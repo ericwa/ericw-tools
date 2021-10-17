@@ -935,6 +935,46 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
     }
 
     bspdata.bspx.transfer("FACENORMALS", data, data_size);
+
+    ofstream obj("test.obj");
+
+    size_t index_id = 1;
+
+    for (auto &face : bsp.dfaces) {
+        auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
+        /*bool keep = true;
+        
+        for (size_t i = 0; i < cache.points().size(); i++) {
+            auto &pt = cache.points()[i];
+
+            if (qv::distance(pt, { -208, 6, 21 }) > 256) {
+                keep = false;
+                break;
+            }
+        }
+
+        if (!keep) {
+            continue;
+        }*/
+
+        for (size_t i = 0; i < cache.points().size(); i++) {
+            auto &pt = cache.points()[i];
+            auto &n = cache.normals()[i];
+            
+            fmt::print(obj, "v {}\n", pt);
+            fmt::print(obj, "vn {}\n", n.normal);
+        }
+        
+        for (size_t i = 1; i < cache.points().size() - 1; i++) {
+            size_t n1 = 0;
+            size_t n2 = i;
+            size_t n3 = (i + 1) % cache.points().size();
+
+            fmt::print(obj, "f {0}//{0} {1}//{1} {2}//{2}\n", index_id + n1, index_id + n2, index_id + n3);
+        }
+
+        index_id += cache.points().size();
+    }
 }
 
 /*

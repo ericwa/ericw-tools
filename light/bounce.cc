@@ -55,7 +55,7 @@ public:
     winding_t w;
     vec3_t center;
     vec3_t samplepoint; // 1 unit above center
-    plane_t plane;
+    qplane3d plane;
     std::map<int, qvec3f> lightByStyle;
 };
 
@@ -203,7 +203,7 @@ static void *MakeBounceLightsThread(void *arg)
             continue;
         }
 
-        plane_t faceplane = winding.plane();
+        qplane3d faceplane = winding.plane();
 
         qvec3d facemidpoint = winding.center();
         facemidpoint += faceplane.normal; // lift 1 unit

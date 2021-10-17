@@ -61,8 +61,6 @@ bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
  */
 const mface_t *BSP_FindFaceAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
-plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face);
-bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const qvec3d &point);
 
 const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f);
 const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);

@@ -111,7 +111,7 @@ SplitFace
 Frees in.
 ==================
 */
-void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **back)
+void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
     side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
@@ -125,7 +125,7 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
         Error("Attempting to split freed face");
 
     /* Fast test */
-    dot = DotProduct(in->origin, split->normal) - split->dist;
+    dot = DotProduct(in->origin, split.normal) - split.dist;
     if (dot > in->radius) {
         counts[SIDE_FRONT] = 1;
         counts[SIDE_BACK] = 0;
@@ -133,7 +133,7 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
         counts[SIDE_FRONT] = 0;
         counts[SIDE_BACK] = 1;
     } else {
-        in->w.calc_sides(split->normal, split->dist, dists, sides, counts, ON_EPSILON);
+        in->w.calc_sides(split, dists, sides, counts, ON_EPSILON);
     }
 
     // Plane doesn't split this face after all
@@ -177,10 +177,10 @@ void SplitFace(face_t *in, const qbsp_plane_t *split, face_t **front, face_t **b
 
         dot = dists[i] / (dists[i] - dists[i + 1]);
         for (j = 0; j < 3; j++) { // avoid round off error when possible
-            if (split->normal[j] == 1)
-                mid[j] = split->dist;
-            else if (split->normal[j] == -1)
-                mid[j] = -split->dist;
+            if (split.normal[j] == 1)
+                mid[j] = split.dist;
+            else if (split.normal[j] == -1)
+                mid[j] = -split.dist;
             else
                 mid[j] = p1[j] + dot * (p2[j] - p1[j]);
         }
@@ -216,10 +216,9 @@ static void RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **o
         for (const face_t *clipface = brush->faces; clipface; clipface = clipface->next) {
             qbsp_plane_t clipplane = map.planes[clipface->planenum];
             if (!clipface->planeside) {
-                VectorSubtract(vec3_origin, clipplane.normal, clipplane.normal);
-                clipplane.dist = -clipplane.dist;
+                clipplane = -clipplane;
             }
-            w = w->clip(clipplane.normal, clipplane.dist, ON_EPSILON, true)[SIDE_FRONT];
+            w = w->clip(clipplane, ON_EPSILON, true)[SIDE_FRONT];
             if (!w)
                 break;
         }
@@ -248,9 +247,8 @@ Faces exactly on the plane will stay inside unless overdrawn by later brush
 static void ClipInside(const face_t *clipface, bool precedence, face_t **inside, face_t **outside)
 {
     face_t *face, *next, *frags[2];
-    const qbsp_plane_t *splitplane;
 
-    splitplane = &map.planes[clipface->planenum];
+    const qbsp_plane_t &splitplane = map.planes[clipface->planenum];
 
     face = *inside;
     *inside = NULL;
@@ -265,7 +263,7 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
             vec_t *dists = (vec_t *)malloc(sizeof(vec_t) * (face->w.size() + 1));
             side_t *sides = (side_t *)malloc(sizeof(side_t) * (face->w.size() + 1));
             int counts[3]{};
-            face->w.calc_sides(splitplane->normal, splitplane->dist, dists, sides, counts, ON_EPSILON);
+            face->w.calc_sides(splitplane, dists, sides, counts, ON_EPSILON);
             free(dists);
             free(sides);
 
@@ -276,8 +274,8 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
 
         /* Handle exactly on-plane faces */
         if (face->planenum == clipface->planenum || spurious_onplane) {
-            const plane_t faceplane = Face_Plane(face);
-            const plane_t clipfaceplane = Face_Plane(clipface);
+            const qplane3d faceplane = Face_Plane(face);
+            const qplane3d clipfaceplane = Face_Plane(clipface);
             const vec_t dp = DotProduct(faceplane.normal, clipfaceplane.normal);
             const bool opposite = (dp < 0);
 

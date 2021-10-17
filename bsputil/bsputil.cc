@@ -124,8 +124,7 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
         dplane_t plane = bsp->dplanes[face->planenum];
 
         if (face->side) {
-            VectorInverse(plane.normal);
-            plane.dist = -plane.dist;
+            plane = -plane;
         }
 
         for (size_t j = 0; j < face->numedges; j++) {

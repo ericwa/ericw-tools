@@ -109,7 +109,22 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
     }
 
     if (bsp.dvis.bits.size()) {
-        j["visdata"] = hex_string(bsp.dvis.bits.data(), bsp.dvis.bits.size());
+
+        if (bsp.dvis.bit_offsets.size()) {
+            json &visdata = (j.emplace("visdata", json::object())).first.value();
+            
+            json &pvs = (visdata.emplace("pvs", json::array())).first.value();
+            json &phs = (visdata.emplace("pvs", json::array())).first.value();
+
+            for (auto &offset : bsp.dvis.bit_offsets) {
+                pvs.push_back(offset[VIS_PVS]);
+                phs.push_back(offset[VIS_PHS]);
+            }
+
+            visdata["bits"] = hex_string(bsp.dvis.bits.data(), bsp.dvis.bits.size());
+        } else {
+            j["visdata"] = hex_string(bsp.dvis.bits.data(), bsp.dvis.bits.size());
+        }
     }
 
     if (bsp.dlightdata.size()) {
@@ -117,7 +132,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
     }
 
     if (!bsp.dentdata.empty()) {
-        j["entdata"] = bsp.dentdata + '\0';
+        j["entdata"] = bsp.dentdata;
     }
 
     if (!bsp.dleafs.empty()) {
@@ -324,10 +339,11 @@ int main(int argc, char **argv)
         LoadBSPFile(source, &bsp);
         PrintBSPFileSizes(&bsp);
 
-        source.replace_extension("bsp.json");
+        WriteBSPFile(std::filesystem::path(source).replace_extension("bsp.rewrite"), &bsp);
+
         ConvertBSPFormat(&bsp, &bspver_generic);
 
-        serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), source);
+        serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), std::filesystem::path(source).replace_extension("bsp.json"));
 
         printf("---------------------\n");
     }

@@ -108,20 +108,15 @@ static void WriteNullTexdef(fmt::memory_buffer &file)
     fmt::format_to(file, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", 1, 0, 0, 0, 0, 1, 0, 0, 0.0, 1, 1);
 }
 
-//
-
-struct decomp_plane_t
+// this should be an outward-facing plane
+struct decomp_plane_t : qplane3d
 {
     const bsp2_dnode_t *node; // can be nullptr
     bool nodefront; // only set if node is non-null. true = we are visiting the front side of the plane
 
-    // this should be an outward-facing plane
-    qvec3d normal;
-    double distance;
-
     static decomp_plane_t make(const qvec3d &normalIn, double distanceIn)
     {
-        return {nullptr, false, normalIn, distanceIn};
+        return {{ normalIn, distanceIn }, nullptr, false};
     }
 };
 
@@ -142,7 +137,7 @@ std::vector<decomp_plane_t> RemoveRedundantPlanes(const std::vector<decomp_plane
 
     for (const decomp_plane_t &plane : planes) {
         // outward-facing plane
-        std::optional<winding_t> winding = winding_t::from_plane(plane.normal, plane.distance, 10e6);
+        std::optional<winding_t> winding = winding_t::from_plane(plane, 10e6);
 
         // clip `winding` by all of the other planes, flipped
         for (const decomp_plane_t &plane2 : planes) {
@@ -150,12 +145,8 @@ std::vector<decomp_plane_t> RemoveRedundantPlanes(const std::vector<decomp_plane
                 continue;
 
             // get flipped plane
-            vec3_t plane2normal;
-            VectorCopy(plane2.normal * -1.0, plane2normal);
-            float plane2dist = -plane2.distance;
-
             // frees winding.
-            auto clipped = winding->clip(plane2normal, plane2dist);
+            auto clipped = winding->clip(-plane2);
 
             // discard the back, continue clipping the front part
             winding = clipped[0];
@@ -210,13 +201,13 @@ std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec3d &nor
     return {tangent, bitangent};
 }
 
-static planepoints NormalDistanceToThreePoints(const qvec3d &normal, const double dist)
+static planepoints NormalDistanceToThreePoints(const qplane3d &plane)
 {
-    std::tuple<qvec3d, qvec3d> tanBitan = MakeTangentAndBitangentUnnormalized(normal);
+    std::tuple<qvec3d, qvec3d> tanBitan = MakeTangentAndBitangentUnnormalized(plane.normal);
 
     planepoints result;
 
-    result.point0 = normal * dist;
+    result.point0 = plane.normal * plane.dist;
     result.point1 = result.point0 + std::get<1>(tanBitan);
     result.point2 = result.point0 + std::get<0>(tanBitan);
 
@@ -231,7 +222,7 @@ void PrintPoint(const qvec3d &v, fmt::memory_buffer &file)
 static void PrintPlanePoints(const mbsp_t *bsp, const decomp_plane_t &decompplane, fmt::memory_buffer &file)
 {
     // we have a plane in (normal, distance) form;
-    const planepoints p = NormalDistanceToThreePoints(decompplane.normal, decompplane.distance);
+    const planepoints p = NormalDistanceToThreePoints(decompplane);
 
     PrintPoint(p.point0, file);
     fmt::format_to(file, " ");
@@ -295,9 +286,9 @@ public:
     /**
      * Returns the { front, back } after the clip.
      */
-    std::pair<decomp_brush_face_t, decomp_brush_face_t> clipToPlane(const qvec3d &normal, double distance) const
+    std::pair<decomp_brush_face_t, decomp_brush_face_t> clipToPlane(const qplane3d &plane) const
     {
-        auto clipped = winding->clip(normal, (float)distance);
+        auto clipped = winding->clip(plane);
 
         // front or back may be null (if fully clipped).
         // these constructors take ownership of the winding.
@@ -377,14 +368,14 @@ struct decomp_brush_side_t
     /**
      * Returns the { front, back } after the clip.
      */
-    std::tuple<decomp_brush_side_t, decomp_brush_side_t> clipToPlane(const qvec3d &normal, double distance) const
+    std::tuple<decomp_brush_side_t, decomp_brush_side_t> clipToPlane(const decomp_plane_t &plane) const
     {
         // FIXME: assert normal/distance are not our plane
 
         std::vector<decomp_brush_face_t> frontfaces, backfaces;
 
         for (auto &face : faces) {
-            auto [faceFront, faceBack] = face.clipToPlane(normal, distance);
+            auto [faceFront, faceBack] = face.clipToPlane(plane);
             if (faceFront.winding) {
                 frontfaces.emplace_back(std::move(faceFront));
             }
@@ -408,14 +399,14 @@ struct decomp_brush_t
     /**
      * Returns the front and back side after clipping to the given plane.
      */
-    std::tuple<decomp_brush_t, decomp_brush_t> clipToPlane(const qvec3d &normal, double distance) const
+    std::tuple<decomp_brush_t, decomp_brush_t> clipToPlane(const qplane3d &plane) const
     {
         // FIXME: this won't handle the the given plane is one of the brush planes
 
         std::vector<decomp_brush_side_t> frontSides, backSides;
 
         for (const auto &side : sides) {
-            auto [frontSide, backSide] = side.clipToPlane(normal, distance);
+            auto [frontSide, backSide] = side.clipToPlane({ plane });
             frontSides.emplace_back(frontSide);
             backSides.emplace_back(backSide);
         }
@@ -423,8 +414,8 @@ struct decomp_brush_t
         // NOTE: the frontSides, backSides vectors will have redundant planes at this point. Should be OK..
 
         // Now we need to add the splitting plane itself to the sides vectors
-        frontSides.emplace_back(-normal, -distance);
-        backSides.emplace_back(normal, distance);
+        frontSides.emplace_back(-plane.normal, -plane.dist);
+        backSides.emplace_back(plane.normal, plane.dist);
 
         return {decomp_brush_t(frontSides), decomp_brush_t(backSides)};
     }
@@ -439,7 +430,7 @@ struct decomp_brush_t
 
                     for (auto &otherSide : sides) {
                         float distance = GLM_DistAbovePlane(
-                            qvec4f(qvec3f(otherSide.plane.normal), (float)otherSide.plane.distance), point);
+                            qvec4f(qvec3f(otherSide.plane.normal), (float)otherSide.plane.dist), point);
                         if (distance > 0.1) {
                             return false;
                         }
@@ -469,7 +460,7 @@ static decomp_brush_t BuildInitialBrush(const mbsp_t *bsp, const std::vector<dec
             if (&plane2 == &plane)
                 continue;
 
-            auto [front, back] = side.clipToPlane(plane2.normal, plane2.distance);
+            auto [front, back] = side.clipToPlane(plane2);
 
             side = back;
         }
@@ -512,7 +503,7 @@ static qvec4f SuggestSplit(const mbsp_t *bsp, const decomp_brush_side_t &side)
         for (const qvec4f &split : face.inwardFacingEdgePlanes) {
             // this is a potential splitting plane.
 
-            auto [front, back] = side.clipToPlane(qvec3d(split.xyz()), split[3]);
+            auto [front, back] = side.clipToPlane(decomp_plane_t { qplane3d { split.xyz(), split[3] } });
 
             // we only consider splits that have at least 1 face on the front and back
             if (front.faces.empty()) {
@@ -542,7 +533,7 @@ static void SplitDifferentTexturedPartsOfBrush_R(
         if (SideNeedsSplitting(bsp, side)) {
             qvec4f split = SuggestSplit(bsp, side);
 
-            auto [front, back] = brush.clipToPlane(qvec3d(split.xyz()), split[3]);
+            auto [front, back] = brush.clipToPlane({ split.xyz(), split[3] });
 
             SplitDifferentTexturedPartsOfBrush_R(bsp, front, out);
             SplitDifferentTexturedPartsOfBrush_R(bsp, back, out);
@@ -667,23 +658,14 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
  */
 decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, const bool front)
 {
-    decomp_plane_t result;
+    const dplane_t &dplane = *BSP_GetPlane(bsp, node->planenum);
 
-    result.node = node;
-    result.nodefront = front;
-
-    const dplane_t *dplane = BSP_GetPlane(bsp, node->planenum);
-
-    result.normal = qvec3d(dplane->normal[0], dplane->normal[1], dplane->normal[2]);
-    result.distance = static_cast<double>(dplane->dist);
-
-    // flip the plane if we went down the front side, since we want the outward-facing plane
-    if (front) {
-        result.normal = result.normal * -1.0;
-        result.distance = result.distance * -1.0;
-    }
-
-    return result;
+    return {
+        // flip the plane if we went down the front side, since we want the outward-facing plane
+        front ? -dplane : dplane,
+        node,
+        front
+    };
 }
 
 /**

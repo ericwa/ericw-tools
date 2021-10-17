@@ -1651,12 +1651,12 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         bool discardFace = false;
         for (int i = 0; i < brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
-            if (PlaneEqual(&check.plane, &face->plane)) {
+            if (qv::epsilonEqual(check.plane, face->plane)) {
                 LogPrint("line {}: Brush with duplicate plane", parser.linenum);
                 discardFace = true;
                 continue;
             }
-            if (PlaneInvEqual(&check.plane, &face->plane)) {
+            if (qv::epsilonEqual(-check.plane, face->plane)) {
                 /* FIXME - this is actually an invalid brush */
                 LogPrint("line {}: Brush with duplicate plane", parser.linenum);
                 continue;
@@ -2296,12 +2296,12 @@ void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const
         for (const face_t *face = brush->faces; face; face = face->next) {
             // FIXME: Factor out this mess
             qbsp_plane_t plane = map.planes.at(face->planenum);
+
             if (face->planeside) {
-                VectorScale(plane.normal, -1, plane.normal);
-                plane.dist = -plane.dist;
+                plane = -plane;
             }
 
-            winding_t w = BaseWindingForPlane(&plane);
+            winding_t w = BaseWindingForPlane(plane);
 
             fmt::print(f, "( {} ) ", w[0]);
             fmt::print(f, "( {} ) ", w[1]);

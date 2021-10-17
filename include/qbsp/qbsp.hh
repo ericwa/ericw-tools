@@ -82,7 +82,6 @@ constexpr int32_t PLANENUM_LEAF = -1;
  *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
  */
 #define ANGLEEPSILON 0.000001
-#define DIST_EPSILON 0.0001
 #define ZERO_EPSILON 0.0001
 #define DISTEPSILON 0.0001
 #define POINT_EPSILON 0.0001
@@ -176,7 +175,6 @@ struct node_t
 
     // information for decision nodes
     int planenum; // -1 = leaf node
-    // outputplanenum moved to qbsp_plane_t
     int firstface; // decision node only
     int numfaces; // decision node only
     node_t *children[2]; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes

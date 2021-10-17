@@ -118,24 +118,19 @@ const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v)
 
 qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f)
 {
-    return Face_Plane(bsp, f).normal();
+    return Face_Plane(bsp, f).normal;
 }
 
 qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
 {
     Q_assert(f->planenum >= 0 && f->planenum < bsp->dplanes.size());
-    const dplane_t *dplane = &bsp->dplanes[f->planenum];
+    qplane3d result = bsp->dplanes[f->planenum];
 
-    plane_t result;
     if (f->side) {
-        result.normal = -dplane->normal;
-        result.dist = -dplane->dist;
-    } else {
-        result.normal = dplane->normal;
-        result.dist = dplane->dist;
+        return -result;
     }
 
-    return {result.normal, result.dist};
+    return result;
 }
 
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
@@ -323,6 +318,36 @@ bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point)
     return Light_PointInSolid(bsp, &bsp->dmodels[0], point);
 }
 
+static std::vector<qplane3d> Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face)
+{
+    std::vector<qplane3d> out;
+    out.reserve(face->numedges);
+
+    const qplane3d faceplane = Face_Plane(bsp, face);
+    for (int i = 0; i < face->numedges; i++) {
+        const qvec3d &v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const qvec3d &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
+
+        qvec3d edgevec = qv::normalize(v1 - v0);
+        qvec3d normal = qv::cross(edgevec, faceplane.normal);
+
+        out.emplace_back(normal, DotProduct(normal, v0));
+    }
+
+    return out;
+}
+
+static bool EdgePlanes_PointInside(const std::vector<qplane3d> &edgeplanes, const qvec3d &point)
+{
+    for (auto &plane : edgeplanes) {
+        const vec_t planedist = DotProduct(point, plane.normal) - plane.dist;
+        if (planedist < 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static const mface_t *BSP_FindFaceAtPoint_r(
     const mbsp_t *bsp, const int nodenum, const qvec3d &point, const qvec3d &wantedNormal)
 {
@@ -351,9 +376,8 @@ static const mface_t *BSP_FindFaceAtPoint_r(
         }
 
         // Next test if it's within the boundaries of the face
-        plane_t *edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
-        const bool insideFace = EdgePlanes_PointInside(face, edgeplanes, point);
-        delete[] edgeplanes;
+        auto edgeplanes = Face_AllocInwardFacingEdgePlanes(bsp, face);
+        const bool insideFace = EdgePlanes_PointInside(edgeplanes, point);
 
         // Found a match?
         if (insideFace) {
@@ -374,37 +398,6 @@ const mface_t *BSP_FindFaceAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal)
 {
     return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
-}
-
-plane_t *Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp, const mface_t *face)
-{
-    plane_t *out = new plane_t[face->numedges];
-
-    const qplane3d faceplane = Face_Plane(bsp, face);
-    for (int i = 0; i < face->numedges; i++) {
-        plane_t *dest = &out[i];
-
-        const qvec3d &v0 = GetSurfaceVertexPoint(bsp, face, i);
-        const qvec3d &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
-
-        qvec3d edgevec = qv::normalize(v1 - v0);
-
-        CrossProduct(edgevec, faceplane.normal(), dest->normal);
-        dest->dist = DotProduct(dest->normal, v0);
-    }
-
-    return out;
-}
-
-bool EdgePlanes_PointInside(const mface_t *face, const plane_t *edgeplanes, const qvec3d &point)
-{
-    for (int i = 0; i < face->numedges; i++) {
-        const vec_t planedist = DotProduct(point, edgeplanes[i].normal) - edgeplanes[i].dist;
-        if (planedist < 0) {
-            return false;
-        }
-    }
-    return true;
 }
 
 // glm stuff

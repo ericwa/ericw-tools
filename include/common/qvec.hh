@@ -379,12 +379,17 @@ template<typename T>
     return fmt::format("{}", v1);
 }
 
+template<typename T>
+[[nodiscard]] bool epsilonEqual(const T &v1, const T &v2, T epsilon)
+{
+    return fabs(v1 - v2) <= epsilon;
+}
+
 template<size_t N, class T>
 [[nodiscard]] bool epsilonEqual(const qvec<T, N> &v1, const qvec<T, N> &v2, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
-        T diff = v1[i] - v2[i];
-        if (fabs(diff) > epsilon)
+        if (!epsilonEqual(v1[i], v2[i], epsilon))
             return false;
     }
     return true;
@@ -393,11 +398,7 @@ template<size_t N, class T>
 template<size_t N, class T>
 [[nodiscard]] bool epsilonEmpty(const qvec<T, N> &v1, T epsilon)
 {
-    for (size_t i = 0; i < N; i++) {
-        if (fabs(v1[i]) > epsilon)
-            return false;
-    }
-    return true;
+    return epsilonEqual({}, v1, epsilon);
 }
 
 template<size_t N, class T>
@@ -571,21 +572,21 @@ using qvec3s = qvec<int16_t, 3>;
 template<class T>
 class qplane3
 {
+public:
+    qvec<T, 3> normal;
+    T dist;
+
+    constexpr qplane3() = default;
+    constexpr qplane3(const qvec<T, 3> &normal, const T &dist) : normal(normal), dist(dist) { }
+
+    // convert from plane of a different type
+    template<typename T2>
+    constexpr qplane3(const qplane3<T2> &plane) : qplane3(plane.normal, static_cast<T2>(plane.dist)) { }
+
 private:
-    qvec<T, 3> m_normal;
-    T m_dist;
+    auto as_tuple() const { return std::tie(normal, dist); }
 
 public:
-    inline qplane3() = default;
-    constexpr qplane3(const qvec<T, 3> &normal, const T &dist) : m_normal(normal), m_dist(dist) { }
-
-    template<typename T2>
-    constexpr qplane3(const qplane3<T2> &plane) : qplane3(plane.normal(), plane.dist())
-    {
-    }
-
-    auto as_tuple() const { return std::tie(m_normal, m_dist); }
-
     // Sort support
     [[nodiscard]] constexpr bool operator<(const qplane3 &other) const { return as_tuple() < other.as_tuple(); }
     [[nodiscard]] constexpr bool operator<=(const qplane3 &other) const { return as_tuple() <= other.as_tuple(); }
@@ -594,18 +595,28 @@ public:
     [[nodiscard]] constexpr bool operator==(const qplane3 &other) const { return as_tuple() == other.as_tuple(); }
     [[nodiscard]] constexpr bool operator!=(const qplane3 &other) const { return as_tuple() != other.as_tuple(); }
 
-    [[nodiscard]] inline T distAbove(const qvec<T, 3> &pt) const { return qv::dot(pt, m_normal) - m_dist; }
-    [[nodiscard]] constexpr const qvec<T, 3> &normal() const { return m_normal; }
-    [[nodiscard]] constexpr const T dist() const { return m_dist; }
+    [[nodiscard]] inline T distAbove(const qvec<T, 3> &pt) const { return qv::dot(pt, normal) - dist; }
 
     [[nodiscard]] constexpr const qvec<T, 4> vec4() const
     {
-        return qvec<T, 4>(m_normal[0], m_normal[1], m_normal[2], m_dist);
+        return qvec<T, 4>(normal[0], normal[1], normal[2], dist);
     }
+
+    [[nodiscard]] constexpr qplane3 operator-() const { return { -normal, -dist }; }
 };
 
 using qplane3f = qplane3<float>;
 using qplane3d = qplane3<double>;
+
+namespace qv
+{
+template<typename T>
+[[nodiscard]] bool epsilonEqual(const qplane3<T> &p1, const qplane3<T> &p2, T normalEpsilon = NORMAL_EPSILON, T distEpsilon = DIST_EPSILON)
+{
+    return epsilonEqual(p1.normal, p2.normal, normalEpsilon) &&
+           epsilonEqual(p1.dist, p2.dist, distEpsilon);
+}
+}
 
 /**
  * Row x Col matrix of T.
@@ -797,12 +808,6 @@ namespace qv
 // "vec3" type. legacy; eventually will be replaced entirely
 using vec3_t = vec_t[3];
 
-struct plane_t
-{
-    qvec3d normal;
-    vec_t dist;
-};
-
 extern const vec3_t vec3_origin;
 
 template<typename T1, typename T2>
@@ -884,8 +889,6 @@ constexpr void VectorClear(T &out)
     out[1] = 0;
     out[2] = 0;
 }
-
-plane_t FlipPlane(plane_t input);
 
 template<typename Ta, typename Tb, typename Tc>
 constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)

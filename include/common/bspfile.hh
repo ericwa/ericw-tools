@@ -278,6 +278,11 @@ struct miptex_t
 
     virtual ~miptex_t() { }
 
+    virtual size_t stream_size() const
+    {
+        return sizeof(dmiptex_t) + width * height / 64 * 85;
+    }
+
     virtual void stream_read(std::istream &stream)
     {
         auto start = stream.tellg();
@@ -291,7 +296,7 @@ struct miptex_t
         height = dtex.height;
 
         for (size_t g = 0; g < MIPLEVELS; g++) {
-            if (dtex.offsets[g] < 0) {
+            if (dtex.offsets[g] <= 0) {
                 continue;
             }
 
@@ -305,8 +310,6 @@ struct miptex_t
 
     virtual void stream_write(std::ostream &stream) const
     {
-        Q_assert((bool)data[0]);
-
         std::array<char, 16> as_array{};
         memcpy(as_array.data(), name.c_str(), name.size());
 
@@ -315,12 +318,18 @@ struct miptex_t
         uint32_t header_end = sizeof(dmiptex_t);
 
         for (size_t i = 0; i < MIPLEVELS; i++) {
-            stream <= header_end;
-            header_end += (width >> i) * (height >> i);
+            if (data[i] <= 0) {
+                stream <= (uint32_t) 0;
+            } else {
+                stream <= header_end;
+                header_end += (width >> i) * (height >> i);
+            }
         }
 
         for (size_t i = 0; i < MIPLEVELS; i++) {
-            stream.write(reinterpret_cast<char *>(data[i].get()), (width >> i) * (height >> i));
+            if (data[i]) {
+                stream.write(reinterpret_cast<char *>(data[i].get()), (width >> i) * (height >> i));
+            }
         }
     }
 };
@@ -334,6 +343,11 @@ struct miptexhl_t : miptex_t
 
     // convert miptex_t to miptexhl_t
     miptexhl_t(miptex_t &&move) : miptex_t(std::forward<miptex_t &&>(move)) { }
+
+    virtual size_t stream_size() const
+    {
+        return miptex_t::stream_size() + sizeof(uint16_t) + palette.size();
+    }
 
     virtual void stream_read(std::istream &stream)
     {
@@ -350,7 +364,7 @@ struct miptexhl_t : miptex_t
     {
         miptex_t::stream_write(stream);
 
-        stream <= static_cast<uint16_t>(palette.size());
+        stream <= static_cast<uint16_t>(palette.size() / 3);
 
         stream.write(reinterpret_cast<const char *>(palette.data()), palette.size());
     }
@@ -402,9 +416,12 @@ struct dmiptexlump_t
 
     void stream_write(std::ostream &stream) const
     {
+        auto p = (size_t) stream.tellp();
+
         stream <= static_cast<int32_t>(textures.size());
 
         const size_t header_size = sizeof(int32_t) + (sizeof(int32_t) * textures.size());
+
         size_t miptex_offset = 0;
 
         for (auto &texture : textures) {
@@ -413,11 +430,19 @@ struct dmiptexlump_t
                 continue;
             }
             stream <= static_cast<int32_t>(header_size + miptex_offset);
-            miptex_offset += sizeof(dmiptex_t) + texture.width * texture.height / 64 * 85;
+
+            miptex_offset += texture.stream_size();
+
+            if (p + miptex_offset % 4) {
+                miptex_offset += 4 - ((p + miptex_offset) % 4);
+            }
         }
 
         for (auto &texture : textures) {
             if (texture.name[0]) {
+                if (stream.tellp() % 4) {
+                    stream.seekp(stream.tellp() + (4 - (stream.tellp() % 4)));
+                }
                 texture.stream_write(stream);
             }
         }
@@ -443,11 +468,11 @@ struct rgba_miptex_t
 #define PLANE_ANYY 4
 #define PLANE_ANYZ 5
 
-struct dplane_t
+struct dplane_t : qplane3f
 {
-    qvec3f normal;
-    float dist;
     int32_t type;
+
+    [[nodiscard]] constexpr dplane_t operator-() const { return { qplane3f::operator-(), type }; }
 
     // serialize for streams
     auto stream_data() { return std::tie(normal, dist, type); }

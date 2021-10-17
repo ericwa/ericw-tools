@@ -28,11 +28,11 @@ static int c_leafskip;
   pointer, was measurably faster
   ==============
 */
-static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const plane_t src_pl,
+static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qplane3d src_pl,
     const std::shared_ptr<winding_t> &pass, std::shared_ptr<winding_t> &target, unsigned int test, pstack_t *stack)
 {
     int i, j, k, l;
-    plane_t sep;
+    qplane3d sep;
     vec3_t v1, v2;
     vec_t d;
     int count;
@@ -76,8 +76,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const pla
             // flip the plane if the source portal is backwards
             //
             if (fliptest) {
-                VectorSubtract(vec3_origin, sep.normal, sep.normal);
-                sep.dist = -sep.dist;
+                sep = -sep;
             }
             //
             // if all of the pass portal points are now on the positive side,
@@ -102,8 +101,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const pla
             // flip the normal if we want the back side (tests 1 and 3)
             //
             if (test & 1) {
-                VectorSubtract(vec3_origin, sep.normal, sep.normal);
-                sep.dist = -sep.dist;
+                sep = -sep;
             }
 
             /* Cache separating planes for tests 0, 1 */
@@ -146,7 +144,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
 {
     pstack_t stack;
     portal_t *p;
-    plane_t backplane;
+    qplane3d backplane;
     leaf_t *leaf;
     int i, j, err, numblocks;
 
@@ -222,8 +220,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         }
         // get plane of portal, point normal into the neighbor leaf
         stack.portalplane = p->plane;
-        VectorSubtract(vec3_origin, p->plane.normal, backplane.normal);
-        backplane.dist = -p->plane.dist;
+        backplane = -p->plane;
 
         if (VectorCompare(prevstack->portalplane.normal, backplane.normal, EQUAL_EPSILON))
             continue; // can't go out a coplanar face

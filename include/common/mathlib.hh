@@ -41,10 +41,14 @@ using vec_t = double;
 
 constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();
 
+/*
+ * The quality of the bsp output is highly sensitive to these epsilon values.
+ */
 constexpr vec_t ZERO_TRI_AREA_EPSILON = 0.05;
 constexpr vec_t POINT_EQUAL_EPSILON = 0.05;
 
 constexpr vec_t NORMAL_EPSILON = 0.000001;
+constexpr vec_t DIST_EPSILON = 0.0001;
 constexpr vec_t DEGREES_EPSILON = 0.001;
 constexpr vec_t DEFAULT_ON_EPSILON = 0.1;
 

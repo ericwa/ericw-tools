@@ -21,7 +21,7 @@ constexpr size_t MAX_POINTS_ON_WINDING = 96;
 
 constexpr vec_t DEFAULT_BOGUS_RANGE = 65536.0;
 
-using winding_edges_t = std::vector<plane_t>;
+using winding_edges_t = std::vector<qplane3d>;
 
 inline bool PointInWindingEdges(const winding_edges_t &wi, const qvec3d &point)
 {
@@ -404,29 +404,22 @@ public:
             *this = std::move(temp);
     }
 
-    plane_t plane() const
+    qplane3d plane() const
     {
-        plane_t p;
-
         qvec3d v1 = at(0) - at(1);
         qvec3d v2 = at(2) - at(1);
         qvec3d normal = qv::normalize(qv::cross(v1, v2));
 
-        for (size_t i = 0; i < 3; i++)
-            p.normal[i] = normal[i];
-
-        p.dist = qv::dot(at(0), normal);
-
-        return p;
+        return { normal, qv::dot(at(0), normal) };
     }
 
-    static winding_base_t from_plane(const qvec3d &normal, const vec_t &dist, const vec_t &worldextent)
+    static winding_base_t from_plane(const qplane3d &plane, const vec_t &worldextent)
     {
         /* find the major axis */
         vec_t max = -VECT_MAX;
         int32_t x = -1;
         for (size_t i = 0; i < 3; i++) {
-            vec_t v = fabs(normal[i]);
+            vec_t v = fabs(plane.normal[i]);
 
             if (v > max) {
                 x = i;
@@ -445,12 +438,12 @@ public:
             case 2: vup[0] = 1; break;
         }
 
-        vec_t v = qv::dot(vup, normal);
-        vup += normal * -v;
+        vec_t v = qv::dot(vup, plane.normal);
+        vup += plane.normal * -v;
         vup = qv::normalize(vup);
 
-        qvec3d org = normal * dist;
-        qvec3d vright = qv::cross(vup, normal);
+        qvec3d org = plane.normal * plane.dist;
+        qvec3d vright = qv::cross(vup, plane.normal);
 
         vup *= worldextent;
         vright *= worldextent;
@@ -475,7 +468,7 @@ public:
         if (a < 1)
             FError("{} area", a);
 
-        plane_t face = plane();
+        qplane3d face = plane();
 
         for (size_t i = 0; i < count; i++) {
             const qvec3d &p1 = at(i);
@@ -520,36 +513,34 @@ public:
 
     winding_edges_t winding_edges() const
     {
-        plane_t p = plane();
+        qplane3d p = plane();
 
-        winding_edges_t result(count);
+        winding_edges_t result;
+        result.reserve(count);
 
         for (size_t i = 0; i < count; i++) {
-            plane_t &dest = result[i];
-
             const qvec3d &v0 = at(i);
             const qvec3d &v1 = at((i + 1) % count);
 
             qvec3d edgevec = qv::normalize(v1 - v0);
             qvec3d normal = qv::cross(edgevec, p.normal);
-            for (size_t i = 0; i < 3; i++)
-                dest.normal[i] = normal[i];
-            dest.dist = qv::dot(normal, v0);
+
+            result.emplace_back(normal, qv::dot(normal, v0));
         }
 
         return result;
     }
 
     // dists/sides must have (size() + 1) reserved
-    inline void calc_sides(const qvec3d &normal, const vec_t &dist, vec_t *dists, side_t *sides, int32_t counts[3],
+    inline void calc_sides(const qplane3d &plane, vec_t *dists, side_t *sides, int32_t counts[3],
         const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         /* determine sides for each point */
         size_t i;
 
         for (i = 0; i < count; i++) {
-            vec_t dot = qv::dot(at(i), normal);
-            dot -= dist;
+            vec_t dot = qv::dot(at(i), plane.normal);
+            dot -= plane.dist;
 
             dists[i] = dot;
 
@@ -576,14 +567,14 @@ public:
     it will be clipped away.
     ==================
     */
-    std::array<std::optional<winding_base_t>, 2> clip(const qvec3d &normal, const vec_t &dist,
+    std::array<std::optional<winding_base_t>, 2> clip(const qplane3d &plane,
         const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (count + 1));
         side_t *sides = (side_t *)alloca(sizeof(side_t) * (count + 1));
         int counts[3]{};
 
-        calc_sides(normal, dist, dists, sides, counts, on_epsilon);
+        calc_sides(plane, dists, sides, counts, on_epsilon);
 
         if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
             return {*this, std::nullopt};
@@ -618,10 +609,10 @@ public:
             qvec3d mid;
 
             for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
-                if (normal[j] == 1)
-                    mid[j] = dist;
-                else if (normal[j] == -1)
-                    mid[j] = -dist;
+                if (plane.normal[j] == 1)
+                    mid[j] = plane.dist;
+                else if (plane.normal[j] == -1)
+                    mid[j] = -plane.dist;
                 else
                     mid[j] = p1[j] + dot * (p2[j] - p1[j]);
             }
@@ -634,16 +625,6 @@ public:
             FError("MAX_POINTS_ON_WINDING");
 
         return {std::move(results[SIDE_FRONT]), std::move(results[SIDE_BACK])};
-    }
-
-    std::optional<winding_base_t> chop(
-        const qvec3d &normal, const vec_t &dist, const vec_t &on_epsilon = DEFAULT_ON_EPSILON)
-    {
-        auto clipped = clip(normal, dist, on_epsilon);
-
-        clear();
-
-        return clipped[0];
     }
 
     using save_fn_t = void (*)(winding_base_t &w, void *userinfo);
@@ -670,10 +651,10 @@ public:
         //
         // split the winding
         //
-        qvec3d split{};
-        split[i] = 1;
-        vec_t dist = subdiv * (1 + floor((b.mins()[i] + 1) / subdiv));
-        auto clipped = clip(split, dist);
+        qplane3d split{};
+        split.normal[i] = 1;
+        split.dist = subdiv * (1 + floor((b.mins()[i] + 1) / subdiv));
+        auto clipped = clip(split);
         clear();
 
         //

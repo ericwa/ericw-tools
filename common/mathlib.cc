@@ -32,16 +32,6 @@ using namespace polylib;
 
 const vec3_t vec3_origin = {0, 0, 0};
 
-plane_t FlipPlane(plane_t input)
-{
-    plane_t result;
-
-    VectorScale(input.normal, -1, result.normal);
-    result.dist = -input.dist;
-
-    return result;
-}
-
 qmat3x3d RotateAboutX(double t)
 {
     // https://en.wikipedia.org/wiki/Rotation_matrix#Examples
@@ -424,7 +414,7 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vect
 
     winding_t w = winding_t::from_winding_points(poly);
 
-    auto clipped = w.clip(qvec3f(plane), plane[3]);
+    auto clipped = w.clip({ plane.xyz(), plane[3] });
 
     return make_pair(
         clipped[0].value_or(winding_t{}).glm_winding_points(), clipped[1].value_or(winding_t{}).glm_winding_points());

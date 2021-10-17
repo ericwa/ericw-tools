@@ -287,7 +287,7 @@ long LoadFile(const std::filesystem::path &filename, void *destptr)
 {
     uint8_t **bufferptr = static_cast<uint8_t **>(destptr);
 
-    qfile_t file = SafeOpenRead(filename);
+    qfile_t file = SafeOpenRead(filename, true);
 
     long length = Sys_FileLength(file);
 

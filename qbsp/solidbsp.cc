@@ -99,22 +99,22 @@ FaceSide
 For BSP hueristic
 ==================
 */
-static int FaceSide__(const face_t *in, const qbsp_plane_t *split)
+static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
 {
     bool have_front, have_back;
     int i;
 
     have_front = have_back = false;
 
-    if (split->type < 3) {
+    if (split.type < 3) {
         /* shortcut for axial planes */
-        const vec_t *p = &in->w[0][split->type];
+        const vec_t *p = &in->w[0][split.type];
         for (i = 0; i < in->w.size(); i++, p += 3) {
-            if (*p > split->dist + ON_EPSILON) {
+            if (*p > split.dist + ON_EPSILON) {
                 if (have_back)
                     return SIDE_ON;
                 have_front = true;
-            } else if (*p < split->dist - ON_EPSILON) {
+            } else if (*p < split.dist - ON_EPSILON) {
                 if (have_front)
                     return SIDE_ON;
                 have_back = true;
@@ -124,7 +124,7 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t *split)
         /* sloping planes take longer */
         const vec_t *p = &in->w[0][0];
         for (i = 0; i < in->w.size(); i++, p += 3) {
-            const vec_t dot = DotProduct(p, split->normal) - split->dist;
+            const vec_t dot = DotProduct(p, split.normal) - split.dist;
             if (dot > ON_EPSILON) {
                 if (have_back)
                     return SIDE_ON;
@@ -145,20 +145,16 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t *split)
     return SIDE_ON;
 }
 
-static int FaceSide(const face_t *in, const qbsp_plane_t *split)
+inline int FaceSide(const face_t *in, const qbsp_plane_t &split)
 {
-    vec_t dist;
-    int ret;
+    vec_t dist = DotProduct(in->origin, split.normal) - split.dist;
 
-    dist = DotProduct(in->origin, split->normal) - split->dist;
     if (dist > in->radius)
-        ret = SIDE_FRONT;
+        return SIDE_FRONT;
     else if (dist < -in->radius)
-        ret = SIDE_BACK;
+        return SIDE_BACK;
     else
-        ret = FaceSide__(in, split);
-
-    return ret;
+        return FaceSide__(in, split);
 }
 
 /*
@@ -167,7 +163,7 @@ static int FaceSide(const face_t *in, const qbsp_plane_t *split)
  * on that side of the plane. Therefore, if the split plane is
  * non-axial, then the returned bounds will overlap.
  */
-static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t *split, aabb3d &front_bounds, aabb3d &back_bounds)
+static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aabb3d &front_bounds, aabb3d &back_bounds)
 {
     int a, b, c, i, j;
     vec_t dist1, dist2, mid, split_mins, split_maxs;
@@ -175,17 +171,17 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t *split, aab
 
     front_bounds = back_bounds = in_bounds;
 
-    if (split->type < 3) {
+    if (split.type < 3) {
         // CHECK: this escapes the immutability "sandbox" of aabb3d, is this a good idea?
         // it'd take like 6 lines to otherwise reproduce this line.
-        front_bounds[0][split->type] = back_bounds[1][split->type] = split->dist;
+        front_bounds[0][split.type] = back_bounds[1][split.type] = split.dist;
         return;
     }
 
     /* Make proper sloping cuts... */
     for (a = 0; a < 3; ++a) {
         /* Check for parallel case... no intersection */
-        if (fabs(split->normal[a]) < NORMAL_EPSILON)
+        if (fabs(split.normal[a]) < NORMAL_EPSILON)
             continue;
 
         b = (a + 1) % 3;
@@ -199,10 +195,10 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t *split, aab
                 corner[c] = in_bounds[j][c];
 
                 corner[a] = in_bounds[0][a];
-                dist1 = DotProduct(corner, split->normal) - split->dist;
+                dist1 = DotProduct(corner, split.normal) - split.dist;
 
                 corner[a] = in_bounds[1][a];
-                dist2 = DotProduct(corner, split->normal) - split->dist;
+                dist2 = DotProduct(corner, split.normal) - split.dist;
 
                 mid = in_bounds[1][a] - in_bounds[0][a];
                 mid *= (dist1 / (dist1 - dist2));
@@ -212,7 +208,7 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t *split, aab
                 split_maxs = min(max(mid, split_maxs), in_bounds.maxs()[a]);
             }
         }
-        if (split->normal[a] > 0) {
+        if (split.normal[a] > 0) {
             front_bounds[0][a] = split_mins;
             back_bounds[1][a] = split_maxs;
         } else {
@@ -225,12 +221,12 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t *split, aab
 /*
  * Calculate the split plane metric for axial planes
  */
-static vec_t SplitPlaneMetric_Axial(const qbsp_plane_t *p, const aabb3d &bounds)
+inline vec_t SplitPlaneMetric_Axial(const qbsp_plane_t &p, const aabb3d &bounds)
 {
     vec_t value = 0;
     for (int i = 0; i < 3; i++) {
-        if (i == p->type) {
-            const vec_t dist = p->dist * p->normal[i];
+        if (i == p.type) {
+            const vec_t dist = p.dist * p.normal[i];
             value += (bounds.maxs()[i] - dist) * (bounds.maxs()[i] - dist);
             value += (dist - bounds.mins()[i]) * (dist - bounds.mins()[i]);
         } else {
@@ -244,7 +240,7 @@ static vec_t SplitPlaneMetric_Axial(const qbsp_plane_t *p, const aabb3d &bounds)
 /*
  * Calculate the split plane metric for non-axial planes
  */
-static vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const aabb3d &bounds)
+inline vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t &p, const aabb3d &bounds)
 {
     aabb3d f, b;
     vec_t value = 0.0;
@@ -258,9 +254,9 @@ static vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t *p, const aabb3d &boun
     return value;
 }
 
-inline vec_t SplitPlaneMetric(const qbsp_plane_t *p, const aabb3d &bounds)
+inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
 {
-    if (p->type < 3)
+    if (p.type < 3)
         return SplitPlaneMetric_Axial(p, bounds);
     else
         return SplitPlaneMetric_NonAxial(p, bounds);
@@ -290,8 +286,8 @@ static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const aabb3d &boun
                 continue;
 
             /* check for axis aligned surfaces */
-            const qbsp_plane_t *plane = &map.planes[surf->planenum];
-            if (!(plane->type < 3))
+            const qbsp_plane_t &plane = map.planes[surf->planenum];
+            if (!(plane.type < 3))
                 continue;
 
             /* calculate the split metric, smaller values are better */
@@ -313,7 +309,7 @@ static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const aabb3d &boun
                 if (!surf->has_struct && !pass)
                     continue;
 
-                const qbsp_plane_t *plane = &map.planes[surf->planenum];
+                const qbsp_plane_t &plane = map.planes[surf->planenum];
                 const vec_t metric = SplitPlaneMetric(plane, bounds);
                 if (metric < bestmetric) {
                     bestmetric = metric;
@@ -377,14 +373,14 @@ static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
             if (!surf->has_struct && !pass)
                 continue;
 
-            const qbsp_plane_t *plane = &map.planes[surf->planenum];
+            const qbsp_plane_t &plane = map.planes[surf->planenum];
             int splits = 0;
 
             for (surface_t *surf2 = surfaces; surf2; surf2 = surf2->next) {
                 if (surf2 == surf || surf2->onnode)
                     continue;
-                const qbsp_plane_t *plane2 = &map.planes[surf2->planenum];
-                if (plane->type < 3 && plane->type == plane2->type)
+                const qbsp_plane_t &plane2 = map.planes[surf2->planenum];
+                if (plane.type < 3 && plane.type == plane2.type)
                     continue;
                 for (const face_t *face = surf2->faces; face; face = face->next) {
                     const surfflags_t &flags = map.mtexinfos.at(face->texinfo).flags;
@@ -412,8 +408,8 @@ static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
              * if equal numbers axial planes win, otherwise decide on spatial
              * subdivision
              */
-            if (splits < minsplits || (splits == minsplits && plane->type < 3)) {
-                if (plane->type < 3) {
+            if (splits < minsplits || (splits == minsplits && plane.type < 3)) {
+                if (plane.type < 3) {
                     const vec_t distribution = SplitPlaneMetric(plane, bounds);
                     if (distribution > bestdistribution && splits == minsplits)
                         continue;
@@ -542,15 +538,15 @@ void CalcSurfaceInfo(surface_t *surf)
 DividePlane
 ==================
 */
-static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **front, surface_t **back)
+static void DividePlane(surface_t *in, const qplane3d &split, surface_t **front, surface_t **back)
 {
     const qbsp_plane_t *inplane = &map.planes[in->planenum];
     *front = *back = NULL;
 
     // parallel case is easy
-    if (VectorCompare(inplane->normal, split->normal, EQUAL_EPSILON)) {
+    if (VectorCompare(inplane->normal, split.normal, EQUAL_EPSILON)) {
         // check for exactly on node
-        if (inplane->dist == split->dist) {
+        if (inplane->dist == split.dist) {
             face_t *facet = in->faces;
             in->faces = NULL;
             in->onnode = true;
@@ -590,7 +586,7 @@ static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **fr
             return;
         }
 
-        if (inplane->dist > split->dist)
+        if (inplane->dist > split.dist)
             *front = in;
         else
             *back = in;
@@ -649,7 +645,7 @@ static void DividePlane(surface_t *in, const qbsp_plane_t *split, surface_t **fr
 DivideNodeBounds
 ==================
 */
-inline void DivideNodeBounds(node_t *node, const qbsp_plane_t *split)
+inline void DivideNodeBounds(node_t *node, const qbsp_plane_t &split)
 {
     DivideBounds(node->bounds, split, node->children[0]->bounds, node->children[1]->bounds);
 }
@@ -807,7 +803,7 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
     node->planenum = split->planenum;
     node->detail_separator = split->detail_separator;
 
-    const qbsp_plane_t *splitplane = &map.planes[split->planenum];
+    const qbsp_plane_t &splitplane = map.planes[split->planenum];
 
     DivideNodeBounds(node, splitplane);
 

@@ -115,7 +115,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
                   "   surface {}, {} extents = {}, scale = {}\n"
                   "   texture {} at ({})\n"
                   "   surface normal ({})\n",
-                Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname, point, plane.normal());
+                Face_GetNum(bsp, face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname, point, plane.normal);
         }
     }
 }
@@ -211,10 +211,10 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
     //           [?]
 
     qmat4x4f T{
-        tex->vecs.at(0, 0), tex->vecs.at(1, 0), static_cast<float>(plane.normal()[0]), 0, // col 0
-        tex->vecs.at(0, 1), tex->vecs.at(1, 1), static_cast<float>(plane.normal()[1]), 0, // col 1
-        tex->vecs.at(0, 2), tex->vecs.at(1, 2), static_cast<float>(plane.normal()[2]), 0, // col 2
-        tex->vecs.at(0, 3), tex->vecs.at(1, 3), static_cast<float>(-plane.dist()), 1 // col 3
+        tex->vecs.at(0, 0), tex->vecs.at(1, 0), static_cast<float>(plane.normal[0]), 0, // col 0
+        tex->vecs.at(0, 1), tex->vecs.at(1, 1), static_cast<float>(plane.normal[1]), 0, // col 1
+        tex->vecs.at(0, 2), tex->vecs.at(1, 2), static_cast<float>(plane.normal[2]), 0, // col 2
+        tex->vecs.at(0, 3), tex->vecs.at(1, 3), static_cast<float>(-plane.dist), 1 // col 3
     };
     return T;
 }
@@ -758,12 +758,11 @@ static bool Lightsurf_Init(
     }
 
     /* Set up the plane, not including model offset */
-    plane_t *plane = &lightsurf->plane;
+    qplane3d *plane = &lightsurf->plane;
     VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
     plane->dist = bsp->dplanes[face->planenum].dist;
     if (face->side) {
-        VectorSubtract(vec3_origin, plane->normal, plane->normal);
-        plane->dist = -plane->dist;
+        *plane = -*plane;
     }
 
     /* Set up the texorg for coordinate transformation */
@@ -1405,7 +1404,7 @@ static void LightFace_Entity(
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    const plane_t *plane = &lightsurf->plane;
+    const qplane3d *plane = &lightsurf->plane;
 
     const float planedist = DotProduct(entity->origin.vec3Value(), plane->normal) - plane->dist;
 
@@ -1518,7 +1517,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
 {
     const globalconfig_t &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    const plane_t *plane = &lightsurf->plane;
+    const qplane3d *plane = &lightsurf->plane;
 
     // FIXME: Normalized sun vector should be stored in the sun_t. Also clarify which way the vector points (towards or
     // away..)

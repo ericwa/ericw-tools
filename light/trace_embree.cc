@@ -423,17 +423,12 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 
 // building faces for skip-textured bmodels
 
-plane_t Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
+qplane3d Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
 {
-    const dplane_t *dplane = &bsp->dplanes[node->planenum];
-    plane_t plane;
-
-    VectorCopy(dplane->normal, plane.normal);
-    plane.dist = dplane->dist;
+    qplane3d plane = bsp->dplanes[node->planenum];
 
     if (side) {
-        VectorScale(plane.normal, -1, plane.normal);
-        plane.dist *= -1.0f;
+        return -plane;
     }
 
     return plane;
@@ -443,22 +438,20 @@ plane_t Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
 static void Leaf_MakeFaces(
-    const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<plane_t> &planes, std::vector<winding_t> &result)
+    const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<qplane3d> &planes, std::vector<winding_t> &result)
 {
-    for (const plane_t &plane : planes) {
+    for (const qplane3d &plane : planes) {
         // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
-        plane_t faceplane;
-        VectorScale(plane.normal, -1, faceplane.normal);
-        faceplane.dist = -plane.dist;
+        qplane3d faceplane = -plane;
 
-        std::optional<winding_t> winding = winding_t::from_plane(faceplane.normal, faceplane.dist, 10e6);
+        std::optional<winding_t> winding = winding_t::from_plane(faceplane, 10e6);
 
         // clip `winding` by all of the other planes
-        for (const plane_t &plane2 : planes) {
+        for (const qplane3d &plane2 : planes) {
             if (&plane2 == &plane)
                 continue;
 
-            auto clipped = winding->clip(plane2.normal, plane2.dist);
+            auto clipped = winding->clip(plane2);
 
             // discard the back, continue clipping the front part
             winding = clipped[0];
@@ -476,7 +469,7 @@ static void Leaf_MakeFaces(
     }
 }
 
-void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *planes, std::vector<winding_t> &result)
+void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<qplane3d> *planes, std::vector<winding_t> &result)
 {
     if (nodenum < 0) {
         const int leafnum = -nodenum - 1;
@@ -492,21 +485,19 @@ void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<plane_t> *pla
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
 
     // go down the front side
-    const plane_t front = Node_Plane(bsp, node, false);
-    planes->push_back(front);
+    planes->push_back(Node_Plane(bsp, node, false));
     MakeFaces_r(bsp, node->children[0], planes, result);
     planes->pop_back();
 
     // go down the back side
-    const plane_t back = Node_Plane(bsp, node, true);
-    planes->push_back(back);
+    planes->push_back(Node_Plane(bsp, node, true));
     MakeFaces_r(bsp, node->children[1], planes, result);
     planes->pop_back();
 }
 
 static void MakeFaces(const mbsp_t *bsp, const dmodelh2_t *model, std::vector<winding_t> &result)
 {
-    std::vector<plane_t> planes;
+    std::vector<qplane3d> planes;
     MakeFaces_r(bsp, model->headnode[0], &planes, result);
     Q_assert(planes.empty());
 }
@@ -725,7 +716,7 @@ hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modeli
 
 // public
 hittype_t Embree_DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, const modelinfo_t *self,
-    vec_t *hitdist_out, plane_t *hitplane_out, const mface_t **face_out)
+    vec_t *hitdist_out, qplane3d *hitplane_out, const mface_t **face_out)
 {
     RTCRayHit ray = SetupRay(0, start, dirn, dist);
     ray_source_info ctx2(nullptr, self);

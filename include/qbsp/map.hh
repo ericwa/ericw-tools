@@ -29,6 +29,14 @@
 #include <utility>
 #include <unordered_map>
 
+struct qbsp_plane_t : qplane3d
+{
+    int type = 0;
+    std::optional<size_t> outputplanenum = std::nullopt; // only valid after ExportNodePlanes
+
+    [[nodiscard]] constexpr qbsp_plane_t operator-() const { return { qplane3d::operator-(), type }; }
+};
+
 struct mapface_t
 {
     qbsp_plane_t plane { };

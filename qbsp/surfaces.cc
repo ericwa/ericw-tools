@@ -103,7 +103,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
             plane.dist = (mins + subdiv - 16) / v;
 
             next = f->next;
-            SplitFace(f, &plane, &front, &back);
+            SplitFace(f, plane, &front, &back);
             if (!front || !back) {
                 printf("didn't split\n");
                 break;

@@ -112,7 +112,7 @@ struct lightsurf_t
     vec3_t minlight_color;
     bool nodirt;
 
-    plane_t plane;
+    qplane3d plane;
     vec3_t snormal;
     vec3_t tnormal;
 
@@ -174,7 +174,9 @@ enum debugmode_t
     debugmode_bounce,
     debugmode_bouncelights,
     debugmode_debugoccluded,
-    debugmode_debugneighbours
+    debugmode_debugneighbours,
+    debugmode_phong_tangents,
+    debugmode_phong_bitangents
 };
 
 extern debugmode_t debugmode;

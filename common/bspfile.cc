@@ -910,7 +910,7 @@ struct lump_reader
 
             buffer.reserve(length = (lump.filelen / lumpspec.size));
         } else {
-            buffer.reserve(length = lump.filelen);
+            buffer.resize(length = lump.filelen);
         }
 
         if (!lump.filelen)

@@ -27,23 +27,20 @@
 /*
  * Beveled clipping hull can generate many extra faces
  */
-#define MAX_FACES 128
-#define MAX_HULL_POINTS 512
-#define MAX_HULL_EDGES 1024
+constexpr size_t MAX_FACES = 128;
+constexpr size_t MAX_HULL_POINTS = 512;
+constexpr size_t MAX_HULL_EDGES = 1024;
 
 struct hullbrush_t
 {
     const mapbrush_t *srcbrush;
     contentflags_t contents;
-    int numfaces;
     aabb3d bounds;
-    mapface_t faces[MAX_FACES];
 
-    int numpoints;
-    int numedges;
-    vec3_t points[MAX_HULL_POINTS];
-    vec3_t corners[MAX_HULL_POINTS * 8];
-    int edges[MAX_HULL_EDGES][2];
+    std::vector<mapface_t> faces;
+    std::vector<qvec3d> points;
+    std::vector<qvec3d> corners;
+    std::vector<std::tuple<int, int>> edges;
 
     int linenum;
 };
@@ -53,17 +50,12 @@ struct hullbrush_t
 Face_Plane
 =================
 */
-plane_t Face_Plane(const face_t *face)
+qplane3d Face_Plane(const face_t *face)
 {
-    const qbsp_plane_t *plane = &map.planes.at(face->planenum);
-    plane_t result;
-
-    result.dist = plane->dist;
-    VectorCopy(plane->normal, result.normal);
+    qplane3d result = map.planes.at(face->planenum);
 
     if (face->planeside) {
-        VectorScale(result.normal, -1.0, result.normal);
-        result.dist = -result.dist;
+        return -result;
     }
 
     return result;
@@ -76,66 +68,64 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-void CheckFace(face_t *face, const mapface_t *sourceface)
+static void CheckFace(face_t *face, const mapface_t &sourceface)
 {
-    const qbsp_plane_t *plane = &map.planes[face->planenum];
-    vec_t length, dist, edgedist;
-    vec3_t edgevec, edgenormal, facenormal;
-    int i, j;
+    const qbsp_plane_t &plane = map.planes[face->planenum];
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
-            FError("line {}: too few points (2): ({}) ({})\n", sourceface->linenum, face->w[0], face->w[1]);
+            FError("line {}: too few points (2): ({}) ({})\n", sourceface.linenum, face->w[0], face->w[1]);
         } else if (face->w.size() == 1) {
-            FError("line {}: too few points (1): ({})\n", sourceface->linenum, face->w[0]);
+            FError("line {}: too few points (1): ({})\n", sourceface.linenum, face->w[0]);
         } else {
-            FError("line {}: too few points ({})", sourceface->linenum, face->w.size());
+            FError("line {}: too few points ({})", sourceface.linenum, face->w.size());
         }
     }
 
-    VectorCopy(plane->normal, facenormal);
+    qvec3d facenormal = plane.normal;
     if (face->planeside)
-        VectorSubtract(vec3_origin, facenormal, facenormal);
+        VectorInverse(facenormal);
 
-    for (i = 0; i < face->w.size(); i++) {
+    for (size_t i = 0; i < face->w.size(); i++) {
         const qvec3d &p1 = face->w[i];
         const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
 
-        for (j = 0; j < 3; j++)
-            if (p1[j] > options.worldExtent || p1[j] < -options.worldExtent)
-                FError("line {}: coordinate out of range ({})", sourceface->linenum, p1[j]);
+        for (auto &v : p1)
+            if (v > options.worldExtent || v < -options.worldExtent)
+                FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
 
         /* check the point is on the face plane */
-        dist = DotProduct(p1, plane->normal) - plane->dist;
+        vec_t dist = DotProduct(p1, plane.normal) - plane.dist;
         if (dist < -ON_EPSILON || dist > ON_EPSILON)
-            LogPrint("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface->linenum, p1[0],
+            LogPrint("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
                 p1[1], p1[2], dist);
 
         /* check the edge isn't degenerate */
-        VectorSubtract(p2, p1, edgevec);
-        length = VectorLength(edgevec);
+        qvec3d edgevec = p2 - p1;
+        vec_t length = VectorLength(edgevec);
         if (length < ON_EPSILON) {
-            LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface->linenum,
+            LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
                 length, p1[0], p1[1], p1[2]);
-            for (j = i + 1; j < face->w.size(); j++)
+            for (size_t j = i + 1; j < face->w.size(); j++)
                 VectorCopy(face->w[j], face->w[j - 1]);
             face->w.resize(face->w.size() - 1);
             CheckFace(face, sourceface);
             break;
         }
 
+        qvec3d edgenormal;
         CrossProduct(facenormal, edgevec, edgenormal);
         VectorNormalize(edgenormal);
-        edgedist = DotProduct(p1, edgenormal);
+        vec_t edgedist = DotProduct(p1, edgenormal);
         edgedist += ON_EPSILON;
 
         /* all other points must be on front side */
-        for (j = 0; j < face->w.size(); j++) {
+        for (size_t j = 0; j < face->w.size(); j++) {
             if (j == i)
                 continue;
             dist = DotProduct(face->w[j], edgenormal);
             if (dist > edgedist)
-                FError("line {}: Found a non-convex face (error size {}, point: {})\n", sourceface->linenum,
+                FError("line {}: Found a non-convex face (error size {}, point: {})\n", sourceface.linenum,
                     dist - edgedist, face->w[j]);
         }
     }
@@ -143,72 +133,54 @@ void CheckFace(face_t *face, const mapface_t *sourceface)
 
 //===========================================================================
 
-static int NormalizePlane(qbsp_plane_t *p, bool flip = true)
+static bool NormalizePlane(qbsp_plane_t &p, bool flip = true)
 {
-    int i;
-    vec_t ax, ay, az;
-
-    for (i = 0; i < 3; i++) {
-        if (p->normal[i] == 1.0) {
-            p->normal[(i + 1) % 3] = 0;
-            p->normal[(i + 2) % 3] = 0;
-            p->type = PLANE_X + i;
+    for (size_t i = 0; i < 3; i++) {
+        if (p.normal[i] == 1.0) {
+            p.normal[(i + 1) % 3] = 0;
+            p.normal[(i + 2) % 3] = 0;
+            p.type = PLANE_X + i;
             return 0; /* no flip */
         }
-        if (p->normal[i] == -1.0) {
+        if (p.normal[i] == -1.0) {
             if (flip) {
-                p->normal[i] = 1.0;
-                p->dist = -p->dist;
+                p.normal[i] = 1.0;
+                p.dist = -p.dist;
             }
-            p->normal[(i + 1) % 3] = 0;
-            p->normal[(i + 2) % 3] = 0;
-            p->type = PLANE_X + i;
+            p.normal[(i + 1) % 3] = 0;
+            p.normal[(i + 2) % 3] = 0;
+            p.type = PLANE_X + i;
             return 1; /* plane flipped */
         }
     }
 
-    ax = fabs(p->normal[0]);
-    ay = fabs(p->normal[1]);
-    az = fabs(p->normal[2]);
+    vec_t ax = fabs(p.normal[0]);
+    vec_t ay = fabs(p.normal[1]);
+    vec_t az = fabs(p.normal[2]);
 
     if (ax >= ay && ax >= az)
-        p->type = PLANE_ANYX;
+        p.type = PLANE_ANYX;
     else if (ay >= ax && ay >= az)
-        p->type = PLANE_ANYY;
+        p.type = PLANE_ANYY;
     else
-        p->type = PLANE_ANYZ;
+        p.type = PLANE_ANYZ;
 
-    if (flip && p->normal[p->type - PLANE_ANYX] < 0) {
-        VectorSubtract(vec3_origin, p->normal, p->normal);
-        p->dist = -p->dist;
-        return 1; /* plane flipped */
+    if (flip && p.normal[p.type - PLANE_ANYX] < 0) {
+        p = -p;
+        return true; /* plane flipped */
     }
-    return 0; /* no flip */
-}
 
-bool PlaneEqual(const plane_t *p1, const plane_t *p2)
-{
-    return (fabs(p1->normal[0] - p2->normal[0]) < NORMAL_EPSILON &&
-            fabs(p1->normal[1] - p2->normal[1]) < NORMAL_EPSILON &&
-            fabs(p1->normal[2] - p2->normal[2]) < NORMAL_EPSILON && fabs(p1->dist - p2->dist) < DIST_EPSILON);
-}
-
-bool PlaneInvEqual(const plane_t *p1, const plane_t *p2)
-{
-    plane_t temp{};
-    VectorScale(p1->normal, -1.0, temp.normal);
-    temp.dist = -p1->dist;
-    return PlaneEqual(&temp, p2);
+    return false; /* no flip */
 }
 
 /* Plane Hashing */
 
-inline int plane_hash_fn(const qbsp_plane_t *p)
+inline int plane_hash_fn(const qplane3d &p)
 {
-    return Q_rint(fabs(p->dist));
+    return Q_rint(fabs(p.dist));
 }
 
-static void PlaneHash_Add(const qbsp_plane_t *p, int index)
+static void PlaneHash_Add(const qplane3d &p, int index)
 {
     const int hash = plane_hash_fn(p);
     map.planehash[hash].push_back(index);
@@ -218,7 +190,7 @@ static void PlaneHash_Add(const qbsp_plane_t *p, int index)
  * NewPlane
  * - Returns a global plane number and the side that will be the front
  */
-static int NewPlane(const qbsp_plane_t &plane, int *side)
+static int NewPlane(const qplane3d &plane, int *side)
 {
     vec_t len = VectorLength(plane.normal);
 
@@ -226,15 +198,15 @@ static int NewPlane(const qbsp_plane_t &plane, int *side)
         FError("invalid normal (vector length {:.4})", len);
 
     size_t index = map.planes.size();
-    qbsp_plane_t &added_plane = map.planes.emplace_back(plane);
+    qbsp_plane_t &added_plane = map.planes.emplace_back(qbsp_plane_t { plane });
 
-    int32_t out_side = NormalizePlane(&added_plane, side != nullptr);
+    bool out_flipped = NormalizePlane(added_plane, side != nullptr);
 
     if (side) {
-        *side = out_side;
+        *side = out_flipped ? SIDE_BACK : SIDE_FRONT;
     }
 
-    PlaneHash_Add(&added_plane, index);
+    PlaneHash_Add(added_plane, index);
     return index;
 }
 
@@ -243,20 +215,16 @@ static int NewPlane(const qbsp_plane_t &plane, int *side)
  * - Returns a global plane number and the side that will be the front
  * - if `side` is null, only an exact match will be fetched.
  */
-int FindPlane(const qvec3d &normal, const vec_t dist, int *side)
+int FindPlane(const qplane3d &plane, int *side)
 {
-    qbsp_plane_t plane {};
-    plane.normal = normal;
-    plane.dist = dist;
-
-    for (int i : map.planehash[plane_hash_fn(&plane)]) {
+    for (int i : map.planehash[plane_hash_fn(plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
-        if (PlaneEqual(&p, &plane)) {
+        if (qv::epsilonEqual(p, plane)) {
             if (side) {
                 *side = SIDE_FRONT;
             }
             return i;
-        } else if (side && PlaneInvEqual(&p, &plane)) {
+        } else if (side && qv::epsilonEqual(-p, plane)) {
             *side = SIDE_BACK;
             return i;
         }
@@ -334,13 +302,11 @@ CreateBrushFaces
 static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const qvec3d &rotate_offset,
     const rotation_t rottype, const int hullnum)
 {
-    int i, j, k;
     vec_t r;
     face_t *f;
     std::optional<winding_t> w;
     qbsp_plane_t plane;
     face_t *facelist = NULL;
-    mapface_t *mapface, *mapface2;
     vec3_t point;
     vec_t max, min;
 
@@ -352,27 +318,27 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
     auto DiscardHintSkipFace =
         (options.target_game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
 
-    mapface = hullbrush->faces;
-    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
+    for (auto &mapface : hullbrush->faces) {
         if (hullnum <= 0 && hullbrush->contents.is_hint()) {
             /* Don't generate hintskip faces */
-            const mtexinfo_t &texinfo = map.mtexinfos.at(mapface->texinfo);
+            const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
             if (DiscardHintSkipFace(hullnum, hullbrush, texinfo))
                 continue;
         }
 
-        w = BaseWindingForPlane(&mapface->plane);
-        mapface2 = hullbrush->faces;
-        for (j = 0; j < hullbrush->numfaces && w; j++, mapface2++) {
-            if (j == i)
-                continue;
-            // flip the plane, because we want to keep the back side
-            VectorSubtract(vec3_origin, mapface2->plane.normal, plane.normal);
-            plane.dist = -mapface2->plane.dist;
+        w = BaseWindingForPlane(mapface.plane);
 
-            w = w->clip(plane.normal, plane.dist, ON_EPSILON, false)[SIDE_FRONT];
+        for (auto &mapface2 : hullbrush->faces) {
+            if (&mapface == &mapface2)
+                continue;
+
+            // flip the plane, because we want to keep the back side
+            plane = -mapface2.plane;
+
+            w = w->clip(plane, ON_EPSILON, false)[SIDE_FRONT];
         }
+
         if (!w)
             continue; // overconstrained plane
 
@@ -381,12 +347,12 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         f->planenum = PLANENUM_LEAF;
 
         if (w->size() > MAXEDGES)
-            FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface->linenum);
+            FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface.linenum);
 
         f->w.resize(w->size());
 
-        for (j = 0; j < w->size(); j++) {
-            for (k = 0; k < 3; k++) {
+        for (size_t j = 0; j < w->size(); j++) {
+            for (size_t k = 0; k < 3; k++) {
                 point[k] = w->at(j)[k] - rotate_offset[k];
                 r = Q_rint(point[k]);
                 if (fabs(point[k] - r) < ZERO_EPSILON)
@@ -405,22 +371,22 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
 
         // account for texture offset, from txqbsp-xt
         if (options.fixRotateObjTexture) {
-            mtexinfo_t texInfoNew = map.mtexinfos.at(mapface->texinfo);
+            mtexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
             texInfoNew.outputnum = std::nullopt;
 
             texInfoNew.vecs.at(0, 3) += DotProduct(rotate_offset, texInfoNew.vecs.row(0));
             texInfoNew.vecs.at(1, 3) += DotProduct(rotate_offset, texInfoNew.vecs.row(1));
 
-            mapface->texinfo = FindTexinfo(texInfoNew);
+            mapface.texinfo = FindTexinfo(texInfoNew);
         }
 
-        VectorCopy(mapface->plane.normal, plane.normal);
-        VectorScale(mapface->plane.normal, mapface->plane.dist, point);
+        VectorCopy(mapface.plane.normal, plane.normal);
+        VectorScale(mapface.plane.normal, mapface.plane.dist, point);
         VectorSubtract(point, rotate_offset, point);
         plane.dist = DotProduct(plane.normal, point);
 
-        f->texinfo = hullnum > 0 ? 0 : mapface->texinfo;
-        f->planenum = FindPlane(plane.normal, plane.dist, &f->planeside);
+        f->texinfo = hullnum > 0 ? 0 : mapface.texinfo;
+        f->planenum = FindPlane(plane, &f->planeside);
         f->next = facelist;
         facelist = f;
         CheckFace(f, mapface);
@@ -508,29 +474,25 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 AddBrushPlane
 =============
 */
-static void AddBrushPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
+static void AddBrushPlane(hullbrush_t *hullbrush, const qplane3d &plane)
 {
-    int i;
-    mapface_t *mapface;
-    vec_t len;
-
-    len = VectorLength(plane->normal);
+    vec_t len = VectorLength(plane.normal);
     if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
 
-    mapface = hullbrush->faces;
-    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (VectorCompare(mapface->plane.normal, plane->normal, EQUAL_EPSILON) &&
-            fabs(mapface->plane.dist - plane->dist) < ON_EPSILON)
+    for (auto &mapface : hullbrush->faces) {
+        if (VectorCompare(mapface.plane.normal, plane.normal, EQUAL_EPSILON) &&
+            fabs(mapface.plane.dist - plane.dist) < ON_EPSILON)
             return;
     }
-    if (hullbrush->numfaces == MAX_FACES)
+
+    if (hullbrush->faces.size() == MAX_FACES)
         FError(
             "brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
 
-    mapface->plane = *plane;
-    mapface->texinfo = 0;
-    hullbrush->numfaces++;
+    mapface_t &mapface = hullbrush->faces.emplace_back();
+    mapface.plane = { plane };
+    mapface.texinfo = 0;
 }
 
 /*
@@ -541,21 +503,16 @@ Adds the given plane to the brush description if all of the original brush
 vertexes can be put on the front side
 =============
 */
-static void TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
+static void TestAddPlane(hullbrush_t *hullbrush, qplane3d &plane)
 {
-    int i, c;
     vec_t d;
-    mapface_t *mapface;
-    vec_t *corner;
-    qbsp_plane_t flip;
     int points_front, points_back;
 
     /* see if the plane has already been added */
-    mapface = hullbrush->faces;
-    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (PlaneEqual(plane, &mapface->plane))
+    for (auto &mapface : hullbrush->faces) {
+        if (qv::epsilonEqual(plane, mapface.plane))
             return;
-        if (PlaneInvEqual(plane, &mapface->plane))
+        if (qv::epsilonEqual(-plane, mapface.plane))
             return;
     }
 
@@ -563,11 +520,8 @@ static void TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
     points_front = 0;
     points_back = 0;
 
-    corner = hullbrush->corners[0];
-    c = hullbrush->numpoints * 8;
-
-    for (i = 0; i < c; i++, corner += 3) {
-        d = DotProduct(corner, plane->normal) - plane->dist;
+    for (auto &corner : hullbrush->corners) {
+        d = DotProduct(corner, plane.normal) - plane.dist;
         if (d < -ON_EPSILON) {
             if (points_front)
                 return;
@@ -581,9 +535,7 @@ static void TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t *plane)
 
     // the plane is a seperator
     if (points_front) {
-        VectorSubtract(vec3_origin, plane->normal, flip.normal);
-        flip.dist = -plane->dist;
-        plane = &flip;
+        plane = -plane;
     }
 
     AddBrushPlane(hullbrush, plane);
@@ -598,33 +550,26 @@ Doesn't add if duplicated
 */
 static int AddHullPoint(hullbrush_t *hullbrush, const qvec3d &p, const aabb3d &hull_size)
 {
-    int i;
-    vec_t *c;
-    int x, y, z;
+    for (auto &pt : hullbrush->points)
+        if (VectorCompare(p, pt, EQUAL_EPSILON))
+            return &pt - hullbrush->points.data();
 
-    for (i = 0; i < hullbrush->numpoints; i++)
-        if (VectorCompare(p, hullbrush->points[i], EQUAL_EPSILON))
-            return i;
-
-    if (hullbrush->numpoints == MAX_HULL_POINTS)
+    if (hullbrush->points.size() == MAX_HULL_POINTS)
         FError("hullbrush->numpoints == MAX_HULL_POINTS ({}), "
                "source brush on line {}",
             MAX_HULL_POINTS, hullbrush->srcbrush->face(0).linenum);
 
-    VectorCopy(p, hullbrush->points[hullbrush->numpoints]);
+    int i = hullbrush->points.size();
+    hullbrush->points.emplace_back(p);
 
-    c = hullbrush->corners[i * 8];
-
-    for (x = 0; x < 2; x++)
-        for (y = 0; y < 2; y++)
-            for (z = 0; z < 2; z++) {
-                c[0] = p[0] + hull_size[x][0];
-                c[1] = p[1] + hull_size[y][1];
-                c[2] = p[2] + hull_size[z][2];
-                c += 3;
+    for (size_t x = 0; x < 2; x++)
+        for (size_t y = 0; y < 2; y++)
+            for (size_t z = 0; z < 2; z++) {
+                hullbrush->corners.emplace_back(
+                    p[0] + hull_size[x][0],
+                    p[1] + hull_size[y][1],
+                    p[2] + hull_size[z][2]);
             }
-
-    hullbrush->numpoints++;
 
     return i;
 }
@@ -639,36 +584,33 @@ Creates all of the hull planes around the given edge, if not done allready
 static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &p2, const aabb3d &hull_size)
 {
     int pt1, pt2;
-    int i;
     int a, b, c, d, e;
-    vec3_t edgevec, planeorg, planevec;
-    qbsp_plane_t plane;
+    qplane3d plane;
     vec_t length;
 
     pt1 = AddHullPoint(hullbrush, p1, hull_size);
     pt2 = AddHullPoint(hullbrush, p2, hull_size);
 
-    for (i = 0; i < hullbrush->numedges; i++)
-        if ((hullbrush->edges[i][0] == pt1 && hullbrush->edges[i][1] == pt2) ||
-            (hullbrush->edges[i][0] == pt2 && hullbrush->edges[i][1] == pt1))
+    for (auto &edge : hullbrush->edges)
+        if ((edge == std::make_tuple(pt1, pt2)) ||
+            (edge == std::make_tuple(pt2, pt1)))
             return;
 
-    if (hullbrush->numedges == MAX_HULL_EDGES)
+    if (hullbrush->edges.size() == MAX_HULL_EDGES)
         FError("hullbrush->numedges == MAX_HULL_EDGES ({}), "
                "source brush on line {}",
             MAX_HULL_EDGES, hullbrush->srcbrush->face(0).linenum);
 
-    hullbrush->edges[i][0] = pt1;
-    hullbrush->edges[i][1] = pt2;
-    hullbrush->numedges++;
+    hullbrush->edges.emplace_back(pt1, pt2);
 
-    VectorSubtract(p1, p2, edgevec);
+    qvec3d edgevec = p1 - p2;
     VectorNormalize(edgevec);
 
     for (a = 0; a < 3; a++) {
         b = (a + 1) % 3;
         c = (a + 2) % 3;
 
+        qvec3d planevec;
         planevec[a] = 1;
         planevec[b] = 0;
         planevec[c] = 0;
@@ -682,11 +624,11 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
         VectorScale(plane.normal, 1.0 / length, plane.normal);
         for (d = 0; d <= 1; d++) {
             for (e = 0; e <= 1; e++) {
-                VectorCopy(p1, planeorg);
+                qvec3d planeorg = p1;
                 planeorg[b] += hull_size[d][b];
                 planeorg[c] += hull_size[e][c];
                 plane.dist = DotProduct(planeorg, plane.normal);
-                TestAddPlane(hullbrush, &plane);
+                TestAddPlane(hullbrush, plane);
             }
         }
     }
@@ -699,54 +641,52 @@ ExpandBrush
 */
 static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const face_t *facelist)
 {
-    int i, x, s;
-    vec3_t corner;
+    int x, s;
     const face_t *f;
     qbsp_plane_t plane;
-    mapface_t *mapface;
     int cBevEdge = 0;
 
-    hullbrush->numpoints = 0;
-    hullbrush->numedges = 0;
+    hullbrush->points.clear();
+    hullbrush->corners.clear();
+    hullbrush->edges.clear();
 
     // create all the hull points
     for (f = facelist; f; f = f->next)
-        for (i = 0; i < f->w.size(); i++) {
+        for (size_t i = 0; i < f->w.size(); i++) {
             AddHullPoint(hullbrush, f->w[i], hull_size);
             cBevEdge++;
         }
 
     // expand all of the planes
-    mapface = hullbrush->faces;
-    for (i = 0; i < hullbrush->numfaces; i++, mapface++) {
-        if (mapface->flags.extended & TEX_EXFLAG_NOEXPAND)
+    for (auto &mapface : hullbrush->faces) {
+        if (mapface.flags.extended & TEX_EXFLAG_NOEXPAND)
             continue;
-        VectorCopy(vec3_origin, corner);
+        qvec3d corner { };
         for (x = 0; x < 3; x++) {
-            if (mapface->plane.normal[x] > 0)
+            if (mapface.plane.normal[x] > 0)
                 corner[x] = hull_size[1][x];
-            else if (mapface->plane.normal[x] < 0)
+            else if (mapface.plane.normal[x] < 0)
                 corner[x] = hull_size[0][x];
         }
-        mapface->plane.dist += DotProduct(corner, mapface->plane.normal);
+        mapface.plane.dist += DotProduct(corner, mapface.plane.normal);
     }
 
     // add any axis planes not contained in the brush to bevel off corners
     for (x = 0; x < 3; x++)
         for (s = -1; s <= 1; s += 2) {
             // add the plane
-            VectorCopy(vec3_origin, plane.normal);
+            plane.normal = {};
             plane.normal[x] = (vec_t)s;
             if (s == -1)
                 plane.dist = -hullbrush->bounds.mins()[x] + -hull_size[0][x];
             else
                 plane.dist = hullbrush->bounds.maxs()[x] + hull_size[1][x];
-            AddBrushPlane(hullbrush, &plane);
+            AddBrushPlane(hullbrush, plane);
         }
 
     // add all of the edge bevels
     for (f = facelist; f; f = f->next)
-        for (i = 0; i < f->w.size(); i++)
+        for (size_t i = 0; i < f->w.size(); i++)
             AddHullEdge(hullbrush, f->w[i], f->w[(i + 1) % f->w.size()], hull_size);
 }
 
@@ -891,9 +831,9 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 
     hullbrush.contents = contents;
     hullbrush.srcbrush = mapbrush;
-    hullbrush.numfaces = mapbrush->numfaces;
+    hullbrush.faces.reserve(mapbrush->numfaces);
     for (int i = 0; i < mapbrush->numfaces; i++)
-        hullbrush.faces[i] = mapbrush->face(i);
+        hullbrush.faces.emplace_back(mapbrush->face(i));
 
     if (hullnum <= 0) {
         // for hull 0 or BSPX -wrbrushes collision, apply the rotation offset now
@@ -1255,476 +1195,3 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         LogPercent(i + 1, src->nummapbrushes);
     }
 }
-
-//============================================================
-
-/*
-==================
-BoundBrush
-
-Sets the mins/maxs based on the windings
-returns false if the brush doesn't enclose a valid volume
-
-from q3map
-==================
-*/
-bool BoundBrush(brush_t *brush)
-{
-    brush->bounds = {};
-
-    for (face_t *face = brush->faces; face; face = face->next) {
-        const winding_t &w = face->w;
-        for (int j = 0; j < w.size(); j++)
-            brush->bounds += w[j];
-    }
-
-    for (int i = 0; i < 3; i++) {
-        // CHECK: because aabb::fix, is this latter check ever possible?
-        if (brush->bounds.mins()[i] < MIN_WORLD_COORD || brush->bounds.maxs()[i] > MAX_WORLD_COORD ||
-            brush->bounds.mins()[i] >= brush->bounds.maxs()[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-/*
-==================
-BrushVolume
-
-from q3map
-modified to follow https://en.wikipedia.org/wiki/Polyhedron#Volume
-==================
-*/
-vec_t BrushVolume(const brush_t *brush)
-{
-    if (!brush)
-        return 0;
-
-    vec_t volume = 0;
-    for (const face_t *face = brush->faces; face; face = face->next) {
-        if (!face->w.size())
-            continue;
-
-        const vec_t area = face->w.area();
-        const plane_t faceplane = Face_Plane(face);
-
-        volume += DotProduct(faceplane.normal, face->w[0]) * area;
-    }
-
-    volume /= 3.0;
-
-    return volume;
-}
-
-/*
-==================
-BrushMostlyOnSide
-
-from q3map
-==================
-*/
-int BrushMostlyOnSide(const brush_t *brush, const qvec3d &planenormal, vec_t planedist)
-{
-    vec_t max;
-    int side;
-
-    max = 0;
-    side = SIDE_FRONT;
-
-    for (const face_t *face = brush->faces; face; face = face->next) {
-        const winding_t &w = face->w;
-
-        if (!w.size())
-            continue;
-
-        for (int j = 0; j < w.size(); j++) {
-            const vec_t d = DotProduct(w[j], planenormal) - planedist;
-            if (d > max) {
-                max = d;
-                side = SIDE_FRONT;
-            }
-            if (-d > max) {
-                max = -d;
-                side = SIDE_BACK;
-            }
-        }
-    }
-
-    return side;
-}
-
-face_t *CopyFace(const face_t *face)
-{
-    face_t *newface = new face_t(*face);
-
-    // clear stuff that shouldn't be copied.
-    newface->original = nullptr;
-    newface->outputnumber = std::nullopt;
-    newface->edges.clear();
-    newface->next = nullptr;
-
-    return newface;
-}
-
-/*
-==================
-CopyBrush
-
-from q3map
-
-Duplicates the brush, the sides, and the windings
-==================
-*/
-brush_t *CopyBrush(const brush_t *brush)
-{
-    brush_t *newbrush = new brush_t(*brush);
-
-    newbrush->next = nullptr;
-    newbrush->faces = nullptr;
-
-    for (const face_t *face = brush->faces; face; face = face->next) {
-
-        face_t *newface = CopyFace(face);
-
-        // link into newbrush
-        newface->next = newbrush->faces;
-        newbrush->faces = newface;
-    }
-
-    return newbrush;
-}
-
-/*
-================
-WindingIsTiny
-
-Returns true if the winding would be crunched out of
-existance by the vertex snapping.
-
-from q3map
-================
-*/
-#define EDGE_LENGTH 0.2
-static bool WindingIsTiny(const winding_t &w)
-{
-    /*
-     if (WindingArea (w) < 1)
-     return qtrue;
-     return qfalse;
-     */
-    size_t edges = 0;
-
-    for (size_t i = 0; i < w.size(); i++) {
-        size_t j = i == w.size() - 1 ? 0 : i + 1;
-        qvec3d delta = w[j] - w[i];
-        vec_t len = VectorLength(delta);
-
-        if (len > EDGE_LENGTH) {
-            if (++edges == 3)
-                return false;
-        }
-    }
-
-    return true;
-}
-
-/*
-================
-WindingIsHuge
-
-Returns true if the winding still has one of the points
-from basewinding for plane
-
-from q3map
-================
-*/
-static bool WindingIsHuge(const winding_t &w)
-{
-    for (size_t i = 0; i < w.size(); i++)
-        for (size_t j = 0; j < 3; j++)
-            if (w[i][j] <= MIN_WORLD_COORD || w[i][j] >= MAX_WORLD_COORD)
-                return true;
-
-    return false;
-}
-
-/*
-================
-SplitBrush
-
-Generates two new brushes, leaving the original
-unchanged
-
-from q3map
-================
-*/
-void SplitBrush(const brush_t *brush, int planenum, int planeside, brush_t **front, brush_t **back)
-{
-    *front = nullptr;
-    *back = nullptr;
-
-    qbsp_plane_t plane;
-    {
-        const qbsp_plane_t *globalplane = &map.planes.at(planenum);
-        VectorCopy(globalplane->normal, plane.normal);
-        plane.dist = globalplane->dist;
-        if (planeside) {
-            VectorScale(plane.normal, -1, plane.normal);
-            plane.dist = -plane.dist;
-        }
-        // FIXME: dangerous..
-        plane.type = -1000;
-        plane.outputplanenum = std::nullopt;
-    }
-
-    // check all points
-    vec_t d_front = 0;
-    vec_t d_back = 0;
-    for (const face_t *face = brush->faces; face; face = face->next) {
-        const winding_t &w = face->w;
-        if (!w.size())
-            continue;
-
-        for (int j = 0; j < w.size(); j++) {
-            const vec_t d = DotProduct(w[j], plane.normal) - plane.dist;
-            if (d > 0 && d > d_front)
-                d_front = d;
-            if (d < 0 && d < d_back)
-                d_back = d;
-        }
-    }
-
-    if (d_front < 0.1) // PLANESIDE_EPSILON)
-    { // only on back
-        *back = CopyBrush(brush);
-        return;
-    }
-    if (d_back > -0.1) // PLANESIDE_EPSILON)
-    { // only on front
-        *front = CopyBrush(brush);
-        return;
-    }
-
-    // create a new winding from the split plane
-    std::optional<winding_t> w = BaseWindingForPlane(&plane);
-
-    for (const face_t *face = brush->faces; face; face = face->next) {
-        if (!w)
-            break;
-        const plane_t plane2 = FlipPlane(Face_Plane(face));
-        w = w->chop(plane2.normal, plane2.dist, 0); // PLANESIDE_EPSILON);
-    }
-
-    if (!w || WindingIsTiny(*w)) { // the brush isn't really split
-        int side;
-
-        side = BrushMostlyOnSide(brush, plane.normal, plane.dist);
-        if (side == SIDE_FRONT)
-            *front = CopyBrush(brush);
-        if (side == SIDE_BACK)
-            *back = CopyBrush(brush);
-        return;
-    }
-
-    if (WindingIsHuge(*w)) {
-        LogPrint("WARNING: huge winding\n");
-    }
-
-    brush_t *b[2];
-
-    // split it for real
-
-    // first, make two empty brushes (for the front and back side of the plane)
-
-    for (int i = 0; i < 2; i++) {
-        b[i] = new brush_t{};
-        // memcpy( b[i], brush, sizeof( brush_t ) );
-
-        // NOTE: brush copying
-        b[i]->contents = brush->contents;
-        b[i]->lmshift = brush->lmshift;
-        b[i]->faces = nullptr;
-        b[i]->next = nullptr;
-
-        // FIXME:
-        // b[i]->original = brush->original;
-    }
-
-    // split all the current windings
-
-    for (const face_t *face = brush->faces; face; face = face->next) {
-        const winding_t &w = face->w;
-        if (!w.size())
-            continue;
-
-        auto cw = w.clip(plane.normal, plane.dist, ON_EPSILON);
-
-        for (int j = 0; j < 2; j++) {
-            if (!cw[j])
-                continue;
-            /*
-             if (WindingIsTiny (cw[j]))
-             {
-             FreeWinding (cw[j]);
-             continue;
-             }
-             */
-
-            face_t *newface = CopyFace(face);
-            newface->w = std::move(*cw[j]);
-            UpdateFaceSphere(newface);
-
-            // link it into the front or back brush we are building
-            newface->next = b[j]->faces;
-            b[j]->faces = newface;
-        }
-    }
-
-    // see if we have valid polygons on both sides
-
-    for (int i = 0; i < 2; i++) {
-        bool bad_brush = false;
-
-        if (!BoundBrush(b[i])) {
-            LogPrint("bogus brush after clip\n");
-            bad_brush = true;
-        }
-
-        // 3 faces is ok because we add a 4th face below
-        if (Brush_NumFaces(b[i]) < 3 || bad_brush) {
-            FreeBrush(b[i]);
-            b[i] = nullptr;
-        }
-    }
-
-    if (!(b[0] && b[1])) {
-        if (!b[0] && !b[1])
-            LogPrint("split removed brush\n");
-        else
-            LogPrint("split not on both sides\n");
-        if (b[0]) {
-            FreeBrush(b[0]);
-            *front = CopyBrush(brush);
-        }
-        if (b[1]) {
-            FreeBrush(b[1]);
-            *back = CopyBrush(brush);
-        }
-        return;
-    }
-
-    // add the midwinding to both sides
-    for (int i = 0; i < 2; i++) {
-        // clone the first face (arbitrarily)
-        face_t *newface = CopyFace(b[i]->faces);
-
-        if (i == 0) {
-            newface->w = w->flip();
-            newface->planenum = planenum;
-            newface->planeside = !planeside;
-        } else {
-            newface->w = *w;
-            newface->planenum = planenum;
-            newface->planeside = planeside;
-        }
-
-        UpdateFaceSphere(newface);
-
-        // link it into the front or back brush
-        newface->next = b[i]->faces;
-        b[i]->faces = newface;
-    }
-
-    {
-        vec_t v1;
-        int i;
-
-        for (i = 0; i < 2; i++) {
-            v1 = BrushVolume(b[i]);
-            if (v1 < 1.0) {
-                FreeBrush(b[i]);
-                b[i] = nullptr;
-                LogPrint("tiny volume after clip\n");
-            }
-        }
-    }
-
-    *front = b[0];
-    *back = b[1];
-}
-
-#if 0
-/*
-====================
-FilterBrushIntoTree_r
-
-from q3map
- 
-returns the number of fragments the brush was split into
-frees brush
-====================
-*/
-int FilterBrushIntoTree_r( brush_t *b, node_t *node )
-{
-    if ( !b ) {
-        return 0;
-    }
-    
-    // add it to the leaf list
-    if ( node->planenum == PLANENUM_LEAF ) {
-        
-        Q_assert(b->next == nullptr);
-        b->next = node->q3map_brushlist;
-        node->q3map_brushlist = b;
-        
-        // FIXME: set node->q3map_contents
-        
-        return 1;
-    }
-    
-    // split it by the node plane
-    brush_t		*front, *back;
-    SplitBrush ( b, node->planenum, 0, &front, &back );
-    FreeBrush( b );
-    
-    int c = 0;
-    c += FilterBrushIntoTree_r( front, node->children[0] );
-    c += FilterBrushIntoTree_r( back, node->children[1] );
-    
-    return c;
-}
-
-/*
-=====================
-FilterStructuralBrushesIntoTree
-
-Mark the leafs as opaque and areaportals
- 
-from q3map
-=====================
-*/
-void FilterStructuralBrushesIntoTree( const mapentity_t *e, node_t *headnode )
-{
-    LogPrint( "----- FilterStructuralBrushesIntoTree -----\n");
-    
-    auto st = I_FloatTime();
-    
-    int c_unique = 0;
-    int c_clusters = 0;
-    for ( const brush_t *b = e->brushes ; b ; b = b->next ) {
-        c_unique++;
-        brush_t *newb = CopyBrush( b );
-        
-        int r = FilterBrushIntoTree_r( newb, headnode );
-        c_clusters += r;
-        
-        // mark all sides as visible so drawsurfs are created
-    }
-    
-    LogPrint( "{:5} structural brushes\n", c_unique );
-    LogPrint( "{:5} cluster references\n", c_clusters );
-    LogPrint( "took {} seconds\n", (I_FloatTime() - st).count() );
-}
-#endif

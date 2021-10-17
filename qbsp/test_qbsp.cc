@@ -153,56 +153,6 @@ static brush_t *load128x128x32Brush()
     return brush;
 }
 
-TEST(qbsp, BrushVolume)
-{
-    brush_t *brush = load128x128x32Brush();
-
-    EXPECT_DOUBLE_EQ((128 * 128 * 32), BrushVolume(brush));
-}
-
-TEST(qbsp, BrushMostlyOnSide1)
-{
-    brush_t *brush = load128x128x32Brush();
-
-    qvec3d plane1normal {-1, 0, 0};
-    vec_t plane1dist = -100;
-
-    EXPECT_EQ(SIDE_FRONT, BrushMostlyOnSide(brush, plane1normal, plane1dist));
-
-    FreeBrush(brush);
-}
-
-TEST(qbsp, BrushMostlyOnSide2)
-{
-    brush_t *brush = load128x128x32Brush();
-
-    qvec3d plane1normal {1, 0, 0};
-    vec_t plane1dist = 100;
-
-    EXPECT_EQ(SIDE_BACK, BrushMostlyOnSide(brush, plane1normal, plane1dist));
-
-    FreeBrush(brush);
-}
-
-TEST(qbsp, BoundBrush)
-{
-    brush_t *brush = load128x128x32Brush();
-
-    brush->bounds = {};
-
-    EXPECT_EQ(true, BoundBrush(brush));
-
-    EXPECT_DOUBLE_EQ(-64, brush->bounds.mins()[0]);
-    EXPECT_DOUBLE_EQ(-64, brush->bounds.mins()[1]);
-    EXPECT_DOUBLE_EQ(-16, brush->bounds.mins()[2]);
-
-    EXPECT_DOUBLE_EQ(64, brush->bounds.maxs()[0]);
-    EXPECT_DOUBLE_EQ(64, brush->bounds.maxs()[1]);
-    EXPECT_DOUBLE_EQ(16, brush->bounds.maxs()[2]);
-
-    FreeBrush(brush);
-}
-
 static void checkForAllCubeNormals(const brush_t *brush)
 {
     const vec3_t wanted[6] = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
@@ -213,7 +163,7 @@ static void checkForAllCubeNormals(const brush_t *brush)
     }
 
     for (const face_t *face = brush->faces; face; face = face->next) {
-        const plane_t faceplane = Face_Plane(face);
+        const qplane3d faceplane = Face_Plane(face);
 
         for (int i = 0; i < 6; i++) {
             if (VectorCompare(wanted[i], faceplane.normal, NORMAL_EPSILON)) {
@@ -236,82 +186,6 @@ static void checkCube(const brush_t *brush)
 
     EXPECT_EQ(contentflags_t{CONTENTS_SOLID}, brush->contents);
 }
-
-TEST(qbsp, SplitBrush)
-{
-    brush_t *brush = load128x128x32Brush();
-
-    const qvec3d planenormal {-1, 0, 0};
-    int planeside;
-    const int planenum = FindPlane(planenormal, 0.0, &planeside);
-
-    brush_t *front, *back;
-    SplitBrush(brush, planenum, planeside, &front, &back);
-
-    ASSERT_NE(nullptr, front);
-    ASSERT_NE(nullptr, back);
-
-    // front
-    EXPECT_DOUBLE_EQ(-64, front->bounds.mins()[0]);
-    EXPECT_DOUBLE_EQ(-64, front->bounds.mins()[1]);
-    EXPECT_DOUBLE_EQ(-16, front->bounds.mins()[2]);
-
-    EXPECT_DOUBLE_EQ(0, front->bounds.maxs()[0]);
-    EXPECT_DOUBLE_EQ(64, front->bounds.maxs()[1]);
-    EXPECT_DOUBLE_EQ(16, front->bounds.maxs()[2]);
-
-    checkCube(front);
-
-    // back
-    EXPECT_DOUBLE_EQ(0, back->bounds.mins()[0]);
-    EXPECT_DOUBLE_EQ(-64, back->bounds.mins()[1]);
-    EXPECT_DOUBLE_EQ(-16, back->bounds.mins()[2]);
-
-    EXPECT_DOUBLE_EQ(64, back->bounds.maxs()[0]);
-    EXPECT_DOUBLE_EQ(64, back->bounds.maxs()[1]);
-    EXPECT_DOUBLE_EQ(16, back->bounds.maxs()[2]);
-
-    checkCube(back);
-
-    FreeBrush(brush);
-    delete front;
-    delete back;
-}
-
-TEST(qbsp, SplitBrushOnSide)
-{
-    brush_t *brush = load128x128x32Brush();
-
-    const qvec3d planenormal {-1, 0, 0};
-    int planeside;
-    const int planenum = FindPlane(planenormal, -64.0, &planeside);
-
-    brush_t *front, *back;
-    SplitBrush(brush, planenum, planeside, &front, &back);
-
-    ASSERT_NE(nullptr, front);
-    checkCube(front);
-
-    EXPECT_EQ(nullptr, back);
-}
-
-#if 0
-TEST(qbsp, MemLeaks) {
-    brush_t *brush = load128x128x32Brush();
-    
-    const qvec3d planenormal { -1, 0, 0 };
-    int planeside;
-    const int planenum = FindPlane(planenormal, 0.0, &planeside);
-    
-    for (int i=0; i<1000000; i++) {
-        brush_t *front, *back;
-        SplitBrush(brush, planenum, planeside, &front, &back);
-        
-        FreeBrush(front);
-        FreeBrush(back);
-    }
-}
-#endif
 
 /**
  * Test that this skip face gets auto-corrected.

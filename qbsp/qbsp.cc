@@ -127,10 +127,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
         int32_t planenum = f->planenum;
 
         if (f->planeside) {
-            auto flipped = map.planes[f->planenum];
-            flipped.dist = -flipped.dist;
-            VectorInverse(flipped.normal);
-            planenum = FindPlane(flipped.normal, flipped.dist, nullptr);
+            planenum = FindPlane(-map.planes[f->planenum], nullptr);
         }
 
         int32_t outputplanenum = ExportMapPlane(planenum);
@@ -152,15 +149,14 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
 
             if (i == planes.size()) {
                 // add a new side
-                plane_t new_plane;
-                VectorClear(new_plane.normal);
+                qplane3d new_plane { };
                 new_plane.normal[axis] = dir;
                 if (dir == 1)
                     new_plane.dist = b->bounds.maxs()[axis];
                 else
                     new_plane.dist = -b->bounds.mins()[axis];
 
-                int32_t planenum = FindPlane(new_plane.normal, new_plane.dist, nullptr);
+                int32_t planenum = FindPlane(new_plane, nullptr);
                 int32_t outputplanenum = ExportMapPlane(planenum);
                 planes.emplace_back(outputplanenum, b->faces);
             }
@@ -206,7 +202,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                     // construct a plane
                     VectorClear(vec2);
                     vec2[axis] = dir;
-                    plane_t current;
+                    qplane3d current;
                     CrossProduct(vec, vec2, current.normal);
                     if (VectorNormalize(current.normal) < 0.5)
                         continue;
@@ -218,17 +214,10 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                     // behind this plane, it is a proper edge bevel
                     for (f = b->faces; f; f = f->next) {
                         auto &plane = map.planes[f->planenum];
-                        plane_t temp;
-                        VectorCopy(plane.normal, temp.normal);
-                        temp.dist = plane.dist;
-
-                        if (f->planeside) {
-                            temp.dist = -temp.dist;
-                            VectorInverse(temp.normal);
-                        }
+                        qplane3d temp = f->planeside ? -plane : plane;
 
                         // if this plane has allready been used, skip it
-                        if (PlaneEqual(&current, &temp))
+                        if (qv::epsilonEqual(current, temp))
                             break;
 
                         auto &w2 = f->w;
@@ -248,7 +237,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                         continue; // wasn't part of the outer hull
 
                     // add this plane
-                    int32_t planenum = FindPlane(current.normal, current.dist, nullptr);
+                    int32_t planenum = FindPlane(current, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
                     planes.emplace_back(outputplanenum, b->faces);
                 }
@@ -494,9 +483,9 @@ static void EmitAreaPortals(node_t *headnode)
 }
 #endif
 
-winding_t BaseWindingForPlane(const qbsp_plane_t *p)
+winding_t BaseWindingForPlane(const qplane3d &p)
 {
-    return winding_t::from_plane(p->normal, p->dist, options.worldExtent);
+    return winding_t::from_plane(p, options.worldExtent);
 }
 
 /*

@@ -43,7 +43,7 @@ enum pstatus_t
 
 struct portal_t
 {
-    plane_t plane; // normal pointing into neighbor
+    qplane3d plane; // normal pointing into neighbor
     int leaf; // neighbor
     std::shared_ptr<struct winding_t> winding;
     pstatus_t status;
@@ -123,7 +123,7 @@ struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
 struct sep_t
 {
     sep_t *next;
-    plane_t plane; // from portal is on positive side
+    qplane3d plane; // from portal is on positive side
 };
 
 struct passage_t
@@ -153,15 +153,15 @@ struct pstack_t
     portal_t *portal; // portal exiting
     std::shared_ptr<winding_t> source, pass;
     std::shared_ptr<winding_t> windings[STACK_WINDINGS]; // Fixed size windings
-    plane_t portalplane;
+    qplane3d portalplane;
     leafbits_t *mightsee; // bit string
-    plane_t separators[2][MAX_SEPARATORS]; /* Separator cache */
+    qplane3d separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
 };
 
 std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack);
 void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack);
-std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, plane_t *split);
+std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, qplane3d *split);
 
 struct threaddata_t
 {

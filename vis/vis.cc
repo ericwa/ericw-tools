@@ -162,7 +162,7 @@ void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack)
   is returned.
   ==================
 */
-std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, plane_t *split)
+std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, qplane3d *split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
     int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
@@ -714,196 +714,6 @@ void CalcVis(mbsp_t *bsp)
     }
 }
 
-/*
-  ============================================================================
-  PASSAGE CALCULATION (not used yet...)
-  ============================================================================
-*/
-#if 0
-int count_sep;
-
-bool PlaneCompare(plane_t *p1, plane_t *p2)
-{
-    int i;
-
-    if (fabs(p1->dist - p2->dist) > 0.01)
-        return false;
-
-    for (i = 0; i < 3; i++)
-        if (fabs(p1->normal[i] - p2->normal[i]) > 0.001)
-            return false;
-
-    return true;
-}
-
-sep_t *Findpassages(winding_t *source, winding_t *pass)
-{
-    int i, j, k, l;
-    plane_t plane;
-    vec3_t v1, v2;
-    float d;
-    double length;
-    int counts[3];
-    bool fliptest;
-    sep_t *sep, *list;
-
-    list = NULL;
-
-    // check all combinations
-    for (i = 0; i < source->numpoints; i++) {
-        l = (i + 1) % source->numpoints;
-        VectorSubtract(source->points[l], source->points[i], v1);
-
-        // fing a vertex of pass that makes a plane that puts all of the
-        // vertexes of pass on the front side and all of the vertexes of
-        // source on the back side
-        for (j = 0; j < pass->numpoints; j++) {
-            VectorSubtract(pass->points[j], source->points[i], v2);
-
-            plane.normal[0] = v1[1] * v2[2] - v1[2] * v2[1];
-            plane.normal[1] = v1[2] * v2[0] - v1[0] * v2[2];
-            plane.normal[2] = v1[0] * v2[1] - v1[1] * v2[0];
-
-            // if points don't make a valid plane, skip it
-
-            length = plane.normal[0] * plane.normal[0] + plane.normal[1] * plane.normal[1] +
-                     plane.normal[2] * plane.normal[2];
-
-            if (length < ON_EPSILON)
-                continue;
-
-            length = 1 / sqrt(length);
-
-            plane.normal[0] *= (vec_t)length;
-            plane.normal[1] *= (vec_t)length;
-            plane.normal[2] *= (vec_t)length;
-
-            plane.dist = DotProduct(pass->points[j], plane.normal);
-
-            //
-            // find out which side of the generated seperating plane has the
-            // source portal
-            //
-            fliptest = false;
-            for (k = 0; k < source->numpoints; k++) {
-                if (k == i || k == l)
-                    continue;
-                d = DotProduct(source->points[k], plane.normal) - plane.dist;
-                if (d < -ON_EPSILON) { // source is on the negative side, so we want all
-                    // pass and target on the positive side
-                    fliptest = false;
-                    break;
-                } else if (d > ON_EPSILON) { // source is on the positive side, so we want all
-                    // pass and target on the negative side
-                    fliptest = true;
-                    break;
-                }
-            }
-            if (k == source->numpoints)
-                continue; // planar with source portal
-
-            //
-            // flip the normal if the source portal is backwards
-            //
-            if (fliptest) {
-                VectorSubtract(vec3_origin, plane.normal, plane.normal);
-                plane.dist = -plane.dist;
-            }
-            //
-            // if all of the pass portal points are now on the positive side,
-            // this is the seperating plane
-            //
-            counts[0] = counts[1] = counts[2] = 0;
-            for (k = 0; k < pass->numpoints; k++) {
-                if (k == j)
-                    continue;
-                d = DotProduct(pass->points[k], plane.normal) - plane.dist;
-                if (d < -ON_EPSILON)
-                    break;
-                else if (d > ON_EPSILON)
-                    counts[0]++;
-                else
-                    counts[2]++;
-            }
-            if (k != pass->numpoints)
-                continue; // points on negative side, not a seperating plane
-
-            if (!counts[0])
-                continue; // planar with pass portal
-
-            //
-            // save this out
-            //
-            count_sep++;
-
-            sep = new sep_t;
-            sep->next = list;
-            list = sep;
-            sep->plane = plane;
-        }
-    }
-
-    return list;
-}
-
-/*
-  ============
-  CalcPassages
-  ============
-*/
-void CalcPassages(void)
-{
-    int i, j, k;
-    int count, count2;
-    leaf_t *l;
-    portal_t *p1, *p2;
-    sep_t *sep;
-    passage_t *passages;
-
-    LogPrint("building passages...\n");
-
-    count = count2 = 0;
-    for (i = 0; i < portalleafs; i++) {
-        l = &leafs[i];
-
-        for (j = 0; j < l->numportals; j++) {
-            p1 = l->portals[j];
-            for (k = 0; k < l->numportals; k++) {
-                if (k == j)
-                    continue;
-
-                count++;
-                p2 = l->portals[k];
-
-                // definately can't see into a coplanar portal
-                if (PlaneCompare(&p1->plane, &p2->plane))
-                    continue;
-
-                count2++;
-
-                sep = Findpassages(p1->winding, p2->winding);
-                if (!sep) {
-                    //                    Error ("No seperating planes found in portal pair");
-                    count_sep++;
-                    sep = new sep_t;
-                    sep->next = NULL;
-                    sep->plane = p1->plane;
-                }
-                passages = new passage_t;
-                passages->planes = sep;
-                passages->from = p1->leaf;
-                passages->to = p2->leaf;
-                passages->next = l->passages;
-                l->passages = passages;
-            }
-        }
-    }
-
-    LogPrint("numpassages: {} ({})\n", count2, count);
-    LogPrint("total passages: {}\n", count_sep);
-}
-#endif
-
 // ===========================================================================
 
 /*
@@ -920,7 +730,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     qfile_t f{nullptr, nullptr};
     int numpoints;
     int leafnums[2];
-    plane_t plane;
+    qplane3d plane;
 
     if (name == "-")
         f = {stdin, nullptr};
@@ -1027,8 +837,7 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         l->portals[l->numportals] = p;
         l->numportals++;
 
-        VectorSubtract(vec3_origin, plane.normal, p->plane.normal);
-        p->plane.dist = -plane.dist;
+        p->plane = -plane;
         p->leaf = leafnums[1];
         p->winding->SetWindingSphere();
         p++;
@@ -1195,8 +1004,6 @@ int main(int argc, char **argv)
     } else {
         uncompressed_q2 = new uint8_t[portalleafs * leafbytes]{};
     }
-
-    //    CalcPassages ();
 
     CalcVis(&bsp);
 
