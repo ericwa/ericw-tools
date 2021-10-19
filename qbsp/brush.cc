@@ -1116,6 +1116,11 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
     if (atoi(ValueForKey(src, "_omitbrushes")))
         return;
 
+    // _omitbrushes 1 just discards all brushes in the entity.
+    // could be useful for geometry guides, selective compilation, etc.
+    if (atoi(ValueForKey(src, "_omitbrushes")))
+        return;
+
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
         contentflags_t contents = Brush_GetContents(mapbrush);
