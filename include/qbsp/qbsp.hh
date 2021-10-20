@@ -55,9 +55,6 @@
 
 // Various other geometry maximums
 constexpr size_t MAXEDGES = 64;
-// don't let a base face get past this
-// because it can be split more later
-#define MAXPOINTS 60
 
 // For brush.c, normal and +16 (?)
 #define NUM_HULLS 2
@@ -205,7 +202,6 @@ struct node_t
 #include <qbsp/surfaces.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/region.hh>
-#include <qbsp/tjunc.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
 

@@ -22,145 +22,112 @@
 
 #include <qbsp/qbsp.hh>
 
-static int numwedges, numwverts;
+// don't let a base face get past this
+// because it can be split more later
+constexpr size_t MAXPOINTS = 60;
+
+namespace qv
+{
+    template<typename T>
+    [[nodiscard]] constexpr int32_t compareEpsilon(const T &v1, const T &v2, const T &epsilon)
+    {
+        T diff = v1 - v2;
+        return (diff > epsilon || diff < -epsilon) ? (diff < 0 ? -1 : 1) : 0;
+    }
+
+    template<typename T, size_t N>
+    [[nodiscard]] inline int32_t compareEpsilon(const qvec<T, N> &v1, const qvec<T, N> &v2, const T &epsilon)
+    {
+        for (size_t i = 0; i < N; i++) {
+            int32_t diff = compareEpsilon(v1[i], v2[i], epsilon);
+
+            if (diff) {
+                return diff;
+            }
+        }
+
+        return 0;
+    }
+}
+
+struct wedge_key_t
+{
+    qvec3d dir; /* direction vector for the edge */
+    qvec3d origin; /* origin (t = 0) in parametric form */
+
+    inline bool operator<(const wedge_key_t &other) const
+    {
+        int32_t diff = qv::compareEpsilon(dir, other.dir, EQUAL_EPSILON);
+
+        if (diff) {
+            return diff < 0;
+        }
+
+        diff = qv::compareEpsilon(origin, other.origin, EQUAL_EPSILON);
+
+        if (diff) {
+            return diff < 0;
+        }
+
+        return false;
+    }
+};
+
+using wedge_t = std::list<vec_t>; /* linked list of vertices on this edge */
+
+static int numwverts;
 static int tjuncs;
 static int tjuncfaces;
 
-static int cWVerts;
-static int cWEdges;
-
-static wvert_t *pWVerts;
-static wedge_t *pWEdges;
+static std::map<wedge_key_t, wedge_t> pWEdges;
 
 //============================================================================
 
-#define NUM_HASH 1024
-
-static wedge_t *wedge_hash[NUM_HASH];
-static qvec3d hash_min, hash_scale;
-
-static void InitHash(const qvec3d &mins, const qvec3d &maxs)
+static qvec3d CanonicalVector(const qvec3d &p1, const qvec3d &p2)
 {
-    vec_t volume;
-    vec_t scale;
-    int newsize[2];
-
-    hash_min = mins;
-    qvec3d size = maxs - mins;
-    memset(wedge_hash, 0, sizeof(wedge_hash));
-
-    volume = size[0] * size[1];
-
-    scale = sqrt(volume / NUM_HASH);
-
-    newsize[0] = (int)(size[0] / scale);
-    newsize[1] = (int)(size[1] / scale);
-
-    hash_scale[0] = newsize[0] / size[0];
-    hash_scale[1] = newsize[1] / size[1];
-    hash_scale[2] = (vec_t)newsize[1];
-}
-
-static unsigned HashVec(vec3_t vec)
-{
-    unsigned h;
-
-    h = (unsigned)(hash_scale[0] * (vec[0] - hash_min[0]) * hash_scale[2] + hash_scale[1] * (vec[1] - hash_min[1]));
-    if (h >= NUM_HASH)
-        return NUM_HASH - 1;
-    return h;
-}
-
-//============================================================================
-
-static void CanonicalVector(const qvec3d &p1, const qvec3d &p2, qvec3d &vec)
-{
-    VectorSubtract(p2, p1, vec);
+    qvec3d vec = p2 - p1;
     vec_t length = VectorNormalize(vec);
-    if (vec[0] > EQUAL_EPSILON)
-        return;
-    else if (vec[0] < -EQUAL_EPSILON) {
-        VectorInverse(vec);
-        return;
-    } else
-        vec[0] = 0;
 
-    if (vec[1] > EQUAL_EPSILON)
-        return;
-    else if (vec[1] < -EQUAL_EPSILON) {
-        VectorInverse(vec);
-        return;
-    } else
-        vec[1] = 0;
+    for (size_t i = 0; i < 3; i++) {
+        if (vec[i] > EQUAL_EPSILON) {
+            return vec;
+        } else if (vec[i] < -EQUAL_EPSILON) {
+            VectorInverse(vec);
+            return vec;
+        } else {
+            vec[i] = 0;
+        }
+    }
 
-    if (vec[2] > EQUAL_EPSILON)
-        return;
-    else if (vec[2] < -EQUAL_EPSILON) {
-        VectorInverse(vec);
-        return;
-    } else
-        vec[2] = 0;
-
-    LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", length, p1[0], p1[1], p1[2]);
+    LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3}\n", length, vec);
+    return vec;
 }
 
-static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t2)
+static std::pair<const wedge_key_t, wedge_t> &FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t2)
 {
-    qvec3d origin, edgevec;
-    wedge_t *edge;
-    int h;
-
-    CanonicalVector(p1, p2, edgevec);
+    qvec3d edgevec = CanonicalVector(p1, p2);
 
     t1 = DotProduct(p1, edgevec);
     t2 = DotProduct(p2, edgevec);
 
-    VectorMA(p1, -t1, edgevec, origin);
+    qvec3d origin = p1 + (edgevec * -t1);
 
     if (t1 > t2) {
         std::swap(t1, t2);
     }
 
-    h = HashVec(&origin[0]);
+    wedge_key_t key { edgevec, origin };
+    auto it = pWEdges.find(key);
 
-    for (edge = wedge_hash[h]; edge; edge = edge->next) {
-        vec_t temp = edge->origin[0] - origin[0];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->origin[1] - origin[1];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->origin[2] - origin[2];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-
-        temp = edge->dir[0] - edgevec[0];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->dir[1] - edgevec[1];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->dir[2] - edgevec[2];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-
-        return edge;
+    if (it != pWEdges.end()) {
+        return *it;
     }
 
-    if (numwedges >= cWEdges)
-        FError("Internal error: didn't allocate enough edges for tjuncs?");
-    edge = pWEdges + numwedges;
-    numwedges++;
+    auto &edge = pWEdges.emplace(key, wedge_t { }).first;
 
-    edge->next = wedge_hash[h];
-    wedge_hash[h] = edge;
+    edge->second.emplace_front(VECT_MAX);
 
-    VectorCopy(origin, edge->origin);
-    VectorCopy(edgevec, edge->dir);
-    edge->head.next = edge->head.prev = &edge->head;
-    edge->head.t = VECT_MAX;
-
-    return edge;
+    return *edge;
 }
 
 /*
@@ -169,31 +136,21 @@ AddVert
 
 ===============
 */
-static void AddVert(wedge_t *edge, vec_t t)
+static void AddVert(wedge_t &edge, vec_t t)
 {
-    wvert_t *v, *newv;
+    auto it = edge.begin();
 
-    v = edge->head.next;
-    do {
-        if (fabs(v->t - t) < T_EPSILON)
+    for (; it != edge.end(); it++) {
+        if (fabs(*it - t) < T_EPSILON) {
             return;
-        if (v->t > t)
+        } else if (*it > t) {
             break;
-        v = v->next;
-    } while (1);
+        }
+    }
 
     // insert a new wvert before v
-    if (numwverts >= cWVerts)
-        FError("Internal error: didn't allocate enough vertices for tjuncs?");
-
-    newv = pWVerts + numwverts;
+    edge.insert(it, t);
     numwverts++;
-
-    newv->t = t;
-    newv->next = v;
-    newv->prev = v->prev;
-    v->prev->next = newv;
-    v->prev = newv;
 }
 
 /*
@@ -205,9 +162,9 @@ AddEdge
 static void AddEdge(const qvec3d &p1, const qvec3d &p2)
 {
     vec_t t1, t2;
-    wedge_t *edge = FindEdge(p1, p2, t1, t2);
-    AddVert(edge, t1);
-    AddVert(edge, t2);
+    auto &edge = FindEdge(p1, p2, t1, t2);
+    AddVert(edge.second, t1);
+    AddVert(edge.second, t2);
 }
 
 /*
@@ -330,24 +287,20 @@ FixFaceEdges
 */
 static void FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
 {
-    int i, j;
-    wedge_t *edge;
-    wvert_t *v;
-    vec_t t1, t2;
-
     *superface = *face;
 
 restart:
-    for (i = 0; i < superface->w.size(); i++) {
-        j = (i + 1) % superface->w.size();
+    for (size_t i = 0; i < superface->w.size(); i++) {
+        size_t j = (i + 1) % superface->w.size();
+        
+        vec_t t1, t2;
+        auto &edge = FindEdge(superface->w[i], superface->w[j], t1, t2);
 
-        edge = FindEdge(superface->w[i], superface->w[j], t1, t2);
+        auto it = edge.second.begin();
+        while (*it < t1 + T_EPSILON)
+            it++;
 
-        v = edge->head.next;
-        while (v->t < t1 + T_EPSILON)
-            v = v->next;
-
-        if (v->t < t2 - T_EPSILON) {
+        if (*it < t2 - T_EPSILON) {
             /* insert a new vertex here */
             if (superface->w.size() == MAX_SUPERFACE_POINTS)
                 FError("tjunc fixups generated too many edges (max {})", MAX_SUPERFACE_POINTS);
@@ -360,10 +313,7 @@ restart:
             for (int32_t k = superface->w.size() - 1; k > j; k--)
                 VectorCopy(superface->w[k - 1], superface->w[k]);
 
-            vec3_t temp;
-            VectorMA(edge->origin, v->t, edge->dir, temp);
-
-            superface->w[j] = temp;
+            superface->w[j] = edge.first.origin + (edge.first.dir * *it);
             goto restart;
         }
     }
@@ -381,28 +331,12 @@ restart:
 
 //============================================================================
 
-static void tjunc_count_r(node_t *node)
-{
-    face_t *f;
-
-    if (node->planenum == PLANENUM_LEAF)
-        return;
-
-    for (f = node->faces; f; f = f->next)
-        cWVerts += f->w.size();
-
-    tjunc_count_r(node->children[0]);
-    tjunc_count_r(node->children[1]);
-}
-
 static void tjunc_find_r(node_t *node)
 {
-    face_t *f;
-
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    for (f = node->faces; f; f = f->next)
+    for (face_t *f = node->faces; f; f = f->next)
         AddFaceEdges(f);
 
     tjunc_find_r(node->children[0]);
@@ -411,14 +345,12 @@ static void tjunc_find_r(node_t *node)
 
 static void tjunc_fix_r(node_t *node, face_t *superface)
 {
-    face_t *face, *next, *facelist;
-
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    facelist = NULL;
+    face_t *facelist = nullptr;
 
-    for (face = node->faces; face; face = next) {
+    for (face_t *face = node->faces, *next = nullptr; face; face = next) {
         next = face->next;
         FixFaceEdges(face, superface, &facelist);
     }
@@ -438,39 +370,13 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    /*
-     * Guess edges = 1/2 verts
-     * Verts are arbitrarily multiplied by 2 because there appears to
-     * be a need for them to "grow" slightly.
-     */
-    cWVerts = 0;
-    tjunc_count_r(headnode);
-    cWEdges = cWVerts;
-    cWVerts *= 2;
+    pWEdges.clear();
 
-    pWVerts = new wvert_t[cWVerts]{};
-    pWEdges = new wedge_t[cWEdges]{};
-
-    qvec3d maxs;
-    /*
-     * identify all points on common edges
-     * origin points won't allways be inside the map, so extend the hash area
-     */
-    for (size_t i = 0; i < 3; i++) {
-        if (fabs(entity->bounds.maxs()[i]) > fabs(entity->bounds.mins()[i]))
-            maxs[i] = fabs(entity->bounds.maxs()[i]);
-        else
-            maxs[i] = fabs(entity->bounds.mins()[i]);
-    }
-    qvec3d mins = -maxs;
-
-    InitHash(mins, maxs);
-
-    numwedges = numwverts = 0;
+    numwverts = 0;
 
     tjunc_find_r(headnode);
 
-    LogPrint(LOG_STAT, "     {:8} world edges\n", numwedges);
+    LogPrint(LOG_STAT, "     {:8} world edges\n", pWEdges.size());
     LogPrint(LOG_STAT, "     {:8} edge points\n", numwverts);
 
     face_t superface;
@@ -478,9 +384,6 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
     tjunc_fix_r(headnode, &superface);
-
-    delete[] pWVerts;
-    delete[] pWEdges;
 
     LogPrint(LOG_STAT, "     {:8} edges added by tjunctions\n", tjuncs);
     LogPrint(LOG_STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);

@@ -339,7 +339,7 @@ int main(int argc, char **argv)
         LoadBSPFile(source, &bsp);
         PrintBSPFileSizes(&bsp);
 
-        WriteBSPFile(std::filesystem::path(source).replace_extension("bsp.rewrite"), &bsp);
+        //WriteBSPFile(std::filesystem::path(source).replace_extension("bsp.rewrite"), &bsp);
 
         ConvertBSPFormat(&bsp, &bspver_generic);
 

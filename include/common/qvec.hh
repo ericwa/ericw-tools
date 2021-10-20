@@ -270,13 +270,13 @@ struct fmt::formatter<qvec<T, N>> : formatter<T>
 namespace qv
 {
 template<class T>
-[[nodiscard]] qvec<T, 3> cross(const qvec<T, 3> &v1, const qvec<T, 3> &v2)
+[[nodiscard]] constexpr qvec<T, 3> cross(const qvec<T, 3> &v1, const qvec<T, 3> &v2)
 {
     return qvec<T, 3>(v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]);
 }
 
 template<size_t N, class T>
-[[nodiscard]] T dot(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] constexpr T dot(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     T result = 0;
     for (size_t i = 0; i < N; i++) {
@@ -306,7 +306,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] T min(const qvec<T, N> &v)
+[[nodiscard]] constexpr T min(const qvec<T, N> &v)
 {
     T res = std::numeric_limits<T>::largest();
     for (auto &c : v) {
@@ -316,7 +316,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] T max(const qvec<T, N> &v)
+[[nodiscard]] constexpr T max(const qvec<T, N> &v)
 {
     T res = std::numeric_limits<T>::lowest();
     for (auto &c : v) {
@@ -326,7 +326,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<T, N> min(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] constexpr qvec<T, N> min(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
@@ -336,7 +336,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<T, N> max(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] constexpr qvec<T, N> max(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
@@ -346,7 +346,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] T length2(const qvec<T, N> &v1)
+[[nodiscard]] constexpr T length2(const qvec<T, N> &v1)
 {
     T len2 = 0;
     for (size_t i = 0; i < N; i++) {
@@ -356,19 +356,19 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] T length(const qvec<T, N> &v1)
+[[nodiscard]] inline T length(const qvec<T, N> &v1)
 {
     return std::sqrt(length2(v1));
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<T, N> normalize(const qvec<T, N> &v1)
+[[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1)
 {
     return v1 / length(v1);
 }
 
 template<size_t N, class T>
-[[nodiscard]] T distance(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] inline T distance(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     return length(v2 - v1);
 }
@@ -380,13 +380,13 @@ template<typename T>
 }
 
 template<typename T>
-[[nodiscard]] bool epsilonEqual(const T &v1, const T &v2, T epsilon)
+[[nodiscard]] inline bool epsilonEqual(const T &v1, const T &v2, T epsilon)
 {
     return fabs(v1 - v2) <= epsilon;
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool epsilonEqual(const qvec<T, N> &v1, const qvec<T, N> &v2, T epsilon)
+[[nodiscard]] inline bool epsilonEqual(const qvec<T, N> &v1, const qvec<T, N> &v2, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
         if (!epsilonEqual(v1[i], v2[i], epsilon))
@@ -396,13 +396,13 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool epsilonEmpty(const qvec<T, N> &v1, T epsilon)
+[[nodiscard]] inline bool epsilonEmpty(const qvec<T, N> &v1, T epsilon)
 {
     return epsilonEqual({}, v1, epsilon);
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool equalExact(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] constexpr bool equalExact(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     for (size_t i = 0; i < N; i++) {
         if (v1[i] != v2[i])
@@ -412,13 +412,13 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] bool emptyExact(const qvec<T, N> &v1)
+[[nodiscard]] constexpr bool emptyExact(const qvec<T, N> &v1)
 {
     return equalExact({}, v1);
 }
 
 template<size_t N, class T>
-[[nodiscard]] size_t indexOfLargestMagnitudeComponent(const qvec<T, N> &v)
+[[nodiscard]] inline size_t indexOfLargestMagnitudeComponent(const qvec<T, N> &v)
 {
     size_t largestIndex = 0;
     T largestMag = 0;
@@ -436,13 +436,13 @@ template<size_t N, class T>
 }
 
 template<size_t N, typename T>
-[[nodiscard]] T TriangleArea(const qvec<T, N> &v0, const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] inline T TriangleArea(const qvec<T, N> &v0, const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     return static_cast<T>(0.5) * qv::length(qv::cross(v2 - v0, v1 - v0));
 }
 
 template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_type>
-[[nodiscard]] T PolyCentroid(Iter begin, Iter end)
+[[nodiscard]] inline T PolyCentroid(Iter begin, Iter end)
 {
     using value_type = typename T::value_type;
     size_t num_points = end - begin;
@@ -475,7 +475,7 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
 }
 
 template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_type, typename F = typename T::value_type>
-[[nodiscard]] F PolyArea(Iter begin, Iter end)
+[[nodiscard]] inline F PolyArea(Iter begin, Iter end)
 {
     Q_assert((end - begin) >= 3);
 
@@ -493,7 +493,7 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
 }
 
 template<typename T>
-[[nodiscard]] qvec<T, 3> Barycentric_FromPoint(const qvec<T, 3> &p, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
+[[nodiscard]] inline qvec<T, 3> Barycentric_FromPoint(const qvec<T, 3> &p, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
 {
     const auto v0 = t1 - t0;
     const auto v1 = t2 - t0;
@@ -515,7 +515,7 @@ template<typename T>
 
 // from global illumination total compendium p. 12
 template<typename T>
-[[nodiscard]] qvec<T, 3> Barycentric_Random(T r1, T r2)
+[[nodiscard]] inline qvec<T, 3> Barycentric_Random(T r1, T r2)
 {
     qvec<T, 3> res;
     res[0] = 1.0 - sqrt(r1);
@@ -526,14 +526,14 @@ template<typename T>
 
 /// Evaluates the given barycentric coord for the given triangle
 template<typename T>
-[[nodiscard]] qvec<T, 3> Barycentric_ToPoint(const qvec<T, 3> &bary, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
+[[nodiscard]] constexpr qvec<T, 3> Barycentric_ToPoint(const qvec<T, 3> &bary, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
 {
     return (t0 * bary[0]) + (t1 * bary[1]) + (t2 * bary[2]);
 }
 
 // Snap vector to nearest axial component
 template<typename T>
-[[nodiscard]] qvec<T, 3> Snap(qvec<T, 3> normal, const T &epsilon = NORMAL_EPSILON)
+[[nodiscard]] inline qvec<T, 3> Snap(qvec<T, 3> normal, const T &epsilon = NORMAL_EPSILON)
 {
     for (auto &v : normal) {
         if (fabs(v - 1) < epsilon) {
