@@ -406,7 +406,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     const vec_t minlight = atof(ValueForKey(entity, "_minlight"));
     if (minlight > 0) {
         // CHECK: allow > 510 now that we're float? or is it not worth it since it will
-        // be beyond max.
+        // be beyond max?
         flags.minlight = clamp(minlight, 0.0, 510.0);
     }
 

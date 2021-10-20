@@ -90,6 +90,8 @@ This allows for arbitrary collision sizes in engines that support it, currently 
 "-wrbrushes" combined with "-noclip" argument. This is NOT backwards compatible.
 .IP "\fB-notex\fP"
 Write only placeholder textures, to depend upon replacements. This avoids inclusion of third-party copyrighted images inside your maps, but is not backwards compatible but will work in FTEQW and QSS.
+.IP "\fB-notjunc\fP"
+Don't attempt to fix T-junctions. This is only for engines or formats that prefer micro-cracks over degenerate triangles. If you don't know what that means, don't set this.
 .IP "\fB-omitdetail\fP"
 Detail brushes are omitted from the compile.
 .IP "\fB-convert <fmt>\fP"

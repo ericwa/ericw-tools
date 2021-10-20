@@ -803,10 +803,16 @@ namespace qv
 }; // namespace qv
 
 // "vec3" type. legacy; eventually will be replaced entirely
-using vec3_t = vec_t[3];
+#if 0
+#define DEPRECATE_SNIFF [[deprecated]]
+#else
+#define DEPRECATE_SNIFF
+#endif
+
+using vec3_t DEPRECATE_SNIFF = vec_t[3];
 
 template<typename T1, typename T2>
-constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
+DEPRECATE_SNIFF constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
 {
     for (size_t i = 0; i < std::size(v1); i++)
         if (fabs(v1[i] - v2[i]) > epsilon)
@@ -816,7 +822,7 @@ constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
 }
 
 template<typename T, typename T2, typename T3>
-constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
+DEPRECATE_SNIFF constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
 {
     cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
     cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
@@ -824,13 +830,13 @@ constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
 }
 
 template<typename Tx, typename Ty>
-constexpr vec_t DotProduct(const Tx &x, const Ty &y)
+DEPRECATE_SNIFF constexpr vec_t DotProduct(const Tx &x, const Ty &y)
 {
     return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
 }
 
 template<typename Tx, typename Ty, typename Tout>
-constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
+DEPRECATE_SNIFF constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
 {
     out[0] = x[0] - y[0];
     out[1] = x[1] - y[1];
@@ -838,7 +844,7 @@ constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
 }
 
 template<typename Tx, typename Ty, typename Tout>
-constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
+DEPRECATE_SNIFF constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
 {
     out[0] = x[0] + y[0];
     out[1] = x[1] + y[1];
@@ -846,7 +852,7 @@ constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
 }
 
 template<typename TFrom, typename TTo>
-constexpr void VectorCopy(const TFrom &in, TTo &out)
+DEPRECATE_SNIFF constexpr void VectorCopy(const TFrom &in, TTo &out)
 {
     out[0] = in[0];
     out[1] = in[1];
@@ -854,7 +860,7 @@ constexpr void VectorCopy(const TFrom &in, TTo &out)
 }
 
 template<typename TFrom, typename TScale, typename TTo>
-constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
+DEPRECATE_SNIFF constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
 {
     out[0] = v[0] * scale;
     out[1] = v[1] * scale;
@@ -862,7 +868,7 @@ constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
 }
 
 template<typename T>
-constexpr void VectorInverse(T &v)
+DEPRECATE_SNIFF constexpr void VectorInverse(T &v)
 {
     v[0] = -v[0];
     v[1] = -v[1];
@@ -870,7 +876,7 @@ constexpr void VectorInverse(T &v)
 }
 
 template<typename T>
-constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
+DEPRECATE_SNIFF constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
 {
     out[0] = x;
     out[1] = y;
@@ -878,7 +884,7 @@ constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
 }
 
 template<typename T>
-constexpr void VectorClear(T &out)
+DEPRECATE_SNIFF constexpr void VectorClear(T &out)
 {
     out[0] = 0;
     out[1] = 0;
@@ -886,7 +892,7 @@ constexpr void VectorClear(T &out)
 }
 
 template<typename Ta, typename Tb, typename Tc>
-constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
+DEPRECATE_SNIFF constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
 {
     vc[0] = va[0] + scale * vb[0];
     vc[1] = va[1] + scale * vb[1];
@@ -894,7 +900,7 @@ constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
 }
 
 template<typename T>
-constexpr vec_t VectorLengthSq(const T &v)
+DEPRECATE_SNIFF constexpr vec_t VectorLengthSq(const T &v)
 {
     vec_t length = 0;
     for (int i = 0; i < 3; i++)
@@ -903,7 +909,7 @@ constexpr vec_t VectorLengthSq(const T &v)
 }
 
 template<typename T>
-inline vec_t VectorLength(const T &v)
+DEPRECATE_SNIFF inline vec_t VectorLength(const T &v)
 {
     vec_t length = VectorLengthSq(v);
     length = sqrt(length);
@@ -911,7 +917,7 @@ inline vec_t VectorLength(const T &v)
 }
 
 template<typename T>
-inline vec_t VectorNormalize(T &v)
+DEPRECATE_SNIFF inline vec_t VectorNormalize(T &v)
 {
     vec_t length = 0;
     for (size_t i = 0; i < 3; i++)

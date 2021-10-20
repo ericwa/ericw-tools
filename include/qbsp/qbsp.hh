@@ -282,6 +282,7 @@ public:
     vec_t worldExtent = 65536.0f;
     bool fNoThreads = false;
     bool includeSkip = false;
+    bool fNoTJunc = false;
 };
 
 extern options_t options;

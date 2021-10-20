@@ -1035,17 +1035,11 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
     return fadedist;
 }
 
-constexpr void Light_Add(lightsample_t *sample, const vec_t light, const qvec3d &color, const qvec3d &direction = {})
-{
-    sample->color += color * (light / 255.0f);
-    sample->direction += direction * light;
-}
-
 // CHECK: naming? why clamp*min*?
 constexpr void Light_ClampMin(lightsample_t *sample, const vec_t light, const qvec3d &color)
 {
     for (int i = 0; i < 3; i++) {
-        sample->color[i] = std::max(sample->color[i], color[i] * light / 255.0f);
+        sample->color[i] = std::max(sample->color[i], color[i] * (light / 255.0f));
     }
 }
 
@@ -1649,7 +1643,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
         if (cfg.addminlight.boolValue()) {
-            Light_Add(sample, value, color);
+            sample->color += color * (value / 255.0);
         } else {
             Light_ClampMin(sample, value, color);
         }
@@ -1715,7 +1709,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             value *=
                 Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], &entity, 0.0 /* TODO: pass distance */, lightsurf);
             if (cfg.addminlight.boolValue()) {
-                Light_Add(sample, value, entity.color.vec3Value());
+                sample->color += entity.color.vec3Value() * (value / 255.0);
             } else {
                 Light_ClampMin(sample, value, entity.color.vec3Value());
             }

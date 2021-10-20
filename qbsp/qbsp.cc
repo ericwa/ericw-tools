@@ -673,7 +673,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 // make the real portals for vis tracing
                 PortalizeWorld(entity, nodes, hullnum);
 
-                TJunc(entity, nodes);
+                if (!options.fNoTJunc) {
+                    TJunc(entity, nodes);
+                }
             }
 
             // Area portals
@@ -693,7 +695,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         }
 
         // bmodels
-        if (entity != pWorldEnt()) {
+        if (entity != pWorldEnt() && !options.fNoTJunc) {
             TJunc(entity, nodes);
         }
 
@@ -1348,6 +1350,8 @@ static void ParseOptions(char *szOptions)
                 szTok = szTok2;
             } else if (!Q_strcasecmp(szTok, "objexport")) {
                 options.fObjExport = true;
+            } else if (!Q_strcasecmp(szTok, "notjunc")) {
+                options.fNoTJunc = true;
             } else if (!Q_strcasecmp(szTok, "omitdetail")) {
                 options.fOmitDetail = true;
             } else if (!Q_strcasecmp(szTok, "omitdetailwall")) {
