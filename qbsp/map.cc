@@ -44,88 +44,42 @@
 
 static int rgfStartSpots;
 
-class texdef_valve_t
+struct texdef_valve_t
 {
-public:
-    vec3_t axis[2];
-    vec_t scale[2];
-    vec_t shift[2];
-
-    texdef_valve_t()
-    {
-        for (int i = 0; i < 2; i++)
-            for (int j = 0; j < 3; j++)
-                axis[i][j] = 0;
-
-        for (int i = 0; i < 2; i++)
-            scale[i] = 0;
-
-        for (int i = 0; i < 2; i++)
-            shift[i] = 0;
-    }
+    qmat<vec_t, 2, 3> axis { };
+    qvec2d scale { };
+    qvec2d shift { };
 };
 
-class texdef_quake_ed_t
+struct texdef_quake_ed_t
 {
-public:
-    vec_t rotate;
-    vec_t scale[2];
-    vec_t shift[2];
-
-    texdef_quake_ed_t() : rotate(0)
-    {
-        scale[0] = 0;
-        scale[1] = 0;
-        shift[0] = 0;
-        shift[1] = 0;
-    }
+    vec_t rotate = 0;
+    qvec2d scale { };
+    qvec2d shift { };
 };
 
-class texdef_quake_ed_noshift_t
+struct texdef_quake_ed_noshift_t
 {
-public:
-    vec_t rotate;
-    vec_t scale[2];
-
-    texdef_quake_ed_noshift_t() : rotate(0)
-    {
-        scale[0] = 0;
-        scale[1] = 0;
-    }
+    vec_t rotate = 0;
+    qvec2d scale { };
 };
 
-class texdef_etp_t
+struct texdef_etp_t
 {
-public:
-    vec3_t planepoints[3];
-    bool tx2;
-
-    texdef_etp_t() : tx2(false)
-    {
-        for (int i = 0; i < 3; i++)
-            for (int j = 0; j < 3; j++)
-                planepoints[i][j] = 0;
-    }
+    std::array<qvec3d, 3> planepoints { };
+    bool tx2 = false;
 };
 
-class texdef_brush_primitives_t
+struct texdef_brush_primitives_t
 {
-public:
-    vec3_t texMat[2];
-
-    texdef_brush_primitives_t()
-    {
-        for (int i = 0; i < 2; i++)
-            for (int j = 0; j < 3; j++)
-                texMat[i][j] = 0;
-    }
+    qmat<vec_t, 2, 3> texMat { };
 };
 
 static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
 static qvec2f projectToAxisPlane(const vec3_t snapped_normal, qvec3f point);
 static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
 static void SetTexinfo_QuakeEd_New(
-    const qbsp_plane_t &plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], texvecf &out_vecs);
+    const qbsp_plane_t &plane, const qvec2d &shift, vec_t rotate, const qvec2d &scale, texvecf &out_vecs);
 static void TestExpandBrushes(const mapentity_t *src);
 
 const mapface_t &mapbrush_t::face(int i) const
@@ -379,9 +333,9 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     // which we can just call instead of this block.
     if (options.target_game->id != GAME_QUAKE_II) {
         if (IsSkipName(texname))
-            flags.extended |= TEX_EXFLAG_SKIP;
+            flags.is_skip = true;
         if (IsHintName(texname))
-            flags.extended |= TEX_EXFLAG_HINT;
+            flags.is_hint = true;
         if (IsSpecialName(texname))
             flags.native |= TEX_SPECIAL;
     } else {
@@ -394,20 +348,20 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
         }
 
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
-            flags.extended |= TEX_EXFLAG_SKIP;
+            flags.is_skip = true;
         if ((flags.native & Q2_SURF_HINT) || IsHintName(texname))
-            flags.extended |= TEX_EXFLAG_HINT;
+            flags.is_hint = true;
     }
     if (IsNoExpandName(texname))
-        flags.extended |= TEX_EXFLAG_NOEXPAND;
+        flags.no_expand = true;
     if (atoi(ValueForKey(entity, "_dirt")) == -1)
-        flags.extended |= TEX_EXFLAG_NODIRT;
+        flags.no_dirt = true;
     if (atoi(ValueForKey(entity, "_bounce")) == -1)
-        flags.extended |= TEX_EXFLAG_NOBOUNCE;
+        flags.no_bounce = true;
     if (atoi(ValueForKey(entity, "_minlight")) == -1)
-        flags.extended |= TEX_EXFLAG_NOMINLIGHT;
+        flags.no_minlight = true;
     if (atoi(ValueForKey(entity, "_lightignore")) == 1)
-        flags.extended |= TEX_EXFLAG_LIGHTIGNORE;
+        flags.light_ignore = true;
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
     for (int i = 0; i <= 9; i++) {
@@ -418,16 +372,16 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 
         const char *excludeTex = ValueForKey(entity, key.c_str());
         if (strlen(excludeTex) > 0 && !Q_strcasecmp(texname, excludeTex)) {
-            flags.extended |= TEX_EXFLAG_NOMINLIGHT;
+            flags.no_minlight = true;
         }
     }
 
     if (shadow == -1)
-        flags.extended |= TEX_EXFLAG_NOSHADOW;
+        flags.no_shadow = true;
     if (!Q_strcasecmp("func_detail_illusionary", ValueForKey(entity, "classname"))) {
         /* Mark these entities as TEX_NOSHADOW unless the mapper set "_shadow" "1" */
         if (shadow != 1) {
-            flags.extended |= TEX_EXFLAG_NOSHADOW;
+            flags.no_shadow = true;
         }
     }
 
@@ -440,7 +394,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     }
 
     if (phongangle) {
-        flags.phong_angle = clamp((int)rint(phongangle), 0, 255);
+        flags.phong_angle = clamp(phongangle, 0.0, 360.0);
     }
 
     const vec_t phong_angle_concave = atof(ValueForKey(entity, "_phong_angle_concave"));
@@ -451,7 +405,9 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     // handle "_minlight"
     const vec_t minlight = atof(ValueForKey(entity, "_minlight"));
     if (minlight > 0) {
-        flags.minlight = clamp((int)rint(minlight), 0, 510) / 2; // map 0..510 to 0..255, so we can handle overbright
+        // CHECK: allow > 510 now that we're float? or is it not worth it since it will
+        // be beyond max.
+        flags.minlight = clamp(minlight, 0.0, 510.0);
     }
 
     // handle "_mincolor"
@@ -459,15 +415,14 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
         qvec3d mincolor{};
 
         GetVectorForKey(entity, "_mincolor", mincolor);
-        if (VectorCompare(vec3_origin, mincolor, EQUAL_EPSILON)) {
+        if (qv::epsilonEmpty(mincolor, EQUAL_EPSILON)) {
             GetVectorForKey(entity, "_minlight_color", mincolor);
         }
 
         normalize_color_format(mincolor);
-        if (!VectorCompare(vec3_origin, mincolor, EQUAL_EPSILON)) {
-
+        if (!qv::epsilonEmpty(mincolor, EQUAL_EPSILON)) {
             for (int32_t i = 0; i < 3; i++) {
-                flags.minlight_color[i] = clamp((int)rint(mincolor[i]), 0, 255);
+                flags.minlight_color[i] = clamp(mincolor[i], 0.0, 255.0);
             }
         }
     }
@@ -475,7 +430,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     // handle "_light_alpha"
     const vec_t lightalpha = atof(ValueForKey(entity, "_light_alpha"));
     if (lightalpha != 0.0) {
-        flags.light_alpha = clamp((int)rint(lightalpha * 255.0), 0, 255);
+        flags.light_alpha = clamp(lightalpha, 0.0, 1.0);
     }
 
     return flags;
@@ -955,7 +910,7 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
 }
 
 static void SetTexinfo_QuakeEd_New(
-    const qbsp_plane_t &plane, const vec_t shift[2], vec_t rotate, const vec_t scale[2], texvecf &out_vecs)
+    const qbsp_plane_t &plane, const qvec2d &shift, vec_t rotate, const qvec2d &scale, texvecf &out_vecs)
 {
     vec_t sanitized_scale[2];
     for (int i = 0; i < 2; i++) {
@@ -1017,8 +972,8 @@ static void SetTexinfo_QuakeEd_New(
     out_vecs.at(1, 3) = shift[1];
 }
 
-static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3d, 3> &planepts, const vec_t shift[2], vec_t rotate,
-    const vec_t scale[2], mtexinfo_t *out)
+static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3d, 3> &planepts, const qvec2d &shift, const vec_t &rotate,
+    const qvec2d &scale, mtexinfo_t *out)
 {
     int i, j;
     vec3_t vecs[2];
@@ -1162,13 +1117,13 @@ static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &plan
     out->vecs.at(1, 3) = -DotProduct(vecs[1], planepts[0]);
 }
 
-static void SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_t scale[2], mtexinfo_t *out)
+static void SetTexinfo_Valve220(qmat<vec_t, 2, 3> &axis, const qvec2d &shift, const qvec2d &scale, mtexinfo_t *out)
 {
     int i;
 
     for (i = 0; i < 3; i++) {
-        out->vecs.at(0, i) = axis[0][i] / scale[0];
-        out->vecs.at(1, i) = axis[1][i] / scale[1];
+        out->vecs.at(0, i) = axis.at(0, i) / scale[0];
+        out->vecs.at(1, i) = axis.at(1, i) / scale[1];
     }
     out->vecs.at(0, 3) = shift[0];
     out->vecs.at(1, 3) = shift[1];
@@ -1183,7 +1138,7 @@ static void SetTexinfo_Valve220(vec3_t axis[2], const vec_t shift[2], const vec_
  warning: special case behaviour of atan2( y, x ) <-> atan( y / x ) might not be the same everywhere when x == 0
  rotation by (0,RotY,RotZ) assigns X to normal
  */
-static void ComputeAxisBase(const qvec3d &normal_unsanitized, vec3_t texX, vec3_t texY)
+static void ComputeAxisBase(const qvec3d &normal_unsanitized, qvec3d &texX, qvec3d &texY)
 {
     vec_t RotY, RotZ;
 
@@ -1217,9 +1172,9 @@ static void ComputeAxisBase(const qvec3d &normal_unsanitized, vec3_t texX, vec3_
 }
 
 static void SetTexinfo_BrushPrimitives(
-    const vec3_t texMat[2], const qvec3d &faceNormal, int texWidth, int texHeight, texvecf &vecs)
+    const qmat<vec_t, 2, 3> &texMat, const qvec3d &faceNormal, int texWidth, int texHeight, texvecf &vecs)
 {
-    vec3_t texX, texY;
+    qvec3d texX, texY;
 
     ComputeAxisBase(faceNormal, texX, texY);
 
@@ -1246,15 +1201,15 @@ static void SetTexinfo_BrushPrimitives(
 
      */
 
-    vecs.at(0, 0) = texWidth * ((texX[0] * texMat[0][0]) + (texY[0] * texMat[0][1]));
-    vecs.at(0, 1) = texWidth * ((texX[1] * texMat[0][0]) + (texY[1] * texMat[0][1]));
-    vecs.at(0, 2) = texWidth * ((texX[2] * texMat[0][0]) + (texY[2] * texMat[0][1]));
-    vecs.at(0, 3) = texWidth * texMat[0][2];
+    vecs.at(0, 0) = texWidth * ((texX[0] * texMat.at(0, 0)) + (texY[0] * texMat.at(0, 1)));
+    vecs.at(0, 1) = texWidth * ((texX[1] * texMat.at(0, 0)) + (texY[1] * texMat.at(0, 1)));
+    vecs.at(0, 2) = texWidth * ((texX[2] * texMat.at(0, 0)) + (texY[2] * texMat.at(0, 1)));
+    vecs.at(0, 3) = texWidth * texMat.at(0, 2);
 
-    vecs.at(1, 0) = texHeight * ((texX[0] * texMat[1][0]) + (texY[0] * texMat[1][1]));
-    vecs.at(1, 1) = texHeight * ((texX[1] * texMat[1][0]) + (texY[1] * texMat[1][1]));
-    vecs.at(1, 2) = texHeight * ((texX[2] * texMat[1][0]) + (texY[2] * texMat[1][1]));
-    vecs.at(1, 3) = texHeight * texMat[1][2];
+    vecs.at(1, 0) = texHeight * ((texX[0] * texMat.at(1, 0)) + (texY[0] * texMat.at(1, 1)));
+    vecs.at(1, 1) = texHeight * ((texX[1] * texMat.at(1, 0)) + (texY[1] * texMat.at(1, 1)));
+    vecs.at(1, 2) = texHeight * ((texX[2] * texMat.at(1, 0)) + (texY[2] * texMat.at(1, 1)));
+    vecs.at(1, 3) = texHeight * texMat.at(1, 2);
 }
 
 static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const texvecf &in_vecs, vec_t *st_out)
@@ -1269,14 +1224,14 @@ static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], co
 static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     const qbsp_plane_t plane, const int texSize[2], const texvecf &in_vecs)
 {
-    vec3_t texX, texY;
+    qvec3d texX, texY;
     ComputeAxisBase(plane.normal, texX, texY);
 
     // ST of (0,0) (1,0) (0,1)
     vec_t ST[3][5]; // [ point index ] [ xyz ST ]
 
     // compute projection vector
-    vec3_t proj;
+    qvec3d proj;
     VectorCopy(plane.normal, proj);
     VectorScale(proj, plane.dist, proj);
 
@@ -1294,12 +1249,12 @@ static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     BSP_GetSTCoordsForPoint(&ST[2][0], texSize, in_vecs, &ST[2][3]);
     // compute texture matrix
     texdef_brush_primitives_t res;
-    res.texMat[0][2] = ST[0][3];
-    res.texMat[1][2] = ST[0][4];
-    res.texMat[0][0] = ST[1][3] - res.texMat[0][2];
-    res.texMat[1][0] = ST[1][4] - res.texMat[1][2];
-    res.texMat[0][1] = ST[2][3] - res.texMat[0][2];
-    res.texMat[1][1] = ST[2][4] - res.texMat[1][2];
+    res.texMat.at(0, 2) = ST[0][3];
+    res.texMat.at(1, 2) = ST[0][4];
+    res.texMat.at(0, 0) = ST[1][3] - res.texMat.at(0, 2);
+    res.texMat.at(1, 0) = ST[1][4] - res.texMat.at(1, 2);
+    res.texMat.at(0, 1) = ST[2][3] - res.texMat.at(0, 2);
+    res.texMat.at(1, 1) = ST[2][4] - res.texMat.at(1, 2);
     return res;
 }
 
@@ -1328,7 +1283,7 @@ parse_error:
     FError("line {}: Invalid brush plane format", parser.linenum);
 }
 
-static void ParseValve220TX(parser_t &parser, vec3_t axis[2], vec_t shift[2], vec_t *rotate, vec_t scale[2])
+static void ParseValve220TX(parser_t &parser, qmat<vec_t, 2, 3> &axis, qvec2d &shift, vec_t &rotate, qvec2d &scale)
 {
     int i, j;
 
@@ -1338,7 +1293,7 @@ static void ParseValve220TX(parser_t &parser, vec3_t axis[2], vec_t shift[2], ve
             goto parse_error;
         for (j = 0; j < 3; j++) {
             parser.parse_token(PARSE_SAMELINE);
-            axis[i][j] = std::stod(parser.token);
+            axis.at(i, j) = std::stod(parser.token);
         }
         parser.parse_token(PARSE_SAMELINE);
         shift[i] = std::stod(parser.token);
@@ -1347,7 +1302,7 @@ static void ParseValve220TX(parser_t &parser, vec3_t axis[2], vec_t shift[2], ve
             goto parse_error;
     }
     parser.parse_token(PARSE_SAMELINE);
-    rotate[0] = std::stod(parser.token);
+    rotate = std::stod(parser.token);
     parser.parse_token(PARSE_SAMELINE);
     scale[0] = std::stod(parser.token);
     parser.parse_token(PARSE_SAMELINE);
@@ -1358,7 +1313,7 @@ parse_error:
     FError("line {}: couldn't parse Valve220 texture info", parser.linenum);
 }
 
-static void ParseBrushPrimTX(parser_t &parser, vec3_t texMat[2])
+static void ParseBrushPrimTX(parser_t &parser, qmat<vec_t, 2, 3> &texMat)
 {
     parser.parse_token(PARSE_SAMELINE);
     if (parser.token != "(")
@@ -1371,7 +1326,7 @@ static void ParseBrushPrimTX(parser_t &parser, vec3_t texMat[2])
 
         for (int j = 0; j < 3; j++) {
             parser.parse_token(PARSE_SAMELINE);
-            texMat[i][j] = std::stod(parser.token);
+            texMat.at(i, j) = std::stod(parser.token);
         }
 
         parser.parse_token(PARSE_SAMELINE);
@@ -1392,9 +1347,9 @@ parse_error:
 static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t *brush, mtexinfo_t *tx,
     std::array<qvec3d, 3> &planepts, const qbsp_plane_t &plane)
 {
-    vec3_t texMat[2];
-    vec3_t axis[2];
-    vec_t shift[2], rotate, scale[2];
+    vec_t rotate;
+    qmat<vec_t, 2, 3> texMat, axis;
+    qvec2d shift, scale;
     texcoord_style_t tx_type;
 
     memset(tx, 0, sizeof(*tx));
@@ -1418,7 +1373,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
         parser.parse_token(PARSE_SAMELINE | PARSE_PEEK);
         if (parser.token == "[") {
-            ParseValve220TX(parser, axis, shift, &rotate, scale);
+            ParseValve220TX(parser, axis, shift, rotate, scale);
             tx_type = TX_VALVE_220;
 
             // Read extra Q2 params
@@ -1547,9 +1502,9 @@ static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
             mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
 
         // Reset texturing to sensible defaults
-        const double shift[2] = {0, 0};
-        const double rotate = 0;
-        const double scale[2] = {1, 1};
+        const std::array<vec_t, 2> shift {0, 0};
+        const vec_t rotate = 0;
+        const std::array<vec_t, 2> scale = {1, 1};
         SetTexinfo_QuakeEd(mapface.plane, mapface.planepts, shift, rotate, scale, tx);
 
         Q_assert(IsValidTextureProjection(mapface, tx));
@@ -1834,7 +1789,7 @@ void ProcessExternalMapEntity(mapentity_t *entity)
 
     qvec3d angles;
     GetVectorForKey(entity, "_external_map_angles", angles);
-    if (VectorCompare(angles, vec3_origin, EQUAL_EPSILON)) {
+    if (qv::epsilonEmpty(angles, EQUAL_EPSILON)) {
         angles[1] = atof(ValueForKey(entity, "_external_map_angle"));
     }
 
@@ -2047,7 +2002,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
             res.scale[i] = 0.0;
         }
         res.shift[i] = in_vecs.at(i, 3);
-        VectorCopy(axis, res.axis[i]);
+        VectorCopy(axis, res.axis.row(i));
     }
 
     return res;
@@ -2106,14 +2061,14 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
 
             fmt::print(f, "{} [ ", mapface.texname);
-            fprintDoubleAndSpc(f, valve.axis[0][0]);
-            fprintDoubleAndSpc(f, valve.axis[0][1]);
-            fprintDoubleAndSpc(f, valve.axis[0][2]);
+            fprintDoubleAndSpc(f, valve.axis.at(0, 0));
+            fprintDoubleAndSpc(f, valve.axis.at(0, 1));
+            fprintDoubleAndSpc(f, valve.axis.at(0, 2));
             fprintDoubleAndSpc(f, valve.shift[0]);
             f << "] [ ";
-            fprintDoubleAndSpc(f, valve.axis[1][0]);
-            fprintDoubleAndSpc(f, valve.axis[1][1]);
-            fprintDoubleAndSpc(f, valve.axis[1][2]);
+            fprintDoubleAndSpc(f, valve.axis.at(1, 0));
+            fprintDoubleAndSpc(f, valve.axis.at(1, 1));
+            fprintDoubleAndSpc(f, valve.axis.at(1, 2));
             fprintDoubleAndSpc(f, valve.shift[1]);
             f << "] 0 ";
             fprintDoubleAndSpc(f, valve.scale[0]);
@@ -2129,13 +2084,13 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
 
             const texdef_brush_primitives_t bp = TexDef_BSPToBrushPrimitives(mapface.plane, texSize, texinfo.vecs);
             f << "( ( ";
-            fprintDoubleAndSpc(f, bp.texMat[0][0]);
-            fprintDoubleAndSpc(f, bp.texMat[0][1]);
-            fprintDoubleAndSpc(f, bp.texMat[0][2]);
+            fprintDoubleAndSpc(f, bp.texMat.at(0, 0));
+            fprintDoubleAndSpc(f, bp.texMat.at(0, 1));
+            fprintDoubleAndSpc(f, bp.texMat.at(0, 2));
             f << ") ( ";
-            fprintDoubleAndSpc(f, bp.texMat[1][0]);
-            fprintDoubleAndSpc(f, bp.texMat[1][1]);
-            fprintDoubleAndSpc(f, bp.texMat[1][2]);
+            fprintDoubleAndSpc(f, bp.texMat.at(1, 0));
+            fprintDoubleAndSpc(f, bp.texMat.at(1, 1));
+            fprintDoubleAndSpc(f, bp.texMat.at(1, 2));
 
             // N.B.: always print the Q2/Q3 flags
             fmt::print(f, ") ) {} 0 0 0", mapface.texname);

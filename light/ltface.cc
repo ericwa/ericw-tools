@@ -723,27 +723,26 @@ static bool Lightsurf_Init(
     if (modelinfo->dirt.isChanged()) {
         lightsurf->nodirt = (modelinfo->dirt.intValue() == -1);
     } else {
-        lightsurf->nodirt = !!(extended_flags.extended & TEX_EXFLAG_NODIRT);
+        lightsurf->nodirt = extended_flags.no_dirt;
     }
 
     // minlight
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.floatValue();
     } else {
-        lightsurf->minlight = (float)extended_flags.minlight * 2; // see SurfFlagsForEntity
+        lightsurf->minlight = extended_flags.minlight;
     }
 
     // minlight_color
     if (modelinfo->minlight_color.isChanged()) {
-        VectorCopy(modelinfo->minlight_color.vec3Value(), lightsurf->minlight_color);
+        lightsurf->minlight_color = modelinfo->minlight_color.vec3Value();
     } else {
         // if modelinfo mincolor not set, use the one from the .texinfo file
-        vec3_t extended_mincolor{(float)extended_flags.minlight_color[0], (float)extended_flags.minlight_color[1],
-            (float)extended_flags.minlight_color[2]};
-        if (lightsurf->minlight > 0 && VectorCompare(extended_mincolor, vec3_origin, EQUAL_EPSILON)) {
-            VectorSet(extended_mincolor, 255, 255, 255);
+        if (lightsurf->minlight > 0 && qv::emptyExact(extended_flags.minlight_color)) {
+            lightsurf->minlight_color = { 255.0 };
+        } else {
+            lightsurf->minlight_color = extended_flags.minlight_color;
         }
-        VectorCopy(extended_mincolor, lightsurf->minlight_color);
     }
 
     /* never receive dirtmapping on lit liquids */
@@ -779,7 +778,8 @@ static bool Lightsurf_Init(
 
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     VectorCopy(tex->vecs.row(0), lightsurf->snormal);
-    VectorSubtract(vec3_origin, tex->vecs.row(1), lightsurf->tnormal);
+    VectorCopy(lightsurf->tnormal, tex->vecs.row(1).xyz());
+    VectorInverse(lightsurf->tnormal);
     VectorNormalize(lightsurf->snormal);
     VectorNormalize(lightsurf->tnormal);
 
@@ -1035,10 +1035,10 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
     return fadedist;
 }
 
-constexpr void Light_Add(lightsample_t *sample, const vec_t light, const qvec3d &color, const qvec3d &direction)
+constexpr void Light_Add(lightsample_t *sample, const vec_t light, const qvec3d &color, const qvec3d &direction = {})
 {
-    VectorMA(sample->color, light / 255.0f, color, sample->color);
-    VectorMA(sample->direction, light, direction, sample->direction);
+    sample->color += color * (light / 255.0f);
+    sample->direction += direction * light;
 }
 
 // CHECK: naming? why clamp*min*?
@@ -1633,7 +1633,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
-    if ((extended_flags.extended & TEX_EXFLAG_NOMINLIGHT) != 0) {
+    if (extended_flags.no_minlight) {
         return; /* this face is excluded from minlight */
     }
 
@@ -1649,7 +1649,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
         if (cfg.addminlight.boolValue()) {
-            Light_Add(sample, value, color, vec3_origin);
+            Light_Add(sample, value, color);
         } else {
             Light_ClampMin(sample, value, color);
         }
@@ -1662,7 +1662,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
     }
 
     // FIXME: Refactor this?
-    if (lightsurf->modelinfo->lightignore.boolValue() || (extended_flags.extended & TEX_EXFLAG_LIGHTIGNORE) != 0)
+    if (lightsurf->modelinfo->lightignore.boolValue() || extended_flags.light_ignore)
         return;
 
     /* Cast rays for local minlight entities */
@@ -1715,7 +1715,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             value *=
                 Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], &entity, 0.0 /* TODO: pass distance */, lightsurf);
             if (cfg.addminlight.boolValue()) {
-                Light_Add(sample, value, entity.color.vec3Value(), vec3_origin);
+                Light_Add(sample, value, entity.color.vec3Value());
             } else {
                 Light_ClampMin(sample, value, entity.color.vec3Value());
             }
@@ -3292,7 +3292,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
         /* positive lights */
-        if (!(modelinfo->lightignore.boolValue() || (extended_flags.extended & TEX_EXFLAG_LIGHTIGNORE) != 0)) {
+        if (!(modelinfo->lightignore.boolValue() || extended_flags.light_ignore)) {
             for (const auto &entity : GetLights()) {
                 if (entity.getFormula() == LF_LOCALMIN)
                     continue;
@@ -3330,7 +3330,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
         }
 
         /* negative lights */
-        if (!(modelinfo->lightignore.boolValue() || (extended_flags.extended & TEX_EXFLAG_LIGHTIGNORE) != 0)) {
+        if (!(modelinfo->lightignore.boolValue() || extended_flags.light_ignore)) {
             for (const auto &entity : GetLights()) {
                 if (entity.getFormula() == LF_LOCALMIN)
                     continue;

@@ -609,10 +609,10 @@ static void SetupSkyDomes(const globalconfig_t &cfg)
                 // Add the upper dome, like sunlight2 (pointing down)
                 SetupSkyDome(cfg, entity.light.floatValue(), entity.color.vec3Value(), entity.dirt.intValue(),
                     entity.anglescale.floatValue(), entity.style.intValue(), entity.suntexture.stringValue(), 0,
-                    vec3_origin, 0, 0, 0, "");
+                             {}, 0, 0, 0, "");
             } else {
                 // Add the lower dome, like sunlight3 (pointing up)
-                SetupSkyDome(cfg, 0, vec3_origin, 0, 0, 0, "", entity.light.floatValue(), entity.color.vec3Value(),
+                SetupSkyDome(cfg, 0, {}, 0, 0, 0, "", entity.light.floatValue(), entity.color.vec3Value(),
                     entity.dirt.intValue(), entity.anglescale.floatValue(), entity.style.intValue(),
                     entity.suntexture.stringValue());
             }
@@ -1265,7 +1265,7 @@ static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3d &pos)
     surflights_dump_file << EntData_Write({epairs});
 }
 
-static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const light_t *surflight_template)
+static void CreateSurfaceLight(const qvec3d &origin, const qvec3d &normal, const light_t *surflight_template)
 {
     light_t &entity = all_lights.emplace_back(DuplicateEntity(*surflight_template));
 
@@ -1277,7 +1277,7 @@ static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const
     /* set spotlight vector based on face normal */
     if (atoi(ValueForKey(surflight_template, "_surface_spotlight"))) {
         entity.spotlight = true;
-        VectorCopy(normal, entity.spotvec);
+        entity.spotvec = normal;
     }
 
     /* export it to a map file for debugging */
@@ -1289,36 +1289,24 @@ static void CreateSurfaceLight(const vec3_t &origin, const vec3_t &normal, const
 static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const modelinfo_t *face_modelinfo,
     const light_t *surflight_template, const mbsp_t *bsp, int numverts, const qvec3d *verts)
 {
-    int i;
-    vec3_t midpoint = {0, 0, 0};
-    vec3_t normal;
-    vec_t offset;
-
-    for (i = 0; i < numverts; i++) {
-        VectorAdd(midpoint, verts[i], midpoint);
-    }
-    midpoint[0] /= numverts;
-    midpoint[1] /= numverts;
-    midpoint[2] /= numverts;
-    VectorCopy(bsp->dplanes[face->planenum].normal, normal);
-    vec_t dist = bsp->dplanes[face->planenum].dist;
+    qvec3d midpoint = qv::PolyCentroid(verts, verts + numverts);
+    qplane3d plane = bsp->dplanes[face->planenum];
 
     /* Nudge 2 units (by default) along face normal */
     if (face->side) {
-        dist = -dist;
-        VectorSubtract(vec3_origin, normal, normal);
+        plane = -plane;
     }
 
-    offset = atof(ValueForKey(surflight_template, "_surface_offset"));
+    vec_t offset = atof(ValueForKey(surflight_template, "_surface_offset"));
     if (offset == 0)
         offset = 2.0;
 
-    VectorMA(midpoint, offset, normal, midpoint);
+    midpoint += plane.normal * offset;
 
     /* Add the model offset */
     VectorAdd(midpoint, face_modelinfo->offset, midpoint);
 
-    CreateSurfaceLight(midpoint, normal, surflight_template);
+    CreateSurfaceLight(midpoint, plane.normal, surflight_template);
 }
 
 static aabb3d BoundPoly(int numverts, qvec3d *verts)

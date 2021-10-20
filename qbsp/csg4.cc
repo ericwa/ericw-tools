@@ -55,7 +55,8 @@ static int MakeSkipTexinfo()
     mtexinfo_t mt{};
 
     mt.miptex = FindMiptex("skip", true);
-    mt.flags = {0, TEX_EXFLAG_SKIP};
+    mt.flags = {};
+    mt.flags.is_skip = true;
 
     return FindTexinfo(mt);
 }

@@ -41,25 +41,11 @@
 
 // texturing
 
-class texdef_valve_t
+struct texdef_valve_t
 {
-public:
-    vec3_t axis[2];
-    vec_t scale[2];
-    vec_t shift[2];
-
-    texdef_valve_t()
-    {
-        for (int i = 0; i < 2; i++)
-            for (int j = 0; j < 3; j++)
-                axis[i][j] = 0;
-
-        for (int i = 0; i < 2; i++)
-            scale[i] = 0;
-
-        for (int i = 0; i < 2; i++)
-            shift[i] = 0;
-    }
+    qmat<vec_t, 2, 3> axis { };
+    qvec2d scale { };
+    qvec2d shift { };
 };
 
 // FIXME: merge with map.cc copy
@@ -86,7 +72,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
             res.scale[i] = 0.0;
         }
         res.shift[i] = in_vecs.at(i, 3);
-        VectorCopy(axis, res.axis[i]);
+        VectorCopy(axis, res.axis.row(i));
     }
 
     return res;
@@ -97,8 +83,8 @@ static void WriteFaceTexdef(const mbsp_t *bsp, const mface_t *face, fmt::memory_
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
     const auto valve = TexDef_BSPToValve(texinfo->vecs);
 
-    fmt::format_to(file, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", valve.axis[0][0], valve.axis[0][1],
-        valve.axis[0][2], valve.shift[0], valve.axis[1][0], valve.axis[1][1], valve.axis[1][2], valve.shift[1], 0.0,
+    fmt::format_to(file, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", valve.axis.at(0, 0), valve.axis.at(0, 1),
+        valve.axis.at(0, 2), valve.shift[0], valve.axis.at(1, 0), valve.axis.at(1, 1), valve.axis.at(1, 2), valve.shift[1], 0.0,
         valve.scale[0], valve.scale[1]);
 }
 

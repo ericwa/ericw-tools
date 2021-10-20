@@ -299,8 +299,8 @@ static bool DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbru
 CreateBrushFaces
 =================
 */
-static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const qvec3d &rotate_offset,
-    const rotation_t rottype, const int hullnum)
+static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
+                                const rotation_t rottype = rotation_t::none, const qvec3d &rotate_offset = {})
 {
     vec_t r;
     face_t *f;
@@ -659,7 +659,7 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const f
 
     // expand all of the planes
     for (auto &mapface : hullbrush->faces) {
-        if (mapface.flags.extended & TEX_EXFLAG_NOEXPAND)
+        if (mapface.flags.no_expand)
             continue;
         qvec3d corner { };
         for (x = 0; x < 3; x++) {
@@ -745,7 +745,7 @@ static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush)
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
-        if (texinfo.flags.extended & TEX_EXFLAG_SKIP) {
+        if (texinfo.flags.is_skip) {
             continue;
         }
 
@@ -837,11 +837,11 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 
     if (hullnum <= 0) {
         // for hull 0 or BSPX -wrbrushes collision, apply the rotation offset now
-        facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
+        facelist = CreateBrushFaces(src, &hullbrush, hullnum, rottype, rotate_offset);
     } else {
         // for Quake-style clipping hulls, don't apply rotation offset yet..
         // it will be applied below
-        facelist = CreateBrushFaces(src, &hullbrush, vec3_origin, rottype, hullnum);
+        facelist = CreateBrushFaces(src, &hullbrush, hullnum);
     }
 
     if (!facelist) {
@@ -855,7 +855,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
         Q_assert(hullnum < hulls.size());
         ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);
         FreeBrushFaces(facelist);
-        facelist = CreateBrushFaces(src, &hullbrush, rotate_offset, rottype, hullnum);
+        facelist = CreateBrushFaces(src, &hullbrush, hullnum, rottype, rotate_offset);
     }
 
     // create the brush

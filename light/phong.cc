@@ -491,8 +491,8 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         const qplane3d f_plane = Face_Plane(bsp, &f);
 
         // any face normal within this many degrees can be smoothed with this face
-        const int f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
-        int f_phong_angle_concave = extended_texinfo_flags[f.texinfo].phong_angle_concave;
+        const vec_t &f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
+        vec_t f_phong_angle_concave = extended_texinfo_flags[f.texinfo].phong_angle_concave;
         if (f_phong_angle_concave == 0) {
             f_phong_angle_concave = f_phong_angle;
         }
@@ -509,8 +509,8 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                     continue;
 
                 // FIXME: factor out and share with above?
-                const int f2_phong_angle = extended_texinfo_flags[f2->texinfo].phong_angle;
-                int f2_phong_angle_concave = extended_texinfo_flags[f2->texinfo].phong_angle_concave;
+                const vec_t &f2_phong_angle = extended_texinfo_flags[f2->texinfo].phong_angle;
+                vec_t f2_phong_angle_concave = extended_texinfo_flags[f2->texinfo].phong_angle_concave;
                 if (f2_phong_angle_concave == 0) {
                     f2_phong_angle_concave = f2_phong_angle;
                 }

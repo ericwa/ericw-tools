@@ -109,7 +109,7 @@ struct lightsurf_t
     const mface_t *face;
     /* these take precedence the values in modelinfo */
     vec_t minlight;
-    vec3_t minlight_color;
+    qvec3d minlight_color;
     bool nodirt;
 
     qplane3d plane;
@@ -230,7 +230,7 @@ public:
     lockable_vec_t phong_angle{"phong_angle", 0};
     lockable_vec_t alpha{"alpha", 1.0};
     lockable_vec3_t minlight_color{
-        strings{"minlight_color", "mincolor"}, 255, 255, 255, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
+        strings{"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
     lockable_bool_t lightignore{"lightignore", false};
 
     float getResolvedPhongAngle() const
@@ -347,7 +347,7 @@ extern int write_litfile;
 extern int write_luxfile;
 extern bool onlyents;
 extern bool scaledonly;
-extern surfflags_t *extended_texinfo_flags;
+extern std::vector<surfflags_t> extended_texinfo_flags;
 extern bool novisapprox;
 extern bool nolights;
 extern bool litonly;

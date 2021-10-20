@@ -787,54 +787,63 @@ private:
 
 #define Q2_SURF_TRANSLUCENT (Q2_SURF_TRANS33 | Q2_SURF_TRANS66) // mxd
 
-// QBSP/LIGHT flags
-#define TEX_EXFLAG_SKIP (1U << 0) /* an invisible surface */
-#define TEX_EXFLAG_HINT (1U << 1) /* hint surface */
-#define TEX_EXFLAG_NODIRT (1U << 2) /* don't receive dirtmapping */
-#define TEX_EXFLAG_NOSHADOW (1U << 3) /* don't cast a shadow */
-#define TEX_EXFLAG_NOBOUNCE (1U << 4) /* light doesn't bounce off this face */
-#define TEX_EXFLAG_NOMINLIGHT (1U << 5) /* opt out of minlight on this face */
-#define TEX_EXFLAG_NOEXPAND (1U << 6) /* don't expand this face for larger clip hulls */
-#define TEX_EXFLAG_LIGHTIGNORE (1U << 7) /* PLEASE DOCUMENT ME MOMMY */
-
 struct surfflags_t
 {
     // native flags value; what's written to the BSP basically
     int32_t native;
 
-    // extra flags, specific to BSP/LIGHT only
-    uint8_t extended;
+    // an invisible surface
+    bool is_skip;
+
+    // hint surface
+    bool is_hint;
+
+    // don't receive dirtmapping
+    bool no_dirt;
+
+    // don't cast a shadow
+    bool no_shadow;
+
+    // light doesn't bounce off this face
+    bool no_bounce;
+
+    // opt out of minlight on this face
+    bool no_minlight;
+
+    // don't expand this face for larger clip hulls
+    bool no_expand;
+
+    // this face doesn't receive light
+    bool light_ignore;
 
     // if non zero, enables phong shading and gives the angle threshold to use
-    uint8_t phong_angle;
-
-    // minlight value for this face, multiplied by 0.5, so we can store overbrights in 8 bits
-    // FIXME: skip the compression and just store a float? serialize all of these to a JSON .texinfo
-    // for better extensibility?
-    uint8_t minlight;
-
-    // red minlight colors for this face
-    // FIXME: this probably makes it illegal to memcpy() from a surfflags_t, which is done in
-    // WriteExtendedTexinfoFlags. Again, points to switching to JSON serialization.
-    std::array<uint8_t, 3> minlight_color;
+    vec_t phong_angle;
 
     // if non zero, overrides _phong_angle for concave joints
-    uint8_t phong_angle_concave;
+    vec_t phong_angle_concave;
+
+    // minlight value for this face
+    vec_t minlight;
+
+    // red minlight colors for this face
+    qvec3b minlight_color;
 
     // custom opacity
-    uint8_t light_alpha;
+    vec_t light_alpha;
 
     constexpr bool needs_write() const
     {
-        return (extended & ~(TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT)) || phong_angle || minlight || minlight_color[0] ||
-               minlight_color[1] || minlight_color[2] || phong_angle_concave || light_alpha;
+        return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle || phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha;
     }
 
+private:
     constexpr auto as_tuple() const
     {
-        return std::tie(native, extended, phong_angle, minlight, minlight_color, phong_angle_concave, light_alpha);
+        return std::tie(native, is_skip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand, light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha);
     }
 
+public:
+    // sort support
     constexpr bool operator<(const surfflags_t &other) const { return as_tuple() < other.as_tuple(); }
 
     constexpr bool operator>(const surfflags_t &other) const { return as_tuple() > other.as_tuple(); }

@@ -364,7 +364,7 @@ static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
              */
             bool hintsplit = false;
             for (const face_t *face = surf->faces; face; face = face->next) {
-                if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_HINT)
+                if (map.mtexinfos.at(face->texinfo).flags.is_hint)
                     hintsplit = true;
             }
 
@@ -385,11 +385,11 @@ static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
                 for (const face_t *face = surf2->faces; face; face = face->next) {
                     const surfflags_t &flags = map.mtexinfos.at(face->texinfo).flags;
                     /* Don't penalize for splitting skip faces */
-                    if (flags.extended & TEX_EXFLAG_SKIP)
+                    if (flags.is_skip)
                         continue;
                     if (FaceSide(face, plane) == SIDE_ON) {
                         /* Never split a hint face except with a hint */
-                        if (!hintsplit && (flags.extended & TEX_EXFLAG_HINT)) {
+                        if (!hintsplit && flags.is_hint) {
                             splits = INT_MAX;
                             break;
                         }

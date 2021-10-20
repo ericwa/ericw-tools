@@ -295,7 +295,7 @@ static std::vector<node_t *> FindOccupiedLeafs(node_t *headnode)
         mapentity_t *entity = &map.entities.at(i);
 
         /* skip entities at (0 0 0) (bmodels) */
-        if (VectorCompare(entity->origin, vec3_origin, EQUAL_EPSILON))
+        if (qv::epsilonEmpty(entity->origin, EQUAL_EPSILON))
             continue;
 
         /* find the leaf it's in. Skip opqaue leafs */

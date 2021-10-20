@@ -30,8 +30,6 @@
 
 using namespace polylib;
 
-const vec3_t vec3_origin = {0, 0, 0};
-
 qmat3x3d RotateAboutX(double t)
 {
     // https://en.wikipedia.org/wiki/Rotation_matrix#Examples

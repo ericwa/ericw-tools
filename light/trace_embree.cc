@@ -70,9 +70,8 @@ static float Face_Alpha(const modelinfo_t *modelinfo, const mface_t *face)
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
     // for _light_alpha, 0 is considered unset
-    const float alpha_float = (float)extended_flags.light_alpha / (float)UCHAR_MAX;
-    if (alpha_float != 0.0f) {
-        return alpha_float;
+    if (extended_flags.light_alpha) {
+        return extended_flags.light_alpha;
     }
 
     // next check modelinfo alpha (defaults to 1.0)
@@ -527,7 +526,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
             // check for TEX_NOSHADOW
             const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
-            if (extended_flags.extended & TEX_EXFLAG_NOSHADOW)
+            if (extended_flags.no_shadow)
                 continue;
 
             // handle switchableshadow

@@ -414,11 +414,7 @@ template<size_t N, class T>
 template<size_t N, class T>
 [[nodiscard]] bool emptyExact(const qvec<T, N> &v1)
 {
-    for (size_t i = 0; i < N; i++) {
-        if (v1[i])
-            return false;
-    }
-    return true;
+    return equalExact({}, v1);
 }
 
 template<size_t N, class T>
@@ -568,6 +564,7 @@ using qvec2i = qvec<int32_t, 2>;
 using qvec3i = qvec<int32_t, 3>;
 
 using qvec3s = qvec<int16_t, 3>;
+using qvec3b = qvec<uint8_t, 3>;
 
 template<class T>
 class qplane3
@@ -807,8 +804,6 @@ namespace qv
 
 // "vec3" type. legacy; eventually will be replaced entirely
 using vec3_t = vec_t[3];
-
-extern const vec3_t vec3_origin;
 
 template<typename T1, typename T2>
 constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)

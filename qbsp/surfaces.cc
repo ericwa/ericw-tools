@@ -46,7 +46,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
 
-    if (tex->flags.extended & (TEX_EXFLAG_SKIP | TEX_EXFLAG_HINT) ||
+    if (tex->flags.is_skip || tex->flags.is_hint ||
         !options.target_game->surf_is_subdivided(tex->flags))
         return;
     // subdivision is pretty much pointless other than because of lightmap block limits
@@ -300,9 +300,9 @@ FindFaceEdges
 */
 static void FindFaceEdges(mapentity_t *entity, face_t *face)
 {
-    if (!options.includeSkip && (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP))
+    if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
         return;
-    if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_HINT)
+    if (map.mtexinfos.at(face->texinfo).flags.is_hint)
         return;
 
     face->outputnumber = std::nullopt;
@@ -348,9 +348,9 @@ static void EmitFace(mapentity_t *entity, face_t *face)
 {
     int i;
     
-    if (!options.includeSkip && (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP))
+    if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
         return;
-    if (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_HINT)
+    if (map.mtexinfos.at(face->texinfo).flags.is_hint)
         return;
 
     // emit a region
@@ -405,9 +405,9 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
 
 static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t &vertexesCount)
 {
-    if (!options.includeSkip && (map.mtexinfos.at(f->texinfo).flags.extended & TEX_EXFLAG_SKIP))
+    if (!options.includeSkip && map.mtexinfos.at(f->texinfo).flags.is_skip)
         return;
-    if (map.mtexinfos.at(f->texinfo).flags.extended & TEX_EXFLAG_HINT)
+    if (map.mtexinfos.at(f->texinfo).flags.is_hint)
         return;
 
     if (f->lmshift[1] != 4)

@@ -51,6 +51,7 @@
 #include <string>
 
 #include <common/qvec.hh>
+#include <common/json.hh>
 
 using namespace std;
 
@@ -110,7 +111,7 @@ bool litonly = false;
 bool skiplighting = false;
 bool write_normals = false;
 
-surfflags_t *extended_texinfo_flags = nullptr;
+std::vector<surfflags_t> extended_texinfo_flags;
 
 std::filesystem::path mapfilename;
 
@@ -495,27 +496,47 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename, const mbsp_t *bsp)
 {
     // always create the zero'ed array
-    extended_texinfo_flags = new surfflags_t[bsp->texinfo.size()]{};
+    extended_texinfo_flags.resize(bsp->texinfo.size());
 
     std::filesystem::path filename(sourcefilename);
-    filename.replace_extension("texinfo");
+    filename.replace_extension("texinfo.json");
 
-    qfile_t texinfofile = SafeOpenRead(filename);
+    std::ifstream texinfofile(filename, std::ios_base::in | std::ios_base::binary);
 
     if (!texinfofile)
         return;
 
     LogPrint("Loading extended texinfo flags from {}...\n", filename);
 
-    extended_flags_header_t header;
+    json j;
 
-    if (SafeRead(texinfofile, &header, sizeof(extended_flags_header_t)) != sizeof(extended_flags_header_t) ||
-        header.num_texinfo != bsp->texinfo.size() || header.surfflags_size != sizeof(surfflags_t) ||
-        SafeRead(texinfofile, extended_texinfo_flags, sizeof(surfflags_t) * header.num_texinfo) !=
-            (sizeof(surfflags_t) * header.num_texinfo)) {
-        LogPrint("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
-        memset(extended_texinfo_flags, 0, bsp->texinfo.size() * sizeof(uint32_t));
-        return;
+    texinfofile >> j;
+
+    for (auto it = j.begin(); it != j.end(); ++it) {
+        size_t index = std::stoull(it.key());
+
+        if (index >= bsp->texinfo.size()) {
+            LogPrint("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
+            memset(extended_texinfo_flags.data(), 0, bsp->texinfo.size() * sizeof(surfflags_t));
+            return;
+        }
+
+        auto &val = it.value();
+        auto &flags = extended_texinfo_flags[index];
+        
+        flags.is_skip = val.at("is_skip").get<bool>();
+        flags.is_hint = val.at("is_hint").get<bool>();
+        flags.no_dirt = val.at("no_dirt").get<bool>();
+        flags.no_shadow = val.at("no_shadow").get<bool>();
+        flags.no_bounce = val.at("no_bounce").get<bool>();
+        flags.no_minlight = val.at("no_minlight").get<bool>();
+        flags.no_expand = val.at("no_expand").get<bool>();
+        flags.light_ignore = val.at("light_ignore").get<bool>();
+        flags.phong_angle = val.at("phong_angle").get<vec_t>();
+        flags.phong_angle_concave = val.at("phong_angle_concave").get<vec_t>();
+        flags.minlight = val.at("minlight").get<vec_t>();
+        flags.minlight_color = val.at("minlight_color").get<qvec3b>();
+        flags.light_alpha = val.at("light_alpha").get<vec_t>();
     }
 }
 

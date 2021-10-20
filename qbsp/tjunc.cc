@@ -37,17 +37,16 @@ static wedge_t *pWEdges;
 #define NUM_HASH 1024
 
 static wedge_t *wedge_hash[NUM_HASH];
-static vec3_t hash_min, hash_scale;
+static qvec3d hash_min, hash_scale;
 
-static void InitHash(vec3_t mins, vec3_t maxs)
+static void InitHash(const qvec3d &mins, const qvec3d &maxs)
 {
-    vec3_t size;
     vec_t volume;
     vec_t scale;
     int newsize[2];
 
-    VectorCopy(mins, hash_min);
-    VectorSubtract(maxs, mins, size);
+    hash_min = mins;
+    qvec3d size = maxs - mins;
     memset(wedge_hash, 0, sizeof(wedge_hash));
 
     volume = size[0] * size[1];
@@ -437,9 +436,6 @@ tjunc
 */
 void TJunc(const mapentity_t *entity, node_t *headnode)
 {
-    vec3_t maxs, mins;
-    int i;
-
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     /*
@@ -455,17 +451,18 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     pWVerts = new wvert_t[cWVerts]{};
     pWEdges = new wedge_t[cWEdges]{};
 
+    qvec3d maxs;
     /*
      * identify all points on common edges
      * origin points won't allways be inside the map, so extend the hash area
      */
-    for (i = 0; i < 3; i++) {
+    for (size_t i = 0; i < 3; i++) {
         if (fabs(entity->bounds.maxs()[i]) > fabs(entity->bounds.mins()[i]))
             maxs[i] = fabs(entity->bounds.maxs()[i]);
         else
             maxs[i] = fabs(entity->bounds.mins()[i]);
     }
-    VectorSubtract(vec3_origin, maxs, mins);
+    qvec3d mins = -maxs;
 
     InitHash(mins, maxs);
 

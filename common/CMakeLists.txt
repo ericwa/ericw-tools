@@ -18,6 +18,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/parser.hh
     ${CMAKE_SOURCE_DIR}/include/common/polylib.hh
     ${CMAKE_SOURCE_DIR}/include/common/qvec.hh
+    ${CMAKE_SOURCE_DIR}/include/common/json.hh
     ${CMAKE_SOURCE_DIR}/include/common/threads.hh)
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt nlohmann_json::nlohmann_json)

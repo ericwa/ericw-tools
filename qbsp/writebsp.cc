@@ -26,6 +26,10 @@
 #include <vector>
 #include <algorithm>
 #include <cstdint>
+#include <common/json.hh>
+#include <fstream>
+
+using nlohmann::json;
 
 static contentflags_t RemapContentsForExport(const contentflags_t &content)
 {
@@ -186,7 +190,7 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     for (face_t **markfaces = node->markfaces; *markfaces; markfaces++) {
         face_t *face = *markfaces;
 
-        if (!options.includeSkip && (map.mtexinfos.at(face->texinfo).flags.extended & TEX_EXFLAG_SKIP))
+        if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
             continue;
 
         /* emit a marksurface */
@@ -311,10 +315,9 @@ void BeginBSPFile(void)
 static void WriteExtendedTexinfoFlags(void)
 {
     bool needwrite = false;
-    const int num_texinfo = map.numtexinfo();
 
-    for (int i = 0; i < num_texinfo; i++) {
-        if (map.mtexinfos.at(i).flags.needs_write()) {
+    for (auto &texinfo : map.mtexinfos) {
+        if (texinfo.flags.needs_write()) {
             // this texinfo uses some extended flags, write them to a file
             needwrite = true;
             break;
@@ -329,19 +332,8 @@ static void WriteExtendedTexinfoFlags(void)
     std::sort(texinfos_sorted.begin(), texinfos_sorted.end(),
         [](const mtexinfo_t &a, const mtexinfo_t &b) { return a.outputnum < b.outputnum; });
 
-    options.szBSPName.replace_extension("texinfo");
-
-    qfile_t texinfofile = SafeOpenWrite(options.szBSPName);
-
-    if (!texinfofile)
-        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
-
-    extended_flags_header_t header;
-    header.num_texinfo = map.bsp.texinfo.size();
-    header.surfflags_size = sizeof(surfflags_t);
-
-    SafeWrite(texinfofile, &header, sizeof(header));
-
+    json texinfofile = json::object();
+    
     size_t count = 0;
     for (const auto &tx : texinfos_sorted) {
         if (!tx.outputnum.has_value())
@@ -349,20 +341,26 @@ static void WriteExtendedTexinfoFlags(void)
 
         Q_assert(count == tx.outputnum.value()); // check we are outputting them in the proper sequence
 
-        SafeWrite(texinfofile, &tx.flags, sizeof(tx.flags));
+        texinfofile[std::to_string(*tx.outputnum)] = {
+            { "is_skip", tx.flags.is_skip },
+            { "is_hint", tx.flags.is_hint },
+            { "no_dirt", tx.flags.no_dirt },
+            { "no_shadow", tx.flags.no_shadow },
+            { "no_bounce", tx.flags.no_bounce },
+            { "no_minlight", tx.flags.no_minlight },
+            { "no_expand", tx.flags.no_expand },
+            { "light_ignore", tx.flags.light_ignore },
+            { "phong_angle", tx.flags.phong_angle },
+            { "phong_angle_concave", tx.flags.phong_angle_concave },
+            { "minlight", tx.flags.minlight },
+            { "minlight_color", tx.flags.minlight_color },
+            { "light_alpha", tx.flags.light_alpha }
+        };
         count++;
     }
     Q_assert(count == map.bsp.texinfo.size());
-}
 
-template<class C>
-static void CopyVector(const std::vector<C> &vec, int *elementCountOut, C **arrayCopyOut)
-{
-    C *data = new C[vec.size()];
-    memcpy(data, vec.data(), sizeof(C) * vec.size());
-
-    *elementCountOut = vec.size();
-    *arrayCopyOut = (C *)data;
+    std::ofstream(std::filesystem::path(options.szBSPName).replace_extension("texinfo.json"), std::ios_base::out | std::ios_base::binary) << texinfofile;
 }
 
 /*
@@ -373,6 +371,7 @@ WriteBSPFile
 static void WriteBSPFile()
 {
     bspdata_t bspdata{};
+
     bspdata.bsp = std::move(map.bsp);
 
     bspdata.version = &bspver_generic;
