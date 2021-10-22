@@ -482,7 +482,7 @@ static void TextureAxisFromPlane(const qbsp_plane_t &plane, qvec3d &xv, qvec3d &
     bestaxis = 0;
 
     for (i = 0; i < 6; i++) {
-        dot = DotProduct(plane.normal, baseaxis[i * 3]);
+        dot = qv::dot(plane.normal, baseaxis[i * 3]);
         if (dot > best || (dot == best && !options.fOldaxis)) {
             best = dot;
             bestaxis = i;
@@ -1062,10 +1062,10 @@ static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &plan
     VectorScale(vecs[0], 1.0 / 128.0, vecs[0]);
     VectorScale(vecs[1], 1.0 / 128.0, vecs[1]);
 
-    a = DotProduct(vecs[0], vecs[0]);
-    b = DotProduct(vecs[0], vecs[1]);
-    c = b; /* DotProduct(vecs[1], vecs[0]); */
-    d = DotProduct(vecs[1], vecs[1]);
+    a = qv::dot(vecs[0], vecs[0]);
+    b = qv::dot(vecs[0], vecs[1]);
+    c = b; /* qv::dot(vecs[1], vecs[0]); */
+    d = qv::dot(vecs[1], vecs[1]);
 
     /*
      * Want to solve for out->vecs:
@@ -1093,8 +1093,8 @@ static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &plan
         vecs[0][i] = out->vecs.at(0, i);
         vecs[1][i] = out->vecs.at(1, i);
     }
-    out->vecs.at(0, 3) = -DotProduct(vecs[0], planepts[0]);
-    out->vecs.at(1, 3) = -DotProduct(vecs[1], planepts[0]);
+    out->vecs.at(0, 3) = -qv::dot(vecs[0], planepts[0]);
+    out->vecs.at(1, 3) = -qv::dot(vecs[1], planepts[0]);
 }
 
 static void SetTexinfo_Valve220(qmat<vec_t, 2, 3> &axis, const qvec2d &shift, const qvec2d &scale, mtexinfo_t *out)
@@ -1427,11 +1427,11 @@ bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
     /* calculate the normal/dist plane equation */
     qvec3d ab = planepts[0] - planepts[1];
     qvec3d cb = planepts[2] - planepts[1];
+    
+    vec_t length;
 
-    CrossProduct(ab, cb, plane.normal);
-
-    vec_t length = VectorNormalize(plane.normal);
-    plane.dist = DotProduct(planepts[1], plane.normal);
+    plane.normal = qv::normalize(qv::cross(ab, cb), length);
+    plane.dist = qv::dot(planepts[1], plane.normal);
 
     return length >= NORMAL_EPSILON;
 }

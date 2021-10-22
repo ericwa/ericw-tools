@@ -130,7 +130,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
          */
         pl = &map.planes[p->planenum];
         plane2 = w->plane();
-        if (DotProduct(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
+        if (qv::dot(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
             fmt::print(portalFile, "{} {} {} ", w->size(), back, front);
         else
             fmt::print(portalFile, "{} {} {} ", w->size(), front, back);
@@ -431,7 +431,7 @@ static void CheckWindingArea(winding_t *w)
     for (i = 1; i < w->numpoints; i++) {
         VectorSubtract(w->points[i], w->points[0], v1);
         VectorSubtract(w->points[i + 1], w->points[0], v2);
-        CrossProduct(v1, v2, cross);
+        cross = qv::cross(v1, v2);
         add = VectorLength(cross);
         total += add * 0.5;
     }
@@ -475,7 +475,7 @@ static void CheckLeafPortalConsistancy(node_t *node)
 
             w = p2->winding;
             for (i = 0; i < w->numpoints; i++) {
-                dist = DotProduct(w->points[i], plane.normal) - plane.dist;
+                dist = plane.distance_to(w->points[i]);
                 if ((side == 0 && dist < -1) || (side == 1 && dist > 1)) {
                     LogPrint("WARNING: Portal siding direction is wrong\n");
                     return;

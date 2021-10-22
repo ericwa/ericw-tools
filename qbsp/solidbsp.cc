@@ -122,9 +122,8 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
         }
     } else {
         /* sloping planes take longer */
-        const vec_t *p = &in->w[0][0];
-        for (i = 0; i < in->w.size(); i++, p += 3) {
-            const vec_t dot = DotProduct(p, split.normal) - split.dist;
+        for (i = 0; i < in->w.size(); i++) {
+            const vec_t dot = split.distance_to(in->w[i]);
             if (dot > ON_EPSILON) {
                 if (have_back)
                     return SIDE_ON;
@@ -147,7 +146,7 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
 
 inline int FaceSide(const face_t *in, const qbsp_plane_t &split)
 {
-    vec_t dist = DotProduct(in->origin, split.normal) - split.dist;
+    vec_t dist = split.distance_to(in->origin);
 
     if (dist > in->radius)
         return SIDE_FRONT;
@@ -195,10 +194,10 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
                 corner[c] = in_bounds[j][c];
 
                 corner[a] = in_bounds[0][a];
-                dist1 = DotProduct(corner, split.normal) - split.dist;
+                dist1 = split.distance_to(corner);
 
                 corner[a] = in_bounds[1][a];
-                dist2 = DotProduct(corner, split.normal) - split.dist;
+                dist2 = split.distance_to(corner);
 
                 mid = in_bounds[1][a] - in_bounds[0][a];
                 mid *= (dist1 / (dist1 - dist2));
@@ -544,7 +543,7 @@ static void DividePlane(surface_t *in, const qplane3d &split, surface_t **front,
     *front = *back = NULL;
 
     // parallel case is easy
-    if (VectorCompare(inplane->normal, split.normal, EQUAL_EPSILON)) {
+    if (qv::epsilonEqual(inplane->normal, split.normal, EQUAL_EPSILON)) {
         // check for exactly on node
         if (inplane->dist == split.dist) {
             face_t *facet = in->faces;

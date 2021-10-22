@@ -77,7 +77,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
             qvec3d tmp = tex->vecs.row(axis).xyz();
 
             for (int32_t i = 0; i < f->w.size(); i++) {
-                v = DotProduct(f->w[i], tmp);
+                v = qv::dot(f->w[i], tmp);
                 if (v < mins)
                     mins = v;
                 if (v > maxs)

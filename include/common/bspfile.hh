@@ -476,6 +476,20 @@ struct dplane_t : qplane3f
 
     // serialize for streams
     auto stream_data() { return std::tie(normal, dist, type); }
+
+    // optimized case
+    template<typename T>
+    inline T distance_to_fast(const qvec<T, 3> &point) const
+    {
+        switch (type) {
+            case PLANE_X: return point[0] - dist;
+            case PLANE_Y: return point[1] - dist;
+            case PLANE_Z: return point[2] - dist;
+            default: {
+                return qplane3f::distance_to(point);
+            }
+        }
+    }
 };
 
 // Q1 contents

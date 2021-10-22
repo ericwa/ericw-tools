@@ -681,11 +681,9 @@ static void SetLitNeeded()
 
 static void CheckLitNeeded(const globalconfig_t &cfg)
 {
-    static constexpr qvec3d white{255};
-
     // check lights
     for (const auto &light : GetLights()) {
-        if (!VectorCompare(white, light.color.vec3Value(), EQUAL_EPSILON) ||
+        if (!qv::epsilonEqual(vec3_white, light.color.vec3Value(), EQUAL_EPSILON) ||
             light.projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
             SetLitNeeded();
             return;
@@ -694,11 +692,11 @@ static void CheckLitNeeded(const globalconfig_t &cfg)
 
     // check global settings
     if (cfg.bouncecolorscale.floatValue() != 0 ||
-        !VectorCompare(cfg.minlight_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(cfg.sunlight_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(cfg.sun2_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(cfg.sunlight2_color.vec3Value(), white, EQUAL_EPSILON) ||
-        !VectorCompare(cfg.sunlight3_color.vec3Value(), white, EQUAL_EPSILON)) {
+        !qv::epsilonEqual(cfg.minlight_color.vec3Value(), vec3_white, EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight_color.vec3Value(), vec3_white, EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sun2_color.vec3Value(), vec3_white, EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight2_color.vec3Value(), vec3_white, EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight3_color.vec3Value(), vec3_white, EQUAL_EPSILON)) {
         SetLitNeeded();
         return;
     }

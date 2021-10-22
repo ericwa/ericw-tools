@@ -48,7 +48,7 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
     }
 
     auto &plane = map.planes[node->planenum];
-    vec_t dist = DotProduct(plane.normal, point) - plane.dist;
+    vec_t dist = plane.distance_to(point);
 
     if (dist > 0) {
         // point is on the front of the node plane

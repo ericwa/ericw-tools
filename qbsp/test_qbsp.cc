@@ -166,7 +166,7 @@ static void checkForAllCubeNormals(const brush_t *brush)
         const qplane3d faceplane = Face_Plane(face);
 
         for (int i = 0; i < 6; i++) {
-            if (VectorCompare(wanted[i], faceplane.normal, NORMAL_EPSILON)) {
+            if (qv::epsilonEqual(wanted[i], faceplane.normal, NORMAL_EPSILON)) {
                 EXPECT_FALSE(found[i]);
                 found[i] = true;
             }

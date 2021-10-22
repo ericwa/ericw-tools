@@ -275,11 +275,13 @@ template<class T>
     return qvec<T, 3>(v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]);
 }
 
-template<size_t N, class T>
-[[nodiscard]] constexpr T dot(const qvec<T, N> &v1, const qvec<T, N> &v2)
+template<typename T, typename U, typename L = std::common_type_t<typename T::value_type, typename U::value_type>>
+[[nodiscard]] constexpr L dot(const T &v1, const U &v2)
 {
-    T result = 0;
-    for (size_t i = 0; i < N; i++) {
+    static_assert(std::size(T()) == std::size(U()), "Can't dot() with two differently-sized vectors");
+
+    L result = 0;
+    for (size_t i = 0; i < std::size(v1); i++) {
         result += v1[i] * v2[i];
     }
     return result;
@@ -362,9 +364,23 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
+[[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1, T &len)
+{
+    return v1 / (len = length(v1));
+}
+
+template<size_t N, class T>
 [[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1)
 {
     return v1 / length(v1);
+}
+
+template<size_t N, class T>
+[[nodiscard]] inline T normalizeInPlace(qvec<T, N> &v1)
+{
+    T len = length(v1);
+    v1 /= len;
+    return len;
 }
 
 template<size_t N, class T>
@@ -600,6 +616,13 @@ public:
     }
 
     [[nodiscard]] constexpr qplane3 operator-() const { return { -normal, -dist }; }
+
+    // generic case
+    template<typename T>
+    inline T distance_to(const qvec<T, 3> &point) const
+    {
+        return qv::dot(point, normal) - dist;
+    }
 };
 
 using qplane3f = qplane3<float>;
@@ -803,35 +826,10 @@ namespace qv
 }; // namespace qv
 
 // "vec3" type. legacy; eventually will be replaced entirely
-#if 0
 #define DEPRECATE_SNIFF [[deprecated]]
-#else
+
+#undef DEPRECATE_SNIFF
 #define DEPRECATE_SNIFF
-#endif
-
-template<typename T1, typename T2>
-DEPRECATE_SNIFF constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
-{
-    for (size_t i = 0; i < std::size(v1); i++)
-        if (fabs(v1[i] - v2[i]) > epsilon)
-            return false;
-
-    return true;
-}
-
-template<typename T, typename T2, typename T3>
-DEPRECATE_SNIFF constexpr void CrossProduct(const T &v1, const T2 &v2, T3 &cross)
-{
-    cross[0] = v1[1] * v2[2] - v1[2] * v2[1];
-    cross[1] = v1[2] * v2[0] - v1[0] * v2[2];
-    cross[2] = v1[0] * v2[1] - v1[1] * v2[0];
-}
-
-template<typename Tx, typename Ty>
-DEPRECATE_SNIFF constexpr vec_t DotProduct(const Tx &x, const Ty &y)
-{
-    return x[0] * y[0] + x[1] * y[1] + x[2] * y[2];
-}
 
 template<typename Tx, typename Ty, typename Tout>
 DEPRECATE_SNIFF constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)

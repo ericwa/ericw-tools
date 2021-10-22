@@ -787,7 +787,7 @@ static bool Lightsurf_Init(
     /* Correct the plane for the model offset (must be done last,
        calculation of face extents / points needs the uncorrected plane) */
     qvec3d planepoint = (plane->normal * plane->dist) + modelinfo->offset;
-    plane->dist = DotProduct(plane->normal, planepoint);
+    plane->dist = qv::dot(plane->normal, planepoint);
 
     /* Correct bounding sphere */
     VectorAdd(lightsurf->origin, modelinfo->offset, lightsurf->origin);
@@ -919,7 +919,7 @@ vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist
 static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm,
     const qvec3d &surfpointToLightDir, float dist, bool twosided)
 {
-    float angle = DotProduct(surfpointToLightDir, surfnorm);
+    vec_t angle = qv::dot(surfpointToLightDir, surfnorm);
     if (entity->bleed.boolValue() || twosided) {
         if (angle < 0) {
             angle = -angle; // ericw -- support "_bleed" option
@@ -938,7 +938,7 @@ static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *en
     /* Check spotlight cone */
     float spotscale = 1;
     if (entity->spotlight) {
-        const vec_t falloff = DotProduct(entity->spotvec, surfpointToLightDir);
+        const vec_t falloff = qv::dot(entity->spotvec, surfpointToLightDir);
         if (falloff > entity->spotfalloff) {
             return 0;
         }
@@ -1265,7 +1265,7 @@ std::map<int, qvec3f> GetDirectLighting(
         const float surfpointToLightDist =
             max(128.0, GetDir(vpl.pos, origin,
                             surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
-        const float angle = DotProduct(surfpointToLightDir, normal);
+        const vec_t angle = qv::dot(surfpointToLightDir, normal);
         if (angle <= 0)
             continue;
 
@@ -1341,7 +1341,7 @@ std::map<int, qvec3f> GetDirectLighting(
 
         qvec3d originLightDir = qv::normalize(sun.sunvec);
 
-        vec_t cosangle = DotProduct(originLightDir, normal);
+        vec_t cosangle = qv::dot(originLightDir, normal);
         if (cosangle < 0) {
             continue;
         }
@@ -1389,7 +1389,7 @@ static void LightFace_Entity(
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const qplane3d *plane = &lightsurf->plane;
 
-    const float planedist = DotProduct(entity->origin.vec3Value(), plane->normal) - plane->dist;
+    const vec_t planedist = plane->distance_to(entity->origin.vec3Value());
 
     /* don't bother with lights behind the surface.
 
@@ -1504,7 +1504,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
     qvec3d incoming = qv::normalize(sun->sunvec);
 
     /* Don't bother if surface facing away from sun */
-    const float dp = DotProduct(incoming, plane->normal);
+    const vec_t dp = qv::dot(incoming, plane->normal);
     if (dp < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
         return;
     }
@@ -1520,14 +1520,14 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
         if (lightsurf->occluded[i])
             continue;
 
-        float angle = DotProduct(incoming, surfnorm);
+        vec_t angle = qv::dot(incoming, surfnorm);
         if (lightsurf->twosided) {
             if (angle < 0) {
                 angle = -angle;
             }
         }
 
-        angle = max(0.0f, angle);
+        angle = max(0.0, angle);
 
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         float value = angle * sun->sunlight;
@@ -2376,10 +2376,8 @@ static void GetUpRtVecs(const qvec3d &normal, qvec3d &myUp, qvec3d &myRt)
         }
     } else {
         constexpr qvec3d worldUp = { 0, 0, 1 };
-        CrossProduct(normal, worldUp, myRt);
-        VectorNormalize(myRt);
-        CrossProduct(myRt, normal, myUp);
-        VectorNormalize(myUp);
+        myRt = qv::normalize(qv::cross(normal, worldUp));
+        myUp = qv::normalize(qv::cross(myRt, normal));
     }
 }
 

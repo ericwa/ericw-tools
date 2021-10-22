@@ -129,8 +129,8 @@ static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t
 
     CanonicalVector(p1, p2, edgevec);
 
-    t1 = DotProduct(p1, edgevec);
-    t2 = DotProduct(p2, edgevec);
+    t1 = qv::dot(p1, edgevec);
+    t2 = qv::dot(p2, edgevec);
 
     VectorMA(p1, -t1, edgevec, origin);
 
@@ -282,7 +282,7 @@ restart:
             const qvec3d &p1 = w[lastcorner];
             VectorSubtract(p0, p1, edgevec[1]);
             VectorNormalize(edgevec[1]);
-            angle = DotProduct(edgevec[0], edgevec[1]);
+            angle = qv::dot(edgevec[0], edgevec[1]);
             if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
                 break;
         }
@@ -295,7 +295,7 @@ restart:
             const qvec3d &p1 = w[firstcorner];
             VectorSubtract(p0, p1, edgevec[1]);
             VectorNormalize(edgevec[1]);
-            angle = DotProduct(edgevec[0], edgevec[1]);
+            angle = qv::dot(edgevec[0], edgevec[1]);
             if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
                 break;
         }

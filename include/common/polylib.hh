@@ -27,7 +27,7 @@ inline bool PointInWindingEdges(const winding_edges_t &wi, const qvec3d &point)
 {
     /* edgeplane faces toward the center of the face */
     for (auto &edgeplane : wi) {
-        if (DotProduct(point, edgeplane.normal) - edgeplane.dist < 0) {
+        if (edgeplane.distance_to(point) < 0) {
             return false;
         }
     }
@@ -479,7 +479,7 @@ public:
                     FError("BOGUS_RANGE: {}", p1[j]);
 
             /* check the point is on the face plane */
-            vec_t d = DotProduct(&p1[0], face.normal) - face.dist;
+            vec_t d = face.distance_to(p1);
             if (d < -on_epsilon || d > on_epsilon)
                 FError("point off plane");
 
@@ -539,8 +539,7 @@ public:
         size_t i;
 
         for (i = 0; i < count; i++) {
-            vec_t dot = qv::dot(at(i), plane.normal);
-            dot -= plane.dist;
+            vec_t dot = plane.distance_to(at(i));
 
             dists[i] = dot;
 

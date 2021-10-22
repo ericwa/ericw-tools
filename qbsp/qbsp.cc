@@ -162,7 +162,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
         for (size_t j = 0; j < w.size(); j++) {
             size_t k = (j + 1) % w.size();
             qvec3d vec = w[j] - w[k];
-            if (VectorNormalize(vec) < 0.5)
+            if (qv::normalizeInPlace(vec) < 0.5)
                 continue;
             vec = qv::Snap(vec);
             for (k = 0; k < 3; k++)
@@ -178,10 +178,10 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                     // construct a plane
                     vec2[axis] = dir;
                     qplane3d current;
-                    CrossProduct(vec, vec2, current.normal);
-                    if (VectorNormalize(current.normal) < 0.5)
+                    current.normal = qv::cross(vec, vec2);
+                    if (qv::normalizeInPlace(current.normal) < 0.5)
                         continue;
-                    current.dist = DotProduct(w[j], current.normal);
+                    current.dist = qv::dot(w[j], current.normal);
 
                     face_t *f;
 
@@ -200,7 +200,7 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
                             continue;
                         size_t l;
                         for (l = 0; l < w2.size(); l++) {
-                            vec_t d = DotProduct(w2[l], current.normal) - current.dist;
+                            vec_t d = current.distance_to(w2[l]);
                             if (d > 0.1)
                                 break; // point in front
                         }

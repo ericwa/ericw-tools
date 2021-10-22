@@ -170,7 +170,7 @@ std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, psta
     int i, j;
 
     /* Fast test first */
-    vec_t dot = DotProduct(in->origin, split->normal) - split->dist;
+    vec_t dot = split->distance_to(in->origin);
     if (dot < -in->radius) {
         FreeStackWinding(in, stack);
         return NULL;
@@ -185,8 +185,7 @@ std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, psta
 
     /* determine sides for each point */
     for (i = 0; i < in->size(); i++) {
-        dot = DotProduct((*in)[i], split->normal);
-        dot -= split->dist;
+        dot = split->distance_to((*in)[i]);
         dists[i] = dot;
         if (dot > ON_EPSILON)
             sides[i] = SIDE_FRONT;

@@ -52,7 +52,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
             // Which side of the source portal is this point?
             // This also tells us which side of the separating plane has
             //  the source portal.
-            d = DotProduct(pass->at(j), src_pl.normal) - src_pl.dist;
+            d = src_pl.distance_to(pass->at(j));
             if (d < -ON_EPSILON)
                 fliptest = true;
             else if (d > ON_EPSILON)
@@ -62,7 +62,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
 
             // Make a plane with the three points
             v2 = pass->at(j) - source->at(i);
-            CrossProduct(v1, v2, sep.normal);
+            sep.normal = qv::cross(v1, v2);
             len_sq = sep.normal[0] * sep.normal[0] + sep.normal[1] * sep.normal[1] + sep.normal[2] * sep.normal[2];
 
             // If points don't make a valid plane, skip it.
@@ -70,7 +70,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
                 continue;
 
             VectorScale(sep.normal, 1.0 / sqrt(len_sq), sep.normal);
-            sep.dist = DotProduct(pass->at(j), sep.normal);
+            sep.dist = qv::dot(pass->at(j), sep.normal);
 
             //
             // flip the plane if the source portal is backwards
@@ -86,7 +86,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
             for (k = 0; k < pass->size(); k++) {
                 if (k == j)
                     continue;
-                d = DotProduct(pass->at(k), sep.normal) - sep.dist;
+                d = sep.distance_to(pass->at(k));
                 if (d < -ON_EPSILON)
                     break;
                 else if (d > ON_EPSILON)
@@ -222,7 +222,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         stack.portalplane = p->plane;
         backplane = -p->plane;
 
-        if (VectorCompare(prevstack->portalplane.normal, backplane.normal, EQUAL_EPSILON))
+        if (qv::epsilonEqual(prevstack->portalplane.normal, backplane.normal, EQUAL_EPSILON))
             continue; // can't go out a coplanar face
 
         c_portalcheck++;
@@ -414,12 +414,12 @@ static void *BasePortalThread(void *dummy)
             winding_t &tw = *tp->winding;
 
             // Quick test - completely at the back?
-            d = DotProduct(tw.origin, p->plane.normal) - p->plane.dist;
+            d = p->plane.distance_to(tw.origin);
             if (d < -tw.radius)
                 continue;
 
             for (j = 0; j < tw.size(); j++) {
-                d = DotProduct(tw[j], p->plane.normal) - p->plane.dist;
+                d = p->plane.distance_to(tw[j]);
                 if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
                                      // https://github.com/ericwa/ericw-tools/issues/261
                     break;
@@ -428,12 +428,12 @@ static void *BasePortalThread(void *dummy)
                 continue; // no points on front
 
             // Quick test - completely on front?
-            d = DotProduct(w.origin, tp->plane.normal) - tp->plane.dist;
+            d = tp->plane.distance_to(w.origin);
             if (d > w.radius)
                 continue;
 
             for (j = 0; j < w.size(); j++) {
-                d = DotProduct(w[j], tp->plane.normal) - tp->plane.dist;
+                d = tp->plane.distance_to(w[j]);
                 if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
                                     // https://github.com/ericwa/ericw-tools/issues/261
                     break;

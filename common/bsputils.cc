@@ -262,18 +262,6 @@ const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string 
     return nullptr;
 }
 
-vec_t Plane_Dist(const qvec3d &point, const dplane_t *plane)
-{
-    switch (plane->type) {
-        case PLANE_X: return point[0] - plane->dist;
-        case PLANE_Y: return point[1] - plane->dist;
-        case PLANE_Z: return point[2] - plane->dist;
-        default: {
-            return DotProduct(point, qvec3d(plane->normal)) - plane->dist;
-        }
-    }
-}
-
 static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const qvec3d &point)
 {
     if (nodenum < 0) {
@@ -288,7 +276,7 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const qve
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    const vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
+    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist > 0.1)
         return Light_PointInSolid_r(bsp, node->children[0], point);
@@ -325,13 +313,13 @@ static std::vector<qplane3d> Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp,
 
     const qplane3d faceplane = Face_Plane(bsp, face);
     for (int i = 0; i < face->numedges; i++) {
-        const qvec3d &v0 = GetSurfaceVertexPoint(bsp, face, i);
-        const qvec3d &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
+        const qvec3f &v0 = GetSurfaceVertexPoint(bsp, face, i);
+        const qvec3f &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
 
         qvec3d edgevec = qv::normalize(v1 - v0);
         qvec3d normal = qv::cross(edgevec, faceplane.normal);
 
-        out.emplace_back(normal, DotProduct(normal, v0));
+        out.emplace_back(normal, qv::dot(normal, v0));
     }
 
     return out;
@@ -340,8 +328,7 @@ static std::vector<qplane3d> Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp,
 static bool EdgePlanes_PointInside(const std::vector<qplane3d> &edgeplanes, const qvec3d &point)
 {
     for (auto &plane : edgeplanes) {
-        const vec_t planedist = DotProduct(point, plane.normal) - plane.dist;
-        if (planedist < 0) {
+        if (plane.distance_to(point) < 0) {
             return false;
         }
     }
@@ -357,7 +344,7 @@ static const mface_t *BSP_FindFaceAtPoint_r(
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    const vec_t dist = Plane_Dist(point, &bsp->dplanes[node->planenum]);
+    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist > 0.1)
         return BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal);
@@ -370,7 +357,7 @@ static const mface_t *BSP_FindFaceAtPoint_r(
         // First check if it's facing the right way
         qvec3d faceNormal = Face_Normal(bsp, face);
 
-        if (DotProduct(faceNormal, wantedNormal) < 0) {
+        if (qv::dot(faceNormal, wantedNormal) < 0) {
             // Opposite, so not the right face.
             continue;
         }

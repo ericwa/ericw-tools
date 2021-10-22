@@ -95,7 +95,7 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
                 FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
 
         /* check the point is on the face plane */
-        vec_t dist = DotProduct(p1, plane.normal) - plane.dist;
+        vec_t dist = plane.distance_to(p1);
         if (dist < -ON_EPSILON || dist > ON_EPSILON)
             LogPrint("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
                 p1[1], p1[2], dist);
@@ -113,17 +113,15 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
             break;
         }
 
-        qvec3d edgenormal;
-        CrossProduct(facenormal, edgevec, edgenormal);
-        VectorNormalize(edgenormal);
-        vec_t edgedist = DotProduct(p1, edgenormal);
+        qvec3d edgenormal = qv::normalize(qv::cross(facenormal, edgevec));
+        vec_t edgedist = qv::dot(p1, edgenormal);
         edgedist += ON_EPSILON;
 
         /* all other points must be on front side */
         for (size_t j = 0; j < face->w.size(); j++) {
             if (j == i)
                 continue;
-            dist = DotProduct(face->w[j], edgenormal);
+            dist = qv::dot(face->w[j], edgenormal);
             if (dist > edgedist)
                 FError("line {}: Found a non-convex face (error size {}, point: {})\n", sourceface.linenum,
                     dist - edgedist, face->w[j]);
@@ -374,8 +372,8 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
             mtexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
             texInfoNew.outputnum = std::nullopt;
 
-            texInfoNew.vecs.at(0, 3) += DotProduct(rotate_offset, texInfoNew.vecs.row(0));
-            texInfoNew.vecs.at(1, 3) += DotProduct(rotate_offset, texInfoNew.vecs.row(1));
+            texInfoNew.vecs.at(0, 3) += qv::dot(rotate_offset, texInfoNew.vecs.row(0).xyz());
+            texInfoNew.vecs.at(1, 3) += qv::dot(rotate_offset, texInfoNew.vecs.row(1).xyz());
 
             mapface.texinfo = FindTexinfo(texInfoNew);
         }
@@ -383,7 +381,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         VectorCopy(mapface.plane.normal, plane.normal);
         VectorScale(mapface.plane.normal, mapface.plane.dist, point);
         VectorSubtract(point, rotate_offset, point);
-        plane.dist = DotProduct(plane.normal, point);
+        plane.dist = qv::dot(plane.normal, point);
 
         f->texinfo = hullnum > 0 ? 0 : mapface.texinfo;
         f->planenum = FindPlane(plane, &f->planeside);
@@ -481,7 +479,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, const qplane3d &plane)
         FError("invalid normal (vector length {:.4})", len);
 
     for (auto &mapface : hullbrush->faces) {
-        if (VectorCompare(mapface.plane.normal, plane.normal, EQUAL_EPSILON) &&
+        if (qv::epsilonEqual(mapface.plane.normal, plane.normal, EQUAL_EPSILON) &&
             fabs(mapface.plane.dist - plane.dist) < ON_EPSILON)
             return;
     }
@@ -521,7 +519,7 @@ static void TestAddPlane(hullbrush_t *hullbrush, qplane3d &plane)
     points_back = 0;
 
     for (auto &corner : hullbrush->corners) {
-        d = DotProduct(corner, plane.normal) - plane.dist;
+        d = plane.distance_to(corner);
         if (d < -ON_EPSILON) {
             if (points_front)
                 return;
@@ -551,7 +549,7 @@ Doesn't add if duplicated
 static int AddHullPoint(hullbrush_t *hullbrush, const qvec3d &p, const aabb3d &hull_size)
 {
     for (auto &pt : hullbrush->points)
-        if (VectorCompare(p, pt, EQUAL_EPSILON))
+        if (qv::epsilonEqual(p, pt, EQUAL_EPSILON))
             return &pt - hullbrush->points.data();
 
     if (hullbrush->points.size() == MAX_HULL_POINTS)
@@ -614,20 +612,19 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
         planevec[a] = 1;
         planevec[b] = 0;
         planevec[c] = 0;
-        CrossProduct(planevec, edgevec, plane.normal);
-        length = VectorLength(plane.normal);
+        plane.normal = qv::cross(planevec, edgevec);
+        length = qv::normalizeInPlace(plane.normal);
 
         /* If this edge is almost parallel to the hull edge, skip it. */
         if (length < ANGLEEPSILON)
             continue;
 
-        VectorScale(plane.normal, 1.0 / length, plane.normal);
         for (d = 0; d <= 1; d++) {
             for (e = 0; e <= 1; e++) {
                 qvec3d planeorg = p1;
                 planeorg[b] += hull_size[d][b];
                 planeorg[c] += hull_size[e][c];
-                plane.dist = DotProduct(planeorg, plane.normal);
+                plane.dist = qv::dot(planeorg, plane.normal);
                 TestAddPlane(hullbrush, plane);
             }
         }
@@ -668,7 +665,7 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const f
             else if (mapface.plane.normal[x] < 0)
                 corner[x] = hull_size[0][x];
         }
-        mapface.plane.dist += DotProduct(corner, mapface.plane.normal);
+        mapface.plane.dist += qv::dot(corner, mapface.plane.normal);
     }
 
     // add any axis planes not contained in the brush to bevel off corners

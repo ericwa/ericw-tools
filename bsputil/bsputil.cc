@@ -131,7 +131,7 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
             const int edgenum = bsp->dsurfedges[face->firstedge + j];
             const int vertnum = (edgenum >= 0) ? bsp->dedges[edgenum][0] : bsp->dedges[-edgenum][1];
             const qvec3f &point = bsp->dvertexes[vertnum];
-            const float dist = qv::dot(plane.normal, point) - plane.dist;
+            const float dist = plane.distance_to(point);
 
             if (dist < -PLANE_ON_EPSILON || dist > PLANE_ON_EPSILON)
                 fmt::print("WARNING: face {}, point {} off plane by {}\n", i, j, dist);

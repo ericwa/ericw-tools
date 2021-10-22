@@ -104,24 +104,22 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     back = f1->w[(i + f1->w.size() - 1) % f1->w.size()];
     VectorSubtract(p1, back, delta);
-    CrossProduct(planenormal, delta, normal);
-    VectorNormalize(normal);
+    normal = qv::normalize(qv::cross(planenormal, delta));
 
     back = f2->w[(j + 2) % f2->w.size()];
     VectorSubtract(back, p1, delta);
-    dot = DotProduct(delta, normal);
+    dot = qv::dot(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
         return NULL; // not a convex polygon
     keep1 = dot < -CONTINUOUS_EPSILON;
 
     back = f1->w[(i + 2) % f1->w.size()];
     VectorSubtract(back, p2, delta);
-    CrossProduct(planenormal, delta, normal);
-    VectorNormalize(normal);
+    normal = qv::normalize(qv::cross(planenormal, delta));
 
     back = f2->w[(j + f2->w.size() - 1) % f2->w.size()];
     VectorSubtract(back, p2, delta);
-    dot = DotProduct(delta, normal);
+    dot = qv::dot(delta, normal);
     if (dot > CONTINUOUS_EPSILON)
         return NULL; // not a convex polygon
     keep2 = dot < -CONTINUOUS_EPSILON;

@@ -379,7 +379,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 VectorNormalize(rayDir);
                 VectorNormalize(potentialHitGeometryNormal);
 
-                const vec_t raySurfaceCosAngle = DotProduct(rayDir, potentialHitGeometryNormal);
+                const vec_t raySurfaceCosAngle = qv::dot(rayDir, potentialHitGeometryNormal);
 
                 // only pick up the color of the glass on the _exiting_ side of the glass.
                 // (we currently trace "backwards", from surface point --> light source)
@@ -722,7 +722,7 @@ hittype_t Embree_DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, 
 
         qvec3d hitpoint = start + (dirn * ray.ray.tfar);
 
-        hitplane_out->dist = DotProduct(hitplane_out->normal, hitpoint);
+        hitplane_out->dist = qv::dot(hitplane_out->normal, hitpoint);
     }
     if (face_out) {
         const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);

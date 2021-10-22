@@ -125,7 +125,7 @@ void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
         Error("Attempting to split freed face");
 
     /* Fast test */
-    dot = DotProduct(in->origin, split.normal) - split.dist;
+    dot = split.distance_to(in->origin);
     if (dot > in->radius) {
         counts[SIDE_FRONT] = 1;
         counts[SIDE_BACK] = 0;
@@ -276,7 +276,7 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
         if (face->planenum == clipface->planenum || spurious_onplane) {
             const qplane3d faceplane = Face_Plane(face);
             const qplane3d clipfaceplane = Face_Plane(clipface);
-            const vec_t dp = DotProduct(faceplane.normal, clipfaceplane.normal);
+            const vec_t dp = qv::dot(faceplane.normal, clipfaceplane.normal);
             const bool opposite = (dp < 0);
 
             if (opposite || precedence) {

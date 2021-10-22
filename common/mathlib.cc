@@ -71,9 +71,9 @@ qmat3x3d RotateAboutZ(double t)
 // Returns a 3x3 matrix that rotates (0,0,1) to the given surface normal.
 qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
 {
-    const qvec3f up(0, 0, 1);
-    const qvec3f east(1, 0, 0);
-    const qvec3f north(0, 1, 0);
+    constexpr qvec3f up(0, 0, 1);
+    constexpr qvec3f east(1, 0, 0);
+    constexpr qvec3f north(0, 1, 0);
 
     // get rotation about Z axis
     float x = qv::dot(east, surfaceNormal);

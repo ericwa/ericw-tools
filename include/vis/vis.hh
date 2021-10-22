@@ -113,7 +113,7 @@ struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
         vec_t mindist = 1e20;
 
         for (size_t i = 0; i < size(); ++i) {
-            mindist = std::min(mindist, fabs(DotProduct(at(i), p->plane.normal) - p->plane.dist));
+            mindist = std::min(mindist, fabs(p->plane.distance_to(at(i))));
         }
 
         return mindist;

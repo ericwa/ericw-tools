@@ -67,8 +67,8 @@ static void FacesOverlappingEdge_r(
 
     const bsp2_dnode_t *node = BSP_GetNode(bsp, nodenum);
     const dplane_t *plane = BSP_GetPlane(bsp, node->planenum);
-    const vec_t p0dist = Plane_Dist(p0, plane);
-    const vec_t p1dist = Plane_Dist(p1, plane);
+    const vec_t p0dist = plane->distance_to_fast(p0);
+    const vec_t p1dist = plane->distance_to_fast(p1);
 
     if (fabs(p0dist) < 0.1 && fabs(p1dist) < 0.1) {
         // check all faces on this node.
