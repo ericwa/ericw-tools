@@ -774,8 +774,8 @@ static bool Lightsurf_Init(
     }
 
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    VectorCopy(tex->vecs.row(0), lightsurf->snormal);
-    VectorCopy(lightsurf->tnormal, tex->vecs.row(1).xyz());
+    VectorCopy(tex->vecs.row(0).xyz(), lightsurf->snormal);
+    VectorCopy(tex->vecs.row(1).xyz(), lightsurf->tnormal);
     VectorInverse(lightsurf->tnormal);
     VectorNormalize(lightsurf->snormal);
     VectorNormalize(lightsurf->tnormal);
@@ -1737,14 +1737,12 @@ static void LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *l
     /* Overwrite each point with the normal for that sample... */
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
-        constexpr qvec3d vec3_one = { 1 };
         // scale from [-1..1] to [0..1], then multiply by 255
-        qvec3d normal_as_color = lightsurf->normals[i];
-        VectorAdd(normal_as_color, vec3_one, normal_as_color);
-        VectorScale(normal_as_color, 0.5, normal_as_color);
-        VectorScale(normal_as_color, 255, normal_as_color);
+        sample->color = lightsurf->normals[i];
 
-        VectorCopy(normal_as_color, sample->color);
+        for (auto &v : sample->color) {
+            v = abs(v) * 255;
+        }
     }
 
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);

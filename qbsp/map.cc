@@ -399,7 +399,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 
     const vec_t phong_angle_concave = atof(ValueForKey(entity, "_phong_angle_concave"));
     {
-        flags.phong_angle_concave = clamp((int)rint(phong_angle_concave), 0, 255);
+        flags.phong_angle_concave = clamp(phong_angle_concave, 0.0, 360.0);
     }
 
     // handle "_minlight"
