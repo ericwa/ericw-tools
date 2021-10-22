@@ -307,7 +307,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
     std::optional<winding_t> w;
     qbsp_plane_t plane;
     face_t *facelist = NULL;
-    vec3_t point;
+    qvec3d point;
     vec_t max, min;
 
     min = VECT_MAX;

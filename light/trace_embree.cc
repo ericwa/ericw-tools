@@ -256,23 +256,13 @@ const modelinfo_t *Embree_LookupModelinfo(unsigned int geomID, unsigned int prim
     return info.triToModelinfo.at(primID);
 }
 
-static void Embree_RayEndpoint(RTCRayN *ray, size_t N, size_t i, vec3_t endpoint)
+static qvec3d Embree_RayEndpoint(RTCRayN *ray, size_t N, size_t i)
 {
-    vec3_t dir;
-    dir[0] = RTCRayN_dir_x(ray, N, i);
-    dir[1] = RTCRayN_dir_y(ray, N, i);
-    dir[2] = RTCRayN_dir_z(ray, N, i);
+    qvec3d dir = qv::normalize(qvec3d { RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i) });
+    qvec3d org { RTCRayN_org_x(ray, N, i), RTCRayN_org_y(ray, N, i), RTCRayN_org_z(ray, N, i) };
+    float &tfar = RTCRayN_tfar(ray, N, i);
 
-    VectorNormalize(dir);
-
-    vec3_t org;
-    org[0] = RTCRayN_org_x(ray, N, i);
-    org[1] = RTCRayN_org_y(ray, N, i);
-    org[2] = RTCRayN_org_z(ray, N, i);
-
-    float tfar = RTCRayN_tfar(ray, N, i);
-
-    VectorMA(org, tfar, dir, endpoint);
+    return org + (dir * tfar);
 }
 
 enum class filtertype_t
@@ -281,8 +271,8 @@ enum class filtertype_t
     OCCLUSION
 };
 
-void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const vec3_t glasscolor);
-void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style);
+static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor);
+static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style);
 
 // called to evaluate transparency
 template<filtertype_t filtertype>
@@ -372,8 +362,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
         }
 
         if (isFence || isGlass) {
-            vec3_t hitpoint;
-            Embree_RayEndpoint(ray, N, i, hitpoint);
+            qvec3d hitpoint = Embree_RayEndpoint(ray, N, i);
             const color_rgba sample = SampleTexture(face, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
 
             if (isGlass) {
@@ -383,8 +372,8 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 if (sample.a < 255)
                     alpha = sample.a / 255.0f;
 
-                vec3_t rayDir = {RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)};
-                vec3_t potentialHitGeometryNormal = {RTCHitN_Ng_x(potentialHit, N, i), RTCHitN_Ng_y(potentialHit, N, i),
+                qvec3d rayDir = {RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)};
+                qvec3d potentialHitGeometryNormal = {RTCHitN_Ng_x(potentialHit, N, i), RTCHitN_Ng_y(potentialHit, N, i),
                     RTCHitN_Ng_z(potentialHit, N, i)};
 
                 VectorNormalize(rayDir);
@@ -395,10 +384,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 // only pick up the color of the glass on the _exiting_ side of the glass.
                 // (we currently trace "backwards", from surface point --> light source)
                 if (raySurfaceCosAngle < 0) {
-                    vec3_t samplecolor{(float)sample.r, (float)sample.g, (float)sample.b};
-                    VectorScale(samplecolor, 1 / 255.0f, samplecolor);
-
-                    AddGlassToRay(context, rayIndex, alpha, samplecolor);
+                    AddGlassToRay(context, rayIndex, alpha, qvec3d{sample.r, sample.g, sample.b} * (1.0 / 255.0));
                 }
 
                 // reject hit
@@ -690,9 +676,7 @@ hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modeli
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
 
-    vec3_t dir_normalized;
-    VectorCopy(dirn, dir_normalized);
-    VectorNormalize(dir_normalized);
+    qvec3d dir_normalized = qv::normalize(dirn);
 
     RTCRayHit ray = SetupRay(0, start, dir_normalized, MAX_SKY_DIST);
 
@@ -736,8 +720,7 @@ hittype_t Embree_DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, 
         hitplane_out->normal[2] = ray.hit.Ng_z;
         VectorNormalize(hitplane_out->normal);
 
-        vec3_t hitpoint;
-        VectorMA(start, ray.ray.tfar, dirn, hitpoint);
+        qvec3d hitpoint = start + (dirn * ray.ray.tfar);
 
         hitplane_out->dist = DotProduct(hitplane_out->normal, hitpoint);
     }
@@ -784,8 +767,8 @@ class raystream_embree_common_t : public virtual raystream_common_t
 public:
     float *_rays_maxdist;
     int *_point_indices;
-    vec3_t *_ray_colors;
-    vec3_t *_ray_normalcontribs;
+    qvec3d *_ray_colors;
+    qvec3d *_ray_normalcontribs;
 
     // This is set to the modelinfo's switchshadstyle if the ray hit
     // a dynamic shadow caster. (note that for rays that hit dynamic
@@ -799,8 +782,8 @@ public:
 
 public:
     raystream_embree_common_t(int maxRays)
-        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{new vec3_t[maxRays]{}},
-          _ray_normalcontribs{new vec3_t[maxRays]{}}, _ray_dynamic_styles{new int[maxRays]}, _numrays{0}, _maxrays{
+        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{new qvec3d[maxRays]{}},
+          _ray_normalcontribs{new qvec3d[maxRays]{}}, _ray_dynamic_styles{new int[maxRays]}, _numrays{0}, _maxrays{
                                                                                                               maxRays}
     {
     }
@@ -825,16 +808,16 @@ public:
         return _point_indices[j];
     }
 
-    void getPushedRayColor(size_t j, vec3_t out) override
+    qvec3d &getPushedRayColor(size_t j) override
     {
         Q_assert(j < _maxrays);
-        VectorCopy(_ray_colors[j], out);
+        return _ray_colors[j];
     }
 
-    void getPushedRayNormalContrib(size_t j, vec3_t out) override
+    qvec3d &getPushedRayNormalContrib(size_t j) override
     {
         Q_assert(j < _maxrays);
-        VectorCopy(_ray_normalcontribs[j], out);
+        return _ray_normalcontribs[j];
     }
 
     int getPushedRayDynamicStyle(size_t j) override
@@ -891,12 +874,10 @@ public:
         rtcIntersect1M(scene, &ctx2, _rays, _numrays, sizeof(_rays[0]));
     }
 
-    void getPushedRayDir(size_t j, vec3_t out) override
+    qvec3d getPushedRayDir(size_t j) override
     {
         Q_assert(j < _maxrays);
-        out[0] = _rays[j].ray.dir_x;
-        out[1] = _rays[j].ray.dir_y;
-        out[2] = _rays[j].ray.dir_z;
+        return { _rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z };
     }
 
     float getPushedRayHitDist(size_t j) override
@@ -984,13 +965,11 @@ public:
         return (_rays[j].tfar < 0.0f);
     }
 
-    void getPushedRayDir(size_t j, vec3_t out) override
+    qvec3d getPushedRayDir(size_t j) override
     {
         Q_assert(j < _maxrays);
 
-        out[0] = _rays[j].dir_x;
-        out[1] = _rays[j].dir_y;
-        out[2] = _rays[j].dir_z;
+        return { _rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z };
     }
 };
 
@@ -1004,7 +983,7 @@ raystream_intersection_t *Embree_MakeIntersectionRayStream(int maxrays)
     return new raystream_embree_intersection_t{maxrays};
 }
 
-void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const vec3_t glasscolor)
+static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor)
 {
     ray_source_info *ctx = static_cast<ray_source_info *>(context);
     raystream_embree_common_t *rs = ctx->raystream;
@@ -1016,33 +995,18 @@ void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacit
     }
 
     // clamp opacity
-    opacity = min(max(0.0f, opacity), 1.0f);
+    opacity = clamp(opacity, 0.0f, 1.0f);
 
     Q_assert(rayIndex < rs->_numrays);
 
-    Q_assert(glasscolor[0] >= 0.0 && glasscolor[0] <= 1.0);
-    Q_assert(glasscolor[1] >= 0.0 && glasscolor[1] <= 1.0);
-    Q_assert(glasscolor[2] >= 0.0 && glasscolor[2] <= 1.0);
-
     // multiply ray color by glass color
-    vec3_t tinted;
-    for (int i = 0; i < 3; i++) {
-        tinted[i] = rs->_ray_colors[rayIndex][i] * glasscolor[i];
-    }
+    qvec3d tinted = rs->_ray_colors[rayIndex] * glasscolor;
 
-    // lerp between original ray color and fully tinted, based on opacity
-    vec3_t lerped = {0.0, 0.0, 0.0};
-    VectorMA(lerped, opacity, tinted, lerped);
-    VectorMA(lerped, 1.0 - opacity, rs->_ray_colors[rayIndex], lerped);
-
-    // use the lerped color, scaled by (1-opacity) as the new ray color
-    //  VectorScale(lerped, (1.0f - opacity), rs->_ray_colors[rayIndex]);
-
-    // use the lerped color
-    VectorCopy(lerped, rs->_ray_colors[rayIndex]);
+    // use the lerped color between original ray color and fully tinted, based on opacity
+    rs->_ray_colors[rayIndex] = mix(tinted, rs->_ray_colors[rayIndex], opacity);
 }
 
-void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style)
+static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style)
 {
     ray_source_info *ctx = static_cast<ray_source_info *>(context);
     raystream_embree_common_t *rs = ctx->raystream;

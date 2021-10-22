@@ -33,8 +33,8 @@ struct wvert_t
 struct wedge_t
 {
     wedge_t *next; /* pointer for hash bucket chain */
-    vec3_t dir; /* direction vector for the edge */
-    vec3_t origin; /* origin (t = 0) in parametric form */
+    qvec3d dir; /* direction vector for the edge */
+    qvec3d origin; /* origin (t = 0) in parametric form */
     wvert_t head; /* linked list of verticies on this edge */
 };
 
@@ -78,7 +78,7 @@ static void InitHash(const qvec3d &mins, const qvec3d &maxs)
     hash_scale[2] = (vec_t)newsize[1];
 }
 
-static unsigned HashVec(vec3_t vec)
+static unsigned HashVec(const qvec3d &vec)
 {
     unsigned h;
 
@@ -138,7 +138,7 @@ static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t
         std::swap(t1, t2);
     }
 
-    h = HashVec(&origin[0]);
+    h = HashVec(origin);
 
     for (edge = wedge_hash[h]; edge; edge = edge->next) {
         vec_t temp = edge->origin[0] - origin[0];
@@ -253,7 +253,7 @@ static void SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
 {
     winding_t &w = face->w;
     face_t *newf, *chain;
-    vec3_t edgevec[2];
+    qvec3d edgevec[2];
     vec_t angle;
     int i, firstcorner, lastcorner;
 
@@ -302,9 +302,7 @@ restart:
 
         if (firstcorner + 2 >= MAXPOINTS) {
             /* rotate the point winding */
-            vec3_t point0;
-
-            VectorCopy(w[0], point0);
+            qvec3d point0 = w[0];
             for (i = 1; i < w.size(); i++)
                 VectorCopy(w[i], w[i - 1]);
             VectorCopy(point0, w[w.size() - 1]);
@@ -377,10 +375,7 @@ restart:
             for (int32_t k = superface->w.size() - 1; k > j; k--)
                 VectorCopy(superface->w[k - 1], superface->w[k]);
 
-            vec3_t temp;
-            VectorMA(edge->origin, v->t, edge->dir, temp);
-
-            superface->w[j] = temp;
+            superface->w[j] = edge->origin + (edge->dir * v->t);
             goto restart;
         }
     }

@@ -91,13 +91,12 @@ face_t *NewFaceFromFace(face_t *in)
 void UpdateFaceSphere(face_t *in)
 {
     int i;
-    vec3_t radius;
     vec_t lensq;
 
     VectorCopy(in->w.center(), in->origin);
     in->radius = 0;
     for (i = 0; i < in->w.size(); i++) {
-        VectorSubtract(in->w[i], in->origin, radius);
+        qvec3d radius = in->w[i] - in->origin;
         lensq = VectorLengthSq(radius);
         if (lensq > in->radius)
             in->radius = lensq;
@@ -120,7 +119,7 @@ void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
     vec_t dot;
     size_t i, j;
     face_t *newf, *new2;
-    vec3_t mid;
+    qvec3d mid;
 
     if (in->w.size() < 0)
         Error("Attempting to split freed face");

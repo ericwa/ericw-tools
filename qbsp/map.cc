@@ -76,7 +76,7 @@ struct texdef_brush_primitives_t
 };
 
 static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
-static qvec2f projectToAxisPlane(const vec3_t snapped_normal, qvec3f point);
+static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point);
 static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
 static void SetTexinfo_QuakeEd_New(
     const qbsp_plane_t &plane, const qvec2d &shift, vec_t rotate, const qvec2d &scale, texvecf &out_vecs);
@@ -463,9 +463,9 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
     }
 }
 
-static void TextureAxisFromPlane(const qbsp_plane_t &plane, vec3_t xv, vec3_t yv, vec3_t snapped_normal)
+static void TextureAxisFromPlane(const qbsp_plane_t &plane, qvec3d &xv, qvec3d &yv, qvec3d &snapped_normal)
 {
-    vec3_t baseaxis[18] = {
+    constexpr qvec3d baseaxis[18] = {
         {0, 0, 1}, {1, 0, 0}, {0, -1, 0}, // floor
         {0, 0, -1}, {1, 0, 0}, {0, -1, 0}, // ceiling
         {1, 0, 0}, {0, 1, 0}, {0, 0, -1}, // west wall
@@ -577,25 +577,6 @@ static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plan
     return uv;
 }
 
-#if 0
-static float
-TexDefRMSE(const texdef_quake_ed_t &texdef, const qbsp_plane_t *faceplane, const qmat4x4f referenceXform, const vec3_t facepoints[3])
-{
-    float avgSquaredDist = 0;
-    for (int i=0; i<3; i++) {
-        qvec3f worldPoint = vec3_t_to_glm(facepoints[i]);
-        qvec2f observed = evalTexDefAtPoint(texdef, faceplane, worldPoint);
-        qvec2f expected = qvec2f(referenceXform * qvec4f(worldPoint, 1.0f));
-        
-        qvec2f distVec = observed - expected;
-        float dist2 = qv::dot(distVec, distVec);
-        avgSquaredDist += dist2;
-    }
-    avgSquaredDist /= 3.0;
-    return sqrt(avgSquaredDist);
-}
-#endif
-
 static texdef_quake_ed_t addShift(const texdef_quake_ed_noshift_t &texdef, const qvec2f shift)
 {
     texdef_quake_ed_t res2;
@@ -635,8 +616,8 @@ static texdef_quake_ed_t TexDef_BSPToQuakeEd(
     const qbsp_plane_t &faceplane, const texture_t *texture, const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
-    vec3_t snapped_normal;
-    vec3_t unrotated_vecs[2];
+    qvec3d snapped_normal;
+    qvec3d unrotated_vecs[2];
     TextureAxisFromPlane(faceplane, unrotated_vecs[0], unrotated_vecs[1], snapped_normal);
 
     const qmat4x4f worldToTexSpace = texVecsTo4x4Matrix(faceplane, in_vecs);
@@ -742,7 +723,7 @@ bool EqualDegrees(float a, float b)
     return fabs(NormalizeDegrees(a) - NormalizeDegrees(b)) < 0.001;
 }
 
-static std::pair<int, int> getSTAxes(const vec3_t snapped_normal)
+static std::pair<int, int> getSTAxes(const qvec3d &snapped_normal)
 {
     if (snapped_normal[0]) {
         return std::make_pair(1, 2);
@@ -753,10 +734,9 @@ static std::pair<int, int> getSTAxes(const vec3_t snapped_normal)
     }
 }
 
-static qvec2f projectToAxisPlane(const vec3_t snapped_normal, qvec3f point)
+static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point)
 {
     const std::pair<int, int> axes = getSTAxes(snapped_normal);
-
     const qvec2f proj(point[axes.first], point[axes.second]);
     return proj;
 }
@@ -849,8 +829,8 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
         0, // col1
         static_cast<float>(absYscale)};
 
-    vec3_t vecs[2];
-    vec3_t snapped_normal;
+    qvec3d vecs[2];
+    qvec3d snapped_normal;
     TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
 
     const qvec2f sAxis = projectToAxisPlane(snapped_normal, vecs[0]);
@@ -917,8 +897,8 @@ static void SetTexinfo_QuakeEd_New(
         sanitized_scale[i] = (scale[i] != 0.0) ? scale[i] : 1.0;
     }
 
-    vec3_t vecs[2];
-    vec3_t snapped_normal;
+    qvec3d vecs[2];
+    qvec3d snapped_normal;
     TextureAxisFromPlane(plane, vecs[0], vecs[1], snapped_normal);
 
     qvec2f sAxis = projectToAxisPlane(snapped_normal, vecs[0]);
@@ -976,11 +956,11 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
     const qvec2d &scale, mtexinfo_t *out)
 {
     int i, j;
-    vec3_t vecs[2];
+    qvec3d vecs[2];
     int sv, tv;
     vec_t ang, sinv, cosv;
     vec_t ns, nt;
-    vec3_t unused;
+    qvec3d unused;
 
     TextureAxisFromPlane(plane, vecs[0], vecs[1], unused);
 
@@ -1059,7 +1039,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
 static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &planepts, texcoord_style_t style, mtexinfo_t *out)
 {
     int i;
-    vec3_t vecs[2];
+    qvec3d vecs[2];
     vec_t a, b, c, d;
     vec_t determinant;
 
@@ -1142,8 +1122,7 @@ static void ComputeAxisBase(const qvec3d &normal_unsanitized, qvec3d &texX, qvec
 {
     vec_t RotY, RotZ;
 
-    vec3_t normal;
-    VectorCopy(normal_unsanitized, normal);
+    qvec3d normal = normal_unsanitized;
 
     /* do some cleaning */
     if (fabs(normal[0]) < 1e-6) {

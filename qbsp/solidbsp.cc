@@ -167,7 +167,7 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
 {
     int a, b, c, i, j;
     vec_t dist1, dist2, mid, split_mins, split_maxs;
-    vec3_t corner;
+    qvec3d corner;
 
     front_bounds = back_bounds = in_bounds;
 

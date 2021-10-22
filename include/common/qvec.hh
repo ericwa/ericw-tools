@@ -809,8 +809,6 @@ namespace qv
 #define DEPRECATE_SNIFF
 #endif
 
-using vec3_t DEPRECATE_SNIFF = vec_t[3];
-
 template<typename T1, typename T2>
 DEPRECATE_SNIFF constexpr bool VectorCompare(const T1 &v1, const T2 &v2, vec_t epsilon)
 {

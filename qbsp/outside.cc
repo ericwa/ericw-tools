@@ -238,9 +238,9 @@ static std::vector<portal_t *> FindPortalsToVoid(node_t *occupied_leaf)
 WriteLeakTrail
 ===============
 */
-static void WriteLeakTrail(std::ofstream &leakfile, const vec3_t point1, const vec3_t point2)
+static void WriteLeakTrail(std::ofstream &leakfile, const qvec3d &point1, const qvec3d &point2)
 {
-    vec3_t vector, trail;
+    qvec3d vector, trail;
     vec_t dist;
 
     VectorSubtract(point2, point1, vector);
@@ -265,7 +265,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
 {
     std::ofstream ptsfile = InitPtsFile();
 
-    vec3_t prevpt, currpt;
+    qvec3d prevpt, currpt;
     VectorCopy(leakentity->origin, prevpt);
 
     for (portal_t *portal : leakline) {

@@ -96,3 +96,10 @@ float Filter_Gaussian(float width, float height, float x, float y);
 
 // sqrt(x^2 + y^2) should be <= a, returns 0 outside that range.
 float Lanczos2D(float x, float y, float a);
+
+// mix a value such that 0 == a and 1 == b
+template<typename T, typename F>
+constexpr T mix(const T &a, const T &b, F frac)
+{
+    return (a * (static_cast<F>(1.0) - frac)) + (b * frac);
+}

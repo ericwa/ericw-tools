@@ -417,7 +417,7 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const qvec3d &color
     const vec_t sun_anglescale, const vec_t sun_deviance, const int sunlight_dirt, const int style,
     const std::string &suntexture)
 {
-    vec3_t sunvec;
+    qvec3d sunvec;
     int i;
     int sun_num_samples = (sun_deviance == 0 ? 1 : sunsamples); // mxd
     vec_t sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
@@ -433,7 +433,7 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const qvec3d &color
     light /= sun_num_samples;
 
     for (i = 0; i < sun_num_samples; i++) {
-        vec3_t direction;
+        qvec3d direction;
 
         /* calculate sun direction */
         if (i == 0) {
@@ -470,7 +470,7 @@ static void SetupSuns(const globalconfig_t &cfg)
         // mxd. Arghrad-style sun setup
         if (entity.sun.intValue() == 1 && entity.light.intValue() > 0) {
             // Set sun vector
-            vec3_t sunvec;
+            qvec3d sunvec;
             if (entity.targetent) {
                 qvec3d target_pos = EntDict_VectorForKey(*entity.targetent, "origin");
                 VectorSubtract(target_pos, entity.origin.vec3Value(), sunvec);
@@ -523,7 +523,7 @@ static void SetupSkyDome(const globalconfig_t &cfg, vec_t upperLight, const qvec
     int iterations;
     vec_t angle, elevation;
     vec_t angleStep, elevationStep;
-    vec3_t direction;
+    qvec3d direction;
 
     /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
     iterations = rint(sqrt((sunsamples - 1) / 4)) + 1;
@@ -1116,12 +1116,10 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
 
     for (int i = 0; i < N2; i++) {
         const vec_t dist = rs->getPushedRayHitDist(i);
-        vec3_t dir;
-        rs->getPushedRayDir(i, dir);
+        qvec3d dir = rs->getPushedRayDir(i);
 
         // get the intersection point
-        vec3_t stop;
-        VectorMA(point, dist, dir, stop);
+        qvec3d stop = point + (dir * dist);
 
         bounds += stop;
     }

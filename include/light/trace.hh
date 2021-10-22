@@ -77,20 +77,12 @@ public:
     virtual void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
         const qvec3d *normalcontrib = nullptr) = 0;
     virtual size_t numPushedRays() = 0;
-    virtual void getPushedRayDir(size_t j, vec3_t out) = 0;
+    virtual qvec3d getPushedRayDir(size_t j) = 0;
     virtual int getPushedRayPointIndex(size_t j) = 0;
-    virtual void getPushedRayColor(size_t j, vec3_t out) = 0;
-    virtual void getPushedRayNormalContrib(size_t j, vec3_t out) = 0;
+    virtual qvec3d &getPushedRayColor(size_t j) = 0;
+    virtual qvec3d &getPushedRayNormalContrib(size_t j) = 0;
     virtual int getPushedRayDynamicStyle(size_t j) = 0;
     virtual void clearPushedRays() = 0;
-
-public:
-    qvec3f getPushedRayDir(size_t j)
-    {
-        vec3_t temp;
-        this->getPushedRayDir(j, temp);
-        return temp;
-    }
 };
 
 class raystream_intersection_t : public virtual raystream_common_t

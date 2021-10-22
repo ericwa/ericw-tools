@@ -45,7 +45,7 @@ using namespace std;
 using namespace polylib;
 
 mutex radlights_lock;
-map<string, qvec3f> texturecolors;
+map<string, qvec3b> texturecolors;
 static std::vector<bouncelight_t> radlights;
 std::map<int, std::vector<int>> radlightsByFacenum;
 
@@ -53,8 +53,8 @@ class patch_t
 {
 public:
     winding_t w;
-    vec3_t center;
-    vec3_t samplepoint; // 1 unit above center
+    qvec3d center;
+    qvec3d samplepoint; // 1 unit above center
     qplane3d plane;
     std::map<int, qvec3f> lightByStyle;
 };
@@ -122,16 +122,16 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
     return true;
 }
 
-void Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face, vec3_t color)
+qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
 {
     const std::string &facename = Face_TextureName(bsp, face);
     auto it = texturecolors.find(facename);
 
     if (it != texturecolors.end()) {
-        VectorCopy((*it).second, color);
-    } else {
-        VectorSet(color, 127, 127, 127);
+        return (*it).second;
     }
+    
+    return { 127 };
 }
 
 template<typename T>
@@ -229,30 +229,26 @@ static void *MakeBounceLightsThread(void *arg)
             // fmt::print("  {} {} {}\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
         }
 
-        for (auto &styleColor : sum) {
-            styleColor.second *= (1.0 / totalarea);
-        }
-
         // avoid small, or zero-area patches ("sum" would be nan)
         if (totalarea < 1) {
             continue;
         }
 
-        vec3_t texturecolor;
-        Face_LookupTextureColor(bsp, face, texturecolor);
+        for (auto &styleColor : sum) {
+            styleColor.second *= (1.0f / totalarea);
+            styleColor.second /= 255.0f;
+        }
 
         // lerp between gray and the texture color according to `bouncecolorscale`
-        const vec3_t gray = {127, 127, 127};
-        vec3_t blendedcolor = {0, 0, 0};
-        VectorMA(blendedcolor, cfg.bouncecolorscale.floatValue(), texturecolor, blendedcolor);
-        VectorMA(blendedcolor, 1 - cfg.bouncecolorscale.floatValue(), gray, blendedcolor);
+        qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.0f;
+        qvec3f blendedcolor = mix(texturecolor, { 127.f / 255.f }, cfg.bouncecolorscale.floatValue());
 
         // final colors to emit
         map<int, qvec3f> emitcolors;
         for (const auto &styleColor : sum) {
             qvec3f emitcolor{};
             for (int k = 0; k < 3; k++) {
-                emitcolor[k] = (styleColor.second[k] / 255.0f) * (blendedcolor[k] / 255.0f);
+                emitcolor[k] = styleColor.second[k] * blendedcolor[k];
             }
             emitcolors[styleColor.first] = emitcolor;
         }

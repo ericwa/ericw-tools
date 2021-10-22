@@ -24,9 +24,7 @@
 #include <fstream>
 #include <iomanip>
 #include <fmt/ostream.h>
-#include <nlohmann/json.hpp>
-
-using namespace nlohmann;
+#include <common/json.hh>
 
 static std::string hex_string(const uint8_t *bytes, const size_t count)
 {
@@ -66,8 +64,8 @@ static json serialize_bspxbrushlist(const bspxentry_t &lump)
             p += sizeof(src_brush);
 
             json &brush = brushes.insert(brushes.end(), json::object()).value();
-            brush.push_back({"mins", json::array({src_brush.mins[0], src_brush.mins[1], src_brush.mins[2]})});
-            brush.push_back({"maxs", json::array({src_brush.maxs[0], src_brush.maxs[1], src_brush.maxs[2]})});
+            brush.push_back({"mins", src_brush.mins});
+            brush.push_back({"maxs", src_brush.maxs});
             brush.push_back({"contents", src_brush.contents});
             json &faces = (brush.emplace("faces", json::array())).first.value();
 
@@ -77,7 +75,7 @@ static json serialize_bspxbrushlist(const bspxentry_t &lump)
                 p += sizeof(src_face);
 
                 json &face = faces.insert(faces.end(), json::object()).value();
-                face.push_back({"normal", json::array({src_face.normal[0], src_face.normal[1], src_face.normal[2]})});
+                face.push_back({"normal", src_face.normal});
                 face.push_back({"dist", src_face.dist});
             }
         }
@@ -96,12 +94,10 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
         for (auto &src_model : bsp.dmodels) {
             json &model = models.insert(models.end(), json::object()).value();
 
-            model.push_back({"mins", json::array({src_model.mins[0], src_model.mins[1], src_model.mins[2]})});
-            model.push_back({"maxs", json::array({src_model.maxs[0], src_model.maxs[1], src_model.maxs[2]})});
-            model.push_back({"origin", json::array({src_model.origin[0], src_model.origin[1], src_model.origin[2]})});
-            model.push_back({"headnode",
-                json::array({src_model.headnode[0], src_model.headnode[1], src_model.headnode[2], src_model.headnode[3],
-                    src_model.headnode[4], src_model.headnode[5], src_model.headnode[6], src_model.headnode[7]})});
+            model.push_back({"mins", src_model.mins});
+            model.push_back({"maxs", src_model.maxs});
+            model.push_back({"origin", src_model.origin});
+            model.push_back({"headnode", src_model.headnode});
             model.push_back({"visleafs", src_model.visleafs});
             model.push_back({"firstface", src_model.firstface});
             model.push_back({"numfaces", src_model.numfaces});
@@ -143,12 +139,11 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
 
             leaf.push_back({"contents", src_leaf.contents});
             leaf.push_back({"visofs", src_leaf.visofs});
-            leaf.push_back({"mins", json::array({src_leaf.mins[0], src_leaf.mins[1], src_leaf.mins[2]})});
-            leaf.push_back({"maxs", json::array({src_leaf.maxs[0], src_leaf.maxs[1], src_leaf.maxs[2]})});
+            leaf.push_back({"mins", src_leaf.mins});
+            leaf.push_back({"maxs", src_leaf.maxs});
             leaf.push_back({"firstmarksurface", src_leaf.firstmarksurface});
             leaf.push_back({"nummarksurfaces", src_leaf.nummarksurfaces});
-            leaf.push_back({"ambient_level", json::array({src_leaf.ambient_level[0], src_leaf.ambient_level[1],
-                                                 src_leaf.ambient_level[2], src_leaf.ambient_level[3]})});
+            leaf.push_back({"ambient_level", src_leaf.ambient_level});
             leaf.push_back({"cluster", src_leaf.cluster});
             leaf.push_back({"area", src_leaf.area});
             leaf.push_back({"firstleafbrush", src_leaf.firstleafbrush});
@@ -162,7 +157,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
         for (auto &src_plane : bsp.dplanes) {
             json &plane = planes.insert(planes.end(), json::object()).value();
 
-            plane.push_back({"normal", json::array({src_plane.normal[0], src_plane.normal[1], src_plane.normal[2]})});
+            plane.push_back({"normal", src_plane.normal});
             plane.push_back({"dist", src_plane.dist});
             plane.push_back({"type", src_plane.type});
         }
@@ -172,7 +167,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
         json &vertexes = (j.emplace("vertexes", json::array())).first.value();
 
         for (auto &src_vertex : bsp.dvertexes) {
-            vertexes.insert(vertexes.end(), json::array({src_vertex[0], src_vertex[1], src_vertex[2]}));
+            vertexes.insert(vertexes.end(), src_vertex);
         }
     }
 
@@ -183,9 +178,9 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
             json &node = nodes.insert(nodes.end(), json::object()).value();
 
             node.push_back({"planenum", src_node.planenum});
-            node.push_back({"children", json::array({src_node.children[0], src_node.children[1]})});
-            node.push_back({"mins", json::array({src_node.mins[0], src_node.mins[1], src_node.mins[2]})});
-            node.push_back({"maxs", json::array({src_node.maxs[0], src_node.maxs[1], src_node.maxs[2]})});
+            node.push_back({"children", src_node.children});
+            node.push_back({"mins", src_node.mins});
+            node.push_back({"maxs", src_node.maxs});
             node.push_back({"firstface", src_node.firstface});
             node.push_back({"numfaces", src_node.numfaces});
         }
@@ -220,8 +215,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
             face.push_back({"firstedge", src_face.firstedge});
             face.push_back({"numedges", src_face.numedges});
             face.push_back({"texinfo", src_face.texinfo});
-            face.push_back({"styles",
-                json::array({src_face.styles[0], src_face.styles[1], src_face.styles[2], src_face.styles[3]})});
+            face.push_back({"styles", src_face.styles});
             face.push_back({"lightofs", src_face.lightofs});
 
             // for readibility, also output the actual vertices
@@ -229,8 +223,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
             for (int32_t k = 0; k < src_face.numedges; ++k) {
                 auto se = bsp.dsurfedges[src_face.firstedge + k];
                 uint32_t v = (se < 0) ? bsp.dedges[-se][1] : bsp.dedges[se][0];
-                auto dv = bsp.dvertexes[v];
-                verts.push_back(json::array({dv[0], dv[1], dv[2]}));
+                verts.push_back(bsp.dvertexes[v]);
             }
             face.push_back({"vertices", verts});
         }
@@ -243,7 +236,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
             json &clipnode = clipnodes.insert(clipnodes.end(), json::object()).value();
 
             clipnode.push_back({"planenum", src_clipnodes.planenum});
-            clipnode.push_back({"children", json::array({src_clipnodes.children[0], src_clipnodes.children[1]})});
+            clipnode.push_back({"children", src_clipnodes.children});
         }
     }
 
@@ -251,7 +244,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
         json &edges = (j.emplace("edges", json::array())).first.value();
 
         for (auto &src_edge : bsp.dedges) {
-            edges.insert(edges.end(), json::array({src_edge[0], src_edge[1]}));
+            edges.insert(edges.end(), src_edge);
         }
     }
 

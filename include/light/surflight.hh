@@ -24,7 +24,7 @@ See file, 'COPYING', for details.
 
 struct surfacelight_t
 {
-    vec3_t pos;
+    qvec3d pos;
     qvec3f surfnormal;
     /**
      * disables use of the surfnormal. We set this to true on sky surface lights,
@@ -36,7 +36,7 @@ struct surfacelight_t
     // Surface light settings...
     float intensity; // Surface light strength for each point
     float totalintensity; // Total surface light strength
-    vec3_t color; // Surface color
+    qvec3d color; // Surface color
 
     // Estimated visible AABB culling
     aabb3d bounds;

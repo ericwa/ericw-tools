@@ -33,7 +33,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
 {
     int i, j, k, l;
     qplane3d sep;
-    vec3_t v1, v2;
+    qvec3d v1, v2;
     vec_t d;
     int count;
     bool fliptest;
@@ -42,7 +42,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
     // check all combinations
     for (i = 0; i < source->size(); i++) {
         l = (i + 1) % source->size();
-        VectorSubtract(source->at(l), source->at(i), v1);
+        v1 = source->at(l) - source->at(i);
 
         // find a vertex of pass that makes a plane that puts all of the
         // vertexes of pass on the front side and all of the vertexes of
@@ -61,7 +61,7 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
                 continue; // Point lies in source plane
 
             // Make a plane with the three points
-            VectorSubtract(pass->at(j), source->at(i), v2);
+            v2 = pass->at(j) - source->at(i);
             CrossProduct(v1, v2, sep.normal);
             len_sq = sep.normal[0] * sep.normal[0] + sep.normal[1] * sep.normal[1] + sep.normal[2] * sep.normal[2];
 

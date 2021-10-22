@@ -103,10 +103,8 @@ static void *MakeSurfaceLightsThread(void *arg)
         winding.remove_colinear();
 
         // Get face normal and midpoint...
-        vec3_t facemidpoint;
         qvec3d facenormal = Face_Normal(bsp, face);
-        VectorCopy(winding.center(), facemidpoint);
-        VectorMA(facemidpoint, 1, facenormal, facemidpoint); // Lift 1 unit
+        qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
 
         // Dice winding...
         vector<qvec3f> points;
@@ -117,11 +115,9 @@ static void *MakeSurfaceLightsThread(void *arg)
         total_surflight_points += points.size();
 
         // Get texture color
-        vec3_t texturecolor;
-        Face_LookupTextureColor(bsp, face, texturecolor);
+        qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
 
         // Calculate emit color and intensity...
-        VectorScale(texturecolor, 1.0f / 255.0f, texturecolor); // Convert to 0..1 range...
 
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
         if (info->flags.native & Q2_SURF_SKY) {
@@ -136,10 +132,8 @@ static void *MakeSurfaceLightsThread(void *arg)
         VectorScale(texturecolor, info->value, texturecolor); // Scale by light value
 
         // Calculate intensity...
-        float intensity = 0.0f;
-        for (float c : texturecolor)
-            if (c > intensity)
-                intensity = c;
+        float intensity = qv::max(texturecolor);
+
         if (intensity == 0.0f)
             continue;
 

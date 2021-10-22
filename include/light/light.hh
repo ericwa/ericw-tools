@@ -65,9 +65,9 @@ constexpr float LightSample_Brightness(const T &color)
 class sun_t
 {
 public:
-    vec3_t sunvec;
+    qvec3d sunvec;
     vec_t sunlight;
-    vec3_t sunlight_color;
+    qvec3d sunlight_color;
     bool dirt;
     float anglescale;
     int style;
@@ -113,8 +113,8 @@ struct lightsurf_t
     bool nodirt;
 
     qplane3d plane;
-    vec3_t snormal;
-    vec3_t tnormal;
+    qvec3d snormal;
+    qvec3d tnormal;
 
     /* 16 in vanilla. engines will hate you if this is not power-of-two-and-at-least-one */
     float lightmapscale;
@@ -127,7 +127,7 @@ struct lightsurf_t
 
     int numpoints;
     qvec3d *points; // new'ed array of numpoints
-    vec3_t *normals; // new'ed array of numpoints
+    qvec3d *normals; // new'ed array of numpoints
     bool *occluded; // new'ed array of numpoints
     int *realfacenums; // new'ed array of numpoints
 
@@ -138,14 +138,14 @@ struct lightsurf_t
     float *occlusion; // new'ed array of numpoints
 
     /* for sphere culling */
-    vec3_t origin;
+    qvec3d origin;
     vec_t radius;
     /* for AABB culling */
     aabb3d bounds = qvec3d(0);
 
     // for radiosity
-    vec3_t radiosity;
-    vec3_t texturecolor;
+    qvec3d radiosity;
+    qvec3d texturecolor;
 
     /* stuff used by CalcPoint */
     texorg_t texorg;
@@ -196,7 +196,7 @@ extern bool dirt_in_use; // should any dirtmapping take place? set in SetupDirt
 
 extern float fadegate;
 extern int softsamples;
-extern const vec3_t vec3_white;
+constexpr qvec3d vec3_white { 255 };
 extern float surflight_subdivide;
 extern int sunsamples;
 

@@ -26,7 +26,7 @@
 static void CheckColinear(face_t *f)
 {
     int i, j;
-    vec3_t v1, v2;
+    qvec3d v1, v2;
 
     for (i = 0; i < f->w.numpoints; i++) {
         // skip the point if the vector from the previous point is the same
@@ -61,7 +61,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     qvec3d p1, p2, p3, p4, back;
     face_t *newf;
     int i, j, k, l;
-    vec3_t normal, delta, planenormal;
+    qvec3d normal, delta, planenormal;
     vec_t dot;
     qbsp_plane_t *plane;
     bool keep1, keep2;

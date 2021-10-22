@@ -62,7 +62,6 @@ bool dirt_in_use = false;
 float fadegate = EQUAL_EPSILON;
 int softsamples = 0;
 
-const vec3_t vec3_white = {255, 255, 255};
 float surflight_subdivide = 128.0f;
 int sunsamples = 64;
 bool scaledonly = false;
@@ -803,7 +802,7 @@ static void PrintUsage()
     }
 }
 
-static bool ParseVec3Optional(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
+static bool ParseVec3Optional(qvec3d &vec3_out, int *i_inout, int argc, const char **argv)
 {
     if ((*i_inout + 3) < argc) {
         const int start = (*i_inout + 1);
@@ -867,16 +866,11 @@ static const char *ParseStringOptional(int *i_inout, int argc, const char **argv
 }
 #endif
 
-static void ParseVec3(vec3_t vec3_out, int *i_inout, int argc, const char **argv)
+static void ParseVec3(qvec3d &vec3_out, int *i_inout, int argc, const char **argv)
 {
     if (!ParseVec3Optional(vec3_out, i_inout, argc, argv)) {
         Error("{} requires 3 numberic arguments\n", argv[*i_inout]);
     }
-}
-
-static void ParseVec3(qvec3d &vec3_out, int *i_inout, int argc, const char **argv)
-{
-    return ParseVec3(&vec3_out[0], i_inout, argc, argv);
 }
 
 static vec_t ParseVec(int *i_inout, int argc, const char **argv)
@@ -1160,7 +1154,7 @@ int light_main(int argc, const char **argv)
             } else if (lockable_vec_t *vecsetting = dynamic_cast<lockable_vec_t *>(setting)) {
                 vecsetting->setFloatValueLocked(ParseVec(&i, argc, argv));
             } else if (lockable_vec3_t *vec3setting = dynamic_cast<lockable_vec3_t *>(setting)) {
-                vec3_t temp;
+                qvec3d temp;
                 ParseVec3(temp, &i, argc, argv);
                 vec3setting->setVec3ValueLocked(temp);
             } else {

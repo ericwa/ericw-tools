@@ -88,29 +88,6 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
 }
 
 /*
-==============
-SnapVector
-==============
-*/
-static void SnapVector(vec3_t normal)
-{
-    int32_t i;
-
-    for (i = 0; i < 3; i++) {
-        if (fabs(normal[i] - 1) < NORMAL_EPSILON) {
-            VectorClear(normal);
-            normal[i] = 1;
-            break;
-        }
-        if (fabs(normal[i] - -1) < NORMAL_EPSILON) {
-            VectorClear(normal);
-            normal[i] = -1;
-            break;
-        }
-    }
-}
-
-/*
 =================
 AddBrushBevels
 
@@ -183,12 +160,11 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
         if (!w.size())
             continue;
         for (size_t j = 0; j < w.size(); j++) {
-            vec3_t vec;
             size_t k = (j + 1) % w.size();
-            VectorSubtract(w[j], w[k], vec);
+            qvec3d vec = w[j] - w[k];
             if (VectorNormalize(vec) < 0.5)
                 continue;
-            SnapVector(vec);
+            vec = qv::Snap(vec);
             for (k = 0; k < 3; k++)
                 if (vec[k] == -1 || vec[k] == 1)
                     break; // axial
@@ -198,9 +174,8 @@ static std::vector<std::tuple<size_t, face_t *>> AddBrushBevels(const brush_t *b
             // try the six possible slanted axials from this edge
             for (int32_t axis = 0; axis < 3; axis++) {
                 for (int32_t dir = -1; dir <= 1; dir += 2) {
-                    vec3_t vec2;
+                    qvec3d vec2 {};
                     // construct a plane
-                    VectorClear(vec2);
                     vec2[axis] = dir;
                     qplane3d current;
                     CrossProduct(vec, vec2, current.normal);

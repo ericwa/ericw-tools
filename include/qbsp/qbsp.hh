@@ -137,7 +137,7 @@ struct face_t
     std::optional<size_t> outputnumber; // only valid for original faces after
                                         // write surfaces
     bool touchesOccupiedLeaf; // internal use in outside.cc
-    vec3_t origin;
+    qvec3d origin;
     vec_t radius;
 
     std::vector<size_t> edges; // only filled in MakeFaceEdges

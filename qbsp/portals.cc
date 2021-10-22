@@ -425,7 +425,7 @@ static void CheckWindingArea(winding_t *w)
 {
     int i;
     vec_t total, add;
-    vec3_t v1, v2, cross;
+    qvec3d v1, v2, cross;
 
     total = 0;
     for (i = 1; i < w->numpoints; i++) {

@@ -155,7 +155,7 @@ static brush_t *load128x128x32Brush()
 
 static void checkForAllCubeNormals(const brush_t *brush)
 {
-    const vec3_t wanted[6] = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
+    const qvec3d wanted[6] = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
 
     bool found[6];
     for (int i = 0; i < 6; i++) {
