@@ -523,19 +523,45 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
         auto &val = it.value();
         auto &flags = extended_texinfo_flags[index];
         
-        flags.is_skip = val.at("is_skip").get<bool>();
-        flags.is_hint = val.at("is_hint").get<bool>();
-        flags.no_dirt = val.at("no_dirt").get<bool>();
-        flags.no_shadow = val.at("no_shadow").get<bool>();
-        flags.no_bounce = val.at("no_bounce").get<bool>();
-        flags.no_minlight = val.at("no_minlight").get<bool>();
-        flags.no_expand = val.at("no_expand").get<bool>();
-        flags.light_ignore = val.at("light_ignore").get<bool>();
-        flags.phong_angle = val.at("phong_angle").get<vec_t>();
-        flags.phong_angle_concave = val.at("phong_angle_concave").get<vec_t>();
-        flags.minlight = val.at("minlight").get<vec_t>();
-        flags.minlight_color = val.at("minlight_color").get<qvec3b>();
-        flags.light_alpha = val.at("light_alpha").get<vec_t>();
+        if (val.contains("is_skip")) {
+            flags.is_skip = val.at("is_skip").get<bool>();
+        }
+        if (val.contains("is_hint")) {
+            flags.is_hint = val.at("is_hint").get<bool>();
+        }
+        if (val.contains("no_dirt")) {
+            flags.no_dirt = val.at("no_dirt").get<bool>();
+        }
+        if (val.contains("no_shadow")) {
+            flags.no_shadow = val.at("no_shadow").get<bool>();
+        }
+        if (val.contains("no_bounce")) {
+            flags.no_bounce = val.at("no_bounce").get<bool>();
+        }
+        if (val.contains("no_minlight")) {
+            flags.no_minlight = val.at("no_minlight").get<bool>();
+        }
+        if (val.contains("no_expand")) {
+            flags.no_expand = val.at("no_expand").get<bool>();
+        }
+        if (val.contains("light_ignore")) {
+            flags.light_ignore = val.at("light_ignore").get<bool>();
+        }
+        if (val.contains("phong_angle")) {
+            flags.phong_angle = val.at("phong_angle").get<vec_t>();
+        }
+        if (val.contains("phong_angle_concave")) {
+            flags.phong_angle_concave = val.at("phong_angle_concave").get<vec_t>();
+        }
+        if (val.contains("minlight")) {
+            flags.minlight = val.at("minlight").get<vec_t>();
+        }
+        if (val.contains("minlight_color")) {
+            flags.minlight_color = val.at("minlight_color").get<qvec3b>();
+        }
+        if (val.contains("light_alpha")) {
+            flags.light_alpha = val.at("light_alpha").get<vec_t>();
+        }
     }
 }
 

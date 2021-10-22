@@ -341,21 +341,49 @@ static void WriteExtendedTexinfoFlags(void)
 
         Q_assert(count == tx.outputnum.value()); // check we are outputting them in the proper sequence
 
-        texinfofile[std::to_string(*tx.outputnum)] = {
-            { "is_skip", tx.flags.is_skip },
-            { "is_hint", tx.flags.is_hint },
-            { "no_dirt", tx.flags.no_dirt },
-            { "no_shadow", tx.flags.no_shadow },
-            { "no_bounce", tx.flags.no_bounce },
-            { "no_minlight", tx.flags.no_minlight },
-            { "no_expand", tx.flags.no_expand },
-            { "light_ignore", tx.flags.light_ignore },
-            { "phong_angle", tx.flags.phong_angle },
-            { "phong_angle_concave", tx.flags.phong_angle_concave },
-            { "minlight", tx.flags.minlight },
-            { "minlight_color", tx.flags.minlight_color },
-            { "light_alpha", tx.flags.light_alpha }
-        };
+        json t = json::object();
+        
+        if (tx.flags.is_skip) {
+            t["is_skip"] = tx.flags.is_skip;
+        }
+        if (tx.flags.is_hint) {
+            t["is_hint"] = tx.flags.is_hint;
+        }
+        if (tx.flags.no_dirt) {
+            t["no_dirt"] = tx.flags.no_dirt;
+        }
+        if (tx.flags.no_shadow) {
+            t["no_shadow"] = tx.flags.no_shadow;
+        }
+        if (tx.flags.no_bounce) {
+            t["no_bounce"] = tx.flags.no_bounce;
+        }
+        if (tx.flags.no_minlight) {
+            t["no_minlight"] = tx.flags.no_minlight;
+        }
+        if (tx.flags.no_expand) {
+            t["no_expand"] = tx.flags.no_expand;
+        }
+        if (tx.flags.light_ignore) {
+            t["light_ignore"] = tx.flags.light_ignore;
+        }
+        if (tx.flags.phong_angle) {
+            t["phong_angle"] = tx.flags.phong_angle;
+        }
+        if (tx.flags.phong_angle_concave) {
+            t["phong_angle_concave"] = tx.flags.phong_angle_concave;
+        }
+        if (tx.flags.minlight) {
+            t["minlight"] = tx.flags.minlight;
+        }
+        if (!qv::emptyExact(tx.flags.minlight_color)) {
+            t["minlight_color"] = tx.flags.minlight_color;
+        }
+        if (tx.flags.light_alpha) {
+            t["light_alpha"] = tx.flags.light_alpha;
+        }
+
+        texinfofile[std::to_string(*tx.outputnum)].swap(t);
         count++;
     }
     Q_assert(count == map.bsp.texinfo.size());

@@ -2192,11 +2192,11 @@ void WriteEntitiesToString()
         for (auto &ep : entity.epairs) {
 
             if (ep.first.size() >= options.target_game->max_entity_key - 1) {
-                LogPrint("WARNING: {} at {} (approx. line {}) has long key {} ({} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
+                LogPrint("WARNING: {} at {} (approx. line {}) has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
             }
 
             if (ep.second.size() >= options.target_game->max_entity_value - 1) {
-                LogPrint("WARNING: {} at {} (approx. line {}) has long value for key {} ({} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.second.size(), options.target_game->max_entity_value - 1);
+                LogPrint("WARNING: {} at {} (approx. line {}) has long value for key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.second.size(), options.target_game->max_entity_value - 1);
             }
 
             fmt::format_to(std::back_inserter(map.bsp.dentdata), "\"{}\" \"{}\"\n", ep.first, ep.second);
