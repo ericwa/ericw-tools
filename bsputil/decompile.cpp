@@ -64,7 +64,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
 
     for (int i = 0; i < 2; i++) {
         qvec3d axis = in_vecs.row(i).xyz();
-        const vec_t length = VectorNormalize(axis);
+        const vec_t length = qv::normalizeInPlace(axis);
         // avoid division by 0
         if (length != 0.0) {
             res.scale[i] = 1.0f / length;

@@ -426,7 +426,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] inline T normalizeInPlace(qvec<T, N> &v1)
+inline T normalizeInPlace(qvec<T, N> &v1)
 {
     T len = length(v1);
     v1 /= len;
@@ -910,29 +910,12 @@ DEPRECATE_SNIFF constexpr void VectorScale(const TFrom &v, TScale scale, TTo &ou
     out[2] = v[2] * scale;
 }
 
-template<typename T>
-DEPRECATE_SNIFF inline vec_t VectorNormalize(T &v)
-{
-    vec_t length = 0;
-    for (size_t i = 0; i < 3; i++)
-        length += v[i] * v[i];
-    length = sqrt(length);
-    if (length == 0)
-        return 0;
-
-    for (size_t i = 0; i < 3; i++)
-        v[i] /= (vec_t)length;
-
-    return (vec_t)length;
-}
-
 // returns the normalized direction from `start` to `stop` in the `dir` param
 // returns the distance from `start` to `stop`
 template<typename Tstart, typename Tstop, typename Tdir>
 inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
 {
-    VectorSubtract(stop, start, dir);
-    return VectorNormalize(dir);
+    return qv::normalizeInPlace(dir = (stop - start));
 }
 
 // Stores a normal, tangent and bitangent

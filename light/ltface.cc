@@ -3118,7 +3118,7 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
                 if (qv::emptyExact(temp))
                     temp = { 0, 0, 1 };
                 else
-                    VectorNormalize(temp);
+                    qv::normalizeInPlace(temp);
 
                 int v = (temp[0] + 1) * 128;
                 *lux++ = (v > 255) ? 255 : v;

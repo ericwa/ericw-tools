@@ -32,14 +32,12 @@ static void CheckColinear(face_t *f)
         // skip the point if the vector from the previous point is the same
         // as the vector to the next point
         j = (i - 1 < 0) ? f->w.numpoints - 1 : i - 1;
-        VectorSubtract(f->w.points[i], f->w.points[j], v1);
-        VectorNormalize(v1);
+        v1 = qv::normalize(f->w.points[i] - f->w.points[j]);
 
         j = (i + 1 == f->w.numpoints) ? 0 : i + 1;
-        VectorSubtract(f->w.points[j], f->w.points[i], v2);
-        VectorNormalize(v2);
+        v2 = qv::normalize(f->w.points[j] - f->w.points[i]);
 
-        if (VectorCompare(v1, v2, EQUAL_EPSILON))
+        if (qv::epsilonEqual(v1, v2, EQUAL_EPSILON))
             FError("Colinear edge");
     }
 }

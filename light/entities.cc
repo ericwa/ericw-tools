@@ -278,8 +278,7 @@ static void SetupSpotlights(const globalconfig_t &cfg)
         if (entity.targetent) {
             qvec3d targetOrigin = EntDict_VectorForKey(*entity.targetent, "origin");
             VectorSubtract(targetOrigin, entity.origin.vec3Value(), entity.spotvec);
-            targetdist = qv::length(entity.spotvec); // mxd
-            VectorNormalize(entity.spotvec);
+            targetdist = qv::normalizeInPlace(entity.spotvec); // mxd
             entity.spotlight = true;
         }
         if (entity.spotlight) {
@@ -385,11 +384,9 @@ static void AddSun(const globalconfig_t &cfg, const qvec3d &sunvec, vec_t light,
 
     // add to list
     sun_t &sun = all_suns.emplace_back();
-    VectorCopy(sunvec, sun.sunvec);
-    VectorNormalize(sun.sunvec);
-    VectorScale(sun.sunvec, -16384, sun.sunvec);
+    sun.sunvec = qv::normalize(sunvec) * -16384;
     sun.sunlight = light;
-    VectorCopy(color, sun.sunlight_color);
+    sun.sunlight_color = color;
     sun.anglescale = sun_anglescale;
     sun.dirt = Dirt_ResolveFlag(cfg, dirtInt);
     sun.style = style;
@@ -417,14 +414,12 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const qvec3d &color
     const vec_t sun_anglescale, const vec_t sun_deviance, const int sunlight_dirt, const int style,
     const std::string &suntexture)
 {
-    qvec3d sunvec;
     int i;
     int sun_num_samples = (sun_deviance == 0 ? 1 : sunsamples); // mxd
     vec_t sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
     vec_t sun_deviance_sq = sun_deviance * sun_deviance; // mxd
-
-    VectorCopy(sunvec_in, sunvec);
-    VectorNormalize(sunvec);
+    
+    qvec3d sunvec = qv::normalize(sunvec_in);
 
     // fmt::print( "input sunvec {} {} {}. deviance is {}, {} samples\n",sunvec[0],sunvec[1], sunvec[2], sun_deviance,
     // sun_num_samples);

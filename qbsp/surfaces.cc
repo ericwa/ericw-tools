@@ -90,10 +90,9 @@ void SubdivideFace(face_t *f, face_t **prevptr)
                 break;
 
             // split it
-            VectorCopy(tmp, plane.normal);
-            v = qv::length(plane.normal);
-            VectorNormalize(plane.normal);
-
+            plane.normal = tmp;
+            v = qv::normalizeInPlace(plane.normal);
+            
             // ericw -- reverted this, was causing https://github.com/ericwa/ericw-tools/issues/160
             //            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this
             //            should balance the load slightly */

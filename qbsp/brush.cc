@@ -602,8 +602,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
 
     hullbrush->edges.emplace_back(pt1, pt2);
 
-    qvec3d edgevec = p1 - p2;
-    VectorNormalize(edgevec);
+    qvec3d edgevec = qv::normalize(p1 - p2);
 
     for (a = 0; a < 3; a++) {
         b = (a + 1) % 3;

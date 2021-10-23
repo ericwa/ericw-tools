@@ -372,12 +372,9 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 if (sample[3] < 255)
                     alpha = sample[3] / 255.0f;
 
-                qvec3d rayDir = {RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)};
-                qvec3d potentialHitGeometryNormal = {RTCHitN_Ng_x(potentialHit, N, i), RTCHitN_Ng_y(potentialHit, N, i),
-                    RTCHitN_Ng_z(potentialHit, N, i)};
-
-                VectorNormalize(rayDir);
-                VectorNormalize(potentialHitGeometryNormal);
+                qvec3d rayDir = qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
+                qvec3d potentialHitGeometryNormal = qv::normalize(qvec3d{RTCHitN_Ng_x(potentialHit, N, i), RTCHitN_Ng_y(potentialHit, N, i),
+                    RTCHitN_Ng_z(potentialHit, N, i)});
 
                 const vec_t raySurfaceCosAngle = qv::dot(rayDir, potentialHitGeometryNormal);
 
@@ -650,7 +647,7 @@ static RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &
 static RTCRayHit SetupRay_StartStop(const qvec3d &start, const qvec3d &stop)
 {
     qvec3d dir = stop - start;
-    vec_t dist = VectorNormalize(dir);
+    vec_t dist = qv::normalizeInPlace(dir);
 
     return SetupRay(0, start, dir, dist);
 }
@@ -715,10 +712,7 @@ hittype_t Embree_DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, 
         *hitdist_out = ray.ray.tfar;
     }
     if (hitplane_out) {
-        hitplane_out->normal[0] = ray.hit.Ng_x;
-        hitplane_out->normal[1] = ray.hit.Ng_y;
-        hitplane_out->normal[2] = ray.hit.Ng_z;
-        VectorNormalize(hitplane_out->normal);
+        hitplane_out->normal = qv::normalize(qvec3d{ray.hit.Ng_x, ray.hit.Ng_y, ray.hit.Ng_z});
 
         qvec3d hitpoint = start + (dirn * ray.ray.tfar);
 

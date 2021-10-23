@@ -264,26 +264,22 @@ static void SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
 
 restart:
         /* find the last corner */
-        VectorSubtract(w[w.size() - 1], w[0], edgevec[0]);
-        VectorNormalize(edgevec[0]);
+        edgevec[0] = qv::normalize(w[w.size() - 1] - w[0]);
         for (lastcorner = w.size() - 1; lastcorner > 0; lastcorner--) {
             const qvec3d &p0 = w[lastcorner - 1];
             const qvec3d &p1 = w[lastcorner];
-            VectorSubtract(p0, p1, edgevec[1]);
-            VectorNormalize(edgevec[1]);
+            edgevec[1] = qv::normalize(p0 - p1);
             angle = qv::dot(edgevec[0], edgevec[1]);
             if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
                 break;
         }
 
         /* find the first corner */
-        VectorSubtract(w[1], w[0], edgevec[0]);
-        VectorNormalize(edgevec[0]);
+        edgevec[0] = qv::normalize(w[1] - w[0]);
         for (firstcorner = 1; firstcorner < w.size() - 1; firstcorner++) {
             const qvec3d &p0 = w[firstcorner + 1];
             const qvec3d &p1 = w[firstcorner];
-            VectorSubtract(p0, p1, edgevec[1]);
-            VectorNormalize(edgevec[1]);
+            edgevec[1] = qv::normalize(p0 - p1);
             angle = qv::dot(edgevec[0], edgevec[1]);
             if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
                 break;
