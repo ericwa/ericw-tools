@@ -92,33 +92,22 @@ static unsigned HashVec(const qvec3d &vec)
 
 static void CanonicalVector(const qvec3d &p1, const qvec3d &p2, qvec3d &vec)
 {
-    VectorSubtract(p2, p1, vec);
-    vec_t length = VectorNormalize(vec);
-    if (vec[0] > EQUAL_EPSILON)
-        return;
-    else if (vec[0] < -EQUAL_EPSILON) {
-        VectorInverse(vec);
-        return;
-    } else
-        vec[0] = 0;
+    vec = p2 - p1;
+    vec_t length = qv::normalizeInPlace(vec);
 
-    if (vec[1] > EQUAL_EPSILON)
-        return;
-    else if (vec[1] < -EQUAL_EPSILON) {
-        VectorInverse(vec);
-        return;
-    } else
-        vec[1] = 0;
+    for (size_t i = 0; i < 3; i++) {
+        if (vec[i] > EQUAL_EPSILON)
+            return;
+        else if (vec[i] < -EQUAL_EPSILON) {
+            vec = -vec;
+            return;
+        } else {
+            vec[i] = 0;
+        }
+    }
 
-    if (vec[2] > EQUAL_EPSILON)
-        return;
-    else if (vec[2] < -EQUAL_EPSILON) {
-        VectorInverse(vec);
-        return;
-    } else
-        vec[2] = 0;
-
-    LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", length, p1[0], p1[1], p1[2]);
+    // FIXME: Line {}: was here but no line number can be grabbed here?
+    LogPrint("WARNING: Healing degenerate edge ({}) at ({:.3})\n", length, p1);
 }
 
 static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t2)

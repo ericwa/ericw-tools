@@ -477,9 +477,8 @@ static void SetupSuns(const globalconfig_t &cfg)
             } else if (VectorLengthSq(entity.mangle.vec3Value()) > 0) {
                 VectorCopy(entity.mangle.vec3Value(), sunvec);
             } else { // Use { 0, 0, 0 } as sun target...
-                LogPrint("WARNING: sun missing target, { 0 0 0 } used.\n");
-                VectorCopy(entity.origin.vec3Value(), sunvec);
-                VectorInverse(sunvec);
+                LogPrint("WARNING: sun missing target, entity origin used.\n");
+                sunvec = -entity.origin.vec3Value();
             }
 
             // Add the sun
@@ -582,16 +581,12 @@ static void SetupSkyDome(const globalconfig_t &cfg, vec_t upperLight, const qvec
     }
 
     /* create vertical sun */
-    VectorSet(direction, 0.0f, 0.0f, -1.0f);
-
     if (sunlight2value > 0) {
-        AddSun(cfg, direction, sunlight2value, upperColor, upperDirt, upperAnglescale, upperStyle, upperSuntexture);
+        AddSun(cfg, { 0.0, 0.0, -1.0 }, sunlight2value, upperColor, upperDirt, upperAnglescale, upperStyle, upperSuntexture);
     }
 
-    VectorSet(direction, 0.0f, 0.0f, 1.0f);
-
     if (sunlight3value > 0) {
-        AddSun(cfg, direction, sunlight3value, lowerColor, lowerDirt, lowerAnglescale, lowerStyle, lowerSuntexture);
+        AddSun(cfg, { 0.0, 0.0, 1.0 }, sunlight3value, lowerColor, lowerDirt, lowerAnglescale, lowerStyle, lowerSuntexture);
     }
 }
 

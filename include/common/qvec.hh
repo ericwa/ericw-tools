@@ -868,33 +868,6 @@ namespace qv
 // "vec3" type. legacy; eventually will be replaced entirely
 #define DEPRECATE_SNIFF [[deprecated]]
 
-#undef DEPRECATE_SNIFF
-#define DEPRECATE_SNIFF
-
-template<typename T>
-DEPRECATE_SNIFF constexpr void VectorInverse(T &v)
-{
-    v[0] = -v[0];
-    v[1] = -v[1];
-    v[2] = -v[2];
-}
-
-template<typename T>
-DEPRECATE_SNIFF constexpr void VectorSet(T &out, vec_t x, vec_t y, vec_t z)
-{
-    out[0] = x;
-    out[1] = y;
-    out[2] = z;
-}
-
-template<typename T>
-DEPRECATE_SNIFF constexpr void VectorClear(T &out)
-{
-    out[0] = 0;
-    out[1] = 0;
-    out[2] = 0;
-}
-
 template<typename Ta, typename Tb, typename Tc>
 DEPRECATE_SNIFF constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
 {
@@ -902,6 +875,9 @@ DEPRECATE_SNIFF constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb,
     vc[1] = va[1] + scale * vb[1];
     vc[2] = va[2] + scale * vb[2];
 }
+
+#undef DEPRECATE_SNIFF
+#define DEPRECATE_SNIFF
 
 template<typename Tx, typename Ty, typename Tout>
 DEPRECATE_SNIFF constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)

@@ -84,7 +84,7 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
 
     qvec3d facenormal = plane.normal;
     if (face->planeside)
-        VectorInverse(facenormal);
+        facenormal = -facenormal;
 
     for (size_t i = 0; i < face->w.size(); i++) {
         const qvec3d &p1 = face->w[i];

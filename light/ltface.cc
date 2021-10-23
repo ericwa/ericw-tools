@@ -1706,7 +1706,7 @@ static void LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *li
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
         const float light = 255 * Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
-        VectorSet(sample->color, light, light, light);
+        sample->color = { light };
     }
 
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
@@ -2354,14 +2354,14 @@ static void GetUpRtVecs(const qvec3d &normal, qvec3d &myUp, qvec3d &myRt)
     /* check if the normal is aligned to the world-up */
     if (normal[0] == 0.0f && normal[1] == 0.0f) {
         if (normal[2] == 1.0f) {
-            VectorSet(myRt, 1.0f, 0.0f, 0.0f);
-            VectorSet(myUp, 0.0f, 1.0f, 0.0f);
+            myRt = { 1.0, 0.0, 0.0 };
+            myUp = { 0.0, 1.0, 0.0 };
         } else if (normal[2] == -1.0f) {
-            VectorSet(myRt, -1.0f, 0.0f, 0.0f);
-            VectorSet(myUp, 0.0f, 1.0f, 0.0f);
+            myRt = { -1.0, 0.0, 0.0 };
+            myUp = { 0.0, 1.0, 0.0 };
         }
     } else {
-        constexpr qvec3d worldUp = { 0, 0, 1 };
+        constexpr qvec3d worldUp { 0, 0, 1 };
         myRt = qv::normalize(qv::cross(normal, worldUp));
         myUp = qv::normalize(qv::cross(myRt, normal));
     }
@@ -3112,14 +3112,15 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
             *out++ = light;
 
             if (lux) {
-                qvec3d temp;
-                const qvec4f &direction = output_dir->at(sampleindex);
-                temp[0] = qv::dot(qvec3f(direction), qvec3f(lightsurf->snormal));
-                temp[1] = qv::dot(qvec3f(direction), qvec3f(lightsurf->tnormal));
-                temp[2] = qv::dot(qvec3f(direction), qvec3f(lightsurf->plane.normal));
+                qvec3d direction = output_dir->at(sampleindex).xyz();
+                qvec3d temp = {
+                    qv::dot(direction, lightsurf->snormal),
+                    qv::dot(direction, lightsurf->tnormal),
+                    qv::dot(direction, lightsurf->plane.normal)
+                };
 
-                if (!temp[0] && !temp[1] && !temp[2])
-                    VectorSet(temp, 0, 0, 1);
+                if (qv::emptyExact(temp))
+                    temp = { 0, 0, 1 };
                 else
                     VectorNormalize(temp);
 
