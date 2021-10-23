@@ -911,23 +911,6 @@ DEPRECATE_SNIFF constexpr void VectorScale(const TFrom &v, TScale scale, TTo &ou
 }
 
 template<typename T>
-DEPRECATE_SNIFF constexpr vec_t VectorLengthSq(const T &v)
-{
-    vec_t length = 0;
-    for (int i = 0; i < 3; i++)
-        length += v[i] * v[i];
-    return length;
-}
-
-template<typename T>
-DEPRECATE_SNIFF inline vec_t VectorLength(const T &v)
-{
-    vec_t length = VectorLengthSq(v);
-    length = sqrt(length);
-    return length;
-}
-
-template<typename T>
 DEPRECATE_SNIFF inline vec_t VectorNormalize(T &v)
 {
     vec_t length = 0;

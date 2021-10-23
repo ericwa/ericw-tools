@@ -294,14 +294,10 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
 
     // calculate a bounding sphere for the face
     {
-        qvec3d radius;
+        qvec3d radius = (worldmaxs - worldmins) * 0.5;
 
-        VectorSubtract(worldmaxs, worldmins, radius);
-        VectorScale(radius, 0.5, radius);
-
-        VectorAdd(worldmins, radius, surf->origin);
-        surf->radius = VectorLength(radius);
-
+        surf->origin = worldmins + radius;
+        surf->radius = qv::length(radius);
         surf->bounds = {worldmins, worldmaxs};
     }
 
@@ -1149,7 +1145,7 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     }
 
     qvec3d distvec = entity->origin.vec3Value() - lightsurf->origin;
-    const float dist = VectorLength(distvec) - lightsurf->radius;
+    const float dist = qv::length(distvec) - lightsurf->radius;
 
     /* light is inside surface bounding sphere => can't cull */
     if (dist < 0) {

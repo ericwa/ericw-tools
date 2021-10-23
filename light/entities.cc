@@ -278,7 +278,7 @@ static void SetupSpotlights(const globalconfig_t &cfg)
         if (entity.targetent) {
             qvec3d targetOrigin = EntDict_VectorForKey(*entity.targetent, "origin");
             VectorSubtract(targetOrigin, entity.origin.vec3Value(), entity.spotvec);
-            targetdist = VectorLength(entity.spotvec); // mxd
+            targetdist = qv::length(entity.spotvec); // mxd
             VectorNormalize(entity.spotvec);
             entity.spotlight = true;
         }
@@ -474,7 +474,7 @@ static void SetupSuns(const globalconfig_t &cfg)
             if (entity.targetent) {
                 qvec3d target_pos = EntDict_VectorForKey(*entity.targetent, "origin");
                 VectorSubtract(target_pos, entity.origin.vec3Value(), sunvec);
-            } else if (VectorLengthSq(entity.mangle.vec3Value()) > 0) {
+            } else if (qv::length2(entity.mangle.vec3Value()) > 0) {
                 VectorCopy(entity.mangle.vec3Value(), sunvec);
             } else { // Use { 0, 0, 0 } as sun target...
                 LogPrint("WARNING: sun missing target, entity origin used.\n");

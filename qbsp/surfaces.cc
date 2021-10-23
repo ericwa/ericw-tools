@@ -91,7 +91,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
 
             // split it
             VectorCopy(tmp, plane.normal);
-            v = VectorLength(plane.normal);
+            v = qv::length(plane.normal);
             VectorNormalize(plane.normal);
 
             // ericw -- reverted this, was causing https://github.com/ericwa/ericw-tools/issues/160

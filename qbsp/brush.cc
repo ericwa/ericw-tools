@@ -102,7 +102,7 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
 
         /* check the edge isn't degenerate */
         qvec3d edgevec = p2 - p1;
-        vec_t length = VectorLength(edgevec);
+        vec_t length = qv::length(edgevec);
         if (length < ON_EPSILON) {
             LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
                 length, p1[0], p1[1], p1[2]);
@@ -190,7 +190,7 @@ static void PlaneHash_Add(const qplane3d &p, int index)
  */
 static int NewPlane(const qplane3d &plane, int *side)
 {
-    vec_t len = VectorLength(plane.normal);
+    vec_t len = qv::length(plane.normal);
 
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
@@ -474,7 +474,8 @@ AddBrushPlane
 */
 static void AddBrushPlane(hullbrush_t *hullbrush, const qplane3d &plane)
 {
-    vec_t len = VectorLength(plane.normal);
+    vec_t len = qv::length(plane.normal);
+
     if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
 
