@@ -24,7 +24,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <direct.h>
 #include <windows.h>
 #endif

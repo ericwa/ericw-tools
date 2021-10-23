@@ -22,6 +22,7 @@ See file, 'COPYING', for details.
 
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
+#include <common/qvec.hh>
 
 struct q2_miptex_t
 {
@@ -32,11 +33,6 @@ struct q2_miptex_t
     int flags;
     int contents;
     int value;
-};
-
-struct color_rgba
-{
-    uint8_t r, g, b, a;
 };
 
 // mxd. Moved from ltface.cc

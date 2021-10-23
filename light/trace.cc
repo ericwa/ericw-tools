@@ -47,15 +47,12 @@ uint32_t clamp_texcoord(vec_t in, uint32_t width)
     }
 }
 
-color_rgba // mxd. int -> color_rgba
-SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point)
+qvec4b SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point)
 {
-    color_rgba sample{};
-
     const auto *miptex = Face_RgbaMiptex(bsp, face);
 
     if (miptex == nullptr || !miptex->width)
-        return sample;
+        return {};
 
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
 
@@ -64,14 +61,7 @@ SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point)
     const uint32_t x = clamp_texcoord(texcoord[0], miptex->width);
     const uint32_t y = clamp_texcoord(texcoord[1], miptex->height);
 
-    const uint8_t *data = miptex->data.get() + ((miptex->width * y) + x) * 4;
-
-    sample.r = data[0];
-    sample.g = data[1];
-    sample.b = data[2];
-    sample.a = data[3];
-
-    return sample;
+    return miptex->data.get()[(miptex->width * y) + x];
 }
 
 hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)

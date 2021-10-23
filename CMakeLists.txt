@@ -40,23 +40,27 @@ endif ()
 
 add_definitions(-DERICWTOOLS_VERSION=${GIT_DESCRIBE})
 
-if (MSVC)
-	add_definitions("/DWIN32")
-	# TODO: remove these 
-	add_definitions("/D_CRT_SECURE_NO_WARNINGS")
-	add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
-	add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
-	add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning
-	add_definitions("/wd4264") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
-	add_definitions("/wd4267") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
-	add_definitions("/wd4305") # disable "truncation from 'double' to 'float'" warning
-	add_definitions("/wd4250") # disable "inherits via dominance' warning (used in trace_embree.cc)
+if (WIN32)
 	set("NO_ITERATOR_DEBUG" FALSE CACHE BOOL "Whether to use MSVC iterator debugging or not")
+
 	if (NO_ITERATOR_DEBUG)
-		add_definitions("/D_ITERATOR_DEBUG_LEVEL=0")
-		add_definitions("/D_CONTAINER_DEBUG_LEVEL=0")
-	endif ()
-endif (MSVC)
+		add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+		add_definitions(-D_CONTAINER_DEBUG_LEVEL=0)
+	endif (NO_ITERATOR_DEBUG)
+
+	# TODO: remove these 
+	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+
+	if (MSVC)
+		add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
+		add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
+		add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning
+		add_definitions("/wd4264") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
+		add_definitions("/wd4267") # disable "conversion from 'size_t' to 'int', possible loss of data" warning
+		add_definitions("/wd4305") # disable "truncation from 'double' to 'float'" warning
+		add_definitions("/wd4250") # disable "inherits via dominance' warning (used in trace_embree.cc)
+	endif (MSVC)
+endif (WIN32)
 
 # 10.9: minimum version that supports unordered_map
 # 10.14: required by tbb 2021.3.0 (due to use of alignas)

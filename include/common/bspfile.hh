@@ -451,11 +451,12 @@ struct dmiptexlump_t
 
 // mxd. Used to store RGBA data in mbsp->drgbatexdata.
 // This isn't persisted to BSPs so we don't need stream stuff.
+// TODO: move to light, it shouldn't be here
 struct rgba_miptex_t
 {
     std::string name;
     uint32_t width = 0, height = 0;
-    std::unique_ptr<uint8_t[]> data;
+    std::unique_ptr<qvec4b[]> data;
 };
 
 /* 0-2 are axial planes */

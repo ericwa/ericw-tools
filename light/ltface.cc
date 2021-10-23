@@ -774,11 +774,8 @@ static bool Lightsurf_Init(
     }
 
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    VectorCopy(tex->vecs.row(0).xyz(), lightsurf->snormal);
-    VectorCopy(tex->vecs.row(1).xyz(), lightsurf->tnormal);
-    VectorInverse(lightsurf->tnormal);
-    VectorNormalize(lightsurf->snormal);
-    VectorNormalize(lightsurf->tnormal);
+    lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
+    lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
 
     /* Set up the surface points */
     CalcFaceExtents(face, bsp, lightsurf);
@@ -966,7 +963,7 @@ static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, co
         // Catch 0 distance between sample point and light (produces infinite brightness / nan's) and causes
         // problems later
         dist = 0.1f;
-        VectorSet(surfpointToLightDir_out, 0, 0, 1);
+        surfpointToLightDir_out = { 0, 0, 1 };
     }
     const float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
 
@@ -1198,13 +1195,13 @@ static bool LightFace_SampleMipTex(
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
     // this is because we're treating it like a cubemap. why? no idea.
     float weight[4];
-    color_rgba pi[4];
-    const color_rgba *data = reinterpret_cast<const color_rgba *>(tex->data.get());
+    qvec4b pi[4];
+    const qvec4b *data = tex->data.get();
 
     qvec3d coord;
     if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
         coord[1] >= 1) {
-        VectorSet(result, 0, 0, 0);
+        result = {};
         return false; // mxd
     } else {
         float sfrac = (coord[0]) * (tex->width - 1); // mxd. We are sampling sbase+1 pixels, so multiplying by
@@ -1223,20 +1220,11 @@ static bool LightFace_SampleMipTex(
         weight[2] = (1 - sfrac) * (tfrac);
         pi[3] = data[((sbase + 1) % tex->width) + (tex->width * ((tbase + 1) % tex->height))];
         weight[3] = (sfrac) * (tfrac);
-        VectorSet(result, 0, 0, 0);
-        result[0] = weight[0] * pi[0].r;
-        result[1] = weight[0] * pi[0].g;
-        result[2] = weight[0] * pi[0].b;
-        result[0] += weight[1] * pi[1].r;
-        result[1] += weight[1] * pi[1].g;
-        result[2] += weight[1] * pi[1].b;
-        result[0] += weight[2] * pi[2].r;
-        result[1] += weight[2] * pi[2].g;
-        result[2] += weight[2] * pi[2].b;
-        result[0] += weight[3] * pi[3].r;
-        result[1] += weight[3] * pi[3].g;
-        result[2] += weight[3] * pi[3].b;
-        VectorScale(result, 2, result);
+        result = pi[0].xyz() * weight[0] +
+                 pi[1].xyz() * weight[1] +
+                 pi[2].xyz() * weight[2] +
+                 pi[3].xyz() * weight[3];
+        result *= 2;
 
         return true;
     }

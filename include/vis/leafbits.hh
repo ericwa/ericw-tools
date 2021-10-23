@@ -26,7 +26,7 @@
 /* Use some GCC builtins */
 #if !defined(ffsl) && defined(__GNUC__)
 #define ffsl __builtin_ffsl
-#elif defined(WIN32)
+#elif defined(_WIN32)
 #include <intrin.h>
 inline int ffsl(long int val)
 {

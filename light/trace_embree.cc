@@ -363,14 +363,14 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 
         if (isFence || isGlass) {
             qvec3d hitpoint = Embree_RayEndpoint(ray, N, i);
-            const color_rgba sample = SampleTexture(face, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
+            const qvec4b sample = SampleTexture(face, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
 
             if (isGlass) {
                 // hit glass...
 
                 // mxd. Adjust alpha by texture alpha?
-                if (sample.a < 255)
-                    alpha = sample.a / 255.0f;
+                if (sample[3] < 255)
+                    alpha = sample[3] / 255.0f;
 
                 qvec3d rayDir = {RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)};
                 qvec3d potentialHitGeometryNormal = {RTCHitN_Ng_x(potentialHit, N, i), RTCHitN_Ng_y(potentialHit, N, i),
@@ -384,7 +384,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 // only pick up the color of the glass on the _exiting_ side of the glass.
                 // (we currently trace "backwards", from surface point --> light source)
                 if (raySurfaceCosAngle < 0) {
-                    AddGlassToRay(context, rayIndex, alpha, qvec3d{sample.r, sample.g, sample.b} * (1.0 / 255.0));
+                    AddGlassToRay(context, rayIndex, alpha, sample.xyz() * (1.0 / 255.0));
                 }
 
                 // reject hit
@@ -393,7 +393,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             }
 
             if (isFence) {
-                if (sample.a < 255) {
+                if (sample[3] < 255) {
                     // reject hit
                     valid[i] = INVALID;
                     continue;

@@ -1981,7 +1981,7 @@ static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
             res.scale[i] = 0.0;
         }
         res.shift[i] = in_vecs.at(i, 3);
-        VectorCopy(axis, res.axis.row(i));
+        res.axis.set_row(i, axis);
     }
 
     return res;

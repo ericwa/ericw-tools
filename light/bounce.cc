@@ -69,7 +69,7 @@ static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const globalconfig_t &cf
     p->plane = p->w.plane();
 
     // nudge the cernter point 1 unit off
-    VectorMA(p->center, 1.0f, p->plane.normal, p->samplepoint);
+    p->samplepoint = p->center + p->plane.normal;
 
     // calculate direct light
 

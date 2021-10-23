@@ -144,8 +144,7 @@ qvec3f Palette_GetColor(const int i)
 
 qvec4f Texture_GetColor(const rgba_miptex_t &tex, const size_t i)
 {
-    const uint8_t *data = tex.data.get();
-    return {(float)data[i * 4], (float)data[i * 4 + 1], (float)data[i * 4 + 2], (float)data[i * 4 + 3]};
+    return tex.data.get()[i];
 }
 
 /*
@@ -628,7 +627,7 @@ LoadTextures(mbsp_t *bsp)
         tex.name = pair.first;
         tex.width = width;
         tex.height = height;
-        tex.data = std::unique_ptr<uint8_t[]>(pixels);
+        tex.data = std::unique_ptr<qvec4b[]>(reinterpret_cast<qvec4b*>(pixels));
     }
 
     // Sanity checks...
@@ -676,17 +675,15 @@ ConvertTextures(mbsp_t *bsp)
         // Convert to RGBA
         const size_t numpalpixels = tex.width * tex.height;
         const uint8_t *data = miptex.data[0].get();
-        uint8_t *pixels = new uint8_t[numpalpixels * 4]; // RGBA
+        qvec4b *pixels = new qvec4b[numpalpixels]; // RGBA
 
         for (size_t c = 0; c < numpalpixels; c++) {
             const uint8_t palindex = data[c];
             auto color = Palette_GetColor(palindex);
-            for (int d = 0; d < 3; d++)
-                pixels[c * 4 + d] = static_cast<uint8_t>(color[d]);
-            pixels[c * 4 + 3] = static_cast<uint8_t>(palindex == 255 ? 0 : 255);
+            pixels[c] = { color, static_cast<uint8_t>(palindex == 255 ? 0 : 255) };
         }
 
-        tex.data = std::unique_ptr<uint8_t[]>(pixels);
+        tex.data = std::unique_ptr<qvec4b[]>(pixels);
     }
 
     // Sanity checks...

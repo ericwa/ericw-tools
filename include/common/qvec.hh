@@ -153,79 +153,117 @@ public:
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
 
     template<typename F>
-    constexpr qvec operator+=(const qvec<F, N> &other)
+    [[nodiscard]] inline auto operator+(const qvec<F, N> &other) const
     {
-        for (size_t i = 0; i < N; i++)
-            v[i] += other.v[i];
-        return *this;
-    }
-    template<typename F>
-    constexpr qvec operator-=(const qvec<F, N> &other)
-    {
-        for (size_t i = 0; i < N; i++)
-            v[i] -= other.v[i];
-        return *this;
-    }
-    constexpr qvec operator*=(const T &scale)
-    {
-        for (size_t i = 0; i < N; i++)
-            v[i] *= scale;
-        return *this;
-    }
-    constexpr qvec operator/=(const T &scale)
-    {
-        for (size_t i = 0; i < N; i++)
-            v[i] /= scale;
-        return *this;
-    }
-    constexpr qvec &operator*=(const qvec &scale)
-    {
-        for (size_t i = 0; i < N; i++)
-            v[i] *= scale[i];
-        return *this;
-    }
-    constexpr qvec operator/=(const qvec &scale)
-    {
-        for (size_t i = 0; i < N; i++)
-            v[i] /= scale[i];
-        return *this;
+        qvec<decltype(T() + F()), N> v;
+
+        for (size_t i = 0; i < N; i++) {
+            v[i] = at(i) + other[i];
+        }
+
+        return v;
     }
 
     template<typename F>
-    [[nodiscard]] constexpr qvec operator+(const qvec<F, N> &other) const
+    [[nodiscard]] inline auto operator-(const qvec<F, N> &other) const
     {
-        return qvec(*this) += other;
+        qvec<decltype(T() - F()), N> v;
+
+        for (size_t i = 0; i < N; i++) {
+            v[i] = at(i) - other[i];
+        }
+
+        return v;
     }
 
-    template<typename F>
-    [[nodiscard]] constexpr qvec<T, N> operator-(const qvec<F, N> &other) const
+    template<typename S>
+    [[nodiscard]] inline auto operator*(const S &scale) const
     {
-        return qvec(*this) -= other;
-    }
+        qvec<decltype(T() * S()), N> v;
 
-    [[nodiscard]] constexpr qvec<T, N> operator*(const T &scale) const
-    {
-        return qvec(*this) *= scale;
-    }
+        for (size_t i = 0; i < N; i++) {
+            v[i] = at(i) * scale;
+        }
 
-    [[nodiscard]] constexpr qvec<T, N> operator/(const T &scale) const
-    {
-        return qvec(*this) /= scale;
+        return v;
     }
     
-    [[nodiscard]] constexpr qvec<T, N> operator*(const qvec<T, N> &scale) const
+    template<typename F>
+    [[nodiscard]] inline auto operator*(const qvec<F, N> &scale) const
     {
-        return qvec(*this) *= scale;
+        qvec<decltype(T() * F()), N> v;
+
+        for (size_t i = 0; i < N; i++) {
+            v[i] = at(i) * scale[i];
+        }
+
+        return v;
+    }
+    
+    template<typename S>
+    [[nodiscard]] inline auto operator/(const S &scale) const
+    {
+        qvec<decltype(T() / S()), N> v;
+
+        for (size_t i = 0; i < N; i++) {
+            v[i] = at(i) / scale;
+        }
+
+        return v;
+    }
+    
+    template<typename F>
+    [[nodiscard]] inline auto operator/(const qvec<F, N> &scale) const
+    {
+        qvec<decltype(T() / F()), N> v;
+
+        for (size_t i = 0; i < N; i++) {
+            v[i] = at(i) / scale[i];
+        }
+
+        return v;
     }
 
-    [[nodiscard]] constexpr qvec<T, N> operator/(const qvec<T, N> &scale) const
+    [[nodiscard]] inline auto operator-() const
     {
-        return qvec(*this) /= scale;
+        qvec<decltype(-T()), N> v;
+
+        for (size_t i = 0; i < N; i++) {
+            v[i] = -at(i);
+        }
+
+        return v;
     }
 
-    [[nodiscard]] constexpr qvec<T, N> operator-() const
+    template<typename F>
+    inline qvec operator+=(const qvec<F, N> &other)
     {
-        return qvec(*this) *= -1;
+        return *this = *this + other;
+    }
+    template<typename F>
+    inline qvec operator-=(const qvec<F, N> &other)
+    {
+        return *this = *this - other;
+    }
+    template<typename S>
+    inline qvec operator*=(const S &scale)
+    {
+        return *this = *this * scale;
+    }
+    template<typename F>
+    inline qvec &operator*=(const qvec<F, N> &other)
+    {
+        return *this = *this * other;
+    }
+    template<typename S>
+    inline qvec operator/=(const S &scale)
+    {
+        return *this = *this / scale;
+    }
+    template<typename F>
+    inline qvec operator/=(const qvec<F, N> &other)
+    {
+        return *this = *this * other;
     }
 
     [[nodiscard]] constexpr qvec<T, 3> xyz() const
@@ -582,6 +620,8 @@ using qvec3i = qvec<int32_t, 3>;
 using qvec3s = qvec<int16_t, 3>;
 using qvec3b = qvec<uint8_t, 3>;
 
+using qvec4b = qvec<uint8_t, 4>;
+
 template<class T>
 class qplane3
 {
@@ -618,8 +658,8 @@ public:
     [[nodiscard]] constexpr qplane3 operator-() const { return { -normal, -dist }; }
 
     // generic case
-    template<typename T>
-    inline T distance_to(const qvec<T, 3> &point) const
+    template<typename F>
+    inline F distance_to(const qvec<F, 3> &point) const
     {
         return qv::dot(point, normal) - dist;
     }
@@ -831,38 +871,6 @@ namespace qv
 #undef DEPRECATE_SNIFF
 #define DEPRECATE_SNIFF
 
-template<typename Tx, typename Ty, typename Tout>
-DEPRECATE_SNIFF constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
-{
-    out[0] = x[0] - y[0];
-    out[1] = x[1] - y[1];
-    out[2] = x[2] - y[2];
-}
-
-template<typename Tx, typename Ty, typename Tout>
-DEPRECATE_SNIFF constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
-{
-    out[0] = x[0] + y[0];
-    out[1] = x[1] + y[1];
-    out[2] = x[2] + y[2];
-}
-
-template<typename TFrom, typename TTo>
-DEPRECATE_SNIFF constexpr void VectorCopy(const TFrom &in, TTo &out)
-{
-    out[0] = in[0];
-    out[1] = in[1];
-    out[2] = in[2];
-}
-
-template<typename TFrom, typename TScale, typename TTo>
-DEPRECATE_SNIFF constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
-{
-    out[0] = v[0] * scale;
-    out[1] = v[1] * scale;
-    out[2] = v[2] * scale;
-}
-
 template<typename T>
 DEPRECATE_SNIFF constexpr void VectorInverse(T &v)
 {
@@ -893,6 +901,38 @@ DEPRECATE_SNIFF constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb,
     vc[0] = va[0] + scale * vb[0];
     vc[1] = va[1] + scale * vb[1];
     vc[2] = va[2] + scale * vb[2];
+}
+
+template<typename Tx, typename Ty, typename Tout>
+DEPRECATE_SNIFF constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
+{
+    out[0] = x[0] - y[0];
+    out[1] = x[1] - y[1];
+    out[2] = x[2] - y[2];
+}
+
+template<typename Tx, typename Ty, typename Tout>
+DEPRECATE_SNIFF constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
+{
+    out[0] = x[0] + y[0];
+    out[1] = x[1] + y[1];
+    out[2] = x[2] + y[2];
+}
+
+template<typename TFrom, typename TTo>
+DEPRECATE_SNIFF constexpr void VectorCopy(const TFrom &in, TTo &out)
+{
+    out[0] = in[0];
+    out[1] = in[1];
+    out[2] = in[2];
+}
+
+template<typename TFrom, typename TScale, typename TTo>
+DEPRECATE_SNIFF constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
+{
+    out[0] = v[0] * scale;
+    out[1] = v[1] * scale;
+    out[2] = v[2] * scale;
 }
 
 template<typename T>
