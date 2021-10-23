@@ -90,16 +90,10 @@ face_t *NewFaceFromFace(face_t *in)
 
 void UpdateFaceSphere(face_t *in)
 {
-    int i;
-    vec_t lensq;
-
     VectorCopy(in->w.center(), in->origin);
     in->radius = 0;
-    for (i = 0; i < in->w.size(); i++) {
-        qvec3d radius = in->w[i] - in->origin;
-        lensq = VectorLengthSq(radius);
-        if (lensq > in->radius)
-            in->radius = lensq;
+    for (size_t i = 0; i < in->w.size(); i++) {
+        in->radius = max(in->radius, qv::distance2(in->w[i], in->origin));
     }
     in->radius = sqrt(in->radius);
 }
