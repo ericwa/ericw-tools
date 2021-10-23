@@ -124,7 +124,7 @@ public:
 class lockable_bool_t : public lockable_setting_t
 {
 private:
-    [[maybe_unused]] bool _default, _value;
+    bool _value;
 
     void setBoolValueInternal(bool f, setting_source_t newsource)
     {
@@ -153,7 +153,7 @@ public:
 
     virtual std::string stringValue() const { return _value ? "1" : "0"; }
 
-    lockable_bool_t(std::vector<std::string> names, bool v) : lockable_setting_t(names), _default(v), _value(v) { }
+    lockable_bool_t(std::vector<std::string> names, bool v) : lockable_setting_t(names), _value(v) { }
 
     lockable_bool_t(std::string name, bool v) : lockable_bool_t(std::vector<std::string>{name}, v) { }
 };
@@ -161,7 +161,7 @@ public:
 class lockable_vec_t : public lockable_setting_t
 {
 private:
-    [[maybe_unused]] vec_t _default, _value, _min, _max;
+    vec_t _value, _min, _max;
 
     inline void setFloatInternal(vec_t f, setting_source_t newsource)
     {
@@ -212,7 +212,7 @@ public:
 
     lockable_vec_t(std::vector<std::string> names, vec_t v, vec_t minval = -std::numeric_limits<vec_t>::infinity(),
         vec_t maxval = std::numeric_limits<vec_t>::infinity())
-        : lockable_setting_t(names), _default(v), _value(v), _min(minval), _max(maxval)
+        : lockable_setting_t(names), _value(v), _min(minval), _max(maxval)
     {
         // check the default value is valid
         Q_assert(_min < _max);
@@ -230,7 +230,7 @@ public:
 class lockable_string_t : public lockable_setting_t
 {
 private:
-    std::string _default, _value;
+    std::string _value;
 
 public:
     virtual void setStringValue(const std::string &str, bool locked = false)
@@ -242,7 +242,7 @@ public:
 
     virtual std::string stringValue() const { return _value; }
 
-    lockable_string_t(std::vector<std::string> names, std::string v) : lockable_setting_t(names), _default(v), _value(v)
+    lockable_string_t(std::vector<std::string> names, std::string v) : lockable_setting_t(names), _value(v)
     {
     }
 

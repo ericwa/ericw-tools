@@ -754,7 +754,7 @@ public:
     }
 
     // access row
-    [[nodiscard]] constexpr qvec<T, NCol> row(size_t row) const
+    [[nodiscard]] inline qvec<T, NCol> row(size_t row) const
     {
         assert(row >= 0 && row < NRow);
         qvec<T, NCol> v;
@@ -764,7 +764,7 @@ public:
         return v;
     }
 
-    void set_row(size_t row, const qvec<T, NCol> &values)
+    inline void set_row(size_t row, const qvec<T, NCol> &values)
     {
         for (size_t i = 0; i < NCol; i++) {
             at(row, i) = values[i];
@@ -777,7 +777,7 @@ public:
         return reinterpret_cast<const qvec<T, NRow> &>(m_values[col * NRow]);
     }
 
-    void set_col(size_t col, const qvec<T, NRow> &values) const
+    inline void set_col(size_t col, const qvec<T, NRow> &values) const
     {
         reinterpret_cast<qvec<T, NRow> &>(m_values[col * NRow]) = values;
     }
