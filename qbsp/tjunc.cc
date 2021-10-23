@@ -121,7 +121,7 @@ static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t
     t1 = qv::dot(p1, edgevec);
     t2 = qv::dot(p2, edgevec);
 
-    VectorMA(p1, -t1, edgevec, origin);
+    origin = p1 + (edgevec * -t1);
 
     if (t1 > t2) {
         std::swap(t1, t2);

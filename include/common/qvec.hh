@@ -868,13 +868,6 @@ namespace qv
 // "vec3" type. legacy; eventually will be replaced entirely
 #define DEPRECATE_SNIFF [[deprecated]]
 
-template<typename Ta, typename Tb, typename Tc>
-DEPRECATE_SNIFF constexpr void VectorMA(const Ta &va, vec_t scale, const Tb &vb, Tc &vc)
-{
-    vc[0] = va[0] + scale * vb[0];
-    vc[1] = va[1] + scale * vb[1];
-    vc[2] = va[2] + scale * vb[2];
-}
 
 #undef DEPRECATE_SNIFF
 #define DEPRECATE_SNIFF

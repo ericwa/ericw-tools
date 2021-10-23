@@ -238,18 +238,14 @@ static std::vector<portal_t *> FindPortalsToVoid(node_t *occupied_leaf)
 WriteLeakTrail
 ===============
 */
-static void WriteLeakTrail(std::ofstream &leakfile, const qvec3d &point1, const qvec3d &point2)
+static void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d &point2)
 {
-    qvec3d vector, trail;
-    vec_t dist;
+    qvec3d vector = point2 - point1;
+    vec_t dist = qv::normalizeInPlace(vector);
 
-    VectorSubtract(point2, point1, vector);
-    dist = VectorNormalize(vector);
-
-    VectorCopy(point1, trail);
     while (dist > options.dxLeakDist) {
-        fmt::print(leakfile, "{} {} {}\n", trail[0], trail[1], trail[2]);
-        VectorMA(trail, options.dxLeakDist, vector, trail);
+        fmt::print(leakfile, "{}\n", point1);
+        point1 += vector * options.dxLeakDist;
         dist -= options.dxLeakDist;
     }
 }
