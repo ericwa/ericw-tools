@@ -252,49 +252,6 @@ std::tuple<qvec3f, qvec3f> compute_tangents(
     return {qv::normalize(tangent), qv::normalize(bitangent)};
 }
 
-/* given a triangle, just adds the contribution from the triangle to the given vertexes normals, based upon angles at
- * the verts. v1, v2, v3 are global vertex indices */
-static void AddTriangleNormals(std::map<int, face_normal_t> &smoothed_normals, const gtexinfo_t *texinfo, const rgba_miptex_t *miptex,
-    const qvec3d &norm, const mbsp_t *bsp, int v1, int v2, int v3)
-{
-    const qvec3f &p1 = Vertex_GetPos(bsp, v1);
-    const qvec3f &p2 = Vertex_GetPos(bsp, v2);
-    const qvec3f &p3 = Vertex_GetPos(bsp, v3);
-    float weight;
-
-    float areaweight = qv::TriangleArea(p1, p2, p3);
-    if (!std::isfinite(areaweight)) {
-        areaweight = 0;
-    }
-
-    auto uv1 = texinfo->vecs.uvs(p1, miptex->width, miptex->height);
-    auto uv2 = texinfo->vecs.uvs(p2, miptex->width, miptex->height);
-    auto uv3 = texinfo->vecs.uvs(p3, miptex->width, miptex->height);
-
-    auto tangent = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
-
-    weight = AngleBetweenPoints(p2, p1, p3);
-    weight *= areaweight;
-    auto &n1 = smoothed_normals[v1];
-    n1.normal += norm * weight;
-    n1.tangent += std::get<0>(tangent) * weight;
-    n1.bitangent += std::get<1>(tangent) * weight;
-
-    weight = AngleBetweenPoints(p1, p2, p3);
-    weight *= areaweight;
-    auto &n2 = smoothed_normals[v2];
-    n2.normal += norm * weight;
-    n2.tangent += std::get<0>(tangent) * weight;
-    n2.bitangent += std::get<1>(tangent) * weight;
-
-    weight = AngleBetweenPoints(p1, p3, p2);
-    weight *= areaweight;
-    auto &n3 = smoothed_normals[v3];
-    n3.normal += norm * weight;
-    n3.tangent += std::get<0>(tangent) * weight;
-    n3.bitangent += std::get<1>(tangent) * weight;
-}
-
 /* access the final phong-shaded vertex normal */
 const face_normal_t &GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f, const int vertindex)
 {
@@ -602,17 +559,44 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
         // walk fPlusNeighbours
         for (auto f2 : fPlusNeighbours) {
+            const auto f2_poly = GLM_FacePoints(bsp, f2);
+            const float f2_area = qv::PolyArea(f2_poly.begin(), f2_poly.end());
             const qvec3d f2_norm = Face_Normal(bsp, f2);
 
-            /* now just walk around the surface as a triangle fan */
-            int v1, v2, v3;
-            v1 = Face_VertexAtIndex(bsp, f2, 0);
-            v2 = Face_VertexAtIndex(bsp, f2, 1);
-            for (int j = 2; j < f2->numedges; j++) {
-                v3 = Face_VertexAtIndex(bsp, f2, j);
-                AddTriangleNormals(smoothedNormals,
-                    BSP_GetTexinfo(bsp, f2->texinfo), Face_RgbaMiptex(bsp, f2), f2_norm, bsp, v1, v2, v3);
-                v2 = v3;
+            // f2 face tangent
+            auto f2_texinfo = BSP_GetTexinfo(bsp, f2->texinfo);
+            auto f2_miptex = Face_RgbaMiptex(bsp, f2);
+            auto &f2_p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, 0));
+            auto &f2_p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, 1));
+            auto &f2_p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, 2));
+            auto f2_uv1 = f2_texinfo->vecs.uvs(f2_p1, f2_miptex->width, f2_miptex->height);
+            auto f2_uv2 = f2_texinfo->vecs.uvs(f2_p2, f2_miptex->width, f2_miptex->height);
+            auto f2_uv3 = f2_texinfo->vecs.uvs(f2_p3, f2_miptex->width, f2_miptex->height);
+
+            auto f2_tangents = compute_tangents({f2_p1, f2_p2, f2_p3}, {f2_uv1, f2_uv2, f2_uv3});
+
+            // walk the vertices of f2, and add their contribution to smoothedNormals
+            for (int j = 0; j < f2->numedges; j++) {
+                const int prev_vert_num = Face_VertexAtIndex(bsp, f2, ((j - 1) + f2->numedges) % f2->numedges);
+                const int curr_vert_num = Face_VertexAtIndex(bsp, f2, j);
+                const int next_vert_num = Face_VertexAtIndex(bsp, f2, (j + 1) % f2->numedges);
+                
+                const qvec3f &prev_vert_pos = Vertex_GetPos(bsp, prev_vert_num);
+                const qvec3f &curr_vert_pos = Vertex_GetPos(bsp, curr_vert_num);
+                const qvec3f &next_vert_pos = Vertex_GetPos(bsp, next_vert_num);
+
+                const float angle_radians = AngleBetweenPoints(prev_vert_pos, curr_vert_pos, next_vert_pos);
+
+                float weight = f2_area * angle_radians;
+                if (!std::isfinite(weight)) {
+                    // TODO: not sure if needed?
+                    weight = 0;
+                }
+
+                auto &n = smoothedNormals[curr_vert_num];
+                n.normal += f2_norm * weight;
+                n.tangent += std::get<0>(f2_tangents) * weight;
+                n.bitangent += std::get<1>(f2_tangents) * weight;
             }
         }
 

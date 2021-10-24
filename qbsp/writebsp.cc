@@ -338,13 +338,10 @@ static void WriteExtendedTexinfoFlags(void)
         [](const mtexinfo_t &a, const mtexinfo_t &b) { return a.outputnum < b.outputnum; });
 
     json texinfofile = json::object();
-    
-    size_t count = 0;
-    for (const auto &tx : texinfos_sorted) {
-        if (!tx.outputnum.has_value())
-            continue;
 
-        Q_assert(count == tx.outputnum.value()); // check we are outputting them in the proper sequence
+    for (const auto &tx : texinfos_sorted) {
+        if (!tx.outputnum.has_value() || !tx.flags.needs_write())
+            continue;
 
         json t = json::object();
         
@@ -389,9 +386,7 @@ static void WriteExtendedTexinfoFlags(void)
         }
 
         texinfofile[std::to_string(*tx.outputnum)].swap(t);
-        count++;
     }
-    Q_assert(count == map.bsp.texinfo.size());
 
     std::ofstream(file, std::ios_base::out | std::ios_base::binary) << texinfofile;
 }
