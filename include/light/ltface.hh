@@ -82,3 +82,8 @@ void SetupDirt(globalconfig_t &cfg);
 float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const qvec3d &point, const qvec3d &normal,
     const modelinfo_t *selfshadow);
 void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globalconfig_t &cfg);
+
+inline qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
+{
+    return qv::inverse(WorldToTexSpace(bsp, f));
+}

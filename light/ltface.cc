@@ -219,11 +219,6 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
     return T;
 }
 
-inline qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
-{
-    return qv::inverse(WorldToTexSpace(bsp, f));
-}
-
 constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg)
 {
     return (texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0)).xyz();
