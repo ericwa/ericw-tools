@@ -459,6 +459,10 @@ qvec3f ClosestPointOnLine(const qvec3f &v, const qvec3f &w, const qvec3f &p)
     const qvec3f vp = p - v;
     const qvec3f vw_norm = qv::normalize(w - v);
 
+    if (qv::emptyExact(vw_norm)) {
+        return p;
+    }
+
     const float vp_scalarproj = qv::dot(vp, vw_norm);
 
     const qvec3f p_projected_on_vw = v + (vw_norm * vp_scalarproj);

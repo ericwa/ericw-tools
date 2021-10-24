@@ -470,11 +470,7 @@ template<size_t N, class T>
 template<size_t N, class T>
 [[nodiscard]] constexpr bool equalExact(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
-    for (size_t i = 0; i < N; i++) {
-        if (v1[i] != v2[i])
-            return false;
-    }
-    return true;
+    return v1 == v2;
 }
 
 template<size_t N, class T>
