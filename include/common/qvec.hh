@@ -663,7 +663,7 @@ public:
         return qvec<T, 4>(normal[0], normal[1], normal[2], dist);
     }
 
-    [[nodiscard]] constexpr qplane3 operator-() const { return { -normal, -dist }; }
+    [[nodiscard]] constexpr qplane3 operator-() const { return {qvec<T, 3>(0, 0, 0) - normal, -dist}; }
 
     // generic case
     template<typename F>
