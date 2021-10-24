@@ -1246,6 +1246,7 @@ std::map<int, qvec3f> GetDirectLighting(
     for (const surfacelight_t &vpl : SurfaceLights()) {
         // Bounce light falloff. Uses light surface center and intensity based on face area
         qvec3d surfpointToLightDir;
+        // FIXME: this is always 128 because vpl.pos and origin are always equal it seems?
         const float surfpointToLightDist =
             max(128.0, GetDir(vpl.pos, origin,
                             surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...

@@ -563,6 +563,10 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         }
     }
 
+    if (verbose_log) {
+        LogPrint("        {} faces for smoothing\n", smoothFaces.size());
+    }
+
     // finally do the smoothing for each face
     for (auto &f : bsp->dfaces) {
         if (f.numedges < 3) {

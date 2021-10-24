@@ -416,20 +416,26 @@ template<size_t N, class T>
 template<size_t N, class T>
 [[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1, T &len)
 {
-    return v1 / (len = length(v1));
+    len = length(v1);
+    return len ? (v1 / len) : qvec<T, N>{};
 }
 
 template<size_t N, class T>
 [[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1)
 {
-    return v1 / length(v1);
+    T len = length(v1);
+    return len ? (v1 / len) : qvec<T, N>{};
 }
 
 template<size_t N, class T>
 inline T normalizeInPlace(qvec<T, N> &v1)
 {
     T len = length(v1);
-    v1 /= len;
+    if (len) {
+        v1 /= len;
+    } else {
+        v1 = {};
+    }
     return len;
 }
 

@@ -1106,19 +1106,18 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
     }
 
     // detect BSPX
-    dheader_t *header = (dheader_t *)file_data;
-
     /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
-    for (i = 0, bspxofs = 0; i < BSP_LUMPS; i++) {
-        if (bspxofs < header->lumps[i].fileofs + header->lumps[i].filelen)
-            bspxofs = header->lumps[i].fileofs + header->lumps[i].filelen;
+    for (i = 0, bspxofs = 0; i < lumps.size(); i++) {
+        if (bspxofs < lumps[i].fileofs + lumps[i].filelen)
+            bspxofs = lumps[i].fileofs + lumps[i].filelen;
     }
+
     bspxofs = (bspxofs + 3) & ~3;
     /*okay, so that's where it *should* be if it exists */
     if (bspxofs + sizeof(*bspx) <= flen) {
         int xlumps;
         const bspx_lump_t *xlump;
-        bspx = (const bspx_header_t *)((const uint8_t *)header + bspxofs);
+        bspx = (const bspx_header_t *)((const uint8_t *)file_data + bspxofs);
         xlump = (const bspx_lump_t *)(bspx + 1);
         xlumps = LittleLong(bspx->numlumps);
         if (!memcmp(&bspx->id, "BSPX", 4) && xlumps >= 0 && bspxofs + sizeof(*bspx) + sizeof(*xlump) * xlumps <= flen) {
@@ -1128,11 +1127,11 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
                 uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
                 uint32_t len = LittleLong(xlump[xlumps].filelen);
                 uint8_t *lumpdata = new uint8_t[len];
-                memcpy(lumpdata, (const uint8_t *)header + ofs, len);
+                memcpy(lumpdata, (const uint8_t *)file_data + ofs, len);
                 bspdata->bspx.transfer(xlump[xlumps].lumpname.data(), lumpdata, len);
             }
         } else {
-            if (!memcmp(&bspx->id, "BSPX", 4))
+            if (memcmp(&bspx->id, "BSPX", 4))
                 printf("invalid bspx header\n");
         }
     }

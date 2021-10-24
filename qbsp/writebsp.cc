@@ -314,7 +314,12 @@ void BeginBSPFile(void)
  */
 static void WriteExtendedTexinfoFlags(void)
 {
+    auto file = std::filesystem::path(options.szBSPName).replace_extension("texinfo.json");
     bool needwrite = false;
+
+    if (std::filesystem::exists(file)) {
+        std::filesystem::remove(file);
+    }
 
     for (auto &texinfo : map.mtexinfos) {
         if (texinfo.flags.needs_write()) {
@@ -388,7 +393,7 @@ static void WriteExtendedTexinfoFlags(void)
     }
     Q_assert(count == map.bsp.texinfo.size());
 
-    std::ofstream(std::filesystem::path(options.szBSPName).replace_extension("texinfo.json"), std::ios_base::out | std::ios_base::binary) << texinfofile;
+    std::ofstream(file, std::ios_base::out | std::ios_base::binary) << texinfofile;
 }
 
 /*
