@@ -395,6 +395,23 @@ static int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
     return 0;
 }
 
+inline bool isDegenerate(const qvec3f &a, const qvec3f &b, const qvec3f &c)
+{
+    float lengths[] = {
+        qv::distance(a, b),
+        qv::distance(b, c),
+        qv::distance(c, a)
+    };
+
+    for (size_t i = 0; i < 3; i++) {
+        if (lengths[i] == lengths[(i + 1) % 3] + lengths[(i + 2) % 3]) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 void CalculateVertexNormals(const mbsp_t *bsp)
 {
     LogPrint("--- {} ---\n", __func__);
@@ -540,14 +557,25 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         // face tangent
         auto texinfo = BSP_GetTexinfo(bsp, f.texinfo);
         auto miptex = Face_RgbaMiptex(bsp, &f);
-        auto p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 0));
-        auto p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 1));
-        auto p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, 2));
-        auto uv1 = texinfo->vecs.uvs(p1, miptex->width, miptex->height);
-        auto uv2 = texinfo->vecs.uvs(p2, miptex->width, miptex->height);
-        auto uv3 = texinfo->vecs.uvs(p3, miptex->width, miptex->height);
 
-        auto tangents = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
+        std::tuple<qvec3f, qvec3f> tangents;
+
+        for (size_t i = 0; i < f.numedges; i++) {
+            auto &p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, i));
+            auto &p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, (i + 1) % f.numedges));
+            auto &p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, (i + 2) % f.numedges));
+
+            if (isDegenerate(p1, p2, p3)) {
+                continue; // degen
+            }
+
+            auto uv1 = texinfo->vecs.uvs(p1, miptex->width, miptex->height);
+            auto uv2 = texinfo->vecs.uvs(p2, miptex->width, miptex->height);
+            auto uv3 = texinfo->vecs.uvs(p3, miptex->width, miptex->height);
+
+            tangents = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
+            break;
+        }
 
         // gather up f and neighboursToSmooth
         std::vector<const mface_t *> fPlusNeighbours;
@@ -566,14 +594,25 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             // f2 face tangent
             auto f2_texinfo = BSP_GetTexinfo(bsp, f2->texinfo);
             auto f2_miptex = Face_RgbaMiptex(bsp, f2);
-            auto &f2_p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, 0));
-            auto &f2_p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, 1));
-            auto &f2_p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, 2));
-            auto f2_uv1 = f2_texinfo->vecs.uvs(f2_p1, f2_miptex->width, f2_miptex->height);
-            auto f2_uv2 = f2_texinfo->vecs.uvs(f2_p2, f2_miptex->width, f2_miptex->height);
-            auto f2_uv3 = f2_texinfo->vecs.uvs(f2_p3, f2_miptex->width, f2_miptex->height);
+            
+            std::tuple<qvec3f, qvec3f> f2_tangents;
 
-            auto f2_tangents = compute_tangents({f2_p1, f2_p2, f2_p3}, {f2_uv1, f2_uv2, f2_uv3});
+            for (size_t i = 0; i < f2->numedges; i++) {
+                auto &p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, i));
+                auto &p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, (i + 1) % f2->numedges));
+                auto &p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, (i + 2) % f2->numedges));
+
+                if (isDegenerate(p1, p2, p3)) {
+                    continue; // degen
+                }
+
+                auto uv1 = f2_texinfo->vecs.uvs(p1, f2_miptex->width, f2_miptex->height);
+                auto uv2 = f2_texinfo->vecs.uvs(p2, f2_miptex->width, f2_miptex->height);
+                auto uv3 = f2_texinfo->vecs.uvs(p3, f2_miptex->width, f2_miptex->height);
+
+                f2_tangents = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
+                break;
+            }
 
             // walk the vertices of f2, and add their contribution to smoothedNormals
             for (int j = 0; j < f2->numedges; j++) {
