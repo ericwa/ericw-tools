@@ -396,6 +396,12 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
+[[nodiscard]] inline T length(const qvec<T, N> &v1)
+{
+    return std::sqrt(length2(v1));
+}
+
+template<size_t N, class T>
 [[nodiscard]] inline T distance(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     return length(v2 - v1);
@@ -405,12 +411,6 @@ template<size_t N, class T>
 [[nodiscard]] constexpr T distance2(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     return length2(v2 - v1);
-}
-
-template<size_t N, class T>
-[[nodiscard]] inline T length(const qvec<T, N> &v1)
-{
-    return std::sqrt(length2(v1));
 }
 
 template<size_t N, class T>
