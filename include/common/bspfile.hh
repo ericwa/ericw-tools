@@ -433,7 +433,7 @@ struct dmiptexlump_t
 
             miptex_offset += texture.stream_size();
 
-            if (p + miptex_offset % 4) {
+            if ((p + miptex_offset) % 4) {
                 miptex_offset += 4 - ((p + miptex_offset) % 4);
             }
         }
@@ -441,7 +441,8 @@ struct dmiptexlump_t
         for (auto &texture : textures) {
             if (texture.name[0]) {
                 if (stream.tellp() % 4) {
-                    stream.seekp(stream.tellp() + (4 - (stream.tellp() % 4)));
+                    constexpr const char pad[4] { };
+                    stream.write(pad, 4 - (stream.tellp() % 4));
                 }
                 texture.stream_write(stream);
             }
