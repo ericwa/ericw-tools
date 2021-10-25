@@ -556,9 +556,6 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         const qvec3f f_norm = Face_Normal(bsp, &f); // get the face normal
 
         // face tangent
-        auto texinfo = BSP_GetTexinfo(bsp, f.texinfo);
-        auto miptex = Face_RgbaMiptex(bsp, &f);
-
         auto t1 = TexSpaceToWorld(bsp, &f);
         std::tuple<qvec3f, qvec3f> tangents(t1.col(0).xyz(), qv::normalize(qv::cross(f_norm, t1.col(0).xyz())));
 
@@ -577,9 +574,6 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             const qvec3f f2_norm = Face_Normal(bsp, f2);
 
             // f2 face tangent
-            auto f2_texinfo = BSP_GetTexinfo(bsp, f2->texinfo);
-            auto f2_miptex = Face_RgbaMiptex(bsp, f2);
-
             auto t2 = TexSpaceToWorld(bsp, f2);
             std::tuple<qvec3f, qvec3f> f2_tangents(t2.col(0).xyz(), qv::normalize(qv::cross(f2_norm, t2.col(0).xyz())));
 

@@ -280,13 +280,13 @@ void FixRotateOrigin(mapentity_t *entity)
     SetKeyValue(entity, "origin", qv::to_string(offset).c_str());
 }
 
-static bool DiscardHintSkipFace_Q1(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo)
+static bool DiscardHintSkipFace_Q1(const mtexinfo_t &texinfo)
 {
     // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
     return !string_iequals(map.miptexTextureName(texinfo.miptex), "hint");
 }
 
-static bool DiscardHintSkipFace_Q2(const int hullnum, const hullbrush_t *hullbrush, const mtexinfo_t &texinfo)
+static bool DiscardHintSkipFace_Q2(const mtexinfo_t &texinfo)
 {
     // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
     return !(texinfo.flags.native & Q2_SURF_HINT);
@@ -321,7 +321,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
-            if (DiscardHintSkipFace(hullnum, hullbrush, texinfo))
+            if (DiscardHintSkipFace(texinfo))
                 continue;
         }
 

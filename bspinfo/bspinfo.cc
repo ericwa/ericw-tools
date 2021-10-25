@@ -156,7 +156,6 @@ static void Base64EncodeTo(const uint8_t *data, size_t in_len, T p)
     if (in_len == 0)
         return;
 
-    size_t out_len = 4 * ((in_len + 2) / 3);
     size_t i;
 
     if (in_len == 1) {
