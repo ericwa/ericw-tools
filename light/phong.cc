@@ -24,6 +24,7 @@
 #include <iostream>
 
 #include <light/phong.hh>
+#include <light/ltface.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
@@ -558,24 +559,8 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         auto texinfo = BSP_GetTexinfo(bsp, f.texinfo);
         auto miptex = Face_RgbaMiptex(bsp, &f);
 
-        std::tuple<qvec3f, qvec3f> tangents;
-
-        for (size_t i = 0; i < f.numedges; i++) {
-            auto &p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, i));
-            auto &p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, (i + 1) % f.numedges));
-            auto &p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, &f, (i + 2) % f.numedges));
-
-            if (isDegenerate(p1, p2, p3)) {
-                continue; // degen
-            }
-
-            auto uv1 = texinfo->vecs.uvs(p1, miptex->width, miptex->height);
-            auto uv2 = texinfo->vecs.uvs(p2, miptex->width, miptex->height);
-            auto uv3 = texinfo->vecs.uvs(p3, miptex->width, miptex->height);
-
-            tangents = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
-            break;
-        }
+        auto t1 = TexSpaceToWorld(bsp, &f);
+        std::tuple<qvec3f, qvec3f> tangents(t1.col(0).xyz(), qv::normalize(qv::cross(f_norm, t1.col(0).xyz())));
 
         // gather up f and neighboursToSmooth
         std::vector<const mface_t *> fPlusNeighbours;
@@ -589,30 +574,14 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         for (auto f2 : fPlusNeighbours) {
             const auto f2_poly = GLM_FacePoints(bsp, f2);
             const float f2_area = qv::PolyArea(f2_poly.begin(), f2_poly.end());
-            const qvec3d f2_norm = Face_Normal(bsp, f2);
+            const qvec3f f2_norm = Face_Normal(bsp, f2);
 
             // f2 face tangent
             auto f2_texinfo = BSP_GetTexinfo(bsp, f2->texinfo);
             auto f2_miptex = Face_RgbaMiptex(bsp, f2);
-            
-            std::tuple<qvec3f, qvec3f> f2_tangents;
 
-            for (size_t i = 0; i < f2->numedges; i++) {
-                auto &p1 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, i));
-                auto &p2 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, (i + 1) % f2->numedges));
-                auto &p3 = Vertex_GetPos(bsp, Face_VertexAtIndex(bsp, f2, (i + 2) % f2->numedges));
-
-                if (isDegenerate(p1, p2, p3)) {
-                    continue; // degen
-                }
-
-                auto uv1 = f2_texinfo->vecs.uvs(p1, f2_miptex->width, f2_miptex->height);
-                auto uv2 = f2_texinfo->vecs.uvs(p2, f2_miptex->width, f2_miptex->height);
-                auto uv3 = f2_texinfo->vecs.uvs(p3, f2_miptex->width, f2_miptex->height);
-
-                f2_tangents = compute_tangents({p1, p2, p3}, {uv1, uv2, uv3});
-                break;
-            }
+            auto t2 = TexSpaceToWorld(bsp, f2);
+            std::tuple<qvec3f, qvec3f> f2_tangents(t2.col(0).xyz(), qv::normalize(qv::cross(f2_norm, t2.col(0).xyz())));
 
             // walk the vertices of f2, and add their contribution to smoothedNormals
             for (int j = 0; j < f2->numedges; j++) {
