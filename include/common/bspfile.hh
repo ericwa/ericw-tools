@@ -1743,18 +1743,9 @@ struct gamedef_t
     virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
-    virtual bool contents_are_empty(const contentflags_t &contents) const
-    {
-        return contents.native == create_empty_contents().native;
-    }
-    virtual bool contents_are_solid(const contentflags_t &contents) const
-    {
-        return contents.native == create_solid_contents().native;
-    }
-    virtual bool contents_are_sky(const contentflags_t &contents) const
-    {
-        return contents.native == create_sky_contents().native;
-    }
+    virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
     virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
