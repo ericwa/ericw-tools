@@ -641,7 +641,7 @@ static void CalcPoints(
      * the surface to help avoid edge cases just inside walls
      */
     surf->midpoint = TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg);
-    VectorAdd(surf->midpoint, offset, surf->midpoint);
+    surf->midpoint += offset;
 
     surf->width = (surf->texsize[0] + 1) * oversample;
     surf->height = (surf->texsize[1] + 1) * oversample;
@@ -681,7 +681,7 @@ static void CalcPoints(
             VectorCopy(res.m_interpolatedNormal, norm);
 
             // apply model offset after calling CalcPointNormal
-            VectorAdd(point, offset, point);
+            point += offset;
         }
     }
 
@@ -778,7 +778,7 @@ static bool Lightsurf_Init(
     plane->dist = qv::dot(plane->normal, planepoint);
 
     /* Correct bounding sphere */
-    VectorAdd(lightsurf->origin, modelinfo->offset, lightsurf->origin);
+    lightsurf->origin += modelinfo->offset;
     lightsurf->bounds = lightsurf->bounds.translate(modelinfo->offset);
 
     /* Allocate occlusion array */
@@ -1991,7 +1991,7 @@ static void LightFace_Bounce(
                 }
 
                 lightsample_t *sample = &lightmap->samples[i];
-                VectorAdd(sample->color, indirect, sample->color);
+                sample->color += indirect;
 
                 hit = true;
                 ++total_bounce_ray_hits;
@@ -2097,7 +2097,7 @@ static void LightFace_Bounce(
 
             qvec3d indirectTmp;
             VectorCopy(colorAvg, indirectTmp);
-            VectorAdd(sample->color, indirectTmp, sample->color);
+            sample->color += indirectTmp;
         }
     }
 
@@ -2185,7 +2185,7 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
                 VectorScale(indirect, dirtscale, indirect);
 
                 lightsample_t *sample = &lightmap->samples[i];
-                VectorAdd(sample->color, indirect, sample->color);
+                sample->color += indirect;
 
                 hit = true;
                 ++total_surflight_ray_hits;

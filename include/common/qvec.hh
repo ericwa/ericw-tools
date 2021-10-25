@@ -772,7 +772,7 @@ public:
         return v;
     }
 
-    inline void set_row(size_t row, const qvec<T, NCol> &values)
+    constexpr void set_row(size_t row, const qvec<T, NCol> &values)
     {
         for (size_t i = 0; i < NCol; i++) {
             at(row, i) = values[i];
@@ -785,7 +785,7 @@ public:
         return reinterpret_cast<const qvec<T, NRow> &>(m_values[col * NRow]);
     }
 
-    inline void set_col(size_t col, const qvec<T, NRow> &values) const
+    inline void set_col(size_t col, const qvec<T, NRow> &values)
     {
         reinterpret_cast<qvec<T, NRow> &>(m_values[col * NRow]) = values;
     }
@@ -879,22 +879,6 @@ namespace qv
 
 #undef DEPRECATE_SNIFF
 #define DEPRECATE_SNIFF
-
-template<typename Tx, typename Ty, typename Tout>
-DEPRECATE_SNIFF constexpr void VectorSubtract(const Tx &x, const Ty &y, Tout &out)
-{
-    out[0] = x[0] - y[0];
-    out[1] = x[1] - y[1];
-    out[2] = x[2] - y[2];
-}
-
-template<typename Tx, typename Ty, typename Tout>
-DEPRECATE_SNIFF constexpr void VectorAdd(const Tx &x, const Ty &y, Tout &out)
-{
-    out[0] = x[0] + y[0];
-    out[1] = x[1] + y[1];
-    out[2] = x[2] + y[2];
-}
 
 template<typename TFrom, typename TTo>
 DEPRECATE_SNIFF constexpr void VectorCopy(const TFrom &in, TTo &out)

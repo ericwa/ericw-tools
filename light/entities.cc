@@ -1292,7 +1292,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
     midpoint += plane.normal * offset;
 
     /* Add the model offset */
-    VectorAdd(midpoint, face_modelinfo->offset, midpoint);
+    midpoint += face_modelinfo->offset;
 
     CreateSurfaceLight(midpoint, plane.normal, surflight_template);
 }

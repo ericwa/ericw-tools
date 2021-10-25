@@ -70,10 +70,7 @@ struct texdef_etp_t
     bool tx2 = false;
 };
 
-struct texdef_brush_primitives_t
-{
-    qmat<vec_t, 2, 3> texMat { };
-};
+using texdef_brush_primitives_t = qmat<vec_t, 2, 3>;
 
 static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
 static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point);
@@ -1192,14 +1189,6 @@ static void SetTexinfo_BrushPrimitives(
     vecs.at(1, 3) = texHeight * texMat.at(1, 2);
 }
 
-static void BSP_GetSTCoordsForPoint(const vec_t *point, const int texSize[2], const texvecf &in_vecs, vec_t *st_out)
-{
-    for (int i = 0; i < 2; i++) {
-        st_out[i] = (point[0] * in_vecs.at(i, 0) + point[1] * in_vecs.at(i, 1) + point[2] * in_vecs.at(i, 2) + in_vecs.at(i, 3)) /
-                    static_cast<vec_t>(texSize[i]);
-    }
-}
-
 // From FaceToBrushPrimitFace in GtkRadiant
 static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     const qbsp_plane_t plane, const int texSize[2], const texvecf &in_vecs)
@@ -1207,34 +1196,23 @@ static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     qvec3d texX, texY;
     ComputeAxisBase(plane.normal, texX, texY);
 
-    // ST of (0,0) (1,0) (0,1)
-    vec_t ST[3][5]; // [ point index ] [ xyz ST ]
-
     // compute projection vector
-    qvec3d proj;
-    VectorCopy(plane.normal, proj);
-    VectorScale(proj, plane.dist, proj);
+    qvec3d proj = plane.normal * plane.dist;
 
     // (0,0) in plane axis base is (0,0,0) in world coordinates + projection on the affine plane
     // (1,0) in plane axis base is texX in world coordinates + projection on the affine plane
     // (0,1) in plane axis base is texY in world coordinates + projection on the affine plane
     // use old texture code to compute the ST coords of these points
-    VectorCopy(proj, ST[0]);
-    BSP_GetSTCoordsForPoint(&ST[0][0], texSize, in_vecs, &ST[0][3]);
-    VectorCopy(texX, ST[1]);
-    VectorAdd(ST[1], proj, ST[1]);
-    BSP_GetSTCoordsForPoint(&ST[1][0], texSize, in_vecs, &ST[1][3]);
-    VectorCopy(texY, ST[2]);
-    VectorAdd(ST[2], proj, ST[2]);
-    BSP_GetSTCoordsForPoint(&ST[2][0], texSize, in_vecs, &ST[2][3]);
+    qvec2d st[] = {
+        in_vecs.uvs(proj, texSize[0], texSize[1]),
+        in_vecs.uvs(texX + proj, texSize[0], texSize[1]),
+        in_vecs.uvs(texY + proj, texSize[0], texSize[1])
+    };
     // compute texture matrix
     texdef_brush_primitives_t res;
-    res.texMat.at(0, 2) = ST[0][3];
-    res.texMat.at(1, 2) = ST[0][4];
-    res.texMat.at(0, 0) = ST[1][3] - res.texMat.at(0, 2);
-    res.texMat.at(1, 0) = ST[1][4] - res.texMat.at(1, 2);
-    res.texMat.at(0, 1) = ST[2][3] - res.texMat.at(0, 2);
-    res.texMat.at(1, 1) = ST[2][4] - res.texMat.at(1, 2);
+    res.set_col(2, st[0]);
+    res.set_col(0, st[1] - st[0]);
+    res.set_col(1, st[2] - st[0]);
     return res;
 }
 
@@ -1721,7 +1699,7 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
 {
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
-        VectorAdd(face->planepts[i], offset, new_planepts[i]);
+        new_planepts[i] = face->planepts[i] + offset;
     }
 
     face->set_planepts(new_planepts);
@@ -2064,13 +2042,13 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
 
             const texdef_brush_primitives_t bp = TexDef_BSPToBrushPrimitives(mapface.plane, texSize, texinfo.vecs);
             f << "( ( ";
-            fprintDoubleAndSpc(f, bp.texMat.at(0, 0));
-            fprintDoubleAndSpc(f, bp.texMat.at(0, 1));
-            fprintDoubleAndSpc(f, bp.texMat.at(0, 2));
+            fprintDoubleAndSpc(f, bp.at(0, 0));
+            fprintDoubleAndSpc(f, bp.at(0, 1));
+            fprintDoubleAndSpc(f, bp.at(0, 2));
             f << ") ( ";
-            fprintDoubleAndSpc(f, bp.texMat.at(1, 0));
-            fprintDoubleAndSpc(f, bp.texMat.at(1, 1));
-            fprintDoubleAndSpc(f, bp.texMat.at(1, 2));
+            fprintDoubleAndSpc(f, bp.at(1, 0));
+            fprintDoubleAndSpc(f, bp.at(1, 1));
+            fprintDoubleAndSpc(f, bp.at(1, 2));
 
             // N.B.: always print the Q2/Q3 flags
             fmt::print(f, ") ) {} 0 0 0", mapface.texname);
