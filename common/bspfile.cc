@@ -171,21 +171,33 @@ struct gamedef_q1_like_t : public gamedef_t
 
     bool contents_are_empty(const contentflags_t &contents) const
     {
+        if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+
         return contents.native == CONTENTS_EMPTY;
     }
 
     bool contents_are_solid(const contentflags_t& contents) const 
     {
+        if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+
         return contents.native == CONTENTS_SOLID;
     }
 
     bool contents_are_sky(const contentflags_t& contents) const
     {
+        if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+
         return contents.native == CONTENTS_SKY;
     }
 
     bool contents_are_liquid(const contentflags_t &contents) const
     {
+        if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+
         return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
     }
 
@@ -346,14 +358,29 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_empty(const contentflags_t &contents) const
     {
+        if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+
         return !(contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
     }
 
-    bool contents_are_solid(const contentflags_t &contents) const { return contents.native & Q2_CONTENTS_SOLID; }
+    bool contents_are_solid(const contentflags_t &contents) const
+    {
+        if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+        
+        return contents.native & Q2_CONTENTS_SOLID;
+    }
 
     bool contents_are_sky(const contentflags_t &contents) const { return false; }
 
-    bool contents_are_liquid(const contentflags_t &contents) const { return contents.native & Q2_CONTENTS_LIQUID; }
+    bool contents_are_liquid(const contentflags_t &contents) const
+    {
+        if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+        
+        return contents.native & Q2_CONTENTS_LIQUID;
+    }
 
     bool contents_are_valid(const contentflags_t &contents, bool strict) const
     {
