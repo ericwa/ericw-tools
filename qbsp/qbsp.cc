@@ -67,7 +67,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
             std::vector<uint32_t> brushes;
 
             for (const brush_t *b = entity->brushes; b; b = b->next, b_id++) {
-                if (node->bounds.intersectWith(b->bounds).valid) {
+                if (node->bounds.intersectWith(b->bounds)) {
                     brushes.push_back(b_id);
                 }
             }
@@ -768,13 +768,6 @@ void BSPX_Brushes_Init(struct bspxbrushes_s *ctx)
     ctx->lumpdata.clear();
 }
 
-static void vec_push_bytes(std::vector<uint8_t> &vec, const void *data, size_t count)
-{
-    const uint8_t *bytes = static_cast<const uint8_t *>(data);
-
-    vec.insert(vec.end(), bytes, bytes + count);
-}
-
 /*
 WriteBrushes
 Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific
@@ -783,15 +776,14 @@ hull sizes
 
 void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes)
 {
-    brush_t *b;
-    face_t *f;
+    bspxbrushes_permodel permodel {
+        1,
+        modelnum
+    };
 
-    bspxbrushes_permodel permodel;
-    permodel.numbrushes = 0;
-    permodel.numfaces = 0;
-    for (b = brushes; b; b = b->next) {
+    for (brush_t *b = brushes; b; b = b->next) {
         permodel.numbrushes++;
-        for (f = b->faces; f; f = f->next) {
+        for (face_t *f = b->faces; f; f = f->next) {
             /*skip axial*/
             if (fabs(map.planes[f->planenum].normal[0]) == 1 || fabs(map.planes[f->planenum].normal[1]) == 1 ||
                 fabs(map.planes[f->planenum].normal[2]) == 1)
@@ -800,16 +792,19 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
         }
     }
 
-    permodel.ver = LittleLong(1);
-    permodel.modelnum = LittleLong(modelnum);
     permodel.numbrushes = LittleLong(permodel.numbrushes);
     permodel.numfaces = LittleLong(permodel.numfaces);
-    vec_push_bytes(ctx->lumpdata, &permodel, sizeof(permodel));
 
-    for (b = brushes; b; b = b->next) {
-        bspxbrushes_perbrush perbrush;
-        perbrush.numfaces = 0;
-        for (f = b->faces; f; f = f->next) {
+    std::ostringstream str(std::ios_base::out | std::ios_base::binary);
+
+    str << endianness<std::endian::little>;
+
+    str <= permodel;
+
+    for (brush_t *b = brushes; b; b = b->next) {
+        bspxbrushes_perbrush perbrush {};
+
+        for (face_t *f = b->faces; f; f = f->next) {
             /*skip axial*/
             if (fabs(map.planes[f->planenum].normal[0]) == 1 || fabs(map.planes[f->planenum].normal[1]) == 1 ||
                 fabs(map.planes[f->planenum].normal[2]) == 1)
@@ -817,12 +812,8 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
             perbrush.numfaces++;
         }
 
-        perbrush.mins[0] = LittleFloat(b->bounds.mins()[0]);
-        perbrush.mins[1] = LittleFloat(b->bounds.mins()[1]);
-        perbrush.mins[2] = LittleFloat(b->bounds.mins()[2]);
-        perbrush.maxs[0] = LittleFloat(b->bounds.maxs()[0]);
-        perbrush.maxs[1] = LittleFloat(b->bounds.maxs()[1]);
-        perbrush.maxs[2] = LittleFloat(b->bounds.maxs()[2]);
+        perbrush.bounds = b->bounds;
+
         switch (b->contents.native) {
             // contents should match the engine.
             case CONTENTS_EMPTY: // really an error, but whatever
@@ -831,7 +822,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (b->contents.extended & CFLAGS_CLIP) {
+                if (b->contents.is_clip()) {
                     perbrush.contents = -8;
                 } else {
                     perbrush.contents = b->contents.native;
@@ -851,32 +842,29 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
                 break;
             }
         }
-        perbrush.contents = LittleShort(perbrush.contents);
-        perbrush.numfaces = LittleShort(perbrush.numfaces);
-        vec_push_bytes(ctx->lumpdata, &perbrush, sizeof(perbrush));
 
-        for (f = b->faces; f; f = f->next) {
-            bspxbrushes_perface perface;
+        str <= perbrush;
+
+        for (face_t *f = b->faces; f; f = f->next) {
             /*skip axial*/
             if (fabs(map.planes[f->planenum].normal[0]) == 1 || fabs(map.planes[f->planenum].normal[1]) == 1 ||
                 fabs(map.planes[f->planenum].normal[2]) == 1)
                 continue;
 
+            bspxbrushes_perface perface;
+
             if (f->planeside) {
-                perface.normal[0] = -map.planes[f->planenum].normal[0];
-                perface.normal[1] = -map.planes[f->planenum].normal[1];
-                perface.normal[2] = -map.planes[f->planenum].normal[2];
-                perface.dist = -map.planes[f->planenum].dist;
+                perface = -map.planes[f->planenum];
             } else {
-                perface.normal[0] = map.planes[f->planenum].normal[0];
-                perface.normal[1] = map.planes[f->planenum].normal[1];
-                perface.normal[2] = map.planes[f->planenum].normal[2];
-                perface.dist = map.planes[f->planenum].dist;
+                perface = map.planes[f->planenum];
             }
 
-            vec_push_bytes(ctx->lumpdata, &perface, sizeof(perface));
+            str <= std::tie(perface.normal, perface.dist);
         }
     }
+
+    std::string data = str.str();
+    ctx->lumpdata.insert(ctx->lumpdata.end(), (uint8_t *)data.data(), ((uint8_t *) data.data()) + data.size());
 }
 
 /* for generating BRUSHLIST bspx lump */

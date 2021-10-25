@@ -769,8 +769,8 @@ TEST(mathlib, aabb_disjoint)
     EXPECT_FALSE(b1.disjoint(no2));
     EXPECT_FALSE(b1.disjoint(no3));
 
-    EXPECT_FALSE(b1.intersectWith(yes1).valid);
-    EXPECT_FALSE(b1.intersectWith(yes2).valid);
+    EXPECT_FALSE(b1.intersectWith(yes1));
+    EXPECT_FALSE(b1.intersectWith(yes2));
 
     // these intersections are single points
     EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(1, 1, 1), qvec3f(1, 1, 1))), b1.intersectWith(no1));

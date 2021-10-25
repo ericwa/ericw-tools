@@ -190,6 +190,10 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
 
         if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
             continue;
+        // FIXME: this can happen when compiling some Q2 maps
+        // as Q1.
+        if (!face->outputnumber.has_value())
+            continue;
 
         /* emit a marksurface */
         do {

@@ -1546,17 +1546,18 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         if (options.target_game->id == GAME_QUAKE_II) {
             // translucent objects are automatically classified as detail
             if ((face->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) ||
-                (face->contents & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)))
+                (face->contents & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP))) {
                 face->contents |= Q2_CONTENTS_DETAIL;
+            }
 
             if (!(face->contents &
-                    (((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) | Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)))
+                    (((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) | Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP))) {
                 face->contents |= Q2_CONTENTS_SOLID;
+            }
 
             // hints and skips are never detail, and have no content
             if (face->flags.native & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
                 face->contents = 0;
-                face->contents &= ~Q2_CONTENTS_DETAIL;
             }
         }
 

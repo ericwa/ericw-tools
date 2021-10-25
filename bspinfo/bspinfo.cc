@@ -44,12 +44,18 @@ static json serialize_bspxbrushlist(const bspxentry_t &lump)
 {
     json j = json::array();
 
-    const uint8_t *p = reinterpret_cast<uint8_t *>(lump.lumpdata.get()), *base = p;
+    memstream p(lump.lumpdata.get(), lump.lumpsize, std::ios_base::in | std::ios_base::binary);
 
-    while (p < (base + lump.lumpsize)) {
+    p >> endianness<std::endian::little>;
+
+    while (true)
+    {
         bspxbrushes_permodel src_model;
-        memcpy(&src_model, p, sizeof(bspxbrushes_permodel));
-        p += sizeof(src_model);
+        p >= src_model;
+
+        if (!p) {
+            break;
+        }
 
         json &model = j.insert(j.end(), json::object()).value();
         model["ver"] = src_model.ver;
@@ -60,19 +66,17 @@ static json serialize_bspxbrushlist(const bspxentry_t &lump)
 
         for (int32_t i = 0; i < src_model.numbrushes; ++i) {
             bspxbrushes_perbrush src_brush;
-            memcpy(&src_brush, p, sizeof(bspxbrushes_perbrush));
-            p += sizeof(src_brush);
+            p >= src_brush;
 
             json &brush = brushes.insert(brushes.end(), json::object()).value();
-            brush.push_back({"mins", src_brush.mins});
-            brush.push_back({"maxs", src_brush.maxs});
+            brush.push_back({"mins", src_brush.bounds.mins()});
+            brush.push_back({"maxs", src_brush.bounds.maxs()});
             brush.push_back({"contents", src_brush.contents});
             json &faces = (brush.emplace("faces", json::array())).first.value();
 
             for (int32_t j = 0; j < src_brush.numfaces; ++j) {
                 bspxbrushes_perface src_face;
-                memcpy(&src_face, p, sizeof(bspxbrushes_perface));
-                p += sizeof(src_face);
+                p >= std::tie(src_face.normal, src_face.dist);
 
                 json &face = faces.insert(faces.end(), json::object()).value();
                 face.push_back({"normal", src_face.normal});

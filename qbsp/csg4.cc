@@ -418,8 +418,9 @@ static void SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **sav
             // marked as empty here, and the detail faces have their "back"
             // marked as detail.
 
-            face->contents[0] = options.target_game->create_empty_contents();
-            face->contents[0].extended |= CFLAGS_STRUCTURAL_COVERED_BY_DETAIL;
+            int32_t old_native = face->contents[0].native;
+            face->contents[0] = options.target_game->create_empty_contents(CFLAGS_STRUCTURAL_COVERED_BY_DETAIL);
+            face->contents[0].covered_native = old_native;
             face->texinfo = MakeSkipTexinfo();
         }
 

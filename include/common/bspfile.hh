@@ -578,6 +578,9 @@ struct contentflags_t
     // extra flags, specific to BSP only
     int32_t extended;
 
+    // for CFLAGS_STRUCTURAL_COVERED_BY_DETAIL
+    int32_t covered_native;
+
     constexpr bool operator==(const contentflags_t &other) const
     {
         return native == other.native && extended == other.extended;
@@ -1220,28 +1223,6 @@ struct bsp2rmq_dleaf_t
     }
 };
 
-// BRUSHLIST BSPX lump
-
-struct bspxbrushes_permodel
-{
-    int32_t ver;
-    int32_t modelnum;
-    int32_t numbrushes;
-    int32_t numfaces;
-};
-struct bspxbrushes_perbrush
-{
-    float mins[3];
-    float maxs[3];
-    int16_t contents;
-    uint16_t numfaces;
-};
-struct bspxbrushes_perface
-{
-    float normal[3];
-    float dist;
-};
-
 struct bsp2_dleaf_t
 {
     int32_t contents;
@@ -1657,14 +1638,44 @@ struct q2_dheader_t
 
 /* ========================================================================= */
 
+// BRUSHLIST BSPX lump
+struct bspxbrushes_permodel
+{
+    int32_t ver;
+    int32_t modelnum;
+    int32_t numbrushes;
+    int32_t numfaces;
+
+    auto stream_data()
+    {
+        return std::tie(ver, modelnum, numbrushes, numfaces);
+    }
+};
+
+struct bspxbrushes_perbrush
+{
+    aabb3f bounds;
+    int16_t contents;
+    uint16_t numfaces;
+
+    auto stream_data()
+    {
+        return std::tie(bounds, contents, numfaces);
+    }
+};
+
+using bspxbrushes_perface = qplane3f;
+
+// BSPX data
+
 struct bspxentry_t
 {
-    std::unique_ptr<std::byte[]> lumpdata;
+    std::unique_ptr<uint8_t[]> lumpdata;
     size_t lumpsize;
 
     // bspxentry_t takes ownership over the pointer and will
     // free it automatically.
-    bspxentry_t(void *lumpdata, size_t lumpsize) : lumpdata(reinterpret_cast<std::byte *>(lumpdata)), lumpsize(lumpsize)
+    bspxentry_t(void *lumpdata, size_t lumpsize) : lumpdata(reinterpret_cast<uint8_t *>(lumpdata)), lumpsize(lumpsize)
     {
     }
 };

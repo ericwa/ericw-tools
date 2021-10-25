@@ -1113,6 +1113,7 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
                     dst->bounds += brush->bounds;
                     FreeBrush(brush);
                 }
+
                 continue;
             }
             // for hull1, 2, etc., convert clip to CONTENTS_SOLID

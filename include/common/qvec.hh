@@ -677,6 +677,12 @@ public:
     {
         return qv::dot(point, normal) - dist;
     }
+
+    // stream support
+    auto stream_data()
+    {
+        return std::tie(normal, dist);
+    }
 };
 
 using qplane3f = qplane3<float>;

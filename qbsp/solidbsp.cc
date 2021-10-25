@@ -681,7 +681,8 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
             if (f->contents[0].extended & CFLAGS_STRUCTURAL_COVERED_BY_DETAIL) {
                 Q_assert(f->contents[0].is_empty(options.target_game));
 
-                const contentflags_t solid_detail = options.target_game->create_extended_contents(CFLAGS_DETAIL);
+                contentflags_t solid_detail = options.target_game->create_extended_contents(CFLAGS_DETAIL);
+                solid_detail.native = f->contents[0].covered_native;
 
                 if (solid_detail.priority(options.target_game) > currentpri) {
                     contents = solid_detail;
