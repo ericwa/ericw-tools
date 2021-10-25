@@ -88,7 +88,7 @@ public:
     constexpr aabb translate(const value_type &vec) const { return {m_mins + vec, m_maxs + vec}; }
 
     template<typename F>
-    constexpr bool disjoint(const aabb &other, const F &epsilon = 0) const
+    constexpr bool disjoint(const aabb<F, N> &other, const F &epsilon = 0) const
     {
         for (size_t i = 0; i < N; i++) {
             if (m_maxs[i] < (other.m_mins[i] - epsilon))
