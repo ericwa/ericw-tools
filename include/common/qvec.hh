@@ -376,7 +376,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] constexpr qvec<T, N> min(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] inline qvec<T, N> min(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
@@ -386,7 +386,7 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] constexpr qvec<T, N> max(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] inline qvec<T, N> max(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
