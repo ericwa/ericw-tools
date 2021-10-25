@@ -169,6 +169,21 @@ struct gamedef_q1_like_t : public gamedef_t
         return {liquid_type, cflags};
     }
 
+    bool contents_are_empty(const contentflags_t &contents) const
+    {
+        return contents.native == CONTENTS_EMPTY;
+    }
+
+    bool contents_are_solid(const contentflags_t& contents) const 
+    {
+        return contents.native == CONTENTS_SOLID;
+    }
+
+    bool contents_are_sky(const contentflags_t& contents) const
+    {
+        return contents.native == CONTENTS_SKY;
+    }
+
     bool contents_are_liquid(const contentflags_t &contents) const
     {
         return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
