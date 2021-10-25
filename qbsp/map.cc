@@ -1050,17 +1050,18 @@ static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &plan
      */
     switch (style) {
         case TX_QUARK_TYPE1:
-            VectorSubtract(planepts[2], planepts[0], vecs[0]);
-            VectorSubtract(planepts[1], planepts[0], vecs[1]);
+            vecs[0] = planepts[2] - planepts[0];
+            vecs[1] = planepts[1] - planepts[0];
             break;
         case TX_QUARK_TYPE2:
-            VectorSubtract(planepts[1], planepts[0], vecs[0]);
-            VectorSubtract(planepts[2], planepts[0], vecs[1]);
+            vecs[0] = planepts[1] - planepts[0];
+            vecs[1] = planepts[2] - planepts[0];
             break;
         default: FError("Internal error: bad texture coordinate style");
     }
-    VectorScale(vecs[0], 1.0 / 128.0, vecs[0]);
-    VectorScale(vecs[1], 1.0 / 128.0, vecs[1]);
+
+    vecs[0] *= 1.0 / 128.0;
+    vecs[1] *= 1.0 / 128.0;
 
     a = qv::dot(vecs[0], vecs[0]);
     b = qv::dot(vecs[0], vecs[1]);

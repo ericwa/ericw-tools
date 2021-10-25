@@ -429,8 +429,8 @@ static void CheckWindingArea(winding_t *w)
 
     total = 0;
     for (i = 1; i < w->numpoints; i++) {
-        VectorSubtract(w->points[i], w->points[0], v1);
-        VectorSubtract(w->points[i + 1], w->points[0], v2);
+        v1 = w->points[i] - w->points[0];
+        v2 = w->points[i + 1] - w->points[0];
         cross = qv::cross(v1, v2);
         add = qv::length(cross);
         total += add * 0.5;

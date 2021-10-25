@@ -380,7 +380,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
 
         VectorCopy(mapface.plane.normal, plane.normal);
         VectorScale(mapface.plane.normal, mapface.plane.dist, point);
-        VectorSubtract(point, rotate_offset, point);
+        point -= rotate_offset;
         plane.dist = qv::dot(plane.normal, point);
 
         f->texinfo = hullnum > 0 ? 0 : mapface.texinfo;
