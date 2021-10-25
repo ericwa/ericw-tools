@@ -259,8 +259,8 @@ private:
     {
         // apply transform
         switch (_transformer) {
-            case vec3_transformer_t::NONE: VectorCopy(val, out); break;
-            case vec3_transformer_t::MANGLE_TO_VEC: VectorCopy(vec_from_mangle(val), out); break;
+            case vec3_transformer_t::NONE: out = val; break;
+            case vec3_transformer_t::MANGLE_TO_VEC: out = vec_from_mangle(val); break;
             case vec3_transformer_t::NORMALIZE_COLOR_TO_255:
                 out = val;
                 normalize_color_format(out);

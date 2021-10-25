@@ -326,7 +326,7 @@ template<typename T, typename U, typename L = std::common_type_t<typename T::val
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<T, N> floor(const qvec<T, N> &v1)
+[[nodiscard]] inline qvec<T, N> floor(const qvec<T, N> &v1)
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
@@ -336,7 +336,17 @@ template<size_t N, class T>
 }
 
 template<size_t N, class T>
-[[nodiscard]] qvec<T, N> pow(const qvec<T, N> &v1, const qvec<T, N> &v2)
+[[nodiscard]] inline qvec<T, N> ceil(const qvec<T, N> &v1)
+{
+    qvec<T, N> res;
+    for (size_t i = 0; i < N; i++) {
+        res[i] = std::ceil(v1[i]);
+    }
+    return res;
+}
+
+template<size_t N, class T>
+[[nodiscard]] inline qvec<T, N> pow(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
@@ -388,11 +398,7 @@ template<size_t N, class T>
 template<size_t N, class T>
 [[nodiscard]] constexpr T length2(const qvec<T, N> &v1)
 {
-    T len2 = 0;
-    for (size_t i = 0; i < N; i++) {
-        len2 += (v1[i] * v1[i]);
-    }
-    return len2;
+    return qv::dot(v1, v1);
 }
 
 template<size_t N, class T>
@@ -872,29 +878,6 @@ namespace qv
 
 [[nodiscard]] qmat2x2f inverse(const qmat2x2f &input);
 }; // namespace qv
-
-// "vec3" type. legacy; eventually will be replaced entirely
-#define DEPRECATE_SNIFF [[deprecated]]
-
-
-#undef DEPRECATE_SNIFF
-#define DEPRECATE_SNIFF
-
-template<typename TFrom, typename TTo>
-DEPRECATE_SNIFF constexpr void VectorCopy(const TFrom &in, TTo &out)
-{
-    out[0] = in[0];
-    out[1] = in[1];
-    out[2] = in[2];
-}
-
-template<typename TFrom, typename TScale, typename TTo>
-DEPRECATE_SNIFF constexpr void VectorScale(const TFrom &v, TScale scale, TTo &out)
-{
-    out[0] = v[0] * scale;
-    out[1] = v[1] * scale;
-    out[2] = v[2] * scale;
-}
 
 // returns the normalized direction from `start` to `stop` in the `dir` param
 // returns the distance from `start` to `stop`

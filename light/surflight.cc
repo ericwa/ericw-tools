@@ -125,11 +125,11 @@ static void *MakeSurfaceLightsThread(void *arg)
             //        There are other more complex variants we could handle documented in the link above.
             // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
             if (cfg.sky_surface.isChanged()) {
-                VectorCopy(cfg.sky_surface.vec3Value(), texturecolor);
+                texturecolor = cfg.sky_surface.vec3Value();
             }
         }
 
-        VectorScale(texturecolor, info->value, texturecolor); // Scale by light value
+        texturecolor *= info->value; // Scale by light value
 
         // Calculate intensity...
         float intensity = qv::max(texturecolor);
@@ -139,7 +139,7 @@ static void *MakeSurfaceLightsThread(void *arg)
 
         // Normalize color...
         if (intensity > 1.0f)
-            VectorScale(texturecolor, 1.0f / intensity, texturecolor);
+            texturecolor *= 1.0f / intensity;
 
         // Sanity checks...
         Q_assert(!points.empty());
@@ -149,12 +149,12 @@ static void *MakeSurfaceLightsThread(void *arg)
         l.surfnormal = facenormal;
         l.omnidirectional = (info->flags.native & Q2_SURF_SKY) ? true : false;
         l.points = points;
-        VectorCopy(facemidpoint, l.pos);
+        l.pos = facemidpoint;
 
         // Store surfacelight settings...
         l.totalintensity = intensity * facearea;
         l.intensity = l.totalintensity / points.size();
-        VectorCopy(texturecolor, l.color);
+        l.color = texturecolor;
 
         // Init bbox...
         l.bounds = qvec3d(0);

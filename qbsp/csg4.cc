@@ -82,7 +82,7 @@ face_t *NewFaceFromFace(face_t *in)
     newf->lmshift[0] = in->lmshift[0];
     newf->lmshift[1] = in->lmshift[1];
 
-    VectorCopy(in->origin, newf->origin);
+    newf->origin = in->origin;
     newf->radius = in->radius;
 
     return newf;
@@ -90,7 +90,7 @@ face_t *NewFaceFromFace(face_t *in)
 
 void UpdateFaceSphere(face_t *in)
 {
-    VectorCopy(in->w.center(), in->origin);
+    in->origin = in->w.center();
     in->radius = 0;
     for (size_t i = 0; i < in->w.size(); i++) {
         in->radius = max(in->radius, qv::distance2(in->w[i], in->origin));

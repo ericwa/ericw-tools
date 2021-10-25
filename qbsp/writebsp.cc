@@ -177,10 +177,8 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     /*
      * write bounding box info
      */
-    for (int32_t i = 0; i < 3; ++i) {
-        dleaf.mins[i] = floor(node->bounds.mins()[i]);
-        dleaf.maxs[i] = ceil(node->bounds.maxs()[i]);
-    }
+    dleaf.mins = qv::floor(node->bounds.mins());
+    dleaf.maxs = qv::ceil(node->bounds.maxs());
 
     dleaf.visofs = -1; // no vis info yet
 
@@ -218,11 +216,8 @@ static void ExportDrawNodes(mapentity_t *entity, node_t *node)
     const size_t ourNodeIndex = map.bsp.dnodes.size();
     bsp2_dnode_t *dnode = &map.bsp.dnodes.emplace_back();
 
-    // VectorCopy doesn't work since dest are shorts
-    for (int32_t i = 0; i < 3; ++i) {
-        dnode->mins[i] = floor(node->bounds.mins()[i]);
-        dnode->maxs[i] = ceil(node->bounds.maxs()[i]);
-    }
+    dnode->mins = qv::floor(node->bounds.mins());
+    dnode->maxs = qv::ceil(node->bounds.maxs());
 
     dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;

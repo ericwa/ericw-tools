@@ -161,8 +161,8 @@ static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t
     edge->next = wedge_hash[h];
     wedge_hash[h] = edge;
 
-    VectorCopy(origin, edge->origin);
-    VectorCopy(edgevec, edge->dir);
+    edge->origin = origin;
+    edge->dir = edgevec;
     edge->head.next = edge->head.prev = &edge->head;
     edge->head.t = VECT_MAX;
 
@@ -289,8 +289,8 @@ restart:
             /* rotate the point winding */
             qvec3d point0 = w[0];
             for (i = 1; i < w.size(); i++)
-                VectorCopy(w[i], w[i - 1]);
-            VectorCopy(point0, w[w.size() - 1]);
+                w[i - 1] = w[i];
+            w[w.size() - 1] = point0;
             goto restart;
         }
 
@@ -358,7 +358,7 @@ restart:
             superface->w.push_back({});
 
             for (int32_t k = superface->w.size() - 1; k > j; k--)
-                VectorCopy(superface->w[k - 1], superface->w[k]);
+                superface->w[k] = superface->w[k - 1];
 
             superface->w[j] = edge->origin + (edge->dir * v->t);
             goto restart;

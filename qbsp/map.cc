@@ -486,9 +486,9 @@ static void TextureAxisFromPlane(const qbsp_plane_t &plane, qvec3d &xv, qvec3d &
         }
     }
 
-    VectorCopy(baseaxis[bestaxis * 3 + 1], xv);
-    VectorCopy(baseaxis[bestaxis * 3 + 2], yv);
-    VectorCopy(baseaxis[bestaxis * 3], snapped_normal);
+    xv = baseaxis[bestaxis * 3 + 1];
+    yv = baseaxis[bestaxis * 3 + 2];
+    snapped_normal = baseaxis[bestaxis * 3];
 }
 
 static quark_tx_info_t ParseExtendedTX(parser_t &parser)
@@ -1634,10 +1634,7 @@ static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
 
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
-        qvec3d oldpt = face->planepts[i];
-        qvec3d newpt = scaleM * oldpt;
-
-        VectorCopy(newpt, new_planepts[i]);
+        new_planepts[i] = scaleM * face->planepts[i];
     }
 
     face->set_planepts(new_planepts);
@@ -1671,10 +1668,7 @@ static void RotateMapFace(mapface_t *face, const qvec3d &angles)
 
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
-        qvec3d oldpt = face->planepts[i];
-        qvec3d newpt = rotation * oldpt;
-
-        VectorCopy(newpt, new_planepts[i]);
+        new_planepts[i] = rotation * face->planepts[i];
     }
 
     face->set_planepts(new_planepts);

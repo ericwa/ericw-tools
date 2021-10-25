@@ -850,10 +850,10 @@ public:
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
-            VectorCopy(*color, _ray_colors[_numrays]);
+            _ray_colors[_numrays] = *color;
         }
         if (normalcontrib) {
-            VectorCopy(*normalcontrib, _ray_normalcontribs[_numrays]);
+            _ray_normalcontribs[_numrays] = *normalcontrib;
         }
         _ray_dynamic_styles[_numrays] = 0;
         _numrays++;
@@ -933,10 +933,10 @@ public:
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
         if (color) {
-            VectorCopy(*color, _ray_colors[_numrays]);
+            _ray_colors[_numrays] = *color;
         }
         if (normalcontrib) {
-            VectorCopy(*normalcontrib, _ray_normalcontribs[_numrays]);
+            _ray_normalcontribs[_numrays] = *normalcontrib;
         }
         _ray_dynamic_styles[_numrays] = 0;
         _numrays++;

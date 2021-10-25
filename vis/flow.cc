@@ -63,13 +63,13 @@ static void ClipToSeparators(const std::shared_ptr<winding_t> &source, const qpl
             // Make a plane with the three points
             v2 = pass->at(j) - source->at(i);
             sep.normal = qv::cross(v1, v2);
-            len_sq = sep.normal[0] * sep.normal[0] + sep.normal[1] * sep.normal[1] + sep.normal[2] * sep.normal[2];
+            len_sq = qv::length2(sep.normal);
 
             // If points don't make a valid plane, skip it.
             if (len_sq < ON_EPSILON)
                 continue;
 
-            VectorScale(sep.normal, 1.0 / sqrt(len_sq), sep.normal);
+            sep.normal *= (1.0 / sqrt(len_sq));
             sep.dist = qv::dot(pass->at(j), sep.normal);
 
             //

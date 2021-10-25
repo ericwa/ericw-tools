@@ -107,7 +107,7 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
             LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
                 length, p1[0], p1[1], p1[2]);
             for (size_t j = i + 1; j < face->w.size(); j++)
-                VectorCopy(face->w[j], face->w[j - 1]);
+                face->w[j - 1] = face->w[j];
             face->w.resize(face->w.size() - 1);
             CheckFace(face, sourceface);
             break;
@@ -378,8 +378,8 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
             mapface.texinfo = FindTexinfo(texInfoNew);
         }
 
-        VectorCopy(mapface.plane.normal, plane.normal);
-        VectorScale(mapface.plane.normal, mapface.plane.dist, point);
+        plane.normal = mapface.plane.normal;
+        point = mapface.plane.normal * mapface.plane.dist;
         point -= rotate_offset;
         plane.dist = qv::dot(plane.normal, point);
 

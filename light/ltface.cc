@@ -677,11 +677,8 @@ static void CalcPoints(
 
             surf->occluded[i] = !res.m_unoccluded;
             *realfacenum = res.m_actualFace != nullptr ? Face_GetNum(bsp, res.m_actualFace) : -1;
-            VectorCopy(res.m_position, point);
-            VectorCopy(res.m_interpolatedNormal, norm);
-
-            // apply model offset after calling CalcPointNormal
-            point += offset;
+            point = res.m_position + offset;
+            norm = res.m_interpolatedNormal;
         }
     }
 
@@ -745,17 +742,17 @@ static bool Lightsurf_Init(
     }
 
     /* Set up the plane, not including model offset */
-    qplane3d *plane = &lightsurf->plane;
-    VectorCopy(bsp->dplanes[face->planenum].normal, plane->normal);
-    plane->dist = bsp->dplanes[face->planenum].dist;
+    qplane3d &plane = lightsurf->plane;
     if (face->side) {
-        *plane = -*plane;
+        plane = -bsp->dplanes[face->planenum];
+    } else {
+        plane = bsp->dplanes[face->planenum];
     }
 
     /* Set up the texorg for coordinate transformation */
     lightsurf->texorg.texSpaceToWorld = TexSpaceToWorld(bsp, face);
     lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
-    lightsurf->texorg.planedist = plane->dist;
+    lightsurf->texorg.planedist = plane.dist;
 
     /* Check for invalid texture axes */
     if (std::isnan(lightsurf->texorg.texSpaceToWorld.at(0, 0))) {
@@ -774,8 +771,8 @@ static bool Lightsurf_Init(
 
     /* Correct the plane for the model offset (must be done last,
        calculation of face extents / points needs the uncorrected plane) */
-    qvec3d planepoint = (plane->normal * plane->dist) + modelinfo->offset;
-    plane->dist = qv::dot(plane->normal, planepoint);
+    qvec3d planepoint = (plane.normal * plane.dist) + modelinfo->offset;
+    plane.dist = qv::dot(plane.normal, planepoint);
 
     /* Correct bounding sphere */
     lightsurf->origin += modelinfo->offset;
@@ -968,13 +965,13 @@ static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, co
                 col[i] *= entcol[i] * (1.0f / 255.0f);
         }
 
-        VectorScale(col, add * (1.0f / 255.0f), color_out);
+        color_out = col * add * (1.0f / 255.0f);
     } else {
-        VectorScale(entity->color.vec3Value(), add * (1.0f / 255.0f), color_out);
+        color_out = entity->color.vec3Value() * add * (1.0f / 255.0f);
     }
 
     // write normalmap contrib
-    VectorScale(surfpointToLightDir_out, add, normalmap_addition_out);
+    normalmap_addition_out = surfpointToLightDir_out * add;
 
     *dist_out = dist;
 }
@@ -1255,10 +1252,8 @@ std::map<int, qvec3f> GetDirectLighting(
             continue;
 
         // Write out the final color
-        qvec3d color;
-        VectorScale(
-            vpl.color, add, color); // color_out is expected to be in [0..255] range, vpl->color is in [0..1] range.
-        VectorScale(color, cfg.surflightbouncescale.floatValue(), color);
+        // color_out is expected to be in [0..255] range, vpl->color is in [0..1] range.
+        qvec3d color = (vpl.color * add) * cfg.surflightbouncescale.floatValue();
 
         // NOTE: Skip negative lights, which would make no sense to bounce!
         if (LightSample_Brightness(color) <= fadegate)
@@ -1287,7 +1282,7 @@ std::map<int, qvec3f> GetDirectLighting(
         GetLightContrib(
             cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
 
-        VectorScale(color, entity.bouncescale.floatValue(), color);
+        color *= entity.bouncescale.floatValue();
 
         // NOTE: Skip negative lights, which would make no sense to bounce!
         if (LightSample_Brightness(color) <= fadegate) {
@@ -1409,7 +1404,7 @@ static void LightFace_Entity(
 
         const float occlusion =
             Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], entity, surfpointToLightDist, lightsurf);
-        VectorScale(color, occlusion, color);
+        color *= occlusion;
 
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= fadegate) {
@@ -1515,14 +1510,14 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
 
-        qvec3d color, normalcontrib;
-        VectorScale(sun->sunlight_color, value / 255.0, color);
-        VectorScale(sun->sunvec, value, normalcontrib);
+        qvec3d color = sun->sunlight_color * (value / 255.0);
 
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= fadegate) {
             continue;
         }
+
+        qvec3d normalcontrib = sun->sunvec * value;
 
         rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
     }
@@ -1755,7 +1750,7 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
 
                 lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, styleColor.first, lightsurf);
                 lightsample_t *sample = &lightmap->samples[i];
-                VectorCopy(patch_color, sample->color);
+                sample->color = patch_color;
                 Lightmap_Save(lightmaps, lightsurf, lightmap, styleColor.first);
             }
         }
@@ -1950,18 +1945,13 @@ static void LightFace_Bounce(
                     continue; // FIXME: nudge or something
                 dir /= dist;
 
-                const qvec3f indirect =
+                const qvec3d indirect =
                     GetIndirectLighting(cfg, &vpl, color, dir, dist, lightsurf->points[i], lightsurf->normals[i]);
 
                 if (LightSample_Brightness(indirect) < 0.25)
                     continue;
 
-                qvec3d vplPos, vplDir, vplColor;
-                VectorCopy(vpl.pos, vplPos);
-                VectorCopy(dir, vplDir);
-                VectorCopy(indirect, vplColor);
-
-                rs->pushRay(i, vplPos, vplDir, dist, &vplColor);
+                rs->pushRay(i, vpl.pos, dir, dist, &indirect);
             }
 
             if (!rs->numPushedRays())
@@ -1987,7 +1977,7 @@ static void LightFace_Bounce(
                  */
                 if (debugmode != debugmode_bounce) {
                     const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
-                    VectorScale(indirect, dirtscale, indirect);
+                    indirect *= dirtscale;
                 }
 
                 lightsample_t *sample = &lightmap->samples[i];
@@ -2094,10 +2084,7 @@ static void LightFace_Bounce(
             colorAvg /= Nhits;
 
             lightsample_t *sample = &lightmap->samples[i];
-
-            qvec3d indirectTmp;
-            VectorCopy(colorAvg, indirectTmp);
-            sample->color += indirectTmp;
+            sample->color += colorAvg;
         }
     }
 
@@ -2138,7 +2125,7 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
                 else
                     dir /= dist;
 
-                const qvec3f indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
+                const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
                 if (LightSample_Brightness(indirect) < 0.01f) // Each point contributes very little to the final result
                     continue;
 
@@ -2152,12 +2139,7 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
                 else
                     dir /= dist;
 
-                qvec3d vplPos, vplDir, vplColor;
-                VectorCopy(pos, vplPos);
-                VectorCopy(dir, vplDir);
-                VectorCopy(indirect, vplColor);
-
-                rs->pushRay(i, vplPos, vplDir, dist, &vplColor);
+                rs->pushRay(i, pos, dir, dist, &indirect);
             }
 
             if (!rs->numPushedRays())
@@ -2182,7 +2164,7 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 
                 // Use dirt scaling on the surface lighting.
                 const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], nullptr, 0.0, lightsurf);
-                VectorScale(indirect, dirtscale, indirect);
+                indirect *= dirtscale;
 
                 lightsample_t *sample = &lightmap->samples[i];
                 sample->color += indirect;
@@ -2209,9 +2191,9 @@ static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *ligh
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
         if (lightsurf->occluded[i]) {
-            VectorCopy(qvec3f(255, 0, 0), sample->color);
+            sample->color = { 255, 0, 0 };
         } else {
-            VectorCopy(qvec3f(0, 255, 0), sample->color);
+            sample->color = { 0, 255, 0 };
         }
         // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
         lightsurf->occluded[i] = false;
@@ -2248,12 +2230,12 @@ static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *li
 
         if (sample_face == dump_facenum) {
             /* Red - the sample is on the selected face */
-            VectorCopy(qvec3f(255, 0, 0), sample->color);
+            sample->color = { 255, 0, 0 };
         } else if (has_sample_on_dumpface) {
             /* Green - the face has some samples on the selected face */
-            VectorCopy(qvec3f(0, 255, 0), sample->color);
+            sample->color = { 0, 255, 0 };
         } else {
-            VectorCopy(qvec3f(0, 0, 0), sample->color);
+            sample->color = { };
         }
         // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
         lightsurf->occluded[i] = false;
@@ -2508,7 +2490,7 @@ static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t
             color = qv::max(color, {0});
 
             /* Scale and clamp any out-of-range samples */
-            VectorScale(color, cfg.rangescale.floatValue(), color);
+            color *= cfg.rangescale.floatValue();
 
             for (auto &c : color) {
                 c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.floatValue()) * 255.0f;
@@ -2517,7 +2499,7 @@ static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t
             vec_t maxcolor = qv::max(color);
 
             if (maxcolor > 255) {
-                VectorScale(color, 255.0f / maxcolor, color);
+                color *= (255.0f / maxcolor);
             }
         }
     }

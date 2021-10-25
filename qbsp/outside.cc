@@ -261,16 +261,15 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
 {
     std::ofstream ptsfile = InitPtsFile();
 
-    qvec3d prevpt, currpt;
-    VectorCopy(leakentity->origin, prevpt);
-
+    qvec3d prevpt = leakentity->origin;
+    
     for (portal_t *portal : leakline) {
-        VectorCopy(portal->winding->center(), currpt);
+        qvec3d currpt = portal->winding->center();
 
         // draw dots from prevpt to currpt
         WriteLeakTrail(ptsfile, prevpt, currpt);
 
-        VectorCopy(currpt, prevpt);
+        prevpt = currpt;
     }
 
     LogPrint("Leak file written to {}\n", options.szBSPName);

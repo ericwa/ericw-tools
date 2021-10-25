@@ -432,7 +432,7 @@ static void SetupSun(const globalconfig_t &cfg, vec_t light, const qvec3d &color
 
         /* calculate sun direction */
         if (i == 0) {
-            VectorCopy(sunvec, direction);
+            direction = sunvec;
         } else {
             vec_t da, de;
             vec_t d = sqrt(sunvec[0] * sunvec[0] + sunvec[1] * sunvec[1]);
@@ -974,8 +974,7 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             entity.settings().setSettings(*entity.epairs, false);
 
             if (entity.mangle.isChanged()) {
-                const qvec3f temp = vec_from_mangle(entity.mangle.vec3Value());
-                VectorCopy(temp, entity.spotvec);
+                entity.spotvec = vec_from_mangle(entity.mangle.vec3Value());
                 entity.spotlight = true;
 
                 if (!entity.projangle.isChanged()) {
@@ -1352,7 +1351,7 @@ static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modeli
         // wrap cases
         dist[j] = dist[0];
         v -= i;
-        VectorCopy(verts, v);
+        v = verts;
 
         f = b = 0;
         v = verts;

@@ -65,7 +65,7 @@ static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const globalconfig_t &cf
     p->w = std::move(w);
 
     // cache some stuff
-    VectorCopy(&p->w.center()[0], p->center);
+    p->center = p->w.center();
     p->plane = p->w.plane();
 
     // nudge the cernter point 1 unit off
