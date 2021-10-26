@@ -33,7 +33,7 @@ struct gamedef_generic_t : public gamedef_t
 
     bool surf_is_subdivided(const surfflags_t &) const { throw std::bad_cast(); }
 
-    bool surfflags_are_valid(const surfflags_t &flags) const { throw std::bad_cast(); }
+    bool surfflags_are_valid(const surfflags_t &) const { throw std::bad_cast(); }
 
     contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
@@ -51,11 +51,11 @@ struct gamedef_generic_t : public gamedef_t
 
     contentflags_t create_liquid_contents(const int32_t &, const int32_t &) const { throw std::bad_cast(); }
 
-    bool contents_are_empty(const contentflags_t &contents) const { throw std::bad_cast(); }
+    bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
 
-    bool contents_are_solid(const contentflags_t &contents) const { throw std::bad_cast(); }
+    bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
 
-    bool contents_are_sky(const contentflags_t &contents) const { throw std::bad_cast(); }
+    bool contents_are_sky(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_liquid(const contentflags_t &) const { throw std::bad_cast(); }
 
@@ -63,9 +63,11 @@ struct gamedef_generic_t : public gamedef_t
 
     bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
-    std::string get_contents_display(const contentflags_t &contents) const { throw std::bad_cast(); }
+    std::string get_contents_display(const contentflags_t &) const { throw std::bad_cast(); }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
+
+    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const { throw std::bad_cast(); };
 };
 
 template<gameid_t ID>
@@ -245,6 +247,31 @@ struct gamedef_q1_like_t : public gamedef_t
 
         return hulls;
     }
+    
+    contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &) const
+    {
+        // check for strong content indicators
+        if (!Q_strcasecmp(texname.data(), "origin")) {
+            return create_extended_contents(CFLAGS_ORIGIN);
+        } else if (!Q_strcasecmp(texname.data(), "hint")) {
+            return create_extended_contents(CFLAGS_HINT);
+        } else if (!Q_strcasecmp(texname.data(), "clip")) {
+            return create_extended_contents(CFLAGS_CLIP);
+        } else if (texname[0] == '*') {
+            if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
+                return create_liquid_contents(CONTENTS_LAVA);
+            } else if (!Q_strncasecmp(texname.data() + 1, "slime", 5)) {
+                return create_liquid_contents(CONTENTS_SLIME);
+            } else {
+                return create_liquid_contents(CONTENTS_WATER);
+            }
+        } else if (!Q_strncasecmp(texname.data(), "sky", 3)) {
+            return create_sky_contents();
+        } else {
+            // and anything else is assumed to be a regular solid.
+            return create_solid_contents();
+        }
+    }
 };
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
@@ -312,7 +339,7 @@ struct gamedef_q2_t : public gamedef_t
     int32_t get_content_type(const contentflags_t &contents) const
     {
         return (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) |
-               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP);
+               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL);
     }
 
     int32_t contents_priority(const contentflags_t &contents) const
@@ -456,6 +483,51 @@ struct gamedef_q2_t : public gamedef_t
     {
         static constexpr std::initializer_list<aabb3d> hulls = {};
         return hulls;
+    }
+    
+    contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const
+    {
+        contentflags_t surf_contents = contents;
+
+        if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) {
+            surf_contents.native |= Q2_CONTENTS_TRANSLUCENT;
+
+            if (surf_contents.native & Q2_CONTENTS_SOLID) {
+                surf_contents.native = (surf_contents.native & ~Q2_CONTENTS_SOLID) | Q2_CONTENTS_WINDOW;
+            }
+        }
+
+        // add extended flags that we may need
+        if (surf_contents.native & Q2_CONTENTS_DETAIL) {
+            surf_contents.extended |= CFLAGS_DETAIL;
+        }
+
+        if (surf_contents.native & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
+            surf_contents.extended |= CFLAGS_CLIP;
+        }
+
+        if (surf_contents.native & Q2_CONTENTS_ORIGIN) {
+            surf_contents.extended |= CFLAGS_ORIGIN;
+        }
+
+        if (surf_contents.native & Q2_CONTENTS_MIST) {
+            surf_contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
+        }
+
+        if (flags.native & Q2_SURF_HINT) {
+            surf_contents.extended |= CFLAGS_HINT;
+        }
+
+        // FIXME: this is a bit of a hack, but this is because clip
+        // and liquids and stuff are already handled *like* detail by
+        // the compiler.
+        if (surf_contents.extended & CFLAGS_DETAIL) {
+            if (!(surf_contents.native & Q2_CONTENTS_SOLID)) {
+                surf_contents.extended &= ~CFLAGS_DETAIL;
+            }
+        }
+
+        return surf_contents;
     }
 };
 

@@ -48,7 +48,7 @@ struct mapface_t
     surfflags_t flags { };
 
     // Q2 stuff
-    int contents = 0;
+    contentflags_t contents { };
     int value = 0;
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);

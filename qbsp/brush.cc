@@ -691,53 +691,30 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const f
 
 static const int DetailFlag = (1 << 27);
 
+// FIXME: move this to earlier into the map process, like in
+// texdef parsing or something
 static bool Brush_IsDetail(const mapbrush_t *mapbrush)
 {
     const mapface_t &mapface = mapbrush->face(0);
 
-    if ((mapface.contents & DetailFlag) == DetailFlag) {
+    if ((mapface.contents.native & DetailFlag) == DetailFlag) {
         return true;
     }
     return false;
 }
 
-static contentflags_t Brush_GetContents_Q1(const mapbrush_t *mapbrush)
+static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
 {
-    const char *texname;
-
-    // check for strong content indicators
-    for (int i = 0; i < mapbrush->numfaces; i++) {
-        const mapface_t &mapface = mapbrush->face(i);
+    // use the first side as the base contents value
+    contentflags_t base_contents;
+    
+    {
+        const mapface_t &mapface = mapbrush->face(0);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-        texname = map.miptexTextureName(texinfo.miptex).c_str();
-
-        if (!Q_strcasecmp(texname, "origin"))
-            return options.target_game->create_extended_contents(CFLAGS_ORIGIN);
-        else if (!Q_strcasecmp(texname, "hint"))
-            return options.target_game->create_extended_contents(CFLAGS_HINT);
-        else if (!Q_strcasecmp(texname, "clip"))
-            return options.target_game->create_extended_contents(CFLAGS_CLIP);
-        else if (texname[0] == '*') {
-            if (!Q_strncasecmp(texname + 1, "lava", 4))
-                return options.target_game->create_liquid_contents(CONTENTS_LAVA);
-            else if (!Q_strncasecmp(texname + 1, "slime", 5))
-                return options.target_game->create_liquid_contents(CONTENTS_SLIME);
-            else
-                return options.target_game->create_liquid_contents(CONTENTS_WATER);
-        } else if (!Q_strncasecmp(texname, "sky", 3))
-            return options.target_game->create_sky_contents();
+        base_contents = options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
     }
 
-    // and anything else is assumed to be a regular solid.
-    return options.target_game->create_solid_contents();
-}
-
-static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush)
-{
-    bool is_trans = false;
-    bool is_hint = false;
-    contentflags_t contents = {mapbrush->face(0).contents};
-
+    // validate that all of the sides have valid contents
     for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
@@ -746,64 +723,20 @@ static contentflags_t Brush_GetContents_Q2(const mapbrush_t *mapbrush)
             continue;
         }
 
-        if (!is_trans && (texinfo.flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
-            is_trans = true;
-        }
+        contentflags_t contents = options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
 
-        if (!is_hint && (texinfo.flags.native & Q2_SURF_HINT)) {
-            is_hint = true;
-        }
-
-        if (mapface.contents != contents.native) {
-            LogPrint("mixed face contents ({} != {} at line {})\n",
+        if (!contents.types_equal(base_contents, options.target_game)) {
+            LogPrint("mixed face contents ({} != {}) at line {}\n",
                 contentflags_t{mapface.contents}.to_string(options.target_game),
                 contents.to_string(options.target_game), mapface.linenum);
             break;
         }
     }
+    
+    // make sure we found a valid type
+    Q_assert(base_contents.is_valid(options.target_game, false));
 
-    // if any side is translucent, mark the contents
-    // and change solid to window
-    if (is_trans) {
-        contents.native |= Q2_CONTENTS_TRANSLUCENT;
-        if (contents.native & Q2_CONTENTS_SOLID) {
-            contents.native = (contents.native & ~Q2_CONTENTS_SOLID) | Q2_CONTENTS_WINDOW;
-        }
-    }
-
-    // add extended flags that we may need
-    if (contents.native & Q2_CONTENTS_DETAIL) {
-        contents.extended |= CFLAGS_DETAIL;
-    }
-
-    if (contents.native & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
-        contents.extended |= CFLAGS_CLIP;
-    }
-
-    if (contents.native & Q2_CONTENTS_ORIGIN) {
-        contents.extended |= CFLAGS_ORIGIN;
-    }
-
-    if (contents.native & Q2_CONTENTS_MIST) {
-        contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
-    }
-
-    if (is_hint) {
-        contents.extended |= CFLAGS_HINT;
-    }
-
-    // FIXME: this is a bit of a hack, but this is because clip
-    // and liquids and stuff are already handled *like* detail by
-    // the compiler.
-    if (contents.extended & CFLAGS_DETAIL) {
-        if (!(contents.native & Q2_CONTENTS_SOLID)) {
-            contents.extended &= ~CFLAGS_DETAIL;
-        }
-    }
-
-    Q_assert(contents.is_valid(options.target_game, false));
-
-    return contents;
+    return base_contents;
 }
 
 /*
@@ -978,9 +911,6 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
 
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
-
-    // TODO: move to game
-    auto Brush_GetContents = (options.target_game->id == GAME_QUAKE_II) ? Brush_GetContents_Q2 : Brush_GetContents_Q1;
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);

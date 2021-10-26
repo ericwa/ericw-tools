@@ -107,7 +107,6 @@ enum
 #include <common/mathlib.hh>
 #include <qbsp/winding.hh>
 
-
 struct mtexinfo_t
 {
     texvecf vecs; /* [s/t][xyz offset] */
