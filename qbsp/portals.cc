@@ -123,6 +123,9 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         front = clusters ? p->nodes[0]->viscluster : p->nodes[0]->visleafnum;
         back = clusters ? p->nodes[1]->viscluster : p->nodes[1]->visleafnum;
 
+        Q_assert(front != -1);
+        Q_assert(back != -1);
+
         /*
          * sometimes planes get turned around when they are very near the
          * changeover point between different axis.  interpret the plane the

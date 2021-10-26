@@ -410,6 +410,10 @@ struct gamedef_q2_t : public gamedef_t
     bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
     {
         int32_t c0 = contents0.native, c1 = contents1.native;
+        
+        // can't see through solid
+        if ((c0 | c1) & Q2_CONTENTS_SOLID)
+            return false;
 
         if (!visible_contents(c0 ^ c1))
             return true;
@@ -418,10 +422,6 @@ struct gamedef_q2_t : public gamedef_t
             c0 = 0;
         if ((c1 & Q2_CONTENTS_TRANSLUCENT) || contents1.is_detail())
             c1 = 0;
-
-        // can't see through solid
-        if ((c0 | c1) & Q2_CONTENTS_SOLID)
-            return false;
 
         // identical on both sides
         if (!(c0 ^ c1))
