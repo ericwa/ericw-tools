@@ -109,7 +109,7 @@ faceextents_t::faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmsca
         if (m_texsize[i] >= MAXDIMENSION) {
             const qplane3d plane = Face_Plane(bsp, face);
             const qvec3f &point = Face_PointAtIndex(bsp, face, 0); // grab first vert
-            const std::string &texname = Face_TextureName(bsp, face);
+            const char *texname = Face_TextureName(bsp, face);
 
             Error("Bad surface extents:\n"
                   "   surface {}, {} extents = {}, scale = {}\n"
@@ -228,7 +228,7 @@ constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg)
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
 {
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    const std::string &texname = Face_TextureName(bsp, face);
+    const char *texname = Face_TextureName(bsp, face);
 
     LogPrint("face {}, texture {}, {} edges; vectors:\n"
              "{: 3.3}\n",
@@ -303,7 +303,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
         surf->texsize[i] = maxs[i] - mins[i];
         if (surf->texsize[i] >= MAXDIMENSION) {
             const dplane_t &plane = bsp->dplanes[face->planenum];
-            const std::string &texname = Face_TextureName(bsp, face);
+            const char *texname = Face_TextureName(bsp, face);
             Error("Bad surface extents:\n"
                   "   face {}, {} extents = {}, scale = {}\n"
                   "   texture {} at [{}]\n"
@@ -1339,7 +1339,7 @@ std::map<int, qvec3f> GetDirectLighting(
         // TODO: this could be faster!
         // TODO: deduplicate from LightFace_Sky
         if (!sun.suntexture.empty()) {
-            const std::string &facetex = Face_TextureName(bsp, face);
+            const char *facetex = Face_TextureName(bsp, face);
             if (sun.suntexture != facetex) {
                 continue;
             }
@@ -1540,7 +1540,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
         // TODO: this could be faster!
         if (!sun->suntexture.empty()) {
             const mface_t *face = rs->getPushedRayHitFace(j);
-            const std::string &facetex = Face_TextureName(lightsurf->bsp, face);
+            const char *facetex = Face_TextureName(lightsurf->bsp, face);
             if (sun->suntexture != facetex) {
                 continue;
             }
@@ -2302,7 +2302,7 @@ void SetupDirt(globalconfig_t &cfg)
     }
 
     /* calculate angular steps */
-    const float angleStep = (float)DEG2RAD(360.0f / DIRT_NUM_ANGLE_STEPS);
+    constexpr float angleStep = (float)DEG2RAD(360.0f / DIRT_NUM_ANGLE_STEPS);
     const float elevationStep = (float)DEG2RAD(cfg.dirtAngle.floatValue() / DIRT_NUM_ELEVATION_STEPS);
 
     /* iterate angle */
@@ -3007,10 +3007,10 @@ static void WriteLightmaps(
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
     {
-        const std::string &texname = Face_TextureName(bsp, face);
+        const char *texname = Face_TextureName(bsp, face);
         Q_assert(Face_IsLightmapped(bsp, face));
-        Q_assert(Q_strcasecmp(texname.data(), "skip") != 0);
-        Q_assert(Q_strcasecmp(texname.data(), "trigger") != 0);
+        Q_assert(Q_strcasecmp(texname, "skip") != 0);
+        Q_assert(Q_strcasecmp(texname, "trigger") != 0);
     }
 
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
@@ -3164,14 +3164,14 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
     if (!Face_IsLightmapped(bsp, face))
         return;
 
-    const std::string &texname = Face_TextureName(bsp, face);
+    const char *texname = Face_TextureName(bsp, face);
 
     /* don't save lightmaps for "trigger" texture */
-    if (!Q_strcasecmp(texname.data(), "trigger"))
+    if (!Q_strcasecmp(texname, "trigger"))
         return;
 
     /* don't save lightmaps for "skip" texture */
-    if (!Q_strcasecmp(texname.data(), "skip"))
+    if (!Q_strcasecmp(texname, "skip"))
         return;
 
     /* all good, this face is going to be lightmapped. */

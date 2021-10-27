@@ -173,21 +173,23 @@ const rgba_miptex_t *Face_RgbaMiptex(const mbsp_t *bsp, const mface_t *face)
     return &bsp->drgbatexdata[texinfo->miptex];
 }
 
-const std::string &Face_TextureName(const mbsp_t *bsp, const mface_t *face)
+const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
     const auto *miptex = Face_Miptex(bsp, face);
 
     if (miptex)
-        return miptex->name;
+        return miptex->name.c_str();
 
     const auto *rgbamiptex = Face_RgbaMiptex(bsp, face);
 
     if (rgbamiptex)
-        return rgbamiptex->name;
+        return rgbamiptex->name.c_str();
 
-    // a bit silly, but...
-    static std::string empty_name;
-    return empty_name;
+    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    if (texinfo && texinfo->texture[0])
+        return texinfo->texture.data();
+
+    return "";
 }
 
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
@@ -205,13 +207,13 @@ const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v)
     return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)];
 }
 
-static int TextureName_Contents(const std::string &texname)
+static int TextureName_Contents(const char *texname)
 {
-    if (!Q_strncasecmp(texname.data(), "sky", 3))
+    if (!Q_strncasecmp(texname, "sky", 3))
         return CONTENTS_SKY;
-    else if (!Q_strncasecmp(texname.data(), "*lava", 5))
+    else if (!Q_strncasecmp(texname, "*lava", 5))
         return CONTENTS_LAVA;
-    else if (!Q_strncasecmp(texname.data(), "*slime", 6))
+    else if (!Q_strncasecmp(texname, "*slime", 6))
         return CONTENTS_SLIME;
     else if (texname[0] == '*')
         return CONTENTS_WATER;
@@ -410,7 +412,7 @@ qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face)
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
 {
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    const std::string &texname = Face_TextureName(bsp, face);
+    const char *texname = Face_TextureName(bsp, face);
 
     LogPrint("face {}, texture '{}', {} edges; vectors:\n"
              "{: 3.3}\n",

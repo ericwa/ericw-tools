@@ -307,10 +307,10 @@ struct fmt::formatter<qvec<T, N>> : formatter<T>
 
 namespace qv
 {
-template<class T>
-[[nodiscard]] constexpr qvec<T, 3> cross(const qvec<T, 3> &v1, const qvec<T, 3> &v2)
+template<class T, class T2>
+[[nodiscard]] constexpr auto cross(const qvec<T, 3> &v1, const qvec<T2, 3> &v2)
 {
-    return qvec<T, 3>(v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]);
+    return qvec<decltype(T() * T2() - T() * T2()), 3> { v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0] };
 }
 
 template<typename T, typename U, typename L = std::common_type_t<typename T::value_type, typename U::value_type>>
@@ -407,8 +407,8 @@ template<size_t N, class T>
     return std::sqrt(length2(v1));
 }
 
-template<size_t N, class T>
-[[nodiscard]] inline T distance(const qvec<T, N> &v1, const qvec<T, N> &v2)
+template<size_t N, class T, class T2>
+[[nodiscard]] inline T distance(const qvec<T, N> &v1, const qvec<T2, N> &v2)
 {
     return length(v2 - v1);
 }

@@ -597,7 +597,9 @@ int main(int argc, char **argv)
         } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly")) {
             const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
 
-            source.replace_filename(source.filename().string() + "-decompile").replace_extension("map");
+            source.replace_extension("");
+            source.replace_filename(source.filename().string() + "-decompile");
+            source.replace_extension(".map");
             fmt::print("-> writing {}... ", source);
 
             std::ofstream f(source);

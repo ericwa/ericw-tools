@@ -1309,8 +1309,8 @@ static aabb3d BoundPoly(int numverts, qvec3d *verts)
 
 static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight)
 {
-    const std::string &texname = Face_TextureName(bsp, face);
-    return !Q_strcasecmp(texname.data(), ValueForKey(&surflight, "_surface"));
+    const char *texname = Face_TextureName(bsp, face);
+    return !Q_strcasecmp(texname, ValueForKey(&surflight, "_surface"));
 }
 
 /*

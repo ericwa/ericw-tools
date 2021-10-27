@@ -356,7 +356,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             if (isGlass)
                 alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.66f : 0.33f);
         } else {
-            const std::string &name = Face_TextureName(bsp_static, face);
+            const char *name = Face_TextureName(bsp_static, face);
             isFence = (name[0] == '{');
             isGlass = (alpha < 1.0f);
         }
@@ -536,7 +536,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
             }
 
             // fence
-            const std::string &texname = Face_TextureName(bsp, face);
+            const char *texname = Face_TextureName(bsp, face);
             if (texname[0] == '{') {
                 filterfaces.push_back(face);
                 continue;
@@ -553,7 +553,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
                 }
             } else {
                 // Q1
-                if (!Q_strncasecmp("sky", texname.data(), 3)) {
+                if (!Q_strncasecmp("sky", texname, 3)) {
                     skyfaces.push_back(face);
                     continue;
                 }

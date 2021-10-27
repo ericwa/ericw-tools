@@ -396,7 +396,7 @@ public:
             qvec3d v1 = qv::normalize(at(j) - at(i));
             qvec3d v2 = qv::normalize(at(i) - at(k));
 
-            if (qv::dot(v1, v2) < 0.999)
+            if (qv::dot(v1, v2) < 1.0 - DIST_EPSILON)
                 temp.push_back(at(i));
         }
 
@@ -683,6 +683,8 @@ public:
         // CHECK: can we do the above + colinear checks
         // in a single pass?
         w.remove_colinear();
+
+        Q_assert(w.size() >= 3);
 
         return w;
     }
