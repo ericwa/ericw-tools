@@ -203,8 +203,7 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     }
     dleaf.nummarksurfaces = static_cast<int>(map.bsp.dleaffaces.size()) - dleaf.firstmarksurface;
 
-    // FIXME-Q2: fill in other things
-    dleaf.area = 1;
+    dleaf.area = node->area;
     dleaf.cluster = node->viscluster;
     dleaf.firstleafbrush = node->firstleafbrush;
     dleaf.numleafbrushes = node->numleafbrushes;
