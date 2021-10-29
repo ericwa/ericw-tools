@@ -208,22 +208,18 @@ static planepoints NormalDistanceToThreePoints(const qplane3<T> &plane)
 }
 
 template<typename T>
-void PrintPoint(const qvec<T, 3> &v, fmt::memory_buffer &file)
-{
-    fmt::format_to(file, "( {} )", v);
-}
-
-template<typename T>
-static void PrintPlanePoints(const mbsp_t *bsp, const qplane3<T> &decompplane, fmt::memory_buffer &file)
+static void PrintPlanePoints(const mbsp_t *bsp, const qplane3<T> &decompplane, fmt::memory_buffer &file, std::optional<qvec3d> &brush_offset)
 {
     // we have a plane in (normal, distance) form;
-    const planepoints p = NormalDistanceToThreePoints(decompplane);
+    planepoints p = NormalDistanceToThreePoints(decompplane);
 
-    PrintPoint(p.point0, file);
-    fmt::format_to(file, " ");
-    PrintPoint(p.point1, file);
-    fmt::format_to(file, " ");
-    PrintPoint(p.point2, file);
+    if (brush_offset.has_value()) {
+        p.point0 += brush_offset.value();
+        p.point1 += brush_offset.value();
+        p.point2 += brush_offset.value();
+    }
+
+    fmt::format_to(file, "( {} ) ( {} ) ( {} )", p.point0, p.point1, p.point2);
 }
 
 static const char *DefaultTextureForContents(const mbsp_t *bsp, int contents)
@@ -243,11 +239,15 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, int contents)
             return "e1u1/clip_mon";
         } else if (contents & Q2_CONTENTS_AREAPORTAL) {
             return "e1u1/trigger";
+        } else if (contents & Q2_CONTENTS_ORIGIN) {
+            return "e1u1/origin";
         }
 
         return "e1u1/skip";
     } else {
         switch (contents) {
+            case Q2_CONTENTS_ORIGIN: return "origin";
+
             case CONTENTS_WATER: return "*waterskip";
             case CONTENTS_SLIME: return "*slimeskip";
             case CONTENTS_LAVA: return "*lavaskip";
@@ -676,14 +676,14 @@ static void DecompileLeaf(const std::vector<decomp_plane_t> &planestack, const m
     result.push_back({planestack, leaf});
 }
 
-static std::string DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const leaf_decompile_task &task)
+static std::string DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     const int32_t contents = task.brush ? task.brush->contents : task.leaf->contents;
 
     fmt::memory_buffer file;
     fmt::format_to(file, "{{\n");
     for (const auto &side : task.allPlanes) {
-        PrintPlanePoints(bsp, side, file);
+        PrintPlanePoints(bsp, side, file, brush_offset);
 
         // print a default face
         fmt::format_to(file, " {} ", DefaultTextureForContents(bsp, contents));
@@ -695,7 +695,7 @@ static std::string DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const leaf_d
     return fmt::to_string(file);
 }
 
-static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task &task)
+static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     const int32_t contents = task.brush ? task.brush->contents : task.leaf->contents;
 
@@ -723,7 +723,7 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
     for (const decomp_brush_t &brush : finalBrushes) {
         fmt::format_to(file, "{{\n");
         for (const auto &side : brush.sides) {
-            PrintPlanePoints(bsp, side.plane, file);
+            PrintPlanePoints(bsp, side.plane, file, brush_offset);
 
             // see if we have a face
             auto faces = side.faces; // FindFacesOnNode(side.plane.node, bsp);
@@ -828,7 +828,7 @@ static void AddMapBoundsToStack(
 
 #include <unordered_set>
 
-static std::string DecompileBrushTask(const mbsp_t *bsp, const dmodelh2_t *model, const dbrush_t *brush, const mleaf_t *leaf, const bsp2_dnode_t *node)
+static std::string DecompileBrushTask(const mbsp_t *bsp, const dmodelh2_t *model, const dbrush_t *brush, const mleaf_t *leaf, const bsp2_dnode_t *node, std::optional<qvec3d> &brush_offset)
 {
     leaf_decompile_task task;
 
@@ -841,8 +841,10 @@ static std::string DecompileBrushTask(const mbsp_t *bsp, const dmodelh2_t *model
     task.brush = brush;
     task.model = model;
 
-    return DecompileLeafTask(bsp, task);
+    return DecompileLeafTask(bsp, task, brush_offset);
 }
+
+#include "common/parser.hh"
 
 static void DecompileEntity(
     const mbsp_t *bsp, const decomp_options &options, std::ofstream &file, const entdict_t &dict, bool isWorld)
@@ -854,6 +856,7 @@ static void DecompileEntity(
     }
 
     const dbrush_t *areaportal_brush = nullptr;
+    std::optional<qvec3d> brush_offset;
 
     // Handle func_areaportal; they don't have their own model, the
     // brushes were moved to the world, so we have to "reconstruct"
@@ -890,6 +893,19 @@ static void DecompileEntity(
             modelNum = atoi(modelNumString.c_str());
             continue;
         } else if (areaportal_brush && keyValue.first == "style") {
+            continue;
+        } else if (modelNum > 0 && keyValue.first == "origin") {
+            parser_t parser(keyValue.second.data());
+            qvec3d vec;
+            parser.parse_token();
+            vec[0] = stof(parser.token);
+            parser.parse_token();
+            vec[1] = stof(parser.token);
+            parser.parse_token();
+            vec[2] = stof(parser.token);
+            if (!qv::emptyExact(vec)) {
+                brush_offset = vec;
+            }
             continue;
         }
 
@@ -945,7 +961,7 @@ static void DecompileEntity(
             size_t t = brushes.size();
             tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](const size_t &i) {
                 fmt::print("{}\n", t);
-                brushStrings[i] = DecompileBrushTask(bsp, model, std::get<0>(brushesVector[i]), std::get<1>(std::get<1>(brushesVector[i])), std::get<0>(std::get<1>(brushesVector[i])));
+                brushStrings[i] = DecompileBrushTask(bsp, model, std::get<0>(brushesVector[i]), std::get<1>(std::get<1>(brushesVector[i])), std::get<0>(std::get<1>(brushesVector[i])), brush_offset);
                 t--;
             });
 
@@ -965,9 +981,9 @@ static void DecompileEntity(
             leafStrings.resize(tasks.size());
             tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
                 if (options.geometryOnly) {
-                    leafStrings[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i]);
+                    leafStrings[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
                 } else {
-                    leafStrings[i] = DecompileLeafTask(bsp, tasks[i]);
+                    leafStrings[i] = DecompileLeafTask(bsp, tasks[i], brush_offset);
                 }
             });
 
@@ -977,7 +993,45 @@ static void DecompileEntity(
             }
         }
     } else if (areaportal_brush) {
-        file << DecompileBrushTask(bsp, nullptr, areaportal_brush, nullptr, nullptr);
+        file << DecompileBrushTask(bsp, nullptr, areaportal_brush, nullptr, nullptr, brush_offset);
+    }
+
+    // print out the origin brush, if we have one
+    if (brush_offset.has_value()) {
+        const char *origin_texture = DefaultTextureForContents(bsp, Q2_CONTENTS_ORIGIN);
+        constexpr planepoints pts[] = {
+            { { -8, -64, -16 }, { -8, -63, -16 }, { -8, -64, -15 } },
+            { { -64, -8, -16 }, { -64, -8, -15 }, { -63, -8, -16 } },
+            { { -64, -64, -8 }, { -63, -64, -8 }, { -64, -63, -8 } },
+            { { 64, 64, 8 }, { 64, 65, 8 }, { 65, 64, 8 } },
+            { { 64, 8, 16 }, { 65, 8, 16 }, { 64, 8, 17 } },
+            { { 8, 64, 16 }, { 8, 64, 17 }, { 8, 65, 16 } }
+        };
+        constexpr struct { qvec4d x, y; } texvecs[] = {
+            { { 0, -1, 0, 0 }, { 0, 0, -1, 0 } },
+            { { 1, 0, 0, 0 }, { 0, 0, -1, 0 } },
+            { { -1, 0, 0, 0 }, { 0, -1, 0, 0 } },
+            { { 1, 0, 0, 0 }, { 0, -1, 0, 0 } },
+            { { -1, 0, 0, 0 }, { 0, 0, -1, 0 } },
+            { { 0, 1, 0, 0 }, { 0, 0, -1, 0 } }
+        };
+
+        fmt::print(file, "{{\n");
+        for (size_t i = 0; i < 6; i++) {
+            planepoints p = pts[i];
+            p.point0 += brush_offset.value();
+            p.point1 += brush_offset.value();
+            p.point2 += brush_offset.value();
+
+            fmt::print(file, "( {} ) ( {} ) ( {} )", p.point0, p.point1, p.point2);
+
+            fmt::print(file, " {} ", origin_texture);
+
+            fmt::print(file, "[ {} ] [ {} ] {} {} {}", texvecs[i].x, texvecs[i].y, 0, 0.0, 1, 1);
+                
+            fmt::print(file, "\n");
+        }
+        fmt::print(file, "}}\n");
     }
 
     fmt::print(file, "}}\n");
