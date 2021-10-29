@@ -386,27 +386,23 @@ static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bs
 
             // If we don't specify a node (Q2) automatically discover
             // faces by comparing their plane values.
-            DecompRecurseNodesLeaves(bsp, &bsp->dnodes[task.model->headnode[0]], [&plane, bsp, &result](auto node, auto front) {
+            for (int i = task.model->firstface; i < task.model->firstface + task.model->numfaces; ++i) {
+                const mface_t &face = bsp->dfaces[i];
 
-                for (auto i = 0; i < node->numfaces; i++) {
-                    const mface_t &face = bsp->dfaces[node->firstface + i];
-
-                    // Don't ever try pulling textures from nodraw faces (mostly only Q2RTX stuff)
-                    if (face.texinfo != -1 && (BSP_GetTexinfo(bsp, face.texinfo)->flags.native & Q2_SURF_NODRAW)) {
-                        continue;
-                    }
-
-                    qplane3d face_plane = *BSP_GetPlane(bsp, face.planenum);
-
-                    if (!qv::epsilonEqual(plane, face_plane, DEFAULT_ON_EPSILON) && !qv::epsilonEqual(-plane, face_plane, DEFAULT_ON_EPSILON)) {
-                        continue;
-                    }
-
-                    result.emplace_back(bsp, &face);
+                // Don't ever try pulling textures from nodraw faces (mostly only Q2RTX stuff)
+                if (face.texinfo != -1 && (BSP_GetTexinfo(bsp, face.texinfo)->flags.native & Q2_SURF_NODRAW)) {
+                    continue;
                 }
 
-                return true;
-            }, nullptr);
+                qplane3d face_plane = *BSP_GetPlane(bsp, face.planenum);
+
+                if (!qv::epsilonEqual(plane, face_plane, DEFAULT_ON_EPSILON) &&
+                    !qv::epsilonEqual(-plane, face_plane, DEFAULT_ON_EPSILON)) {
+                    continue;
+                }
+
+                result.emplace_back(bsp, &face);
+            }
         }
     } else {
         const bsp2_dnode_t *node = plane.node;
