@@ -357,25 +357,48 @@ static void DecompRecurseNodesLeaves(const mbsp_t *bsp, const bsp2_dnode_t *node
     }
 }
 
+struct leaf_decompile_task
+{
+    std::vector<decomp_plane_t> allPlanes;
+    const mleaf_t *leaf;
+    const dbrush_t *brush;
+    const dmodelh2_t *model;
+};
+
 /**
  * Builds the initial list of faces on the node
  */
-static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bsp, const dmodelh2_t *model, const decomp_plane_t &plane)
+static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bsp, const leaf_decompile_task &task, const decomp_plane_t &plane)
 {
     std::vector<decomp_brush_face_t> result;
 
     if (plane.node == nullptr) {
 
-        if (model) {
+        if (task.model) {
+
+            // If we have a brush and we're non-visible but solid brushes,
+            // let DecompileLeafTask just fill in a default texture.
+            if (task.brush) {
+                if (task.brush->contents & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
+                    return result;
+                }
+            }
+
             // If we don't specify a node (Q2) automatically discover
             // faces by comparing their plane values.
-            DecompRecurseNodesLeaves(bsp, &bsp->dnodes[model->headnode[0]], [&plane, bsp, &result](auto node, auto front) {
+            DecompRecurseNodesLeaves(bsp, &bsp->dnodes[task.model->headnode[0]], [&plane, bsp, &result](auto node, auto front) {
 
                 for (auto i = 0; i < node->numfaces; i++) {
-                    auto &face = bsp->dfaces[node->firstface + i];
-                    auto face_plane = BSP_GetPlane(bsp, face.planenum);
+                    const mface_t &face = bsp->dfaces[node->firstface + i];
 
-                    if (plane != *face_plane && -plane != *face_plane) {
+                    // Don't ever try pulling textures from nodraw faces (mostly only Q2RTX stuff)
+                    if (face.texinfo != -1 && (BSP_GetTexinfo(bsp, face.texinfo)->flags.native & Q2_SURF_NODRAW)) {
+                        continue;
+                    }
+
+                    qplane3d face_plane = *BSP_GetPlane(bsp, face.planenum);
+
+                    if (!qv::epsilonEqual(plane, face_plane, DEFAULT_ON_EPSILON) && !qv::epsilonEqual(-plane, face_plane, DEFAULT_ON_EPSILON)) {
                         continue;
                     }
 
@@ -417,7 +440,7 @@ struct decomp_brush_side_t
     std::vector<decomp_brush_face_t> faces;
     decomp_plane_t plane;
 
-    decomp_brush_side_t(const mbsp_t *bsp, const dmodelh2_t *model, const decomp_plane_t &planeIn)
+    decomp_brush_side_t(const mbsp_t *bsp, const leaf_decompile_task &model, const decomp_plane_t &planeIn)
         : faces(BuildDecompFacesOnPlane(bsp, model, planeIn)), plane(planeIn)
     {
     }
@@ -515,12 +538,12 @@ struct decomp_brush_t
  * @returns a brush object which has the faces from the .bsp clipped to
  * the parts that lie on the brush.
  */
-static decomp_brush_t BuildInitialBrush(const mbsp_t *bsp, const dmodelh2_t *model, const std::vector<decomp_plane_t> &planes)
+static decomp_brush_t BuildInitialBrush(const mbsp_t *bsp, const leaf_decompile_task &task, const std::vector<decomp_plane_t> &planes)
 {
     std::vector<decomp_brush_side_t> sides;
 
     for (const decomp_plane_t &plane : planes) {
-        decomp_brush_side_t side(bsp, model, plane);
+        decomp_brush_side_t side(bsp, task, plane);
 
         // clip `side` by all of the other planes, and keep the back portion
         for (const decomp_plane_t &plane2 : planes) {
@@ -621,6 +644,12 @@ static void SplitDifferentTexturedPartsOfBrush_R(
 
 static std::vector<decomp_brush_t> SplitDifferentTexturedPartsOfBrush(const mbsp_t *bsp, const decomp_brush_t &brush)
 {
+    // Quake II maps include brushes, so we shouldn't ever run into
+    // a case where a brush has faces split up beyond the brush bounds.
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        return { brush };
+    }
+
     std::vector<decomp_brush_t> result;
     SplitDifferentTexturedPartsOfBrush_R(bsp, brush, result);
 
@@ -630,14 +659,6 @@ static std::vector<decomp_brush_t> SplitDifferentTexturedPartsOfBrush(const mbsp
 
     return result;
 }
-
-struct leaf_decompile_task
-{
-    std::vector<decomp_plane_t> allPlanes;
-    const mleaf_t *leaf;
-    const dbrush_t *brush;
-    const dmodelh2_t *model;
-};
 
 /**
  * Preconditions:
@@ -690,7 +711,7 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
     // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
     // It's possible that the faces are half-overlapping the leaf, so we may have to cut the
     // faces in half.
-    auto initialBrush = BuildInitialBrush(bsp, task.model, reducedPlanes);
+    auto initialBrush = BuildInitialBrush(bsp, task, reducedPlanes);
     //assert(initialBrush.checkPoints());
 
     // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
@@ -852,6 +873,9 @@ static void DecompileEntity(
                 brush_offset--;
             }
         }
+    } else if (dict.find("classname")->second == "func_group") {
+        // Some older Q2 maps included func_group in the entity list.
+        return;
     }
 
     // First, print the key/values for this entity
