@@ -31,4 +31,5 @@ struct portal_t
 
 extern node_t outside_node; // portals outside the world face this
 
+contentflags_t ClusterContents(const node_t *node);
 void FreeAllPortals(node_t *node);

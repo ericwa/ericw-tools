@@ -52,7 +52,7 @@ static void WriteFloat(std::ofstream &portalFile, vec_t v)
         fmt::print(portalFile, "{} ", v);
 }
 
-static contentflags_t ClusterContents(const node_t *node)
+contentflags_t ClusterContents(const node_t *node)
 {
     /* Pass the leaf contents up the stack */
     if (node->planenum == PLANENUM_LEAF)

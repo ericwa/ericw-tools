@@ -385,6 +385,8 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
 
         f->texinfo = hullnum > 0 ? 0 : mapface.texinfo;
         f->planenum = FindPlane(plane, &f->planeside);
+        f->src_entity = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
+
         f->next = facelist;
         facelist = f;
         CheckFace(f, mapface);

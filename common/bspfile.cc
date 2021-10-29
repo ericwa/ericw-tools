@@ -388,6 +388,9 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
 
+        if (contents.native & Q2_CONTENTS_AREAPORTAL)
+            return false; // HACK: needs to return false in order for LinkConvexFaces to assign Q2_CONTENTS_AREAPORTAL to the leaf
+
         return !(contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
     }
 
@@ -406,6 +409,9 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
         
+        if (contents.native & Q2_CONTENTS_AREAPORTAL)
+            return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
+
         return contents.native & Q2_CONTENTS_LIQUID;
     }
 

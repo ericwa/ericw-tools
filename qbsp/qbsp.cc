@@ -262,7 +262,6 @@ FLOOD AREAS
 =========================================================
 */
 
-#if 0
 int32_t c_areas;
 
 /*
@@ -276,15 +275,27 @@ Flowing from side s to side !s
 */
 static bool Portal_EntityFlood(const portal_t *p, int32_t s)
 {
-    if (p->nodes[0]->planenum != PLANENUM_LEAF || p->nodes[1]->planenum != PLANENUM_LEAF)
-        Error("Portal_EntityFlood: not a leaf");
+    auto contents0 = ClusterContents(p->nodes[0]);
+    auto contents1 = ClusterContents(p->nodes[1]);
 
     // can never cross to a solid
-    if ((p->nodes[0]->contents.native & CONTENTS_SOLID) || (p->nodes[1]->contents.native & CONTENTS_SOLID))
+    if (contents0.is_solid(options.target_game))
+        return false;
+    if (contents1.is_solid(options.target_game))
         return false;
 
     // can flood through everything else
     return true;
+}
+
+static void ApplyArea_r(node_t *node)
+{
+    node->area = c_areas;
+
+    if (node->planenum != PLANENUM_LEAF) {
+        ApplyArea_r(node->children[0]);
+        ApplyArea_r(node->children[1]);
+    }
 }
 
 /*
@@ -292,9 +303,12 @@ static bool Portal_EntityFlood(const portal_t *p, int32_t s)
 FloodAreas_r
 =============
 */
-static void FloodAreas_r(mapentity_t *entity, node_t *node)
+static void FloodAreas_r(node_t *node)
 {
-    if (node->contents.native == Q2_CONTENTS_AREAPORTAL) {
+    if (node->planenum == PLANENUM_LEAF && node->contents.native == Q2_CONTENTS_AREAPORTAL) {
+        // grab the func_areanode entity
+        mapentity_t *entity = node->markfaces[0]->src_entity;
+
         // this node is part of an area portal;
         // if the current area has allready touched this
         // portal, we are done
@@ -322,6 +336,11 @@ static void FloodAreas_r(mapentity_t *entity, node_t *node)
 
     node->area = c_areas;
 
+    // propagate area assignment to descendants if we're a cluster
+    if (!(node->planenum == PLANENUM_LEAF)) {
+        ApplyArea_r(node);
+    }
+
     int32_t s;
 
     for (portal_t *p = node->portals; p; p = p->next[s]) {
@@ -333,7 +352,7 @@ static void FloodAreas_r(mapentity_t *entity, node_t *node)
         if (!Portal_EntityFlood(p, s))
             continue;
 
-        FloodAreas_r(entity, p->nodes[!s]);
+        FloodAreas_r(p->nodes[!s]);
     }
 }
 
@@ -345,31 +364,21 @@ Just decend the tree, and for each node that hasn't had an
 area set, flood fill out from there
 =============
 */
-static void FindAreas_r(mapentity_t *entity, node_t *node)
+static void FindAreas(node_t *node)
 {
-    if (node->planenum != PLANENUM_LEAF) {
-        FindAreas_r(entity, node->children[0]);
-        FindAreas_r(entity, node->children[1]);
-        return;
+    auto leafs = FindOccupiedClusters(node);
+    for (auto *leaf : leafs) {
+        if (leaf->area)
+            continue;
+
+        // area portals are always only flooded into, never
+        // out of
+        if (leaf->contents.native == Q2_CONTENTS_AREAPORTAL)
+            return;
+
+        c_areas++;
+        FloodAreas_r(leaf);
     }
-
-    if (node->area)
-        return; // already got it
-
-    if (node->contents.native & Q2_CONTENTS_SOLID)
-        return;
-
-    // FIXME: how to do this since the nodes are destroyed by this point?
-    // if (!node->occupied)
-    //	return;			// not reachable by entities
-
-    // area portals are always only flooded into, never
-    // out of
-    if (node->contents.native == Q2_CONTENTS_AREAPORTAL)
-        return;
-
-    c_areas++;
-    FloodAreas_r(entity, node);
 }
 
 /*
@@ -380,11 +389,11 @@ Just decend the tree, and for each node that hasn't had an
 area set, flood fill out from there
 =============
 */
-static void SetAreaPortalAreas_r(mapentity_t *entity, node_t *node)
+static void SetAreaPortalAreas_r(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF) {
-        SetAreaPortalAreas_r(entity, node->children[0]);
-        SetAreaPortalAreas_r(entity, node->children[1]);
+        SetAreaPortalAreas_r(node->children[0]);
+        SetAreaPortalAreas_r(node->children[1]);
         return;
     }
 
@@ -393,6 +402,9 @@ static void SetAreaPortalAreas_r(mapentity_t *entity, node_t *node)
 
     if (node->area)
         return; // already set
+
+    // grab the func_areanode entity
+    mapentity_t *entity = node->markfaces[0]->src_entity;
 
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
@@ -413,8 +425,8 @@ Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
 static void FloodAreas(mapentity_t *entity, node_t *headnode)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
-    FindAreas_r(entity, headnode);
-    SetAreaPortalAreas_r(entity, headnode);
+    FindAreas(headnode);
+    SetAreaPortalAreas_r(headnode);
     LogPrint(LOG_STAT, "{:5} areas\n", c_areas);
 }
 
@@ -456,7 +468,6 @@ static void EmitAreaPortals(node_t *headnode)
     LogPrint(LOG_STAT, "{:5} numareas\n", map.bsp.dareas.size());
     LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
 }
-#endif
 
 winding_t BaseWindingForPlane(const qplane3d &p)
 {
@@ -654,16 +665,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             }
 
             // Area portals
-            /*if (options.target_game->id == GAME_QUAKE_II) {
+            if (options.target_game->id == GAME_QUAKE_II) {
                 FloodAreas(entity, nodes);
                 EmitAreaPortals(nodes);
-            }*/
-            // TEMP
-            if (options.target_game->id == GAME_QUAKE_II) {
-                map.bsp.dareaportals.emplace_back();
-
-                map.bsp.dareas.emplace_back();
-                map.bsp.dareas.push_back({0, 1});
             }
 
             FreeAllPortals(nodes);

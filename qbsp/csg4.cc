@@ -81,6 +81,7 @@ face_t *NewFaceFromFace(face_t *in)
     newf->contents[1] = in->contents[1];
     newf->lmshift[0] = in->lmshift[0];
     newf->lmshift[1] = in->lmshift[1];
+    newf->src_entity = in->src_entity;
 
     newf->origin = in->origin;
     newf->radius = in->radius;

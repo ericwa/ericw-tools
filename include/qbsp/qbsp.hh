@@ -122,6 +122,8 @@ struct mtexinfo_t
     constexpr bool operator>(const mtexinfo_t &other) const { return as_tuple() > other.as_tuple(); }
 };
 
+class mapentity_t;
+
 struct face_t
 {
     face_t *next;
@@ -132,6 +134,7 @@ struct face_t
     contentflags_t contents[2]; // 0 = front side
     short lmshift[2]; // lightmap scale.
 
+    mapentity_t *src_entity; // source entity
     face_t *original; // face on node
     std::optional<size_t> outputnumber; // only valid for original faces after
                                         // write surfaces
@@ -161,7 +164,6 @@ struct surface_t
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
-class mapentity_t;
 struct brush_t;
 struct portal_t;
 

@@ -43,7 +43,7 @@ of the map (exactly on a brush faces) - happens in base1.map.
 */
 static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->planenum == PLANENUM_LEAF || node->detail_separator) {
         return node;
     }
 
@@ -282,7 +282,7 @@ FindOccupiedLeafs
 sets node->occupant
 ==================
 */
-static std::vector<node_t *> FindOccupiedLeafs(node_t *headnode)
+std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 {
     std::vector<node_t *> result;
 
@@ -448,7 +448,7 @@ bool FillOutside(node_t *node, const int hullnum)
     ClearOccupied_r(node);
 
     // Sets leaf->occupant
-    const std::vector<node_t *> occupied_leafs = FindOccupiedLeafs(node);
+    const std::vector<node_t *> occupied_leafs = FindOccupiedClusters(node);
 
     if (occupied_leafs.empty()) {
         LogPrint("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
