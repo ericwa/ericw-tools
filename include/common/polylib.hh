@@ -664,6 +664,10 @@ public:
                 o->dice(subdiv, save_fn, userinfo);
     }
 
+    /**
+     * Returns a winding for the face. Colinear vertices are filtered out.
+     * Might return a degenerate polygon.
+     */
     static winding_base_t from_face(const mbsp_t *bsp, const mface_t *f)
     {
         winding_base_t w(f->numedges);
@@ -683,8 +687,6 @@ public:
         // CHECK: can we do the above + colinear checks
         // in a single pass?
         w.remove_colinear();
-
-        Q_assert(w.size() >= 3);
 
         return w;
     }
