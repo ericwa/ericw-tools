@@ -115,11 +115,13 @@ skipspace:
                     case '9': // too lazy to validate these. doesn't break stuff.
                         break;
                     case '\"':
-                        *token_p++ = *pos++;
-                        if (pos[1] == '\r' || pos[1] == '\n')
-                            FError("line {}: escaped double-quote at end of string", linenum);
+                        if (pos[2] == '\r' || pos[2] == '\n') {
+                            LogPrint("WARNING: line {}: escaped double-quote at end of string\n", linenum);
+                        } else {
+                            *token_p++ = *pos++;
+                        }
                         break;
-                    default: LogPrint("line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
+                    default: LogPrint("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
                 }
             }
             *token_p++ = *pos++;

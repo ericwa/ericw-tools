@@ -600,7 +600,7 @@ int main(int argc, char **argv)
             source.replace_extension("");
             source.replace_filename(source.filename().string() + "-decompile");
             source.replace_extension(".map");
-            fmt::print("-> writing {}... ", source);
+            fmt::print("-> writing {}...\n", source);
 
             std::ofstream f(source);
 
@@ -617,7 +617,7 @@ int main(int argc, char **argv)
             if (!f)
                 Error("{}", strerror(errno));
 
-            printf("done.\n");
+            printf("done!\n");
             return 0;
         }
     }

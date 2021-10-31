@@ -684,7 +684,7 @@ public:
         // in a single pass?
         w.remove_colinear();
 
-        Q_assert(w.size() >= 3);
+        //Q_assert(w.size() >= 3);
 
         return w;
     }
