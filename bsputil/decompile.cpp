@@ -755,7 +755,14 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
     // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
     // texinfo, we need to clip the brush perpendicular to the face until there are no longer
     // 2+ faces on a plane with non-equal texinfo.
-    auto finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
+    std::vector<decomp_brush_t> finalBrushes;
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // Q2 doesn't need this - we assume each brush in the brush lump corresponds to exactly one .map file brush
+        // and so each side of the brush can only have 1 texture at this point.
+        finalBrushes = {initialBrush};
+    } else {
+        finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
+    }
 
     for (const decomp_brush_t &finalBrush : finalBrushes) {
         for (const auto &finalSide : finalBrush.sides) {
@@ -864,7 +871,7 @@ static void AddMapBoundsToStack(
     }
 }
 
-static compiled_brush_t DecompileBrushTask(const mbsp_t *bsp, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+static compiled_brush_t DecompileBrushTask(const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
@@ -872,7 +879,11 @@ static compiled_brush_t DecompileBrushTask(const mbsp_t *bsp, leaf_decompile_tas
         plane.source = side;
     }
 
-    return DecompileLeafTask(bsp, task, brush_offset);
+    if (options.geometryOnly) {
+        return DecompileLeafTaskGeometryOnly(bsp, task, brush_offset);
+    } else {
+        return DecompileLeafTask(bsp, task, brush_offset);
+    }
 }
 
 #include "common/parser.hh"
@@ -1000,7 +1011,7 @@ static void DecompileEntity(
             size_t t = brushes.size();
 
             tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](const size_t &i) {
-                compiledBrushes[i] = DecompileBrushTask(bsp, brushesVector[i], brush_offset);
+                compiledBrushes[i] = DecompileBrushTask(bsp, options, brushesVector[i], brush_offset);
                 t--;
             });
         } else {
@@ -1026,7 +1037,7 @@ static void DecompileEntity(
     } else if (areaportal_brush) {
         leaf_decompile_task task;
         task.brush = areaportal_brush;
-        compiledBrushes.push_back(DecompileBrushTask(bsp, task, brush_offset));
+        compiledBrushes.push_back(DecompileBrushTask(bsp, options, task, brush_offset));
     }
 
     // If we run into a trigger brush, replace all of its faces with trigger texture.
