@@ -713,7 +713,14 @@ static std::string DecompileLeafTask(const mbsp_t *bsp, const leaf_decompile_tas
     // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
     // texinfo, we need to clip the brush perpendicular to the face until there are no longer
     // 2+ faces on a plane with non-equal texinfo.
-    auto finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
+    std::vector<decomp_brush_t> finalBrushes;
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // Q2 doesn't need this - we assume each brush in the brush lump corresponds to exactly one .map file brush
+        // and so each side of the brush can only have 1 texture at this point.
+        finalBrushes = {initialBrush};
+    } else {
+        finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
+    }
 
     fmt::memory_buffer file;
     for (const decomp_brush_t &brush : finalBrushes) {
