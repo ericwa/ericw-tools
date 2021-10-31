@@ -824,7 +824,8 @@ static void AddMapBoundsToStack(
 
 #include <unordered_set>
 
-static std::string DecompileBrushTask(const mbsp_t *bsp, const dmodelh2_t *model, const dbrush_t *brush, const mleaf_t *leaf, const bsp2_dnode_t *node)
+static std::string DecompileBrushTask(const mbsp_t *bsp, const decomp_options &options, const dmodelh2_t *model,
+    const dbrush_t *brush, const mleaf_t *leaf, const bsp2_dnode_t *node)
 {
     leaf_decompile_task task;
 
@@ -837,7 +838,11 @@ static std::string DecompileBrushTask(const mbsp_t *bsp, const dmodelh2_t *model
     task.brush = brush;
     task.model = model;
 
-    return DecompileLeafTask(bsp, task);
+    if (options.geometryOnly) {
+        return DecompileLeafTaskGeometryOnly(bsp, task);
+    } else {
+        return DecompileLeafTask(bsp, task);
+    }
 }
 
 static void DecompileEntity(
@@ -941,7 +946,8 @@ static void DecompileEntity(
             size_t t = brushes.size();
             tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](const size_t &i) {
                 fmt::print("{}\n", t);
-                brushStrings[i] = DecompileBrushTask(bsp, model, std::get<0>(brushesVector[i]), std::get<1>(std::get<1>(brushesVector[i])), std::get<0>(std::get<1>(brushesVector[i])));
+                brushStrings[i] = DecompileBrushTask(bsp, options, model, std::get<0>(brushesVector[i]),
+                    std::get<1>(std::get<1>(brushesVector[i])), std::get<0>(std::get<1>(brushesVector[i])));
                 t--;
             });
 
@@ -973,7 +979,7 @@ static void DecompileEntity(
             }
         }
     } else if (areaportal_brush) {
-        file << DecompileBrushTask(bsp, nullptr, areaportal_brush, nullptr, nullptr);
+        file << DecompileBrushTask(bsp, options, nullptr, areaportal_brush, nullptr, nullptr);
     }
 
     fmt::print(file, "}}\n");
