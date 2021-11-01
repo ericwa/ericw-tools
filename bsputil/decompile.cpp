@@ -199,7 +199,11 @@ struct compiled_brush_t
                 for (auto &v : p) {
                     v += brush_offset.value();
                 }
+
+                side.valve.shift[0] -= qv::dot(brush_offset.value(), side.valve.axis.row(0));
+                side.valve.shift[1] -= qv::dot(brush_offset.value(), side.valve.axis.row(1));
             }
+
 
             fmt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2], side.texture_name, side.valve.axis.at(0, 0), side.valve.axis.at(0, 1),
                 side.valve.axis.at(0, 2), side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2), side.valve.shift[1], 0.0,
@@ -770,6 +774,13 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
             side.plane = finalSide.plane;
             side.source = finalSide.plane.source;
 
+            if (brush.contents.native == 0) {
+                // hint brush
+                side.texture_name = "e1u1/hint";
+                side.valve = finalSide.plane.normal;
+                continue;
+            }
+
             // see if we have a face
             auto faces = finalSide.faces;
 
@@ -1053,11 +1064,6 @@ static void DecompileEntity(
     // things that aren't output in BSP faces will use a skip texture.
     // we'll find the best matching texture that we think would work well.
     for (auto &brush : compiledBrushes) {
-        if (brush.contents.native == 0) {
-            printf("NOTE: removing dummy brush\n");
-            brush.sides.clear();
-            continue;
-        }
         for (auto &side : brush.sides) {
             if (side.texture_name != DefaultSkipTexture(bsp)) {
                 continue;
