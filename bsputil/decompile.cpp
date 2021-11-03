@@ -421,60 +421,28 @@ struct leaf_decompile_task
  */
 static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bsp, const leaf_decompile_task &task, const decomp_plane_t &plane)
 {
+    if (plane.node == nullptr) {
+        return {};
+    }
+    
     std::vector<decomp_brush_face_t> result;
 
-    if (plane.node == nullptr) {
+    const bsp2_dnode_t *node = plane.node;
 
-        if (task.model) {
+    result.reserve(static_cast<size_t>(node->numfaces));
 
-            // If we have a brush and we're non-visible but solid brushes,
-            // let DecompileLeafTask just fill in a default texture.
-            if (task.brush) {
-                if (task.brush->contents & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
-                    return result;
-                }
-            }
+    for (int i = 0; i < node->numfaces; i++) {
+        const mface_t *face = BSP_GetFace(bsp, static_cast<int>(node->firstface) + i);
 
-            // If we don't specify a node (Q2) automatically discover
-            // faces by comparing their plane values.
-            for (int i = task.model->firstface; i < task.model->firstface + task.model->numfaces; ++i) {
-                const mface_t &face = bsp->dfaces[i];
+        decomp_brush_face_t decompFace(bsp, face);
 
-                // Don't ever try pulling textures from nodraw faces (mostly only Q2RTX stuff)
-                auto texinfo = BSP_GetTexinfo(bsp, face.texinfo);
+        const double dp = qv::dot(plane.normal, decompFace.normal());
 
-                if (texinfo && (texinfo->flags.native & Q2_SURF_NODRAW) && !(texinfo->flags.native & Q2_SURF_SKY)) {
-                    continue;
-                }
-
-                qplane3d face_plane = *BSP_GetPlane(bsp, face.planenum);
-
-                if (!qv::epsilonEqual(plane, face_plane, DEFAULT_ON_EPSILON) &&
-                    !qv::epsilonEqual(-plane, face_plane, DEFAULT_ON_EPSILON)) {
-                    continue;
-                }
-
-                result.emplace_back(bsp, &face);
-            }
+        if (dp < 0.9) {
+            continue;
         }
-    } else {
-        const bsp2_dnode_t *node = plane.node;
 
-        result.reserve(static_cast<size_t>(node->numfaces));
-
-        for (int i = 0; i < node->numfaces; i++) {
-            const mface_t *face = BSP_GetFace(bsp, static_cast<int>(node->firstface) + i);
-
-            decomp_brush_face_t decompFace(bsp, face);
-
-            const double dp = qv::dot(plane.normal, decompFace.normal());
-
-            if (dp < 0.9) {
-                continue;
-            }
-
-            result.emplace_back(bsp, face);
-        }
+        result.emplace_back(bsp, face);
     }
 
     return result;
@@ -837,12 +805,24 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
             }
 
             // see if we have a face
-            auto faces = finalSide.faces;
+            if (!finalSide.plane.source && finalSide.faces.empty()) {
+                // print a default face
+                side.valve = finalSide.plane.normal;
+                side.texture_name = DefaultSkipTexture(bsp);
+            } else {
+                const char *name;
+                const gtexinfo_t *ti;
 
-            if (!faces.empty()) {
-                const mface_t *face = faces.at(0).original_face;
-                const char *name = Face_TextureName(bsp, face);
-                const auto ti = Face_Texinfo(bsp, face);
+                auto faces = finalSide.faces;
+
+                if (!faces.empty()) {
+                    const mface_t *face = faces[0].original_face;
+                    name = Face_TextureName(bsp, face);
+                    ti = Face_Texinfo(bsp, face);
+                } else if (finalSide.plane.source) {
+                    ti = BSP_GetTexinfo(bsp, finalSide.plane.source->texinfo);
+                    name = ti->texture.data();
+                }
 
                 if (ti) {
                     side.valve = ti->vecs;
@@ -855,15 +835,11 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
                     side.valve = finalSide.plane.normal;
                 }
 
-                if (!*name) {
+                if (!name && !*name) {
                     side.texture_name = DefaultSkipTexture(bsp);
                 } else {
                     side.texture_name = OverrideTextureForContents(bsp, name, brush.contents);
                 }
-            } else {
-                // print a default face
-                side.valve = finalSide.plane.normal;
-                side.texture_name = DefaultSkipTexture(bsp);
             }
         }
     }
