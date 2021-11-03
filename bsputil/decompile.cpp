@@ -96,6 +96,7 @@ struct compiled_brush_side_t
     qplane3d plane;
     std::string texture_name;
     texdef_valve_t valve;
+    std::optional<polylib::winding_t> winding;
 
     // only for Q2
     surfflags_t flags;
@@ -167,6 +168,12 @@ static planepoints NormalDistanceToThreePoints(const qplane3<T> &plane)
     };
 }
 
+static planepoints WindingToThreePoints(const polylib::winding_t &winding)
+{
+    Q_assert(winding.size() >= 3);
+    return {winding[0], winding[1], winding[2]};
+}
+
 struct compiled_brush_t
 {
     const dbrush_t *source = nullptr;
@@ -193,7 +200,12 @@ struct compiled_brush_t
         fmt::print(stream, "{{\n");
 
         for (auto &side : sides) {
-            planepoints p = NormalDistanceToThreePoints(side.plane);
+            planepoints p; 
+            if (side.winding) {
+                p = WindingToThreePoints(*side.winding);
+            } else {
+                p = NormalDistanceToThreePoints(side.plane);
+            }
 
             if (brush_offset.has_value()) {
                 for (auto &v : p) {
@@ -237,7 +249,7 @@ void RemoveRedundantPlanes(std::vector<T> &planes)
 {
     auto removed = std::remove_if(planes.begin(), planes.end(), [&planes](const T &plane) {
         // outward-facing plane
-        std::optional<winding_t> winding = winding_t::from_plane(plane, 10e6);
+        std::optional<polylib::winding_t> winding = winding_t::from_plane(plane, 10e6);
 
         // clip `winding` by all of the other planes, flipped
         for (const T &plane2 : planes) {
@@ -476,6 +488,8 @@ struct decomp_brush_side_t
      */
     std::vector<decomp_brush_face_t> faces;
     decomp_plane_t plane;
+    // for Q2 path
+    polylib::winding_t winding;
 
     decomp_brush_side_t(const mbsp_t *bsp, const leaf_decompile_task &model, const decomp_plane_t &planeIn)
         : faces(BuildDecompFacesOnPlane(bsp, model, planeIn)), plane(planeIn)
@@ -596,6 +610,46 @@ static decomp_brush_t BuildInitialBrush(const mbsp_t *bsp, const leaf_decompile_
         // as it's one of the final boundaries of the brush
 
         sides.emplace_back(std::move(side));
+    }
+
+    return decomp_brush_t(sides);
+}
+
+static decomp_brush_t BuildInitialBrush_Q2(
+    const mbsp_t *bsp, const leaf_decompile_task &task, const std::vector<decomp_plane_t> &planes)
+{
+    std::vector<decomp_brush_side_t> sides;
+
+    for (const decomp_plane_t &plane : planes) {
+        // FIXME: use a better max
+        auto winding = std::make_optional(polylib::winding_t::from_plane(plane, 10e6));
+        
+        // clip `winding` by all of the other planes, and keep the back portion
+        for (const decomp_plane_t &plane2 : planes) {
+            if (&plane2 == &plane)
+                continue;
+
+            if (!winding)
+                break;
+
+            // FIXME: epsilon is a lot larger than what qbsp uses
+            auto [front, back] = winding->clip(plane2, DEFAULT_ON_EPSILON, true);
+
+            winding = back;
+        }
+
+        if (!winding)
+            continue;
+
+        winding->remove_colinear();
+
+        if (winding->size() < 3)
+            continue;
+
+        auto side = decomp_brush_side_t(bsp, task, plane);
+        side.winding = *winding;
+
+        sides.emplace_back(side);
     }
 
     return decomp_brush_t(sides);
@@ -740,31 +794,31 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
     brush.brush_offset = brush_offset;
     brush.contents = { task.brush ? task.brush->contents : task.leaf->contents };
 
-    RemoveRedundantPlanes(task.allPlanes);
-
-    if (task.allPlanes.empty()) {
-        printf("warning, skipping empty brush\n");
-        return {};
-    }
-
-    // fmt::print("before: {} after {}\n", task.allPlanes.size(), reducedPlanes.size());
-
-    // At this point, we should gather all of the faces on `reducedPlanes` and clip away the
-    // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
-    // It's possible that the faces are half-overlapping the leaf, so we may have to cut the
-    // faces in half.
-    auto initialBrush = BuildInitialBrush(bsp, task, task.allPlanes);
-    //assert(initialBrush.checkPoints());
-
-    // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
-    // texinfo, we need to clip the brush perpendicular to the face until there are no longer
-    // 2+ faces on a plane with non-equal texinfo.
     std::vector<decomp_brush_t> finalBrushes;
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         // Q2 doesn't need this - we assume each brush in the brush lump corresponds to exactly one .map file brush
         // and so each side of the brush can only have 1 texture at this point.
-        finalBrushes = {initialBrush};
+        finalBrushes = {BuildInitialBrush_Q2(bsp, task, task.allPlanes)};
     } else {
+        RemoveRedundantPlanes(task.allPlanes);
+
+        if (task.allPlanes.empty()) {
+            printf("warning, skipping empty brush\n");
+            return {};
+        }
+
+        // fmt::print("before: {} after {}\n", task.allPlanes.size(), reducedPlanes.size());
+
+        // At this point, we should gather all of the faces on `reducedPlanes` and clip away the
+        // parts that are outside of our brush. (keeping track of which of the nodes they belonged to)
+        // It's possible that the faces are half-overlapping the leaf, so we may have to cut the
+        // faces in half.
+        auto initialBrush = BuildInitialBrush(bsp, task, task.allPlanes);
+        // assert(initialBrush.checkPoints());
+
+        // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
+        // texinfo, we need to clip the brush perpendicular to the face until there are no longer
+        // 2+ faces on a plane with non-equal texinfo.
         finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
     }
 
@@ -772,6 +826,7 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
         for (const auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
             side.plane = finalSide.plane;
+            side.winding = finalSide.winding;
             side.source = finalSide.plane.source;
 
             if (brush.contents.native == 0) {
