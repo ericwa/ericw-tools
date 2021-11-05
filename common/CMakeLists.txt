@@ -8,6 +8,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/common/parser.cc
     ${CMAKE_SOURCE_DIR}/common/qvec.cc
     ${CMAKE_SOURCE_DIR}/common/threads.cc
+    ${CMAKE_SOURCE_DIR}/common/fs.cc
     ${CMAKE_SOURCE_DIR}/include/common/aabb.hh
     ${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
     ${CMAKE_SOURCE_DIR}/include/common/bsputils.hh
@@ -19,6 +20,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/polylib.hh
     ${CMAKE_SOURCE_DIR}/include/common/qvec.hh
     ${CMAKE_SOURCE_DIR}/include/common/json.hh
-    ${CMAKE_SOURCE_DIR}/include/common/threads.hh)
+    ${CMAKE_SOURCE_DIR}/include/common/threads.hh
+    ${CMAKE_SOURCE_DIR}/include/common/fs.hh)
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt nlohmann_json::nlohmann_json)

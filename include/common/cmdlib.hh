@@ -20,7 +20,6 @@
 #pragma once
 
 #include <cassert>
-//#include <cstdio>
 #include <cstring>
 #include <cstdlib>
 #include <cerrno>
@@ -28,7 +27,6 @@
 #include <ctime>
 #include <cstdarg>
 #include <string>
-#include <filesystem>
 #include <memory>
 #include <fmt/format.h>
 #include <common/log.hh>
@@ -47,10 +45,6 @@
 #define Q_strncasecmp strnicmp
 #define Q_strcasecmp stricmp
 #endif
-
-extern std::filesystem::path qdir, // c:/Quake/, c:/Hexen II/ etc.
-    gamedir, // c:/Quake/mymod/
-    basedir; // c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
 
 bool string_iequals(const std::string &a, const std::string &b); // mxd
 
@@ -86,18 +80,6 @@ struct case_insensitive_less
     }
 };
 
-void SetQdirFromPath(const std::string &basedirname, std::filesystem::path path);
-
-// Returns the path itself if it has an extension already, otherwise
-// returns the path with extension replaced with `extension`.
-inline std::filesystem::path DefaultExtension(const std::filesystem::path &path, const std::filesystem::path &extension)
-{
-    if (path.has_extension())
-        return path;
-
-    return std::filesystem::path(path).replace_extension(extension);
-}
-
 #include <chrono>
 
 using qclock = std::chrono::high_resolution_clock;
@@ -119,18 +101,6 @@ template<typename... Args>
 }
 
 #define FError(fmt, ...) Error("{}: " fmt, __func__, ##__VA_ARGS__)
-
-using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;
-
-qfile_t SafeOpenWrite(const std::filesystem::path &filename);
-qfile_t SafeOpenRead(const std::filesystem::path &filename, bool must_exist = false);
-size_t SafeRead(const qfile_t &f, void *buffer, size_t count);
-size_t SafeWrite(const qfile_t &f, const void *buffer, size_t count);
-void SafeSeek(const qfile_t &f, long offset, int32_t origin);
-long SafeTell(const qfile_t &f);
-
-long LoadFilePak(std::filesystem::path &filename, void *destptr);
-long LoadFile(const std::filesystem::path &filename, void *destptr);
 
 /*
  * ============================================================================

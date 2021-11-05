@@ -25,6 +25,7 @@
 #include <vector>
 #include <list>
 #include "common/cmdlib.hh"
+#include "common/fs.hh"
 
 // Texture data stored for quick searching
 struct texture_t

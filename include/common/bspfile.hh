@@ -1734,14 +1734,14 @@ struct gamedef_t
 
     // base dir for searching for paths, in case we are in a mod dir
     // note: we need this to be able to be overridden via options
-    const std::string base_dir;
+    const std::string default_base_dir;
 
     // max values of entity key & value pairs, only used for
     // printing warnings.
     size_t max_entity_key = 32;
     size_t max_entity_value = 128;
 
-    gamedef_t(const char *base_dir) : base_dir(base_dir) { }
+    gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir) { }
 
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
@@ -1763,6 +1763,7 @@ struct gamedef_t
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
+    virtual void init_filesystem(const std::filesystem::path &source) const = 0;
 };
 
 // BSP version struct & instances

@@ -8,6 +8,7 @@
 #include <vis/vis.hh>
 #include <common/log.hh>
 #include <common/threads.hh>
+#include <common/fs.hh>
 #include <fmt/chrono.h>
 
 /*
@@ -985,6 +986,8 @@ int main(int argc, char **argv)
     sourcefile = DefaultExtension(path_base, "bsp");
 
     LoadBSPFile(sourcefile, &bspdata);
+
+    bspdata.version->game->init_filesystem(sourcefile);
 
     loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);

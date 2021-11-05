@@ -27,6 +27,7 @@
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
 #include <common/mathlib.hh>
+#include <common/fs.hh>
 
 #include "decompile.h"
 
@@ -475,6 +476,8 @@ int main(int argc, char **argv)
     fmt::print("{}\n", source);
 
     LoadBSPFile(source, &bspdata);
+
+    bspdata.version->game->init_filesystem(source);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 

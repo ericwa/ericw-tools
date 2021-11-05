@@ -212,10 +212,6 @@ static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
         return false;
     }
 
-    if (lump.size != lump.disksize) {
-        LogPrint("Texture {} is {} bytes in wad, packed to {} bytes in bsp\n", name, lump.disksize, lump.size);
-    }
-
     std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(lump.disksize);
     size_t size = SafeRead(wad.file, buffer.get(), lump.disksize);
 

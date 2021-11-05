@@ -459,6 +459,9 @@ void UpdateBSPFileEntitiesLump()
 
     // load the .bsp
     LoadBSPFile(options.szBSPName, &bspdata);
+
+    bspdata.version->game->init_filesystem(options.szBSPName);
+
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);

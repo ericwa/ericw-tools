@@ -25,6 +25,7 @@
 
 #include <common/log.hh>
 #include <common/aabb.hh>
+#include <common/fs.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 #include <fmt/chrono.h>
@@ -1038,8 +1039,8 @@ ProcessFile
 static void ProcessFile(void)
 {
     // load brushes and entities
-    SetQdirFromPath(options.target_game->base_dir, options.szMapName);
     LoadMapFile();
+
     if (options.fConvertMapFormat) {
         ConvertMapFile();
         return;
@@ -1470,6 +1471,11 @@ static void InitQBSP(int argc, const char **argv)
 
         options.szBSPName.replace_extension("por");
         remove(options.szBSPName);
+    }
+
+    // onlyents might not load this yet
+    if (options.target_game) {
+        options.target_game->init_filesystem(options.szMapName);
     }
 }
 

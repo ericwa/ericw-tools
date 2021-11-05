@@ -34,6 +34,7 @@
 
 #include <qbsp/qbsp.hh>
 #include <common/parser.hh>
+#include "common/fs.hh"
 #include <qbsp/wad.hh>
 
 #include <common/qvec.hh>
@@ -142,7 +143,7 @@ struct wal_t
 
 static std::optional<wal_t> LoadWal(const char *name)
 {
-    std::filesystem::path p = (gamedir / "textures" / name).replace_extension("wal");
+    std::filesystem::path p = (fs::gamedir / "textures" / name).replace_extension("wal");
 
     FILE *fp = fopen(p.string().c_str(), "rb");
 

@@ -22,6 +22,7 @@
 
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
+#include <common/fs.hh>
 
 void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const std::filesystem::path &filename, int version)
 {

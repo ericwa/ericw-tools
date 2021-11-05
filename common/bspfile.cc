@@ -20,6 +20,7 @@
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
+#include <common/fs.hh>
 #include <cstdint>
 #include <limits.h>
 
@@ -68,6 +69,8 @@ struct gamedef_generic_t : public gamedef_t
     const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
 
     contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const { throw std::bad_cast(); };
+
+    void init_filesystem(const fs::path &) const { throw std::bad_cast(); };
 };
 
 template<gameid_t ID>
@@ -271,6 +274,12 @@ struct gamedef_q1_like_t : public gamedef_t
             // and anything else is assumed to be a regular solid.
             return create_solid_contents();
         }
+    }
+
+    void init_filesystem(const fs::path &) const
+    {
+        // Q1-like games don't care about the local
+        // filesystem.
     }
 };
 
@@ -534,6 +543,76 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return surf_contents;
+    }
+
+private:
+    void discoverArchives(const fs::path &base) const
+    {
+        fs::directory_iterator it(base);
+
+        // TODO: natsort
+        std::set<std::string, case_insensitive_less> packs;
+
+        for (auto &entry : it) {
+            if (string_iequals(entry.path().extension().generic_string(), ".pak")) {
+                packs.insert(entry.path().generic_string());
+            }
+        }
+
+        for (auto &pak : packs) {
+            fs::addArchive(pak);
+        }
+    }
+
+public:
+
+    void init_filesystem(const fs::path &source) const
+    {
+        constexpr const char *MAPS_FOLDER = "maps";
+
+        // detect gamedir (mod directory path)
+        fs::path gamedir;
+
+        // if the source is an archive, use the parent
+        // of that folder as the mod directory
+        auto archive = fs::splitArchivePath(source);
+        
+       // expand canonicals, and fetch parent of source file
+        if (std::get<0>(archive).has_relative_path()) {
+            // pak0.pak/maps/source.map -> C:/Quake/ID1
+            gamedir = fs::canonical(std::get<0>(archive)).parent_path();
+        } else {
+            // maps/source.map -> C:/Quake/ID1/maps
+            // this is weak because the source may not exist yet
+            gamedir = fs::weakly_canonical(source).parent_path();
+
+            if (!string_iequals(gamedir.filename().generic_string(), "maps")) {
+                FLogPrint("WARNING: '{}' is not directly inside '{}'. This may throw off automated path detection!\n", source, MAPS_FOLDER);
+                return;
+            }
+            
+            // C:/Quake/ID1/maps -> C:/Quake/ID1
+            gamedir = gamedir.parent_path();
+        }
+
+        fs::addArchive(gamedir);
+        discoverArchives(gamedir);
+
+        // C:/Quake/ID1 -> C:/Quake
+        fs::path qdir = gamedir.parent_path();
+
+        // Set base dir and make sure it exists
+        fs::path basedir = qdir / default_base_dir;
+
+        if (!exists(basedir)) {
+            FLogPrint("WARNING: failed to find '{}' in '{}'\n", default_base_dir, qdir);
+            return;
+        }
+
+        if (!equivalent(gamedir, basedir)) {
+            fs::addArchive(basedir);
+            discoverArchives(basedir);
+        }
     }
 };
 
@@ -1160,10 +1239,15 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
     FLogPrint("'{}'\n", filename);
 
     /* load the file header */
-    uint8_t *file_data;
-    uint32_t flen = LoadFilePak(filename, &file_data);
+    fs::data file_data = fs::load(filename);
 
-    memstream stream(file_data, flen);
+    if (!file_data) {
+        FError("Unable to load \"{}\"\n", filename);
+    }
+
+    filename = fs::resolveArchivePath(filename);
+
+    memstream stream(file_data->data(), file_data->size());
 
     stream >> endianness<std::endian::little>;
 
@@ -1195,7 +1279,7 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
         Error("Sorry, this bsp version is not supported.");
     } else {
         // special case handling for Hexen II
-        if (bspdata->version->game->id == GAME_QUAKE && isHexen2((dheader_t *)file_data)) {
+        if (bspdata->version->game->id == GAME_QUAKE && isHexen2((dheader_t *)file_data->data())) {
             if (bspdata->version == &bspver_q1) {
                 bspdata->version = &bspver_h2;
             } else if (bspdata->version == &bspver_bsp2) {
@@ -1234,20 +1318,20 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
 
     bspxofs = (bspxofs + 3) & ~3;
     /*okay, so that's where it *should* be if it exists */
-    if (bspxofs + sizeof(*bspx) <= flen) {
+    if (bspxofs + sizeof(*bspx) <= file_data->size()) {
         int xlumps;
         const bspx_lump_t *xlump;
-        bspx = (const bspx_header_t *)((const uint8_t *)file_data + bspxofs);
+        bspx = (const bspx_header_t *)((const uint8_t *)file_data->data() + bspxofs);
         xlump = (const bspx_lump_t *)(bspx + 1);
         xlumps = LittleLong(bspx->numlumps);
-        if (!memcmp(&bspx->id, "BSPX", 4) && xlumps >= 0 && bspxofs + sizeof(*bspx) + sizeof(*xlump) * xlumps <= flen) {
+        if (!memcmp(&bspx->id, "BSPX", 4) && xlumps >= 0 && bspxofs + sizeof(*bspx) + sizeof(*xlump) * xlumps <= file_data->size()) {
             /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring
              * that they get written out anew*/
             while (xlumps-- > 0) {
                 uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
                 uint32_t len = LittleLong(xlump[xlumps].filelen);
                 uint8_t *lumpdata = new uint8_t[len];
-                memcpy(lumpdata, (const uint8_t *)file_data + ofs, len);
+                memcpy(lumpdata, (const uint8_t *)file_data->data() + ofs, len);
                 bspdata->bspx.transfer(xlump[xlumps].lumpname.data(), lumpdata, len);
             }
         } else {
@@ -1255,9 +1339,6 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
                 printf("invalid bspx header\n");
         }
     }
-
-    /* everything has been copied out */
-    delete[] file_data;
 }
 
 /* ========================================================================= */

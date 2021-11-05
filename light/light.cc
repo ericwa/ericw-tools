@@ -35,6 +35,7 @@
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
+#include <common/fs.hh>
 
 #ifdef HAVE_EMBREE
 #include <xmmintrin.h>
@@ -1243,6 +1244,8 @@ int light_main(int argc, const char **argv)
     source.replace_extension("bsp");
     LoadBSPFile(source, &bspdata);
 
+    bspdata.version->game->init_filesystem(source);
+
     loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -1254,8 +1257,6 @@ int light_main(int argc, const char **argv)
         cfg.rangescale = *rs; // Gross hacks to avoid displaying this in OptionsSummary...
     }
 
-    // mxd. Load or convert textures...
-    SetQdirFromPath(bspdata.loadversion->game->base_dir, source);
     LoadPalette(&bspdata);
     LoadOrConvertTextures(&bsp);
 

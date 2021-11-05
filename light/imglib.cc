@@ -2,6 +2,7 @@
 #include <light/entities.hh>
 #include <map>
 #include <vector>
+#include <common/fs.hh>
 
 /*
 ============================================================================
@@ -111,14 +112,14 @@ LoadPalette(bspdata_t *bspdata)
     // Load Quake 2 palette
     if (bspdata->loadversion->game->id == GAME_QUAKE_II) {
         uint8_t *palette;
-        std::filesystem::path path = gamedir / colormap;
+        std::filesystem::path path = fs::gamedir / colormap;
 
         if (!std::filesystem::exists(path) || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
-            if (gamedir != basedir) {
-                path = basedir / colormap;
+            if (fs::gamedir != fs::basedir) {
+                path = fs::basedir / colormap;
                 if (!std::filesystem::exists(path) || !LoadPCX(path, nullptr, &palette, nullptr, nullptr)) {
                     LogPrint("INFO: failed to load palette from '{}' or '{}'.\nUsing built-in palette.\n",
-                        gamedir / colormap, path);
+                        fs::gamedir / colormap, path);
                     palette = quake2palette;
                 }
             } else {
@@ -532,13 +533,13 @@ static void AddTextureName(std::map<std::string, std::string> &texturenames, con
     if (texturenames.find(texture) != texturenames.end())
         return;
 
-    static const bool is_mod = gamedir != basedir;
+    static const bool is_mod = fs::gamedir != fs::basedir;
     const char *TEXTURES_PATH = "textures";
     std::filesystem::path path[] = {
-        (gamedir / TEXTURES_PATH / texture).replace_extension("tga"),
-        (basedir / TEXTURES_PATH / texture).replace_extension("tga"),
-        (gamedir / TEXTURES_PATH / texture).replace_extension("wal"),
-        (basedir / TEXTURES_PATH / texture).replace_extension("wal"),
+        (fs::gamedir / TEXTURES_PATH / texture).replace_extension("tga"),
+        (fs::basedir / TEXTURES_PATH / texture).replace_extension("tga"),
+        (fs::gamedir / TEXTURES_PATH / texture).replace_extension("wal"),
+        (fs::basedir / TEXTURES_PATH / texture).replace_extension("wal"),
     };
 
     int c;

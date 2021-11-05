@@ -26,6 +26,7 @@
 #include <common/bsputils.hh>
 #include <common/mathlib.hh>
 #include <common/polylib.hh>
+#include <common/fs.hh>
 
 #include <vector>
 #include <cstdio>
@@ -174,6 +175,18 @@ static planepoints WindingToThreePoints(const polylib::winding_t &winding)
     return {winding[0], winding[1], winding[2]};
 }
 
+struct wal_metadata_t
+{
+    int32_t flags, contents, value;
+
+    auto stream_data()
+    {
+        return std::tie(flags, contents, value);
+    }
+};
+
+static std::unordered_map<std::string, wal_metadata_t> wals;
+
 struct compiled_brush_t
 {
     const dbrush_t *source = nullptr;
@@ -187,15 +200,14 @@ struct compiled_brush_t
             return;
         }
 
-        if (source) {
+        /*if (source) {
             fmt::print(stream, "// generated from brush #{}\n", static_cast<ptrdiff_t>(source - bsp->dbrushes.data()));
             
             for (auto &side : sides) {
 
                 fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source - bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
             }
-
-        }
+        }*/
 
         fmt::print(stream, "{{\n");
 
@@ -223,7 +235,27 @@ struct compiled_brush_t
 
             // TODO: optimize for Q2 cases where they match the .wal
             if (contents.native || side.flags.native || side.value) {
-                fmt::print(stream, " {} {} {}", contents.native, side.flags.native, side.value);
+                wal_metadata_t *meta = nullptr;
+
+                auto it = wals.find(side.texture_name);
+
+                if (it != wals.end()) {
+                    meta = &it->second;
+                } else {
+                    auto wal = fs::load((fs::path("textures") / side.texture_name) += ".wal");
+
+                    if (wal) {
+                        memstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
+                        stream.seekg(88);
+
+                        meta = &wals.emplace(side.texture_name, wal_metadata_t {}).first->second;
+                        stream >= *meta;
+                    }
+                }
+
+                if (!meta || !((meta->contents & ~Q2_CONTENTS_SOLID) == (contents.native & ~Q2_CONTENTS_SOLID) && meta->flags == side.flags.native && meta->value == side.value)) {
+                    fmt::print(stream, " {} {} {}", contents.native, side.flags.native, side.value);
+                }
             }
 
             fmt::print(stream, "\n");
@@ -273,80 +305,6 @@ void RemoveRedundantPlanes(std::vector<T> &planes)
     planes.erase(removed, planes.end());
 }
 
-static const char *DefaultSkipTexture(const mbsp_t *bsp)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        return "e1u1/skip";
-    } else {
-        return "skip";
-    }
-}
-
-static const char *DefaultTriggerTexture(const mbsp_t *bsp)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        return "e1u1/trigger";
-    } else {
-        return "trigger";
-    }
-}
-
-static const char *DefaultOriginTexture(const mbsp_t *bsp)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        return "e1u1/origin";
-    } else {
-        return "origin";
-    }
-}
-
-static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentflags_t &contents)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        int visible = contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1);
-
-        if (visible & Q2_CONTENTS_WATER) {
-            return "e1u1/water4";
-        } else if (visible & Q2_CONTENTS_SLIME) {
-            return "e1u1/sewer1";
-        } else if (visible & Q2_CONTENTS_LAVA) {
-            return "e1u1/brlava";
-        } else if (contents.native & Q2_CONTENTS_PLAYERCLIP) {
-            return "e1u1/clip";
-        } else if (contents.native & Q2_CONTENTS_MONSTERCLIP) {
-            return "e1u1/clip_mon";
-        } else if (contents.native & Q2_CONTENTS_AREAPORTAL) {
-            return "e1u1/trigger";
-        }
-
-        return "e1u1/skip";
-    } else {
-        switch (contents.native) {
-            case CONTENTS_WATER: return "*waterskip";
-            case CONTENTS_SLIME: return "*slimeskip";
-            case CONTENTS_LAVA: return "*lavaskip";
-            case CONTENTS_SKY: return "skyskip";
-            default: return "skip";
-        }
-    }
-}
-
-// some faces can be given an incorrect-but-matching texture if they
-// don't actually have a rendered face to pull in, so we're gonna
-// replace the texture here with something more appropriate.
-static const char *OverrideTextureForContents(const mbsp_t *bsp, const char *name, const contentflags_t &contents)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-
-        if ((contents.native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) == (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
-            return "e1u1/clip";
-        } else if (contents.native & Q2_CONTENTS_MONSTERCLIP) {
-            return "e1u1/clip_mon";
-        }
-    }
-
-    return name;
-}
 
 // structures representing a brush
 
@@ -551,6 +509,104 @@ struct decomp_brush_t
     }
 };
 
+static const char *DefaultSkipTexture(const mbsp_t *bsp)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        return "e1u1/skip";
+    } else {
+        return "skip";
+    }
+}
+
+static void DefaultSkipSide(compiled_brush_side_t &side, const mbsp_t *bsp)
+{
+    side.texture_name = DefaultSkipTexture(bsp);
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        side.flags = { Q2_SURF_NODRAW };
+    }
+}
+
+static const char *DefaultTriggerTexture(const mbsp_t *bsp)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        return "e1u1/trigger";
+    } else {
+        return "trigger";
+    }
+}
+
+static void DefaultTriggerSide(compiled_brush_side_t &side, const mbsp_t *bsp)
+{
+    side.texture_name = DefaultTriggerTexture(bsp);
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        side.flags = { Q2_SURF_NODRAW };
+    }
+}
+
+static const char *DefaultOriginTexture(const mbsp_t *bsp)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        return "e1u1/origin";
+    } else {
+        return "origin";
+    }
+}
+
+static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentflags_t &contents)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        int visible = contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1);
+
+        if (visible & Q2_CONTENTS_WATER) {
+            return "e1u1/water4";
+        } else if (visible & Q2_CONTENTS_SLIME) {
+            return "e1u1/sewer1";
+        } else if (visible & Q2_CONTENTS_LAVA) {
+            return "e1u1/brlava";
+        } else if (contents.native & Q2_CONTENTS_PLAYERCLIP) {
+            return "e1u1/clip";
+        } else if (contents.native & Q2_CONTENTS_MONSTERCLIP) {
+            return "e1u1/clip_mon";
+        } else if (contents.native & Q2_CONTENTS_AREAPORTAL) {
+            return "e1u1/trigger";
+        }
+
+        return "e1u1/skip";
+    } else {
+        switch (contents.native) {
+            case CONTENTS_WATER: return "*waterskip";
+            case CONTENTS_SLIME: return "*slimeskip";
+            case CONTENTS_LAVA: return "*lavaskip";
+            case CONTENTS_SKY: return "skyskip";
+            default: return "skip";
+        }
+    }
+}
+
+// some faces can be given an incorrect-but-matching texture if they
+// don't actually have a rendered face to pull in, so we're gonna
+// replace the texture here with something more appropriate.
+static void OverrideTextureForContents(compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, const contentflags_t &contents)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+
+        if (contents.native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
+            if (!(contents.native & Q2_CONTENTS_PLAYERCLIP)) {
+                side.texture_name = "e1u1/clip_mon";
+            } else {
+                side.texture_name = "e1u1/clip";
+            }
+
+            side.flags = { Q2_SURF_NODRAW };
+            return;
+        }
+    }
+
+    side.texture_name = name;
+}
+
 /***
  * Preconditions: planes are exactly the planes that define the brush
  *
@@ -748,7 +804,7 @@ static compiled_brush_t DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const l
         compiled_brush_side_t &side = brush.sides.emplace_back();
         side.source = plane.source;
         side.plane = plane;
-        side.texture_name = DefaultSkipTexture(bsp);
+        DefaultSkipSide(side, bsp);
         side.valve = plane.normal;
     }
 
@@ -800,6 +856,11 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
             if (brush.contents.native == 0) {
                 // hint brush
                 side.texture_name = "e1u1/hint";
+                
+                if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                    side.flags = { Q2_SURF_HINT };
+                }
+
                 side.valve = finalSide.plane.normal;
                 continue;
             }
@@ -808,7 +869,7 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
             if (!finalSide.plane.source && finalSide.faces.empty()) {
                 // print a default face
                 side.valve = finalSide.plane.normal;
-                side.texture_name = DefaultSkipTexture(bsp);
+                DefaultSkipSide(side, bsp);
             } else {
                 const char *name;
                 const gtexinfo_t *ti;
@@ -824,6 +885,12 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
                     name = ti->texture.data();
                 }
 
+                if (!name && !*name) {
+                    DefaultSkipSide(side, bsp);
+                } else {
+                    OverrideTextureForContents(side, bsp, name, brush.contents);
+                }
+
                 if (ti) {
                     side.valve = ti->vecs;
                 
@@ -833,12 +900,6 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
                     }
                 } else {
                     side.valve = finalSide.plane.normal;
-                }
-
-                if (!name && !*name) {
-                    side.texture_name = DefaultSkipTexture(bsp);
-                } else {
-                    side.texture_name = OverrideTextureForContents(bsp, name, brush.contents);
                 }
             }
         }
@@ -1086,7 +1147,7 @@ static void DecompileEntity(
     if (modelNum > 0 && dict.find("classname")->second.compare(0, 8, "trigger_") == 0) {
         for (auto &brush : compiledBrushes) {
             for (auto &side : brush.sides) {
-                side.texture_name = DefaultTriggerTexture(bsp);
+                DefaultTriggerSide(side, bsp);
             }
         }
     }

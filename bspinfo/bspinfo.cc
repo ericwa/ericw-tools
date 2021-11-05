@@ -25,6 +25,7 @@
 #include <iomanip>
 #include <fmt/ostream.h>
 #include <common/json.hh>
+#include "common/fs.hh"
 
 static std::string hex_string(const uint8_t *bytes, const size_t count)
 {
@@ -524,6 +525,9 @@ int main(int argc, char **argv)
 
         bspdata_t bsp;
         LoadBSPFile(source, &bsp);
+
+        bsp.version->game->init_filesystem(source);
+
         PrintBSPFileSizes(&bsp);
 
         //WriteBSPFile(std::filesystem::path(source).replace_extension("bsp.rewrite"), &bsp);
@@ -533,6 +537,8 @@ int main(int argc, char **argv)
         serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), std::filesystem::path(source).replace_extension("bsp.json"));
 
         printf("---------------------\n");
+
+        fs::clear();
     }
 
     return 0;
