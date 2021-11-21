@@ -47,6 +47,5 @@ struct bouncelight_t
 
 const std::vector<bouncelight_t> &BounceLights();
 const std::vector<int> &BounceLightsForFaceNum(int facenum);
-void MakeTextureColors(const mbsp_t *bsp);
 void MakeBounceLights(const globalconfig_t &cfg, const mbsp_t *bsp);
 qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face); // mxd

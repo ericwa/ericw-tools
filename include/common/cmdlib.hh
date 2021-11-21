@@ -269,10 +269,31 @@ inline std::ios_base &endianness(std::ios_base &os)
     return os;
 }
 
+// blank type used 
+template<size_t n>
+struct padding { };
+
 // using <= for ostream and >= for istream
+template<size_t n>
+inline std::ostream &operator<=(std::ostream &s, const padding<n> &)
+{
+    for (size_t i = 0; i < n; i++) {
+        s.put(0);
+    }
+
+    return s;
+}
+
 inline std::ostream &operator<=(std::ostream &s, const char &c)
 {
     s.write(&c, sizeof(c));
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const int8_t &c)
+{
+    s.write(reinterpret_cast<const char *>(&c), sizeof(c));
 
     return s;
 }
@@ -397,9 +418,24 @@ inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_wr
     return s;
 }
 
+template<size_t n>
+inline std::istream &operator>=(std::istream &s, padding<n> &)
+{
+    s.seekg(n, std::ios_base::cur);
+
+    return s;
+}
+
 inline std::istream &operator>=(std::istream &s, char &c)
 {
     s.read(&c, sizeof(c));
+
+    return s;
+}
+
+inline std::istream &operator>=(std::istream &s, int8_t &c)
+{
+    s.read(reinterpret_cast<char *>(&c), sizeof(c));
 
     return s;
 }
@@ -712,6 +748,12 @@ struct memstream : virtual membuf, std::ostream, std::istream
 {
     inline memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
         : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
+          std::istream(static_cast<std::streambuf *>(this))
+    {
+    }
+
+    inline memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+        : membuf(base, size, which), std::ostream(nullptr),
           std::istream(static_cast<std::streambuf *>(this))
     {
     }

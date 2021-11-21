@@ -33,17 +33,22 @@ namespace fs
     struct directory_archive : archive_like
     {
         using archive_like::archive_like;
-        
-        virtual data load(const path &filename) override
+
+        bool contains(const path &filename) override
         {
-            path p = pathname / filename;
+            return exists(!pathname.empty() ? (pathname / filename) : filename);
+        }
+        
+        data load(const path &filename) override
+        {
+            path p = !pathname.empty() ? (pathname / filename) : filename;
 
             if (!exists(p)) {
                 return std::nullopt;
             }
 
             uintmax_t size = file_size(p);
-            std::ifstream stream(pathname / filename, std::ios_base::in | std::ios_base::binary);
+            std::ifstream stream(p, std::ios_base::in | std::ios_base::binary);
             std::vector<uint8_t> data(size);
             stream.read(reinterpret_cast<char *>(data.data()), size);
             return data;
@@ -109,7 +114,12 @@ namespace fs
             }
         }
         
-        virtual data load(const path &filename) override
+        bool contains(const path &filename) override
+        {
+            return files.find(filename.generic_string()) != files.end();
+        }
+        
+        data load(const path &filename) override
         {
             auto it = files.find(filename.generic_string());
 
@@ -187,7 +197,12 @@ namespace fs
             }
         }
         
-        virtual data load(const path &filename) override
+        bool contains(const path &filename) override
+        {
+            return files.find(filename.generic_string()) != files.end();
+        }
+        
+        data load(const path &filename) override
         {
             auto it = files.find(filename.generic_string());
 
@@ -203,6 +218,7 @@ namespace fs
         }
     };
     
+    static std::shared_ptr<directory_archive> absrel_dir = std::make_shared<directory_archive>("");
     std::list<std::shared_ptr<archive_like>> archives, directories;
 
     /** It's possible to compile quake 1/hexen 2 maps without a qdir */
@@ -218,6 +234,11 @@ namespace fs
 
     std::shared_ptr<archive_like> addArchive(const path &p)
     {
+        if (p.empty()) {
+            FLogPrint("WARNING: can't add empty archive path\n");
+            return nullptr;
+        }
+
         if (!exists(p)) {
             FLogPrint("WARNING: '{}' not found\n", p);
             return nullptr;
@@ -230,7 +251,7 @@ namespace fs
                 }
             }
 
-            auto &arch = directories.emplace_front(std::make_unique<directory_archive>(p));
+            auto &arch = directories.emplace_front(std::make_shared<directory_archive>(p));
             LogPrint(LOG_VERBOSE, "Added directory '{}'\n", p);
             return arch;
         } else {
@@ -265,48 +286,55 @@ namespace fs
         return nullptr;
     }
 
-    data load(const path &p)
+    resolve_result where(const path &p)
     {
         // check absolute + relative first
         if (exists(p)) {
-            uintmax_t size = file_size(p);
-            std::ifstream stream(p, std::ios_base::in | std::ios_base::binary);
-            std::vector<uint8_t> data(size);
-            stream.read(reinterpret_cast<char *>(data.data()), size);
-            return data;
+            return { absrel_dir, p };
         }
         
         // check direct archive loading
-        auto archive = splitArchivePath(p);
-
-        if (std::get<0>(archive).has_relative_path()) {
-            auto &arch = addArchive(std::get<0>(archive));
+        if (auto paths = splitArchivePath(p)) {
+            auto &arch = addArchive(paths.archive);
 
             if (arch) {
-                return arch->load(std::get<1>(archive));
+                return { arch, paths.filename };
             }
         }
 
         // absolute doesn't make sense for other load types
         if (p.is_absolute()) {
-            return std::nullopt;
+            return {};
         }
 
         // check directories
         for (auto &dir : directories) {
-            if (auto file = dir->load(p)) {
-                return file;
+            if (dir->contains(p)) {
+                return { dir, p };
             }
         }
 
         // check archives
         for (auto &arch : archives) {
-            if (auto file = arch->load(p)) {
-                return file;
+            if (arch->contains(p)) {
+                return { arch, p };
             }
         }
 
-        return std::nullopt;
+        return {};
+    }
+
+    data load(const path &p)
+    {
+        auto [ arch, filename ] = where(p);
+
+        if (!arch) {
+            return std::nullopt;
+        }
+
+        LogPrint(LOG_VERBOSE, "Loaded '{}' from archive '{}'\n", filename, arch->pathname);
+
+        return arch->load(filename);
     }
 }
 

@@ -337,7 +337,7 @@ struct miptex_t
 // Half Life miptex, which includes a palette
 struct miptexhl_t : miptex_t
 {
-    std::vector<uint8_t> palette;
+    std::vector<qvec3b> palette;
 
     miptexhl_t() = default;
 
@@ -346,7 +346,7 @@ struct miptexhl_t : miptex_t
 
     virtual size_t stream_size() const
     {
-        return miptex_t::stream_size() + sizeof(uint16_t) + palette.size();
+        return miptex_t::stream_size() + sizeof(uint16_t) + (palette.size() * sizeof(qvec3b));
     }
 
     virtual void stream_read(std::istream &stream)
@@ -356,7 +356,7 @@ struct miptexhl_t : miptex_t
         uint16_t num_colors;
         stream >= num_colors;
 
-        palette.resize(num_colors * 3);
+        palette.resize(num_colors);
         stream.read(reinterpret_cast<char *>(palette.data()), palette.size());
     }
 
@@ -364,7 +364,7 @@ struct miptexhl_t : miptex_t
     {
         miptex_t::stream_write(stream);
 
-        stream <= static_cast<uint16_t>(palette.size() / 3);
+        stream <= static_cast<uint16_t>(palette.size());
 
         stream.write(reinterpret_cast<const char *>(palette.data()), palette.size());
     }
@@ -448,16 +448,6 @@ struct dmiptexlump_t
             }
         }
     }
-};
-
-// mxd. Used to store RGBA data in mbsp->drgbatexdata.
-// This isn't persisted to BSPs so we don't need stream stuff.
-// TODO: move to light, it shouldn't be here
-struct rgba_miptex_t
-{
-    std::string name;
-    uint32_t width = 0, height = 0;
-    std::unique_ptr<qvec4b[]> data;
 };
 
 /* 0-2 are axial planes */
@@ -1600,7 +1590,6 @@ struct mbsp_t
     mvis_t dvis;
     std::vector<uint8_t> dlightdata;
     dmiptexlump_t<miptexhl_t> dtex;
-    std::vector<rgba_miptex_t> drgbatexdata;
     std::string dentdata;
     std::vector<mleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
@@ -1764,6 +1753,7 @@ struct gamedef_t
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
     virtual void init_filesystem(const std::filesystem::path &source) const = 0;
+    virtual const std::initializer_list<qvec3b> &get_default_palette() const = 0;
 };
 
 // BSP version struct & instances

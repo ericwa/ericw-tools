@@ -148,46 +148,38 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
         return nullptr;
 
     const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+
     if (texinfo == nullptr)
         return nullptr;
 
-    const int32_t texnum = texinfo->miptex;
-    const miptex_t *miptex = &bsp->dtex.textures[texnum];
+    const miptex_t &miptex = bsp->dtex.textures[texinfo->miptex];
 
     // sometimes the texture just wasn't written. including its name.
-    if (!miptex->name.size())
+    if (miptex.name.empty())
         return nullptr;
 
-    return miptex;
-}
-
-const rgba_miptex_t *Face_RgbaMiptex(const mbsp_t *bsp, const mface_t *face)
-{
-    if (!bsp->drgbatexdata.size())
-        return nullptr;
-
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
-    if (texinfo == nullptr)
-        return nullptr;
-
-    return &bsp->drgbatexdata[texinfo->miptex];
+    return &miptex;
 }
 
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
+    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+
+    if (!texinfo) {
+        return "";
+    }
+
+    // Q2 has texture written directly here
+    if (texinfo->texture[0]) {
+        return texinfo->texture.data();
+    }
+
+    // Q1 has it on the miptex
     const auto *miptex = Face_Miptex(bsp, face);
 
-    if (miptex)
+    if (miptex) {
         return miptex->name.c_str();
-
-    const auto *rgbamiptex = Face_RgbaMiptex(bsp, face);
-
-    if (rgbamiptex)
-        return rgbamiptex->name.c_str();
-
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
-    if (texinfo && texinfo->texture[0])
-        return texinfo->texture.data();
+    }
 
     return "";
 }

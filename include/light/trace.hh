@@ -19,8 +19,6 @@
 
 #pragma once
 
-#include <light/imglib.hh> //mxd
-
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>

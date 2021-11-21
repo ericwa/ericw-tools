@@ -112,7 +112,8 @@ public:
 struct texdata_t
 {
     std::string name;
-    int32_t flags, value;
+    surfflags_t flags;
+    int32_t value;
 };
 
 struct mapdata_t
@@ -175,8 +176,8 @@ void ConvertMapFile(void);
 
 struct extended_texinfo_t
 {
-    int contents = 0;
-    int flags = 0;
+    contentflags_t contents = { 0 };
+    surfflags_t flags = { 0 };
     int value = 0;
 };
 

@@ -69,12 +69,7 @@ struct texdef_valve_t
     inline texdef_valve_t(const texvec<T> &in_vecs)
     {
         // From the valve -> bsp code,
-        //
-        //    for (i = 0; i < 3; i++) {
-        //        out->vecs[0][i] = axis[0][i] / scale[0];
-        //        out->vecs[1][i] = axis[1][i] / scale[1];
-        //    }
-        //
+        //        out->vecs[n].xyz = axis[n].xyz / scale[n];
         // We'll generate axis vectors of length 1 and pick the necessary scale
 
         for (int i = 0; i < 2; i++) {
@@ -228,12 +223,10 @@ struct compiled_brush_t
                 side.valve.shift[1] -= qv::dot(brush_offset.value(), side.valve.axis.row(1));
             }
 
-
             fmt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2], side.texture_name, side.valve.axis.at(0, 0), side.valve.axis.at(0, 1),
                 side.valve.axis.at(0, 2), side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2), side.valve.shift[1], 0.0,
                 side.valve.scale[0], side.valve.scale[1]);
 
-            // TODO: optimize for Q2 cases where they match the .wal
             if (contents.native || side.flags.native || side.value) {
                 wal_metadata_t *meta = nullptr;
 
@@ -246,6 +239,7 @@ struct compiled_brush_t
 
                     if (wal) {
                         memstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
+                        stream >> endianness<std::endian::little>;
                         stream.seekg(88);
 
                         meta = &wals.emplace(side.texture_name, wal_metadata_t {}).first->second;
@@ -253,7 +247,7 @@ struct compiled_brush_t
                     }
                 }
 
-                if (!meta || !((meta->contents & ~Q2_CONTENTS_SOLID) == (contents.native & ~Q2_CONTENTS_SOLID) && meta->flags == side.flags.native && meta->value == side.value)) {
+                if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) == (contents.native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) && meta->flags == side.flags.native && meta->value == side.value)) {
                     fmt::print(stream, " {} {} {}", contents.native, side.flags.native, side.value);
                 }
             }
@@ -462,8 +456,6 @@ struct decomp_brush_t
     std::vector<decomp_brush_side_t> sides;
 
     decomp_brush_t(std::vector<decomp_brush_side_t> sidesIn) : sides(std::move(sidesIn)) { }
-
-    std::unique_ptr<decomp_brush_t> clone() const { return std::unique_ptr<decomp_brush_t>(new decomp_brush_t(*this)); }
 
     /**
      * Returns the front and back side after clipping to the given plane.
@@ -1191,7 +1183,7 @@ static void DecompileEntity(
         }
     }
 
-    // add out the origin brush, if we have one
+    // add the origin brush, if we have one
     if (brush_offset.has_value()) {
         compiled_brush_t &brush = compiledBrushes.emplace_back();
         brush.brush_offset = brush_offset;

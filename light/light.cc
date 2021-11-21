@@ -29,13 +29,13 @@
 #include <light/phong.hh>
 #include <light/bounce.hh>
 #include <light/surflight.hh> //mxd
-#include <light/imglib.hh> //mxd
 #include <light/entities.hh>
 #include <light/ltface.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 #include <common/fs.hh>
+#include <common/imglib.hh>
 
 #ifdef HAVE_EMBREE
 #include <xmmintrin.h>
@@ -106,7 +106,6 @@ bool novisapprox = false;
 bool nolights = false;
 bool debug_highlightseams = false;
 debugmode_t debugmode = debugmode_none;
-bool verbose_log = false;
 bool litonly = false;
 bool skiplighting = false;
 bool write_normals = false;
@@ -254,6 +253,17 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
         return NULL;
     }
     return modelinfo.at(i);
+}
+
+const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
+{
+    const char *name = Face_TextureName(bsp, face);
+
+    if (!name || !*name) {
+        return nullptr;
+    }
+
+    return img::find(name);
 }
 
 static void *LightThread(void *arg)
@@ -437,7 +447,6 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
 
     if ((bouncerequired || isQuake2map) && !skiplighting) {
-        MakeTextureColors(&bsp);
         if (isQuake2map)
             MakeSurfaceLights(cfg_static, &bsp);
         if (bouncerequired)
@@ -970,9 +979,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 
     Q_assert(stream.tellp() == data_size);
 
-    if (verbose_log) {
-        LogPrint("Compressed {} normals down to {}\n", num_normals, unique_normals.size());
-    }
+    LogPrint(LOG_VERBOSE, "Compressed {} normals down to {}\n", num_normals, unique_normals.size());
 
     bspdata.bspx.transfer("FACENORMALS", data, data_size);
 
@@ -1026,7 +1033,6 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 int light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
-    const bspversion_t *loadversion;
     int i;
     const char *lmscaleoverride = NULL;
 
@@ -1156,7 +1162,7 @@ int light_main(int argc, const char **argv)
         } else if (!strcmp(argv[i], "-wrnormals")) {
             write_normals = true;
         } else if (!strcmp(argv[i], "-verbose") || !strcmp(argv[i], "-v")) { // Quark always passes -v
-            verbose_log = true;
+            log_mask |= 1 << LOG_VERBOSE;
         } else if (!strcmp(argv[i], "-help")) {
             PrintUsage();
             exit(0);
@@ -1246,19 +1252,18 @@ int light_main(int argc, const char **argv)
 
     bspdata.version->game->init_filesystem(source);
 
-    loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
-    if ((loadversion->game->id == GAME_QUAKE_II) && !cfg.rangescale.isChanged()) {
+    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !cfg.rangescale.isChanged()) {
         const auto rs = new lockable_vec_t(cfg.rangescale.primaryName(), 1.0f, 0.0f, 100.0f);
         cfg.rangescale = *rs; // Gross hacks to avoid displaying this in OptionsSummary...
     }
 
-    LoadPalette(&bspdata);
-    LoadOrConvertTextures(&bsp);
+    img::init_palette(bspdata.loadversion->game);
+    img::load_textures(&bsp);
 
     LoadExtendedTexinfoFlags(source, &bsp);
     LoadEntities(cfg, &bsp);
@@ -1286,7 +1291,7 @@ int light_main(int argc, const char **argv)
     // PrintLights();
 
     if (!onlyents) {
-        if (!loadversion->game->has_rgb_lightmap) {
+        if (!bspdata.loadversion->game->has_rgb_lightmap) {
             CheckLitNeeded(cfg);
         }
         SetupDirt(cfg);
@@ -1330,7 +1335,7 @@ int light_main(int argc, const char **argv)
 
     WriteEntitiesToString(cfg, &bsp);
     /* Convert data format back if necessary */
-    ConvertBSPFormat(&bspdata, loadversion);
+    ConvertBSPFormat(&bspdata, bspdata.loadversion);
 
     if (!litonly) {
         WriteBSPFile(source, &bspdata);

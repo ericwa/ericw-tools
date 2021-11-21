@@ -45,7 +45,6 @@ using namespace std;
 using namespace polylib;
 
 mutex radlights_lock;
-map<string, qvec3b> texturecolors;
 static std::vector<bouncelight_t> radlights;
 std::map<int, std::vector<int>> radlightsByFacenum;
 
@@ -124,11 +123,10 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 
 qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
 {
-    const char *facename = Face_TextureName(bsp, face);
-    auto it = texturecolors.find(facename);
+    auto it = img::find(Face_TextureName(bsp, face));
 
-    if (it != texturecolors.end()) {
-        return (*it).second;
+    if (it) {
+        return it->meta.averageColor;
     }
     
     return { 127 };
@@ -273,46 +271,6 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
 
     static std::vector<int> empty;
     return empty;
-}
-
-// Returns color in [0,255]
-static qvec3f Texture_AvgColor(const mbsp_t *bsp, const rgba_miptex_t &miptex)
-{
-    qvec4f color{};
-
-    if (!miptex.data)
-        return color;
-
-    // mxd
-    const auto miptexsize = miptex.width * miptex.height;
-    for (auto i = 0; i < miptexsize; i++) {
-        auto c = Texture_GetColor(miptex, i);
-        if (c[3] < 128)
-            continue; // Skip transparent pixels...
-        color += c;
-    }
-
-    return color / miptexsize;
-}
-
-void MakeTextureColors(const mbsp_t *bsp)
-{
-    if (!bsp->drgbatexdata.size()) // mxd. dtexdata -> drgbatexdata
-        return;
-
-    LogPrint("--- MakeTextureColors ---\n");
-
-    for (auto &miptex : bsp->drgbatexdata) {
-        if (!miptex.data) {
-            continue;
-        }
-
-        const string name{miptex.name};
-        const qvec3f color = Texture_AvgColor(bsp, miptex);
-
-        // fmt::print("{} has color {}\n", name, qv::to_string(color));
-        texturecolors[name] = color;
-    }
 }
 
 void MakeBounceLights(const globalconfig_t &cfg, const mbsp_t *bsp)

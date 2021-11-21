@@ -109,9 +109,7 @@ static int LightStyleForTargetname(const globalconfig_t &cfg, const std::string 
     lightstyleForTargetname.emplace_back(
         targetname, newStylenum); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
 
-    if (verbose_log) {
-        FLogPrint("Allocated lightstyle {} for targetname '{}'\n", newStylenum, targetname);
-    }
+    LogPrint(LOG_VERBOSE, "Allocated lightstyle {} for targetname '{}'\n", newStylenum, targetname);
 
     return newStylenum;
 }
@@ -825,23 +823,6 @@ inline vec_t CalcFov(vec_t fov_x, vec_t width, vec_t height)
     return a;
 }
 
-/*
-finds the texture that is meant to be projected.
-*/
-static const rgba_miptex_t *FindProjectionTexture(const mbsp_t *bsp, const std::string &texname)
-{
-    /*outer loop finds the textures*/
-    for (auto &miptex : bsp->drgbatexdata) {
-        if (!miptex.data)
-            continue;
-
-        if (string_iequals(miptex.name, texname))
-            return &miptex;
-    }
-
-    return nullptr;
-}
-
 static std::string ParseEscapeSequences(const std::string &input)
 {
     std::string s;
@@ -985,10 +966,10 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
 
             if (!entity.project_texture.stringValue().empty()) {
                 auto texname = entity.project_texture.stringValue();
-                entity.projectedmip = FindProjectionTexture(bsp, texname);
+                entity.projectedmip = img::find(texname);
                 if (entity.projectedmip == nullptr) {
                     LogPrint(
-                        "WARNING: light has \"_project_texture\" \"{}\", but this texture is not present in the bsp\n",
+                        "WARNING: light has \"_project_texture\" \"{}\", but this texture was not found\n",
                         texname);
                 }
 
@@ -1003,14 +984,14 @@ void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp)
             }
 
             if (entity.projectedmip) {
-                if (entity.projectedmip->width > entity.projectedmip->height)
+                if (entity.projectedmip->meta.width > entity.projectedmip->meta.height)
                     Matrix4x4_CM_MakeModelViewProj(entity.projangle.vec3Value(), entity.origin.vec3Value(),
                         entity.projfov.floatValue(),
-                        CalcFov(entity.projfov.floatValue(), entity.projectedmip->width, entity.projectedmip->height),
+                        CalcFov(entity.projfov.floatValue(), entity.projectedmip->meta.width, entity.projectedmip->meta.height),
                         entity.projectionmatrix);
                 else
                     Matrix4x4_CM_MakeModelViewProj(entity.projangle.vec3Value(), entity.origin.vec3Value(),
-                        CalcFov(entity.projfov.floatValue(), entity.projectedmip->height, entity.projectedmip->width),
+                        CalcFov(entity.projfov.floatValue(), entity.projectedmip->meta.height, entity.projectedmip->meta.width),
                         entity.projfov.floatValue(), entity.projectionmatrix);
             }
 

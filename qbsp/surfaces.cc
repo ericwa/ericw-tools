@@ -86,7 +86,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
 
             extent = ceil(maxs) - floor(mins);
             //          extent = maxs - mins;
-            if (extent <= subdiv)
+            if (!subdiv || extent <= subdiv)
                 break;
 
             // split it

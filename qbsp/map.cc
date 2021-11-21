@@ -34,7 +34,8 @@
 
 #include <qbsp/qbsp.hh>
 #include <common/parser.hh>
-#include "common/fs.hh"
+#include <common/fs.hh>
+#include <common/imglib.hh>
 #include <qbsp/wad.hh>
 
 #include <common/qvec.hh>
@@ -132,31 +133,27 @@ static void AddAnimTex(const char *name)
     }
 }
 
-struct wal_t
+// Small cache for .wals
+static std::unordered_map<std::string, std::optional<img::texture_meta>> wal_cache;
+
+static std::optional<img::texture_meta> LoadWal(const char *name)
 {
-    char name[32];
-    int32_t width, height;
-    int32_t mip_offsets[MIPLEVELS];
-    char anim_name[32];
-    int32_t flags, contents, value;
-};
+    auto it = wal_cache.find(name);
 
-static std::optional<wal_t> LoadWal(const char *name)
-{
-    std::filesystem::path p = (fs::gamedir / "textures" / name).replace_extension("wal");
+    if (it != wal_cache.end()) {
+        return it->second;
+    }
 
-    FILE *fp = fopen(p.string().c_str(), "rb");
+    fs::path p = fs::path("textures") / name += ".wal";
+    fs::data wal = fs::load(p);
 
-    if (!fp)
+    if (!wal) {
+        LogPrint("WARNING: Couldn't locate wal for {}\n", name);
+        wal_cache.emplace(name, std::nullopt);
         return std::nullopt;
+    }
 
-    wal_t wal;
-
-    fread(&wal, 1, sizeof(wal), fp);
-
-    fclose(fp);
-
-    return wal;
+    return wal_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
 }
 
 int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal)
@@ -191,18 +188,14 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         }
     } else {
         // load .wal first
-        std::optional<wal_t> wal;
+        std::optional<img::texture_meta> wal;
 
         if (!internal || !extended_info.has_value()) {
             wal = LoadWal(name);
 
             if (!wal.has_value()) {
-                // FIXME
-                // LogPrint("Couldn't locate wal for {}\n", name);
-                if (!extended_info.has_value()) {
-                    extended_info = extended_texinfo_t{};
-                }
-            } else if (!extended_info.has_value()) {
+                extended_info = extended_texinfo_t{};
+            } else {
                 extended_info = extended_texinfo_t{wal->contents, wal->flags, wal->value};
             }
         }
@@ -210,7 +203,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         for (i = 0; i < map.nummiptex(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
-            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags == extended_info->flags &&
+            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
                 tex.value == extended_info->value) {
 
                 return i;
@@ -221,8 +214,8 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         map.miptex.push_back({name, extended_info->flags, extended_info->value});
 
         /* Handle animating textures carefully */
-        if (wal && wal->anim_name[0]) {
-            FindMiptex(wal->anim_name);
+        if (wal && !wal->animation.empty()) {
+            FindMiptex(wal->animation.data());
         }
     }
 
@@ -509,7 +502,7 @@ static quark_tx_info_t ParseExtendedTX(parser_t &parser)
             result.info = extended_texinfo_t{std::stoi(parser.token)};
 
             if (parser.parse_token(PARSE_OPTIONAL)) {
-                result.info->flags = std::stoi(parser.token);
+                result.info->flags.native = std::stoi(parser.token);
             }
             if (parser.parse_token(PARSE_OPTIONAL)) {
                 result.info->value = std::stoi(parser.token);

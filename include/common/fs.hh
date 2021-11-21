@@ -39,6 +39,8 @@ namespace fs
         {
         }
 
+        virtual bool contains(const path &filename) = 0;
+
         virtual data load(const path &filename) = 0;
     };
 
@@ -55,29 +57,48 @@ namespace fs
     // archive added if one was added, or nullptr on error.
     std::shared_ptr<archive_like> addArchive(const path &p);
 
-    // attempt to load the specified file.
-    // this will attempt loads in the following order
+    struct resolve_result
+    {
+        std::shared_ptr<archive_like> archive;
+        path filename;
+
+        inline operator bool() { return (bool) archive; }
+    };
+    
+    // attempt to resolve the specified file.
+    // this will attempt resolves in the following order
     // given the path "maps/start.map":
     // - absolute path match (ie, "maps/start.map")
     // - relative path match to current working dir (ie, "c:/eric-tools/bin/maps/start.map")
     // - direct archive load (only used if path has a valid archive string in it; ie, "c:/quake/id1/pak0.pak/start.map")
     // - registered directories in reverse order (ie, "c:/quake/mod/maps/start.map", "c:/quake/id1/maps/start.map")
     // - registered archives in reverse order (ie, "c:/quake/pak1/maps/start.map", "c:/quake/pak0/maps/start.map")
+    // returns the archive that it is contained in, and the filename.
+    // the filename is only different from p if p is an archive path.
+    resolve_result where(const path &p);
+
+    // attempt to load the specified file using the
+    // archive found via where(p)
     data load(const path &p);
 
+    struct archive_components
+    {
+        path archive, filename;
+
+        inline operator bool() { return archive.has_relative_path(); }
+    };
+
     // Splits an archive load path (ie, "C:/pak0.pak/file/path") into two components ("C:/pak0.pak", "file/path").
-    inline std::tuple<path, path> splitArchivePath(const path &source)
+    inline archive_components splitArchivePath(const path &source)
     {
         // check direct archive loading
         // this is a bit complex, but we check the whole
         // path to see if any piece of it that isn't
         // the last piece matches a file
         for (path archive = source.parent_path(); archive.has_relative_path(); archive = archive.parent_path()) {
-            if (!is_regular_file(archive)) {
-                continue;
+            if (is_regular_file(archive)) {
+                return { archive, source.lexically_relative(archive) };
             }
-
-            return std::make_tuple(archive, source.lexically_relative(archive));
         }
 
         return {};
@@ -87,10 +108,8 @@ namespace fs
     // if it wasn't in a pak
     inline path resolveArchivePath(const path &source)
     {
-        auto archive = splitArchivePath(source);
-
-        if (std::get<0>(archive).has_relative_path()) {
-            return std::get<0>(archive).parent_path() / std::get<1>(archive);
+        if (auto paths = splitArchivePath(source)) {
+            return paths.archive.parent_path() / paths.filename;
         }
 
         return source;

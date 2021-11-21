@@ -939,8 +939,74 @@ static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *en
     return add;
 }
 
+
+static void Matrix4x4_CM_Transform4(const std::array<vec_t, 16> &matrix, const qvec4d &vector, qvec4d &product)
+{
+    product[0] = matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2] + matrix[12] * vector[3];
+    product[1] = matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2] + matrix[13] * vector[3];
+    product[2] = matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2] + matrix[14] * vector[3];
+    product[3] = matrix[3] * vector[0] + matrix[7] * vector[1] + matrix[11] * vector[2] + matrix[15] * vector[3];
+}
+static bool Matrix4x4_CM_Project(const qvec3d &in, qvec3d &out, const std::array<vec_t, 16> &modelviewproj)
+{
+    bool result = true;
+
+    qvec4d v;
+    Matrix4x4_CM_Transform4(modelviewproj, {in, 1}, v);
+
+    v[0] /= v[3];
+    v[1] /= v[3];
+    if (v[2] < 0)
+        result = false; // too close to the view
+    v[2] /= v[3];
+
+    out[0] = (1 + v[0]) / 2;
+    out[1] = (1 + v[1]) / 2;
+    out[2] = (1 + v[2]) / 2;
+    if (out[2] > 1)
+        result = false; // beyond far clip plane
+    return result;
+}
+
 static bool LightFace_SampleMipTex(
-    const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point, qvec3d &result);
+    const img::texture *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point, qvec3d &result)
+{
+    // okay, yes, this is weird, yes we're using a vec3_t for a coord...
+    // this is because we're treating it like a cubemap. why? no idea.
+    float weight[4];
+    qvec4b pi[4];
+
+    qvec3d coord;
+    if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
+        coord[1] >= 1) {
+        result = {};
+        return false; // mxd
+    }
+
+    float sfrac = (coord[0]) * (tex->meta.width - 1); // mxd. We are sampling sbase+1 pixels, so multiplying by
+                                                    // tex->width will result in an 1px overdraw, same for tbase
+    const int sbase = sfrac;
+    sfrac -= sbase;
+    float tfrac = (1 - coord[1]) * (tex->meta.height - 1);
+    const int tbase = tfrac;
+    tfrac -= tbase;
+
+    pi[0] = tex->pixels[((sbase + 0) % tex->meta.width) + (tex->meta.width * ((tbase + 0) % tex->meta.height))];
+    weight[0] = (1 - sfrac) * (1 - tfrac);
+    pi[1] = tex->pixels[((sbase + 1) % tex->meta.width) + (tex->meta.width * ((tbase + 0) % tex->meta.height))];
+    weight[1] = (sfrac) * (1 - tfrac);
+    pi[2] = tex->pixels[((sbase + 0) % tex->meta.width) + (tex->meta.width * ((tbase + 1) % tex->meta.height))];
+    weight[2] = (1 - sfrac) * (tfrac);
+    pi[3] = tex->pixels[((sbase + 1) % tex->meta.width) + (tex->meta.width * ((tbase + 1) % tex->meta.height))];
+    weight[3] = (sfrac) * (tfrac);
+    result = pi[0].xyz() * weight[0] +
+                pi[1].xyz() * weight[1] +
+                pi[2].xyz() * weight[2] +
+                pi[3].xyz() * weight[3];
+    result *= 2;
+
+    return true;
+}
 
 static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm,
     const qvec3d &surfpoint, bool twosided, qvec3d &color_out, qvec3d &surfpointToLightDir_out,
@@ -1148,74 +1214,6 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
      surface bounding sphere to the light source is <= fadegate.
      need fabs to handle antilights. */
     return fabs(GetLightValue(cfg, entity, dist)) <= fadegate;
-}
-
-static void Matrix4x4_CM_Transform4(const std::array<vec_t, 16> &matrix, const qvec4d &vector, qvec4d &product)
-{
-    product[0] = matrix[0] * vector[0] + matrix[4] * vector[1] + matrix[8] * vector[2] + matrix[12] * vector[3];
-    product[1] = matrix[1] * vector[0] + matrix[5] * vector[1] + matrix[9] * vector[2] + matrix[13] * vector[3];
-    product[2] = matrix[2] * vector[0] + matrix[6] * vector[1] + matrix[10] * vector[2] + matrix[14] * vector[3];
-    product[3] = matrix[3] * vector[0] + matrix[7] * vector[1] + matrix[11] * vector[2] + matrix[15] * vector[3];
-}
-static bool Matrix4x4_CM_Project(const qvec3d &in, qvec3d &out, const std::array<vec_t, 16> &modelviewproj)
-{
-    bool result = true;
-
-    qvec4d v;
-    Matrix4x4_CM_Transform4(modelviewproj, {in, 1}, v);
-
-    v[0] /= v[3];
-    v[1] /= v[3];
-    if (v[2] < 0)
-        result = false; // too close to the view
-    v[2] /= v[3];
-
-    out[0] = (1 + v[0]) / 2;
-    out[1] = (1 + v[1]) / 2;
-    out[2] = (1 + v[2]) / 2;
-    if (out[2] > 1)
-        result = false; // beyond far clip plane
-    return result;
-}
-static bool LightFace_SampleMipTex(
-    const rgba_miptex_t *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point, qvec3d &result)
-{
-    // okay, yes, this is weird, yes we're using a vec3_t for a coord...
-    // this is because we're treating it like a cubemap. why? no idea.
-    float weight[4];
-    qvec4b pi[4];
-    const qvec4b *data = tex->data.get();
-
-    qvec3d coord;
-    if (!Matrix4x4_CM_Project(point, coord, projectionmatrix) || coord[0] <= 0 || coord[0] >= 1 || coord[1] <= 0 ||
-        coord[1] >= 1) {
-        result = {};
-        return false; // mxd
-    } else {
-        float sfrac = (coord[0]) * (tex->width - 1); // mxd. We are sampling sbase+1 pixels, so multiplying by
-                                                     // tex->width will result in an 1px overdraw, same for tbase
-        const int sbase = sfrac;
-        sfrac -= sbase;
-        float tfrac = (1 - coord[1]) * (tex->height - 1);
-        const int tbase = tfrac;
-        tfrac -= tbase;
-
-        pi[0] = data[((sbase + 0) % tex->width) + (tex->width * ((tbase + 0) % tex->height))];
-        weight[0] = (1 - sfrac) * (1 - tfrac);
-        pi[1] = data[((sbase + 1) % tex->width) + (tex->width * ((tbase + 0) % tex->height))];
-        weight[1] = (sfrac) * (1 - tfrac);
-        pi[2] = data[((sbase + 0) % tex->width) + (tex->width * ((tbase + 1) % tex->height))];
-        weight[2] = (1 - sfrac) * (tfrac);
-        pi[3] = data[((sbase + 1) % tex->width) + (tex->width * ((tbase + 1) % tex->height))];
-        weight[3] = (sfrac) * (tfrac);
-        result = pi[0].xyz() * weight[0] +
-                 pi[1].xyz() * weight[1] +
-                 pi[2].xyz() * weight[2] +
-                 pi[3].xyz() * weight[3];
-        result *= 2;
-
-        return true;
-    }
 }
 
 /*

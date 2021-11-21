@@ -25,6 +25,7 @@
 #include <common/log.hh>
 #include <common/threads.hh>
 #include <common/polylib.hh>
+#include <common/imglib.hh>
 
 #include <light/litfile.hh>
 #include <light/trace.hh>
@@ -180,7 +181,6 @@ enum debugmode_t
 };
 
 extern debugmode_t debugmode;
-extern bool verbose_log;
 
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
 extern std::vector<const modelinfo_t *> tracelist;
@@ -369,5 +369,5 @@ const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
  * returns nullptr for "skip" faces
  */
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
-// bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf); //mxd. Missing definition
+const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
 int light_main(int argc, const char **argv);

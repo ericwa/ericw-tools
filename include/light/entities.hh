@@ -26,6 +26,7 @@
 #include <common/entdata.h>
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
+#include <common/imglib.hh>
 #include <light/light.hh>
 
 constexpr vec_t DEFAULTLIGHTLEVEL = 300.0;
@@ -56,7 +57,7 @@ public:
     qvec3d spotvec{}; // computed
     float spotfalloff = 0;
     float spotfalloff2 = 0;
-    const rgba_miptex_t *projectedmip = nullptr; /*projected texture*/ // mxd. miptex_t -> rgba_miptex_t
+    const img::texture *projectedmip = nullptr; /*projected texture*/ // mxd. miptex_t -> rgba_miptex_t
     std::array<vec_t, 16> projectionmatrix{}; /*matrix used to project the specified texture. already contains origin.*/
 
     const entdict_t *epairs = nullptr;

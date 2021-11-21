@@ -1,5 +1,4 @@
 set(LIGHT_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/light/imglib.hh
 	${CMAKE_SOURCE_DIR}/include/light/entities.hh
 	${CMAKE_SOURCE_DIR}/include/light/light.hh
 	${CMAKE_SOURCE_DIR}/include/light/phong.hh
@@ -20,7 +19,6 @@ set(LIGHT_SOURCES
 	bounce.cc
 	surflight.cc
 	settings.cc
-	imglib.cc
 	${LIGHT_INCLUDES})
 
 FIND_PACKAGE(embree 3.0 REQUIRED)
