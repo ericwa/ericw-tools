@@ -297,7 +297,7 @@ namespace fs
         
         // check direct archive loading
         if (auto paths = splitArchivePath(p)) {
-            auto &arch = addArchive(paths.archive);
+            auto arch = addArchive(paths.archive);
 
             if (arch) {
                 return { arch, paths.filename };
