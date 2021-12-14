@@ -25,6 +25,7 @@
 #include <memory>
 #include <array>
 #include <set>
+#include <stdexcept>
 
 namespace fs
 {
@@ -96,7 +97,7 @@ namespace fs
             pakstream >= header;
 
             if (header.magic != std::array<char, 4> { 'P', 'A', 'C', 'K' }) {
-                throw std::exception("Bad magic");
+                throw std::runtime_error("Bad magic");
             }
 
             size_t totalFiles = header.size / sizeof(pak_file);
@@ -181,7 +182,7 @@ namespace fs
             wadstream >= header;
 
             if (header.identification != std::array<char, 4> { 'W', 'A', 'D', '2' }) {
-                throw std::exception("Bad magic");
+                throw std::runtime_error("Bad magic");
             }
 
             files.reserve(header.numlumps);
