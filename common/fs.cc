@@ -24,6 +24,7 @@
 #include <fstream>
 #include <memory>
 #include <array>
+#include <list>
 #include <set>
 #include <stdexcept>
 
