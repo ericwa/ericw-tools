@@ -209,7 +209,7 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
             if (*pixel == 255) {
                 s <= (int32_t) 0;
             } else {
-                const qvec3b *color = &palette[*pixel];
+                const qvec3b &color = palette[*pixel];
                 s <= color[2];
                 s <= color[1];
                 s <= color[0];
