@@ -330,6 +330,8 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         for (auto &mapface2 : hullbrush->faces) {
             if (&mapface == &mapface2)
                 continue;
+            if (!w)
+                break;
 
             // flip the plane, because we want to keep the back side
             plane = -mapface2.plane;
