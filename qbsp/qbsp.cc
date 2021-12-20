@@ -1392,27 +1392,20 @@ InitQBSP
 */
 static void InitQBSP(int argc, const char **argv)
 {
-    int i;
-    char *szBuf;
-    int length;
-
-    length = LoadFile("qbsp.ini", &szBuf, false);
-    if (length) {
+    if (auto file = fs::load("qbsp.ini")) {
         LogPrint("Loading options from qbsp.ini\n");
-        ParseOptions(szBuf);
-
-        delete[] szBuf;
+        ParseOptions(reinterpret_cast<char *>(file->data()));
     }
 
     // Concatenate command line args
-    length = 1;
-    for (i = 1; i < argc; i++) {
+    int length = 1;
+    for (int i = 1; i < argc; i++) {
         length += strlen(argv[i]) + 1;
         if (argv[i][0] != '-')
             length += 2; /* quotes */
     }
-    szBuf = new char[length]{};
-    for (i = 1; i < argc; i++) {
+    char *szBuf = new char[length]{};
+    for (int i = 1; i < argc; i++) {
         /* Quote filenames for the parsing function */
         if (argv[i][0] != '-')
             strcat(szBuf, "\"");

@@ -1839,12 +1839,15 @@ bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity)
  */
 mapentity_t LoadExternalMap(const char *filename)
 {
-    char *buf;
-    int length;
     mapentity_t dest{};
 
-    length = LoadFile(filename, &buf, true);
-    parser_t parser(buf);
+    auto file = fs::load(filename);
+
+    if (!file) {
+        FError("Couldn't load external map file \"{}.\"\n", filename);
+    }
+
+    parser_t parser(reinterpret_cast<const char *>(file->data()));
 
     // parse the worldspawn
     if (!ParseEntity(parser, &dest)) {
@@ -1877,34 +1880,35 @@ mapentity_t LoadExternalMap(const char *filename)
 
     LogPrint(LOG_STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
 
-    delete[] buf;
-
     return dest;
 }
 
 void LoadMapFile(void)
 {
-    char *buf;
-    int length;
-
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    length = LoadFile(options.szMapName, &buf, true);
-    parser_t parser(buf);
+    {
+        auto file = fs::load(options.szMapName);
 
-    for (int i = 0;; i++) {
-        mapentity_t &entity = map.entities.emplace_back();
-
-        if (!ParseEntity(parser, &entity)) {
-            break;
+        if (!file) {
+            FError("Couldn't load map file \"{}.\"\n", options.szMapName);
+            return;
         }
-    }
-    // Remove dummy entity inserted above
-    assert(!map.entities.back().epairs.size());
-    assert(map.entities.back().numbrushes == 0);
-    map.entities.pop_back();
 
-    delete[] buf;
+        parser_t parser(reinterpret_cast<const char *>(file->data()));
+
+        for (int i = 0;; i++) {
+            mapentity_t &entity = map.entities.emplace_back();
+
+            if (!ParseEntity(parser, &entity)) {
+                break;
+            }
+        }
+        // Remove dummy entity inserted above
+        assert(!map.entities.back().epairs.size());
+        assert(map.entities.back().numbrushes == 0);
+        map.entities.pop_back();
+    }
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))

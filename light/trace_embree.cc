@@ -354,7 +354,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                        Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
             isGlass = !isFence && (surf_flags & Q2_SURF_TRANSLUCENT);
             if (isGlass)
-                alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.66f : 0.33f);
+                alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
         } else {
             const char *name = Face_TextureName(bsp_static, face);
             isFence = (name[0] == '{');

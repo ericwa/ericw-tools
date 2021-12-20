@@ -134,6 +134,3 @@ size_t SafeRead(const qfile_t &f, void *buffer, size_t count);
 size_t SafeWrite(const qfile_t &f, const void *buffer, size_t count);
 void SafeSeek(const qfile_t &f, long offset, int32_t origin);
 long SafeTell(const qfile_t &f);
-
-long LoadFilePak(std::filesystem::path &filename, void *destptr);
-long LoadFile(const std::filesystem::path &filename, void *destptr);

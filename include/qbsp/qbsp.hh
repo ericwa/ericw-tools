@@ -42,8 +42,6 @@
 #include <common/bspfile.hh>
 #include <common/aabb.hh>
 
-#include "file.hh"
-
 /*
  * Clipnodes need to be stored as a 16-bit offset. Originally, this was a
  * signed value and only the positive values up to 32767 were available. Since
