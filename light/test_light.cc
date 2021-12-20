@@ -196,6 +196,11 @@ TEST(mathlib, PolygonArea)
         {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
     EXPECT_EQ(64.0f * 64.0f, qv::PolyArea(poly.begin(), poly.end()));
+
+    // 0, 1, or 2 vertices return 0 area
+    EXPECT_EQ(0.0f, qv::PolyArea(poly.begin(), poly.begin()));
+    EXPECT_EQ(0.0f, qv::PolyArea(poly.begin(), poly.begin() + 1));
+    EXPECT_EQ(0.0f, qv::PolyArea(poly.begin(), poly.begin() + 2));
 }
 
 TEST(mathlib, BarycentricFromPoint)

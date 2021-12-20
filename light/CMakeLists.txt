@@ -68,8 +68,12 @@ if (embree_FOUND)
 
 	add_custom_command(TARGET light POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:light>"
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:light>"
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:light>")
+
+	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
+		add_custom_command(TARGET light POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_LICENSE}"       "$<TARGET_FILE_DIR:light>/LICENSE-embree.txt")
+	endif()
 
 	# so the executable will search for dylib's in the same directory as the executable 
 	if(APPLE)
@@ -93,7 +97,9 @@ if (embree_FOUND)
 		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION bin)
 	endif()
 
-	install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
+	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
+		install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
+	endif()
 endif(embree_FOUND)
 
 install(TARGETS light RUNTIME DESTINATION bin)

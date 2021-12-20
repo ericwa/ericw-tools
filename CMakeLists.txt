@@ -52,6 +52,10 @@ if (WIN32)
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
 	if (MSVC)
+		# request 8MB stack for all .exe's
+		set(STACKSIZE 8388608)
+		set(CMAKE_EXE_LINKER_FLAGS "/STACK:${STACKSIZE}")
+
 		add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning
 		add_definitions("/wd4018") # disable "signed/unsigned mismatch" warning
 		add_definitions("/wd4200") # disable "nonstandard extension used: zero-sized array in struct/union" warning

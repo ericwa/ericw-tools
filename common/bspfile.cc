@@ -1180,6 +1180,7 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         }
         catch (std::overflow_error e) {
             LogPrint("LIMITS EXCEEDED ON {}\n", e.what());
+            return false;
         }
 
         bspdata->version = to_version;

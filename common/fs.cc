@@ -24,7 +24,10 @@
 #include <fstream>
 #include <memory>
 #include <array>
+#include <list>
 #include <set>
+#include <stdexcept>
+#include <unordered_map>
 
 namespace fs
 {
@@ -96,7 +99,7 @@ namespace fs
             pakstream >= header;
 
             if (header.magic != std::array<char, 4> { 'P', 'A', 'C', 'K' }) {
-                throw std::exception("Bad magic");
+                throw std::runtime_error("Bad magic");
             }
 
             size_t totalFiles = header.size / sizeof(pak_file);
@@ -181,7 +184,7 @@ namespace fs
             wadstream >= header;
 
             if (header.identification != std::array<char, 4> { 'W', 'A', 'D', '2' }) {
-                throw std::exception("Bad magic");
+                throw std::runtime_error("Bad magic");
             }
 
             files.reserve(header.numlumps);
@@ -295,7 +298,7 @@ namespace fs
         
         // check direct archive loading
         if (auto paths = splitArchivePath(p)) {
-            auto &arch = addArchive(paths.archive);
+            auto arch = addArchive(paths.archive);
 
             if (arch) {
                 return { arch, paths.filename };

@@ -545,7 +545,8 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
 template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_type, typename F = typename T::value_type>
 [[nodiscard]] inline F PolyArea(Iter begin, Iter end)
 {
-    Q_assert((end - begin) >= 3);
+    if ((end - begin) < 3)
+        return static_cast<F>(0);
 
     float poly_area = 0;
 
