@@ -83,7 +83,15 @@ for bsp in ${COMMIT_JSON_MAPS}; do
         diff -U3 -w reference_bsp_json/${bsp}.qbsplog ${bsp}.qbsplog
 
         echo "Diff of reference_bsp_json/${bsp}.json and ${bsp}.json:"
-        diff -U3 -w reference_bsp_json/${bsp}.json ${bsp}.json || exit 1
+        diff -U3 -w reference_bsp_json/${bsp}.json ${bsp}.json
+
+        diffreturn=$?
+        if [[ $diffreturn -ne 0 ]]; then
+            echo "Diff returned $diffreturn"
+            file reference_bsp_json/${bsp}.json
+            file ${bsp}.json
+            exit 1
+        fi
     fi
 done
 
