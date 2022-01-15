@@ -69,7 +69,7 @@ qbsp_brush_clipping_order.bsp"
 # check .json diff of COMMIT_JSON_MAPS
 for bsp in ${COMMIT_JSON_MAPS}; do
     # save regular verbosity log to file, to avoid spamming the CI log
-    qbsp -nopercent ${bsp} &> ${bsp}.qbsplog || exit 1
+    qbsp -nopercent ${bsp} &> ${bsp}.qbsplog
 
     # dump .bsp to .bsp.json
     bspinfo ${bsp} || exit 1
