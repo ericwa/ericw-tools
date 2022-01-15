@@ -1,0 +1,57 @@
+// Game: Quake
+// Format: Standard
+
+// The sbutt2 brush should "win" in clipping against the floor,
+// in both a worldspawn test case, as well as a func_wall.
+
+// entity 0
+{
+"mapversion" "220"
+"classname" "worldspawn"
+"wad" "deprecated/free_wad.wad"
+// brush 0
+{
+( -128 -64 -16 ) ( -128 -63 -16 ) ( -128 -64 -15 ) brown_brick 0 0 0 1 1
+( -64 -64 -16 ) ( -64 -64 -15 ) ( -63 -64 -16 ) brown_brick 0 0 0 1 1
+( -64 -64 -16 ) ( -63 -64 -16 ) ( -64 -63 -16 ) brown_brick 0 0 0 1 1
+( 64 64 16 ) ( 64 65 16 ) ( 65 64 16 ) brown_brick 0 0 0 1 1
+( 64 64 16 ) ( 65 64 16 ) ( 64 64 17 ) brown_brick 0 0 0 1 1
+( 64 64 16 ) ( 64 64 17 ) ( 64 65 16 ) brown_brick 0 0 0 1 1
+}
+// brush 1
+{
+( -32 8 0 ) ( -32 9 0 ) ( -32 8 1 ) sbutt2 0 0 0 1 1
+( -8 -32 0 ) ( -8 -32 1 ) ( -7 -32 0 ) sbutt2 0 0 0 1 1
+( -8 8 0 ) ( -7 8 0 ) ( -8 9 0 ) sbutt2 0 0 0 1 1
+( 24 40 16 ) ( 24 41 16 ) ( 25 40 16 ) sbutt2 0 0 0 1 1
+( 24 16 16 ) ( 25 16 16 ) ( 24 16 17 ) sbutt2 0 0 0 1 1
+( 16 40 16 ) ( 16 40 17 ) ( 16 41 16 ) sbutt2 0 0 0 1 1
+}
+}
+// entity 1
+{
+"classname" "func_wall"
+// brush 0
+{
+( 96 -64 -16 ) ( 96 -63 -16 ) ( 96 -64 -15 ) brown_brick 0 0 0 1 1
+( 96 -64 -16 ) ( 96 -64 -15 ) ( 97 -64 -16 ) brown_brick 0 0 0 1 1
+( 96 -64 -16 ) ( 97 -64 -16 ) ( 96 -63 -16 ) brown_brick 0 0 0 1 1
+( 224 64 16 ) ( 224 65 16 ) ( 225 64 16 ) brown_brick 0 0 0 1 1
+( 224 64 16 ) ( 225 64 16 ) ( 224 64 17 ) brown_brick 0 0 0 1 1
+( 224 64 16 ) ( 224 64 17 ) ( 224 65 16 ) brown_brick 0 0 0 1 1
+}
+// brush 1
+{
+( 128 8 0 ) ( 128 9 0 ) ( 128 8 1 ) sbutt2 0 0 0 1 1
+( 152 -32 0 ) ( 152 -32 1 ) ( 153 -32 0 ) sbutt2 0 0 0 1 1
+( 152 8 0 ) ( 153 8 0 ) ( 152 9 0 ) sbutt2 0 0 0 1 1
+( 184 40 16 ) ( 184 41 16 ) ( 185 40 16 ) sbutt2 0 0 0 1 1
+( 184 16 16 ) ( 185 16 16 ) ( 184 16 17 ) sbutt2 0 0 0 1 1
+( 176 40 16 ) ( 176 40 17 ) ( 176 41 16 ) sbutt2 0 0 0 1 1
+}
+}
+// entity 2
+{
+"classname" "info_player_start"
+"origin" "-104 -8 40"
+}

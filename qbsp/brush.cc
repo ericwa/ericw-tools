@@ -1107,24 +1107,26 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         dst->numbrushes++;
         brush->lmshift = lmshift;
 
+        brush_t** front;
+
         if (brush->contents.is_solid(options.target_game)) {
-            brush->next = dst->solid;
-            dst->solid = brush;
+            front = &dst->solid;
         } else if (brush->contents.is_sky(options.target_game)) {
-            brush->next = dst->sky;
-            dst->sky = brush;
+            front = &dst->sky;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL)) {
-            brush->next = dst->detail;
-            dst->detail = brush;
+            front = &dst->detail;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
-            brush->next = dst->detail_illusionary;
-            dst->detail_illusionary = brush;
+            front = &dst->detail_illusionary;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
-            brush->next = dst->detail_fence;
-            dst->detail_fence = brush;
+            front = &dst->detail_fence;
         } else {
-            brush->next = dst->liquid;
-            dst->liquid = brush;
+            front = &dst->liquid;
+        }
+
+        if (!*front) {
+            *front = brush;
+        } else {
+            Brush_ListTail(*front)->next = brush;
         }
 
         dst->bounds += brush->bounds;

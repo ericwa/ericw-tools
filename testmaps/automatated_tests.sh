@@ -62,7 +62,8 @@ COMMIT_JSON_MAPS="qbsp_func_detail.bsp \
 qbsp_func_detail_illusionary_plus_water.bsp \
 qbsp_origin.bsp \
 qbsp_angled_brush.bsp \
-qbsp_sealing_point_entity_on_outside.bsp"
+qbsp_sealing_point_entity_on_outside.bsp \
+qbsp_brush_clipping_order.bsp"
 
 # smaller test maps for specific features/combinations
 # check .json diff of COMMIT_JSON_MAPS
