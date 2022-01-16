@@ -23,6 +23,7 @@
 #include <array>
 #include <tuple>
 #include <variant>
+#include <vector>
 #include <unordered_map>
 
 #include <common/cmdlib.hh>
@@ -1753,7 +1754,7 @@ struct gamedef_t
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
     virtual void init_filesystem(const std::filesystem::path &source) const = 0;
-    virtual const std::initializer_list<qvec3b> &get_default_palette() const = 0;
+    virtual const std::vector<qvec3b> &get_default_palette() const = 0;
 };
 
 // BSP version struct & instances

@@ -26,6 +26,20 @@
 
 #include <fmt/format.h>
 
+static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
+{
+    Q_assert((bytes.size() % 3) == 0);
+
+    std::vector<qvec3b> result;
+    result.reserve(bytes.size() / 3);
+
+    for (const uint8_t *it = bytes.begin(); it < bytes.end(); it += 3) {
+        result.emplace_back(it[0], it[1], it[2]);
+    }
+
+    return result;
+}
+
 struct gamedef_generic_t : public gamedef_t
 {
     gamedef_generic_t() : gamedef_t("") { id = GAME_UNKNOWN; }
@@ -72,7 +86,7 @@ struct gamedef_generic_t : public gamedef_t
 
     void init_filesystem(const fs::path &) const { throw std::bad_cast(); };
 
-    const std::initializer_list<qvec3b> &get_default_palette() const { throw std::bad_cast(); };
+    const std::vector<qvec3b> &get_default_palette() const { throw std::bad_cast(); };
 };
 
 template<gameid_t ID>
@@ -284,9 +298,9 @@ struct gamedef_q1_like_t : public gamedef_t
         // filesystem.
     }
 
-    const std::initializer_list<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const
     {
-        static constexpr std::initializer_list<uint8_t> palette
+        static constexpr std::initializer_list<uint8_t> palette_bytes
         {
             0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63, 63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139,
             139, 139, 155, 155, 155, 171, 171, 171, 187, 187, 187, 203, 203, 203, 219, 219, 219, 235, 235, 235, 15, 11, 7,
@@ -319,7 +333,8 @@ struct gamedef_q1_like_t : public gamedef_t
             0, 0, 255, 0, 0, 255, 243, 147, 255, 247, 199, 255, 255, 255, 159, 91, 83
         };
 
-        return reinterpret_cast<const std::initializer_list<qvec3b> &>(palette);
+        static const auto palette = make_palette(palette_bytes);
+        return palette;
     }
 };
 
@@ -337,9 +352,9 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
         return hulls;
     }
 
-    const std::initializer_list<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const
     {
-        static constexpr std::initializer_list<uint8_t> palette
+        static constexpr std::initializer_list<uint8_t> palette_bytes
         {
             0, 0, 0, 0, 0, 0, 8, 8, 8, 16, 16, 16, 24, 24, 24, 32, 32, 32, 40, 40, 40, 48, 48, 48, 56, 56, 56, 64, 64, 64, 72,
             72, 72, 80, 80, 80, 84, 84, 84, 88, 88, 88, 96, 96, 96, 104, 104, 104, 112, 112, 112, 120, 120, 120, 128, 128,
@@ -373,7 +388,8 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
             252, 172, 24, 252, 252, 252
         };
         
-        return reinterpret_cast<const std::initializer_list<qvec3b> &>(palette);
+        static const auto palette = make_palette(palette_bytes);
+        return palette;
     }
 };
 
@@ -389,7 +405,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         return hulls;
     }
 
-    const std::initializer_list<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const
     {
         static constexpr std::initializer_list<qvec3b> palette{};
         return palette;
@@ -694,9 +710,9 @@ public:
         discoverArchives(gamedir);
     }
 
-    const std::initializer_list<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const
     {
-        static constexpr std::initializer_list<uint8_t> palette
+        static constexpr std::initializer_list<uint8_t> palette_bytes
         {
             0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63, 63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139,
             139, 139, 155, 155, 155, 171, 171, 171, 187, 187, 187, 203, 203, 203, 219, 219, 219, 235, 235, 235, 99, 75, 35,
@@ -728,7 +744,8 @@ public:
             55, 55, 255, 255, 0, 0, 0, 0, 255, 43, 43, 35, 27, 27, 23, 19, 19, 15, 235, 151, 127, 195, 115, 83, 159, 87, 51,
             123, 63, 27, 235, 211, 199, 199, 171, 155, 167, 139, 119, 135, 107, 87, 159, 91, 83
         };
-        return reinterpret_cast<const std::initializer_list<qvec3b> &>(palette);
+        static const auto palette = make_palette(palette_bytes);
+        return palette;
     }
 };
 
