@@ -43,12 +43,15 @@ inline auto untie(const std::tuple<T...> &tuple)
 struct parser_t
 {
     const char *pos;
+    const char *end;
     uint32_t linenum = 1;
     std::string token;
 
-    parser_t(const char *data) : pos(data) { }
+    parser_t(const char *data, const char *in_end) : pos(data), end(in_end) { }
 
     bool parse_token(parseflags flags = PARSE_NORMAL);
 
     auto state() { return std::tie(pos, linenum); }
+
+    bool at_end() const { return pos >= end; };
 };

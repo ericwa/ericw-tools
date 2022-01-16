@@ -37,8 +37,8 @@ bool parser_t::parse_token(parseflags flags)
 
 skipspace:
     /* skip space */
-    while (*pos <= 32) {
-        if (!*pos) {
+    while (at_end() || *pos <= 32) {
+        if (at_end() || !*pos) {
             if (flags & PARSE_OPTIONAL)
                 return false;
             if (flags & PARSE_SAMELINE)

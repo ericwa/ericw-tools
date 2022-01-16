@@ -1847,7 +1847,8 @@ mapentity_t LoadExternalMap(const char *filename)
         FError("Couldn't load external map file \"{}.\"\n", filename);
     }
 
-    parser_t parser(reinterpret_cast<const char *>(file->data()));
+    const char *begin = reinterpret_cast<const char *>(file->data());
+    parser_t parser(begin, begin + file->size());
 
     // parse the worldspawn
     if (!ParseEntity(parser, &dest)) {
@@ -1895,7 +1896,8 @@ void LoadMapFile(void)
             return;
         }
 
-        parser_t parser(reinterpret_cast<const char *>(file->data()));
+        const char *begin = reinterpret_cast<const char *>(file->data());
+        parser_t parser(begin, begin + file->size());
 
         for (int i = 0;; i++) {
             mapentity_t &entity = map.entities.emplace_back();
