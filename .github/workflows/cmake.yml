@@ -14,7 +14,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-20.04, macos-10.15]
-
+        use-asan: [YES, NO]
+    env:
+        # Expose to the build-*.sh in an environment variable
+        USE_ASAN: ${{ matrix.use-asan }}
     steps:
     - uses: actions/checkout@v2
       with:

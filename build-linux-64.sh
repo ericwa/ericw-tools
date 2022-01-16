@@ -20,7 +20,12 @@ tar xf tbb.tgz
 EMBREE_CMAKE_DIR="$(pwd)/embree-3.13.1.x86_64.linux/lib/cmake/embree-3.13.1"
 TBB_CMAKE_DIR="$(pwd)/oneapi-tbb-2021.3.0/lib/cmake"
 
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
+# check USE_ASAN environment variable (see cmake.yml)
+if [ "$USE_ASAN" == "YES" ]; then
+  cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR" -DERICWTOOLS_ASAN=YES
+else
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
+fi
 make -j8 VERBOSE=1 || exit 1
 make -j8 VERBOSE=1 testlight || exit 1
 make -j8 VERBOSE=1 testqbsp || exit 1

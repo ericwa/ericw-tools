@@ -66,6 +66,13 @@ if (WIN32)
 	endif (MSVC)
 endif (WIN32)
 
+# Pass -DERICWTOOLS_ASAN=YES to enable for all targets
+if (ERICWTOOLS_ASAN)
+	message(STATUS "Enabling ASan on all targets")
+	add_compile_options(-fsanitize=address)
+	add_link_options(-fsanitize=address)
+endif()
+
 # 10.9: minimum version that supports unordered_map
 # 10.14: required by tbb 2021.3.0 (due to use of alignas)
 # 10.15: required by std::filesytstem

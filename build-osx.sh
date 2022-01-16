@@ -32,7 +32,12 @@ tar xf "$TBB_TGZ_NAME"
 
 EMBREE_CMAKE_DIR="$(pwd)/$EMBREE_DIR_NAME/lib/cmake/embree-3.13.0"
 TBB_CMAKE_DIR="$(pwd)/${TBB_DIR_NAME}/lib/cmake"
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
+# check USE_ASAN environment variable (see cmake.yml)
+if [ "$USE_ASAN" == "YES" ]; then
+  cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR" -DERICWTOOLS_ASAN=YES
+else
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
+fi
 make -j8 || exit 1
 make -j8 testlight || exit 1
 make -j8 testqbsp || exit 1
