@@ -85,7 +85,7 @@ namespace img
             LogPrint("INFO: Falling back to built-in palette.\n");
         }
 
-        auto pal = game->get_default_palette();
+        auto &pal = game->get_default_palette();
 
         std::copy(pal.begin(), pal.end(), std::back_inserter(palette));
     }

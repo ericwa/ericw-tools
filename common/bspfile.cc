@@ -407,7 +407,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 
     const std::vector<qvec3b> &get_default_palette() const
     {
-        static constexpr std::initializer_list<qvec3b> palette{};
+        static const std::vector<qvec3b> palette;
         return palette;
     }
 };
