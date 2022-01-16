@@ -1404,7 +1404,7 @@ bool ParseLightsFile(const std::filesystem::path &fname)
     while (!f.eof()) {
         std::getline(f, buf);
 
-        parser_t parser(buf.c_str());
+        parser_t parser(buf.data(), buf.data() + buf.size());
 
         if (!parser.parse_token())
             continue;

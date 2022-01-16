@@ -3,6 +3,8 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
 
+#include <cstring>
+
 // FIXME: Clear global data (planes, etc) between each test
 
 static face_t *Brush_FirstFaceWithTextureName(brush_t *brush, const char *texname)
@@ -30,7 +32,7 @@ static mapentity_t LoadMap(const char *map)
     options.target_version = &bspver_q1;
     options.target_game = options.target_version->game;
 
-    parser_t parser(map);
+    parser_t parser(map, map + strlen(map));
 
     mapentity_t worldspawn;
     // FIXME: adds the brush to the global map...

@@ -1032,7 +1032,8 @@ static void DecompileEntity(
         } else if (areaportal_brush && keyValue.first == "style") {
             continue;
         } else if (modelNum > 0 && keyValue.first == "origin") {
-            parser_t parser(keyValue.second.data());
+            auto &value = keyValue.second;
+            parser_t parser(value.data(), value.data() + value.size());
             qvec3d vec;
             parser.parse_token();
             vec[0] = stof(parser.token);
