@@ -116,6 +116,14 @@ void SubdivideFace(face_t *f, face_t **prevptr)
     }
 }
 
+static void FreeNode(node_t* node)
+{
+    if (node->markfaces) {
+        delete node->markfaces;
+    }
+    delete node;
+}
+
 /*
 =============================================================================
 GatherNodeFaces
@@ -143,7 +151,7 @@ static void GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
         GatherNodeFaces_r(node->children[0], planefaces);
         GatherNodeFaces_r(node->children[1], planefaces);
     }
-    delete node;
+    FreeNode(node);
 }
 
 /*
