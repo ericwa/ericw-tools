@@ -26,7 +26,8 @@ jobs:
     - name: Linux Build
       if: runner.os == 'Linux'
       run: |
-          sudo apt install -y groff 
+          sudo apt-get update
+          sudo apt-get install -y groff
           ./build-linux-64.sh
 
     - name: macOS Build
