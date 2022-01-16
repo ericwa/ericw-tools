@@ -450,7 +450,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
 
             json &mips = tex["mips"] = json::array();
 
-            const qvec3b *pal = src_tex.palette.empty() ? bspdata.loadversion->game->get_default_palette().begin() : src_tex.palette.data();
+            const qvec3b *pal = src_tex.palette.empty() ? bspdata.loadversion->game->get_default_palette().data() : src_tex.palette.data();
 
             for (size_t i = 0; i < src_tex.data.size(); i++) {
                 mips.emplace_back(serialize_image(pal, src_tex.data[i].get(), src_tex.width >> i, src_tex.height >> i));
