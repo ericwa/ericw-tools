@@ -47,7 +47,15 @@ struct parser_t
     uint32_t linenum = 1;
     std::string token;
 
-    parser_t(const char *data, const char *in_end) : pos(data), end(in_end) { }
+    // base constructor; accept raw start & length
+    parser_t(const void *start, size_t length) : pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length) { }
+
+    // pull from string_view; note that the string view must live for the entire
+    // duration of the parser's life time
+    parser_t(const std::string_view &view) : parser_t(&view.front(), view.size()) { }
+
+    // pull from C string; made explicit because this is error-prone
+    explicit parser_t(const char *str) : parser_t(str, strlen(str)) { }
 
     bool parse_token(parseflags flags = PARSE_NORMAL);
 

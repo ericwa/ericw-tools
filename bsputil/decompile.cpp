@@ -1033,7 +1033,7 @@ static void DecompileEntity(
             continue;
         } else if (modelNum > 0 && keyValue.first == "origin") {
             auto &value = keyValue.second;
-            parser_t parser(value.data(), value.data() + value.size());
+            parser_t parser(value);
             qvec3d vec;
             parser.parse_token();
             vec[0] = stof(parser.token);

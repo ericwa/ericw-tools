@@ -32,7 +32,7 @@ static mapentity_t LoadMap(const char *map)
     options.target_version = &bspver_q1;
     options.target_game = options.target_version->game;
 
-    parser_t parser(map, map + strlen(map));
+    parser_t parser(map);
 
     mapentity_t worldspawn;
     // FIXME: adds the brush to the global map...
