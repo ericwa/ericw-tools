@@ -22,3 +22,4 @@
 #pragma once
 
 surface_t *GatherNodeFaces(node_t *headnode);
+void FreeNodes(node_t* node);

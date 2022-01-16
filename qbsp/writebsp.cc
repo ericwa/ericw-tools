@@ -108,11 +108,8 @@ static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
 {
     face_t *face, *next;
 
-    // FIXME: free more stuff?
     if (node->planenum == PLANENUM_LEAF) {
-        int contents = node->contents.native;
-        delete node;
-        return contents;
+        return node->contents.native;
     }
 
     /* emit a clipnode */
@@ -128,12 +125,6 @@ static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
     clipnode.children[0] = child0;
     clipnode.children[1] = child1;
 
-    for (face = node->faces; face; face = next) {
-        next = face->next;
-        delete face;
-    }
-
-    delete node;
     return nodenum;
 }
 
@@ -142,7 +133,7 @@ static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
 ExportClipNodes
 
 Called after the clipping hull is completed.  Generates a disk format
-representation and frees the original memory.
+representation.
 
 This gets real ugly.  Gets called twice per entity, once for each clip hull.
 First time just store away data, second time fix up reference points to
