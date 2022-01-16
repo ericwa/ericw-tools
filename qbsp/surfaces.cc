@@ -119,7 +119,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
 static void FreeNode(node_t* node)
 {
     if (node->markfaces) {
-        delete node->markfaces;
+        delete[] node->markfaces;
     }
     delete node;
 }
