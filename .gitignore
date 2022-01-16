@@ -9,6 +9,7 @@ testmaps/*.bsp
 testmaps/*.bsp.qbsplog
 testmaps/*.log
 testmaps/*.prt
+testmaps/*.pts
 testmaps/*.vis
 testmaps/*.texinfo
 testmaps/*.texinfo.json
@@ -16,6 +17,7 @@ testmaps/*.bsp.json
 testmaps/quake_map_source/*.bsp
 testmaps/quake_map_source/*.log
 testmaps/quake_map_source/*.prt
+testmaps/quake_map_source/*.pts
 testmaps/quake_map_source/*.vis
 testmaps/quake_map_source/*.texinfo
 testmaps/quake_map_source/*.bsp.json
