@@ -1906,7 +1906,7 @@ void LoadMapFile(void)
         }
         // Remove dummy entity inserted above
         assert(!map.entities.back().epairs.size());
-        assert(map.entities.back().numbrushes == 0);
+        assert(map.entities.back().brushes.empty());
         map.entities.pop_back();
     }
 

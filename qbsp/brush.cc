@@ -439,13 +439,7 @@ FreeBrushes
 */
 void FreeBrushes(mapentity_t *ent)
 {
-    brush_t *brush, *next;
-
-    for (brush = ent->brushes; brush; brush = next) {
-        next = brush->next;
-        FreeBrush(brush);
-    }
-    ent->brushes = nullptr;
+    ent->brushes.clear();
 }
 
 /*
@@ -798,35 +792,6 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
 
 //=============================================================================
 
-static brush_t *Brush_ListTail(brush_t *brush)
-{
-    if (brush == nullptr) {
-        return nullptr;
-    }
-
-    while (brush->next != nullptr) {
-        brush = brush->next;
-    }
-
-    Q_assert(brush->next == nullptr);
-    return brush;
-}
-
-int Brush_ListCountWithCFlags(const brush_t *brush, int cflags)
-{
-    int cnt = 0;
-    for (const brush_t *b = brush; b; b = b->next) {
-        if (cflags == (b->contents.extended & cflags))
-            cnt++;
-    }
-    return cnt;
-}
-
-int Brush_ListCount(const brush_t *brush)
-{
-    return Brush_ListCountWithCFlags(brush, 0);
-}
-
 int Brush_NumFaces(const brush_t *brush)
 {
     return brush->faces.size();
@@ -834,51 +799,19 @@ int Brush_NumFaces(const brush_t *brush)
 
 void Entity_SortBrushes(mapentity_t *dst)
 {
-    Q_assert(dst->brushes == nullptr);
+    Q_assert(dst->brushes.empty());
 
-    brush_t **nextLink = &dst->brushes;
+    dst->brushes.reserve(dst->detail_illusionary.size() + dst->liquid.size() + dst->detail_fence.size() + dst->detail.size() + dst->sky.size() + dst->solid.size());
 
-    if (dst->detail_illusionary) {
-        brush_t *last = Brush_ListTail(dst->detail_illusionary);
-        *nextLink = dst->detail_illusionary;
-        nextLink = &last->next;
-    }
-    if (dst->liquid) {
-        brush_t *last = Brush_ListTail(dst->liquid);
-        *nextLink = dst->liquid;
-        nextLink = &last->next;
-    }
-    if (dst->detail_fence) {
-        brush_t *last = Brush_ListTail(dst->detail_fence);
-        *nextLink = dst->detail_fence;
-        nextLink = &last->next;
-    }
-    if (dst->detail) {
-        brush_t *last = Brush_ListTail(dst->detail);
-        *nextLink = dst->detail;
-        nextLink = &last->next;
-    }
-    if (dst->sky) {
-        brush_t *last = Brush_ListTail(dst->sky);
-        *nextLink = dst->sky;
-        nextLink = &last->next;
-    }
-    if (dst->solid) {
-        brush_t *last = Brush_ListTail(dst->solid);
-        *nextLink = dst->solid;
-        nextLink = &last->next;
-    }
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->detail_illusionary.begin()), make_move_iterator(dst->detail_illusionary.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->liquid.begin()), make_move_iterator(dst->liquid.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->detail_fence.begin()), make_move_iterator(dst->detail_fence.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->detail.begin()), make_move_iterator(dst->detail.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->sky.begin()), make_move_iterator(dst->sky.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->solid.begin()), make_move_iterator(dst->solid.end()));
 }
 
-/*
-============
-Brush_LoadEntity
-
-hullnum -1 should contain ALL brushes. (used by BSPX_CreateBrushList())
-hullnum 0 does not contain clip brushes.
-============
-*/
-void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
+static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
 {
     const char *classname;
     const mapbrush_t *mapbrush;
@@ -1090,33 +1023,62 @@ void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnu
         if (!brush)
             continue;
 
-        dst->numbrushes++;
         brush->lmshift = lmshift;
 
-        brush_t** front;
-
         if (brush->contents.is_solid(options.target_game)) {
-            front = &dst->solid;
+            dst->solid.emplace_back(brush);
         } else if (brush->contents.is_sky(options.target_game)) {
-            front = &dst->sky;
+            dst->sky.emplace_back(brush);
         } else if (brush->contents.is_detail(CFLAGS_DETAIL)) {
-            front = &dst->detail;
+            dst->detail.emplace_back(brush);
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
-            front = &dst->detail_illusionary;
+            dst->detail_illusionary.emplace_back(brush);
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
-            front = &dst->detail_fence;
+            dst->detail_fence.emplace_back(brush);
         } else {
-            front = &dst->liquid;
-        }
-
-        if (!*front) {
-            *front = brush;
-        } else {
-            Brush_ListTail(*front)->next = brush;
+            dst->liquid.emplace_back(brush);
         }
 
         dst->bounds += brush->bounds;
 
         LogPercent(i + 1, src->nummapbrushes);
     }
+}
+
+/*
+============
+Brush_LoadEntity
+
+hullnum -1 should contain ALL brushes. (used by BSPX_CreateBrushList())
+hullnum 0 does not contain clip brushes.
+============
+*/
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
+{
+    Brush_LoadEntity(entity, entity, hullnum);
+
+    /*
+     * If this is the world entity, find all func_group and func_detail
+     * entities and add their brushes with the appropriate contents flag set.
+     */
+    if (entity == pWorldEnt()) {
+        /*
+         * We no longer care about the order of adding func_detail and func_group,
+         * Entity_SortBrushes will sort the brushes
+         */
+        for (int i = 1; i < map.numentities(); i++) {
+            mapentity_t *source = &map.entities.at(i);
+
+            /* Load external .map and change the classname, if needed */
+            ProcessExternalMapEntity(source);
+
+            ProcessAreaPortal(source);
+
+            if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
+                Brush_LoadEntity(entity, source, hullnum);
+            }
+        }
+    }
+
+    Entity_SortBrushes(entity);
 }

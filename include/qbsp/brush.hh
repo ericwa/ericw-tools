@@ -26,7 +26,6 @@
 
 struct brush_t
 {
-    brush_t *next;
     aabb3d bounds;
     std::vector<face_t> faces;
     contentflags_t contents; /* BSP contents */
@@ -37,8 +36,6 @@ class mapbrush_t;
 
 qplane3d Face_Plane(const face_t *face);
 
-int Brush_ListCountWithCFlags(const brush_t *brush, int cflags);
-int Brush_ListCount(const brush_t *brush);
 int Brush_NumFaces(const brush_t *brush);
 
 enum class rotation_t

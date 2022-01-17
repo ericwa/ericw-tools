@@ -539,16 +539,9 @@ surface_t *CSGFaces(const mapentity_t *entity)
     }
 #endif
 
-    // copy to vector
-    // TODO: change brush list in mapentity_t to a vector so we can skip this
-    std::vector<const brush_t *> brushvec;
-    for (const brush_t *brush = entity->brushes; brush; brush = brush->next) {
-        brushvec.push_back(brush);
-    }
-
     // output vector for the parallel_for
     std::vector<face_t *> brushvec_outsides;
-    brushvec_outsides.resize(brushvec.size());
+    brushvec_outsides.resize(entity->brushes.size());
 
     /*
      * For each brush, clip away the parts that are inside other brushes.
@@ -558,13 +551,12 @@ surface_t *CSGFaces(const mapentity_t *entity)
      *
      * The output of this is a face list for each brush called "outside"
      */
-    tbb::parallel_for(static_cast<size_t>(0), brushvec.size(), [entity, &brushvec, &brushvec_outsides](const size_t i) {
-        const brush_t *brush = brushvec[i];
-        face_t *outside = CopyBrushFaces(brush);
+    tbb::parallel_for(static_cast<size_t>(0), entity->brushes.size(), [entity, &brushvec_outsides](const size_t i) {
+        auto &brush = entity->brushes[i];
+        face_t *outside = CopyBrushFaces(brush.get());
         bool overwrite = false;
-        const brush_t *clipbrush = entity->brushes;
 
-        for (; clipbrush; clipbrush = clipbrush->next) {
+        for (auto &clipbrush : entity->brushes) {
             if (brush == clipbrush) {
                 /* Brushes further down the list overried earlier ones */
                 overwrite = true;
@@ -613,7 +605,7 @@ surface_t *CSGFaces(const mapentity_t *entity)
             face_t *inside = outside;
             outside = NULL;
 
-            RemoveOutsideFaces(clipbrush, &inside, &outside);
+            RemoveOutsideFaces(clipbrush.get(), &inside, &outside);
             for (auto &clipface : clipbrush->faces)
                 ClipInside(&clipface, overwrite, &inside, &outside);
 
@@ -643,7 +635,7 @@ surface_t *CSGFaces(const mapentity_t *entity)
 
                 || (brush->contents.is_fence() &&
                        (clipbrush->contents.is_liquid(options.target_game) || clipbrush->contents.is_fence()))) {
-                SaveInsideFaces(inside, clipbrush, &outside);
+                SaveInsideFaces(inside, clipbrush.get(), &outside);
             } else {
                 FreeFaces(inside);
             }
@@ -655,8 +647,8 @@ surface_t *CSGFaces(const mapentity_t *entity)
 
     // Non parallel part:
     std::map<int, face_t *> planefaces;
-    for (size_t i = 0; i < brushvec.size(); ++i) {
-        const brush_t *brush = brushvec[i];
+    for (size_t i = 0; i < entity->brushes.size(); ++i) {
+        const brush_t *brush = entity->brushes[i].get();
         face_t *outside = brushvec_outsides[i];
 
         /*

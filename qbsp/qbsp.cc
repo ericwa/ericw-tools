@@ -67,10 +67,11 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
             uint32_t b_id = brush_offset;
             std::vector<uint32_t> brushes;
 
-            for (const brush_t *b = entity->brushes; b; b = b->next, b_id++) {
+            for (auto &b : entity->brushes) {
                 if (node->bounds.intersectWith(b->bounds)) {
                     brushes.push_back(b_id);
                 }
+                b_id++;
             }
 
             if (brushes.size()) {
@@ -231,11 +232,11 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 
     brush_state = {};
 
-    for (const brush_t *b = entity->brushes; b; b = b->next) {
+    for (auto &b : entity->brushes) {
         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
             dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
 
-        auto bevels = AddBrushBevels(b);
+        auto bevels = AddBrushBevels(b.get());
 
         for (auto &plane : bevels) {
             map.bsp.dbrushsides.push_back(
@@ -522,54 +523,30 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     /*
      * Init the entity
      */
-    entity->brushes = NULL;
-    entity->solid = NULL;
-    entity->sky = NULL;
-    entity->detail = NULL;
-    entity->detail_illusionary = NULL;
-    entity->detail_fence = NULL;
-    entity->liquid = NULL;
-    entity->numbrushes = 0;
+    entity->brushes.clear();
+    entity->solid.clear();
+    entity->sky.clear();
+    entity->detail.clear();
+    entity->detail_illusionary.clear();
+    entity->detail_fence.clear();
+    entity->liquid.clear();
+    entity->brushes.clear();
     entity->bounds = {};
 
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
     LogPrint(LOG_PROGRESS, "---- Brush_LoadEntity ----\n");
-    Brush_LoadEntity(entity, entity, hullnum);
-
-    // FIXME: copied and pasted to BSPX_CreateBrushList
-    /*
-     * If this is the world entity, find all func_group and func_detail
-     * entities and add their brushes with the appropriate contents flag set.
-     */
-    if (entity == pWorldEnt()) {
-        /*
-         * We no longer care about the order of adding func_detail and func_group,
-         * Entity_SortBrushes will sort the brushes
-         */
-        for (i = 1; i < map.numentities(); i++) {
-            mapentity_t *source = &map.entities.at(i);
-
-            /* Load external .map and change the classname, if needed */
-            ProcessExternalMapEntity(source);
-
-            ProcessAreaPortal(source);
-
-            if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum);
-            }
-        }
-    }
+    Brush_LoadEntity(entity, hullnum);
 
     /* Print brush counts */
     {
-        int solidcount = Brush_ListCount(entity->solid);
-        int skycount = Brush_ListCount(entity->sky);
-        int detail_all_count = Brush_ListCount(entity->detail);
-        int detail_illusionarycount = Brush_ListCount(entity->detail_illusionary);
-        int detail_fence_count = Brush_ListCount(entity->detail_fence);
-        int liquidcount = Brush_ListCount(entity->liquid);
+        int solidcount = entity->solid.size();
+        int skycount = entity->sky.size();
+        int detail_all_count = entity->detail.size();
+        int detail_illusionarycount = entity->detail_illusionary.size();
+        int detail_fence_count = entity->detail_fence.size();
+        int liquidcount = entity->liquid.size();
 
         int nondetailcount = (solidcount + skycount + liquidcount);
         int detailcount = detail_all_count;
@@ -588,9 +565,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         LogPrint(LOG_STAT, "     {:8} planes\n", map.numplanes());
     }
 
-    Entity_SortBrushes(entity);
-
-    if (!entity->brushes && hullnum) {
+    if (entity->brushes.empty() && hullnum) {
         PrintEntity(entity);
         FError("Entity with no valid brushes");
     }
@@ -781,14 +756,14 @@ Generates a submodel's direct brush information to a separate file, so the engin
 hull sizes
 */
 
-void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *brushes)
+static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<brush_t>> &brushes)
 {
     bspxbrushes_permodel permodel {
         1,
         modelnum
     };
 
-    for (brush_t *b = brushes; b; b = b->next) {
+    for (auto &b : brushes) {
         permodel.numbrushes++;
         for (auto &f : b->faces) {
             /*skip axial*/
@@ -808,7 +783,7 @@ void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, brush_t *bru
 
     str <= permodel;
 
-    for (brush_t *b = brushes; b; b = b->next) {
+    for (auto &b : brushes) {
         bspxbrushes_perbrush perbrush {};
 
         for (auto &f : b->faces) {
@@ -899,42 +874,18 @@ static void BSPX_CreateBrushList(void)
             modelnum = atoi(mod + 1);
         }
 
-        ent->brushes = NULL;
-        ent->detail_illusionary = NULL;
-        ent->liquid = NULL;
-        ent->detail_fence = NULL;
-        ent->detail = NULL;
-        ent->sky = NULL;
-        ent->solid = NULL;
+        ent->brushes.clear();
+        ent->detail_illusionary.clear();
+        ent->liquid.clear();
+        ent->detail_fence.clear();
+        ent->detail.clear();
+        ent->sky.clear();
+        ent->solid.clear();
 
-        ent->numbrushes = 0;
-        Brush_LoadEntity(ent, ent, -1);
+        ent->brushes.clear();
+        Brush_LoadEntity(ent, -1);
 
-        // FIXME: copied and pasted from ProcessEntity
-        /*
-         * If this is the world entity, find all func_group and func_detail
-         * entities and add their brushes with the appropriate contents flag set.
-         */
-        if (ent == pWorldEnt()) {
-            /*
-             * We no longer care about the order of adding func_detail and func_group,
-             * Entity_SortBrushes will sort the brushes
-             */
-            for (int i = 1; i < map.numentities(); i++) {
-                mapentity_t *source = &map.entities.at(i);
-
-                /* Load external .map and change the classname, if needed */
-                ProcessExternalMapEntity(source);
-
-                if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                    Brush_LoadEntity(ent, source, -1);
-                }
-            }
-        }
-
-        Entity_SortBrushes(ent);
-
-        if (!ent->brushes)
+        if (ent->brushes.empty())
             continue; // non-bmodel entity
 
         BSPX_Brushes_AddModel(&ctx, modelnum, ent->brushes);
