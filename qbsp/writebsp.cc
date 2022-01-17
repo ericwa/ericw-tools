@@ -106,8 +106,6 @@ ExportClipNodes
 */
 static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
 {
-    face_t *face, *next;
-
     if (node->planenum == PLANENUM_LEAF) {
         return node->contents.native;
     }

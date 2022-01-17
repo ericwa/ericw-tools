@@ -28,7 +28,7 @@ struct brush_t
 {
     brush_t *next;
     aabb3d bounds;
-    face_t *faces;
+    std::vector<face_t> faces;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
 };
