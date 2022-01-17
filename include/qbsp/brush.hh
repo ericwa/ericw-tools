@@ -36,8 +36,6 @@ class mapbrush_t;
 
 qplane3d Face_Plane(const face_t *face);
 
-int Brush_NumFaces(const brush_t *brush);
-
 enum class rotation_t
 {
     none,
@@ -51,4 +49,3 @@ void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const qplane3d &plane, int *side);
 
-void FreeBrush(brush_t *brush);

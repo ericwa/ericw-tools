@@ -443,16 +443,6 @@ void FreeBrushes(mapentity_t *ent)
 }
 
 /*
-=====================
-FreeBrush
-=====================
-*/
-void FreeBrush(brush_t *brush)
-{
-    delete brush;
-}
-
-/*
 ==============================================================================
 
 BEVELED CLIPPING HULL GENERATION
@@ -788,11 +778,6 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
 }
 
 //=============================================================================
-
-int Brush_NumFaces(const brush_t *brush)
-{
-    return brush->faces.size();
-}
 
 // temporary brush lists to hold sorting data
 struct brush_types_t

@@ -7,15 +7,6 @@
 
 // FIXME: Clear global data (planes, etc) between each test
 
-static face_t *Brush_FirstFaceWithTextureName(brush_t *brush, const char *texname)
-{
-    for (face_t *face = brush->faces; face; face = face->next) {
-        if (map.texinfoTextureName(face->texinfo) == texname)
-            return face;
-    }
-    return nullptr;
-}
-
 static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brush, const std::string &texname)
 {
     for (int i = 0; i < brush->numfaces; i++) {
@@ -118,75 +109,12 @@ TEST(qbsp, duplicatePlanes)
 
     mapentity_t worldspawn = LoadMap(mapWithDuplicatePlanes);
     ASSERT_EQ(1, worldspawn.nummapbrushes);
-    EXPECT_EQ(0, worldspawn.numbrushes);
+    EXPECT_EQ(0, worldspawn.brushes.size());
     EXPECT_EQ(6, worldspawn.mapbrush(0).numfaces);
 
-    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, {}, rotation_t::none, 0);
-    ASSERT_NE(nullptr, brush);
-    EXPECT_EQ(6, Brush_NumFaces(brush));
-    FreeBrush(brush);
-}
-
-static brush_t *load128x128x32Brush()
-{
-    /* 128x128x32 rectangular brush */
-    const char *map = R"(
-    {
-        "classname" "worldspawn"
-        {
-            ( -64 -64 -16 ) ( -64 -63 -16 ) ( -64 -64 -15 ) __TB_empty 0 0 0 1 1
-            ( 64 64 16 ) ( 64 64 17 ) ( 64 65 16 ) __TB_empty 0 0 0 1 1
-            ( -64 -64 -16 ) ( -64 -64 -15 ) ( -63 -64 -16 ) __TB_empty 0 0 0 1 1
-            ( 64 64 16 ) ( 65 64 16 ) ( 64 64 17 ) __TB_empty 0 0 0 1 1
-            ( 64 64 16 ) ( 64 65 16 ) ( 65 64 16 ) __TB_empty 0 0 0 1 1
-            ( -64 -64 -16 ) ( -63 -64 -16 ) ( -64 -63 -16 ) __TB_empty 0 0 0 1 1
-        }
-    }
-    )";
-
-    mapentity_t worldspawn = LoadMap(map);
-    Q_assert(1 == worldspawn.nummapbrushes);
-
-    brush_t *brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, {}, rotation_t::none, 0);
-    Q_assert(nullptr != brush);
-
-    brush->contents = {CONTENTS_SOLID};
-
-    return brush;
-}
-
-static void checkForAllCubeNormals(const brush_t *brush)
-{
-    const qvec3d wanted[6] = {{-1, 0, 0}, {1, 0, 0}, {0, -1, 0}, {0, 1, 0}, {0, 0, -1}, {0, 0, 1}};
-
-    bool found[6];
-    for (int i = 0; i < 6; i++) {
-        found[i] = false;
-    }
-
-    for (const face_t *face = brush->faces; face; face = face->next) {
-        const qplane3d faceplane = Face_Plane(face);
-
-        for (int i = 0; i < 6; i++) {
-            if (qv::epsilonEqual(wanted[i], faceplane.normal, NORMAL_EPSILON)) {
-                EXPECT_FALSE(found[i]);
-                found[i] = true;
-            }
-        }
-    }
-
-    for (int i = 0; i < 6; i++) {
-        EXPECT_TRUE(found[i]);
-    }
-}
-
-static void checkCube(const brush_t *brush)
-{
-    EXPECT_EQ(6, Brush_NumFaces(brush));
-
-    checkForAllCubeNormals(brush);
-
-    EXPECT_EQ(contentflags_t{CONTENTS_SOLID}, brush->contents);
+    std::optional<brush_t> brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, {}, rotation_t::none, 0);
+    ASSERT_NE(std::nullopt, brush);
+    EXPECT_EQ(6, brush->faces.size());
 }
 
 /**
