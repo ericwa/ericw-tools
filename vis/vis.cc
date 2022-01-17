@@ -531,10 +531,10 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 
     /* Allocate for worst case where RLE might grow the data (unlikely) */
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        compressed = new uint8_t[(portalleafs * 2) / 8];
+        compressed = new uint8_t[max(1, (portalleafs * 2) / 8)];
         len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
     } else {
-        compressed = new uint8_t[(portalleafs_real * 2) / 8];
+        compressed = new uint8_t[max(1, (portalleafs_real * 2) / 8)];
         len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
     }
 

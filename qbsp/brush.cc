@@ -303,7 +303,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
     vec_t r;
     std::optional<winding_t> w;
     qbsp_plane_t plane;
-    std::vector<face_t> facelist;
+    std::list<face_t> facelist;
     qvec3d point;
     vec_t max, min;
 
@@ -345,7 +345,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface.linenum);
         
         // this face is a keeper
-        face_t &f = facelist.emplace_back();
+        face_t &f = facelist.emplace_front();
         f.planenum = PLANENUM_LEAF;
 
         f.w.resize(w->size());
@@ -414,7 +414,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         hullbrush->bounds = {-delta, delta};
     }
 
-    return facelist;
+    return { std::make_move_iterator(facelist.begin()), std::make_move_iterator(facelist.end()) };
 }
 
 /*
