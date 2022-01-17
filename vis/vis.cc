@@ -455,65 +455,6 @@ void *LeafThread(void *arg)
 */
 int64_t totalvis;
 
-static void LeafFlow(int leafnum, mleaf_t *dleaf, const mbsp_t *bsp)
-{
-    leaf_t *leaf;
-    uint8_t *outbuffer;
-    uint8_t *compressed;
-    int i, j, shift, len;
-    int numvis;
-    uint8_t *dest;
-    const portal_t *p;
-
-    /*
-     * flow through all portals, collecting visible bits
-     */
-    outbuffer = (bsp->loadversion->game->id == GAME_QUAKE_II ? uncompressed_q2 : uncompressed) + leafnum * leafbytes;
-    leaf = &leafs[leafnum];
-    for (i = 0; i < leaf->numportals; i++) {
-        p = leaf->portals[i];
-        if (p->status != pstat_done)
-            FError("portal not done");
-        for (j = 0; j < leafbytes; j++) {
-            shift = (j << 3) & leafbits_t::mask;
-            outbuffer[j] |= (p->visbits.data()[j >> (leafbits_t::shift - 3)] >> shift) & 0xff;
-        }
-    }
-
-    if (outbuffer[leafnum >> 3] & (1 << (leafnum & 7)))
-        LogPrint("WARNING: Leaf portals saw into leaf ({})\n", leafnum);
-    outbuffer[leafnum >> 3] |= (1 << (leafnum & 7));
-
-    numvis = 0;
-    for (i = 0; i < portalleafs; i++)
-        if (outbuffer[i >> 3] & (1 << (i & 3)))
-            numvis++;
-
-    /*
-     * compress the bit string
-     */
-    if (verbose > 1)
-        LogPrint("leaf {:4} : {:4} visible\n", leafnum, numvis);
-    totalvis += numvis;
-
-    /* Allocate for worst case where RLE might grow the data (unlikely) */
-    /* Also, always allocate at least 1 byte (for vising single leaf test maps) */
-    compressed = new uint8_t[max(1, (portalleafs * 2) / 8)];
-    len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
-
-    dest = vismap_p;
-    vismap_p += len;
-
-    if (vismap_p > vismap_end)
-        FError("Vismap expansion overflow");
-
-    /* leaf 0 is a common solid */
-    dleaf->visofs = dest - vismap;
-
-    memcpy(dest, compressed, len);
-    delete[] compressed;
-}
-
 static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 {
     leaf_t *leaf;
@@ -686,19 +627,11 @@ void CalcVis(mbsp_t *bsp)
     //
     // assemble the leaf vis lists by oring and compressing the portal lists
     //
-    if (portalleafs == portalleafs_real && bsp->loadversion->game->id != GAME_QUAKE_II) {
-        // Legacy, non-detail Q1 vis codepath
-        // FIXME: Should be possible to remove this and just use ClusterFlow even on Q1 maps
-        // with no detail.
-        for (i = 0; i < portalleafs; i++)
-            LeafFlow(i, &bsp->dleafs[i + 1], bsp);
-    } else {
-        LogPrint("Expanding clusters...\n");
-        leafbits_t buffer(portalleafs);
-        for (i = 0; i < portalleafs; i++) {
-            ClusterFlow(i, buffer, bsp);
-            buffer.clear();
-        }
+    LogPrint("Expanding clusters...\n");
+    leafbits_t buffer(portalleafs);
+    for (i = 0; i < portalleafs; i++) {
+        ClusterFlow(i, buffer, bsp);
+        buffer.clear();
     }
 
     int64_t avg = totalvis;
@@ -868,6 +801,11 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
 
     // No clusters
     if (portalleafs == portalleafs_real) {
+        // e.g. Quake 1, PRT1 (no func_detail).
+        // Assign the identity cluster numbers for consistency
+        for (i = 0; i < portalleafs; i++) {
+            bsp->dleafs[i + 1].cluster = i;
+        }
         return;
     }
 

@@ -697,6 +697,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     FreeBrushes(entity);
+    FreeNodes(nodes);
 }
 
 /*

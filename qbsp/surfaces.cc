@@ -118,10 +118,28 @@ void SubdivideFace(face_t *f, face_t **prevptr)
 
 static void FreeNode(node_t* node)
 {
+    if (node->faces) {
+        face_t *f, *next;
+        for (f = node->faces; f; f = next) {
+            next = f->next;
+            delete f;        
+        }
+        node->faces = nullptr;
+    }
     if (node->markfaces) {
         delete[] node->markfaces;
+        node->markfaces = nullptr;
     }
     delete node;
+}
+
+void FreeNodes(node_t* node)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        FreeNodes(node->children[0]);
+        FreeNodes(node->children[1]);
+    }
+    FreeNode(node);
 }
 
 /*
@@ -148,6 +166,8 @@ static void GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
                 planefaces[f->planenum] = f;
             }
         }
+        // don't attempt to free node->faces again as ownership has moved to the planefaces map
+        node->faces = nullptr;
         GatherNodeFaces_r(node->children[0], planefaces);
         GatherNodeFaces_r(node->children[1], planefaces);
     }
