@@ -200,7 +200,7 @@ outside the brush to the outside list, without splitting them. This saves us
 time in mergefaces later on (and sometimes a lot of memory)
 =================
 */
-static void RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **outside)
+static void RemoveOutsideFaces(const brush_t &brush, face_t **inside, face_t **outside)
 {
     face_t *face = *inside;
     face_t *next = nullptr;
@@ -208,7 +208,7 @@ static void RemoveOutsideFaces(const brush_t *brush, face_t **inside, face_t **o
     while (face) {
         next = face->next;
         std::optional<winding_t> w = face->w;
-        for (auto &clipface : brush->faces) {
+        for (auto &clipface : brush.faces) {
             qbsp_plane_t clipplane = map.planes[clipface.planenum];
             if (!clipface.planeside) {
                 clipplane = -clipplane;
@@ -390,9 +390,9 @@ match given brush. If the inside contents are empty, the given brush's
 contents override the face inside contents.
 ==================
 */
-static void SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **savelist)
+static void SaveInsideFaces(face_t *face, const brush_t &clipbrush, face_t **savelist)
 {
-    Q_assert(!clipbrush->contents.is_solid(options.target_game));
+    Q_assert(!clipbrush.contents.is_solid(options.target_game));
 
     face_t *next;
 
@@ -401,10 +401,10 @@ static void SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **sav
         // Q_assert(face->contents[1] == CONTENTS_SOLID);
 
         next = face->next;
-        face->contents[0] = clipbrush->contents;
+        face->contents[0] = clipbrush.contents;
 
         if ((face->contents[1].is_solid(options.target_game) || face->contents[1].is_sky(options.target_game)) &&
-            clipbrush->contents.is_detail(CFLAGS_DETAIL)) {
+            clipbrush.contents.is_detail(CFLAGS_DETAIL)) {
             // This case is when a structural and detail brush are touching,
             // and we want to save the sturctural face that is
             // touching detail.
@@ -436,11 +436,11 @@ static void SaveInsideFaces(face_t *face, const brush_t *clipbrush, face_t **sav
          * The only brushes with empty contents currently are hint brushes.
          */
         if (face->contents[1].is_empty(options.target_game)) {
-            face->contents[1] = clipbrush->contents;
+            face->contents[1] = clipbrush.contents;
         }
         if (face->contents[1].is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
             bool wasMirrorInside = !!(face->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE);
-            face->contents[1] = clipbrush->contents;
+            face->contents[1] = clipbrush.contents;
             face->contents[1].extended |= CFLAGS_WAS_ILLUSIONARY;
             if (wasMirrorInside) {
                 face->contents[1].extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
@@ -498,18 +498,18 @@ surface_t *BuildSurfaces(const std::map<int, face_t *> &planefaces)
 CopyBrushFaces
 ==================
 */
-static face_t *CopyBrushFaces(const brush_t *brush)
+static face_t *CopyBrushFaces(const brush_t &brush)
 {
     face_t *facelist, *newface;
 
     facelist = NULL;
-    for (auto &face : brush->faces) {
+    for (auto &face : brush.faces) {
         brushfaces++;
         newface = new face_t(face);
         newface->contents[0] = options.target_game->create_empty_contents();
-        newface->contents[1] = brush->contents;
-        newface->lmshift[0] = brush->lmshift;
-        newface->lmshift[1] = brush->lmshift;
+        newface->contents[1] = brush.contents;
+        newface->lmshift[0] = brush.lmshift;
+        newface->lmshift[1] = brush.lmshift;
         newface->next = facelist;
         facelist = newface;
     }
@@ -553,33 +553,33 @@ surface_t *CSGFaces(const mapentity_t *entity)
      */
     tbb::parallel_for(static_cast<size_t>(0), entity->brushes.size(), [entity, &brushvec_outsides](const size_t i) {
         auto &brush = entity->brushes[i];
-        face_t *outside = CopyBrushFaces(brush.get());
+        face_t *outside = CopyBrushFaces(brush);
         bool overwrite = false;
 
         for (auto &clipbrush : entity->brushes) {
-            if (brush == clipbrush) {
+            if (&brush == &clipbrush) {
                 /* Brushes further down the list overried earlier ones */
                 overwrite = true;
                 continue;
             }
-            if (clipbrush->contents.is_empty(options.target_game)) {
+            if (clipbrush.contents.is_empty(options.target_game)) {
                 /* Ensure hint never clips anything */
                 continue;
             }
 
-            if (clipbrush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY) &&
-                !brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+            if (clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY) &&
+                !brush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
                 /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
                 continue;
             }
 
-            if (clipbrush->contents.is_detail(CFLAGS_DETAIL_FENCE) && !brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
+            if (clipbrush.contents.is_detail(CFLAGS_DETAIL_FENCE) && !brush.contents.is_detail(CFLAGS_DETAIL_FENCE)) {
                 /* CONTENTS_DETAIL_FENCE never clips anything but itself */
                 continue;
             }
 
-            if (clipbrush->contents.types_equal(brush->contents, options.target_game) &&
-                !clipbrush->contents.clips_same_type()) {
+            if (clipbrush.contents.types_equal(brush.contents, options.target_game) &&
+                !clipbrush.contents.clips_same_type()) {
                 /* _noclipfaces key */
                 continue;
             }
@@ -588,9 +588,9 @@ surface_t *CSGFaces(const mapentity_t *entity)
             // TODO: is this a disjoint check? brush->bounds.disjoint(clipbrush->bounds)?
             int i;
             for (i = 0; i < 3; i++) {
-                if (brush->bounds.mins()[i] > clipbrush->bounds.maxs()[i])
+                if (brush.bounds.mins()[i] > clipbrush.bounds.maxs()[i])
                     break;
-                if (brush->bounds.maxs()[i] < clipbrush->bounds.mins()[i])
+                if (brush.bounds.maxs()[i] < clipbrush.bounds.mins()[i])
                     break;
             }
             if (i < 3)
@@ -605,8 +605,8 @@ surface_t *CSGFaces(const mapentity_t *entity)
             face_t *inside = outside;
             outside = NULL;
 
-            RemoveOutsideFaces(clipbrush.get(), &inside, &outside);
-            for (auto &clipface : clipbrush->faces)
+            RemoveOutsideFaces(clipbrush, &inside, &outside);
+            for (auto &clipface : clipbrush.faces)
                 ClipInside(&clipface, overwrite, &inside, &outside);
 
             // inside = parts of `brush` that are inside `clipbrush`
@@ -620,22 +620,22 @@ surface_t *CSGFaces(const mapentity_t *entity)
              *
              * FIXME: clean this up, the predicate seems to be "can you see 'brush' from inside 'clipbrush'"
              */
-            if ((brush->contents.is_solid(options.target_game) && !clipbrush->contents.is_solid(options.target_game))
+            if ((brush.contents.is_solid(options.target_game) && !clipbrush.contents.is_solid(options.target_game))
 
                 ||
-                (brush->contents.is_sky(options.target_game) && (!clipbrush->contents.is_solid(options.target_game) &&
-                                                                    !clipbrush->contents.is_sky(options.target_game)))
+                (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                                    !clipbrush.contents.is_sky(options.target_game)))
 
-                || (brush->contents.is_detail(CFLAGS_DETAIL) && (!clipbrush->contents.is_solid(options.target_game) &&
-                                                                    !clipbrush->contents.is_sky(options.target_game) &&
-                                                                    !clipbrush->contents.is_detail(CFLAGS_DETAIL)))
+                || (brush.contents.is_detail(CFLAGS_DETAIL) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                                    !clipbrush.contents.is_sky(options.target_game) &&
+                                                                    !clipbrush.contents.is_detail(CFLAGS_DETAIL)))
 
-                || (brush->contents.is_liquid(options.target_game) &&
-                       clipbrush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
+                || (brush.contents.is_liquid(options.target_game) &&
+                       clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
 
-                || (brush->contents.is_fence() &&
-                       (clipbrush->contents.is_liquid(options.target_game) || clipbrush->contents.is_fence()))) {
-                SaveInsideFaces(inside, clipbrush.get(), &outside);
+                || (brush.contents.is_fence() &&
+                       (clipbrush.contents.is_liquid(options.target_game) || clipbrush.contents.is_fence()))) {
+                SaveInsideFaces(inside, clipbrush, &outside);
             } else {
                 FreeFaces(inside);
             }
@@ -648,14 +648,14 @@ surface_t *CSGFaces(const mapentity_t *entity)
     // Non parallel part:
     std::map<int, face_t *> planefaces;
     for (size_t i = 0; i < entity->brushes.size(); ++i) {
-        const brush_t *brush = entity->brushes[i].get();
+        const brush_t &brush = entity->brushes[i];
         face_t *outside = brushvec_outsides[i];
 
         /*
          * All of the faces left on the outside list are real surface faces
          * If the brush is non-solid, mirror faces for the inside view
          */
-        const bool mirror = options.fContentHack ? true : !brush->contents.is_solid(options.target_game);
+        const bool mirror = options.fContentHack ? true : !brush.contents.is_solid(options.target_game);
         SaveFacesToPlaneList(outside, mirror, planefaces);
     }
     surface_t *surfaces = BuildSurfaces(planefaces);

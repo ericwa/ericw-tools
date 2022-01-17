@@ -739,11 +739,10 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
-    const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
+std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+                                 const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
-    brush_t *brush;
     std::vector<face_t> facelist;
 
     // create the faces
@@ -770,7 +769,7 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
     if (facelist.empty()) {
         LogPrint("WARNING: Couldn't create brush faces\n");
         LogPrint("^ brush at line {} of .map file\n", hullbrush.linenum);
-        return NULL;
+        return std::nullopt;
     }
 
     if (hullnum > 0) {
@@ -781,12 +780,10 @@ brush_t *LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const con
     }
 
     // create the brush
-    brush = new brush_t{};
-
-    brush->contents = contents;
-    brush->faces = facelist;
-    brush->bounds = hullbrush.bounds;
-
+    brush_t brush {};
+    brush.contents = contents;
+    brush.faces = std::move(facelist);
+    brush.bounds = hullbrush.bounds;
     return brush;
 }
 
@@ -797,21 +794,38 @@ int Brush_NumFaces(const brush_t *brush)
     return brush->faces.size();
 }
 
-void Entity_SortBrushes(mapentity_t *dst)
+// temporary brush lists to hold sorting data
+struct brush_types_t
 {
+    std::vector<brush_t> detail_illusionary, liquid, detail_fence, detail, sky, solid;
+};
+
+static brush_stats_t Entity_SortBrushes(mapentity_t *dst, brush_types_t &types)
+{
+    brush_stats_t stats;
+
     Q_assert(dst->brushes.empty());
+    
+    stats.detail_illusionary = types.detail_illusionary.size();
+    stats.liquid = types.liquid.size();
+    stats.detail_fence = types.detail_fence.size();
+    stats.detail = types.detail.size();
+    stats.sky = types.sky.size();
+    stats.solid = types.solid.size();
 
-    dst->brushes.reserve(dst->detail_illusionary.size() + dst->liquid.size() + dst->detail_fence.size() + dst->detail.size() + dst->sky.size() + dst->solid.size());
+    dst->brushes.reserve(stats.detail_illusionary + stats.liquid + stats.detail_fence + stats.detail + stats.sky + stats.solid);
 
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->detail_illusionary.begin()), make_move_iterator(dst->detail_illusionary.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->liquid.begin()), make_move_iterator(dst->liquid.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->detail_fence.begin()), make_move_iterator(dst->detail_fence.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->detail.begin()), make_move_iterator(dst->detail.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->sky.begin()), make_move_iterator(dst->sky.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(dst->solid.begin()), make_move_iterator(dst->solid.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_illusionary.begin()), make_move_iterator(types.detail_illusionary.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.liquid.begin()), make_move_iterator(types.liquid.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_fence.begin()), make_move_iterator(types.detail_fence.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail.begin()), make_move_iterator(types.detail.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.sky.begin()), make_move_iterator(types.sky.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.solid.begin()), make_move_iterator(types.solid.end()));
+
+    return stats;
 }
 
-static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum)
+static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, brush_types_t &types)
 {
     const char *classname;
     const mapbrush_t *mapbrush;
@@ -844,15 +858,14 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 continue;
             }
 
-            brush_t *brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
+            std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
+
             if (brush) {
                 rotate_offset = brush->bounds.centroid();
 
                 SetKeyValue(dst, "origin", qv::to_string(rotate_offset).c_str());
 
                 rottype = rotation_t::origin_brush;
-
-                FreeBrush(brush);
             }
         }
     }
@@ -961,10 +974,9 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          */
         if (contents.is_clip()) {
             if (hullnum == 0) {
-                brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+                std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
                 if (brush) {
                     dst->bounds += brush->bounds;
-                    FreeBrush(brush);
                 }
 
                 continue;
@@ -1019,24 +1031,24 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
         }
 
-        brush_t *brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+        std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
             continue;
 
         brush->lmshift = lmshift;
 
         if (brush->contents.is_solid(options.target_game)) {
-            dst->solid.emplace_back(brush);
+            types.solid.emplace_back(std::move(brush.value()));
         } else if (brush->contents.is_sky(options.target_game)) {
-            dst->sky.emplace_back(brush);
+            types.sky.emplace_back(std::move(brush.value()));
         } else if (brush->contents.is_detail(CFLAGS_DETAIL)) {
-            dst->detail.emplace_back(brush);
+            types.detail.emplace_back(std::move(brush.value()));
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
-            dst->detail_illusionary.emplace_back(brush);
+            types.detail_illusionary.emplace_back(std::move(brush.value()));
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
-            dst->detail_fence.emplace_back(brush);
+            types.detail_fence.emplace_back(std::move(brush.value()));
         } else {
-            dst->liquid.emplace_back(brush);
+            types.liquid.emplace_back(std::move(brush.value()));
         }
 
         dst->bounds += brush->bounds;
@@ -1053,9 +1065,11 @@ hullnum -1 should contain ALL brushes. (used by BSPX_CreateBrushList())
 hullnum 0 does not contain clip brushes.
 ============
 */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
+brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 {
-    Brush_LoadEntity(entity, entity, hullnum);
+    brush_types_t types;
+
+    Brush_LoadEntity(entity, entity, hullnum, types);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -1075,10 +1089,10 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum);
+                Brush_LoadEntity(entity, source, hullnum, types);
             }
         }
     }
 
-    Entity_SortBrushes(entity);
+    return Entity_SortBrushes(entity, types);
 }

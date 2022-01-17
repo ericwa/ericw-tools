@@ -89,14 +89,11 @@ public:
     int firstmapbrush = 0;
     int nummapbrushes = 0;
 
-    // Temporary lists used to build `brushes` in the correct order.
-    std::vector<std::unique_ptr<brush_t>> solid, sky, detail, detail_illusionary, detail_fence, liquid;
-
     // key/value pairs in the order they were parsed
     std::vector<std::pair<std::string, std::string>> epairs;
 
     aabb3d bounds;
-    std::vector<std::unique_ptr<brush_t>> brushes;
+    std::vector<brush_t> brushes;
 
     int firstoutputfacenumber = -1;
     std::optional<size_t> outputmodelnumber = std::nullopt;
@@ -204,8 +201,18 @@ void WriteEntitiesToString();
 
 void FixRotateOrigin(mapentity_t *entity);
 
+struct brush_stats_t
+{
+    size_t detail_illusionary;
+    size_t liquid;
+    size_t detail_fence;
+    size_t detail;
+    size_t sky;
+    size_t solid;
+};
+
 /* Create BSP brushes from map brushes */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum);
+brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum);
 
 surface_t *CSGFaces(const mapentity_t *entity);
 void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);

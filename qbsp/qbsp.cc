@@ -68,7 +68,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
             std::vector<uint32_t> brushes;
 
             for (auto &b : entity->brushes) {
-                if (node->bounds.intersectWith(b->bounds)) {
+                if (node->bounds.intersectWith(b.bounds)) {
                     brushes.push_back(b_id);
                 }
                 b_id++;
@@ -97,12 +97,12 @@ Adds any additional planes necessary to allow the brush to be expanded
 against axial bounding boxes
 =================
 */
-static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brush_t *b)
+static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brush_t &b)
 {
     // add already-present planes
     std::vector<std::tuple<size_t, const face_t *>> planes;
 
-    for (auto &f : b->faces) {
+    for (auto &f : b.faces) {
         int32_t planenum = f.planenum;
 
         if (f.planeside) {
@@ -131,13 +131,13 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
                 qplane3d new_plane { };
                 new_plane.normal[axis] = dir;
                 if (dir == 1)
-                    new_plane.dist = b->bounds.maxs()[axis];
+                    new_plane.dist = b.bounds.maxs()[axis];
                 else
-                    new_plane.dist = -b->bounds.mins()[axis];
+                    new_plane.dist = -b.bounds.mins()[axis];
 
                 int32_t planenum = FindPlane(new_plane, nullptr);
                 int32_t outputplanenum = ExportMapPlane(planenum);
-                planes.emplace_back(outputplanenum, &b->faces.front());
+                planes.emplace_back(outputplanenum, &b.faces.front());
             }
 
             // if the plane is not in it canonical order, swap it
@@ -185,11 +185,11 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
                         continue;
                     current.dist = qv::dot(w[j], current.normal);
 
-                    auto it = b->faces.begin();
+                    auto it = b.faces.begin();
 
                     // if all the points on all the sides are
                     // behind this plane, it is a proper edge bevel
-                    for (; it != b->faces.end(); it++) {
+                    for (; it != b.faces.end(); it++) {
                         auto &f = *it;
                         auto &plane = map.planes[f.planenum];
                         qplane3d temp = f.planeside ? -plane : plane;
@@ -211,13 +211,13 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
                             break;
                     }
 
-                    if (it == b->faces.end())
+                    if (it == b.faces.end())
                         continue; // wasn't part of the outer hull
 
                     // add this plane
                     int32_t planenum = FindPlane(current, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
-                    planes.emplace_back(outputplanenum, &b->faces.front());
+                    planes.emplace_back(outputplanenum, &b.faces.front());
                 }
             }
         }
@@ -234,9 +234,9 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 
     for (auto &b : entity->brushes) {
         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
-            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
+            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b.contents.native});
 
-        auto bevels = AddBrushBevels(b.get());
+        auto bevels = AddBrushBevels(b);
 
         for (auto &plane : bevels) {
             map.bsp.dbrushsides.push_back(
@@ -484,7 +484,7 @@ ProcessEntity
 */
 static void ProcessEntity(mapentity_t *entity, const int hullnum)
 {
-    int i, firstface;
+    int firstface;
     surface_t *surfs;
     node_t *nodes;
 
@@ -524,46 +524,35 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      * Init the entity
      */
     entity->brushes.clear();
-    entity->solid.clear();
-    entity->sky.clear();
-    entity->detail.clear();
-    entity->detail_illusionary.clear();
-    entity->detail_fence.clear();
-    entity->liquid.clear();
-    entity->brushes.clear();
     entity->bounds = {};
 
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
     LogPrint(LOG_PROGRESS, "---- Brush_LoadEntity ----\n");
-    Brush_LoadEntity(entity, hullnum);
+    auto stats = Brush_LoadEntity(entity, hullnum);
 
     /* Print brush counts */
-    {
-        int solidcount = entity->solid.size();
-        int skycount = entity->sky.size();
-        int detail_all_count = entity->detail.size();
-        int detail_illusionarycount = entity->detail_illusionary.size();
-        int detail_fence_count = entity->detail_fence.size();
-        int liquidcount = entity->liquid.size();
-
-        int nondetailcount = (solidcount + skycount + liquidcount);
-        int detailcount = detail_all_count;
-
-        LogPrint(LOG_STAT, "     {:8} brushes\n", nondetailcount);
-        if (detailcount > 0) {
-            LogPrint(LOG_STAT, "     {:8} detail\n", detailcount);
-        }
-        if (detail_fence_count > 0) {
-            LogPrint(LOG_STAT, "     {:8} detail fence\n", detail_fence_count);
-        }
-        if (detail_illusionarycount > 0) {
-            LogPrint(LOG_STAT, "     {:8} detail illusionary\n", detail_illusionarycount);
-        }
-
-        LogPrint(LOG_STAT, "     {:8} planes\n", map.numplanes());
+    if (stats.solid) {
+        LogPrint(LOG_STAT, "     {:8} solid brushes\n", stats.solid);
     }
+    if (stats.sky) {
+        LogPrint(LOG_STAT, "     {:8} sky brushes\n", stats.sky);
+    }
+    if (stats.detail) {
+        LogPrint(LOG_STAT, "     {:8} detail brushes\n", stats.detail);
+    }
+    if (stats.detail_illusionary) {
+        LogPrint(LOG_STAT, "     {:8} detail illusionary brushes\n", stats.detail_illusionary);
+    }
+    if (stats.detail_fence) {
+        LogPrint(LOG_STAT, "     {:8} detail fence brushes\n", stats.detail_fence);
+    }
+    if (stats.liquid) {
+        LogPrint(LOG_STAT, "     {:8} liquid brushes\n", stats.liquid);
+    }
+
+    LogPrint(LOG_STAT, "     {:8} planes\n", map.numplanes());
 
     if (entity->brushes.empty() && hullnum) {
         PrintEntity(entity);
@@ -756,7 +745,7 @@ Generates a submodel's direct brush information to a separate file, so the engin
 hull sizes
 */
 
-static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<brush_t>> &brushes)
+static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::vector<brush_t> &brushes)
 {
     bspxbrushes_permodel permodel {
         1,
@@ -765,7 +754,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
 
     for (auto &b : brushes) {
         permodel.numbrushes++;
-        for (auto &f : b->faces) {
+        for (auto &f : b.faces) {
             /*skip axial*/
             if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
                 fabs(map.planes[f.planenum].normal[2]) == 1)
@@ -786,7 +775,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
     for (auto &b : brushes) {
         bspxbrushes_perbrush perbrush {};
 
-        for (auto &f : b->faces) {
+        for (auto &f : b.faces) {
             /*skip axial*/
             if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
                 fabs(map.planes[f.planenum].normal[2]) == 1)
@@ -794,9 +783,9 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
             perbrush.numfaces++;
         }
 
-        perbrush.bounds = b->bounds;
+        perbrush.bounds = b.bounds;
 
-        switch (b->contents.native) {
+        switch (b.contents.native) {
             // contents should match the engine.
             case CONTENTS_EMPTY: // really an error, but whatever
             case CONTENTS_SOLID: // these are okay
@@ -804,21 +793,21 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (b->contents.is_clip()) {
+                if (b.contents.is_clip()) {
                     perbrush.contents = -8;
                 } else {
-                    perbrush.contents = b->contents.native;
+                    perbrush.contents = b.contents.native;
                 }
                 break;
             //              case CONTENTS_LADDER:
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (b->contents.is_clip()) {
+                if (b.contents.is_clip()) {
                     perbrush.contents = -8;
                 } else {
                     LogPrint("WARNING: Unknown contents: {}. Translating to solid.\n",
-                        b->contents.to_string(options.target_game));
+                        b.contents.to_string(options.target_game));
                     perbrush.contents = CONTENTS_SOLID;
                 }
                 break;
@@ -827,7 +816,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
 
         str <= perbrush;
 
-        for (auto &f : b->faces) {
+        for (auto &f : b.faces) {
             /*skip axial*/
             if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
                 fabs(map.planes[f.planenum].normal[2]) == 1)
@@ -875,14 +864,7 @@ static void BSPX_CreateBrushList(void)
         }
 
         ent->brushes.clear();
-        ent->detail_illusionary.clear();
-        ent->liquid.clear();
-        ent->detail_fence.clear();
-        ent->detail.clear();
-        ent->sky.clear();
-        ent->solid.clear();
 
-        ent->brushes.clear();
         Brush_LoadEntity(ent, -1);
 
         if (ent->brushes.empty())
