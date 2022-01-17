@@ -686,7 +686,7 @@ void CalcVis(mbsp_t *bsp)
     //
     // assemble the leaf vis lists by oring and compressing the portal lists
     //
-    if (portalleafs == portalleafs_real && bsp->loadversion->game->id != GAME_QUAKE_II) {
+    if (0 && portalleafs == portalleafs_real && bsp->loadversion->game->id != GAME_QUAKE_II) {
         // Legacy, non-detail Q1 vis codepath
         // FIXME: Should be possible to remove this and just use ClusterFlow even on Q1 maps
         // with no detail.
@@ -868,6 +868,11 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
 
     // No clusters
     if (portalleafs == portalleafs_real) {
+        // e.g. Quake 1, PRT1 (no func_detail).
+        // Assign the identity cluster numbers for consistency
+        for (i = 0; i < portalleafs; i++) {
+            bsp->dleafs[i + 1].cluster = i;
+        }
         return;
     }
 
