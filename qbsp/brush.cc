@@ -21,6 +21,7 @@
 */
 
 #include <cstring>
+#include <list>
 
 #include <qbsp/qbsp.hh>
 
