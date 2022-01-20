@@ -531,30 +531,46 @@ public:
         return result;
     }
 
-    // dists/sides must have (size() + 1) reserved
-    inline void calc_sides(const qplane3d &plane, vec_t *dists, side_t *sides, int32_t counts[3],
+    // dists/sides can be null, or must have (size() + 1) reserved
+    inline std::array<size_t, SIDE_TOTAL> calc_sides(const qplane3d &plane, vec_t *dists, side_t *sides,
         const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
     {
+        std::array<size_t, SIDE_TOTAL> counts {};
+
         /* determine sides for each point */
         size_t i;
 
         for (i = 0; i < count; i++) {
             vec_t dot = plane.distance_to(at(i));
 
-            dists[i] = dot;
+            if (dists) {
+                dists[i] = dot;
+            }
+
+            side_t side;
 
             if (dot > on_epsilon)
-                sides[i] = SIDE_FRONT;
+                side = SIDE_FRONT;
             else if (dot < -on_epsilon)
-                sides[i] = SIDE_BACK;
+                side = SIDE_BACK;
             else
-                sides[i] = SIDE_ON;
+                side = SIDE_ON;
 
-            counts[sides[i]]++;
+            counts[side]++;
+
+            if (sides) {
+                sides[i] = side;
+            }
         }
 
-        sides[i] = sides[SIDE_FRONT];
-        dists[i] = dists[SIDE_FRONT];
+        if (sides) {
+            sides[i] = sides[SIDE_FRONT];
+        }
+        if (dists) {
+            dists[i] = dists[SIDE_FRONT];
+        }
+
+        return counts;
     }
 
     /*
@@ -571,9 +587,8 @@ public:
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (count + 1));
         side_t *sides = (side_t *)alloca(sizeof(side_t) * (count + 1));
-        int counts[3]{};
 
-        calc_sides(plane, dists, sides, counts, on_epsilon);
+        std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
 
         if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
             return {*this, std::nullopt};

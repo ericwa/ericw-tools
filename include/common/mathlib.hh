@@ -57,6 +57,7 @@ enum side_t : int8_t
     SIDE_FRONT,
     SIDE_BACK,
     SIDE_ON,
+    SIDE_TOTAL,
 
     SIDE_CROSS = -2
 };

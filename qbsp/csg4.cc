@@ -110,7 +110,7 @@ void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
     side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
-    int counts[3]{};
+    std::array<size_t, SIDE_TOTAL> counts { };
     vec_t dot;
     size_t i, j;
     face_t *newf, *new2;
@@ -128,7 +128,7 @@ void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
         counts[SIDE_FRONT] = 0;
         counts[SIDE_BACK] = 1;
     } else {
-        in->w.calc_sides(split, dists, sides, counts, ON_EPSILON);
+        counts = in->w.calc_sides(split, dists, sides, ON_EPSILON);
     }
 
     // Plane doesn't split this face after all
@@ -241,6 +241,8 @@ Faces exactly on the plane will stay inside unless overdrawn by later brush
 */
 static void ClipInside(const face_t *clipface, bool precedence, face_t **inside, face_t **outside)
 {
+    std::vector<vec_t> dists;
+    std::vector<side_t> sides;
     face_t *face, *next, *frags[2];
 
     const qbsp_plane_t &splitplane = map.planes[clipface->planenum];
@@ -255,12 +257,7 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
          */
         bool spurious_onplane = false;
         {
-            vec_t *dists = (vec_t *)malloc(sizeof(vec_t) * (face->w.size() + 1));
-            side_t *sides = (side_t *)malloc(sizeof(side_t) * (face->w.size() + 1));
-            int counts[3]{};
-            face->w.calc_sides(splitplane, dists, sides, counts, ON_EPSILON);
-            free(dists);
-            free(sides);
+            std::array<size_t, SIDE_TOTAL> counts = face->w.calc_sides(splitplane, nullptr, nullptr, ON_EPSILON);
 
             if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
                 spurious_onplane = true;

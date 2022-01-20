@@ -555,7 +555,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
         // face tangent
         auto t1 = TexSpaceToWorld(bsp, &f);
-        std::tuple<qvec3f, qvec3f> tangents(t1.col(0).xyz(), qv::normalize(qv::cross(f_norm, t1.col(0).xyz())));
+        std::tuple<qvec3f, qvec3f> tangents(t1.col(0).xyz(), qv::normalize(t1.col(1).xyz()));
 
         // gather up f and neighboursToSmooth
         std::vector<const mface_t *> fPlusNeighbours;
@@ -573,7 +573,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
             // f2 face tangent
             auto t2 = TexSpaceToWorld(bsp, f2);
-            std::tuple<qvec3f, qvec3f> f2_tangents(t2.col(0).xyz(), qv::normalize(qv::cross(f2_norm, t2.col(0).xyz())));
+            std::tuple<qvec3f, qvec3f> f2_tangents(t2.col(0).xyz(), qv::normalize(t2.col(1).xyz()));
 
             // walk the vertices of f2, and add their contribution to smoothedNormals
             for (int j = 0; j < f2->numedges; j++) {
