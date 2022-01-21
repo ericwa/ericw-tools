@@ -711,9 +711,12 @@ public:
         winding_base_t result = *this;
 
         if (result.is_dynamic()) {
-            std::reverse(std::get<vector_type>(result.data).begin(), std::get<vector_type>(result.data).end());
+            vector_type &v = std::get<vector_type>(result.data);
+            std::reverse(v.begin(), v.end());
         } else {
-            std::reverse(std::get<array_type>(result.data).begin(), std::get<array_type>(result.data).end());
+            for (size_t i = 0; i < result.size() / 2; i++) {
+                std::swap(result[i], result[result.size() - i - 1]);
+            }
         }
 
         return result;
