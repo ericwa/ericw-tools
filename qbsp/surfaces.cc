@@ -43,6 +43,11 @@ void SubdivideFace(face_t *f, face_t **prevptr)
     vec_t extent;
     int lmshift;
 
+    // subdivision disabled
+    if (!options.dxSubdivide) {
+        return;
+    }
+
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
 
@@ -86,7 +91,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
 
             extent = ceil(maxs) - floor(mins);
             //          extent = maxs - mins;
-            if (!subdiv || extent <= subdiv)
+            if (extent <= subdiv)
                 break;
 
             // split it

@@ -1720,7 +1720,10 @@ struct gamedef_t
     gameid_t id;
 
     // whether the game uses an RGB lightmap or not
-    bool has_rgb_lightmap;
+    bool has_rgb_lightmap = false;
+
+    // whether the game supports content flags on brush models
+    bool allow_contented_bmodels = false;
 
     // base dir for searching for paths, in case we are in a mod dir
     // note: we need this to be able to be overridden via options

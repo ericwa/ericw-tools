@@ -95,7 +95,6 @@ struct gamedef_q1_like_t : public gamedef_t
     gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir)
     {
         this->id = ID;
-        has_rgb_lightmap = false;
     }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
@@ -418,6 +417,7 @@ struct gamedef_q2_t : public gamedef_t
     {
         this->id = GAME_QUAKE_II;
         has_rgb_lightmap = true;
+        allow_contented_bmodels = true;
         max_entity_key = 256;
     }
 

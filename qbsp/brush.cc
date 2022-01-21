@@ -981,21 +981,23 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             contents = options.target_game->create_empty_contents();
         }
 
-        /* entities never use water merging */
         if (dst != pWorldEnt()) {
-            contents = options.target_game->create_solid_contents();
-        }
+            /* entities in some games never use water merging */
+            if (!options.target_game->allow_contented_bmodels) {
+                contents = options.target_game->create_solid_contents();
+            }
 
-        /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
-           this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
-           Otherwise they would be CONTENTS_SOLID and the inside faces would be deleted.
+            /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
+               this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
+               Otherwise they would be CONTENTS_SOLID and the inside faces would be deleted.
 
-           It's CONTENTS_DETAIL_FENCE because this gets mapped to CONTENTS_SOLID just
-           before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
-           contents type.
-         */
-        if (dst != pWorldEnt() && hullnum <= 0 && mirrorinside) {
-            contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
+               It's CONTENTS_DETAIL_FENCE because this gets mapped to CONTENTS_SOLID just
+               before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
+               contents type.
+             */
+            if (hullnum <= 0 && mirrorinside) {
+                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
+            }
         }
 
         /* nonsolid brushes don't show up in clipping hulls */
