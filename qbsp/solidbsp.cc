@@ -529,6 +529,8 @@ void CalcSurfaceInfo(surface_t *surf)
         for (int i = 0; i < f->w.size(); i++) {
             surf->bounds += f->w[i];
         }
+
+        Q_assert(!qv::emptyExact(surf->bounds.size()));
     }
 }
 

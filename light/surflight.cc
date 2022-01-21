@@ -96,10 +96,7 @@ static void *MakeSurfaceLightsThread(void *arg)
             continue;
 
         // Create winding...
-        const int numpoints = poly.size();
-        winding_t winding(numpoints);
-        for (int c = 0; c < numpoints; c++)
-            winding[c] = poly.at(c);
+        winding_t winding = winding_t::from_winding_points(poly);
         winding.remove_colinear();
 
         // Get face normal and midpoint...

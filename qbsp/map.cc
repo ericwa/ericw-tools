@@ -190,7 +190,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         // load .wal first
         std::optional<img::texture_meta> wal;
 
-        if (!internal || !extended_info.has_value()) {
+        if (!internal && !extended_info.has_value()) {
             wal = LoadWal(name);
 
             if (!wal.has_value()) {
