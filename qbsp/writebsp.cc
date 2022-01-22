@@ -35,6 +35,16 @@ static contentflags_t RemapContentsForExport(const contentflags_t &content)
 {
     if (content.extended & CFLAGS_DETAIL_FENCE) {
         /*
+         * A bit of a hack for Q2, to ensure that structural faces which are completely covered by CFLAGS_DETAIL_FENCE
+         * still render.
+         * 
+         * If we export the detail fence leaf as CONTENTS_SOLID, Q2 engines will refuse to render the covered sturctural
+         * face because of a short-circuit in GL_DrawLeaf.
+         */
+        if (options.target_game->id == GAME_QUAKE_II) {
+            return { Q2_CONTENTS_WINDOW, 0 };
+        }
+        /*
          * This is for func_detail_wall.. we want to write a solid leaf that has faces,
          * because it may be possible to see inside (fence textures).
          *
