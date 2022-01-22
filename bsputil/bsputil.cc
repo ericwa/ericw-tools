@@ -521,7 +521,7 @@ int main(int argc, char **argv)
 
             ConvertBSPFormat(&bspdata, fmt);
 
-            WriteBSPFile(source.replace_filename(source.filename().string() + "-" + argv[i]), &bspdata);
+            WriteBSPFile(source.replace_filename(source.stem().string() + "-" + argv[i]), &bspdata);
 
         } else if (!strcmp(argv[i], "--extract-entities")) {
             uint32_t crc = CRC_Block((unsigned char *)bsp.dentdata.data(), bsp.dentdata.size() - 1);
@@ -601,7 +601,7 @@ int main(int argc, char **argv)
             const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
 
             source.replace_extension("");
-            source.replace_filename(source.filename().string() + "-decompile");
+            source.replace_filename(source.stem().string() + "-decompile");
             source.replace_extension(".map");
             fmt::print("-> writing {}...\n", source);
 

@@ -1456,7 +1456,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
     if (surflight_dump) {
         surflights_dump_filename = mapfilename;
-        surflights_dump_filename.replace_filename(surflights_dump_filename.filename().string() + "-surflights")
+        surflights_dump_filename.replace_filename(surflights_dump_filename.stem().string() + "-surflights")
             .replace_extension("map");
         surflights_dump_file.open(surflights_dump_filename);
     }
