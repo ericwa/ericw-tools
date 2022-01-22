@@ -211,6 +211,9 @@ struct brush_stats_t
     size_t solid;
 };
 
+/** Special ID for the collision-only hull; used for wrbrushes/Q2 */
+constexpr int HULL_COLLISION = -1;
+
 /* Create BSP brushes from map brushes */
 brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum);
 

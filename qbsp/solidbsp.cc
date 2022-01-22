@@ -171,8 +171,6 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
     front_bounds = back_bounds = in_bounds;
 
     if (split.type < 3) {
-        // CHECK: this escapes the immutability "sandbox" of aabb3d, is this a good idea?
-        // it'd take like 6 lines to otherwise reproduce this line.
         front_bounds[0][split.type] = back_bounds[1][split.type] = split.dist;
         return;
     }

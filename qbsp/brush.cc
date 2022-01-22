@@ -905,11 +905,6 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     if (atoi(ValueForKey(src, "_omitbrushes")))
         return;
 
-    // _omitbrushes 1 just discards all brushes in the entity.
-    // could be useful for geometry guides, selective compilation, etc.
-    if (atoi(ValueForKey(src, "_omitbrushes")))
-        return;
-
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         mapbrush = &src->mapbrush(i);
         contentflags_t contents = Brush_GetContents(mapbrush);
@@ -939,16 +934,16 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(options.target_game)) {
             if (detail) {
-                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL);
+                contents = {contents.native, CFLAGS_DETAIL};
             } else if (detail_illusionary) {
-                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_ILLUSIONARY);
+                contents = {contents.native, CFLAGS_DETAIL_ILLUSIONARY};
             } else if (detail_fence) {
-                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
+                contents = {contents.native, CFLAGS_DETAIL_FENCE};
             }
         }
 
         /* func_detail_illusionary don't exist in the collision hull
-         * (or bspx export) */
+         * (or bspx export) except for Q2, who needs them in there */
         if ((options.target_game->id != GAME_QUAKE_II && hullnum) && detail_illusionary) {
             continue;
         }
@@ -958,20 +953,19 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (contents.is_clip()) {
+        if (contents.is_clip() && hullnum != HULL_COLLISION) {
             if (hullnum == 0) {
                 std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+
                 if (brush) {
                     dst->bounds += brush->bounds;
                 }
 
                 continue;
-            }
             // for hull1, 2, etc., convert clip to CONTENTS_SOLID
-            if (hullnum > 0) {
+            } else {
                 contents = options.target_game->create_solid_contents();
             }
-            // if hullnum is -1 (bspx brush export), leave it as CONTENTS_CLIP
         }
 
         /* "hint" brushes don't affect the collision hulls */
@@ -996,7 +990,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                contents type.
              */
             if (hullnum <= 0 && mirrorinside) {
-                contents = options.target_game->create_extended_contents(CFLAGS_DETAIL_FENCE);
+                contents = {contents.native, CFLAGS_DETAIL_FENCE};
             }
         }
 
@@ -1049,7 +1043,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 ============
 Brush_LoadEntity
 
-hullnum -1 should contain ALL brushes. (used by BSPX_CreateBrushList())
+hullnum HULL_COLLISION should contain ALL brushes. (used by BSPX_CreateBrushList())
 hullnum 0 does not contain clip brushes.
 ============
 */

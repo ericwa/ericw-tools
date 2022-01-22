@@ -865,7 +865,7 @@ static void BSPX_CreateBrushList(void)
 
         ent->brushes.clear();
 
-        Brush_LoadEntity(ent, -1);
+        Brush_LoadEntity(ent, HULL_COLLISION);
 
         if (ent->brushes.empty())
             continue; // non-bmodel entity
@@ -919,18 +919,15 @@ static void CreateHulls(void)
 
     // game has no hulls, so we have to export brush lists and stuff.
     if (!hulls.size()) {
-        CreateSingleHull(-1);
-        return;
-    }
-
-    // we got hulls!
-    for (size_t i = 0; i < hulls.size(); i++) {
-        /* ignore the clipping hulls altogether */
-        if (i && options.fNoclip) {
-            return;
+        CreateSingleHull(HULL_COLLISION);
+    // only create hull 0 if fNoclip is set
+    } else if (options.fNoclip) {
+        CreateSingleHull(0);
+    // do all the hulls
+    } else {
+        for (size_t i = 0; i < hulls.size(); i++) {
+            CreateSingleHull(i);
         }
-
-        CreateSingleHull(i);
     }
 }
 

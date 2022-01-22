@@ -462,7 +462,7 @@ struct gamedef_q2_t : public gamedef_t
             return 7;
         } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
             return 2;
-        } else
+        } else {
             switch (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) {
                 case Q2_CONTENTS_SOLID: return 10;
                 case Q2_CONTENTS_WINDOW: return 9;
@@ -473,6 +473,7 @@ struct gamedef_q2_t : public gamedef_t
                 case Q2_CONTENTS_MIST: return 1;
                 default: return 0;
             }
+        }
     }
 
     contentflags_t create_extended_contents(const int32_t &cflags) const { return {0, cflags}; }
@@ -604,6 +605,10 @@ struct gamedef_q2_t : public gamedef_t
     contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const
     {
         contentflags_t surf_contents = contents;
+
+        if (!(surf_contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1))) {
+            surf_contents.native |= Q2_CONTENTS_SOLID;
+        }
 
         if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) {
             surf_contents.native |= Q2_CONTENTS_TRANSLUCENT;
