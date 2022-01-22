@@ -193,11 +193,13 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         if (!internal && !extended_info.has_value()) {
             wal = LoadWal(name);
 
-            if (!wal.has_value()) {
-                extended_info = extended_texinfo_t{};
-            } else {
+            if (wal) {
                 extended_info = extended_texinfo_t{wal->contents, wal->flags, wal->value};
             }
+        }
+
+        if (!extended_info.has_value()) {
+            extended_info = extended_texinfo_t{};
         }
 
         for (i = 0; i < map.nummiptex(); i++) {
