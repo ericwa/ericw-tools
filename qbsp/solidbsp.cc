@@ -492,38 +492,6 @@ static surface_t *SelectPartition(surface_t *surfaces)
 //============================================================================
 
 /*
-=================
-CalcSurfaceInfo
-
-Calculates the bounding box
-=================
-*/
-void CalcSurfaceInfo(surface_t *surf)
-{
-    // calculate a bounding box
-    surf->bounds = {};
-
-    surf->has_struct = false;
-
-    for (const face_t *f = surf->faces; f; f = f->next) {
-        for (auto &contents : f->contents)
-            if (!contents.is_valid(options.target_game, false))
-                FError("Bad contents in face: {}", contents.to_string(options.target_game));
-
-        surf->lmshift = min(f->lmshift.front, f->lmshift.back);
-
-        surf->has_struct = !((f->contents[0].extended | f->contents[1].extended) &
-            (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY));
-
-        for (int i = 0; i < f->w.size(); i++) {
-            surf->bounds += f->w[i];
-        }
-
-        Q_assert(!qv::emptyExact(surf->bounds.size()));
-    }
-}
-
-/*
 ==================
 DividePlane
 ==================
@@ -560,8 +528,8 @@ static void DividePlane(surface_t *in, const qplane3d &split, surface_t **front,
 
             // ericw -- added these CalcSurfaceInfo to recalculate the surf bbox.
             // pretty sure their omission here was a bug.
-            CalcSurfaceInfo(newsurf);
-            CalcSurfaceInfo(in);
+            newsurf->calculateInfo();
+            in->calculateInfo();
 
             if (in->faces)
                 *front = in;
@@ -626,8 +594,8 @@ static void DividePlane(surface_t *in, const qplane3d &split, surface_t **front,
     *front = in;
 
     // recalc bboxes and flags
-    CalcSurfaceInfo(newsurf);
-    CalcSurfaceInfo(in);
+    newsurf->calculateInfo();
+    in->calculateInfo();
 }
 
 /*

@@ -478,7 +478,7 @@ surface_t *BuildSurfaces(const std::map<int, face_t *> &planefaces)
             csgmergefaces++;
 
         /* Calculate bounding box and flags */
-        CalcSurfaceInfo(surf);
+        surf->calculateInfo();
     }
 
     return surfaces;

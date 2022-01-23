@@ -109,7 +109,7 @@ void SubdivideFace(face_t *f, face_t **prevptr)
             next = f->next;
             SplitFace(f, plane, &front, &back);
             if (!front || !back) {
-                printf("didn't split\n");
+                LogPrintLocked("didn't split\n");
                 break;
                 // FError("Didn't split the polygon");
             }

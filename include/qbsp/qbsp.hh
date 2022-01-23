@@ -42,6 +42,88 @@
 #include <common/bspfile.hh>
 #include <common/aabb.hh>
 
+enum texcoord_style_t
+{
+    TX_QUAKED = 0,
+    TX_QUARK_TYPE1 = 1,
+    TX_QUARK_TYPE2 = 2,
+    TX_VALVE_220 = 3,
+    TX_BRUSHPRIM = 4
+};
+
+enum class conversion_t
+{
+    quake,
+    quake2,
+    valve,
+    bp
+};
+
+class options_t
+{
+public:
+    bool fNofill = false;
+    bool fNoclip = false;
+    bool fNoskip = false;
+    bool fNodetail = false;
+    bool fOnlyents = false;
+    bool fConvertMapFormat = false;
+    conversion_t convertMapFormat = conversion_t::quake;
+    bool fVerbose = true;
+    bool fAllverbose = false;
+    bool fSplitspecial = false;
+    bool fSplitturb = false;
+    bool fSplitsky = false;
+    bool fTranswater = true;
+    bool fTranssky = false;
+    bool fOldaxis = true;
+    bool fNoverbose = false;
+    bool fNopercent = false;
+    bool forceGoodTree = false;
+    bool fixRotateObjTexture = true;
+    bool fbspx_brushes = false;
+    bool fNoTextures = false;
+    const bspversion_t *target_version = &bspver_q1;
+    const gamedef_t *target_game = target_version->game;
+    int dxSubdivide = 240;
+    int dxLeakDist = 2;
+    int maxNodeSize = 1024;
+    /**
+     * if 0 (default), use maxNodeSize for deciding when to switch to midsplit bsp heuristic.
+     *
+     * if 0 < midsplitSurfFraction <=1, switch to midsplit if the node contains more than this fraction of the model's
+     * total surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)
+     */
+    float midsplitSurfFraction = 0.f;
+    std::filesystem::path szMapName;
+    std::filesystem::path szBSPName;
+
+    struct wadpath
+    {
+        std::filesystem::path path;
+        bool external; // wads from this path are not to be embedded into the bsp, but will instead require the engine
+                       // to load them from elsewhere. strongly recommended for eg halflife.wad
+    };
+
+    std::vector<wadpath> wadPathsVec;
+    vec_t on_epsilon = 0.0001;
+    bool fObjExport = false;
+    bool fOmitDetail = false;
+    bool fOmitDetailWall = false;
+    bool fOmitDetailIllusionary = false;
+    bool fOmitDetailFence = false;
+    bool fForcePRT1 = false;
+    bool fTestExpand = false;
+    bool fLeakTest = false;
+    bool fContentHack = false;
+    vec_t worldExtent = 65536.0f;
+    bool fNoThreads = false;
+    bool includeSkip = false;
+    bool fNoTJunc = false;
+};
+
+extern options_t options;
+
 /*
  * Clipnodes need to be stored as a 16-bit offset. Originally, this was a
  * signed value and only the positive values up to 32767 were available. Since
@@ -149,14 +231,39 @@ struct surface_t
     surface_t *next;
     int planenum;
     std::optional<size_t> outputplanenum; // only valid after WriteSurfacePlanes
-    aabb3d bounds;
     bool onnode; // true if surface has already been used
                  //   as a splitting node
     bool detail_separator; // true if ALL faces are detail
     face_t *faces; // links to all faces on either side of the surf
-    bool has_detail; // 1 if the surface has detail brushes
-    bool has_struct; // 1 if the surface has non-detail brushes
+
+    // bounds of all the face windings; calculated via calculateInfo
+    aabb3d bounds;
+    // 1 if the surface has non-detail brushes; calculated via calculateInfo
+    bool has_struct;
+    // smallest lmshift of all faces; calculated via calculateInfo
     short lmshift;
+
+    // calculate bounds & info
+    inline void calculateInfo()
+    {
+        bounds = {};
+        lmshift = std::numeric_limits<short>::max();
+
+        for (const face_t *f = faces; f; f = f->next) {
+            for (auto &contents : f->contents)
+                if (!contents.is_valid(options.target_game, false))
+                    FError("Bad contents in face: {}", contents.to_string(options.target_game));
+
+            lmshift = min(f->lmshift.front, f->lmshift.back);
+
+            has_struct = !((f->contents[0].extended | f->contents[1].extended) &
+                (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY));
+
+            bounds += f->w.bounds();
+
+            Q_assert(!qv::emptyExact(bounds.size()));
+        }
+    }
 };
 
 // there is a node_t structure for every node and leaf in the bsp tree
@@ -202,89 +309,6 @@ struct node_t
 #include <qbsp/region.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
-
-enum texcoord_style_t
-{
-    TX_QUAKED = 0,
-    TX_QUARK_TYPE1 = 1,
-    TX_QUARK_TYPE2 = 2,
-    TX_VALVE_220 = 3,
-    TX_BRUSHPRIM = 4
-};
-
-enum class conversion_t
-{
-    quake,
-    quake2,
-    valve,
-    bp
-};
-
-class options_t
-{
-public:
-    bool fNofill = false;
-    bool fNoclip = false;
-    bool fNoskip = false;
-    bool fNodetail = false;
-    bool fOnlyents = false;
-    bool fConvertMapFormat = false;
-    conversion_t convertMapFormat = conversion_t::quake;
-    bool fVerbose = true;
-    bool fAllverbose = false;
-    bool fSplitspecial = false;
-    bool fSplitturb = false;
-    bool fSplitsky = false;
-    bool fTranswater = true;
-    bool fTranssky = false;
-    bool fOldaxis = true;
-    bool fNoverbose = false;
-    bool fNopercent = false;
-    bool forceGoodTree = false;
-    bool fixRotateObjTexture = true;
-    bool fbspx_brushes = false;
-    bool fNoTextures = false;
-    const bspversion_t *target_version = &bspver_q1;
-    const gamedef_t *target_game = target_version->game;
-    int dxSubdivide = 240;
-    int dxLeakDist = 2;
-    int maxNodeSize = 1024;
-    /**
-     * if 0 (default), use maxNodeSize for deciding when to switch to midsplit bsp heuristic.
-     *
-     * if 0 < midsplitSurfFraction <=1, switch to midsplit if the node contains more than this fraction of the model's
-     * total surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)
-     */
-    float midsplitSurfFraction = 0.f;
-    std::filesystem::path szMapName;
-    std::filesystem::path szBSPName;
-
-    struct wadpath
-    {
-        std::filesystem::path path;
-        bool external; // wads from this path are not to be embedded into the bsp, but will instead require the engine
-                       // to load them from elsewhere. strongly recommended for eg halflife.wad
-    };
-
-    std::vector<wadpath> wadPathsVec;
-    vec_t on_epsilon = 0.0001;
-    bool fObjExport = false;
-    bool fOmitDetail = false;
-    bool fOmitDetailWall = false;
-    bool fOmitDetailIllusionary = false;
-    bool fOmitDetailFence = false;
-    bool fForcePRT1 = false;
-    bool fTestExpand = false;
-    bool fLeakTest = false;
-    bool fContentHack = false;
-    vec_t worldExtent = 65536.0f;
-    bool fNoThreads = false;
-    bool includeSkip = false;
-    bool fNoTJunc = false;
-};
-
-extern options_t options;
-
 #include <qbsp/map.hh>
 
 int qbsp_main(int argc, const char **argv);
