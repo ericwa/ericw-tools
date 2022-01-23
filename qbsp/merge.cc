@@ -65,8 +65,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     bool keep1, keep2;
 
     if (!f1->w.size() || !f2->w.size() || f1->planeside != f2->planeside || f1->texinfo != f2->texinfo ||
-        f1->contents[0] != f2->contents[0] || f1->contents[1] != f2->contents[1] || f1->lmshift[0] != f2->lmshift[0] ||
-        f1->lmshift[1] != f2->lmshift[1])
+        f1->contents != f2->contents || f1->lmshift != f2->lmshift)
         return NULL;
 
     // find a common edge
@@ -194,9 +193,9 @@ face_t *FreeMergeListScraps(face_t *merged)
     head = NULL;
     for (; merged; merged = next) {
         next = merged->next;
-        if (!merged->w.size())
+        if (!merged->w.size()) {
             delete merged;
-        else {
+        } else {
             merged->next = head;
             head = merged;
         }

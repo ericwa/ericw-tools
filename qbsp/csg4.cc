@@ -77,10 +77,8 @@ face_t *NewFaceFromFace(face_t *in)
     newf->texinfo = in->texinfo;
     newf->planeside = in->planeside;
     newf->original = in->original;
-    newf->contents[0] = in->contents[0];
-    newf->contents[1] = in->contents[1];
-    newf->lmshift[0] = in->lmshift[0];
-    newf->lmshift[1] = in->lmshift[1];
+    newf->contents = in->contents;
+    newf->lmshift = in->lmshift;
     newf->src_entity = in->src_entity;
 
     newf->origin = in->origin;
@@ -328,10 +326,8 @@ void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *>
             face_t *newface = NewFaceFromFace(face);
             newface->w = face->w.flip();
             newface->planeside = face->planeside ^ 1;
-            newface->contents[0] = face->contents[1];
-            newface->contents[1] = face->contents[0];
-            newface->lmshift[0] = face->lmshift[1];
-            newface->lmshift[1] = face->lmshift[0];
+            newface->contents.swap();
+            newface->lmshift.swap();
 
             // e.g. for a water volume:
             // the face facing the air:
@@ -503,10 +499,8 @@ static face_t *CopyBrushFaces(const brush_t &brush)
     for (auto &face : brush.faces) {
         brushfaces++;
         newface = new face_t(face);
-        newface->contents[0] = options.target_game->create_empty_contents();
-        newface->contents[1] = brush.contents;
-        newface->lmshift[0] = brush.lmshift;
-        newface->lmshift[1] = brush.lmshift;
+        newface->contents = { options.target_game->create_empty_contents(), brush.contents };
+        newface->lmshift = { brush.lmshift, brush.lmshift };
         newface->next = facelist;
         facelist = newface;
     }

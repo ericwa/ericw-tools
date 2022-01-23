@@ -129,8 +129,8 @@ struct face_t
     int planenum;
     int planeside; // which side is the front of the face
     int texinfo;
-    contentflags_t contents[2]; // 0 = front side
-    short lmshift[2]; // lightmap scale.
+    twosided<contentflags_t> contents;
+    twosided<int16_t> lmshift;
 
     mapentity_t *src_entity; // source entity
     face_t *original; // face on node
@@ -147,7 +147,6 @@ struct face_t
 struct surface_t
 {
     surface_t *next;
-    surface_t *original; // before BSP cuts it up
     int planenum;
     std::optional<size_t> outputplanenum; // only valid after WriteSurfacePlanes
     aabb3d bounds;

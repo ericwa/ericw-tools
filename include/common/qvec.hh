@@ -1069,3 +1069,46 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
 
 bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1,
     const vec_t &on_epsilon = DEFAULT_ON_EPSILON);
+
+template<typename T>
+struct twosided
+{
+    T front, back;
+    
+    // 0 is front, 1 is back
+    constexpr T &operator[](const int32_t &i)
+    {
+        switch (i)
+        {
+            case 0: return front;
+            case 1: return back;
+        }
+
+        throw std::exception();
+    }
+    // 0 is front, 1 is back
+    constexpr const T &operator[](const int32_t &i) const
+    {
+        switch (i)
+        {
+            case 0: return front;
+            case 1: return back;
+        }
+
+        throw std::exception();
+    }
+
+    // iterator support
+    T *begin() { return &front; }
+    T *end() { return (&back) + 1; }
+    
+    const T *begin() const { return &front; }
+    const T *end() const { return (&back) + 1; }
+
+    // swap the front and back values
+    constexpr void swap() { std::swap(front, back); }
+    
+    // equality checks
+    constexpr bool operator==(const twosided &other) const { return front == other.front && back == other.back; }
+    constexpr bool operator!=(const twosided &other) const { return !(*this == other); }
+};

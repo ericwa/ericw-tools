@@ -503,7 +503,6 @@ void CalcSurfaceInfo(surface_t *surf)
     // calculate a bounding box
     surf->bounds = {};
 
-    surf->has_detail = false;
     surf->has_struct = false;
 
     for (const face_t *f = surf->faces; f; f = f->next) {
@@ -511,18 +510,10 @@ void CalcSurfaceInfo(surface_t *surf)
             if (!contents.is_valid(options.target_game, false))
                 FError("Bad contents in face: {}", contents.to_string(options.target_game));
 
-        surf->lmshift = (f->lmshift[0] < f->lmshift[1]) ? f->lmshift[0] : f->lmshift[1];
+        surf->lmshift = min(f->lmshift.front, f->lmshift.back);
 
-        bool faceIsDetail = false;
-
-        if ((f->contents[0].extended | f->contents[1].extended) &
-            (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))
-            faceIsDetail = true;
-
-        if (faceIsDetail)
-            surf->has_detail = true;
-        else
-            surf->has_struct = true;
+        surf->has_struct = !((f->contents[0].extended | f->contents[1].extended) &
+            (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY));
 
         for (int i = 0; i < f->w.size(); i++) {
             surf->bounds += f->w[i];
