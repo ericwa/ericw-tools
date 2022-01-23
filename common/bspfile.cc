@@ -449,7 +449,7 @@ struct gamedef_q2_t : public gamedef_t
     int32_t get_content_type(const contentflags_t &contents) const
     {
         return (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) |
-               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_DETAIL | Q2_CONTENTS_AREAPORTAL);
+               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL);
     }
 
     int32_t contents_priority(const contentflags_t &contents) const
@@ -510,7 +510,7 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
         
-        return (contents.native & Q2_CONTENTS_SOLID);
+        return contents.native & Q2_CONTENTS_SOLID;
     }
 
     bool contents_are_sky(const contentflags_t &contents) const { return false; }
@@ -629,9 +629,9 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         // translucent objects are automatically classified as detail
-        if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_CONTENTS_WINDOW)) {
+        if (surf_contents.native & Q2_CONTENTS_WINDOW) {
             surf_contents.extended |= CFLAGS_DETAIL_FENCE;
-        } else if (flags.native & (Q2_CONTENTS_MIST | Q2_CONTENTS_AUX)) {
+        } else if (surf_contents.native & (Q2_CONTENTS_MIST | Q2_CONTENTS_AUX)) {
             surf_contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
         // if we used the DETAIL contents flag, copy over DETAIL
         } else if (surf_contents.native & Q2_CONTENTS_DETAIL) {
