@@ -630,8 +630,7 @@ surface_t *CSGFaces(const mapentity_t *entity)
                 || (brush.contents.is_liquid(options.target_game) &&
                        clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
 
-                || (brush.contents.is_fence() &&
-                       (clipbrush.contents.is_liquid(options.target_game) || clipbrush.contents.is_fence()))) {
+                || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))) {
                 SaveInsideFaces(inside, clipbrush, &outside);
             } else {
                 FreeFaces(inside);
