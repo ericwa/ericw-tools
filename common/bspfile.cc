@@ -449,7 +449,7 @@ struct gamedef_q2_t : public gamedef_t
     int32_t get_content_type(const contentflags_t &contents) const
     {
         return (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) |
-               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL);
+               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_DETAIL | Q2_CONTENTS_AREAPORTAL);
     }
 
     int32_t contents_priority(const contentflags_t &contents) const
@@ -510,7 +510,7 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
         
-        return contents.native & Q2_CONTENTS_SOLID;
+        return (contents.native & Q2_CONTENTS_SOLID);
     }
 
     bool contents_are_sky(const contentflags_t &contents) const { return false; }
@@ -604,12 +604,22 @@ struct gamedef_q2_t : public gamedef_t
     
     contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const
     {
+        // hints and skips are never detail, and have no content
+        if (flags.native & Q2_SURF_HINT) {
+            return { 0, CFLAGS_HINT };
+        } else if (flags.native & Q2_SURF_SKIP) {
+            return { 0, 0 };
+        }
+
         contentflags_t surf_contents = contents;
 
+        // if we don't have a declared content type, assume solid.
         if (!(surf_contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1))) {
             surf_contents.native |= Q2_CONTENTS_SOLID;
         }
 
+        // if we have TRANS33 or TRANS66, we have to be marked as WINDOW,
+        // so unset SOLID, give us WINDOW, and give us TRANSLUCENT
         if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) {
             surf_contents.native |= Q2_CONTENTS_TRANSLUCENT;
 
@@ -618,8 +628,13 @@ struct gamedef_q2_t : public gamedef_t
             }
         }
 
-        // add extended flags that we may need
-        if (surf_contents.native & Q2_CONTENTS_DETAIL) {
+        // translucent objects are automatically classified as detail
+        if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_CONTENTS_WINDOW)) {
+            surf_contents.extended |= CFLAGS_DETAIL_FENCE;
+        } else if (flags.native & (Q2_CONTENTS_MIST | Q2_CONTENTS_AUX)) {
+            surf_contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
+        // if we used the DETAIL contents flag, copy over DETAIL
+        } else if (surf_contents.native & Q2_CONTENTS_DETAIL) {
             surf_contents.extended |= CFLAGS_DETAIL;
         }
 
@@ -629,14 +644,6 @@ struct gamedef_q2_t : public gamedef_t
 
         if (surf_contents.native & Q2_CONTENTS_ORIGIN) {
             surf_contents.extended |= CFLAGS_ORIGIN;
-        }
-
-        if (surf_contents.native & Q2_CONTENTS_MIST) {
-            surf_contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
-        }
-
-        if (flags.native & Q2_SURF_HINT) {
-            surf_contents.extended |= CFLAGS_HINT;
         }
 
         // FIXME: this is a bit of a hack, but this is because clip

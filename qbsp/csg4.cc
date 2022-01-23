@@ -403,7 +403,7 @@ static void SaveInsideFaces(face_t *face, const brush_t &clipbrush, face_t **sav
         if ((face->contents[1].is_solid(options.target_game) || face->contents[1].is_sky(options.target_game)) &&
             clipbrush.contents.is_detail(CFLAGS_DETAIL)) {
             // This case is when a structural and detail brush are touching,
-            // and we want to save the sturctural face that is
+            // and we want to save the structural face that is
             // touching detail.
             //
             // We just marked face->contents[0] as CONTENTS_DETAIL which will

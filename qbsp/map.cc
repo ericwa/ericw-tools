@@ -1538,25 +1538,6 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         if (face.get() == nullptr)
             continue;
 
-        // FIXME: can we move this somewhere later?
-        if (options.target_game->id == GAME_QUAKE_II) {
-            // translucent objects are automatically classified as detail
-            if ((face->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) ||
-                (face->contents.native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP))) {
-                face->contents.native |= Q2_CONTENTS_DETAIL;
-            }
-
-            if (!(face->contents.native &
-                    (((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) | Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP))) {
-                face->contents.native |= Q2_CONTENTS_SOLID;
-            }
-
-            // hints and skips are never detail, and have no content
-            if (face->flags.native & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
-                face->contents.native = 0;
-            }
-        }
-
         /* Check for duplicate planes */
         bool discardFace = false;
         for (int i = 0; i < brush.numfaces; i++) {

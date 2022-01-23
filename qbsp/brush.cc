@@ -673,20 +673,6 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
 
 //============================================================================
 
-static const int DetailFlag = (1 << 27);
-
-// FIXME: move this to earlier into the map process, like in
-// texdef parsing or something
-static bool Brush_IsDetail(const mapbrush_t *mapbrush)
-{
-    const mapface_t &mapface = mapbrush->face(0);
-
-    if ((mapface.contents.native & DetailFlag) == DetailFlag) {
-        return true;
-    }
-    return false;
-}
-
 static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
 {
     // use the first side as the base contents value
@@ -893,7 +879,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     }
 
     /* _mirrorinside key (for func_water etc.) */
-    const bool mirrorinside = !!atoi(ValueForKey(src, "_mirrorinside"));
+    const bool mirrorinside_set = *ValueForKey(src, "_mirrorinside");
+    const bool all_mirrorinside = !!atoi(ValueForKey(src, "_mirrorinside"));
 
     /* _noclipfaces */
     const bool noclipfaces = !!atoi(ValueForKey(src, "_noclipfaces"));
@@ -910,14 +897,21 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         contentflags_t contents = Brush_GetContents(mapbrush);
 
         // per-brush settings
-        bool detail = Brush_IsDetail(mapbrush);
+        bool detail = false;
         bool detail_illusionary = false;
         bool detail_fence = false;
+        bool mirrorinside = all_mirrorinside;
 
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
+
+        if (!mirrorinside_set) {
+            if (options.target_game->id == GAME_QUAKE_II && (contents.native & (Q2_CONTENTS_AUX | Q2_CONTENTS_MIST))) {
+                mirrorinside = true;
+            }
+        }
 
         /* "origin" brushes always discarded */
         if (contents.is_origin())
@@ -933,12 +927,12 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(options.target_game)) {
-            if (detail) {
-                contents = {contents.native, CFLAGS_DETAIL};
-            } else if (detail_illusionary) {
+            if (detail_illusionary) {
                 contents = {contents.native, CFLAGS_DETAIL_ILLUSIONARY};
             } else if (detail_fence) {
                 contents = {contents.native, CFLAGS_DETAIL_FENCE};
+            } else if (detail) {
+                contents = {contents.native, CFLAGS_DETAIL};
             }
         }
 
@@ -974,21 +968,19 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 continue;
             contents = options.target_game->create_empty_contents();
         }
-
-        if (dst != pWorldEnt()) {
-            /* entities in some games never use water merging */
-            if (!options.target_game->allow_contented_bmodels) {
-                contents = options.target_game->create_solid_contents();
-            }
+        
+        /* entities in some games never use water merging */
+        if (dst != pWorldEnt() && !options.target_game->allow_contented_bmodels) {
+            contents = options.target_game->create_solid_contents();
 
             /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
-               this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
-               Otherwise they would be CONTENTS_SOLID and the inside faces would be deleted.
+                this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
+                Otherwise they would be CONTENTS_SOLID and the inside faces would be deleted.
 
-               It's CONTENTS_DETAIL_FENCE because this gets mapped to CONTENTS_SOLID just
-               before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
-               contents type.
-             */
+                It's CONTENTS_DETAIL_FENCE because this gets mapped to CONTENTS_SOLID just
+                before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
+                contents type.
+                */
             if (hullnum <= 0 && mirrorinside) {
                 contents = {contents.native, CFLAGS_DETAIL_FENCE};
             }
