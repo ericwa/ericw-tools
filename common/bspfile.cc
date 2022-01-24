@@ -271,7 +271,7 @@ struct gamedef_q1_like_t : public gamedef_t
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
             return create_extended_contents(CFLAGS_ORIGIN);
-        } else if (!Q_strcasecmp(texname.data(), "hint")) {
+        } else if (!Q_strcasecmp(texname.data(), "hint") || !Q_strcasecmp(texname.data(), "hintskip")) {
             return create_extended_contents(CFLAGS_HINT);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return create_extended_contents(CFLAGS_CLIP);

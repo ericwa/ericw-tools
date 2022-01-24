@@ -1827,7 +1827,7 @@ mapentity_t LoadExternalMap(const char *filename)
     auto file = fs::load(filename);
 
     if (!file) {
-        FError("Couldn't load external map file \"{}.\"\n", filename);
+        FError("Couldn't load external map file \"{}\".\n", filename);
     }
 
     parser_t parser(file->data(), file->size());
@@ -2147,11 +2147,11 @@ void WriteEntitiesToString()
         for (auto &ep : entity.epairs) {
 
             if (ep.first.size() >= options.target_game->max_entity_key - 1) {
-                LogPrint("WARNING: {} at {} (approx. line {}) has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
+                LogPrint("WARNING: {} at {} has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
             }
 
             if (ep.second.size() >= options.target_game->max_entity_value - 1) {
-                LogPrint("WARNING: {} at {} (approx. line {}) has long value for key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, entity.mapbrush(0).face(0).linenum, ep.first, ep.second.size(), options.target_game->max_entity_value - 1);
+                LogPrint("WARNING: {} at {} has long value for key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, ep.first, ep.second.size(), options.target_game->max_entity_value - 1);
             }
 
             fmt::format_to(std::back_inserter(map.bsp.dentdata), "\"{}\" \"{}\"\n", ep.first, ep.second);

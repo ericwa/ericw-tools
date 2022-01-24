@@ -264,7 +264,7 @@ struct surface_t
 
             bounds += f->w.bounds();
 
-            Q_assert(!qv::emptyExact(bounds.size()));
+            //Q_assert(!qv::emptyExact(bounds.size()));
         }
     }
 };

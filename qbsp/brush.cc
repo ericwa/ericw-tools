@@ -675,14 +675,8 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
 
 static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
 {
-    // use the first side as the base contents value
-    contentflags_t base_contents;
-    
-    {
-        const mapface_t &mapface = mapbrush->face(0);
-        const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-        base_contents = options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
-    }
+    bool base_contents_set = false;
+    contentflags_t base_contents = options.target_game->create_empty_contents();
 
     // validate that all of the sides have valid contents
     for (int i = 0; i < mapbrush->numfaces; i++) {
@@ -694,6 +688,12 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
         }
 
         contentflags_t contents = options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
+        
+        // use the first non-skip as the base contents value
+        if (!base_contents_set) {
+            base_contents_set = true;
+            base_contents = contents;
+        }
 
         if (!contents.types_equal(base_contents, options.target_game)) {
             LogPrint("mixed face contents ({} != {}) at line {}\n",
