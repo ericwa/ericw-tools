@@ -21,7 +21,6 @@
 
 #pragma once
 
-void MergePlaneFaces(surface_t *plane);
 face_t *MergeFaceToList(face_t *face, face_t *list);
 face_t *FreeMergeListScraps(face_t *merged);
-void MergeAll(surface_t *surfhead);
+void MergeAll(std::list<surface_t> &surfhead);

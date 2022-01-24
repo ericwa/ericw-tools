@@ -239,8 +239,6 @@ Faces exactly on the plane will stay inside unless overdrawn by later brush
 */
 static void ClipInside(const face_t *clipface, bool precedence, face_t **inside, face_t **outside)
 {
-    std::vector<vec_t> dists;
-    std::vector<side_t> sides;
     face_t *face, *next, *frags[2];
 
     const qbsp_plane_t &splitplane = map.planes[clipface->planenum];
@@ -458,27 +456,27 @@ visible face.
 Not parallel.
 ==================
 */
-surface_t *BuildSurfaces(const std::map<int, face_t *> &planefaces)
+std::list<surface_t> BuildSurfaces(const std::map<int, face_t *> &planefaces)
 {
-    surface_t *surfaces = NULL;
+    std::list<surface_t> surfaces;
 
     for (int i = 0; i < map.numplanes(); i++) {
         const auto entry = planefaces.find(i);
-        if (entry == planefaces.end() ||
-            entry->second == nullptr) // FIXME: entry->second == nullptr should never happen, turn into Q_assert
+
+        if (entry == planefaces.end())
             continue;
 
+        Q_assert(entry->second != nullptr);
+
         /* create a new surface to hold the faces on this plane */
-        surface_t *surf = new surface_t{};
-        surf->planenum = entry->first;
-        surf->next = surfaces;
-        surfaces = surf;
-        surf->faces = entry->second;
-        for (const face_t *face = surf->faces; face; face = face->next)
+        surface_t &surf = surfaces.emplace_front();
+        surf.planenum = entry->first;
+        surf.faces = entry->second;
+        for (const face_t *face = surf.faces; face; face = face->next)
             csgmergefaces++;
 
         /* Calculate bounding box and flags */
-        surf->calculateInfo();
+        surf.calculateInfo();
     }
 
     return surfaces;
@@ -515,7 +513,7 @@ CSGFaces
 Returns a list of surfaces containing all of the faces
 ==================
 */
-surface_t *CSGFaces(const mapentity_t *entity)
+std::list<surface_t> CSGFaces(const mapentity_t *entity)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
@@ -648,11 +646,13 @@ surface_t *CSGFaces(const mapentity_t *entity)
         const bool mirror = options.fContentHack ? true : !brush.contents.is_solid(options.target_game);
         SaveFacesToPlaneList(outside, mirror, planefaces);
     }
-    surface_t *surfaces = BuildSurfaces(planefaces);
+
+    std::list<surface_t> surfaces = BuildSurfaces(planefaces);
 
     LogPrint(LOG_STAT, "     {:8} brushfaces\n", brushfaces.load());
     LogPrint(LOG_STAT, "     {:8} csgfaces\n", csgfaces);
     LogPrint(LOG_STAT, "     {:8} mergedfaces\n", csgmergefaces);
+    LogPrint(LOG_STAT, "     {:8} surfaces\n", surfaces.size());
 
     return surfaces;
 }

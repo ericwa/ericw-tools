@@ -209,21 +209,18 @@ face_t *FreeMergeListScraps(face_t *merged)
 MergePlaneFaces
 ===============
 */
-void MergePlaneFaces(surface_t *plane)
+inline void MergePlaneFaces(surface_t &plane)
 {
-    face_t *f, *next;
-    face_t *merged;
+    face_t *merged = NULL, *next;
 
-    merged = NULL;
-
-    for (f = plane->faces; f; f = next) {
+    for (face_t *f = plane.faces; f; f = next) {
         next = f->next;
         merged = MergeFaceToList(f, merged);
     }
 
     // Remove all empty faces (numpoints == -1) and add the remaining
     // faces to the plane
-    plane->faces = FreeMergeListScraps(merged);
+    plane.faces = FreeMergeListScraps(merged);
 }
 
 /*
@@ -231,7 +228,7 @@ void MergePlaneFaces(surface_t *plane)
 MergeAll
 ============
 */
-void MergeAll(surface_t *surfhead)
+void MergeAll(std::list<surface_t> &surfhead)
 {
     surface_t *surf;
     int mergefaces = 0;
@@ -239,10 +236,11 @@ void MergeAll(surface_t *surfhead)
 
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    for (surf = surfhead; surf; surf = surf->next) {
+    for (auto &surf : surfhead) {
         MergePlaneFaces(surf);
-        for (f = surf->faces; f; f = f->next)
+        for (f = surf.faces; f; f = f->next) {
             mergefaces++;
+        }
     }
 
     LogPrint(LOG_STAT, "     {:8} mergefaces\n", mergefaces);

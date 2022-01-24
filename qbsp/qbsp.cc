@@ -485,7 +485,6 @@ ProcessEntity
 static void ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     int firstface;
-    surface_t *surfs;
     node_t *nodes;
 
     /* No map brushes means non-bmodel entity.
@@ -563,7 +562,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      * Take the brush_t's and clip off all overlapping and contained faces,
      * leaving a perfect skin of the model with no hidden faces
      */
-    surfs = CSGFaces(entity);
+    std::list<surface_t> surfs = CSGFaces(entity);
 
     if (options.fObjExport && entity == pWorldEnt() && hullnum <= 0) {
         ExportObj_Surfaces("post_csg", surfs);

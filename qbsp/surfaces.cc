@@ -184,15 +184,11 @@ static void GatherNodeFaces_r(node_t *node, std::map<int, face_t *> &planefaces)
 GatherNodeFaces
 ================
 */
-surface_t *GatherNodeFaces(node_t *headnode)
+std::list<surface_t> GatherNodeFaces(node_t *headnode)
 {
-    surface_t *surfaces;
-
     std::map<int, face_t *> planefaces;
     GatherNodeFaces_r(headnode, planefaces);
-    surfaces = BuildSurfaces(planefaces);
-
-    return surfaces;
+    return BuildSurfaces(planefaces);
 }
 
 //===========================================================================

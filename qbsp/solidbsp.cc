@@ -266,14 +266,14 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const aabb3d &bounds)
+static std::list<surface_t>::iterator ChooseMidPlaneFromList(std::list<surface_t> &surfaces, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     vec_t bestmetric = VECT_MAX;
-    surface_t *bestsurface = nullptr;
+    std::list<surface_t>::iterator bestsurface = surfaces.end();
 
     for (int pass = 0; pass < 2; pass++) {
-        for (surface_t *surf = surfaces; surf; surf = surf->next) {
+        for (auto surf = surfaces.begin(); surf != surfaces.end(); surf++) {
             if (surf->onnode)
                 continue;
 
@@ -295,9 +295,10 @@ static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const aabb3d &boun
             }
         }
 
-        if (!bestsurface) {
+        if (bestsurface == surfaces.end()) {
+            // TODO: we can probably merge this into the loop above
             /* Choose based on spatial subdivision only */
-            for (surface_t *surf = surfaces; surf; surf = surf->next) {
+            for (auto surf = surfaces.begin(); surf != surfaces.end(); surf++) {
                 if (surf->onnode)
                     continue;
 
@@ -315,10 +316,11 @@ static surface_t *ChooseMidPlaneFromList(surface_t *surfaces, const aabb3d &boun
             }
         }
 
-        if (bestsurface)
+        if (bestsurface != surfaces.end())
             break;
     }
-    if (!bestsurface)
+
+    if (bestsurface == surfaces.end())
         FError("No valid planes in surface list");
 
     // ericw -- (!usemidsplit) is true on the final SolidBSP phase for the world.
@@ -342,16 +344,16 @@ ChoosePlaneFromList
 The real BSP hueristic
 ==================
 */
-static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
+static std::list<surface_t>::iterator ChoosePlaneFromList(std::list<surface_t> &surfaces, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     int minsplits = INT_MAX - 1;
     vec_t bestdistribution = VECT_MAX;
-    surface_t *bestsurface = nullptr;
+    std::list<surface_t>::iterator bestsurface = surfaces.end();
 
     /* Two passes - exhaust all non-detail faces before details */
     for (int pass = 0; pass < 2; pass++) {
-        for (surface_t *surf = surfaces; surf; surf = surf->next) {
+        for (auto surf = surfaces.begin(); surf != surfaces.end(); surf++) {
             if (surf->onnode)
                 continue;
 
@@ -373,7 +375,7 @@ static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
             const qbsp_plane_t &plane = map.planes[surf->planenum];
             int splits = 0;
 
-            for (surface_t *surf2 = surfaces; surf2; surf2 = surf2->next) {
+            for (auto surf2 = surfaces.begin(); surf2 != surfaces.end(); surf2++) {
                 if (surf2 == surf || surf2->onnode)
                     continue;
                 const qbsp_plane_t &plane2 = map.planes[surf2->planenum];
@@ -419,7 +421,7 @@ static surface_t *ChoosePlaneFromList(surface_t *surfaces, const aabb3d &bounds)
         }
 
         /* If we found a candidate on first pass, don't do a second pass */
-        if (bestsurface) {
+        if (bestsurface != surfaces.end()) {
             bestsurface->detail_separator = (pass > 0);
             break;
         }
@@ -438,19 +440,21 @@ returns NULL if the surface list can not be divided any more (a leaf)
 Called in parallel.
 ==================
 */
-static surface_t *SelectPartition(surface_t *surfaces)
+static std::list<surface_t>::iterator SelectPartition(std::list<surface_t> &surfaces)
 {
     // count onnode surfaces
     int surfcount = 0;
-    surface_t *bestsurface = nullptr;
-    for (surface_t *surf = surfaces; surf; surf = surf->next)
+    std::list<surface_t>::iterator bestsurface = surfaces.end();
+
+    for (auto surf = surfaces.begin(); surf != surfaces.end(); surf++) {
         if (!surf->onnode) {
             surfcount++;
             bestsurface = surf;
         }
+    }
 
     if (surfcount == 0)
-        return NULL;
+        return surfaces.end();
 
     if (surfcount == 1)
         return bestsurface; // this is a final split
@@ -458,8 +462,8 @@ static surface_t *SelectPartition(surface_t *surfaces)
     // calculate a bounding box of the entire surfaceset
     aabb3d bounds;
 
-    for (surface_t *surf = surfaces; surf; surf = surf->next) {
-        bounds += surf->bounds;
+    for (auto &surf : surfaces) {
+        bounds += surf.bounds;
     }
 
     // how much of the map are we partitioning?
@@ -496,67 +500,64 @@ static surface_t *SelectPartition(surface_t *surfaces)
 DividePlane
 ==================
 */
-static void DividePlane(surface_t *in, const qplane3d &split, surface_t **front, surface_t **back)
+static twosided<std::optional<surface_t>> DividePlane(surface_t &in, const qplane3d &split)
 {
-    const qbsp_plane_t *inplane = &map.planes[in->planenum];
-    *front = *back = NULL;
+    const qbsp_plane_t *inplane = &map.planes[in.planenum];
+    std::optional<surface_t> front, back;
 
     // parallel case is easy
     if (qv::epsilonEqual(inplane->normal, split.normal, EQUAL_EPSILON)) {
         // check for exactly on node
         if (inplane->dist == split.dist) {
-            face_t *facet = in->faces;
-            in->faces = NULL;
-            in->onnode = true;
+            face_t *facet = in.faces;
+            in.faces = NULL;
+            in.onnode = true;
 
             // divide the facets to the front and back sides
-            surface_t *newsurf = new surface_t{};
-            *newsurf = *in;
+            surface_t newsurf(in);
 
             // Prepend each face in facet list to either in or newsurf lists
             face_t *next;
             for (; facet; facet = next) {
                 next = facet->next;
                 if (facet->planeside == 1) {
-                    facet->next = newsurf->faces;
-                    newsurf->faces = facet;
+                    facet->next = newsurf.faces;
+                    newsurf.faces = facet;
                 } else {
-                    facet->next = in->faces;
-                    in->faces = facet;
+                    facet->next = in.faces;
+                    in.faces = facet;
                 }
             }
 
             // ericw -- added these CalcSurfaceInfo to recalculate the surf bbox.
             // pretty sure their omission here was a bug.
-            newsurf->calculateInfo();
-            in->calculateInfo();
+            newsurf.calculateInfo();
+            in.calculateInfo();
 
-            if (in->faces)
-                *front = in;
-            else
-                delete in;
+            if (in.faces)
+                front = std::move(in);
 
-            if (newsurf->faces)
-                *back = newsurf;
-            else
-                delete newsurf;
-
-            return;
+            if (newsurf.faces)
+                back = std::move(newsurf);
+            
+            return { front, back };
         }
 
         if (inplane->dist > split.dist)
-            *front = in;
+            front = std::move(in);
         else
-            *back = in;
-        return;
+            back = std::move(in);
+
+        return { front, back };
     }
+
     // do a real split.  may still end up entirely on one side
     // OPTIMIZE: use bounding box for fast test
     face_t *frontlist = NULL;
     face_t *backlist = NULL;
 
     face_t *next;
-    for (face_t *facet = in->faces; facet; facet = next) {
+    for (face_t *facet = in.faces; facet; facet = next) {
         next = facet->next;
 
         face_t *frontfrag = NULL;
@@ -574,28 +575,25 @@ static void DividePlane(surface_t *in, const qplane3d &split, surface_t **front,
 
     // if nothing actually got split, just move the in plane
     if (frontlist == NULL) {
-        *back = in;
-        in->faces = backlist;
-        return;
+        in.faces = backlist;
+        return { std::nullopt, std::move(in) };
     }
 
     if (backlist == NULL) {
-        *front = in;
-        in->faces = frontlist;
-        return;
+        in.faces = frontlist;
+        return { std::move(in), std::nullopt };
     }
 
     // stuff got split, so allocate one new plane and reuse in
-    surface_t *newsurf = new surface_t(*in);
-    newsurf->faces = backlist;
-    *back = newsurf;
-
-    in->faces = frontlist;
-    *front = in;
+    surface_t newsurf(in);
+    newsurf.faces = backlist;
+    in.faces = frontlist;
 
     // recalc bboxes and flags
-    newsurf->calculateInfo();
-    in->calculateInfo();
+    newsurf.calculateInfo();
+    in.calculateInfo();
+
+    return { std::move(in), std::move(newsurf) };
 }
 
 /*
@@ -618,7 +616,7 @@ original faces that have some fragment inside this leaf.
 Called in parallel.
 ==================
 */
-static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
+static void LinkConvexFaces(std::list<surface_t> &planelist, node_t *leafnode)
 {
     leafnode->faces = NULL;
     leafnode->planenum = PLANENUM_LEAF;
@@ -626,8 +624,8 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     int count = 0;
     std::optional<contentflags_t> contents;
 
-    for (surface_t *surf = planelist; surf; surf = surf->next) {
-        for (face_t *f = surf->faces; f; f = f->next) {
+    for (auto &surf : planelist) {
+        for (face_t *f = surf.faces; f; f = f->next) {
             count++;
 
             const int currentpri = contents.has_value() ? contents->priority(options.target_game) : -1;
@@ -681,18 +679,17 @@ static void LinkConvexFaces(surface_t *planelist, node_t *leafnode)
     leafnode->markfaces = new face_t *[count + 1] {};
 
     int i = 0;
-    surface_t *pnext;
-    for (surface_t *surf = planelist; surf; surf = pnext) {
-        pnext = surf->next;
-        face_t *next;
-        for (face_t *f = surf->faces; f; f = next) {
-            next = f->next;
+
+    for (auto &surf : planelist) {
+        for (face_t *f = surf.faces; f; ) {
+            face_t *next = f->next;
             leafnode->markfaces[i] = f->original;
             i++;
             delete f;
+            f = next;
         }
-        delete surf;
     }
+
     leafnode->markfaces[i] = NULL; // sentinal
 }
 
@@ -709,12 +706,12 @@ is returned here (why?).
 Called in parallel.
 ==================
 */
-static face_t *LinkNodeFaces(surface_t *surface)
+static face_t *LinkNodeFaces(surface_t &surface)
 {
     face_t *list = NULL;
 
     // subdivide large faces
-    face_t **prevptr = &surface->faces;
+    face_t **prevptr = &surface.faces;
     face_t *f = *prevptr;
     while (f) {
         SubdivideFace(f, prevptr);
@@ -723,7 +720,7 @@ static face_t *LinkNodeFaces(surface_t *surface)
     }
 
     // copy
-    for (face_t *f = surface->faces; f; f = f->next) {
+    for (face_t *f = surface.faces; f; f = f->next) {
         nodefaces++;
         face_t *newf = new face_t(*f);
         f->original = newf;
@@ -741,10 +738,11 @@ PartitionSurfaces
 Called in parallel.
 ==================
 */
-static void PartitionSurfaces(surface_t *surfaces, node_t *node)
+static void PartitionSurfaces(std::list<surface_t> &surfaces, node_t *node)
 {
-    surface_t *split = SelectPartition(surfaces);
-    if (!split) { // this is a leaf node
+    std::list<surface_t>::iterator split = SelectPartition(surfaces);
+
+    if (split == surfaces.end()) { // this is a leaf node
         node->planenum = PLANENUM_LEAF;
 
         // frees `surfaces` and the faces on it.
@@ -756,7 +754,7 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
     splitnodes++;
     LogPercent(splitnodes.load(), csgmergefaces);
 
-    node->faces = LinkNodeFaces(split);
+    node->faces = LinkNodeFaces(*split);
     node->children[0] = new node_t{};
     node->children[1] = new node_t{};
     node->planenum = split->planenum;
@@ -767,33 +765,27 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
     DivideNodeBounds(node, splitplane);
 
     // multiple surfaces, so split all the polysurfaces into front and back lists
-    surface_t *frontlist = NULL;
-    surface_t *backlist = NULL;
+    std::list<surface_t> frontlist, backlist;
 
-    surface_t *next;
-    for (surface_t *surf = surfaces; surf; surf = next) {
-        next = surf->next;
+    for (auto &surf : surfaces) {
+        auto frags = DividePlane(surf, splitplane);
 
-        surface_t *frontfrag, *backfrag;
-        DividePlane(surf, splitplane, &frontfrag, &backfrag);
-        if (frontfrag && backfrag) {
+        if (frags.front && frags.back) {
             // the plane was split, which may expose oportunities to merge
             // adjacent faces into a single face
             //                      MergePlaneFaces (frontfrag);
             //                      MergePlaneFaces (backfrag);
         }
 
-        if (frontfrag) {
-            if (!frontfrag->faces)
+        if (frags.front) {
+            if (!frags.front->faces)
                 FError("Surface with no faces");
-            frontfrag->next = frontlist;
-            frontlist = frontfrag;
+            frontlist.emplace_front(std::move(*frags.front));
         }
-        if (backfrag) {
-            if (!backfrag->faces)
+        if (frags.back) {
+            if (!frags.back->faces)
                 FError("Surface with no faces");
-            backfrag->next = backlist;
-            backlist = backfrag;
+            backlist.emplace_front(std::move(*frags.back));
         }
     }
 
@@ -808,9 +800,9 @@ static void PartitionSurfaces(surface_t *surfaces, node_t *node)
 SolidBSP
 ==================
 */
-node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
+node_t *SolidBSP(const mapentity_t *entity, std::list<surface_t> &surfhead, bool midsplit)
 {
-    if (!surfhead) {
+    if (surfhead.empty()) {
         /*
          * We allow an entity to be constructed with no visible brushes
          * (i.e. all clip brushes), but need to construct a simple empty
@@ -851,10 +843,7 @@ node_t *SolidBSP(const mapentity_t *entity, surface_t *surfhead, bool midsplit)
     c_detail_fence = 0;
     c_illusionary_visblocker = 0;
     // count map surfaces; this is used when deciding to switch between midsplit and the expensive partitioning
-    mapsurfaces = 0;
-    for (surface_t *surf = surfhead; surf; surf = surf->next) {
-        mapsurfaces++;
-    }
+    mapsurfaces = surfhead.size();
 
     PartitionSurfaces(surfhead, headnode);
 

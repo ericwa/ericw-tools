@@ -228,11 +228,9 @@ struct face_t
 
 struct surface_t
 {
-    surface_t *next;
     int planenum;
-    std::optional<size_t> outputplanenum; // only valid after WriteSurfacePlanes
     bool onnode; // true if surface has already been used
-                 //   as a splitting node
+                 // as a splitting node
     bool detail_separator; // true if ALL faces are detail
     face_t *faces; // links to all faces on either side of the surf
 
@@ -242,6 +240,8 @@ struct surface_t
     bool has_struct;
     // smallest lmshift of all faces; calculated via calculateInfo
     short lmshift;
+
+    std::optional<size_t> outputplanenum; // only valid after WriteSurfacePlanes
 
     // calculate bounds & info
     inline void calculateInfo()
