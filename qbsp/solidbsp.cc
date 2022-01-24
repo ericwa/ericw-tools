@@ -270,8 +270,10 @@ The clipping hull BSP doesn't worry about avoiding splits
 static std::list<surface_t>::iterator ChooseMidPlaneFromList(std::list<surface_t> &surfaces, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
-    vec_t bestmetric = VECT_MAX;
-    std::list<surface_t>::iterator bestsurface = surfaces.end();
+    vec_t bestaxialmetric = VECT_MAX;
+    std::list<surface_t>::iterator bestaxialsurface = surfaces.end();
+    vec_t bestanymetric = VECT_MAX;
+    std::list<surface_t>::iterator bestanysurface = surfaces.end();
 
     for (int pass = 0; pass < 2; pass++) {
         for (auto surf = surfaces.begin(); surf != surfaces.end(); surf++) {
@@ -283,43 +285,37 @@ static std::list<surface_t>::iterator ChooseMidPlaneFromList(std::list<surface_t
             if (!surf->has_struct && !pass)
                 continue;
 
-            /* check for axis aligned surfaces */
             const qbsp_plane_t &plane = map.planes[surf->planenum];
-            if (!(plane.type < 3))
-                continue;
+            bool axial = false;
+            
+            /* check for axis aligned surfaces */
+            if (plane.type < 3) {
+                axial = true;
+            }
 
             /* calculate the split metric, smaller values are better */
             const vec_t metric = SplitPlaneMetric(plane, bounds);
-            if (metric < bestmetric) {
-                bestmetric = metric;
-                bestsurface = surf;
+
+            if (metric < bestanymetric) {
+                bestanymetric = metric;
+                bestanysurface = surf;
             }
-        }
 
-        if (bestsurface == surfaces.end()) {
-            // TODO: we can probably merge this into the loop above
-            /* Choose based on spatial subdivision only */
-            for (auto surf = surfaces.begin(); surf != surfaces.end(); surf++) {
-                if (surf->onnode)
-                    continue;
-
-                if (surf->has_struct && pass)
-                    continue;
-                if (!surf->has_struct && !pass)
-                    continue;
-
-                const qbsp_plane_t &plane = map.planes[surf->planenum];
-                const vec_t metric = SplitPlaneMetric(plane, bounds);
-                if (metric < bestmetric) {
-                    bestmetric = metric;
-                    bestsurface = surf;
+            if (axial) {
+                if (metric < bestaxialmetric) {
+                    bestaxialmetric = metric;
+                    bestaxialsurface = surf;
                 }
             }
         }
 
-        if (bestsurface != surfaces.end())
+        if (bestanysurface != surfaces.end() || bestaxialsurface != surfaces.end()) {
             break;
+        }
     }
+
+    // prefer the axial split
+    auto bestsurface = (bestaxialsurface == surfaces.end()) ? bestanysurface : bestaxialsurface;
 
     if (bestsurface == surfaces.end())
         FError("No valid planes in surface list");
