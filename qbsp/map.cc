@@ -2182,11 +2182,11 @@ void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<brush
 
     for (auto &brush : list) {
         fmt::print(f, "{{\n");
-        for (auto &face : brush.faces) {
+        for (const face_t *face = brush.faces; face; face = face->next) {
             // FIXME: Factor out this mess
-            qbsp_plane_t plane = map.planes.at(face.planenum);
+            qbsp_plane_t plane = map.planes.at(face->planenum);
 
-            if (face.planeside) {
+            if (face->planeside) {
                 plane = -plane;
             }
 
