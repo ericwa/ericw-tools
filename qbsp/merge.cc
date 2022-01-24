@@ -230,7 +230,6 @@ MergeAll
 */
 void MergeAll(std::list<surface_t> &surfhead)
 {
-    surface_t *surf;
     int mergefaces = 0;
     face_t *f;
 

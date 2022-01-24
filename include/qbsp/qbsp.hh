@@ -248,6 +248,7 @@ struct surface_t
     {
         bounds = {};
         lmshift = std::numeric_limits<short>::max();
+        has_struct = false;
 
         for (const face_t *f = faces; f; f = f->next) {
             for (auto &contents : f->contents)
@@ -256,8 +257,10 @@ struct surface_t
 
             lmshift = min(f->lmshift.front, f->lmshift.back);
 
-            has_struct = !((f->contents[0].extended | f->contents[1].extended) &
-                (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY));
+            if (!((f->contents[0].extended | f->contents[1].extended) &
+                (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))) {
+                has_struct = true;
+            }
 
             bounds += f->w.bounds();
 
