@@ -28,6 +28,7 @@
 #include <vector>
 #include <utility>
 #include <unordered_map>
+#include <list>
 
 struct qbsp_plane_t : qplane3d
 {

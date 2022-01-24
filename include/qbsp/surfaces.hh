@@ -21,5 +21,7 @@
 
 #pragma once
 
+#include <list>
+
 std::list<surface_t> GatherNodeFaces(node_t *headnode);
 void FreeNodes(node_t* node);

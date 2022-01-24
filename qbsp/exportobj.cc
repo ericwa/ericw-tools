@@ -24,6 +24,7 @@
 #include <unordered_set>
 #include <fstream>
 #include <fmt/ostream.h>
+#include <list>
 
 static std::ofstream InitObjFile(const std::string &filesuffix)
 {

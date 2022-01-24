@@ -23,6 +23,7 @@
 
 #include <qbsp/qbsp.hh>
 
+#include <list>
 #include <atomic>
 
 #include "tbb/task_group.h"

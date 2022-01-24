@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <list>
+
 extern int csgmergefaces;
 
 // build surfaces is also used by GatherNodeFaces
