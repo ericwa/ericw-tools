@@ -498,6 +498,9 @@ bool FillOutside(node_t *node, const int hullnum)
             exit(1);
         }
 
+        // clear occupied state, so areas can be flooded in Q2
+        ClearOccupied_r(node);
+
         return false;
     }
 
