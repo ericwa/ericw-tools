@@ -298,14 +298,13 @@ static bool DiscardHintSkipFace_Q2(const mtexinfo_t &texinfo)
 CreateBrushFaces
 =================
 */
-static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
-                                const rotation_t rottype = rotation_t::none, const qvec3d &rotate_offset = {})
+static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
+                                            const rotation_t rottype = rotation_t::none, const qvec3d &rotate_offset = {})
 {
     vec_t r;
-    face_t *f;
     std::optional<winding_t> w;
     qbsp_plane_t plane;
-    face_t *facelist = NULL;
+    std::list<face_t> facelist;
     qvec3d point;
     vec_t max, min;
 
@@ -343,31 +342,31 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         if (!w)
             continue; // overconstrained plane
 
-        // this face is a keeper
-        f = new face_t{};
-        f->planenum = PLANENUM_LEAF;
-
         if (w->size() > MAXEDGES)
             FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface.linenum);
+        
+        // this face is a keeper
+        face_t &f = facelist.emplace_front();
+        f.planenum = PLANENUM_LEAF;
 
-        f->w.resize(w->size());
+        f.w.resize(w->size());
 
         for (size_t j = 0; j < w->size(); j++) {
             for (size_t k = 0; k < 3; k++) {
                 point[k] = w->at(j)[k] - rotate_offset[k];
                 r = Q_rint(point[k]);
                 if (fabs(point[k] - r) < ZERO_EPSILON)
-                    f->w[j][k] = r;
+                    f.w[j][k] = r;
                 else
-                    f->w[j][k] = point[k];
+                    f.w[j][k] = point[k];
 
-                if (f->w[j][k] < min)
-                    min = f->w[j][k];
-                if (f->w[j][k] > max)
-                    max = f->w[j][k];
+                if (f.w[j][k] < min)
+                    min = f.w[j][k];
+                if (f.w[j][k] > max)
+                    max = f.w[j][k];
             }
 
-            hullbrush->bounds += f->w[j];
+            hullbrush->bounds += f.w[j];
         }
 
         // account for texture offset, from txqbsp-xt
@@ -386,14 +385,12 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         point -= rotate_offset;
         plane.dist = qv::dot(plane.normal, point);
 
-        f->texinfo = hullnum > 0 ? 0 : mapface.texinfo;
-        f->planenum = FindPlane(plane, &f->planeside);
-        f->src_entity = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
+        f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
+        f.planenum = FindPlane(plane, &f.planeside);
+        f.src_entity = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
 
-        f->next = facelist;
-        facelist = f;
-        CheckFace(f, mapface);
-        UpdateFaceSphere(f);
+        CheckFace(&f, mapface);
+        UpdateFaceSphere(&f);
     }
 
     // Rotatable objects must have a bounding box big enough to
@@ -418,7 +415,7 @@ static face_t *CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, 
         hullbrush->bounds = {-delta, delta};
     }
 
-    return facelist;
+    return { std::make_move_iterator(facelist.begin()), std::make_move_iterator(facelist.end()) };
 }
 
 /*
@@ -444,17 +441,6 @@ FreeBrushes
 void FreeBrushes(mapentity_t *ent)
 {
     ent->brushes.clear();
-}
-
-/*
-=====================
-FreeBrush
-=====================
-*/
-void FreeBrush(brush_t *brush)
-{
-    FreeBrushFaces(brush->faces);
-    delete brush;
 }
 
 /*
@@ -635,10 +621,9 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
 ExpandBrush
 =============
 */
-static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const face_t *facelist)
+static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::vector<face_t> &facelist)
 {
     int x, s;
-    const face_t *f;
     qbsp_plane_t plane;
     int cBevEdge = 0;
 
@@ -647,9 +632,9 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const f
     hullbrush->edges.clear();
 
     // create all the hull points
-    for (f = facelist; f; f = f->next)
-        for (size_t i = 0; i < f->w.size(); i++) {
-            AddHullPoint(hullbrush, f->w[i], hull_size);
+    for (auto &f : facelist)
+        for (size_t i = 0; i < f.w.size(); i++) {
+            AddHullPoint(hullbrush, f.w[i], hull_size);
             cBevEdge++;
         }
 
@@ -681,9 +666,9 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, const f
         }
 
     // add all of the edge bevels
-    for (f = facelist; f; f = f->next)
-        for (size_t i = 0; i < f->w.size(); i++)
-            AddHullEdge(hullbrush, f->w[i], f->w[(i + 1) % f->w.size()], hull_size);
+    for (auto &f : facelist)
+        for (size_t i = 0; i < f.w.size(); i++)
+            AddHullEdge(hullbrush, f.w[i], f.w[(i + 1) % f.w.size()], hull_size);
 }
 
 //============================================================================
@@ -735,7 +720,7 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
                                  const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
-    face_t *facelist;
+    std::vector<face_t> facelist;
 
     // create the faces
 
@@ -758,7 +743,7 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
         facelist = CreateBrushFaces(src, &hullbrush, hullnum);
     }
 
-    if (!facelist) {
+    if (facelist.empty()) {
         LogPrint("WARNING: Couldn't create brush faces\n");
         LogPrint("^ brush at line {} of .map file\n", hullbrush.linenum);
         return std::nullopt;
@@ -768,7 +753,6 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
         auto &hulls = options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
         ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);
-        FreeBrushFaces(facelist);
         facelist = CreateBrushFaces(src, &hullbrush, hullnum, rottype, rotate_offset);
     }
 
@@ -801,6 +785,8 @@ static brush_stats_t Entity_SortBrushes(mapentity_t *dst, brush_types_t &types)
     stats.sky = types.sky.size();
     stats.solid = types.solid.size();
 
+    dst->brushes.reserve(stats.detail_illusionary + stats.liquid + stats.detail_fence + stats.detail + stats.sky + stats.solid);
+
     dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_illusionary.begin()), make_move_iterator(types.detail_illusionary.end()));
     dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.liquid.begin()), make_move_iterator(types.liquid.end()));
     dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_fence.begin()), make_move_iterator(types.detail_fence.end()));
@@ -809,19 +795,6 @@ static brush_stats_t Entity_SortBrushes(mapentity_t *dst, brush_types_t &types)
     dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.solid.begin()), make_move_iterator(types.solid.end()));
 
     return stats;
-}
-
-static int FaceListCount(const face_t *facelist)
-{
-    if (facelist)
-        return 1 + FaceListCount(facelist->next);
-    else
-        return 0;
-}
-
-int Brush_NumFaces(const brush_t *brush)
-{
-    return FaceListCount(brush->faces);
 }
 
 static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, brush_types_t &types)

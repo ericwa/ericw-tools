@@ -206,9 +206,9 @@ static void RemoveOutsideFaces(const brush_t &brush, face_t **inside, face_t **o
     while (face) {
         next = face->next;
         std::optional<winding_t> w = face->w;
-        for (const face_t *clipface = brush.faces; clipface; clipface = clipface->next) {
-            qbsp_plane_t clipplane = map.planes[clipface->planenum];
-            if (!clipface->planeside) {
+        for (auto &clipface : brush.faces) {
+            qbsp_plane_t clipplane = map.planes[clipface.planenum];
+            if (!clipface.planeside) {
                 clipplane = -clipplane;
             }
             w = w->clip(clipplane, ON_EPSILON, true)[SIDE_FRONT];
@@ -491,12 +491,12 @@ CopyBrushFaces
 */
 static face_t *CopyBrushFaces(const brush_t &brush)
 {
-    face_t *facelist, *face, *newface;
+    face_t *facelist, *newface;
 
     facelist = NULL;
-    for (face = brush.faces; face; face = face->next) {
+    for (auto &face : brush.faces) {
         brushfaces++;
-        newface = new face_t(*face);
+        newface = new face_t(face);
         newface->contents = { options.target_game->create_empty_contents(), brush.contents };
         newface->lmshift = { brush.lmshift, brush.lmshift };
         newface->next = facelist;
@@ -595,9 +595,8 @@ std::list<surface_t> CSGFaces(const mapentity_t *entity)
             outside = NULL;
 
             RemoveOutsideFaces(clipbrush, &inside, &outside);
-            const face_t *clipface = clipbrush.faces;
-            for (; clipface; clipface = clipface->next)
-                ClipInside(clipface, overwrite, &inside, &outside);
+            for (auto &clipface : clipbrush.faces)
+                ClipInside(&clipface, overwrite, &inside, &outside);
 
             // inside = parts of `brush` that are inside `clipbrush`
             // outside = parts of `brush` that are outside `clipbrush`
