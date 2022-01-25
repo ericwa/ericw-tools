@@ -1543,13 +1543,13 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         for (int i = 0; i < brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
             if (qv::epsilonEqual(check.plane, face->plane)) {
-                LogPrint("line {}: Brush with duplicate plane", parser.linenum);
+                LogPrint("line {}: Brush with duplicate plane\n", parser.linenum);
                 discardFace = true;
                 continue;
             }
             if (qv::epsilonEqual(-check.plane, face->plane)) {
                 /* FIXME - this is actually an invalid brush */
-                LogPrint("line {}: Brush with duplicate plane", parser.linenum);
+                LogPrint("line {}: Brush with duplicate plane\n", parser.linenum);
                 continue;
             }
         }
@@ -1874,7 +1874,7 @@ void LoadMapFile(void)
         auto file = fs::load(options.szMapName);
 
         if (!file) {
-            FError("Couldn't load map file \"{}.\"\n", options.szMapName);
+            FError("Couldn't load map file \"{}\".\n", options.szMapName);
             return;
         }
 

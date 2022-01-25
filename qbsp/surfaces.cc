@@ -317,6 +317,23 @@ inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, c
     return i;
 }
 
+static void FindFaceFragmentEdges(mapentity_t *entity, face_t *face, face_fragment_t *fragment)
+{
+    fragment->outputnumber = std::nullopt;
+
+    if (fragment->w.size() > MAXEDGES) {
+        FError("Internal error: face->numpoints > MAXEDGES");
+    }
+
+    fragment->edges.resize(fragment->w.size());
+
+    for (size_t i = 0; i < fragment->w.size(); i++) {
+        const qvec3d &p1 = fragment->w[i];
+        const qvec3d &p2 = fragment->w[(i + 1) % fragment->w.size()];
+        fragment->edges[i] = GetEdge(entity, p1, p2, face);
+    }
+}
+
 /*
 ==================
 FindFaceEdges
@@ -329,16 +346,10 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
     if (map.mtexinfos.at(face->texinfo).flags.is_hint)
         return;
 
-    face->outputnumber = std::nullopt;
-    if (face->w.size() > MAXEDGES)
-        FError("Internal error: face->numpoints > MAXEDGES");
+    FindFaceFragmentEdges(entity, face, face);
 
-    face->edges.resize(face->w.size());
-
-    for (size_t i = 0; i < face->w.size(); i++) {
-        const qvec3d &p1 = face->w[i];
-        const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
-        face->edges[i] = GetEdge(entity, p1, p2, face);
+    for (auto &fragment : face->fragments) {
+        FindFaceFragmentEdges(entity, face, &fragment);
     }
 }
 
@@ -365,21 +376,16 @@ static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 
 /*
 ==============
-EmitFace
+EmitFaceFragment
 ==============
 */
-static void EmitFace(mapentity_t *entity, face_t *face)
+static void EmitFaceFragment(mapentity_t *entity, face_t *face, face_fragment_t *fragment)
 {
     int i;
     
-    if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
-        return;
-    if (map.mtexinfos.at(face->texinfo).flags.is_hint)
-        return;
-
     // emit a region
-    Q_assert(!face->outputnumber.has_value());
-    face->outputnumber = map.bsp.dfaces.size();
+    Q_assert(!fragment->outputnumber.has_value());
+    fragment->outputnumber = map.bsp.dfaces.size();
 
     mface_t &out = map.bsp.dfaces.emplace_back();
 
@@ -396,10 +402,29 @@ static void EmitFace(mapentity_t *entity, face_t *face)
 
     // emit surfedges
     out.firstedge = static_cast<int32_t>(map.bsp.dsurfedges.size());
-    std::copy(face->edges.cbegin(), face->edges.cbegin() + face->w.size(), std::back_inserter(map.bsp.dsurfedges));
-    face->edges.clear();
+    std::copy(fragment->edges.cbegin(), fragment->edges.cbegin() + fragment->w.size(), std::back_inserter(map.bsp.dsurfedges));
+    fragment->edges.clear();
 
     out.numedges = static_cast<int32_t>(map.bsp.dsurfedges.size()) - out.firstedge;
+}
+
+/*
+==============
+EmitFace
+==============
+*/
+static void EmitFace(mapentity_t *entity, face_t *face)
+{
+    if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
+        return;
+    if (map.mtexinfos.at(face->texinfo).flags.is_hint)
+        return;
+
+    EmitFaceFragment(entity, face, face);
+
+    for (auto &fragment : face->fragments) {
+        EmitFaceFragment(entity, face, &fragment);
+    }
 }
 
 /*

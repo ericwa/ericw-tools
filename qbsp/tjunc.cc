@@ -238,25 +238,20 @@ static void AddFaceEdges(face_t *f)
  */
 #define MAX_SUPERFACE_POINTS 8192
 
-static void SplitFaceForTjunc(face_t *face, face_t *original, face_t **facelist)
+static void SplitFaceForTjunc(face_t *face, face_t *original)
 {
     winding_t &w = face->w;
-    face_t *newf, *chain;
     qvec3d edgevec[2];
     vec_t angle;
     int i, firstcorner, lastcorner;
 
-    chain = NULL;
     do {
         if (w.size() <= MAXPOINTS) {
             /*
              * the face is now small enough without more cutting so
              * copy it back to the original
              */
-            *original = *face;
-            original->original = chain;
-            original->next = *facelist;
-            *facelist = original;
+            *original = std::move(*face);
             return;
         }
 
@@ -298,27 +293,23 @@ restart:
          * cut off as big a piece as possible, less than MAXPOINTS, and not
          * past lastcorner
          */
-        newf = NewFaceFromFace(face);
-        if (face->original)
-            FError("original face still exists");
+        winding_t neww(face->w);
 
-        newf->original = chain;
-        chain = newf;
-        newf->next = *facelist;
-        *facelist = newf;
         if (w.size() - firstcorner <= MAXPOINTS)
-            newf->w.resize(firstcorner + 2);
+            neww.resize(firstcorner + 2);
         else if (lastcorner + 2 < MAXPOINTS && w.size() - lastcorner <= MAXPOINTS)
-            newf->w.resize(lastcorner + 2);
+            neww.resize(lastcorner + 2);
         else
-            newf->w.resize(MAXPOINTS);
+            neww.resize(MAXPOINTS);
 
-        for (i = 0; i < newf->w.size(); i++)
-            newf->w[i] = w[i];
-        for (i = newf->w.size() - 1; i < w.size(); i++)
-            w[i - (newf->w.size() - 2)] = w[i];
+        for (i = 0; i < neww.size(); i++)
+            Q_assert(qv::equalExact(neww[i], w[i]));
+        for (i = neww.size() - 1; i < w.size(); i++)
+            w[i - (neww.size() - 2)] = w[i];
 
-        w.resize(w.size() - (newf->w.size() - 2));
+        w.resize(w.size() - (neww.size() - 2));
+
+        face->fragments.emplace_front(face_fragment_t { std::move(neww) });
     } while (1);
 }
 
@@ -328,14 +319,14 @@ FixFaceEdges
 
 ===============
 */
-static void FixFaceEdges(face_t *face, face_t *superface, face_t **facelist)
+static void FixFaceEdges(face_t *face, face_t *superface)
 {
     int i, j;
     wedge_t *edge;
     wvert_t *v;
     vec_t t1, t2;
 
-    *superface = *face;
+    *superface = std::move(*face);
 
 restart:
     for (i = 0; i < superface->w.size(); i++) {
@@ -366,14 +357,12 @@ restart:
     }
 
     if (superface->w.size() <= MAXPOINTS) {
-        *face = *superface;
-        face->next = *facelist;
-        *facelist = face;
+        *face = std::move(*superface);
         return;
     }
 
     /* Too many edges - needs to be split into multiple faces */
-    SplitFaceForTjunc(superface, face, facelist);
+    SplitFaceForTjunc(superface, face);
 }
 
 //============================================================================
@@ -408,19 +397,19 @@ static void tjunc_find_r(node_t *node)
 
 static void tjunc_fix_r(node_t *node, face_t *superface)
 {
-    face_t *face, *next, *facelist;
-
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    facelist = NULL;
-
-    for (face = node->faces; face; face = next) {
+    face_t *root = nullptr, *next;
+ 
+    for (face_t *face = node->faces; face; face = next) {
         next = face->next;
-        FixFaceEdges(face, superface, &facelist);
+        FixFaceEdges(face, superface);
+        face->next = root;
+        root = face;
     }
 
-    node->faces = facelist;
+    node->faces = root;
 
     tjunc_fix_r(node->children[0], superface);
     tjunc_fix_r(node->children[1], superface);

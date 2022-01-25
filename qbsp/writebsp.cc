@@ -193,10 +193,12 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
             continue;
 
         /* emit a marksurface */
-        do {
-            map.bsp.dleaffaces.push_back(face->outputnumber.value());
-            face = face->original; /* grab tjunction split faces */
-        } while (face);
+        map.bsp.dleaffaces.push_back(face->outputnumber.value());
+
+        /* grab tjunction split faces */
+        for (auto &fragment : face->fragments) {
+            map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
+        }
     }
     dleaf.nummarksurfaces = static_cast<int>(map.bsp.dleaffaces.size()) - dleaf.firstmarksurface;
 

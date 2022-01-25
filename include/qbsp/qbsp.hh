@@ -204,7 +204,15 @@ struct mtexinfo_t
 
 class mapentity_t;
 
-struct face_t
+struct face_fragment_t
+{
+    winding_t w;
+    std::vector<size_t> edges; // only filled in MakeFaceEdges
+    std::optional<size_t> outputnumber; // only valid for original faces after
+                                        // write surfaces
+};
+
+struct face_t : face_fragment_t
 {
     face_t *next;
 
@@ -216,14 +224,12 @@ struct face_t
 
     mapentity_t *src_entity; // source entity
     face_t *original; // face on node
-    std::optional<size_t> outputnumber; // only valid for original faces after
-                                        // write surfaces
     bool touchesOccupiedLeaf; // internal use in outside.cc
     qvec3d origin;
     vec_t radius;
 
-    std::vector<size_t> edges; // only filled in MakeFaceEdges
-    winding_t w;
+    // filled by TJunc
+    std::list<face_fragment_t> fragments;
 };
 
 struct surface_t
