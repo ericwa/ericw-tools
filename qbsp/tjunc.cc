@@ -232,13 +232,11 @@ static void AddFaceEdges(face_t *f)
 
 //============================================================================
 
-/*
- * superface is a large face used as intermediate stage in tjunc fixes,
- * can hold hundreds of edges if needed
- */
-#define MAX_SUPERFACE_POINTS 8192
+// If we hit this amount of points, there's probably an issue
+// in the algorithm that is generating endless vertices.
+constexpr size_t MAX_TJUNC_POINTS = 8192;
 
-static void SplitFaceForTjunc(face_t *face, face_t *original)
+static void SplitFaceForTjunc(face_t *face)
 {
     winding_t &w = face->w;
     qvec3d edgevec[2];
@@ -247,11 +245,7 @@ static void SplitFaceForTjunc(face_t *face, face_t *original)
 
     do {
         if (w.size() <= MAXPOINTS) {
-            /*
-             * the face is now small enough without more cutting so
-             * copy it back to the original
-             */
-            *original = std::move(*face);
+            // the face is now small enough without more cutting
             return;
         }
 
@@ -319,20 +313,18 @@ FixFaceEdges
 
 ===============
 */
-static void FixFaceEdges(face_t *face, face_t *superface)
+static void FixFaceEdges(face_t *face)
 {
     int i, j;
     wedge_t *edge;
     wvert_t *v;
     vec_t t1, t2;
 
-    *superface = std::move(*face);
-
 restart:
-    for (i = 0; i < superface->w.size(); i++) {
-        j = (i + 1) % superface->w.size();
+    for (i = 0; i < face->w.size(); i++) {
+        j = (i + 1) % face->w.size();
 
-        edge = FindEdge(superface->w[i], superface->w[j], t1, t2);
+        edge = FindEdge(face->w[i], face->w[j], t1, t2);
 
         v = edge->head.next;
         while (v->t < t1 + T_EPSILON)
@@ -340,29 +332,30 @@ restart:
 
         if (v->t < t2 - T_EPSILON) {
             /* insert a new vertex here */
-            if (superface->w.size() == MAX_SUPERFACE_POINTS)
-                FError("tjunc fixups generated too many edges (max {})", MAX_SUPERFACE_POINTS);
+            if (face->w.size() >= MAX_TJUNC_POINTS) {
+                FError("generated too many points (max {})", MAX_TJUNC_POINTS);
+            }
 
             tjuncs++;
 
             // FIXME: a bit of a silly way of handling this
-            superface->w.push_back({});
+            face->w.push_back({});
 
-            for (int32_t k = superface->w.size() - 1; k > j; k--)
-                superface->w[k] = superface->w[k - 1];
+            for (int32_t k = face->w.size() - 1; k > j; k--)
+                face->w[k] = face->w[k - 1];
 
-            superface->w[j] = edge->origin + (edge->dir * v->t);
+            face->w[j] = edge->origin + (edge->dir * v->t);
             goto restart;
         }
     }
 
-    if (superface->w.size() <= MAXPOINTS) {
-        *face = std::move(*superface);
+    // we're good to go!
+    if (face->w.size() <= MAXPOINTS) {
         return;
     }
 
     /* Too many edges - needs to be split into multiple faces */
-    SplitFaceForTjunc(superface, face);
+    SplitFaceForTjunc(face);
 }
 
 //============================================================================
@@ -395,17 +388,17 @@ static void tjunc_find_r(node_t *node)
     tjunc_find_r(node->children[1]);
 }
 
-static void tjunc_fix_r(node_t *node, face_t *superface)
+static void tjunc_fix_r(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF)
         return;
 
     for (face_t *face = node->faces; face; face = face->next) {
-        FixFaceEdges(face, superface);
+        FixFaceEdges(face);
     }
 
-    tjunc_fix_r(node->children[0], superface);
-    tjunc_fix_r(node->children[1], superface);
+    tjunc_fix_r(node->children[0]);
+    tjunc_fix_r(node->children[1]);
 }
 
 /*
@@ -452,11 +445,9 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     LogPrint(LOG_STAT, "     {:8} world edges\n", numwedges);
     LogPrint(LOG_STAT, "     {:8} edge points\n", numwverts);
 
-    face_t superface;
-
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
-    tjunc_fix_r(headnode, &superface);
+    tjunc_fix_r(headnode);
 
     delete[] pWVerts;
     delete[] pWEdges;
