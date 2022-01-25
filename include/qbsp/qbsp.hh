@@ -229,7 +229,7 @@ struct face_t : face_fragment_t
     vec_t radius;
 
     // filled by TJunc
-    std::list<face_fragment_t> fragments;
+    std::vector<face_fragment_t> fragments;
 };
 
 struct surface_t
