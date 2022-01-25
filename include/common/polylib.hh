@@ -303,7 +303,7 @@ public:
     {
         // move us to dynamic
         if (count == N)
-            data.template emplace<vector_type>(begin(), end());
+            data = vector_type(begin(), end());
 
         if (is_dynamic())
             std::get<vector_type>(data).push_back(vec);
@@ -317,8 +317,9 @@ public:
     {
         // move us to dynamic if we'll expand too big
         if (new_size > N && !is_dynamic()) {
-            auto &vector = data.template emplace<vector_type>(begin(), end());
+            auto &vector = vector_type(begin(), end());
             vector.resize(new_size);
+            data = std::move(vector);
         } else if (is_dynamic()) {
             if (new_size > N)
                 std::get<vector_type>(data).resize(new_size);
