@@ -273,9 +273,41 @@ struct miptex_t
     std::string name;
     uint32_t width, height;
     std::array<std::unique_ptr<uint8_t[]>, MIPLEVELS> data;
+
+    static inline uint8_t *copy_bytes(const uint8_t *in, size_t size)
+    {
+        uint8_t *bytes = new uint8_t[size];
+        memcpy(bytes, in, size);
+        return bytes;
+    }
     
     miptex_t() = default;
-    miptex_t(miptex_t &&) = default;
+    miptex_t(const miptex_t &copy) :
+        name(copy.name),
+        width(copy.width),
+        height(copy.height)
+    {
+        for (int32_t i = 0; i < data.size(); i++) {
+            if (copy.data[i]) {
+                data[i] = std::unique_ptr<uint8_t[]>(copy_bytes(copy.data[i].get(), (width >> i) * (height >> i)));
+            }
+        }
+    }
+
+    inline miptex_t &operator=(const miptex_t &copy)
+    {
+        name = copy.name;
+        width = copy.width;
+        height = copy.height;
+
+        for (int32_t i = 0; i < data.size(); i++) {
+            if (copy.data[i]) {
+                data[i] = std::unique_ptr<uint8_t[]>(copy_bytes(copy.data[i].get(), (width >> i) * (height >> i)));
+            }
+        }
+
+        return *this;
+    }
 
     virtual ~miptex_t() { }
 
@@ -343,7 +375,7 @@ struct miptexhl_t : miptex_t
     miptexhl_t() = default;
 
     // convert miptex_t to miptexhl_t
-    miptexhl_t(miptex_t &&move) : miptex_t(std::forward<miptex_t &&>(move)) { }
+    miptexhl_t(const miptex_t &copy) : miptex_t(copy) { }
 
     virtual size_t stream_size() const
     {
@@ -379,14 +411,14 @@ struct dmiptexlump_t
 
     dmiptexlump_t() = default;
 
-    // move from a different lump type
+    // copy from a different lump type
     template<typename T2>
-    dmiptexlump_t(dmiptexlump_t<T2> &&move)
+    dmiptexlump_t(const dmiptexlump_t<T2> &copy)
     {
-        textures.reserve(move.textures.size());
+        textures.reserve(copy.textures.size());
 
-        for (auto &m : move.textures) {
-            textures.emplace_back(std::move(m));
+        for (auto &m : copy.textures) {
+            textures.emplace_back(m);
         }
     }
 
