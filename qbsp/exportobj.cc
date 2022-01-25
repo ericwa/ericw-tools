@@ -170,9 +170,7 @@ static void ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<cons
         return;
     }
 
-    for (face_t **markface = node->markfaces; *markface; markface++) {
-        face_t *face = *markface;
-
+    for (auto &face : node->markfaces) {
         if (map.mtexinfos.at(face->texinfo).flags.is_skip)
             continue;
 

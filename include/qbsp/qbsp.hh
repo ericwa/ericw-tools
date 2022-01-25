@@ -287,7 +287,7 @@ struct node_t
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
-    face_t **markfaces; // leaf nodes only, point to node faces
+    std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     portal_t *portals;
     int visleafnum; // -1 = solid
     int viscluster; // detail cluster for faster vis

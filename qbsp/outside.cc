@@ -351,8 +351,8 @@ static void MarkFacesTouchingOccupiedLeafs(node_t *node)
 
     if (node->outside_distance == -1) {
         // This is an occupied leaf, so we need to keep all of the faces touching it.
-        for (face_t **markface = node->markfaces; *markface; markface++) {
-            (*markface)->touchesOccupiedLeaf = true;
+        for (auto &markface : node->markfaces) {
+            markface->touchesOccupiedLeaf = true;
         }
     }
 }
@@ -377,9 +377,9 @@ static void ClearOutFaces(node_t *node)
         return;
     }
 
-    for (face_t **markface = node->markfaces; *markface; markface++) {
+    for (auto &markface : node->markfaces) {
         // NOTE: This is how faces are deleted here, kind of ugly
-        (*markface)->w.clear();
+        markface->w.clear();
     }
 
     // FIXME: Shouldn't be needed here
@@ -405,8 +405,8 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
     // Now check all faces touching the leaf. If any of them are partially going into the occupied part of the map,
     // don't fill the leaf (see comment in FillOutside).
     bool skipFill = false;
-    for (face_t **markface = node->markfaces; *markface; markface++) {
-        if ((*markface)->touchesOccupiedLeaf) {
+    for (auto &markface : node->markfaces) {
+        if (markface->touchesOccupiedLeaf) {
             skipFill = true;
             break;
         }

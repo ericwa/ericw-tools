@@ -56,9 +56,8 @@ void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 
     node->planenum = PLANENUM_LEAF;
     node->contents = contents;
-    node->markfaces = new face_t *[1] {};
 
-    Q_assert(node->markfaces[0] == nullptr);
+    Q_assert(node->markfaces.empty());
 }
 
 void DetailToSolid(node_t *node)
@@ -338,7 +337,7 @@ static std::list<surface_t>::iterator ChooseMidPlaneFromList(std::list<surface_t
 ==================
 ChoosePlaneFromList
 
-The real BSP hueristic
+The real BSP heuristic
 ==================
 */
 static std::list<surface_t>::iterator ChoosePlaneFromList(std::list<surface_t> &surfaces, const aabb3d &bounds)
@@ -673,21 +672,16 @@ static void LinkConvexFaces(std::list<surface_t> &planelist, node_t *leafnode)
     // write the list of the original faces to the leaf's markfaces
     // free surf and the surf->faces list.
     leaffaces += count;
-    leafnode->markfaces = new face_t *[count + 1] {};
-
-    int i = 0;
+    leafnode->markfaces.reserve(count);
 
     for (auto &surf : planelist) {
         for (face_t *f = surf.faces; f; ) {
             face_t *next = f->next;
-            leafnode->markfaces[i] = f->original;
-            i++;
+            leafnode->markfaces.push_back(f->original);
             delete f;
             f = next;
         }
     }
-
-    leafnode->markfaces[i] = NULL; // sentinal
 }
 
 /*
@@ -811,11 +805,9 @@ node_t *SolidBSP(const mapentity_t *entity, std::list<surface_t> &surfhead, bool
         headnode->children[0] = new node_t{};
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = options.target_game->create_empty_contents();
-        headnode->children[0]->markfaces = new face_t *[1] {};
         headnode->children[1] = new node_t{};
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = options.target_game->create_empty_contents();
-        headnode->children[1]->markfaces = new face_t *[1] {};
 
         return headnode;
     }

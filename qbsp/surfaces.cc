@@ -131,10 +131,6 @@ static void FreeNode(node_t* node)
         }
         node->faces = nullptr;
     }
-    if (node->markfaces) {
-        delete[] node->markfaces;
-        node->markfaces = nullptr;
-    }
     delete node;
 }
 

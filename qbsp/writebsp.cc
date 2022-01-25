@@ -184,9 +184,7 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     // write the marksurfaces
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
-    for (face_t **markfaces = node->markfaces; *markfaces; markfaces++) {
-        face_t *face = *markfaces;
-
+    for (auto &face : node->markfaces) {
         if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
             continue;
         // FIXME: this can happen when compiling some Q2 maps
