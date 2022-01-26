@@ -1,20 +1,21 @@
----- qbsp / ericw-tools v0.18.1-477-g4accc4d-dirty ----
+---- qbsp / ericw-tools v0.18.1-636-g19dbc1c ----
 Input file: qbsp_func_detail_illusionary_plus_water.map
 Output file: qbsp_func_detail_illusionary_plus_water.bsp
 
-SetQdirFromPath: WARNING: 'C:\Users\Eric\Documents\ericw-tools\testmaps' is not directly inside 'maps'
 WARNING: No info_player_deathmatch entities in level
 Opened WAD: deprecated/fence.wad
 Opened WAD: deprecated/free_wad.wad
 Processing hull 0...
 ---- Brush_LoadEntity ----
-            7 brushes
-            1 detail illusionary
+            6 solid brushes
+            1 detail illusionary brushes
+            1 liquid brushes
            18 planes
 ---- CSGFaces ----
            48 brushfaces
            50 csgfaces
            60 mergedfaces
+           18 surfaces
 ---- SolidBSP ----
            34 split nodes
             6 solid leafs
@@ -76,4 +77,4 @@ Wrote qbsp_func_detail_illusionary_plus_water.bsp
         visdata               0
         entdata             223
 
-0.013s seconds elapsed
+0.015s seconds elapsed

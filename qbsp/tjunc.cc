@@ -303,7 +303,7 @@ restart:
 
         w.resize(w.size() - (neww.size() - 2));
 
-        face->fragments.insert(face->fragments.begin(), face_fragment_t{ std::move(neww) });
+        face->fragments.push_back(face_fragment_t { std::move(neww) });
     } while (1);
 }
 
@@ -393,16 +393,9 @@ static void tjunc_fix_r(node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    face_t *root = nullptr, *next;
- 
-    for (face_t *face = node->faces; face; face = next) {
-        next = face->next;
+    for (face_t *face = node->faces; face; face = face->next) {
         FixFaceEdges(face);
-        face->next = root;
-        root = face;
     }
-
-    node->faces = root;
 
     tjunc_fix_r(node->children[0]);
     tjunc_fix_r(node->children[1]);

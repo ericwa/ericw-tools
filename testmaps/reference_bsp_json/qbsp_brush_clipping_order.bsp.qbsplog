@@ -1,4 +1,4 @@
----- qbsp / ericw-tools v0.18.1-578-g3d9277b ----
+---- qbsp / ericw-tools v0.18.1-636-g19dbc1c ----
 Input file: qbsp_brush_clipping_order.map
 Output file: qbsp_brush_clipping_order.bsp
 
@@ -6,12 +6,13 @@ WARNING: No info_player_deathmatch entities in level
 Opened WAD: deprecated/free_wad.wad
 Processing hull 0...
 ---- Brush_LoadEntity ----
-            2 brushes
+            2 solid brushes
            11 planes
 ---- CSGFaces ----
            12 brushfaces
            10 csgfaces
            10 mergedfaces
+            6 surfaces
 ---- SolidBSP ----
             6 split nodes
             1 solid leafs

@@ -38,12 +38,12 @@ light invalid_texture_axes.map || exit 1
 # regenerate the expected hashes, but check that the .bsp's still
 # work in game at the same time.
 
+# qbsp_brush_clipping_order.bsp omitted because it is not sealed, so doesn't have a .prt
 HASH_CHECK_BSPS="qbsp_func_detail.bsp \
 qbsp_func_detail_illusionary_plus_water.bsp \
 qbsp_origin.bsp \
 qbsp_angled_brush.bsp \
 qbsp_sealing_point_entity_on_outside.bsp \
-qbsp_brush_clipping_order.bsp \
 qbsp_tjunc_many_sided_face.bsp \
 e1m1-bsp29.bsp \
 e1m1-bsp2.bsp \
