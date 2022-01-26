@@ -1,20 +1,17 @@
 ---- qbsp / ericw-tools v0.18.1-636-g19dbc1c ----
-Input file: qbsp_sealing_point_entity_on_outside.map
-Output file: qbsp_sealing_point_entity_on_outside.bsp
+Input file: qbsp_tjunc_many_sided_face.map
+Output file: qbsp_tjunc_many_sided_face.bsp
 
 WARNING: No info_player_deathmatch entities in level
 Opened WAD: deprecated/free_wad.wad
-Opened WAD: deprecated/fence.wad
-Opened WAD: deprecated/origin.wad
-Opened WAD: deprecated/hintskip.wad
 Processing hull 0...
 ---- Brush_LoadEntity ----
-            6 solid brushes
-           12 planes
+           82 solid brushes
+           50 planes
 ---- CSGFaces ----
-           36 brushfaces
-           36 csgfaces
-           36 mergedfaces
+          492 brushfaces
+          340 csgfaces
+          340 mergedfaces
            12 surfaces
 ---- SolidBSP ----
            24 split nodes
@@ -25,8 +22,8 @@ Processing hull 0...
             0 detail illusionary leafs
             0 detail fence leafs
             0 illusionary visblocker leafs
-          120 leaffaces
-          120 nodefaces
+          732 leaffaces
+          732 nodefaces
 ---- PortalizeWorld ----
            19 vis leafs
            19 vis clusters
@@ -34,7 +31,7 @@ Processing hull 0...
 ---- FillOutside ----
            18 outleafs
 ---- MergeAll ----
-            6 mergefaces
+           82 mergefaces
 ---- SolidBSP ----
             6 split nodes
             6 solid leafs
@@ -44,37 +41,39 @@ Processing hull 0...
             0 detail illusionary leafs
             0 detail fence leafs
             0 illusionary visblocker leafs
-           32 leaffaces
-           32 nodefaces
+          386 leaffaces
+          386 nodefaces
 ---- PortalizeWorld ----
             1 vis leafs
             1 vis clusters
             0 vis portals
 ---- TJunc ----
-           28 world edges
-          100 edge points
-           16 edges added by tjunctions
-            0 faces added by tjunctions
+          120 world edges
+          988 edge points
+          192 edges added by tjunctions
+            1 faces added by tjunctions
 ---- MakeFaceEdges ----
 ---- GrowRegions ----
 Processing hull 1...
+WARNING: No entities in empty space -- no filling performed (hull 1)
 Processing hull 2...
-Writing qbsp_sealing_point_entity_on_outside.bsp as BSP version Quake BSP
-Wrote qbsp_sealing_point_entity_on_outside.bsp
+WARNING: No entities in empty space -- no filling performed (hull 2)
+Writing qbsp_tjunc_many_sided_face.bsp as BSP version Quake BSP
+Wrote qbsp_tjunc_many_sided_face.bsp
       1 models      
-     17 planes              340
-     42 vertexes            504
+     39 planes              780
+    484 vertexes           5808
       6 nodes               144
-      4 texinfos            160
-     32 faces               640
-     12 clipnodes            96
+     18 texinfos            720
+    387 faces              7740
+    112 clipnodes           896
       2 leafs                56
-     32 marksurfaces         64
-     73 edges               292
-    144 surfedges           576
-        textures              2
+    387 marksurfaces        774
+    870 edges              3480
+   1738 surfedges          6952
+        textures              3
         lightdata             0
         visdata               0
-        entdata             463
+        entdata             139
 
-0.013s seconds elapsed
+0.056s seconds elapsed

@@ -1,8 +1,7 @@
----- qbsp / ericw-tools v0.18.1-477-g4accc4d-dirty ----
+---- qbsp / ericw-tools v0.18.1-636-g19dbc1c ----
 Input file: qbsp_func_detail.map
 Output file: qbsp_func_detail.bsp
 
-SetQdirFromPath: WARNING: 'C:\Users\Eric\Documents\ericw-tools\testmaps' is not directly inside 'maps'
 WARNING: No info_player_deathmatch entities in level
 Opened WAD: deprecated/free_wad.wad
 Opened WAD: deprecated/fence.wad
@@ -10,13 +9,14 @@ Opened WAD: deprecated/origin.wad
 Opened WAD: deprecated/hintskip.wad
 Processing hull 0...
 ---- Brush_LoadEntity ----
-            7 brushes
-            1 detail
+            7 solid brushes
+            1 detail brushes
            21 planes
 ---- CSGFaces ----
            48 brushfaces
            53 csgfaces
            58 mergedfaces
+           21 surfaces
 ---- SolidBSP ----
            62 split nodes
            17 solid leafs
@@ -78,4 +78,4 @@ Wrote qbsp_func_detail.bsp
         visdata               0
         entdata             320
 
-0.017s seconds elapsed
+0.018s seconds elapsed
