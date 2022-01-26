@@ -43,6 +43,8 @@ qbsp_func_detail_illusionary_plus_water.bsp \
 qbsp_origin.bsp \
 qbsp_angled_brush.bsp \
 qbsp_sealing_point_entity_on_outside.bsp \
+qbsp_brush_clipping_order.bsp \
+qbsp_tjunc_many_sided_face.bsp \
 e1m1-bsp29.bsp \
 e1m1-bsp2.bsp \
 e1m1-2psb.bsp \
@@ -63,7 +65,8 @@ qbsp_func_detail_illusionary_plus_water.bsp \
 qbsp_origin.bsp \
 qbsp_angled_brush.bsp \
 qbsp_sealing_point_entity_on_outside.bsp \
-qbsp_brush_clipping_order.bsp"
+qbsp_brush_clipping_order.bsp \
+qbsp_tjunc_many_sided_face.bsp"
 
 # smaller test maps for specific features/combinations
 # check .json diff of COMMIT_JSON_MAPS
