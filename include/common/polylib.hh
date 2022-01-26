@@ -317,7 +317,7 @@ public:
     {
         // move us to dynamic if we'll expand too big
         if (new_size > N && !is_dynamic()) {
-            auto &vector = vector_type(begin(), end());
+            auto vector = vector_type(begin(), end());
             vector.resize(new_size);
             data = std::move(vector);
         } else if (is_dynamic()) {
