@@ -280,19 +280,6 @@ void FixRotateOrigin(mapentity_t *entity)
 
     SetKeyValue(entity, "origin", qv::to_string(offset).c_str());
 }
-
-static bool DiscardHintSkipFace_Q1(const mtexinfo_t &texinfo)
-{
-    // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
-    return !string_iequals(map.miptexTextureName(texinfo.miptex), "hint");
-}
-
-static bool DiscardHintSkipFace_Q2(const mtexinfo_t &texinfo)
-{
-    // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
-    return !(texinfo.flags.native & Q2_SURF_HINT);
-}
-
 /*
 =================
 CreateBrushFaces
@@ -313,15 +300,12 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 
     hullbrush->bounds = {};
 
-    auto DiscardHintSkipFace =
-        (options.target_game->id == GAME_QUAKE_II) ? DiscardHintSkipFace_Q2 : DiscardHintSkipFace_Q1;
-
     for (auto &mapface : hullbrush->faces) {
         if (hullnum <= 0 && hullbrush->contents.is_hint()) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
-            if (DiscardHintSkipFace(texinfo))
+            if (options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
                 continue;
         }
 
@@ -339,11 +323,13 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             w = w->clip(plane, ON_EPSILON, false)[SIDE_FRONT];
         }
 
-        if (!w)
+        if (!w) {
             continue; // overconstrained plane
+        }
 
-        if (w->size() > MAXEDGES)
+        if (w->size() > MAXEDGES) {
             FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface.linenum);
+        }
         
         // this face is a keeper
         face_t &f = facelist.emplace_front();

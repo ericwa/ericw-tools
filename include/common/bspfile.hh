@@ -1771,6 +1771,8 @@ struct gamedef_t
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
     virtual bool surfflags_are_valid(const surfflags_t &flags) const = 0;
+    // FIXME: fix so that we don't have to pass a name here
+    virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
     virtual int32_t contents_priority(const contentflags_t &contents) const = 0;

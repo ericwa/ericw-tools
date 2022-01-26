@@ -2163,6 +2163,64 @@ void WriteEntitiesToString()
 
 //====================================================================
 
+inline std::optional<qvec3d> GetIntersection(const qbsp_plane_t &p1, const qbsp_plane_t &p2, const qbsp_plane_t &p3)
+{
+    const vec_t denom = qv::dot(p1.normal, qv::cross(p2.normal, p3.normal));
+
+    if (denom == 0.f) {
+        return std::nullopt;
+    }
+
+    return (qv::cross(p2.normal, p3.normal) * p1.dist - qv::cross(p3.normal, p1.normal) * -p2.dist - qv::cross(p1.normal, p2.normal) * -p3.dist) / denom;
+}
+
+/*
+=================
+GetBrushExtents
+=================
+*/
+vec_t GetBrushExtents(const mapbrush_t &hullbrush)
+{
+    vec_t extents = -std::numeric_limits<vec_t>::infinity();
+
+    for (int32_t i = 0; i < hullbrush.numfaces - 2; i++) {
+        for (int32_t j = i; j < hullbrush.numfaces - 1; j++) {
+            for (int32_t k = j; k < hullbrush.numfaces; k++) {
+                if (i == j || j == k || k == i) {
+                    continue;
+                }
+                
+                auto &fi = hullbrush.face(i);
+                auto &fj = hullbrush.face(j);
+                auto &fk = hullbrush.face(k);
+
+                bool legal = true;
+                auto vertex = GetIntersection(fi.plane, fj.plane, fk.plane);
+
+                if (!vertex) {
+                    continue;
+                }
+
+                for (int32_t m = 0; m < hullbrush.numfaces; m++) {
+                    if (hullbrush.face(m).plane.distance_to(*vertex) > NORMAL_EPSILON) {
+                        legal = false;
+                        break;
+                    }
+                }
+
+                if (legal) {
+
+                    for (auto &p : *vertex) {
+                        extents = max(extents, fabs(p));
+                    }
+                }
+            }
+        }
+    }
+
+    return extents;
+}
+
 /*
 ==================
 WriteBspBrushMap

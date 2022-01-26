@@ -50,6 +50,8 @@ struct gamedef_generic_t : public gamedef_t
 
     bool surfflags_are_valid(const surfflags_t &) const { throw std::bad_cast(); }
 
+    bool texinfo_is_hintskip(const surfflags_t &, const std::string &) const { throw std::bad_cast(); }
+
     contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
     int32_t get_content_type(const contentflags_t &) const { throw std::bad_cast(); }
@@ -105,6 +107,12 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         // Q1 only supports TEX_SPECIAL
         return (flags.native & ~TEX_SPECIAL) == 0;
+    }
+
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const
+    {
+        // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
+        return !string_iequals(name, "hint");
     }
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
@@ -432,6 +440,12 @@ struct gamedef_q2_t : public gamedef_t
     {
         // no rules in Quake II baby
         return true;
+    }
+
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const
+    {
+        // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
+        return !(flags.native & Q2_SURF_HINT);
     }
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const

@@ -116,7 +116,7 @@ public:
     bool fTestExpand = false;
     bool fLeakTest = false;
     bool fContentHack = false;
-    vec_t worldExtent = 65536.0f;
+    vec_t worldExtent = 0.f;
     bool fNoThreads = false;
     bool includeSkip = false;
     bool fNoTJunc = false;
@@ -135,9 +135,6 @@ extern options_t options;
 
 // Various other geometry maximums
 constexpr size_t MAXEDGES = 64;
-
-// For brush.c, normal and +16 (?)
-#define NUM_HULLS 2
 
 // 0-2 are axial planes
 // 3-5 are non-axial planes snapped to the nearest

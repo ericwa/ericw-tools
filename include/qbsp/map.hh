@@ -75,6 +75,8 @@ public:
     const mapface_t &face(int i) const;
 };
 
+vec_t GetBrushExtents(const mapbrush_t &hullbrush);
+
 struct lumpdata
 {
     int count;
