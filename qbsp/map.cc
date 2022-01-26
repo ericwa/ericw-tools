@@ -2179,7 +2179,7 @@ inline std::optional<qvec3d> GetIntersection(const qbsp_plane_t &p1, const qbsp_
 GetBrushExtents
 =================
 */
-vec_t GetBrushExtents(const mapbrush_t &hullbrush)
+inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
 {
     vec_t extents = -std::numeric_limits<vec_t>::infinity();
 
@@ -2219,6 +2219,34 @@ vec_t GetBrushExtents(const mapbrush_t &hullbrush)
     }
 
     return extents;
+}
+
+#include "tbb/parallel_for.h"
+#include <mutex>
+
+void CalculateWorldExtent(void)
+{
+    LogPrint("Calculating world extents... ");
+
+    std::atomic<vec_t> extents = -std::numeric_limits<vec_t>::infinity();
+
+    tbb::parallel_for(static_cast<size_t>(0), static_cast<size_t>(map.numbrushes()), [&](const size_t &i) {
+        const auto &brush = map.brushes[i];
+        const vec_t brushExtents = max(extents.load(), GetBrushExtents(brush));
+        vec_t currentExtents = extents;
+        while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents));
+    });
+
+    vec_t hull_extents = 0;
+
+    for (auto &hull : options.target_game->get_hull_sizes()) {
+        for (auto &v : hull.size()) {
+            hull_extents = max(hull_extents, fabs(v));
+        }
+    }
+
+    options.worldExtent = extents + hull_extents;
+    LogPrint("{} units\n", options.worldExtent);
 }
 
 /*

@@ -75,8 +75,6 @@ public:
     const mapface_t &face(int i) const;
 };
 
-vec_t GetBrushExtents(const mapbrush_t &hullbrush);
-
 struct lumpdata
 {
     int count;
@@ -159,6 +157,9 @@ struct mapdata_t
 };
 
 extern mapdata_t map;
+
+void CalculateWorldExtent(void);
+
 extern mapentity_t *pWorldEnt();
 
 bool ParseEntity(parser_t &parser, mapentity_t *entity);

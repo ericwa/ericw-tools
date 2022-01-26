@@ -879,7 +879,6 @@ static void BSPX_CreateBrushList(void)
 /*
 =================
 CreateSingleHull
-
 =================
 */
 static void CreateSingleHull(const int hullnum)
@@ -900,52 +899,9 @@ static void CreateSingleHull(const int hullnum)
     }
 }
 
-template<typename T>
-void update_maximum(std::atomic<T> &maximum_value, const T &value) noexcept
-{
-    T prev_value = maximum_value;
-    while(prev_value < value &&
-            !maximum_value.compare_exchange_weak(prev_value, value))
-        {}
-}
-
-#include "tbb/parallel_for.h"
-#include <mutex>
-
-static void CalculateWorldExtent(void)
-{
-    LogPrint("Calculating world extents... ");
-
-    std::atomic<vec_t> extents = -std::numeric_limits<vec_t>::infinity();
-
-    tbb::parallel_for(static_cast<size_t>(0), static_cast<size_t>(map.numentities()), [&](const size_t &i) {
-        const mapentity_t *entity = &map.entities.at(i);
-        
-        tbb::parallel_for(static_cast<size_t>(0), static_cast<size_t>(entity->nummapbrushes), [&](const size_t &b) {
-            const auto &brush = entity->mapbrush(b);
-            const vec_t brushExtents = max(extents.load(), GetBrushExtents(brush));
-            vec_t currentExtents = extents;
-            while (currentExtents < brushExtents &&
-                   !extents.compare_exchange_weak(currentExtents, brushExtents));
-        });
-    });
-
-    vec_t hull_extents = 0;
-
-    for (auto &hull : options.target_game->get_hull_sizes()) {
-        for (auto &v : hull.size()) {
-            hull_extents = max(hull_extents, fabs(v));
-        }
-    }
-
-    options.worldExtent = extents + hull_extents;
-    LogPrint("{} units\n", options.worldExtent);
-}
-
 /*
 =================
 CreateHulls
-
 =================
 */
 static void CreateHulls(void)
