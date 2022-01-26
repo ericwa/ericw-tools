@@ -995,14 +995,14 @@ static bool BSPVersionSupported(int32_t ident, int32_t version, const bspversion
 // move structured data if the input and output
 // are of the same type
 template<typename T>
-inline void CopyOrMoveArray(T &in, T &out)
+inline void CopyArray(T &in, T &out)
 {
-    out = std::move(in);
+    out = in;
 }
 
 // convert structured data if we're different types
 template<typename T, typename F, typename = std::enable_if_t<!std::is_same_v<T, F>>>
-inline void CopyOrMoveArray(std::vector<F> &from, std::vector<T> &to)
+inline void CopyArray(std::vector<F> &from, std::vector<T> &to)
 {
     to.reserve(from.size());
 
@@ -1010,22 +1010,22 @@ inline void CopyOrMoveArray(std::vector<F> &from, std::vector<T> &to)
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
             to.emplace_back(numeric_cast<T>(v));
         else
-            to.emplace_back(std::move(v));
+            to.emplace_back(v);
     }
 }
 
 // move structured data if the input and output
 // are of the same type
 template<typename T, typename F>
-inline void CopyOrMoveArray(F &in, T &out)
+inline void CopyArray(F &in, T &out)
 {
-    out = std::move(in);
+    out = in;
 }
 
 // convert structured data if we're different types
 // with numeric casting for arrays
 template<typename T, typename F, size_t N, typename = std::enable_if_t<!std::is_same_v<T, F>>>
-inline void CopyOrMoveArray(std::vector<std::array<F, N>> &from, std::vector<std::array<T, N>> &to)
+inline void CopyArray(std::vector<std::array<F, N>> &from, std::vector<std::array<T, N>> &to)
 {
     to.reserve(from.size());
 
@@ -1033,7 +1033,7 @@ inline void CopyOrMoveArray(std::vector<std::array<F, N>> &from, std::vector<std
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
             to.emplace_back(array_cast<std::array<T, N>>(v));
         else
-            to.emplace_back(std::move(v));
+            to.emplace_back(v);
     }
 }
 
@@ -1041,28 +1041,28 @@ inline void CopyOrMoveArray(std::vector<std::array<F, N>> &from, std::vector<std
 template<typename T>
 inline void ConvertQ1BSPToGeneric(T &bsp, mbsp_t &mbsp)
 {
-    CopyOrMoveArray(bsp.dentdata, mbsp.dentdata);
-    CopyOrMoveArray(bsp.dplanes, mbsp.dplanes);
+    CopyArray(bsp.dentdata, mbsp.dentdata);
+    CopyArray(bsp.dplanes, mbsp.dplanes);
     if (std::holds_alternative<miptexhl_lump>(bsp.dtex)) {
-        CopyOrMoveArray(std::get<miptexhl_lump>(bsp.dtex), mbsp.dtex);
+        CopyArray(std::get<miptexhl_lump>(bsp.dtex), mbsp.dtex);
     } else {
-        CopyOrMoveArray(std::get<miptexq1_lump>(bsp.dtex), mbsp.dtex);
+        CopyArray(std::get<miptexq1_lump>(bsp.dtex), mbsp.dtex);
     }
-    CopyOrMoveArray(bsp.dvertexes, mbsp.dvertexes);
-    CopyOrMoveArray(bsp.dvisdata, mbsp.dvis.bits);
-    CopyOrMoveArray(bsp.dnodes, mbsp.dnodes);
-    CopyOrMoveArray(bsp.texinfo, mbsp.texinfo);
-    CopyOrMoveArray(bsp.dfaces, mbsp.dfaces);
-    CopyOrMoveArray(bsp.dlightdata, mbsp.dlightdata);
-    CopyOrMoveArray(bsp.dclipnodes, mbsp.dclipnodes);
-    CopyOrMoveArray(bsp.dleafs, mbsp.dleafs);
-    CopyOrMoveArray(bsp.dmarksurfaces, mbsp.dleaffaces);
-    CopyOrMoveArray(bsp.dedges, mbsp.dedges);
-    CopyOrMoveArray(bsp.dsurfedges, mbsp.dsurfedges);
+    CopyArray(bsp.dvertexes, mbsp.dvertexes);
+    CopyArray(bsp.dvisdata, mbsp.dvis.bits);
+    CopyArray(bsp.dnodes, mbsp.dnodes);
+    CopyArray(bsp.texinfo, mbsp.texinfo);
+    CopyArray(bsp.dfaces, mbsp.dfaces);
+    CopyArray(bsp.dlightdata, mbsp.dlightdata);
+    CopyArray(bsp.dclipnodes, mbsp.dclipnodes);
+    CopyArray(bsp.dleafs, mbsp.dleafs);
+    CopyArray(bsp.dmarksurfaces, mbsp.dleaffaces);
+    CopyArray(bsp.dedges, mbsp.dedges);
+    CopyArray(bsp.dsurfedges, mbsp.dsurfedges);
     if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels)) {
-        CopyOrMoveArray(std::get<dmodelh2_vector>(bsp.dmodels), mbsp.dmodels);
+        CopyArray(std::get<dmodelh2_vector>(bsp.dmodels), mbsp.dmodels);
     } else {
-        CopyOrMoveArray(std::get<dmodelq1_vector>(bsp.dmodels), mbsp.dmodels);
+        CopyArray(std::get<dmodelq1_vector>(bsp.dmodels), mbsp.dmodels);
     }
 }
 
@@ -1070,24 +1070,24 @@ inline void ConvertQ1BSPToGeneric(T &bsp, mbsp_t &mbsp)
 template<typename T>
 inline void ConvertQ2BSPToGeneric(T &bsp, mbsp_t &mbsp)
 {
-    CopyOrMoveArray(bsp.dentdata, mbsp.dentdata);
-    CopyOrMoveArray(bsp.dplanes, mbsp.dplanes);
-    CopyOrMoveArray(bsp.dvertexes, mbsp.dvertexes);
-    CopyOrMoveArray(bsp.dvis, mbsp.dvis);
-    CopyOrMoveArray(bsp.dnodes, mbsp.dnodes);
-    CopyOrMoveArray(bsp.texinfo, mbsp.texinfo);
-    CopyOrMoveArray(bsp.dfaces, mbsp.dfaces);
-    CopyOrMoveArray(bsp.dlightdata, mbsp.dlightdata);
-    CopyOrMoveArray(bsp.dleafs, mbsp.dleafs);
-    CopyOrMoveArray(bsp.dleaffaces, mbsp.dleaffaces);
-    CopyOrMoveArray(bsp.dleafbrushes, mbsp.dleafbrushes);
-    CopyOrMoveArray(bsp.dedges, mbsp.dedges);
-    CopyOrMoveArray(bsp.dsurfedges, mbsp.dsurfedges);
-    CopyOrMoveArray(bsp.dmodels, mbsp.dmodels);
-    CopyOrMoveArray(bsp.dbrushes, mbsp.dbrushes);
-    CopyOrMoveArray(bsp.dbrushsides, mbsp.dbrushsides);
-    CopyOrMoveArray(bsp.dareas, mbsp.dareas);
-    CopyOrMoveArray(bsp.dareaportals, mbsp.dareaportals);
+    CopyArray(bsp.dentdata, mbsp.dentdata);
+    CopyArray(bsp.dplanes, mbsp.dplanes);
+    CopyArray(bsp.dvertexes, mbsp.dvertexes);
+    CopyArray(bsp.dvis, mbsp.dvis);
+    CopyArray(bsp.dnodes, mbsp.dnodes);
+    CopyArray(bsp.texinfo, mbsp.texinfo);
+    CopyArray(bsp.dfaces, mbsp.dfaces);
+    CopyArray(bsp.dlightdata, mbsp.dlightdata);
+    CopyArray(bsp.dleafs, mbsp.dleafs);
+    CopyArray(bsp.dleaffaces, mbsp.dleaffaces);
+    CopyArray(bsp.dleafbrushes, mbsp.dleafbrushes);
+    CopyArray(bsp.dedges, mbsp.dedges);
+    CopyArray(bsp.dsurfedges, mbsp.dsurfedges);
+    CopyArray(bsp.dmodels, mbsp.dmodels);
+    CopyArray(bsp.dbrushes, mbsp.dbrushes);
+    CopyArray(bsp.dbrushsides, mbsp.dbrushsides);
+    CopyArray(bsp.dareas, mbsp.dareas);
+    CopyArray(bsp.dareaportals, mbsp.dareaportals);
 }
 
 // Convert from a Q1-esque format to Generic
@@ -1097,28 +1097,28 @@ inline T ConvertGenericToQ1BSP(mbsp_t &mbsp, const bspversion_t *to_version)
     T bsp{};
 
     // copy or convert data
-    CopyOrMoveArray(mbsp.dentdata, bsp.dentdata);
-    CopyOrMoveArray(mbsp.dplanes, bsp.dplanes);
+    CopyArray(mbsp.dentdata, bsp.dentdata);
+    CopyArray(mbsp.dplanes, bsp.dplanes);
     if (to_version->game->id == GAME_HALF_LIFE) {
-        CopyOrMoveArray(mbsp.dtex, bsp.dtex.template emplace<miptexhl_lump>());
+        CopyArray(mbsp.dtex, bsp.dtex.template emplace<miptexhl_lump>());
     } else {
-        CopyOrMoveArray(mbsp.dtex, bsp.dtex.template emplace<miptexq1_lump>());
+        CopyArray(mbsp.dtex, bsp.dtex.template emplace<miptexq1_lump>());
     }
-    CopyOrMoveArray(mbsp.dvertexes, bsp.dvertexes);
-    CopyOrMoveArray(mbsp.dvis.bits, bsp.dvisdata);
-    CopyOrMoveArray(mbsp.dnodes, bsp.dnodes);
-    CopyOrMoveArray(mbsp.texinfo, bsp.texinfo);
-    CopyOrMoveArray(mbsp.dfaces, bsp.dfaces);
-    CopyOrMoveArray(mbsp.dlightdata, bsp.dlightdata);
-    CopyOrMoveArray(mbsp.dclipnodes, bsp.dclipnodes);
-    CopyOrMoveArray(mbsp.dleafs, bsp.dleafs);
-    CopyOrMoveArray(mbsp.dleaffaces, bsp.dmarksurfaces);
-    CopyOrMoveArray(mbsp.dedges, bsp.dedges);
-    CopyOrMoveArray(mbsp.dsurfedges, bsp.dsurfedges);
+    CopyArray(mbsp.dvertexes, bsp.dvertexes);
+    CopyArray(mbsp.dvis.bits, bsp.dvisdata);
+    CopyArray(mbsp.dnodes, bsp.dnodes);
+    CopyArray(mbsp.texinfo, bsp.texinfo);
+    CopyArray(mbsp.dfaces, bsp.dfaces);
+    CopyArray(mbsp.dlightdata, bsp.dlightdata);
+    CopyArray(mbsp.dclipnodes, bsp.dclipnodes);
+    CopyArray(mbsp.dleafs, bsp.dleafs);
+    CopyArray(mbsp.dleaffaces, bsp.dmarksurfaces);
+    CopyArray(mbsp.dedges, bsp.dedges);
+    CopyArray(mbsp.dsurfedges, bsp.dsurfedges);
     if (to_version->game->id == GAME_HEXEN_II) {
-        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.template emplace<dmodelh2_vector>());
+        CopyArray(mbsp.dmodels, bsp.dmodels.template emplace<dmodelh2_vector>());
     } else {
-        CopyOrMoveArray(mbsp.dmodels, bsp.dmodels.template emplace<dmodelq1_vector>());
+        CopyArray(mbsp.dmodels, bsp.dmodels.template emplace<dmodelq1_vector>());
     }
 
     return bsp;
@@ -1131,24 +1131,24 @@ inline T ConvertGenericToQ2BSP(mbsp_t &mbsp, const bspversion_t *to_version)
     T bsp{};
 
     // copy or convert data
-    CopyOrMoveArray(mbsp.dentdata, bsp.dentdata);
-    CopyOrMoveArray(mbsp.dplanes, bsp.dplanes);
-    CopyOrMoveArray(mbsp.dvertexes, bsp.dvertexes);
-    CopyOrMoveArray(mbsp.dvis, bsp.dvis);
-    CopyOrMoveArray(mbsp.dnodes, bsp.dnodes);
-    CopyOrMoveArray(mbsp.texinfo, bsp.texinfo);
-    CopyOrMoveArray(mbsp.dfaces, bsp.dfaces);
-    CopyOrMoveArray(mbsp.dlightdata, bsp.dlightdata);
-    CopyOrMoveArray(mbsp.dleafs, bsp.dleafs);
-    CopyOrMoveArray(mbsp.dleaffaces, bsp.dleaffaces);
-    CopyOrMoveArray(mbsp.dleafbrushes, bsp.dleafbrushes);
-    CopyOrMoveArray(mbsp.dedges, bsp.dedges);
-    CopyOrMoveArray(mbsp.dsurfedges, bsp.dsurfedges);
-    CopyOrMoveArray(mbsp.dmodels, bsp.dmodels);
-    CopyOrMoveArray(mbsp.dbrushes, bsp.dbrushes);
-    CopyOrMoveArray(mbsp.dbrushsides, bsp.dbrushsides);
-    CopyOrMoveArray(mbsp.dareas, bsp.dareas);
-    CopyOrMoveArray(mbsp.dareaportals, bsp.dareaportals);
+    CopyArray(mbsp.dentdata, bsp.dentdata);
+    CopyArray(mbsp.dplanes, bsp.dplanes);
+    CopyArray(mbsp.dvertexes, bsp.dvertexes);
+    CopyArray(mbsp.dvis, bsp.dvis);
+    CopyArray(mbsp.dnodes, bsp.dnodes);
+    CopyArray(mbsp.texinfo, bsp.texinfo);
+    CopyArray(mbsp.dfaces, bsp.dfaces);
+    CopyArray(mbsp.dlightdata, bsp.dlightdata);
+    CopyArray(mbsp.dleafs, bsp.dleafs);
+    CopyArray(mbsp.dleaffaces, bsp.dleaffaces);
+    CopyArray(mbsp.dleafbrushes, bsp.dleafbrushes);
+    CopyArray(mbsp.dedges, bsp.dedges);
+    CopyArray(mbsp.dsurfedges, bsp.dsurfedges);
+    CopyArray(mbsp.dmodels, bsp.dmodels);
+    CopyArray(mbsp.dbrushes, bsp.dbrushes);
+    CopyArray(mbsp.dbrushsides, bsp.dbrushsides);
+    CopyArray(mbsp.dareas, bsp.dareas);
+    CopyArray(mbsp.dareaportals, bsp.dareaportals);
 
     return bsp;
 }
