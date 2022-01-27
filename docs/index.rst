@@ -7,9 +7,12 @@ Welcome to ericw-tools's documentation!
 =======================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
+   
+   qbsp
+   vis
+   light
+   bspinfo
+   bsputil
 
 
 Indices and tables
