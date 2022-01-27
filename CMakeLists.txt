@@ -92,7 +92,6 @@ endif ()
 
 add_subdirectory(qbsp)
 add_subdirectory(vis)
-add_subdirectory(man)
 
 install(FILES README.md DESTINATION bin)
 install(FILES changelog.md DESTINATION bin)
