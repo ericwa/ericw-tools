@@ -24,15 +24,16 @@
 #include <qbsp/winding.hh>
 #include <common/aabb.hh>
 
+class mapbrush_t;
+
 struct brush_t
 {
+    const mapbrush_t *src;
     aabb3d bounds;
     std::vector<face_t> faces;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
 };
-
-class mapbrush_t;
 
 qplane3d Face_Plane(const face_t *face);
 

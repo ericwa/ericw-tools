@@ -29,6 +29,7 @@ class aabb
 {
 public:
     using value_type = qvec<V, N>;
+    using value_value_type = typename value_type::value_type;
 
     class intersection_t
     {
@@ -182,6 +183,20 @@ public:
     }
 
     constexpr value_type centroid() const { return (m_mins + m_maxs) * 0.5; }
+
+    constexpr value_value_type extents() const
+    {
+        value_value_type extent = -std::numeric_limits<value_value_type>::infinity();
+        
+        for (auto &v : m_mins) {
+            extent = max(extent, v);
+        }
+        for (auto &v : m_maxs) {
+            extent = max(extent, v);
+        }
+
+        return extent;
+    }
 
     // stream support
     auto stream_data() { return std::tie(m_mins, m_maxs); }

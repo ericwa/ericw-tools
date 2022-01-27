@@ -29,8 +29,6 @@ static mapentity_t LoadMap(const char *map)
     // FIXME: adds the brush to the global map...
     Q_assert(ParseEntity(parser, &worldspawn));
 
-    CalculateWorldExtent();
-
     return worldspawn;
 }
 

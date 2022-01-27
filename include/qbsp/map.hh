@@ -71,6 +71,7 @@ public:
     int numfaces = 0;
     brushformat_t format = brushformat_t::NORMAL;
     int contents = 0;
+    vec_t extents = 0;
 
     const mapface_t &face(int i) const;
 };
@@ -157,8 +158,6 @@ struct mapdata_t
 };
 
 extern mapdata_t map;
-
-void CalculateWorldExtent(void);
 
 extern mapentity_t *pWorldEnt();
 
