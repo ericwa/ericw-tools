@@ -2245,7 +2245,7 @@ void CalculateWorldExtent(void)
         }
     }
 
-    options.worldExtent = extents + hull_extents;
+    options.worldExtent = (extents + hull_extents) * 2;
     LogPrint("{} units\n", options.worldExtent);
 }
 

@@ -662,6 +662,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     FreeBrushes(entity);
     FreeNodes(nodes);
+
+    LogPrint("Entity bounds: {} {}\n", entity->bounds[0], entity->bounds[1]);
 }
 
 /*
