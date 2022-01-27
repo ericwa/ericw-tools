@@ -1,3 +1,4 @@
+====
 qbsp
 ====
 
@@ -206,7 +207,7 @@ All faces of a brush must have textures which indicate the same
 contents. Mixed content types will cause qbsp to print an error and
 exit.
 
-SKIP
+skip
 ^^^^
 
 Any surfaces assigned a texture name of *skip* will be compiled into the
@@ -215,7 +216,7 @@ play can't walk or shoot through them) but they will not be drawn.
 Water, slime and lava surfaces can be made invisible using the texture
 names *\*waterskip*, *\*slimeskip* and *\*lavaskip* respectively.
 
-HINT
+hint
 ^^^^
 
 Hint surfaces cause a bsp split and portal to be generated the on the
@@ -228,7 +229,7 @@ Use a texture with the name *hintskip* on any surfaces of a hint brush
 which you don't want to generate bsp splits or portals. All surfaces of
 a hint brush must use either the *hint* or *hintskip* texture name.
 
-ORIGIN
+origin
 ^^^^^^
 
 An origin brush (all faces textured with "origin") can be added to a

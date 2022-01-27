@@ -1,33 +1,39 @@
-NAME
-====
+=======
+bsputil
+=======
 
 bsputil - utiltiy for working with Quake BSP files
 
-SYNOPSIS
+Synopsis
 ========
 
 **bsputil** [OPTION]... BSPFILE
 
-DESCRIPTION
+Description
 ===========
 
 **bsputil is a small utility for basic manipulation of Quake BSP
 files.**
 
-OPTIONS
+Options
 =======
 
---extract-textures
+.. program:: bsputil
+
+.. option:: --extract-textures
+
    Extract the texture data from *BSPFILE*\ **and create a Quake WAD**
    file. The output filename is generated from *BSPFILE*\ **by**
    stripping the .bsp extension and adding the .wad extension.
 
---extract-entities
+.. option:: --extract-entities
+
    Extract the entity data from *BSPFILE*\ **and create a plain** text
    .ent file. The output filename is generated from *BSPFILE* by
    stripping the .bsp extension and adding the .ent extension.
 
---check
+.. option:: --check
+   
    Load *BSPFILE*\ **into memory and run a set of tests to check that**
    all internal data structures are self-consistent. Currently the tests
    are very basic and not all warnings will result in errors from all
@@ -35,21 +41,21 @@ OPTIONS
    designers, but is intended to assist with development of the **qbsp
    tool and check that a "clean" bsp file is generated.**
 
-AUTHOR
+Author
 ======
 
 | Kevin Shanahan (aka Tyrann) - http://disenchant.net
 | Eric Wasylishen
 | Based on source provided by id Software
 
-REPORTING BUGS
+Reporting Bugs
 ==============
 
 | Please post bug reports at
   https://github.com/ericwa/ericw-tools/issues.
 | Improvements to the documentation are welcome and encouraged.
 
-COPYRIGHT
+Copyright
 =========
 
 | Copyright (C) 2017 Eric Wasylishen
@@ -61,7 +67,7 @@ COPYRIGHT
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
 
-SEE ALSO
+See Also
 ========
 
 **qbsp(1)** **light(1)** **vis(1)** **bspinfo(1)** **quake(6)**

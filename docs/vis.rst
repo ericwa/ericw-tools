@@ -1,14 +1,15 @@
-NAME
-====
+===
+vis
+===
 
 vis - Compute visibility (PVS) for a Quake BSP file
 
-SYNOPSIS
+Synopsis
 ========
 
 **vis** [OPTION]... BSPFILE
 
-DESCRIPTION
+Description
 ===========
 
 **vis** is a tool used in the creation of maps for the game Quake. vis
@@ -25,66 +26,79 @@ days or weeks in extreme cases. Vis will attempt to write a state file
 every five minutes so that progress will not be lost in case the
 computer needs to be rebooted or an unexpected power outage occurs.
 
-OPTIONS
+Options
 =======
 
--threads n
+.. program:: vis
+
+.. option:: -threads n
+
    Set number of threads explicitly. By default vis will attempt to
    detect the number of CPUs/cores available.
 
--fast
+.. option:: -fast
+
    Skip detailed calculations and calculate a very loose set of PVS
    data. Sometimes useful for a quick test while developing a map.
 
--level n
+.. option:: -level n
+
    Select a test level from 0 to 4 for detailed visibility calculations.
    Lower levels are not necessarily faster in in all cases. It is not
    recommended that you change the default level unless you are
    experiencing problems. Default 4.
 
--v
+.. option:: -v
+
    Verbose output.
 
--vv
+.. option:: -vv
+
    Very verbose output.
 
--noambientsky
+.. option:: -noambientsky
+
    Disable ambient sound generation for textures with names beginning
    with 'SKY'.
 
--noambientwater
+.. option:: -noambientwater
+
    Disable ambient sound generation for textures with names beginning
    with '*WATER' or '*04WATER'.
 
--noambientslime
+.. option:: -noambientslime
+
    Disable ambient sound generation for textures with names beginning
    with '*SLIME'.
 
--noambientlava
+.. option:: -noambientlava
+
    Disable ambient sound generation for textures with names beginning
    with '*LAVA'.
 
--noambient
+.. option:: -noambient
+
    Disable all ambient sound generation.
 
--visdist n
+.. option:: -visdist n
+   
    Allow culling of areas further than n units.
 
-AUTHOR
+Author
 ======
 
 | Kevin Shanahan (aka Tyrann) - http://disenchant.net
 | Eric Wasylishen
 | Based on source provided by id Software
 
-REPORTING BUGS
+Reporting Bugs
 ==============
 
 | Please post bug reports at
   https://github.com/ericwa/tyrutils-ericw/issues.
 | Improvements to the documentation are welcome and encouraged.
 
-COPYRIGHT
+Copyright
 =========
 
 | Copyright (C) 2017 Eric Wasylishen
@@ -96,7 +110,7 @@ COPYRIGHT
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
 
-SEE ALSO
+See Also
 ========
 
 **qbsp**\ (1) **light**\ (1) **bspinfo**\ (1) **bsputil**\ (1)

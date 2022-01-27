@@ -1,14 +1,15 @@
-NAME
-====
+=======
+bspinfo
+=======
 
 bspinfo - print basic information about a Quake BSP file
 
-SYNOPSIS
+Synopsis
 ========
 
 **bspinfo** BSPFILE
 
-DESCRIPTION
+Description
 ===========
 
 **bspinfo** will print a very basic summary of the internal data in
@@ -20,21 +21,21 @@ If the filename *BSPFILE* does not have a .bsp extension, **bsputil**
 will look for a .bsp file by stripping the file extension from BSPFILE
 (if any) and appending ".bsp".
 
-AUTHOR
+Author
 ======
 
 | Kevin Shanahan (aka Tyrann) - http://disenchant.net
 | Eric Wasylishen
 | Based on source provided by id Software
 
-REPORTING BUGS
+Reporting Bugs
 ==============
 
 | Please post bug reports at
   https://github.com/ericwa/ericw-tools/issues.
 | Improvements to the documentation are welcome and encouraged.
 
-COPYRIGHT
+Copyright
 =========
 
 | Copyright (C) 2017 Eric Wasylishen
@@ -46,7 +47,7 @@ COPYRIGHT
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
 
-SEE ALSO
+See Also
 ========
 
 **qbsp**\ (1) **light**\ (1) **vis**\ (1) **bsputil**\ (1)
