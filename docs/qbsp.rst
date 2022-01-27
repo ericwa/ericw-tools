@@ -1,163 +1,198 @@
-NAME
+qbsp
 ====
 
 qbsp - Compile a Quake BSP file from a MAP source file
 
-SYNOPSIS
-========
+Synopsis
+--------
 
 **qbsp** [OPTION]... SOURCFILE [DESTFILE]
 
-DESCRIPTION
-===========
+Description
+-----------
 
-**qbsp** is a tool used in the creation of maps for the **id Software**
+:program:`qbsp` is a tool used in the creation of maps for the **id Software**
 game **Quake**. qbsp takes a .map file as input and produces a .bsp file
-playable in the Quake engine. If the *DESTFILE* argument is not
+playable in the Quake engine. If the ``DESTFILE`` argument is not
 supplied, the output filename will be chosen by stripping the file
-extension (if any) from *SOURCEFILE* and appending the .bsp extension.
+extension (if any) from ``SOURCEFILE`` and appending the .bsp extension.
 
-OPTIONS
-=======
+Options
+-------
 
--nofill
+.. program:: qbsp
+
+.. option:: -nofill
+
    Doesn't perform outside filling
 
--noclip
+.. option:: -noclip
+
    Doesn't build clip hulls
 
--noskip
+.. option:: -noskip
+
    Doesn't remove faces using the 'skip' texture
 
--onlyents
+.. option:: -onlyents
+
    Only updates .map entities
 
--verbose
+.. option:: -verbose
+
    Print out more .map information
 
--noverbose
+.. option:: -noverbose
+
    Print out almost no information at all
 
--splitspecial
+.. option:: -splitspecial
+   
    Doesn't combine sky and water faces into one large face. This allows
    for statically lit water.
 
--transwater
+.. option:: -transwater
+
    Computes portal information for transparent water (default)
 
--notranswater
+.. option:: -notranswater
+
    Computes portal information for opaque water
 
--transsky
+.. option:: -transsky
+
    Computes portal information for transparent sky
 
--nooldaxis
+.. option:: -nooldaxis
+
    Use alternate texture alignment algorithm. The default is to use the
    original QBSP texture alignment algorithm, which required the
    -oldaxis switch in tyrutils-ericw v0.15.1 and earlier.
 
--forcegoodtree (experimental)
+.. option:: -forcegoodtree (experimental)
+
    Force use of expensive processing for SolidBSP stage. Often results
    in a more optimal BSP file in terms of file size, at the expense of
    extra processing time.
 
--bspleak
+.. option:: -bspleak
+
    Creates a .por file, used in the BSP editor
 
--oldleak
+.. option:: -oldleak
+
    Create an old-style QBSP .PTS file (default is new)
 
--leaktest
+.. option:: -leaktest
+
    Makes it a compile error if a leak is detected.
 
--nopercent
+.. option:: -nopercent
+
    Prevents output of percent completion information
 
--hexen2
+.. option:: -hexen2
+
    Generate a hexen2 bsp. This can be used in addition to -bsp2 to avoid
    clipnode issues.
 
--bsp2
+.. option:: -bsp2
+
    Create the output BSP file in BSP2 format. Allows the creation of
    much larger and more complex maps than the original BSP 29 format).
 
--2psb
+.. option:: -2psb
+
    Create the output BSP file in 2PSB format. This an earlier version of
    the BSP2 format, supported by the RMQ engine (and thus is also known
    as the BSP2rmq or RMQe bsp format).
 
--hlbsp
+.. option:: -hlbsp
+
    Create the output BSP file in Half-Life's format. Note that the hull
    size differences prevent this from being generally usable for the
    vanilla quake gamecode. This cannot be used in combination with the
    -bsp2 argument.
 
--leakdist [n]
+.. option:: -leakdist [n]
+
    Space between leakfile points (default 2)
 
--subdivide [n]
+.. option:: -subdivide [n]
+
    Use different texture subdivision (default 240). Lower values will
    harm framerates. Higher values may not be supported. DP+FTEQW+QSS
    support up to 4080 (unless lightmap scaling is in use), but such
    values will cause other engines to crash-to-console. Use zero to
    specify no subdivision.
 
--wadpath <dir>
+.. option:: -wadpath <dir>
+
    Search this directory for wad files (default is cwd). Multiple
    -wadpath args may be used. This argument is ignored for wads
    specified using an absolute path.
 
--xwadpath <dir>
+.. option:: -xwadpath <dir>
+
    Like -wadpath, except textures found using the specified path will
    NOT be embedded into the bsp (equivelent to -notex, but for only
    textures from specific wads). You should use this for wads like
    halflife's standard wad files, but q1bsps require an engine extension
    and players are not nearly as likely to have the same wad version.
 
--oldrottex
+.. option:: -oldrottex
+
    Use old method of texturing rotate\_ brushes where the mapper aligns
    textures for the object at (0 0 0).
 
--maxNodeSize [n]
+.. option:: -maxNodeSize [n]
+
    Switch to the cheap spatial subdivion bsp heuristic when splitting
    nodes of this size (in any dimension). This gives much faster qbsp
    processing times on large maps and should generate better bsp trees
    as well. From txqbsp-xt, thanks rebb. (default 1024, 0 to disable)
 
--wrbrushes
+.. option:: -wrbrushes
+
    (bspx) Includes a list of brushes for brush-based collision. This
    allows for arbitrary collision sizes in engines that support it,
    currently only FTEQW.
 
--wrbrushesonly
+.. option:: -wrbrushesonly
+
    "-wrbrushes" combined with "-noclip" argument. This is NOT backwards
    compatible.
 
--notex
+.. option:: -notex
+
    Write only placeholder textures, to depend upon replacements. This
    avoids inclusion of third-party copyrighted images inside your maps,
    but is not backwards compatible but will work in FTEQW and QSS.
 
--notjunc
+.. option:: -notjunc
+
    Don't attempt to fix T-junctions. This is only for engines or formats
    that prefer micro-cracks over degenerate triangles. If you don't know
    what that means, don't set this.
 
--omitdetail
+.. option:: -omitdetail
+
    Detail brushes are omitted from the compile.
 
--convert <fmt>
+.. option:: -convert <fmt>
+
    Convert a .MAP to a different .MAP format. fmt can be: quake, quake2,
    valve, bp (brush primitives). Conversions to "quake" or "quake2"
    format may not be able to match the texture alignment in the source
    map, other conversions are lossless. The converted map is saved to
    <source map name>-<fmt>.map.
 
--includeskip
+.. option:: -includeskip
+
    Emit skip/nodraw faces. Mainly for Q2RTX.
 
-SPECIAL TEXTURE NAMES
-=====================
+Special Texture Names
+---------------------
 
 The contents inside a brush depend on the texture name(s) assigned to
 it.
@@ -172,7 +207,7 @@ contents. Mixed content types will cause qbsp to print an error and
 exit.
 
 SKIP
-----
+^^^^
 
 Any surfaces assigned a texture name of *skip* will be compiled into the
 bsp as invisible surfaces. Solid surfaces will still be solid (e.g. the
@@ -181,7 +216,7 @@ Water, slime and lava surfaces can be made invisible using the texture
 names *\*waterskip*, *\*slimeskip* and *\*lavaskip* respectively.
 
 HINT
-----
+^^^^
 
 Hint surfaces cause a bsp split and portal to be generated the on the
 surface plane, after which they are removed from the final bsp - they
@@ -194,7 +229,7 @@ which you don't want to generate bsp splits or portals. All surfaces of
 a hint brush must use either the *hint* or *hintskip* texture name.
 
 ORIGIN
-------
+^^^^^^
 
 An origin brush (all faces textured with "origin") can be added to a
 brush entity (but not detail or compiler-internal entities like
@@ -220,8 +255,8 @@ if you're going to rotate a model with an origin brush you might need to
 expand the bounds of it a bit using clip brushes so it doesn't get vis
 culled.
 
-EXTERNAL MAP PREFAB SUPPORT
-===========================
+External Map Prefab Support
+---------------------------
 
 This qbsp has a prefab system using a point entity named
 "misc_external_map". The idea is, each "misc_external_map" imports
@@ -266,8 +301,8 @@ configure the final entity type. e.g. if you set
    Scale factor for the prefab, defaults to 1. Either specify a single
    value or three scales, "x y z".
 
-DETAIL BRUSH SUPPORT
-====================
+Detail Brush Support
+--------------------
 
 This version of qbsp supports detail brushes which are similar in
 concept to Quake 2's detail brushes. They don't seal the map (previous
@@ -333,11 +368,11 @@ extra information needed by vis to compute the potentially visible set
 (PVS) for the map/bsp. So you will also need a vis util capable of
 processing the PRT2 file format.
 
-DETAIL VARIANTS
-===============
+Detail Variants
+---------------
 
 func_detail_illusionary
------------------------
+^^^^^^^^^^^^^^^^^^^^^^^
 
 func_detail variant with no collision (players / monsters / gunfire) and
 doesn't split world faces. Doesn't cast shadows unless enabled with
@@ -349,7 +384,7 @@ is intended to make trees/shrubs/foliage easier with "_mirrorinside"
 "1".
 
 func_detail_wall
-----------------
+^^^^^^^^^^^^^^^^
 
 func_detail variant that doesn't split world faces. Useful for when you
 want a decoration touching a floor or wall to not split the floor/wall
@@ -360,7 +395,7 @@ fence textures; see func_detail_fence instead.
 Intersecting func_detail_wall brushes don't clip each other.
 
 func_detail_fence
------------------
+^^^^^^^^^^^^^^^^^
 
 Similar to func_detail_wall except it's suitable for fence textures,
 never clips away world faces. Useful for fences, grates, etc., that are
@@ -368,8 +403,8 @@ solid and block gunfire.
 
 Intersecting func_detail_fence brushes don't clip each other.
 
-MODEL ENTITY KEYS
-=================
+Model Entity Keys
+-----------------
 
 "_lmscale" "n"
    Generates an LMSHIFT bspx lump for use by a light util. Note that
@@ -380,11 +415,11 @@ MODEL ENTITY KEYS
    player view is inside the bmodel, they will still see the faces.
    (e.g. for func_water, or func_illusionary)
 
-OTHER SPECIAL-PURPOSE ENTITIES
-==============================
+Other Special-Purpose Entities
+------------------------------
 
 func_illusionary_visblocker
----------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 For creating vis-blocking illusionary brushes (similar to
 "func_detail_illusionary" or "func_illusionary". The player can walk
@@ -396,8 +431,8 @@ see into the void (depending on the engine). Fitzquake family engines
 have a workaround for this that is enabled if the brushes are textured
 with a water texture ("*" prefix).
 
-MAP COMPATIBILITY
-=================
+Map Compatibility
+-----------------
 
 In addition to standard Quake 1 .map files, ericw-tools QBSP is
 compatible with:
@@ -414,22 +449,22 @@ compatible with:
 -  Brush Primitives produce by Radiant editors (normally a Quake 3
    format)
 
-AUTHOR
-======
+Author
+------
 
 | Eric Wasylishen
 | Kevin Shanahan (aka Tyrann) - http://disenchant.net
 | Based on source provided by id Software and Greg Lewis
 
-REPORTING BUGS
-==============
+Reporting Bugs
+--------------
 
 | Please post bug reports at
   https://github.com/ericwa/ericw-tools/issues.
 | Improvements to the documentation are welcome and encouraged.
 
-COPYRIGHT
-=========
+Copyright
+---------
 
 | Copyright (C) 2017 Eric Wasylishen
 | Copyright (C) 2013 Kevin Shanahan
@@ -441,8 +476,8 @@ COPYRIGHT
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
 
-SEE ALSO
-========
+See Also
+--------
 
 **light**\ (1) **vis**\ (1) **bspinfo**\ (1) **bsputil**\ (1)
 **quake**\ (6)
