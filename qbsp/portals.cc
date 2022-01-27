@@ -364,7 +364,6 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
 
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = entity->bounds.grow(SIDESPACE);
-    vec_t extents = bounds.extents() + options.target_game->hull_extents;
 
     outside_node.planenum = PLANENUM_LEAF;
     outside_node.contents = options.target_game->create_solid_contents();
@@ -390,7 +389,7 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
             }
             p->planenum = FindPlane(pl, &side);
 
-            p->winding = winding_t::from_plane(pl, extents);
+            p->winding = BaseWindingForPlane(pl);
             if (side)
                 AddPortalToNodes(p, &outside_node, node);
             else
@@ -528,7 +527,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     new_portal = new portal_t{};
     new_portal->planenum = node->planenum;
 
-    std::optional<winding_t> winding = winding_t::from_plane(plane, node->bounds.extents() + options.target_game->hull_extents);
+    std::optional<winding_t> winding = BaseWindingForPlane(plane);
     for (portal = node->portals; portal; portal = portal->next[side]) {
         clipplane = map.planes[portal->planenum];
         if (portal->nodes[0] == node)

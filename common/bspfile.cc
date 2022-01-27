@@ -97,7 +97,6 @@ struct gamedef_q1_like_t : public gamedef_t
     gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir)
     {
         this->id = ID;
-        hull_extents = 64;
     }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
@@ -348,7 +347,7 @@ struct gamedef_q1_like_t : public gamedef_t
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 {
-    gamedef_h2_t() : gamedef_q1_like_t("DATA1") { hull_extents = 40; }
+    gamedef_h2_t() : gamedef_q1_like_t("DATA1") { }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const
     {
@@ -403,7 +402,7 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 
 struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 {
-    gamedef_hl_t() : gamedef_q1_like_t("VALVE") { has_rgb_lightmap = true; hull_extents = 36; }
+    gamedef_hl_t() : gamedef_q1_like_t("VALVE") { has_rgb_lightmap = true; }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const
     {

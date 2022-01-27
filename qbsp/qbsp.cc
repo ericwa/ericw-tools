@@ -472,6 +472,11 @@ static void EmitAreaPortals(node_t *headnode)
     LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
 }
 
+winding_t BaseWindingForPlane(const qplane3d &p)
+{
+    return winding_t::from_plane(p, options.worldExtent);
+}
+
 /*
 ===============
 ProcessEntity
@@ -983,6 +988,11 @@ static void ProcessFile(void)
     if (!options.fAllverbose) {
         options.fVerbose = false;
         log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+    }
+
+    // calculate extents, if required
+    if (!options.worldExtent) {
+        CalculateWorldExtent();
     }
 
     // create hulls!

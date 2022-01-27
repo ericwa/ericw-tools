@@ -91,6 +91,10 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
         const qvec3d &p1 = face->w[i];
         const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
 
+        for (auto &v : p1)
+            if (v > options.worldExtent || v < -options.worldExtent)
+                FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
+
         /* check the point is on the face plane */
         vec_t dist = plane.distance_to(p1);
         if (dist < -ON_EPSILON || dist > ON_EPSILON)
@@ -305,7 +309,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
                 continue;
         }
 
-        w = winding_t::from_plane(mapface.plane, hullbrush->srcbrush->extents);
+        w = BaseWindingForPlane(mapface.plane);
 
         for (auto &mapface2 : hullbrush->faces) {
             if (&mapface == &mapface2)
@@ -702,8 +706,6 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
                                  const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
-    hullbrush.srcbrush = mapbrush;
-
     std::vector<face_t> facelist;
 
     // create the faces

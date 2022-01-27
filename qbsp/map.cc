@@ -40,67 +40,6 @@
 
 #include <common/qvec.hh>
 
-/*
-=================
-GetBrushExtents
-=================
-*/
-inline std::optional<qvec3d> GetIntersection(const qbsp_plane_t &p1, const qbsp_plane_t &p2, const qbsp_plane_t &p3)
-{
-    const vec_t denom = qv::dot(p1.normal, qv::cross(p2.normal, p3.normal));
-
-    if (denom == 0.f) {
-        return std::nullopt;
-    }
-
-    return (qv::cross(p2.normal, p3.normal) * p1.dist - qv::cross(p3.normal, p1.normal) * -p2.dist - qv::cross(p1.normal, p2.normal) * -p3.dist) / denom;
-}
-
-#include "tbb/parallel_for.h"
-#include <mutex>
-
-inline vec_t CalculateBrushExtents(const mapbrush_t &hullbrush)
-{
-    vec_t extents = -std::numeric_limits<vec_t>::infinity();
-
-    for (int32_t i = 0; i < hullbrush.numfaces - 2; i++) {
-        for (int32_t j = i; j < hullbrush.numfaces - 1; j++) {
-            for (int32_t k = j; k < hullbrush.numfaces; k++) {
-                if (i == j || j == k || k == i) {
-                    continue;
-                }
-                
-                auto &fi = hullbrush.face(i);
-                auto &fj = hullbrush.face(j);
-                auto &fk = hullbrush.face(k);
-
-                bool legal = true;
-                auto vertex = GetIntersection(fi.plane, fj.plane, fk.plane);
-
-                if (!vertex) {
-                    continue;
-                }
-
-                for (int32_t m = 0; m < hullbrush.numfaces; m++) {
-                    if (hullbrush.face(m).plane.distance_to(*vertex) > NORMAL_EPSILON) {
-                        legal = false;
-                        break;
-                    }
-                }
-
-                if (legal) {
-
-                    for (auto &p : *vertex) {
-                        extents = max(extents, fabs(p));
-                    }
-                }
-            }
-        }
-    }
-
-    return extents + options.target_game->hull_extents;
-}
-
 #define info_player_start 1
 #define info_player_deathmatch 2
 #define info_player_coop 4
@@ -1634,13 +1573,6 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
     }
     // ericw -- end brush primitives
 
-    // calculate extents, if required
-    if (!options.worldExtent) {
-        brush.extents = CalculateBrushExtents(brush);
-    } else {
-        brush.extents = options.worldExtent;
-    }
-
     return brush;
 }
 
@@ -2229,6 +2161,94 @@ void WriteEntitiesToString()
     }
 }
 
+//====================================================================
+
+inline std::optional<qvec3d> GetIntersection(const qbsp_plane_t &p1, const qbsp_plane_t &p2, const qbsp_plane_t &p3)
+{
+    const vec_t denom = qv::dot(p1.normal, qv::cross(p2.normal, p3.normal));
+
+    if (denom == 0.f) {
+        return std::nullopt;
+    }
+
+    return (qv::cross(p2.normal, p3.normal) * p1.dist - qv::cross(p3.normal, p1.normal) * -p2.dist - qv::cross(p1.normal, p2.normal) * -p3.dist) / denom;
+}
+
+/*
+=================
+GetBrushExtents
+=================
+*/
+inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
+{
+    vec_t extents = -std::numeric_limits<vec_t>::infinity();
+
+    for (int32_t i = 0; i < hullbrush.numfaces - 2; i++) {
+        for (int32_t j = i; j < hullbrush.numfaces - 1; j++) {
+            for (int32_t k = j; k < hullbrush.numfaces; k++) {
+                if (i == j || j == k || k == i) {
+                    continue;
+                }
+                
+                auto &fi = hullbrush.face(i);
+                auto &fj = hullbrush.face(j);
+                auto &fk = hullbrush.face(k);
+
+                bool legal = true;
+                auto vertex = GetIntersection(fi.plane, fj.plane, fk.plane);
+
+                if (!vertex) {
+                    continue;
+                }
+
+                for (int32_t m = 0; m < hullbrush.numfaces; m++) {
+                    if (hullbrush.face(m).plane.distance_to(*vertex) > NORMAL_EPSILON) {
+                        legal = false;
+                        break;
+                    }
+                }
+
+                if (legal) {
+
+                    for (auto &p : *vertex) {
+                        extents = max(extents, fabs(p));
+                    }
+                }
+            }
+        }
+    }
+
+    return extents;
+}
+
+#include "tbb/parallel_for.h"
+#include <mutex>
+
+void CalculateWorldExtent(void)
+{
+    LogPrint("Calculating world extents... ");
+
+    std::atomic<vec_t> extents = -std::numeric_limits<vec_t>::infinity();
+
+    tbb::parallel_for(static_cast<size_t>(0), static_cast<size_t>(map.numbrushes()), [&](const size_t &i) {
+        const auto &brush = map.brushes[i];
+        const vec_t brushExtents = max(extents.load(), GetBrushExtents(brush));
+        vec_t currentExtents = extents;
+        while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents));
+    });
+
+    vec_t hull_extents = 0;
+
+    for (auto &hull : options.target_game->get_hull_sizes()) {
+        for (auto &v : hull.size()) {
+            hull_extents = max(hull_extents, fabs(v));
+        }
+    }
+
+    options.worldExtent = extents + hull_extents;
+    LogPrint("{} units\n", options.worldExtent);
+}
+
 /*
 ==================
 WriteBspBrushMap
@@ -2256,7 +2276,7 @@ void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<brush
                 plane = -plane;
             }
 
-            winding_t w = winding_t::from_plane(plane, brush.src->extents);
+            winding_t w = BaseWindingForPlane(plane);
 
             fmt::print(f, "( {} ) ", w[0]);
             fmt::print(f, "( {} ) ", w[1]);

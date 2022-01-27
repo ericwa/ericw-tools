@@ -1766,12 +1766,7 @@ struct gamedef_t
     size_t max_entity_key = 32;
     size_t max_entity_value = 128;
 
-    // maximum extent of hulls; used for world extent calculations
-    vec_t hull_extents = 0;
-
-    gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir)
-    {
-    }
+    gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir) { }
 
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;

@@ -24,3 +24,5 @@
 #include "common/polylib.hh"
 
 using winding_t = polylib::winding_base_t<MAXEDGES>;
+
+winding_t BaseWindingForPlane(const qplane3d &p);
