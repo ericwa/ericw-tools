@@ -235,7 +235,7 @@ struct surface_t
     bool onnode; // true if surface has already been used
                  // as a splitting node
     bool detail_separator; // true if ALL faces are detail
-    face_t *faces; // links to all faces on either side of the surf
+    std::list<face_t *> faces; // links to all faces on either side of the surf
 
     // bounds of all the face windings; calculated via calculateInfo
     aabb3d bounds;
@@ -246,6 +246,19 @@ struct surface_t
 
     std::optional<size_t> outputplanenum; // only valid after WriteSurfacePlanes
 
+    inline surface_t shallowCopy()
+    {
+        surface_t copy;
+
+        copy.planenum = planenum;
+        copy.onnode = onnode;
+        copy.detail_separator = detail_separator;
+        copy.has_struct = has_struct;
+        copy.lmshift = lmshift;
+
+        return copy;
+    }
+
     // calculate bounds & info
     inline void calculateInfo()
     {
@@ -253,10 +266,12 @@ struct surface_t
         lmshift = std::numeric_limits<short>::max();
         has_struct = false;
 
-        for (const face_t *f = faces; f; f = f->next) {
-            for (auto &contents : f->contents)
-                if (!contents.is_valid(options.target_game, false))
+        for (auto &f : faces) {
+            for (auto &contents : f->contents) {
+                if (!contents.is_valid(options.target_game, false)) {
                     FError("Bad contents in face: {}", contents.to_string(options.target_game));
+                }
+            }
 
             lmshift = min(f->lmshift.front, f->lmshift.back);
 

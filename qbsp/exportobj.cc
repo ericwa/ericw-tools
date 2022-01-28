@@ -128,14 +128,12 @@ void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const br
     ExportObj_Faces(filesuffix, faces);
 }
 
-void ExportObj_Surfaces(const std::string &filesuffix, const std::list<surface_t> &surfaces)
+void ExportObj_Surfaces(const std::string &filesuffix, const std::vector<surface_t> &surfaces)
 {
     std::vector<const face_t *> faces;
 
     for (auto &surf : surfaces) {
-        for (const face_t *face = surf.faces; face; face = face->next) {
-            faces.push_back(face);
-        }
+        std::copy(surf.faces.begin(), surf.faces.end(), std::back_inserter(faces));
     }
 
     ExportObj_Faces(filesuffix, faces);

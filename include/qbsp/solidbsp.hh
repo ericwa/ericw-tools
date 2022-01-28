@@ -26,4 +26,4 @@
 extern std::atomic<int> splitnodes;
 
 void DetailToSolid(node_t *node);
-void SubdivideFace(face_t *f, face_t **prevptr);
+std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, std::list<face_t *> &surfaces);

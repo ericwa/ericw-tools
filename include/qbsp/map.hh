@@ -221,10 +221,10 @@ constexpr int HULL_COLLISION = -1;
 /* Create BSP brushes from map brushes */
 brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum);
 
-std::list<surface_t> CSGFaces(const mapentity_t *entity);
+std::vector<surface_t> CSGFaces(const mapentity_t *entity);
 void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *entity, node_t *headnode);
-node_t *SolidBSP(const mapentity_t *entity, std::list<surface_t> &surfhead, bool midsplit);
+node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bool midsplit);
 int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
@@ -238,7 +238,7 @@ void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
 
 void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces);
 void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const brush_t *> &brushes);
-void ExportObj_Surfaces(const std::string &filesuffix, const std::list<surface_t> &surfaces);
+void ExportObj_Surfaces(const std::string &filesuffix, const std::vector<surface_t> &surfaces);
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 

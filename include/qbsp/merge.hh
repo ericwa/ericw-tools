@@ -23,6 +23,5 @@
 
 #include <list>
 
-face_t *MergeFaceToList(face_t *face, face_t *list);
-face_t *FreeMergeListScraps(face_t *merged);
-void MergeAll(std::list<surface_t> &surfhead);
+void MergeFaceToList(face_t *face, std::list<face_t *> &list);
+void MergeAll(std::vector<surface_t> &surfhead);

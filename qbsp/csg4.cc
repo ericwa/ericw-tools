@@ -303,7 +303,7 @@ This plane map is later used to build up the surfaces for creating the BSP.
 Not parallel.
 ==================
 */
-void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *> &planefaces)
+static void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, std::list<face_t *>> &planefaces)
 {
     face_t *face, *next;
 
@@ -317,8 +317,8 @@ void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *>
             continue;
 #endif
 
-        face_t *plane_current_facelist =
-            planefaces[plane]; // returns `null` (and inserts it) if plane is not in the map yet
+        // returns empty (and inserts it) if plane is not in the map yet
+        std::list<face_t *> &plane_current_facelist = planefaces[plane];
 
         if (mirror) {
             face_t *newface = NewFaceFromFace(face);
@@ -347,13 +347,9 @@ void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, face_t *>
                 }
             }
 
-            plane_current_facelist = MergeFaceToList(newface, plane_current_facelist);
+            MergeFaceToList(newface, plane_current_facelist);
         }
-        plane_current_facelist = MergeFaceToList(face, plane_current_facelist);
-        plane_current_facelist = FreeMergeListScraps(plane_current_facelist);
-
-        // save the new list back in the map
-        planefaces[plane] = plane_current_facelist;
+        MergeFaceToList(face, plane_current_facelist);
 
         csgfaces++;
     }
@@ -456,9 +452,9 @@ visible face.
 Not parallel.
 ==================
 */
-std::list<surface_t> BuildSurfaces(const std::map<int, face_t *> &planefaces)
+std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefaces)
 {
-    std::list<surface_t> surfaces;
+    std::vector<surface_t> surfaces;
 
     for (int i = 0; i < map.numplanes(); i++) {
         const auto entry = planefaces.find(i);
@@ -466,14 +462,13 @@ std::list<surface_t> BuildSurfaces(const std::map<int, face_t *> &planefaces)
         if (entry == planefaces.end())
             continue;
 
-        Q_assert(entry->second != nullptr);
+        Q_assert(!entry->second.empty());
 
         /* create a new surface to hold the faces on this plane */
-        surface_t &surf = surfaces.emplace_front();
+        surface_t &surf = surfaces.emplace_back();
         surf.planenum = entry->first;
-        surf.faces = entry->second;
-        for (const face_t *face = surf.faces; face; face = face->next)
-            csgmergefaces++;
+        surf.faces = std::move(entry->second);
+        csgmergefaces += surf.faces.size();
 
         /* Calculate bounding box and flags */
         surf.calculateInfo();
@@ -513,7 +508,7 @@ CSGFaces
 Returns a list of surfaces containing all of the faces
 ==================
 */
-std::list<surface_t> CSGFaces(const mapentity_t *entity)
+std::vector<surface_t> CSGFaces(const mapentity_t *entity)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
@@ -634,7 +629,7 @@ std::list<surface_t> CSGFaces(const mapentity_t *entity)
     });
 
     // Non parallel part:
-    std::map<int, face_t *> planefaces;
+    std::map<int, std::list<face_t *>> planefaces;
     for (size_t i = 0; i < entity->brushes.size(); ++i) {
         const brush_t &brush = entity->brushes[i];
         face_t *outside = brushvec_outsides[i];
@@ -647,7 +642,7 @@ std::list<surface_t> CSGFaces(const mapentity_t *entity)
         SaveFacesToPlaneList(outside, mirror, planefaces);
     }
 
-    std::list<surface_t> surfaces = BuildSurfaces(planefaces);
+    std::vector<surface_t> surfaces = BuildSurfaces(planefaces);
 
     LogPrint(LOG_STAT, "     {:8} brushfaces\n", brushfaces.load());
     LogPrint(LOG_STAT, "     {:8} csgfaces\n", csgfaces);

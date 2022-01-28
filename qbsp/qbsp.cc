@@ -563,7 +563,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      * Take the brush_t's and clip off all overlapping and contained faces,
      * leaving a perfect skin of the model with no hidden faces
      */
-    std::list<surface_t> surfs = CSGFaces(entity);
+    std::vector<surface_t> surfs = CSGFaces(entity);
 
     if (options.fObjExport && entity == pWorldEnt() && hullnum <= 0) {
         ExportObj_Surfaces("post_csg", surfs);

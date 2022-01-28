@@ -157,51 +157,25 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 MergeFaceToList
 ===============
 */
-face_t *MergeFaceToList(face_t *face, face_t *list)
+void MergeFaceToList(face_t *face, std::list<face_t *> &list)
 {
-    face_t *newf, *f;
-
-    f = list;
-    while (f) {
+    for (auto it = list.begin(); it != list.end(); ) {
 #ifdef PARANOID
         CheckColinear(f);
 #endif
-        newf = TryMerge(face, f);
+        face_t *newf = TryMerge(face, *it);
+
         if (newf) {
             delete face;
-            f->w.clear(); // merged out, remove later
+            list.erase(it);
             face = newf;
-            f = list;
-        } else
-            f = f->next;
-    }
-
-    // didn't merge, so add at start
-    face->next = list;
-    return face;
-}
-
-/*
-===============
-FreeMergeListScraps
-===============
-*/
-face_t *FreeMergeListScraps(face_t *merged)
-{
-    face_t *head, *next;
-
-    head = NULL;
-    for (; merged; merged = next) {
-        next = merged->next;
-        if (!merged->w.size()) {
-            delete merged;
+            it = list.begin();
         } else {
-            merged->next = head;
-            head = merged;
+            it++;
         }
     }
 
-    return head;
+    list.emplace_back(face);
 }
 
 /*
@@ -211,16 +185,13 @@ MergePlaneFaces
 */
 inline void MergePlaneFaces(surface_t &plane)
 {
-    face_t *merged = NULL, *next;
+    std::list<face_t *> merged;
 
-    for (face_t *f = plane.faces; f; f = next) {
-        next = f->next;
-        merged = MergeFaceToList(f, merged);
+    for (auto &f : plane.faces) {
+        MergeFaceToList(f, merged);
     }
 
-    // Remove all empty faces (numpoints == -1) and add the remaining
-    // faces to the plane
-    plane.faces = FreeMergeListScraps(merged);
+    plane.faces = std::move(merged);
 }
 
 #include <tbb/parallel_for_each.h>
@@ -230,20 +201,16 @@ inline void MergePlaneFaces(surface_t &plane)
 MergeAll
 ============
 */
-void MergeAll(std::list<surface_t> &surfhead)
+void MergeAll(std::vector<surface_t> &surfhead)
 {
     std::atomic<int> mergefaces = 0, premergefaces = 0;
 
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
     tbb::parallel_for_each(surfhead, [&](surface_t &surf) {
-        for (face_t *f = surf.faces; f; f = f->next) {
-            premergefaces++;
-        }
+        premergefaces += surf.faces.size();
         MergePlaneFaces(surf);
-        for (face_t *f = surf.faces; f; f = f->next) {
-            mergefaces++;
-        }
+        mergefaces += surf.faces.size();
     });
 
     LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces, (static_cast<double>(mergefaces) / premergefaces) * 100.);
