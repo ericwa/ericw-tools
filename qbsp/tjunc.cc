@@ -320,8 +320,7 @@ static void FixFaceEdges(face_t *face)
     wvert_t *v;
     vec_t t1, t2;
 
-restart:
-    for (i = 0; i < face->w.size(); i++) {
+    for (i = 0; i < face->w.size(); ) {
         j = (i + 1) % face->w.size();
 
         edge = FindEdge(face->w[i], face->w[j], t1, t2);
@@ -338,15 +337,17 @@ restart:
 
             tjuncs++;
 
-            // FIXME: a bit of a silly way of handling this
-            face->w.push_back({});
+            face->w.resize(face->w.size() + 1);
 
-            for (int32_t k = face->w.size() - 1; k > j; k--)
-                face->w[k] = face->w[k - 1];
+            std::copy_backward(face->w.begin() + j, face->w.end() - 1, face->w.end());  
 
             face->w[j] = edge->origin + (edge->dir * v->t);
-            goto restart;
+
+            i = 0;
+            continue;
         }
+
+        i++;
     }
 
     // we're good to go!

@@ -2221,8 +2221,7 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
     return extents;
 }
 
-#include "tbb/parallel_for.h"
-#include <mutex>
+#include "tbb/parallel_for_each.h"
 
 void CalculateWorldExtent(void)
 {
@@ -2230,8 +2229,7 @@ void CalculateWorldExtent(void)
 
     std::atomic<vec_t> extents = -std::numeric_limits<vec_t>::infinity();
 
-    tbb::parallel_for(static_cast<size_t>(0), static_cast<size_t>(map.numbrushes()), [&](const size_t &i) {
-        const auto &brush = map.brushes[i];
+    tbb::parallel_for_each(map.brushes, [&](const mapbrush_t &brush) {
         const vec_t brushExtents = max(extents.load(), GetBrushExtents(brush));
         vec_t currentExtents = extents;
         while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents));

@@ -48,23 +48,21 @@ private:
     variant_type data;
 
 public:
-    class iterator
+    template<typename array_iterator, typename vector_iterator>
+    class iterator_base
     {
-        using array_iterator = typename array_type::const_iterator;
-        using vector_iterator = vector_type::const_iterator;
-
         std::variant<array_iterator, vector_iterator> it;
 
     public:
-        using iterator_category = vector_iterator::iterator_category;
-        using value_type = vector_iterator::value_type;
-        using difference_type = vector_iterator::difference_type;
-        using pointer = vector_iterator::pointer;
-        using reference = vector_iterator::reference;
+        using iterator_category = typename vector_iterator::iterator_category;
+        using value_type = typename vector_iterator::value_type;
+        using difference_type = typename vector_iterator::difference_type;
+        using pointer = typename vector_iterator::pointer;
+        using reference = typename vector_iterator::reference;
 
-        iterator(array_iterator it) : it(it) { }
+        iterator_base(array_iterator it) : it(it) { }
 
-        iterator(vector_iterator it) : it(it) { }
+        iterator_base(vector_iterator it) : it(it) { }
 
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
@@ -73,9 +71,9 @@ public:
             return *std::get<vector_iterator>(it);
         }
 
-        constexpr iterator &operator=(const iterator &) noexcept = default;
+        constexpr iterator_base &operator=(const iterator_base &) noexcept = default;
 
-        constexpr iterator &operator++() noexcept
+        constexpr iterator_base &operator++() noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
                 ++std::get<array_iterator>(it);
@@ -85,7 +83,7 @@ public:
             return *this;
         }
 
-        constexpr iterator &operator++(int) noexcept
+        constexpr iterator_base &operator++(int) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it)++;
@@ -95,7 +93,7 @@ public:
             return *this;
         }
 
-        constexpr iterator &operator--() noexcept
+        constexpr iterator_base &operator--() noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
                 --std::get<array_iterator>(it);
@@ -105,7 +103,7 @@ public:
             return *this;
         }
 
-        constexpr iterator operator--(int) noexcept
+        constexpr iterator_base operator--(int) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it)--;
@@ -115,7 +113,7 @@ public:
             return *this;
         }
 
-        constexpr iterator &operator+=(const difference_type _Off) noexcept
+        constexpr iterator_base &operator+=(const difference_type _Off) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it) += _Off;
@@ -125,14 +123,14 @@ public:
             return *this;
         }
 
-        [[nodiscard]] constexpr iterator operator+(const difference_type _Off) const noexcept
+        [[nodiscard]] constexpr iterator_base operator+(const difference_type _Off) const noexcept
         {
-            iterator _Tmp = *this;
+            iterator_base _Tmp = *this;
             _Tmp += _Off; // TRANSITION, LLVM-49342
             return _Tmp;
         }
 
-        constexpr iterator &operator-=(const difference_type _Off) noexcept
+        constexpr iterator_base &operator-=(const difference_type _Off) noexcept
         {
             if (std::holds_alternative<array_iterator>(it))
                 std::get<array_iterator>(it) -= _Off;
@@ -142,7 +140,7 @@ public:
             return *this;
         }
 
-        [[nodiscard]] constexpr bool operator==(const iterator &_Off) const noexcept
+        [[nodiscard]] constexpr bool operator==(const iterator_base &_Off) const noexcept
         {
             if (std::holds_alternative<array_iterator>(it)) {
                 auto sit = std::get<array_iterator>(it);
@@ -159,7 +157,7 @@ public:
             }
         }
 
-        [[nodiscard]] constexpr bool operator!=(const iterator &_Off) const noexcept
+        [[nodiscard]] constexpr bool operator!=(const iterator_base &_Off) const noexcept
         {
             if (std::holds_alternative<array_iterator>(it)) {
                 auto sit = std::get<array_iterator>(it);
@@ -176,7 +174,7 @@ public:
             }
         }
 
-        [[nodiscard]] constexpr difference_type operator-(const iterator &_Off) const noexcept
+        [[nodiscard]] constexpr difference_type operator-(const iterator_base &_Off) const noexcept
         {
             if (std::holds_alternative<array_iterator>(it)) {
                 auto sit = std::get<array_iterator>(it);
@@ -193,9 +191,9 @@ public:
             }
         }
 
-        [[nodiscard]] constexpr iterator operator-(const difference_type _Off) const noexcept
+        [[nodiscard]] constexpr iterator_base operator-(const difference_type _Off) const noexcept
         {
-            iterator _Tmp = *this;
+            iterator_base _Tmp = *this;
             _Tmp -= _Off; // TRANSITION, LLVM-49342
             return _Tmp;
         }
@@ -223,8 +221,9 @@ public:
     inline winding_base_t(Iter begin, Iter end)
         : count(end - begin), data(count > N ? variant_type(vector_type(begin, end)) : variant_type(array_type()))
     {
-        if (!is_dynamic())
+        if (!is_dynamic()) {
             std::copy(begin, end, std::get<array_type>(data).begin());
+        }
     }
 
     // copy constructor
@@ -284,15 +283,33 @@ public:
     inline qvec3d &operator[](const size_t &index) { return at(index); }
 
     inline const qvec3d &operator[](const size_t &index) const { return at(index); }
+    
+    using const_iterator = iterator_base<typename array_type::const_iterator, vector_type::const_iterator>;
 
-    const iterator begin() const
+    const const_iterator begin() const
+    {
+        if (is_dynamic())
+            return const_iterator(std::get<vector_type>(data).begin());
+        return const_iterator(std::get<array_type>(data).begin());
+    }
+
+    const const_iterator end() const
+    {
+        if (is_dynamic())
+            return const_iterator(std::get<vector_type>(data).end());
+        return const_iterator(std::get<array_type>(data).begin() + count);
+    }
+
+    using iterator = iterator_base<typename array_type::iterator, vector_type::iterator>;
+
+    iterator begin()
     {
         if (is_dynamic())
             return iterator(std::get<vector_type>(data).begin());
         return iterator(std::get<array_type>(data).begin());
     }
 
-    const iterator end() const
+    iterator end()
     {
         if (is_dynamic())
             return iterator(std::get<vector_type>(data).end());

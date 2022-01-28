@@ -223,6 +223,8 @@ inline void MergePlaneFaces(surface_t &plane)
     plane.faces = FreeMergeListScraps(merged);
 }
 
+#include <tbb/parallel_for_each.h>
+
 /*
 ============
 MergeAll
@@ -230,19 +232,21 @@ MergeAll
 */
 void MergeAll(std::list<surface_t> &surfhead)
 {
-    int mergefaces = 0;
-    face_t *f;
+    std::atomic<int> mergefaces = 0, premergefaces = 0;
 
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    for (auto &surf : surfhead) {
+    tbb::parallel_for_each(surfhead, [&](surface_t &surf) {
+        for (face_t *f = surf.faces; f; f = f->next) {
+            premergefaces++;
+        }
         MergePlaneFaces(surf);
-        for (f = surf.faces; f; f = f->next) {
+        for (face_t *f = surf.faces; f; f = f->next) {
             mergefaces++;
         }
-    }
+    });
 
-    LogPrint(LOG_STAT, "     {:8} mergefaces\n", mergefaces);
+    LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces, (static_cast<double>(mergefaces) / premergefaces) * 100.);
 
     // Quick hack to let solidbsp print out progress %
     csgmergefaces = mergefaces;
