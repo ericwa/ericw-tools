@@ -465,7 +465,7 @@ int main(int argc, char **argv)
     printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
     if (argc == 1) {
         printf(
-            "usage: bsputil [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
+            "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
             "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
             "[--decompile] [--decompile-geomonly] bspfile\n");
         exit(1);
@@ -482,7 +482,25 @@ int main(int argc, char **argv)
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     for (int32_t i = 0; i < argc - 1; i++) {
-        if (!strcmp(argv[i], "--compare")) {
+        if (!strcmp(argv[i], "--replace-entities")) {
+            i++;
+            if (i == argc - 1) {
+                Error("--replace-entities requires two arguments");
+            }
+
+            // Load the .ent
+            fs::data ent = fs::load(argv[i]);
+
+            if (!ent) {
+                Error("couldn't load ent file {}", argv[i]);
+            }
+
+            std::get<mbsp_t>(bspdata.bsp).dentdata = std::string(reinterpret_cast<char *>(ent->data()), ent->size());
+
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
+
+            WriteBSPFile(source, &bspdata);
+        } else if (!strcmp(argv[i], "--compare")) {
             i++;
             if (i == argc - 1) {
                 Error("--compare requires two arguments");
