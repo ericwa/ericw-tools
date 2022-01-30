@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # usage:
-#     ./automated_tests.sh [--update-hashes]
+#     ./automated_tests.sh [--update-hashes|--continue-on-failure]
 #
 # If --update-hashes is given, updates the expected hash files.
 # Otherwise tests the generated .bsp's match the expected hashes.
@@ -14,8 +14,11 @@
 set -x
 
 UPDATE_HASHES=0
+CONTINUE_ON_FAILURE=0
 if [[ "$1" == "--update-hashes" ]]; then 
     UPDATE_HASHES=1
+elif [[ "$1" == "--continue-on-failure" ]]; then
+    CONTINUE_ON_FAILURE=1
 elif [[ "$1" != "" ]]; then
     echo "usage: ./automated_tests.sh [--update-hashes]"
     exit 1
@@ -93,7 +96,10 @@ for bsp in ${COMMIT_JSON_MAPS}; do
             echo "Diff returned $diffreturn"
             file reference_bsp_json/${bsp}.json
             file ${bsp}.json
-            exit 1
+
+            if [[ $CONTINUE_ON_FAILURE -ne 1]]; then
+                exit 1
+            fi
         fi
     fi
 done
@@ -122,7 +128,12 @@ qbsp -noverbose               qbspfeatures.map                               || 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} ${HASH_CHECK_PRTS} > qbsp.sha256sum || exit 1
 else
-    sha256sum --strict --check qbsp.sha256sum || exit 1
+    sha256sum --strict --check qbsp.sha256sum
+
+    hash_check_return=$?
+    if [[ $hash_check_return -ne 0 ]] && [[ $CONTINUE_ON_FAILURE -ne 1]]; then
+        exit 1
+    fi
 fi
 
 # now run vis
@@ -139,7 +150,12 @@ wait
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} > qbsp-vis.sha256sum || exit 1
 else
-    sha256sum --strict --check qbsp-vis.sha256sum || exit 1
+    sha256sum --strict --check qbsp-vis.sha256sum
+
+    hash_check_return=$?
+    if [[ $hash_check_return -ne 0 ]] && [[ $CONTINUE_ON_FAILURE -ne 1]]; then
+        exit 1
+    fi
 fi
 
 # FIXME: light output is nondeterministic so we can't check the hashes currently
