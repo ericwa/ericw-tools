@@ -1,7 +1,7 @@
 # From:
 # https://devblogs.microsoft.com/cppblog/clear-functional-c-documentation-with-sphinx-breathe-doxygen-cmake/
 
-find_package(Sphinx REQUIRED)
+find_package(Sphinx)
 
 if (Sphinx_FOUND)
     set(SPHINX_SOURCE ${CMAKE_CURRENT_SOURCE_DIR})
