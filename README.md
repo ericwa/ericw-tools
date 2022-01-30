@@ -45,7 +45,10 @@ Dependencies: Embree 3.0+, TBB (TODO: version?), Sphinx (for building manuals)
 ### Ubuntu
 
 ```
-sudo apt install libembree-dev libtbb-dev python3-sphinx cmake build-essential g++
+sudo apt install libembree-dev libtbb-dev cmake build-essential g++
+sudo apt install python3-pip
+python3 -m pip install sphinx_rtd_theme
+export PATH="~/.local/bin/:$PATH"
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 mkdir build

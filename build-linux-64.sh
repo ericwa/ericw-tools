@@ -1,5 +1,8 @@
 #!/bin/bash
 
+python3 -m pip install sphinx_rtd_theme
+export PATH="~/.local/bin/:$PATH"
+
 BUILD_DIR=build-linux
 
 if [ -d "$BUILD_DIR" ]; then
