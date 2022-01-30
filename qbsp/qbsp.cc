@@ -603,10 +603,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        if (entity == pWorldEnt() && !options.fNofill) {
+        if (entity == pWorldEnt()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
-            if (FillOutside(nodes, hullnum)) {
+            if (!options.fNofill && FillOutside(nodes, hullnum)) {
                 FreeAllPortals(nodes);
 
                 // get the remaining faces together into surfaces again
