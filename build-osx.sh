@@ -3,6 +3,8 @@
 # for sha256sum, used by the tests
 brew install coreutils
 
+python3 -m pip install sphinx_rtd_theme
+
 BUILD_DIR=build-osx
 EMBREE_ZIP="https://github.com/embree/embree/releases/download/v3.13.0/embree-3.13.0.x86_64.macosx.zip"
 
