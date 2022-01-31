@@ -117,7 +117,7 @@ public:
     bool fLeakTest = false;
     bool fContentHack = false;
     vec_t worldExtent = 0.f;
-    bool fNoThreads = false;
+    int threads = 0; // 0 = let TBB auto select ideal number of threads
     bool includeSkip = false;
     bool fNoTJunc = false;
 };
