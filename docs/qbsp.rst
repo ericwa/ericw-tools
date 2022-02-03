@@ -192,6 +192,11 @@ Options
 
    Emit skip/nodraw faces. Mainly for Q2RTX.
 
+.. option:: -threads n
+
+   Set number of threads to use. By default, qbsp will attempt to
+   use all available hardware threads.
+
 Special Texture Names
 ---------------------
 
