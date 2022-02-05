@@ -628,7 +628,7 @@ struct gamedef_q2_t : public gamedef_t
         contentflags_t surf_contents = contents;
 
         // if we don't have a declared content type, assume solid.
-        if (!(surf_contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1))) {
+        if (!get_content_type(surf_contents)) {
             surf_contents.native |= Q2_CONTENTS_SOLID;
         }
 

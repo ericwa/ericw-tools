@@ -682,7 +682,7 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
 
         if (!contents.types_equal(base_contents, options.target_game)) {
             LogPrint("mixed face contents ({} != {}) at line {}\n",
-                contentflags_t{mapface.contents}.to_string(options.target_game),
+                base_contents.to_string(options.target_game),
                 contents.to_string(options.target_game), mapface.linenum);
             break;
         }
