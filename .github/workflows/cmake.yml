@@ -27,7 +27,8 @@ jobs:
       if: runner.os == 'Linux'
       run: |
           sudo apt-get update
-          sudo apt-get install -y groff
+          # for Sphinx
+          sudo apt-get install -y python3-pip
           ./build-linux-64.sh
 
     - name: macOS Build

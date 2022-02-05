@@ -40,12 +40,15 @@ source code.
 
 ## Compiling
 
-Dependencies: Embree 3.0+, TBB (TODO: version?), groff (for building manuals)
+Dependencies: Embree 3.0+, TBB (TODO: version?), Sphinx (for building manuals)
 
 ### Ubuntu
 
 ```
-sudo apt install libembree-dev libtbb-dev groff cmake build-essential g++
+sudo apt install libembree-dev libtbb-dev cmake build-essential g++
+sudo apt install python3-pip
+python3 -m pip install sphinx_rtd_theme
+export PATH="~/.local/bin/:$PATH"
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 mkdir build
@@ -58,6 +61,8 @@ cmake ..
 Example using vcpkg (32-bit build):
 
 ```
+# TODO: sphinx installation
+
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 git clone https://github.com/microsoft/vcpkg
@@ -78,6 +83,7 @@ cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmak
 
 ```
 brew install embree tbb
+python3 -m pip install sphinx_rtd_theme
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
 mkdir build

@@ -3,6 +3,8 @@ cmake_policy(SET CMP0028 NEW)
 
 project (ericw-tools)
 
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
+
 # Grab the git describe output and store it in GIT_DESCRIBE
 # Thanks to http://xit0.org/2013/04/cmake-use-git-branch-and-commit-details-in-project/
 execute_process(
@@ -92,6 +94,7 @@ endif ()
 
 add_subdirectory(qbsp)
 add_subdirectory(vis)
+add_subdirectory(docs)
 
 install(FILES README.md DESTINATION bin)
 install(FILES changelog.md DESTINATION bin)

@@ -38,6 +38,10 @@ target_link_libraries(qbsp libqbsp)
 
 install(TARGETS qbsp RUNTIME DESTINATION bin)
 
+# HACK: copy .dll dependencies
+add_custom_command(TARGET qbsp POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:qbsp>")
+
 # test (copied from light/CMakeLists.txt)
 
 set(QBSP_TEST_SOURCE 

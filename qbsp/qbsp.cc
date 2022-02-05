@@ -26,6 +26,7 @@
 #include <common/log.hh>
 #include <common/aabb.hh>
 #include <common/fs.hh>
+#include <common/threads.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 #include <fmt/chrono.h>
@@ -603,10 +604,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        if (entity == pWorldEnt() && !options.fNofill) {
+        if (entity == pWorldEnt()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
-            if (FillOutside(nodes, hullnum)) {
+            if (!options.fNofill && FillOutside(nodes, hullnum)) {
                 FreeAllPortals(nodes);
 
                 // get the remaining faces together into surfaces again
@@ -1059,7 +1060,7 @@ PrintOptions
         "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
         "   -leaktest       Make compilation fail if the map leaks\n"
         "   -contenthack    Hack to fix leaks through solids. Causes missing faces in some cases so disabled by default.\n"
-        "   -nothreads      Disable multithreading\n"
+        "   -threads n      Set the number of threads (1 to disable multithreading)\n"
         "   sourcefile      .MAP file to process\n"
         "   destfile        .BSP file to output\n");
 
@@ -1295,8 +1296,11 @@ static void ParseOptions(char *szOptions)
                 options.fLeakTest = true;
             } else if (!Q_strcasecmp(szTok, "contenthack")) {
                 options.fContentHack = true;
-            } else if (!Q_strcasecmp(szTok, "nothreads")) {
-                options.fNoThreads = true;
+            } else if (!Q_strcasecmp(szTok, "threads")) {
+                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
+                if (!szTok2)
+                    FError("Invalid argument to option {}", szTok);
+                options.threads = atoi(szTok2);
             } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help")) {
                 PrintOptions();
             } else {
@@ -1421,11 +1425,7 @@ int qbsp_main(int argc, const char **argv)
 
     InitQBSP(argc, argv);
 
-    // disable TBB if requested
-    auto tbbOptions = std::unique_ptr<tbb::global_control>();
-    if (options.fNoThreads) {
-        tbbOptions = std::make_unique<tbb::global_control>(tbb::global_control::max_allowed_parallelism, 1);
-    }
+    auto tbbOptions = ConfigureTBB(options.threads);
 
     // do it!
     auto start = I_FloatTime();
