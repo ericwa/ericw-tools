@@ -439,6 +439,12 @@ void FinishBSPFile(void)
     options.fVerbose = true;
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
+    if (map.bsp.dvertexes.empty()) {
+        // First vertex must remain unused because edge references it
+        map.bsp.dvertexes.emplace_back();
+        Q_assert(map.bsp.dvertexes.size() == 1);
+    }
+
     WriteExtendedTexinfoFlags();
     WriteBSPFile();
 

@@ -668,14 +668,13 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
     for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+        contentflags_t contents = options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
 
-        if (texinfo.flags.is_skip) {
+        if (contents.is_empty(options.target_game)) {
             continue;
         }
-
-        contentflags_t contents = options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
         
-        // use the first non-skip as the base contents value
+        // use the first non-empty as the base contents value
         if (!base_contents_set) {
             base_contents_set = true;
             base_contents = contents;
