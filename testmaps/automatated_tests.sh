@@ -97,7 +97,7 @@ for bsp in ${COMMIT_JSON_MAPS}; do
             file reference_bsp_json/${bsp}.json
             file ${bsp}.json
 
-            if [[ $CONTINUE_ON_FAILURE -ne 1]]; then
+            if [[ $CONTINUE_ON_FAILURE -ne 1 ]]; then
                 exit 1
             fi
         fi
@@ -131,21 +131,17 @@ else
     sha256sum --strict --check qbsp.sha256sum
 
     hash_check_return=$?
-    if [[ $hash_check_return -ne 0 ]] && [[ $CONTINUE_ON_FAILURE -ne 1]]; then
+    if [[ $hash_check_return -ne 0 ]] && [[ $CONTINUE_ON_FAILURE -ne 1 ]]; then
         exit 1
     fi
 fi
 
 # now run vis
-# since vis is slower, launch all as background processes, and then wait for all of them to finish
 # FIXME: vis output is nondeterministic when run with multiple threads, so force 1 thread per process
 
 for bsp in ${HASH_CHECK_BSPS}; do
-    vis -nostate -threads 1 ${bsp} &
+    vis -nostate -threads 1 ${bsp} || exit 1
 done
-
-# we don't get the exit status this way, but the hash check will test the resulting visdata
-wait 
 
 if [[ $UPDATE_HASHES -ne 0 ]]; then
     sha256sum ${HASH_CHECK_BSPS} > qbsp-vis.sha256sum || exit 1
@@ -153,7 +149,7 @@ else
     sha256sum --strict --check qbsp-vis.sha256sum
 
     hash_check_return=$?
-    if [[ $hash_check_return -ne 0 ]] && [[ $CONTINUE_ON_FAILURE -ne 1]]; then
+    if [[ $hash_check_return -ne 0 ]] && [[ $CONTINUE_ON_FAILURE -ne 1 ]]; then
         exit 1
     fi
 fi
