@@ -548,16 +548,13 @@ static twosided<std::optional<surface_t>> DividePlane(surface_t &in, const qplan
     std::list<face_t *> frontlist, backlist;
 
     for (auto face : in.faces) {
-        face_t *frontfrag = nullptr;
-        face_t *backfrag = nullptr;
-
-        SplitFace(face, split, &frontfrag, &backfrag);
+        auto [frontfrag, backfrag] = SplitFace(face, split);
 
         if (frontfrag) {
-            frontlist.emplace_back(frontfrag);
+            frontlist.push_back(frontfrag);
         }
         if (backfrag) {
-            backlist.emplace_back(backfrag);
+            backlist.push_back(backfrag);
         }
     }
 
@@ -606,7 +603,7 @@ Called in parallel.
 */
 static void LinkConvexFaces(std::vector<surface_t> &planelist, node_t *leafnode)
 {
-    leafnode->faces = NULL;
+    leafnode->facelist.clear();
     leafnode->planenum = PLANENUM_LEAF;
 
     int count = 0;
@@ -688,7 +685,7 @@ is returned here (why?).
 Called in parallel.
 ==================
 */
-static face_t *LinkNodeFaces(surface_t &surface)
+static std::list<face_t *> LinkNodeFaces(surface_t &surface)
 {
     // subdivide large faces
     for (auto it = surface.faces.begin(); it != surface.faces.end(); it++) {
@@ -699,14 +696,15 @@ static face_t *LinkNodeFaces(surface_t &surface)
 
     nodefaces += surface.faces.size();
     
-    face_t *list = NULL;
-
+    std::list<face_t *> list;
+     
     // copy
     for (auto &f : surface.faces) {
         face_t *newf = new face_t(*f);
+        Q_assert(newf->original == nullptr);
+
+        list.push_front(newf);
         f->original = newf;
-        newf->next = list;
-        list = newf;
     }
 
     return list;
@@ -735,7 +733,7 @@ static void PartitionSurfaces(std::vector<surface_t> &surfaces, node_t *node)
     splitnodes++;
     LogPercent(splitnodes.load(), csgmergefaces);
 
-    node->faces = LinkNodeFaces(*split);
+    node->facelist = LinkNodeFaces(*split);
     node->children[0] = new node_t{};
     node->children[1] = new node_t{};
     node->planenum = split->planenum;

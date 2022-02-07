@@ -101,10 +101,10 @@ void UpdateFaceSphere(face_t *in)
 ==================
 SplitFace
 
-Frees in.
+Frees in. Returns {front, back}
 ==================
 */
-void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
+std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
     side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
@@ -131,18 +131,14 @@ void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
 
     // Plane doesn't split this face after all
     if (!counts[SIDE_FRONT]) {
-        *front = NULL;
-        *back = in;
-        return;
+        return {nullptr, in};
     }
     if (!counts[SIDE_BACK]) {
-        *front = in;
-        *back = NULL;
-        return;
+        return {in, nullptr};
     }
 
-    *back = newf = NewFaceFromFace(in);
-    *front = new2 = NewFaceFromFace(in);
+    newf = NewFaceFromFace(in);
+    new2 = NewFaceFromFace(in);
 
     // distribute the points and generate splits
     for (i = 0; i < in->w.size(); i++) {
@@ -187,6 +183,9 @@ void SplitFace(face_t *in, const qplane3d &split, face_t **front, face_t **back)
 
     /* free the original face now that it is represented by the fragments */
     delete in;
+
+    // {front, back}
+    return {new2, newf};
 }
 
 /*
@@ -198,13 +197,14 @@ outside the brush to the outside list, without splitting them. This saves us
 time in mergefaces later on (and sometimes a lot of memory)
 =================
 */
-static void RemoveOutsideFaces(const brush_t &brush, face_t **inside, face_t **outside)
+static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside, std::list<face_t *> *outside)
 {
-    face_t *face = *inside;
-    face_t *next = nullptr;
-    *inside = NULL;
-    while (face) {
-        next = face->next;
+    std::list<face_t *> oldinside;
+
+    // clear `inside`, transfer it to `oldinside`
+    std::swap(*inside, oldinside);
+
+    for (face_t *face : oldinside) {
         std::optional<winding_t> w = face->w;
         for (auto &clipface : brush.faces) {
             qbsp_plane_t clipplane = map.planes[clipface.planenum];
@@ -216,14 +216,11 @@ static void RemoveOutsideFaces(const brush_t &brush, face_t **inside, face_t **o
                 break;
         }
         if (!w) {
-            /* The face is completely outside this brush */
-            face->next = *outside;
-            *outside = face;
+            /* The face is completely outside this brush */            
+            outside->push_front(face);
         } else {
-            face->next = *inside;
-            *inside = face;
+            inside->push_front(face);
         }
-        face = next;
     }
 }
 
@@ -237,17 +234,17 @@ outside list or spliting it into a piece in each list.
 Faces exactly on the plane will stay inside unless overdrawn by later brush
 =================
 */
-static void ClipInside(const face_t *clipface, bool precedence, face_t **inside, face_t **outside)
+static void ClipInside(const face_t *clipface, bool precedence, std::list<face_t *> *inside,
+    std::list<face_t *> *outside)
 {
-    face_t *face, *next, *frags[2];
+    std::list<face_t *> oldinside;
+
+    // effectively make a copy of `inside`, and clear it
+    std::swap(*inside, oldinside);
 
     const qbsp_plane_t &splitplane = map.planes[clipface->planenum];
 
-    face = *inside;
-    *inside = NULL;
-    while (face) {
-        next = face->next;
-
+    for (face_t *face : oldinside) {
         /* HACK: Check for on-plane but not the same planenum
           ( https://github.com/ericwa/ericw-tools/issues/174 )
          */
@@ -260,6 +257,8 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
             }
         }
 
+        std::array<face_t *, 2> frags;
+
         /* Handle exactly on-plane faces */
         if (face->planenum == clipface->planenum || spurious_onplane) {
             const qplane3d faceplane = Face_Plane(face);
@@ -269,27 +268,24 @@ static void ClipInside(const face_t *clipface, bool precedence, face_t **inside,
 
             if (opposite || precedence) {
                 /* always clip off opposite facing */
-                frags[clipface->planeside] = NULL;
-                frags[!clipface->planeside] = face;
+                frags[clipface->planeside] = {};
+                frags[!clipface->planeside] = {face};
             } else {
                 /* leave it on the outside */
-                frags[clipface->planeside] = face;
-                frags[!clipface->planeside] = NULL;
+                frags[clipface->planeside] = {face};
+                frags[!clipface->planeside] = {};
             }
         } else {
             /* proper split */
-            SplitFace(face, splitplane, &frags[0], &frags[1]);
+            std::tie(frags[0], frags[1]) = SplitFace(face, splitplane);
         }
 
         if (frags[clipface->planeside]) {
-            frags[clipface->planeside]->next = *outside;
-            *outside = frags[clipface->planeside];
+            outside->push_front(frags[clipface->planeside]);
         }
         if (frags[!clipface->planeside]) {
-            frags[!clipface->planeside]->next = *inside;
-            *inside = frags[!clipface->planeside];
+            inside->push_front(frags[!clipface->planeside]);
         }
-        face = next;
     }
 }
 
@@ -303,13 +299,10 @@ This plane map is later used to build up the surfaces for creating the BSP.
 Not parallel.
 ==================
 */
-static void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, std::list<face_t *>> &planefaces)
+static void SaveFacesToPlaneList(std::list<face_t *> facelist, bool mirror, std::map<int, std::list<face_t *>> &planefaces)
 {
-    face_t *face, *next;
-
-    for (face = facelist; face; face = next) {
+    for (face_t *face : facelist) {
         const int plane = face->planenum;
-        next = face->next;
 
         // Handy for debugging CSGFaces issues, throw out detail faces and export obj.
 #if 0
@@ -355,39 +348,33 @@ static void SaveFacesToPlaneList(face_t *facelist, bool mirror, std::map<int, st
     }
 }
 
-static void FreeFaces(face_t *face)
+static void FreeFaces(std::list<face_t *> &facelist)
 {
-    face_t *next;
-
-    while (face) {
-        next = face->next;
+    for (face_t *face : facelist) {
         delete face;
-        face = next;
     }
+    facelist.clear();
 }
 
 /*
 ==================
 SaveInsideFaces
 
-`face` is the list of faces from `brush` (solid) that are inside `clipbrush` (nonsolid)
+`faces` is the list of faces from `brush` (solid) that are inside `clipbrush` (nonsolid)
 
 Save the list of faces onto the output list, modifying the outside contents to
 match given brush. If the inside contents are empty, the given brush's
 contents override the face inside contents.
 ==================
 */
-static void SaveInsideFaces(face_t *face, const brush_t &clipbrush, face_t **savelist)
+static void SaveInsideFaces(const std::list<face_t *> &faces, const brush_t &clipbrush, std::list<face_t *> *savelist)
 {
     Q_assert(!clipbrush.contents.is_solid(options.target_game));
 
-    face_t *next;
-
-    while (face) {
+    for (face_t *face : faces) {
         // the back side of `face` is a solid
         // Q_assert(face->contents[1] == CONTENTS_SOLID);
 
-        next = face->next;
         face->contents[0] = clipbrush.contents;
 
         if ((face->contents[1].is_solid(options.target_game) || face->contents[1].is_sky(options.target_game)) &&
@@ -434,9 +421,7 @@ static void SaveInsideFaces(face_t *face, const brush_t &clipbrush, face_t **sav
             }
         }
 
-        face->next = *savelist;
-        *savelist = face;
-        face = next;
+        savelist->push_front(face);
     }
 }
 
@@ -484,18 +469,16 @@ std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefa
 CopyBrushFaces
 ==================
 */
-static face_t *CopyBrushFaces(const brush_t &brush)
+static std::list<face_t *> CopyBrushFaces(const brush_t &brush)
 {
-    face_t *facelist, *newface;
+    std::list<face_t *> facelist;
 
-    facelist = NULL;
     for (auto &face : brush.faces) {
         brushfaces++;
-        newface = new face_t(face);
+        auto *newface = new face_t(face);
         newface->contents = { options.target_game->create_empty_contents(), brush.contents };
         newface->lmshift = { brush.lmshift, brush.lmshift };
-        newface->next = facelist;
-        facelist = newface;
+        facelist.push_back(newface);
     }
 
     return facelist;
@@ -524,7 +507,7 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
 #endif
 
     // output vector for the parallel_for
-    std::vector<face_t *> brushvec_outsides;
+    std::vector<std::list<face_t *>> brushvec_outsides;
     brushvec_outsides.resize(entity->brushes.size());
 
     /*
@@ -537,7 +520,7 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
      */
     tbb::parallel_for(static_cast<size_t>(0), entity->brushes.size(), [entity, &brushvec_outsides](const size_t i) {
         auto &brush = entity->brushes[i];
-        face_t *outside = CopyBrushFaces(brush);
+        std::list<face_t*> outside = CopyBrushFaces(brush);
         bool overwrite = false;
 
         for (auto &clipbrush : entity->brushes) {
@@ -586,8 +569,9 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
              */
 
             // divide faces by the planes of the new brush
-            face_t *inside = outside;
-            outside = NULL;
+            std::list<face_t *> inside;
+
+            std::swap(inside, outside);
 
             RemoveOutsideFaces(clipbrush, &inside, &outside);
             for (auto &clipface : clipbrush.faces)
@@ -632,7 +616,7 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
     std::map<int, std::list<face_t *>> planefaces;
     for (size_t i = 0; i < entity->brushes.size(); ++i) {
         const brush_t &brush = entity->brushes[i];
-        face_t *outside = brushvec_outsides[i];
+        std::list<face_t *> outside = brushvec_outsides[i];
 
         /*
          * All of the faces left on the outside list are real surface faces

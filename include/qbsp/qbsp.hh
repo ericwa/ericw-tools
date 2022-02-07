@@ -211,8 +211,6 @@ struct face_fragment_t
 
 struct face_t : face_fragment_t
 {
-    face_t *next;
-
     int planenum;
     int planeside; // which side is the front of the face
     int texinfo;
@@ -301,7 +299,7 @@ struct node_t
     int firstface; // decision node only
     int numfaces; // decision node only
     node_t *children[2]; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
-    face_t *faces; // decision nodes only, list for both sides
+    std::list<face_t *> facelist; // decision nodes only, list for both sides
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)

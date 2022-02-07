@@ -324,7 +324,7 @@ static void ResetFacesTouchingOccupiedLeafs(node_t *node)
         return;
     }
 
-    for (face_t *face = node->faces; face; face = face->next) {
+    for (face_t *face : node->facelist) {
         face->touchesOccupiedLeaf = false;
     }
 
@@ -383,7 +383,7 @@ static void ClearOutFaces(node_t *node)
     }
 
     // FIXME: Shouldn't be needed here
-    node->faces = NULL;
+    node->facelist = {};
 }
 
 static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)

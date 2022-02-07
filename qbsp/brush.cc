@@ -405,21 +405,6 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 }
 
 /*
-=================
-FreeBrushFaces
-=================
-*/
-static void FreeBrushFaces(face_t *facelist)
-{
-    face_t *face, *next;
-
-    for (face = facelist; face; face = next) {
-        next = face->next;
-        delete face;
-    }
-}
-
-/*
 =====================
 FreeBrushes
 =====================
