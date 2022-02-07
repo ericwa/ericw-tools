@@ -27,3 +27,4 @@ extern std::atomic<int> splitnodes;
 
 void DetailToSolid(node_t *node);
 std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, std::list<face_t *> &surfaces);
+node_t *SolidBSP(mapentity_t *entity, bool midsplit);

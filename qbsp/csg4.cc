@@ -47,7 +47,7 @@ std::mutex csgfaces_lock;
 MakeSkipTexinfo
 ==================
 */
-static int MakeSkipTexinfo()
+int MakeSkipTexinfo()
 {
     // FindMiptex, FindTexinfo not threadsafe
     std::unique_lock<std::mutex> lck{csgfaces_lock};
@@ -207,11 +207,7 @@ static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside
     for (face_t *face : oldinside) {
         std::optional<winding_t> w = face->w;
         for (auto &clipface : brush.faces) {
-            qbsp_plane_t clipplane = map.planes[clipface.planenum];
-            if (!clipface.planeside) {
-                clipplane = -clipplane;
-            }
-            w = w->clip(clipplane, ON_EPSILON, true)[SIDE_FRONT];
+            w = w->clip(Face_Plane(&clipface), ON_EPSILON, true)[SIDE_FRONT];
             if (!w)
                 break;
         }

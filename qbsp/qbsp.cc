@@ -559,6 +559,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         FError("Entity with no valid brushes");
     }
 
+    // fixme-brushbsp: generate the faces somewhere...
+#if 0
     /*
      * Take the brush_t's and clip off all overlapping and contained faces,
      * leaving a perfect skin of the model with no hidden faces
@@ -568,18 +570,19 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     if (options.fObjExport && entity == pWorldEnt() && hullnum <= 0) {
         ExportObj_Surfaces("post_csg", surfs);
     }
+#endif
 
     if (hullnum > 0) {
-        nodes = SolidBSP(entity, surfs, true);
+        nodes = SolidBSP(entity, true);
         if (entity == pWorldEnt() && !options.fNofill) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
             if (FillOutside(nodes, hullnum)) {
                 // Free portals before regenerating new nodes
                 FreeAllPortals(nodes);
-                surfs = GatherNodeFaces(nodes);
+                // fixme-brushbsp: surfs = GatherNodeFaces(nodes);
                 // make a really good tree
-                nodes = SolidBSP(entity, surfs, false);
+                nodes = SolidBSP(entity, false);
 
                 DetailToSolid(nodes);
             }
@@ -598,9 +601,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
          * longer processing time.
          */
         if (options.forceGoodTree)
-            nodes = SolidBSP(entity, surfs, false);
+            nodes = SolidBSP(entity, false);
         else
-            nodes = SolidBSP(entity, surfs, entity == pWorldEnt());
+            nodes = SolidBSP(entity, entity == pWorldEnt());
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
@@ -611,13 +614,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 FreeAllPortals(nodes);
 
                 // get the remaining faces together into surfaces again
-                surfs = GatherNodeFaces(nodes);
+                // fixme-brushbsp: surfs = GatherNodeFaces(nodes);
 
                 // merge polygons
-                MergeAll(surfs);
+                // fixme-brushbsp: MergeAll(surfs);
 
                 // make a really good tree
-                nodes = SolidBSP(entity, surfs, false);
+                nodes = SolidBSP(entity, false);
 
                 // convert detail leafs to solid
                 DetailToSolid(nodes);
@@ -662,7 +665,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     FreeBrushes(entity);
-    FreeNodes(nodes);
+    // fixme-brushbsp: why is this crashig?
+    //FreeNodes(nodes);
 }
 
 /*

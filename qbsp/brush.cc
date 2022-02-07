@@ -1040,3 +1040,11 @@ brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 
     return Entity_SortBrushes(entity, types);
 }
+
+void brush_t::update_bounds()
+{
+    this->bounds = {};
+    for (const face_t &face : faces) {
+        this->bounds = this->bounds.unionWith(face.w.bounds());
+    }
+}

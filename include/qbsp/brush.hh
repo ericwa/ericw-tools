@@ -30,6 +30,8 @@ struct brush_t
     std::vector<face_t> faces;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
+
+    void update_bounds();
 };
 
 class mapbrush_t;

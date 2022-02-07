@@ -226,6 +226,8 @@ struct face_t : face_fragment_t
 
     // filled by TJunc
     std::vector<face_fragment_t> fragments;
+
+    bool onnode; // has this face been used as a BSP node plane yet?
 };
 
 struct surface_t
