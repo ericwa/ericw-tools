@@ -1325,18 +1325,22 @@ static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modeli
             continue;
 
         // cut it
-        qvec3d *v = verts + i;
-        for (j = 0; j < numverts; j++, v += 3)
-            dist[j] = (*v)[0] - m;
+        {
+            vec_t *v = &verts->at(i);
+            for (j = 0; j < numverts; j++, v += 3)
+                dist[j] = *v - m;
 
-        // wrap cases
-        dist[j] = dist[0];
-        v -= i;
-        v = verts;
+            // wrap cases
+            dist[j] = dist[0];
+            v -= i;
+            v[0] = (*verts)[0];
+            v[1] = (*verts)[1];
+            v[2] = (*verts)[2];
+        }
 
         f = b = 0;
-        v = verts;
-        for (j = 0; j < numverts; j++, v += 3) {
+        qvec3d *v = verts;
+        for (j = 0; j < numverts; j++, v++) {
             if (dist[j] >= 0) {
                 front[f] = *v;
                 f++;
