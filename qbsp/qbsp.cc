@@ -554,24 +554,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     LogPrint(LOG_STAT, "     {:8} planes\n", map.numplanes());
 
-    if (entity->brushes.empty() && hullnum) {
-        PrintEntity(entity);
-        FError("Entity with no valid brushes");
-    }
-
-    // fixme-brushbsp: generate the faces somewhere...
-#if 0
-    /*
-     * Take the brush_t's and clip off all overlapping and contained faces,
-     * leaving a perfect skin of the model with no hidden faces
-     */
-    std::vector<surface_t> surfs = CSGFaces(entity);
-
-    if (options.fObjExport && entity == pWorldEnt() && hullnum <= 0) {
-        ExportObj_Surfaces("post_csg", surfs);
-    }
-#endif
-
     if (hullnum > 0) {
         nodes = SolidBSP(entity, true);
         if (entity == pWorldEnt() && !options.fNofill) {
