@@ -819,47 +819,6 @@ static void CreateLeaf(const std::vector<brush_t> &brushes, node_t *leafnode)
 #endif
 }
 
-// fixme-brushbsp: move SubdivideFace call somewhere else
-#if 0
-/*
-==================
-LinkNodeFaces
-
-First subdivides surface->faces.
-Then, duplicates the list of subdivided faces and returns it.
-
-For each surface->faces, ->original is set to the respective duplicate that
-is returned here (why?).
-
-Called in parallel.
-==================
-*/
-static std::list<face_t *> LinkNodeFaces(surface_t &surface)
-{
-    // subdivide large faces
-    for (auto it = surface.faces.begin(); it != surface.faces.end(); it++) {
-        it = SubdivideFace(it, surface.faces);
-    }
-
-    surface.faces.reverse();
-
-    nodefaces += surface.faces.size();
-    
-    std::list<face_t *> list;
-     
-    // copy
-    for (auto &f : surface.faces) {
-        face_t *newf = new face_t(*f);
-        Q_assert(newf->original == nullptr);
-
-        list.push_front(newf);
-        f->original = newf;
-    }
-
-    return list;
-}
-#endif
-
 /*
 ==================
 PartitionBrushes

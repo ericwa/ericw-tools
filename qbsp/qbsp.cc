@@ -605,11 +605,15 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         else
             nodes = SolidBSP(entity, entity == pWorldEnt());
 
+        MakeVisibleFaces(entity, nodes);
+
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
         if (entity == pWorldEnt()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
+
+            #if 0
             if (!options.fNofill && FillOutside(nodes, hullnum)) {
                 FreeAllPortals(nodes);
 
@@ -632,6 +636,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                     TJunc(entity, nodes);
                 }
             }
+            #endif
 
             // Area portals
             if (options.target_game->id == GAME_QUAKE_II) {

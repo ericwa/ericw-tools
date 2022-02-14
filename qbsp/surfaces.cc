@@ -511,3 +511,97 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     return firstface;
 }
+
+//===========================================================================
+
+static int c_nodefaces;
+
+static void AddMarksurfaces_r(face_t *face, node_t *node)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        node->markfaces.push_back(face);
+        return;
+    }
+
+    AddMarksurfaces_r(face, node->children[0]);
+    AddMarksurfaces_r(face, node->children[1]);
+}
+
+void AddFaceToTree_r(face_t *face, node_t* node)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        if (!face->w.size()) {
+            // spurious
+            return;
+        }
+        FError("couldn't find node for face");
+    }
+
+    if (face->planenum == node->planenum) {
+        // found the correct plane - add the face to it.
+
+        ++c_nodefaces;
+
+        // subdivide large faces
+        // fixme-brushbsp: weird calling convention
+        auto parts = std::list<face_t *>{face};
+        for (auto it = parts.begin(); it != parts.end(); it++) {
+            it = SubdivideFace(it, parts);
+        }
+
+        for (face_t *part : parts) {
+            node->facelist.push_back(part);
+
+            // Now that the final face has been added
+            // fixme-brushbsp: do this as a postprocessing step
+            AddMarksurfaces_r(part, node);
+        }
+        
+        return;
+    }
+
+    // fixme-brushbsp: we need to handle the case of the face being near enough that it gets clipped away,
+    // but not face->planenum == node->planenum
+    auto [frontWinding, backWinding] = face->w.clip(map.planes[node->planenum]);
+    if (frontWinding) {
+        auto *newFace = new face_t{*face};
+        newFace->w = *frontWinding;
+        AddFaceToTree_r(newFace, node->children[0]);
+    }
+    if (backWinding) {
+        auto *newFace = new face_t{*face};
+        newFace->w = *backWinding;
+        AddFaceToTree_r(newFace, node->children[1]);
+    }
+
+    delete face;
+}
+
+/*
+================
+MakeVisibleFaces
+
+Given a completed BSP tree and a list of brushes (in `entity`),
+
+- filters the brush faces into the BSP, finding the correct nodes they end up on
+- clips the faces by other brushes.
+  
+  first iteration, we can just do an exhaustive check against all brushes
+================
+*/
+void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
+{
+    c_nodefaces = 0;
+
+    for (auto &brush : entity->brushes) {
+        for (auto &face : brush.faces) {
+
+            face_t *temp = NewFaceFromFace(&face);
+            temp->w = face.w;
+
+            AddFaceToTree_r(temp, headnode);
+        }
+    }
+
+    LogPrint("{} nodefaces\n", c_nodefaces);
+}
