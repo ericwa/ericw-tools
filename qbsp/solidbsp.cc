@@ -701,14 +701,16 @@ static twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const q
     for (int i = 0; i < 2; i++) {
         face_t cs{};
         
-        const bool front = (i == 0);
+        const bool brushOnFront = (i == 0);
         
-        cs.planenum = FindPlane(front ? split : -split, &cs.planeside);
+        // for the brush on the front side of the plane, the `midwinding`
+        // (the face that is touching the plane) should have a normal opposite the plane's normal
+        cs.planenum = FindPlane(brushOnFront ? -split : split, &cs.planeside);
         cs.texinfo = MakeSkipTexinfo();
 
         // fixme-brushbsp: configure any other settings on the face?
 
-        cs.w = front ? midwinding : midwinding.flip();
+        cs.w = brushOnFront ? midwinding.flip() : midwinding;
 
         result[i]->faces.push_back(std::move(cs));
     }
