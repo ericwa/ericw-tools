@@ -14,7 +14,10 @@
 set -x
 
 UPDATE_HASHES=0
-CONTINUE_ON_FAILURE=0
+
+# FIXME: reset back to 0
+CONTINUE_ON_FAILURE=1
+
 if [[ "$1" == "--update-hashes" ]]; then 
     UPDATE_HASHES=1
 elif [[ "$1" == "--continue-on-failure" ]]; then
