@@ -191,9 +191,10 @@ struct mtexinfo_t
     int32_t miptex = 0;
     surfflags_t flags = {};
     int32_t value = 0; // Q2-specific
+    int32_t next = -1; // Q2-specific
     std::optional<size_t> outputnum = std::nullopt; // nullopt until added to bsp
 
-    constexpr auto as_tuple() const { return std::tie(vecs, miptex, flags, value); }
+    constexpr auto as_tuple() const { return std::tie(vecs, miptex, flags, value, next); }
 
     constexpr bool operator<(const mtexinfo_t &other) const { return as_tuple() < other.as_tuple(); }
 
