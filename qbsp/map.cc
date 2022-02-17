@@ -188,14 +188,10 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         }
     } else {
         // load .wal first
-        std::optional<img::texture_meta> wal;
+        std::optional<img::texture_meta> wal = LoadWal(name);
 
-        if (!internal && !extended_info.has_value()) {
-            wal = LoadWal(name);
-
-            if (wal) {
-                extended_info = extended_texinfo_t{wal->contents, wal->flags, wal->value};
-            }
+        if (wal && !internal && !extended_info.has_value()) {
+            extended_info = extended_texinfo_t{wal->contents, wal->flags, wal->value, wal->animation};
         }
 
         if (!extended_info.has_value()) {
@@ -205,19 +201,21 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         for (i = 0; i < map.nummiptex(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
-            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
-                tex.value == extended_info->value) {
+            if (!Q_strcasecmp(name, tex.name.c_str()) &&
+                tex.flags.native == extended_info->flags.native &&
+                tex.value == extended_info->value &&
+                tex.animation == extended_info->animation) {
 
                 return i;
             }
         }
 
         i = map.miptex.size();
-        map.miptex.push_back({name, extended_info->flags, extended_info->value});
+        map.miptex.push_back({name, extended_info->flags, extended_info->value, extended_info->animation});
 
         /* Handle animating textures carefully */
-        if (wal && !wal->animation.empty()) {
-            FindMiptex(wal->animation.data());
+        if (!extended_info->animation.empty()) {
+            map.miptex[i].animation_miptex = FindMiptex(extended_info->animation.data(), internal);
         }
     }
 
@@ -295,11 +293,20 @@ int FindTexinfo(const mtexinfo_t &texinfo)
 
     /* Allocate a new texinfo at the end of the array */
     const int num_texinfo = static_cast<int>(map.mtexinfos.size());
-    map.mtexinfos.push_back(texinfo);
+    map.mtexinfos.emplace_back(texinfo);
     map.mtexinfo_lookup[texinfo] = num_texinfo;
 
     // catch broken < implementations in mtexinfo_t
     assert(map.mtexinfo_lookup.find(texinfo) != map.mtexinfo_lookup.end());
+
+    // create a copy of the miptex for animation chains
+    if (map.miptex[texinfo.miptex].animation_miptex != -1) {
+        mtexinfo_t anim_next = texinfo;
+
+        anim_next.miptex = map.miptex[texinfo.miptex].animation_miptex;
+
+        map.mtexinfos[num_texinfo].next = FindTexinfo(anim_next);
+    }
 
     return num_texinfo;
 }
@@ -1306,8 +1313,6 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     qvec2d shift, scale;
     texcoord_style_t tx_type;
 
-    memset(tx, 0, sizeof(*tx));
-
     quark_tx_info_t extinfo;
 
     if (brush->format == brushformat_t::BRUSH_PRIMITIVES) {
@@ -1362,6 +1367,12 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     // info so it can at least compile.
     if (options.target_game->id != GAME_QUAKE_II) {
         extinfo.info = std::nullopt;
+    } else {
+        // assign animation to extinfo, so that we load the animated
+        // first one first
+        if (auto wal = LoadWal(mapface.texname.c_str())) {
+            extinfo.info->animation = wal->animation;
+        }
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);

@@ -208,7 +208,7 @@ struct compiled_brush_t
 
         for (auto &side : sides) {
             planepoints p; 
-            if (side.winding) {
+            if (side.winding && side.winding->size()) {
                 p = WindingToThreePoints(*side.winding);
             } else {
                 p = NormalDistanceToThreePoints(side.plane);
@@ -1120,7 +1120,6 @@ static void DecompileEntity(
             DecompileNode(stack, bsp, headnode, tasks);
 
             // decompile the leafs in parallel
-            std::vector<compiled_brush_t> compiledBrushes;
             compiledBrushes.resize(tasks.size());
             tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
                 if (options.geometryOnly) {

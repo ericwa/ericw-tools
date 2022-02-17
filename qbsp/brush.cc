@@ -653,6 +653,7 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
     for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
         const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+
         contentflags_t contents = options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
 
         if (contents.is_empty(options.target_game)) {

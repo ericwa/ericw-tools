@@ -104,6 +104,10 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     src.outputnum = i;
 
+    if (src.next != -1) {
+        map.bsp.texinfo[i].nexttexinfo = ExportMapTexinfo(src.next);
+    }
+
     return i;
 }
 

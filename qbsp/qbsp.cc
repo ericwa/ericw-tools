@@ -652,7 +652,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     FreeBrushes(entity);
-    // fixme-brushbsp: why is this crashig?
     //FreeNodes(nodes);
 }
 

@@ -462,8 +462,8 @@ struct gamedef_q2_t : public gamedef_t
 
     int32_t get_content_type(const contentflags_t &contents) const
     {
-        return (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) |
-               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL);
+        return contents.native & (((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) |
+               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
     }
 
     int32_t contents_priority(const contentflags_t &contents) const

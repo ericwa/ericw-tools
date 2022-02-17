@@ -110,6 +110,8 @@ struct texdata_t
     std::string name;
     surfflags_t flags;
     int32_t value;
+    std::string animation;
+    int32_t animation_miptex = -1;
 };
 
 struct mapdata_t
@@ -178,6 +180,7 @@ struct extended_texinfo_t
     contentflags_t contents = { 0 };
     surfflags_t flags = { 0 };
     int value = 0;
+    std::string animation;
 };
 
 struct quark_tx_info_t
