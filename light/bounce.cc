@@ -237,9 +237,9 @@ static void *MakeBounceLightsThread(void *arg)
             styleColor.second /= 255.0f;
         }
 
-        // lerp between gray and the texture color according to `bouncecolorscale`
+        // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
         qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.0f;
-        qvec3f blendedcolor = mix(texturecolor, { 127.f / 255.f }, cfg.bouncecolorscale.floatValue());
+        qvec3f blendedcolor = mix(qvec3f{127.f / 255.f}, texturecolor, cfg.bouncecolorscale.floatValue());
 
         // final colors to emit
         map<int, qvec3f> emitcolors;
