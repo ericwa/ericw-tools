@@ -5,6 +5,15 @@ $env:Path += ";C:\cygwin64\bin"
 # For sha256sum
 $env:Path += ";C:\Program Files\Git\usr\bin"
 
+# Create and activate a Python virtual environment, and install sphinx
+py -m venv ericwtools-env
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+ericwtools-env\Scripts\Activate.ps1
+python.exe -m pip install sphinx_rtd_theme
+
+# Confirm Sphinx is installed
+get-command sphinx-build
+
 mkdir cmakebuild
 
 cd cmakebuild
