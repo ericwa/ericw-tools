@@ -5,6 +5,7 @@ platform:
 
 version: 1.0.{build}
 install:
+- py -m pip install sphinx_rtd_theme
 - ps: Invoke-WebRequest 'https://github.com/embree/embree/releases/download/v3.12.1/embree-3.12.1.x64.vc14.windows.zip' -OutFile 'embree64.zip'
 - ps: 7z x embree64.zip -oc:\
 - ps: Invoke-WebRequest 'https://github.com/oneapi-src/oneTBB/releases/download/v2020.2/tbb-2020.2-win.zip' -OutFile 'tbb.zip'
