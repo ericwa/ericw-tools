@@ -23,6 +23,7 @@
 
 #include <filesystem>
 #include <optional>
+#include <vector>
 
 namespace fs
 {
