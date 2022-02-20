@@ -1371,6 +1371,9 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         // assign animation to extinfo, so that we load the animated
         // first one first
         if (auto wal = LoadWal(mapface.texname.c_str())) {
+            if (!extinfo.info) {
+                extinfo.info = extended_texinfo_t{};
+            }
             extinfo.info->animation = wal->animation;
         }
     }
