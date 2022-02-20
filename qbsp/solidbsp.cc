@@ -631,8 +631,7 @@ static twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const q
 
     for (int i = 0; i < 2; i++) {
         result[i] = { brush_t{} };
-        // fixme-brushbsp: set original pointer
-        //b[i]->original = brush->original;
+        result[i]->original = brush.original;
         // fixme-brushbsp: add a brush_t copy constructor to make sure we get all fields
         result[i]->contents = brush.contents;
         result[i]->lmshift = brush.lmshift;
@@ -785,6 +784,10 @@ static void CreateLeaf(const std::vector<brush_t> &brushes, node_t *leafnode)
     for (auto &brush : brushes) {
         leafnode->contents = MergeContents(leafnode->contents, brush.contents);
     }
+    for (auto &brush : brushes) {
+        Q_assert(brush.original != nullptr);
+        leafnode->original_brushes.push_back(brush.original);
+    }
 
     if (leafnode->contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
         c_illusionary_visblocker++;
@@ -828,7 +831,7 @@ PartitionBrushes
 Called in parallel.
 ==================
 */
-static void PartitionBrushes(std::vector<brush_t> &brushes, node_t *node)
+static void PartitionBrushes(std::vector<brush_t> brushes, node_t *node)
 {
     face_t *split = SelectPartition(brushes);
 
@@ -890,8 +893,8 @@ static void PartitionBrushes(std::vector<brush_t> &brushes, node_t *node)
     g.run([&]() { PartitionBrushes(backlist, node->children[1]); });
     g.wait();
 #else
-    PartitionBrushes(frontlist, node->children[0]);
-    PartitionBrushes(backlist, node->children[1]);
+    PartitionBrushes(std::move(frontlist), node->children[0]);
+    PartitionBrushes(std::move(backlist), node->children[1]);
 #endif
 }
 
@@ -943,7 +946,14 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     // count map surfaces; this is used when deciding to switch between midsplit and the expensive partitioning
     mapbrushes = entity->brushes.size();
 
-    PartitionBrushes(entity->brushes, headnode);
+    // set the original pointers
+    std::vector<brush_t> brushcopies;
+    for (brush_t &original : entity->brushes) {
+        brush_t copy = original;
+        copy.original = &original;
+        brushcopies.push_back(std::move(copy));
+    }
+    PartitionBrushes(std::move(brushcopies), headnode);
 
     LogPrint(LOG_STAT, "     {:8} split nodes\n", splitnodes.load());
     LogPrint(LOG_STAT, "     {:8} solid leafs\n", c_solid.load());

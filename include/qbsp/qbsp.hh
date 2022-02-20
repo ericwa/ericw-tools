@@ -307,7 +307,7 @@ struct node_t
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
-    // std::vector<brush_t *> original_brushes; // fixme-brushbsp: implement this
+    std::vector<brush_t *> original_brushes;
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     portal_t *portals;
     int visleafnum; // -1 = solid

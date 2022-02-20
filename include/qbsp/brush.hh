@@ -23,14 +23,20 @@
 
 #include <qbsp/winding.hh>
 #include <common/aabb.hh>
+#include <optional>
 
 struct brush_t
 {
-    //brush_t *original; // fixme-brushbsp: implement this
+    /**
+     * The brushes in the mapentity_t::brushes vector are considered originals. Brush fragments created during
+     * the BrushBSP will have this pointing back to the original brush in mapentity_t::brushes.
+     */
+    brush_t *original;
     aabb3d bounds;
     std::vector<face_t> faces;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
+    std::optional<uint32_t> outputnumber; /* only set for original brushes */
 
     void update_bounds();
 };

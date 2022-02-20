@@ -43,14 +43,6 @@ bool node_t::opaque() const
     return contents.is_sky(options.target_game) || contents.is_solid(options.target_game);
 }
 
-// a simple tree structure used for leaf brush
-// compression.
-struct leafbrush_entry_t
-{
-    uint32_t offset;
-    std::map<uint32_t, leafbrush_entry_t> entries;
-};
-
 // per-entity
 static struct
 {
@@ -58,36 +50,25 @@ static struct
     uint32_t total_leaf_brushes;
 } brush_state;
 
-// running total
-static uint32_t brush_offset;
-
-static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uint32_t &brush_offset)
+static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
         if (node->contents.native) {
-            uint32_t b_id = brush_offset;
-            std::vector<uint32_t> brushes;
-
-            for (auto &b : entity->brushes) {
-                if (node->bounds.intersectWith(b.bounds)) {
-                    brushes.push_back(b_id);
-                }
-                b_id++;
-            }
-
-            if (brushes.size()) {
-                node->numleafbrushes = brushes.size();
+            if (node->original_brushes.size()) {
+                node->numleafbrushes = node->original_brushes.size();
                 brush_state.total_leaf_brushes += node->numleafbrushes;
                 node->firstleafbrush = map.bsp.dleafbrushes.size();
-                map.bsp.dleafbrushes.insert(map.bsp.dleafbrushes.end(), brushes.begin(), brushes.end());
+                for (auto &b : node->original_brushes) {
+                    map.bsp.dleafbrushes.push_back(b->outputnumber.value());
+                }
             }
         }
 
         return;
     }
 
-    ExportBrushList_r(entity, node->children[0], brush_offset);
-    ExportBrushList_r(entity, node->children[1], brush_offset);
+    ExportBrushList_r(entity, node->children[0]);
+    ExportBrushList_r(entity, node->children[1]);
 }
 
 /*
@@ -227,7 +208,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
     return planes;
 }
 
-static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &brush_offset)
+static void ExportBrushList(mapentity_t *entity, node_t *node)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
@@ -236,6 +217,8 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
     for (auto &b : entity->brushes) {
         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
             dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b.contents.native});
+
+        b.outputnumber = { static_cast<uint32_t>(map.bsp.dbrushes.size()) };
 
         auto bevels = AddBrushBevels(b);
 
@@ -249,9 +232,7 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
         brush_state.total_brushes++;
     }
 
-    ExportBrushList_r(entity, node, brush_offset);
-
-    brush_offset += brush_state.total_brushes;
+    ExportBrushList_r(entity, node);
 
     LogPrint(LOG_STAT, "     {:8} total brushes\n", brush_state.total_brushes);
     LogPrint(LOG_STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
@@ -645,7 +626,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         firstface = MakeFaceEdges(entity, nodes);
 
         if (options.target_game->id == GAME_QUAKE_II) {
-            ExportBrushList(entity, nodes, brush_offset);
+            ExportBrushList(entity, nodes);
         }
 
         ExportDrawNodes(entity, nodes, firstface);
