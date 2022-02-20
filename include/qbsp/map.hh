@@ -224,6 +224,7 @@ constexpr int HULL_COLLISION = -1;
 /* Create BSP brushes from map brushes */
 brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum);
 
+std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const brush_t *srcbrush, const node_t *srcnode);
 std::vector<surface_t> CSGFaces(const mapentity_t *entity);
 void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *entity, node_t *headnode);

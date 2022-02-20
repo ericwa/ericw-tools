@@ -527,7 +527,7 @@ static void AddMarksurfaces_r(face_t *face, node_t *node)
     AddMarksurfaces_r(face, node->children[1]);
 }
 
-void AddFaceToTree_r(face_t *face, node_t* node)
+static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush, node_t* node)
 {
     if (node->planenum == PLANENUM_LEAF) {
         if (!face->w.size()) {
@@ -542,19 +542,25 @@ void AddFaceToTree_r(face_t *face, node_t* node)
 
         ++c_nodefaces;
 
-        // subdivide large faces
-        // fixme-brushbsp: weird calling convention
-        auto parts = std::list<face_t *>{face};
-        for (auto it = parts.begin(); it != parts.end(); it++) {
-            it = SubdivideFace(it, parts);
-        }
+        // csg it
+        auto csgfaces = CSGFace(face, entity, srcbrush, node);
 
-        for (face_t *part : parts) {
-            node->facelist.push_back(part);
+        for (face_t *csgface : csgfaces) {
+            // subdivide large faces
+            // fixme-brushbsp: weird calling convention
+            auto parts = std::list<face_t *>{csgface};
+            for (auto it = parts.begin(); it != parts.end(); it++) {
+                it = SubdivideFace(it, parts);
+            }
 
-            // Now that the final face has been added
-            // fixme-brushbsp: do this as a postprocessing step
-            AddMarksurfaces_r(part, node);
+            for (face_t *part: parts) {
+                node->facelist.push_back(part);
+
+                // Now that the final face has been added
+                // fixme-brushbsp: do this as a postprocessing step
+                // fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
+                AddMarksurfaces_r(part, node);
+            }
         }
         
         return;
@@ -566,12 +572,12 @@ void AddFaceToTree_r(face_t *face, node_t* node)
     if (frontWinding) {
         auto *newFace = new face_t{*face};
         newFace->w = *frontWinding;
-        AddFaceToTree_r(newFace, node->children[0]);
+        AddFaceToTree_r(entity, newFace, srcbrush, node->children[0]);
     }
     if (backWinding) {
         auto *newFace = new face_t{*face};
         newFace->w = *backWinding;
-        AddFaceToTree_r(newFace, node->children[1]);
+        AddFaceToTree_r(entity, newFace, srcbrush, node->children[1]);
     }
 
     delete face;
@@ -581,7 +587,7 @@ void AddFaceToTree_r(face_t *face, node_t* node)
 ================
 MakeVisibleFaces
 
-Given a completed BSP tree and a list of brushes (in `entity`),
+Given a completed BSP tree and a list of the original brushes (in `entity`),
 
 - filters the brush faces into the BSP, finding the correct nodes they end up on
 - clips the faces by other brushes.
@@ -599,7 +605,7 @@ void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
             face_t *temp = NewFaceFromFace(&face);
             temp->w = face.w;
 
-            AddFaceToTree_r(temp, headnode);
+            AddFaceToTree_r(entity, temp, &brush, headnode);
         }
     }
 

@@ -195,6 +195,9 @@ RemoveOutsideFaces
 Quick test before running ClipInside; move any faces that are completely
 outside the brush to the outside list, without splitting them. This saves us
 time in mergefaces later on (and sometimes a lot of memory)
+
+Input is a list of faces in the param `inside`.
+On return, the ones touching `brush` remain in `inside`, the rest are added to `outside`.
 =================
 */
 static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside, std::list<face_t *> *outside)
@@ -207,7 +210,7 @@ static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside
     for (face_t *face : oldinside) {
         std::optional<winding_t> w = face->w;
         for (auto &clipface : brush.faces) {
-            w = w->clip(Face_Plane(&clipface), ON_EPSILON, true)[SIDE_FRONT];
+            w = w->clip(Face_Plane(&clipface), ON_EPSILON, false)[SIDE_BACK];
             if (!w)
                 break;
         }
@@ -293,6 +296,8 @@ Links the given list of faces into a mapping from plane number to faces.
 This plane map is later used to build up the surfaces for creating the BSP.
 
 Not parallel.
+
+fixme-brushbsp: remove
 ==================
 */
 static void SaveFacesToPlaneList(std::list<face_t *> facelist, bool mirror, std::map<int, std::list<face_t *>> &planefaces)
@@ -361,6 +366,8 @@ SaveInsideFaces
 Save the list of faces onto the output list, modifying the outside contents to
 match given brush. If the inside contents are empty, the given brush's
 contents override the face inside contents.
+
+fixme-brushbsp: remove
 ==================
 */
 static void SaveInsideFaces(const std::list<face_t *> &faces, const brush_t &clipbrush, std::list<face_t *> *savelist)
@@ -431,6 +438,8 @@ Returns a chain of all the surfaces for all the planes with one or more
 visible face.
 
 Not parallel.
+
+fixme-brushbsp: remove
 ==================
 */
 std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefaces)
@@ -463,6 +472,8 @@ std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefa
 /*
 ==================
 CopyBrushFaces
+
+fixme-brushbsp: remove
 ==================
 */
 static std::list<face_t *> CopyBrushFaces(const brush_t &brush)
@@ -480,11 +491,105 @@ static std::list<face_t *> CopyBrushFaces(const brush_t &brush)
     return facelist;
 }
 
+static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const brush_t *srcbrush, const brush_t *clipbrush)
+{
+    if (srcbrush == clipbrush) {
+        LogPrint("    ignoring self-clip\n");
+        return input;
+    }
+
+    std::list<face_t *> inside {input};
+    std::list<face_t *> outside;
+    RemoveOutsideFaces(*clipbrush, &inside, &outside);
+
+    // at this point, inside = the faces of `input` which are touching `clipbrush`
+    //                outside = the other faces of `input`
+
+    bool overwrite = true;
+
+    for (auto &clipface : clipbrush->faces)
+        ClipInside(&clipface, overwrite, &inside, &outside);
+
+    // inside = parts of `brush` that are inside `clipbrush`
+    // outside = parts of `brush` that are outside `clipbrush`
+
+    return outside;
+}
+
+// fixme-brushbsp: determinism: sort `result` set by .map file order
+// fixme-brushbsp: add bounds test
+#if 0
+static void GatherPossibleClippingBrushes_R(const node_t *node, const face_t *srcface, std::set<const brush_t *> &result)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        for (auto *brush : node->original_brushes) {
+            result.insert(brush);
+        }
+        return;
+    }
+
+    GatherPossibleClippingBrushes_R(node->children[0], srcface, result);
+    GatherPossibleClippingBrushes_R(node->children[1], srcface, result);
+}
+#endif
+
+/*
+==================
+GatherPossibleClippingBrushes
+
+Starting a search at `node`, returns brushes that possibly intersect `srcface`.
+==================
+*/
+static std::set<const brush_t *> GatherPossibleClippingBrushes(const mapentity_t* srcentity, const node_t *node, const face_t *srcface)
+{
+    std::set<const brush_t *> result;
+    // fixme-brushbsp: implement this, need node->original_brushes working
+#if 0
+    GatherPossibleClippingBrushes_R(node, srcface, result);
+#else
+    for (auto &brush : srcentity->brushes) {
+        result.insert(&brush);
+    }
+#endif
+    return result;
+}
+
+/*
+==================
+CSGFace
+
+Given `srcface`, which was produced from `srcbrush` and lies on `srcnode`:
+
+ - search srcnode as well as its children for brushes which might clip
+   srcface.
+
+ - clip srcface against all such brushes
+
+Frees srcface.
+==================
+*/
+std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const brush_t *srcbrush, const node_t *srcnode)
+{
+    const auto possible_clipbrushes = GatherPossibleClippingBrushes(srcentity, srcnode, srcface);
+
+    LogPrint("face {} has {} possible clipbrushes\n", (void*)srcface, possible_clipbrushes.size());
+
+    std::list<face_t *> result{srcface};
+
+    for (const brush_t *possible_clipbrush : possible_clipbrushes) {
+        result = CSGFace_ClipAgainstSingleBrush(std::move(result), srcbrush, possible_clipbrush);
+    }
+
+    return result;
+}
+
 /*
 ==================
 CSGFaces
 
 Returns a list of surfaces containing all of the faces
+
+fixme-brushbsp: remove
 ==================
 */
 std::vector<surface_t> CSGFaces(const mapentity_t *entity)

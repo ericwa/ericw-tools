@@ -26,6 +26,7 @@
 
 struct brush_t
 {
+    //brush_t *original; // fixme-brushbsp: implement this
     aabb3d bounds;
     std::vector<face_t> faces;
     contentflags_t contents; /* BSP contents */
