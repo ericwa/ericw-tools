@@ -231,7 +231,4 @@ void MergeAll(node_t *headnode)
     });
 
     LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces, (static_cast<double>(mergefaces) / premergefaces) * 100.);
-
-    // Quick hack to let solidbsp print out progress %
-    csgmergefaces = mergefaces;
 }

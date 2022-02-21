@@ -443,32 +443,34 @@ static void SaveInsideFaces(const std::list<face_t *> &faces, const brush_t &cli
 
 /*
 ==================
-CopyBrushFaces
+BrushIndexInMap
 
-fixme-brushbsp: remove
+Returns the index of the brush in the .map files.
+Only call with an "original" brush (from entity->brushes).
+Used for clipping priority.
 ==================
 */
-static std::list<face_t *> CopyBrushFaces(const brush_t &brush)
+static int BrushIndexInMap(const mapentity_t *entity, const brush_t *brush)
 {
-    std::list<face_t *> facelist;
+    Q_assert(brush >= entity->brushes.data());
+    Q_assert(brush < (entity->brushes.data() + entity->brushes.size()));
 
-    for (auto &face : brush.faces) {
-        brushfaces++;
-        auto *newface = new face_t(face);
-        newface->contents = { options.target_game->create_empty_contents(), brush.contents };
-        newface->lmshift = { brush.lmshift, brush.lmshift };
-        facelist.push_back(newface);
-    }
-
-    return facelist;
+    return static_cast<int>(brush - entity->brushes.data());
 }
 
-static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const brush_t *srcbrush, const brush_t *clipbrush)
+static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const mapentity_t *srcentity, const brush_t *srcbrush, const brush_t *clipbrush)
 {
     if (srcbrush == clipbrush) {
         LogPrint("    ignoring self-clip\n");
         return input;
     }
+
+    int srcindex = BrushIndexInMap(srcentity, srcbrush);
+    int clipindex = BrushIndexInMap(srcentity, clipbrush);
+    if (srcindex > clipindex) {
+        return input;
+    }
+
 
     std::list<face_t *> inside {input};
     std::list<face_t *> outside;
@@ -540,7 +542,7 @@ Given `srcface`, which was produced from `srcbrush` and lies on `srcnode`:
 Frees srcface.
 ==================
 */
-std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const brush_t *srcbrush, const node_t *srcnode)
+std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t *srcentity, const brush_t *srcbrush, const node_t *srcnode)
 {
     const auto possible_clipbrushes = GatherPossibleClippingBrushes(srcentity, srcnode, srcface);
 
@@ -549,7 +551,7 @@ std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const
     std::list<face_t *> result{srcface};
 
     for (const brush_t *possible_clipbrush : possible_clipbrushes) {
-        result = CSGFace_ClipAgainstSingleBrush(std::move(result), srcbrush, possible_clipbrush);
+        result = CSGFace_ClipAgainstSingleBrush(std::move(result), srcentity, srcbrush, possible_clipbrush);
     }
 
     return result;

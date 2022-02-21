@@ -24,8 +24,6 @@
 #include <list>
 #include <tuple>
 
-extern int csgmergefaces;
-
 int MakeSkipTexinfo();
 face_t *NewFaceFromFace(const face_t *in);
 face_t *MirrorFace(const face_t *face);
