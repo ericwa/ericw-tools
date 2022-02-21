@@ -578,8 +578,11 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
             for (face_t *part: parts) {
                 node->facelist.push_back(part);
 
-                // fixme-brushbsp: condition for face being two sided?
-                if (true) {
+                /*
+                 * If the brush is non-solid, mirror faces for the inside view
+                 */
+                const bool mirror = !srcbrush->contents.is_solid(options.target_game);
+                if (mirror) {
                     node->facelist.push_back(MirrorFace(part));
                 }
             }

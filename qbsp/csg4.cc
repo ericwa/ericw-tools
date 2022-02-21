@@ -299,144 +299,12 @@ face_t *MirrorFace(const face_t *face)
     return newface;
 }
 
-/*
-==================
-SaveFacesToPlaneList
-
-Links the given list of faces into a mapping from plane number to faces.
-This plane map is later used to build up the surfaces for creating the BSP.
-
-Not parallel.
-
-fixme-brushbsp: remove
-==================
-*/
-static void SaveFacesToPlaneList(std::list<face_t *> facelist, bool mirror, std::map<int, std::list<face_t *>> &planefaces)
-{
-    for (face_t *face : facelist) {
-        const int plane = face->planenum;
-
-        // Handy for debugging CSGFaces issues, throw out detail faces and export obj.
-#if 0
-        if (face->contents[1] == CONTENTS_DETAIL)
-            continue;
-#endif
-
-        // returns empty (and inserts it) if plane is not in the map yet
-        std::list<face_t *> &plane_current_facelist = planefaces[plane];
-
-        if (mirror) {
-            face_t *newface = NewFaceFromFace(face);
-            newface->w = face->w.flip();
-            newface->planeside = face->planeside ^ 1;
-            newface->contents.swap();
-            newface->lmshift.swap();
-
-            // e.g. for a water volume:
-            // the face facing the air:
-            //   - face->contents[0] is CONTENTS_EMPTY
-            //   - face->contents[1] is CONTENTS_WATER
-            // the face facing the water:
-            //   - newface->contents[0] is CONTENTS_WATER
-            //   - newface->contents[1] is CONTENTS_EMPTY
-
-            // HACK: We only want this mirrored face for CONTENTS_DETAIL
-            // to force the right content type for the leaf, but we don't actually
-            // want the face. So just set the texinfo to "skip" so it gets deleted.
-            if ((face->contents[1].is_detail() || (face->contents[1].extended & CFLAGS_WAS_ILLUSIONARY)) ||
-                (options.fContentHack && face->contents[1].is_solid(options.target_game))) {
-
-                // if CFLAGS_BMODEL_MIRROR_INSIDE is set, never change to skip
-                if (!(face->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
-                    newface->texinfo = MakeSkipTexinfo();
-                }
-            }
-
-            MergeFaceToList(newface, plane_current_facelist);
-        }
-        MergeFaceToList(face, plane_current_facelist);
-
-        csgfaces++;
-    }
-}
-
 static void FreeFaces(std::list<face_t *> &facelist)
 {
     for (face_t *face : facelist) {
         delete face;
     }
     facelist.clear();
-}
-
-/*
-==================
-SaveInsideFaces
-
-`faces` is the list of faces from `brush` (solid) that are inside `clipbrush` (nonsolid)
-
-Save the list of faces onto the output list, modifying the outside contents to
-match given brush. If the inside contents are empty, the given brush's
-contents override the face inside contents.
-
-fixme-brushbsp: remove
-==================
-*/
-static void SaveInsideFaces(const std::list<face_t *> &faces, const brush_t &clipbrush, std::list<face_t *> *savelist)
-{
-    Q_assert(!clipbrush.contents.is_solid(options.target_game));
-
-    for (face_t *face : faces) {
-        // the back side of `face` is a solid
-        // Q_assert(face->contents[1] == CONTENTS_SOLID);
-
-        face->contents[0] = clipbrush.contents;
-
-        if ((face->contents[1].is_solid(options.target_game) || face->contents[1].is_sky(options.target_game)) &&
-            clipbrush.contents.is_detail(CFLAGS_DETAIL)) {
-            // This case is when a structural and detail brush are touching,
-            // and we want to save the structural face that is
-            // touching detail.
-            //
-            // We just marked face->contents[0] as CONTENTS_DETAIL which will
-            // break things, because this is turning a structural face into
-            // detail.
-            //
-            // As a sort-of-hack, mark it as empty. Example:
-            // a detail light fixture touching a structural wall.
-            // The covered-up structural face on the wall has it's "front"
-            // marked as empty here, and the detail faces have their "back"
-            // marked as detail.
-
-            int32_t old_native = face->contents[0].native;
-            face->contents[0] = options.target_game->create_empty_contents(CFLAGS_STRUCTURAL_COVERED_BY_DETAIL);
-            face->contents[0].covered_native = old_native;
-            face->texinfo = MakeSkipTexinfo();
-        }
-
-        // N.B.: We don't need a hack like above for when clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY.
-
-        // These would create leaks
-        Q_assert(!(face->contents[1].is_solid(options.target_game) && face->contents[0].is_detail(CFLAGS_DETAIL)));
-        Q_assert(!(face->contents[1].is_sky(options.target_game) && face->contents[0].is_detail(CFLAGS_DETAIL)));
-
-        /*
-         * If the inside brush is empty space, inherit the outside contents.
-         * The only brushes with empty contents currently are hint brushes.
-         */
-        if (face->contents[1].is_empty(options.target_game)) {
-            face->contents[1] = clipbrush.contents;
-        }
-        if (face->contents[1].is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
-            bool wasMirrorInside = !!(face->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE);
-            face->contents[1] = clipbrush.contents;
-            face->contents[1].extended |= CFLAGS_WAS_ILLUSIONARY;
-            if (wasMirrorInside) {
-                face->contents[1].extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
-            }
-        }
-
-        savelist->push_front(face);
-    }
 }
 
 //==========================================================================
@@ -458,6 +326,58 @@ static int BrushIndexInMap(const mapentity_t *entity, const brush_t *brush)
     return static_cast<int>(brush - entity->brushes.data());
 }
 
+static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbrush)
+{
+    if (clipbrush.contents.is_empty(options.target_game)) {
+        /* Ensure hint never clips anything */
+        return false;
+    }
+
+    if (clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY) &&
+        !brush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+        /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
+        return false;
+    }
+
+    if (clipbrush.contents.is_detail(CFLAGS_DETAIL_FENCE) && !brush.contents.is_detail(CFLAGS_DETAIL_FENCE)) {
+        /* CONTENTS_DETAIL_FENCE never clips anything but itself */
+        return false;
+    }
+
+    if (clipbrush.contents.types_equal(brush.contents, options.target_game) &&
+        !clipbrush.contents.clips_same_type()) {
+        /* _noclipfaces key */
+        return false;
+    }
+
+    /*
+     * If the brush is solid and the clipbrush is not, then we need to
+     * keep the inside faces and set the outside contents to those of
+     * the clipbrush. Otherwise, these inside surfaces are hidden and
+     * should be discarded.
+     *
+     * FIXME: clean this up, the predicate seems to be "can you see 'brush' from inside 'clipbrush'"
+     */
+    if ((brush.contents.is_solid(options.target_game) && !clipbrush.contents.is_solid(options.target_game))
+
+        ||
+        (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                        !clipbrush.contents.is_sky(options.target_game)))
+
+        || (brush.contents.is_detail(CFLAGS_DETAIL) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                        !clipbrush.contents.is_sky(options.target_game) &&
+                                                        !clipbrush.contents.is_detail(CFLAGS_DETAIL)))
+
+        || (brush.contents.is_liquid(options.target_game) &&
+            clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
+
+        || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))) {
+        return false;
+    }
+
+    return true;
+}
+
 static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const mapentity_t *srcentity, const brush_t *srcbrush, const brush_t *clipbrush)
 {
     if (srcbrush == clipbrush) {
@@ -465,12 +385,12 @@ static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> in
         return input;
     }
 
-    int srcindex = BrushIndexInMap(srcentity, srcbrush);
-    int clipindex = BrushIndexInMap(srcentity, clipbrush);
-    if (srcindex > clipindex) {
-        return input;
-    }
+    const int srcindex = BrushIndexInMap(srcentity, srcbrush);
+    const int clipindex = BrushIndexInMap(srcentity, clipbrush);
 
+    if (!ShouldClipbrushEatBrush(*srcbrush, *clipbrush)) {
+        return {input};
+    }
 
     std::list<face_t *> inside {input};
     std::list<face_t *> outside;
@@ -479,7 +399,7 @@ static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> in
     // at this point, inside = the faces of `input` which are touching `clipbrush`
     //                outside = the other faces of `input`
 
-    bool overwrite = true;
+    const bool overwrite = (srcindex < clipindex);
 
     for (auto &clipface : clipbrush->faces)
         ClipInside(&clipface, overwrite, &inside, &outside);
@@ -556,159 +476,3 @@ std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t *srcentity, const
 
     return result;
 }
-
-#if 0
-/*
-==================
-CSGFaces
-
-Returns a list of surfaces containing all of the faces
-
-fixme-brushbsp: remove
-==================
-*/
-std::vector<surface_t> CSGFaces(const mapentity_t *entity)
-{
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
-
-    csgfaces = 0;
-    brushfaces = 0;
-    csgmergefaces = 0;
-
-#if 0
-    LogPrint("CSGFaces brush order:\n");
-    for (brush = entity->brushes; brush; brush = brush->next) {
-        LogPrint("    {} ({})\n", map.texinfoTextureName(brush->faces->texinfo), brush->contents.to_string(options.target_game));
-    }
-#endif
-
-    // output vector for the parallel_for
-    std::vector<std::list<face_t *>> brushvec_outsides;
-    brushvec_outsides.resize(entity->brushes.size());
-
-    /*
-     * For each brush, clip away the parts that are inside other brushes.
-     * Solid brushes override non-solid brushes.
-     *   brush     => the brush to be clipped
-     *   clipbrush => the brush we are clipping against
-     *
-     * The output of this is a face list for each brush called "outside"
-     */
-    tbb::parallel_for(static_cast<size_t>(0), entity->brushes.size(), [entity, &brushvec_outsides](const size_t i) {
-        auto &brush = entity->brushes[i];
-        std::list<face_t*> outside = CopyBrushFaces(brush);
-        bool overwrite = false;
-
-        for (auto &clipbrush : entity->brushes) {
-            if (&brush == &clipbrush) {
-                /* Brushes further down the list overried earlier ones */
-                overwrite = true;
-                continue;
-            }
-            if (clipbrush.contents.is_empty(options.target_game)) {
-                /* Ensure hint never clips anything */
-                continue;
-            }
-
-            if (clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY) &&
-                !brush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
-                /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
-                continue;
-            }
-
-            if (clipbrush.contents.is_detail(CFLAGS_DETAIL_FENCE) && !brush.contents.is_detail(CFLAGS_DETAIL_FENCE)) {
-                /* CONTENTS_DETAIL_FENCE never clips anything but itself */
-                continue;
-            }
-
-            if (clipbrush.contents.types_equal(brush.contents, options.target_game) &&
-                !clipbrush.contents.clips_same_type()) {
-                /* _noclipfaces key */
-                continue;
-            }
-
-            /* check bounding box first */
-            // TODO: is this a disjoint check? brush->bounds.disjoint(clipbrush->bounds)?
-            int i;
-            for (i = 0; i < 3; i++) {
-                if (brush.bounds.mins()[i] > clipbrush.bounds.maxs()[i])
-                    break;
-                if (brush.bounds.maxs()[i] < clipbrush.bounds.mins()[i])
-                    break;
-            }
-            if (i < 3)
-                continue;
-
-            /*
-             * TODO - optimise by checking for opposing planes?
-             *  => brushes can't intersect
-             */
-
-            // divide faces by the planes of the new brush
-            std::list<face_t *> inside;
-
-            std::swap(inside, outside);
-
-            RemoveOutsideFaces(clipbrush, &inside, &outside);
-            for (auto &clipface : clipbrush.faces)
-                ClipInside(&clipface, overwrite, &inside, &outside);
-
-            // inside = parts of `brush` that are inside `clipbrush`
-            // outside = parts of `brush` that are outside `clipbrush`
-
-            /*
-             * If the brush is solid and the clipbrush is not, then we need to
-             * keep the inside faces and set the outside contents to those of
-             * the clipbrush. Otherwise, these inside surfaces are hidden and
-             * should be discarded.
-             *
-             * FIXME: clean this up, the predicate seems to be "can you see 'brush' from inside 'clipbrush'"
-             */
-            if ((brush.contents.is_solid(options.target_game) && !clipbrush.contents.is_solid(options.target_game))
-
-                ||
-                (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
-                                                                    !clipbrush.contents.is_sky(options.target_game)))
-
-                || (brush.contents.is_detail(CFLAGS_DETAIL) && (!clipbrush.contents.is_solid(options.target_game) &&
-                                                                    !clipbrush.contents.is_sky(options.target_game) &&
-                                                                    !clipbrush.contents.is_detail(CFLAGS_DETAIL)))
-
-                || (brush.contents.is_liquid(options.target_game) &&
-                       clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
-
-                || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))) {
-                SaveInsideFaces(inside, clipbrush, &outside);
-            } else {
-                FreeFaces(inside);
-            }
-        }
-
-        // save the result
-        brushvec_outsides[i] = outside;
-    });
-
-    // Non parallel part:
-    std::map<int, std::list<face_t *>> planefaces;
-    for (size_t i = 0; i < entity->brushes.size(); ++i) {
-        const brush_t &brush = entity->brushes[i];
-        std::list<face_t *> outside = brushvec_outsides[i];
-
-        /*
-         * All of the faces left on the outside list are real surface faces
-         * If the brush is non-solid, mirror faces for the inside view
-         */
-        const bool mirror = options.fContentHack ? true : !brush.contents.is_solid(options.target_game);
-        SaveFacesToPlaneList(outside, mirror, planefaces);
-    }
-
-    std::vector<surface_t> surfaces = BuildSurfaces(planefaces);
-
-    LogPrint(LOG_STAT, "     {:8} brushfaces\n", brushfaces.load());
-    LogPrint(LOG_STAT, "     {:8} csgfaces\n", csgfaces);
-    LogPrint(LOG_STAT, "     {:8} mergedfaces\n", csgmergefaces);
-    LogPrint(LOG_STAT, "     {:8} surfaces\n", surfaces.size());
-
-    return surfaces;
-}
-#endif
