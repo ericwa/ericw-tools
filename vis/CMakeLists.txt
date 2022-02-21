@@ -17,4 +17,9 @@ find_library(M_LIB m)
 if (M_LIB)
     target_link_libraries (vis ${M_LIB})
 endif (M_LIB)
+
+# HACK: copy .dll dependencies
+add_custom_command(TARGET vis POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:vis>")
+
 install(TARGETS vis RUNTIME DESTINATION bin)

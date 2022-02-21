@@ -3,7 +3,7 @@
 // entity 0
 {
 "classname" "worldspawn"
-"wad" "free_wad.wad;fence.wad"
+"wad" "deprecated/free_wad.wad;deprecated/fence.wad"
 "light" "4"
 "_dirt" "0"
 // brush 0
