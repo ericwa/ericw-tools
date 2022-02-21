@@ -45,16 +45,17 @@ static int mapbrushes;
 
 void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
-    // backup the mins/maxs
-    aabb3d bounds = node->bounds;
-
-    // zero it
-    memset(node, 0, sizeof(*node));
-
-    // restore relevant fields
-    node->bounds = bounds;
-
     node->planenum = PLANENUM_LEAF;
+
+    for (int i = 0; i < 2; ++i) {
+        delete node->children[i];
+        node->children[i] = nullptr;
+    }
+    for (auto *face : node->facelist) {
+        delete face;
+    }
+    node->facelist = {};
+
     node->contents = contents;
 
     Q_assert(node->markfaces.empty());
