@@ -167,7 +167,9 @@ void MergeFaceToList(face_t *face, std::list<face_t *> &list)
 
         if (newf) {
             delete face;
+            delete *it;
             list.erase(it);
+            // restart, now trying to merge `newf` into the list
             face = newf;
             it = list.begin();
         } else {
@@ -180,37 +182,52 @@ void MergeFaceToList(face_t *face, std::list<face_t *> &list)
 
 /*
 ===============
-MergePlaneFaces
+MergeFaceList
 ===============
 */
-inline void MergePlaneFaces(surface_t &plane)
+inline std::list<face_t *> MergeFaceList(std::list<face_t *> input)
 {
-    std::list<face_t *> merged;
+    std::list<face_t *> result;
 
-    for (auto &f : plane.faces) {
-        MergeFaceToList(f, merged);
+    for (face_t * face : input) {
+        MergeFaceToList(face, result);
     }
 
-    plane.faces = std::move(merged);
+    return result;
 }
 
 #include <tbb/parallel_for_each.h>
+
+static void CollectNodes_R(node_t *node, std::vector<node_t *> &allnodes)
+{
+    allnodes.push_back(node);
+
+    if (node->planenum == PLANENUM_LEAF) {
+        return;
+    }
+
+    CollectNodes_R(node->children[0], allnodes);
+    CollectNodes_R(node->children[1], allnodes);
+}
 
 /*
 ============
 MergeAll
 ============
 */
-void MergeAll(std::vector<surface_t> &surfhead)
+void MergeAll(node_t *headnode)
 {
     std::atomic<int> mergefaces = 0, premergefaces = 0;
 
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    tbb::parallel_for_each(surfhead, [&](surface_t &surf) {
-        premergefaces += surf.faces.size();
-        MergePlaneFaces(surf);
-        mergefaces += surf.faces.size();
+    std::vector<node_t *> allnodes;
+    CollectNodes_R(headnode, allnodes);
+
+    tbb::parallel_for_each(allnodes, [&](node_t *node) {
+        premergefaces += node->facelist.size();
+        node->facelist = MergeFaceList(node->facelist);
+        mergefaces += node->facelist.size();
     });
 
     LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces, (static_cast<double>(mergefaces) / premergefaces) * 100.);

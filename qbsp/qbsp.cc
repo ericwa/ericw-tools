@@ -570,6 +570,12 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         MakeVisibleFaces(entity, nodes);
 
+        // fixme-brushbsp: only here for testing, was inside FillOutside if()
+        MergeAll(nodes);
+
+        // needs to come after any face creation
+        MakeMarkFaces(entity, nodes);
+
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
         if (entity == pWorldEnt()) {

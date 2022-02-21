@@ -24,4 +24,4 @@
 #include <list>
 
 void MergeFaceToList(face_t *face, std::list<face_t *> &list);
-void MergeAll(std::vector<surface_t> &surfhead);
+void MergeAll(node_t *headnode);

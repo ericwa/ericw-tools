@@ -516,6 +516,16 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
 static int c_nodefaces;
 
+/*
+================
+AddMarksurfaces_r
+
+Adds the given face to the markfaces lists of all descendant leafs of `node`.
+
+fixme-brushbsp: do this accurately, not exhaustively
+fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
+================
+*/
 static void AddMarksurfaces_r(face_t *face, node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
@@ -525,6 +535,30 @@ static void AddMarksurfaces_r(face_t *face, node_t *node)
 
     AddMarksurfaces_r(face, node->children[0]);
     AddMarksurfaces_r(face, node->children[1]);
+}
+
+/*
+================
+MakeMarkFaces
+
+Populates the `markfaces` vectors of all leafs
+================
+*/
+void MakeMarkFaces(mapentity_t* entity, node_t* node)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        return;
+    }
+
+    // for the faces on this splitting node..
+    for (face_t *face : node->facelist) {
+        // add this face to all descendant leafs (temporary hack)
+        AddMarksurfaces_r(face, node);
+    }
+
+    // process child nodes recursively
+    MakeMarkFaces(entity, node->children[0]);
+    MakeMarkFaces(entity, node->children[1]);
 }
 
 static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush, node_t* node)
@@ -555,11 +589,6 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
 
             for (face_t *part: parts) {
                 node->facelist.push_back(part);
-
-                // Now that the final face has been added
-                // fixme-brushbsp: do this as a postprocessing step
-                // fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
-                AddMarksurfaces_r(part, node);
             }
         }
         
