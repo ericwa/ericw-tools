@@ -69,7 +69,7 @@ Duplicates the non point information of a face, used by SplitFace and
 MergeFace.
 ==================
 */
-face_t *NewFaceFromFace(face_t *in)
+face_t *NewFaceFromFace(const face_t *in)
 {
     face_t *newf = new face_t{};
 
@@ -286,6 +286,17 @@ static void ClipInside(const face_t *clipface, bool precedence, std::list<face_t
             inside->push_front(frags[!clipface->planeside]);
         }
     }
+}
+
+face_t *MirrorFace(const face_t *face)
+{
+    face_t *newface = NewFaceFromFace(face);
+    newface->w = face->w.flip();
+    newface->planeside = face->planeside ^ 1;
+    newface->contents.swap();
+    newface->lmshift.swap();
+
+    return newface;
 }
 
 /*

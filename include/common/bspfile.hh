@@ -571,8 +571,8 @@ struct dplane_t : qplane3f
 #define Q2_CONTENTS_LADDER 0x20000000
 
 // Special contents flags for the compiler only
-#define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1 << 0)
-#define CFLAGS_WAS_ILLUSIONARY (1 << 1) /* was illusionary, got changed to something else */
+#define CFLAGS_STRUCTURAL_COVERED_BY_DETAIL (1 << 0) // fixme-brushbsp: remove
+#define CFLAGS_WAS_ILLUSIONARY (1 << 1) // fixme-brushbsp: remove
 #define CFLAGS_BMODEL_MIRROR_INSIDE                                                                                    \
     (1 << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
 #define CFLAGS_NO_CLIPPING_SAME_TYPE                                                                                   \
