@@ -23,7 +23,6 @@
 
 #include <list>
 
-std::vector<surface_t> GatherNodeFaces(node_t *headnode);
 void FreeNodes(node_t* node);
 void MakeVisibleFaces(mapentity_t *entity, node_t *headnode);
 void MakeMarkFaces(mapentity_t* entity, node_t* headnode);

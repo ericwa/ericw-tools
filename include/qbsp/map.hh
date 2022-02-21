@@ -225,7 +225,6 @@ constexpr int HULL_COLLISION = -1;
 brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum);
 
 std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const brush_t *srcbrush, const node_t *srcnode);
-std::vector<surface_t> CSGFaces(const mapentity_t *entity);
 void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *entity, node_t *headnode);
 int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
@@ -241,7 +240,6 @@ void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
 
 void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces);
 void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const brush_t *> &brushes);
-void ExportObj_Surfaces(const std::string &filesuffix, const std::vector<surface_t> &surfaces);
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 

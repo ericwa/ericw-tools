@@ -231,64 +231,6 @@ struct face_t : face_fragment_t
     bool onnode; // has this face been used as a BSP node plane yet?
 };
 
-struct surface_t
-{
-    int planenum;
-    bool onnode; // true if surface has already been used
-                 // as a splitting node
-    bool detail_separator; // true if ALL faces are detail
-    std::list<face_t *> faces; // links to all faces on either side of the surf
-
-    // bounds of all the face windings; calculated via calculateInfo
-    aabb3d bounds;
-    // 1 if the surface has non-detail brushes; calculated via calculateInfo
-    bool has_struct;
-    // smallest lmshift of all faces; calculated via calculateInfo
-    short lmshift;
-
-    std::optional<size_t> outputplanenum; // only valid after WriteSurfacePlanes
-
-    inline surface_t shallowCopy()
-    {
-        surface_t copy;
-
-        copy.planenum = planenum;
-        copy.onnode = onnode;
-        copy.detail_separator = detail_separator;
-        copy.has_struct = has_struct;
-        copy.lmshift = lmshift;
-
-        return copy;
-    }
-
-    // calculate bounds & info
-    inline void calculateInfo()
-    {
-        bounds = {};
-        lmshift = std::numeric_limits<short>::max();
-        has_struct = false;
-
-        for (auto &f : faces) {
-            for (auto &contents : f->contents) {
-                if (!contents.is_valid(options.target_game, false)) {
-                    FError("Bad contents in face: {}", contents.to_string(options.target_game));
-                }
-            }
-
-            lmshift = min(f->lmshift.front, f->lmshift.back);
-
-            if (!((f->contents[0].extended | f->contents[1].extended) &
-                (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))) {
-                has_struct = true;
-            }
-
-            bounds += f->w.bounds();
-
-            //Q_assert(!qv::emptyExact(bounds.size()));
-        }
-    }
-};
-
 // there is a node_t structure for every node and leaf in the bsp tree
 
 struct brush_t;

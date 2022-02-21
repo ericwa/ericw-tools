@@ -171,18 +171,6 @@ static void GatherNodeFaces_r(node_t *node, std::map<int, std::list<face_t *>> &
     FreeNode(node);
 }
 
-/*
-================
-GatherNodeFaces
-================
-*/
-std::vector<surface_t> GatherNodeFaces(node_t *headnode)
-{
-    std::map<int, std::list<face_t *>> planefaces;
-    GatherNodeFaces_r(headnode, planefaces);
-    return BuildSurfaces(planefaces);
-}
-
 //===========================================================================
 
 // This is a kludge.   Should be pEdgeFaces[2].

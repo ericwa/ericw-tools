@@ -432,45 +432,6 @@ static void SaveInsideFaces(const std::list<face_t *> &faces, const brush_t &cli
 
 /*
 ==================
-BuildSurfaces
-
-Returns a chain of all the surfaces for all the planes with one or more
-visible face.
-
-Not parallel.
-
-fixme-brushbsp: remove
-==================
-*/
-std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefaces)
-{
-    std::vector<surface_t> surfaces;
-
-    for (int i = 0; i < map.numplanes(); i++) {
-        const auto entry = planefaces.find(i);
-
-        if (entry == planefaces.end())
-            continue;
-
-        Q_assert(!entry->second.empty());
-
-        /* create a new surface to hold the faces on this plane */
-        surface_t &surf = surfaces.emplace_back();
-        surf.planenum = entry->first;
-        surf.faces = std::move(entry->second);
-        csgmergefaces += surf.faces.size();
-
-        /* Calculate bounding box and flags */
-        surf.calculateInfo();
-    }
-
-    return surfaces;
-}
-
-//==========================================================================
-
-/*
-==================
 CopyBrushFaces
 
 fixme-brushbsp: remove
@@ -583,6 +544,7 @@ std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const
     return result;
 }
 
+#if 0
 /*
 ==================
 CSGFaces
@@ -736,3 +698,4 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
 
     return surfaces;
 }
+#endif

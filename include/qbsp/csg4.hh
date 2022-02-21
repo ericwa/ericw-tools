@@ -27,8 +27,6 @@
 extern int csgmergefaces;
 
 int MakeSkipTexinfo();
-// build surfaces is also used by GatherNodeFaces
-std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefaces);
 face_t *NewFaceFromFace(face_t *in);
 std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);

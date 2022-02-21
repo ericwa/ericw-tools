@@ -128,17 +128,6 @@ void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const br
     ExportObj_Faces(filesuffix, faces);
 }
 
-void ExportObj_Surfaces(const std::string &filesuffix, const std::vector<surface_t> &surfaces)
-{
-    std::vector<const face_t *> faces;
-
-    for (auto &surf : surfaces) {
-        std::copy(surf.faces.begin(), surf.faces.end(), std::back_inserter(faces));
-    }
-
-    ExportObj_Faces(filesuffix, faces);
-}
-
 static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)
 {
     if (node->planenum == PLANENUM_LEAF) {
