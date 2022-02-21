@@ -143,34 +143,6 @@ void FreeNodes(node_t* node)
     FreeNode(node);
 }
 
-/*
-=============================================================================
-GatherNodeFaces
-
-Frees the current node tree and returns a new chain of the surfaces that
-have inside faces.
-=============================================================================
-*/
-
-static void GatherNodeFaces_r(node_t *node, std::map<int, std::list<face_t *>> &planefaces)
-{
-    if (node->planenum != PLANENUM_LEAF) {
-        // decision node
-        for (face_t *f : node->facelist) {
-            if (!f->w.size()) { // face was removed outside
-                delete f;
-            } else {
-                planefaces[f->planenum].emplace_back(f);
-            }
-        }
-        // don't attempt to free node->faces again as ownership has moved to the planefaces map
-        node->facelist = {};
-        GatherNodeFaces_r(node->children[0], planefaces);
-        GatherNodeFaces_r(node->children[1], planefaces);
-    }
-    FreeNode(node);
-}
-
 //===========================================================================
 
 // This is a kludge.   Should be pEdgeFaces[2].
