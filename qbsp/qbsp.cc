@@ -215,10 +215,10 @@ static void ExportBrushList(mapentity_t *entity, node_t *node)
     brush_state = {};
 
     for (auto &b : entity->brushes) {
+        b.outputnumber = { static_cast<uint32_t>(map.bsp.dbrushes.size()) };
+
         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
             dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b.contents.native});
-
-        b.outputnumber = { static_cast<uint32_t>(map.bsp.dbrushes.size()) };
 
         auto bevels = AddBrushBevels(b);
 
