@@ -807,21 +807,6 @@ static void CreateLeaf(const std::vector<brush_t> &brushes, node_t *leafnode)
         // FIXME: what to call here? is_valid()? this hits in Q2 a lot
         // FError("Bad contents in face: {}", leafnode->contents.to_string(options.target_game));
     }
-
-    // fixme-brushbsp: move somewhere else
-#if 0
-    // write the list of the original faces to the leaf's markfaces
-    // free surf and the surf->faces list.
-    leaffaces += count;
-    leafnode->markfaces.reserve(count);
-
-    for (auto &surf : planelist) {
-        for (auto &f : surf.faces) {
-            leafnode->markfaces.push_back(f->original);
-            delete f;
-        }
-    }
-#endif
 }
 
 /*
@@ -844,8 +829,6 @@ static void PartitionBrushes(std::vector<brush_t> brushes, node_t *node)
 
     splitnodes++;
 
-    // fixme-brushbsp: populate somewhere later
-    //node->facelist = LinkNodeFaces(*split);
     node->children[0] = new node_t{};
     node->children[1] = new node_t{};
     node->planenum = split->planenum;
