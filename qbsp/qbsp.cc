@@ -861,15 +861,11 @@ CreateSingleHull
 */
 static void CreateSingleHull(const int hullnum)
 {
-    int i;
-    mapentity_t *entity;
-
     LogPrint("Processing hull {}...\n", hullnum);
 
     // for each entity in the map file that has geometry
-    for (i = 0; i < map.numentities(); i++) {
-        entity = &map.entities.at(i);
-        ProcessEntity(entity, hullnum);
+    for (auto &entity : map.entities) {
+        ProcessEntity(&entity, hullnum);
         if (!options.fAllverbose) {
             options.fVerbose = false; // don't print rest of entities
             log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
@@ -1410,9 +1406,6 @@ int qbsp_main(int argc, const char **argv)
     auto end = I_FloatTime();
 
     LogPrint("\n{:.3} seconds elapsed\n", (end - start));
-
-    //      FreeAllMem();
-    //      PrintMem();
 
     CloseLog();
 

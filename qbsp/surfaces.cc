@@ -550,6 +550,7 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
             for (face_t *part: parts) {
                 node->facelist.push_back(part);
 
+                // fixme-brushbsp: this isn't quite right, also check _mirrorinside for some content types
                 /*
                  * If the brush is non-solid, mirror faces for the inside view
                  */
