@@ -737,38 +737,7 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
 
 //=============================================================================
 
-// temporary brush lists to hold sorting data
-struct brush_types_t
-{
-    std::vector<brush_t> detail_illusionary, liquid, detail_fence, detail, sky, solid;
-};
-
-static brush_stats_t Entity_SortBrushes(mapentity_t *dst, brush_types_t &types)
-{
-    brush_stats_t stats;
-
-    Q_assert(dst->brushes.empty());
-    
-    stats.detail_illusionary = types.detail_illusionary.size();
-    stats.liquid = types.liquid.size();
-    stats.detail_fence = types.detail_fence.size();
-    stats.detail = types.detail.size();
-    stats.sky = types.sky.size();
-    stats.solid = types.solid.size();
-
-    dst->brushes.reserve(stats.detail_illusionary + stats.liquid + stats.detail_fence + stats.detail + stats.sky + stats.solid);
-
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_illusionary.begin()), make_move_iterator(types.detail_illusionary.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.liquid.begin()), make_move_iterator(types.liquid.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_fence.begin()), make_move_iterator(types.detail_fence.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail.begin()), make_move_iterator(types.detail.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.sky.begin()), make_move_iterator(types.sky.end()));
-    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.solid.begin()), make_move_iterator(types.solid.end()));
-
-    return stats;
-}
-
-static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, brush_types_t &types)
+static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, brush_stats_t &stats)
 {
     const char *classname;
     const mapbrush_t *mapbrush;
@@ -983,19 +952,19 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         brush->lmshift = lmshift;
 
         if (brush->contents.is_solid(options.target_game)) {
-            types.solid.emplace_back(std::move(brush.value()));
+            stats.solid++;
         } else if (brush->contents.is_sky(options.target_game)) {
-            types.sky.emplace_back(std::move(brush.value()));
+            stats.sky++;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL)) {
-            types.detail.emplace_back(std::move(brush.value()));
+            stats.detail++;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
-            types.detail_illusionary.emplace_back(std::move(brush.value()));
+            stats.detail_illusionary++;
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
-            types.detail_fence.emplace_back(std::move(brush.value()));
+            stats.detail_fence++;
         } else {
-            types.liquid.emplace_back(std::move(brush.value()));
+            stats.liquid++;
         }
-
+        dst->brushes.push_back(std::move(brush.value()));
         dst->bounds += brush->bounds;
 
         LogPercent(i + 1, src->nummapbrushes);
@@ -1012,9 +981,9 @@ hullnum 0 does not contain clip brushes.
 */
 brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 {
-    brush_types_t types;
+    brush_stats_t stats{};
 
-    Brush_LoadEntity(entity, entity, hullnum, types);
+    Brush_LoadEntity(entity, entity, hullnum, stats);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -1034,12 +1003,12 @@ brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum, types);
+                Brush_LoadEntity(entity, source, hullnum, stats);
             }
         }
     }
 
-    return Entity_SortBrushes(entity, types);
+    return stats;
 }
 
 void brush_t::update_bounds()
