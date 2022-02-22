@@ -325,6 +325,8 @@ static face_t *ChooseMidPlaneFromList(std::vector<brush_t> &brushes, const aabb3
 ChoosePlaneFromList
 
 The real BSP heuristic
+
+fixme-brushbsp: prefer splits that include a lot of brush sides?
 ==================
 */
 static face_t *ChoosePlaneFromList(std::vector<brush_t> &brushes, const aabb3d &bounds)

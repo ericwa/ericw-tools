@@ -128,6 +128,7 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
 
 static void FreeNode(node_t* node)
 {
+    FreeAllPortals(node);
     for (face_t *f : node->facelist) {
         delete f;
     }

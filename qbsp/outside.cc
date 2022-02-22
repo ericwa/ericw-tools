@@ -111,10 +111,19 @@ static bool Portal_Passable(const portal_t *p)
         return false;
     }
 
-    Q_assert(p->nodes[0]->planenum == PLANENUM_LEAF);
-    Q_assert(p->nodes[1]->planenum == PLANENUM_LEAF);
+    auto leafOpaque = [](const node_t *l) {
+        Q_assert(l->planenum == PLANENUM_LEAF || l->detail_separator);
 
-    if (p->nodes[0]->opaque() || p->nodes[1]->opaque())
+        // fixme-brushbsp: confirm, why was this not needed before?
+        // detail separators are treated as non-opaque because detail doesn't block vis
+        if (l->detail_separator) {
+            return false;
+        }
+
+        return l->opaque();
+    };
+
+    if (leafOpaque(p->nodes[0]) || leafOpaque(p->nodes[1]))
         return false;
 
     return true;
@@ -522,6 +531,8 @@ bool FillOutside(node_t *node, const int hullnum)
     // In order to avoid this scenario, we need to detect those "void-and-non-void-straddling" faces and not fill those
     // leafs in as solid. This will keep some extra faces around but keep the content types consistent.
 
+    // fixme-brushbsp: the above is no longer relevant
+
     ResetFacesTouchingOccupiedLeafs(node);
     MarkFacesTouchingOccupiedLeafs(node);
 
@@ -529,6 +540,7 @@ bool FillOutside(node_t *node, const int hullnum)
     const int outleafs = OutLeafsToSolid(node);
 
     /* remove faces from filled in leafs */
+    // fixme-brushbsp: don't do this; mark brush sides instead
     ClearOutFaces(node);
 
     LogPrint(LOG_STAT, "     {:8} outleafs\n", outleafs);

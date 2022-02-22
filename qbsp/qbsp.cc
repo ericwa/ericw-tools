@@ -541,9 +541,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
             if (FillOutside(nodes, hullnum)) {
-                // Free portals before regenerating new nodes
-                FreeAllPortals(nodes);
-                // fixme-brushbsp: surfs = GatherNodeFaces(nodes);
+                // fixme-brushbsp: re-add
+                // FreeNodes(nodes);
+
                 // make a really good tree
                 nodes = SolidBSP(entity, false);
 
@@ -551,6 +551,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             }
         }
         ExportClipNodes(entity, nodes, hullnum);
+
+        // fixme-brushbsp: return here?
     } else {
         /*
          * SolidBSP generates a node tree
@@ -568,58 +570,46 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         else
             nodes = SolidBSP(entity, entity == pWorldEnt());
 
-        MakeVisibleFaces(entity, nodes);
-
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
         if (entity == pWorldEnt()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
 
-            #if 0
             if (!options.fNofill && FillOutside(nodes, hullnum)) {
-                FreeAllPortals(nodes);
-
-                // get the remaining faces together into surfaces again
-                // fixme-brushbsp: surfs = GatherNodeFaces(nodes);
-
-                // merge polygons
-                // fixme-brushbsp: MergeAll(surfs);
+                // fixme-brushbsp: re-add
+                //FreeNodes(nodes);
 
                 // make a really good tree
                 nodes = SolidBSP(entity, false);
 
-                // convert detail leafs to solid
-                DetailToSolid(nodes);
+                // merge polygons
+                MergeAll(nodes);
 
                 // make the real portals for vis tracing
                 PortalizeWorld(entity, nodes, hullnum);
-
-                if (!options.fNoTJunc) {
-                    TJunc(entity, nodes);
-                }
             }
-            #endif
 
             // Area portals
             if (options.target_game->id == GAME_QUAKE_II) {
                 FloodAreas(entity, nodes);
                 EmitAreaPortals(nodes);
             }
-
-            FreeAllPortals(nodes);
         }
 
-        // bmodels
-        if (entity != pWorldEnt() && !options.fNoTJunc) {
-            TJunc(entity, nodes);
-        }
+        MakeVisibleFaces(entity, nodes);
+
+        // needs to come after any face creation
+        MakeMarkFaces(entity, nodes);
 
         // convert detail leafs to solid (in case we didn't make the call above)
         DetailToSolid(nodes);
 
-        // needs to come after any face creation
-        MakeMarkFaces(entity, nodes);
+        // fixme-brushbsp: prune nodes
+
+        if (!options.fNoTJunc) {
+            TJunc(entity, nodes);
+        }
 
         if (options.fObjExport && entity == pWorldEnt()) {
             ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);
@@ -636,6 +626,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     FreeBrushes(entity);
+    // fixme-brushbsp: re-add
     //FreeNodes(nodes);
 }
 
