@@ -57,6 +57,9 @@ bool com_eof;
     /* Using lockless prints so we can error out while holding the lock */
     InterruptThreadProgress__();
     LogPrintLocked("************ ERROR ************\n{}\n", error);
+#ifdef _WIN32
+    __debugbreak();
+#endif
     exit(1);
 }
 
