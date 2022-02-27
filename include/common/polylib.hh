@@ -692,9 +692,7 @@ public:
         return {std::move(results[SIDE_FRONT]), std::move(results[SIDE_BACK])};
     }
 
-    using save_fn_t = void (*)(winding_base_t &w, void *userinfo);
-
-    void dice(vec_t subdiv, save_fn_t save_fn, void *userinfo)
+    void dice(vec_t subdiv, std::function<void(winding_base_t &)> save_fn)
     {
         if (!count)
             return;
@@ -709,7 +707,7 @@ public:
 
         if (i == 3) {
             // no splitting needed
-            save_fn(*this, userinfo);
+            save_fn(*this);
             return;
         }
 
@@ -727,7 +725,7 @@ public:
         //
         for (auto &o : clipped)
             if (o.has_value())
-                o->dice(subdiv, save_fn, userinfo);
+                o->dice(subdiv, save_fn);
     }
 
     /**

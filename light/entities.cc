@@ -104,8 +104,7 @@ static int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const s
         FError("Too many unique light targetnames (max={})\n", MAX_SWITCHABLE_STYLES);
     }
 
-    lightstyleForTargetname.emplace_back(
-        targetname, newStylenum); // mxd. https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html
+    lightstyleForTargetname.emplace_back(targetname, newStylenum);
 
     LogPrint(LOG_VERBOSE, "Allocated lightstyle {} for targetname '{}'\n", newStylenum, targetname);
 
@@ -1094,16 +1093,9 @@ inline void EstimateLightAABB(light_t *light)
     light->bounds = EstimateVisibleBoundsAtPoint(light->origin.value());
 }
 
-static void *EstimateLightAABBThread(void *arg)
+static void EstimateLightAABBThread(size_t i)
 {
-    while (1) {
-        const int i = GetThreadWork();
-        if (i == -1)
-            break;
-
-        EstimateLightAABB(&all_lights.at(i));
-    }
-    return nullptr;
+    EstimateLightAABB(&all_lights.at(i));
 }
 
 void EstimateLightVisibility(void)
@@ -1113,7 +1105,7 @@ void EstimateLightVisibility(void)
 
     LogPrint("--- EstimateLightVisibility ---\n");
 
-    RunThreadsOn(0, static_cast<int>(all_lights.size()), EstimateLightAABBThread, nullptr);
+    RunThreadsOn(0, all_lights.size(), EstimateLightAABBThread);
 }
 
 void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)

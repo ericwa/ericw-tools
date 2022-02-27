@@ -287,48 +287,39 @@ const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
     return img::find(name);
 }
 
-static void *LightThread(void *arg)
+static void LightThread(const mbsp_t *bsp, size_t facenum)
 {
-    const mbsp_t *bsp = (const mbsp_t *)arg;
-
 #ifdef HAVE_EMBREE
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 //    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
 
-    while (1) {
-        const int facenum = GetThreadWork();
-        if (facenum == -1)
-            break;
+    mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum);
 
-        mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum);
-
-        /* Find the correct model offset */
-        const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
-        if (face_modelinfo == NULL) {
-            // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
-            // LogPrint("warning: no model has face {}\n", facenum);
-            continue;
-        }
-
-        if (!faces_sup)
-            LightFace(bsp, f, nullptr, options);
-        else if (options.novanilla.value()) {
-            f->lightofs = -1;
-            f->styles[0] = 255;
-            LightFace(bsp, f, faces_sup + facenum, options);
-        } else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale) {
-            LightFace(bsp, f, nullptr, options);
-            faces_sup[facenum].lightofs = f->lightofs;
-            for (int i = 0; i < MAXLIGHTMAPS; i++)
-                faces_sup[facenum].styles[i] = f->styles[i];
-        } else {
-            LightFace(bsp, f, nullptr, options);
-            LightFace(bsp, f, faces_sup + facenum, options);
-        }
+    /* Find the correct model offset */
+    const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
+    if (face_modelinfo == NULL) {
+        // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
+        // LogPrint("warning: no model has face {}\n", facenum);
+        return;
     }
 
-    return NULL;
+    if (!faces_sup)
+        LightFace(bsp, f, nullptr, options);
+    else if (options.novanilla.value()) {
+        f->lightofs = -1;
+        f->styles[0] = 255;
+        LightFace(bsp, f, faces_sup + facenum, options);
+    } else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale) {
+        LightFace(bsp, f, nullptr, options);
+        faces_sup[facenum].lightofs = f->lightofs;
+        for (int i = 0; i < MAXLIGHTMAPS; i++)
+            faces_sup[facenum].styles[i] = f->styles[i];
+    } else {
+        LightFace(bsp, f, nullptr, options);
+        LightFace(bsp, f, faces_sup + facenum, options);
+    }
+
 }
 
 static void FindModelInfo(const mbsp_t *bsp)
@@ -483,7 +474,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
     LogPrint("--- LightThread ---\n"); // mxd
-    RunThreadsOn(0, bsp.dfaces.size(), LightThread, &bsp);
+    RunThreadsOn(0, bsp.dfaces.size(), [&bsp](size_t i) { LightThread(&bsp, i); });
 #endif
 
     if ((bouncerequired || isQuake2map) && !options.nolighting.value()) { // mxd. Print some extra stats...
@@ -870,8 +861,6 @@ int light_main(int argc, const char **argv)
 
     options.preinitialize(argc, argv);
     options.initialize(argc, argv);
-
-    LowerProcessPriority();
 
     auto start = I_FloatTime();
     fs::path source = options.sourceMap;

@@ -77,25 +77,6 @@ static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const settings::worldspa
     return p;
 }
 
-struct make_bounce_lights_args_t
-{
-    const mbsp_t *bsp;
-    const settings::worldspawn_keys *cfg;
-};
-
-struct save_winding_args_t
-{
-    vector<unique_ptr<patch_t>> *patches;
-    const mbsp_t *bsp;
-    const settings::worldspawn_keys *cfg;
-};
-
-static void SaveWindingFn(winding_t &w, void *userinfo)
-{
-    save_winding_args_t *args = static_cast<save_winding_args_t *>(userinfo);
-    args->patches->push_back(MakePatch(args->bsp, *args->cfg, w));
-}
-
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
     // make bounce light, only if this face is shadow casting
@@ -173,90 +154,6 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
     radlightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
 }
 
-static void *MakeBounceLightsThread(void *arg)
-{
-    const mbsp_t *bsp = static_cast<make_bounce_lights_args_t *>(arg)->bsp;
-    const settings::worldspawn_keys &cfg = *static_cast<make_bounce_lights_args_t *>(arg)->cfg;
-
-    while (1) {
-        int i = GetThreadWork();
-        if (i == -1)
-            break;
-
-        const mface_t *face = BSP_GetFace(bsp, i);
-
-        if (!Face_ShouldBounce(bsp, face)) {
-            continue;
-        }
-
-        vector<unique_ptr<patch_t>> patches;
-
-        winding_t winding = winding_t::from_face(bsp, face);
-
-        // grab some info about the face winding
-        const vec_t facearea = winding.area();
-
-        // degenerate face
-        if (!facearea) {
-            continue;
-        }
-
-        qplane3d faceplane = winding.plane();
-
-        qvec3d facemidpoint = winding.center();
-        facemidpoint += faceplane.normal; // lift 1 unit
-
-        save_winding_args_t args;
-        args.patches = &patches;
-        args.bsp = bsp;
-        args.cfg = &cfg;
-
-        winding.dice(64.0f, SaveWindingFn, &args);
-
-        // average them, area weighted
-        map<int, qvec3f> sum;
-        float totalarea = 0;
-
-        for (const auto &patch : patches) {
-            const float patcharea = patch->w.area();
-            totalarea += patcharea;
-
-            for (const auto &styleColor : patch->lightByStyle) {
-                sum[styleColor.first] = sum[styleColor.first] + (styleColor.second * patcharea);
-            }
-            // fmt::print("  {} {} {}\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
-        }
-
-        // avoid small, or zero-area patches ("sum" would be nan)
-        if (totalarea < 1) {
-            continue;
-        }
-
-        for (auto &styleColor : sum) {
-            styleColor.second *= (1.0f / totalarea);
-            styleColor.second /= 255.0f;
-        }
-
-        // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
-        qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.0f;
-        qvec3f blendedcolor = mix(qvec3f{127.f / 255.f}, texturecolor, cfg.bouncecolorscale.value());
-
-        // final colors to emit
-        map<int, qvec3f> emitcolors;
-        for (const auto &styleColor : sum) {
-            qvec3f emitcolor{};
-            for (int k = 0; k < 3; k++) {
-                emitcolor[k] = styleColor.second[k] * blendedcolor[k];
-            }
-            emitcolors[styleColor.first] = emitcolor;
-        }
-
-        AddBounceLight(facemidpoint, emitcolors, faceplane.normal, facearea, face, bsp);
-    }
-
-    return NULL;
-}
-
 const std::vector<bouncelight_t> &BounceLights()
 {
     return radlights;
@@ -273,14 +170,87 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
     return empty;
 }
 
+struct make_bounce_lights_args_t
+{
+    const mbsp_t *bsp;
+    const settings::worldspawn_keys &cfg;
+};
+
+static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, size_t i)
+{
+    const mface_t *face = BSP_GetFace(bsp, i);
+
+    if (!Face_ShouldBounce(bsp, face)) {
+        return;
+    }
+
+    vector<unique_ptr<patch_t>> patches;
+
+    winding_t winding = winding_t::from_face(bsp, face);
+
+    // grab some info about the face winding
+    const vec_t facearea = winding.area();
+
+    // degenerate face
+    if (!facearea) {
+        return;
+    }
+
+    qplane3d faceplane = winding.plane();
+
+    qvec3d facemidpoint = winding.center();
+    facemidpoint += faceplane.normal; // lift 1 unit
+
+    winding.dice(64.0f, [&](winding_t &w) {
+        patches.push_back(MakePatch(bsp, cfg, w));
+    });
+
+    // average them, area weighted
+    map<int, qvec3f> sum;
+    float totalarea = 0;
+
+    for (const auto &patch : patches) {
+        const float patcharea = patch->w.area();
+        totalarea += patcharea;
+
+        for (const auto &styleColor : patch->lightByStyle) {
+            sum[styleColor.first] = sum[styleColor.first] + (styleColor.second * patcharea);
+        }
+        // fmt::print("  {} {} {}\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
+    }
+
+    // avoid small, or zero-area patches ("sum" would be nan)
+    if (totalarea < 1) {
+        return;
+    }
+
+    for (auto &styleColor : sum) {
+        styleColor.second *= (1.0f / totalarea);
+        styleColor.second /= 255.0f;
+    }
+
+    // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
+    qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.0f;
+    qvec3f blendedcolor = mix(qvec3f{127.f / 255.f}, texturecolor, cfg.bouncecolorscale.value());
+
+    // final colors to emit
+    map<int, qvec3f> emitcolors;
+    for (const auto &styleColor : sum) {
+        qvec3f emitcolor{};
+        for (int k = 0; k < 3; k++) {
+            emitcolor[k] = styleColor.second[k] * blendedcolor[k];
+        }
+        emitcolors[styleColor.first] = emitcolor;
+    }
+
+    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, facearea, face, bsp);
+}
+
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
     LogPrint("--- MakeBounceLights ---\n");
 
-    make_bounce_lights_args_t args{
-        bsp, &cfg}; // mxd. https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-pro-type-member-init.html
-
-    RunThreadsOn(0, bsp->dfaces.size(), MakeBounceLightsThread, (void *)&args);
+    RunThreadsOn(0, bsp->dfaces.size(), [&](size_t i) { MakeBounceLightsThread(cfg, bsp, i); });
 
     LogPrint("{} bounce lights created\n", radlights.size());
 }

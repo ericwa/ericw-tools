@@ -172,7 +172,7 @@ protected:
 public:
     inline setting_func(setting_container *dictionary, const nameset &names, std::function<void()> func,
         const setting_group *group = nullptr, const char *description = "")
-        : setting_base(dictionary, "test", group, description), _func(func)
+        : setting_base(dictionary, names, group, description), _func(func)
     {
     }
 

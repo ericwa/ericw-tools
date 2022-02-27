@@ -390,73 +390,65 @@ static void SimpleFlood(portal_t *srcportal, int leafnum, const leafbits_t &port
   BasePortalVis
   ==============
 */
-static void *BasePortalThread(void *dummy)
+static void BasePortalThread(size_t portalnum)
 {
-    int i, j, portalnum;
+    int i, j;
     portal_t *p, *tp;
     float d;
     leafbits_t portalsee(numportals * 2);
 
-    while (1) {
-        portalnum = GetThreadWork();
-        if (portalnum == -1)
-            break;
+    p = portals + portalnum;
+    winding_t &w = *p->winding;
 
-        p = portals + portalnum;
-        winding_t &w = *p->winding;
+    p->mightsee.resize(portalleafs);
 
-        p->mightsee.resize(portalleafs);
+    for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
+        if (tp == p)
+            continue;
 
-        for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
-            if (tp == p)
-                continue;
+        winding_t &tw = *tp->winding;
 
-            winding_t &tw = *tp->winding;
+        // Quick test - completely at the back?
+        d = p->plane.distance_to(tw.origin);
+        if (d < -tw.radius)
+            continue;
 
-            // Quick test - completely at the back?
-            d = p->plane.distance_to(tw.origin);
-            if (d < -tw.radius)
-                continue;
-
-            for (j = 0; j < tw.size(); j++) {
-                d = p->plane.distance_to(tw[j]);
-                if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
-                                     // https://github.com/ericwa/ericw-tools/issues/261
-                    break;
-            }
-            if (j == tw.size())
-                continue; // no points on front
-
-            // Quick test - completely on front?
-            d = tp->plane.distance_to(w.origin);
-            if (d > w.radius)
-                continue;
-
-            for (j = 0; j < w.size(); j++) {
-                d = tp->plane.distance_to(w[j]);
-                if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
+        for (j = 0; j < tw.size(); j++) {
+            d = p->plane.distance_to(tw[j]);
+            if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
                                     // https://github.com/ericwa/ericw-tools/issues/261
-                    break;
-            }
-            if (j == w.size())
-                continue; // no points on back
+                break;
+        }
+        if (j == tw.size())
+            continue; // no points on front
 
-            if (options.visdist.value() > 0) {
-                if (tp->winding->distFromPortal(p) > options.visdist.value() ||
-                    p->winding->distFromPortal(tp) > options.visdist.value())
-                    continue;
-            }
+        // Quick test - completely on front?
+        d = tp->plane.distance_to(w.origin);
+        if (d > w.radius)
+            continue;
 
-            portalsee[i] = 1;
+        for (j = 0; j < w.size(); j++) {
+            d = tp->plane.distance_to(w[j]);
+            if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
+                                // https://github.com/ericwa/ericw-tools/issues/261
+                break;
+        }
+        if (j == w.size())
+            continue; // no points on back
+
+        if (options.visdist.value() > 0) {
+            if (tp->winding->distFromPortal(p) > options.visdist.value() ||
+                p->winding->distFromPortal(tp) > options.visdist.value())
+                continue;
         }
 
-        p->nummightsee = 0;
-        SimpleFlood(p, p->leaf, portalsee);
-
-        portalsee.clear();
+        portalsee[i] = 1;
     }
 
-    return NULL;
+    p->nummightsee = 0;
+    SimpleFlood(p, p->leaf, portalsee);
+
+    portalsee.clear();
 }
 
 /*
@@ -466,5 +458,5 @@ static void *BasePortalThread(void *dummy)
 */
 void BasePortalVis(void)
 {
-    RunThreadsOn(0, numportals * 2, BasePortalThread, NULL);
+    RunThreadsOn(0, numportals * 2, BasePortalThread);
 }

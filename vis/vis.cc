@@ -49,7 +49,7 @@ setting_group advanced_group{"Advanced", 300};
 
 void vis_settings::initialize(int argc, const char **argv)
 {
-    auto remainder = parse(token_parser_t(argc, argv));
+    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
 
     if (remainder.size() <= 0 || remainder.size() > 1) {
         printHelp();
@@ -305,7 +305,6 @@ portal_t *GetNextPortal(void)
 
     if (ret) {
         ret->status = pstat_working;
-        GetThreadWork_Locked__();
     }
 
     ThreadUnlock();
@@ -423,33 +422,29 @@ static duration stateinterval;
   LeafThread
   ==============
 */
-void *LeafThread(void *arg)
+void LeafThread(size_t)
 {
     portal_t *p;
 
-    do {
-        ThreadLock();
-        /* Save state if sufficient time has elapsed */
-        auto now = I_FloatTime();
-        if (now > statetime + stateinterval) {
-            statetime = now;
-            SaveVisState();
-        }
-        ThreadUnlock();
+    ThreadLock();
+    /* Save state if sufficient time has elapsed */
+    auto now = I_FloatTime();
+    if (now > statetime + stateinterval) {
+        statetime = now;
+        SaveVisState();
+    }
+    ThreadUnlock();
 
-        p = GetNextPortal();
-        if (!p)
-            break;
+    p = GetNextPortal();
+    if (!p)
+        return;
 
-        PortalFlow(p);
+    PortalFlow(p);
 
-        PortalCompleted(p);
+    PortalCompleted(p);
 
-        LogPrint(LOG_VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee,
-            p->numcansee);
-    } while (1);
-
-    return NULL;
+    LogPrint(LOG_VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee,
+        p->numcansee);
 }
 
 /*
@@ -600,7 +595,7 @@ void CalcPortalVis(const mbsp_t *bsp)
         if (p->status == pstat_done)
             startcount++;
     }
-    RunThreadsOn(startcount, numportals * 2, LeafThread, NULL);
+    RunThreadsOn(startcount, numportals * 2, LeafThread);
 
     SaveVisState();
 
@@ -857,8 +852,6 @@ int main(int argc, const char **argv)
     LogPrint("---- vis / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
 
     options.run(argc, argv);
-
-    LowerProcessPriority();
 
     stateinterval = std::chrono::minutes(5); /* 5 minutes */
     starttime = statetime = I_FloatTime();

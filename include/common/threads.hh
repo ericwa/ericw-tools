@@ -3,13 +3,12 @@
 #pragma once
 
 #include <memory>
+#include <functional>
 
 #include "tbb/global_control.h"
 
-void LowerProcessPriority(void);
-int GetThreadWork(void);
-int GetThreadWork_Locked__(void); /* caller must take care of locking */
-void RunThreadsOn(int start, int workcnt, void *(func)(void *), void *arg);
+void GetThreadWork_Locked__(void); /* caller must take care of locking */
+void RunThreadsOn(size_t start, size_t workcnt, std::function<void(size_t)> func);
 void ThreadLock(void);
 void ThreadUnlock(void);
 

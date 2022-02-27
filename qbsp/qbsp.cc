@@ -61,7 +61,7 @@ void qbsp_settings::initialize(int argc, const char **argv)
         parse(parser_t(file->data(), file->size()));
     }
 
-    auto remainder = parse(token_parser_t(argc, argv));
+    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
 
     if (remainder.size() <= 0 || remainder.size() > 2) {
         printHelp();
