@@ -1758,8 +1758,13 @@ void ProcessAreaPortal(mapentity_t *entity)
     if (entity->nummapbrushes != 1)
         FError("func_areaportal can only be a single brush");
 
-    map.brushes[entity->firstmapbrush].contents = Q2_CONTENTS_AREAPORTAL;
-    map.faces[map.brushes[entity->firstmapbrush].firstface].contents.native = Q2_CONTENTS_AREAPORTAL;
+    for (size_t i = entity->firstmapbrush; i < entity->firstmapbrush + entity->nummapbrushes; i++) {
+        map.brushes[i].contents = Q2_CONTENTS_AREAPORTAL;
+
+        for (size_t f = map.brushes[i].firstface; f < map.brushes[i].firstface + map.brushes[i].numfaces; f++) {
+            map.faces[f].contents.native = Q2_CONTENTS_AREAPORTAL;
+        }
+    }
     entity->areaportalnum = ++map.numareaportals;
     // set the portal number as "style"
     SetKeyValue(entity, "style", std::to_string(map.numareaportals).c_str());

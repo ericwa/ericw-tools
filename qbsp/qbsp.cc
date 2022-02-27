@@ -1118,7 +1118,7 @@ InitQBSP
 */
 static void InitQBSP(int argc, const char **argv)
 {
-    options.run(argc - 1, argv + 1);
+    options.run(argc, argv);
 
     options.szMapName.replace_extension("map");
 
