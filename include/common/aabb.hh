@@ -45,10 +45,7 @@ public:
             return valid == other.valid && bbox == other.bbox;
         }
 
-        constexpr operator bool() const
-        {
-            return valid;
-        }
+        constexpr operator bool() const { return valid; }
     };
 
 private:
@@ -74,12 +71,11 @@ public:
     constexpr aabb(const value_type &points) : aabb(points, points) { }
 
     template<typename V2>
-    constexpr aabb(const aabb<V2, N> &other) : aabb(other.m_mins, other.m_maxs) { }
-
-    constexpr bool operator==(const aabb &other) const
+    constexpr aabb(const aabb<V2, N> &other) : aabb(other.m_mins, other.m_maxs)
     {
-        return m_mins == other.m_mins && m_maxs == other.m_maxs;
     }
+
+    constexpr bool operator==(const aabb &other) const { return m_mins == other.m_mins && m_maxs == other.m_maxs; }
 
     constexpr const value_type &mins() const { return m_mins; }
 
@@ -126,7 +122,7 @@ public:
             mins[i] = min(mins[i], pt[i]);
             maxs[i] = max(maxs[i], pt[i]);
         }
-        return { mins, maxs };
+        return {mins, maxs};
     }
 
     constexpr aabb operator+(const value_type &pt) const { return expand(pt); }
@@ -150,34 +146,28 @@ public:
                 return {};
             }
         }
-        return { aabb(mins, maxs) };
+        return {aabb(mins, maxs)};
     }
 
     constexpr value_type size() const { return m_maxs - m_mins; }
 
-    constexpr aabb grow(const value_type &size) const { return { m_mins - size, m_maxs + size }; }
+    constexpr aabb grow(const value_type &size) const { return {m_mins - size, m_maxs + size}; }
 
     constexpr value_type &operator[](const size_t &index)
     {
         switch (index) {
-            case 0:
-                return m_mins;
-            case 1:
-                return m_maxs;
-            default:
-                throw std::exception();
+            case 0: return m_mins;
+            case 1: return m_maxs;
+            default: throw std::exception();
         }
     }
 
     constexpr const value_type &operator[](const size_t &index) const
     {
         switch (index) {
-            case 0:
-                return m_mins;
-            case 1:
-                return m_maxs;
-            default:
-                throw std::exception();
+            case 0: return m_mins;
+            case 1: return m_maxs;
+            default: throw std::exception();
         }
     }
 

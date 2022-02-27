@@ -587,8 +587,8 @@ int main(int argc, char **argv)
             }
 
             try {
-                const qvec3d pos {std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
-                const qvec3d normal {std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
+                const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
+                const qvec3d normal{std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
                 FindFaces(&bsp, pos, normal);
             }
             catch (const std::exception &) {

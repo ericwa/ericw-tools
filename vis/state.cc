@@ -140,7 +140,7 @@ void SaveVisState(void)
     state.version = LittleLong(VIS_STATE_VERSION);
     state.numportals = LittleLong(numportals);
     state.numleafs = LittleLong(portalleafs);
-    state.testlevel = LittleLong(testlevel);
+    state.testlevel = LittleLong(options.visdist.value());
     state.time_elapsed = LittleLong((uint32_t)(statetime - starttime).count());
 
     SafeWrite(outfile, &state, sizeof(state));
@@ -193,7 +193,7 @@ bool LoadVisState(void)
     dportal_t pstate;
     uint8_t *compressed;
 
-    if (nostate) {
+    if (options.nostate.value()) {
         return false;
     }
 

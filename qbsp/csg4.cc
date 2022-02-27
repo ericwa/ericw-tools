@@ -108,7 +108,7 @@ std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
     side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
-    std::array<size_t, SIDE_TOTAL> counts { };
+    std::array<size_t, SIDE_TOTAL> counts{};
     vec_t dot;
     size_t i, j;
     face_t *newf, *new2;
@@ -216,7 +216,7 @@ static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside
                 break;
         }
         if (!w) {
-            /* The face is completely outside this brush */            
+            /* The face is completely outside this brush */
             outside->push_front(face);
         } else {
             inside->push_front(face);
@@ -234,8 +234,8 @@ outside list or spliting it into a piece in each list.
 Faces exactly on the plane will stay inside unless overdrawn by later brush
 =================
 */
-static void ClipInside(const face_t *clipface, bool precedence, std::list<face_t *> *inside,
-    std::list<face_t *> *outside)
+static void ClipInside(
+    const face_t *clipface, bool precedence, std::list<face_t *> *inside, std::list<face_t *> *outside)
 {
     std::list<face_t *> oldinside;
 
@@ -299,7 +299,8 @@ This plane map is later used to build up the surfaces for creating the BSP.
 Not parallel.
 ==================
 */
-static void SaveFacesToPlaneList(std::list<face_t *> facelist, bool mirror, std::map<int, std::list<face_t *>> &planefaces)
+static void SaveFacesToPlaneList(
+    std::list<face_t *> facelist, bool mirror, std::map<int, std::list<face_t *>> &planefaces)
 {
     for (face_t *face : facelist) {
         const int plane = face->planenum;
@@ -332,7 +333,7 @@ static void SaveFacesToPlaneList(std::list<face_t *> facelist, bool mirror, std:
             // to force the right content type for the leaf, but we don't actually
             // want the face. So just set the texinfo to "skip" so it gets deleted.
             if ((face->contents[1].is_detail() || (face->contents[1].extended & CFLAGS_WAS_ILLUSIONARY)) ||
-                (options.fContentHack && face->contents[1].is_solid(options.target_game))) {
+                (options.contenthack.value() && face->contents[1].is_solid(options.target_game))) {
 
                 // if CFLAGS_BMODEL_MIRROR_INSIDE is set, never change to skip
                 if (!(face->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
@@ -476,8 +477,8 @@ static std::list<face_t *> CopyBrushFaces(const brush_t &brush)
     for (auto &face : brush.faces) {
         brushfaces++;
         auto *newface = new face_t(face);
-        newface->contents = { options.target_game->create_empty_contents(), brush.contents };
-        newface->lmshift = { brush.lmshift, brush.lmshift };
+        newface->contents = {options.target_game->create_empty_contents(), brush.contents};
+        newface->lmshift = {brush.lmshift, brush.lmshift};
         facelist.push_back(newface);
     }
 
@@ -520,7 +521,7 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
      */
     tbb::parallel_for(static_cast<size_t>(0), entity->brushes.size(), [entity, &brushvec_outsides](const size_t i) {
         auto &brush = entity->brushes[i];
-        std::list<face_t*> outside = CopyBrushFaces(brush);
+        std::list<face_t *> outside = CopyBrushFaces(brush);
         bool overwrite = false;
 
         for (auto &clipbrush : entity->brushes) {
@@ -590,13 +591,12 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
              */
             if ((brush.contents.is_solid(options.target_game) && !clipbrush.contents.is_solid(options.target_game))
 
-                ||
-                (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
-                                                                    !clipbrush.contents.is_sky(options.target_game)))
+                || (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                                      !clipbrush.contents.is_sky(options.target_game)))
 
                 || (brush.contents.is_detail(CFLAGS_DETAIL) && (!clipbrush.contents.is_solid(options.target_game) &&
-                                                                    !clipbrush.contents.is_sky(options.target_game) &&
-                                                                    !clipbrush.contents.is_detail(CFLAGS_DETAIL)))
+                                                                   !clipbrush.contents.is_sky(options.target_game) &&
+                                                                   !clipbrush.contents.is_detail(CFLAGS_DETAIL)))
 
                 || (brush.contents.is_liquid(options.target_game) &&
                        clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
@@ -622,7 +622,7 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
          * All of the faces left on the outside list are real surface faces
          * If the brush is non-solid, mirror faces for the inside view
          */
-        const bool mirror = options.fContentHack ? true : !brush.contents.is_solid(options.target_game);
+        const bool mirror = options.contenthack.value() ? true : !brush.contents.is_solid(options.target_game);
         SaveFacesToPlaneList(outside, mirror, planefaces);
     }
 

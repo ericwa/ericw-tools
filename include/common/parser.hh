@@ -22,6 +22,8 @@
 #pragma once
 
 #include <utility>
+#include <vector>
+#include <string_view>
 
 enum : int32_t
 {
@@ -35,31 +37,118 @@ enum : int32_t
 using parseflags = int32_t;
 
 template<typename... T>
-inline auto untie(const std::tuple<T...> &tuple)
+constexpr auto untie(const std::tuple<T...> &tuple)
 {
     return std::tuple<typename std::remove_reference<T>::type...>(tuple);
 }
 
-struct parser_t
+template<typename T>
+using untied_t = decltype(untie(std::declval<T>()));
+
+struct parser_base_t
+{
+    std::string token;
+    bool was_quoted = false; // whether the current token was from a quoted string or not
+
+    virtual bool parse_token(parseflags flags = PARSE_NORMAL) = 0;
+
+    virtual bool at_end() const = 0;
+
+    virtual void push_state() = 0;
+
+    virtual void pop_state() = 0;
+};
+
+#include <utility>
+
+// a parser that works on a single, contiguous string
+struct parser_t : parser_base_t
 {
     const char *pos;
     const char *end;
     uint32_t linenum = 1;
-    std::string token;
 
     // base constructor; accept raw start & length
-    parser_t(const void *start, size_t length) : pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length) { }
+    inline parser_t(const void *start, size_t length)
+        : pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length)
+    {
+    }
 
     // pull from string_view; note that the string view must live for the entire
     // duration of the parser's life time
-    parser_t(const std::string_view &view) : parser_t(&view.front(), view.size()) { }
+    inline parser_t(const std::string_view &view) : parser_t(&view.front(), view.size()) { }
 
     // pull from C string; made explicit because this is error-prone
     explicit parser_t(const char *str) : parser_t(str, strlen(str)) { }
 
-    bool parse_token(parseflags flags = PARSE_NORMAL);
+    bool parse_token(parseflags flags = PARSE_NORMAL) override;
 
-    auto state() { return std::tie(pos, linenum); }
+    using state_type = decltype(std::tie(pos, linenum));
 
-    bool at_end() const { return pos >= end; };
+    constexpr state_type state() { return state_type(pos, linenum); }
+
+    bool at_end() const override { return pos >= end; }
+
+private:
+    std::vector<untied_t<state_type>> _states;
+
+public:
+    virtual void push_state() override { _states.push_back(state()); }
+
+    virtual void pop_state() override
+    {
+        state() = _states.back();
+        _states.pop_back();
+    }
+};
+
+// a parser that works on a list of tokens
+struct token_parser_t : parser_base_t
+{
+    std::vector<std::string_view> tokens;
+    size_t cur = 0;
+
+    inline token_parser_t(int argc, const char **args) : tokens(args, args + argc) { }
+
+    using state_type = decltype(std::tie(cur));
+
+    constexpr state_type state() { return state_type(cur); }
+
+    inline bool parse_token(parseflags flags = PARSE_NORMAL) override
+    {
+        /* for peek, we'll do a backup/restore. */
+        if (flags & PARSE_PEEK) {
+            auto restore = untie(state());
+            bool result = parse_token(flags & ~PARSE_PEEK);
+            state() = restore;
+            return result;
+        }
+
+        token.clear();
+        was_quoted = false;
+
+        if (at_end()) {
+            return false;
+        }
+
+        token = tokens[cur++];
+
+        was_quoted = std::any_of(token.begin(), token.end(), isspace);
+
+        return true;
+    }
+
+    bool at_end() const override { return cur >= tokens.size(); }
+
+private:
+    std::vector<untied_t<state_type>> _states;
+
+public:
+    virtual void push_state() override { _states.push_back(state()); }
+
+    virtual void pop_state() override
+    {
+        state() = _states.back();
+        _states.pop_back();
+    }
 };

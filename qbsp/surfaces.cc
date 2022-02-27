@@ -43,18 +43,12 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
     vec_t extent;
     int lmshift;
 
-    // subdivision disabled
-    if (!options.dxSubdivide) {
-        return it;
-    }
-
     face_t *f = *it;
 
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
 
-    if (tex->flags.is_skip || tex->flags.is_hint ||
-        !options.target_game->surf_is_subdivided(tex->flags)) {
+    if (tex->flags.is_skip || tex->flags.is_hint || !options.target_game->surf_is_subdivided(tex->flags)) {
         return it;
     }
     // subdivision is pretty much pointless other than because of lightmap block limits
@@ -64,18 +58,16 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
     lmshift = f->lmshift[0];
     if (lmshift > 4)
         lmshift = 4; // no bugging out with legacy lighting
-    subdiv = 255 << lmshift;
 
     // legacy engines support 18*18 max blocks (at 1:16 scale).
     // the 18*18 limit can be relaxed in certain engines, and doing so will generally give a performance boost.
-    if (subdiv >= options.dxSubdivide)
-        subdiv = options.dxSubdivide;
+    subdiv = min(options.subdivide.value(), 255 << lmshift);
 
     //      subdiv += 8;
 
     // floating point precision from clipping means we should err on the low side
     // the bsp is possibly going to be used in both engines that support scaling and those that do not. this means we
-    // always over-estimate by 16 rathern than 1<<lmscale
+    // always over-estimate by 16 rather than 1<<lmscale
 
     for (axis = 0; axis < 2; axis++) {
         while (1) {
@@ -101,7 +93,7 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
             // split it
             plane.normal = tmp;
             v = qv::normalizeInPlace(plane.normal);
-            
+
             // ericw -- reverted this, was causing https://github.com/ericwa/ericw-tools/issues/160
             //            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this
             //            should balance the load slightly */
@@ -126,7 +118,7 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
     return it;
 }
 
-static void FreeNode(node_t* node)
+static void FreeNode(node_t *node)
 {
     for (face_t *f : node->facelist) {
         delete f;
@@ -134,7 +126,7 @@ static void FreeNode(node_t* node)
     delete node;
 }
 
-void FreeNodes(node_t* node)
+void FreeNodes(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF) {
         FreeNodes(node->children[0]);
@@ -337,7 +329,7 @@ FindFaceEdges
 */
 static void FindFaceEdges(mapentity_t *entity, face_t *face)
 {
-    if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
+    if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
         return;
     if (map.mtexinfos.at(face->texinfo).flags.is_hint)
         return;
@@ -378,7 +370,7 @@ EmitFaceFragment
 static void EmitFaceFragment(mapentity_t *entity, face_t *face, face_fragment_t *fragment)
 {
     int i;
-    
+
     // emit a region
     Q_assert(!fragment->outputnumber.has_value());
     fragment->outputnumber = map.bsp.dfaces.size();
@@ -398,7 +390,8 @@ static void EmitFaceFragment(mapentity_t *entity, face_t *face, face_fragment_t 
 
     // emit surfedges
     out.firstedge = static_cast<int32_t>(map.bsp.dsurfedges.size());
-    std::copy(fragment->edges.cbegin(), fragment->edges.cbegin() + fragment->w.size(), std::back_inserter(map.bsp.dsurfedges));
+    std::copy(fragment->edges.cbegin(), fragment->edges.cbegin() + fragment->w.size(),
+        std::back_inserter(map.bsp.dsurfedges));
     fragment->edges.clear();
 
     out.numedges = static_cast<int32_t>(map.bsp.dsurfedges.size()) - out.firstedge;
@@ -411,7 +404,7 @@ EmitFace
 */
 static void EmitFace(mapentity_t *entity, face_t *face)
 {
-    if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
+    if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
         return;
     if (map.mtexinfos.at(face->texinfo).flags.is_hint)
         return;
@@ -450,7 +443,7 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
 
 static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t &vertexesCount)
 {
-    if (!options.includeSkip && map.mtexinfos.at(f->texinfo).flags.is_skip)
+    if (!options.includeskip.value() && map.mtexinfos.at(f->texinfo).flags.is_skip)
         return;
     if (map.mtexinfos.at(f->texinfo).flags.is_hint)
         return;

@@ -38,7 +38,6 @@ struct wedge_t
     wvert_t head; /* linked list of verticies on this edge */
 };
 
-
 static int numwedges, numwverts;
 static int tjuncs;
 static int tjuncfaces;
@@ -303,7 +302,7 @@ restart:
 
         w.resize(w.size() - (neww.size() - 2));
 
-        face->fragments.push_back(face_fragment_t { std::move(neww) });
+        face->fragments.push_back(face_fragment_t{std::move(neww)});
     } while (1);
 }
 
@@ -320,7 +319,7 @@ static void FixFaceEdges(face_t *face)
     wvert_t *v;
     vec_t t1, t2;
 
-    for (i = 0; i < face->w.size(); ) {
+    for (i = 0; i < face->w.size();) {
         j = (i + 1) % face->w.size();
 
         edge = FindEdge(face->w[i], face->w[j], t1, t2);
@@ -339,7 +338,7 @@ static void FixFaceEdges(face_t *face)
 
             face->w.resize(face->w.size() + 1);
 
-            std::copy_backward(face->w.begin() + j, face->w.end() - 1, face->w.end());  
+            std::copy_backward(face->w.begin() + j, face->w.end() - 1, face->w.end());
 
             face->w[j] = edge->origin + (edge->dir * v->t);
 

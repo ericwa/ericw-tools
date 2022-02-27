@@ -69,9 +69,9 @@ private:
 
 public:
     face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
-        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals),
-          m_plane(Face_Plane(bsp, face).vec4()), m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)),
-          m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)), m_neighbours(NeighbouringFaces_new(bsp, face))
+        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_plane(Face_Plane(bsp, face).vec4()),
+          m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)), m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
+          m_neighbours(NeighbouringFaces_new(bsp, face))
     {
     }
 

@@ -261,7 +261,7 @@ const face_normal_t &GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f,
     // handle degenerate faces
     const auto it = vertex_normals.find(f);
     if (it == vertex_normals.end()) {
-        static const face_normal_t empty {};
+        static const face_normal_t empty{};
         return empty;
     }
     const auto &face_normals_vec = it->second;
@@ -398,11 +398,7 @@ static int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
 
 inline bool isDegenerate(const qvec3f &a, const qvec3f &b, const qvec3f &c)
 {
-    float lengths[] = {
-        qv::distance(a, b),
-        qv::distance(b, c),
-        qv::distance(c, a)
-    };
+    float lengths[] = {qv::distance(a, b), qv::distance(b, c), qv::distance(c, a)};
 
     for (size_t i = 0; i < 3; i++) {
         if (lengths[i] == lengths[(i + 1) % 3] + lengths[(i + 2) % 3]) {
@@ -580,7 +576,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 const int prev_vert_num = Face_VertexAtIndex(bsp, f2, ((j - 1) + f2->numedges) % f2->numedges);
                 const int curr_vert_num = Face_VertexAtIndex(bsp, f2, j);
                 const int next_vert_num = Face_VertexAtIndex(bsp, f2, (j + 1) % f2->numedges);
-                
+
                 const qvec3f &prev_vert_pos = Vertex_GetPos(bsp, prev_vert_num);
                 const qvec3f &curr_vert_pos = Vertex_GetPos(bsp, curr_vert_num);
                 const qvec3f &next_vert_pos = Vertex_GetPos(bsp, next_vert_num);
@@ -615,22 +611,23 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                          bsp->dvertexes[vertIndex].point[1],
                          bsp->dvertexes[vertIndex].point[2]);
 #endif
-                vertNormal = { f_norm, std::get<0>(tangents), std::get<1>(tangents) };
+                vertNormal = {f_norm, std::get<0>(tangents), std::get<1>(tangents)};
             } else {
-                vertNormal = { qv::normalize(vertNormal.normal), qv::normalize(vertNormal.tangent), qv::normalize(vertNormal.bitangent) };
+                vertNormal = {qv::normalize(vertNormal.normal), qv::normalize(vertNormal.tangent),
+                    qv::normalize(vertNormal.bitangent)};
             }
-            
+
             // FIXME: why
             if (std::isnan(vertNormal.tangent[0])) {
                 vertNormal.tangent = std::get<0>(tangents);
                 if (std::isnan(vertNormal.tangent[0])) {
-                    vertNormal.tangent = { 0, 0, 0 };
+                    vertNormal.tangent = {0, 0, 0};
                 }
             }
             if (std::isnan(vertNormal.bitangent[0])) {
                 vertNormal.bitangent = std::get<1>(tangents);
                 if (std::isnan(vertNormal.bitangent[0])) {
-                    vertNormal.bitangent = { 0, 0, 0 };
+                    vertNormal.bitangent = {0, 0, 0};
                 }
             }
         }

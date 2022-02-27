@@ -43,15 +43,14 @@ public:
     using value_type = T;
 
     inline qvec() = default;
-    
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-value"
 #endif
     template<typename... Args,
         typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
-    constexpr qvec(Args... a) :
-        v({})
+    constexpr qvec(Args... a) : v({})
     {
         constexpr size_t count = sizeof...(Args);
 
@@ -187,7 +186,7 @@ public:
 
         return v;
     }
-    
+
     template<typename F>
     [[nodiscard]] inline auto operator*(const qvec<F, N> &scale) const
     {
@@ -199,7 +198,7 @@ public:
 
         return v;
     }
-    
+
     template<typename S>
     [[nodiscard]] inline auto operator/(const S &scale) const
     {
@@ -211,7 +210,7 @@ public:
 
         return v;
     }
-    
+
     template<typename F>
     [[nodiscard]] inline auto operator/(const qvec<F, N> &scale) const
     {
@@ -284,9 +283,7 @@ public:
     constexpr auto cend() const { return v.cend(); }
 
     // for Google Test
-    friend std::ostream &operator<<(std::ostream &os, const qvec &v) {
-        return os << fmt::format("{}", v);
-    }
+    friend std::ostream &operator<<(std::ostream &os, const qvec &v) { return os << fmt::format("{}", v); }
 };
 
 // Fmt support
@@ -310,7 +307,8 @@ namespace qv
 template<class T, class T2>
 [[nodiscard]] constexpr auto cross(const qvec<T, 3> &v1, const qvec<T2, 3> &v2)
 {
-    return qvec<decltype(T() * T2() - T() * T2()), 3> { v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0] };
+    return qvec<decltype(T() * T2() - T() * T2()), 3>{
+        v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]};
 }
 
 template<typename T, typename U, typename L = std::common_type_t<typename T::value_type, typename U::value_type>>
@@ -542,7 +540,8 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
     return poly_centroid;
 }
 
-template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_type, typename F = typename T::value_type>
+template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_type,
+    typename F = typename T::value_type>
 [[nodiscard]] inline F PolyArea(Iter begin, Iter end)
 {
     if ((end - begin) < 3)
@@ -562,7 +561,8 @@ template<typename Iter, typename T = typename std::iterator_traits<Iter>::value_
 }
 
 template<typename T>
-[[nodiscard]] inline qvec<T, 3> Barycentric_FromPoint(const qvec<T, 3> &p, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
+[[nodiscard]] inline qvec<T, 3> Barycentric_FromPoint(
+    const qvec<T, 3> &p, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
 {
     const auto v0 = t1 - t0;
     const auto v1 = t2 - t0;
@@ -595,7 +595,8 @@ template<typename T>
 
 /// Evaluates the given barycentric coord for the given triangle
 template<typename T>
-[[nodiscard]] constexpr qvec<T, 3> Barycentric_ToPoint(const qvec<T, 3> &bary, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
+[[nodiscard]] constexpr qvec<T, 3> Barycentric_ToPoint(
+    const qvec<T, 3> &bary, const qvec<T, 3> &t0, const qvec<T, 3> &t1, const qvec<T, 3> &t2)
 {
     return (t0 * bary[0]) + (t1 * bary[1]) + (t2 * bary[2]);
 }
@@ -616,9 +617,49 @@ template<typename T>
             break;
         }
     }
-    
+
     return normal;
 }
+
+template<typename T>
+inline qvec<T, 3> vec_from_mangle(const qvec<T, 3> &m)
+{
+    const qvec<T, 3> mRadians = m * static_cast<T>(Q_PI / 180.0);
+    const qmat3x3d rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
+    return {rotations * qvec3d(1, 0, 0)};
+}
+
+template<typename T>
+inline qvec<T, 3> mangle_from_vec(const qvec<T, 3> &v)
+{
+    static constexpr qvec<T, 3> up(0, 0, 1);
+    static constexpr qvec<T, 3> east(1, 0, 0);
+    static constexpr qvec<T, 3> north(0, 1, 0);
+
+    // get rotation about Z axis
+    T x = qv::dot(east, v);
+    T y = qv::dot(north, v);
+    T theta = atan2(y, x);
+
+    // get angle away from Z axis
+    T cosangleFromUp = qv::dot(up, v);
+    cosangleFromUp = ::min(::max(static_cast<T>(-1.0), cosangleFromUp), static_cast<T>(1.0));
+    T radiansFromUp = acosf(cosangleFromUp);
+
+    return qvec<T, 3>{theta, -(radiansFromUp - Q_PI / 2.0), 0} * static_cast<T>(180.0 / Q_PI);
+}
+
+/* detect colors with components in 0-1 and scale them to 0-255 */
+template<typename T>
+constexpr qvec<T, 3> normalize_color_format(const qvec<T, 3> &color)
+{
+    if (color[0] >= 0 && color[0] <= 1 && color[1] >= 0 && color[1] <= 1 && color[2] >= 0 && color[2] <= 1) {
+        return color * 255;
+    }
+
+    return color;
+}
+
 }; // namespace qv
 
 using qvec2f = qvec<float, 2>;
@@ -649,7 +690,9 @@ public:
 
     // convert from plane of a different type
     template<typename T2>
-    constexpr qplane3(const qplane3<T2> &plane) : qplane3(plane.normal, static_cast<T2>(plane.dist)) { }
+    constexpr qplane3(const qplane3<T2> &plane) : qplane3(plane.normal, static_cast<T2>(plane.dist))
+    {
+    }
 
 private:
     auto as_tuple() const { return std::tie(normal, dist); }
@@ -665,10 +708,7 @@ public:
 
     [[nodiscard]] inline T distAbove(const qvec<T, 3> &pt) const { return qv::dot(pt, normal) - dist; }
 
-    [[nodiscard]] constexpr const qvec<T, 4> vec4() const
-    {
-        return qvec<T, 4>(normal[0], normal[1], normal[2], dist);
-    }
+    [[nodiscard]] constexpr const qvec<T, 4> vec4() const { return qvec<T, 4>(normal[0], normal[1], normal[2], dist); }
 
     [[nodiscard]] constexpr qplane3 operator-() const { return {-normal, -dist}; }
 
@@ -680,10 +720,7 @@ public:
     }
 
     // stream support
-    auto stream_data()
-    {
-        return std::tie(normal, dist);
-    }
+    auto stream_data() { return std::tie(normal, dist); }
 };
 
 using qplane3f = qplane3<float>;
@@ -692,12 +729,12 @@ using qplane3d = qplane3<double>;
 namespace qv
 {
 template<typename T>
-[[nodiscard]] bool epsilonEqual(const qplane3<T> &p1, const qplane3<T> &p2, T normalEpsilon = NORMAL_EPSILON, T distEpsilon = DIST_EPSILON)
+[[nodiscard]] bool epsilonEqual(
+    const qplane3<T> &p1, const qplane3<T> &p2, T normalEpsilon = NORMAL_EPSILON, T distEpsilon = DIST_EPSILON)
 {
-    return epsilonEqual(p1.normal, p2.normal, normalEpsilon) &&
-           epsilonEqual(p1.dist, p2.dist, distEpsilon);
+    return epsilonEqual(p1.normal, p2.normal, normalEpsilon) && epsilonEqual(p1.dist, p2.dist, distEpsilon);
 }
-}
+} // namespace qv
 
 /**
  * Row x Col matrix of T.
@@ -749,7 +786,7 @@ public:
         assert(list.size() == NRow * NCol);
         std::copy(list.begin(), list.end(), m_values.begin());
     }
-    
+
     // Sort support
     [[nodiscard]] constexpr bool operator<(const qmat &other) const { return m_values < other.m_values; }
     [[nodiscard]] constexpr bool operator<=(const qmat &other) const { return m_values <= other.m_values; }
@@ -1074,12 +1111,11 @@ template<typename T>
 struct twosided
 {
     T front, back;
-    
+
     // 0 is front, 1 is back
     constexpr T &operator[](const int32_t &i)
     {
-        switch (i)
-        {
+        switch (i) {
             case 0: return front;
             case 1: return back;
         }
@@ -1089,8 +1125,7 @@ struct twosided
     // 0 is front, 1 is back
     constexpr const T &operator[](const int32_t &i) const
     {
-        switch (i)
-        {
+        switch (i) {
             case 0: return front;
             case 1: return back;
         }
@@ -1101,13 +1136,13 @@ struct twosided
     // iterator support
     T *begin() { return &front; }
     T *end() { return (&back) + 1; }
-    
+
     const T *begin() const { return &front; }
     const T *end() const { return (&back) + 1; }
 
     // swap the front and back values
     constexpr void swap() { std::swap(front, back); }
-    
+
     // equality checks
     constexpr bool operator==(const twosided &other) const { return front == other.front && back == other.back; }
     constexpr bool operator!=(const twosided &other) const { return !(*this == other); }

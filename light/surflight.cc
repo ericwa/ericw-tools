@@ -48,7 +48,7 @@ int total_surflight_points = 0;
 struct make_surface_lights_args_t
 {
     const mbsp_t *bsp;
-    const globalconfig_t *cfg;
+    const settings::worldspawn_keys *cfg;
 };
 
 struct save_winding_points_args_t
@@ -66,7 +66,7 @@ static void SaveWindingCenterFn(winding_t &w, void *userinfo)
 static void *MakeSurfaceLightsThread(void *arg)
 {
     const mbsp_t *bsp = static_cast<make_surface_lights_args_t *>(arg)->bsp;
-    const globalconfig_t &cfg = *static_cast<make_surface_lights_args_t *>(arg)->cfg;
+    const settings::worldspawn_keys &cfg = *static_cast<make_surface_lights_args_t *>(arg)->cfg;
 
     while (true) {
         const int i = GetThreadWork();
@@ -108,7 +108,7 @@ static void *MakeSurfaceLightsThread(void *arg)
         save_winding_points_args_t args{};
         args.points = &points;
 
-        winding.dice(cfg.surflightsubdivision.floatValue(), SaveWindingCenterFn, &args);
+        winding.dice(cfg.surflightsubdivision.value(), SaveWindingCenterFn, &args);
         total_surflight_points += points.size();
 
         // Get texture color
@@ -122,7 +122,7 @@ static void *MakeSurfaceLightsThread(void *arg)
             //        There are other more complex variants we could handle documented in the link above.
             // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
             if (cfg.sky_surface.isChanged()) {
-                texturecolor = cfg.sky_surface.vec3Value();
+                texturecolor = cfg.sky_surface.value();
             }
         }
 
@@ -156,7 +156,7 @@ static void *MakeSurfaceLightsThread(void *arg)
         // Init bbox...
         l.bounds = qvec3d(0);
 
-        if (!novisapprox)
+        if (!options.novisapprox.value())
             l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
 
         // Store light...
@@ -192,7 +192,7 @@ const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 }
 
 void // Quake 2 surface lights
-MakeSurfaceLights(const globalconfig_t &cfg, const mbsp_t *bsp)
+MakeSurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
     LogPrint("--- MakeSurfaceLights ---\n");
 

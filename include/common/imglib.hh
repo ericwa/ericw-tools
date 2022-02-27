@@ -27,42 +27,42 @@ See file, 'COPYING', for details.
 
 namespace img
 {
-    extern std::vector<qvec3b> palette;
+extern std::vector<qvec3b> palette;
 
-    // Palette
-    void init_palette(const gamedef_t *game);
+// Palette
+void init_palette(const gamedef_t *game);
 
-    struct texture_meta
-    {
-        std::string name;
-        uint32_t width, height;
+struct texture_meta
+{
+    std::string name;
+    uint32_t width, height;
 
-        // This member is only set before insertion into the table
-        // and not calculated by individual load functions.
-        qvec3b averageColor;
+    // This member is only set before insertion into the table
+    // and not calculated by individual load functions.
+    qvec3b averageColor;
 
-        // Q2/WAL only
-        surfflags_t flags;
-        contentflags_t contents;
-        int32_t value;
-        std::string animation;
-    };
-
-    struct texture
-    {
-        texture_meta meta { };
-        std::vector<qvec4b> pixels;
-    };
-
-    extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
-
-    qvec3b calculate_average(const std::vector<qvec4b> &pixels);
-
-    const texture *find(const std::string &str);
-
-    // Load wal
-    std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool metaOnly);
-
-    // Pull in texture data from the BSP into the textures map
-    void load_textures(const mbsp_t *bsp);
+    // Q2/WAL only
+    surfflags_t flags;
+    contentflags_t contents;
+    int32_t value;
+    std::string animation;
 };
+
+struct texture
+{
+    texture_meta meta{};
+    std::vector<qvec4b> pixels;
+};
+
+extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
+
+qvec3b calculate_average(const std::vector<qvec4b> &pixels);
+
+const texture *find(const std::string &str);
+
+// Load wal
+std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool metaOnly);
+
+// Pull in texture data from the BSP into the textures map
+void load_textures(const mbsp_t *bsp);
+}; // namespace img

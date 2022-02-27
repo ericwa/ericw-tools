@@ -49,8 +49,7 @@ static json serialize_bspxbrushlist(const bspxentry_t &lump)
 
     p >> endianness<std::endian::little>;
 
-    while (true)
-    {
+    while (true) {
         bspxbrushes_permodel src_model;
         p >= src_model;
 
@@ -115,16 +114,10 @@ static json serialize_bspxbrushlist(const bspxentry_t &lump)
 template<typename T>
 static void Base64EncodeTo(const uint8_t *data, size_t in_len, T p)
 {
-    static constexpr char sEncodingTable[] = {
-        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
-        'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
-        'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
-        'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
-        'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
-        'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
-        'w', 'x', 'y', 'z', '0', '1', '2', '3',
-        '4', '5', '6', '7', '8', '9', '+', '/'
-    };
+    static constexpr char sEncodingTable[] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+        'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k',
+        'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3', '4', '5', '6',
+        '7', '8', '9', '+', '/'};
 
     if (in_len == 0)
         return;
@@ -149,8 +142,8 @@ static void Base64EncodeTo(const uint8_t *data, size_t in_len, T p)
 
     for (i = 0; i < in_len - 2; i += 3) {
         *p++ = sEncodingTable[(data[i] >> 2) & 0x3F];
-        *p++ = sEncodingTable[((data[i] & 0x3) << 4) | ((int) (data[i + 1] & 0xF0) >> 4)];
-        *p++ = sEncodingTable[((data[i + 1] & 0xF) << 2) | ((int) (data[i + 2] & 0xC0) >> 6)];
+        *p++ = sEncodingTable[((data[i] & 0x3) << 4) | ((int)(data[i + 1] & 0xF0) >> 4)];
+        *p++ = sEncodingTable[((data[i + 1] & 0xF) << 2) | ((int)(data[i + 2] & 0xC0) >> 6)];
         *p++ = sEncodingTable[data[i + 2] & 0x3F];
     }
     if (i < in_len) {
@@ -158,9 +151,8 @@ static void Base64EncodeTo(const uint8_t *data, size_t in_len, T p)
         if (i == (in_len - 1)) {
             *p++ = sEncodingTable[((data[i] & 0x3) << 4)];
             *p++ = '=';
-        }
-        else {
-            *p++ = sEncodingTable[((data[i] & 0x3) << 4) | ((int) (data[i + 1] & 0xF0) >> 4)];
+        } else {
+            *p++ = sEncodingTable[((data[i] & 0x3) << 4) | ((int)(data[i + 1] & 0xF0) >> 4)];
             *p++ = sEncodingTable[((data[i + 1] & 0xF) << 2)];
         }
         *p++ = '=';
@@ -176,49 +168,49 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
 
     s << endianness<std::endian::little>;
 
-    s <= std::array<char, 2> { 'B', 'M' };
-    s <= (int32_t) bufsize;
-    s <= (int16_t) 0;
-    s <= (int16_t) 0;
-    s <= (int32_t) 122;
-    s <= (int32_t) 108;
+    s <= std::array<char, 2>{'B', 'M'};
+    s <= (int32_t)bufsize;
+    s <= (int16_t)0;
+    s <= (int16_t)0;
+    s <= (int32_t)122;
+    s <= (int32_t)108;
     s <= width;
     s <= height;
-    s <= (int16_t) 1;
-    s <= (int16_t) 32;
-    s <= (int32_t) 3;
-    s <= (int32_t) (width * height * 4);
-    s <= (int32_t) 2835;
-    s <= (int32_t) 2835;
-    s <= (int32_t) 0;
-    s <= (int32_t) 0;
-    s <= (int32_t) 0x00FF0000;
-    s <= (int32_t) 0x0000FF00;
-    s <= (int32_t) 0x000000FF;
-    s <= (int32_t) 0xFF000000;
-    s <= std::array<char, 4> { 'W', 'i', 'n', ' ' };
-    s <= std::array<char, 36> { };
-    s <= (int32_t) 0;
-    s <= (int32_t) 0;
-    s <= (int32_t) 0;
+    s <= (int16_t)1;
+    s <= (int16_t)32;
+    s <= (int32_t)3;
+    s <= (int32_t)(width * height * 4);
+    s <= (int32_t)2835;
+    s <= (int32_t)2835;
+    s <= (int32_t)0;
+    s <= (int32_t)0;
+    s <= (int32_t)0x00FF0000;
+    s <= (int32_t)0x0000FF00;
+    s <= (int32_t)0x000000FF;
+    s <= (int32_t)0xFF000000;
+    s <= std::array<char, 4>{'W', 'i', 'n', ' '};
+    s <= std::array<char, 36>{};
+    s <= (int32_t)0;
+    s <= (int32_t)0;
+    s <= (int32_t)0;
 
     for (size_t y = 0; y < height; y++) {
         for (size_t x = 0; x < width; x++) {
             const uint8_t *pixel = image + ((height - y - 1) * width) + x;
 
             if (*pixel == 255) {
-                s <= (int32_t) 0;
+                s <= (int32_t)0;
             } else {
                 const qvec3b &color = palette[*pixel];
                 s <= color[2];
                 s <= color[1];
                 s <= color[0];
-                s <= (uint8_t) 255;
+                s <= (uint8_t)255;
             }
         }
     }
 
-    std::string str { "data:image/bmp;base64," };
+    std::string str{"data:image/bmp;base64,"};
 
     Base64EncodeTo(buf, bufsize, std::back_inserter(str));
 
@@ -251,7 +243,7 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
 
         if (bsp.dvis.bit_offsets.size()) {
             json &visdata = (j.emplace("visdata", json::object())).first.value();
-            
+
             json &pvs = (visdata.emplace("pvs", json::array())).first.value();
             json &phs = (visdata.emplace("pvs", json::array())).first.value();
 
@@ -450,7 +442,8 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
 
             json &mips = tex["mips"] = json::array();
 
-            const qvec3b *pal = src_tex.palette.empty() ? bspdata.loadversion->game->get_default_palette().data() : src_tex.palette.data();
+            const qvec3b *pal = src_tex.palette.empty() ? bspdata.loadversion->game->get_default_palette().data()
+                                                        : src_tex.palette.data();
 
             for (size_t i = 0; i < src_tex.data.size(); i++) {
                 mips.emplace_back(serialize_image(pal, src_tex.data[i].get(), src_tex.width >> i, src_tex.height >> i));
@@ -478,6 +471,42 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
 }
 
+#include "common/polylib.hh"
+#include "common/bsputils.hh"
+
+static void PrintBSPTextureUsage(const mbsp_t &bsp)
+{
+    std::unordered_map<std::string, vec_t> areas;
+
+    for (auto &face : bsp.dfaces) {
+        const char *name = Face_TextureName(&bsp, &face);
+
+        if (!name || !*name) {
+            continue;
+        }
+
+        auto points = GLM_FacePoints(&bsp, &face);
+        polylib::winding_t w(points.begin(), points.end());
+        vec_t area = w.area();
+
+        areas[name] += area;
+    }
+
+    std::vector<std::tuple<std::string, vec_t>> areasVec;
+
+    for (auto &area : areas) {
+        areasVec.push_back(std::make_tuple(area.first, area.second));
+    }
+
+    std::sort(areasVec.begin(), areasVec.end(), [](auto &l, auto &r) { return std::get<1>(r) < std::get<1>(l); });
+
+    printf("\n");
+
+    for (auto &area : areasVec) {
+        fmt::print("{},{:.0f}\n", std::get<0>(area), std::get<1>(area));
+    }
+}
+
 int main(int argc, char **argv)
 {
     printf("---- bspinfo / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
@@ -498,11 +527,13 @@ int main(int argc, char **argv)
 
         PrintBSPFileSizes(&bsp);
 
-        //WriteBSPFile(std::filesystem::path(source).replace_extension("bsp.rewrite"), &bsp);
+        // WriteBSPFile(std::filesystem::path(source).replace_extension("bsp.rewrite"), &bsp);
 
         ConvertBSPFormat(&bsp, &bspver_generic);
 
         serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), std::filesystem::path(source).replace_extension("bsp.json"));
+
+        PrintBSPTextureUsage(std::get<mbsp_t>(bsp.bsp));
 
         printf("---------------------\n");
 

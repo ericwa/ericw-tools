@@ -84,7 +84,10 @@ struct gamedef_generic_t : public gamedef_t
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
 
-    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const { throw std::bad_cast(); };
+    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const
+    {
+        throw std::bad_cast();
+    };
 
     void init_filesystem(const fs::path &) const { throw std::bad_cast(); };
 
@@ -94,10 +97,7 @@ struct gamedef_generic_t : public gamedef_t
 template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
-    gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir)
-    {
-        this->id = ID;
-    }
+    gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir) { this->id = ID; }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
 
@@ -205,7 +205,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents.native == CONTENTS_EMPTY;
     }
 
-    bool contents_are_solid(const contentflags_t& contents) const 
+    bool contents_are_solid(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -213,7 +213,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents.native == CONTENTS_SOLID;
     }
 
-    bool contents_are_sky(const contentflags_t& contents) const
+    bool contents_are_sky(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -273,7 +273,7 @@ struct gamedef_q1_like_t : public gamedef_t
 
         return hulls;
     }
-    
+
     contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &) const
     {
         // check for strong content indicators
@@ -307,38 +307,37 @@ struct gamedef_q1_like_t : public gamedef_t
 
     const std::vector<qvec3b> &get_default_palette() const
     {
-        static constexpr std::initializer_list<uint8_t> palette_bytes
-        {
-            0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63, 63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139,
-            139, 139, 155, 155, 155, 171, 171, 171, 187, 187, 187, 203, 203, 203, 219, 219, 219, 235, 235, 235, 15, 11, 7,
-            23, 15, 11, 31, 23, 11, 39, 27, 15, 47, 35, 19, 55, 43, 23, 63, 47, 23, 75, 55, 27, 83, 59, 27, 91, 67, 31, 99,
-            75, 31, 107, 83, 31, 115, 87, 31, 123, 95, 35, 131, 103, 35, 143, 111, 35, 11, 11, 15, 19, 19, 27, 27, 27, 39,
-            39, 39, 51, 47, 47, 63, 55, 55, 75, 63, 63, 87, 71, 71, 103, 79, 79, 115, 91, 91, 127, 99, 99, 139, 107, 107,
-            151, 115, 115, 163, 123, 123, 175, 131, 131, 187, 139, 139, 203, 0, 0, 0, 7, 7, 0, 11, 11, 0, 19, 19, 0, 27, 27,
-            0, 35, 35, 0, 43, 43, 7, 47, 47, 7, 55, 55, 7, 63, 63, 7, 71, 71, 7, 75, 75, 11, 83, 83, 11, 91, 91, 11, 99, 99,
-            11, 107, 107, 15, 7, 0, 0, 15, 0, 0, 23, 0, 0, 31, 0, 0, 39, 0, 0, 47, 0, 0, 55, 0, 0, 63, 0, 0, 71, 0, 0, 79,
-            0, 0, 87, 0, 0, 95, 0, 0, 103, 0, 0, 111, 0, 0, 119, 0, 0, 127, 0, 0, 19, 19, 0, 27, 27, 0, 35, 35, 0, 47, 43,
-            0, 55, 47, 0, 67, 55, 0, 75, 59, 7, 87, 67, 7, 95, 71, 7, 107, 75, 11, 119, 83, 15, 131, 87, 19, 139, 91, 19,
-            151, 95, 27, 163, 99, 31, 175, 103, 35, 35, 19, 7, 47, 23, 11, 59, 31, 15, 75, 35, 19, 87, 43, 23, 99, 47, 31,
-            115, 55, 35, 127, 59, 43, 143, 67, 51, 159, 79, 51, 175, 99, 47, 191, 119, 47, 207, 143, 43, 223, 171, 39, 239,
-            203, 31, 255, 243, 27, 11, 7, 0, 27, 19, 0, 43, 35, 15, 55, 43, 19, 71, 51, 27, 83, 55, 35, 99, 63, 43, 111, 71,
-            51, 127, 83, 63, 139, 95, 71, 155, 107, 83, 167, 123, 95, 183, 135, 107, 195, 147, 123, 211, 163, 139, 227, 179,
-            151, 171, 139, 163, 159, 127, 151, 147, 115, 135, 139, 103, 123, 127, 91, 111, 119, 83, 99, 107, 75, 87, 95, 63,
-            75, 87, 55, 67, 75, 47, 55, 67, 39, 47, 55, 31, 35, 43, 23, 27, 35, 19, 19, 23, 11, 11, 15, 7, 7, 187, 115, 159,
-            175, 107, 143, 163, 95, 131, 151, 87, 119, 139, 79, 107, 127, 75, 95, 115, 67, 83, 107, 59, 75, 95, 51, 63, 83,
-            43, 55, 71, 35, 43, 59, 31, 35, 47, 23, 27, 35, 19, 19, 23, 11, 11, 15, 7, 7, 219, 195, 187, 203, 179, 167, 191,
-            163, 155, 175, 151, 139, 163, 135, 123, 151, 123, 111, 135, 111, 95, 123, 99, 83, 107, 87, 71, 95, 75, 59, 83,
-            63, 51, 67, 51, 39, 55, 43, 31, 39, 31, 23, 27, 19, 15, 15, 11, 7, 111, 131, 123, 103, 123, 111, 95, 115, 103,
-            87, 107, 95, 79, 99, 87, 71, 91, 79, 63, 83, 71, 55, 75, 63, 47, 67, 55, 43, 59, 47, 35, 51, 39, 31, 43, 31, 23,
-            35, 23, 15, 27, 19, 11, 19, 11, 7, 11, 7, 255, 243, 27, 239, 223, 23, 219, 203, 19, 203, 183, 15, 187, 167, 15,
-            171, 151, 11, 155, 131, 7, 139, 115, 7, 123, 99, 7, 107, 83, 0, 91, 71, 0, 75, 55, 0, 59, 43, 0, 43, 31, 0, 27,
-            15, 0, 11, 7, 0, 0, 0, 255, 11, 11, 239, 19, 19, 223, 27, 27, 207, 35, 35, 191, 43, 43, 175, 47, 47, 159, 47,
-            47, 143, 47, 47, 127, 47, 47, 111, 47, 47, 95, 43, 43, 79, 35, 35, 63, 27, 27, 47, 19, 19, 31, 11, 11, 15, 43,
-            0, 0, 59, 0, 0, 75, 7, 0, 95, 7, 0, 111, 15, 0, 127, 23, 7, 147, 31, 7, 163, 39, 11, 183, 51, 15, 195, 75, 27,
-            207, 99, 43, 219, 127, 59, 227, 151, 79, 231, 171, 95, 239, 191, 119, 247, 211, 139, 167, 123, 59, 183, 155, 55,
-            199, 195, 55, 231, 227, 87, 127, 191, 255, 171, 231, 255, 215, 255, 255, 103, 0, 0, 139, 0, 0, 179, 0, 0, 215,
-            0, 0, 255, 0, 0, 255, 243, 147, 255, 247, 199, 255, 255, 255, 159, 91, 83
-        };
+        static constexpr std::initializer_list<uint8_t> palette_bytes{0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63,
+            63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139, 139, 139, 155, 155, 155, 171, 171, 171,
+            187, 187, 187, 203, 203, 203, 219, 219, 219, 235, 235, 235, 15, 11, 7, 23, 15, 11, 31, 23, 11, 39, 27, 15,
+            47, 35, 19, 55, 43, 23, 63, 47, 23, 75, 55, 27, 83, 59, 27, 91, 67, 31, 99, 75, 31, 107, 83, 31, 115, 87,
+            31, 123, 95, 35, 131, 103, 35, 143, 111, 35, 11, 11, 15, 19, 19, 27, 27, 27, 39, 39, 39, 51, 47, 47, 63, 55,
+            55, 75, 63, 63, 87, 71, 71, 103, 79, 79, 115, 91, 91, 127, 99, 99, 139, 107, 107, 151, 115, 115, 163, 123,
+            123, 175, 131, 131, 187, 139, 139, 203, 0, 0, 0, 7, 7, 0, 11, 11, 0, 19, 19, 0, 27, 27, 0, 35, 35, 0, 43,
+            43, 7, 47, 47, 7, 55, 55, 7, 63, 63, 7, 71, 71, 7, 75, 75, 11, 83, 83, 11, 91, 91, 11, 99, 99, 11, 107, 107,
+            15, 7, 0, 0, 15, 0, 0, 23, 0, 0, 31, 0, 0, 39, 0, 0, 47, 0, 0, 55, 0, 0, 63, 0, 0, 71, 0, 0, 79, 0, 0, 87,
+            0, 0, 95, 0, 0, 103, 0, 0, 111, 0, 0, 119, 0, 0, 127, 0, 0, 19, 19, 0, 27, 27, 0, 35, 35, 0, 47, 43, 0, 55,
+            47, 0, 67, 55, 0, 75, 59, 7, 87, 67, 7, 95, 71, 7, 107, 75, 11, 119, 83, 15, 131, 87, 19, 139, 91, 19, 151,
+            95, 27, 163, 99, 31, 175, 103, 35, 35, 19, 7, 47, 23, 11, 59, 31, 15, 75, 35, 19, 87, 43, 23, 99, 47, 31,
+            115, 55, 35, 127, 59, 43, 143, 67, 51, 159, 79, 51, 175, 99, 47, 191, 119, 47, 207, 143, 43, 223, 171, 39,
+            239, 203, 31, 255, 243, 27, 11, 7, 0, 27, 19, 0, 43, 35, 15, 55, 43, 19, 71, 51, 27, 83, 55, 35, 99, 63, 43,
+            111, 71, 51, 127, 83, 63, 139, 95, 71, 155, 107, 83, 167, 123, 95, 183, 135, 107, 195, 147, 123, 211, 163,
+            139, 227, 179, 151, 171, 139, 163, 159, 127, 151, 147, 115, 135, 139, 103, 123, 127, 91, 111, 119, 83, 99,
+            107, 75, 87, 95, 63, 75, 87, 55, 67, 75, 47, 55, 67, 39, 47, 55, 31, 35, 43, 23, 27, 35, 19, 19, 23, 11, 11,
+            15, 7, 7, 187, 115, 159, 175, 107, 143, 163, 95, 131, 151, 87, 119, 139, 79, 107, 127, 75, 95, 115, 67, 83,
+            107, 59, 75, 95, 51, 63, 83, 43, 55, 71, 35, 43, 59, 31, 35, 47, 23, 27, 35, 19, 19, 23, 11, 11, 15, 7, 7,
+            219, 195, 187, 203, 179, 167, 191, 163, 155, 175, 151, 139, 163, 135, 123, 151, 123, 111, 135, 111, 95, 123,
+            99, 83, 107, 87, 71, 95, 75, 59, 83, 63, 51, 67, 51, 39, 55, 43, 31, 39, 31, 23, 27, 19, 15, 15, 11, 7, 111,
+            131, 123, 103, 123, 111, 95, 115, 103, 87, 107, 95, 79, 99, 87, 71, 91, 79, 63, 83, 71, 55, 75, 63, 47, 67,
+            55, 43, 59, 47, 35, 51, 39, 31, 43, 31, 23, 35, 23, 15, 27, 19, 11, 19, 11, 7, 11, 7, 255, 243, 27, 239,
+            223, 23, 219, 203, 19, 203, 183, 15, 187, 167, 15, 171, 151, 11, 155, 131, 7, 139, 115, 7, 123, 99, 7, 107,
+            83, 0, 91, 71, 0, 75, 55, 0, 59, 43, 0, 43, 31, 0, 27, 15, 0, 11, 7, 0, 0, 0, 255, 11, 11, 239, 19, 19, 223,
+            27, 27, 207, 35, 35, 191, 43, 43, 175, 47, 47, 159, 47, 47, 143, 47, 47, 127, 47, 47, 111, 47, 47, 95, 43,
+            43, 79, 35, 35, 63, 27, 27, 47, 19, 19, 31, 11, 11, 15, 43, 0, 0, 59, 0, 0, 75, 7, 0, 95, 7, 0, 111, 15, 0,
+            127, 23, 7, 147, 31, 7, 163, 39, 11, 183, 51, 15, 195, 75, 27, 207, 99, 43, 219, 127, 59, 227, 151, 79, 231,
+            171, 95, 239, 191, 119, 247, 211, 139, 167, 123, 59, 183, 155, 55, 199, 195, 55, 231, 227, 87, 127, 191,
+            255, 171, 231, 255, 215, 255, 255, 103, 0, 0, 139, 0, 0, 179, 0, 0, 215, 0, 0, 255, 0, 0, 255, 243, 147,
+            255, 247, 199, 255, 255, 255, 159, 91, 83};
 
         static const auto palette = make_palette(palette_bytes);
         return palette;
@@ -361,40 +360,38 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 
     const std::vector<qvec3b> &get_default_palette() const
     {
-        static constexpr std::initializer_list<uint8_t> palette_bytes
-        {
-            0, 0, 0, 0, 0, 0, 8, 8, 8, 16, 16, 16, 24, 24, 24, 32, 32, 32, 40, 40, 40, 48, 48, 48, 56, 56, 56, 64, 64, 64, 72,
-            72, 72, 80, 80, 80, 84, 84, 84, 88, 88, 88, 96, 96, 96, 104, 104, 104, 112, 112, 112, 120, 120, 120, 128, 128,
-            128, 136, 136, 136, 148, 148, 148, 156, 156, 156, 168, 168, 168, 180, 180, 180, 184, 184, 184, 196, 196, 196,
-            204, 204, 204, 212, 212, 212, 224, 224, 224, 232, 232, 232, 240, 240, 240, 252, 252, 252, 8, 8, 12, 16, 16, 20,
-            24, 24, 28, 28, 32, 36, 36, 36, 44, 44, 44, 52, 48, 52, 60, 56, 56, 68, 64, 64, 72, 76, 76, 88, 92, 92, 104,
-            108, 112, 128, 128, 132, 152, 152, 156, 176, 168, 172, 196, 188, 196, 220, 32, 24, 20, 40, 32, 28, 48, 36, 32,
-            52, 44, 40, 60, 52, 44, 68, 56, 52, 76, 64, 56, 84, 72, 64, 92, 76, 72, 100, 84, 76, 108, 92, 84, 112, 96, 88,
-            120, 104, 96, 128, 112, 100, 136, 116, 108, 144, 124, 112, 20, 24, 20, 28, 32, 28, 32, 36, 32, 40, 44, 40, 44,
-            48, 44, 48, 56, 48, 56, 64, 56, 64, 68, 64, 68, 76, 68, 84, 92, 84, 104, 112, 104, 120, 128, 120, 140, 148, 136,
-            156, 164, 152, 172, 180, 168, 188, 196, 184, 48, 32, 8, 60, 40, 8, 72, 48, 16, 84, 56, 20, 92, 64, 28, 100, 72,
-            36, 108, 80, 44, 120, 92, 52, 136, 104, 60, 148, 116, 72, 160, 128, 84, 168, 136, 92, 180, 144, 100, 188, 152,
-            108, 196, 160, 116, 204, 168, 124, 16, 20, 16, 20, 28, 20, 24, 32, 24, 28, 36, 28, 32, 44, 32, 36, 48, 36, 40,
-            56, 40, 44, 60, 44, 48, 68, 48, 52, 76, 52, 60, 84, 60, 68, 92, 64, 76, 100, 72, 84, 108, 76, 92, 116, 84, 100,
-            128, 92, 24, 12, 8, 32, 16, 8, 40, 20, 8, 52, 24, 12, 60, 28, 12, 68, 32, 12, 76, 36, 16, 84, 44, 20, 92, 48,
-            24, 100, 56, 28, 112, 64, 32, 120, 72, 36, 128, 80, 44, 144, 92, 56, 168, 112, 72, 192, 132, 88, 24, 4, 4, 36,
-            4, 4, 48, 0, 0, 60, 0, 0, 68, 0, 0, 80, 0, 0, 88, 0, 0, 100, 0, 0, 112, 0, 0, 132, 0, 0, 152, 0, 0, 172, 0, 0,
-            192, 0, 0, 212, 0, 0, 232, 0, 0, 252, 0, 0, 16, 12, 32, 28, 20, 48, 32, 28, 56, 40, 36, 68, 52, 44, 80, 60, 56,
-            92, 68, 64, 104, 80, 72, 116, 88, 84, 128, 100, 96, 140, 108, 108, 152, 120, 116, 164, 132, 132, 176, 144, 144,
-            188, 156, 156, 200, 172, 172, 212, 36, 20, 4, 52, 24, 4, 68, 32, 4, 80, 40, 0, 100, 48, 4, 124, 60, 4, 140, 72,
-            4, 156, 88, 8, 172, 100, 8, 188, 116, 12, 204, 128, 12, 220, 144, 16, 236, 160, 20, 252, 184, 56, 248, 200, 80,
-            248, 220, 120, 20, 16, 4, 28, 24, 8, 36, 32, 8, 44, 40, 12, 52, 48, 16, 56, 56, 16, 64, 64, 20, 68, 72, 24, 72,
-            80, 28, 80, 92, 32, 84, 104, 40, 88, 116, 44, 92, 128, 52, 92, 140, 52, 92, 148, 56, 96, 160, 64, 60, 16, 16,
-            72, 24, 24, 84, 28, 28, 100, 36, 36, 112, 44, 44, 124, 52, 48, 140, 64, 56, 152, 76, 64, 44, 20, 8, 56, 28, 12,
-            72, 32, 16, 84, 40, 20, 96, 44, 28, 112, 52, 32, 124, 56, 40, 140, 64, 48, 24, 20, 16, 36, 28, 20, 44, 36, 28,
-            56, 44, 32, 64, 52, 36, 72, 60, 44, 80, 68, 48, 92, 76, 52, 100, 84, 60, 112, 92, 68, 120, 100, 72, 132, 112,
-            80, 144, 120, 88, 152, 128, 96, 160, 136, 104, 168, 148, 112, 36, 24, 12, 44, 32, 16, 52, 40, 20, 60, 44, 20,
-            72, 52, 24, 80, 60, 28, 88, 68, 28, 104, 76, 32, 148, 96, 56, 160, 108, 64, 172, 116, 72, 180, 124, 80, 192,
-            132, 88, 204, 140, 92, 216, 156, 108, 60, 20, 92, 100, 36, 116, 168, 72, 164, 204, 108, 192, 4, 84, 4, 4, 132,
-            4, 0, 180, 0, 0, 216, 0, 4, 4, 144, 16, 68, 204, 36, 132, 224, 88, 168, 232, 216, 4, 4, 244, 72, 0, 252, 128, 0,
-            252, 172, 24, 252, 252, 252
-        };
-        
+        static constexpr std::initializer_list<uint8_t> palette_bytes{0, 0, 0, 0, 0, 0, 8, 8, 8, 16, 16, 16, 24, 24, 24,
+            32, 32, 32, 40, 40, 40, 48, 48, 48, 56, 56, 56, 64, 64, 64, 72, 72, 72, 80, 80, 80, 84, 84, 84, 88, 88, 88,
+            96, 96, 96, 104, 104, 104, 112, 112, 112, 120, 120, 120, 128, 128, 128, 136, 136, 136, 148, 148, 148, 156,
+            156, 156, 168, 168, 168, 180, 180, 180, 184, 184, 184, 196, 196, 196, 204, 204, 204, 212, 212, 212, 224,
+            224, 224, 232, 232, 232, 240, 240, 240, 252, 252, 252, 8, 8, 12, 16, 16, 20, 24, 24, 28, 28, 32, 36, 36, 36,
+            44, 44, 44, 52, 48, 52, 60, 56, 56, 68, 64, 64, 72, 76, 76, 88, 92, 92, 104, 108, 112, 128, 128, 132, 152,
+            152, 156, 176, 168, 172, 196, 188, 196, 220, 32, 24, 20, 40, 32, 28, 48, 36, 32, 52, 44, 40, 60, 52, 44, 68,
+            56, 52, 76, 64, 56, 84, 72, 64, 92, 76, 72, 100, 84, 76, 108, 92, 84, 112, 96, 88, 120, 104, 96, 128, 112,
+            100, 136, 116, 108, 144, 124, 112, 20, 24, 20, 28, 32, 28, 32, 36, 32, 40, 44, 40, 44, 48, 44, 48, 56, 48,
+            56, 64, 56, 64, 68, 64, 68, 76, 68, 84, 92, 84, 104, 112, 104, 120, 128, 120, 140, 148, 136, 156, 164, 152,
+            172, 180, 168, 188, 196, 184, 48, 32, 8, 60, 40, 8, 72, 48, 16, 84, 56, 20, 92, 64, 28, 100, 72, 36, 108,
+            80, 44, 120, 92, 52, 136, 104, 60, 148, 116, 72, 160, 128, 84, 168, 136, 92, 180, 144, 100, 188, 152, 108,
+            196, 160, 116, 204, 168, 124, 16, 20, 16, 20, 28, 20, 24, 32, 24, 28, 36, 28, 32, 44, 32, 36, 48, 36, 40,
+            56, 40, 44, 60, 44, 48, 68, 48, 52, 76, 52, 60, 84, 60, 68, 92, 64, 76, 100, 72, 84, 108, 76, 92, 116, 84,
+            100, 128, 92, 24, 12, 8, 32, 16, 8, 40, 20, 8, 52, 24, 12, 60, 28, 12, 68, 32, 12, 76, 36, 16, 84, 44, 20,
+            92, 48, 24, 100, 56, 28, 112, 64, 32, 120, 72, 36, 128, 80, 44, 144, 92, 56, 168, 112, 72, 192, 132, 88, 24,
+            4, 4, 36, 4, 4, 48, 0, 0, 60, 0, 0, 68, 0, 0, 80, 0, 0, 88, 0, 0, 100, 0, 0, 112, 0, 0, 132, 0, 0, 152, 0,
+            0, 172, 0, 0, 192, 0, 0, 212, 0, 0, 232, 0, 0, 252, 0, 0, 16, 12, 32, 28, 20, 48, 32, 28, 56, 40, 36, 68,
+            52, 44, 80, 60, 56, 92, 68, 64, 104, 80, 72, 116, 88, 84, 128, 100, 96, 140, 108, 108, 152, 120, 116, 164,
+            132, 132, 176, 144, 144, 188, 156, 156, 200, 172, 172, 212, 36, 20, 4, 52, 24, 4, 68, 32, 4, 80, 40, 0, 100,
+            48, 4, 124, 60, 4, 140, 72, 4, 156, 88, 8, 172, 100, 8, 188, 116, 12, 204, 128, 12, 220, 144, 16, 236, 160,
+            20, 252, 184, 56, 248, 200, 80, 248, 220, 120, 20, 16, 4, 28, 24, 8, 36, 32, 8, 44, 40, 12, 52, 48, 16, 56,
+            56, 16, 64, 64, 20, 68, 72, 24, 72, 80, 28, 80, 92, 32, 84, 104, 40, 88, 116, 44, 92, 128, 52, 92, 140, 52,
+            92, 148, 56, 96, 160, 64, 60, 16, 16, 72, 24, 24, 84, 28, 28, 100, 36, 36, 112, 44, 44, 124, 52, 48, 140,
+            64, 56, 152, 76, 64, 44, 20, 8, 56, 28, 12, 72, 32, 16, 84, 40, 20, 96, 44, 28, 112, 52, 32, 124, 56, 40,
+            140, 64, 48, 24, 20, 16, 36, 28, 20, 44, 36, 28, 56, 44, 32, 64, 52, 36, 72, 60, 44, 80, 68, 48, 92, 76, 52,
+            100, 84, 60, 112, 92, 68, 120, 100, 72, 132, 112, 80, 144, 120, 88, 152, 128, 96, 160, 136, 104, 168, 148,
+            112, 36, 24, 12, 44, 32, 16, 52, 40, 20, 60, 44, 20, 72, 52, 24, 80, 60, 28, 88, 68, 28, 104, 76, 32, 148,
+            96, 56, 160, 108, 64, 172, 116, 72, 180, 124, 80, 192, 132, 88, 204, 140, 92, 216, 156, 108, 60, 20, 92,
+            100, 36, 116, 168, 72, 164, 204, 108, 192, 4, 84, 4, 4, 132, 4, 0, 180, 0, 0, 216, 0, 4, 4, 144, 16, 68,
+            204, 36, 132, 224, 88, 168, 232, 216, 4, 4, 244, 72, 0, 252, 128, 0, 252, 172, 24, 252, 252, 252};
+
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
@@ -463,7 +460,8 @@ struct gamedef_q2_t : public gamedef_t
     int32_t get_content_type(const contentflags_t &contents) const
     {
         return contents.native & (((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) |
-               (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
+                                     (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
+                                         Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
     }
 
     int32_t contents_priority(const contentflags_t &contents) const
@@ -514,7 +512,8 @@ struct gamedef_q2_t : public gamedef_t
             return false;
 
         if (contents.native & Q2_CONTENTS_AREAPORTAL)
-            return false; // HACK: needs to return false in order for LinkConvexFaces to assign Q2_CONTENTS_AREAPORTAL to the leaf
+            return false; // HACK: needs to return false in order for LinkConvexFaces to assign Q2_CONTENTS_AREAPORTAL
+                          // to the leaf
 
         return !(contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
     }
@@ -523,7 +522,7 @@ struct gamedef_q2_t : public gamedef_t
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
-        
+
         return contents.native & Q2_CONTENTS_SOLID;
     }
 
@@ -533,7 +532,7 @@ struct gamedef_q2_t : public gamedef_t
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
-        
+
         if (contents.native & Q2_CONTENTS_AREAPORTAL)
             return true; // HACK: treat areaportal as a liquid for the purposes of the CSG code
 
@@ -568,7 +567,7 @@ struct gamedef_q2_t : public gamedef_t
     bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
     {
         int32_t c0 = contents0.native, c1 = contents1.native;
-        
+
         // can't see through solid
         if ((c0 | c1) & Q2_CONTENTS_SOLID)
             return false;
@@ -615,14 +614,15 @@ struct gamedef_q2_t : public gamedef_t
         static constexpr std::initializer_list<aabb3d> hulls = {};
         return hulls;
     }
-    
-    contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const
+
+    contentflags_t face_get_contents(
+        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const
     {
         // hints and skips are never detail, and have no content
         if (flags.native & Q2_SURF_HINT) {
-            return { 0, CFLAGS_HINT };
+            return {0, CFLAGS_HINT};
         } else if (flags.native & Q2_SURF_SKIP) {
-            return { 0, 0 };
+            return {0, 0};
         }
 
         contentflags_t surf_contents = contents;
@@ -647,7 +647,7 @@ struct gamedef_q2_t : public gamedef_t
             surf_contents.extended |= CFLAGS_DETAIL_FENCE;
         } else if (surf_contents.native & (Q2_CONTENTS_MIST | Q2_CONTENTS_AUX)) {
             surf_contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
-        // if we used the DETAIL contents flag, copy over DETAIL
+            // if we used the DETAIL contents flag, copy over DETAIL
         } else if (surf_contents.native & Q2_CONTENTS_DETAIL) {
             surf_contents.extended |= CFLAGS_DETAIL;
         }
@@ -711,10 +711,11 @@ public:
             gamedir = fs::weakly_canonical(source).parent_path();
 
             if (!string_iequals(gamedir.filename().generic_string(), "maps")) {
-                FLogPrint("WARNING: '{}' is not directly inside '{}'. This may throw off automated path detection!\n", source, MAPS_FOLDER);
+                FLogPrint("WARNING: '{}' is not directly inside '{}'. This may throw off automated path detection!\n",
+                    source, MAPS_FOLDER);
                 return;
             }
-            
+
             // C:/Quake/ID1/maps -> C:/Quake/ID1
             gamedir = gamedir.parent_path();
         }
@@ -738,38 +739,37 @@ public:
 
     const std::vector<qvec3b> &get_default_palette() const
     {
-        static constexpr std::initializer_list<uint8_t> palette_bytes
-        {
-            0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63, 63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139,
-            139, 139, 155, 155, 155, 171, 171, 171, 187, 187, 187, 203, 203, 203, 219, 219, 219, 235, 235, 235, 99, 75, 35,
-            91, 67, 31, 83, 63, 31, 79, 59, 27, 71, 55, 27, 63, 47, 23, 59, 43, 23, 51, 39, 19, 47, 35, 19, 43, 31, 19, 39,
-            27, 15, 35, 23, 15, 27, 19, 11, 23, 15, 11, 19, 15, 7, 15, 11, 7, 95, 95, 111, 91, 91, 103, 91, 83, 95, 87, 79,
-            91, 83, 75, 83, 79, 71, 75, 71, 63, 67, 63, 59, 59, 59, 55, 55, 51, 47, 47, 47, 43, 43, 39, 39, 39, 35, 35, 35,
-            27, 27, 27, 23, 23, 23, 19, 19, 19, 143, 119, 83, 123, 99, 67, 115, 91, 59, 103, 79, 47, 207, 151, 75, 167, 123,
-            59, 139, 103, 47, 111, 83, 39, 235, 159, 39, 203, 139, 35, 175, 119, 31, 147, 99, 27, 119, 79, 23, 91, 59, 15,
-            63, 39, 11, 35, 23, 7, 167, 59, 43, 159, 47, 35, 151, 43, 27, 139, 39, 19, 127, 31, 15, 115, 23, 11, 103, 23, 7,
-            87, 19, 0, 75, 15, 0, 67, 15, 0, 59, 15, 0, 51, 11, 0, 43, 11, 0, 35, 11, 0, 27, 7, 0, 19, 7, 0, 123, 95, 75,
-            115, 87, 67, 107, 83, 63, 103, 79, 59, 95, 71, 55, 87, 67, 51, 83, 63, 47, 75, 55, 43, 67, 51, 39, 63, 47, 35,
-            55, 39, 27, 47, 35, 23, 39, 27, 19, 31, 23, 15, 23, 15, 11, 15, 11, 7, 111, 59, 23, 95, 55, 23, 83, 47, 23, 67,
-            43, 23, 55, 35, 19, 39, 27, 15, 27, 19, 11, 15, 11, 7, 179, 91, 79, 191, 123, 111, 203, 155, 147, 215, 187, 183,
-            203, 215, 223, 179, 199, 211, 159, 183, 195, 135, 167, 183, 115, 151, 167, 91, 135, 155, 71, 119, 139, 47, 103,
-            127, 23, 83, 111, 19, 75, 103, 15, 67, 91, 11, 63, 83, 7, 55, 75, 7, 47, 63, 7, 39, 51, 0, 31, 43, 0, 23, 31, 0,
-            15, 19, 0, 7, 11, 0, 0, 0, 139, 87, 87, 131, 79, 79, 123, 71, 71, 115, 67, 67, 107, 59, 59, 99, 51, 51, 91, 47,
-            47, 87, 43, 43, 75, 35, 35, 63, 31, 31, 51, 27, 27, 43, 19, 19, 31, 15, 15, 19, 11, 11, 11, 7, 7, 0, 0, 0, 151,
-            159, 123, 143, 151, 115, 135, 139, 107, 127, 131, 99, 119, 123, 95, 115, 115, 87, 107, 107, 79, 99, 99, 71, 91,
-            91, 67, 79, 79, 59, 67, 67, 51, 55, 55, 43, 47, 47, 35, 35, 35, 27, 23, 23, 19, 15, 15, 11, 159, 75, 63, 147,
-            67, 55, 139, 59, 47, 127, 55, 39, 119, 47, 35, 107, 43, 27, 99, 35, 23, 87, 31, 19, 79, 27, 15, 67, 23, 11, 55,
-            19, 11, 43, 15, 7, 31, 11, 7, 23, 7, 0, 11, 0, 0, 0, 0, 0, 119, 123, 207, 111, 115, 195, 103, 107, 183, 99, 99,
-            167, 91, 91, 155, 83, 87, 143, 75, 79, 127, 71, 71, 115, 63, 63, 103, 55, 55, 87, 47, 47, 75, 39, 39, 63, 35,
-            31, 47, 27, 23, 35, 19, 15, 23, 11, 7, 7, 155, 171, 123, 143, 159, 111, 135, 151, 99, 123, 139, 87, 115, 131,
-            75, 103, 119, 67, 95, 111, 59, 87, 103, 51, 75, 91, 39, 63, 79, 27, 55, 67, 19, 47, 59, 11, 35, 47, 7, 27, 35,
-            0, 19, 23, 0, 11, 15, 0, 0, 255, 0, 35, 231, 15, 63, 211, 27, 83, 187, 39, 95, 167, 47, 95, 143, 51, 95, 123,
-            51, 255, 255, 255, 255, 255, 211, 255, 255, 167, 255, 255, 127, 255, 255, 83, 255, 255, 39, 255, 235, 31, 255,
-            215, 23, 255, 191, 15, 255, 171, 7, 255, 147, 0, 239, 127, 0, 227, 107, 0, 211, 87, 0, 199, 71, 0, 183, 59, 0,
-            171, 43, 0, 155, 31, 0, 143, 23, 0, 127, 15, 0, 115, 7, 0, 95, 0, 0, 71, 0, 0, 47, 0, 0, 27, 0, 0, 239, 0, 0,
-            55, 55, 255, 255, 0, 0, 0, 0, 255, 43, 43, 35, 27, 27, 23, 19, 19, 15, 235, 151, 127, 195, 115, 83, 159, 87, 51,
-            123, 63, 27, 235, 211, 199, 199, 171, 155, 167, 139, 119, 135, 107, 87, 159, 91, 83
-        };
+        static constexpr std::initializer_list<uint8_t> palette_bytes{0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63,
+            63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139, 139, 139, 155, 155, 155, 171, 171, 171,
+            187, 187, 187, 203, 203, 203, 219, 219, 219, 235, 235, 235, 99, 75, 35, 91, 67, 31, 83, 63, 31, 79, 59, 27,
+            71, 55, 27, 63, 47, 23, 59, 43, 23, 51, 39, 19, 47, 35, 19, 43, 31, 19, 39, 27, 15, 35, 23, 15, 27, 19, 11,
+            23, 15, 11, 19, 15, 7, 15, 11, 7, 95, 95, 111, 91, 91, 103, 91, 83, 95, 87, 79, 91, 83, 75, 83, 79, 71, 75,
+            71, 63, 67, 63, 59, 59, 59, 55, 55, 51, 47, 47, 47, 43, 43, 39, 39, 39, 35, 35, 35, 27, 27, 27, 23, 23, 23,
+            19, 19, 19, 143, 119, 83, 123, 99, 67, 115, 91, 59, 103, 79, 47, 207, 151, 75, 167, 123, 59, 139, 103, 47,
+            111, 83, 39, 235, 159, 39, 203, 139, 35, 175, 119, 31, 147, 99, 27, 119, 79, 23, 91, 59, 15, 63, 39, 11, 35,
+            23, 7, 167, 59, 43, 159, 47, 35, 151, 43, 27, 139, 39, 19, 127, 31, 15, 115, 23, 11, 103, 23, 7, 87, 19, 0,
+            75, 15, 0, 67, 15, 0, 59, 15, 0, 51, 11, 0, 43, 11, 0, 35, 11, 0, 27, 7, 0, 19, 7, 0, 123, 95, 75, 115, 87,
+            67, 107, 83, 63, 103, 79, 59, 95, 71, 55, 87, 67, 51, 83, 63, 47, 75, 55, 43, 67, 51, 39, 63, 47, 35, 55,
+            39, 27, 47, 35, 23, 39, 27, 19, 31, 23, 15, 23, 15, 11, 15, 11, 7, 111, 59, 23, 95, 55, 23, 83, 47, 23, 67,
+            43, 23, 55, 35, 19, 39, 27, 15, 27, 19, 11, 15, 11, 7, 179, 91, 79, 191, 123, 111, 203, 155, 147, 215, 187,
+            183, 203, 215, 223, 179, 199, 211, 159, 183, 195, 135, 167, 183, 115, 151, 167, 91, 135, 155, 71, 119, 139,
+            47, 103, 127, 23, 83, 111, 19, 75, 103, 15, 67, 91, 11, 63, 83, 7, 55, 75, 7, 47, 63, 7, 39, 51, 0, 31, 43,
+            0, 23, 31, 0, 15, 19, 0, 7, 11, 0, 0, 0, 139, 87, 87, 131, 79, 79, 123, 71, 71, 115, 67, 67, 107, 59, 59,
+            99, 51, 51, 91, 47, 47, 87, 43, 43, 75, 35, 35, 63, 31, 31, 51, 27, 27, 43, 19, 19, 31, 15, 15, 19, 11, 11,
+            11, 7, 7, 0, 0, 0, 151, 159, 123, 143, 151, 115, 135, 139, 107, 127, 131, 99, 119, 123, 95, 115, 115, 87,
+            107, 107, 79, 99, 99, 71, 91, 91, 67, 79, 79, 59, 67, 67, 51, 55, 55, 43, 47, 47, 35, 35, 35, 27, 23, 23,
+            19, 15, 15, 11, 159, 75, 63, 147, 67, 55, 139, 59, 47, 127, 55, 39, 119, 47, 35, 107, 43, 27, 99, 35, 23,
+            87, 31, 19, 79, 27, 15, 67, 23, 11, 55, 19, 11, 43, 15, 7, 31, 11, 7, 23, 7, 0, 11, 0, 0, 0, 0, 0, 119, 123,
+            207, 111, 115, 195, 103, 107, 183, 99, 99, 167, 91, 91, 155, 83, 87, 143, 75, 79, 127, 71, 71, 115, 63, 63,
+            103, 55, 55, 87, 47, 47, 75, 39, 39, 63, 35, 31, 47, 27, 23, 35, 19, 15, 23, 11, 7, 7, 155, 171, 123, 143,
+            159, 111, 135, 151, 99, 123, 139, 87, 115, 131, 75, 103, 119, 67, 95, 111, 59, 87, 103, 51, 75, 91, 39, 63,
+            79, 27, 55, 67, 19, 47, 59, 11, 35, 47, 7, 27, 35, 0, 19, 23, 0, 11, 15, 0, 0, 255, 0, 35, 231, 15, 63, 211,
+            27, 83, 187, 39, 95, 167, 47, 95, 143, 51, 95, 123, 51, 255, 255, 255, 255, 255, 211, 255, 255, 167, 255,
+            255, 127, 255, 255, 83, 255, 255, 39, 255, 235, 31, 255, 215, 23, 255, 191, 15, 255, 171, 7, 255, 147, 0,
+            239, 127, 0, 227, 107, 0, 211, 87, 0, 199, 71, 0, 183, 59, 0, 171, 43, 0, 155, 31, 0, 143, 23, 0, 127, 15,
+            0, 115, 7, 0, 95, 0, 0, 71, 0, 0, 47, 0, 0, 27, 0, 0, 239, 0, 0, 55, 55, 255, 255, 0, 0, 0, 0, 255, 43, 43,
+            35, 27, 27, 23, 19, 19, 15, 235, 151, 127, 195, 115, 83, 159, 87, 51, 123, 63, 27, 235, 211, 199, 199, 171,
+            155, 167, 139, 119, 135, 107, 87, 159, 91, 83};
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
@@ -783,157 +783,168 @@ static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
 
 const bspversion_t bspver_generic{NO_VERSION, NO_VERSION, "mbsp", "generic BSP", {}, &gamedef_generic};
-const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp29_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp29_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp29_dclipnode_t)},
-    {"leafs", sizeof(bsp29_dleaf_t)},
-    {"marksurfaces", sizeof(uint16_t)},
-    {"edges", sizeof(bsp29_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelq1_t)},
-}, &gamedef_q1, &bspver_bsp2};
-const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelq1_t)},
-}, &gamedef_q1};
-const bspversion_t bspver_bsp2rmq{
-    BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2rmq_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2rmq_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelq1_t)},
-}, &gamedef_q1};
+const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"texture", sizeof(uint8_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(bsp29_dnode_t)},
+        {"texinfos", sizeof(texinfo_t)},
+        {"faces", sizeof(bsp29_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"clipnodes", sizeof(bsp29_dclipnode_t)},
+        {"leafs", sizeof(bsp29_dleaf_t)},
+        {"marksurfaces", sizeof(uint16_t)},
+        {"edges", sizeof(bsp29_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(dmodelq1_t)},
+    },
+    &gamedef_q1, &bspver_bsp2};
+const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"texture", sizeof(uint8_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(bsp2_dnode_t)},
+        {"texinfos", sizeof(texinfo_t)},
+        {"faces", sizeof(bsp2_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"clipnodes", sizeof(bsp2_dclipnode_t)},
+        {"leafs", sizeof(bsp2_dleaf_t)},
+        {"marksurfaces", sizeof(uint32_t)},
+        {"edges", sizeof(bsp2_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(dmodelq1_t)},
+    },
+    &gamedef_q1};
+const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"texture", sizeof(uint8_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(bsp2rmq_dnode_t)},
+        {"texinfos", sizeof(texinfo_t)},
+        {"faces", sizeof(bsp2_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"clipnodes", sizeof(bsp2_dclipnode_t)},
+        {"leafs", sizeof(bsp2rmq_dleaf_t)},
+        {"marksurfaces", sizeof(uint32_t)},
+        {"edges", sizeof(bsp2_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(dmodelq1_t)},
+    },
+    &gamedef_q1};
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
-const bspversion_t bspver_h2{
-    BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp29_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp29_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp29_dclipnode_t)},
-    {"leafs", sizeof(bsp29_dleaf_t)},
-    {"marksurfaces", sizeof(uint16_t)},
-    {"edges", sizeof(bsp29_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelh2_t)},
-}, &gamedef_h2, &bspver_h2bsp2};
-const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelh2_t)},
-}, &gamedef_h2};
-const bspversion_t bspver_h2bsp2rmq{
-    BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"texture", sizeof(uint8_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(bsp2rmq_dnode_t)},
-    {"texinfos", sizeof(texinfo_t)},
-    {"faces", sizeof(bsp2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"clipnodes", sizeof(bsp2_dclipnode_t)},
-    {"leafs", sizeof(bsp2rmq_dleaf_t)},
-    {"marksurfaces", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(dmodelh2_t)},
-}, &gamedef_h2};
+const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"texture", sizeof(uint8_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(bsp29_dnode_t)},
+        {"texinfos", sizeof(texinfo_t)},
+        {"faces", sizeof(bsp29_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"clipnodes", sizeof(bsp29_dclipnode_t)},
+        {"leafs", sizeof(bsp29_dleaf_t)},
+        {"marksurfaces", sizeof(uint16_t)},
+        {"edges", sizeof(bsp29_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(dmodelh2_t)},
+    },
+    &gamedef_h2, &bspver_h2bsp2};
+const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"texture", sizeof(uint8_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(bsp2_dnode_t)},
+        {"texinfos", sizeof(texinfo_t)},
+        {"faces", sizeof(bsp2_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"clipnodes", sizeof(bsp2_dclipnode_t)},
+        {"leafs", sizeof(bsp2_dleaf_t)},
+        {"marksurfaces", sizeof(uint32_t)},
+        {"edges", sizeof(bsp2_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(dmodelh2_t)},
+    },
+    &gamedef_h2};
+const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"texture", sizeof(uint8_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(bsp2rmq_dnode_t)},
+        {"texinfos", sizeof(texinfo_t)},
+        {"faces", sizeof(bsp2_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"clipnodes", sizeof(bsp2_dclipnode_t)},
+        {"leafs", sizeof(bsp2rmq_dleaf_t)},
+        {"marksurfaces", sizeof(uint32_t)},
+        {"edges", sizeof(bsp2_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(dmodelh2_t)},
+    },
+    &gamedef_h2};
 const bspversion_t bspver_hl{BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
-const bspversion_t bspver_q2{
-    Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(q2_dnode_t)},
-    {"texinfos", sizeof(q2_texinfo_t)},
-    {"faces", sizeof(q2_dface_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"leafs", sizeof(q2_dleaf_t)},
-    {"leaffaces", sizeof(uint16_t)},
-    {"leafbrushes", sizeof(uint16_t)},
-    {"edges", sizeof(bsp29_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(q2_dmodel_t)},
-    {"brushes", sizeof(dbrush_t)},
-    {"brushsides", sizeof(q2_dbrushside_t)},
-    {"pop", sizeof(uint8_t)},
-    {"areas", sizeof(darea_t)},
-    {"areaportals", sizeof(dareaportal_t)},
-}, &gamedef_q2, &bspver_qbism};
-const bspversion_t bspver_qbism{
-    Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II Qbism BSP", {
-    {"entities", sizeof(char)},
-    {"planes", sizeof(dplane_t)},
-    {"vertexes", sizeof(qvec3f)},
-    {"visibility", sizeof(uint8_t)},
-    {"nodes", sizeof(q2_dnode_qbism_t)},
-    {"texinfos", sizeof(q2_texinfo_t)},
-    {"faces", sizeof(q2_dface_qbism_t)},
-    {"lighting", sizeof(uint8_t)},
-    {"leafs", sizeof(q2_dleaf_qbism_t)},
-    {"leaffaces", sizeof(uint32_t)},
-    {"leafbrushes", sizeof(uint32_t)},
-    {"edges", sizeof(bsp2_dedge_t)},
-    {"surfedges", sizeof(int32_t)},
-    {"models", sizeof(q2_dmodel_t)},
-    {"brushes", sizeof(dbrush_t)},
-    {"brushsides", sizeof(q2_dbrushside_qbism_t)},
-    {"pop", sizeof(uint8_t)},
-    {"areas", sizeof(darea_t)},
-    {"areaportals", sizeof(dareaportal_t)},
-}, &gamedef_q2};
+const bspversion_t bspver_q2{Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(q2_dnode_t)},
+        {"texinfos", sizeof(q2_texinfo_t)},
+        {"faces", sizeof(q2_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"leafs", sizeof(q2_dleaf_t)},
+        {"leaffaces", sizeof(uint16_t)},
+        {"leafbrushes", sizeof(uint16_t)},
+        {"edges", sizeof(bsp29_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(q2_dmodel_t)},
+        {"brushes", sizeof(dbrush_t)},
+        {"brushsides", sizeof(q2_dbrushside_t)},
+        {"pop", sizeof(uint8_t)},
+        {"areas", sizeof(darea_t)},
+        {"areaportals", sizeof(dareaportal_t)},
+    },
+    &gamedef_q2, &bspver_qbism};
+const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II Qbism BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(q2_dnode_qbism_t)},
+        {"texinfos", sizeof(q2_texinfo_t)},
+        {"faces", sizeof(q2_dface_qbism_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"leafs", sizeof(q2_dleaf_qbism_t)},
+        {"leaffaces", sizeof(uint32_t)},
+        {"leafbrushes", sizeof(uint32_t)},
+        {"edges", sizeof(bsp2_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(q2_dmodel_t)},
+        {"brushes", sizeof(dbrush_t)},
+        {"brushsides", sizeof(q2_dbrushside_qbism_t)},
+        {"pop", sizeof(uint8_t)},
+        {"areas", sizeof(darea_t)},
+        {"areaportals", sizeof(dareaportal_t)},
+    },
+    &gamedef_q2};
 
 bool surfflags_t::is_valid(const gamedef_t *game) const
 {
@@ -1484,7 +1495,8 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
         bspx = (const bspx_header_t *)((const uint8_t *)file_data->data() + bspxofs);
         xlump = (const bspx_lump_t *)(bspx + 1);
         xlumps = LittleLong(bspx->numlumps);
-        if (!memcmp(&bspx->id, "BSPX", 4) && xlumps >= 0 && bspxofs + sizeof(*bspx) + sizeof(*xlump) * xlumps <= file_data->size()) {
+        if (!memcmp(&bspx->id, "BSPX", 4) && xlumps >= 0 &&
+            bspxofs + sizeof(*bspx) + sizeof(*xlump) * xlumps <= file_data->size()) {
             /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring
              * that they get written out anew*/
             while (xlumps-- > 0) {
@@ -1619,7 +1631,7 @@ private:
 public:
     inline void write_bsp(const mbsp_t &) { FError("Can't write generic BSP"); }
     inline void write_bsp(const std::monostate &) { FError("No BSP to write"); }
-    
+
     template<typename T, typename std::enable_if_t<std::is_base_of_v<q1bsp_tag_t, T>, int> = 0>
     inline void write_bsp(const T &bsp)
     {
@@ -1633,12 +1645,12 @@ public:
         write_lump(LUMP_MARKSURFACES, bsp.dmarksurfaces);
         write_lump(LUMP_SURFEDGES, bsp.dsurfedges);
         write_lump(LUMP_EDGES, bsp.dedges);
-        std::visit([this](auto&& arg) { this->write_lump(LUMP_MODELS, arg); }, bsp.dmodels);
+        std::visit([this](auto &&arg) { this->write_lump(LUMP_MODELS, arg); }, bsp.dmodels);
 
         write_lump(LUMP_LIGHTING, bsp.dlightdata);
         write_lump(LUMP_VISIBILITY, bsp.dvisdata);
         write_lump(LUMP_ENTITIES, bsp.dentdata);
-        std::visit([this](auto&& arg) { this->write_lump(LUMP_TEXTURES, arg); }, bsp.dtex);
+        std::visit([this](auto &&arg) { this->write_lump(LUMP_TEXTURES, arg); }, bsp.dtex);
     }
 
     template<typename T, typename std::enable_if_t<std::is_base_of_v<q2bsp_tag_t, T>, int> = 0>
@@ -1740,7 +1752,7 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
         bspfile.stream <= bspfile.q1header;
     }
 
-    std::visit([&bspfile](auto&& arg) { bspfile.write_bsp(arg); }, bspdata->bsp);
+    std::visit([&bspfile](auto &&arg) { bspfile.write_bsp(arg); }, bspdata->bsp);
 
     /*BSPX lumps are at a 4-byte alignment after the last of any official lump*/
     bspfile.write_bspx(*bspdata);

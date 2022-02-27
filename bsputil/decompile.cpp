@@ -44,9 +44,9 @@
 
 struct texdef_valve_t
 {
-    qmat<vec_t, 2, 3> axis { };
-    qvec2d scale { 1.0 };
-    qvec2d shift { };
+    qmat<vec_t, 2, 3> axis{};
+    qvec2d scale{1.0};
+    qvec2d shift{};
 
     constexpr texdef_valve_t() = default;
 
@@ -56,9 +56,9 @@ struct texdef_valve_t
         const size_t normalAxis = qv::indexOfLargestMagnitudeComponent(normal);
 
         if (normalAxis == 2) {
-            axis.set_row(0, qv::normalize(qv::cross(qvec3d { 0, 1, 0 }, normal)));
+            axis.set_row(0, qv::normalize(qv::cross(qvec3d{0, 1, 0}, normal)));
         } else {
-            axis.set_row(0, qv::normalize(qv::cross(qvec3d { 0, 0, 1 }, normal)));
+            axis.set_row(0, qv::normalize(qv::cross(qvec3d{0, 0, 1}, normal)));
         }
 
         axis.set_row(1, qv::normalize(qv::cross(axis.row(0), normal)));
@@ -109,7 +109,7 @@ struct planepoints : std::array<qvec3d, 3>
         qvec3d ab = at(0) - at(1);
         qvec3d cb = at(2) - at(1);
         qvec3d normal = qv::normalize(qv::cross(ab, cb));
-        return { normal, qv::dot(at(1), normal) };
+        return {normal, qv::dot(at(1), normal)};
     }
 };
 
@@ -156,12 +156,8 @@ static planepoints NormalDistanceToThreePoints(const qplane3<T> &plane)
     std::tuple<qvec3d, qvec3d> tanBitan = MakeTangentAndBitangentUnnormalized(plane.normal);
 
     qvec3d point0 = plane.normal * plane.dist;
-    
-    return {
-        point0,
-        point0 + std::get<1>(tanBitan),
-        point0 + std::get<0>(tanBitan)
-    };
+
+    return {point0, point0 + std::get<1>(tanBitan), point0 + std::get<0>(tanBitan)};
 }
 
 static planepoints WindingToThreePoints(const polylib::winding_t &winding)
@@ -174,10 +170,7 @@ struct wal_metadata_t
 {
     int32_t flags, contents, value;
 
-    auto stream_data()
-    {
-        return std::tie(flags, contents, value);
-    }
+    auto stream_data() { return std::tie(flags, contents, value); }
 };
 
 static std::unordered_map<std::string, wal_metadata_t> wals;
@@ -197,17 +190,18 @@ struct compiled_brush_t
 
         /*if (source) {
             fmt::print(stream, "// generated from brush #{}\n", static_cast<ptrdiff_t>(source - bsp->dbrushes.data()));
-            
+
             for (auto &side : sides) {
 
-                fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source - bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
+                fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source -
+        bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
             }
         }*/
 
         fmt::print(stream, "{{\n");
 
         for (auto &side : sides) {
-            planepoints p; 
+            planepoints p;
             if (side.winding && side.winding->size()) {
                 p = WindingToThreePoints(*side.winding);
             } else {
@@ -223,9 +217,10 @@ struct compiled_brush_t
                 side.valve.shift[1] -= qv::dot(brush_offset.value(), side.valve.axis.row(1));
             }
 
-            fmt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2], side.texture_name, side.valve.axis.at(0, 0), side.valve.axis.at(0, 1),
-                side.valve.axis.at(0, 2), side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2), side.valve.shift[1], 0.0,
-                side.valve.scale[0], side.valve.scale[1]);
+            fmt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2],
+                side.texture_name, side.valve.axis.at(0, 0), side.valve.axis.at(0, 1), side.valve.axis.at(0, 2),
+                side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2),
+                side.valve.shift[1], 0.0, side.valve.scale[0], side.valve.scale[1]);
 
             if (contents.native || side.flags.native || side.value) {
                 wal_metadata_t *meta = nullptr;
@@ -242,12 +237,14 @@ struct compiled_brush_t
                         stream >> endianness<std::endian::little>;
                         stream.seekg(88);
 
-                        meta = &wals.emplace(side.texture_name, wal_metadata_t {}).first->second;
+                        meta = &wals.emplace(side.texture_name, wal_metadata_t{}).first->second;
                         stream >= *meta;
                     }
                 }
 
-                if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) == (contents.native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) && meta->flags == side.flags.native && meta->value == side.value)) {
+                if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) ==
+                                     (contents.native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) &&
+                                 meta->flags == side.flags.native && meta->value == side.value)) {
                     fmt::print(stream, " {} {} {}", contents.native, side.flags.native, side.value);
                 }
             }
@@ -298,7 +295,6 @@ void RemoveRedundantPlanes(std::vector<T> &planes)
     });
     planes.erase(removed, planes.end());
 }
-
 
 // structures representing a brush
 
@@ -354,10 +350,7 @@ public:
             decomp_brush_face_t(std::move(clipped[1]), original_face));
     }
 
-    qvec3d normal() const
-    {
-        return winding->plane().normal;
-    }
+    qvec3d normal() const { return winding->plane().normal; }
 };
 
 struct leaf_decompile_task
@@ -371,12 +364,13 @@ struct leaf_decompile_task
 /**
  * Builds the initial list of faces on the node
  */
-static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(const mbsp_t *bsp, const leaf_decompile_task &task, const decomp_plane_t &plane)
+static std::vector<decomp_brush_face_t> BuildDecompFacesOnPlane(
+    const mbsp_t *bsp, const leaf_decompile_task &task, const decomp_plane_t &plane)
 {
     if (plane.node == nullptr) {
         return {};
     }
-    
+
     std::vector<decomp_brush_face_t> result;
 
     const bsp2_dnode_t *node = plane.node;
@@ -424,9 +418,7 @@ struct decomp_brush_side_t
     /**
      * Construct a new side with no faces on it, with the given outward-facing plane
      */
-    decomp_brush_side_t(const qvec3d &normal, double distance) : faces(), plane({ { normal, distance } })
-    {
-    }
+    decomp_brush_side_t(const qvec3d &normal, double distance) : faces(), plane({{normal, distance}}) { }
 
     /**
      * Returns the { front, back } after the clip.
@@ -447,7 +439,8 @@ struct decomp_brush_side_t
             }
         }
 
-        return {decomp_brush_side_t(std::move(frontfaces), this->plane), decomp_brush_side_t(std::move(backfaces), this->plane)};
+        return {decomp_brush_side_t(std::move(frontfaces), this->plane),
+            decomp_brush_side_t(std::move(backfaces), this->plane)};
     }
 };
 
@@ -488,8 +481,8 @@ struct decomp_brush_t
                 for (auto &point : face.winding.value()) {
                     // check against all planes
                     for (auto &otherSide : sides) {
-                        float distance = GLM_DistAbovePlane(
-                            qvec4f(otherSide.plane.normal, otherSide.plane.dist), point);
+                        float distance =
+                            GLM_DistAbovePlane(qvec4f(otherSide.plane.normal, otherSide.plane.dist), point);
                         if (distance > 0.1) {
                             return false;
                         }
@@ -515,7 +508,7 @@ static void DefaultSkipSide(compiled_brush_side_t &side, const mbsp_t *bsp)
     side.texture_name = DefaultSkipTexture(bsp);
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        side.flags = { Q2_SURF_NODRAW };
+        side.flags = {Q2_SURF_NODRAW};
     }
 }
 
@@ -533,7 +526,7 @@ static void DefaultTriggerSide(compiled_brush_side_t &side, const mbsp_t *bsp)
     side.texture_name = DefaultTriggerTexture(bsp);
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        side.flags = { Q2_SURF_NODRAW };
+        side.flags = {Q2_SURF_NODRAW};
     }
 }
 
@@ -580,7 +573,8 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentfla
 // some faces can be given an incorrect-but-matching texture if they
 // don't actually have a rendered face to pull in, so we're gonna
 // replace the texture here with something more appropriate.
-static void OverrideTextureForContents(compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, const contentflags_t &contents)
+static void OverrideTextureForContents(
+    compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, const contentflags_t &contents)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
 
@@ -591,7 +585,7 @@ static void OverrideTextureForContents(compiled_brush_side_t &side, const mbsp_t
                 side.texture_name = "e1u1/clip";
             }
 
-            side.flags = { Q2_SURF_NODRAW };
+            side.flags = {Q2_SURF_NODRAW};
             return;
         }
     }
@@ -605,7 +599,8 @@ static void OverrideTextureForContents(compiled_brush_side_t &side, const mbsp_t
  * @returns a brush object which has the faces from the .bsp clipped to
  * the parts that lie on the brush.
  */
-static decomp_brush_t BuildInitialBrush(const mbsp_t *bsp, const leaf_decompile_task &task, const std::vector<decomp_plane_t> &planes)
+static decomp_brush_t BuildInitialBrush(
+    const mbsp_t *bsp, const leaf_decompile_task &task, const std::vector<decomp_plane_t> &planes)
 {
     std::vector<decomp_brush_side_t> sides;
 
@@ -639,7 +634,7 @@ static decomp_brush_t BuildInitialBrush_Q2(
     for (const decomp_plane_t &plane : planes) {
         // FIXME: use a better max
         auto winding = std::make_optional(polylib::winding_t::from_plane(plane, 10e6));
-        
+
         // clip `winding` by all of the other planes, and keep the back portion
         for (const decomp_plane_t &plane2 : planes) {
             if (&plane2 == &plane)
@@ -694,14 +689,14 @@ static qvec4f SuggestSplit(const mbsp_t *bsp, const decomp_brush_side_t &side)
     assert(SideNeedsSplitting(bsp, side));
 
     size_t bestFaceCount = SIZE_MAX;
-    qvec4f bestPlane {};
+    qvec4f bestPlane{};
 
     // for all possible splits:
     for (const auto &face : side.faces) {
         for (const qvec4f &split : face.inwardFacingEdgePlanes) {
             // this is a potential splitting plane.
 
-            auto [front, back] = side.clipToPlane({ split.xyz(), split[3] });
+            auto [front, back] = side.clipToPlane({split.xyz(), split[3]});
 
             // we only consider splits that have at least 1 face on the front and back
             if (front.faces.empty()) {
@@ -722,7 +717,7 @@ static qvec4f SuggestSplit(const mbsp_t *bsp, const decomp_brush_side_t &side)
 
     // FIXME: this hits on a Q2 map. need to figure out why. works
     // fine without it though.
-    //assert(bestFaceCount != SIZE_MAX);
+    // assert(bestFaceCount != SIZE_MAX);
     return bestPlane;
 }
 
@@ -737,7 +732,7 @@ static void SplitDifferentTexturedPartsOfBrush_R(
                 return;
             }
 
-            auto [front, back] = brush.clipToPlane({ split.xyz(), split[3] });
+            auto [front, back] = brush.clipToPlane({split.xyz(), split[3]});
 
             SplitDifferentTexturedPartsOfBrush_R(bsp, front, out);
             SplitDifferentTexturedPartsOfBrush_R(bsp, back, out);
@@ -754,7 +749,7 @@ static std::vector<decomp_brush_t> SplitDifferentTexturedPartsOfBrush(const mbsp
     // Quake II maps include brushes, so we shouldn't ever run into
     // a case where a brush has faces split up beyond the brush bounds.
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        return { brush };
+        return {brush};
     }
 
     std::vector<decomp_brush_t> result;
@@ -783,12 +778,13 @@ static void DecompileLeaf(const std::vector<decomp_plane_t> &planestack, const m
     result.push_back({planestack, leaf});
 }
 
-static compiled_brush_t DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+static compiled_brush_t DecompileLeafTaskGeometryOnly(
+    const mbsp_t *bsp, const leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     compiled_brush_t brush;
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
-    brush.contents = { task.brush ? task.brush->contents : task.leaf->contents };
+    brush.contents = {task.brush ? task.brush->contents : task.leaf->contents};
 
     brush.sides.reserve(task.allPlanes.size());
 
@@ -803,12 +799,13 @@ static compiled_brush_t DecompileLeafTaskGeometryOnly(const mbsp_t *bsp, const l
     return brush;
 }
 
-static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+static compiled_brush_t DecompileLeafTask(
+    const mbsp_t *bsp, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     compiled_brush_t brush;
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
-    brush.contents = { task.brush ? task.brush->contents : task.leaf->contents };
+    brush.contents = {task.brush ? task.brush->contents : task.leaf->contents};
 
     std::vector<decomp_brush_t> finalBrushes;
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
@@ -848,9 +845,9 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
             if (brush.contents.native == 0) {
                 // hint brush
                 side.texture_name = "e1u1/hint";
-                
+
                 if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-                    side.flags = { Q2_SURF_HINT };
+                    side.flags = {Q2_SURF_HINT};
                 }
 
                 side.valve = finalSide.plane.normal;
@@ -885,7 +882,7 @@ static compiled_brush_t DecompileLeafTask(const mbsp_t *bsp, leaf_decompile_task
 
                 if (ti) {
                     side.valve = ti->vecs;
-                
+
                     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                         side.flags = ti->flags;
                         side.value = ti->value;
@@ -907,11 +904,8 @@ decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, cons
 {
     const dplane_t &dplane = *BSP_GetPlane(bsp, node->planenum);
 
-    return {
-        // flip the plane if we went down the front side, since we want the outward-facing plane
-        front ? -dplane : dplane,
-        node
-    };
+    return {// flip the plane if we went down the front side, since we want the outward-facing plane
+        front ? -dplane : dplane, node};
 }
 
 /**
@@ -961,16 +955,17 @@ static void AddMapBoundsToStack(
             }
 
             // we want outward-facing planes
-            planestack.push_back(decomp_plane_t { { normal, dist } });
+            planestack.push_back(decomp_plane_t{{normal, dist}});
         }
     }
 }
 
-static compiled_brush_t DecompileBrushTask(const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+static compiled_brush_t DecompileBrushTask(
+    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
-        decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t { { bsp->dplanes[side->planenum] } });
+        decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t{{bsp->dplanes[side->planenum]}});
         plane.source = side;
     }
 
@@ -1061,8 +1056,7 @@ static void DecompileEntity(
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             std::unordered_map<const dbrush_t *, leaf_decompile_task> brushes;
 
-            auto handle_leaf = [&brushes, bsp, model](const mleaf_t *leaf)
-            {
+            auto handle_leaf = [&brushes, bsp, model](const mleaf_t *leaf) {
                 for (size_t i = 0; i < leaf->numleafbrushes; i++) {
                     auto brush = &bsp->dbrushes[bsp->dleafbrushes[leaf->firstleafbrush + i]];
                     auto existing = brushes.find(brush);
@@ -1073,7 +1067,7 @@ static void DecompileEntity(
                         continue;
                     }
 
-                    if (existing == brushes.end() ) {
+                    if (existing == brushes.end()) {
                         auto &task = brushes[brush] = {};
                         task.model = model;
                         task.brush = brush;
@@ -1082,8 +1076,8 @@ static void DecompileEntity(
                 }
             };
 
-            std::function<void(const bsp2_dnode_t *)> handle_node = [&brushes, bsp, &handle_leaf, &handle_node](const bsp2_dnode_t *node)
-            {
+            std::function<void(const bsp2_dnode_t *)> handle_node = [&brushes, bsp, &handle_leaf, &handle_node](
+                                                                        const bsp2_dnode_t *node) {
                 for (auto &c : node->children) {
                     if (c < 0) {
                         handle_leaf(BSP_GetLeafFromNodeNum(bsp, c));
@@ -1101,7 +1095,8 @@ static void DecompileEntity(
 
             std::vector<leaf_decompile_task> brushesVector;
             brushesVector.reserve(brushes.size());
-            std::transform(brushes.begin(), brushes.end(), std::back_inserter(brushesVector), [](auto &v) { return v.second; });
+            std::transform(
+                brushes.begin(), brushes.end(), std::back_inserter(brushesVector), [](auto &v) { return v.second; });
 
             compiledBrushes.resize(brushes.size());
             size_t t = brushes.size();
@@ -1166,7 +1161,7 @@ static void DecompileEntity(
                 if (side2.texture_name == DefaultSkipTexture(bsp)) {
                     continue;
                 }
-                
+
                 vec_t d = qv::dot(normal_to_check, side2.plane.normal);
 
                 if (!closest || d > closest_dot) {
@@ -1187,15 +1182,15 @@ static void DecompileEntity(
     if (brush_offset.has_value()) {
         compiled_brush_t &brush = compiledBrushes.emplace_back();
         brush.brush_offset = brush_offset;
-        brush.contents = { Q2_CONTENTS_ORIGIN };
+        brush.contents = {Q2_CONTENTS_ORIGIN};
 
         constexpr qplane3d planes[] = {
-            { { -1, 0, 0 }, 8 },
-            { { 0, -1, 0 }, 8 },
-            { { 0, 0, -1 }, 8 },
-            { { 0, 0, 1 }, 8 },
-            { { 0, 1, 0 }, 8 },
-            { { 1, 0, 0 }, 8 },
+            {{-1, 0, 0}, 8},
+            {{0, -1, 0}, 8},
+            {{0, 0, -1}, 8},
+            {{0, 0, 1}, 8},
+            {{0, 1, 0}, 8},
+            {{1, 0, 0}, 8},
         };
 
         for (auto &plane : planes) {

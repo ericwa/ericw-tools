@@ -59,7 +59,7 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
     } else {
         // point is exactly on the node plane
 
-        node_t *front = PointInLeaf(node->children[0], point);    
+        node_t *front = PointInLeaf(node->children[0], point);
         node_t *back = PointInLeaf(node->children[1], point);
 
         // prefer the opaque one
@@ -141,9 +141,9 @@ static void FloodFillFromVoid()
     {
         const int side = (outside_node.portals->nodes[0] == &outside_node);
         node_t *fillnode = outside_node.portals->nodes[side];
-        
+
         Q_assert(fillnode != &outside_node);
-        
+
         // this must be true because the map is made from closed brushes, beyion which is void
         Q_assert(!fillnode->opaque());
         queue.emplace_back(fillnode, 0);
@@ -243,10 +243,10 @@ static void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d 
     qvec3d vector = point2 - point1;
     vec_t dist = qv::normalizeInPlace(vector);
 
-    while (dist > options.dxLeakDist) {
+    while (dist > options.leakdist.value()) {
         fmt::print(leakfile, "{}\n", point1);
-        point1 += vector * options.dxLeakDist;
-        dist -= options.dxLeakDist;
+        point1 += vector * options.leakdist.value();
+        dist -= options.leakdist.value();
     }
 }
 
@@ -262,7 +262,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
     std::ofstream ptsfile = InitPtsFile();
 
     qvec3d prevpt = leakentity->origin;
-    
+
     for (portal_t *portal : leakline) {
         qvec3d currpt = portal->winding->center();
 
@@ -439,11 +439,6 @@ bool FillOutside(node_t *node, const int hullnum)
 {
     LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
 
-    if (options.fNofill) {
-        LogPrint(LOG_STAT, "     skipped\n");
-        return false;
-    }
-
     /* Clear the outside filling state on all nodes */
     ClearOccupied_r(node);
 
@@ -453,7 +448,7 @@ bool FillOutside(node_t *node, const int hullnum)
     if (occupied_leafs.empty()) {
         LogPrint("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
         return false;
-    }    
+    }
 
     // Flood fill from outside -> in.
     //
@@ -493,7 +488,7 @@ bool FillOutside(node_t *node, const int hullnum)
         options.szBSPName.replace_extension("prt");
         remove(options.szBSPName);
 
-        if (options.fLeakTest) {
+        if (options.leaktest.value()) {
             LogPrint("Aborting because -leaktest was used.\n");
             exit(1);
         }

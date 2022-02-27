@@ -185,7 +185,8 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
     ADest dest{};
 
     for (size_t i = 0; i < std::min(dest.size(), src.size()); i++) {
-        if constexpr (std::is_arithmetic_v<typename ADest::value_type> && std::is_arithmetic_v<typename ASrc::value_type>)
+        if constexpr (std::is_arithmetic_v<typename ADest::value_type> &&
+                      std::is_arithmetic_v<typename ASrc::value_type>)
             dest[i] = numeric_cast<typename ADest::value_type>(src[i], overflow_message);
         else
             dest[i] = static_cast<typename ADest::value_type>(src[i]);
@@ -280,12 +281,9 @@ struct miptex_t
         memcpy(bytes, in, size);
         return bytes;
     }
-    
+
     miptex_t() = default;
-    miptex_t(const miptex_t &copy) :
-        name(copy.name),
-        width(copy.width),
-        height(copy.height)
+    miptex_t(const miptex_t &copy) : name(copy.name), width(copy.width), height(copy.height)
     {
         for (int32_t i = 0; i < data.size(); i++) {
             if (copy.data[i]) {
@@ -311,10 +309,7 @@ struct miptex_t
 
     virtual ~miptex_t() { }
 
-    virtual size_t stream_size() const
-    {
-        return sizeof(dmiptex_t) + width * height / 64 * 85;
-    }
+    virtual size_t stream_size() const { return sizeof(dmiptex_t) + width * height / 64 * 85; }
 
     virtual void stream_read(std::istream &stream)
     {
@@ -352,7 +347,7 @@ struct miptex_t
 
         for (size_t i = 0; i < MIPLEVELS; i++) {
             if (data[i] <= 0) {
-                stream <= (uint32_t) 0;
+                stream <= (uint32_t)0;
             } else {
                 stream <= header_end;
                 header_end += (width >> i) * (height >> i);
@@ -449,7 +444,7 @@ struct dmiptexlump_t
 
     void stream_write(std::ostream &stream) const
     {
-        auto p = (size_t) stream.tellp();
+        auto p = (size_t)stream.tellp();
 
         stream <= static_cast<int32_t>(textures.size());
 
@@ -474,7 +469,7 @@ struct dmiptexlump_t
         for (auto &texture : textures) {
             if (texture.name[0]) {
                 if (stream.tellp() % 4) {
-                    constexpr const char pad[4] { };
+                    constexpr const char pad[4]{};
                     stream.write(pad, 4 - (stream.tellp() % 4));
                 }
                 texture.stream_write(stream);
@@ -497,7 +492,7 @@ struct dplane_t : qplane3f
 {
     int32_t type;
 
-    [[nodiscard]] constexpr dplane_t operator-() const { return { qplane3f::operator-(), type }; }
+    [[nodiscard]] constexpr dplane_t operator-() const { return {qplane3f::operator-(), type}; }
 
     // serialize for streams
     auto stream_data() { return std::tie(normal, dist, type); }
@@ -875,13 +870,15 @@ struct surfflags_t
 
     constexpr bool needs_write() const
     {
-        return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle || phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha;
+        return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle ||
+               phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha;
     }
 
 private:
     constexpr auto as_tuple() const
     {
-        return std::tie(native, is_skip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand, light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha);
+        return std::tie(native, is_skip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand, light_ignore,
+            phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha);
     }
 
 public:
@@ -909,13 +906,13 @@ struct texvec : qmat<T, 2, 4>
     constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos) const
     {
         return {(pos[0] * this->at(0, 0) + pos[1] * this->at(0, 1) + pos[2] * this->at(0, 2) + this->at(0, 3)),
-                (pos[0] * this->at(1, 0) + pos[1] * this->at(1, 1) + pos[2] * this->at(1, 2) + this->at(1, 3))};
+            (pos[0] * this->at(1, 0) + pos[1] * this->at(1, 1) + pos[2] * this->at(1, 2) + this->at(1, 3))};
     }
 
     template<typename T2>
     constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos, const int32_t &width, const int32_t &height) const
     {
-        return uvs(pos) / qvec<T2, 2> { width, height };
+        return uvs(pos) / qvec<T2, 2>{width, height};
     }
 
     // Not blit compatible because qmat is column-major but
@@ -1505,7 +1502,9 @@ using miptexq1_lump = dmiptexlump_t<miptex_t>;
 using miptexhl_lump = dmiptexlump_t<miptexhl_t>;
 
 // type tag used for type inference
-struct q1bsp_tag_t { };
+struct q1bsp_tag_t
+{
+};
 
 struct bsp29_t : q1bsp_tag_t
 {
@@ -1565,7 +1564,9 @@ struct bsp2_t : q1bsp_tag_t
 };
 
 // type tag used for type inference
-struct q2bsp_tag_t { };
+struct q2bsp_tag_t
+{
+};
 
 struct q2bsp_t : q2bsp_tag_t
 {
@@ -1668,10 +1669,7 @@ struct bspxbrushes_permodel
     int32_t numbrushes;
     int32_t numfaces;
 
-    auto stream_data()
-    {
-        return std::tie(ver, modelnum, numbrushes, numfaces);
-    }
+    auto stream_data() { return std::tie(ver, modelnum, numbrushes, numfaces); }
 };
 
 struct bspxbrushes_perbrush
@@ -1680,10 +1678,7 @@ struct bspxbrushes_perbrush
     int16_t contents;
     uint16_t numfaces;
 
-    auto stream_data()
-    {
-        return std::tie(bounds, contents, numfaces);
-    }
+    auto stream_data() { return std::tie(bounds, contents, numfaces); }
 };
 
 using bspxbrushes_perface = qplane3f;
@@ -1789,7 +1784,8 @@ struct gamedef_t
     virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
-    virtual contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
+    virtual contentflags_t face_get_contents(
+        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
     virtual void init_filesystem(const std::filesystem::path &source) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
 };
@@ -1817,10 +1813,7 @@ struct bspversion_t
 template<>
 struct fmt::formatter<bspversion_t>
 {
-    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin())
-    {
-        return ctx.end();
-    }
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
 
     template<typename FormatContext>
     auto format(const bspversion_t &v, FormatContext &ctx) -> decltype(ctx.out())

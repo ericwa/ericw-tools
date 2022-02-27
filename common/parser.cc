@@ -32,6 +32,7 @@ bool parser_t::parse_token(parseflags flags)
         return result;
     }
 
+    was_quoted = false;
     token.clear();
     auto token_p = std::back_inserter(token);
 
@@ -83,6 +84,7 @@ skipspace:
     /* copy token */
 
     if (*pos == '"') {
+        was_quoted = true;
         pos++;
         while (*pos != '"') {
             if (!*pos)

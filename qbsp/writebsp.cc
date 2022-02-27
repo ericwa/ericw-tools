@@ -37,12 +37,12 @@ static contentflags_t RemapContentsForExport(const contentflags_t &content)
         /*
          * A bit of a hack for Q2, to ensure that structural faces which are completely covered by CFLAGS_DETAIL_FENCE
          * still render.
-         * 
+         *
          * If we export the detail fence leaf as CONTENTS_SOLID, Q2 engines will refuse to render the covered sturctural
          * face because of a short-circuit in GL_DrawLeaf.
          */
         if (options.target_game->id == GAME_QUAKE_II) {
-            return { Q2_CONTENTS_WINDOW, 0 };
+            return {Q2_CONTENTS_WINDOW, 0};
         }
         /*
          * This is for func_detail_wall.. we want to write a solid leaf that has faces,
@@ -172,7 +172,8 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     const contentflags_t remapped = RemapContentsForExport(node->contents);
 
     if (!remapped.is_valid(options.target_game, false)) {
-        FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1, remapped.to_string(options.target_game));
+        FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1,
+            remapped.to_string(options.target_game));
     }
 
     dleaf.contents = remapped.native;
@@ -189,7 +190,7 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
     for (auto &face : node->markfaces) {
-        if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
+        if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
             continue;
         // FIXME: this can happen when compiling some Q2 maps
         // as Q1.
@@ -345,7 +346,7 @@ static void WriteExtendedTexinfoFlags(void)
             continue;
 
         json t = json::object();
-        
+
         if (tx.flags.is_skip) {
             t["is_skip"] = tx.flags.is_skip;
         }

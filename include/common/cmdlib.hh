@@ -80,6 +80,49 @@ struct case_insensitive_less
     }
 };
 
+// natural sorting
+#include <string>
+
+/**
+ * standard C natural string compare
+ * @param s1 left string
+ * @param s2 right string
+ * @return -1 when s1 < s2, 0 when s1 == s2, 1 when s1 > s2
+ */
+int natstrcmp(const char *s1, const char *s2);
+
+/**
+ * STL natural less-than string compare
+ * @param s1 left string
+ * @param s2 right string
+ * @return true when natural s1 < s2
+ */
+bool natstrlt(const char *s1, const char *s2);
+
+/**
+ * @param s1 left string
+ * @param s2 right string
+ * std::string variant of natstrlt.
+ * @return true when natural s1 < s2
+ */
+inline bool stlnatstrlt(const std::string &s1, const std::string &s2)
+{
+    return natstrlt(s1.c_str(), s2.c_str());
+}
+
+struct natural_equal
+{
+    bool operator()(const std::string &l, const std::string &r) const noexcept
+    {
+        return strcmp(l.c_str(), r.c_str()) == 0;
+    }
+};
+
+struct natural_less
+{
+    bool operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r); }
+};
+
 #include <chrono>
 
 using qclock = std::chrono::high_resolution_clock;
@@ -194,7 +237,7 @@ inline void Q_assert_(bool success, const char *expr, const char *file, int line
 {
     if (!success) {
         LogPrint("{}:{}: Q_assert({}) failed.\n", file, line, expr);
-        //assert(0);
+        // assert(0);
 #ifdef _WIN32
         __debugbreak();
 #endif
@@ -269,9 +312,11 @@ inline std::ios_base &endianness(std::ios_base &os)
     return os;
 }
 
-// blank type used 
+// blank type used
 template<size_t n>
-struct padding { };
+struct padding
+{
+};
 
 // using <= for ostream and >= for istream
 template<size_t n>
@@ -395,7 +440,7 @@ inline std::ostream &operator<=(std::ostream &s, const std::array<T, N> &c)
 }
 
 template<typename... T>
-inline std::ostream &operator<=(std::ostream &s, std::tuple<T&...> tuple)
+inline std::ostream &operator<=(std::ostream &s, std::tuple<T &...> tuple)
 {
     std::apply([&s](auto &&...args) { ((s <= args), ...); }, tuple);
     return s;
@@ -537,7 +582,7 @@ inline std::istream &operator>=(std::istream &s, std::array<T, N> &c)
 }
 
 template<typename... T>
-inline std::istream &operator>=(std::istream &s, std::tuple<T&...> tuple)
+inline std::istream &operator>=(std::istream &s, std::tuple<T &...> tuple)
 {
     std::apply([&s](auto &&...args) { ((s >= args), ...); }, tuple);
     return s;
@@ -653,7 +698,7 @@ public:
             this->setg(cbase, cbase, cbase + size);
         }
     }
-    
+
 protected:
     inline void setpptrs(char *first, char *next, char *end)
     {
@@ -753,8 +798,7 @@ struct memstream : virtual membuf, std::ostream, std::istream
     }
 
     inline memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
-        : membuf(base, size, which), std::ostream(nullptr),
-          std::istream(static_cast<std::streambuf *>(this))
+        : membuf(base, size, which), std::ostream(nullptr), std::istream(static_cast<std::streambuf *>(this))
     {
     }
 };
@@ -779,3 +823,62 @@ void CRC_Init(unsigned short *crcvalue);
 void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
 unsigned short CRC_Value(unsigned short crcvalue);
 unsigned short CRC_Block(const unsigned char *start, int count);
+
+#include <bitset>
+
+template<typename Enum>
+struct bitflags
+{
+    static_assert(std::is_enum_v<Enum>, "Must be enum");
+
+private:
+    using type = typename std::underlying_type_t<Enum>;
+    std::bitset<sizeof(type) * 8> _bits{};
+
+    constexpr bitflags(const std::bitset<sizeof(type) * 8> &bits) : _bits(bits) { }
+
+public:
+    constexpr bitflags() { }
+
+    constexpr bitflags(const Enum &enumValue) : _bits(static_cast<type>(enumValue)) { }
+
+    constexpr bitflags(const bitflags &copy) = default;
+    constexpr bitflags(bitflags &&move) = default;
+
+    constexpr bitflags &operator=(const bitflags &copy) = default;
+    constexpr bitflags &operator=(bitflags &&move) = default;
+
+    inline explicit operator bool() const { return _bits.any(); }
+
+    inline bool operator!() const { return !_bits.any(); }
+
+    inline operator Enum() const { return static_cast<Enum>(_bits.to_ulong()); }
+
+    inline bitflags &operator|=(const bitflags &r)
+    {
+        _bits |= r._bits;
+        return *this;
+    }
+    inline bitflags &operator&=(const bitflags &r)
+    {
+        _bits &= r._bits;
+        return *this;
+    }
+    inline bitflags &operator^=(const bitflags &r)
+    {
+        _bits ^= r._bits;
+        return *this;
+    }
+
+    inline bitflags operator|(const bitflags &r) { return bitflags(*this) |= r; }
+    inline bitflags operator&(const bitflags &r) { return bitflags(*this) &= r; }
+    inline bitflags operator^(const bitflags &r) { return bitflags(*this) ^= r; }
+
+    inline bitflags operator~() const { return ~_bits; }
+
+    inline bool operator==(const bitflags &r) const { return _bits == r._bits; }
+    inline bool operator!=(const bitflags &r) const { return _bits != r._bits; }
+
+    inline bool operator==(const Enum &r) const { return _bits == bitflags(r)._bits; }
+    inline bool operator!=(const Enum &r) const { return _bits != bitflags(r)._bits; }
+};

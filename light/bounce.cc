@@ -58,7 +58,7 @@ public:
     std::map<int, qvec3f> lightByStyle;
 };
 
-static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const globalconfig_t &cfg, winding_t &w)
+static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, winding_t &w)
 {
     unique_ptr<patch_t> p{new patch_t};
     p->w = std::move(w);
@@ -80,14 +80,14 @@ static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const globalconfig_t &cf
 struct make_bounce_lights_args_t
 {
     const mbsp_t *bsp;
-    const globalconfig_t *cfg;
+    const settings::worldspawn_keys *cfg;
 };
 
 struct save_winding_args_t
 {
     vector<unique_ptr<patch_t>> *patches;
     const mbsp_t *bsp;
-    const globalconfig_t *cfg;
+    const settings::worldspawn_keys *cfg;
 };
 
 static void SaveWindingFn(winding_t &w, void *userinfo)
@@ -128,8 +128,8 @@ qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
     if (it) {
         return it->meta.averageColor;
     }
-    
-    return { 127 };
+
+    return {127};
 }
 
 template<typename T>
@@ -162,7 +162,7 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
     l.area = area;
     l.bounds = qvec3d(0);
 
-    if (!novisapprox) {
+    if (!options.novisapprox.value()) {
         l.bounds = EstimateVisibleBoundsAtPoint(pos);
     }
 
@@ -176,7 +176,7 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
 static void *MakeBounceLightsThread(void *arg)
 {
     const mbsp_t *bsp = static_cast<make_bounce_lights_args_t *>(arg)->bsp;
-    const globalconfig_t &cfg = *static_cast<make_bounce_lights_args_t *>(arg)->cfg;
+    const settings::worldspawn_keys &cfg = *static_cast<make_bounce_lights_args_t *>(arg)->cfg;
 
     while (1) {
         int i = GetThreadWork();
@@ -239,7 +239,7 @@ static void *MakeBounceLightsThread(void *arg)
 
         // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
         qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.0f;
-        qvec3f blendedcolor = mix(qvec3f{127.f / 255.f}, texturecolor, cfg.bouncecolorscale.floatValue());
+        qvec3f blendedcolor = mix(qvec3f{127.f / 255.f}, texturecolor, cfg.bouncecolorscale.value());
 
         // final colors to emit
         map<int, qvec3f> emitcolors;
@@ -273,7 +273,7 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
     return empty;
 }
 
-void MakeBounceLights(const globalconfig_t &cfg, const mbsp_t *bsp)
+void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
     LogPrint("--- MakeBounceLights ---\n");
 

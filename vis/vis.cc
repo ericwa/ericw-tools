@@ -42,18 +42,26 @@ int leafbytes; // (portalleafs+63)>>3
 int leaflongs;
 int leafbytes_real; // (portalleafs_real+63)>>3, not used for Q2.
 
-/* Options - TODO: collect these in a struct */
-bool fastvis;
-static int verbose = 0;
-int testlevel = 4;
-bool ambientsky = true;
-bool ambientwater = true;
-bool ambientslime = true;
-bool ambientlava = true;
-int visdist = 0;
-bool nostate = false;
+namespace settings
+{
+setting_group output_group{"Output", 200};
+setting_group advanced_group{"Advanced", 300};
 
-std::filesystem::path sourcefile, portalfile, statefile, statetmpfile;
+void vis_settings::initialize(int argc, const char **argv)
+{
+    auto remainder = parse(token_parser_t(argc, argv));
+
+    if (remainder.size() <= 0 || remainder.size() > 1) {
+        printHelp();
+    }
+
+    sourceMap = DefaultExtension(remainder[0], "bsp");
+}
+} // namespace settings
+
+settings::vis_settings options;
+
+std::filesystem::path portalfile, statefile, statetmpfile;
 
 /*
   ===============
@@ -437,10 +445,8 @@ void *LeafThread(void *arg)
 
         PortalCompleted(p);
 
-        if (verbose > 1) {
-            LogPrint(
-                "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee, p->numcansee);
-        }
+        LogPrint(LOG_VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee,
+            p->numcansee);
     } while (1);
 
     return NULL;
@@ -511,8 +517,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     /*
      * compress the bit string
      */
-    if (verbose > 1)
-        LogPrint("cluster {:4} : {:4} visible\n", clusternum, numvis);
+    LogPrint(LOG_VERBOSE, "cluster {:4} : {:4} visible\n", clusternum, numvis);
 
     /*
      * increment totalvis by
@@ -579,7 +584,7 @@ void CalcPortalVis(const mbsp_t *bsp)
     portal_t *p;
 
     // fastvis just uses mightsee for a very loose bound
-    if (fastvis) {
+    if (options.fast.value()) {
         for (i = 0; i < numportals * 2; i++) {
             portals[i].visbits = portals[i].mightsee;
             portals[i].status = pstat_done;
@@ -599,10 +604,10 @@ void CalcPortalVis(const mbsp_t *bsp)
 
     SaveVisState();
 
-    if (verbose) {
-        LogPrint("portalcheck: {}  portaltest: {}  portalpass: {}\n", c_portalcheck, c_portaltest, c_portalpass);
-        LogPrint("c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", c_vistest, c_mighttest, c_mightseeupdate);
-    }
+    LogPrint(
+        LOG_VERBOSE, "portalcheck: {}  portaltest: {}  portalpass: {}\n", c_portalcheck, c_portaltest, c_portalpass);
+    LogPrint(
+        LOG_VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", c_vistest, c_mighttest, c_mightseeupdate);
 }
 
 /*
@@ -660,16 +665,10 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
     portal_t *p;
     leaf_t *l;
     char magic[80];
-    qfile_t f{nullptr, nullptr};
     int numpoints;
     int leafnums[2];
     qplane3d plane;
-
-    if (name == "-")
-        f = {stdin, nullptr};
-    else {
-        f = SafeOpenRead(name, true);
-    }
+    qfile_t f = SafeOpenRead(name, true);
 
     /*
      * Parse the portal file header
@@ -849,95 +848,35 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
   main
   ===========
 */
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
     bspdata_t bspdata;
     const bspversion_t *loadversion;
-    int i;
 
     InitLog("vis.log");
     LogPrint("---- vis / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
 
+    options.run(argc, argv);
+
     LowerProcessPriority();
-    numthreads = GetDefaultThreads();
-
-    for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-threads")) {
-            numthreads = atoi(argv[i + 1]);
-            i++;
-        } else if (!strcmp(argv[i], "-fast")) {
-            LogPrint("fastvis = true\n");
-            fastvis = true;
-        } else if (!strcmp(argv[i], "-level")) {
-            testlevel = atoi(argv[i + 1]);
-            i++;
-        } else if (!strcmp(argv[i], "-v")) {
-            LogPrint("verbose = true\n");
-            verbose = 1;
-        } else if (!strcmp(argv[i], "-vv")) {
-            LogPrint("verbose = extra\n");
-            verbose = 2;
-        } else if (!strcmp(argv[i], "-noambientsky")) {
-            LogPrint("ambient sky sounds disabled\n");
-            ambientsky = false;
-        } else if (!strcmp(argv[i], "-noambientwater")) {
-            LogPrint("ambient water sounds disabled\n");
-            ambientwater = false;
-        } else if (!strcmp(argv[i], "-noambientslime")) {
-            LogPrint("ambient slime sounds disabled\n");
-            ambientslime = false;
-        } else if (!strcmp(argv[i], "-noambientlava")) {
-            LogPrint("ambient lava sounds disabled\n");
-            ambientlava = false;
-        } else if (!strcmp(argv[i], "-noambient")) {
-            LogPrint("ambient sound calculation disabled\n");
-            ambientsky = false;
-            ambientwater = false;
-            ambientslime = false;
-            ambientlava = false;
-        } else if (!strcmp(argv[i], "-visdist")) {
-            visdist = atoi(argv[i + 1]);
-            i++;
-            LogPrint("visdist = {}\n", visdist);
-        } else if (!strcmp(argv[i], "-nostate")) {
-            LogPrint("loading from state file disabled\n");
-            nostate = true;
-        } else if (argv[i][0] == '-')
-            FError("Unknown option \"{}\"", argv[i]);
-        else
-            break;
-    }
-
-    if (i != argc - 1) {
-        printf("usage: vis [-threads #] [-level 0-4] [-fast] [-v|-vv] "
-               "[-credits] bspfile\n");
-        exit(1);
-    }
-
-    LogPrint("running with {} threads\n", numthreads);
-    LogPrint("testlevel = {}\n", testlevel);
 
     stateinterval = std::chrono::minutes(5); /* 5 minutes */
     starttime = statetime = I_FloatTime();
 
-    std::filesystem::path path_base(argv[i]);
-    sourcefile = DefaultExtension(path_base, "bsp");
+    LoadBSPFile(options.sourceMap, &bspdata);
 
-    LoadBSPFile(sourcefile, &bspdata);
-
-    bspdata.version->game->init_filesystem(sourcefile);
+    bspdata.version->game->init_filesystem(options.sourceMap);
 
     loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
-    portalfile = path_base.replace_extension("prt");
-
+    portalfile = fs::path(options.sourceMap).replace_extension("prt");
     LoadPortals(portalfile, &bsp);
 
-    statefile = path_base.replace_extension("vis");
-    statetmpfile = path_base.replace_extension("vi0");
+    statefile = fs::path(options.sourceMap).replace_extension("vis");
+    statetmpfile = fs::path(options.sourceMap).replace_extension("vi0");
 
     if (bsp.loadversion->game->id != GAME_QUAKE_II) {
         uncompressed = new uint8_t[portalleafs * leafbytes_real]{};
@@ -966,7 +905,7 @@ int main(int argc, char **argv)
     /* Convert data format back if necessary */
     ConvertBSPFormat(&bspdata, loadversion);
 
-    WriteBSPFile(sourcefile, &bspdata);
+    WriteBSPFile(options.sourceMap, &bspdata);
 
     endtime = I_FloatTime();
     LogPrint("{:.2} elapsed\n", (endtime - starttime));

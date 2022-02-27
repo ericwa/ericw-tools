@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+	<!--math lib-->
+	<Type Name="qvec&lt;*,*&gt;">
+		<DisplayString>{($T1 *) (&amp; v),[$T2]}</DisplayString>
+		<Expand>
+			<ExpandedItem>v</ExpandedItem>
+		</Expand>
+	</Type>
+	<Type Name="qmat&lt;*,*,*&gt;">
+		<DisplayString>{$T2} x {$T3} matrix</DisplayString>
+		<Expand>
+			<ArrayItems>
+				<Direction>Backward</Direction>
+				<Rank>$T2 - 1</Rank>
+				<Size>$T3</Size>
+				<ValuePointer>($T1 *) (&amp; m_values)</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+	<Type Name="polylib::winding_base_t&lt;*&gt;">
+		<DisplayString>{count} points</DisplayString>
+		<Expand>
+			<ExpandedItem Condition="isVector">vector</ExpandedItem>
+			<ArrayItems Condition="!isVector">
+				<Rank>1</Rank>
+				<Size>count</Size>
+				<ValuePointer>&amp;array[0]</ValuePointer>
+			</ArrayItems>
+		</Expand>
+	</Type>
+
+	<!--settings-->
+	<Type Name="settings::setting_value&lt;*&gt;">
+		<DisplayString>{_value} from {_source}</DisplayString>
+		<Expand>
+			<ExpandedItem>_value</ExpandedItem>
+		</Expand>
+	</Type>
+</AutoVisualizer>

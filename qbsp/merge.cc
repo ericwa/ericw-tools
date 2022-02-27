@@ -159,7 +159,7 @@ MergeFaceToList
 */
 void MergeFaceToList(face_t *face, std::list<face_t *> &list)
 {
-    for (auto it = list.begin(); it != list.end(); ) {
+    for (auto it = list.begin(); it != list.end();) {
 #ifdef PARANOID
         CheckColinear(f);
 #endif
@@ -213,7 +213,8 @@ void MergeAll(std::vector<surface_t> &surfhead)
         mergefaces += surf.faces.size();
     });
 
-    LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces, (static_cast<double>(mergefaces) / premergefaces) * 100.);
+    LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces,
+        (static_cast<double>(mergefaces) / premergefaces) * 100.);
 
     // Quick hack to let solidbsp print out progress %
     csgmergefaces = mergefaces;
