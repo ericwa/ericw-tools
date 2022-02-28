@@ -672,10 +672,14 @@ public:
     // global settings
     setting_int32 threads{
         this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"};
+    setting_bool lowpriority{
+        this, "lowpriority", false, &performance_group, "run in a lower priority, to free up headroom for other processes"};
 
     setting_bool verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"};
-    setting_bool quiet{this, {"quiet", "noverbose"}, false, &logging_group, "suppress non-important output"};
     setting_bool nopercent{this, "nopercent", false, &logging_group, "don't output percentage messages"};
+    setting_bool nostat{this, "nostat", false, &logging_group, "don't output statistic messages"};
+    setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
+    setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group, "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
 
     virtual void setParameters(int argc, const char **argv);
 

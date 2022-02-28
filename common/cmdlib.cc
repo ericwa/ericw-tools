@@ -180,7 +180,12 @@ inline bool t_digit(char c)
     return c >= 48 && c <= 57;
 }
 
-int natstrcmp(const char *s1, const char *s2)
+inline bool t_lower(char c)
+{
+    return std::tolower(c);
+}
+
+int natstrcmp(const char *s1, const char *s2, bool case_sensitive)
 {
     const char *p1 = s1;
     const char *p2 = s2;
@@ -199,10 +204,10 @@ int natstrcmp(const char *s1, const char *s2)
             case st_scan:
                 if (!t_digit(*p1) && !t_digit(*p2)) {
                     state = st_alpha;
-                    if (*p1 == *p2) {
+                    if (case_sensitive ? (*p1 == *p2) : (t_lower(*p1) == t_lower(*p2))) {
                         p1++;
                         p2++;
-                    } else if (*p1 < *p2)
+                    } else if (case_sensitive ? (*p1 < *p2) : (t_lower(*p1) < t_lower(*p2)))
                         return -1;
                     else
                         return 1;
@@ -245,10 +250,10 @@ int natstrcmp(const char *s1, const char *s2)
                 break;
             case st_alpha:
                 if (!t_digit(*p1) && !t_digit(*p2)) {
-                    if (*p1 == *p2) {
+                    if (case_sensitive ? (*p1 == *p2) : (t_lower(*p1) == t_lower(*p2))) {
                         p1++;
                         p2++;
-                    } else if (*p1 < *p2)
+                    } else if (case_sensitive ? (*p1 < *p2) : (t_lower(*p1) < t_lower(*p2)))
                         return -1;
                     else
                         return 1;
@@ -261,7 +266,7 @@ int natstrcmp(const char *s1, const char *s2)
                 while (t_digit(*p2))
                     numend2 = p2++;
                 if (numend1 - numstart1 == numend2 - numstart2 &&
-                    !strncmp(numstart1, numstart2, numend2 - numstart2 + 1))
+                    case_sensitive ? (!strncmp(numstart1, numstart2, numend2 - numstart2 + 1)) : (!Q_strncasecmp(numstart1, numstart2, numend2 - numstart2 + 1)))
                     state = st_scan;
                 else {
                     if (numend1 - numstart1 < numend2 - numstart2)
@@ -295,7 +300,7 @@ int natstrcmp(const char *s1, const char *s2)
  * STL natural less-than string compare
  * @return true when natural s1 < s2
  */
-bool natstrlt(const char *s1, const char *s2)
+bool natstrlt(const char *s1, const char *s2, bool case_sensitive)
 {
     // std::cout << "natstrlt s1=" << s1 << " s2=" << s2 << std::endl;
     const char *p1 = s1;
@@ -315,11 +320,11 @@ bool natstrlt(const char *s1, const char *s2)
             case st_scan:
                 if (!t_digit(*p1) && !t_digit(*p2)) {
                     state = st_alpha;
-                    if (*p1 == *p2) {
+                    if (case_sensitive ? (*p1 == *p2) : (t_lower(*p1) == t_lower(*p2))) {
                         p1++;
                         p2++;
                     } else
-                        return *p1 < *p2;
+                        return case_sensitive ? (*p1 < *p2) : (t_lower(*p1) < t_lower(*p2));
                 } else if (t_digit(*p1) && !t_digit(*p2))
                     return true;
                 else if (!t_digit(*p1) && t_digit(*p2))
@@ -358,11 +363,11 @@ bool natstrlt(const char *s1, const char *s2)
                 break;
             case st_alpha:
                 if (!t_digit(*p1) && !t_digit(*p2)) {
-                    if (*p1 == *p2) {
+                    if (case_sensitive ? (*p1 == *p2) : (t_lower(*p1) == t_lower(*p2))) {
                         p1++;
                         p2++;
                     } else
-                        return *p1 < *p2;
+                        return case_sensitive ? (*p1 < *p2) : (t_lower(*p1) < t_lower(*p2));
                 } else
                     state = st_scan;
                 break;

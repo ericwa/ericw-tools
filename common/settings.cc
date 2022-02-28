@@ -145,7 +145,7 @@ void common_settings::postinitialize(int argc, const char **argv)
 {
     printSummary();
 
-    configureTBB(threads.value());
+    configureTBB(threads.value(), lowpriority.value());
 
     if (verbose.value()) {
         log_mask |= 1 << LOG_VERBOSE;
@@ -155,8 +155,12 @@ void common_settings::postinitialize(int argc, const char **argv)
         log_mask &= ~(1 << LOG_PERCENT);
     }
 
-    if (quiet.value()) {
-        log_mask &= ~((1 << LOG_PERCENT) | (1 << LOG_STAT) | (1 << LOG_PROGRESS));
+    if (nostat.value()) {
+        log_mask &= ~(1 << LOG_STAT);
+    }
+
+    if (noprogress.value()) {
+        log_mask &= ~(1 << LOG_PROGRESS);
     }
 }
 } // namespace settings

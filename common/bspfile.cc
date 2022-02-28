@@ -677,8 +677,7 @@ private:
     {
         fs::directory_iterator it(base);
 
-        // TODO: natsort
-        std::set<std::string, case_insensitive_less> packs;
+        std::set<std::string, natural_case_insensitive_less> packs;
 
         for (auto &entry : it) {
             if (string_iequals(entry.path().extension().generic_string(), ".pak")) {

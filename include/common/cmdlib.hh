@@ -89,7 +89,7 @@ struct case_insensitive_less
  * @param s2 right string
  * @return -1 when s1 < s2, 0 when s1 == s2, 1 when s1 > s2
  */
-int natstrcmp(const char *s1, const char *s2);
+int natstrcmp(const char *s1, const char *s2, bool case_sensitive = true);
 
 /**
  * STL natural less-than string compare
@@ -97,7 +97,7 @@ int natstrcmp(const char *s1, const char *s2);
  * @param s2 right string
  * @return true when natural s1 < s2
  */
-bool natstrlt(const char *s1, const char *s2);
+bool natstrlt(const char *s1, const char *s2, bool case_sensitive = true);
 
 /**
  * @param s1 left string
@@ -105,9 +105,9 @@ bool natstrlt(const char *s1, const char *s2);
  * std::string variant of natstrlt.
  * @return true when natural s1 < s2
  */
-inline bool stlnatstrlt(const std::string &s1, const std::string &s2)
+inline bool stlnatstrlt(const std::string &s1, const std::string &s2, bool case_sensitive = true)
 {
-    return natstrlt(s1.c_str(), s2.c_str());
+    return natstrlt(s1.c_str(), s2.c_str(), case_sensitive);
 }
 
 struct natural_equal
@@ -121,6 +121,19 @@ struct natural_equal
 struct natural_less
 {
     bool operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r); }
+};
+
+struct natural_case_insensitive_equal
+{
+    bool operator()(const std::string &l, const std::string &r) const noexcept
+    {
+        return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
+    }
+};
+
+struct natural_case_insensitive_less
+{
+    bool operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r, false); }
 };
 
 #include <chrono>

@@ -18,4 +18,4 @@ void InterruptThreadProgress__(void);
 /**
  * Configures TBB to have the given max threads (specify 0 for unlimited).
  */
-void configureTBB(int maxthreads);
+void configureTBB(int maxthreads, bool lowPriority);
