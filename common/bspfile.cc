@@ -89,7 +89,7 @@ struct gamedef_generic_t : public gamedef_t
         throw std::bad_cast();
     };
 
-    void init_filesystem(const fs::path &) const { throw std::bad_cast(); };
+    void init_filesystem(const fs::path &, const settings::common_settings &) const { throw std::bad_cast(); };
 
     const std::vector<qvec3b> &get_default_palette() const { throw std::bad_cast(); };
 };
@@ -299,7 +299,7 @@ struct gamedef_q1_like_t : public gamedef_t
         }
     }
 
-    void init_filesystem(const fs::path &) const
+    void init_filesystem(const fs::path &, const settings::common_settings &) const
     {
         // Q1-like games don't care about the local
         // filesystem.
@@ -691,7 +691,7 @@ private:
     }
 
 public:
-    void init_filesystem(const fs::path &source) const
+    void init_filesystem(const fs::path &source, const settings::common_settings &settings) const
     {
         constexpr const char *MAPS_FOLDER = "maps";
 
@@ -710,7 +710,7 @@ public:
             gamedir = fs::weakly_canonical(source).parent_path();
 
             if (!string_iequals(gamedir.filename().generic_string(), "maps")) {
-                FLogPrint("WARNING: '{}' is not directly inside '{}'. This may throw off automated path detection!\n",
+                logging::print("WARNING: '{}' is not directly inside '{}'. This may confuse automated path detection.\n",
                     source, MAPS_FOLDER);
                 return;
             }
@@ -723,10 +723,10 @@ public:
         fs::path qdir = gamedir.parent_path();
 
         // Set base dir and make sure it exists
-        fs::path basedir = qdir / default_base_dir;
+        fs::path basedir = qdir / (settings.basedir.isChanged() ? settings.basedir.value() : default_base_dir);
 
         if (!exists(basedir)) {
-            FLogPrint("WARNING: failed to find '{}' in '{}'\n", default_base_dir, qdir);
+            logging::print("WARNING: failed to find '{}' in '{}'\n", default_base_dir, qdir);
         } else if (!equivalent(gamedir, basedir)) {
             fs::addArchive(basedir);
             discoverArchives(basedir);
@@ -1232,7 +1232,7 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             }
         }
         catch (std::overflow_error e) {
-            LogPrint("LIMITS EXCEEDED ON {}\n", e.what());
+            logging::print("LIMITS EXCEEDED ON {}\n", e.what());
             return false;
         }
 
@@ -1400,13 +1400,13 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
  * LoadBSPFile
  * =============
  */
-void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
+void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
 {
     int i;
     uint32_t bspxofs;
     const bspx_header_t *bspx;
 
-    FLogPrint("'{}'\n", filename);
+    logging::funcprint("'{}'\n", filename);
 
     /* load the file header */
     fs::data file_data = fs::load(filename);
@@ -1445,7 +1445,7 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
 
     /* check the file version */
     if (!BSPVersionSupported(temp_version.ident, temp_version.version, &bspdata->version)) {
-        LogPrint("BSP is version {}\n", temp_version);
+        logging::print("BSP is version {}\n", temp_version);
         Error("Sorry, this bsp version is not supported.");
     } else {
         // special case handling for Hexen II
@@ -1459,7 +1459,7 @@ void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata)
             }
         }
 
-        LogPrint("BSP is version {}\n", *bspdata->version);
+        logging::print("BSP is version {}\n", *bspdata->version);
     }
 
     lump_reader reader{stream, bspdata->version, lumps};
@@ -1723,7 +1723,7 @@ public:
  * Swaps the bsp file in place, so it should not be referenced again
  * =============
  */
-void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
+void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
 {
     bspfile_t bspfile{};
 
@@ -1736,7 +1736,7 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
         bspfile.q2header.version = bspfile.version->version;
     }
 
-    LogPrint("Writing {} as BSP version {}\n", filename, *bspdata->version);
+    logging::print("Writing {} as BSP version {}\n", filename, *bspdata->version);
     bspfile.stream.open(filename, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 
     if (!bspfile.stream)
@@ -1770,16 +1770,16 @@ void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata)
 
 inline void PrintLumpSize(const lumpspec_t &lump, size_t count)
 {
-    LogPrint("{:7} {:<12} {:10}\n", count, lump.name, count * lump.size);
+    logging::print("{:7} {:<12} {:10}\n", count, lump.name, count * lump.size);
 }
 
 template<typename T>
 inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
 {
     if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels))
-        LogPrint("{:7} {:<12}\n", std::get<dmodelh2_vector>(bsp.dmodels).size(), "models");
+        logging::print("{:7} {:<12}\n", std::get<dmodelh2_vector>(bsp.dmodels).size(), "models");
     else
-        LogPrint("{:7} {:<12}\n", std::get<dmodelq1_vector>(bsp.dmodels).size(), "models");
+        logging::print("{:7} {:<12}\n", std::get<dmodelq1_vector>(bsp.dmodels).size(), "models");
 
     PrintLumpSize(lumpspec.begin()[LUMP_PLANES], bsp.dplanes.size());
     PrintLumpSize(lumpspec.begin()[LUMP_VERTEXES], bsp.dvertexes.size());
@@ -1793,18 +1793,18 @@ inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
     PrintLumpSize(lumpspec.begin()[LUMP_SURFEDGES], bsp.dsurfedges.size());
 
     if (std::holds_alternative<miptexhl_lump>(bsp.dtex))
-        LogPrint("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexhl_lump>(bsp.dtex).textures.size());
+        logging::print("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexhl_lump>(bsp.dtex).textures.size());
     else
-        LogPrint("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexq1_lump>(bsp.dtex).textures.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvisdata.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
+        logging::print("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexq1_lump>(bsp.dtex).textures.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvisdata.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
 template<typename T>
 inline void PrintQ2BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
 {
-    LogPrint("{:7} {:<12}\n", bsp.dmodels.size(), "models");
+    logging::print("{:7} {:<12}\n", bsp.dmodels.size(), "models");
 
     PrintLumpSize(lumpspec.begin()[Q2_LUMP_PLANES], bsp.dplanes.size());
     PrintLumpSize(lumpspec.begin()[Q2_LUMP_VERTEXES], bsp.dvertexes.size());
@@ -1821,9 +1821,9 @@ inline void PrintQ2BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
     PrintLumpSize(lumpspec.begin()[Q2_LUMP_AREAS], bsp.dareas.size());
     PrintLumpSize(lumpspec.begin()[Q2_LUMP_AREAPORTALS], bsp.dareaportals.size());
 
-    LogPrint("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
-    LogPrint("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
+    logging::print("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
 /*
@@ -1851,6 +1851,6 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
     }
 
     for (auto &x : bspdata->bspx.entries) {
-        LogPrint("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.lumpsize);
+        logging::print("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.lumpsize);
     }
 }

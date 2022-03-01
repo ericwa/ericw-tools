@@ -316,11 +316,11 @@ void BeginBSPFile(void)
  */
 static void WriteExtendedTexinfoFlags(void)
 {
-    auto file = std::filesystem::path(options.szBSPName).replace_extension("texinfo.json");
+    auto file = fs::path(options.szBSPName).replace_extension("texinfo.json");
     bool needwrite = false;
 
-    if (std::filesystem::exists(file)) {
-        std::filesystem::remove(file);
+    if (fs::exists(file)) {
+        fs::remove(file);
     }
 
     for (auto &texinfo : map.mtexinfos) {
@@ -420,7 +420,7 @@ static void WriteBSPFile()
             FError("No extended limits version of {} available", options.target_version->name);
         }
 
-        LogPrint("NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name,
+        logging::print("NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name,
             extendedLimitsFormat->name);
 
         Q_assert(ConvertBSPFormat(&bspdata, extendedLimitsFormat));
@@ -429,7 +429,7 @@ static void WriteBSPFile()
     options.szBSPName.replace_extension("bsp");
 
     WriteBSPFile(options.szBSPName, &bspdata);
-    LogPrint("Wrote {}\n", options.szBSPName);
+    logging::print("Wrote {}\n", options.szBSPName);
 
     PrintBSPFileSizes(&bspdata);
 }
@@ -442,7 +442,7 @@ FinishBSPFile
 void FinishBSPFile(void)
 {
     options.fVerbose = true;
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     if (map.bsp.dvertexes.empty()) {
         // First vertex must remain unused because edge references it
@@ -470,7 +470,7 @@ void UpdateBSPFileEntitiesLump()
     // load the .bsp
     LoadBSPFile(options.szBSPName, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.szBSPName);
+    bspdata.version->game->init_filesystem(options.szBSPName, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -483,5 +483,5 @@ void UpdateBSPFileEntitiesLump()
     ConvertBSPFormat(&bspdata, bspdata.loadversion);
     WriteBSPFile(options.szBSPName, &bspdata);
 
-    LogPrint("Wrote {}\n", options.szBSPName);
+    logging::print("Wrote {}\n", options.szBSPName);
 }

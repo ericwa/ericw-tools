@@ -417,7 +417,7 @@ static void CheckWindingInNode(winding_t *w, node_t *node)
     for (i = 0; i < w->numpoints; i++) {
         for (j = 0; j < 3; j++)
             if (w->points[i][j] < node->mins[j] - 1 || w->points[i][j] > node->maxs[j] + 1) {
-                LogPrint("WARNING: Winding outside node\n");
+                logging::print("WARNING: Winding outside node\n");
                 return;
             }
     }
@@ -438,7 +438,7 @@ static void CheckWindingArea(winding_t *w)
         total += add * 0.5;
     }
     if (total < 16)
-        LogPrint("WARNING: Winding with area {}\n", total);
+        logging::print("WARNING: Winding with area {}\n", total);
 }
 
 static void CheckLeafPortalConsistancy(node_t *node)
@@ -479,7 +479,7 @@ static void CheckLeafPortalConsistancy(node_t *node)
             for (i = 0; i < w->numpoints; i++) {
                 dist = plane.distance_to(w->points[i]);
                 if ((side == 0 && dist < -1) || (side == 1 && dist > 1)) {
-                    LogPrint("WARNING: Portal siding direction is wrong\n");
+                    logging::print("WARNING: Portal siding direction is wrong\n");
                     return;
                 }
             }
@@ -539,7 +539,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
 
         winding = winding->clip(clipplane, ON_EPSILON, true)[SIDE_FRONT];
         if (!winding) {
-            FLogPrint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0],
+            logging::funcprint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0],
                 portal->winding->at(0)[1], portal->winding->at(0)[2]);
             break;
         }
@@ -599,8 +599,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     }
 
     /* Display progress */
-    state->iNodesDone++;
-    LogPercent(state->iNodesDone, splitnodes.load());
+    logging::percent(state->iNodesDone++, splitnodes);
 
     CutNodePortals_r(front, state);
     CutNodePortals_r(back, state);
@@ -615,7 +614,7 @@ Builds the exact polyhedrons for the nodes and leafs
 */
 void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     portal_state_t state{};
 
@@ -623,14 +622,15 @@ void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hulln
 
     MakeHeadnodePortals(entity, headnode);
     CutNodePortals_r(headnode, &state);
+    logging::percent(splitnodes, splitnodes);
 
     if (hullnum <= 0) {
         /* save portal file for vis tracing */
         WritePortalfile(headnode, &state);
 
-        LogPrint(LOG_STAT, "     {:8} vis leafs\n", state.num_visleafs);
-        LogPrint(LOG_STAT, "     {:8} vis clusters\n", state.num_visclusters);
-        LogPrint(LOG_STAT, "     {:8} vis portals\n", state.num_visportals);
+        logging::print(logging::flag::STAT, "     {:8} vis leafs\n", state.num_visleafs);
+        logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);
+        logging::print(logging::flag::STAT, "     {:8} vis portals\n", state.num_visportals);
     }
 }
 

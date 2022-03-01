@@ -40,6 +40,7 @@
 #include <string>
 
 #include <common/qvec.hh>
+#include <common/parallel.hh>
 
 using namespace std;
 using namespace polylib;
@@ -176,17 +177,15 @@ struct make_bounce_lights_args_t
     const settings::worldspawn_keys &cfg;
 };
 
-static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, size_t i)
+static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face)
 {
-    const mface_t *face = BSP_GetFace(bsp, i);
-
-    if (!Face_ShouldBounce(bsp, face)) {
+    if (!Face_ShouldBounce(bsp, &face)) {
         return;
     }
 
     vector<unique_ptr<patch_t>> patches;
 
-    winding_t winding = winding_t::from_face(bsp, face);
+    winding_t winding = winding_t::from_face(bsp, &face);
 
     // grab some info about the face winding
     const vec_t facearea = winding.area();
@@ -230,7 +229,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
-    qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.0f;
+    qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, &face)) / 255.0f;
     qvec3f blendedcolor = mix(qvec3f{127.f / 255.f}, texturecolor, cfg.bouncecolorscale.value());
 
     // final colors to emit
@@ -243,14 +242,16 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         emitcolors[styleColor.first] = emitcolor;
     }
 
-    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, facearea, face, bsp);
+    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, facearea, &face, bsp);
 }
 
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    LogPrint("--- MakeBounceLights ---\n");
+    logging::print("--- MakeBounceLights ---\n");
 
-    RunThreadsOn(0, bsp->dfaces.size(), [&](size_t i) { MakeBounceLightsThread(cfg, bsp, i); });
+    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) {
+        MakeBounceLightsThread(cfg, bsp, face);
+    });
 
-    LogPrint("{} bounce lights created\n", radlights.size());
+    logging::print("{} bounce lights created\n", radlights.size());
 }

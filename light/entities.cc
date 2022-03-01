@@ -27,6 +27,7 @@
 #include <light/entities.hh>
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
+#include <common/parallel.hh>
 
 std::vector<light_t> all_lights;
 std::vector<sun_t> all_suns;
@@ -106,7 +107,7 @@ static int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const s
 
     lightstyleForTargetname.emplace_back(targetname, newStylenum);
 
-    LogPrint(LOG_VERBOSE, "Allocated lightstyle {} for targetname '{}'\n", newStylenum, targetname);
+    logging::print(logging::flag::VERBOSE, "Allocated lightstyle {} for targetname '{}'\n", newStylenum, targetname);
 
     return newStylenum;
 }
@@ -169,7 +170,7 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
     // empty values warning
     for (const auto &keyval : entdict) {
         if (keyval.first.empty() || keyval.second.empty()) {
-            LogPrint("WARNING: {} has empty key/value \"{}\" \"{}\"\n", EntDict_PrettyDescription(bsp, entdict),
+            logging::print("WARNING: {} has empty key/value \"{}\" \"{}\"\n", EntDict_PrettyDescription(bsp, entdict),
                 keyval.first, keyval.second);
             ok = false;
         }
@@ -200,7 +201,7 @@ bool EntDict_CheckTargetKeysMatched(
             continue;
 
         if (targetVal == targetname) {
-            LogPrint("WARNING: {} has \"{}\" set to itself\n", EntDict_PrettyDescription(bsp, entity), targetKey);
+            logging::print("WARNING: {} has \"{}\" set to itself\n", EntDict_PrettyDescription(bsp, entity), targetKey);
             ok = false;
             continue;
         }
@@ -218,7 +219,7 @@ bool EntDict_CheckTargetKeysMatched(
         }
 
         if (!found) {
-            LogPrint("WARNING: {} has unmatched \"{}\" ({})\n", EntDict_PrettyDescription(bsp, entity), targetKey,
+            logging::print("WARNING: {} has unmatched \"{}\" ({})\n", EntDict_PrettyDescription(bsp, entity), targetKey,
                 targetVal);
             ok = false;
         }
@@ -257,7 +258,7 @@ bool EntDict_CheckTargetnameKeyMatched(
         }
 
         if (!found) {
-            LogPrint("WARNING: {} has targetname \"{}\", which is not targeted by anything.\n",
+            logging::print("WARNING: {} has targetname \"{}\", which is not targeted by anything.\n",
                 EntDict_PrettyDescription(bsp, entity), targetnameVal);
             ok = false;
         }
@@ -306,7 +307,7 @@ static void CheckEntityFields(const settings::worldspawn_keys &cfg, light_t *ent
 
     // mxd. Warn about unsupported _falloff / delay combos...
     if (entity->falloff.value() > 0.0f && entity->getFormula() != LF_LINEAR) {
-        LogPrint("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
+        logging::print("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
                  "   {} at [{}]\n",
             entity->classname(), entity->origin.value());
         entity->falloff.setValue(0.0f);
@@ -449,7 +450,7 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
             } else if (qv::length2(entity.mangle.value()) > 0) {
                 sunvec = entity.mangle.value();
             } else { // Use { 0, 0, 0 } as sun target...
-                LogPrint("WARNING: sun missing target, entity origin used.\n");
+                logging::print("WARNING: sun missing target, entity origin used.\n");
                 sunvec = -entity.origin.value();
             }
 
@@ -466,7 +467,7 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
         cfg.sun_deviance.value(), cfg.sunlight_dirt.value(), 0, "");
 
     if (cfg.sun2.value() != 0) {
-        LogPrint("creating sun2\n");
+        logging::print("creating sun2\n");
         SetupSun(cfg, cfg.sun2.value(), cfg.sun2_color.value(), cfg.sun2vec.value(), cfg.global_anglescale.value(),
             cfg.sun_deviance.value(), cfg.sunlight_dirt.value(), 0, "");
     }
@@ -830,7 +831,7 @@ static std::string ParseEscapeSequences(const std::string &input)
  */
 void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    LogPrint("--- LoadEntities ---\n");
+    logging::print("--- LoadEntities ---\n");
 
     entdicts = EntData_Parse(bsp->dentdata);
 
@@ -856,7 +857,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
         // fix "lightmap_scale"
         const std::string &lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
         if (!lmscale.empty()) {
-            LogPrint("lightmap_scale should be _lightmap_scale\n");
+            logging::print("lightmap_scale should be _lightmap_scale\n");
 
             EntDict_RemoveValueForKey(entdict, "lightmap_scale");
             entdict.set("_lightmap_scale", lmscale);
@@ -946,7 +947,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                 auto texname = entity.project_texture.value();
                 entity.projectedmip = img::find(texname);
                 if (entity.projectedmip == nullptr) {
-                    LogPrint(
+                    logging::print(
                         "WARNING: light has \"_project_texture\" \"{}\", but this texture was not found\n", texname);
                 }
 
@@ -978,7 +979,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
         }
     }
 
-    LogPrint("{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
+    logging::print("{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
 }
 
 static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
@@ -1002,7 +1003,7 @@ static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
         }
     }
 
-    LogPrint("WARNING: couldn't nudge light in solid at {}\n", point);
+    logging::print("WARNING: couldn't nudge light in solid at {}\n", point);
     return point;
 }
 
@@ -1075,7 +1076,7 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
     return bounds.grow(bounds.size() * 0.25);
 
     /*
-    LogPrint("light at {} {} {} has mins {} {} {} maxs {} {} {}\n",
+    logging::print("light at {} {} {} has mins {} {} {} maxs {} {} {}\n",
            point[0],
            point[1],
            point[2],
@@ -1088,14 +1089,9 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
     */
 }
 
-inline void EstimateLightAABB(light_t *light)
+inline void EstimateLightAABB(light_t &light)
 {
-    light->bounds = EstimateVisibleBoundsAtPoint(light->origin.value());
-}
-
-static void EstimateLightAABBThread(size_t i)
-{
-    EstimateLightAABB(&all_lights.at(i));
+    light.bounds = EstimateVisibleBoundsAtPoint(light.origin.value());
 }
 
 void EstimateLightVisibility(void)
@@ -1103,23 +1099,23 @@ void EstimateLightVisibility(void)
     if (options.novisapprox.value())
         return;
 
-    LogPrint("--- EstimateLightVisibility ---\n");
+    logging::print("--- EstimateLightVisibility ---\n");
 
-    RunThreadsOn(0, all_lights.size(), EstimateLightAABBThread);
+    logging::parallel_for_each(all_lights, EstimateLightAABB);
 }
 
 void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    LogPrint("SetupLights: {} initial lights\n", all_lights.size());
+    logging::print("SetupLights: {} initial lights\n", all_lights.size());
 
     // Creates more light entities, needs to be done before the rest
     MakeSurfaceLights(bsp);
 
-    LogPrint("SetupLights: {} after surface lights\n", all_lights.size());
+    logging::print("SetupLights: {} after surface lights\n", all_lights.size());
 
     JitterEntities();
 
-    LogPrint("SetupLights: {} after jittering\n", all_lights.size());
+    logging::print("SetupLights: {} after jittering\n", all_lights.size());
 
     const size_t final_lightcount = all_lights.size();
 
@@ -1130,7 +1126,7 @@ void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     FixLightsOnFaces(bsp);
     EstimateLightVisibility();
 
-    LogPrint("Final count: {} lights, {} suns in use.\n", all_lights.size(), all_suns.size());
+    logging::print("Final count: {} lights, {} suns in use.\n", all_lights.size(), all_suns.size());
 
     Q_assert(final_lightcount == all_lights.size());
 }
@@ -1175,7 +1171,7 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp)
     bsp->dentdata = EntData_Write(entdicts);
 
     /* FIXME - why are we printing this here? */
-    LogPrint("{} switchable light styles ({} max)\n", lightstyleForTargetname.size(),
+    logging::print("{} switchable light styles ({} max)\n", lightstyleForTargetname.size(),
         MAX_SWITCHABLE_STYLES - cfg.compilerstyle_start.value());
 }
 
@@ -1188,7 +1184,7 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp)
 static std::vector<light_t> surfacelight_templates;
 
 static std::ofstream surflights_dump_file;
-static std::filesystem::path surflights_dump_filename;
+static fs::path surflights_dump_filename;
 
 static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3d &pos)
 {
@@ -1364,7 +1360,7 @@ static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_mod
     SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts, options.surflight_subdivide.value());
 }
 
-bool ParseLightsFile(const std::filesystem::path &fname)
+bool ParseLightsFile(const fs::path &fname)
 {
     // note: this creates dupes. super bright light! (and super slow, too)
     std::string buf;
@@ -1400,7 +1396,7 @@ bool ParseLightsFile(const std::filesystem::path &fname)
 
 static void MakeSurfaceLights(const mbsp_t *bsp)
 {
-    LogPrint("--- MakeSurfaceLights ---\n");
+    logging::print("--- MakeSurfaceLights ---\n");
 
     Q_assert(surfacelight_templates.empty());
 
@@ -1418,7 +1414,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             // Hack: clear templates light value to 0 so they don't cast light
             entity.light.setValue(0);
 
-            LogPrint("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
+            logging::print("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
                 ValueForKey(&entity, "origin"));
         }
     }

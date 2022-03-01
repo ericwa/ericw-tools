@@ -134,7 +134,7 @@ const std::string &WorldValueForKey(const std::string &key);
 
 void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
 void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
-bool ParseLightsFile(const std::filesystem::path &fname);
+bool ParseLightsFile(const fs::path &fname);
 void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp);
 aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point);
 

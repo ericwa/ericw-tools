@@ -27,6 +27,7 @@
 #include <common/polylib.hh>
 #include <common/imglib.hh>
 #include <common/settings.hh>
+#include <common/bitflags.hh>
 
 #include <light/litfile.hh>
 #include <light/trace.hh>

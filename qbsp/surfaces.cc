@@ -104,7 +104,7 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
 
             std::tie(front, back) = SplitFace(f, plane);
             if (!front || !back) {
-                LogPrintLocked("didn't split\n");
+                logging::print("didn't split\n");
                 break;
                 // FError("Didn't split the polygon");
             }
@@ -355,7 +355,7 @@ static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
         FindFaceEdges(entity, f);
     }
 
-    LogPercent(++progress, splitnodes.load());
+    logging::percent(++progress, splitnodes.load());
     progress = MakeFaceEdges_r(entity, node->children[0], progress);
     progress = MakeFaceEdges_r(entity, node->children[1], progress);
 
@@ -482,7 +482,7 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 {
     int firstface;
 
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     Q_assert(entity->firstoutputfacenumber == -1);
     entity->firstoutputfacenumber = static_cast<int>(map.bsp.dfaces.size());
@@ -499,7 +499,7 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
 
-    LogPrint(LOG_PROGRESS, "---- GrowRegions ----\n");
+    logging::print(logging::flag::PROGRESS, "---- GrowRegions ----\n");
     GrowNodeRegion(entity, headnode);
 
     return firstface;

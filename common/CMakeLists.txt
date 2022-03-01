@@ -13,6 +13,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/common/settings.cc
     ${CMAKE_SOURCE_DIR}/common/debugger.natvis
     ${CMAKE_SOURCE_DIR}/include/common/aabb.hh
+    ${CMAKE_SOURCE_DIR}/include/common/bitflags.hh
     ${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
     ${CMAKE_SOURCE_DIR}/include/common/bsputils.hh
     ${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh
@@ -23,6 +24,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/polylib.hh
     ${CMAKE_SOURCE_DIR}/include/common/qvec.hh
     ${CMAKE_SOURCE_DIR}/include/common/json.hh
+    ${CMAKE_SOURCE_DIR}/include/common/parallel.hh
     ${CMAKE_SOURCE_DIR}/include/common/threads.hh
     ${CMAKE_SOURCE_DIR}/include/common/fs.hh
     ${CMAKE_SOURCE_DIR}/include/common/imglib.hh

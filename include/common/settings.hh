@@ -349,11 +349,11 @@ protected:
     virtual void setValueInternal(T f, source newsource) override
     {
         if (f < _min) {
-            LogPrint("WARNING: '{}': {} is less than minimum value {}.\n", primaryName(), f, _min);
+            logging::print("WARNING: '{}': {} is less than minimum value {}.\n", primaryName(), f, _min);
             f = _min;
         }
         if (f > _max) {
-            LogPrint("WARNING: '{}': {} is greater than maximum value {}.\n", primaryName(), f, _max);
+            logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", primaryName(), f, _max);
             f = _max;
         }
 
@@ -664,7 +664,7 @@ public:
 };
 
 // global groups
-extern setting_group performance_group, logging_group;
+extern setting_group performance_group, logging_group, game_group;
 
 class common_settings : public virtual setting_container
 {
@@ -674,12 +674,14 @@ public:
         this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"};
     setting_bool lowpriority{
         this, "lowpriority", false, &performance_group, "run in a lower priority, to free up headroom for other processes"};
-
+    
+    setting_invertible_bool log{this, "log", true, &logging_group, "whether log files are written or not"};
     setting_bool verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"};
     setting_bool nopercent{this, "nopercent", false, &logging_group, "don't output percentage messages"};
     setting_bool nostat{this, "nostat", false, &logging_group, "don't output statistic messages"};
     setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
     setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group, "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
+    setting_string basedir{this, "basedir", "", "dir_name", &game_group, "override the default game base directory"};
 
     virtual void setParameters(int argc, const char **argv);
 

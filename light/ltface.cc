@@ -230,7 +230,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
-    LogPrint("face {}, texture {}, {} edges; vectors:\n"
+    logging::print("face {}, texture {}, {} edges; vectors:\n"
              "{: 3.3}\n",
         Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
@@ -239,7 +239,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
         int vert = Face_VertexAtIndex(bsp, face, i);
         const qvec3f &point = GetSurfaceVertexPoint(bsp, face, i);
         const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i).normal;
-        LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
+        logging::print("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
             i ? "          " : "    verts ", vert, point[0], point[1], point[2], norm[0], norm[1], norm[2], edge);
     }
 }
@@ -527,7 +527,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
         }
     }
 
-    LogPrint("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
+    logging::print("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
         surf->height);
 
     PrintFaceInfo(surf->face, bsp);
@@ -756,7 +756,7 @@ static bool Lightsurf_Init(
 
     /* Check for invalid texture axes */
     if (std::isnan(lightsurf->texorg.texSpaceToWorld.at(0, 0))) {
-        LogPrint("Bad texture axes on face:\n");
+        logging::print("Bad texture axes on face:\n");
         PrintFaceInfo(face, bsp);
         return false;
     }
@@ -2285,7 +2285,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
     }
 
     /* note it */
-    LogPrint("--- SetupDirt ---\n");
+    logging::print("--- SetupDirt ---\n");
 
     /* calculate angular steps */
     constexpr float angleStep = (float)DEG2RAD(360.0f / DIRT_NUM_ANGLE_STEPS);
@@ -2305,7 +2305,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
     }
 
     /* emit some statistics */
-    LogPrint("{:9} dirtmap vectors\n", numDirtVectors);
+    logging::print("{:9} dirtmap vectors\n", numDirtVectors);
 }
 
 // from q3map2
@@ -2514,7 +2514,7 @@ static float Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lig
 }
 
 #if 0
-static void WritePPM(const std::filesystem::path &fname, int width, int height, const uint8_t *rgbdata)
+static void WritePPM(const fs::path &fname, int width, int height, const uint8_t *rgbdata)
 {
     qfile_t file = SafeOpenWrite(fname);
 
@@ -2766,7 +2766,7 @@ static std::vector<qvec4f> FloodFillTransparent(const std::vector<qvec4f> &input
         }
 
         if (unhandled_pixels == input.size()) {
-            // FLogPrint("warning, fully transparent lightmap\n");
+            // logging::funcprint("warning, fully transparent lightmap\n");
             fully_transparent_lightmaps++;
             break;
         }
@@ -2933,7 +2933,7 @@ static void WriteLightmaps(
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
         if (sorted.size() == MAXLIGHTMAPS) {
-            LogPrint("WARNING: Too many light styles on a face\n"
+            logging::print("WARNING: Too many light styles on a face\n"
                      "         lightmap point near [{}]\n",
                 lightsurf->points[0]);
             break;

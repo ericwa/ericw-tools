@@ -36,10 +36,11 @@ setting_base::setting_base(
 
 setting_group performance_group{"Performance", 10};
 setting_group logging_group{"Logging", 5};
+setting_group game_group{"Game", 15};
 
 [[noreturn]] void setting_container::printHelp()
 {
-    fmt::print("{}usage: {} [-help/-h/-?] [-options] {}\n\n", usage, programName, remainderName);
+    fmt::print("{} ({})usage: {} [-help/-h/-?] [-options] {}\n\n", usage, stringify(ERICWTOOLS_VERSION), programName, remainderName);
 
     for (auto grouped : grouped()) {
         if (grouped.first) {
@@ -64,14 +65,14 @@ setting_group logging_group{"Logging", 5};
 
 void setting_container::printSummary()
 {
-    LogPrint("\n--- Options Summary ---\n");
+    logging::print("\n--- Options Summary ---\n");
     for (auto setting : _settings) {
         if (setting->isChanged()) {
-            LogPrint("    \"{}\" was set to \"{}\" (from {})\n", setting->primaryName(), setting->stringValue(),
+            logging::print("    \"{}\" was set to \"{}\" (from {})\n", setting->primaryName(), setting->stringValue(),
                 setting->sourceString());
         }
     }
-    LogPrint("\n");
+    logging::print("\n");
 }
 
 std::vector<std::string> setting_container::parse(parser_base_t &parser)
@@ -139,6 +140,7 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
 void common_settings::setParameters(int argc, const char **argv)
 {
     programName = fs::path(argv[0]).stem().string();
+    fmt::print("---- {} / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n", programName);
 }
 
 void common_settings::postinitialize(int argc, const char **argv)
@@ -148,19 +150,19 @@ void common_settings::postinitialize(int argc, const char **argv)
     configureTBB(threads.value(), lowpriority.value());
 
     if (verbose.value()) {
-        log_mask |= 1 << LOG_VERBOSE;
+        logging::mask |= logging::flag::VERBOSE;
     }
 
     if (nopercent.value()) {
-        log_mask &= ~(1 << LOG_PERCENT);
+        logging::mask &= ~bitflags<logging::flag>(logging::flag::PERCENT);
     }
 
     if (nostat.value()) {
-        log_mask &= ~(1 << LOG_STAT);
+        logging::mask &= ~bitflags<logging::flag>(logging::flag::STAT);
     }
 
     if (noprogress.value()) {
-        log_mask &= ~(1 << LOG_PROGRESS);
+        logging::mask &= ~bitflags<logging::flag>(logging::flag::PROGRESS);
     }
 }
 } // namespace settings

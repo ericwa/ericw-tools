@@ -220,8 +220,8 @@ public:
     bool fNoverbose = false;
     const bspversion_t *target_version;
     const gamedef_t *target_game;
-    std::filesystem::path szMapName;
-    std::filesystem::path szBSPName;
+    fs::path szMapName;
+    fs::path szBSPName;
 };
 }; // namespace settings
 

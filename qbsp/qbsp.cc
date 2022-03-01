@@ -34,8 +34,6 @@
 
 #include "tbb/global_control.h"
 
-constexpr const char *IntroString = "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
-
 // command line flags
 namespace settings
 {
@@ -57,7 +55,7 @@ inline void set_target_version(const bspversion_t *version)
 void qbsp_settings::initialize(int argc, const char **argv)
 {
     if (auto file = fs::load("qbsp.ini")) {
-        LogPrint("Loading options from qbsp.ini\n");
+        logging::print("Loading options from qbsp.ini\n");
         parse(parser_t(file->data(), file->size()));
     }
 
@@ -79,11 +77,11 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
     common_settings::postinitialize(argc, argv);
 
     // side effects from common
-    if (log_mask & (1 << LOG_VERBOSE)) {
+    if (logging::mask & logging::flag::VERBOSE) {
         options.fAllverbose = true;
     }
 
-    if ((log_mask & ((1 << LOG_PERCENT) | (1 << LOG_STAT) | (1 << LOG_PROGRESS))) == 0) {
+    if ((logging::mask & (bitflags<logging::flag>(logging::flag::PERCENT) | logging::flag::STAT | logging::flag::PROGRESS)) == logging::flag::NONE) {
         options.fNoverbose = true;
     }
 
@@ -336,7 +334,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
 
 static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &brush_offset)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     brush_state = {};
 
@@ -360,9 +358,9 @@ static void ExportBrushList(const mapentity_t *entity, node_t *node, uint32_t &b
 
     brush_offset += brush_state.total_brushes;
 
-    LogPrint(LOG_STAT, "     {:8} total brushes\n", brush_state.total_brushes);
-    LogPrint(LOG_STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
-    LogPrint(LOG_STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
+    logging::print(logging::flag::STAT, "     {:8} total brushes\n", brush_state.total_brushes);
+    logging::print(logging::flag::STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
+    logging::print(logging::flag::STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
 }
 
 /*
@@ -429,7 +427,7 @@ static void FloodAreas_r(node_t *node)
         // note the current area as bounding the portal
         if (entity->portalareas[1]) {
             // FIXME: entity #
-            LogPrint("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n", node->bounds.mins(),
+            logging::print("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n", node->bounds.mins(),
                 node->bounds.maxs());
             return;
         }
@@ -520,7 +518,7 @@ static void SetAreaPortalAreas_r(node_t *node)
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
         // FIXME: entity #
-        LogPrint("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n",
+        logging::print("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n",
             qv::to_string(entity->bounds.mins()), qv::to_string(entity->bounds.maxs()));
         return;
     }
@@ -535,10 +533,10 @@ Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
 */
 static void FloodAreas(mapentity_t *entity, node_t *headnode)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
     FindAreas(headnode);
     SetAreaPortalAreas_r(headnode);
-    LogPrint(LOG_STAT, "{:5} areas\n", c_areas);
+    logging::print(logging::flag::STAT, "{:5} areas\n", c_areas);
 }
 
 /*
@@ -549,7 +547,7 @@ EmitAreaPortals
 */
 static void EmitAreaPortals(node_t *headnode)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     map.bsp.dareaportals.emplace_back();
     map.bsp.dareas.emplace_back();
@@ -576,8 +574,8 @@ static void EmitAreaPortals(node_t *headnode)
         area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
     }
 
-    LogPrint(LOG_STAT, "{:5} numareas\n", map.bsp.dareas.size());
-    LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
+    logging::print(logging::flag::STAT, "{:5} numareas\n", map.bsp.dareas.size());
+    logging::print(logging::flag::STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
 }
 
 winding_t BaseWindingForPlane(const qplane3d &p)
@@ -615,7 +613,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     if (entity != pWorldEnt()) {
         if (entity == pWorldEnt() + 1)
-            LogPrint(LOG_PROGRESS, "---- Internal Entities ----\n");
+            logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
 
         std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
 
@@ -623,7 +621,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             PrintEntity(entity);
 
         if (hullnum <= 0)
-            LogPrint(LOG_STAT, "     MODEL: {}\n", mod);
+            logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
         SetKeyValue(entity, "model", mod.c_str());
     }
 
@@ -636,30 +634,30 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
-    LogPrint(LOG_PROGRESS, "---- Brush_LoadEntity ----\n");
+    logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
     auto stats = Brush_LoadEntity(entity, hullnum);
 
     /* Print brush counts */
     if (stats.solid) {
-        LogPrint(LOG_STAT, "     {:8} solid brushes\n", stats.solid);
+        logging::print(logging::flag::STAT, "     {:8} solid brushes\n", stats.solid);
     }
     if (stats.sky) {
-        LogPrint(LOG_STAT, "     {:8} sky brushes\n", stats.sky);
+        logging::print(logging::flag::STAT, "     {:8} sky brushes\n", stats.sky);
     }
     if (stats.detail) {
-        LogPrint(LOG_STAT, "     {:8} detail brushes\n", stats.detail);
+        logging::print(logging::flag::STAT, "     {:8} detail brushes\n", stats.detail);
     }
     if (stats.detail_illusionary) {
-        LogPrint(LOG_STAT, "     {:8} detail illusionary brushes\n", stats.detail_illusionary);
+        logging::print(logging::flag::STAT, "     {:8} detail illusionary brushes\n", stats.detail_illusionary);
     }
     if (stats.detail_fence) {
-        LogPrint(LOG_STAT, "     {:8} detail fence brushes\n", stats.detail_fence);
+        logging::print(logging::flag::STAT, "     {:8} detail fence brushes\n", stats.detail_fence);
     }
     if (stats.liquid) {
-        LogPrint(LOG_STAT, "     {:8} liquid brushes\n", stats.liquid);
+        logging::print(logging::flag::STAT, "     {:8} liquid brushes\n", stats.liquid);
     }
 
-    LogPrint(LOG_STAT, "     {:8} planes\n", map.numplanes());
+    logging::print(logging::flag::STAT, "     {:8} planes\n", map.numplanes());
 
     if (entity->brushes.empty() && hullnum) {
         PrintEntity(entity);
@@ -784,7 +782,7 @@ static void UpdateEntLump(void)
     char modname[10];
     mapentity_t *entity;
 
-    LogPrint(LOG_STAT, "     Updating entities lump...\n");
+    logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
     modnum = 1;
     for (i = 1; i < map.numentities(); i++) {
@@ -828,7 +826,7 @@ static void UpdateEntLump(void)
 
     if (!options.fAllverbose) {
         options.fVerbose = false;
-        log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 }
 
@@ -910,7 +908,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
                 if (b.contents.is_clip()) {
                     perbrush.contents = -8;
                 } else {
-                    LogPrint("WARNING: Unknown contents: {}. Translating to solid.\n",
+                    logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
                         b.contents.to_string(options.target_game));
                     perbrush.contents = CONTENTS_SOLID;
                 }
@@ -991,7 +989,7 @@ static void CreateSingleHull(const int hullnum)
     int i;
     mapentity_t *entity;
 
-    LogPrint("Processing hull {}...\n", hullnum);
+    logging::print("Processing hull {}...\n", hullnum);
 
     // for each entity in the map file that has geometry
     for (i = 0; i < map.numentities(); i++) {
@@ -999,7 +997,7 @@ static void CreateSingleHull(const int hullnum)
         ProcessEntity(entity, hullnum);
         if (!options.fAllverbose) {
             options.fVerbose = false; // don't print rest of entities
-            log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+            logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
         }
     }
 }
@@ -1014,7 +1012,7 @@ static void CreateHulls(void)
     /* create the hulls sequentially */
     if (!options.fNoverbose) {
         options.fVerbose = true;
-        log_mask |= (1 << LOG_STAT) | (1 << LOG_PROGRESS);
+        logging::mask |= (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 
     auto &hulls = options.target_game->get_hull_sizes();
@@ -1046,22 +1044,22 @@ void EnsureTexturesLoaded()
     if (!wadstring[0])
         wadstring = ValueForKey(pWorldEnt(), "wad");
     if (!wadstring[0])
-        LogPrint("WARNING: No wad or _wad key exists in the worldmodel\n");
+        logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
     else
         WADList_Init(wadstring);
 
     if (!wadlist.size()) {
         if (wadstring[0])
-            LogPrint("WARNING: No valid WAD filenames in worldmodel\n");
+            logging::print("WARNING: No valid WAD filenames in worldmodel\n");
 
         /* Try the default wad name */
-        std::filesystem::path defaultwad = options.szMapName;
+        fs::path defaultwad = options.szMapName;
         defaultwad.replace_extension("wad");
 
         WADList_Init(defaultwad.string().c_str());
 
         if (wadlist.size())
-            LogPrint("Using default WAD: {}\n", defaultwad);
+            logging::print("Using default WAD: {}\n", defaultwad);
     }
 }
 
@@ -1092,7 +1090,7 @@ static void ProcessFile(void)
 
     if (!options.fAllverbose) {
         options.fVerbose = false;
-        log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 
     // calculate extents, if required
@@ -1127,10 +1125,7 @@ static void InitQBSP(int argc, const char **argv)
         options.szBSPName = options.szMapName;
 
     /* Start logging to <bspname>.log */
-    options.szBSPName.replace_extension("log");
-    InitLog(options.szBSPName);
-
-    LogPrintSilent(IntroString);
+    logging::init(fs::path(options.szBSPName).replace_extension("log"), options);
 
     // Remove already existing files
     if (!options.onlyents.value() && options.convertmapformat.value() == conversion_t::none) {
@@ -1138,8 +1133,8 @@ static void InitQBSP(int argc, const char **argv)
         remove(options.szBSPName);
 
         // Probably not the best place to do this
-        LogPrint("Input file: {}\n", options.szMapName);
-        LogPrint("Output file: {}\n\n", options.szBSPName);
+        logging::print("Input file: {}\n", options.szMapName);
+        logging::print("Output file: {}\n\n", options.szBSPName);
 
         options.szBSPName.replace_extension("prt");
         remove(options.szBSPName);
@@ -1153,7 +1148,7 @@ static void InitQBSP(int argc, const char **argv)
 
     // onlyents might not load this yet
     if (options.target_game) {
-        options.target_game->init_filesystem(options.szMapName);
+        options.target_game->init_filesystem(options.szMapName, options);
     }
 }
 
@@ -1166,8 +1161,6 @@ main
 */
 int qbsp_main(int argc, const char **argv)
 {
-    LogPrint(IntroString);
-
     InitQBSP(argc, argv);
 
     // do it!
@@ -1175,12 +1168,12 @@ int qbsp_main(int argc, const char **argv)
     ProcessFile();
     auto end = I_FloatTime();
 
-    LogPrint("\n{:.3} seconds elapsed\n", (end - start));
+    logging::print("\n{:.3} seconds elapsed\n", (end - start));
 
     //      FreeAllMem();
     //      PrintMem();
-
-    CloseLog();
+    
+    logging::close();
 
     return 0;
 }

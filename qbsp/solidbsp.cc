@@ -732,8 +732,7 @@ static void PartitionSurfaces(std::vector<surface_t> &surfaces, node_t *node)
         return;
     }
 
-    splitnodes++;
-    LogPercent(splitnodes.load(), csgmergefaces);
+    logging::percent(splitnodes++, csgmergefaces);
 
     node->facelist = LinkNodeFaces(*split);
     node->children[0] = new node_t{};
@@ -804,7 +803,7 @@ node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bo
         return headnode;
     }
 
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     node_t *headnode = new node_t{};
     usemidsplit = midsplit;
@@ -827,17 +826,18 @@ node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bo
     mapsurfaces = surfhead.size();
 
     PartitionSurfaces(surfhead, headnode);
+    logging::percent(csgmergefaces, csgmergefaces);
 
-    LogPrint(LOG_STAT, "     {:8} split nodes\n", splitnodes.load());
-    LogPrint(LOG_STAT, "     {:8} solid leafs\n", c_solid.load());
-    LogPrint(LOG_STAT, "     {:8} empty leafs\n", c_empty.load());
-    LogPrint(LOG_STAT, "     {:8} water leafs\n", c_water.load());
-    LogPrint(LOG_STAT, "     {:8} detail leafs\n", c_detail.load());
-    LogPrint(LOG_STAT, "     {:8} detail illusionary leafs\n", c_detail_illusionary.load());
-    LogPrint(LOG_STAT, "     {:8} detail fence leafs\n", c_detail_fence.load());
-    LogPrint(LOG_STAT, "     {:8} illusionary visblocker leafs\n", c_illusionary_visblocker.load());
-    LogPrint(LOG_STAT, "     {:8} leaffaces\n", leaffaces.load());
-    LogPrint(LOG_STAT, "     {:8} nodefaces\n", nodefaces.load());
+    logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
+    logging::print(logging::flag::STAT, "     {:8} solid leafs\n", c_solid.load());
+    logging::print(logging::flag::STAT, "     {:8} empty leafs\n", c_empty.load());
+    logging::print(logging::flag::STAT, "     {:8} water leafs\n", c_water.load());
+    logging::print(logging::flag::STAT, "     {:8} detail leafs\n", c_detail.load());
+    logging::print(logging::flag::STAT, "     {:8} detail illusionary leafs\n", c_detail_illusionary.load());
+    logging::print(logging::flag::STAT, "     {:8} detail fence leafs\n", c_detail_fence.load());
+    logging::print(logging::flag::STAT, "     {:8} illusionary visblocker leafs\n", c_illusionary_visblocker.load());
+    logging::print(logging::flag::STAT, "     {:8} leaffaces\n", leaffaces.load());
+    logging::print(logging::flag::STAT, "     {:8} nodefaces\n", nodefaces.load());
 
     return headnode;
 }

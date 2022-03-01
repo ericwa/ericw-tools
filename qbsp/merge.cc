@@ -123,7 +123,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     // build the new polygon
     if (f1->w.size() + f2->w.size() > MAXEDGES) {
-        FLogPrint("WARNING: Too many edges\n");
+        logging::funcprint("WARNING: Too many edges\n");
         return NULL;
     }
 
@@ -205,7 +205,7 @@ void MergeAll(std::vector<surface_t> &surfhead)
 {
     std::atomic<int> mergefaces = 0, premergefaces = 0;
 
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     tbb::parallel_for_each(surfhead, [&](surface_t &surf) {
         premergefaces += surf.faces.size();
@@ -213,7 +213,7 @@ void MergeAll(std::vector<surface_t> &surfhead)
         mergefaces += surf.faces.size();
     });
 
-    LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces,
+    logging::print(logging::flag::STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces,
         (static_cast<double>(mergefaces) / premergefaces) * 100.);
 
     // Quick hack to let solidbsp print out progress %

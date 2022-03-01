@@ -106,7 +106,7 @@ static void CanonicalVector(const qvec3d &p1, const qvec3d &p2, qvec3d &vec)
     }
 
     // FIXME: Line {}: was here but no line number can be grabbed here?
-    LogPrint("WARNING: Healing degenerate edge ({}) at ({:.3})\n", length, p1);
+    logging::print("WARNING: Healing degenerate edge ({}) at ({:.3})\n", length, p1);
 }
 
 static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t2)
@@ -406,7 +406,7 @@ tjunc
 */
 void TJunc(const mapentity_t *entity, node_t *headnode)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     /*
      * Guess edges = 1/2 verts
@@ -440,8 +440,8 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
 
     tjunc_find_r(headnode);
 
-    LogPrint(LOG_STAT, "     {:8} world edges\n", numwedges);
-    LogPrint(LOG_STAT, "     {:8} edge points\n", numwverts);
+    logging::print(logging::flag::STAT, "     {:8} world edges\n", numwedges);
+    logging::print(logging::flag::STAT, "     {:8} edge points\n", numwverts);
 
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
@@ -450,6 +450,6 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     delete[] pWVerts;
     delete[] pWEdges;
 
-    LogPrint(LOG_STAT, "     {:8} edges added by tjunctions\n", tjuncs);
-    LogPrint(LOG_STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);
+    logging::print(logging::flag::STAT, "     {:8} edges added by tjunctions\n", tjuncs);
+    logging::print(logging::flag::STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);
 }

@@ -29,6 +29,7 @@ See file, 'COPYING', for details.
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
+#include <common/parallel.hh>
 
 #include <vector>
 #include <map>
@@ -56,7 +57,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
         if (info->flags.native & Q2_SURF_LIGHT) {
             qvec3d wc = winding_t::from_face(bsp, face).center();
-            LogPrint("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
+            logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
         }
         return;
     }
@@ -162,7 +163,7 @@ const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 void // Quake 2 surface lights
 MakeSurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    LogPrint("--- MakeSurfaceLights ---\n");
+    logging::print("--- MakeSurfaceLights ---\n");
 
-    RunThreadsOn(0, bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
 }

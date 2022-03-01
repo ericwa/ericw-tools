@@ -246,22 +246,10 @@ inline float BigFloat(float l)
         return byte_swap(l);
 }
 
-inline void Q_assert_(bool success, const char *expr, const char *file, int line)
-{
-    if (!success) {
-        LogPrint("{}:{}: Q_assert({}) failed.\n", file, line, expr);
-        // assert(0);
-#ifdef _WIN32
-        __debugbreak();
-#endif
-        exit(1);
-    }
-}
-
 /**
  * assertion macro that is used in all builds (debug/release)
  */
-#define Q_assert(x) Q_assert_((x), stringify(x), __FILE__, __LINE__)
+#define Q_assert(x) logging::assert_((x), stringify(x), __FILE__, __LINE__)
 
 #define Q_assert_unreachable() Q_assert(false)
 
@@ -836,62 +824,3 @@ void CRC_Init(unsigned short *crcvalue);
 void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
 unsigned short CRC_Value(unsigned short crcvalue);
 unsigned short CRC_Block(const unsigned char *start, int count);
-
-#include <bitset>
-
-template<typename Enum>
-struct bitflags
-{
-    static_assert(std::is_enum_v<Enum>, "Must be enum");
-
-private:
-    using type = typename std::underlying_type_t<Enum>;
-    std::bitset<sizeof(type) * 8> _bits{};
-
-    constexpr bitflags(const std::bitset<sizeof(type) * 8> &bits) : _bits(bits) { }
-
-public:
-    constexpr bitflags() { }
-
-    constexpr bitflags(const Enum &enumValue) : _bits(static_cast<type>(enumValue)) { }
-
-    constexpr bitflags(const bitflags &copy) = default;
-    constexpr bitflags(bitflags &&move) = default;
-
-    constexpr bitflags &operator=(const bitflags &copy) = default;
-    constexpr bitflags &operator=(bitflags &&move) = default;
-
-    inline explicit operator bool() const { return _bits.any(); }
-
-    inline bool operator!() const { return !_bits.any(); }
-
-    inline operator Enum() const { return static_cast<Enum>(_bits.to_ulong()); }
-
-    inline bitflags &operator|=(const bitflags &r)
-    {
-        _bits |= r._bits;
-        return *this;
-    }
-    inline bitflags &operator&=(const bitflags &r)
-    {
-        _bits &= r._bits;
-        return *this;
-    }
-    inline bitflags &operator^=(const bitflags &r)
-    {
-        _bits ^= r._bits;
-        return *this;
-    }
-
-    inline bitflags operator|(const bitflags &r) { return bitflags(*this) |= r; }
-    inline bitflags operator&(const bitflags &r) { return bitflags(*this) &= r; }
-    inline bitflags operator^(const bitflags &r) { return bitflags(*this) ^= r; }
-
-    inline bitflags operator~() const { return ~_bits; }
-
-    inline bool operator==(const bitflags &r) const { return _bits == r._bits; }
-    inline bool operator!=(const bitflags &r) const { return _bits != r._bits; }
-
-    inline bool operator==(const Enum &r) const { return _bits == bitflags(r)._bits; }
-    inline bool operator!=(const Enum &r) const { return _bits != bitflags(r)._bits; }
-};

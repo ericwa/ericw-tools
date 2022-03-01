@@ -1,6 +1,7 @@
 #include <common/threads.hh>
 #include <vis/vis.hh>
 #include <vis/leafbits.hh>
+#include <common/parallel.hh>
 
 unsigned long c_chains;
 int c_vistest, c_mighttest;
@@ -159,7 +160,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     if (err) {
         // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
         // causes it to happen a lot.
-        // FLogPrint("WARNING: recursion on leaf {}\n", leafnum);
+        // logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
         return;
     }
 
@@ -458,5 +459,5 @@ static void BasePortalThread(size_t portalnum)
 */
 void BasePortalVis(void)
 {
-    RunThreadsOn(0, numportals * 2, BasePortalThread);
+    logging::parallel_for(0, numportals * 2, BasePortalThread);
 }

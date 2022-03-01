@@ -220,12 +220,12 @@ void clear()
 std::shared_ptr<archive_like> addArchive(const path &p)
 {
     if (p.empty()) {
-        FLogPrint("WARNING: can't add empty archive path\n");
+        logging::funcprint("WARNING: can't add empty archive path\n");
         return nullptr;
     }
 
     if (!exists(p)) {
-        FLogPrint("WARNING: '{}' not found\n", p);
+        logging::funcprint("WARNING: '{}' not found\n", p);
         return nullptr;
     }
 
@@ -237,7 +237,7 @@ std::shared_ptr<archive_like> addArchive(const path &p)
         }
 
         auto &arch = directories.emplace_front(std::make_shared<directory_archive>(p));
-        LogPrint(LOG_VERBOSE, "Added directory '{}'\n", p);
+        logging::print(logging::flag::VERBOSE, "Added directory '{}'\n", p);
         return arch;
     } else {
         for (auto &arch : archives) {
@@ -252,19 +252,19 @@ std::shared_ptr<archive_like> addArchive(const path &p)
             if (string_iequals(ext.generic_string(), ".pak")) {
                 auto &arch = archives.emplace_front(std::make_shared<pak_archive>(p));
                 auto &pak = reinterpret_cast<std::shared_ptr<pak_archive> &>(arch);
-                LogPrint(LOG_VERBOSE, "Added pak '{}' with {} files\n", p, pak->files.size());
+                logging::print(logging::flag::VERBOSE, "Added pak '{}' with {} files\n", p, pak->files.size());
                 return arch;
             } else if (string_iequals(ext.generic_string(), ".wad")) {
                 auto &arch = archives.emplace_front(std::make_shared<wad_archive>(p));
                 auto &wad = reinterpret_cast<std::shared_ptr<wad_archive> &>(arch);
-                LogPrint(LOG_VERBOSE, "Added wad '{}' with {} lumps\n", p, wad->files.size());
+                logging::print(logging::flag::VERBOSE, "Added wad '{}' with {} lumps\n", p, wad->files.size());
                 return arch;
             } else {
-                FLogPrint("WARNING: no idea what to do with archive '{}'\n", p);
+                logging::funcprint("WARNING: no idea what to do with archive '{}'\n", p);
             }
         }
         catch (std::exception e) {
-            FLogPrint("WARNING: unable to load archive '{}': {}\n", p, e.what());
+            logging::funcprint("WARNING: unable to load archive '{}': {}\n", p, e.what());
         }
     }
 
@@ -317,13 +317,13 @@ data load(const path &p)
         return std::nullopt;
     }
 
-    LogPrint(LOG_VERBOSE, "Loaded '{}' from archive '{}'\n", filename, arch->pathname);
+    logging::print(logging::flag::VERBOSE, "Loaded '{}' from archive '{}'\n", filename, arch->pathname);
 
     return arch->load(filename);
 }
 } // namespace fs
 
-qfile_t SafeOpenWrite(const std::filesystem::path &filename)
+qfile_t SafeOpenWrite(const fs::path &filename)
 {
     FILE *f;
 
@@ -339,7 +339,7 @@ qfile_t SafeOpenWrite(const std::filesystem::path &filename)
     return {f, fclose};
 }
 
-qfile_t SafeOpenRead(const std::filesystem::path &filename, bool must_exist)
+qfile_t SafeOpenRead(const fs::path &filename, bool must_exist)
 {
     FILE *f;
 

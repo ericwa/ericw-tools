@@ -42,12 +42,12 @@ struct pcx_t
     }
 };
 
-static bool LoadPCXPalette(const std::filesystem::path &filename, std::vector<qvec3b> &palette)
+static bool LoadPCXPalette(const fs::path &filename, std::vector<qvec3b> &palette)
 {
     auto file = fs::load(filename);
 
     if (!file || !file->size()) {
-        FLogPrint("Failed to load '{}'.\n", filename);
+        logging::funcprint("Failed to load '{}'.\n", filename);
         return false;
     }
 
@@ -59,7 +59,7 @@ static bool LoadPCXPalette(const std::filesystem::path &filename, std::vector<qv
     stream >= pcx;
 
     if (pcx.manufacturer != 0x0a || pcx.version != 5 || pcx.encoding != 1 || pcx.bits_per_pixel != 8) {
-        FLogPrint("Failed to load '{}'. Unsupported PCX file.\n", filename);
+        logging::funcprint("Failed to load '{}'. Unsupported PCX file.\n", filename);
         return false;
     }
 
@@ -83,7 +83,7 @@ void init_palette(const gamedef_t *game)
             return;
         }
 
-        LogPrint("INFO: Falling back to built-in palette.\n");
+        logging::print("INFO: Falling back to built-in palette.\n");
     }
 
     auto &pal = game->get_default_palette();
@@ -182,12 +182,12 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
     stream >= targa_header;
 
     if (targa_header.image_type != 2 && targa_header.image_type != 10) {
-        FLogPrint("Failed to load TGA. Only type 2 and 10 targa RGB images supported.\n");
+        logging::funcprint("Failed to load TGA. Only type 2 and 10 targa RGB images supported.\n");
         return std::nullopt;
     }
 
     if (targa_header.colormap_type != 0 || (targa_header.pixel_size != 32 && targa_header.pixel_size != 24)) {
-        FLogPrint("Failed to load TGA. Only 32 or 24 bit images supported (no colormaps).\n");
+        logging::funcprint("Failed to load TGA. Only 32 or 24 bit images supported (no colormaps).\n");
         return std::nullopt;
     }
 
@@ -222,7 +222,7 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
                             *pixbuf++ = {red, green, blue, alphabyte};
                             break;
                         default:
-                            FLogPrint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
+                            logging::funcprint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
                             return std::nullopt;
                     }
                 }
@@ -244,7 +244,7 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
                                 break;
                             case 32: stream >= blue >= green >= red >= alphabyte; break;
                             default:
-                                FLogPrint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
+                                logging::funcprint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
                                 return std::nullopt;
                         }
 
@@ -272,7 +272,7 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
                                     *pixbuf++ = {red, green, blue, alphabyte};
                                     break;
                                 default:
-                                    FLogPrint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
+                                    logging::funcprint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
                                     return std::nullopt;
                             }
                             column++;
@@ -348,7 +348,7 @@ static void AddTextureName(const char *textureName)
     auto wal = fs::load("textures" / fs::path(textureName) += ".wal");
 
     if (!wal) {
-        FLogPrint("WARNING: can't find .wal for {}\n", textureName);
+        logging::funcprint("WARNING: can't find .wal for {}\n", textureName);
     } else {
         auto walTex = load_wal(textureName, wal, false);
 
@@ -411,7 +411,7 @@ static void ConvertTextures(const mbsp_t *bsp)
 
     for (auto &miptex : bsp->dtex.textures) {
         if (textures.find(miptex.name) != textures.end()) {
-            FLogPrint("WARNING: Texture {} duplicated\n", miptex.name);
+            logging::funcprint("WARNING: Texture {} duplicated\n", miptex.name);
             continue;
         }
 
@@ -419,7 +419,7 @@ static void ConvertTextures(const mbsp_t *bsp)
         auto &tex = textures.emplace(miptex.name, texture{}).first->second;
 
         if (!miptex.data[0]) {
-            FLogPrint("WARNING: Texture {} is external\n", miptex.name);
+            logging::funcprint("WARNING: Texture {} is external\n", miptex.name);
             continue;
         }
 
@@ -447,14 +447,14 @@ static void ConvertTextures(const mbsp_t *bsp)
 
 void load_textures(const mbsp_t *bsp)
 {
-    LogPrint("--- {} ---\n", __func__);
+    logging::print("--- {} ---\n", __func__);
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         LoadTextures(bsp);
     } else if (bsp->dtex.textures.size() > 0) {
         ConvertTextures(bsp);
     } else {
-        LogPrint("WARNING: failed to load or convert textures.\n");
+        logging::print("WARNING: failed to load or convert textures.\n");
     }
 }
 } // namespace img

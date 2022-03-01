@@ -125,7 +125,7 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
     return true;
 }
 
-static void WADList_OpenWad(const std::filesystem::path &fpath, bool external)
+static void WADList_OpenWad(const fs::path &fpath, bool external)
 {
     wad_t wad;
 
@@ -133,14 +133,14 @@ static void WADList_OpenWad(const std::filesystem::path &fpath, bool external)
 
     if (wad.file) {
         if (options.fVerbose)
-            LogPrint("Opened WAD: {}\n", fpath);
+            logging::print("Opened WAD: {}\n", fpath);
 
         if (WAD_LoadInfo(wad, external)) {
             wadlist.emplace_front(std::move(wad));
             return;
         }
 
-        LogPrint("WARNING: {} isn't a wadfile\n", fpath);
+        logging::print("WARNING: {} isn't a wadfile\n", fpath);
         wad.file.reset();
     } else {
         // Message?
@@ -164,7 +164,7 @@ void WADList_Init(const char *wadstring)
         std::string fpathstr;
         fpathstr.resize(fpathLen);
         memcpy(&fpathstr[0], fname, fpathLen);
-        std::filesystem::path fpath = fpathstr;
+        fs::path fpath = fpathstr;
 
         if (options.wadpaths.pathsValue().empty() || fpath.is_absolute()) {
             WADList_OpenWad(fpath, false);
@@ -207,7 +207,7 @@ static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
     SafeSeek(wad.file, lump.filepos, SEEK_SET);
 
     if (lump.disksize < sizeof(dmiptex_t)) {
-        LogPrint("Wad texture {} is invalid", name);
+        logging::print("Wad texture {} is invalid", name);
         return false;
     }
 
@@ -234,7 +234,7 @@ static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
     }
 
     if (lump.size != lump.disksize) {
-        LogPrint("Texture {} is {} bytes in wad, packed to {} bytes in bsp\n", name, lump.disksize, lump.size);
+        logging::print("Texture {} is {} bytes in wad, packed to {} bytes in bsp\n", name, lump.disksize, lump.size);
     }
 
     for (size_t i = 0; i < MIPLEVELS; i++) {
@@ -293,7 +293,7 @@ static void WADList_AddAnimationFrames()
         }
     }
 
-    LogPrint(LOG_STAT, "     {:8} texture frames added\n", map.nummiptex() - oldcount);
+    logging::print(logging::flag::STAT, "     {:8} texture frames added\n", map.nummiptex() - oldcount);
 }
 
 void WADList_Process()
@@ -313,7 +313,7 @@ void WADList_Process()
     /* Last pass, mark unfound textures as such */
     for (size_t i = 0; i < map.nummiptex(); i++) {
         if (!map.bsp.dtex.textures[i].data[0]) {
-            LogPrint("WARNING: Texture {} not found\n", map.miptexTextureName(i));
+            logging::print("WARNING: Texture {} not found\n", map.miptexTextureName(i));
         }
     }
 }

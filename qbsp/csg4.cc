@@ -494,16 +494,16 @@ Returns a list of surfaces containing all of the faces
 */
 std::vector<surface_t> CSGFaces(const mapentity_t *entity)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     csgfaces = 0;
     brushfaces = 0;
     csgmergefaces = 0;
 
 #if 0
-    LogPrint("CSGFaces brush order:\n");
+    logging::print("CSGFaces brush order:\n");
     for (brush = entity->brushes; brush; brush = brush->next) {
-        LogPrint("    {} ({})\n", map.texinfoTextureName(brush->faces->texinfo), brush->contents.to_string(options.target_game));
+        logging::print("    {} ({})\n", map.texinfoTextureName(brush->faces->texinfo), brush->contents.to_string(options.target_game));
     }
 #endif
 
@@ -628,10 +628,10 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
 
     std::vector<surface_t> surfaces = BuildSurfaces(planefaces);
 
-    LogPrint(LOG_STAT, "     {:8} brushfaces\n", brushfaces.load());
-    LogPrint(LOG_STAT, "     {:8} csgfaces\n", csgfaces);
-    LogPrint(LOG_STAT, "     {:8} mergedfaces\n", csgmergefaces);
-    LogPrint(LOG_STAT, "     {:8} surfaces\n", surfaces.size());
+    logging::print(logging::flag::STAT, "     {:8} brushfaces\n", brushfaces.load());
+    logging::print(logging::flag::STAT, "     {:8} csgfaces\n", csgfaces);
+    logging::print(logging::flag::STAT, "     {:8} mergedfaces\n", csgmergefaces);
+    logging::print(logging::flag::STAT, "     {:8} surfaces\n", surfaces.size());
 
     return surfaces;
 }

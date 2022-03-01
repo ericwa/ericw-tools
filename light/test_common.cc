@@ -6,6 +6,6 @@
 
 TEST(common, StripFilename)
 {
-    ASSERT_EQ("/home/foo", std::filesystem::path("/home/foo/bar.txt").parent_path());
-    ASSERT_EQ("", std::filesystem::path("bar.txt").parent_path());
+    ASSERT_EQ("/home/foo", fs::path("/home/foo/bar.txt").parent_path());
+    ASSERT_EQ("", fs::path("bar.txt").parent_path());
 }

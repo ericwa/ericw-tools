@@ -445,7 +445,7 @@ static void Leaf_MakeFaces(
         }
 
         if (winding) {
-            // LogPrint("WARNING: winding clipped away\n");
+            // logging::print("WARNING: winding clipped away\n");
         } else {
             result.push_back(std::move(*winding));
         }
@@ -598,7 +598,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     const size_t ver_maj = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_MAJOR);
     const size_t ver_min = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_MINOR);
     const size_t ver_pat = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_PATCH);
-    FLogPrint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
+    logging::funcprint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
 
     scene = rtcNewScene(device);
     rtcSetSceneFlags(scene, RTC_SCENE_FLAG_NONE);
@@ -615,11 +615,11 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
     rtcCommitScene(scene);
 
-    FLogPrint("\n");
-    LogPrint("\t{} sky faces\n", skyfaces.size());
-    LogPrint("\t{} solid faces\n", solidfaces.size());
-    LogPrint("\t{} filtered faces\n", filterfaces.size());
-    LogPrint("\t{} shadow-casting skip faces\n", skipwindings.size());
+    logging::funcprint("\n");
+    logging::print("\t{} sky faces\n", skyfaces.size());
+    logging::print("\t{} solid faces\n", solidfaces.size());
+    logging::print("\t{} filtered faces\n", filterfaces.size());
+    logging::print("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
 static RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &dir, vec_t dist)

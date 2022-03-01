@@ -36,6 +36,7 @@
 #include <common/bsputils.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
+#include <common/parallel.hh>
 
 #ifdef HAVE_EMBREE
 #include <xmmintrin.h>
@@ -114,12 +115,12 @@ void light_settings::initialize(int argc, const char **argv)
 void light_settings::postinitialize(int argc, const char **argv)
 {
     if (gate.value() > 1) {
-        LogPrint("WARNING: -gate value greater than 1 may cause artifacts\n");
+        logging::print("WARNING: -gate value greater than 1 may cause artifacts\n");
     }
 
     if (radlights.isChanged()) {
         if (!ParseLightsFile(radlights.value())) {
-            LogPrint("Unable to read surfacelights file {}\n", radlights.value());
+            logging::print("Unable to read surfacelights file {}\n", radlights.value());
         }
     }
 
@@ -140,16 +141,16 @@ void light_settings::postinitialize(int argc, const char **argv)
     }
 
     if (write_litfile == lightfile::lit2) {
-        LogPrint("generating lit2 output only.\n");
+        logging::print("generating lit2 output only.\n");
     } else {
         if (write_litfile & lightfile::external)
-            LogPrint(".lit colored light output requested on command line.\n");
+            logging::print(".lit colored light output requested on command line.\n");
         if (write_litfile & lightfile::bspx)
-            LogPrint("BSPX colored light output requested on command line.\n");
+            logging::print("BSPX colored light output requested on command line.\n");
         if (write_luxfile & lightfile::external)
-            LogPrint(".lux light directions output requested on command line.\n");
+            logging::print(".lux light directions output requested on command line.\n");
         if (write_luxfile & lightfile::bspx)
-            LogPrint("BSPX light directions output requested on command line.\n");
+            logging::print("BSPX light directions output requested on command line.\n");
     }
 
     if (debugmode == debugmodes::dirt) {
@@ -159,8 +160,8 @@ void light_settings::postinitialize(int argc, const char **argv)
     } else if (debugmode == debugmodes::debugneighbours && !debugface.isChanged()) {
         FError("-debugneighbours without -debugface specified\n");
     }
-
-    options.printSummary();
+    
+    common_settings::postinitialize(argc, argv);
 }
 } // namespace settings
 
@@ -197,6 +198,8 @@ void FixupGlobalSettings()
     }
 }
 
+static std::mutex light_mutex;
+
 /*
  * Return space for the lightmap and colourmap at the same time so it can
  * be done in a thread-safe manner.
@@ -206,7 +209,7 @@ void FixupGlobalSettings()
  */
 void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size)
 {
-    ThreadLock();
+    light_mutex.lock();
 
     *lightdata = filebase + file_p;
     *colordata = lit_filebase + lit_file_p;
@@ -223,7 +226,7 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
     lit_file_p += 3 * size;
     lux_file_p += 3 * size;
 
-    ThreadUnlock();
+    light_mutex.unlock();
 
     if (file_p > file_end)
         FError("overrun");
@@ -300,7 +303,7 @@ static void LightThread(const mbsp_t *bsp, size_t facenum)
     const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
     if (face_modelinfo == NULL) {
         // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
-        // LogPrint("warning: no model has face {}\n", facenum);
+        // logging::print("warning: no model has face {}\n", facenum);
         return;
     }
 
@@ -344,7 +347,7 @@ static void FindModelInfo(const mbsp_t *bsp)
     if (lightmapscale <= 0)
         FError("lightmap scale is 0 or negative\n");
     if (options.lmscale.isChanged() || lightmapscale != 16)
-        LogPrint("Forcing lightmap scale of {}qu\n", lightmapscale);
+        logging::print("Forcing lightmap scale of {}qu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software
      * ones that might be able to just do some mip hacks). This tool doesn't really care.*/
     {
@@ -353,7 +356,7 @@ static void FindModelInfo(const mbsp_t *bsp)
             i++;
         }
         if (i != lightmapscale) {
-            LogPrint("WARNING: lightmap scale is not a power of 2\n");
+            logging::print("WARNING: lightmap scale is not a power of 2\n");
         }
     }
 
@@ -404,7 +407,7 @@ static void FindModelInfo(const mbsp_t *bsp)
  */
 static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 {
-    LogPrint("--- LightWorld ---\n");
+    logging::print("--- LightWorld ---\n");
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
@@ -473,16 +476,18 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     info.bsp = bsp;
     RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
 #else
-    LogPrint("--- LightThread ---\n"); // mxd
-    RunThreadsOn(0, bsp.dfaces.size(), [&bsp](size_t i) { LightThread(&bsp, i); });
+    logging::print("--- LightThread ---\n"); // mxd
+    logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
+        LightThread(&bsp, i);
+    });
 #endif
 
     if ((bouncerequired || isQuake2map) && !options.nolighting.value()) { // mxd. Print some extra stats...
-        LogPrint("Indirect lights: {} bounce lights, {} surface lights ({} light points) in use.\n",
+        logging::print("Indirect lights: {} bounce lights, {} surface lights ({} light points) in use.\n",
             BounceLights().size(), SurfaceLights().size(), TotalSurfacelightPoints());
     }
 
-    LogPrint("Lighting Completed.\n\n");
+    logging::print("Lighting Completed.\n\n");
 
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     if (!options.litonly.value()) {
@@ -496,7 +501,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     } else {
         // NOTE: bsp.lightdatasize is already valid in the -litonly case
     }
-    LogPrint("lightdatasize: {}\n", bsp.dlightdata.size());
+    logging::print("lightdatasize: {}\n", bsp.dlightdata.size());
 
     // kill this stuff if its somehow found.
     bspdata->bspx.entries.erase("LMSTYLE");
@@ -515,12 +520,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     }
 }
 
-static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename, const mbsp_t *bsp)
+static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp)
 {
     // always create the zero'ed array
     extended_texinfo_flags.resize(bsp->texinfo.size());
 
-    std::filesystem::path filename(sourcefilename);
+    fs::path filename(sourcefilename);
     filename.replace_extension("texinfo.json");
 
     std::ifstream texinfofile(filename, std::ios_base::in | std::ios_base::binary);
@@ -528,7 +533,7 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
     if (!texinfofile)
         return;
 
-    LogPrint("Loading extended texinfo flags from {}...\n", filename);
+    logging::print("Loading extended texinfo flags from {}...\n", filename);
 
     json j;
 
@@ -538,7 +543,7 @@ static void LoadExtendedTexinfoFlags(const std::filesystem::path &sourcefilename
         size_t index = std::stoull(it.key());
 
         if (index >= bsp->texinfo.size()) {
-            LogPrint("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
+            logging::print("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
             memset(extended_texinfo_flags.data(), 0, bsp->texinfo.size() * sizeof(surfflags_t));
             return;
         }
@@ -613,7 +618,7 @@ static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *fa
     *vertcount += face->numedges;
 }
 
-static void ExportObj(const std::filesystem::path &filename, const mbsp_t *bsp)
+static void ExportObj(const fs::path &filename, const mbsp_t *bsp)
 {
     std::ofstream objfile(filename);
     int vertcount = 0;
@@ -625,7 +630,7 @@ static void ExportObj(const std::filesystem::path &filename, const mbsp_t *bsp)
         ExportObjFace(objfile, bsp, BSP_GetFace(bsp, i), &vertcount);
     }
 
-    LogPrint("Wrote {}\n", filename);
+    logging::print("Wrote {}\n", filename);
 }
 
 // obj
@@ -670,7 +675,7 @@ static void FindDebugFace(const mbsp_t *bsp)
     const int modelnum = mi ? (mi->model - bsp->dmodels.data()) : -1;
 
     const char *texname = Face_TextureName(bsp, f);
-    FLogPrint("dumping face {} (texture '{}' model {})\n", facenum, texname, modelnum);
+    logging::funcprint("dumping face {} (texture '{}' model {})\n", facenum, texname, modelnum);
 }
 
 // returns the vert nearest the given point
@@ -700,7 +705,7 @@ static void FindDebugVert(const mbsp_t *bsp)
 
     int v = Vertex_NearestPoint(bsp, options.debugvert.value());
 
-    FLogPrint("dumping vert {} at {}\n", v, bsp->dvertexes[v]);
+    logging::funcprint("dumping vert {} at {}\n", v, bsp->dvertexes[v]);
 
     dump_vertnum = v;
 }
@@ -710,11 +715,11 @@ static void SetLitNeeded()
     if (!options.write_litfile) {
         if (options.novanilla.value()) {
             options.write_litfile = lightfile::bspx;
-            LogPrint("Colored light entities/settings detected: "
+            logging::print("Colored light entities/settings detected: "
                      "bspxlit output enabled.\n");
         } else {
             options.write_litfile = lightfile::external;
-            LogPrint("Colored light entities/settings detected: "
+            logging::print("Colored light entities/settings detected: "
                      ".lit output enabled.\n");
         }
     }
@@ -754,19 +759,19 @@ static void PrintLight(const light_t &light)
 
         // print separator
         if (!first) {
-            LogPrint("; ");
+            logging::print("; ");
         } else {
             first = false;
         }
 
-        LogPrint("{}={}", setting->primaryName(), setting->stringValue());
+        logging::print("{}={}", setting->primaryName(), setting->stringValue());
     }
-    LogPrint("\n");
+    logging::print("\n");
 }
 
 static void PrintLights(void)
 {
-    LogPrint("===PrintLights===\n");
+    logging::print("===PrintLights===\n");
 
     for (const auto &light : GetLights()) {
         PrintLight(light);
@@ -815,7 +820,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 
     Q_assert(stream.tellp() == data_size);
 
-    LogPrint(LOG_VERBOSE, "Compressed {} normals down to {}\n", num_normals, unique_normals.size());
+    logging::print(logging::flag::VERBOSE, "Compressed {} normals down to {}\n", num_normals, unique_normals.size());
 
     bspdata.bspx.transfer("FACENORMALS", data, data_size);
 
@@ -856,14 +861,13 @@ int light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
 
-    InitLog("light.log");
-    LogPrint("---- light / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
-
     options.preinitialize(argc, argv);
     options.initialize(argc, argv);
 
     auto start = I_FloatTime();
     fs::path source = options.sourceMap;
+
+    logging::init(fs::path(source).replace_filename(source.stem().string() + "-light").replace_extension("log"), options);
 
     // delete previous litfile
     if (!options.onlyents.value()) {
@@ -879,7 +883,7 @@ int light_main(int argc, const char **argv)
     source.replace_extension("bsp");
     LoadBSPFile(source, &bspdata);
 
-    bspdata.version->game->init_filesystem(source);
+    bspdata.version->game->init_filesystem(source, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -912,7 +916,7 @@ int light_main(int argc, const char **argv)
         source.replace_extension("obj");
         ExportObj(source, &bsp);
 
-        CloseLog();
+        logging::close();
         return 0;
     }
 
@@ -978,20 +982,20 @@ int light_main(int argc, const char **argv)
     }
 
     auto end = I_FloatTime();
-    LogPrint("{:.3} seconds elapsed\n", (end - start));
-    LogPrint("\n");
-    LogPrint("stats:\n");
-    LogPrint("{} lights tested, {} hits per sample point\n",
+    logging::print("{:.3} seconds elapsed\n", (end - start));
+    logging::print("\n");
+    logging::print("stats:\n");
+    logging::print("{} lights tested, {} hits per sample point\n",
         static_cast<double>(total_light_rays) / static_cast<double>(total_samplepoints),
         static_cast<double>(total_light_ray_hits) / static_cast<double>(total_samplepoints));
-    LogPrint("{} surface lights tested, {} hits per sample point\n",
+    logging::print("{} surface lights tested, {} hits per sample point\n",
         static_cast<double>(total_surflight_rays) / static_cast<double>(total_samplepoints),
         static_cast<double>(total_surflight_ray_hits) / static_cast<double>(total_samplepoints)); // mxd
-    LogPrint("{} bounce lights tested, {} hits per sample point\n",
+    logging::print("{} bounce lights tested, {} hits per sample point\n",
         static_cast<double>(total_bounce_rays) / static_cast<double>(total_samplepoints),
         static_cast<double>(total_bounce_ray_hits) / static_cast<double>(total_samplepoints));
-    LogPrint("{} empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
-    CloseLog();
+    logging::print("{} empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
+    logging::close();
 
     return 0;
 }

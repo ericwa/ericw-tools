@@ -118,12 +118,12 @@ skipspace:
                         break;
                     case '\"':
                         if (pos[2] == '\r' || pos[2] == '\n') {
-                            LogPrint("WARNING: line {}: escaped double-quote at end of string\n", linenum);
+                            logging::print("WARNING: line {}: escaped double-quote at end of string\n", linenum);
                         } else {
                             *token_p++ = *pos++;
                         }
                         break;
-                    default: LogPrint("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
+                    default: logging::print("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
                 }
             }
             *token_p++ = *pos++;

@@ -272,7 +272,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
         prevpt = currpt;
     }
 
-    LogPrint("Leak file written to {}\n", options.szBSPName);
+    logging::print("Leak file written to {}\n", options.szBSPName);
 }
 
 /*
@@ -437,7 +437,7 @@ FillOutside
 */
 bool FillOutside(node_t *node, const int hullnum)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     /* Clear the outside filling state on all nodes */
     ClearOccupied_r(node);
@@ -446,7 +446,7 @@ bool FillOutside(node_t *node, const int hullnum)
     const std::vector<node_t *> occupied_leafs = FindOccupiedClusters(node);
 
     if (occupied_leafs.empty()) {
-        LogPrint("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
+        logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
         return false;
     }
 
@@ -476,7 +476,7 @@ bool FillOutside(node_t *node, const int hullnum)
         mapentity_t *leakentity = best_leak->occupant;
         Q_assert(leakentity != nullptr);
 
-        LogPrint("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n",
+        logging::print("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n",
             ValueForKey(leakentity, "classname"), leakentity->origin);
         if (map.leakfile)
             return false;
@@ -489,7 +489,7 @@ bool FillOutside(node_t *node, const int hullnum)
         remove(options.szBSPName);
 
         if (options.leaktest.value()) {
-            LogPrint("Aborting because -leaktest was used.\n");
+            logging::print("Aborting because -leaktest was used.\n");
             exit(1);
         }
 
@@ -526,6 +526,6 @@ bool FillOutside(node_t *node, const int hullnum)
     /* remove faces from filled in leafs */
     ClearOutFaces(node);
 
-    LogPrint(LOG_STAT, "     {:8} outleafs\n", outleafs);
+    logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;
 }

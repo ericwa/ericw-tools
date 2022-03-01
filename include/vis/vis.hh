@@ -189,7 +189,7 @@ extern int leafbytes;
 extern int leafbytes_real;
 extern int leaflongs;
 
-extern std::filesystem::path portalfile, statefile, statetmpfile;
+extern fs::path portalfile, statefile, statetmpfile;
 
 void BasePortalVis(void);
 

@@ -219,7 +219,7 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
     return str;
 }
 
-static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const std::filesystem::path &name)
+static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
 {
     json j = json::object();
 
@@ -507,6 +507,9 @@ static void PrintBSPTextureUsage(const mbsp_t &bsp)
     }
 }
 
+// TODO
+settings::common_settings options;
+
 int main(int argc, char **argv)
 {
     printf("---- bspinfo / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
@@ -517,21 +520,21 @@ int main(int argc, char **argv)
 
     for (int32_t i = 1; i < argc; i++) {
         printf("---------------------\n");
-        std::filesystem::path source = DefaultExtension(argv[i], ".bsp");
+        fs::path source = DefaultExtension(argv[i], ".bsp");
         fmt::print("{}\n", source);
 
         bspdata_t bsp;
         LoadBSPFile(source, &bsp);
 
-        bsp.version->game->init_filesystem(source);
+        bsp.version->game->init_filesystem(source, options);
 
         PrintBSPFileSizes(&bsp);
 
-        // WriteBSPFile(std::filesystem::path(source).replace_extension("bsp.rewrite"), &bsp);
+        // WriteBSPFile(fs::path(source).replace_extension("bsp.rewrite"), &bsp);
 
         ConvertBSPFormat(&bsp, &bspver_generic);
 
-        serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), std::filesystem::path(source).replace_extension("bsp.json"));
+        serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), fs::path(source).replace_extension("bsp.json"));
 
         PrintBSPTextureUsage(std::get<mbsp_t>(bsp.bsp));
 

@@ -9,6 +9,7 @@
 #include <common/log.hh>
 #include <common/threads.hh>
 #include <common/fs.hh>
+#include <common/parallel.hh>
 #include <fmt/chrono.h>
 
 /*
@@ -61,7 +62,7 @@ void vis_settings::initialize(int argc, const char **argv)
 
 settings::vis_settings options;
 
-std::filesystem::path portalfile, statefile, statetmpfile;
+fs::path portalfile, statefile, statetmpfile;
 
 /*
   ===============
@@ -276,6 +277,11 @@ noclip:
 
 //============================================================================
 
+#include <mutex>
+
+static std::mutex portal_mutex;
+static std::atomic_int64_t portalIndex;
+
 /*
   =============
   GetNextPortal
@@ -291,7 +297,7 @@ portal_t *GetNextPortal(void)
     portal_t *p, *ret;
     unsigned min;
 
-    ThreadLock();
+    portal_mutex.lock();
 
     min = INT_MAX;
     ret = NULL;
@@ -307,7 +313,7 @@ portal_t *GetNextPortal(void)
         ret->status = pstat_working;
     }
 
-    ThreadUnlock();
+    portal_mutex.unlock();
 
     return ret;
 }
@@ -361,7 +367,7 @@ static void PortalCompleted(portal_t *completed)
     const uint32_t *might, *vis;
     uint32_t changed;
 
-    ThreadLock();
+    portal_mutex.lock();
 
     completed->status = pstat_done;
 
@@ -411,7 +417,7 @@ static void PortalCompleted(portal_t *completed)
         }
     }
 
-    ThreadUnlock();
+    portal_mutex.unlock();
 }
 
 time_point starttime, endtime, statetime;
@@ -426,14 +432,14 @@ void LeafThread(size_t)
 {
     portal_t *p;
 
-    ThreadLock();
+    portal_mutex.lock();
     /* Save state if sufficient time has elapsed */
     auto now = I_FloatTime();
     if (now > statetime + stateinterval) {
         statetime = now;
         SaveVisState();
     }
-    ThreadUnlock();
+    portal_mutex.unlock();
 
     p = GetNextPortal();
     if (!p)
@@ -443,7 +449,7 @@ void LeafThread(size_t)
 
     PortalCompleted(p);
 
-    LogPrint(LOG_VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee,
+    logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee,
         p->numcansee);
 }
 
@@ -482,7 +488,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
     // causes it to happen a lot.
     // if (TestLeafBit(buffer, clusternum))
-    //    LogPrint("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
+    //    logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
 
     buffer[clusternum] = true;
 
@@ -512,7 +518,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     /*
      * compress the bit string
      */
-    LogPrint(LOG_VERBOSE, "cluster {:4} : {:4} visible\n", clusternum, numvis);
+    logging::print(logging::flag::VERBOSE, "cluster {:4} : {:4} visible\n", clusternum, numvis);
 
     /*
      * increment totalvis by
@@ -575,7 +581,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 */
 void CalcPortalVis(const mbsp_t *bsp)
 {
-    int i, startcount;
+    int i;
     portal_t *p;
 
     // fastvis just uses mightsee for a very loose bound
@@ -590,19 +596,20 @@ void CalcPortalVis(const mbsp_t *bsp)
     /*
      * Count the already completed portals in case we loaded previous state
      */
-    startcount = 0;
+    int32_t startcount = 0;
     for (i = 0, p = portals; i < numportals * 2; i++, p++) {
         if (p->status == pstat_done)
             startcount++;
     }
-    RunThreadsOn(startcount, numportals * 2, LeafThread);
+    portalIndex = startcount;
+    logging::parallel_for(startcount, numportals * 2, LeafThread);
 
     SaveVisState();
 
-    LogPrint(
-        LOG_VERBOSE, "portalcheck: {}  portaltest: {}  portalpass: {}\n", c_portalcheck, c_portaltest, c_portalpass);
-    LogPrint(
-        LOG_VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", c_vistest, c_mighttest, c_mightseeupdate);
+    logging::print(
+        logging::flag::VERBOSE, "portalcheck: {}  portaltest: {}  portalpass: {}\n", c_portalcheck, c_portaltest, c_portalpass);
+    logging::print(
+        logging::flag::VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", c_vistest, c_mighttest, c_mightseeupdate);
 }
 
 /*
@@ -615,19 +622,19 @@ void CalcVis(mbsp_t *bsp)
     int i;
 
     if (LoadVisState()) {
-        LogPrint("Loaded previous state. Resuming progress...\n");
+        logging::print("Loaded previous state. Resuming progress...\n");
     } else {
-        LogPrint("Calculating Base Vis:\n");
+        logging::print("Calculating Base Vis:\n");
         BasePortalVis();
     }
 
-    LogPrint("Calculating Full Vis:\n");
+    logging::print("Calculating Full Vis:\n");
     CalcPortalVis(bsp);
 
     //
     // assemble the leaf vis lists by oring and compressing the portal lists
     //
-    LogPrint("Expanding clusters...\n");
+    logging::print("Expanding clusters...\n");
     leafbits_t buffer(portalleafs);
     for (i = 0; i < portalleafs; i++) {
         ClusterFlow(i, buffer, bsp);
@@ -639,11 +646,11 @@ void CalcVis(mbsp_t *bsp)
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         avg /= static_cast<int64_t>(portalleafs);
 
-        LogPrint("average clusters visible: {}\n", avg);
+        logging::print("average clusters visible: {}\n", avg);
     } else {
         avg /= static_cast<int64_t>(portalleafs_real);
 
-        LogPrint("average leafs visible: {}\n", avg);
+        logging::print("average leafs visible: {}\n", avg);
     }
 }
 
@@ -654,7 +661,7 @@ void CalcVis(mbsp_t *bsp)
   LoadPortals
   ============
 */
-static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
+static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 {
     int i, j, count;
     portal_t *p;
@@ -680,12 +687,12 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
             portalleafs_real = 0;
-            LogPrint("{:6} clusters\n", portalleafs);
-            LogPrint("{:6} portals\n", numportals);
+            logging::print("{:6} clusters\n", portalleafs);
+            logging::print("{:6} portals\n", numportals);
         } else {
             portalleafs_real = portalleafs;
-            LogPrint("{:6} leafs\n", portalleafs);
-            LogPrint("{:6} portals\n", numportals);
+            logging::print("{:6} leafs\n", portalleafs);
+            logging::print("{:6} portals\n", numportals);
         }
     } else if (!strcmp(magic, PORTALFILE2)) {
         count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs_real, &portalleafs, &numportals);
@@ -694,9 +701,9 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             FError("{} can not be used with Q2\n", PORTALFILE2);
         }
-        LogPrint("{:6} leafs\n", portalleafs_real);
-        LogPrint("{:6} clusters\n", portalleafs);
-        LogPrint("{:6} portals\n", numportals);
+        logging::print("{:6} leafs\n", portalleafs_real);
+        logging::print("{:6} clusters\n", portalleafs);
+        logging::print("{:6} portals\n", numportals);
     } else if (!strcmp(magic, PORTALFILEAM)) {
         count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs, &numportals, &portalleafs_real);
         if (count != 3)
@@ -704,9 +711,9 @@ static void LoadPortals(const std::filesystem::path &name, mbsp_t *bsp)
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             FError("{} can not be used with Q2\n", PORTALFILEAM);
         }
-        LogPrint("{:6} leafs\n", portalleafs_real);
-        LogPrint("{:6} clusters\n", portalleafs);
-        LogPrint("{:6} portals\n", numportals);
+        logging::print("{:6} leafs\n", portalleafs_real);
+        logging::print("{:6} clusters\n", portalleafs);
+        logging::print("{:6} portals\n", numportals);
     } else {
         FError("unknown header: {}\n", magic);
     }
@@ -848,17 +855,16 @@ int main(int argc, const char **argv)
     bspdata_t bspdata;
     const bspversion_t *loadversion;
 
-    InitLog("vis.log");
-    LogPrint("---- vis / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
-
     options.run(argc, argv);
+
+    logging::init(fs::path(options.sourceMap).replace_filename(options.sourceMap.stem().string() + "-vis").replace_extension("log"), options);
 
     stateinterval = std::chrono::minutes(5); /* 5 minutes */
     starttime = statetime = I_FloatTime();
 
     LoadBSPFile(options.sourceMap, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.sourceMap);
+    bspdata.version->game->init_filesystem(options.sourceMap, options);
 
     loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);
@@ -879,19 +885,19 @@ int main(int argc, const char **argv)
 
     CalcVis(&bsp);
 
-    LogPrint("c_noclip: {}\n", c_noclip);
-    LogPrint("c_chains: {}\n", c_chains);
+    logging::print("c_noclip: {}\n", c_noclip);
+    logging::print("c_chains: {}\n", c_chains);
 
     bsp.dvis.bits.resize(vismap_p - bsp.dvis.bits.data());
     bsp.dvis.bits.shrink_to_fit();
-    LogPrint("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
+    logging::print("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
 
     // no ambient sounds for Q2
     if (bsp.loadversion->game->id != GAME_QUAKE_II) {
-        LogPrint("---- CalcAmbientSounds ----\n");
+        logging::print("---- CalcAmbientSounds ----\n");
         CalcAmbientSounds(&bsp);
     } else {
-        LogPrint("---- CalcPHS ----\n");
+        logging::print("---- CalcPHS ----\n");
         CalcPHS(&bsp);
     }
 
@@ -901,9 +907,9 @@ int main(int argc, const char **argv)
     WriteBSPFile(options.sourceMap, &bspdata);
 
     endtime = I_FloatTime();
-    LogPrint("{:.2} elapsed\n", (endtime - starttime));
-
-    CloseLog();
+    logging::print("{:.2} elapsed\n", (endtime - starttime));
+    
+    logging::close();
 
     return 0;
 }

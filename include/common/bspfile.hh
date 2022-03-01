@@ -30,6 +30,7 @@
 #include <common/log.hh>
 #include <common/qvec.hh>
 #include <common/aabb.hh>
+#include <common/settings.hh>
 
 /* upper design bounds */
 
@@ -1786,7 +1787,7 @@ struct gamedef_t
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
-    virtual void init_filesystem(const std::filesystem::path &source) const = 0;
+    virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
 };
 
@@ -1845,8 +1846,8 @@ extern const bspversion_t bspver_qbism;
 constexpr const bspversion_t *const bspversions[] = {&bspver_generic, &bspver_q1, &bspver_h2, &bspver_h2bsp2,
     &bspver_h2bsp2rmq, &bspver_bsp2, &bspver_bsp2rmq, &bspver_hl, &bspver_q2, &bspver_qbism};
 
-void LoadBSPFile(std::filesystem::path &filename, bspdata_t *bspdata); // returns the filename as contained inside a bsp
-void WriteBSPFile(const std::filesystem::path &filename, bspdata_t *bspdata);
+void LoadBSPFile(fs::path &filename, bspdata_t *bspdata); // returns the filename as contained inside a bsp
+void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata);
 void PrintBSPFileSizes(const bspdata_t *bspdata);
 /**
  * Returns false if the conversion failed.

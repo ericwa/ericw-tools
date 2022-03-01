@@ -54,17 +54,21 @@ bool com_eof;
  */
 [[noreturn]] void Error(const char *error)
 {
-    /* Using lockless prints so we can error out while holding the lock */
-    InterruptThreadProgress__();
-    LogPrintLocked("************ ERROR ************\n{}\n", error);
+    logging::print("************ ERROR ************\n{}\n", error);
+    logging::close();
+#ifdef _DEBUG
+    __debugbreak();
+#endif
     exit(1);
 }
 
 void // mxd
 string_replaceall(std::string &str, const std::string &from, const std::string &to)
 {
-    if (from.empty())
+    if (from.empty()) {
         return;
+    }
+
     size_t start_pos = 0;
     while ((start_pos = str.find(from, start_pos)) != std::string::npos) {
         str.replace(start_pos, from.length(), to);

@@ -148,7 +148,7 @@ static std::optional<img::texture_meta> LoadWal(const char *name)
     fs::data wal = fs::load(p);
 
     if (!wal) {
-        LogPrint("WARNING: Couldn't locate wal for {}\n", name);
+        logging::print("WARNING: Couldn't locate wal for {}\n", name);
         wal_cache.emplace(name, std::nullopt);
         return std::nullopt;
     }
@@ -332,7 +332,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
         // This fixes a bug in some old maps.
         if ((flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             flags.native &= ~Q2_SURF_NODRAW;
-            // LogPrint("Corrected invalid SKY flag\n");
+            // logging::print("Corrected invalid SKY flag\n");
         }
 
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
@@ -440,7 +440,7 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
             if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start)) {
-                LogPrint("WARNING: Multiple info_player_start entities\n");
+                logging::print("WARNING: Multiple info_player_start entities\n");
             }
             rgfStartSpots |= info_player_start;
         } else if (string_iequals(parser.token, "info_player_deathmatch")) {
@@ -1068,7 +1068,7 @@ static void SetTexinfo_QuArK(
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
-        LogPrint("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser.linenum);
+        logging::print("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser.linenum);
         for (i = 0; i < 3; i++)
             out->vecs.at(0, i) = out->vecs.at(1, i) = 0;
     } else {
@@ -1446,7 +1446,7 @@ inline bool IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t 
 static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
-        LogPrint("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
+        logging::print("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
             mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
 
         // Reset texturing to sensible defaults
@@ -1475,7 +1475,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrus
     ParseTextureDef(parser, *face, brush, &tx, face->planepts, face->plane);
 
     if (!normal_ok) {
-        LogPrint("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
+        logging::print("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
         return nullptr;
     }
 
@@ -1537,13 +1537,13 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         for (int i = 0; i < brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
             if (qv::epsilonEqual(check.plane, face->plane)) {
-                LogPrint("line {}: Brush with duplicate plane\n", parser.linenum);
+                logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
                 discardFace = true;
                 continue;
             }
             if (qv::epsilonEqual(-check.plane, face->plane)) {
                 /* FIXME - this is actually an invalid brush */
-                LogPrint("line {}: Brush with duplicate plane\n", parser.linenum);
+                logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
                 continue;
             }
         }
@@ -1859,14 +1859,14 @@ mapentity_t LoadExternalMap(const char *filename)
         FError("Expected at least one brush for external map {}\n", filename);
     }
 
-    LogPrint(LOG_STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
+    logging::print(logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
 
     return dest;
 }
 
 void LoadMapFile(void)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     {
         auto file = fs::load(options.szMapName);
@@ -1893,18 +1893,18 @@ void LoadMapFile(void)
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))
-        LogPrint("WARNING: No info_player_start entity in level\n");
+        logging::print("WARNING: No info_player_start entity in level\n");
     if (!(rgfStartSpots & info_player_deathmatch))
-        LogPrint("WARNING: No info_player_deathmatch entities in level\n");
+        logging::print("WARNING: No info_player_deathmatch entities in level\n");
     //      if (!(rgfStartSpots & info_player_coop))
-    //              LogPrint("WARNING: No info_player_coop entities in level\n");
+    //              logging::print("WARNING: No info_player_coop entities in level\n");
 
-    LogPrint(LOG_STAT, "     {:8} faces\n", map.numfaces());
-    LogPrint(LOG_STAT, "     {:8} brushes\n", map.numbrushes());
-    LogPrint(LOG_STAT, "     {:8} entities\n", map.numentities());
-    LogPrint(LOG_STAT, "     {:8} unique texnames\n", map.nummiptex());
-    LogPrint(LOG_STAT, "     {:8} texinfo\n", map.numtexinfo());
-    LogPrint(LOG_STAT, "\n");
+    logging::print(logging::flag::STAT, "     {:8} faces\n", map.numfaces());
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.numbrushes());
+    logging::print(logging::flag::STAT, "     {:8} entities\n", map.numentities());
+    logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.nummiptex());
+    logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.numtexinfo());
+    logging::print(logging::flag::STAT, "\n");
 
     if (options.expand.value()) {
         TestExpandBrushes(pWorldEnt());
@@ -2066,7 +2066,7 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t *entity, const con
 
 void ConvertMapFile(void)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     std::string append;
 
@@ -2078,7 +2078,7 @@ void ConvertMapFile(void)
         default: FError("Internal error: unknown conversion_t\n");
     }
 
-    std::filesystem::path filename = options.szBSPName;
+    fs::path filename = options.szBSPName;
     filename.replace_filename(options.szBSPName.stem().string() + append);
 
     std::ofstream f(filename);
@@ -2090,7 +2090,7 @@ void ConvertMapFile(void)
         ConvertEntity(f, &entity, options.convertmapformat.value());
     }
 
-    LogPrint("Conversion saved to {}\n", filename);
+    logging::print("Conversion saved to {}\n", filename);
 
     options.fVerbose = false;
 }
@@ -2098,7 +2098,7 @@ void ConvertMapFile(void)
 void PrintEntity(const mapentity_t *entity)
 {
     for (auto &epair : entity->epairs)
-        LogPrint(LOG_STAT, "     {:20} : {}\n", epair.first, epair.second);
+        logging::print(logging::flag::STAT, "     {:20} : {}\n", epair.first, epair.second);
 }
 
 const char *ValueForKey(const mapentity_t *entity, const char *key)
@@ -2145,12 +2145,12 @@ void WriteEntitiesToString()
         for (auto &ep : entity.epairs) {
 
             if (ep.first.size() >= options.target_game->max_entity_key - 1) {
-                LogPrint("WARNING: {} at {} has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"),
+                logging::print("WARNING: {} at {} has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"),
                     entity.origin, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
             }
 
             if (ep.second.size() >= options.target_game->max_entity_value - 1) {
-                LogPrint("WARNING: {} at {} has long value for key {} (length {} >= {})\n",
+                logging::print("WARNING: {} at {} has long value for key {} (length {} >= {})\n",
                     ValueForKey(&entity, "classname"), entity.origin, ep.first, ep.second.size(),
                     options.target_game->max_entity_value - 1);
             }
@@ -2255,9 +2255,9 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<brush_t> &list)
+void WriteBspBrushMap(const fs::path &name, const std::vector<brush_t> &list)
 {
-    LogPrint("writing {}\n", name);
+    logging::print("writing {}\n", name);
     std::ofstream f(name);
 
     if (!f)

@@ -98,14 +98,14 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
         /* check the point is on the face plane */
         vec_t dist = plane.distance_to(p1);
         if (dist < -ON_EPSILON || dist > ON_EPSILON)
-            LogPrint("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
+            logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
                 p1[1], p1[2], dist);
 
         /* check the edge isn't degenerate */
         qvec3d edgevec = p2 - p1;
         vec_t length = qv::length(edgevec);
         if (length < ON_EPSILON) {
-            LogPrint("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
+            logging::print("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
                 length, p1[0], p1[1], p1[2]);
             for (size_t j = i + 1; j < face->w.size(); j++)
                 face->w[j - 1] = face->w[j];
@@ -274,7 +274,7 @@ void FixRotateOrigin(mapentity_t *entity)
         GetVectorForKey(target, "origin", offset);
     } else {
         search = ValueForKey(entity, "classname");
-        LogPrint("WARNING: No target for rotation entity \"{}\"", search);
+        logging::print("WARNING: No target for rotation entity \"{}\"", search);
         offset = {};
     }
 
@@ -664,7 +664,7 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
         }
 
         if (!contents.types_equal(base_contents, options.target_game)) {
-            LogPrint("mixed face contents ({} != {}) at line {}\n", base_contents.to_string(options.target_game),
+            logging::print("mixed face contents ({} != {}) at line {}\n", base_contents.to_string(options.target_game),
                 contents.to_string(options.target_game), mapface.linenum);
             break;
         }
@@ -711,8 +711,8 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
     }
 
     if (facelist.empty()) {
-        LogPrint("WARNING: Couldn't create brush faces\n");
-        LogPrint("^ brush at line {} of .map file\n", hullbrush.linenum);
+        logging::print("WARNING: Couldn't create brush faces\n");
+        logging::print("^ brush at line {} of .map file\n", hullbrush.linenum);
         return std::nullopt;
     }
 
@@ -799,7 +799,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         const contentflags_t contents = Brush_GetContents(mapbrush);
         if (contents.is_origin()) {
             if (dst == pWorldEnt()) {
-                LogPrint("WARNING: Ignoring origin brush in worldspawn\n");
+                logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
             }
 
@@ -867,6 +867,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         return;
 
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
+        logging::percent(i, src->nummapbrushes);
         mapbrush = &src->mapbrush(i);
         contentflags_t contents = Brush_GetContents(mapbrush);
 
@@ -1000,9 +1001,9 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         }
 
         dst->bounds += brush->bounds;
-
-        LogPercent(i + 1, src->nummapbrushes);
     }
+
+    logging::percent(src->nummapbrushes, src->nummapbrushes);
 }
 
 /*
