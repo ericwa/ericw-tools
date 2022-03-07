@@ -109,5 +109,5 @@ inline void assert_(bool success, const char *expr, const char *file, int line)
 // bar will "finish" and be inoperable.
 // Only use this by hand if you absolutely need to; otherwise,
 // use <common/parallel.h>'s parallel_for(_each)
-void percent(uint64_t count, uint64_t max);
+void percent(uint64_t count, uint64_t max, bool displayElapsed = true);
 };

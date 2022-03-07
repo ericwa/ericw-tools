@@ -451,6 +451,29 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
     // build the "face -> faces to smooth with" map
     for (auto &f : bsp->dfaces) {
+        // Q2 shading groups
+        const int f_phongValue = Q2_FacePhongValue(bsp, &f);
+        if (f_phongValue) {
+            for (int j = 0; j < f.numedges; j++) {
+                const int v = Face_VertexAtIndex(bsp, &f, j);
+                // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
+                for (const mface_t *f2 : vertsToFaces[v]) {
+                    if (f2 == &f)
+                        continue;
+
+                    const int f2_phongValue = Q2_FacePhongValue(bsp, f2);
+                    if (f_phongValue != f2_phongValue)
+                        continue;
+
+                    // we've already checked f_phongValue is nonzero, so smooth these two faces.
+                    smoothFaces[&f].insert(f2);
+                }
+            }
+
+            continue;
+        }
+
+        // Q1 phong angle stuff
         const auto f_points = GLM_FacePoints(bsp, &f);
         const qvec3d f_norm = Face_Normal(bsp, &f);
         const qplane3d f_plane = Face_Plane(bsp, &f);
@@ -500,30 +523,6 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 if (cosangle >= cosmaxangle) {
                     smoothFaces[&f].insert(f2);
                 }
-            }
-        }
-    }
-
-    // Q2: build the "face -> faces to smooth with" map
-    // FIXME: merge this into the above loop
-    for (auto &f : bsp->dfaces) {
-        const int f_phongValue = Q2_FacePhongValue(bsp, &f);
-        if (f_phongValue == 0)
-            continue;
-
-        for (int j = 0; j < f.numedges; j++) {
-            const int v = Face_VertexAtIndex(bsp, &f, j);
-            // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
-            for (const mface_t *f2 : vertsToFaces[v]) {
-                if (f2 == &f)
-                    continue;
-
-                const int f2_phongValue = Q2_FacePhongValue(bsp, f2);
-                if (f_phongValue != f2_phongValue)
-                    continue;
-
-                // we've already checked f_phongValue is nonzero, so smooth these two faces.
-                smoothFaces[&f].insert(f2);
             }
         }
     }

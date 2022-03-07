@@ -64,6 +64,10 @@ static std::mutex print_mutex;
 
 void print(flag logflag, const char *str)
 {
+    if (!(mask & logflag)) {
+        return;
+    }
+
     print_mutex.lock();
  
     if (logflag != flag::PERCENT) {
@@ -88,7 +92,7 @@ void print(flag logflag, const char *str)
 static time_point start_time;
 static bool is_timing = false;
 
-void percent(uint64_t count, uint64_t max)
+void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {
     if (!is_timing) {
         start_time = I_FloatTime();
@@ -98,7 +102,9 @@ void percent(uint64_t count, uint64_t max)
     if (count == max) {
         auto elapsed = I_FloatTime() - start_time;
         is_timing = false;
-        print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+        if (displayElapsed) {
+            print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+        }
     } else {
         print(flag::PERCENT, "[{:>3}%]\r", static_cast<uint32_t>((static_cast<float>(count) / max) * 100));
     }

@@ -104,7 +104,7 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
 
             std::tie(front, back) = SplitFace(f, plane);
             if (!front || !back) {
-                logging::print("didn't split\n");
+                //logging::print("didn't split\n");
                 break;
                 // FError("Didn't split the polygon");
             }
@@ -355,7 +355,7 @@ static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
         FindFaceEdges(entity, f);
     }
 
-    logging::percent(++progress, splitnodes.load());
+    logging::percent(progress, splitnodes, entity);
     progress = MakeFaceEdges_r(entity, node->children[0], progress);
     progress = MakeFaceEdges_r(entity, node->children[1], progress);
 
@@ -495,6 +495,7 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     firstface = static_cast<int>(map.bsp.dfaces.size());
     MakeFaceEdges_r(entity, headnode, 0);
+    logging::percent(splitnodes, splitnodes, entity == pWorldEnt());
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();

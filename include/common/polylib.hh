@@ -381,6 +381,7 @@ public:
         }
 
         count = new_size;
+        isVector = count > N;
     }
 
     void clear()

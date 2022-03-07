@@ -1003,7 +1003,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         dst->bounds += brush->bounds;
     }
 
-    logging::percent(src->nummapbrushes, src->nummapbrushes);
+    logging::percent(src->nummapbrushes, src->nummapbrushes, src == pWorldEnt());
 }
 
 /*

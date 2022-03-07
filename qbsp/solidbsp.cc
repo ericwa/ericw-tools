@@ -731,7 +731,7 @@ static void PartitionSurfaces(std::vector<surface_t> &surfaces, node_t *node)
         LinkConvexFaces(surfaces, node);
         return;
     }
-
+    
     logging::percent(splitnodes++, csgmergefaces);
 
     node->facelist = LinkNodeFaces(*split);
@@ -826,7 +826,8 @@ node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bo
     mapsurfaces = surfhead.size();
 
     PartitionSurfaces(surfhead, headnode);
-    logging::percent(csgmergefaces, csgmergefaces);
+
+    logging::percent(csgmergefaces, csgmergefaces, entity == pWorldEnt());
 
     logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
     logging::print(logging::flag::STAT, "     {:8} solid leafs\n", c_solid.load());
