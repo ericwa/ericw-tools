@@ -33,7 +33,7 @@
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 
-#ifdef HAVE_EMBREE
+#if defined(HAVE_EMBREE) && defined (__SSE2__)
 #include <xmmintrin.h>
 //#include <pmmintrin.h>
 #endif
@@ -255,7 +255,7 @@ LightThread(void *arg)
 {
     const mbsp_t *bsp = (const mbsp_t *)arg;
 
-#ifdef HAVE_EMBREE
+#if defined(HAVE_EMBREE) && defined (__SSE2__)
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 //    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
