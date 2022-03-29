@@ -38,7 +38,7 @@
 #include <common/imglib.hh>
 #include <common/parallel.hh>
 
-#ifdef HAVE_EMBREE
+#if defined(HAVE_EMBREE) && defined (__SSE2__)
 #include <xmmintrin.h>
 //#include <pmmintrin.h>
 #endif
@@ -292,7 +292,7 @@ const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
 
 static void LightThread(const mbsp_t *bsp, size_t facenum)
 {
-#ifdef HAVE_EMBREE
+#if defined(HAVE_EMBREE) && defined (__SSE2__)
     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 //    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
 #endif
