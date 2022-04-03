@@ -91,12 +91,13 @@ void print(flag logflag, const char *str)
         }
 
 #ifdef _WIN32
-        // print to windows console
-        OutputDebugStringA(ansi_str.c_str());
+        // print to windows console.
+        // if VS's Output window gets support for ANSI colors, we can change this to ansi_str.c_str()
+        OutputDebugStringA(str);
 #endif
     }
 
-    // stdout
+    // stdout (assume the termaial can render ANSI colors)
     std::cout << ansi_str;
 
     print_mutex.unlock();
