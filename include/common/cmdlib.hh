@@ -136,6 +136,11 @@ struct natural_case_insensitive_less
     bool operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r, false); }
 };
 
+#include <string_view>
+
+std::string_view::const_iterator string_ifind(std::string_view haystack, std::string_view needle);
+bool string_icontains(std::string_view haystack, std::string_view needle);
+
 #include <chrono>
 
 using qclock = std::chrono::high_resolution_clock;

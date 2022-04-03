@@ -37,6 +37,7 @@
 
 #include <cstdint>
 
+#include <algorithm>
 #include <string>
 
 /* set these before calling CheckParm */
@@ -405,4 +406,15 @@ bool natstrlt(const char *s1, const char *s2, bool case_sensitive)
     if (*p1 != 0 && *p2 == 0)
         return false;
     return false;
+}
+
+std::string_view::const_iterator string_ifind(std::string_view haystack, std::string_view needle)
+{
+    return std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(),
+        [](char a, char b) { return tolower(a) == tolower(b); });
+}
+
+bool string_icontains(std::string_view haystack, std::string_view needle)
+{
+    return string_ifind(haystack, needle) != haystack.end();
 }
