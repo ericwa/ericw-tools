@@ -68,6 +68,19 @@ void print(flag logflag, const char *str)
         return;
     }
 
+    static const char *escape_red = "\033[31m";
+    static const char *escape_yellow = "\033[33m";
+    static const char *escape_reset = "\033[0m";
+
+    std::string ansi_str;
+    if (string_icontains(str, "error")) {
+        ansi_str = fmt::format("{}{}{}", escape_red, str, escape_reset);
+    } else if (string_icontains(str, "warning")) {
+        ansi_str = fmt::format("{}{}{}", escape_yellow, str, escape_reset);
+    } else {
+        ansi_str = str;
+    }
+
     print_mutex.lock();
  
     if (logflag != flag::PERCENT) {
@@ -79,12 +92,12 @@ void print(flag logflag, const char *str)
 
 #ifdef _WIN32
         // print to windows console
-        OutputDebugStringA(str);
+        OutputDebugStringA(ansi_str.c_str());
 #endif
     }
 
     // stdout
-    std::cout << str;
+    std::cout << ansi_str;
 
     print_mutex.unlock();
 }
