@@ -230,7 +230,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
-    LogPrint("face {}, texture {}, {} edges; vectors:\n"
+    logging::print("face {}, texture {}, {} edges; vectors:\n"
              "{: 3.3}\n",
         Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
@@ -239,7 +239,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
         int vert = Face_VertexAtIndex(bsp, face, i);
         const qvec3f &point = GetSurfaceVertexPoint(bsp, face, i);
         const qvec3f norm = GetSurfaceVertexNormal(bsp, face, i).normal;
-        LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
+        logging::print("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: normal ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n",
             i ? "          " : "    verts ", vert, point[0], point[1], point[2], norm[0], norm[1], norm[2], edge);
     }
 }
@@ -513,7 +513,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
         for (int s = 0; s < surf->width; s++) {
             const int i = t * surf->width + s;
             const qvec3d &point = surf->points[i];
-            const qvec3f mangle = mangle_from_vec(qvec3d(surf->normals[i]));
+            const qvec3d mangle = qv::mangle_from_vec(qvec3d(surf->normals[i]));
 
             f << "{\n";
             f << "\"classname\" \"light\"\n";
@@ -527,7 +527,7 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
         }
     }
 
-    LogPrint("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
+    logging::print("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
         surf->height);
 
     PrintFaceInfo(surf->face, bsp);
@@ -550,7 +550,7 @@ bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, const qvec
     for (const auto &modelinfo : tracelist) {
         if (Light_PointInSolid(bsp, modelinfo->model, point)) {
             // Only mark occluded if the bmodel is fully opaque
-            if (modelinfo->alpha.floatValue() == 1.0f)
+            if (modelinfo->alpha.value() == 1.0f)
                 return true;
         }
     }
@@ -634,7 +634,7 @@ static position_t PositionSamplePointOnFace(
 static void CalcPoints(
     const modelinfo_t *modelinfo, const qvec3d &offset, lightsurf_t *surf, const mbsp_t *bsp, const mface_t *face)
 {
-    const globalconfig_t &cfg = *surf->cfg;
+    const settings::worldspawn_keys &cfg = *surf->cfg;
 
     /*
      * Fill in the surface points. The points are biased towards the center of
@@ -643,11 +643,11 @@ static void CalcPoints(
     surf->midpoint = TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg);
     surf->midpoint += offset;
 
-    surf->width = (surf->texsize[0] + 1) * oversample;
-    surf->height = (surf->texsize[1] + 1) * oversample;
-    const float starts = (surf->texmins[0] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
-    const float startt = (surf->texmins[1] - 0.5 + (0.5 / oversample)) * surf->lightmapscale;
-    const float st_step = surf->lightmapscale / oversample;
+    surf->width = (surf->texsize[0] + 1) * options.extra.value();
+    surf->height = (surf->texsize[1] + 1) * options.extra.value();
+    const float starts = (surf->texmins[0] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
+    const float startt = (surf->texmins[1] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
+    const float st_step = surf->lightmapscale / options.extra.value();
 
     /* Allocate surf->points */
     surf->numpoints = surf->width * surf->height;
@@ -672,7 +672,7 @@ static void CalcPoints(
             point = TexCoordToWorld(us, ut, &surf->texorg);
 
             // do this before correcting the point, so we can wrap around the inside of pipes
-            const bool phongshaded = (surf->curved && cfg.phongallowed.boolValue());
+            const bool phongshaded = (surf->curved && cfg.phongallowed.value());
             const auto res = CalcPointNormal(bsp, face, point, phongshaded, surf->lightmapscale, 0, offset);
 
             surf->occluded[i] = !res.m_unoccluded;
@@ -706,25 +706,25 @@ static bool Lightsurf_Init(
 
     // nodirt
     if (modelinfo->dirt.isChanged()) {
-        lightsurf->nodirt = (modelinfo->dirt.intValue() == -1);
+        lightsurf->nodirt = (modelinfo->dirt.value() == -1);
     } else {
         lightsurf->nodirt = extended_flags.no_dirt;
     }
 
     // minlight
     if (modelinfo->minlight.isChanged()) {
-        lightsurf->minlight = modelinfo->minlight.floatValue();
+        lightsurf->minlight = modelinfo->minlight.value();
     } else {
         lightsurf->minlight = extended_flags.minlight;
     }
 
     // minlight_color
     if (modelinfo->minlight_color.isChanged()) {
-        lightsurf->minlight_color = modelinfo->minlight_color.vec3Value();
+        lightsurf->minlight_color = modelinfo->minlight_color.value();
     } else {
         // if modelinfo mincolor not set, use the one from the .texinfo file
         if (lightsurf->minlight > 0 && qv::emptyExact(extended_flags.minlight_color)) {
-            lightsurf->minlight_color = { 255.0 };
+            lightsurf->minlight_color = {255.0};
         } else {
             lightsurf->minlight_color = extended_flags.minlight_color;
         }
@@ -736,7 +736,7 @@ static bool Lightsurf_Init(
     }
 
     /* handle glass alpha */
-    if (modelinfo->alpha.floatValue() < 1) {
+    if (modelinfo->alpha.value() < 1) {
         /* skip culling of rays coming from the back side of the face */
         lightsurf->twosided = true;
     }
@@ -756,7 +756,7 @@ static bool Lightsurf_Init(
 
     /* Check for invalid texture axes */
     if (std::isnan(lightsurf->texorg.texSpaceToWorld.at(0, 0))) {
-        LogPrint("Bad texture axes on face:\n");
+        logging::print("Bad texture axes on face:\n");
         PrintFaceInfo(face, bsp);
         return false;
     }
@@ -865,12 +865,12 @@ static void Lightmap_Save(
  */
 
 // returns the light contribution at a given distance, without regard for angle
-vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist)
+vec_t GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, vec_t dist)
 {
-    const float light = entity->light.floatValue();
+    const float light = entity->light.value();
 
     // mxd. Apply falloff?
-    const float lightdistance = entity->falloff.floatValue();
+    const float lightdistance = entity->falloff.value();
     if (lightdistance > 0.0f) {
         if (entity->getFormula() == LF_LINEAR) {
             // Light can affect surface?
@@ -884,7 +884,7 @@ vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist
     if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
         return light;
 
-    vec_t value = cfg.scaledist.floatValue() * entity->atten.floatValue() * dist;
+    vec_t value = cfg.scaledist.value() * entity->atten.value() * dist;
 
     switch (entity->getFormula()) {
         case LF_INVERSE: return light / (value / LF_SCALE);
@@ -901,11 +901,11 @@ vec_t GetLightValue(const globalconfig_t &cfg, const light_t *entity, vec_t dist
     }
 }
 
-static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm,
+static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3d &surfnorm,
     const qvec3d &surfpointToLightDir, float dist, bool twosided)
 {
     vec_t angle = qv::dot(surfpointToLightDir, surfnorm);
-    if (entity->bleed.boolValue() || twosided) {
+    if (entity->bleed.value() || twosided) {
         if (angle < 0) {
             angle = -angle; // ericw -- support "_bleed" option
         }
@@ -918,7 +918,7 @@ static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *en
     }
 
     /* Apply anglescale */
-    angle = (1.0 - entity->anglescale.floatValue()) + (entity->anglescale.floatValue() * angle);
+    angle = (1.0 - entity->anglescale.value()) + (entity->anglescale.value() * angle);
 
     /* Check spotlight cone */
     float spotscale = 1;
@@ -938,7 +938,6 @@ static float GetLightValueWithAngle(const globalconfig_t &cfg, const light_t *en
     float add = GetLightValue(cfg, entity, dist) * angle * spotscale;
     return add;
 }
-
 
 static void Matrix4x4_CM_Transform4(const std::array<vec_t, 16> &matrix, const qvec4d &vector, qvec4d &product)
 {
@@ -984,7 +983,7 @@ static bool LightFace_SampleMipTex(
     }
 
     float sfrac = (coord[0]) * (tex->meta.width - 1); // mxd. We are sampling sbase+1 pixels, so multiplying by
-                                                    // tex->width will result in an 1px overdraw, same for tbase
+                                                      // tex->width will result in an 1px overdraw, same for tbase
     const int sbase = sfrac;
     sfrac -= sbase;
     float tfrac = (1 - coord[1]) * (tex->meta.height - 1);
@@ -999,25 +998,22 @@ static bool LightFace_SampleMipTex(
     weight[2] = (1 - sfrac) * (tfrac);
     pi[3] = tex->pixels[((sbase + 1) % tex->meta.width) + (tex->meta.width * ((tbase + 1) % tex->meta.height))];
     weight[3] = (sfrac) * (tfrac);
-    result = pi[0].xyz() * weight[0] +
-                pi[1].xyz() * weight[1] +
-                pi[2].xyz() * weight[2] +
-                pi[3].xyz() * weight[3];
+    result = pi[0].xyz() * weight[0] + pi[1].xyz() * weight[1] + pi[2].xyz() * weight[2] + pi[3].xyz() * weight[3];
     result *= 2;
 
     return true;
 }
 
-static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, const qvec3d &surfnorm,
+static void GetLightContrib(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3d &surfnorm,
     const qvec3d &surfpoint, bool twosided, qvec3d &color_out, qvec3d &surfpointToLightDir_out,
     qvec3d &normalmap_addition_out, float *dist_out)
 {
-    float dist = GetDir(surfpoint, entity->origin.vec3Value(), surfpointToLightDir_out);
+    float dist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir_out);
     if (dist < 0.1) {
         // Catch 0 distance between sample point and light (produces infinite brightness / nan's) and causes
         // problems later
         dist = 0.1f;
-        surfpointToLightDir_out = { 0, 0, 1 };
+        surfpointToLightDir_out = {0, 0, 1};
     }
     const float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
 
@@ -1026,14 +1022,14 @@ static void GetLightContrib(const globalconfig_t &cfg, const light_t *entity, co
         qvec3d col;
         if (LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col)) {
             // mxd. Modulate by light color...
-            const auto &entcol = entity->color.vec3Value();
+            const auto &entcol = entity->color.value();
             for (int i = 0; i < 3; i++)
                 col[i] *= entcol[i] * (1.0f / 255.0f);
         }
 
         color_out = col * add * (1.0f / 255.0f);
     } else {
-        color_out = entity->color.vec3Value() * add * (1.0f / 255.0f);
+        color_out = entity->color.value() * add * (1.0f / 255.0f);
     }
 
     // write normalmap contrib
@@ -1048,13 +1044,13 @@ constexpr vec_t SQR(vec_t x)
 }
 
 // this is the inverse of GetLightValue
-float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desiredLight)
+float GetLightDist(const settings::worldspawn_keys &cfg, const light_t *entity, vec_t desiredLight)
 {
     float fadedist;
     if (entity->getFormula() == LF_LINEAR) {
         /* Linear formula always has a falloff point */
-        fadedist = fabs(entity->light.floatValue()) - desiredLight;
-        fadedist = fadedist / entity->atten.floatValue() / cfg.scaledist.floatValue();
+        fadedist = fabs(entity->light.value()) - desiredLight;
+        fadedist = fadedist / entity->atten.value() / cfg.scaledist.value();
         fadedist = max(0.0f, fadedist);
     } else {
         /* Calculate the distance at which brightness falls to desiredLight */
@@ -1062,16 +1058,15 @@ float GetLightDist(const globalconfig_t &cfg, const light_t *entity, vec_t desir
             case LF_INFINITE:
             case LF_LOCALMIN: fadedist = FLT_MAX; break;
             case LF_INVERSE:
-                fadedist = (LF_SCALE * fabs(entity->light.floatValue())) /
-                           (cfg.scaledist.floatValue() * entity->atten.floatValue() * desiredLight);
+                fadedist = (LF_SCALE * fabs(entity->light.value())) /
+                           (cfg.scaledist.value() * entity->atten.value() * desiredLight);
                 break;
             case LF_INVERSE2:
             case LF_INVERSE2A:
-                fadedist =
-                    sqrt(fabs(entity->light.floatValue() * SQR(LF_SCALE) /
-                              (SQR(cfg.scaledist.floatValue()) * SQR(entity->atten.floatValue()) * desiredLight)));
+                fadedist = sqrt(fabs(entity->light.value() * SQR(LF_SCALE) /
+                                     (SQR(cfg.scaledist.value()) * SQR(entity->atten.value()) * desiredLight)));
                 if (entity->getFormula() == LF_INVERSE2A) {
-                    fadedist -= (LF_SCALE / (cfg.scaledist.floatValue() * entity->atten.floatValue()));
+                    fadedist -= (LF_SCALE / (cfg.scaledist.value() * entity->atten.value()));
                 }
                 fadedist = max(0.0f, fadedist);
                 break;
@@ -1106,11 +1101,11 @@ constexpr vec_t fraction(const vec_t &min, const vec_t &val, const vec_t &max)
  * returns scale factor for dirt/ambient occlusion
  * ============
  */
-inline vec_t Dirt_GetScaleFactor(
-    const globalconfig_t &cfg, vec_t occlusion, const light_t *entity, const vec_t entitydist, const lightsurf_t *surf)
+inline vec_t Dirt_GetScaleFactor(const settings::worldspawn_keys &cfg, vec_t occlusion, const light_t *entity,
+    const vec_t entitydist, const lightsurf_t *surf)
 {
-    vec_t light_dirtgain = cfg.dirtGain.floatValue();
-    vec_t light_dirtscale = cfg.dirtScale.floatValue();
+    vec_t light_dirtgain = cfg.dirtGain.value();
+    vec_t light_dirtscale = cfg.dirtScale.value();
     bool usedirt;
 
     /* is dirt processing disabled entirely? */
@@ -1121,12 +1116,12 @@ inline vec_t Dirt_GetScaleFactor(
 
     /* should this light be affected by dirt? */
     if (entity) {
-        if (entity->dirt.intValue() == -1) {
+        if (entity->dirt.value() == -1) {
             usedirt = false;
-        } else if (entity->dirt.intValue() == 1) {
+        } else if (entity->dirt.value() == 1) {
             usedirt = true;
         } else {
-            usedirt = cfg.globalDirt.boolValue();
+            usedirt = cfg.globalDirt.value();
         }
     } else {
         /* no entity is provided, assume the caller wants dirt */
@@ -1140,10 +1135,10 @@ inline vec_t Dirt_GetScaleFactor(
     /* override the global scale and gain values with the light-specific
        values, if present */
     if (entity) {
-        if (entity->dirtgain.floatValue())
-            light_dirtgain = entity->dirtgain.floatValue();
-        if (entity->dirtscale.floatValue())
-            light_dirtscale = entity->dirtscale.floatValue();
+        if (entity->dirtgain.value())
+            light_dirtgain = entity->dirtgain.value();
+        if (entity->dirtscale.value())
+            light_dirtscale = entity->dirtscale.value();
     }
 
     /* early out */
@@ -1171,8 +1166,8 @@ inline vec_t Dirt_GetScaleFactor(
 
         if (entity->dirt_on_radius.isChanged() && entity->dirt_off_radius.isChanged()) {
 
-            const float onRadius = entity->dirt_on_radius.floatValue();
-            const float offRadius = entity->dirt_off_radius.floatValue();
+            const float onRadius = entity->dirt_on_radius.value();
+            const float offRadius = entity->dirt_off_radius.value();
 
             if (entitydist < offRadius) {
                 outDirt = 0.0;
@@ -1196,13 +1191,13 @@ inline vec_t Dirt_GetScaleFactor(
  */
 inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (!novisapprox && entity->bounds.disjoint(lightsurf->bounds, 0.001)) {
+    if (!options.novisapprox.value() && entity->bounds.disjoint(lightsurf->bounds, 0.001)) {
         return true;
     }
 
-    qvec3d distvec = entity->origin.vec3Value() - lightsurf->origin;
+    qvec3d distvec = entity->origin.value() - lightsurf->origin;
     const float dist = qv::length(distvec) - lightsurf->radius;
 
     /* light is inside surface bounding sphere => can't cull */
@@ -1213,7 +1208,7 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     /* return true if the light level at the closest point on the
      surface bounding sphere to the light source is <= fadegate.
      need fabs to handle antilights. */
-    return fabs(GetLightValue(cfg, entity, dist)) <= fadegate;
+    return fabs(GetLightValue(cfg, entity, dist)) <= options.gate.value();
 }
 
 /*
@@ -1228,7 +1223,7 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
  * ================
  */
 std::map<int, qvec3f> GetDirectLighting(
-    const mbsp_t *bsp, const globalconfig_t &cfg, const qvec3d &origin, const qvec3d &normal)
+    const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const qvec3d &origin, const qvec3d &normal)
 {
     std::map<int, qvec3f> result;
 
@@ -1239,7 +1234,7 @@ std::map<int, qvec3f> GetDirectLighting(
         // FIXME: this is always 128 because vpl.pos and origin are always equal it seems?
         const float surfpointToLightDist =
             max(128.0, GetDir(vpl.pos, origin,
-                            surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
+                           surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
         const vec_t angle = qv::dot(surfpointToLightDir, normal);
         if (angle <= 0)
             continue;
@@ -1251,10 +1246,10 @@ std::map<int, qvec3f> GetDirectLighting(
 
         // Write out the final color
         // color_out is expected to be in [0..255] range, vpl->color is in [0..1] range.
-        qvec3d color = (vpl.color * add) * cfg.surflightbouncescale.floatValue();
+        qvec3d color = (vpl.color * add) * cfg.surflightbouncescale.value();
 
         // NOTE: Skip negative lights, which would make no sense to bounce!
-        if (LightSample_Brightness(color) <= fadegate)
+        if (LightSample_Brightness(color) <= options.gate.value())
             continue;
 
         if (!TestLight(vpl.pos, origin, nullptr).blocked)
@@ -1268,31 +1263,31 @@ std::map<int, qvec3f> GetDirectLighting(
         float surfpointToLightDist;
         qvec3d color, normalcontrib;
 
-        if (entity.nostaticlight.boolValue()) {
+        if (entity.nostaticlight.value()) {
             continue;
         }
 
         // Skip styled lights if "bouncestyled" setting is off.
-        if (entity.style.intValue() != 0 && !cfg.bouncestyled.boolValue()) {
+        if (entity.style.value() != 0 && !cfg.bouncestyled.value()) {
             continue;
         }
 
         GetLightContrib(
             cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
 
-        color *= entity.bouncescale.floatValue();
+        color *= entity.bouncescale.value();
 
         // NOTE: Skip negative lights, which would make no sense to bounce!
-        if (LightSample_Brightness(color) <= fadegate) {
+        if (LightSample_Brightness(color) <= options.gate.value()) {
             continue;
         }
 
-        const hitresult_t hit = TestLight(entity.origin.vec3Value(), origin, NULL);
+        const hitresult_t hit = TestLight(entity.origin.value(), origin, NULL);
         if (!hit.blocked) {
             continue;
         }
 
-        int lightstyle = entity.style.intValue();
+        int lightstyle = entity.style.value();
         if (lightstyle == 0) {
             // switchable shadow only blocks style 0 lights, otherwise switchable lights become always on when shadow is
             // hidden
@@ -1304,7 +1299,7 @@ std::map<int, qvec3f> GetDirectLighting(
 
     for (const sun_t &sun : GetSuns()) {
         // Skip styled lights if "bouncestyled" setting is off.
-        if (sun.style != 0 && !cfg.bouncestyled.boolValue()) {
+        if (sun.style != 0 && !cfg.bouncestyled.value()) {
             continue;
         }
 
@@ -1358,11 +1353,11 @@ std::map<int, qvec3f> GetDirectLighting(
 static void LightFace_Entity(
     const mbsp_t *bsp, const light_t *entity, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const qplane3d *plane = &lightsurf->plane;
 
-    const vec_t planedist = plane->distance_to(entity->origin.vec3Value());
+    const vec_t planedist = plane->distance_to(entity->origin.value());
 
     /* don't bother with lights behind the surface.
 
@@ -1371,7 +1366,7 @@ static void LightFace_Entity(
        normal may be facing such that it receives some light, so we can't use this
        test in the curved case.
     */
-    if (planedist < 0 && !entity->bleed.boolValue() && !lightsurf->curved && !lightsurf->twosided) {
+    if (planedist < 0 && !entity->bleed.value() && !lightsurf->curved && !lightsurf->twosided) {
         return;
     }
 
@@ -1405,7 +1400,7 @@ static void LightFace_Entity(
         color *= occlusion;
 
         /* Quick distance check first */
-        if (fabs(LightSample_Brightness(color)) <= fadegate) {
+        if (fabs(LightSample_Brightness(color)) <= options.gate.value()) {
             continue;
         }
 
@@ -1416,7 +1411,7 @@ static void LightFace_Entity(
     rs->tracePushedRaysOcclusion(modelinfo);
     total_light_rays += rs->numPushedRays();
 
-    int cached_style = entity->style.intValue();
+    int cached_style = entity->style.value();
     lightmap_t *cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
 
     const int N = rs->numPushedRays();
@@ -1440,7 +1435,7 @@ static void LightFace_Entity(
         //
         // If not, then we are guaranteed to detect the dynamic shadow caster in the ray filter
         // (if any), and handle it here.
-        int desired_style = entity->style.intValue();
+        int desired_style = entity->style.value();
         if (desired_style == 0) {
             desired_style = rs->getPushedRayDynamicStyle(j);
         }
@@ -1467,7 +1462,7 @@ static void LightFace_Entity(
  */
 static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const qplane3d *plane = &lightsurf->plane;
 
@@ -1511,7 +1506,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
         qvec3d color = sun->sunlight_color * (value / 255.0);
 
         /* Quick distance check first */
-        if (fabs(LightSample_Brightness(color)) <= fadegate) {
+        if (fabs(LightSample_Brightness(color)) <= options.gate.value()) {
             continue;
         }
 
@@ -1575,7 +1570,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
 static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &color, vec_t light,
     const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
@@ -1591,10 +1586,10 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         lightsample_t *sample = &lightmap->samples[i];
 
         vec_t value = light;
-        if (cfg.minlightDirt.boolValue()) {
+        if (cfg.minlightDirt.value()) {
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
-        if (cfg.addminlight.boolValue()) {
+        if (cfg.addminlight.value()) {
             sample->color += color * (value / 255.0);
         } else {
             Light_ClampMin(sample, value, color);
@@ -1608,7 +1603,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
     }
 
     // FIXME: Refactor this?
-    if (lightsurf->modelinfo->lightignore.boolValue() || extended_flags.light_ignore)
+    if (lightsurf->modelinfo->lightignore.value() || extended_flags.light_ignore)
         return;
 
     /* Cast rays for local minlight entities */
@@ -1616,7 +1611,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         if (entity.getFormula() != LF_LOCALMIN) {
             continue;
         }
-        if (entity.nostaticlight.boolValue()) {
+        if (entity.nostaticlight.value()) {
             continue;
         }
 
@@ -1627,7 +1622,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         raystream_occlusion_t *rs = lightsurf->occlusion_stream;
         rs->clearPushedRays();
 
-        lightmap = Lightmap_ForStyle(lightmaps, entity.style.intValue(), lightsurf);
+        lightmap = Lightmap_ForStyle(lightmaps, entity.style.value(), lightsurf);
 
         hit = false;
         for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -1636,9 +1631,9 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
 
             const lightsample_t *sample = &lightmap->samples[i];
             const qvec3d &surfpoint = lightsurf->points[i];
-            if (cfg.addminlight.boolValue() || LightSample_Brightness(sample->color) < entity.light.floatValue()) {
+            if (cfg.addminlight.value() || LightSample_Brightness(sample->color) < entity.light.value()) {
                 qvec3d surfpointToLightDir;
-                const vec_t surfpointToLightDist = GetDir(surfpoint, entity.origin.vec3Value(), surfpointToLightDir);
+                const vec_t surfpointToLightDist = GetDir(surfpoint, entity.origin.value(), surfpointToLightDir);
 
                 rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
             }
@@ -1655,15 +1650,15 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             }
 
             int i = rs->getPushedRayPointIndex(j);
-            vec_t value = entity.light.floatValue();
+            vec_t value = entity.light.value();
             lightsample_t *sample = &lightmap->samples[i];
 
             value *=
                 Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], &entity, 0.0 /* TODO: pass distance */, lightsurf);
-            if (cfg.addminlight.boolValue()) {
-                sample->color += entity.color.vec3Value() * (value / 255.0);
+            if (cfg.addminlight.value()) {
+                sample->color += entity.color.value() * (value / 255.0);
             } else {
-                Light_ClampMin(sample, value, entity.color.vec3Value());
+                Light_ClampMin(sample, value, entity.color.value());
             }
 
             hit = true;
@@ -1671,7 +1666,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         }
 
         if (hit) {
-            Lightmap_Save(lightmaps, lightsurf, lightmap, entity.style.intValue());
+            Lightmap_Save(lightmaps, lightsurf, lightmap, entity.style.value());
         }
     }
 }
@@ -1683,7 +1678,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
  */
 static void LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
 
@@ -1691,7 +1686,7 @@ static void LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *li
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
         const float light = 255 * Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
-        sample->color = { light };
+        sample->color = {light};
     }
 
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
@@ -1723,7 +1718,7 @@ static void LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *l
 
 static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    Q_assert(debugmode == debugmode_bouncelights);
+    Q_assert(options.debugmode == debugmodes::bouncelights);
 
     // reset all lightmaps to black (lazily)
     Lightmap_ClearAll(lightmaps);
@@ -1756,7 +1751,8 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
 }
 
 // returns color in [0,255]
-inline qvec3f BounceLight_ColorAtDist(const globalconfig_t &cfg, float area, const qvec3f &bounceLightColor, float dist)
+inline qvec3f BounceLight_ColorAtDist(
+    const settings::worldspawn_keys &cfg, float area, const qvec3f &bounceLightColor, float dist)
 {
     // clamp away hotspots
     if (dist < 128.0f) {
@@ -1764,7 +1760,7 @@ inline qvec3f BounceLight_ColorAtDist(const globalconfig_t &cfg, float area, con
     }
 
     const float dist2 = (dist * dist);
-    const float scale = (1.0f / dist2) * cfg.bouncescale.floatValue();
+    const float scale = (1.0f / dist2) * cfg.bouncescale.value();
 
     // get light contribution
     const qvec3f result = bounceLightColor * area * (255.0f * scale);
@@ -1773,11 +1769,11 @@ inline qvec3f BounceLight_ColorAtDist(const globalconfig_t &cfg, float area, con
 
 // mxd. Surface light falloff. Returns color in [0,255]
 static qvec3f SurfaceLight_ColorAtDist(
-    const globalconfig_t &cfg, const float intensity, const qvec3f color, const float dist)
+    const settings::worldspawn_keys &cfg, const float intensity, const qvec3f color, const float dist)
 {
     // Exponential falloff
     const float d = max(dist, 16.0f); // Clamp away hotspots, also avoid division by 0...
-    const float scaledintensity = intensity * cfg.surflightscale.floatValue();
+    const float scaledintensity = intensity * cfg.surflightscale.value();
     const float scale = (1.0f / (d * d));
 
     return color * scaledintensity * scale;
@@ -1785,8 +1781,8 @@ static qvec3f SurfaceLight_ColorAtDist(
 
 // dir: vpl -> sample point direction
 // returns color in [0,255]
-inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t *vpl, const qvec3f &bounceLightColor,
-    const qvec3f &dir, const float dist, const qvec3f &origin, const qvec3f &normal)
+inline qvec3f GetIndirectLighting(const settings::worldspawn_keys &cfg, const bouncelight_t *vpl,
+    const qvec3f &bounceLightColor, const qvec3f &dir, const float dist, const qvec3f &origin, const qvec3f &normal)
 {
     const float dp1 = qv::dot(vpl->surfnormal, dir);
     if (dp1 < 0.0f)
@@ -1812,8 +1808,8 @@ inline qvec3f GetIndirectLighting(const globalconfig_t &cfg, const bouncelight_t
 
 // dir: vpl -> sample point direction
 // mxd. returns color in [0,255]
-static qvec3f GetSurfaceLighting(
-    const globalconfig_t &cfg, const surfacelight_t *vpl, const qvec3f &dir, const float dist, const qvec3f &normal)
+static qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t *vpl, const qvec3f &dir,
+    const float dist, const qvec3f &normal)
 {
     qvec3f result;
     float dotProductFactor = 1.0f;
@@ -1849,9 +1845,9 @@ static qvec3f GetSurfaceLighting(
 
 inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (!novisapprox && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
+    if (!options.novisapprox.value() && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
         return true;
 
     const qvec3f dir = qvec3f(lightsurf->origin) - vpl->pos; // vpl -> sample point
@@ -1866,10 +1862,10 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 {
-    if (!novisapprox && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
+    if (!options.novisapprox.value() && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
         return true;
 
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const qvec3f dir = qvec3f(lightsurf->origin) - qvec3f(vpl->pos); // vpl -> sample point
     const float dist = qv::length(dir) + lightsurf->radius;
 
@@ -1909,13 +1905,13 @@ inline qvec3d CosineWeightedHemisphereSample(float u1, float u2)
 static void LightFace_Bounce(
     const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     // const dmodelh2_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
 
-    if (!cfg.bounce.boolValue())
+    if (!cfg.bounce.value())
         return;
 
-    if (!(debugmode == debugmode_bounce || debugmode == debugmode_none))
+    if (!(options.debugmode == debugmodes::bounce || options.debugmode == debugmodes::none))
         return;
 
 #if 1
@@ -1973,7 +1969,7 @@ static void LightFace_Bounce(
                 /* Use dirt scaling on the indirect lighting.
                  * Except, not in bouncedebug mode.
                  */
-                if (debugmode != debugmode_bounce) {
+                if (options.debugmode != debugmodes::bounce) {
                     const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
                     indirect *= dirtscale;
                 }
@@ -2095,7 +2091,7 @@ static void LightFace_Bounce(
 static void // mxd
 LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
     for (const surfacelight_t &vpl : SurfaceLights()) {
         if (SurfaceLight_SphereCull(&vpl, lightsurf))
@@ -2180,7 +2176,7 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 
 static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    Q_assert(debugmode == debugmode_debugoccluded);
+    Q_assert(options.debugmode == debugmodes::debugoccluded);
 
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -2189,9 +2185,9 @@ static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *ligh
     for (int i = 0; i < lightsurf->numpoints; i++) {
         lightsample_t *sample = &lightmap->samples[i];
         if (lightsurf->occluded[i]) {
-            sample->color = { 255, 0, 0 };
+            sample->color = {255, 0, 0};
         } else {
-            sample->color = { 0, 255, 0 };
+            sample->color = {0, 255, 0};
         }
         // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
         lightsurf->occluded[i] = false;
@@ -2202,7 +2198,7 @@ static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *ligh
 
 static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    Q_assert(debugmode == debugmode_debugneighbours);
+    Q_assert(options.debugmode == debugmodes::debugneighbours);
 
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -2228,12 +2224,12 @@ static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *li
 
         if (sample_face == dump_facenum) {
             /* Red - the sample is on the selected face */
-            sample->color = { 255, 0, 0 };
+            sample->color = {255, 0, 0};
         } else if (has_sample_on_dumpface) {
             /* Green - the face has some samples on the selected face */
-            sample->color = { 0, 255, 0 };
+            sample->color = {0, 255, 0};
         } else {
-            sample->color = { };
+            sample->color = {};
         }
         // N.B.: Mark it as un-occluded now, to disable special handling later in the -extra/-extra4 downscaling code
         lightsurf->occluded[i] = false;
@@ -2258,17 +2254,17 @@ int numDirtVectors = 0;
  * sets up dirtmap (ambient occlusion)
  * ============
  */
-void SetupDirt(globalconfig_t &cfg)
+void SetupDirt(settings::worldspawn_keys &cfg)
 {
     // check if needed
 
-    if (!cfg.globalDirt.boolValue() && cfg.globalDirt.isLocked()) {
+    if (!cfg.globalDirt.value() && cfg.globalDirt.isLocked()) {
         // HACK: "-dirt 0" disables all dirtmapping even if we would otherwise use it.
         dirt_in_use = false;
         return;
     }
 
-    if (cfg.globalDirt.boolValue() || cfg.minlightDirt.boolValue() || cfg.sunlight_dirt.boolValue() ||
+    if (cfg.globalDirt.value() || cfg.minlightDirt.value() || cfg.sunlight_dirt.boolValue() ||
         cfg.sunlight2_dirt.boolValue()) {
         dirt_in_use = true;
     }
@@ -2289,19 +2285,11 @@ void SetupDirt(globalconfig_t &cfg)
     }
 
     /* note it */
-    LogPrint("--- SetupDirt ---\n");
-
-    /* clamp dirtAngle */
-    if (cfg.dirtAngle.floatValue() <= 1.0f) {
-        cfg.dirtAngle.setFloatValueLocked(1.0f); // FIXME: add clamping API
-    }
-    if (cfg.dirtAngle.floatValue() >= 90.0f) {
-        cfg.dirtAngle.setFloatValueLocked(90.0f);
-    }
+    logging::print("--- SetupDirt ---\n");
 
     /* calculate angular steps */
     constexpr float angleStep = (float)DEG2RAD(360.0f / DIRT_NUM_ANGLE_STEPS);
-    const float elevationStep = (float)DEG2RAD(cfg.dirtAngle.floatValue() / DIRT_NUM_ELEVATION_STEPS);
+    const float elevationStep = (float)DEG2RAD(cfg.dirtAngle.value() / DIRT_NUM_ELEVATION_STEPS);
 
     /* iterate angle */
     float angle = 0.0f;
@@ -2317,7 +2305,7 @@ void SetupDirt(globalconfig_t &cfg)
     }
 
     /* emit some statistics */
-    LogPrint("{:9} dirtmap vectors\n", numDirtVectors);
+    logging::print("{:9} dirtmap vectors\n", numDirtVectors);
 }
 
 // from q3map2
@@ -2326,14 +2314,14 @@ static void GetUpRtVecs(const qvec3d &normal, qvec3d &myUp, qvec3d &myRt)
     /* check if the normal is aligned to the world-up */
     if (normal[0] == 0.0f && normal[1] == 0.0f) {
         if (normal[2] == 1.0f) {
-            myRt = { 1.0, 0.0, 0.0 };
-            myUp = { 0.0, 1.0, 0.0 };
+            myRt = {1.0, 0.0, 0.0};
+            myUp = {0.0, 1.0, 0.0};
         } else if (normal[2] == -1.0f) {
-            myRt = { -1.0, 0.0, 0.0 };
-            myUp = { 0.0, 1.0, 0.0 };
+            myRt = {-1.0, 0.0, 0.0};
+            myUp = {0.0, 1.0, 0.0};
         }
     } else {
-        constexpr qvec3d worldUp { 0, 0, 1 };
+        constexpr qvec3d worldUp{0, 0, 1};
         myRt = qv::normalize(qv::cross(normal, worldUp));
         myUp = qv::normalize(qv::cross(myRt, normal));
     }
@@ -2347,22 +2335,22 @@ inline qvec3d TransformToTangentSpace(
 }
 
 // from q3map2
-inline qvec3d GetDirtVector(const globalconfig_t &cfg, int i)
+inline qvec3d GetDirtVector(const settings::worldspawn_keys &cfg, int i)
 {
     Q_assert(i < numDirtVectors);
 
-    if (cfg.dirtMode.intValue() == 1) {
+    if (cfg.dirtMode.value() == 1) {
         /* get random vector */
         float angle = Random() * DEG2RAD(360.0f);
-        float elevation = Random() * DEG2RAD(cfg.dirtAngle.floatValue());
-        return { cos(angle) * sin(elevation), sin(angle) * sin(elevation), cos(elevation) };
+        float elevation = Random() * DEG2RAD(cfg.dirtAngle.value());
+        return {cos(angle) * sin(elevation), sin(angle) * sin(elevation), cos(elevation)};
     }
 
     return dirtVectors[i];
 }
 
-float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const qvec3d &point, const qvec3d &normal,
-    const modelinfo_t *selfshadow)
+float DirtAtPoint(const settings::worldspawn_keys &cfg, raystream_intersection_t *rs, const qvec3d &point,
+    const qvec3d &normal, const modelinfo_t *selfshadow)
 {
     if (!dirt_in_use) {
         return 0.0f;
@@ -2383,7 +2371,7 @@ float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const
         qvec3d dirtvec = GetDirtVector(cfg, j);
         qvec3d dir = TransformToTangentSpace(normal, myUp, myRt, dirtvec);
 
-        rs->pushRay(j, point, dir, cfg.dirtDepth.floatValue());
+        rs->pushRay(j, point, dir, cfg.dirtDepth.value());
     }
 
     Q_assert(rs->numPushedRays() == numDirtVectors);
@@ -2395,15 +2383,15 @@ float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const
     for (int j = 0; j < numDirtVectors; j++) {
         if (rs->getPushedRayHitType(j) == hittype_t::SOLID) {
             const vec_t dist = rs->getPushedRayHitDist(j);
-            occlusion += min(cfg.dirtDepth.floatValue(), dist);
+            occlusion += min(cfg.dirtDepth.value(), dist);
         } else {
-            occlusion += cfg.dirtDepth.floatValue();
+            occlusion += cfg.dirtDepth.value();
         }
     }
 
     // process the results.
     const vec_t avgHitdist = occlusion / numDirtVectors;
-    occlusion = 1 - (avgHitdist / cfg.dirtDepth.floatValue());
+    occlusion = 1 - (avgHitdist / cfg.dirtDepth.value());
     return occlusion;
 }
 
@@ -2414,7 +2402,7 @@ float DirtAtPoint(const globalconfig_t &cfg, raystream_intersection_t *rs, const
  */
 static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
     Q_assert(dirt_in_use);
 
@@ -2446,7 +2434,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             qvec3d dirtvec = GetDirtVector(cfg, j);
             qvec3d dir = TransformToTangentSpace(lightsurf->normals[i], myUps[i], myRts[i], dirtvec);
 
-            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.floatValue());
+            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.value());
         }
 
         // trace the batch. need closest hit for dirt, so intersection.
@@ -2457,9 +2445,9 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             const int i = rs->getPushedRayPointIndex(k);
             if (rs->getPushedRayHitType(k) == hittype_t::SOLID) {
                 vec_t dist = rs->getPushedRayHitDist(k);
-                lightsurf->occlusion[i] += min(cfg.dirtDepth.floatValue(), dist);
+                lightsurf->occlusion[i] += min(cfg.dirtDepth.value(), dist);
             } else {
-                lightsurf->occlusion[i] += cfg.dirtDepth.floatValue();
+                lightsurf->occlusion[i] += cfg.dirtDepth.value();
             }
         }
     }
@@ -2467,7 +2455,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
     // process the results.
     for (int i = 0; i < lightsurf->numpoints; i++) {
         vec_t avgHitdist = lightsurf->occlusion[i] / (float)numDirtVectors;
-        lightsurf->occlusion[i] = 1 - (avgHitdist / cfg.dirtDepth.floatValue());
+        lightsurf->occlusion[i] = 1 - (avgHitdist / cfg.dirtDepth.value());
     }
 
     delete[] myUps;
@@ -2478,7 +2466,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 // N.B. we want to do this before smoothing / downscaling, so huge values don't mess up the averaging.
 static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const globalconfig_t &cfg = *lightsurf->cfg;
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
     for (lightmap_t &lightmap : *lightmaps) {
         for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -2488,10 +2476,10 @@ static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t
             color = qv::max(color, {0});
 
             /* Scale and clamp any out-of-range samples */
-            color *= cfg.rangescale.floatValue();
+            color *= cfg.rangescale.value();
 
             for (auto &c : color) {
-                c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.floatValue()) * 255.0f;
+                c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
             }
 
             vec_t maxcolor = qv::max(color);
@@ -2526,7 +2514,7 @@ static float Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lig
 }
 
 #if 0
-static void WritePPM(const std::filesystem::path &fname, int width, int height, const uint8_t *rgbdata)
+static void WritePPM(const fs::path &fname, int width, int height, const uint8_t *rgbdata)
 {
     qfile_t file = SafeOpenWrite(fname);
 
@@ -2551,8 +2539,8 @@ static void DumpFullSizeLightmap(const mbsp_t *bsp, const lightsurf_t *lightsurf
             }
         }
 
-        const int oversampled_width = (lightsurf->texsize[0] + 1) * oversample;
-        const int oversampled_height = (lightsurf->texsize[1] + 1) * oversample;
+        const int oversampled_width = (lightsurf->texsize[0] + 1) * settings::extra.value();
+        const int oversampled_height = (lightsurf->texsize[1] + 1) * settings::extra.value();
 
         Q_assert(lightsurf->numpoints == (oversampled_height * oversampled_width));
 
@@ -2778,7 +2766,7 @@ static std::vector<qvec4f> FloodFillTransparent(const std::vector<qvec4f> &input
         }
 
         if (unhandled_pixels == input.size()) {
-            // FLogPrint("warning, fully transparent lightmap\n");
+            // logging::funcprint("warning, fully transparent lightmap\n");
             fully_transparent_lightmaps++;
             break;
         }
@@ -2881,7 +2869,7 @@ static void WriteLightmaps(
     const int actual_width = lightsurf->texsize[0] + 1;
     const int actual_height = lightsurf->texsize[1] + 1;
 
-    if (litonly) {
+    if (options.litonly.value()) {
         // special case for writing a .lit for a bsp without modifying the bsp.
         // involves looking at which styles were written to the bsp in the previous lighting run, and then
         // writing the same styles to the same offsets in the .lit file.
@@ -2945,7 +2933,7 @@ static void WriteLightmaps(
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
         if (sorted.size() == MAXLIGHTMAPS) {
-            LogPrint("WARNING: Too many light styles on a face\n"
+            logging::print("WARNING: Too many light styles on a face\n"
                      "         lightmap point near [{}]\n",
                 lightsurf->points[0]);
             break;
@@ -3030,32 +3018,32 @@ static void WriteLightmaps(
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
     const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux)
 {
-    const int oversampled_width = actual_width * oversample;
-    const int oversampled_height = actual_height * oversample;
+    const int oversampled_width = actual_width * options.extra.value();
+    const int oversampled_height = actual_height * options.extra.value();
 
     // allocate new float buffers for the output colors and directions
     // these are the actual output width*height, without oversampling.
 
     std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
 
-    if (debug_highlightseams) {
+    if (options.highlightseams.value()) {
         fullres = HighlightSeams(fullres, oversampled_width, oversampled_height);
     }
 
     // removes all transparent pixels by averaging from adjacent pixels
     fullres = FloodFillTransparent(fullres, oversampled_width, oversampled_height);
 
-    if (softsamples > 0) {
-        fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, softsamples);
+    if (options.soft.value() > 0) {
+        fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, options.soft.value());
     }
 
     const std::vector<qvec4f> output_color =
-        IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, oversample);
+        IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, options.extra.value());
     std::optional<std::vector<qvec4f>> output_dir;
 
     if (lux) {
         output_dir = IntegerDownsampleImage(
-            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, oversample);
+            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, options.extra.value());
     }
 
     // copy from the float buffers to byte buffers in .bsp / .lit / .lux
@@ -3076,7 +3064,7 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
 
             This must be max(), see LightNormalize in MarkV 1036.
             */
-            float light = max({ color[0], color[1], color[2] });
+            float light = max({color[0], color[1], color[2]});
             if (light < 0)
                 light = 0;
             if (light > 255)
@@ -3085,14 +3073,11 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
 
             if (lux) {
                 qvec3d direction = output_dir->at(sampleindex).xyz();
-                qvec3d temp = {
-                    qv::dot(direction, lightsurf->snormal),
-                    qv::dot(direction, lightsurf->tnormal),
-                    qv::dot(direction, lightsurf->plane.normal)
-                };
+                qvec3d temp = {qv::dot(direction, lightsurf->snormal), qv::dot(direction, lightsurf->tnormal),
+                    qv::dot(direction, lightsurf->plane.normal)};
 
                 if (qv::emptyExact(temp))
-                    temp = { 0, 0, 1 };
+                    temp = {0, 0, 1};
                 else
                     qv::normalizeInPlace(temp);
 
@@ -3130,7 +3115,7 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
  * LightFace
  * ============
  */
-void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globalconfig_t &cfg)
+void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const settings::worldspawn_keys &cfg)
 {
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -3140,7 +3125,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
 
     /* One extra lightmap is allocated to simplify handling overflow */
 
-    if (!litonly) {
+    if (!options.litonly.value()) {
         // if litonly is set we need to preserve the existing lightofs
 
         /* some surfaces don't need lightmaps */
@@ -3191,7 +3176,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
     lightmapdict_t *lightmaps = &lightsurf->lightmapsByStyle;
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
-    if (dirt_in_use && (debugmode != debugmode_phong))
+    if (dirt_in_use && (options.debugmode != debugmodes::phong))
         LightFace_CalculateDirt(lightsurf);
 
     /*
@@ -3200,20 +3185,20 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
      * clamp any values that may have gone negative.
      */
 
-    if (debugmode == debugmode_none) {
+    if (options.debugmode == debugmodes::none) {
 
         total_samplepoints += lightsurf->numpoints;
 
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
         /* positive lights */
-        if (!(modelinfo->lightignore.boolValue() || extended_flags.light_ignore)) {
+        if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
             for (const auto &entity : GetLights()) {
                 if (entity.getFormula() == LF_LOCALMIN)
                     continue;
-                if (entity.nostaticlight.boolValue())
+                if (entity.nostaticlight.value())
                     continue;
-                if (entity.light.floatValue() > 0)
+                if (entity.light.value() > 0)
                     LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
@@ -3233,23 +3218,23 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
             LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), texinfo->value * 2.0f, lightsurf,
                 lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface
                             // is renered fullbright, when using arghrad3
-        } else if (lightsurf->minlight > cfg.minlight.floatValue()) {
+        } else if (lightsurf->minlight > cfg.minlight.value()) {
             LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
         } else {
-            const float light = cfg.minlight.floatValue();
-            const qvec3d &color = cfg.minlight_color.vec3Value();
+            const float light = cfg.minlight.value();
+            const qvec3d &color = cfg.minlight_color.value();
 
             LightFace_Min(bsp, face, color, light, lightsurf, lightmaps);
         }
 
         /* negative lights */
-        if (!(modelinfo->lightignore.boolValue() || extended_flags.light_ignore)) {
+        if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
             for (const auto &entity : GetLights()) {
                 if (entity.getFormula() == LF_LOCALMIN)
                     continue;
-                if (entity.nostaticlight.boolValue())
+                if (entity.nostaticlight.value())
                     continue;
-                if (entity.light.floatValue() < 0)
+                if (entity.light.value() < 0)
                     LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
@@ -3260,23 +3245,23 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const globa
 
     /* bounce debug */
     // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
-    if (debugmode == debugmode_bounce)
+    if (options.debugmode == debugmodes::bounce)
         LightFace_Bounce(bsp, face, lightsurf, lightmaps);
 
     /* replace lightmaps with AO for debugging */
-    if (debugmode == debugmode_dirt)
+    if (options.debugmode == debugmodes::dirt)
         LightFace_DirtDebug(lightsurf, lightmaps);
 
-    if (debugmode == debugmode_phong)
+    if (options.debugmode == debugmodes::phong)
         LightFace_PhongDebug(lightsurf, lightmaps);
 
-    if (debugmode == debugmode_bouncelights)
+    if (options.debugmode == debugmodes::bouncelights)
         LightFace_BounceLightsDebug(lightsurf, lightmaps);
 
-    if (debugmode == debugmode_debugoccluded)
+    if (options.debugmode == debugmodes::debugoccluded)
         LightFace_OccludedDebug(lightsurf, lightmaps);
 
-    if (debugmode == debugmode_debugneighbours)
+    if (options.debugmode == debugmodes::debugneighbours)
         LightFace_DebugNeighbours(lightsurf, lightmaps);
 
     /* Apply gamma, rangescale, and clamp */

@@ -24,11 +24,11 @@
 #include <common/cmdlib.hh>
 #include <common/fs.hh>
 
-void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const std::filesystem::path &filename, int version)
+void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const fs::path &filename, int version)
 {
     litheader_t header;
 
-    std::filesystem::path litname = filename;
+    fs::path litname = filename;
     litname.replace_extension("lit");
 
     header.v1.ident[0] = 'Q';
@@ -39,7 +39,7 @@ void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const std::filesystem::
     header.v2.numsurfs = LittleLong(bsp->dfaces.size());
     header.v2.lmsamples = LittleLong(bsp->dlightdata.size());
 
-    LogPrint("Writing {}\n", litname);
+    logging::print("Writing {}\n", litname);
     auto litfile = SafeOpenWrite(litname);
     SafeWrite(litfile, &header.v1, sizeof(header.v1));
     if (version == 2) {
@@ -72,11 +72,11 @@ void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const std::filesystem::
         SafeWrite(litfile, lit_filebase, bsp->dlightdata.size() * 3);
 }
 
-void WriteLuxFile(const mbsp_t *bsp, const std::filesystem::path &filename, int version)
+void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version)
 {
     litheader_t header;
 
-    std::filesystem::path luxname = filename;
+    fs::path luxname = filename;
     luxname.replace_extension("lux");
 
     header.v1.ident[0] = 'Q';

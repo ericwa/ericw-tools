@@ -108,7 +108,7 @@ std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
     side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
-    std::array<size_t, SIDE_TOTAL> counts { };
+    std::array<size_t, SIDE_TOTAL> counts{};
     vec_t dot;
     size_t i, j;
     face_t *newf, *new2;
@@ -215,7 +215,7 @@ static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside
                 break;
         }
         if (!w) {
-            /* The face is completely outside this brush */            
+            /* The face is completely outside this brush */
             outside->push_front(face);
         } else {
             inside->push_front(face);
@@ -233,8 +233,8 @@ outside list or spliting it into a piece in each list.
 Faces exactly on the plane will stay inside unless overdrawn by later brush
 =================
 */
-static void ClipInside(const face_t *clipface, bool precedence, std::list<face_t *> *inside,
-    std::list<face_t *> *outside)
+static void ClipInside(
+    const face_t *clipface, bool precedence, std::list<face_t *> *inside, std::list<face_t *> *outside)
 {
     std::list<face_t *> oldinside;
 
@@ -381,7 +381,7 @@ static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbru
 static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const mapentity_t *srcentity, const brush_t *srcbrush, const brush_t *clipbrush)
 {
     if (srcbrush == clipbrush) {
-        LogPrint("    ignoring self-clip\n");
+        logging::print("    ignoring self-clip\n");
         return input;
     }
 
@@ -466,7 +466,7 @@ std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t *srcentity, const
 {
     const auto possible_clipbrushes = GatherPossibleClippingBrushes(srcentity, srcnode, srcface);
 
-    LogPrint("face {} has {} possible clipbrushes\n", (void*)srcface, possible_clipbrushes.size());
+    logging::print("face {} has {} possible clipbrushes\n", (void *)srcface, possible_clipbrushes.size());
 
     std::list<face_t *> result{srcface};
 

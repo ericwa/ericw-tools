@@ -25,13 +25,14 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <mutex>
+#include <fmt/ostream.h>
+#include <fmt/chrono.h>
 
 #include <common/log.hh>
 #include <common/threads.hh>
+#include <common/settings.hh>
 #include <common/cmdlib.hh>
-
-log_flag_t log_mask =
-    (std::numeric_limits<log_flag_t>::max()) & ~((1 << LOG_VERBOSE) | (1 << LOG_STAT) | (1 << LOG_PROGRESS));
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -40,81 +41,72 @@ log_flag_t log_mask =
 
 static std::ofstream logfile;
 
-void InitLog(const std::filesystem::path &filename)
+namespace logging
 {
-    logfile.open(filename);
+bitflags<flag> mask = bitflags<flag>(flag::ALL) & ~bitflags<flag>(flag::VERBOSE);
+
+void init(const fs::path &filename, const settings::common_settings &settings)
+{
+    if (settings.log.value()) {
+        logfile.open(filename);
+        fmt::print(logfile, "---- {} / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n", settings.programName);
+    }
 }
 
-void CloseLog()
+void close()
 {
-    if (logfile)
-        logfile.close();
-}
-
-void LogPrintLocked(const char *str)
-{
-    // log file, if open
     if (logfile) {
-        logfile << str;
-        logfile.flush();
+        logfile.close();
+    }
+}
+
+static std::mutex print_mutex;
+
+void print(flag logflag, const char *str)
+{
+    if (!(mask & logflag)) {
+        return;
+    }
+
+    print_mutex.lock();
+ 
+    if (logflag != flag::PERCENT) {
+        // log file, if open
+        if (logfile) {
+            logfile << str;
+            logfile.flush();
+        }
+
+#ifdef _WIN32
+        // print to windows console
+        OutputDebugStringA(str);
+#endif
     }
 
     // stdout
     std::cout << str;
 
-    // print to windows console
-#ifdef _WIN32
-    OutputDebugStringA(str);
-#endif
+    print_mutex.unlock();
 }
 
-static bool fInPercent = false;
+static time_point start_time;
+static bool is_timing = false;
 
-void LogPrint(log_flag_t type, const char *str)
+void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {
-    if (type && !(log_mask & (1 << type)))
-        return;
-
-    if (fInPercent && type != LOG_PERCENT) {
-        std::cout << "\r";
-        fInPercent = false;
+    if (!is_timing) {
+        start_time = I_FloatTime();
+        is_timing = true;
     }
 
-    ThreadLock();
-    InterruptThreadProgress__();
-    LogPrintLocked(str);
-    ThreadUnlock();
-}
-
-void LogPrintSilent(const char *str)
-{
-    ThreadLock();
-    InterruptThreadProgress__();
-
-    if (logfile) {
-        logfile << str;
-        logfile.flush();
+    if (count == max) {
+        auto elapsed = I_FloatTime() - start_time;
+        is_timing = false;
+        if (displayElapsed) {
+            print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+        }
+    } else {
+        print(flag::PERCENT, "[{:>3}%]\r", static_cast<uint32_t>((static_cast<float>(count) / max) * 100));
     }
-
-    ThreadUnlock();
 }
-
-void LogPercent(int32_t value, int32_t max)
-{
-    if (!(log_mask & (1 << LOG_PERCENT)))
-        return;
-
-    if (((value + 1) * 100) / max == (value * 100) / max)
-        return;
-
-    ThreadLock();
-    InterruptThreadProgress__();
-
-    // stdout
-    fmt::print("\r{:3}%", ((value + 1) * 100) / max);
-    fflush(stdout);
-
-    fInPercent = true;
-
-    ThreadUnlock();
-}
+};

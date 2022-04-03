@@ -114,7 +114,8 @@ TEST(qbsp, duplicatePlanes)
     EXPECT_EQ(0, worldspawn.brushes.size());
     EXPECT_EQ(6, worldspawn.mapbrush(0).numfaces);
 
-    std::optional<brush_t> brush = LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, {}, rotation_t::none, 0);
+    std::optional<brush_t> brush =
+        LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, {}, rotation_t::none, 0);
     ASSERT_NE(std::nullopt, brush);
     EXPECT_EQ(6, brush->faces.size());
 }
@@ -212,14 +213,14 @@ TEST(qbsp, InvalidTextureProjection3)
 
 TEST(mathlib, WindingArea)
 {
-    winding_t w { 5 };
+    winding_t w{5};
 
     // poor test.. but at least checks that the colinear point is treated correctly
-    w[0] = { 0, 0, 0 };
-    w[1] = { 0, 32, 0}; // colinear
-    w[2] = { 0, 64, 0};
-    w[3] = { 64, 64, 0};
-    w[4] = { 64, 0, 0};
+    w[0] = {0, 0, 0};
+    w[1] = {0, 32, 0}; // colinear
+    w[2] = {0, 64, 0};
+    w[3] = {64, 64, 0};
+    w[4] = {64, 0, 0};
 
     EXPECT_EQ(64.0f * 64.0f, w.area());
 }

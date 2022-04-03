@@ -140,7 +140,7 @@ void SaveVisState(void)
     state.version = LittleLong(VIS_STATE_VERSION);
     state.numportals = LittleLong(numportals);
     state.numleafs = LittleLong(portalleafs);
-    state.testlevel = LittleLong(testlevel);
+    state.testlevel = LittleLong(options.visdist.value());
     state.time_elapsed = LittleLong((uint32_t)(statetime - starttime).count());
 
     SafeWrite(outfile, &state, sizeof(state));
@@ -175,46 +175,46 @@ void SaveVisState(void)
 
     std::error_code ec;
 
-    std::filesystem::remove(statefile, ec);
+    fs::remove(statefile, ec);
     if (ec && ec.value() != ENOENT)
         FError("error removing old state ({})", ec.message());
 
-    std::filesystem::rename(statetmpfile, statefile, ec);
+    fs::rename(statetmpfile, statefile, ec);
     if (ec)
         FError("error renaming state file ({})", ec.message());
 }
 
 bool LoadVisState(void)
 {
-    std::filesystem::file_time_type prt_time, state_time;
+    fs::file_time_type prt_time, state_time;
     int i, numbytes;
     portal_t *p;
     dvisstate_t state;
     dportal_t pstate;
     uint8_t *compressed;
 
-    if (nostate) {
+    if (options.nostate.value()) {
         return false;
     }
 
-    if (!std::filesystem::exists(statefile)) {
+    if (!fs::exists(statefile)) {
         /* No state file, maybe temp file is there? */
-        if (!std::filesystem::exists(statetmpfile))
+        if (!fs::exists(statetmpfile))
             return false;
-        state_time = std::filesystem::last_write_time(statetmpfile);
+        state_time = fs::last_write_time(statetmpfile);
 
         std::error_code ec;
-        std::filesystem::rename(statetmpfile, statefile, ec);
+        fs::rename(statetmpfile, statefile, ec);
 
         if (ec)
             return false;
     } else {
-        state_time = std::filesystem::last_write_time(statefile);
+        state_time = fs::last_write_time(statefile);
     }
 
-    prt_time = std::filesystem::last_write_time(portalfile);
+    prt_time = fs::last_write_time(portalfile);
     if (prt_time > state_time) {
-        LogPrint("State file is out of date, will be overwritten\n");
+        logging::print("State file is out of date, will be overwritten\n");
         return false;
     }
 

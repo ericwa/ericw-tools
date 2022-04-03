@@ -170,13 +170,13 @@ TEST(mathlib, PolygonCentroid_empty)
 
 TEST(mathlib, PolygonCentroid_point)
 {
-    const std::initializer_list<qvec3d> point{ { 1, 1, 1 } };
+    const std::initializer_list<qvec3d> point{{1, 1, 1}};
     EXPECT_EQ(*point.begin(), qv::PolyCentroid(point.begin(), point.end()));
 }
 
 TEST(mathlib, PolygonCentroid_line)
 {
-    const std::initializer_list<qvec3d> line{ { 0, 0, 0 }, { 2, 2, 2 } };
+    const std::initializer_list<qvec3d> line{{0, 0, 0}, {2, 2, 2}};
     EXPECT_EQ(qvec3d(1, 1, 1), qv::PolyCentroid(line.begin(), line.end()));
 }
 
@@ -205,36 +205,36 @@ TEST(mathlib, PolygonArea)
 
 TEST(mathlib, BarycentricFromPoint)
 {
-     // clockwise
-    const std::array<qvec3f, 3> tri { qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
+    // clockwise
+    const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
     EXPECT_EQ(qvec3f(1, 0, 0), qv::Barycentric_FromPoint(tri[0], tri[0], tri[1], tri[2]));
     EXPECT_EQ(qvec3f(0, 1, 0), qv::Barycentric_FromPoint(tri[1], tri[0], tri[1], tri[2]));
     EXPECT_EQ(qvec3f(0, 0, 1), qv::Barycentric_FromPoint(tri[2], tri[0], tri[1], tri[2]));
 
-    EXPECT_EQ(qvec3f(0.5, 0.5, 0.0), qv::Barycentric_FromPoint({ 0, 32, 0 }, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(0.0, 0.5, 0.5), qv::Barycentric_FromPoint({ 32, 32, 0 }, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(0.5, 0.0, 0.5), qv::Barycentric_FromPoint({ 32, 0, 0 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0.5, 0.5, 0.0), qv::Barycentric_FromPoint({0, 32, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0.0, 0.5, 0.5), qv::Barycentric_FromPoint({32, 32, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0.5, 0.0, 0.5), qv::Barycentric_FromPoint({32, 0, 0}, tri[0], tri[1], tri[2]));
 }
 
 TEST(mathlib, BarycentricToPoint)
 {
-     // clockwise
-    const std::array<qvec3f, 3> tri { qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
+    // clockwise
+    const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(tri[0], qv::Barycentric_ToPoint({ 1, 0, 0 }, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(tri[1], qv::Barycentric_ToPoint({ 0, 1, 0 }, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(tri[2], qv::Barycentric_ToPoint({ 0, 0, 1 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(tri[0], qv::Barycentric_ToPoint({1, 0, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(tri[1], qv::Barycentric_ToPoint({0, 1, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(tri[2], qv::Barycentric_ToPoint({0, 0, 1}, tri[0], tri[1], tri[2]));
 
-    EXPECT_EQ(qvec3f(0, 32, 0), qv::Barycentric_ToPoint({ 0.5, 0.5, 0.0 }, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(32, 32, 0), qv::Barycentric_ToPoint({ 0.0, 0.5, 0.5 }, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(32, 0, 0), qv::Barycentric_ToPoint({ 0.5, 0.0, 0.5 }, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(0, 32, 0), qv::Barycentric_ToPoint({0.5, 0.5, 0.0}, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(32, 32, 0), qv::Barycentric_ToPoint({0.0, 0.5, 0.5}, tri[0], tri[1], tri[2]));
+    EXPECT_EQ(qvec3f(32, 0, 0), qv::Barycentric_ToPoint({0.5, 0.0, 0.5}, tri[0], tri[1], tri[2]));
 }
 
 TEST(mathlib, BarycentricRandom)
 {
-     // clockwise
-    const std::array<qvec3f, 3> tri { qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
+    // clockwise
+    const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
     const auto triAsVec = vector<qvec3f>{tri.begin(), tri.end()};
     const auto edges = GLM_MakeInwardFacingEdgePlanes(triAsVec);
@@ -448,24 +448,24 @@ static const float MANGLE_EPSILON = 0.1f;
 
 TEST(light, vec_from_mangle)
 {
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(1, 0, 0), vec_from_mangle(qvec3f(0, 0, 0)), MANGLE_EPSILON));
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(-1, 0, 0), vec_from_mangle(qvec3f(180, 0, 0)), MANGLE_EPSILON));
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, 1), vec_from_mangle(qvec3f(0, 90, 0)), MANGLE_EPSILON));
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, -1), vec_from_mangle(qvec3f(0, -90, 0)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(1, 0, 0), qv::vec_from_mangle(qvec3f(0, 0, 0)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(-1, 0, 0), qv::vec_from_mangle(qvec3f(180, 0, 0)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, 1), qv::vec_from_mangle(qvec3f(0, 90, 0)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, -1), qv::vec_from_mangle(qvec3f(0, -90, 0)), MANGLE_EPSILON));
 }
 
 TEST(light, mangle_from_vec)
 {
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, 0), mangle_from_vec(qvec3f(1, 0, 0)), MANGLE_EPSILON));
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(180, 0, 0), mangle_from_vec(qvec3f(-1, 0, 0)), MANGLE_EPSILON));
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 90, 0), mangle_from_vec(qvec3f(0, 0, 1)), MANGLE_EPSILON));
-    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, -90, 0), mangle_from_vec(qvec3f(0, 0, -1)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, 0), qv::mangle_from_vec(qvec3f(1, 0, 0)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(180, 0, 0), qv::mangle_from_vec(qvec3f(-1, 0, 0)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 90, 0), qv::mangle_from_vec(qvec3f(0, 0, 1)), MANGLE_EPSILON));
+    EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, -90, 0), qv::mangle_from_vec(qvec3f(0, 0, -1)), MANGLE_EPSILON));
 
     for (int yaw = -179; yaw <= 179; yaw++) {
         for (int pitch = -89; pitch <= 89; pitch++) {
             const qvec3f origMangle = qvec3f(yaw, pitch, 0);
-            const qvec3f vec = vec_from_mangle(origMangle);
-            const qvec3f roundtrip = mangle_from_vec(vec);
+            const qvec3f vec = qv::vec_from_mangle(origMangle);
+            const qvec3f roundtrip = qv::mangle_from_vec(vec);
             EXPECT_TRUE(qv::epsilonEqual(origMangle, roundtrip, MANGLE_EPSILON));
         }
     }

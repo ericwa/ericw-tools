@@ -28,7 +28,7 @@
 
 static std::ofstream InitObjFile(const std::string &filesuffix)
 {
-    std::filesystem::path name = options.szBSPName;
+    fs::path name = options.szBSPName;
     name.replace_filename(options.szBSPName.stem().string() + "_" + filesuffix).replace_extension("obj");
 
     std::ofstream objfile(name);
@@ -40,7 +40,7 @@ static std::ofstream InitObjFile(const std::string &filesuffix)
 
 static std::ofstream InitMtlFile(const std::string &filesuffix)
 {
-    std::filesystem::path name = options.szBSPName;
+    fs::path name = options.szBSPName;
     name.replace_filename(options.szBSPName.stem().string() + "_" + filesuffix).replace_extension("mtl");
 
     std::ofstream file(name);

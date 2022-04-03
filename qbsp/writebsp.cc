@@ -37,12 +37,12 @@ static contentflags_t RemapContentsForExport(const contentflags_t &content)
         /*
          * A bit of a hack for Q2, to ensure that structural faces which are completely covered by CFLAGS_DETAIL_FENCE
          * still render.
-         * 
+         *
          * If we export the detail fence leaf as CONTENTS_SOLID, Q2 engines will refuse to render the covered sturctural
          * face because of a short-circuit in GL_DrawLeaf.
          */
         if (options.target_game->id == GAME_QUAKE_II) {
-            return { Q2_CONTENTS_WINDOW, 0 };
+            return {Q2_CONTENTS_WINDOW, 0};
         }
         /*
          * This is for func_detail_wall.. we want to write a solid leaf that has faces,
@@ -172,7 +172,8 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     const contentflags_t remapped = RemapContentsForExport(node->contents);
 
     if (!remapped.is_valid(options.target_game, false)) {
-        FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1, remapped.to_string(options.target_game));
+        FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1,
+            remapped.to_string(options.target_game));
     }
 
     dleaf.contents = remapped.native;
@@ -189,7 +190,7 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
     for (auto &face : node->markfaces) {
-        if (!options.includeSkip && map.mtexinfos.at(face->texinfo).flags.is_skip)
+        if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
             continue;
         // FIXME: this can happen when compiling some Q2 maps
         // as Q1.
@@ -315,11 +316,11 @@ void BeginBSPFile(void)
  */
 static void WriteExtendedTexinfoFlags(void)
 {
-    auto file = std::filesystem::path(options.szBSPName).replace_extension("texinfo.json");
+    auto file = fs::path(options.szBSPName).replace_extension("texinfo.json");
     bool needwrite = false;
 
-    if (std::filesystem::exists(file)) {
-        std::filesystem::remove(file);
+    if (fs::exists(file)) {
+        fs::remove(file);
     }
 
     for (auto &texinfo : map.mtexinfos) {
@@ -345,7 +346,7 @@ static void WriteExtendedTexinfoFlags(void)
             continue;
 
         json t = json::object();
-        
+
         if (tx.flags.is_skip) {
             t["is_skip"] = tx.flags.is_skip;
         }
@@ -419,7 +420,7 @@ static void WriteBSPFile()
             FError("No extended limits version of {} available", options.target_version->name);
         }
 
-        LogPrint("NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name,
+        logging::print("NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name,
             extendedLimitsFormat->name);
 
         Q_assert(ConvertBSPFormat(&bspdata, extendedLimitsFormat));
@@ -428,7 +429,7 @@ static void WriteBSPFile()
     options.szBSPName.replace_extension("bsp");
 
     WriteBSPFile(options.szBSPName, &bspdata);
-    LogPrint("Wrote {}\n", options.szBSPName);
+    logging::print("Wrote {}\n", options.szBSPName);
 
     PrintBSPFileSizes(&bspdata);
 }
@@ -441,7 +442,7 @@ FinishBSPFile
 void FinishBSPFile(void)
 {
     options.fVerbose = true;
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     if (map.bsp.dvertexes.empty()) {
         // First vertex must remain unused because edge references it
@@ -469,7 +470,7 @@ void UpdateBSPFileEntitiesLump()
     // load the .bsp
     LoadBSPFile(options.szBSPName, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.szBSPName);
+    bspdata.version->game->init_filesystem(options.szBSPName, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -482,5 +483,5 @@ void UpdateBSPFileEntitiesLump()
     ConvertBSPFormat(&bspdata, bspdata.loadversion);
     WriteBSPFile(options.szBSPName, &bspdata);
 
-    LogPrint("Wrote {}\n", options.szBSPName);
+    logging::print("Wrote {}\n", options.szBSPName);
 }

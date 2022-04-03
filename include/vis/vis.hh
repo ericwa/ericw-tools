@@ -184,20 +184,12 @@ extern unsigned long c_chains;
 
 extern bool showgetleaf;
 
-extern int testlevel;
-extern bool ambientsky;
-extern bool ambientwater;
-extern bool ambientslime;
-extern bool ambientlava;
-extern int visdist;
-extern bool nostate;
-
 extern uint8_t *uncompressed;
 extern int leafbytes;
 extern int leafbytes_real;
 extern int leaflongs;
 
-extern std::filesystem::path sourcefile, portalfile, statefile, statetmpfile;
+extern fs::path portalfile, statefile, statetmpfile;
 
 void BasePortalVis(void);
 
@@ -214,3 +206,41 @@ bool LoadVisState(void);
 
 void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed);
 int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out);
+
+#include <common/settings.hh>
+#include <common/fs.hh>
+
+namespace settings
+{
+extern setting_group output_group;
+extern setting_group advanced_group;
+
+class vis_settings : public common_settings
+{
+public:
+    setting_bool fast{this, "fast", false, &performance_group, "run very simple & fast vis procedure"};
+    setting_int32 level{this, "level", 4, 0, 4, &advanced_group, "number of iterations for tests"};
+    setting_bool noambientsky{this, "noambientsky", false, &output_group, "don't output ambient sky sounds"};
+    setting_bool noambientwater{this, "noambientwater", false, &output_group, "don't output ambient water sounds"};
+    setting_bool noambientslime{this, "noambientslime", false, &output_group, "don't output ambient slime sounds"};
+    setting_bool noambientlava{this, "noambientlava", false, &output_group, "don't output ambient lava sounds"};
+    setting_redirect noambient{this, "noambient", {&noambientsky, &noambientwater, &noambientslime, &noambientlava},
+        &output_group, "don't output ambient sounds at all"};
+    setting_scalar visdist{
+        this, "visdist", 0.0, &advanced_group, "control the distance required for a portal to be considered seen"};
+    setting_bool nostate{this, "nostate", false, &advanced_group, "ignore saved state files, for forced re-runs"};
+
+    fs::path sourceMap;
+
+    virtual void setParameters(int argc, const char **argv) override
+    {
+        common_settings::setParameters(argc, argv);
+        usage = "vis calculates the visibility (and hearability) sets for \n.BSP files.\n\n";
+        remainderName = "mapname.bsp";
+    }
+    virtual void initialize(int argc, const char **argv) override;
+};
+
+} // namespace settings
+
+extern settings::vis_settings options;

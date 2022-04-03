@@ -45,4 +45,4 @@ struct surfacelight_t
 const std::vector<surfacelight_t> &SurfaceLights();
 int TotalSurfacelightPoints();
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
-void MakeSurfaceLights(const globalconfig_t &cfg, const mbsp_t *bsp);
+void MakeSurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);

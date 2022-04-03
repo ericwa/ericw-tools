@@ -433,13 +433,13 @@ static face_t *SelectPartition(std::vector<brush_t> &brushes)
     bool largenode = false;
 
     // decide if we should switch to the midsplit method
-    if (options.midsplitSurfFraction != 0.0) {
+    if (options.midsplitsurffraction.value() != 0.0) {
         // new way (opt-in)
-        largenode = (fractionOfMap > options.midsplitSurfFraction);
+        largenode = (fractionOfMap > options.midsplitsurffraction.value());
     } else {
         // old way (ericw-tools 0.15.2+)
-        if (options.maxNodeSize >= 64) {
-            const vec_t maxnodesize = options.maxNodeSize - ON_EPSILON;
+        if (options.maxnodesize.value() >= 64) {
+            const vec_t maxnodesize = options.maxnodesize.value() - ON_EPSILON;
 
             largenode = (bounds.maxs()[0] - bounds.mins()[0]) > maxnodesize ||
                         (bounds.maxs()[1] - bounds.mins()[1]) > maxnodesize ||
@@ -623,7 +623,7 @@ static twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const q
     }
 
     if (WindingIsHuge(*w)) {
-        LogPrint("WARNING: huge winding\n");
+        logging::print("WARNING: huge winding\n");
     }
 
     winding_t midwinding = *w;
@@ -674,7 +674,7 @@ static twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const q
         bool bogus = false;
         for (int j = 0; j < 3; j++) {
             if (result[i]->bounds.mins()[j] < -4096 || result[i]->bounds.maxs()[j] > 4096) {
-                LogPrint("bogus brush after clip\n");
+                logging::print("bogus brush after clip\n");
                 bogus = true;
                 break;
             }
@@ -687,9 +687,9 @@ static twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const q
 
     if (!(result[0] && result[1])) {
         if (!result[0] && !result[1])
-            LogPrint("split removed brush\n");
+            logging::print("split removed brush\n");
         else
-            LogPrint("split not on both sides\n");
+            logging::print("split not on both sides\n");
         if (result[0]) {
             result.front = {brush};
         }
@@ -910,7 +910,7 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
         return headnode;
     }
 
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     node_t *headnode = new node_t{};
     usemidsplit = midsplit;
@@ -941,16 +941,18 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     }
     PartitionBrushes(std::move(brushcopies), headnode);
 
-    LogPrint(LOG_STAT, "     {:8} split nodes\n", splitnodes.load());
-    LogPrint(LOG_STAT, "     {:8} solid leafs\n", c_solid.load());
-    LogPrint(LOG_STAT, "     {:8} empty leafs\n", c_empty.load());
-    LogPrint(LOG_STAT, "     {:8} water leafs\n", c_water.load());
-    LogPrint(LOG_STAT, "     {:8} detail leafs\n", c_detail.load());
-    LogPrint(LOG_STAT, "     {:8} detail illusionary leafs\n", c_detail_illusionary.load());
-    LogPrint(LOG_STAT, "     {:8} detail fence leafs\n", c_detail_fence.load());
-    LogPrint(LOG_STAT, "     {:8} illusionary visblocker leafs\n", c_illusionary_visblocker.load());
-    LogPrint(LOG_STAT, "     {:8} leaffaces\n", leaffaces.load());
-    LogPrint(LOG_STAT, "     {:8} nodefaces\n", nodefaces.load());
+    //logging::percent(csgmergefaces, csgmergefaces, entity == pWorldEnt());
+
+    logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
+    logging::print(logging::flag::STAT, "     {:8} solid leafs\n", c_solid.load());
+    logging::print(logging::flag::STAT, "     {:8} empty leafs\n", c_empty.load());
+    logging::print(logging::flag::STAT, "     {:8} water leafs\n", c_water.load());
+    logging::print(logging::flag::STAT, "     {:8} detail leafs\n", c_detail.load());
+    logging::print(logging::flag::STAT, "     {:8} detail illusionary leafs\n", c_detail_illusionary.load());
+    logging::print(logging::flag::STAT, "     {:8} detail fence leafs\n", c_detail_fence.load());
+    logging::print(logging::flag::STAT, "     {:8} illusionary visblocker leafs\n", c_illusionary_visblocker.load());
+    logging::print(logging::flag::STAT, "     {:8} leaffaces\n", leaffaces.load());
+    logging::print(logging::flag::STAT, "     {:8} nodefaces\n", nodefaces.load());
 
     return headnode;
 }

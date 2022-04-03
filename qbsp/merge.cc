@@ -123,7 +123,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     // build the new polygon
     if (f1->w.size() + f2->w.size() > MAXEDGES) {
-        FLogPrint("WARNING: Too many edges\n");
+        logging::funcprint("WARNING: Too many edges\n");
         return NULL;
     }
 
@@ -159,7 +159,7 @@ MergeFaceToList
 */
 void MergeFaceToList(face_t *face, std::list<face_t *> &list)
 {
-    for (auto it = list.begin(); it != list.end(); ) {
+    for (auto it = list.begin(); it != list.end();) {
 #ifdef PARANOID
         CheckColinear(f);
 #endif
@@ -219,7 +219,7 @@ void MergeAll(node_t *headnode)
 {
     std::atomic<int> mergefaces = 0, premergefaces = 0;
 
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     std::vector<node_t *> allnodes;
     CollectNodes_R(headnode, allnodes);
@@ -230,5 +230,6 @@ void MergeAll(node_t *headnode)
         mergefaces += node->facelist.size();
     });
 
-    LogPrint(LOG_STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces, (static_cast<double>(mergefaces) / premergefaces) * 100.);
+    logging::print(logging::flag::STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces,
+        (static_cast<double>(mergefaces) / premergefaces) * 100.);
 }

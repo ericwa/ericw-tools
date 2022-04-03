@@ -59,7 +59,7 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
     } else {
         // point is exactly on the node plane
 
-        node_t *front = PointInLeaf(node->children[0], point);    
+        node_t *front = PointInLeaf(node->children[0], point);
         node_t *back = PointInLeaf(node->children[1], point);
 
         // prefer the opaque one
@@ -150,9 +150,9 @@ static void FloodFillFromVoid()
     {
         const int side = (outside_node.portals->nodes[0] == &outside_node);
         node_t *fillnode = outside_node.portals->nodes[side];
-        
+
         Q_assert(fillnode != &outside_node);
-        
+
         // this must be true because the map is made from closed brushes, beyion which is void
         Q_assert(!fillnode->opaque());
         queue.emplace_back(fillnode, 0);
@@ -252,10 +252,10 @@ static void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d 
     qvec3d vector = point2 - point1;
     vec_t dist = qv::normalizeInPlace(vector);
 
-    while (dist > options.dxLeakDist) {
+    while (dist > options.leakdist.value()) {
         fmt::print(leakfile, "{}\n", point1);
-        point1 += vector * options.dxLeakDist;
-        dist -= options.dxLeakDist;
+        point1 += vector * options.leakdist.value();
+        dist -= options.leakdist.value();
     }
 }
 
@@ -271,7 +271,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
     std::ofstream ptsfile = InitPtsFile();
 
     qvec3d prevpt = leakentity->origin;
-    
+
     for (portal_t *portal : leakline) {
         qvec3d currpt = portal->winding->center();
 
@@ -281,7 +281,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
         prevpt = currpt;
     }
 
-    LogPrint("Leak file written to {}\n", options.szBSPName);
+    logging::print("Leak file written to {}\n", options.szBSPName);
 }
 
 /*
@@ -446,12 +446,7 @@ FillOutside
 */
 bool FillOutside(node_t *node, const int hullnum)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
-
-    if (options.fNofill) {
-        LogPrint(LOG_STAT, "     skipped\n");
-        return false;
-    }
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     /* Clear the outside filling state on all nodes */
     ClearOccupied_r(node);
@@ -460,9 +455,9 @@ bool FillOutside(node_t *node, const int hullnum)
     const std::vector<node_t *> occupied_leafs = FindOccupiedClusters(node);
 
     if (occupied_leafs.empty()) {
-        LogPrint("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
+        logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
         return false;
-    }    
+    }
 
     // Flood fill from outside -> in.
     //
@@ -490,7 +485,7 @@ bool FillOutside(node_t *node, const int hullnum)
         mapentity_t *leakentity = best_leak->occupant;
         Q_assert(leakentity != nullptr);
 
-        LogPrint("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n",
+        logging::print("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n",
             ValueForKey(leakentity, "classname"), leakentity->origin);
         if (map.leakfile)
             return false;
@@ -502,8 +497,8 @@ bool FillOutside(node_t *node, const int hullnum)
         options.szBSPName.replace_extension("prt");
         remove(options.szBSPName);
 
-        if (options.fLeakTest) {
-            LogPrint("Aborting because -leaktest was used.\n");
+        if (options.leaktest.value()) {
+            logging::print("Aborting because -leaktest was used.\n");
             exit(1);
         }
 
@@ -543,6 +538,6 @@ bool FillOutside(node_t *node, const int hullnum)
     // fixme-brushbsp: don't do this; mark brush sides instead
     ClearOutFaces(node);
 
-    LogPrint(LOG_STAT, "     {:8} outleafs\n", outleafs);
+    logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;
 }

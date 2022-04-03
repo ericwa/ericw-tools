@@ -1,6 +1,7 @@
 #include <common/threads.hh>
 #include <vis/vis.hh>
 #include <vis/leafbits.hh>
+#include <common/parallel.hh>
 
 unsigned long c_chains;
 int c_vistest, c_mighttest;
@@ -159,7 +160,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     if (err) {
         // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
         // causes it to happen a lot.
-        // FLogPrint("WARNING: recursion on leaf {}\n", leafnum);
+        // logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
         return;
     }
 
@@ -269,7 +270,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         c_portaltest++;
 
         /* TEST 0 :: source -> pass -> target */
-        if (testlevel > 0) {
+        if (options.level.value() > 0) {
             if (stack.numseparators[0]) {
                 for (j = 0; j < stack.numseparators[0]; j++) {
                     stack.pass = ClipStackWinding(stack.pass, &stack, &stack.separators[0][j]);
@@ -288,7 +289,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         }
 
         /* TEST 1 :: pass -> source -> target */
-        if (testlevel > 1) {
+        if (options.level.value() > 1) {
             if (stack.numseparators[1]) {
                 for (j = 0; j < stack.numseparators[1]; j++) {
                     stack.pass = ClipStackWinding(stack.pass, &stack, &stack.separators[1][j]);
@@ -306,7 +307,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         }
 
         /* TEST 2 :: target -> pass -> source */
-        if (testlevel > 2) {
+        if (options.level.value() > 2) {
             ClipToSeparators(stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, &stack);
             if (!stack.source) {
                 FreeStackWinding(stack.pass, &stack);
@@ -315,7 +316,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
         }
 
         /* TEST 3 :: pass -> target -> source */
-        if (testlevel > 3) {
+        if (options.level.value() > 3) {
             ClipToSeparators(prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, &stack);
             if (!stack.source) {
                 FreeStackWinding(stack.pass, &stack);
@@ -390,72 +391,65 @@ static void SimpleFlood(portal_t *srcportal, int leafnum, const leafbits_t &port
   BasePortalVis
   ==============
 */
-static void *BasePortalThread(void *dummy)
+static void BasePortalThread(size_t portalnum)
 {
-    int i, j, portalnum;
+    int i, j;
     portal_t *p, *tp;
     float d;
     leafbits_t portalsee(numportals * 2);
 
-    while (1) {
-        portalnum = GetThreadWork();
-        if (portalnum == -1)
-            break;
+    p = portals + portalnum;
+    winding_t &w = *p->winding;
 
-        p = portals + portalnum;
-        winding_t &w = *p->winding;
+    p->mightsee.resize(portalleafs);
 
-        p->mightsee.resize(portalleafs);
+    for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
+        if (tp == p)
+            continue;
 
-        for (i = 0, tp = portals; i < numportals * 2; i++, tp++) {
-            if (tp == p)
-                continue;
+        winding_t &tw = *tp->winding;
 
-            winding_t &tw = *tp->winding;
+        // Quick test - completely at the back?
+        d = p->plane.distance_to(tw.origin);
+        if (d < -tw.radius)
+            continue;
 
-            // Quick test - completely at the back?
-            d = p->plane.distance_to(tw.origin);
-            if (d < -tw.radius)
-                continue;
-
-            for (j = 0; j < tw.size(); j++) {
-                d = p->plane.distance_to(tw[j]);
-                if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
-                                     // https://github.com/ericwa/ericw-tools/issues/261
-                    break;
-            }
-            if (j == tw.size())
-                continue; // no points on front
-
-            // Quick test - completely on front?
-            d = tp->plane.distance_to(w.origin);
-            if (d > w.radius)
-                continue;
-
-            for (j = 0; j < w.size(); j++) {
-                d = tp->plane.distance_to(w[j]);
-                if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
+        for (j = 0; j < tw.size(); j++) {
+            d = p->plane.distance_to(tw[j]);
+            if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
                                     // https://github.com/ericwa/ericw-tools/issues/261
-                    break;
-            }
-            if (j == w.size())
-                continue; // no points on back
+                break;
+        }
+        if (j == tw.size())
+            continue; // no points on front
 
-            if (visdist > 0) {
-                if (tp->winding->distFromPortal(p) > visdist || p->winding->distFromPortal(tp) > visdist)
-                    continue;
-            }
+        // Quick test - completely on front?
+        d = tp->plane.distance_to(w.origin);
+        if (d > w.radius)
+            continue;
 
-            portalsee[i] = 1;
+        for (j = 0; j < w.size(); j++) {
+            d = tp->plane.distance_to(w[j]);
+            if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
+                                // https://github.com/ericwa/ericw-tools/issues/261
+                break;
+        }
+        if (j == w.size())
+            continue; // no points on back
+
+        if (options.visdist.value() > 0) {
+            if (tp->winding->distFromPortal(p) > options.visdist.value() ||
+                p->winding->distFromPortal(tp) > options.visdist.value())
+                continue;
         }
 
-        p->nummightsee = 0;
-        SimpleFlood(p, p->leaf, portalsee);
-
-        portalsee.clear();
+        portalsee[i] = 1;
     }
 
-    return NULL;
+    p->nummightsee = 0;
+    SimpleFlood(p, p->leaf, portalsee);
+
+    portalsee.clear();
 }
 
 /*
@@ -465,5 +459,5 @@ static void *BasePortalThread(void *dummy)
 */
 void BasePortalVis(void)
 {
-    RunThreadsOn(0, numportals * 2, BasePortalThread, NULL);
+    logging::parallel_for(0, numportals * 2, BasePortalThread);
 }

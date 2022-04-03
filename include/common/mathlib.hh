@@ -33,7 +33,7 @@ using std::max, std::min, std::clamp;
 
 // Calculate average of inputs
 template<typename... T>
-constexpr auto avg(T&&... args)
+constexpr auto avg(T &&...args)
 {
     return (args + ...) / sizeof...(args);
 }

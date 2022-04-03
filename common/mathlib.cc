@@ -321,7 +321,8 @@ qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, flo
 
     // Pick random barycentric coords.
     const qvec3f bary = qv::Barycentric_Random(r2, r3);
-    const qvec3f point = qv::Barycentric_ToPoint(bary, state.points.at(0), state.points.at(1 + whichTri), state.points.at(2 + whichTri));
+    const qvec3f point =
+        qv::Barycentric_ToPoint(bary, state.points.at(0), state.points.at(1 + whichTri), state.points.at(2 + whichTri));
 
     return point;
 }
@@ -357,7 +358,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
     const std::vector<qvec3f> &points, const std::vector<face_normal_t> &normals, const qvec3f &point)
 {
     std::vector<qvec3f> normalvecs;
-    for (auto& normal : normals) {
+    for (auto &normal : normals) {
         normalvecs.push_back(normal.normal);
     }
 
@@ -412,7 +413,7 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vect
 
     winding_t w = winding_t::from_winding_points(poly);
 
-    auto clipped = w.clip({ plane.xyz(), plane[3] });
+    auto clipped = w.clip({plane.xyz(), plane[3]});
 
     return make_pair(
         clipped[0].value_or(winding_t{}).glm_winding_points(), clipped[1].value_or(winding_t{}).glm_winding_points());

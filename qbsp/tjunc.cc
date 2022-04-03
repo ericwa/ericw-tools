@@ -38,7 +38,6 @@ struct wedge_t
     wvert_t head; /* linked list of verticies on this edge */
 };
 
-
 static int numwedges, numwverts;
 static int tjuncs;
 static int tjuncfaces;
@@ -107,7 +106,7 @@ static void CanonicalVector(const qvec3d &p1, const qvec3d &p2, qvec3d &vec)
     }
 
     // FIXME: Line {}: was here but no line number can be grabbed here?
-    LogPrint("WARNING: Healing degenerate edge ({}) at ({:.3})\n", length, p1);
+    logging::print("WARNING: Healing degenerate edge ({}) at ({:.3})\n", length, p1);
 }
 
 static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t2)
@@ -303,7 +302,7 @@ restart:
 
         w.resize(w.size() - (neww.size() - 2));
 
-        face->fragments.push_back(face_fragment_t { std::move(neww) });
+        face->fragments.push_back(face_fragment_t{std::move(neww)});
     } while (1);
 }
 
@@ -320,7 +319,7 @@ static void FixFaceEdges(face_t *face)
     wvert_t *v;
     vec_t t1, t2;
 
-    for (i = 0; i < face->w.size(); ) {
+    for (i = 0; i < face->w.size();) {
         j = (i + 1) % face->w.size();
 
         edge = FindEdge(face->w[i], face->w[j], t1, t2);
@@ -339,7 +338,7 @@ static void FixFaceEdges(face_t *face)
 
             face->w.resize(face->w.size() + 1);
 
-            std::copy_backward(face->w.begin() + j, face->w.end() - 1, face->w.end());  
+            std::copy_backward(face->w.begin() + j, face->w.end() - 1, face->w.end());
 
             face->w[j] = edge->origin + (edge->dir * v->t);
 
@@ -407,7 +406,7 @@ tjunc
 */
 void TJunc(const mapentity_t *entity, node_t *headnode)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     /*
      * Guess edges = 1/2 verts
@@ -441,8 +440,8 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
 
     tjunc_find_r(headnode);
 
-    LogPrint(LOG_STAT, "     {:8} world edges\n", numwedges);
-    LogPrint(LOG_STAT, "     {:8} edge points\n", numwverts);
+    logging::print(logging::flag::STAT, "     {:8} world edges\n", numwedges);
+    logging::print(logging::flag::STAT, "     {:8} edge points\n", numwverts);
 
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
@@ -451,6 +450,6 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     delete[] pWVerts;
     delete[] pWEdges;
 
-    LogPrint(LOG_STAT, "     {:8} edges added by tjunctions\n", tjuncs);
-    LogPrint(LOG_STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);
+    logging::print(logging::flag::STAT, "     {:8} edges added by tjunctions\n", tjuncs);
+    logging::print(logging::flag::STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);
 }

@@ -406,7 +406,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
     const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
-    LogPrint("face {}, texture '{}', {} edges; vectors:\n"
+    logging::print("face {}, texture '{}', {} edges; vectors:\n"
              "{: 3.3}\n",
         Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
@@ -414,7 +414,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
         int edge = bsp->dsurfedges[face->firstedge + i];
         int vert = Face_VertexAtIndex(bsp, face, i);
         const qvec3f &point = GetSurfaceVertexPoint(bsp, face, i);
-        LogPrint("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n", i ? "          " : "    verts ", vert, point[0],
+        logging::print("{} {:3} ({:3.3}, {:3.3}, {:3.3}) :: edge {}\n", i ? "          " : "    verts ", vert, point[0],
             point[1], point[2], edge);
     }
 }

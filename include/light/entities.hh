@@ -50,7 +50,7 @@ enum light_formula_t
     LF_COUNT
 };
 
-class light_t
+class light_t : public settings::setting_container
 {
 public:
     bool spotlight = false;
@@ -68,54 +68,40 @@ public:
 
     aabb3d bounds;
 
+    settings::setting_scalar light{this, "light", DEFAULTLIGHTLEVEL};
+    settings::setting_scalar atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()};
+    settings::setting_numeric<light_formula_t> formula{this, "delay", LF_LINEAR, LF_LINEAR, LF_INVERSE2A};
+    settings::setting_scalar spotangle{this, "angle", 40.0};
+    settings::setting_scalar spotangle2{this, "softangle", 0.0};
+    settings::setting_numeric<int32_t> style{this, "style", 0.0, 0, 254};
+    settings::setting_scalar anglescale{this, {"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
+    settings::setting_scalar dirtscale{this, "dirtscale", 0.0};
+    settings::setting_scalar dirtgain{this, "dirtgain", 0};
+    settings::setting_scalar dirt{this, "dirt", 0};
+    settings::setting_scalar deviance{this, "deviance", 0};
+    settings::setting_int32 samples{this, "samples", 16, 0, std::numeric_limits<int32_t>::max()};
+    settings::setting_scalar projfov{this, "project_fov", 90};
+    settings::setting_scalar bouncescale{this, "bouncescale", 1.0};
+    settings::setting_scalar dirt_off_radius{this, "dirt_off_radius", 0.0};
+    settings::setting_scalar dirt_on_radius{this, "dirt_on_radius", 0.0};
+    settings::setting_bool sun{this, "sun", false}; // mxd
+    settings::setting_bool sunlight2{this, "sunlight2", 0};
+    settings::setting_bool sunlight3{this, "sunlight3", 0};
+    settings::setting_scalar falloff{this, "falloff", 0.0, 0.0, std::numeric_limits<vec_t>::max()}; // mxd
+    settings::setting_bool bleed{this, "bleed", false};
+    settings::setting_vec3 origin{this, "origin", 0, 0, 0};
+    settings::setting_color color{this, "color", 255.0, 255.0, 255.0};
+    settings::setting_vec3 mangle{this, "mangle", 0, 0, 0}; // not transformed to vec
+    settings::setting_vec3 projangle{this, "project_mangle", 20, 0, 0}; // not transformed to vec
+    settings::setting_string project_texture{this, "project_texture", ""};
+    settings::setting_string suntexture{this, "suntexture", ""};
+    settings::setting_bool nostaticlight{this, "nostaticlight", false};
+
     const char *classname() const;
 
-public:
-    lockable_vec_t light{"light", DEFAULTLIGHTLEVEL};
-    lockable_vec_t atten{"wait", 1.0, 0.0, std::numeric_limits<vec_t>::infinity()};
-    lockable_vec_t formula{"delay", 0.0};
-    lockable_vec_t spotangle{"angle", 40.0};
-    lockable_vec_t spotangle2{"softangle", 0.0};
-    lockable_vec_t style{"style", 0.0};
-    lockable_vec_t anglescale{strings{"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
-    lockable_vec_t dirtscale{"dirtscale", 0.0};
-    lockable_vec_t dirtgain{"dirtgain", 0};
-    lockable_vec_t dirt{"dirt", 0};
-    lockable_vec_t deviance{"deviance", 0};
-    lockable_vec_t samples{"samples", 16};
-    lockable_vec_t projfov{"project_fov", 90};
-    lockable_vec_t bouncescale{"bouncescale", 1.0};
-    lockable_vec_t dirt_off_radius{"dirt_off_radius", 0.0};
-    lockable_vec_t dirt_on_radius{"dirt_on_radius", 0.0};
-    lockable_vec_t sun{"sun", 0}; // mxd
-    lockable_bool_t sunlight2{"sunlight2", 0};
-    lockable_bool_t sunlight3{"sunlight3", 0};
-    lockable_vec_t falloff{"falloff", 0.0}; // mxd
-    lockable_bool_t bleed{"bleed", false};
-    lockable_vec3_t origin{"origin", 0, 0, 0};
-    lockable_vec3_t color{"color", 255.0, 255.0, 255.0, vec3_transformer_t::NORMALIZE_COLOR_TO_255};
-    lockable_vec3_t mangle{"mangle", 0, 0, 0}; // not transformed to vec
-    lockable_vec3_t projangle{"project_mangle", 20, 0, 0}; // not transformed to vec
-    lockable_string_t project_texture{"project_texture", ""};
-    lockable_string_t suntexture{"suntexture", ""};
-    lockable_bool_t nostaticlight{"nostaticlight", false};
+    const light_formula_t &getFormula() const { return formula.value(); }
 
-    light_formula_t getFormula() const { return static_cast<light_formula_t>(formula.intValue()); }
-
-public:
-    using strings = std::vector<std::string>;
-
-    settingsdict_t settings()
-    {
-        return {{&light, &atten, &formula, &spotangle, &spotangle2, &style, &bleed, &anglescale, &dirtscale, &dirtgain,
-            &dirt, &deviance, &samples, &projfov, &bouncescale, &dirt_off_radius, &dirt_on_radius,
-            &sun, // mxd
-            &sunlight2, &sunlight3,
-            &falloff, // mxd
-            &origin, &color, &mangle, &projangle, &project_texture, &suntexture, &nostaticlight}};
-    }
-
-    void initAABB() { bounds = origin.vec3Value(); }
+    void initAABB() { bounds = origin.value(); }
 
     void expandAABB(const qvec3d &pt) { bounds += pt; }
 };
@@ -146,10 +132,10 @@ qvec3d EntDict_VectorForKey(const entdict_t &ent, const std::string &key);
 void SetWorldKeyValue(const std::string &key, const std::string &value);
 const std::string &WorldValueForKey(const std::string &key);
 
-void LoadEntities(const globalconfig_t &cfg, const mbsp_t *bsp);
-void SetupLights(const globalconfig_t &cfg, const mbsp_t *bsp);
-bool ParseLightsFile(const std::filesystem::path &fname);
-void WriteEntitiesToString(const globalconfig_t &cfg, mbsp_t *bsp);
+void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
+void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
+bool ParseLightsFile(const fs::path &fname);
+void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp);
 aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point);
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);

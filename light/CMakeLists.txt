@@ -6,8 +6,7 @@ set(LIGHT_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/light/surflight.hh
 	${CMAKE_SOURCE_DIR}/include/light/ltface.hh
 	${CMAKE_SOURCE_DIR}/include/light/trace.hh
-	${CMAKE_SOURCE_DIR}/include/light/litfile.hh
-	${CMAKE_SOURCE_DIR}/include/light/settings.hh)
+	${CMAKE_SOURCE_DIR}/include/light/litfile.hh)
 
 set(LIGHT_SOURCES
 	entities.cc
@@ -18,7 +17,6 @@ set(LIGHT_SOURCES
 	phong.cc
 	bounce.cc
 	surflight.cc
-	settings.cc
 	${LIGHT_INCLUDES})
 
 FIND_PACKAGE(embree 3.0 REQUIRED)

@@ -45,7 +45,9 @@ private:
     using vector_type = std::vector<qvec3d>;
     using variant_type = std::variant<array_type, vector_type>;
     size_t count = 0;
-    variant_type data;
+    bool isVector = false;
+    array_type array;
+    vector_type vector;
 
 public:
     template<typename array_iterator, typename vector_iterator>
@@ -204,39 +206,60 @@ public:
         }
     };
 
-    // default constructor
-    inline winding_base_t() = default;
+    // default constructor does nothing
+    inline winding_base_t() { }
 
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_base_t(const size_t &initial_size)
-        : count(initial_size), data(count > N ? variant_type(vector_type(initial_size)) : variant_type(array_type()))
+    inline winding_base_t(const size_t &initial_size) : count(initial_size), isVector(count > N)
     {
+        if (isVector) {
+            vector.reserve(count);
+        }
     }
 
     // construct winding from range.
     // iterators must have operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_base_t(Iter begin, Iter end)
-        : count(end - begin), data(count > N ? variant_type(vector_type(begin, end)) : variant_type(array_type()))
+    inline winding_base_t(Iter begin, Iter end) : count(end - begin), isVector(count > N)
     {
-        if (!is_dynamic()) {
-            std::copy(begin, end, std::get<array_type>(data).begin());
+        if (isVector) {
+            vector = std::move(vector_type(begin, end));
+        } else {
+            std::copy(begin, end, array.begin());
         }
     }
 
     // copy constructor
-    inline winding_base_t(const winding_base_t &copy) : count(copy.count), data(copy.data) { }
+    inline winding_base_t(const winding_base_t &copy) : winding_base_t(copy.begin(), copy.end()) { }
 
     // move constructor
-    inline winding_base_t(winding_base_t &&move) noexcept : count(move.count), data(std::move(move.data)) { move.count = 0; }
+    inline winding_base_t(winding_base_t &&move) noexcept : count(move.count)
+    {
+        count = move.count;
+        isVector = move.isVector;
+
+        if (move.isVector) {
+            vector = std::move(move.vector);
+            move.isVector = false;
+        } else {
+            std::copy(move.begin(), move.begin() + move.count, array.begin());
+        }
+        move.count = 0;
+    }
 
     // assignment copy
     inline winding_base_t &operator=(const winding_base_t &copy)
     {
         count = copy.count;
-        data = copy.data;
+        isVector = copy.isVector;
+
+        if (isVector) {
+            vector = copy.vector;
+        } else {
+            std::copy(copy.begin(), copy.begin() + copy.count, array.begin());
+        }
 
         return *this;
     }
@@ -245,14 +268,18 @@ public:
     inline winding_base_t &operator=(winding_base_t &&move)
     {
         count = move.count;
-        data = std::move(move.data);
+        isVector = move.isVector;
 
+        if (move.isVector) {
+            vector = std::move(move.vector);
+            move.isVector = false;
+        } else {
+            std::copy(move.begin(), move.begin() + move.count, array.begin());
+        }
         move.count = 0;
 
         return *this;
     }
-
-    inline bool is_dynamic() const { return std::holds_alternative<vector_type>(data); }
 
     inline const size_t &size() const { return count; }
 
@@ -263,9 +290,9 @@ public:
             throw std::invalid_argument("index");
 #endif
 
-        if (is_dynamic())
-            return std::get<vector_type>(data)[index];
-        return std::get<array_type>(data)[index];
+        if (isVector)
+            return vector[index];
+        return array[index];
     }
 
     inline const qvec3d &at(const size_t &index) const
@@ -275,89 +302,96 @@ public:
             throw std::invalid_argument("index");
 #endif
 
-        if (is_dynamic())
-            return std::get<vector_type>(data)[index];
-        return std::get<array_type>(data)[index];
+        if (isVector)
+            return vector[index];
+        return array[index];
     }
 
     inline qvec3d &operator[](const size_t &index) { return at(index); }
 
     inline const qvec3d &operator[](const size_t &index) const { return at(index); }
-    
+
     using const_iterator = iterator_base<typename array_type::const_iterator, vector_type::const_iterator>;
 
     const const_iterator begin() const
     {
-        if (is_dynamic())
-            return const_iterator(std::get<vector_type>(data).begin());
-        return const_iterator(std::get<array_type>(data).begin());
+        if (isVector)
+            return const_iterator(vector.begin());
+        return const_iterator(array.begin());
     }
 
     const const_iterator end() const
     {
-        if (is_dynamic())
-            return const_iterator(std::get<vector_type>(data).end());
-        return const_iterator(std::get<array_type>(data).begin() + count);
+        if (isVector)
+            return const_iterator(vector.end());
+        return const_iterator(array.begin() + count);
     }
 
     using iterator = iterator_base<typename array_type::iterator, vector_type::iterator>;
 
     iterator begin()
     {
-        if (is_dynamic())
-            return iterator(std::get<vector_type>(data).begin());
-        return iterator(std::get<array_type>(data).begin());
+        if (isVector)
+            return iterator(vector.begin());
+        return iterator(array.begin());
     }
 
     iterator end()
     {
-        if (is_dynamic())
-            return iterator(std::get<vector_type>(data).end());
-        return iterator(std::get<array_type>(data).begin() + count);
+        if (isVector)
+            return iterator(vector.end());
+        return iterator(array.begin() + count);
     }
 
-    void push_back(const qvec3d &vec)
+    template<typename... Args>
+    qvec3d &emplace_back(Args &&...vec)
     {
         // move us to dynamic
-        if (count == N)
-            data = vector_type(begin(), end());
-
-        if (is_dynamic())
-            std::get<vector_type>(data).push_back(vec);
-        else
-            std::get<array_type>(data)[count] = vec;
+        if (count == N) {
+            vector = std::move(vector_type(begin(), end()));
+            isVector = true;
+        }
 
         count++;
+
+        if (isVector) {
+            return vector.emplace_back(std::forward<Args>(vec)...);
+        }
+
+        return (array[count - 1] = qvec3d(std::forward<Args>(vec)...));
     }
+
+    void push_back(qvec3d &&vec) { emplace_back(std::move(vec)); }
+
+    void push_back(const qvec3d &vec) { emplace_back(vec); }
 
     void resize(const size_t &new_size)
     {
         // move us to dynamic if we'll expand too big
-        if (new_size > N && !is_dynamic()) {
-            auto vector = vector_type(begin(), end());
+        if (new_size > N && !isVector) {
             vector.resize(new_size);
-            data = std::move(vector);
-        } else if (is_dynamic()) {
-            if (new_size > N)
-                std::get<vector_type>(data).resize(new_size);
-            // move us to array if we're shrinking
-            else {
-                auto vector = std::move(std::get<vector_type>(data));
-                auto &array = data.template emplace<array_type>();
+            std::copy(begin(), end(), vector.begin());
+        } else if (isVector) {
+            if (new_size > N) {
+                vector.resize(new_size);
+                // move us to array if we're shrinking
+            } else {
                 std::copy_n(vector.begin(), new_size, array.begin());
             }
         }
 
         count = new_size;
+        isVector = count > N;
     }
 
     void clear()
     {
-        if (is_dynamic())
-            std::get<vector_type>(data).clear();
+        if (isVector) {
+            vector.clear();
+            isVector = false;
+        }
 
         count = 0;
-        data.template emplace<array_type>();
     }
 
     vec_t area() const
@@ -428,7 +462,7 @@ public:
         qvec3d v2 = at(2) - at(1);
         qvec3d normal = qv::normalize(qv::cross(v1, v2));
 
-        return { normal, qv::dot(at(0), normal) };
+        return {normal, qv::dot(at(0), normal)};
     }
 
     static winding_base_t from_plane(const qplane3d &plane, const vec_t &worldextent)
@@ -550,10 +584,10 @@ public:
     }
 
     // dists/sides can be null, or must have (size() + 1) reserved
-    inline std::array<size_t, SIDE_TOTAL> calc_sides(const qplane3d &plane, vec_t *dists, side_t *sides,
-        const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
+    inline std::array<size_t, SIDE_TOTAL> calc_sides(
+        const qplane3d &plane, vec_t *dists, side_t *sides, const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
     {
-        std::array<size_t, SIDE_TOTAL> counts {};
+        std::array<size_t, SIDE_TOTAL> counts{};
 
         /* determine sides for each point */
         size_t i;
@@ -600,8 +634,8 @@ public:
     it will be clipped away.
     ==================
     */
-    std::array<std::optional<winding_base_t>, 2> clip(const qplane3d &plane,
-        const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+    std::array<std::optional<winding_base_t>, 2> clip(
+        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (count + 1));
         side_t *sides = (side_t *)alloca(sizeof(side_t) * (count + 1));
@@ -659,9 +693,7 @@ public:
         return {std::move(results[SIDE_FRONT]), std::move(results[SIDE_BACK])};
     }
 
-    using save_fn_t = void (*)(winding_base_t &w, void *userinfo);
-
-    void dice(vec_t subdiv, save_fn_t save_fn, void *userinfo)
+    void dice(vec_t subdiv, std::function<void(winding_base_t &)> save_fn)
     {
         if (!count)
             return;
@@ -676,7 +708,7 @@ public:
 
         if (i == 3) {
             // no splitting needed
-            save_fn(*this, userinfo);
+            save_fn(*this);
             return;
         }
 
@@ -694,7 +726,7 @@ public:
         //
         for (auto &o : clipped)
             if (o.has_value())
-                o->dice(subdiv, save_fn, userinfo);
+                o->dice(subdiv, save_fn);
     }
 
     /**
@@ -726,16 +758,9 @@ public:
 
     winding_base_t flip() const
     {
-        winding_base_t result = *this;
+        winding_base_t result(count);
 
-        if (result.is_dynamic()) {
-            vector_type &v = std::get<vector_type>(result.data);
-            std::reverse(v.begin(), v.end());
-        } else {
-            for (size_t i = 0; i < result.size() / 2; i++) {
-                std::swap(result[i], result[result.size() - i - 1]);
-            }
-        }
+        std::reverse_copy(begin(), end(), result.begin());
 
         return result;
     }

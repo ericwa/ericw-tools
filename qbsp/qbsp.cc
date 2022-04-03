@@ -27,16 +27,121 @@
 #include <common/aabb.hh>
 #include <common/fs.hh>
 #include <common/threads.hh>
+#include <common/settings.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 #include <fmt/chrono.h>
 
 #include "tbb/global_control.h"
 
-constexpr const char *IntroString = "---- qbsp / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n";
-
 // command line flags
-options_t options;
+namespace settings
+{
+setting_group game_target_group{"Game/BSP Target", -1};
+setting_group map_development_group{"Map development", 1};
+setting_group common_format_group{"Common format options", 2};
+setting_group debugging_group{"Advanced/tool debugging", 500};
+
+inline void set_target_version(const bspversion_t *version)
+{
+    if (options.target_version) {
+        FError("BSP version was set by multiple flags; currently {}, tried to change to {}\n",
+            options.target_version->name, version->name);
+    }
+
+    options.target_version = version;
+}
+
+void qbsp_settings::initialize(int argc, const char **argv)
+{
+    if (auto file = fs::load("qbsp.ini")) {
+        logging::print("Loading options from qbsp.ini\n");
+        parse(parser_t(file->data(), file->size()));
+    }
+
+    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
+
+    if (remainder.size() <= 0 || remainder.size() > 2) {
+        printHelp();
+    }
+
+    options.szMapName = remainder[0];
+
+    if (remainder.size() == 2) {
+        options.szBSPName = remainder[1];
+    }
+}
+
+void qbsp_settings::postinitialize(int argc, const char **argv)
+{
+    common_settings::postinitialize(argc, argv);
+
+    // side effects from common
+    if (logging::mask & logging::flag::VERBOSE) {
+        options.fAllverbose = true;
+    }
+
+    if ((logging::mask & (bitflags<logging::flag>(logging::flag::PERCENT) | logging::flag::STAT | logging::flag::PROGRESS)) == logging::flag::NONE) {
+        options.fNoverbose = true;
+    }
+
+    // set target BSP type
+    if (hlbsp.value()) {
+        set_target_version(&bspver_hl);
+    }
+
+    if (q2bsp.value()) {
+        set_target_version(&bspver_q2);
+    }
+
+    if (qbism.value()) {
+        set_target_version(&bspver_qbism);
+    }
+
+    if (bsp2.value()) {
+        set_target_version(&bspver_bsp2);
+    }
+
+    if (bsp2rmq.value()) {
+        set_target_version(&bspver_bsp2rmq);
+    }
+
+    if (!options.target_version) {
+        set_target_version(&bspver_q1);
+    }
+
+    // if we wanted hexen2, update it now
+    if (hexen2.value()) {
+        if (options.target_version == &bspver_bsp2) {
+            options.target_version = &bspver_h2bsp2;
+        } else if (options.target_version == &bspver_bsp2rmq) {
+            options.target_version = &bspver_h2bsp2rmq;
+        } else {
+            options.target_version = &bspver_h2;
+        }
+    } else {
+        if (!options.target_version) {
+            options.target_version = &bspver_q1;
+        }
+    }
+
+    // update target game
+    options.target_game = options.target_version->game;
+
+    /* If no wadpath given, default to the map directory */
+    if (wadpaths.pathsValue().empty()) {
+        wadpath wp{options.szMapName.parent_path(), false};
+
+        // If options.szMapName is a relative path, StrippedFilename will return the empty string.
+        // In that case, don't add it as a wad path.
+        if (!wp.path.empty()) {
+            wadpaths.addPath(wp);
+        }
+    }
+}
+}; // namespace settings
+
+settings::qbsp_settings options;
 
 bool node_t::opaque() const
 {
@@ -110,7 +215,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
 
             if (i == planes.size()) {
                 // add a new side
-                qplane3d new_plane { };
+                qplane3d new_plane{};
                 new_plane.normal[axis] = dir;
                 if (dir == 1)
                     new_plane.dist = b.bounds.maxs()[axis];
@@ -158,7 +263,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
             // try the six possible slanted axials from this edge
             for (int32_t axis = 0; axis < 3; axis++) {
                 for (int32_t dir = -1; dir <= 1; dir += 2) {
-                    qvec3d vec2 {};
+                    qvec3d vec2{};
                     // construct a plane
                     vec2[axis] = dir;
                     qplane3d current;
@@ -210,7 +315,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
 
 static void ExportBrushList(mapentity_t *entity, node_t *node)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     brush_state = {};
 
@@ -234,9 +339,9 @@ static void ExportBrushList(mapentity_t *entity, node_t *node)
 
     ExportBrushList_r(entity, node);
 
-    LogPrint(LOG_STAT, "     {:8} total brushes\n", brush_state.total_brushes);
-    LogPrint(LOG_STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
-    LogPrint(LOG_STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
+    logging::print(logging::flag::STAT, "     {:8} total brushes\n", brush_state.total_brushes);
+    logging::print(logging::flag::STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
+    logging::print(logging::flag::STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
 }
 
 /*
@@ -303,7 +408,7 @@ static void FloodAreas_r(node_t *node)
         // note the current area as bounding the portal
         if (entity->portalareas[1]) {
             // FIXME: entity #
-            LogPrint("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n", node->bounds.mins(),
+            logging::print("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n", node->bounds.mins(),
                 node->bounds.maxs());
             return;
         }
@@ -394,7 +499,7 @@ static void SetAreaPortalAreas_r(node_t *node)
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
         // FIXME: entity #
-        LogPrint("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n",
+        logging::print("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n",
             qv::to_string(entity->bounds.mins()), qv::to_string(entity->bounds.maxs()));
         return;
     }
@@ -409,10 +514,10 @@ Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
 */
 static void FloodAreas(mapentity_t *entity, node_t *headnode)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
     FindAreas(headnode);
     SetAreaPortalAreas_r(headnode);
-    LogPrint(LOG_STAT, "{:5} areas\n", c_areas);
+    logging::print(logging::flag::STAT, "{:5} areas\n", c_areas);
 }
 
 /*
@@ -423,7 +528,7 @@ EmitAreaPortals
 */
 static void EmitAreaPortals(node_t *headnode)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     map.bsp.dareaportals.emplace_back();
     map.bsp.dareas.emplace_back();
@@ -450,13 +555,13 @@ static void EmitAreaPortals(node_t *headnode)
         area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
     }
 
-    LogPrint(LOG_STAT, "{:5} numareas\n", map.bsp.dareas.size());
-    LogPrint(LOG_STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
+    logging::print(logging::flag::STAT, "{:5} numareas\n", map.bsp.dareas.size());
+    logging::print(logging::flag::STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
 }
 
 winding_t BaseWindingForPlane(const qplane3d &p)
 {
-    return winding_t::from_plane(p, options.worldExtent);
+    return winding_t::from_plane(p, options.worldextent.value());
 }
 
 /*
@@ -489,7 +594,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     if (entity != pWorldEnt()) {
         if (entity == pWorldEnt() + 1)
-            LogPrint(LOG_PROGRESS, "---- Internal Entities ----\n");
+            logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
 
         std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
 
@@ -497,7 +602,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             PrintEntity(entity);
 
         if (hullnum <= 0)
-            LogPrint(LOG_STAT, "     MODEL: {}\n", mod);
+            logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
         SetKeyValue(entity, "model", mod.c_str());
     }
 
@@ -510,34 +615,34 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
-    LogPrint(LOG_PROGRESS, "---- Brush_LoadEntity ----\n");
+    logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
     auto stats = Brush_LoadEntity(entity, hullnum);
 
     /* Print brush counts */
     if (stats.solid) {
-        LogPrint(LOG_STAT, "     {:8} solid brushes\n", stats.solid);
+        logging::print(logging::flag::STAT, "     {:8} solid brushes\n", stats.solid);
     }
     if (stats.sky) {
-        LogPrint(LOG_STAT, "     {:8} sky brushes\n", stats.sky);
+        logging::print(logging::flag::STAT, "     {:8} sky brushes\n", stats.sky);
     }
     if (stats.detail) {
-        LogPrint(LOG_STAT, "     {:8} detail brushes\n", stats.detail);
+        logging::print(logging::flag::STAT, "     {:8} detail brushes\n", stats.detail);
     }
     if (stats.detail_illusionary) {
-        LogPrint(LOG_STAT, "     {:8} detail illusionary brushes\n", stats.detail_illusionary);
+        logging::print(logging::flag::STAT, "     {:8} detail illusionary brushes\n", stats.detail_illusionary);
     }
     if (stats.detail_fence) {
-        LogPrint(LOG_STAT, "     {:8} detail fence brushes\n", stats.detail_fence);
+        logging::print(logging::flag::STAT, "     {:8} detail fence brushes\n", stats.detail_fence);
     }
     if (stats.liquid) {
-        LogPrint(LOG_STAT, "     {:8} liquid brushes\n", stats.liquid);
+        logging::print(logging::flag::STAT, "     {:8} liquid brushes\n", stats.liquid);
     }
 
-    LogPrint(LOG_STAT, "     {:8} planes\n", map.numplanes());
+    logging::print(logging::flag::STAT, "     {:8} planes\n", map.numplanes());
 
     if (hullnum > 0) {
         nodes = SolidBSP(entity, true);
-        if (entity == pWorldEnt() && !options.fNofill) {
+        if (entity == pWorldEnt() && !options.nofill.value()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
             if (FillOutside(nodes, hullnum)) {
@@ -565,7 +670,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
          * sometimes result in reduced marksurfaces at the expense of
          * longer processing time.
          */
-        if (options.forceGoodTree)
+        if (options.forcegoodtree.value())
             nodes = SolidBSP(entity, false);
         else
             nodes = SolidBSP(entity, entity == pWorldEnt());
@@ -576,7 +681,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
 
-            if (!options.fNofill && FillOutside(nodes, hullnum)) {
+            if (!options.nofill.value() && FillOutside(nodes, hullnum)) {
                 // fixme-brushbsp: re-add
                 //FreeNodes(nodes);
 
@@ -607,11 +712,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // fixme-brushbsp: prune nodes
 
-        if (!options.fNoTJunc) {
+        if (!options.notjunc.value()) {
             TJunc(entity, nodes);
         }
 
-        if (options.fObjExport && entity == pWorldEnt()) {
+        if (options.objexport.value() && entity == pWorldEnt()) {
             ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", nodes);
         }
@@ -642,7 +747,7 @@ static void UpdateEntLump(void)
     char modname[10];
     mapentity_t *entity;
 
-    LogPrint(LOG_STAT, "     Updating entities lump...\n");
+    logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
     modnum = 1;
     for (i = 1; i < map.numentities(); i++) {
@@ -686,7 +791,7 @@ static void UpdateEntLump(void)
 
     if (!options.fAllverbose) {
         options.fVerbose = false;
-        log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 }
 
@@ -712,10 +817,7 @@ hull sizes
 
 static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::vector<brush_t> &brushes)
 {
-    bspxbrushes_permodel permodel {
-        1,
-        modelnum
-    };
+    bspxbrushes_permodel permodel{1, modelnum};
 
     for (auto &b : brushes) {
         permodel.numbrushes++;
@@ -738,7 +840,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
     str <= permodel;
 
     for (auto &b : brushes) {
-        bspxbrushes_perbrush perbrush {};
+        bspxbrushes_perbrush perbrush{};
 
         for (auto &f : b.faces) {
             /*skip axial*/
@@ -771,7 +873,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
                 if (b.contents.is_clip()) {
                     perbrush.contents = -8;
                 } else {
-                    LogPrint("WARNING: Unknown contents: {}. Translating to solid.\n",
+                    logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
                         b.contents.to_string(options.target_game));
                     perbrush.contents = CONTENTS_SOLID;
                 }
@@ -800,7 +902,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
     }
 
     std::string data = str.str();
-    ctx->lumpdata.insert(ctx->lumpdata.end(), (uint8_t *)data.data(), ((uint8_t *) data.data()) + data.size());
+    ctx->lumpdata.insert(ctx->lumpdata.end(), (uint8_t *)data.data(), ((uint8_t *)data.data()) + data.size());
 }
 
 /* for generating BRUSHLIST bspx lump */
@@ -812,7 +914,7 @@ static void BSPX_CreateBrushList(void)
     const char *mod;
     struct bspxbrushes_s ctx;
 
-    if (!options.fbspx_brushes)
+    if (!options.wrbrushes.value())
         return;
 
     BSPX_Brushes_Init(&ctx);
@@ -849,14 +951,14 @@ CreateSingleHull
 */
 static void CreateSingleHull(const int hullnum)
 {
-    LogPrint("Processing hull {}...\n", hullnum);
+    logging::print("Processing hull {}...\n", hullnum);
 
     // for each entity in the map file that has geometry
     for (auto &entity : map.entities) {
         ProcessEntity(&entity, hullnum);
         if (!options.fAllverbose) {
             options.fVerbose = false; // don't print rest of entities
-            log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+            logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
         }
     }
 }
@@ -871,7 +973,7 @@ static void CreateHulls(void)
     /* create the hulls sequentially */
     if (!options.fNoverbose) {
         options.fVerbose = true;
-        log_mask |= (1 << LOG_STAT) | (1 << LOG_PROGRESS);
+        logging::mask |= (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 
     auto &hulls = options.target_game->get_hull_sizes();
@@ -879,10 +981,10 @@ static void CreateHulls(void)
     // game has no hulls, so we have to export brush lists and stuff.
     if (!hulls.size()) {
         CreateSingleHull(HULL_COLLISION);
-    // only create hull 0 if fNoclip is set
-    } else if (options.fNoclip) {
+        // only create hull 0 if fNoclip is set
+    } else if (options.noclip.value()) {
         CreateSingleHull(0);
-    // do all the hulls
+        // do all the hulls
     } else {
         for (size_t i = 0; i < hulls.size(); i++) {
             CreateSingleHull(i);
@@ -903,22 +1005,22 @@ void EnsureTexturesLoaded()
     if (!wadstring[0])
         wadstring = ValueForKey(pWorldEnt(), "wad");
     if (!wadstring[0])
-        LogPrint("WARNING: No wad or _wad key exists in the worldmodel\n");
+        logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
     else
         WADList_Init(wadstring);
 
     if (!wadlist.size()) {
         if (wadstring[0])
-            LogPrint("WARNING: No valid WAD filenames in worldmodel\n");
+            logging::print("WARNING: No valid WAD filenames in worldmodel\n");
 
         /* Try the default wad name */
-        std::filesystem::path defaultwad = options.szMapName;
+        fs::path defaultwad = options.szMapName;
         defaultwad.replace_extension("wad");
 
         WADList_Init(defaultwad.string().c_str());
 
         if (wadlist.size())
-            LogPrint("Using default WAD: {}\n", defaultwad);
+            logging::print("Using default WAD: {}\n", defaultwad);
     }
 }
 
@@ -932,11 +1034,11 @@ static void ProcessFile(void)
     // load brushes and entities
     LoadMapFile();
 
-    if (options.fConvertMapFormat) {
+    if (options.convertmapformat.value() != conversion_t::none) {
         ConvertMapFile();
         return;
     }
-    if (options.fOnlyents) {
+    if (options.onlyents.value()) {
         UpdateEntLump();
         return;
     }
@@ -949,11 +1051,11 @@ static void ProcessFile(void)
 
     if (!options.fAllverbose) {
         options.fVerbose = false;
-        log_mask &= ~((1 << LOG_STAT) | (1 << LOG_PROGRESS));
+        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 
     // calculate extents, if required
-    if (!options.worldExtent) {
+    if (!options.worldextent.value()) {
         CalculateWorldExtent();
     }
 
@@ -969,359 +1071,13 @@ static void ProcessFile(void)
 }
 
 /*
-==============
-PrintOptions
-==============
-*/
-[[noreturn]] static void PrintOptions()
-{
-    printf(
-        "\n"
-        "qbsp performs geometric level processing of Quake .MAP files to create\n"
-        "Quake .BSP files.\n\n"
-        "qbsp [options] sourcefile [destfile]\n\n"
-        "Options:\n"
-        "   -nofill         Doesn't perform outside filling\n"
-        "   -noclip         Doesn't build clip hulls\n"
-        "   -noskip         Doesn't remove faces with the 'skip' texture\n"
-        "   -nodetail       Convert func_detail to structural\n"
-        "   -onlyents       Only updates .MAP entities\n"
-        "   -verbose        Print out more .MAP information\n"
-        "   -noverbose      Print out almost no information at all\n"
-        "   -splitspecial   Doesn't combine sky and water faces into one large face\n"
-        "   -splitsky       Doesn't combine sky faces into one large face\n"
-        "   -splitturb      Doesn't combine water faces into one large face\n"
-        "   -notranswater   Computes portal information for opaque water\n"
-        "   -transsky       Computes portal information for transparent sky\n"
-        "   -notex          Write only placeholder textures, to depend upon replacements, to keep file sizes down, or to skirt copyrights\n"
-        "   -nooldaxis      Uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older\n"
-        "   -forcegoodtree  Force use of expensive processing for SolidBSP stage\n"
-        "   -nopercent      Prevents output of percent completion information\n"
-        "   -wrbrushes      (bspx) Includes a list of brushes for brush-based collision\n"
-        "   -wrbrushesonly  -wrbrushes with -noclip\n"
-        "   -hexen2         Generate a BSP compatible with hexen2 engines\n"
-        "   -hlbsp          Request output in Half-Life bsp format\n"
-        "   -bsp2           Request output in bsp2 format\n"
-        "   -2psb           Request output in 2psb format (RMQ compatible)\n"
-        "   -leakdist  [n]  Space between leakfile points (default 2)\n"
-        "   -subdivide [n]  Use different texture subdivision (default 240)\n"
-        "   -wadpath <dir>  Search this directory for wad files (mips will be embedded unless -notex)\n"
-        "   -xwadpath <dir> Search this directory for wad files (mips will NOT be embedded, avoiding texture license issues)\n"
-        "   -oldrottex      Use old rotate_ brush texturing aligned at (0 0 0)\n"
-        "   -maxnodesize [n]Triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)\n"
-        "   -epsilon [n]    Customize ON_EPSILON (default 0.0001)\n"
-        "   -forceprt1      Create a PRT1 file for loading in editors, even if PRT2 is required to run vis.\n"
-        "   -objexport      Export the map file as an .OBJ model after the CSG phase\n"
-        "   -omitdetail     func_detail brushes are omitted from the compile\n"
-        "   -omitdetailwall          func_detail_wall brushes are omitted from the compile\n"
-        "   -omitdetailillusionary   func_detail_illusionary brushes are omitted from the compile\n"
-        "   -omitdetailfence         func_detail_fence brushes are omitted from the compile\n"
-        "   -convert <fmt>  Convert a .MAP to a different .MAP format. fmt can be: quake, quake2, valve, bp (brush primitives).\n"
-        "   -includeskip    Include skip/nodraw faces."
-        "   -expand         Write hull 1 expanded brushes to expanded.map for debugging\n"
-        "   -leaktest       Make compilation fail if the map leaks\n"
-        "   -contenthack    Hack to fix leaks through solids. Causes missing faces in some cases so disabled by default.\n"
-        "   -threads n      Set the number of threads (1 to disable multithreading)\n"
-        "   sourcefile      .MAP file to process\n"
-        "   destfile        .BSP file to output\n");
-
-    exit(1);
-}
-
-/*
-=============
-GetTok
-
-Gets tokens from command line string.
-=============
-*/
-static char *GetTok(char *szBuf, char *szEnd)
-{
-    char *szTok;
-
-    if (szBuf >= szEnd)
-        return NULL;
-
-    // Eliminate leading whitespace
-    while (*szBuf == ' ' || *szBuf == '\n' || *szBuf == '\t' || *szBuf == '\r')
-        szBuf++;
-
-    if (szBuf >= szEnd)
-        return NULL;
-
-    // Three cases: strings, options, and none-of-the-above.
-    if (*szBuf == '\"') {
-        szBuf++;
-        szTok = szBuf;
-        while (*szBuf != 0 && *szBuf != '\"' && *szBuf != '\n' && *szBuf != '\r')
-            szBuf++;
-    } else if (*szBuf == '-' || *szBuf == '/') {
-        szTok = szBuf;
-        while (*szBuf != ' ' && *szBuf != '\n' && *szBuf != '\t' && *szBuf != '\r' && *szBuf != 0)
-            szBuf++;
-    } else {
-        szTok = szBuf;
-        while (*szBuf != ' ' && *szBuf != '\n' && *szBuf != '\t' && *szBuf != '\r' && *szBuf != 0)
-            szBuf++;
-    }
-
-    if (*szBuf != 0)
-        *szBuf = 0;
-    return szTok;
-}
-
-/*
-==================
-ParseOptions
-==================
-*/
-static void ParseOptions(char *szOptions)
-{
-    char *szTok, *szTok2;
-    char *szEnd;
-    int NameCount = 0;
-
-    // temporary flags
-    bool hexen2 = false;
-
-    szEnd = szOptions + strlen(szOptions);
-    szTok = GetTok(szOptions, szEnd);
-    while (szTok) {
-        if (szTok[0] != '-') {
-            /* Treat as filename */
-            if (NameCount == 0)
-                options.szMapName = szTok;
-            else if (NameCount == 1)
-                options.szBSPName = szTok;
-            else
-                FError("Unknown option '{}'", szTok);
-            NameCount++;
-        } else {
-            szTok++;
-            if (!Q_strcasecmp(szTok, "nofill"))
-                options.fNofill = true;
-            else if (!Q_strcasecmp(szTok, "noclip"))
-                options.fNoclip = true;
-            else if (!Q_strcasecmp(szTok, "noskip"))
-                options.fNoskip = true;
-            else if (!Q_strcasecmp(szTok, "nodetail"))
-                options.fNodetail = true;
-            else if (!Q_strcasecmp(szTok, "onlyents"))
-                options.fOnlyents = true;
-            else if (!Q_strcasecmp(szTok, "verbose")) {
-                options.fAllverbose = true;
-                log_mask |= 1 << LOG_VERBOSE;
-            } else if (!Q_strcasecmp(szTok, "splitspecial"))
-                options.fSplitspecial = true;
-            else if (!Q_strcasecmp(szTok, "splitsky"))
-                options.fSplitsky = true;
-            else if (!Q_strcasecmp(szTok, "splitturb"))
-                options.fSplitturb = true;
-            else if (!Q_strcasecmp(szTok, "notranswater"))
-                options.fTranswater = false;
-            else if (!Q_strcasecmp(szTok, "transwater"))
-                options.fTranswater = true;
-            else if (!Q_strcasecmp(szTok, "transsky"))
-                options.fTranssky = true;
-            else if (!Q_strcasecmp(szTok, "notex"))
-                options.fNoTextures = true;
-            else if (!Q_strcasecmp(szTok, "oldaxis"))
-                LogPrint(
-                    "-oldaxis is now the default and the flag is ignored.\nUse -nooldaxis to get the alternate behaviour.\n");
-            else if (!Q_strcasecmp(szTok, "nooldaxis"))
-                options.fOldaxis = false;
-            else if (!Q_strcasecmp(szTok, "forcegoodtree"))
-                options.forceGoodTree = true;
-            else if (!Q_strcasecmp(szTok, "noverbose")) {
-                options.fNoverbose = true;
-                log_mask &= ~((1 << LOG_PERCENT) | (1 << LOG_STAT) | (1 << LOG_PROGRESS));
-            } else if (!Q_strcasecmp(szTok, "nopercent")) {
-                options.fNopercent = true;
-                log_mask &= ~(1 << LOG_PERCENT);
-            } else if (!Q_strcasecmp(szTok, "hexen2"))
-                hexen2 = true; // can be combined with -bsp2 or -2psb
-            else if (!Q_strcasecmp(szTok, "q2bsp"))
-                options.target_version = &bspver_q2;
-            else if (!Q_strcasecmp(szTok, "qbism"))
-                options.target_version = &bspver_qbism;
-            else if (!Q_strcasecmp(szTok, "wrbrushes") || !Q_strcasecmp(szTok, "bspx"))
-                options.fbspx_brushes = true;
-            else if (!Q_strcasecmp(szTok, "wrbrushesonly") || !Q_strcasecmp(szTok, "bspxonly")) {
-                options.fbspx_brushes = true;
-                options.fNoclip = true;
-            } else if (!Q_strcasecmp(szTok, "hlbsp")) {
-                options.target_version = &bspver_hl;
-            } else if (!Q_strcasecmp(szTok, "bsp2")) {
-                options.target_version = &bspver_bsp2;
-            } else if (!Q_strcasecmp(szTok, "2psb")) {
-                options.target_version = &bspver_bsp2rmq;
-            } else if (!Q_strcasecmp(szTok, "leakdist")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-                options.dxLeakDist = atoi(szTok2);
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "subdivide")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-                options.dxSubdivide = atoi(szTok2);
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "wadpath") || !Q_strcasecmp(szTok, "xwadpath")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-
-                std::string wadpath = szTok2;
-                /* Remove trailing /, if any */
-                if (wadpath.size() > 0 && wadpath[wadpath.size() - 1] == '/') {
-                    wadpath.resize(wadpath.size() - 1);
-                }
-
-                options_t::wadpath wp;
-                wp.external = !!Q_strcasecmp(szTok, "wadpath");
-                wp.path = wadpath;
-                options.wadPathsVec.push_back(wp);
-
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "oldrottex")) {
-                options.fixRotateObjTexture = false;
-            } else if (!Q_strcasecmp(szTok, "maxnodesize")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-                options.maxNodeSize = atoi(szTok2);
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "midsplitsurffraction")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-                options.midsplitSurfFraction = clamp((float)atof(szTok2), 0.0f, 1.0f);
-                LogPrint("Switching to midsplit when node contains more than fraction {} of model's surfaces\n",
-                    options.midsplitSurfFraction);
-
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "epsilon")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-                options.on_epsilon = atof(szTok2);
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "worldextent")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-                options.worldExtent = atof(szTok2);
-                LogPrint("Overriding maximum world extents to +/- {} units\n", options.worldExtent);
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "objexport")) {
-                options.fObjExport = true;
-            } else if (!Q_strcasecmp(szTok, "notjunc")) {
-                options.fNoTJunc = true;
-            } else if (!Q_strcasecmp(szTok, "omitdetail")) {
-                options.fOmitDetail = true;
-            } else if (!Q_strcasecmp(szTok, "omitdetailwall")) {
-                options.fOmitDetailWall = true;
-            } else if (!Q_strcasecmp(szTok, "omitdetailillusionary")) {
-                options.fOmitDetailIllusionary = true;
-            } else if (!Q_strcasecmp(szTok, "omitdetailfence")) {
-                options.fOmitDetailFence = true;
-            } else if (!Q_strcasecmp(szTok, "convert")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-
-                if (!Q_strcasecmp(szTok2, "quake")) {
-                    options.convertMapFormat = conversion_t::quake;
-                } else if (!Q_strcasecmp(szTok2, "quake2")) {
-                    options.convertMapFormat = conversion_t::quake2;
-                } else if (!Q_strcasecmp(szTok2, "valve")) {
-                    options.convertMapFormat = conversion_t::valve;
-                } else if (!Q_strcasecmp(szTok2, "bp")) {
-                    options.convertMapFormat = conversion_t::bp;
-                } else {
-                    FError("'-convert' requires one of: quake,quake2,valve,bp");
-                }
-
-                options.fConvertMapFormat = true;
-                szTok = szTok2;
-            } else if (!Q_strcasecmp(szTok, "includeskip")) {
-                options.includeSkip = true;
-            } else if (!Q_strcasecmp(szTok, "forceprt1")) {
-                options.fForcePRT1 = true;
-                LogPrint("WARNING: Forcing creation of PRT1.\n");
-                LogPrint("         Only use this for viewing portals in a map editor.\n");
-            } else if (!Q_strcasecmp(szTok, "expand")) {
-                options.fTestExpand = true;
-            } else if (!Q_strcasecmp(szTok, "leaktest")) {
-                options.fLeakTest = true;
-            } else if (!Q_strcasecmp(szTok, "contenthack")) {
-                options.fContentHack = true;
-            } else if (!Q_strcasecmp(szTok, "threads")) {
-                szTok2 = GetTok(szTok + strlen(szTok) + 1, szEnd);
-                if (!szTok2)
-                    FError("Invalid argument to option {}", szTok);
-                options.threads = atoi(szTok2);
-            } else if (!Q_strcasecmp(szTok, "?") || !Q_strcasecmp(szTok, "help")) {
-                PrintOptions();
-            } else {
-                FError("Unknown option '{}'", szTok);
-            }
-        }
-        szTok = GetTok(szTok + strlen(szTok) + 1, szEnd);
-    }
-
-    // if we wanted hexen2, update it now
-    if (hexen2) {
-        if (options.target_version == &bspver_bsp2) {
-            options.target_version = &bspver_h2bsp2;
-        } else if (options.target_version == &bspver_bsp2rmq) {
-            options.target_version = &bspver_h2bsp2rmq;
-        } else {
-            options.target_version = &bspver_h2;
-        }
-    }
-
-    // update target game
-    options.target_game = options.target_version->game;
-}
-
-/*
 ==================
 InitQBSP
 ==================
 */
 static void InitQBSP(int argc, const char **argv)
 {
-    if (auto file = fs::load("qbsp.ini")) {
-        LogPrint("Loading options from qbsp.ini\n");
-        ParseOptions(reinterpret_cast<char *>(file->data()));
-    }
-
-    // Concatenate command line args
-    int length = 1;
-    for (int i = 1; i < argc; i++) {
-        length += strlen(argv[i]) + 1;
-        if (argv[i][0] != '-')
-            length += 2; /* quotes */
-    }
-    char *szBuf = new char[length]{};
-    for (int i = 1; i < argc; i++) {
-        /* Quote filenames for the parsing function */
-        if (argv[i][0] != '-')
-            strcat(szBuf, "\"");
-        strcat(szBuf, argv[i]);
-        if (argv[i][0] != '-')
-            strcat(szBuf, "\" ");
-        else
-            strcat(szBuf, " ");
-    }
-    szBuf[length - 1] = 0;
-    ParseOptions(szBuf);
-    delete[] szBuf;
-
-    if (options.szMapName.empty())
-        PrintOptions();
+    options.run(argc, argv);
 
     options.szMapName.replace_extension("map");
 
@@ -1330,32 +1086,16 @@ static void InitQBSP(int argc, const char **argv)
         options.szBSPName = options.szMapName;
 
     /* Start logging to <bspname>.log */
-    options.szBSPName.replace_extension("log");
-    InitLog(options.szBSPName);
-
-    LogPrintSilent(IntroString);
-
-    /* If no wadpath given, default to the map directory */
-    if (options.wadPathsVec.empty()) {
-        options_t::wadpath wp;
-        wp.external = false;
-        wp.path = options.szMapName.parent_path();
-
-        // If options.szMapName is a relative path, StrippedFilename will return the empty string.
-        // In that case, don't add it as a wad path.
-        if (!wp.path.empty()) {
-            options.wadPathsVec.push_back(wp);
-        }
-    }
+    logging::init(fs::path(options.szBSPName).replace_extension("log"), options);
 
     // Remove already existing files
-    if (!options.fOnlyents && !options.fConvertMapFormat) {
+    if (!options.onlyents.value() && options.convertmapformat.value() == conversion_t::none) {
         options.szBSPName.replace_extension("bsp");
         remove(options.szBSPName);
 
         // Probably not the best place to do this
-        LogPrint("Input file: {}\n", options.szMapName);
-        LogPrint("Output file: {}\n\n", options.szBSPName);
+        logging::print("Input file: {}\n", options.szMapName);
+        logging::print("Output file: {}\n\n", options.szBSPName);
 
         options.szBSPName.replace_extension("prt");
         remove(options.szBSPName);
@@ -1369,7 +1109,7 @@ static void InitQBSP(int argc, const char **argv)
 
     // onlyents might not load this yet
     if (options.target_game) {
-        options.target_game->init_filesystem(options.szMapName);
+        options.target_game->init_filesystem(options.szMapName, options);
     }
 }
 
@@ -1382,20 +1122,16 @@ main
 */
 int qbsp_main(int argc, const char **argv)
 {
-    LogPrint(IntroString);
-
     InitQBSP(argc, argv);
-
-    auto tbbOptions = ConfigureTBB(options.threads);
 
     // do it!
     auto start = I_FloatTime();
     ProcessFile();
     auto end = I_FloatTime();
 
-    LogPrint("\n{:.3} seconds elapsed\n", (end - start));
+    logging::print("\n{:.3} seconds elapsed\n", (end - start));
 
-    CloseLog();
+    logging::close();
 
     return 0;
 }

@@ -75,7 +75,7 @@ static float Face_Alpha(const modelinfo_t *modelinfo, const mface_t *face)
     }
 
     // next check modelinfo alpha (defaults to 1.0)
-    return modelinfo->alpha.floatValue();
+    return modelinfo->alpha.value();
 }
 
 sceneinfo CreateGeometry(
@@ -258,8 +258,8 @@ const modelinfo_t *Embree_LookupModelinfo(unsigned int geomID, unsigned int prim
 
 static qvec3d Embree_RayEndpoint(RTCRayN *ray, size_t N, size_t i)
 {
-    qvec3d dir = qv::normalize(qvec3d { RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i) });
-    qvec3d org { RTCRayN_org_x(ray, N, i), RTCRayN_org_y(ray, N, i), RTCRayN_org_z(ray, N, i) };
+    qvec3d dir = qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
+    qvec3d org{RTCRayN_org_x(ray, N, i), RTCRayN_org_y(ray, N, i), RTCRayN_org_z(ray, N, i)};
     float &tfar = RTCRayN_tfar(ray, N, i);
 
     return org + (dir * tfar);
@@ -333,7 +333,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             // we hit a dynamic shadow caster. reject the hit, but store the
             // info about what we hit.
 
-            const int style = hit_modelinfo->switchshadstyle.intValue();
+            const int style = hit_modelinfo->switchshadstyle.value();
 
             AddDynamicOccluderToRay(context, rayIndex, style);
 
@@ -372,9 +372,10 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 if (sample[3] < 255)
                     alpha = sample[3] / 255.0f;
 
-                qvec3d rayDir = qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
-                qvec3d potentialHitGeometryNormal = qv::normalize(qvec3d{RTCHitN_Ng_x(potentialHit, N, i), RTCHitN_Ng_y(potentialHit, N, i),
-                    RTCHitN_Ng_z(potentialHit, N, i)});
+                qvec3d rayDir =
+                    qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
+                qvec3d potentialHitGeometryNormal = qv::normalize(qvec3d{RTCHitN_Ng_x(potentialHit, N, i),
+                    RTCHitN_Ng_y(potentialHit, N, i), RTCHitN_Ng_z(potentialHit, N, i)});
 
                 const vec_t raySurfaceCosAngle = qv::dot(rayDir, potentialHitGeometryNormal);
 
@@ -444,7 +445,7 @@ static void Leaf_MakeFaces(
         }
 
         if (winding) {
-            // LogPrint("WARNING: winding clipped away\n");
+            // logging::print("WARNING: winding clipped away\n");
         } else {
             result.push_back(std::move(*winding));
         }
@@ -547,7 +548,8 @@ void Embree_TraceInit(const mbsp_t *bsp)
                 // Q2: arghrad compat: sky faces only emit sunlight if:
                 // sky flag set, light flag set, value nonzero
                 if ((contents_or_surf_flags & Q2_SURF_SKY) != 0 &&
-                    (!arghradcompat || ((contents_or_surf_flags & Q2_SURF_LIGHT) != 0 && texinfo->value != 0))) {
+                    (!options.arghradcompat.value() ||
+                        ((contents_or_surf_flags & Q2_SURF_LIGHT) != 0 && texinfo->value != 0))) {
                     skyfaces.push_back(face);
                     continue;
                 }
@@ -596,7 +598,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     const size_t ver_maj = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_MAJOR);
     const size_t ver_min = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_MINOR);
     const size_t ver_pat = rtcGetDeviceProperty(device, RTC_DEVICE_PROPERTY_VERSION_PATCH);
-    FLogPrint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
+    logging::funcprint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
 
     scene = rtcNewScene(device);
     rtcSetSceneFlags(scene, RTC_SCENE_FLAG_NONE);
@@ -613,11 +615,11 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
     rtcCommitScene(scene);
 
-    FLogPrint("\n");
-    LogPrint("\t{} sky faces\n", skyfaces.size());
-    LogPrint("\t{} solid faces\n", solidfaces.size());
-    LogPrint("\t{} filtered faces\n", filterfaces.size());
-    LogPrint("\t{} shadow-casting skip faces\n", skipwindings.size());
+    logging::funcprint("\n");
+    logging::print("\t{} sky faces\n", skyfaces.size());
+    logging::print("\t{} solid faces\n", solidfaces.size());
+    logging::print("\t{} filtered faces\n", filterfaces.size());
+    logging::print("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
 static RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &dir, vec_t dist)
@@ -871,7 +873,7 @@ public:
     qvec3d getPushedRayDir(size_t j) override
     {
         Q_assert(j < _maxrays);
-        return { _rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z };
+        return {_rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z};
     }
 
     float getPushedRayHitDist(size_t j) override
@@ -963,7 +965,7 @@ public:
     {
         Q_assert(j < _maxrays);
 
-        return { _rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z };
+        return {_rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z};
     }
 };
 

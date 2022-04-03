@@ -37,7 +37,6 @@
 #include <algorithm> // std::sort
 #include <string>
 #include <fstream>
-#include <light/light.hh>
 
 /* FIXME - share header with qbsp, etc. */
 struct wadinfo_t
@@ -109,7 +108,7 @@ static void PrintModelInfo(const mbsp_t *bsp)
 {
     for (size_t i = 0; i < bsp->dmodels.size(); i++) {
         const dmodelh2_t *dmodel = &bsp->dmodels[i];
-        LogPrint("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
+        logging::print("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
     }
 }
 
@@ -457,6 +456,9 @@ static void FindFaces(const mbsp_t *bsp, const qvec3d &pos, const qvec3d &normal
     }
 }
 
+// TODO
+settings::common_settings options;
+
 int main(int argc, char **argv)
 {
     bspdata_t bspdata;
@@ -471,13 +473,13 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    std::filesystem::path source = DefaultExtension(argv[argc - 1], "bsp");
+    fs::path source = DefaultExtension(argv[argc - 1], "bsp");
     printf("---------------------\n");
     fmt::print("{}\n", source);
 
     LoadBSPFile(source, &bspdata);
 
-    bspdata.version->game->init_filesystem(source);
+    bspdata.version->game->init_filesystem(source, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -507,7 +509,7 @@ int main(int argc, char **argv)
             }
             // Load the reference BSP
 
-            std::filesystem::path refbspname = DefaultExtension(argv[i], "bsp");
+            fs::path refbspname = DefaultExtension(argv[i], "bsp");
 
             bspdata_t refbspdata;
             LoadBSPFile(refbspname, &refbspdata);
@@ -587,8 +589,8 @@ int main(int argc, char **argv)
             }
 
             try {
-                const qvec3d pos {std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
-                const qvec3d normal {std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
+                const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
+                const qvec3d normal{std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
                 FindFaces(&bsp, pos, normal);
             }
             catch (const std::exception &) {

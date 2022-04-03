@@ -48,27 +48,27 @@ static int rgfStartSpots;
 
 struct texdef_valve_t
 {
-    qmat<vec_t, 2, 3> axis { };
-    qvec2d scale { };
-    qvec2d shift { };
+    qmat<vec_t, 2, 3> axis{};
+    qvec2d scale{};
+    qvec2d shift{};
 };
 
 struct texdef_quake_ed_t
 {
     vec_t rotate = 0;
-    qvec2d scale { };
-    qvec2d shift { };
+    qvec2d scale{};
+    qvec2d shift{};
 };
 
 struct texdef_quake_ed_noshift_t
 {
     vec_t rotate = 0;
-    qvec2d scale { };
+    qvec2d scale{};
 };
 
 struct texdef_etp_t
 {
-    std::array<qvec3d, 3> planepoints { };
+    std::array<qvec3d, 3> planepoints{};
     bool tx2 = false;
 };
 
@@ -148,7 +148,7 @@ static std::optional<img::texture_meta> LoadWal(const char *name)
     fs::data wal = fs::load(p);
 
     if (!wal) {
-        LogPrint("WARNING: Couldn't locate wal for {}\n", name);
+        logging::print("WARNING: Couldn't locate wal for {}\n", name);
         wal_cache.emplace(name, std::nullopt);
         return std::nullopt;
     }
@@ -201,10 +201,8 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         for (i = 0; i < map.nummiptex(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
-            if (!Q_strcasecmp(name, tex.name.c_str()) &&
-                tex.flags.native == extended_info->flags.native &&
-                tex.value == extended_info->value &&
-                tex.animation == extended_info->animation) {
+            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
+                tex.value == extended_info->value && tex.animation == extended_info->animation) {
 
                 return i;
             }
@@ -224,7 +222,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
 
 static bool IsSkipName(const char *name)
 {
-    if (options.fNoskip)
+    if (options.noskip.value())
         return false;
     if (!Q_strcasecmp(name, "skip"))
         return true;
@@ -250,11 +248,9 @@ static bool IsNoExpandName(const char *name)
 
 static bool IsSpecialName(const char *name)
 {
-    if (options.fSplitspecial)
-        return false;
-    if (name[0] == '*' && !options.fSplitturb)
+    if (name[0] == '*' && !options.splitturb.value())
         return true;
-    if (!Q_strncasecmp(name, "sky", 3) && !options.fSplitsky)
+    if (!Q_strncasecmp(name, "sky", 3) && !options.splitsky.value())
         return true;
     return false;
 }
@@ -311,14 +307,6 @@ int FindTexinfo(const mtexinfo_t &texinfo)
     return num_texinfo;
 }
 
-/* detect colors with components in 0-1 and scale them to 0-255 */
-constexpr void normalize_color_format(qvec3d &color)
-{
-    if (color[0] >= 0 && color[0] <= 1 && color[1] >= 0 && color[1] <= 1 && color[2] >= 0 && color[2] <= 1) {
-        color *= 255;
-    }
-}
-
 static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity_t *entity)
 {
     surfflags_t flags{};
@@ -344,7 +332,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
         // This fixes a bug in some old maps.
         if ((flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             flags.native &= ~Q2_SURF_NODRAW;
-            // LogPrint("Corrected invalid SKY flag\n");
+            // logging::print("Corrected invalid SKY flag\n");
         }
 
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
@@ -419,7 +407,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
             GetVectorForKey(entity, "_minlight_color", mincolor);
         }
 
-        normalize_color_format(mincolor);
+        mincolor = qv::normalize_color_format(mincolor);
         if (!qv::epsilonEmpty(mincolor, EQUAL_EPSILON)) {
             for (int32_t i = 0; i < 3; i++) {
                 flags.minlight_color[i] = clamp(mincolor[i], 0.0, 255.0);
@@ -452,7 +440,7 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
             if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start)) {
-                LogPrint("WARNING: Multiple info_player_start entities\n");
+                logging::print("WARNING: Multiple info_player_start entities\n");
             }
             rgfStartSpots |= info_player_start;
         } else if (string_iequals(parser.token, "info_player_deathmatch")) {
@@ -483,7 +471,7 @@ static void TextureAxisFromPlane(const qbsp_plane_t &plane, qvec3d &xv, qvec3d &
 
     for (i = 0; i < 6; i++) {
         dot = qv::dot(plane.normal, baseaxis[i * 3]);
-        if (dot > best || (dot == best && !options.fOldaxis)) {
+        if (dot > best || (dot == best && !options.oldaxis.value())) {
             best = dot;
             bestaxis = i;
         }
@@ -612,8 +600,8 @@ qvec2f normalizeShift(const texture_t *texture, const qvec2f &in)
 }
 
 /// `texture` is optional. If given, the "shift" values can be normalized
-static texdef_quake_ed_t TexDef_BSPToQuakeEd(
-    const qbsp_plane_t &faceplane, const texture_t *texture, const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
+static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const texture_t *texture,
+    const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
     qvec3d snapped_normal;
@@ -952,8 +940,8 @@ static void SetTexinfo_QuakeEd_New(
     out_vecs.at(1, 3) = shift[1];
 }
 
-static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3d, 3> &planepts, const qvec2d &shift, const vec_t &rotate,
-    const qvec2d &scale, mtexinfo_t *out)
+static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3d, 3> &planepts, const qvec2d &shift,
+    const vec_t &rotate, const qvec2d &scale, mtexinfo_t *out)
 {
     int i, j;
     qvec3d vecs[2];
@@ -1036,7 +1024,8 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
     }
 }
 
-static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &planepts, texcoord_style_t style, mtexinfo_t *out)
+static void SetTexinfo_QuArK(
+    parser_t &parser, const std::array<qvec3d, 3> &planepts, texcoord_style_t style, mtexinfo_t *out)
 {
     int i;
     qvec3d vecs[2];
@@ -1079,7 +1068,7 @@ static void SetTexinfo_QuArK(parser_t &parser, const std::array<qvec3d, 3> &plan
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
-        LogPrint("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser.linenum);
+        logging::print("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser.linenum);
         for (i = 0; i < 3; i++)
             out->vecs.at(0, i) = out->vecs.at(1, i) = 0;
     } else {
@@ -1206,11 +1195,8 @@ static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     // (1,0) in plane axis base is texX in world coordinates + projection on the affine plane
     // (0,1) in plane axis base is texY in world coordinates + projection on the affine plane
     // use old texture code to compute the ST coords of these points
-    qvec2d st[] = {
-        in_vecs.uvs(proj, texSize[0], texSize[1]),
-        in_vecs.uvs(texX + proj, texSize[0], texSize[1]),
-        in_vecs.uvs(texY + proj, texSize[0], texSize[1])
-    };
+    qvec2d st[] = {in_vecs.uvs(proj, texSize[0], texSize[1]), in_vecs.uvs(texX + proj, texSize[0], texSize[1]),
+        in_vecs.uvs(texY + proj, texSize[0], texSize[1])};
     // compute texture matrix
     texdef_brush_primitives_t res;
     res.set_col(2, st[0]);
@@ -1380,7 +1366,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
 
-    mapface.contents = { extinfo.info->contents };
+    mapface.contents = {extinfo.info->contents};
     tx->flags = mapface.flags = {extinfo.info->flags};
     tx->value = mapface.value = extinfo.info->value;
 
@@ -1388,12 +1374,8 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
     switch (tx_type) {
         case TX_QUARK_TYPE1:
-        case TX_QUARK_TYPE2:
-            SetTexinfo_QuArK(parser, planepts, tx_type, tx);
-            break;
-        case TX_VALVE_220:
-            SetTexinfo_Valve220(axis, shift, scale, tx);
-            break;
+        case TX_QUARK_TYPE2: SetTexinfo_QuArK(parser, planepts, tx_type, tx); break;
+        case TX_VALVE_220: SetTexinfo_Valve220(axis, shift, scale, tx); break;
         case TX_BRUSHPRIM: {
             const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
             const int32_t width = texture ? texture->width : 64;
@@ -1403,9 +1385,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             break;
         }
         case TX_QUAKED:
-        default:
-            SetTexinfo_QuakeEd(plane, planepts, shift, rotate, scale, tx);
-            break;
+        default: SetTexinfo_QuakeEd(plane, planepts, shift, rotate, scale, tx); break;
     }
 }
 
@@ -1416,7 +1396,7 @@ bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
     /* calculate the normal/dist plane equation */
     qvec3d ab = planepts[0] - planepts[1];
     qvec3d cb = planepts[2] - planepts[1];
-    
+
     vec_t length;
 
     plane.normal = qv::normalize(qv::cross(ab, cb), length);
@@ -1466,11 +1446,11 @@ inline bool IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t 
 static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
-        LogPrint("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
+        logging::print("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
             mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
 
         // Reset texturing to sensible defaults
-        const std::array<vec_t, 2> shift {0, 0};
+        const std::array<vec_t, 2> shift{0, 0};
         const vec_t rotate = 0;
         const std::array<vec_t, 2> scale = {1, 1};
         SetTexinfo_QuakeEd(mapface.plane, mapface.planepts, shift, rotate, scale, tx);
@@ -1495,7 +1475,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrus
     ParseTextureDef(parser, *face, brush, &tx, face->planepts, face->plane);
 
     if (!normal_ok) {
-        LogPrint("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
+        logging::print("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
         return nullptr;
     }
 
@@ -1557,13 +1537,13 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         for (int i = 0; i < brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
             if (qv::epsilonEqual(check.plane, face->plane)) {
-                LogPrint("line {}: Brush with duplicate plane\n", parser.linenum);
+                logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
                 discardFace = true;
                 continue;
             }
             if (qv::epsilonEqual(-check.plane, face->plane)) {
                 /* FIXME - this is actually an invalid brush */
-                LogPrint("line {}: Brush with duplicate plane\n", parser.linenum);
+                logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
                 continue;
             }
         }
@@ -1644,7 +1624,7 @@ static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
         const qvec3f in_first3(in);
 
         const qvec3f out_first3 = inversescaleM * in_first3;
-        newtexvecs.set_row(i, { out_first3[0], out_first3[1], out_first3[2], in[3] });
+        newtexvecs.set_row(i, {out_first3[0], out_first3[1], out_first3[2], in[3]});
     }
 
     face->set_texvecs(newtexvecs);
@@ -1673,7 +1653,7 @@ static void RotateMapFace(mapface_t *face, const qvec3d &angles)
     for (int i = 0; i < 2; i++) {
         const qvec4f in = texvecs.row(i);
         const qvec3f in_first3(in);
-        
+
         const qvec3f out_first3 = rotation * in_first3;
         newtexvecs.set_row(i, {out_first3[0], out_first3[1], out_first3[2], in[3]});
     }
@@ -1700,7 +1680,6 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
         // CHECK: precision loss here?
         out[3] += qv::dot(qvec3f(out), qvec3f(offset) * -1.0f);
         newtexvecs.set_row(i, {out[0], out[1], out[2], out[3]});
-
     }
 
     face->set_texvecs(newtexvecs);
@@ -1708,7 +1687,7 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
 
 void ProcessExternalMapEntity(mapentity_t *entity)
 {
-    Q_assert(!options.fOnlyents);
+    Q_assert(!options.onlyents.value());
 
     const char *classname = ValueForKey(entity, "classname");
     if (Q_strcasecmp(classname, "misc_external_map"))
@@ -1766,7 +1745,7 @@ void ProcessExternalMapEntity(mapentity_t *entity)
 
 void ProcessAreaPortal(mapentity_t *entity)
 {
-    Q_assert(!options.fOnlyents);
+    Q_assert(!options.onlyents.value());
 
     const char *classname = ValueForKey(entity, "classname");
 
@@ -1779,8 +1758,13 @@ void ProcessAreaPortal(mapentity_t *entity)
     if (entity->nummapbrushes != 1)
         FError("func_areaportal can only be a single brush");
 
-    map.brushes[entity->firstmapbrush].contents = Q2_CONTENTS_AREAPORTAL;
-    map.faces[map.brushes[entity->firstmapbrush].firstface].contents.native = Q2_CONTENTS_AREAPORTAL;
+    for (size_t i = entity->firstmapbrush; i < entity->firstmapbrush + entity->nummapbrushes; i++) {
+        map.brushes[i].contents = Q2_CONTENTS_AREAPORTAL;
+
+        for (size_t f = map.brushes[i].firstface; f < map.brushes[i].firstface + map.brushes[i].numfaces; f++) {
+            map.faces[f].contents.native = Q2_CONTENTS_AREAPORTAL;
+        }
+    }
     entity->areaportalnum = ++map.numareaportals;
     // set the portal number as "style"
     SetKeyValue(entity, "style", std::to_string(map.numareaportals).c_str());
@@ -1875,14 +1859,14 @@ mapentity_t LoadExternalMap(const char *filename)
         FError("Expected at least one brush for external map {}\n", filename);
     }
 
-    LogPrint(LOG_STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
+    logging::print(logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
 
     return dest;
 }
 
 void LoadMapFile(void)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     {
         auto file = fs::load(options.szMapName);
@@ -1909,20 +1893,20 @@ void LoadMapFile(void)
 
     // Print out warnings for entities
     if (!(rgfStartSpots & info_player_start))
-        LogPrint("WARNING: No info_player_start entity in level\n");
+        logging::print("WARNING: No info_player_start entity in level\n");
     if (!(rgfStartSpots & info_player_deathmatch))
-        LogPrint("WARNING: No info_player_deathmatch entities in level\n");
+        logging::print("WARNING: No info_player_deathmatch entities in level\n");
     //      if (!(rgfStartSpots & info_player_coop))
-    //              LogPrint("WARNING: No info_player_coop entities in level\n");
+    //              logging::print("WARNING: No info_player_coop entities in level\n");
 
-    LogPrint(LOG_STAT, "     {:8} faces\n", map.numfaces());
-    LogPrint(LOG_STAT, "     {:8} brushes\n", map.numbrushes());
-    LogPrint(LOG_STAT, "     {:8} entities\n", map.numentities());
-    LogPrint(LOG_STAT, "     {:8} unique texnames\n", map.nummiptex());
-    LogPrint(LOG_STAT, "     {:8} texinfo\n", map.numtexinfo());
-    LogPrint(LOG_STAT, "\n");
+    logging::print(logging::flag::STAT, "     {:8} faces\n", map.numfaces());
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.numbrushes());
+    logging::print(logging::flag::STAT, "     {:8} entities\n", map.numentities());
+    logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.nummiptex());
+    logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.numtexinfo());
+    logging::print(logging::flag::STAT, "\n");
 
-    if (options.fTestExpand) {
+    if (options.expand.value()) {
         TestExpandBrushes(pWorldEnt());
     }
 }
@@ -2082,11 +2066,11 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t *entity, const con
 
 void ConvertMapFile(void)
 {
-    LogPrint(LOG_PROGRESS, "---- {} ----\n", __func__);
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     std::string append;
 
-    switch (options.convertMapFormat) {
+    switch (options.convertmapformat.value()) {
         case conversion_t::quake: append = "-quake"; break;
         case conversion_t::quake2: append = "-quake2"; break;
         case conversion_t::valve: append = "-valve"; break;
@@ -2094,7 +2078,7 @@ void ConvertMapFile(void)
         default: FError("Internal error: unknown conversion_t\n");
     }
 
-    std::filesystem::path filename = options.szBSPName;
+    fs::path filename = options.szBSPName;
     filename.replace_filename(options.szBSPName.stem().string() + append);
 
     std::ofstream f(filename);
@@ -2103,10 +2087,10 @@ void ConvertMapFile(void)
         FError("Couldn't open file\n");
 
     for (const mapentity_t &entity : map.entities) {
-        ConvertEntity(f, &entity, options.convertMapFormat);
+        ConvertEntity(f, &entity, options.convertmapformat.value());
     }
 
-    LogPrint("Conversion saved to {}\n", filename);
+    logging::print("Conversion saved to {}\n", filename);
 
     options.fVerbose = false;
 }
@@ -2114,7 +2098,7 @@ void ConvertMapFile(void)
 void PrintEntity(const mapentity_t *entity)
 {
     for (auto &epair : entity->epairs)
-        LogPrint(LOG_STAT, "     {:20} : {}\n", epair.first, epair.second);
+        logging::print(logging::flag::STAT, "     {:20} : {}\n", epair.first, epair.second);
 }
 
 const char *ValueForKey(const mapentity_t *entity, const char *key)
@@ -2161,11 +2145,14 @@ void WriteEntitiesToString()
         for (auto &ep : entity.epairs) {
 
             if (ep.first.size() >= options.target_game->max_entity_key - 1) {
-                LogPrint("WARNING: {} at {} has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
+                logging::print("WARNING: {} at {} has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"),
+                    entity.origin, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
             }
 
             if (ep.second.size() >= options.target_game->max_entity_value - 1) {
-                LogPrint("WARNING: {} at {} has long value for key {} (length {} >= {})\n", ValueForKey(&entity, "classname"), entity.origin, ep.first, ep.second.size(), options.target_game->max_entity_value - 1);
+                logging::print("WARNING: {} at {} has long value for key {} (length {} >= {})\n",
+                    ValueForKey(&entity, "classname"), entity.origin, ep.first, ep.second.size(),
+                    options.target_game->max_entity_value - 1);
             }
 
             fmt::format_to(std::back_inserter(map.bsp.dentdata), "\"{}\" \"{}\"\n", ep.first, ep.second);
@@ -2185,7 +2172,9 @@ inline std::optional<qvec3d> GetIntersection(const qbsp_plane_t &p1, const qbsp_
         return std::nullopt;
     }
 
-    return (qv::cross(p2.normal, p3.normal) * p1.dist - qv::cross(p3.normal, p1.normal) * -p2.dist - qv::cross(p1.normal, p2.normal) * -p3.dist) / denom;
+    return (qv::cross(p2.normal, p3.normal) * p1.dist - qv::cross(p3.normal, p1.normal) * -p2.dist -
+               qv::cross(p1.normal, p2.normal) * -p3.dist) /
+           denom;
 }
 
 /*
@@ -2203,7 +2192,7 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
                 if (i == j || j == k || k == i) {
                     continue;
                 }
-                
+
                 auto &fi = hullbrush.face(i);
                 auto &fj = hullbrush.face(j);
                 auto &fk = hullbrush.face(k);
@@ -2239,14 +2228,13 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
 
 void CalculateWorldExtent(void)
 {
-    LogPrint("Calculating world extents... ");
-
     std::atomic<vec_t> extents = -std::numeric_limits<vec_t>::infinity();
 
     tbb::parallel_for_each(map.brushes, [&](const mapbrush_t &brush) {
         const vec_t brushExtents = max(extents.load(), GetBrushExtents(brush));
         vec_t currentExtents = extents;
-        while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents));
+        while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents))
+            ;
     });
 
     vec_t hull_extents = 0;
@@ -2257,8 +2245,7 @@ void CalculateWorldExtent(void)
         }
     }
 
-    options.worldExtent = (extents + hull_extents) * 2;
-    LogPrint("{} units\n", options.worldExtent);
+    options.worldextent.setValueLocked((extents + hull_extents) * 2);
 }
 
 /*
@@ -2268,9 +2255,9 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<brush_t> &list)
+void WriteBspBrushMap(const fs::path &name, const std::vector<brush_t> &list)
 {
-    LogPrint("writing {}\n", name);
+    logging::print("writing {}\n", name);
     std::ofstream f(name);
 
     if (!f)

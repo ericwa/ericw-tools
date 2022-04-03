@@ -98,15 +98,15 @@ void CalcAmbientSounds(mbsp_t *bsp)
                 info = &bsp->texinfo[surf->texinfo];
                 const auto &miptex = bsp->dtex.textures[info->miptex];
 
-                if (!Q_strncasecmp(miptex.name.data(), "sky", 3) && ambientsky)
+                if (!Q_strncasecmp(miptex.name.data(), "sky", 3) && !options.noambientsky.value())
                     ambient_type = AMBIENT_SKY;
-                else if (!Q_strncasecmp(miptex.name.data(), "*water", 6) && ambientwater)
+                else if (!Q_strncasecmp(miptex.name.data(), "*water", 6) && !options.noambientwater.value())
                     ambient_type = AMBIENT_WATER;
-                else if (!Q_strncasecmp(miptex.name.data(), "*04water", 8) && ambientwater)
+                else if (!Q_strncasecmp(miptex.name.data(), "*04water", 8) && !options.noambientwater.value())
                     ambient_type = AMBIENT_WATER;
-                else if (!Q_strncasecmp(miptex.name.data(), "*slime", 6) && ambientslime)
+                else if (!Q_strncasecmp(miptex.name.data(), "*slime", 6) && !options.noambientslime.value())
                     ambient_type = AMBIENT_WATER; // AMBIENT_SLIME;
-                else if (!Q_strncasecmp(miptex.name.data(), "*lava", 5) && ambientlava)
+                else if (!Q_strncasecmp(miptex.name.data(), "*lava", 5) && !options.noambientlava.value())
                     ambient_type = AMBIENT_LAVA;
                 else
                     continue;

@@ -32,6 +32,7 @@ bool parser_t::parse_token(parseflags flags)
         return result;
     }
 
+    was_quoted = false;
     token.clear();
     auto token_p = std::back_inserter(token);
 
@@ -83,6 +84,7 @@ skipspace:
     /* copy token */
 
     if (*pos == '"') {
+        was_quoted = true;
         pos++;
         while (*pos != '"') {
             if (!*pos)
@@ -116,12 +118,12 @@ skipspace:
                         break;
                     case '\"':
                         if (pos[2] == '\r' || pos[2] == '\n') {
-                            LogPrint("WARNING: line {}: escaped double-quote at end of string\n", linenum);
+                            logging::print("WARNING: line {}: escaped double-quote at end of string\n", linenum);
                         } else {
                             *token_p++ = *pos++;
                         }
                         break;
-                    default: LogPrint("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
+                    default: logging::print("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
                 }
             }
             *token_p++ = *pos++;

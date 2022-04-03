@@ -35,21 +35,21 @@ struct qbsp_plane_t : qplane3d
     int type = 0;
     std::optional<size_t> outputplanenum = std::nullopt; // only valid after ExportNodePlanes
 
-    [[nodiscard]] constexpr qbsp_plane_t operator-() const { return { qplane3d::operator-(), type }; }
+    [[nodiscard]] constexpr qbsp_plane_t operator-() const { return {qplane3d::operator-(), type}; }
 };
 
 struct mapface_t
 {
-    qbsp_plane_t plane { };
-    std::array<qvec3d, 3> planepts { };
-    std::string texname { };
+    qbsp_plane_t plane{};
+    std::array<qvec3d, 3> planepts{};
+    std::string texname{};
     int texinfo = 0;
     int linenum = 0;
 
-    surfflags_t flags { };
+    surfflags_t flags{};
 
     // Q2 stuff
-    contentflags_t contents { };
+    contentflags_t contents{};
     int value = 0;
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);
@@ -177,8 +177,8 @@ void ConvertMapFile(void);
 
 struct extended_texinfo_t
 {
-    contentflags_t contents = { 0 };
-    surfflags_t flags = { 0 };
+    contentflags_t contents = {0};
+    surfflags_t flags = {0};
     int value = 0;
     std::string animation;
 };
@@ -243,6 +243,6 @@ void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const br
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 
-void WriteBspBrushMap(const std::filesystem::path &name, const std::vector<const brush_t *> &list);
+void WriteBspBrushMap(const fs::path &name, const std::vector<const brush_t *> &list);
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);
