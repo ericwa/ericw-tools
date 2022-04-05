@@ -323,14 +323,17 @@ struct face_t : face_fragment_t
 
     mapentity_t *src_entity; // source entity
     face_t *original; // face on node
-    bool touchesOccupiedLeaf; // internal use in outside.cc
     qvec3d origin;
     vec_t radius;
 
     // filled by TJunc
     std::vector<face_fragment_t> fragments;
 
+    // fixme-brushbsp: move to a brush_side_t struct
     bool onnode; // has this face been used as a BSP node plane yet?
+    bool visible; // can any part of this side be seen from non-void parts of the level?
+                  // non-visible means we can discard the brush side 
+                  // (avoiding generating a BSP spit, so expanding it outwards)
 };
 
 // there is a node_t structure for every node and leaf in the bsp tree

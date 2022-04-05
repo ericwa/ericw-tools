@@ -116,6 +116,7 @@ static bool Portal_Passable(const portal_t *p)
 
         // fixme-brushbsp: confirm, why was this not needed before?
         // detail separators are treated as non-opaque because detail doesn't block vis
+        // fixme-brushbsp: should probably move to node_t::opaque()
         if (l->detail_separator) {
             return false;
         }
@@ -322,77 +323,24 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 
 /*
 ==================
-ResetFacesTouchingOccupiedLeafs
-
-Set f->touchesOccupiedLeaf=false on all faces.
-==================
-*/
-static void ResetFacesTouchingOccupiedLeafs(node_t *node)
-{
-    if (node->planenum == PLANENUM_LEAF) {
-        return;
-    }
-
-    for (face_t *face : node->facelist) {
-        face->touchesOccupiedLeaf = false;
-    }
-
-    ResetFacesTouchingOccupiedLeafs(node->children[0]);
-    ResetFacesTouchingOccupiedLeafs(node->children[1]);
-}
-
-/*
-==================
-MarkFacesTouchingOccupiedLeafs
+MarkVisibleBrushSides
 
 Set f->touchesOccupiedLeaf=true on faces that are touching occupied leafs
 ==================
 */
-static void MarkFacesTouchingOccupiedLeafs(node_t *node)
+static void MarkVisibleBrushSides(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF) {
-        MarkFacesTouchingOccupiedLeafs(node->children[0]);
-        MarkFacesTouchingOccupiedLeafs(node->children[1]);
+        MarkVisibleBrushSides(node->children[0]);
+        MarkVisibleBrushSides(node->children[1]);
         return;
     }
 
     // visit the leaf
 
-    if (node->outside_distance == -1) {
-        // This is an occupied leaf, so we need to keep all of the faces touching it.
-        for (auto &markface : node->markfaces) {
-            markface->touchesOccupiedLeaf = true;
-        }
-    }
-}
-
-/*
-==================
-ClearOutFaces
-
-Deletes (by setting f->w.numpoints=0) faces in solid nodes
-==================
-*/
-static void ClearOutFaces(node_t *node)
-{
-    if (node->planenum != PLANENUM_LEAF) {
-        ClearOutFaces(node->children[0]);
-        ClearOutFaces(node->children[1]);
-        return;
-    }
-
-    // visit the leaf
-    if (!node->contents.is_solid(options.target_game)) {
-        return;
-    }
-
-    for (auto &markface : node->markfaces) {
-        // NOTE: This is how faces are deleted here, kind of ugly
-        markface->w.clear();
-    }
-
-    // FIXME: Shouldn't be needed here
-    node->facelist = {};
+    // fixme-brushbsp: do a flood fill from all empty leafs.
+    // when we reach a portal to solid, look for a brush side with the same
+    // planenum. mark it as 'visible'.
 }
 
 static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
@@ -411,20 +359,7 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
     if (node->contents.is_solid(options.target_game) || node->contents.is_sky(options.target_game))
         return;
 
-    // Now check all faces touching the leaf. If any of them are partially going into the occupied part of the map,
-    // don't fill the leaf (see comment in FillOutside).
-    bool skipFill = false;
-    for (auto &markface : node->markfaces) {
-        if (markface->touchesOccupiedLeaf) {
-            skipFill = true;
-            break;
-        }
-    }
-    if (skipFill) {
-        return;
-    }
-
-    // Finally, we can fill it in as void.
+     // Finally, we can fill it in as void.
     node->contents = options.target_game->create_solid_contents();
     *outleafs_count += 1;
 }
@@ -442,6 +377,24 @@ static int OutLeafsToSolid(node_t *node)
 ===========
 FillOutside
 
+Goal is to mark brush sides which only touch void as "unbounded" (aka Q2 skip),
+so they're not used as BSP splitters in the next phase and basically expand outwards.
+
+Brush sides which cross between void and non-void are problematic for this, so
+the process looks like:
+
+1) flood outside -> in from beyond the map bounds and mark these leafs as solid
+
+Now all leafs marked "empty" are actually empty, not void.
+
+2) initialize all original brush sides to "invisible"
+
+2) flood from all empty leafs, mark original brush sides as "visible"
+
+This will handle partially-void, partially-in-bounds sides (they'll be marked visible).
+
+fixme-brushbsp: we'll want to do this for detail as well, which means building another set of
+portals for everything (not just structural).
 ===========
 */
 bool FillOutside(node_t *node, const int hullnum)
@@ -508,35 +461,11 @@ bool FillOutside(node_t *node, const int hullnum)
         return false;
     }
 
-    // At this point, leafs not reachable from entities have (node->occupied == 0).
-    // The two final tasks are:
-    // 1. Mark the leafs that are not reachable as CONTENTS_SOLID (i.e. filling them in as the void).
-    // 2. Delete faces in those leafs
-
-    // An annoying wrinkle here: there may be leafs with (node->occupied == 0), which means they should be filled in as
-    // void, but they have faces straddling between them and occupied leafs (i.e. leafs which will be CONTENTS_EMPTY
-    // because they're in playable space). See missing_face_simple.map for an example.
-    //
-    // The subtlety is, if we fill these leafs in as solid and delete the inward-facing faces, the only face left
-    // will be the void-and-non-void-straddling face. This face will mess up LinkConvexFaces, since we need to rebuild
-    // the BSP and recalculate the leaf contents, unaware of the fact that we wanted this leaf to be void
-    // (CONTENTS_SOLID), and this face will cause it to be marked as CONTENTS_EMPTY which will manifest as messed up
-    // hull0 collision in game (weapons shoot through the leaf.)
-    //
-    // In order to avoid this scenario, we need to detect those "void-and-non-void-straddling" faces and not fill those
-    // leafs in as solid. This will keep some extra faces around but keep the content types consistent.
-
-    // fixme-brushbsp: the above is no longer relevant
-
-    ResetFacesTouchingOccupiedLeafs(node);
-    MarkFacesTouchingOccupiedLeafs(node);
-
-    /* now go back and fill outside with solid contents */
     const int outleafs = OutLeafsToSolid(node);
 
-    /* remove faces from filled in leafs */
-    // fixme-brushbsp: don't do this; mark brush sides instead
-    ClearOutFaces(node);
+    // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
+    
+    MarkVisibleBrushSides(node);   
 
     logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;
