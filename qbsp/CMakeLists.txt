@@ -8,7 +8,6 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/outside.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/portals.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/region.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/solidbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/surfaces.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)

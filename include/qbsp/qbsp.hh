@@ -374,7 +374,6 @@ struct node_t
 #include <qbsp/merge.hh>
 #include <qbsp/surfaces.hh>
 #include <qbsp/portals.hh>
-#include <qbsp/region.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
 #include <qbsp/map.hh>
