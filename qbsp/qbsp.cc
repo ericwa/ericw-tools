@@ -37,6 +37,8 @@
 #include <qbsp/surfaces.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
+#include <qbsp/writebsp.hh>
+#include <qbsp/outside.hh>
 
 #include <fmt/chrono.h>
 

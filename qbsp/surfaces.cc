@@ -25,6 +25,7 @@
 #include <qbsp/map.hh>
 #include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/writebsp.hh>
 
 #include <map>
 #include <list>

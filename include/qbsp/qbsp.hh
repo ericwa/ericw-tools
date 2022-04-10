@@ -284,7 +284,6 @@ enum
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
-#include <qbsp/winding.hh>
 
 struct mtexinfo_t
 {
@@ -369,8 +368,5 @@ struct node_t
 
     bool opaque() const;
 };
-
-#include <qbsp/writebsp.hh>
-#include <qbsp/outside.hh>
 
 int qbsp_main(int argc, const char **argv);
