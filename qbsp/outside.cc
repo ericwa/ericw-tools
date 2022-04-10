@@ -325,17 +325,11 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 
 //=============================================================================
 
-static void AssertBrushSidesInvisible(node_t *node)
+static void MarkBrushSidesInvisible(mapentity_t *entity)
 {
-    if (node->planenum != PLANENUM_LEAF) {
-        AssertBrushSidesInvisible(node->children[0]);
-        AssertBrushSidesInvisible(node->children[1]);
-        return;
-    }
-
-    for (auto *brush : node->original_brushes) {
-        for (const auto &face : brush->faces) {
-            Q_assert(!face.visible);
+    for (auto &brush : entity->brushes) {
+        for (auto &face : brush.faces) {
+            face.visible = false;
         }
     }
 }
@@ -507,25 +501,11 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     const int outleafs = OutLeafsToSolid(node);
 
     // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
-    AssertBrushSidesInvisible(node);
+    
+    MarkBrushSidesInvisible(entity);
 
     MarkVisibleBrushSides(node);
 
-    // Count brush sides
-    int visible_brush_sides = 0;
-    int invisible_brush_sides = 0;
-    for (const auto &brush : entity->brushes) {
-        for (auto &side : brush.faces) {
-            if (side.visible) {
-                ++visible_brush_sides;
-            } else {
-                ++invisible_brush_sides;
-            }
-        }
-    }
-
     logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
-    logging::print(logging::flag::STAT, "     {:8} visible brush sides\n", visible_brush_sides);
-    logging::print(logging::flag::STAT, "     {:8} invisible brush sides\n", invisible_brush_sides);
     return true;
 }

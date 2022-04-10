@@ -287,6 +287,10 @@ static face_t *ChooseMidPlaneFromList(std::vector<brush_t> &brushes, const aabb3
             for (auto &face : brush.faces) {
                 if (face.onnode)
                     continue;
+                if (!face.visible) {
+                    // never use as a bsp splitter, efffectively filling the brush outwards
+                    continue;
+                }
 
                 const qbsp_plane_t &plane = map.planes[face.planenum];
                 bool axial = false;
@@ -348,6 +352,10 @@ static face_t *ChoosePlaneFromList(std::vector<brush_t> &brushes, const aabb3d &
 
             for (auto &face : brush.faces) {
                 if (face.onnode) {
+                    continue;
+                }
+                if (!face.visible) {
+                    // never use as a bsp splitter, efffectively filling the brush outwards
                     continue;
                 }
 
@@ -914,6 +922,22 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     }
 
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+
+    // Count visible/nonvisible brush sides (this is the side effect of FillOutside)
+    int visible_brush_sides = 0;
+    int invisible_brush_sides = 0;
+    for (const auto &brush : entity->brushes) {
+        for (auto &side : brush.faces) {
+            if (side.visible) {
+                ++visible_brush_sides;
+            } else {
+                ++invisible_brush_sides;
+            }
+        }
+    }
+
+    logging::print(logging::flag::STAT, "     {:8} visible brush sides\n", visible_brush_sides);
+    logging::print(logging::flag::STAT, "     {:8} invisible brush sides\n", invisible_brush_sides);
 
     node_t *headnode = new node_t{};
     usemidsplit = midsplit;

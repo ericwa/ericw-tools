@@ -526,11 +526,9 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
 static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush, node_t* node)
 {
     if (node->planenum == PLANENUM_LEAF) {
-        if (!face->w.size()) {
-            // spurious
-            return;
-        }
-        FError("couldn't find node for face");
+        //FError("couldn't find node for face");
+        // after outside filling, this is completely expected
+        return;
     }
 
     if (face->planenum == node->planenum) {
