@@ -370,7 +370,6 @@ struct node_t
     bool opaque() const;
 };
 
-#include <qbsp/solidbsp.hh>
 #include <qbsp/merge.hh>
 #include <qbsp/surfaces.hh>
 #include <qbsp/portals.hh>

@@ -22,6 +22,8 @@
 
 #include <fstream>
 #include <fmt/ostream.h>
+
+#include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 
 node_t outside_node; // portals outside the world face this

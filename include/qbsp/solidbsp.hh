@@ -22,8 +22,13 @@
 #pragma once
 
 #include <atomic>
+#include <list>
 
 extern std::atomic<int> splitnodes;
+
+struct node_t;
+struct face_t;
+class mapentity_t;
 
 void DetailToSolid(node_t *node);
 std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, std::list<face_t *> &surfaces);

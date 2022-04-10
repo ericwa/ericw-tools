@@ -22,6 +22,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/brush.hh>
+#include <qbsp/solidbsp.hh>
 
 #include <map>
 #include <list>
