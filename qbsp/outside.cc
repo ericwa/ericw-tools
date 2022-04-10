@@ -321,6 +321,23 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
     return result;
 }
 
+//=============================================================================
+
+static void AssertBrushSidesInvisible(node_t *node)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        AssertBrushSidesInvisible(node->children[0]);
+        AssertBrushSidesInvisible(node->children[1]);
+        return;
+    }
+
+    for (auto *brush : node->original_brushes) {
+        for (const auto &face : brush->faces) {
+            Q_assert(!face.visible);
+        }
+    }
+}
+
 /*
 ==================
 MarkVisibleBrushSides
@@ -336,12 +353,31 @@ static void MarkVisibleBrushSides(node_t *node)
         return;
     }
 
-    // visit the leaf
+    if (node->opaque()) {
+        return;
+    }
 
-    // fixme-brushbsp: do a flood fill from all empty leafs.
-    // when we reach a portal to solid, look for a brush side with the same
-    // planenum. mark it as 'visible'.
+    // visit the non-opaque leaf: check all portals to neighbouring leafs.
+
+    int side;
+    for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
+        side = (portal->nodes[0] == node);
+
+        node_t *neighbour_leaf = portal->nodes[side];
+
+        for (auto *brush : neighbour_leaf->original_brushes) {
+            for (auto &side : brush->faces) {
+                if (side.planenum == portal->planenum) {
+                    // we've found a brush side in an original brush in the neighbouring
+                    // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
+                    side.visible = true;
+                }
+            }
+        }
+    }
 }
+
+//=============================================================================
 
 static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
 {
@@ -393,11 +429,15 @@ Now all leafs marked "empty" are actually empty, not void.
 
 This will handle partially-void, partially-in-bounds sides (they'll be marked visible).
 
+(doing it the opposite way, defaulting brushes to "visible" and flood-filling
+from the void wouldn't work, because brush sides that cross into the map would
+get incorrectly marked as "invisible").
+
 fixme-brushbsp: we'll want to do this for detail as well, which means building another set of
 portals for everything (not just structural).
 ===========
 */
-bool FillOutside(node_t *node, const int hullnum)
+bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
@@ -461,12 +501,29 @@ bool FillOutside(node_t *node, const int hullnum)
         return false;
     }
 
+    // change the leaf contents
     const int outleafs = OutLeafsToSolid(node);
 
     // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
-    
-    MarkVisibleBrushSides(node);   
+    AssertBrushSidesInvisible(node);
+
+    MarkVisibleBrushSides(node);
+
+    // Count brush sides
+    int visible_brush_sides = 0;
+    int invisible_brush_sides = 0;
+    for (const auto &brush : entity->brushes) {
+        for (auto &side : brush.faces) {
+            if (side.visible) {
+                ++visible_brush_sides;
+            } else {
+                ++invisible_brush_sides;
+            }
+        }
+    }
 
     logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
+    logging::print(logging::flag::STAT, "     {:8} visible brush sides\n", visible_brush_sides);
+    logging::print(logging::flag::STAT, "     {:8} invisible brush sides\n", invisible_brush_sides);
     return true;
 }
