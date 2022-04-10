@@ -24,7 +24,7 @@
 #include <list>
 
 #include <qbsp/brush.hh>
-
+#include <qbsp/csg4.hh>
 #include <qbsp/qbsp.hh>
 
 /*

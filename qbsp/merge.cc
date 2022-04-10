@@ -21,6 +21,7 @@
 // merge.c
 
 #include <qbsp/qbsp.hh>
+#include <qbsp/csg4.hh>
 
 #ifdef PARANOID
 static void CheckColinear(face_t *f)

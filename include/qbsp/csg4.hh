@@ -21,8 +21,12 @@
 
 #pragma once
 
+#include <common/qvec.hh>
+
 #include <list>
 #include <tuple>
+
+struct face_t;
 
 int MakeSkipTexinfo();
 face_t *NewFaceFromFace(const face_t *in);

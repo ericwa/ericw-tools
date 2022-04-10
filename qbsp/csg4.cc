@@ -20,6 +20,8 @@
 */
 // csg4.c
 
+#include <qbsp/csg4.hh>
+
 #include <qbsp/qbsp.hh>
 
 #include <qbsp/brush.hh>
