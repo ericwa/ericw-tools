@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <qbsp/brush.hh>
+
 #include <common/parser.hh>
 #include "common/cmdlib.hh"
 

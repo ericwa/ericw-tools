@@ -40,6 +40,8 @@
 #include <cstring>
 #include <ctime>
 
+#include <qbsp/winding.hh>
+
 #include <common/bspfile.hh>
 #include <common/aabb.hh>
 #include <common/settings.hh>
@@ -236,9 +238,6 @@ extern settings::qbsp_settings options;
  */
 #define MAX_BSP_CLIPNODES 0xfff0
 
-// Various other geometry maximums
-constexpr size_t MAXEDGES = 64;
-
 // 0-2 are axial planes
 // 3-5 are non-axial planes snapped to the nearest
 #define PLANE_X 0
@@ -371,7 +370,6 @@ struct node_t
     bool opaque() const;
 };
 
-#include <qbsp/brush.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/solidbsp.hh>
 #include <qbsp/merge.hh>

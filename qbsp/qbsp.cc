@@ -28,6 +28,7 @@
 #include <common/fs.hh>
 #include <common/threads.hh>
 #include <common/settings.hh>
+#include <qbsp/brush.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 #include <fmt/chrono.h>

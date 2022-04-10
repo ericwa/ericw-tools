@@ -33,6 +33,7 @@
 #include <fmt/ostream.h>
 
 #include <qbsp/qbsp.hh>
+#include <qbsp/brush.hh>
 #include <common/parser.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>

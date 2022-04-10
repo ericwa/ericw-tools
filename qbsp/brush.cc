@@ -23,6 +23,8 @@
 #include <cstring>
 #include <list>
 
+#include <qbsp/brush.hh>
+
 #include <qbsp/qbsp.hh>
 
 /*

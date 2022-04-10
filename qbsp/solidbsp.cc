@@ -22,6 +22,7 @@
 #include <climits>
 
 #include <qbsp/qbsp.hh>
+#include <qbsp/brush.hh>
 
 #include <list>
 #include <atomic>

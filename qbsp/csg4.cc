@@ -22,6 +22,8 @@
 
 #include <qbsp/qbsp.hh>
 
+#include <qbsp/brush.hh>
+
 #include <atomic>
 #include <mutex>
 

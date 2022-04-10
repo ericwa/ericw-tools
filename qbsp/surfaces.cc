@@ -20,6 +20,8 @@
 */
 
 #include <qbsp/qbsp.hh>
+#include <qbsp/brush.hh>
+
 #include <map>
 #include <list>
 
