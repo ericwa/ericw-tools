@@ -20,6 +20,8 @@
 */
 // merge.c
 
+#include <qbsp/merge.hh>
+
 #include <qbsp/qbsp.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>

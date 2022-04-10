@@ -23,5 +23,8 @@
 
 #include <list>
 
+struct face_t;
+struct node_t;
+
 void MergeFaceToList(face_t *face, std::list<face_t *> &list);
 void MergeAll(node_t *headnode);
