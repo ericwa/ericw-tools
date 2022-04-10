@@ -33,6 +33,7 @@
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
 #include <qbsp/solidbsp.hh>
+#include <qbsp/surfaces.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 
