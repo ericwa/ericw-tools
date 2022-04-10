@@ -20,6 +20,7 @@
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/brush.hh>
+#include <qbsp/map.hh>
 #include <qbsp/wad.hh>
 
 #include <unordered_set>

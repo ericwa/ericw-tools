@@ -375,6 +375,5 @@ struct node_t
 #include <qbsp/portals.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
-#include <qbsp/map.hh>
 
 int qbsp_main(int argc, const char **argv);

@@ -22,6 +22,7 @@
 #include <cstring>
 #include <string>
 
+#include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 

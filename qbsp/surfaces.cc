@@ -19,10 +19,11 @@
     See file, 'COPYING', for details.
 */
 
-#include <qbsp/qbsp.hh>
-#include <qbsp/csg4.hh>
 #include <qbsp/brush.hh>
+#include <qbsp/csg4.hh>
+#include <qbsp/map.hh>
 #include <qbsp/solidbsp.hh>
+#include <qbsp/qbsp.hh>
 
 #include <map>
 #include <list>

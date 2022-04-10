@@ -29,6 +29,7 @@
 #include <common/threads.hh>
 #include <common/settings.hh>
 #include <qbsp/brush.hh>
+#include <qbsp/map.hh>
 #include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>

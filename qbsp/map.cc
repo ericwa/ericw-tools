@@ -32,13 +32,14 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
-#include <qbsp/qbsp.hh>
 #include <qbsp/brush.hh>
+#include <qbsp/map.hh>
+#include <qbsp/qbsp.hh>
+#include <qbsp/wad.hh>
+
 #include <common/parser.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
-#include <qbsp/wad.hh>
-
 #include <common/qvec.hh>
 
 #define info_player_start 1

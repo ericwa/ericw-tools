@@ -23,6 +23,7 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
+#include <qbsp/map.hh>
 #include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 

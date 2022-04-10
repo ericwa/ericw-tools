@@ -19,6 +19,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
 #include <climits>
