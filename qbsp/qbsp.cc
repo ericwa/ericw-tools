@@ -32,6 +32,7 @@
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
+#include <qbsp/portals.hh>
 #include <qbsp/solidbsp.hh>
 #include <qbsp/surfaces.hh>
 #include <qbsp/qbsp.hh>

@@ -370,7 +370,6 @@ struct node_t
     bool opaque() const;
 };
 
-#include <qbsp/portals.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
 

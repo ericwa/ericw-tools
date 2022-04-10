@@ -20,6 +20,7 @@
 */
 
 #include <qbsp/brush.hh>
+#include <qbsp/portals.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
 #include <qbsp/solidbsp.hh>
