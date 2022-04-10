@@ -320,7 +320,6 @@ struct face_t : face_fragment_t
     twosided<int16_t> lmshift;
 
     mapentity_t *src_entity; // source entity
-    face_t *original; // face on node
     qvec3d origin;
     vec_t radius;
 

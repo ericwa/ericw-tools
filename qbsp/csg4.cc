@@ -79,7 +79,6 @@ face_t *NewFaceFromFace(const face_t *in)
     newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;
     newf->planeside = in->planeside;
-    newf->original = in->original;
     newf->contents = in->contents;
     newf->lmshift = in->lmshift;
     newf->src_entity = in->src_entity;
