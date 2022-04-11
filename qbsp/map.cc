@@ -1909,7 +1909,7 @@ void LoadMapFile(void)
     logging::print(logging::flag::STAT, "\n");
 
     if (options.expand.value()) {
-        TestExpandBrushes(pWorldEnt());
+        TestExpandBrushes(map.world_entity());
     }
 }
 

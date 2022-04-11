@@ -968,7 +968,7 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     }
     PartitionBrushes(std::move(brushcopies), headnode);
 
-    //logging::percent(csgmergefaces, csgmergefaces, entity == pWorldEnt());
+    //logging::percent(csgmergefaces, csgmergefaces, entity == map.pWorldEnt());
 
     logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
     logging::print(logging::flag::STAT, "     {:8} solid leafs\n", c_solid.load());

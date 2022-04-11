@@ -586,7 +586,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
-    if (!entity->nummapbrushes && entity != pWorldEnt())
+    if (!entity->nummapbrushes && entity != map.world_entity())
         return;
 
     /*
@@ -602,8 +602,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         map.bsp.dmodels.emplace_back();
     }
 
-    if (entity != pWorldEnt()) {
-        if (entity == pWorldEnt() + 1)
+    if (entity != map.world_entity()) {
+        if (entity == map.world_entity() + 1)
             logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
 
         std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
@@ -652,7 +652,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     if (hullnum > 0) {
         nodes = SolidBSP(entity, true);
-        if (entity == pWorldEnt() && !options.nofill.value()) {
+        if (entity == map.world_entity() && !options.nofill.value()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
             if (FillOutside(entity, nodes, hullnum)) {
@@ -683,11 +683,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         if (options.forcegoodtree.value())
             nodes = SolidBSP(entity, false);
         else
-            nodes = SolidBSP(entity, entity == pWorldEnt());
+            nodes = SolidBSP(entity, entity == map.world_entity());
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        if (entity == pWorldEnt()) {
+        if (entity == map.world_entity()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
 
@@ -730,7 +730,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             TJunc(entity, nodes);
         }
 
-        if (options.objexport.value() && entity == pWorldEnt()) {
+        if (options.objexport.value() && entity == map.world_entity()) {
             ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", nodes);
         }
@@ -935,7 +935,7 @@ static void BSPX_CreateBrushList(void)
 
     for (entnum = 0; entnum < map.numentities(); entnum++) {
         ent = &map.entities.at(entnum);
-        if (ent == pWorldEnt())
+        if (ent == map.world_entity())
             modelnum = 0;
         else {
             mod = ValueForKey(ent, "model");
@@ -1015,9 +1015,9 @@ void EnsureTexturesLoaded()
 
     wadlist_tried_loading = true;
 
-    const char *wadstring = ValueForKey(pWorldEnt(), "_wad");
+    const char *wadstring = ValueForKey(map.world_entity(), "_wad");
     if (!wadstring[0])
-        wadstring = ValueForKey(pWorldEnt(), "wad");
+        wadstring = ValueForKey(map.world_entity(), "wad");
     if (!wadstring[0])
         logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
     else

@@ -627,7 +627,7 @@ void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hulln
     MakeHeadnodePortals(entity, headnode);
     CutNodePortals_r(headnode, &state);
 
-    logging::percent(splitnodes, splitnodes, entity == pWorldEnt());
+    logging::percent(splitnodes, splitnodes, entity == map.world_entity());
 
     if (hullnum <= 0) {
         /* save portal file for vis tracing */

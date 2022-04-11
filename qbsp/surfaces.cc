@@ -463,7 +463,7 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     firstface = static_cast<int>(map.bsp.dfaces.size());
     MakeFaceEdges_r(entity, headnode, 0);
-    logging::percent(splitnodes, splitnodes, entity == pWorldEnt());
+    logging::percent(splitnodes, splitnodes, entity == map.world_entity());
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();

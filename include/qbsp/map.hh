@@ -158,13 +158,13 @@ struct mapdata_t
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
 
     const std::string &texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
+
+    mapentity_t *world_entity();
 };
 
 extern mapdata_t map;
 
 void CalculateWorldExtent(void);
-
-extern mapentity_t *pWorldEnt();
 
 bool ParseEntity(parser_t &parser, mapentity_t *entity);
 

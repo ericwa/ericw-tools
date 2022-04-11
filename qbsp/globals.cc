@@ -28,7 +28,7 @@
 mapdata_t map;
 
 // Useful shortcuts
-mapentity_t *pWorldEnt()
+mapentity_t *mapdata_t::world_entity()
 {
-    return &map.entities.at(0);
+    return &entities.at(0);
 }
