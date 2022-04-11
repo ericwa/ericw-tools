@@ -46,8 +46,6 @@
 #define info_player_deathmatch 2
 #define info_player_coop 4
 
-static int rgfStartSpots;
-
 struct texdef_valve_t
 {
     qmat<vec_t, 2, 3> axis{};
@@ -441,14 +439,14 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
             // Quake II uses multiple starts for level transitions/backtracking.
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
-            if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start)) {
+            if (options.target_game->id != GAME_QUAKE_II && (map.start_spots & info_player_start)) {
                 logging::print("WARNING: Multiple info_player_start entities\n");
             }
-            rgfStartSpots |= info_player_start;
+            map.start_spots |= info_player_start;
         } else if (string_iequals(parser.token, "info_player_deathmatch")) {
-            rgfStartSpots |= info_player_deathmatch;
+            map.start_spots |= info_player_deathmatch;
         } else if (string_iequals(parser.token, "info_player_coop")) {
-            rgfStartSpots |= info_player_coop;
+            map.start_spots |= info_player_coop;
         }
     }
 }
@@ -1894,11 +1892,11 @@ void LoadMapFile(void)
     }
 
     // Print out warnings for entities
-    if (!(rgfStartSpots & info_player_start))
+    if (!(map.start_spots & info_player_start))
         logging::print("WARNING: No info_player_start entity in level\n");
-    if (!(rgfStartSpots & info_player_deathmatch))
+    if (!(map.start_spots & info_player_deathmatch))
         logging::print("WARNING: No info_player_deathmatch entities in level\n");
-    //      if (!(rgfStartSpots & info_player_coop))
+    //      if (!(map.start_spots & info_player_coop))
     //              logging::print("WARNING: No info_player_coop entities in level\n");
 
     logging::print(logging::flag::STAT, "     {:8} faces\n", map.numfaces());

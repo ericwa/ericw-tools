@@ -154,6 +154,9 @@ struct mapdata_t
     // Q2 stuff
     int32_t numareaportals;
 
+    // misc
+    int start_spots = 0;
+
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
 
