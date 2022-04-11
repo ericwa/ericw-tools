@@ -38,10 +38,6 @@ Brushes that touch still need to be split at the cut point to make a tjunction
 
 */
 
-static std::atomic<int> brushfaces;
-static int csgfaces;
-int csgmergefaces;
-
 // acquire this for anything that can't run in parallel during CSGFaces
 std::mutex csgfaces_lock;
 
