@@ -431,6 +431,8 @@ get incorrectly marked as "invisible").
 
 fixme-brushbsp: we'll want to do this for detail as well, which means building another set of
 portals for everything (not just structural).
+
+fixme-brushbsp: remember, structural covered by detail still gets marked 'visible'.
 ===========
 */
 bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
