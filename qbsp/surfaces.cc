@@ -560,6 +560,9 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
                 }
             }
         }
+
+        // fixme-brushbsp: need to continue clipping it down the bsp tree,
+        // this currently leaves bits floating in the void that happen to touch splitting nodes
         
         return;
     }
