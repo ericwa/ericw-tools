@@ -132,16 +132,8 @@ struct mapdata_t
     /* map from plane hash code to list of indicies in `planes` vector */
     std::unordered_map<int, std::vector<int>> planehash;
 
-    /* Number of items currently used */
-    int numfaces() const { return faces.size(); };
-    int numbrushes() const { return brushes.size(); };
-    int numentities() const { return entities.size(); };
-    int numplanes() const { return planes.size(); };
-    int nummiptex() const { return miptex.size(); };
-    int numtexinfo() const { return mtexinfos.size(); };
-
     /* Misc other global state for the compile process */
-    bool leakfile; /* Flag once we've written a leak (.por/.pts) file */
+    bool leakfile = false; /* Flag once we've written a leak (.por/.pts) file */
 
     // Final, exported BSP
     mbsp_t bsp;
@@ -152,7 +144,7 @@ struct mapdata_t
     std::vector<uint8_t> exported_bspxbrushes;
 
     // Q2 stuff
-    int32_t numareaportals;
+    int32_t numareaportals = 0;
 
     // misc
     int start_spots = 0;

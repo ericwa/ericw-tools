@@ -122,11 +122,11 @@ static void AddAnimTex(const char *name)
     snprintf(framename, sizeof(framename), "%s", name);
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
-        for (j = 0; j < map.nummiptex(); j++) {
+        for (j = 0; j < map.miptex.size(); j++) {
             if (!Q_strcasecmp(framename, map.miptex.at(j).name.c_str()))
                 break;
         }
-        if (j < map.nummiptex())
+        if (j < map.miptex.size())
             continue;
 
         map.miptex.push_back({framename});
@@ -171,7 +171,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             extended_info = extended_texinfo_t{};
         }
 
-        for (i = 0; i < map.nummiptex(); i++) {
+        for (i = 0; i < map.miptex.size(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str())) {
@@ -198,7 +198,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             extended_info = extended_texinfo_t{};
         }
 
-        for (i = 0; i < map.nummiptex(); i++) {
+        for (i = 0; i < map.miptex.size(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
@@ -1899,11 +1899,11 @@ void LoadMapFile(void)
     //      if (!(map.start_spots & info_player_coop))
     //              logging::print("WARNING: No info_player_coop entities in level\n");
 
-    logging::print(logging::flag::STAT, "     {:8} faces\n", map.numfaces());
-    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.numbrushes());
-    logging::print(logging::flag::STAT, "     {:8} entities\n", map.numentities());
-    logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.nummiptex());
-    logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.numtexinfo());
+    logging::print(logging::flag::STAT, "     {:8} faces\n", map.faces.size());
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.brushes.size());
+    logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());
+    logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.miptex.size());
+    logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.mtexinfos.size());
     logging::print(logging::flag::STAT, "\n");
 
     if (options.expand.value()) {

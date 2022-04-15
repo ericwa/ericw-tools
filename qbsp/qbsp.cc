@@ -648,7 +648,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         logging::print(logging::flag::STAT, "     {:8} liquid brushes\n", stats.liquid);
     }
 
-    logging::print(logging::flag::STAT, "     {:8} planes\n", map.numplanes());
+    logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
 
     if (hullnum > 0) {
         nodes = SolidBSP(entity, true);
@@ -757,14 +757,14 @@ UpdateEntLump
 */
 static void UpdateEntLump(void)
 {
-    int modnum, i;
+    int modnum;
     char modname[10];
     mapentity_t *entity;
 
     logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
     modnum = 1;
-    for (i = 1; i < map.numentities(); i++) {
+    for (int i = 1; i < map.entities.size(); i++) {
         entity = &map.entities.at(i);
 
         /* Special handling for misc_external_map.
@@ -922,10 +922,6 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
 /* for generating BRUSHLIST bspx lump */
 static void BSPX_CreateBrushList(void)
 {
-    mapentity_t *ent;
-    int entnum;
-    int modelnum;
-    const char *mod;
     struct bspxbrushes_s ctx;
 
     if (!options.wrbrushes.value())
@@ -933,12 +929,13 @@ static void BSPX_CreateBrushList(void)
 
     BSPX_Brushes_Init(&ctx);
 
-    for (entnum = 0; entnum < map.numentities(); entnum++) {
-        ent = &map.entities.at(entnum);
-        if (ent == map.world_entity())
+    for (int entnum = 0; entnum < map.entities.size(); ++entnum) {
+        mapentity_t *ent = &map.entities.at(entnum);
+        int modelnum;
+        if (ent == map.world_entity()) {
             modelnum = 0;
-        else {
-            mod = ValueForKey(ent, "model");
+        } else {
+            const char *mod = ValueForKey(ent, "model");
             if (*mod != '*')
                 continue;
             modelnum = atoi(mod + 1);

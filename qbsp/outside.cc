@@ -298,7 +298,7 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 {
     std::vector<node_t *> result;
 
-    for (int i = 1; i < map.numentities(); i++) {
+    for (int i = 1; i < map.entities.size(); i++) {
         mapentity_t *entity = &map.entities.at(i);
 
         /* skip entities at (0 0 0) (bmodels) */

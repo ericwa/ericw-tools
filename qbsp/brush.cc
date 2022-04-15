@@ -995,7 +995,7 @@ brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
          * We no longer care about the order of adding func_detail and func_group,
          * Entity_SortBrushes will sort the brushes
          */
-        for (int i = 1; i < map.numentities(); i++) {
+        for (int i = 1; i < map.entities.size(); i++) {
             mapentity_t *source = &map.entities.at(i);
 
             /* Load external .map and change the classname, if needed */
