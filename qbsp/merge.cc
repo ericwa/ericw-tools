@@ -229,9 +229,14 @@ void MergeAll(node_t *headnode)
     CollectNodes_R(headnode, allnodes);
 
     tbb::parallel_for_each(allnodes, [&](node_t *node) {
-        premergefaces += node->facelist.size();
+        const size_t before = node->facelist.size();
+
         node->facelist = MergeFaceList(node->facelist);
-        mergefaces += node->facelist.size();
+
+        const size_t after = node->facelist.size();
+
+        premergefaces += before;
+        mergefaces += after;
     });
 
     logging::print(logging::flag::STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces,
