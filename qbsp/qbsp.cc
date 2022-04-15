@@ -702,9 +702,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 // make a really good tree
                 nodes = SolidBSP(entity, false);
 
-                // merge polygons
-                MergeAll(nodes);
-
                 // make the real portals for vis tracing
                 PortalizeWorld(entity, nodes, hullnum);
             }
@@ -717,6 +714,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         }
 
         MakeVisibleFaces(entity, nodes);
+
+        // merge polygons
+        MergeAll(nodes);
 
         // needs to come after any face creation
         MakeMarkFaces(entity, nodes);
