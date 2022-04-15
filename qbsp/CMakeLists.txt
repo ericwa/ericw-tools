@@ -41,13 +41,15 @@ install(TARGETS qbsp RUNTIME DESTINATION bin)
 add_custom_command(TARGET qbsp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:qbsp>")
 
-# test (copied from light/CMakeLists.txt)
+# test (see: https://google.github.io/googletest/quickstart-cmake.html)
+
+enable_testing()
 
 set(QBSP_TEST_SOURCE 
 	test.cc
 	test_qbsp.cc)
-
-add_executable(testqbsp EXCLUDE_FROM_ALL ${QBSP_TEST_SOURCE})
-add_test(testqbsp testqbsp)
-
+add_executable(testqbsp ${QBSP_TEST_SOURCE})
 target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest fmt::fmt)
+
+include(GoogleTest)
+gtest_discover_tests(testqbsp)

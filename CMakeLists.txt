@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.14)
 cmake_policy(SET CMP0028 NEW)
 
 project (ericw-tools)
@@ -31,14 +31,20 @@ if (UNIX)
 endif (UNIX)
 
 # set our C/C++ dialects
-if (CMAKE_VERSION VERSION_LESS "3.1")
-	set (CMAKE_CXX_FLAGS "-std=gnu++11 ${CMAKE_CXX_FLAGS}")
-	set (CMAKE_C_FLAGS "-std=gnu11 ${CMAKE_C_FLAGS}")
-else ()
-	set(CMAKE_CXX_STANDARD 17)
-	set(CMAKE_CXX_STANDARD_REQUIRED ON)
-	set(CMAKE_C_STANDARD 99)
-endif ()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 99)
+
+# GoogleTest quickstart https://google.github.io/googletest/quickstart-cmake.html
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/609281088cfefc76f9d0ce82e1ff6c30cc3591e5.zip
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+# end GoogleTest setup
 
 add_definitions(-DERICWTOOLS_VERSION=${GIT_DESCRIBE})
 
