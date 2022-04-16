@@ -682,6 +682,7 @@ public:
     setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
     setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group, "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
     setting_string basedir{this, "basedir", "", "dir_name", &game_group, "override the default game base directory"};
+    setting_bool q2rtx{this, "q2rtx", false, &game_group, "adjust settings to best support Q2RTX"};
 
     virtual void setParameters(int argc, const char **argv);
 

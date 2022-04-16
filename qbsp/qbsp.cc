@@ -58,24 +58,30 @@ void qbsp_settings::initialize(int argc, const char **argv)
         logging::print("Loading options from qbsp.ini\n");
         parse(parser_t(file->data(), file->size()));
     }
+    
+    try
+    {
+        auto remainder = parse(token_parser_t(argc - 1, argv + 1));
 
-    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
+        if (remainder.size() <= 0 || remainder.size() > 2) {
+            printHelp();
+        }
 
-    if (remainder.size() <= 0 || remainder.size() > 2) {
-        printHelp();
+        options.szMapName = remainder[0];
+
+        if (remainder.size() == 2) {
+            options.szBSPName = remainder[1];
+        }
     }
-
-    options.szMapName = remainder[0];
-
-    if (remainder.size() == 2) {
-        options.szBSPName = remainder[1];
+    catch (parse_exception ex)
+    {
+        logging::print(ex.what());
+        printHelp();
     }
 }
 
 void qbsp_settings::postinitialize(int argc, const char **argv)
 {
-    common_settings::postinitialize(argc, argv);
-
     // side effects from common
     if (logging::mask & logging::flag::VERBOSE) {
         options.fAllverbose = true;
@@ -138,6 +144,19 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
             wadpaths.addPath(wp);
         }
     }
+
+    // side effects from q2rtx
+    if (q2rtx.value()) {
+        if (!subdivide.isChanged()) {
+            subdivide.setValueLocked(0);
+        }
+
+        if (!includeskip.isChanged()) {
+            includeskip.setValueLocked(true);
+        }
+    }
+
+    common_settings::postinitialize(argc, argv);
 }
 }; // namespace settings
 
@@ -659,7 +678,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "     {:8} planes\n", map.numplanes());
 
-    if (entity->brushes.empty() && hullnum) {
+    if (entity->brushes.empty() && hullnum && entity != pWorldEnt()) {
         PrintEntity(entity);
         FError("Entity with no valid brushes");
     }
