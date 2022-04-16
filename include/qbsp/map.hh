@@ -155,6 +155,8 @@ struct mapdata_t
     const std::string &texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
 
     mapentity_t *world_entity();
+
+    void reset();
 };
 
 extern mapdata_t map;

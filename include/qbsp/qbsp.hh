@@ -368,4 +368,6 @@ struct node_t
     bool opaque() const;
 };
 
+void ProcessFile();
+
 int qbsp_main(int argc, const char **argv);

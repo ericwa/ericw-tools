@@ -1040,7 +1040,7 @@ void EnsureTexturesLoaded()
 ProcessFile
 =================
 */
-static void ProcessFile(void)
+void ProcessFile()
 {
     // load brushes and entities
     LoadMapFile();

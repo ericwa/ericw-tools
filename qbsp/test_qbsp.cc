@@ -2,6 +2,7 @@
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
+#include <common/fs.hh>
 #include <testmaps.hh>
 
 #include <cstring>
@@ -33,6 +34,33 @@ static mapentity_t LoadMap(const char *map)
     CalculateWorldExtent();
 
     return worldspawn;
+}
+
+static mbsp_t LoadTestmap(const std::filesystem::path &name)
+{
+    map.reset();
+
+    options.szMapName = std::filesystem::path(testmaps_dir) / name;
+    options.szBSPName = options.szMapName;
+    options.szBSPName.replace_extension(".bsp");
+
+    options.target_version = &bspver_q1;
+    options.target_game = options.target_version->game;
+
+    ProcessFile();
+
+    // re-open the .bsp and return it
+
+    options.szBSPName.replace_extension("bsp");
+    
+    bspdata_t bspdata;
+    LoadBSPFile(options.szBSPName, &bspdata);
+
+    bspdata.version->game->init_filesystem(options.szBSPName, options);
+
+    ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    return std::get<mbsp_t>(bspdata.bsp);
 }
 
 static const texvecf &GetTexvecs(const char *map, const char *texname)
@@ -224,4 +252,17 @@ TEST(mathlib, WindingArea)
     w[4] = {64, 0, 0};
 
     EXPECT_EQ(64.0f * 64.0f, w.area());
+}
+
+TEST(qsbsp, simple_sealed2)
+{
+    mbsp_t result = LoadTestmap("qbsp_simple_sealed2.map");
+
+    ASSERT_EQ(map.brushes.size(), 14);
+
+    ASSERT_EQ(result.dleafs.size(), 3);
+    
+    ASSERT_EQ(result.dleafs[0].contents, CONTENTS_SOLID);
+    ASSERT_EQ(result.dleafs[1].contents, CONTENTS_EMPTY);
+    ASSERT_EQ(result.dleafs[2].contents, CONTENTS_EMPTY);
 }

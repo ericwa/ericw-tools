@@ -32,3 +32,7 @@ mapentity_t *mapdata_t::world_entity()
 {
     return &entities.at(0);
 }
+
+void mapdata_t::reset() {
+    *this = mapdata_t {};
+}
