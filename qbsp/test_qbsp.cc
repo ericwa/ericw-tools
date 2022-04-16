@@ -257,6 +257,21 @@ TEST(mathlib, WindingArea)
     EXPECT_EQ(64.0f * 64.0f, w.area());
 }
 
+TEST(qsbsp, simple_sealed)
+{
+    mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
+
+    ASSERT_EQ(map.brushes.size(), 6);
+
+    ASSERT_EQ(result.dleafs.size(), 2);
+
+    ASSERT_EQ(result.dleafs[0].contents, CONTENTS_SOLID);
+    ASSERT_EQ(result.dleafs[1].contents, CONTENTS_EMPTY);
+    
+    // just a hollow box
+    ASSERT_EQ(result.dfaces.size(), 6);
+}
+
 TEST(qsbsp, simple_sealed2)
 {
     mbsp_t result = LoadTestmap("qbsp_simple_sealed2.map");
