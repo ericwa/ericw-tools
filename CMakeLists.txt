@@ -88,6 +88,11 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 find_package(TBB REQUIRED)
 
+# just creates testmaps.hh with absolute path to the testmaps source directory.
+# include it as #include <testmaps.hh>
+configure_file(testmaps.hh.in testmaps.hh @ONLY)
+include_directories(${CMAKE_BINARY_DIR})
+
 add_subdirectory(3rdparty)
 add_subdirectory(common)
 add_subdirectory(bspinfo)

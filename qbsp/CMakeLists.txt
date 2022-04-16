@@ -45,9 +45,10 @@ add_custom_command(TARGET qbsp POST_BUILD
 
 enable_testing()
 
-set(QBSP_TEST_SOURCE 
+set(QBSP_TEST_SOURCE
 	test.cc
-	test_qbsp.cc)
+	test_qbsp.cc
+	${CMAKE_BINARY_DIR}/testmaps.hh)
 add_executable(testqbsp ${QBSP_TEST_SOURCE})
 target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest fmt::fmt)
 

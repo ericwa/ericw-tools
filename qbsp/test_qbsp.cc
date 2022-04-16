@@ -2,6 +2,7 @@
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
+#include <testmaps.hh>
 
 #include <cstring>
 
