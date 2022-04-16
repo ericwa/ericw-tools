@@ -523,6 +523,66 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
     MakeMarkFaces(entity, node->children[1]);
 }
 
+static std::list<face_t *> ClipFacesToTree_r(node_t *node, std::list<face_t *> faces)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        if (node->contents.is_solid(options.target_game)) {
+            // solids eat any faces that reached this point
+            return {};
+        }
+        // other content types let the faces thorugh
+        // fixme-brushbsp: detail?
+        return faces;
+    }
+
+    const qbsp_plane_t &splitplane = map.planes[node->planenum];
+
+    std::list<face_t *> front, back;
+
+    for (auto *face : faces) {
+        auto [frontFragment, backFragment] = SplitFace(face, splitplane);
+        if (frontFragment) {
+            front.push_back(frontFragment);            
+        }
+        if (backFragment) {
+            back.push_back(backFragment);
+        }
+    }
+
+    front = ClipFacesToTree_r(node->children[0], front);
+    back = ClipFacesToTree_r(node->children[1], back);
+
+    // merge lists
+    front.splice(front.end(), back);
+
+    return front;
+}
+
+static std::list<face_t*> ClipFacesToTree(node_t* node, std::list<face_t*> faces)
+{
+    // handles the first level - faces are all supposed to be lying exactly on `node`
+    for (auto *face : faces) {
+        Q_assert(face->planenum == node->planenum);
+    }
+
+    std::list<face_t *> front, back;
+    for (auto *face : faces) {
+        if (face->planeside == 0) {
+            front.push_back(face);
+        } else {
+            back.push_back(face);
+        }
+    }
+
+    front = ClipFacesToTree_r(node->children[0], front);
+    back = ClipFacesToTree_r(node->children[1], back);
+
+    // merge lists
+    front.splice(front.end(), back);
+
+    return front;
+}
+
 static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush, node_t* node)
 {
     if (node->planenum == PLANENUM_LEAF) {
@@ -537,9 +597,13 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
         ++c_nodefaces;
 
         // csg it
-        auto csgfaces = CSGFace(face, entity, srcbrush, node);
+        std::list<face_t *> faces = CSGFace(face, entity, srcbrush, node);
 
-        for (face_t *csgface : csgfaces) {
+        // clip them to the descendant parts of the BSP
+        // (otherwise we could have faces floating in the void on this node)
+        faces = ClipFacesToTree(node, faces);
+
+        for (face_t *csgface : faces) {
             // subdivide large faces
             // fixme-brushbsp: weird calling convention
             auto parts = std::list<face_t *>{csgface};

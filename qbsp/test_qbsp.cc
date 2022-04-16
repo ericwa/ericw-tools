@@ -40,6 +40,9 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name)
 {
     map.reset();
 
+    options.nopercent.setValue(true);
+    options.noprogress.setValue(true);
+
     options.szMapName = std::filesystem::path(testmaps_dir) / name;
     options.szBSPName = options.szMapName;
     options.szBSPName.replace_extension(".bsp");
@@ -265,4 +268,8 @@ TEST(qsbsp, simple_sealed2)
     ASSERT_EQ(result.dleafs[0].contents, CONTENTS_SOLID);
     ASSERT_EQ(result.dleafs[1].contents, CONTENTS_EMPTY);
     ASSERT_EQ(result.dleafs[2].contents, CONTENTS_EMPTY);
+
+    // L-shaped room
+    // 2 ceiling + 2 floor + 6 wall faces
+    ASSERT_EQ(result.dfaces.size(), 10);
 }
