@@ -222,8 +222,8 @@ public:
     bool fNoverbose = false;
     const bspversion_t *target_version;
     const gamedef_t *target_game;
-    fs::path szMapName;
-    fs::path szBSPName;
+    fs::path map_path;
+    fs::path bsp_path;
 };
 }; // namespace settings
 

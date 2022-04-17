@@ -75,10 +75,10 @@ void qbsp_settings::initialize(int argc, const char **argv)
         printHelp();
     }
 
-    options.szMapName = remainder[0];
+    options.map_path = remainder[0];
 
     if (remainder.size() == 2) {
-        options.szBSPName = remainder[1];
+        options.bsp_path = remainder[1];
     }
 }
 
@@ -140,9 +140,9 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
     /* If no wadpath given, default to the map directory */
     if (wadpaths.pathsValue().empty()) {
-        wadpath wp{options.szMapName.parent_path(), false};
+        wadpath wp{options.map_path.parent_path(), false};
 
-        // If options.szMapName is a relative path, StrippedFilename will return the empty string.
+        // If options.map_path is a relative path, StrippedFilename will return the empty string.
         // In that case, don't add it as a wad path.
         if (!wp.path.empty()) {
             wadpaths.addPath(wp);
@@ -1025,7 +1025,7 @@ void EnsureTexturesLoaded()
             logging::print("WARNING: No valid WAD filenames in worldmodel\n");
 
         /* Try the default wad name */
-        fs::path defaultwad = options.szMapName;
+        fs::path defaultwad = options.map_path;
         defaultwad.replace_extension("wad");
 
         WADList_Init(defaultwad.string().c_str());
@@ -1090,40 +1090,40 @@ static void InitQBSP(int argc, const char **argv)
 {
     options.run(argc, argv);
 
-    options.szMapName.replace_extension("map");
+    options.map_path.replace_extension("map");
 
     // The .map extension gets removed right away anyways...
-    if (options.szBSPName.empty())
-        options.szBSPName = options.szMapName;
+    if (options.bsp_path.empty())
+        options.bsp_path = options.map_path;
 
     /* Start logging to <bspname>.log */
-    logging::init(fs::path(options.szBSPName).replace_extension("log"), options);
+    logging::init(fs::path(options.bsp_path).replace_extension("log"), options);
 
     // Remove already existing files
     if (!options.onlyents.value() && options.convertmapformat.value() == conversion_t::none) {
-        options.szBSPName.replace_extension("bsp");
-        remove(options.szBSPName);
+        options.bsp_path.replace_extension("bsp");
+        remove(options.bsp_path);
 
         // Probably not the best place to do this
-        logging::print("Input file: {}\n", options.szMapName);
-        logging::print("Output file: {}\n\n", options.szBSPName);
+        logging::print("Input file: {}\n", options.map_path);
+        logging::print("Output file: {}\n\n", options.bsp_path);
 
-        fs::path prtfile = options.szBSPName;
+        fs::path prtfile = options.bsp_path;
         prtfile.replace_extension("prt");
         remove(prtfile);
 
-        fs::path ptsfile = options.szBSPName;
+        fs::path ptsfile = options.bsp_path;
         ptsfile.replace_extension("pts");
         remove(ptsfile);
 
-        fs::path porfile = options.szBSPName;
+        fs::path porfile = options.bsp_path;
         porfile.replace_extension("por");
         remove(porfile);
     }
 
     // onlyents might not load this yet
     if (options.target_game) {
-        options.target_game->init_filesystem(options.szMapName, options);
+        options.target_game->init_filesystem(options.map_path, options);
     }
 }
 

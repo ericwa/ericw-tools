@@ -251,7 +251,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     NumberLeafs_r(headnode, state, -1);
 
     // write the file
-    fs::path name = options.szBSPName;
+    fs::path name = options.bsp_path;
     name.replace_extension("prt");
 
     std::ofstream portalFile(name, std::ios_base::binary | std::ios_base::out);

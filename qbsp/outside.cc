@@ -259,7 +259,7 @@ leakline should be a sequence of portals leading from leakentity to the void
 */
 static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<portal_t *> &leakline)
 {
-    fs::path name = options.szBSPName;
+    fs::path name = options.bsp_path;
     name.replace_extension("pts");
 
     std::ofstream ptsfile(name);
@@ -479,7 +479,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
-        fs::path name = options.szBSPName;
+        fs::path name = options.bsp_path;
         name.replace_extension("prt");
         remove(name);
 

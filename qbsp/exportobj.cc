@@ -30,24 +30,24 @@
 
 static std::ofstream InitObjFile(const std::string &filesuffix)
 {
-    fs::path name = options.szBSPName;
-    name.replace_filename(options.szBSPName.stem().string() + "_" + filesuffix).replace_extension("obj");
+    fs::path name = options.bsp_path;
+    name.replace_filename(options.bsp_path.stem().string() + "_" + filesuffix).replace_extension("obj");
 
     std::ofstream objfile(name);
     if (!objfile)
-        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", options.bsp_path, strerror(errno));
 
     return objfile;
 }
 
 static std::ofstream InitMtlFile(const std::string &filesuffix)
 {
-    fs::path name = options.szBSPName;
-    name.replace_filename(options.szBSPName.stem().string() + "_" + filesuffix).replace_extension("mtl");
+    fs::path name = options.bsp_path;
+    name.replace_filename(options.bsp_path.stem().string() + "_" + filesuffix).replace_extension("mtl");
 
     std::ofstream file(name);
     if (!file)
-        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", options.bsp_path, strerror(errno));
 
     return file;
 }

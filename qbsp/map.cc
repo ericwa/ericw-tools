@@ -1869,10 +1869,10 @@ void LoadMapFile(void)
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     {
-        auto file = fs::load(options.szMapName);
+        auto file = fs::load(options.map_path);
 
         if (!file) {
-            FError("Couldn't load map file \"{}\".\n", options.szMapName);
+            FError("Couldn't load map file \"{}\".\n", options.map_path);
             return;
         }
 
@@ -2078,8 +2078,8 @@ void ConvertMapFile(void)
         default: FError("Internal error: unknown conversion_t\n");
     }
 
-    fs::path filename = options.szBSPName;
-    filename.replace_filename(options.szBSPName.stem().string() + append);
+    fs::path filename = options.bsp_path;
+    filename.replace_filename(options.bsp_path.stem().string() + append);
 
     std::ofstream f(filename);
 

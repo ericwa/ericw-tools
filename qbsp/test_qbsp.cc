@@ -43,9 +43,9 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name)
     options.nopercent.setValue(true);
     options.noprogress.setValue(true);
 
-    options.szMapName = std::filesystem::path(testmaps_dir) / name;
-    options.szBSPName = options.szMapName;
-    options.szBSPName.replace_extension(".bsp");
+    options.map_path = std::filesystem::path(testmaps_dir) / name;
+    options.bsp_path = options.map_path;
+    options.bsp_path.replace_extension(".bsp");
 
     options.target_version = &bspver_q1;
     options.target_game = options.target_version->game;
@@ -55,17 +55,17 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name)
     if (strlen(test_quake_maps_dir) > 0) {
         auto dest = fs::path(test_quake_maps_dir) / name;
         dest.replace_extension(".bsp");
-        fs::copy(options.szBSPName, dest, fs::copy_options::overwrite_existing);
+        fs::copy(options.bsp_path, dest, fs::copy_options::overwrite_existing);
     }
 
     // re-open the .bsp and return it
 
-    options.szBSPName.replace_extension("bsp");
+    options.bsp_path.replace_extension("bsp");
     
     bspdata_t bspdata;
-    LoadBSPFile(options.szBSPName, &bspdata);
+    LoadBSPFile(options.bsp_path, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.szBSPName, options);
+    bspdata.version->game->init_filesystem(options.bsp_path, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
