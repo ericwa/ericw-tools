@@ -152,7 +152,7 @@ public:
     setting_bool nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"};
     setting_bool onlyents{this, "onlyents", false, &map_development_group, "only updates .MAP entities"};
     setting_bool splitsky{this, "splitsky", false, &debugging_group, "doesn't combine sky faces into one large face"};
-    setting_bool splitturb{this, {"litwater", "splitturb"}, false, &common_format_group,
+    setting_bool splitturb{this, {"litwater", "splitturb"}, true, &common_format_group,
         "doesn't combine water faces into one large face"};
     setting_redirect splitspecial{this, "splitspecial", {&splitsky, &splitturb}, &debugging_group,
         "doesn't combine sky and water faces into one large face (splitturb + splitsky)"};
@@ -207,6 +207,7 @@ public:
         this, "expand", false, &common_format_group, "write hull 1 expanded brushes to expanded.map for debugging"};
     setting_wadpathset wadpaths{this, {"wadpath", "xwadpath"}, &debugging_group,
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
+    setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
 
     virtual void setParameters(int argc, const char **argv) override
     {

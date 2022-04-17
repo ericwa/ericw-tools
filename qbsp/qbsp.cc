@@ -68,24 +68,30 @@ void qbsp_settings::initialize(int argc, const char **argv)
         logging::print("Loading options from qbsp.ini\n");
         parse(parser_t(file->data(), file->size()));
     }
+    
+    try
+    {
+        auto remainder = parse(token_parser_t(argc - 1, argv + 1));
 
-    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
+        if (remainder.size() <= 0 || remainder.size() > 2) {
+            printHelp();
+        }
 
-    if (remainder.size() <= 0 || remainder.size() > 2) {
-        printHelp();
+        options.map_path = remainder[0];
+
+        if (remainder.size() == 2) {
+            options.bsp_path = remainder[1];
+        }
     }
-
-    options.map_path = remainder[0];
-
-    if (remainder.size() == 2) {
-        options.bsp_path = remainder[1];
+    catch (parse_exception ex)
+    {
+        logging::print(ex.what());
+        printHelp();
     }
 }
 
 void qbsp_settings::postinitialize(int argc, const char **argv)
 {
-    common_settings::postinitialize(argc, argv);
-
     // side effects from common
     if (logging::mask & logging::flag::VERBOSE) {
         options.fAllverbose = true;
@@ -148,6 +154,23 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
             wadpaths.addPath(wp);
         }
     }
+
+    // side effects from q2rtx
+    if (q2rtx.value()) {
+        if (!subdivide.isChanged()) {
+            subdivide.setValueLocked(0);
+        }
+
+        if (!includeskip.isChanged()) {
+            includeskip.setValueLocked(true);
+        }
+        
+        if (!notriggermodels.isChanged()) {
+            notriggermodels.setValueLocked(true);
+        }
+    }
+
+    common_settings::postinitialize(argc, argv);
 }
 }; // namespace settings
 
@@ -596,24 +619,31 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     if (IsWorldBrushEntity(entity) || IsNonRemoveWorldBrushEntity(entity))
         return;
 
+    // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
+    bool discarded_trigger = (entity != map.world_entity() &&
+        options.notriggermodels.value() &&
+        entity->mapbrush(0).face(0).texname.find_last_of("trigger") == entity->mapbrush(0).face(0).texname.size() - strlen("trigger"));
+
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
-    if (!entity->outputmodelnumber.has_value()) {
-        entity->outputmodelnumber = map.bsp.dmodels.size();
-        map.bsp.dmodels.emplace_back();
-    }
+    if (!discarded_trigger) {
+        if (!entity->outputmodelnumber.has_value()) {
+            entity->outputmodelnumber = map.bsp.dmodels.size();
+            map.bsp.dmodels.emplace_back();
+        }
 
-    if (entity != map.world_entity()) {
-        if (entity == map.world_entity() + 1)
-            logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
+        if (entity != map.world_entity()) {
+            if (entity == map.world_entity() + 1)
+                logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
 
-        std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
+            std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
 
-        if (options.fVerbose)
-            PrintEntity(entity);
+            if (options.fVerbose)
+                PrintEntity(entity);
 
-        if (hullnum <= 0)
-            logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
-        SetKeyValue(entity, "model", mod.c_str());
+            if (hullnum <= 0)
+                logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
+            SetKeyValue(entity, "model", mod.c_str());
+        }
     }
 
     /*
@@ -627,6 +657,14 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
     auto stats = Brush_LoadEntity(entity, hullnum);
+
+    // we're discarding the brush
+    if (discarded_trigger) {
+        entity->brushes.clear();
+        SetKeyValue(entity, "mins", fmt::to_string(entity->bounds.mins()).c_str());
+        SetKeyValue(entity, "maxs", fmt::to_string(entity->bounds.maxs()).c_str());
+        return;
+    }
 
     /* Print brush counts */
     if (stats.solid) {
