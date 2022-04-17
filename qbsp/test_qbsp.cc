@@ -303,6 +303,10 @@ TEST(qsbsp, simple_worldspawn_worldspawn)
     // 1 for the button
     ASSERT_EQ(map.brushes.size(), 7);
 
+    // 1 solid leaf
+    // 5 empty leafs around the button
+    ASSERT_EQ(bsp.dleafs.size(), 6);
+
     // 5 faces for the "button"
     // 9 faces for the room (6 + 3 extra for the floor splits)
     ASSERT_EQ(bsp.dfaces.size(), 14);
@@ -313,4 +317,17 @@ TEST(qsbsp, simple_worldspawn_worldspawn)
         auto& name = bsp.dtex.textures[bsp.texinfo[face.texinfo].miptex].name;
         // TODO: count faces by texture
     }
+}
+
+TEST(qsbsp, simple_worldspawn_detail_wall)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_wall.map");
+
+    // 6 for the room
+    // 1 for the button
+    ASSERT_EQ(map.brushes.size(), 7);
+
+    // 5 faces for the "button"
+    // 6 faces for the room
+    ASSERT_EQ(bsp.dfaces.size(), 11);
 }
