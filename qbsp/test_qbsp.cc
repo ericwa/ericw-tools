@@ -52,6 +52,12 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name)
 
     ProcessFile();
 
+    if (strlen(test_quake_maps_dir) > 0) {
+        auto dest = fs::path(test_quake_maps_dir) / name;
+        dest.replace_extension(".bsp");
+        fs::copy(options.szBSPName, dest, fs::copy_options::overwrite_existing);
+    }
+
     // re-open the .bsp and return it
 
     options.szBSPName.replace_extension("bsp");

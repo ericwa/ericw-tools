@@ -88,6 +88,9 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 find_package(TBB REQUIRED)
 
+set(TEST_QUAKE_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake maps to this directory (useful for testing in game)")
+set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake 2 maps to this directory (useful for testing in game)")
+
 # just creates testmaps.hh with absolute path to the testmaps source directory.
 # include it as #include <testmaps.hh>
 configure_file(testmaps.hh.in testmaps.hh @ONLY)
