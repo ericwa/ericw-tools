@@ -288,3 +288,23 @@ TEST(qsbsp, simple_sealed2)
     // 2 ceiling + 2 floor + 6 wall faces
     ASSERT_EQ(result.dfaces.size(), 10);
 }
+
+TEST(qsbsp, simple_worldspawn_worldspawn)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_worldspawn.map");
+
+    // 6 for the room
+    // 1 for the button
+    ASSERT_EQ(map.brushes.size(), 7);
+
+    // 5 faces for the "button"
+    // 9 faces for the room (6 + 3 extra for the floor splits)
+    ASSERT_EQ(bsp.dfaces.size(), 14);
+
+    int fan_faces = 0;
+    int room_faces = 0;
+    for (auto &face : bsp.dfaces) {
+        auto& name = bsp.dtex.textures[bsp.texinfo[face.texinfo].miptex].name;
+        // TODO: count faces by texture
+    }
+}
