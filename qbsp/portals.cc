@@ -251,11 +251,12 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     NumberLeafs_r(headnode, state, -1);
 
     // write the file
-    options.szBSPName.replace_extension("prt");
+    fs::path name = options.szBSPName;
+    name.replace_extension("prt");
 
-    std::ofstream portalFile(options.szBSPName, std::ios_base::binary | std::ios_base::out);
+    std::ofstream portalFile(name, std::ios_base::binary | std::ios_base::out);
     if (!portalFile)
-        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", name, strerror(errno));
 
     // q2 uses a PRT1 file, but with clusters.
     // (Since q2bsp natively supports clusters, we don't need PRT2.)

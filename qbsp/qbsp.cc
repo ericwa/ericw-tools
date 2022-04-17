@@ -1108,14 +1108,17 @@ static void InitQBSP(int argc, const char **argv)
         logging::print("Input file: {}\n", options.szMapName);
         logging::print("Output file: {}\n\n", options.szBSPName);
 
-        options.szBSPName.replace_extension("prt");
-        remove(options.szBSPName);
+        fs::path prtfile = options.szBSPName;
+        prtfile.replace_extension("prt");
+        remove(prtfile);
 
-        options.szBSPName.replace_extension("pts");
-        remove(options.szBSPName);
+        fs::path ptsfile = options.szBSPName;
+        ptsfile.replace_extension("pts");
+        remove(ptsfile);
 
-        options.szBSPName.replace_extension("por");
-        remove(options.szBSPName);
+        fs::path porfile = options.szBSPName;
+        porfile.replace_extension("por");
+        remove(porfile);
     }
 
     // onlyents might not load this yet

@@ -72,18 +72,6 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
     }
 }
 
-static std::ofstream InitPtsFile(void)
-{
-    options.szBSPName.replace_extension("pts");
-
-    std::ofstream ptsfile(options.szBSPName);
-
-    if (!ptsfile)
-        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
-
-    return ptsfile;
-}
-
 static void ClearOccupied_r(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF) {
@@ -271,7 +259,13 @@ leakline should be a sequence of portals leading from leakentity to the void
 */
 static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<portal_t *> &leakline)
 {
-    std::ofstream ptsfile = InitPtsFile();
+    fs::path name = options.szBSPName;
+    name.replace_extension("pts");
+
+    std::ofstream ptsfile(name);
+
+    if (!ptsfile)
+        FError("Failed to open {}: {}", name, strerror(errno));
 
     qvec3d prevpt = leakentity->origin;
 
@@ -284,7 +278,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
         prevpt = currpt;
     }
 
-    logging::print("Leak file written to {}\n", options.szBSPName);
+    logging::print("Leak file written to {}\n", name);
 }
 
 /*
@@ -485,8 +479,9 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
-        options.szBSPName.replace_extension("prt");
-        remove(options.szBSPName);
+        fs::path name = options.szBSPName;
+        name.replace_extension("prt");
+        remove(name);
 
         if (options.leaktest.value()) {
             logging::print("Aborting because -leaktest was used.\n");
