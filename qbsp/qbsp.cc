@@ -154,6 +154,10 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         if (!includeskip.isChanged()) {
             includeskip.setValueLocked(true);
         }
+        
+        if (!notriggermodels.isChanged()) {
+            notriggermodels.setValueLocked(true);
+        }
     }
 
     common_settings::postinitialize(argc, argv);
@@ -624,24 +628,31 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     if (IsWorldBrushEntity(entity) || IsNonRemoveWorldBrushEntity(entity))
         return;
 
+    // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
+    bool discarded_trigger = (entity != pWorldEnt() &&
+        options.notriggermodels.value() &&
+        entity->mapbrush(0).face(0).texname.find_last_of("trigger") == entity->mapbrush(0).face(0).texname.size() - strlen("trigger"));
+
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
-    if (!entity->outputmodelnumber.has_value()) {
-        entity->outputmodelnumber = map.bsp.dmodels.size();
-        map.bsp.dmodels.emplace_back();
-    }
+    if (!discarded_trigger) {
+        if (!entity->outputmodelnumber.has_value()) {
+            entity->outputmodelnumber = map.bsp.dmodels.size();
+            map.bsp.dmodels.emplace_back();
+        }
 
-    if (entity != pWorldEnt()) {
-        if (entity == pWorldEnt() + 1)
-            logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
+        if (entity != pWorldEnt()) {
+            if (entity == pWorldEnt() + 1)
+                logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
 
-        std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
+            std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
 
-        if (options.fVerbose)
-            PrintEntity(entity);
+            if (options.fVerbose)
+                PrintEntity(entity);
 
-        if (hullnum <= 0)
-            logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
-        SetKeyValue(entity, "model", mod.c_str());
+            if (hullnum <= 0)
+                logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
+            SetKeyValue(entity, "model", mod.c_str());
+        }
     }
 
     /*
@@ -655,6 +666,14 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
     auto stats = Brush_LoadEntity(entity, hullnum);
+
+    // we're discarding the brush
+    if (discarded_trigger) {
+        entity->brushes.clear();
+        SetKeyValue(entity, "mins", fmt::to_string(entity->bounds.mins()).c_str());
+        SetKeyValue(entity, "maxs", fmt::to_string(entity->bounds.maxs()).c_str());
+        return;
+    }
 
     /* Print brush counts */
     if (stats.solid) {
