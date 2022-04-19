@@ -479,9 +479,11 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
-        fs::path name = options.bsp_path;
-        name.replace_extension("prt");
-        remove(name);
+        if (!options.keepprt.value()) {
+            fs::path name = options.bsp_path;
+            name.replace_extension("prt");
+            remove(name);
+        }
 
         if (options.leaktest.value()) {
             logging::print("Aborting because -leaktest was used.\n");

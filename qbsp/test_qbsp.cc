@@ -42,6 +42,7 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name)
 
     options.nopercent.setValue(true);
     options.noprogress.setValue(true);
+    options.keepprt.setValue(true);
 
     options.map_path = std::filesystem::path(testmaps_dir) / name;
     options.bsp_path = options.map_path;
@@ -322,6 +323,8 @@ TEST(qsbsp, simple_worldspawn_worldspawn)
 TEST(qsbsp, simple_worldspawn_detail_wall)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_wall.map");
+
+    ASSERT_FALSE(map.leakfile);
 
     // 6 for the room
     // 1 for the button
