@@ -1124,8 +1124,11 @@ void ProcessFile()
 InitQBSP
 ==================
 */
-static void InitQBSP(int argc, const char **argv)
+void InitQBSP(int argc, const char **argv)
 {
+    // In case we're launched more than once, in testqbsp
+    map.reset();
+
     options.run(argc, argv);
 
     options.map_path.replace_extension("map");
@@ -1163,6 +1166,16 @@ static void InitQBSP(int argc, const char **argv)
     if (options.target_game) {
         options.target_game->init_filesystem(options.map_path, options);
     }
+}
+
+void InitQBSP(const std::vector<std::string>& args)
+{
+    std::vector<const char *> argPtrs;
+    for (const std::string &arg : args) {
+        argPtrs.push_back(arg.data());
+    }
+
+    InitQBSP(argPtrs.size(), argPtrs.data());
 }
 
 #include <fstream>

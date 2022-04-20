@@ -38,18 +38,11 @@ static mapentity_t LoadMap(const char *map)
 
 static mbsp_t LoadTestmap(const std::filesystem::path &name)
 {
-    map.reset();
+    auto map_path = std::filesystem::path(testmaps_dir) / name;
+    auto bsp_path = map_path;
+    bsp_path.replace_extension(".bsp");
 
-    options.nopercent.setValue(true);
-    options.noprogress.setValue(true);
-    options.keepprt.setValue(true);
-
-    options.map_path = std::filesystem::path(testmaps_dir) / name;
-    options.bsp_path = options.map_path;
-    options.bsp_path.replace_extension(".bsp");
-
-    options.target_version = &bspver_q1;
-    options.target_game = options.target_version->game;
+    InitQBSP({"", "-nopercent", "-noprogress", "-keepprt", map_path.string(), bsp_path.string()});
 
     ProcessFile();
 

@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <array>
 #include <optional>
+#include <string>
 
 #include <cassert>
 #include <cctype>
@@ -371,6 +372,8 @@ struct node_t
     bool opaque() const;
 };
 
+void InitQBSP(int argc, const char **argv);
+void InitQBSP(const std::vector<std::string>& args);
 void ProcessFile();
 
 int qbsp_main(int argc, const char **argv);
