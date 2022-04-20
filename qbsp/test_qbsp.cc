@@ -327,3 +327,14 @@ TEST(qsbsp, simple_worldspawn_detail_wall)
     // 6 faces for the room
     ASSERT_EQ(bsp.dfaces.size(), 11);
 }
+
+TEST(qsbsp, noclipfaces)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    ASSERT_EQ(bsp.dfaces.size(), 2);
+    // TODO: both faces should be "{trigger"
+    // TODO: contents should be empty in hull0 because it's func_detail_illusionary
+}
