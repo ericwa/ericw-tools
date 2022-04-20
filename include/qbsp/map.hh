@@ -148,6 +148,7 @@ struct mapdata_t
 
     // misc
     int start_spots = 0;
+    bool wadlist_tried_loading = false;
 
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }

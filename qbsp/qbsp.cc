@@ -1041,14 +1041,12 @@ static void CreateHulls(void)
     }
 }
 
-static bool wadlist_tried_loading = false;
-
 void EnsureTexturesLoaded()
 {
-    if (wadlist_tried_loading)
+    if (map.wadlist_tried_loading)
         return;
 
-    wadlist_tried_loading = true;
+    map.wadlist_tried_loading = true;
 
     const char *wadstring = ValueForKey(map.world_entity(), "_wad");
     if (!wadstring[0])
