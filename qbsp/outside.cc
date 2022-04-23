@@ -74,15 +74,14 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 
 static void ClearOccupied_r(node_t *node)
 {
+    // we need to clear this on leaf nodes and detail separators (clusters).. just clear it on everything
+    node->outside_distance = -1;
+    node->occupant = nullptr;
+
     if (node->planenum != PLANENUM_LEAF) {
         ClearOccupied_r(node->children[0]);
         ClearOccupied_r(node->children[1]);
-        return;
     }
-
-    /* leaf node */
-    node->outside_distance = -1;
-    node->occupant = nullptr;
 }
 
 /*
@@ -438,6 +437,10 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
 
     // Sets leaf->occupant
     const std::vector<node_t *> occupied_leafs = FindOccupiedClusters(node);
+
+    for (auto *occupied_leaf : occupied_leafs) {
+        Q_assert(occupied_leaf->outside_distance == -1);
+    }
 
     if (occupied_leafs.empty()) {
         logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
