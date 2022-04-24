@@ -338,3 +338,10 @@ TEST(qsbsp, noclipfaces)
     // TODO: both faces should be "{trigger"
     // TODO: contents should be empty in hull0 because it's func_detail_illusionary
 }
+
+TEST(qsbsp, detail_doesnt_seal)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_seal.map");
+
+    ASSERT_TRUE(map.leakfile);
+}
