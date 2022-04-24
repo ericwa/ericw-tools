@@ -225,7 +225,6 @@ constexpr int HULL_COLLISION = -1;
 brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum);
 
 std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const brush_t *srcbrush, const node_t *srcnode);
-void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum);
 void TJunc(const mapentity_t *entity, node_t *headnode);
 int MakeFaceEdges(mapentity_t *entity, node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
