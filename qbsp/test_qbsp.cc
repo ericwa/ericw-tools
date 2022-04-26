@@ -354,6 +354,18 @@ TEST(qsbsp, noclipfaces)
     // TODO: contents should be empty in hull0 because it's func_detail_illusionary
 }
 
+TEST(qsbsp, noclipfaces_mirrorinside)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces_mirrorinside.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    ASSERT_EQ(bsp.dfaces.size(), 4);
+    // TODO: both faces should be "{trigger"
+    // TODO: contents should be empty in hull0 because it's func_detail_illusionary
+}
+
+
 TEST(qsbsp, detail_doesnt_seal)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_seal.map");

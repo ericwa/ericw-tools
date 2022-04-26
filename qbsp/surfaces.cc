@@ -619,7 +619,7 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
                 /*
                  * If the brush is non-solid, mirror faces for the inside view
                  */
-                bool mirror = (part->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE);
+                bool mirror = (srcbrush->contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE);
                 
                 if (!(srcbrush->contents.is_solid(options.target_game) ||
                         srcbrush->contents.is_detail())) {
