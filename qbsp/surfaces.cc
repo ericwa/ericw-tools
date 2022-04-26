@@ -526,12 +526,13 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
 static std::list<face_t *> ClipFacesToTree_r(node_t *node, std::list<face_t *> faces)
 {
     if (node->planenum == PLANENUM_LEAF) {
-        if (node->contents.is_solid(options.target_game)) {
+        // fixme-brushbsp: move to contentflags_t?
+        if (node->contents.is_solid(options.target_game) 
+            || node->contents.is_detail(CFLAGS_DETAIL)) {
             // solids eat any faces that reached this point
             return {};
         }
         // other content types let the faces thorugh
-        // fixme-brushbsp: detail?
         return faces;
     }
 

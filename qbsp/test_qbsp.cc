@@ -328,6 +328,21 @@ TEST(qsbsp, simple_worldspawn_detail_wall)
     ASSERT_EQ(bsp.dfaces.size(), 11);
 }
 
+TEST(qsbsp, simple_worldspawn_detail)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    // 6 for the room
+    // 1 for the button
+    ASSERT_EQ(map.brushes.size(), 7);
+
+    // 5 faces for the "button"
+    // 9 faces for the room
+    ASSERT_EQ(bsp.dfaces.size(), 14);
+}
+
 TEST(qsbsp, noclipfaces)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces.map");
