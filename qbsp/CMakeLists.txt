@@ -15,7 +15,6 @@ set(QBSP_INCLUDES
 set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/qbsp/brush.cc
 	${CMAKE_SOURCE_DIR}/qbsp/csg4.cc
-	${CMAKE_SOURCE_DIR}/qbsp/globals.cc
 	${CMAKE_SOURCE_DIR}/qbsp/map.cc
 	${CMAKE_SOURCE_DIR}/qbsp/merge.cc
 	${CMAKE_SOURCE_DIR}/qbsp/outside.cc

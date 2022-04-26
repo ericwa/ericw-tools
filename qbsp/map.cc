@@ -42,6 +42,20 @@
 #include <common/imglib.hh>
 #include <common/qvec.hh>
 
+mapdata_t map;
+
+// Useful shortcuts
+mapentity_t *mapdata_t::world_entity()
+{
+    return &entities.at(0);
+}
+
+void mapdata_t::reset()
+{
+    *this = mapdata_t{};
+}
+
+
 #define info_player_start 1
 #define info_player_deathmatch 2
 #define info_player_coop 4
