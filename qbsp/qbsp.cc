@@ -176,11 +176,6 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
 settings::qbsp_settings options;
 
-bool node_t::opaque() const
-{
-    return contents.is_sky(options.target_game) || contents.is_solid(options.target_game);
-}
-
 // per-entity
 static struct
 {

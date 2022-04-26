@@ -32,6 +32,17 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
+static bool ClusterSealsMap(const node_t *node)
+{
+    Q_assert(node->planenum == PLANENUM_LEAF || node->detail_separator);
+
+    if (node->detail_separator) {
+        return false;
+    }
+
+    return options.target_game->contents_seals_map(node->contents);
+}
+
 /*
 ===========
 PointInLeaf
@@ -43,7 +54,7 @@ This avoids spurious leaks if a point entity is on the outside
 of the map (exactly on a brush faces) - happens in base1.map.
 ===========
 */
-static node_t *PointInLeaf(node_t *node, const qvec3d &point)
+static node_t *PointInCluster(node_t *node, const qvec3d &point)
 {
     if (node->planenum == PLANENUM_LEAF || node->detail_separator) {
         return node;
@@ -54,18 +65,18 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 
     if (dist > 0) {
         // point is on the front of the node plane
-        return PointInLeaf(node->children[0], point);
+        return PointInCluster(node->children[0], point);
     } else if (dist < 0) {
         // point is on the back of the node plane
-        return PointInLeaf(node->children[1], point);
+        return PointInCluster(node->children[1], point);
     } else {
         // point is exactly on the node plane
 
-        node_t *front = PointInLeaf(node->children[0], point);
-        node_t *back = PointInLeaf(node->children[1], point);
+        node_t *front = PointInCluster(node->children[0], point);
+        node_t *back = PointInCluster(node->children[1], point);
 
         // prefer the opaque one
-        if (front->opaque()) {
+        if (ClusterSealsMap(front)) {
             return front;
         }
         return back;
@@ -84,19 +95,10 @@ static void ClearOccupied_r(node_t *node)
     }
 }
 
-/*
-=============
-Portal_Passable
-
-Returns true if the portal has non-opaque leafs on both sides
-
-from q3map
-=============
-*/
-static bool Portal_Passable(const portal_t *p)
+static bool OutsideFill_Passable(const portal_t *p)
 {
     if (p->nodes[0] == &outside_node || p->nodes[1] == &outside_node) {
-        // FIXME: need this because the outside_node doesn't have PLANENUM_LEAF set
+        // need this because the outside_node doesn't have PLANENUM_LEAF set
         return false;
     }
 
@@ -110,7 +112,7 @@ static bool Portal_Passable(const portal_t *p)
             return false;
         }
 
-        return l->opaque();
+        return ClusterSealsMap(l);
     };
 
     if (leafOpaque(p->nodes[0]) || leafOpaque(p->nodes[1]))
@@ -144,7 +146,7 @@ static void FloodFillFromVoid()
         Q_assert(fillnode != &outside_node);
 
         // this must be true because the map is made from closed brushes, beyion which is void
-        Q_assert(!fillnode->opaque());
+        Q_assert(!ClusterSealsMap(fillnode));
         queue.emplace_back(fillnode, 0);
     }
 
@@ -168,7 +170,7 @@ static void FloodFillFromVoid()
         for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
             side = (portal->nodes[0] == node);
 
-            if (!Portal_Passable(portal))
+            if (!OutsideFill_Passable(portal))
                 continue;
 
             node_t *neighbour = portal->nodes[side];
@@ -207,7 +209,7 @@ static std::vector<portal_t *> FindPortalsToVoid(node_t *occupied_leaf)
         for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
             side = (portal->nodes[0] == node);
 
-            if (!Portal_Passable(portal))
+            if (!OutsideFill_Passable(portal))
                 continue;
 
             node_t *neighbour = portal->nodes[side];
@@ -299,18 +301,20 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
             continue;
 
         /* find the leaf it's in. Skip opqaue leafs */
-        node_t *leaf = PointInLeaf(headnode, entity->origin);
+        node_t *cluster = PointInCluster(headnode, entity->origin);
 
-        if (leaf->opaque())
+        if (ClusterSealsMap(cluster)) {
             continue;
+        }
 
         /* did we already find an entity for this leaf? */
-        if (leaf->occupant != nullptr)
+        if (cluster->occupant != nullptr) {
             continue;
+        }
 
-        leaf->occupant = entity;
+        cluster->occupant = entity;
 
-        result.push_back(leaf);
+        result.push_back(cluster);
     }
 
     return result;
@@ -327,6 +331,22 @@ static void MarkBrushSidesInvisible(mapentity_t *entity)
     }
 }
 
+static void MarkAllBrushSidesVisible_R(node_t *node)
+{
+    // descend to leafs
+    if (node->planenum != PLANENUM_LEAF) {
+        MarkAllBrushSidesVisible_R(node->children[0]);
+        MarkAllBrushSidesVisible_R(node->children[1]);
+        return;
+    }
+
+    for (auto *brush : node->original_brushes) {
+        for (auto &side : brush->faces) {
+            side.visible = true;
+        }
+    }
+}
+
 /*
 ==================
 MarkVisibleBrushSides
@@ -334,19 +354,28 @@ MarkVisibleBrushSides
 Set f->touchesOccupiedLeaf=true on faces that are touching occupied leafs
 ==================
 */
-static void MarkVisibleBrushSides(node_t *node)
+static void MarkVisibleBrushSides_R(node_t *node)
 {
-    if (node->planenum != PLANENUM_LEAF) {
-        MarkVisibleBrushSides(node->children[0]);
-        MarkVisibleBrushSides(node->children[1]);
+    // descent to clusters
+    if (!(node->planenum == PLANENUM_LEAF || node->detail_separator)) {
+        MarkVisibleBrushSides_R(node->children[0]);
+        MarkVisibleBrushSides_R(node->children[1]);
         return;
     }
 
-    if (node->opaque()) {
+    if (ClusterSealsMap(node)) {
+        // this cluster is opaque
         return;
     }
 
-    // visit the non-opaque leaf: check all portals to neighbouring leafs.
+    if (node->detail_separator) {
+        // this is a detail cluster, so mark all descendant brushes (all sides) as visible
+        MarkAllBrushSidesVisible_R(node);
+    }
+
+
+    // we also want to mark brush sides in the neighbouring cluster
+    // as visible
 
     int side;
     for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
@@ -354,15 +383,24 @@ static void MarkVisibleBrushSides(node_t *node)
 
         node_t *neighbour_leaf = portal->nodes[side];
 
-        for (auto *brush : neighbour_leaf->original_brushes) {
-            for (auto &side : brush->faces) {
-                if (side.planenum == portal->planenum) {
-                    // we've found a brush side in an original brush in the neighbouring
-                    // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
-                    side.visible = true;
+        if (neighbour_leaf->planenum == PLANENUM_LEAF) {
+            // optimized case: just mark the brush sides in the neighbouring
+            // leaf that are coplanar
+            for (auto *brush : neighbour_leaf->original_brushes) {
+                for (auto &side : brush->faces) {
+                    if (side.planenum == portal->planenum) {
+                        // we've found a brush side in an original brush in the neighbouring
+                        // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
+                        side.visible = true;
+                    }
                 }
             }
-        }
+        } else {
+            // other case: neighbour is a detail separator, so it has detail at a finer granularity
+            // than the portal. Need to mark all brush sides as potentially visible.
+            Q_assert(neighbour_leaf->detail_separator);
+            MarkAllBrushSidesVisible_R(neighbour_leaf);
+        }        
     }
 }
 
@@ -381,7 +419,7 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
         return;
 
     // Don't fill sky, or count solids as outleafs
-    if (node->contents.is_solid(options.target_game) || node->contents.is_sky(options.target_game))
+    if (options.target_game->contents_seals_map(node->contents))
         return;
 
      // Finally, we can fill it in as void.
@@ -422,10 +460,7 @@ This will handle partially-void, partially-in-bounds sides (they'll be marked vi
 from the void wouldn't work, because brush sides that cross into the map would
 get incorrectly marked as "invisible").
 
-fixme-brushbsp: we'll want to do this for detail as well, which means building another set of
-portals for everything (not just structural).
-
-fixme-brushbsp: remember, structural covered by detail still gets marked 'visible'.
+Special cases: structural fully covered by detail still needs to be marked "visible".
 ===========
 */
 bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
@@ -436,13 +471,13 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     ClearOccupied_r(node);
 
     // Sets leaf->occupant
-    const std::vector<node_t *> occupied_leafs = FindOccupiedClusters(node);
+    const std::vector<node_t *> occupied_clusters = FindOccupiedClusters(node);
 
-    for (auto *occupied_leaf : occupied_leafs) {
-        Q_assert(occupied_leaf->outside_distance == -1);
+    for (auto *occupied_cluster : occupied_clusters) {
+        Q_assert(occupied_cluster->outside_distance == -1);
     }
 
-    if (occupied_leafs.empty()) {
+    if (occupied_clusters.empty()) {
         logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
         return false;
     }
@@ -457,7 +492,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     int best_leak_dist = INT_MAX;
     node_t *best_leak = nullptr;
 
-    for (node_t *leaf : occupied_leafs) {
+    for (node_t *leaf : occupied_clusters) {
         if (leaf->outside_distance == -1)
             continue;
 
@@ -506,7 +541,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     
     MarkBrushSidesInvisible(entity);
 
-    MarkVisibleBrushSides(node);
+    MarkVisibleBrushSides_R(node);
 
     logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;

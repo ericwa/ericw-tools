@@ -614,11 +614,17 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
             for (face_t *part: parts) {
                 node->facelist.push_back(part);
 
-                // fixme-brushbsp: this isn't quite right, also check _mirrorinside for some content types
+                // fixme-brushbsp: move to contentflags_t helper
                 /*
                  * If the brush is non-solid, mirror faces for the inside view
                  */
-                const bool mirror = !srcbrush->contents.is_solid(options.target_game);
+                bool mirror = (part->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE);
+                
+                if (!(srcbrush->contents.is_solid(options.target_game) ||
+                        srcbrush->contents.is_detail())) {
+                    mirror = true;
+                }
+
                 if (mirror) {
                     node->facelist.push_back(MirrorFace(part));
                 }
