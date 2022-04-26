@@ -80,6 +80,8 @@ struct gamedef_generic_t : public gamedef_t
 
     bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
+    bool contents_seals_map(const contentflags_t &contents) const { throw std::bad_cast(); }
+
     std::string get_contents_display(const contentflags_t &) const { throw std::bad_cast(); }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
@@ -250,6 +252,11 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         /* If contents values are the same and not solid, can see through */
         return !(contents0.is_solid(this) || contents1.is_solid(this)) && contents0 == contents1;
+    }
+
+    bool contents_seals_map(const contentflags_t &contents) const override
+    {
+        return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
@@ -585,6 +592,11 @@ struct gamedef_q2_t : public gamedef_t
             return true;
 
         return visible_contents(c0 ^ c1);
+    }
+
+    bool contents_seals_map(const contentflags_t& contents) const override
+    {
+        return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
