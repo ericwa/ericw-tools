@@ -345,3 +345,13 @@ TEST(qsbsp, detail_doesnt_seal)
 
     ASSERT_TRUE(map.leakfile);
 }
+
+TEST(qsbsp, detail_doesnt_remove_world_nodes)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_remove_world_nodes.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    // TODO: make sure that the node here wasn't clipped away by the detail
+    const auto node_locations = std::vector<qvec3f>{{72, -88, 144}};
+}
