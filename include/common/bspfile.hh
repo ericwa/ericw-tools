@@ -595,10 +595,6 @@ struct contentflags_t
     // extra flags, specific to BSP only
     int32_t extended;
 
-    // for CFLAGS_STRUCTURAL_COVERED_BY_DETAIL
-    // fixme-brushbsp: remove this
-    int32_t covered_native;
-
     constexpr bool operator==(const contentflags_t &other) const
     {
         return native == other.native && extended == other.extended;
