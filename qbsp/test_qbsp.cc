@@ -4,9 +4,11 @@
 #include <qbsp/map.hh>
 #include <common/fs.hh>
 #include <common/bsputils.hh>
+#include <common/qvec.hh>
 #include <testmaps.hh>
 
 #include <cstring>
+#include <map>
 
 // FIXME: Clear global data (planes, etc) between each test
 
@@ -420,4 +422,35 @@ TEST(testmaps_q1, detail_doesnt_remove_world_nodes)
         auto *covered_by_detail_node = BSP_FindNodeAtPoint(&bsp, &bsp.dmodels[0], covered_by_detail, {-1, 0, 0});
         ASSERT_NE(nullptr, covered_by_detail_node);
     }
+}
+
+TEST(testmaps_q1, merge)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_merge.map");
+
+    ASSERT_EQ(9, map.brushes.size());
+
+    ASSERT_TRUE(map.leakfile);
+    ASSERT_EQ(6, bsp.dfaces.size());
+}
+
+TEST(testmaps_q1, tjunc_many_sided_face)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_tjunc_many_sided_face.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    std::map<qvec3d, std::vector<const mface_t *>> faces_by_normal;
+    for (auto &face : bsp.dfaces) {
+        faces_by_normal[Face_Normal(&bsp, &face)].push_back(&face);
+    }
+
+    ASSERT_EQ(6, faces_by_normal.size());
+
+    // the floor has a 0.1 texture scale, so it gets subdivided into many small faces
+    EXPECT_EQ(15 * 15, (faces_by_normal.at({0, 0, 1}).size()));
+
+    // the ceiling gets split into 2 faces because fixing T-Junctions with all of the
+    // wall sections exceeds the max vertices per face limit
+    EXPECT_EQ(2, (faces_by_normal.at({0, 0, -1}).size()));
 }

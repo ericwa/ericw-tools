@@ -25,6 +25,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
+#include <qbsp/surfaces.hh>
 
 #ifdef PARANOID
 static void CheckColinear(face_t *f)
@@ -231,7 +232,13 @@ void MergeAll(node_t *headnode)
     tbb::parallel_for_each(allnodes, [&](node_t *node) {
         const size_t before = node->facelist.size();
 
-        node->facelist = MergeFaceList(node->facelist);
+        std::list<face_t *> merged_pre_subdivide = MergeFaceList(node->facelist);
+
+        // re-subdivide after merging
+        node->facelist.clear();
+        for (face_t *face : merged_pre_subdivide) {
+            node->facelist.splice(node->facelist.end(), SubdivideFace(face));
+        }
 
         const size_t after = node->facelist.size();
 

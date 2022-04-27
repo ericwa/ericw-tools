@@ -619,27 +619,22 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
         // (otherwise we could have faces floating in the void on this node)
         faces = ClipFacesToTree(node, faces);
 
-        for (face_t *csgface : faces) {
-            // subdivide large faces
-            auto parts = SubdivideFace(csgface);
+        for (face_t *part : faces) {
+            node->facelist.push_back(part);
 
-            for (face_t *part: parts) {
-                node->facelist.push_back(part);
-
-                // fixme-brushbsp: move to contentflags_t helper
-                /*
-                 * If the brush is non-solid, mirror faces for the inside view
-                 */
-                bool mirror = (srcbrush->contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE);
+            // fixme-brushbsp: move to contentflags_t helper
+            /*
+             * If the brush is non-solid, mirror faces for the inside view
+             */
+            bool mirror = (srcbrush->contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE);
                 
-                if (!(srcbrush->contents.is_solid(options.target_game) ||
-                        srcbrush->contents.is_detail())) {
-                    mirror = true;
-                }
+            if (!(srcbrush->contents.is_solid(options.target_game) ||
+                    srcbrush->contents.is_detail())) {
+                mirror = true;
+            }
 
-                if (mirror) {
-                    node->facelist.push_back(MirrorFace(part));
-                }
+            if (mirror) {
+                node->facelist.push_back(MirrorFace(part));
             }
         }
 
