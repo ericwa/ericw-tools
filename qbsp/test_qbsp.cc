@@ -87,6 +87,17 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     return std::get<mbsp_t>(bspdata.bsp);
 }
 
+static std::map<std::string, std::vector<const mface_t *>> MakeTextureToFaceMap(const mbsp_t &bsp)
+{ 
+    std::map<std::string, std::vector<const mface_t *>> result;
+
+    for (auto &face : bsp.dfaces) {
+        result[Face_TextureName(&bsp, &face)].push_back(&face);
+    }
+
+    return result;
+}
+
 static const texvecf &GetTexvecs(const char *map, const char *texname)
 {
     mapentity_t worldspawn = LoadMap(map);
@@ -372,6 +383,20 @@ TEST(testmaps_q1, simple_worldspawn_detail)
     // 5 faces for the "button"
     // 9 faces for the room
     ASSERT_EQ(bsp.dfaces.size(), 14);
+}
+
+TEST(testmaps_q1, simple_worldspawn_sky)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_sky.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    // just a box with sky on the ceiling
+    const auto textureToFace = MakeTextureToFaceMap(bsp);
+    EXPECT_EQ(1, textureToFace.at("sky3").size());
+    EXPECT_EQ(5, textureToFace.at("orangestuff8").size());
+
+    // FIXME: check leaf contents, void is not compiling to solid
 }
 
 TEST(testmaps_q1, water_detail_illusionary)
