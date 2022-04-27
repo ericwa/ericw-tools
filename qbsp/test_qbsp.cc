@@ -40,24 +40,41 @@ static mapentity_t LoadMap(const char *map)
     return worldspawn;
 }
 
-static mbsp_t LoadTestmap(const std::filesystem::path &name)
+static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
     auto map_path = std::filesystem::path(testmaps_dir) / name;
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    InitQBSP({"", "-nopercent", "-noprogress", "-keepprt", map_path.string(), bsp_path.string()});
+    std::vector<std::string> args{"", "-nopercent", "-noprogress", "-keepprt"};
+    for (auto &arg : extra_args) {
+        args.push_back(arg);
+    }
+    args.push_back(map_path.string());
+    args.push_back(bsp_path.string());
 
+    // run qbsp
+
+    InitQBSP(args);
     ProcessFile();
+    
+    const char *destdir = "";
 
-    if (strlen(test_quake_maps_dir) > 0) {
-        auto dest = fs::path(test_quake_maps_dir) / name;
+    // read cmake variables TEST_QUAKE_MAP_EXPORT_DIR / TEST_QUAKE2_MAP_EXPORT_DIR
+    if (options.target_game->id == GAME_QUAKE_II) {
+        destdir = test_quake2_maps_dir;
+    } else if (options.target_game->id == GAME_QUAKE) {
+        destdir = test_quake_maps_dir;
+    }
+
+    // copy .bsp to game's basedir/maps directory, for easy in-game testing
+    if (strlen(destdir) > 0) {
+        auto dest = fs::path(destdir) / name;
         dest.replace_extension(".bsp");
         fs::copy(options.bsp_path, dest, fs::copy_options::overwrite_existing);
     }
 
     // re-open the .bsp and return it
-
     options.bsp_path.replace_extension("bsp");
     
     bspdata_t bspdata;
@@ -511,4 +528,15 @@ TEST(testmaps_q1, origin)
 
     ASSERT_NE(it, ents.end());
     ASSERT_EQ("216 -216 340", it->get("origin"));
+}
+
+// q2 testmaps
+
+TEST(testmaps_q2, detail) {
+#if 0
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_detail.map", {"-q2bsp"});
+
+    ASSERT_FALSE(map.leakfile);
+    ASSERT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+#endif
 }

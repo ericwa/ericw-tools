@@ -224,8 +224,8 @@ public:
     bool fVerbose = true;
     bool fAllverbose = false;
     bool fNoverbose = false;
-    const bspversion_t *target_version;
-    const gamedef_t *target_game;
+    const bspversion_t *target_version = nullptr;
+    const gamedef_t *target_game = nullptr;
     fs::path map_path;
     fs::path bsp_path;
 };
