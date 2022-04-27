@@ -454,3 +454,33 @@ TEST(testmaps_q1, tjunc_many_sided_face)
     // wall sections exceeds the max vertices per face limit
     EXPECT_EQ(2, (faces_by_normal.at({0, 0, -1}).size()));
 }
+
+/**
+ * Because it comes second, the sbutt2 brush should "win" in clipping against the floor,
+ * in both a worldspawn test case, as well as a func_wall.
+ */
+TEST(testmaps_q1, brush_clipping_order)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_brush_clipping_order.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    const qvec3d world_button{-8, -8, 16};
+    const qvec3d func_wall_button{152, -8, 16};
+
+    // 0 = world, 1 = func_wall
+    ASSERT_EQ(2, bsp.dmodels.size());
+
+    ASSERT_EQ(20, bsp.dfaces.size());
+
+    ASSERT_EQ(10, bsp.dmodels[0].numfaces); // 5 faces for the sides + bottom, 5 faces for the top
+    ASSERT_EQ(10, bsp.dmodels[1].numfaces); // (same on worldspawn and func_wall)
+
+    auto *world_button_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], world_button, {0, 0, 1});
+    ASSERT_NE(nullptr, world_button_face);
+    ASSERT_STREQ("sbutt2", Face_TextureName(&bsp, world_button_face));
+
+    auto *func_wall_button_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], func_wall_button, {0, 0, 1});
+    ASSERT_NE(nullptr, func_wall_button_face);
+    ASSERT_STREQ("sbutt2", Face_TextureName(&bsp, func_wall_button_face));
+}
