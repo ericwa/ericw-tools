@@ -7,6 +7,7 @@
 #include <common/qvec.hh>
 #include <testmaps.hh>
 
+#include <algorithm>
 #include <cstring>
 #include <map>
 
@@ -483,4 +484,31 @@ TEST(testmaps_q1, brush_clipping_order)
     auto *func_wall_button_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], func_wall_button, {0, 0, 1});
     ASSERT_NE(nullptr, func_wall_button_face);
     ASSERT_STREQ("sbutt2", Face_TextureName(&bsp, func_wall_button_face));
+}
+
+/**
+ * Box room with a rotating fan (just a cube). Works in a mod with hiprotate - AD, Quoth, etc.
+ */
+TEST(testmaps_q1, origin)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_origin.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    // 0 = world, 1 = rotate_object
+    ASSERT_EQ(2, bsp.dmodels.size());
+
+    // check that the origin brush didn't clip away any solid faces, or generate faces
+    ASSERT_EQ(6, bsp.dmodels[1].numfaces);
+
+    // FIXME: should the origin brush update the dmodel's origin too?
+    ASSERT_EQ(qvec3f(0, 0, 0), bsp.dmodels[1].origin);
+
+    // check that the origin brush updated the entity lump
+    auto ents = EntData_Parse(bsp.dentdata);
+    auto it = std::find_if(ents.begin(), ents.end(), 
+        [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
+
+    ASSERT_NE(it, ents.end());
+    ASSERT_EQ("216 -216 340", it->get("origin"));
 }
