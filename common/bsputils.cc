@@ -381,6 +381,42 @@ const mface_t *BSP_FindFaceAtPoint(
     return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
 }
 
+static const bsp2_dnode_t *BSP_FindNodeAtPoint_r(
+    const mbsp_t *bsp, const int nodenum, const qvec3d &point, const qvec3d &wantedNormal)
+{
+    if (nodenum < 0) {
+        // we're only interested in nodes
+        return nullptr;
+    }
+
+    const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
+    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+
+    if (dist > 0.1)
+        return BSP_FindNodeAtPoint_r(bsp, node->children[0], point, wantedNormal);
+    if (dist < -0.1)
+        return BSP_FindNodeAtPoint_r(bsp, node->children[1], point, wantedNormal);
+
+    // Point is close to this node plane. Check normal
+    if (qv::epsilonEqual(1.0, fabs(qv::dot(bsp->dplanes[node->planenum].normal, wantedNormal)), 0.01)) {
+        return node;
+    }
+
+    // No match found on this plane. Check both sides of the tree.
+    const bsp2_dnode_t *side0Match = BSP_FindNodeAtPoint_r(bsp, node->children[0], point, wantedNormal);
+    if (side0Match != nullptr) {
+        return side0Match;
+    } else {
+        return BSP_FindNodeAtPoint_r(bsp, node->children[1], point, wantedNormal);
+    }
+}
+
+const bsp2_dnode_t* BSP_FindNodeAtPoint(
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wanted_normal)
+{
+    return BSP_FindNodeAtPoint_r(bsp, model->headnode[0], point, wanted_normal);
+}
+
 // glm stuff
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
 {

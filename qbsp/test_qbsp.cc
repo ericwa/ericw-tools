@@ -3,6 +3,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
 #include <common/fs.hh>
+#include <common/bsputils.hh>
 #include <testmaps.hh>
 
 #include <cstring>
@@ -379,6 +380,21 @@ TEST(qsbsp, detail_doesnt_remove_world_nodes)
 
     ASSERT_FALSE(map.leakfile);
 
-    // TODO: make sure that the node here wasn't clipped away by the detail
-    const auto node_locations = std::vector<qvec3f>{{72, -88, 144}};
+    {
+        const qvec3d floor_under_start{-56, -72, 64};
+        auto *floor_under_start_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_start, {0, 0, 1});
+        ASSERT_NE(nullptr, floor_under_start_face);
+    }
+
+    {
+        const qvec3d floor_inside_detail{64, -72, 64};
+        auto *floor_inside_detail_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_inside_detail, {0, 0, 1});
+        ASSERT_EQ(nullptr, floor_inside_detail_face);
+    }
+
+    {
+        const qvec3d covered_by_detail{48, -88, 128};
+        auto *covered_by_detail_node = BSP_FindNodeAtPoint(&bsp, &bsp.dmodels[0], covered_by_detail, {-1, 0, 0});
+        ASSERT_NE(nullptr, covered_by_detail_node);
+    }
 }

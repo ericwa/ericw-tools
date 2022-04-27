@@ -59,6 +59,12 @@ bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
  */
 const mface_t *BSP_FindFaceAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
+/**
+ * Searches for a decision node in hull0 that contains `point`, and has a plane normal of either 
+ * wanted_normal or -wanted_normal.
+ */
+const bsp2_dnode_t *BSP_FindNodeAtPoint(
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wanted_normal);
 
 const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f);
 const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);
