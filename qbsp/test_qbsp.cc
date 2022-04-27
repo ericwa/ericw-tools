@@ -530,6 +530,24 @@ TEST(testmaps_q1, origin)
     ASSERT_EQ("216 -216 340", it->get("origin"));
 }
 
+TEST(testmaps_q1, simple)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_simple.map");
+
+    ASSERT_TRUE(map.leakfile);
+
+}
+
+/**
+ * Lots of features in one map, more for testing in game than automated testing
+ */
+TEST(testmaps_q1, features)
+{
+    const mbsp_t bsp = LoadTestmap("qbspfeatures.map");
+
+    ASSERT_FALSE(map.leakfile);
+}
+
 // q2 testmaps
 
 TEST(testmaps_q2, detail) {
