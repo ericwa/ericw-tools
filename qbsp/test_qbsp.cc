@@ -258,6 +258,8 @@ TEST(mathlib, WindingArea)
     EXPECT_EQ(64.0f * 64.0f, w.area());
 }
 
+// Q1 testmaps
+
 TEST(testmaps_q1, simple_sealed)
 {
     mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
@@ -309,9 +311,17 @@ TEST(testmaps_q1, simple_worldspawn_worldspawn)
     int fan_faces = 0;
     int room_faces = 0;
     for (auto &face : bsp.dfaces) {
-        auto& name = bsp.dtex.textures[bsp.texinfo[face.texinfo].miptex].name;
-        // TODO: count faces by texture
+        const char *texname = Face_TextureName(&bsp, &face);
+        if (!strcmp(texname, "orangestuff8")) {
+            ++room_faces;
+        } else if (!strcmp(texname, "+0fan")) {
+            ++fan_faces;
+        } else {
+            FAIL();
+        }
     }
+    ASSERT_EQ(fan_faces, 5);
+    ASSERT_EQ(room_faces, 9);
 }
 
 TEST(testmaps_q1, simple_worldspawn_detail_wall)
@@ -351,10 +361,17 @@ TEST(testmaps_q1, noclipfaces)
     ASSERT_FALSE(map.leakfile);
 
     ASSERT_EQ(bsp.dfaces.size(), 2);
-    // TODO: both faces should be "{trigger"
+
     // TODO: contents should be empty in hull0 because it's func_detail_illusionary
+
+    for (auto &face : bsp.dfaces) {
+        ASSERT_STREQ("{trigger", Face_TextureName(&bsp, &face));
+    }
 }
 
+/**
+ * Same as previous test, but the T shaped brush entity has _mirrorinside
+ */
 TEST(testmaps_q1, noclipfaces_mirrorinside)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces_mirrorinside.map");
@@ -362,10 +379,13 @@ TEST(testmaps_q1, noclipfaces_mirrorinside)
     ASSERT_FALSE(map.leakfile);
 
     ASSERT_EQ(bsp.dfaces.size(), 4);
-    // TODO: both faces should be "{trigger"
+    
     // TODO: contents should be empty in hull0 because it's func_detail_illusionary
-}
 
+    for (auto &face : bsp.dfaces) {
+        ASSERT_STREQ("{trigger", Face_TextureName(&bsp, &face));
+    }
+}
 
 TEST(testmaps_q1, detail_doesnt_seal)
 {
@@ -381,18 +401,21 @@ TEST(testmaps_q1, detail_doesnt_remove_world_nodes)
     ASSERT_FALSE(map.leakfile);
 
     {
+        // check for a face under the start pos
         const qvec3d floor_under_start{-56, -72, 64};
         auto *floor_under_start_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_start, {0, 0, 1});
         ASSERT_NE(nullptr, floor_under_start_face);
     }
 
     {
+        // floor face should be clipped away by detail
         const qvec3d floor_inside_detail{64, -72, 64};
         auto *floor_inside_detail_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_inside_detail, {0, 0, 1});
         ASSERT_EQ(nullptr, floor_inside_detail_face);
     }
 
     {
+        // but the sturctural nodes/leafs should not be clipped away by detail
         const qvec3d covered_by_detail{48, -88, 128};
         auto *covered_by_detail_node = BSP_FindNodeAtPoint(&bsp, &bsp.dmodels[0], covered_by_detail, {-1, 0, 0});
         ASSERT_NE(nullptr, covered_by_detail_node);
