@@ -148,7 +148,7 @@ struct gamedef_q1_like_t : public gamedef_t
         } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
             return 4;
         } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
-            return 3;
+            return 2;
         } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
             return 2;
         } else {
@@ -157,9 +157,9 @@ struct gamedef_q1_like_t : public gamedef_t
 
                 case CONTENTS_SKY: return 6;
 
-                case CONTENTS_WATER: return 2;
-                case CONTENTS_SLIME: return 2;
-                case CONTENTS_LAVA: return 2;
+                case CONTENTS_WATER: return 3;
+                case CONTENTS_SLIME: return 3;
+                case CONTENTS_LAVA: return 3;
 
                 case CONTENTS_EMPTY: return 1;
                 case 0: return 0;

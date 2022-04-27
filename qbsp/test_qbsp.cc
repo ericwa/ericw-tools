@@ -374,6 +374,18 @@ TEST(testmaps_q1, simple_worldspawn_detail)
     ASSERT_EQ(bsp.dfaces.size(), 14);
 }
 
+TEST(testmaps_q1, water_detail_illusionary)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_water_detail_illusionary.map");
+
+    ASSERT_FALSE(map.leakfile);
+
+    const qvec3d inside_water_and_fence{-20, -52, 124};
+    const auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_water_and_fence);
+    ASSERT_EQ(leaf->contents, CONTENTS_WATER);
+}
+
+
 TEST(testmaps_q1, noclipfaces)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces.map");

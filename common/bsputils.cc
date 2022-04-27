@@ -417,6 +417,28 @@ const bsp2_dnode_t* BSP_FindNodeAtPoint(
     return BSP_FindNodeAtPoint_r(bsp, model->headnode[0], point, wanted_normal);
 }
 
+static const mleaf_t *BSP_FindLeafAtPoint_r(
+    const mbsp_t *bsp, const int nodenum, const qvec3d &point)
+{
+    if (nodenum < 0) {
+        return BSP_GetLeafFromNodeNum(bsp, nodenum);
+    }
+
+    const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
+    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+
+    if (dist >= 0) {
+        return BSP_FindLeafAtPoint_r(bsp, node->children[0], point);
+    } else {
+        return BSP_FindLeafAtPoint_r(bsp, node->children[1], point);
+    }
+}
+
+const mleaf_t* BSP_FindLeafAtPoint(const mbsp_t* bsp, const dmodelh2_t* model, const qvec3d& point)
+{
+    return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point);
+}
+
 // glm stuff
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
 {

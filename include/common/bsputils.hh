@@ -66,6 +66,8 @@ const mface_t *BSP_FindFaceAtPoint(
 const bsp2_dnode_t *BSP_FindNodeAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wanted_normal);
 
+const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
+
 const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f);
 const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);
 qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f);
