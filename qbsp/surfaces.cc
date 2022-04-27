@@ -38,7 +38,7 @@ If the face is >256 in either texture direction, carve a valid sized
 piece off and insert the remainder in the next link
 ===============
 */
-std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, std::list<face_t *> &surfaces)
+std::list<face_t *> SubdivideFace(face_t *f)
 {
     vec_t mins, maxs;
     vec_t v;
@@ -50,13 +50,11 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
     vec_t extent;
     int lmshift;
 
-    face_t *f = *it;
-
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
 
     if (tex->flags.is_skip || tex->flags.is_hint || !options.target_game->surf_is_subdivided(tex->flags)) {
-        return it;
+        return {f};
     }
     // subdivision is pretty much pointless other than because of lightmap block limits
     // one lightmap block will always be added at the end, for smooth interpolation
@@ -76,8 +74,16 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
     // the bsp is possibly going to be used in both engines that support scaling and those that do not. this means we
     // always over-estimate by 16 rather than 1<<lmscale
 
+    std::list<face_t *> surfaces{f};
+
     for (axis = 0; axis < 2; axis++) {
-        while (1) {
+        // we'll transfer faces that are chopped down to size to this list
+        std::list<face_t *> chopped;
+
+        while (!surfaces.empty()) {
+            f = surfaces.front();
+            surfaces.pop_front();
+
             mins = VECT_MAX;
             maxs = -VECT_MAX;
 
@@ -94,7 +100,9 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
             extent = ceil(maxs) - floor(mins);
             //          extent = maxs - mins;
             if (extent <= subdiv) {
-                break;
+                // this face is already good
+                chopped.push_back(f);
+                continue;
             }
 
             // split it
@@ -112,17 +120,24 @@ std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, st
             std::tie(front, back) = SplitFace(f, plane);
             if (!front || !back) {
                 //logging::print("didn't split\n");
-                break;
                 // FError("Didn't split the polygon");
             }
-            it = surfaces.erase(it);
-            it = surfaces.insert(it, front);
-            it = surfaces.insert(it, back);
-            f = back;
+
+            if (front) {
+                surfaces.push_back(front);
+            }
+            if (back) {
+                chopped.push_front(back);
+            }
         }
+
+        // we've finished chopping on this axis, but we may need to chop on other axes
+        Q_assert(surfaces.empty());
+
+        surfaces = std::move(chopped);
     }
 
-    return it;
+    return surfaces;
 }
 
 static void FreeNode(node_t *node)
@@ -606,11 +621,7 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
 
         for (face_t *csgface : faces) {
             // subdivide large faces
-            // fixme-brushbsp: weird calling convention
-            auto parts = std::list<face_t *>{csgface};
-            for (auto it = parts.begin(); it != parts.end(); it++) {
-                it = SubdivideFace(it, parts);
-            }
+            auto parts = SubdivideFace(csgface);
 
             for (face_t *part: parts) {
                 node->facelist.push_back(part);

@@ -31,5 +31,5 @@ struct face_t;
 class mapentity_t;
 
 void DetailToSolid(node_t *node);
-std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, std::list<face_t *> &surfaces);
+std::list<face_t *> SubdivideFace(face_t *f);
 node_t *SolidBSP(mapentity_t *entity, bool midsplit);
