@@ -1121,6 +1121,9 @@ void InitQBSP(int argc, const char **argv)
 {
     // In case we're launched more than once, in testqbsp
     map.reset();
+    // HACK: should have a better way of clearing the options system
+    options.target_game = nullptr;
+    options.target_version = nullptr;
 
     options.run(argc, argv);
 

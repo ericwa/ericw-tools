@@ -533,10 +533,8 @@ TEST(testmaps_q1, origin)
 // q2 testmaps
 
 TEST(testmaps_q2, detail) {
-#if 0
     const mbsp_t bsp = LoadTestmap("qbsp_q2_detail.map", {"-q2bsp"});
 
     ASSERT_FALSE(map.leakfile);
     ASSERT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
-#endif
 }
