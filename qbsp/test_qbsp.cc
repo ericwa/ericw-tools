@@ -258,7 +258,7 @@ TEST(mathlib, WindingArea)
     EXPECT_EQ(64.0f * 64.0f, w.area());
 }
 
-TEST(qsbsp, simple_sealed)
+TEST(testmaps_q1, simple_sealed)
 {
     mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
 
@@ -273,7 +273,7 @@ TEST(qsbsp, simple_sealed)
     ASSERT_EQ(result.dfaces.size(), 6);
 }
 
-TEST(qsbsp, simple_sealed2)
+TEST(testmaps_q1, simple_sealed2)
 {
     mbsp_t result = LoadTestmap("qbsp_simple_sealed2.map");
 
@@ -290,7 +290,7 @@ TEST(qsbsp, simple_sealed2)
     ASSERT_EQ(result.dfaces.size(), 10);
 }
 
-TEST(qsbsp, simple_worldspawn_worldspawn)
+TEST(testmaps_q1, simple_worldspawn_worldspawn)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_worldspawn.map");
 
@@ -314,7 +314,7 @@ TEST(qsbsp, simple_worldspawn_worldspawn)
     }
 }
 
-TEST(qsbsp, simple_worldspawn_detail_wall)
+TEST(testmaps_q1, simple_worldspawn_detail_wall)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_wall.map");
 
@@ -329,7 +329,7 @@ TEST(qsbsp, simple_worldspawn_detail_wall)
     ASSERT_EQ(bsp.dfaces.size(), 11);
 }
 
-TEST(qsbsp, simple_worldspawn_detail)
+TEST(testmaps_q1, simple_worldspawn_detail)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail.map");
 
@@ -344,7 +344,7 @@ TEST(qsbsp, simple_worldspawn_detail)
     ASSERT_EQ(bsp.dfaces.size(), 14);
 }
 
-TEST(qsbsp, noclipfaces)
+TEST(testmaps_q1, noclipfaces)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces.map");
 
@@ -355,7 +355,7 @@ TEST(qsbsp, noclipfaces)
     // TODO: contents should be empty in hull0 because it's func_detail_illusionary
 }
 
-TEST(qsbsp, noclipfaces_mirrorinside)
+TEST(testmaps_q1, noclipfaces_mirrorinside)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces_mirrorinside.map");
 
@@ -367,14 +367,14 @@ TEST(qsbsp, noclipfaces_mirrorinside)
 }
 
 
-TEST(qsbsp, detail_doesnt_seal)
+TEST(testmaps_q1, detail_doesnt_seal)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_seal.map");
 
     ASSERT_TRUE(map.leakfile);
 }
 
-TEST(qsbsp, detail_doesnt_remove_world_nodes)
+TEST(testmaps_q1, detail_doesnt_remove_world_nodes)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_remove_world_nodes.map");
 
