@@ -543,7 +543,8 @@ static std::list<face_t *> ClipFacesToTree_r(node_t *node, std::list<face_t *> f
     if (node->planenum == PLANENUM_LEAF) {
         // fixme-brushbsp: move to contentflags_t?
         if (node->contents.is_solid(options.target_game) 
-            || node->contents.is_detail(CFLAGS_DETAIL)) {
+            || node->contents.is_detail(CFLAGS_DETAIL)
+            || node->contents.is_sky(options.target_game)) {
             // solids eat any faces that reached this point
             return {};
         }
@@ -629,7 +630,8 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
             bool mirror = (srcbrush->contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE);
                 
             if (!(srcbrush->contents.is_solid(options.target_game) ||
-                    srcbrush->contents.is_detail())) {
+                    srcbrush->contents.is_detail() ||
+                    srcbrush->contents.is_sky(options.target_game))) {
                 mirror = true;
             }
 
