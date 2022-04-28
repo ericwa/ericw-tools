@@ -681,7 +681,9 @@ void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
 
     for (auto &brush : entity->brushes) {
         for (auto &face : brush.faces) {
-
+            if (!face.visible) {
+                continue;
+            }
             face_t *temp = NewFaceFromFace(&face);
             temp->w = face.w;
 
