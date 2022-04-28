@@ -396,7 +396,22 @@ TEST(testmaps_q1, simple_worldspawn_sky)
     EXPECT_EQ(1, textureToFace.at("sky3").size());
     EXPECT_EQ(5, textureToFace.at("orangestuff8").size());
 
-    // FIXME: check leaf contents, void is not compiling to solid
+    // leaf/node counts
+    EXPECT_EQ(6, bsp.dnodes.size());
+    EXPECT_EQ(3, bsp.dleafs.size()); // shared solid leaf + empty + sky
+
+    // check contents
+    const qvec3d player_pos{-88, -64, 120};
+
+    EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos)->contents);
+
+    EXPECT_EQ(CONTENTS_SKY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0,0,500))->contents);
+
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d( 500,    0,    0))->contents);
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(-500,    0,    0))->contents);
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(   0,  500,    0))->contents);
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(   0, -500,    0))->contents);
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(   0,    0, -500))->contents);
 }
 
 TEST(testmaps_q1, water_detail_illusionary)
