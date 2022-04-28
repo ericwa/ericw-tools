@@ -385,6 +385,29 @@ TEST(testmaps_q1, simple_worldspawn_detail)
     ASSERT_EQ(bsp.dfaces.size(), 14);
 }
 
+TEST(testmaps_q1, simple_worldspawn_detail_illusionary)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_illusionary.map", {"-outsidedebug"});
+
+    ASSERT_FALSE(map.leakfile);
+
+    // 6 for the room
+    // 1 for the button
+    EXPECT_EQ(map.brushes.size(), 7);
+
+    // 5 faces for the "button"
+    // 6 faces for the room
+    EXPECT_EQ(bsp.dfaces.size(), 11);
+
+    // leaf/node counts
+    EXPECT_EQ(11, bsp.dnodes.size()); // one node per face
+    EXPECT_EQ(7, bsp.dleafs.size()); // shared solid leaf + 6 empty leafs inside the room
+
+    // where the func_detail_illusionary sticks into the void
+    const qvec3d illusionary_in_void{8, -40, 72};
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], illusionary_in_void)->contents);
+}
+
 TEST(testmaps_q1, simple_worldspawn_sky)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_sky.map");
