@@ -182,6 +182,7 @@ public:
     setting_bool contenthack{this, "contenthack", false, &debugging_group,
         "hack to fix leaks through solids. causes missing faces in some cases so disabled by default"};
     setting_bool leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"};
+    setting_bool outsidedebug{this, "outsidedebug", false, &debugging_group, "write a .map after outside filling showing non-visible brush sides"};
     setting_bool keepprt{this, "keepprt", false, &debugging_group,
         "avoid deleting the .prt file on leaking maps"};
     setting_bool includeskip{this, "includeskip", false, &common_format_group,

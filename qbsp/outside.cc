@@ -543,6 +543,13 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
 
     MarkVisibleBrushSides_R(node);
 
+    if (options.outsidedebug.value() && hullnum == 0) {
+        fs::path path = options.bsp_path;
+        path.replace_extension(".outside.map");
+
+        WriteBspBrushMap(path, map.entities[0].brushes);
+    }
+
     logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;
 }

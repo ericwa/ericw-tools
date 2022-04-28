@@ -2295,7 +2295,11 @@ void WriteBspBrushMap(const fs::path &name, const std::vector<brush_t> &list)
             fmt::print(f, "( {} ) ", w[1]);
             fmt::print(f, "( {} ) ", w[2]);
 
-            fmt::print(f, "notexture 0 0 0 1 1\n");
+            if (face.visible) {
+                fmt::print(f, "skip 0 0 0 1 1\n");
+            } else {
+                fmt::print(f, "nonvisible 0 0 0 1 1\n");
+            }
         }
 
         fmt::print(f, "}}\n");
