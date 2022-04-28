@@ -1374,6 +1374,9 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             if (!extinfo.info) {
                 extinfo.info = extended_texinfo_t{};
             }
+            extinfo.info->value = wal->value;
+            extinfo.info->flags = wal->flags;
+            extinfo.info->contents = wal->contents;
             extinfo.info->animation = wal->animation;
         }
     }
