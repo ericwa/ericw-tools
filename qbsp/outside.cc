@@ -32,10 +32,24 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
+static bool AllSolid(const node_t* node) {
+    if (node->planenum != PLANENUM_LEAF) {
+        return AllSolid(node->children[0]) && AllSolid(node->children[1]);
+    }
+
+    return node->contents.is_solid(options.target_game);
+}
+
 static bool ClusterSealsMap(const node_t *node)
 {
     Q_assert(node->planenum == PLANENUM_LEAF || node->detail_separator);
 
+    // detail separators can seal if all leafs have been turned to solid by outside filling
+    if (node->detail_separator && AllSolid(node)) {
+        return true;
+    }
+
+    // normally detail doesn't seal
     if (node->detail_separator) {
         return false;
     }
@@ -123,15 +137,33 @@ static bool OutsideFill_Passable(const portal_t *p)
 
 /*
 ==================
+MarkClusterOutsideDistance_R
+
+Given that the cluster is reachable from the void, sets outside_distance
+to the given value on this cluster and all desdcent leafs (if it's a detail cluster).
+==================
+*/
+static void MarkClusterOutsideDistance_R(node_t* node, int outside_distance)
+{
+    node->outside_distance = outside_distance;
+
+    if (node->planenum != PLANENUM_LEAF) {
+        MarkClusterOutsideDistance_R(node->children[0], outside_distance);
+        MarkClusterOutsideDistance_R(node->children[1], outside_distance);
+    }    
+}
+
+/*
+==================
 FloodFillFromOutsideNode
 
-Sets outside_distance on leafs reachable from the void
+Sets outside_distance on clusters reachable from the void
 
 preconditions:
 - all leafs have outside_distance set to -1
 ==================
 */
-static void FloodFillFromVoid()
+static void FloodFillClustersFromVoid()
 {
     // breadth-first search
     std::list<std::pair<node_t *, int>> queue;
@@ -163,7 +195,7 @@ static void FloodFillFromVoid()
 
         // visit node
         visited_nodes.insert(node);
-        node->outside_distance = outside_distance;
+        MarkClusterOutsideDistance_R(node, outside_distance);
 
         // push neighbouring nodes onto the back of the queue
         int side;
@@ -486,7 +518,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     //
     // We tried inside -> out and it leads to things like monster boxes getting inadvertently sealed,
     // or even whole sections of the map with no point entities - problems compounded by hull expansion.
-    FloodFillFromVoid();
+    FloodFillClustersFromVoid();
 
     // check for the occupied leaf closest to the void
     int best_leak_dist = INT_MAX;
