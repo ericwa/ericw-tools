@@ -1001,6 +1001,35 @@ bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
 std::string contentflags_t::to_string(const gamedef_t *game) const
 {
     std::string s = game->get_contents_display(*this);
+
+    if (extended & CFLAGS_BMODEL_MIRROR_INSIDE) {
+        s += "|BMODEL_MIRROR_INSIDE";
+    }
+    if (extended & CFLAGS_NO_CLIPPING_SAME_TYPE) {
+        s += "|NO_CLIPPING_SAME_TYPE";
+    }
+    if (extended & CFLAGS_HINT) {
+        s += "|HINT";
+    }
+    if (extended & CFLAGS_CLIP) {
+        s += "|CLIP";
+    }
+    if (extended & CFLAGS_ORIGIN) {
+        s += "|ORIGIN";
+    }
+    if (extended & CFLAGS_DETAIL) {
+        s += "|DETAIL";
+    }
+    if (extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        s += "|DETAIL_ILLUSIONARY";
+    }
+    if (extended & CFLAGS_DETAIL_FENCE) {
+        s += "|FENCE";
+    }
+    if (extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+        s += "|ILLUSIONARY_VISBLOCKER";
+    }
+
     return s;
 }
 
