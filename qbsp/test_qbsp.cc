@@ -387,7 +387,7 @@ TEST(testmaps_q1, simple_worldspawn_detail)
 
 TEST(testmaps_q1, simple_worldspawn_detail_illusionary)
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_illusionary.map", {"-outsidedebug"});
+    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_illusionary.map");
 
     ASSERT_FALSE(map.leakfile);
 
