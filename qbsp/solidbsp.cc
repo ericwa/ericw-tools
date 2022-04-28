@@ -96,6 +96,33 @@ void DetailToSolid(node_t *node)
     }
 }
 
+static void PruneNodes_R(node_t *node, int &count_pruned)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        return;
+    }
+
+    PruneNodes_R(node->children[0], count_pruned);
+    PruneNodes_R(node->children[1], count_pruned);
+
+    if (node->children[0]->planenum == PLANENUM_LEAF && node->children[0]->contents.is_solid(options.target_game) &&
+        node->children[1]->planenum == PLANENUM_LEAF && node->children[1]->contents.is_solid(options.target_game)) {
+        // This discards any faces on-node. Should be safe (?)
+        ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
+        ++count_pruned;
+    }
+}
+
+void PruneNodes(node_t *node)
+{ 
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    
+    int count_pruned = 0;
+    PruneNodes_R(node, count_pruned);
+
+    logging::print(logging::flag::STAT, "     {:8} pruned nodes\n", count_pruned);
+}
+
 /*
 ==================
 FaceSide

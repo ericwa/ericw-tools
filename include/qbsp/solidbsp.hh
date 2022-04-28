@@ -31,4 +31,5 @@ struct face_t;
 class mapentity_t;
 
 void DetailToSolid(node_t *node);
+void PruneNodes(node_t *node);
 node_t *SolidBSP(mapentity_t *entity, bool midsplit);

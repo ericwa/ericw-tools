@@ -746,6 +746,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             }
         }
 
+        PruneNodes(nodes);
+
         MakeVisibleFaces(entity, nodes);
 
         // merge polygons
