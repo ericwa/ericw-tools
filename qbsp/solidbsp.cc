@@ -397,6 +397,8 @@ static face_t *ChoosePlaneFromList(std::vector<brush_t> &brushes, const aabb3d &
                     for (auto &face2 : brush2.faces) {
                         if (face2.planenum == face.planenum || face2.onnode)
                             continue;
+                        if (!face2.visible)
+                            continue; // don't penalize for splitting non-visible
 
                         const surfflags_t &flags = map.mtexinfos.at(face2.texinfo).flags;
                         /* Don't penalize for splitting skip faces */
