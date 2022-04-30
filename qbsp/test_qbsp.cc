@@ -291,6 +291,26 @@ TEST(mathlib, WindingArea)
 
 // Q1 testmaps
 
+/**
+ * checks that options are reset across tests.
+ * set two random options and check that they don't carry over.
+ */
+TEST(testmaps_q1, options_reset1)
+{
+    LoadTestmap("qbsp_simple_sealed.map", {"-transsky"});
+
+    EXPECT_FALSE(options.forcegoodtree.value());
+    EXPECT_TRUE(options.transsky.value());
+}
+
+TEST(testmaps_q1, options_reset2)
+{
+    LoadTestmap("qbsp_simple_sealed.map", {"-forcegoodtree"});
+        
+    EXPECT_TRUE(options.forcegoodtree.value());
+    EXPECT_FALSE(options.transsky.value());
+}
+
 TEST(testmaps_q1, simple_sealed)
 {
     mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
