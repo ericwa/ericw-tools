@@ -616,7 +616,7 @@ unchanged
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-static twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d &split)
+twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d &split)
 {
     twosided<std::optional<brush_t>> result;
     

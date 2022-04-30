@@ -23,6 +23,7 @@
 #include <qbsp/brush.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
+#include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 
 #include <atomic>
@@ -471,6 +472,129 @@ std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t *srcentity, const
     for (const brush_t *possible_clipbrush : possible_clipbrushes) {
         result = CSGFace_ClipAgainstSingleBrush(std::move(result), srcentity, srcbrush, possible_clipbrush);
     }
+
+    return result;
+}
+
+/*
+==================
+SubtractBrush
+
+Returns the fragments from a - b
+==================
+*/
+std::vector<brush_t> SubtractBrush(const brush_t& a, const brush_t& b)
+{
+    // first, check if `a` is fully in front of _any_ of b's planes
+    for (const auto &side : b.faces) {
+        auto [front, back] = SplitBrush(a, Face_Plane(&side));
+        if (front && !back) {
+            // `a` is fully in front of this side of b, so they don't actually intersect
+            return {a};
+        }
+    }
+
+    std::vector<brush_t> frontlist;
+    std::vector<brush_t> unclassified{a};
+
+    for (const auto &side : b.faces) {
+        std::vector<brush_t> new_unclassified;
+
+        for (const auto &fragment : unclassified) {
+            auto [front, back] = SplitBrush(fragment, Face_Plane(&side));
+            if (front) {
+                frontlist.push_back(*front);
+            }
+            if (back) {
+                new_unclassified.push_back(*back);
+            }
+        }
+
+        unclassified = std::move(new_unclassified);
+    }
+
+    return frontlist;
+}
+
+/*
+==================
+BrushGE
+
+Returns a >= b as far as brush clipping
+==================
+*/
+static bool BrushGE(const brush_t& a, const brush_t& b)
+{
+    int32_t a_pri = a.contents.priority(options.target_game);
+    int32_t b_pri = b.contents.priority(options.target_game);
+
+    return a_pri >= b_pri;
+}
+
+/*
+==================
+ChopBrushes
+
+Clips off any overlapping portions of brushes
+==================
+*/
+std::vector<brush_t> ChopBrushes(const std::vector<brush_t>& input)
+{
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+
+    // output vector for the parallel_for
+    std::vector<std::vector<brush_t>> brush_fragments;
+    brush_fragments.resize(input.size());
+
+    /*
+     * For each brush, clip away the parts that are inside other brushes.
+     * Solid brushes override non-solid brushes.
+     *   brush     => the brush to be clipped
+     *   clipbrush => the brush we are clipping against
+     *
+     * The output of this is a face list for each brush called "outside"
+     */
+    tbb::parallel_for(static_cast<size_t>(0), input.size(), [input, &brush_fragments](const size_t i) {
+        const auto &brush = input[i];
+        // the fragments `brush` is chopped into
+        std::vector<brush_t> brush_result{brush};
+
+        for (auto &clipbrush : input) {
+            if (&brush == &clipbrush) {
+                continue;
+            }
+            if (brush.bounds.disjoint(clipbrush.bounds)) {
+                continue;
+            }
+
+            if (BrushGE(clipbrush, brush)) {
+                std::vector<brush_t> new_result;
+
+                // clipbrush is stronger. clip all existing fragments to clipbrush
+                for (const auto &current_fragment : brush_result) {
+                    for (const auto &new_fragment : SubtractBrush(current_fragment, clipbrush)) {
+                        new_result.push_back(new_fragment);
+                    }
+                }
+                
+                brush_result = std::move(new_result);
+            }
+        }
+
+        // save the result
+        brush_fragments[i] = brush_result;
+    });
+
+    // Non parallel part:
+    std::vector<brush_t> result;
+    for (auto &fragment_list : brush_fragments) {
+        for (auto &fragment : fragment_list) {
+            result.push_back(std::move(fragment));
+        }
+    }
+    
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", input.size());
+    logging::print(logging::flag::STAT, "     {:8} chopped brushes\n", result.size());
 
     return result;
 }

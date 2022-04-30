@@ -30,6 +30,7 @@
 #include <common/settings.hh>
 
 #include <qbsp/brush.hh>
+#include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
 #include <qbsp/portals.hh>
@@ -652,6 +653,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
     auto stats = Brush_LoadEntity(entity, hullnum);
+
+    entity->brushes = ChopBrushes(entity->brushes);
 
     // we're discarding the brush
     if (discarded_trigger) {

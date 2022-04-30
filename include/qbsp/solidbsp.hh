@@ -21,8 +21,13 @@
 
 #pragma once
 
+#include <qbsp/brush.hh>
+
+#include <common/qvec.hh>
+
 #include <atomic>
 #include <list>
+#include <optional>
 
 extern std::atomic<int> splitnodes;
 
@@ -32,4 +37,5 @@ class mapentity_t;
 
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);
+twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d &split);
 node_t *SolidBSP(mapentity_t *entity, bool midsplit);
