@@ -528,6 +528,10 @@ static bool BrushGE(const brush_t& a, const brush_t& b)
     int32_t a_pri = a.contents.priority(options.target_game);
     int32_t b_pri = b.contents.priority(options.target_game);
 
+    if (a_pri == b_pri) {
+        return &a > &b;
+    }
+
     return a_pri >= b_pri;
 }
 
