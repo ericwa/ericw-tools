@@ -656,6 +656,15 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     entity->brushes = ChopBrushes(entity->brushes);
 
+    if (entity == map.world_entity() && hullnum == 0) {
+        if (options.debugchop.value()) {
+            fs::path path = options.bsp_path;
+            path.replace_extension(".chop.map");
+
+            WriteBspBrushMap(path, entity->brushes);
+        }
+    }
+
     // we're discarding the brush
     if (discarded_trigger) {
         entity->brushes.clear();
