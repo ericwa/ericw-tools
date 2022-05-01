@@ -383,7 +383,7 @@ public:
 
     setting_bool surflight_dump{this, "surflight_dump", false, &debug_group, "dump surface lights to a .map file"};
     setting_scalar surflight_subdivide{
-        this, "surflight_subdivide", 128.0, 64.0, 2048.0, &performance_group, "surface light subdivision size"};
+        this, "surflight_subdivide", 128.0, 1.0, 2048.0, &performance_group, "surface light subdivision size"};
     setting_bool onlyents{this, "onlyents", false, &output_group, "only update entities"};
     setting_bool write_normals{
         this, "wrnormals", false, &output_group, "output normals, tangents and bitangents in a BSPX lump"};
