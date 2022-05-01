@@ -669,7 +669,7 @@ struct gamedef_q2_t : public gamedef_t
 
         // translucent objects are automatically classified as detail
         if (surf_contents.native & Q2_CONTENTS_WINDOW) {
-            surf_contents.extended |= CFLAGS_DETAIL_FENCE;
+            surf_contents.extended |= CFLAGS_DETAIL;
         } else if (surf_contents.native & (Q2_CONTENTS_MIST | Q2_CONTENTS_AUX)) {
             surf_contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
             // if we used the DETAIL contents flag, copy over DETAIL

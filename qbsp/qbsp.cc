@@ -107,7 +107,7 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         set_target_version(&bspver_hl);
     }
 
-    if (q2bsp.value()) {
+    if (q2bsp.value() || q2rtx.value()) {
         set_target_version(&bspver_q2);
     }
 

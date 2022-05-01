@@ -160,6 +160,12 @@ void light_settings::postinitialize(int argc, const char **argv)
     } else if (debugmode == debugmodes::debugneighbours && !debugface.isChanged()) {
         FError("-debugneighbours without -debugface specified\n");
     }
+
+    if (options.q2rtx.value()) {
+        if (!options.nolighting.isChanged()) {
+            options.nolighting.setValueLocked(true);
+        }
+    }
     
     common_settings::postinitialize(argc, argv);
 }

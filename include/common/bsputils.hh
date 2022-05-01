@@ -43,7 +43,6 @@ qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f);
 const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face);
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face);
-bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);
 const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v);
 bool ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, int contents_or_surf_flags); // mxd
 bool Face_IsTranslucent(const mbsp_t *bsp, const mface_t *face); // mxd
