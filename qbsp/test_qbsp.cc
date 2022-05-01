@@ -461,13 +461,21 @@ TEST(testmaps_q1, water_detail_illusionary)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_water_detail_illusionary.map");
 
-    ASSERT_FALSE(map.leakfile);
+    EXPECT_FALSE(map.leakfile);
 
     const qvec3d inside_water_and_fence{-20, -52, 124};
-    const auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_water_and_fence);
-    ASSERT_EQ(leaf->contents, CONTENTS_WATER);
-}
+    const qvec3d inside_fence{-20, -52, 172};
 
+    EXPECT_EQ(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_water_and_fence)->contents, CONTENTS_WATER);
+    EXPECT_EQ(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_fence)->contents, CONTENTS_EMPTY);
+
+    const qvec3d underwater_face_pos{-40, -52, 124};
+    const qvec3d above_face_pos{-40, -52, 172};
+
+    // make sure the detail_illusionary face underwater isn't clipped away
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0}));
+}
 
 TEST(testmaps_q1, noclipfaces)
 {
