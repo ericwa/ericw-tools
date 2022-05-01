@@ -527,12 +527,7 @@ static bool BrushGE(const brush_t& a, const brush_t& b)
 {
     // only chop if at least one of the two contents is
     // opaque (solid, sky, or detail)
-    if (!(a.contents.is_solid(options.target_game)
-          || b.contents.is_solid(options.target_game)
-          || a.contents.is_sky(options.target_game)
-          || b.contents.is_sky(options.target_game)
-          || a.contents.is_detail(CFLAGS_DETAIL)
-          || b.contents.is_detail(CFLAGS_DETAIL))) {
+    if (!(a.contents.chops(options.target_game) || b.contents.chops(options.target_game))) {
         return false;
     }
 

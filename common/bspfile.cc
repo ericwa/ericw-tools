@@ -58,6 +58,8 @@ struct gamedef_generic_t : public gamedef_t
 
     int32_t contents_priority(const contentflags_t &) const { throw std::bad_cast(); }
 
+    bool chops(const contentflags_t &) const { throw std::bad_cast(); }
+
     contentflags_t create_extended_contents(const int32_t &) const { throw std::bad_cast(); }
 
     contentflags_t create_empty_contents(const int32_t &) const { throw std::bad_cast(); }
@@ -167,6 +169,10 @@ struct gamedef_q1_like_t : public gamedef_t
                 default: FError("Bad contents in face"); return 0;
             }
         }
+    }
+
+    bool chops(const contentflags_t &contents) const { 
+        return contents_are_solid(contents) || contents_are_sky(contents) || (contents.extended & CFLAGS_DETAIL);
     }
 
     contentflags_t create_extended_contents(const int32_t &cflags) const { return {0, cflags}; }
@@ -493,6 +499,13 @@ struct gamedef_q2_t : public gamedef_t
                 default: return 0;
             }
         }
+    }
+
+    bool chops(const contentflags_t &contents) const
+    {
+        // TODO: ideally this could just check for Q2_CONTENTS_SOLID
+        // once we implement detail as Q2_CONTENTS_SOLID|Q2_CONTENTS_DETAIL
+        return contents_are_solid(contents) || (contents.extended & CFLAGS_DETAIL);
     }
 
     contentflags_t create_extended_contents(const int32_t &cflags) const { return {0, cflags}; }
@@ -971,6 +984,11 @@ bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *g
 int32_t contentflags_t::priority(const gamedef_t *game) const
 {
     return game->contents_priority(*this);
+}
+
+bool contentflags_t::chops(const gamedef_t* game) const
+{
+    return game->chops(*this);
 }
 
 bool contentflags_t::is_empty(const gamedef_t *game) const

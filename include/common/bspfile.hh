@@ -632,7 +632,13 @@ struct contentflags_t
     // also match.
     bool types_equal(const contentflags_t &other, const gamedef_t *game) const;
 
+    // when multiple brushes contribute to a leaf, the higher priority
+    // one determines the leaf contents
     int32_t priority(const gamedef_t *game) const;
+
+    // whether this should chop (if so, only lower priority content brushes get chopped)
+    // should return true only for solid / opaque content types
+    bool chops(const gamedef_t *game) const;
 
     std::string to_string(const gamedef_t *game) const;
 };
@@ -1767,6 +1773,7 @@ struct gamedef_t
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
     virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
+    virtual bool chops(const contentflags_t &) const = 0;
     virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
