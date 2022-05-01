@@ -2860,6 +2860,21 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
     return res;
 }
 
+bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
+{
+    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+
+    if (texinfo == nullptr)
+        return false;
+
+    // Q2RTX should light nodraw faces
+    if (options.q2rtx.value() && (texinfo->flags.native & Q2_SURF_NODRAW)) {
+        return true;
+    }
+
+    return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
+}
+
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
     const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux);
 

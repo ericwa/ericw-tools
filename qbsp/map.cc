@@ -1358,12 +1358,11 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         // first one first
         if (auto wal = LoadWal(mapface.texname.c_str())) {
             if (!extinfo.info) {
-                extinfo.info = extended_texinfo_t{};
+                extinfo.info = extended_texinfo_t{wal->contents, wal->flags, wal->value};
             }
-            extinfo.info->value = wal->value;
-            extinfo.info->flags = wal->flags;
-            extinfo.info->contents = wal->contents;
             extinfo.info->animation = wal->animation;
+        } else if (!extinfo.info) {
+            extinfo.info = extended_texinfo_t{};
         }
     }
 

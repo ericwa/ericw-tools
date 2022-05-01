@@ -184,16 +184,6 @@ const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
     return "";
 }
 
-bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
-{
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
-
-    if (texinfo == nullptr)
-        return false;
-
-    return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
-}
-
 const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v)
 {
     return bsp->dvertexes[Face_VertexAtIndex(bsp, f, v)];
