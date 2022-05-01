@@ -617,7 +617,7 @@ PortalizeWorld
 Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
-void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hullnum)
+void PortalizeEntity(const mapentity_t *entity, node_t *headnode, const int hullnum)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
@@ -630,7 +630,7 @@ void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hulln
 
     logging::percent(splitnodes, splitnodes, entity == map.world_entity());
 
-    if (hullnum <= 0) {
+    if (hullnum <= 0 && entity == map.world_entity()) {
         /* save portal file for vis tracing */
         WritePortalfile(headnode, &state);
 

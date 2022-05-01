@@ -23,3 +23,5 @@
 
 bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum);
 std::vector<node_t *> FindOccupiedClusters(node_t *headnode);
+
+void FillBrushEntity(mapentity_t *entity, node_t *node, const int hullnum);

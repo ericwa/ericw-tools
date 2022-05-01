@@ -699,7 +699,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         nodes = SolidBSP(entity, true);
         if (entity == map.world_entity() && !options.nofill.value()) {
             // assume non-world bmodels are simple
-            PortalizeWorld(entity, nodes, hullnum);
+            PortalizeEntity(entity, nodes, hullnum);
             if (FillOutside(entity, nodes, hullnum)) {
                 // fixme-brushbsp: re-add
                 // FreeNodes(nodes);
@@ -732,10 +732,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        if (entity == map.world_entity()) {
-            // assume non-world bmodels are simple
-            PortalizeWorld(entity, nodes, hullnum);
+        PortalizeEntity(entity, nodes, hullnum);
 
+        if (entity == map.world_entity()) {
             // flood fills from the void.
             // marks brush sides which are *only* touching void;
             // we can skip using them as BSP splitters on the "really good tree"
@@ -748,7 +747,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 nodes = SolidBSP(entity, false);
 
                 // make the real portals for vis tracing
-                PortalizeWorld(entity, nodes, hullnum);
+                PortalizeEntity(entity, nodes, hullnum);
             }
 
             // Area portals
@@ -756,6 +755,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 FloodAreas(entity, nodes);
                 EmitAreaPortals(nodes);
             }
+        } else {
+            FillBrushEntity(entity, nodes, hullnum);
+
+            // rebuild BSP now that we've marked invisible brush sides
+            nodes = SolidBSP(entity, false);
         }
 
         PruneNodes(nodes);

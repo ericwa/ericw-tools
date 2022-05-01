@@ -585,3 +585,15 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;
 }
+
+void FillBrushEntity(mapentity_t* entity, node_t* node, const int hullnum)
+{
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+
+    // Clear the outside filling state on all nodes
+    ClearOccupied_r(node);
+
+    MarkBrushSidesInvisible(entity);
+
+    MarkVisibleBrushSides_R(node);
+}
