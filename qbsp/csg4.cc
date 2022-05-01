@@ -525,6 +525,17 @@ Returns a >= b as far as brush clipping
 */
 static bool BrushGE(const brush_t& a, const brush_t& b)
 {
+    // only chop if at least one of the two contents is
+    // opaque (solid, sky, or detail)
+    if (!(a.contents.is_solid(options.target_game)
+          || b.contents.is_solid(options.target_game)
+          || a.contents.is_sky(options.target_game)
+          || b.contents.is_sky(options.target_game)
+          || a.contents.is_detail(CFLAGS_DETAIL)
+          || b.contents.is_detail(CFLAGS_DETAIL))) {
+        return false;
+    }
+
     int32_t a_pri = a.contents.priority(options.target_game);
     int32_t b_pri = b.contents.priority(options.target_game);
 
