@@ -86,6 +86,13 @@ face_t *NewFaceFromFace(const face_t *in)
     return newf;
 }
 
+face_t* CopyFace(const face_t* in)
+{
+    face_t *temp = NewFaceFromFace(in);
+    temp->w = in->w;
+    return temp;
+}
+
 void UpdateFaceSphere(face_t *in)
 {
     in->origin = in->w.center();

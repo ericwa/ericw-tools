@@ -499,19 +499,25 @@ AddMarksurfaces_r
 
 Adds the given face to the markfaces lists of all descendant leafs of `node`.
 
-fixme-brushbsp: do this accurately, not exhaustively
 fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
 ================
 */
-static void AddMarksurfaces_r(face_t *face, node_t *node)
+static void AddMarksurfaces_r(face_t *face, face_t *face_copy, node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
         node->markfaces.push_back(face);
         return;
     }
 
-    AddMarksurfaces_r(face, node->children[0]);
-    AddMarksurfaces_r(face, node->children[1]);
+    const qbsp_plane_t &splitplane = map.planes[node->planenum];
+
+    auto [frontFragment, backFragment] = SplitFace(face_copy, splitplane);
+    if (frontFragment) {
+        AddMarksurfaces_r(face, frontFragment, node->children[0]);
+    }
+    if (backFragment) {
+        AddMarksurfaces_r(face, backFragment, node->children[1]);
+    }
 }
 
 /*
@@ -529,8 +535,16 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
 
     // for the faces on this splitting node..
     for (face_t *face : node->facelist) {
-        // add this face to all descendant leafs (temporary hack)
-        AddMarksurfaces_r(face, node);
+        // add this face to all descendant leafs it touches
+        
+        // make a copy we can clip
+        face_t *face_copy = CopyFace(face);
+
+        if (face->planeside == 0) {
+            AddMarksurfaces_r(face, face_copy, node->children[0]);
+        } else {
+            AddMarksurfaces_r(face, face_copy, node->children[1]);
+        }
     }
 
     // process child nodes recursively
@@ -692,8 +706,7 @@ void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
             if (!face.visible) {
                 continue;
             }
-            face_t *temp = NewFaceFromFace(&face);
-            temp->w = face.w;
+            face_t *temp = CopyFace(&face);
 
             AddFaceToTree_r(entity, temp, &brush, headnode);
         }

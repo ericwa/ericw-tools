@@ -33,6 +33,7 @@ struct face_t;
 
 int MakeSkipTexinfo();
 face_t *NewFaceFromFace(const face_t *in);
+face_t *CopyFace(const face_t *in);
 face_t *MirrorFace(const face_t *face);
 std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);

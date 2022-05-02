@@ -347,7 +347,7 @@ TEST(testmaps_q1, simple_sealed2)
     const qvec3d player_pos{-56, -96, 120};
     const qvec3d other_empty_leaf_pos{-71, -288, 102};
     auto *player_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos);
-    auto *other_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos);
+    auto *other_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], other_empty_leaf_pos);
 
     auto player_markfaces = Leaf_Markfaces(&bsp, player_leaf);
     auto other_markfaces = Leaf_Markfaces(&bsp, other_leaf);
