@@ -538,7 +538,9 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
     MakeMarkFaces(entity, node->children[1]);
 }
 
-static std::list<face_t *> ClipFacesToTree_r(node_t *node, std::list<face_t *> faces)
+// the fronts of `faces` are facing `node`, determine what gets clipped away
+// (return the post-clipping result)
+static std::list<face_t *> ClipFacesToTree_r(node_t *node, const brush_t *srcbrush, std::list<face_t *> faces)
 {
     if (node->planenum == PLANENUM_LEAF) {
         // fixme-brushbsp: move to contentflags_t?
@@ -546,6 +548,12 @@ static std::list<face_t *> ClipFacesToTree_r(node_t *node, std::list<face_t *> f
             || node->contents.is_detail(CFLAGS_DETAIL)
             || node->contents.is_sky(options.target_game)) {
             // solids eat any faces that reached this point
+            return {};
+        }
+
+        // translucent contents also clip faces 
+        if (node->contents == srcbrush->contents 
+            && srcbrush->contents.clips_same_type()) {
             return {};
         }
         // other content types let the faces thorugh
@@ -566,8 +574,8 @@ static std::list<face_t *> ClipFacesToTree_r(node_t *node, std::list<face_t *> f
         }
     }
 
-    front = ClipFacesToTree_r(node->children[0], front);
-    back = ClipFacesToTree_r(node->children[1], back);
+    front = ClipFacesToTree_r(node->children[0], srcbrush, front);
+    back = ClipFacesToTree_r(node->children[1], srcbrush, back);
 
     // merge lists
     front.splice(front.end(), back);
@@ -575,7 +583,7 @@ static std::list<face_t *> ClipFacesToTree_r(node_t *node, std::list<face_t *> f
     return front;
 }
 
-static std::list<face_t*> ClipFacesToTree(node_t* node, std::list<face_t*> faces)
+static std::list<face_t *> ClipFacesToTree(node_t *node, const brush_t *srcbrush, std::list<face_t *> faces)
 {
     // handles the first level - faces are all supposed to be lying exactly on `node`
     for (auto *face : faces) {
@@ -591,8 +599,8 @@ static std::list<face_t*> ClipFacesToTree(node_t* node, std::list<face_t*> faces
         }
     }
 
-    front = ClipFacesToTree_r(node->children[0], front);
-    back = ClipFacesToTree_r(node->children[1], back);
+    front = ClipFacesToTree_r(node->children[0], srcbrush, front);
+    back = ClipFacesToTree_r(node->children[1], srcbrush, back);
 
     // merge lists
     front.splice(front.end(), back);
@@ -618,7 +626,7 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
 
         // clip them to the descendant parts of the BSP
         // (otherwise we could have faces floating in the void on this node)
-        faces = ClipFacesToTree(node, faces);
+        faces = ClipFacesToTree(node, srcbrush, faces);
 
         for (face_t *part : faces) {
             node->facelist.push_back(part);

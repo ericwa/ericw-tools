@@ -272,8 +272,14 @@ BrushGE
 Returns a >= b as far as brush clipping
 ==================
 */
-static bool BrushGE(const brush_t& a, const brush_t& b)
+bool BrushGE(const brush_t& a, const brush_t& b)
 {
+    // same contents clip each other
+    if (a.contents == b.contents && a.contents.clips_same_type()) {
+        // map file order
+        return &a > &b;
+    }
+
     // only chop if at least one of the two contents is
     // opaque (solid, sky, or detail)
     if (!(a.contents.chops(options.target_game) || b.contents.chops(options.target_game))) {
@@ -284,6 +290,7 @@ static bool BrushGE(const brush_t& a, const brush_t& b)
     int32_t b_pri = b.contents.priority(options.target_game);
 
     if (a_pri == b_pri) {
+        // map file order
         return &a > &b;
     }
 
