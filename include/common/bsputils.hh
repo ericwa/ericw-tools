@@ -21,9 +21,10 @@
 
 #include <common/bspfile.hh>
 #include <common/mathlib.hh>
-#include <string>
-
 #include <common/qvec.hh>
+
+#include <string>
+#include <vector>
 
 const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp);
 int Face_GetNum(const mbsp_t *bsp, const mface_t *f);
@@ -51,6 +52,9 @@ int Face_ContentsOrSurfaceFlags(
 const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
 bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
 bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
+
+std::vector<const mface_t *> BSP_FindFacesAtPoint(
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
 /**
  * Searches for a face touching a point and facing a certain way.
  * Sometimes (water, sky?) there will be 2 overlapping candidates facing opposite ways, the provided normal

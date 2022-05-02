@@ -510,6 +510,45 @@ TEST(testmaps_q1, noclipfaces_mirrorinside)
     }
 }
 
+TEST(testmaps_q1, detail_illusionary_intersecting)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_detail_illusionary_intersecting.map");
+
+    EXPECT_FALSE(map.leakfile);
+
+    // sides: 3*4 = 12
+    // top: 3
+    // bottom: 3
+    EXPECT_EQ(bsp.dfaces.size(), 18);
+
+    for (auto &face : bsp.dfaces) {
+        EXPECT_STREQ("{trigger", Face_TextureName(&bsp, &face));
+    }
+
+    // top of cross
+    EXPECT_EQ(1, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -50, 120), qvec3d(0, 0, 1)).size());
+
+    // interior face that should be clipped away
+    EXPECT_EQ(0, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -52, 116), qvec3d(0, -1, 0)).size());
+}
+
+TEST(testmaps_q1, detail_illusionary_noclipfaces_intersecting)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_detail_illusionary_noclipfaces_intersecting.map");
+
+    EXPECT_FALSE(map.leakfile);
+
+    for (auto &face : bsp.dfaces) {
+        EXPECT_STREQ("{trigger", Face_TextureName(&bsp, &face));
+    }
+
+    // top of cross has 2 faces Z-fighting, because we disabled clipping
+    EXPECT_EQ(2, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -50, 120), qvec3d(0, 0, 1)).size());
+
+    // interior face not clipped away
+    EXPECT_EQ(1, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -52, 116), qvec3d(0, -1, 0)).size());
+}
+
 TEST(testmaps_q1, detail_doesnt_seal)
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_seal.map");

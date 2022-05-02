@@ -319,21 +319,28 @@ static bool EdgePlanes_PointInside(const std::vector<qplane3d> &edgeplanes, cons
     return true;
 }
 
-static const mface_t *BSP_FindFaceAtPoint_r(
-    const mbsp_t *bsp, const int nodenum, const qvec3d &point, const qvec3d &wantedNormal)
+/**
+ * pass 0,0,0 for wantedNormal to disable the normal check
+ */
+static void BSP_FindFaceAtPoint_r(
+    const mbsp_t *bsp, const int nodenum, const qvec3d &point, const qvec3d &wantedNormal, std::vector<const mface_t *> &result)
 {
     if (nodenum < 0) {
         // we're only interested in nodes, since faces are owned by nodes.
-        return nullptr;
+        return;
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
     const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
-    if (dist > 0.1)
-        return BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal);
-    if (dist < -0.1)
-        return BSP_FindFaceAtPoint_r(bsp, node->children[1], point, wantedNormal);
+    if (dist > 0.1) {
+        BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal, result);
+        return;
+    }
+    if (dist < -0.1) {
+        BSP_FindFaceAtPoint_r(bsp, node->children[1], point, wantedNormal, result);
+        return;
+    }
 
     // Point is close to this node plane. Check all faces on the plane.
     for (int i = 0; i < node->numfaces; i++) {
@@ -341,9 +348,11 @@ static const mface_t *BSP_FindFaceAtPoint_r(
         // First check if it's facing the right way
         qvec3d faceNormal = Face_Normal(bsp, face);
 
-        if (qv::dot(faceNormal, wantedNormal) < 0) {
-            // Opposite, so not the right face.
-            continue;
+        if (wantedNormal != qvec3d{0, 0, 0}) {
+            if (qv::dot(faceNormal, wantedNormal) < 0) {
+                // Opposite, so not the right face.
+                continue;
+            }
         }
 
         // Next test if it's within the boundaries of the face
@@ -352,23 +361,33 @@ static const mface_t *BSP_FindFaceAtPoint_r(
 
         // Found a match?
         if (insideFace) {
-            return face;
+            result.push_back(face);
         }
     }
 
     // No match found on this plane. Check both sides of the tree.
-    const mface_t *side0Match = BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal);
-    if (side0Match != nullptr) {
-        return side0Match;
-    } else {
-        return BSP_FindFaceAtPoint_r(bsp, node->children[1], point, wantedNormal);
-    }
+    BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal, result);
+    BSP_FindFaceAtPoint_r(bsp, node->children[1], point, wantedNormal, result);
+}
+
+std::vector<const mface_t *> BSP_FindFacesAtPoint(
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal)
+{
+    std::vector<const mface_t *> result;
+    BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal, result);
+    return result;
 }
 
 const mface_t *BSP_FindFaceAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal)
 {
-    return BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal);
+    std::vector<const mface_t *> result;
+    BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal, result);
+
+    if (result.empty()) {    
+        return nullptr; 
+    }
+    return result[0];
 }
 
 static const bsp2_dnode_t *BSP_FindNodeAtPoint_r(
