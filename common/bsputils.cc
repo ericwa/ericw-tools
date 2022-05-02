@@ -448,6 +448,19 @@ const mleaf_t* BSP_FindLeafAtPoint(const mbsp_t* bsp, const dmodelh2_t* model, c
     return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point);
 }
 
+std::vector<const mface_t*> Leaf_Markfaces(const mbsp_t* bsp, const mleaf_t* leaf)
+{
+    std::vector<const mface_t *> result;
+    result.reserve(leaf->nummarksurfaces);
+
+    for (uint32_t i = 0; i < leaf->nummarksurfaces; ++i) {
+        uint32_t face_index = bsp->dleaffaces.at(leaf->firstmarksurface + i);
+        result.push_back(BSP_GetFace(bsp, face_index));
+    }
+
+    return result;
+}
+
 // glm stuff
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
 {

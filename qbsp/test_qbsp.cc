@@ -1,4 +1,5 @@
-#include "gtest/gtest.h"
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
@@ -328,20 +329,44 @@ TEST(testmaps_q1, simple_sealed)
 
 TEST(testmaps_q1, simple_sealed2)
 {
-    mbsp_t result = LoadTestmap("qbsp_simple_sealed2.map");
+    mbsp_t bsp = LoadTestmap("qbsp_simple_sealed2.map");
 
-    ASSERT_EQ(map.brushes.size(), 14);
+    EXPECT_EQ(map.brushes.size(), 14);
 
-    ASSERT_EQ(result.dleafs.size(), 3);
+    EXPECT_EQ(bsp.dleafs.size(), 3);
     
-    ASSERT_EQ(result.dleafs[0].contents, CONTENTS_SOLID);
-    ASSERT_EQ(result.dleafs[1].contents, CONTENTS_EMPTY);
-    ASSERT_EQ(result.dleafs[2].contents, CONTENTS_EMPTY);
+    EXPECT_EQ(bsp.dleafs[0].contents, CONTENTS_SOLID);
+    EXPECT_EQ(bsp.dleafs[1].contents, CONTENTS_EMPTY);
+    EXPECT_EQ(bsp.dleafs[2].contents, CONTENTS_EMPTY);
 
     // L-shaped room
     // 2 ceiling + 2 floor + 6 wall faces
-    ASSERT_EQ(result.dfaces.size(), 10);
+    EXPECT_EQ(bsp.dfaces.size(), 10);
+
+    // get markfaces
+    const qvec3d player_pos{-56, -96, 120};
+    const qvec3d other_empty_leaf_pos{-71, -288, 102};
+    auto *player_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos);
+    auto *other_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos);
+
+    auto player_markfaces = Leaf_Markfaces(&bsp, player_leaf);
+    auto other_markfaces = Leaf_Markfaces(&bsp, other_leaf);
+
+    // other room's expected markfaces
+
+    auto *other_floor = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-80, -272, 64), qvec3d(0, 0, 1));
+    auto *other_ceil = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-80, -272, 192), qvec3d(0, 0, -1));
+    auto *other_minus_x =
+        BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-16, -272, 128), qvec3d(-1, 0, 0));
+    auto *other_plus_x = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-128, -272, 128), qvec3d(1, 0, 0)); // +X normal wall (extends into player leaf)
+    auto *other_plus_y =
+        BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-64, -368, 128), qvec3d(0, 1, 0)); // back wall +Y normal
+
+    EXPECT_THAT(other_markfaces, testing::UnorderedElementsAreArray({
+        other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y
+    }));
 }
+
 
 TEST(testmaps_q1, simple_worldspawn_worldspawn)
 {
