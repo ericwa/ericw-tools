@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <set>
 #include <map>
 
 // FIXME: Clear global data (planes, etc) between each test
@@ -720,6 +721,74 @@ TEST(testmaps_q1, features)
 TEST(testmaps_q2, detail) {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_detail.map", {"-q2bsp"});
 
-    ASSERT_FALSE(map.leakfile);
-    ASSERT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+    EXPECT_FALSE(map.leakfile);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    // stats
+    EXPECT_EQ(1, bsp.dmodels.size());
+    // leafs:
+    //  6 solid leafs outside the room
+    //  1 empty leaf filling the room above the divider
+    //  2 empty leafs + 1 solid leaf for divider
+    //  1 detail leaf for button
+    //  4 empty leafs around + 1 on top of button 
+    // total: 16
+    // Q2 reserves leaf 0 as an invalid leaf, so dleafs size is 17
+    EXPECT_EQ(17, bsp.dleafs.size());
+
+    std::map<int32_t, int> counts_by_contents;
+    for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
+        ++counts_by_contents[bsp.dleafs[i].contents];
+    }
+
+    EXPECT_EQ((std::map<int32_t, int>{{Q2_CONTENTS_SOLID, 7}, {Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL, 1}, {0, 8}}),
+        counts_by_contents);
+
+    // clusters:
+    //  6 solid leafs outside the room
+    //  1 empty leaf filling the room above the divider
+    //  2 empty leafs + 1 solid leaf for divider
+    //  1 cluster for the part of the room with the button
+    // total: 10
+    std::set<int> clusters;
+    // first add the empty leafs
+    for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
+        if (0 == bsp.dleafs[i].contents) {
+            clusters.insert(bsp.dleafs[i].cluster);
+        }
+    }
+    EXPECT_EQ(4, clusters.size());
+
+    // various points in the main room cluster
+    const qvec3d under_button{46, -64, 96}; // directly on the main floor plane
+    const qvec3d inside_button{46, -64, 98};
+    const qvec3d above_button{46, -64, 120};
+
+    // side room (different cluster)
+    const qvec3d side_room{-62, 76, 140};    
+
+    // detail clips away world faces
+    EXPECT_EQ(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], under_button, {0, 0, 1}));
+
+    // check for correct contents
+    auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
+    EXPECT_EQ(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL, detail_leaf->contents);
+
+    // check for button (detail) brush
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, detail_leaf).size());
+    EXPECT_EQ(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL, 
+                Leaf_Brushes(&bsp, detail_leaf).at(0)->contents);
+
+    // get more leafs
+    auto *empty_leaf_above_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_button);
+    EXPECT_EQ(0, empty_leaf_above_button->contents);
+    EXPECT_EQ(0, Leaf_Brushes(&bsp, empty_leaf_above_button).size());
+
+    auto *empty_leaf_side_room = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], side_room);
+    EXPECT_EQ(0, empty_leaf_side_room->contents);
+    EXPECT_EQ(0, Leaf_Brushes(&bsp, empty_leaf_side_room).size());
+
+    // check cluster indices
+    EXPECT_EQ(empty_leaf_above_button->cluster, detail_leaf->cluster);
+    EXPECT_NE(empty_leaf_side_room->contents, detail_leaf->cluster);
 }

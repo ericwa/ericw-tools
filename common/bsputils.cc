@@ -461,6 +461,19 @@ std::vector<const mface_t*> Leaf_Markfaces(const mbsp_t* bsp, const mleaf_t* lea
     return result;
 }
 
+std::vector<const dbrush_t*> Leaf_Brushes(const mbsp_t* bsp, const mleaf_t* leaf)
+{
+    std::vector<const dbrush_t *> result;
+    result.reserve(leaf->numleafbrushes);
+
+    for (uint32_t i = 0; i < leaf->numleafbrushes; ++i) {
+        uint32_t brush_index = bsp->dleafbrushes.at(leaf->firstleafbrush + i);
+        result.push_back(&bsp->dbrushes.at(brush_index));
+    }
+
+    return result;
+}
+
 // glm stuff
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
 {
