@@ -215,21 +215,11 @@ static void FreeFaces(std::list<face_t *> &facelist)
 
 //==========================================================================
 
-/*
-==================
-BrushIndexInMap
-
-Returns the index of the brush in the .map files.
-Only call with an "original" brush (from entity->brushes).
-Used for clipping priority.
-==================
-*/
-static int BrushIndexInMap(const mapentity_t *entity, const brush_t *brush)
+static std::vector<std::unique_ptr<brush_t>> SingleBrush(std::unique_ptr<brush_t> a)
 {
-    Q_assert(brush >= entity->brushes.data());
-    Q_assert(brush < (entity->brushes.data() + entity->brushes.size()));
-
-    return static_cast<int>(brush - entity->brushes.data());
+    std::vector<std::unique_ptr<brush_t>> res;
+    res.push_back(std::move(a));
+    return res;
 }
 
 /*
@@ -239,30 +229,46 @@ SubtractBrush
 Returns the fragments from a - b
 ==================
 */
-std::vector<brush_t> SubtractBrush(const brush_t& a, const brush_t& b)
+static std::vector<std::unique_ptr<brush_t>> SubtractBrush(std::unique_ptr<brush_t> a, const brush_t& b)
 {
     // first, check if `a` is fully in front of _any_ of b's planes
     for (const auto &side : b.faces) {
-        auto [front, back] = SplitBrush(a, Face_Plane(&side));
-        if (front && !back) {
+        // is `a` fully in front of `side`?
+        bool fully_infront = true;
+
+        // fixme-brushbsp: factor this out somewhere
+        for (const auto &a_face : a->faces) {
+            for (const auto &a_point : a_face.w) {
+                if (Face_Plane(&side).distance_to(a_point) < 0) {
+                    fully_infront = false;
+                    break;
+                }
+            }
+            if (!fully_infront) {
+                break;
+            }
+        }
+
+        if (fully_infront) {
             // `a` is fully in front of this side of b, so they don't actually intersect
-            return {a};
+            return SingleBrush(std::move(a));
         }
     }
 
-    std::vector<brush_t> frontlist;
-    std::vector<brush_t> unclassified{a};
+    std::vector<std::unique_ptr<brush_t>> frontlist;
+    std::vector<std::unique_ptr<brush_t>> unclassified = SingleBrush(std::move(a));
 
     for (const auto &side : b.faces) {
-        std::vector<brush_t> new_unclassified;
+        std::vector<std::unique_ptr<brush_t>> new_unclassified;
 
-        for (const auto &fragment : unclassified) {
-            auto [front, back] = SplitBrush(fragment, Face_Plane(&side));
+        for (auto &fragment : unclassified) {
+            // destructively processing `unclassified` here
+            auto [front, back] = SplitBrush(std::move(fragment), Face_Plane(&side));
             if (front) {
-                frontlist.push_back(*front);
+                frontlist.push_back(std::move(front));
             }
             if (back) {
-                new_unclassified.push_back(*back);
+                new_unclassified.push_back(std::move(back));
             }
         }
 
@@ -284,7 +290,7 @@ bool BrushGE(const brush_t& a, const brush_t& b)
     // same contents clip each other
     if (a.contents == b.contents && a.contents.clips_same_type()) {
         // map file order
-        return &a > &b;
+        return a.file_order > b.file_order;
     }
 
     // only chop if at least one of the two contents is
@@ -298,7 +304,7 @@ bool BrushGE(const brush_t& a, const brush_t& b)
 
     if (a_pri == b_pri) {
         // map file order
-        return &a > &b;
+        return a.file_order > b.file_order;
     }
 
     return a_pri >= b_pri;
@@ -311,12 +317,13 @@ ChopBrushes
 Clips off any overlapping portions of brushes
 ==================
 */
-std::vector<brush_t> ChopBrushes(const std::vector<brush_t>& input)
+std::vector<std::unique_ptr<brush_t>> ChopBrushes(const std::vector<std::unique_ptr<brush_t>>& input)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
-    // output vector for the parallel_for
-    std::vector<std::vector<brush_t>> brush_fragments;
+    // each inner vector corresponds to a brush in `input`
+    // (set up this way for thread safety)
+    std::vector<std::vector<std::unique_ptr<brush_t>>> brush_fragments;
     brush_fragments.resize(input.size());
 
     /*
@@ -327,26 +334,31 @@ std::vector<brush_t> ChopBrushes(const std::vector<brush_t>& input)
      *
      * The output of this is a face list for each brush called "outside"
      */
-    tbb::parallel_for(static_cast<size_t>(0), input.size(), [input, &brush_fragments](const size_t i) {
-        const auto &brush = input[i];
+    tbb::parallel_for(static_cast<size_t>(0), input.size(), [&](const size_t i) {
+        const auto& brush = input[i];
+
         // the fragments `brush` is chopped into
-        std::vector<brush_t> brush_result{brush};
+        std::vector<std::unique_ptr<brush_t>> brush_result = SingleBrush(
+            // start with a copy of brush
+            std::make_unique<brush_t>(*brush)
+        );
 
         for (auto &clipbrush : input) {
-            if (&brush == &clipbrush) {
+            if (brush == clipbrush) {
                 continue;
             }
-            if (brush.bounds.disjoint(clipbrush.bounds)) {
+            if (brush->bounds.disjoint(clipbrush->bounds)) {
                 continue;
             }
 
-            if (BrushGE(clipbrush, brush)) {
-                std::vector<brush_t> new_result;
+            if (BrushGE(*clipbrush, *brush)) {
+                std::vector<std::unique_ptr<brush_t>> new_result;
 
-                // clipbrush is stronger. clip all existing fragments to clipbrush
-                for (const auto &current_fragment : brush_result) {
-                    for (const auto &new_fragment : SubtractBrush(current_fragment, clipbrush)) {
-                        new_result.push_back(new_fragment);
+                // clipbrush is stronger. 
+                // rebuild existing fragments in brush_result, cliping them to clipbrush
+                for (auto &current_fragment : brush_result) {
+                    for (auto &new_fragment : SubtractBrush(std::move(current_fragment), *clipbrush)) {
+                        new_result.push_back(std::move(new_fragment));
                     }
                 }
                 
@@ -355,11 +367,11 @@ std::vector<brush_t> ChopBrushes(const std::vector<brush_t>& input)
         }
 
         // save the result
-        brush_fragments[i] = brush_result;
+        brush_fragments[i] = std::move(brush_result);
     });
 
     // Non parallel part:
-    std::vector<brush_t> result;
+    std::vector<std::unique_ptr<brush_t>> result;
     for (auto &fragment_list : brush_fragments) {
         for (auto &fragment : fragment_list) {
             result.push_back(std::move(fragment));

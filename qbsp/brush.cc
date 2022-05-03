@@ -965,7 +965,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         } else {
             stats.liquid++;
         }
-        dst->brushes.push_back(std::move(brush.value()));
+        dst->brushes.push_back(std::make_unique<brush_t>(brush.value()));
         dst->bounds += brush->bounds;
     }
 

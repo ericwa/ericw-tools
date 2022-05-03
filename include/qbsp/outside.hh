@@ -21,6 +21,11 @@
 
 #pragma once
 
+#include <vector>
+
+class mapentity_t;
+struct node_t;
+
 bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum);
 std::vector<node_t *> FindOccupiedClusters(node_t *headnode);
 

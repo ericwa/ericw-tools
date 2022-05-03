@@ -21,21 +21,21 @@
 
 #pragma once
 
-#include <qbsp/brush.hh>
-
 #include <common/qvec.hh>
 
 #include <atomic>
 #include <list>
 #include <optional>
+#include <memory>
 
 extern std::atomic<int> splitnodes;
 
+struct brush_t;
 struct node_t;
 struct face_t;
 class mapentity_t;
 
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);
-twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d &split);
+twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, const qplane3d &split);
 node_t *SolidBSP(mapentity_t *entity, bool midsplit);

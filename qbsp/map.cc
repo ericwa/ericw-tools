@@ -2271,7 +2271,7 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-void WriteBspBrushMap(const fs::path &name, const std::vector<brush_t> &list)
+void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<brush_t>> &list)
 {
     logging::print("writing {}\n", name);
     std::ofstream f(name);
@@ -2283,7 +2283,7 @@ void WriteBspBrushMap(const fs::path &name, const std::vector<brush_t> &list)
 
     for (auto &brush : list) {
         fmt::print(f, "{{\n");
-        for (auto &face : brush.faces) {
+        for (auto &face : brush->faces) {
             // FIXME: Factor out this mess
             qbsp_plane_t plane = map.planes.at(face.planenum);
 
@@ -2322,15 +2322,17 @@ from q3map
 */
 static void TestExpandBrushes(const mapentity_t *src)
 {
-    std::vector<brush_t> hull1brushes;
+    std::vector<std::unique_ptr<brush_t>> hull1brushes;
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
         std::optional<brush_t> hull1brush = LoadBrush(
             src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? -1 : 1);
 
-        if (hull1brush)
-            hull1brushes.emplace_back(std::move(hull1brush.value()));
+        if (hull1brush) {
+            hull1brushes.emplace_back(
+                std::make_unique<brush_t>(std::move(*hull1brush)));
+        }
     }
 
     WriteBspBrushMap("expanded.map", hull1brushes);

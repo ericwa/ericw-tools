@@ -297,7 +297,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static face_t *ChooseMidPlaneFromList(std::vector<brush_t> &brushes, const aabb3d &bounds)
+static face_t *ChooseMidPlaneFromList(std::vector<std::unique_ptr<brush_t>> &brushes, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     vec_t bestaxialmetric = VECT_MAX;
@@ -307,11 +307,11 @@ static face_t *ChooseMidPlaneFromList(std::vector<brush_t> &brushes, const aabb3
 
     for (int pass = 0; pass < 2; pass++) {
         for (auto &brush : brushes) {
-            if (brush.contents.is_detail() != (pass == 1)) {
+            if (brush->contents.is_detail() != (pass == 1)) {
                 continue;
             }
 
-            for (auto &face : brush.faces) {
+            for (auto &face : brush->faces) {
                 if (face.onnode)
                     continue;
                 if (!face.visible) {
@@ -363,7 +363,7 @@ The real BSP heuristic
 fixme-brushbsp: prefer splits that include a lot of brush sides?
 ==================
 */
-static face_t *ChoosePlaneFromList(std::vector<brush_t> &brushes, const aabb3d &bounds)
+static face_t *ChoosePlaneFromList(std::vector<std::unique_ptr<brush_t>> &brushes, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     int minsplits = INT_MAX - 1;
@@ -373,11 +373,11 @@ static face_t *ChoosePlaneFromList(std::vector<brush_t> &brushes, const aabb3d &
     /* Two passes - exhaust all non-detail faces before details */
     for (int pass = 0; pass < 2; pass++) {
         for (auto &brush : brushes) {
-            if (brush.contents.is_detail() != (pass == 1)) {
+            if (brush->contents.is_detail() != (pass == 1)) {
                 continue;
             }
 
-            for (auto &face : brush.faces) {
+            for (auto &face : brush->faces) {
                 if (face.onnode) {
                     continue;
                 }
@@ -394,7 +394,7 @@ static face_t *ChoosePlaneFromList(std::vector<brush_t> &brushes, const aabb3d &
                 // now check all of the other faces in `brushes` and count how many
                 // would get split if we used `face` as the splitting plane
                 for (auto &brush2 : brushes) {
-                    for (auto &face2 : brush2.faces) {
+                    for (auto &face2 : brush2->faces) {
                         if (face2.planenum == face.planenum || face2.onnode)
                             continue;
                         if (!face2.visible)
@@ -458,13 +458,13 @@ returns NULL if the surface list can not be divided any more (a leaf)
 Called in parallel.
 ==================
 */
-static face_t *SelectPartition(std::vector<brush_t> &brushes)
+static face_t *SelectPartition(std::vector<std::unique_ptr<brush_t>> &brushes)
 {
     // calculate a bounding box of the entire surfaceset
     aabb3d bounds;
 
     for (auto &brush : brushes) {
-        bounds += brush.bounds;
+        bounds += brush->bounds;
     }
 
     // how much of the map are we partitioning?
@@ -610,20 +610,20 @@ vec_t BrushVolume(const brush_t &brush)
 ================
 SplitBrush
 
-Generates two new brushes, leaving the original
-unchanged
+Note, it's useful to take/return std::unique_ptr so it can quickly return the
+input.
 
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d &split)
+twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, const qplane3d &split)
 {
-    twosided<std::optional<brush_t>> result;
+    twosided<std::unique_ptr<brush_t>> result;
     
     // check all points
     vec_t d_front = 0;
     vec_t d_back = 0;
-    for (auto &face : brush.faces) {
+    for (auto &face : brush->faces) {
         for (int j = 0; j < face.w.size(); j++) {
             vec_t d = qv::dot(face.w[j], split.normal) - split.dist;
             if (d > 0 && d > d_front)
@@ -634,18 +634,18 @@ twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d
     }
     if (d_front < 0.1) // PLANESIDE_EPSILON)
     { // only on back
-        result.back = {brush};
+        result.back = std::move(brush);
         return result;
     }
     if (d_back > -0.1) // PLANESIDE_EPSILON)
     { // only on front
-        result.front = {brush};
+        result.front = std::move(brush);
         return result;
     }
 
     // create a new winding from the split plane
     auto w = std::optional<winding_t>{BaseWindingForPlane(split)};
-    for (auto &face : brush.faces) {
+    for (auto &face : brush->faces) {
         if (!w) {
             break;
         }
@@ -654,11 +654,11 @@ twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d
     }
 
     if (!w || WindingIsTiny(*w)) { // the brush isn't really split
-        side_t side = BrushMostlyOnSide(brush, split);
+        side_t side = BrushMostlyOnSide(*brush, split);
         if (side == SIDE_FRONT)
-            result.front = {brush};
+            result.front = std::move(brush);
         else
-            result.back = {brush};
+            result.back = std::move(brush);
         return result;
     }
 
@@ -673,16 +673,16 @@ twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d
     // start with 2 empty brushes
 
     for (int i = 0; i < 2; i++) {
-        result[i] = { brush_t{} };
-        result[i]->original = brush.original;
+        result[i] = std::make_unique<brush_t>();
+        result[i]->original = brush->original;
         // fixme-brushbsp: add a brush_t copy constructor to make sure we get all fields
-        result[i]->contents = brush.contents;
-        result[i]->lmshift = brush.lmshift;
+        result[i]->contents = brush->contents;
+        result[i]->lmshift = brush->lmshift;
     }
 
     // split all the current windings
 
-    for (const auto& face : brush.faces) {
+    for (const auto &face : brush->faces) {
         auto cw = face.w.clip(split, 0 /*PLANESIDE_EPSILON*/);
         for (size_t j = 0; j < 2; j++) {
             if (!cw[j])
@@ -721,7 +721,7 @@ twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d
         }
 
         if (result[i]->faces.size() < 3 || bogus) {
-            result[i] = std::nullopt;
+            result[i] = nullptr;
         }
     }
 
@@ -731,10 +731,10 @@ twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d
         else
             logging::print("split not on both sides\n");
         if (result[0]) {
-            result.front = {brush};
+            result.front = std::move(brush);
         }
         if (result[1]) {
-            result.back = {brush};
+            result.back = std::move(brush);
         }
         return result;
     }
@@ -764,7 +764,7 @@ twosided<std::optional<brush_t>> SplitBrush(const brush_t &brush, const qplane3d
         for (i = 0; i < 2; i++) {
             v1 = BrushVolume(*result[i]);
             if (v1 < 1.0) {
-                result[i] = std::nullopt;
+                result[i] = nullptr;
                 //			qprintf ("tiny volume after clip\n");
             }
         }
@@ -785,10 +785,10 @@ inline void DivideNodeBounds(node_t *node, const qbsp_plane_t &split)
     DivideBounds(node->bounds, split, node->children[0]->bounds, node->children[1]->bounds);
 }
 
-static bool AllDetail(const std::vector<brush_t> &brushes)
+static bool AllDetail(const std::vector<std::unique_ptr<brush_t>> &brushes)
 {
     for (auto &brush : brushes) {
-        if (!brush.contents.is_detail()) {
+        if (!brush->contents.is_detail()) {
             return false;
         }
     }
@@ -818,18 +818,18 @@ original faces that have some fragment inside this leaf.
 Called in parallel.
 ==================
 */
-static void CreateLeaf(const std::vector<brush_t> &brushes, node_t *leafnode)
+static void CreateLeaf(std::vector<std::unique_ptr<brush_t>> brushes, node_t *leafnode)
 {
     leafnode->facelist.clear();
     leafnode->planenum = PLANENUM_LEAF;
 
     leafnode->contents = options.target_game->create_empty_contents();
     for (auto &brush : brushes) {
-        leafnode->contents = MergeContents(leafnode->contents, brush.contents);
+        leafnode->contents = MergeContents(leafnode->contents, brush->contents);
     }
     for (auto &brush : brushes) {
-        Q_assert(brush.original != nullptr);
-        leafnode->original_brushes.push_back(brush.original);
+        Q_assert(brush->original != nullptr);
+        leafnode->original_brushes.push_back(brush->original);
     }
 
     if (leafnode->contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
@@ -859,14 +859,14 @@ PartitionBrushes
 Called in parallel.
 ==================
 */
-static void PartitionBrushes(std::vector<brush_t> brushes, node_t *node)
+static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node_t *node)
 {
     face_t *split = SelectPartition(brushes);
 
     if (split == nullptr) { // this is a leaf node
         node->planenum = PLANENUM_LEAF;
 
-        CreateLeaf(brushes, node);
+        CreateLeaf(std::move(brushes), node);
         return;
     }
 
@@ -882,10 +882,11 @@ static void PartitionBrushes(std::vector<brush_t> brushes, node_t *node)
     DivideNodeBounds(node, splitplane);
 
     // multiple surfaces, so split all the polysurfaces into front and back lists
-    std::vector<brush_t> frontlist, backlist;
+    std::vector<std::unique_ptr<brush_t>> frontlist, backlist;
 
     for (auto &brush : brushes) {
-        auto frags = SplitBrush(brush, splitplane);
+        // NOTE: we're destroying `brushes` here with the std::move()
+        auto frags = SplitBrush(std::move(brush), splitplane);
 
         // mark faces which were used as a splitter
         for (auto &brushMaybe : frags) {
@@ -902,13 +903,13 @@ static void PartitionBrushes(std::vector<brush_t> brushes, node_t *node)
             if (frags.front->faces.empty()) {
                 FError("Surface with no faces");
             }
-            frontlist.emplace_back(std::move(*frags.front));
+            frontlist.emplace_back(std::move(frags.front));
         }
         if (frags.back) {
             if (frags.back->faces.empty()) {
                 FError("Surface with no faces");
             }
-            backlist.emplace_back(std::move(*frags.back));
+            backlist.emplace_back(std::move(frags.back));
         }
     }
 
@@ -956,7 +957,7 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     int visible_brush_sides = 0;
     int invisible_brush_sides = 0;
     for (const auto &brush : entity->brushes) {
-        for (auto &side : brush.faces) {
+        for (auto &side : brush->faces) {
             if (side.visible) {
                 ++visible_brush_sides;
             } else {
@@ -989,10 +990,10 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     mapbrushes = entity->brushes.size();
 
     // set the original pointers
-    std::vector<brush_t> brushcopies;
-    for (brush_t &original : entity->brushes) {
-        brush_t copy = original;
-        copy.original = &original;
+    std::vector<std::unique_ptr<brush_t>> brushcopies;
+    for (const auto &original : entity->brushes) {
+        auto copy = std::make_unique<brush_t>(*original);
+        copy->original = original.get();
         brushcopies.push_back(std::move(copy));
     }
     PartitionBrushes(std::move(brushcopies), headnode);

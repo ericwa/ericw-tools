@@ -20,6 +20,7 @@
 */
 // portals.c
 
+#include <qbsp/brush.hh>
 #include <qbsp/portals.hh>
 #include <fstream>
 #include <fmt/ostream.h>

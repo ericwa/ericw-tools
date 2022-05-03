@@ -21,8 +21,9 @@
 
 #pragma once
 
-#include <qbsp/brush.hh>
+#include <qbsp/qbsp.hh>
 
+#include <common/bspfile.hh>
 #include <common/parser.hh>
 #include "common/cmdlib.hh"
 
@@ -31,6 +32,8 @@
 #include <utility>
 #include <unordered_map>
 #include <list>
+
+struct brush_t;
 
 struct qbsp_plane_t : qplane3d
 {
@@ -96,7 +99,7 @@ public:
     std::vector<std::pair<std::string, std::string>> epairs;
 
     aabb3d bounds;
-    std::vector<brush_t> brushes;
+    std::vector<std::unique_ptr<brush_t>> brushes;
 
     int firstoutputfacenumber = -1;
     std::optional<size_t> outputmodelnumber = std::nullopt;
@@ -241,6 +244,6 @@ void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const br
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 
-void WriteBspBrushMap(const fs::path &name, const std::vector<brush_t> &list);
+void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<brush_t>> &list);
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);

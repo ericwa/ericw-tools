@@ -702,13 +702,13 @@ void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
     c_nodefaces = 0;
 
     for (auto &brush : entity->brushes) {
-        for (auto &face : brush.faces) {
+        for (auto &face : brush->faces) {
             if (!face.visible) {
                 continue;
             }
             face_t *temp = CopyFace(&face);
 
-            AddFaceToTree_r(entity, temp, &brush, headnode);
+            AddFaceToTree_r(entity, temp, brush.get(), headnode);
         }
     }
 

@@ -21,14 +21,13 @@
 
 #pragma once
 
-#include <qbsp/brush.hh>
-
 #include <common/qvec.hh>
 
 #include <list>
 #include <tuple>
 #include <vector>
 
+struct brush_t;
 struct face_t;
 
 int MakeSkipTexinfo();
@@ -38,4 +37,4 @@ face_t *MirrorFace(const face_t *face);
 std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);
 bool BrushGE(const brush_t &a, const brush_t &b);
-std::vector<brush_t> ChopBrushes(const std::vector<brush_t> &input);
+std::vector<std::unique_ptr<brush_t>> ChopBrushes(const std::vector<std::unique_ptr<brush_t>> &input);

@@ -33,6 +33,7 @@ struct brush_t
      * the BrushBSP will have this pointing back to the original brush in mapentity_t::brushes.
      */
     brush_t *original;
+    uint32_t file_order;
     aabb3d bounds;
     std::vector<face_t> faces;
     contentflags_t contents; /* BSP contents */

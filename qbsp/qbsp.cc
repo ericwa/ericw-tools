@@ -349,12 +349,12 @@ static void ExportBrushList(mapentity_t *entity, node_t *node)
     brush_state = {};
 
     for (auto &b : entity->brushes) {
-        b.outputnumber = { static_cast<uint32_t>(map.bsp.dbrushes.size()) };
+        b->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
 
         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
-            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b.contents.native});
+            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
 
-        auto bevels = AddBrushBevels(b);
+        auto bevels = AddBrushBevels(*b);
 
         for (auto &plane : bevels) {
             map.bsp.dbrushsides.push_back(
@@ -654,6 +654,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
     auto stats = Brush_LoadEntity(entity, hullnum);
 
+    // assign brush file order
+    for (size_t i = 0; i < entity->brushes.size(); ++i) {
+        entity->brushes[i]->file_order = i;
+    }
+
     entity->brushes = ChopBrushes(entity->brushes);
 
     if (entity == map.world_entity() && hullnum == 0) {
@@ -880,13 +885,14 @@ Generates a submodel's direct brush information to a separate file, so the engin
 hull sizes
 */
 
-static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::vector<brush_t> &brushes)
+static void BSPX_Brushes_AddModel(
+    struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<brush_t>> &brushes)
 {
     bspxbrushes_permodel permodel{1, modelnum};
 
     for (auto &b : brushes) {
         permodel.numbrushes++;
-        for (auto &f : b.faces) {
+        for (auto &f : b->faces) {
             /*skip axial*/
             if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
                 fabs(map.planes[f.planenum].normal[2]) == 1)
@@ -907,7 +913,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
     for (auto &b : brushes) {
         bspxbrushes_perbrush perbrush{};
 
-        for (auto &f : b.faces) {
+        for (auto &f : b->faces) {
             /*skip axial*/
             if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
                 fabs(map.planes[f.planenum].normal[2]) == 1)
@@ -915,9 +921,9 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
             perbrush.numfaces++;
         }
 
-        perbrush.bounds = b.bounds;
+        perbrush.bounds = b->bounds;
 
-        switch (b.contents.native) {
+        switch (b->contents.native) {
             // contents should match the engine.
             case CONTENTS_EMPTY: // really an error, but whatever
             case CONTENTS_SOLID: // these are okay
@@ -925,21 +931,21 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (b.contents.is_clip()) {
+                if (b->contents.is_clip()) {
                     perbrush.contents = -8;
                 } else {
-                    perbrush.contents = b.contents.native;
+                    perbrush.contents = b->contents.native;
                 }
                 break;
             //              case CONTENTS_LADDER:
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (b.contents.is_clip()) {
+                if (b->contents.is_clip()) {
                     perbrush.contents = -8;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
-                        b.contents.to_string(options.target_game));
+                        b->contents.to_string(options.target_game));
                     perbrush.contents = CONTENTS_SOLID;
                 }
                 break;
@@ -948,7 +954,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
 
         str <= perbrush;
 
-        for (auto &f : b.faces) {
+        for (auto &f : b->faces) {
             /*skip axial*/
             if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
                 fabs(map.planes[f.planenum].normal[2]) == 1)

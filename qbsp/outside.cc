@@ -19,6 +19,8 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/outside.hh>
+#include <qbsp/brush.hh>
 #include <qbsp/map.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/qbsp.hh>
@@ -357,7 +359,7 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 static void MarkBrushSidesInvisible(mapentity_t *entity)
 {
     for (auto &brush : entity->brushes) {
-        for (auto &face : brush.faces) {
+        for (auto &face : brush->faces) {
             face.visible = false;
         }
     }

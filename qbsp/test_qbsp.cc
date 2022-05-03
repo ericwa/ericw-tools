@@ -1,6 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <qbsp/brush.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
 #include <common/fs.hh>
