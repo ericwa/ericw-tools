@@ -75,6 +75,10 @@ if (ERICWTOOLS_ASAN)
 	add_link_options(-fsanitize=address)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+	add_compile_options(/EHsc)
+endif()
+
 # 10.9: minimum version that supports unordered_map
 # 10.14: required by tbb 2021.3.0 (due to use of alignas)
 # 10.15: required by std::filesytstem
