@@ -792,3 +792,36 @@ TEST(testmaps_q2, detail) {
     EXPECT_EQ(empty_leaf_above_button->cluster, detail_leaf->cluster);
     EXPECT_NE(empty_leaf_side_room->contents, detail_leaf->cluster);
 }
+
+TEST(testmaps_q2, base1)
+{
+#if 0
+    const mbsp_t bsp = LoadTestmap("base1.map", {"-q2bsp"});
+
+    EXPECT_FALSE(map.leakfile);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    // bspinfo output from a compile done with
+    // https://github.com/qbism/q2tools-220 at 46fd97bbe1b3657ca9e93227f89aaf0fbd3677c9.
+    // only took a couple of seconds (debug build)
+
+    //   35 models
+    // 9918 planes           198360
+    //10367 vertexes         124404
+    // 5177 nodes            144956
+    //  637 texinfos          48412
+    // 7645 faces            152900
+    // 5213 leafs            145964
+    // 9273 leaffaces         18546
+    // 7307 leafbrushes       14614
+    //20143 edges             80572
+    //37287 surfedges        149148
+    // 1765 brushes           21180
+    //15035 brushsides        60140
+    //    3 areas                24
+    //    3 areaportals          24
+    //      lightdata             0
+    //      visdata               0
+    //      entdata           53623
+#endif
+}
