@@ -807,6 +807,35 @@ TEST(testmaps_q2, detail) {
     EXPECT_NE(empty_leaf_side_room->contents, detail_leaf->cluster);
 }
 
+TEST(testmaps_q2, playerclip)
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_playerclip.map", {"-q2bsp"});
+
+    EXPECT_FALSE(map.leakfile);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    const qvec3d in_playerclip{32, -136, 144};
+    auto *playerclip_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_playerclip);
+    EXPECT_EQ(Q2_CONTENTS_PLAYERCLIP, playerclip_leaf->contents);
+
+    // make sure faces at these locations aren't clipped away
+    const qvec3d floor_under_clip{32, -136, 96};
+    const qvec3d pillar_side_in_clip1{32, -48, 144};
+    const qvec3d pillar_side_in_clip2{32, -208, 144};
+
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_clip, {0, 0, 1}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip1, {0, -1, 0}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip2, {0, 1, 0}));
+
+    // make sure no face is generated for the playerclip brush
+    const qvec3d playerclip_front_face{16, -152, 144};
+    EXPECT_EQ(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], playerclip_front_face, {-1, 0, 0}));
+
+    // check for brush
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, playerclip_leaf).size());
+    EXPECT_EQ(Q2_CONTENTS_PLAYERCLIP, Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
+}
+
 TEST(testmaps_q2, base1)
 {
 #if 0
