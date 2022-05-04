@@ -49,7 +49,7 @@ set(QBSP_TEST_SOURCE
 	test_qbsp.cc
 	${CMAKE_BINARY_DIR}/testmaps.hh)
 add_executable(testqbsp ${QBSP_TEST_SOURCE})
-target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest gmock fmt::fmt)
+target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest gmock fmt::fmt nanobench::nanobench)
 
 include(GoogleTest)
 gtest_discover_tests(testqbsp)

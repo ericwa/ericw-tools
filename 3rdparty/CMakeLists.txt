@@ -6,3 +6,4 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 add_subdirectory(googletest EXCLUDE_FROM_ALL)
 
 add_subdirectory(json EXCLUDE_FROM_ALL)
+add_subdirectory(nanobench EXCLUDE_FROM_ALL)

@@ -9,6 +9,8 @@
 #include <common/qvec.hh>
 #include <testmaps.hh>
 
+#include <nanobench.h>
+
 #include <algorithm>
 #include <cstring>
 #include <set>
@@ -836,4 +838,31 @@ TEST(testmaps_q2, base1)
     //      visdata               0
     //      entdata           53623
 #endif
+}
+
+TEST(benchmark, winding) {
+    ankerl::nanobench::Bench bench;
+
+    bench.run("std::vector<double> reserve(3*4*6)", [&] {
+        std::vector<double> temp;
+        temp.reserve(3 * 4 * 6);
+        ankerl::nanobench::doNotOptimizeAway(temp);
+    });
+    bench.run("std::vector<qvec3d> reserve(4*6)", [&] {
+        std::vector<qvec3d> temp;
+        temp.reserve(4 * 6);
+        ankerl::nanobench::doNotOptimizeAway(temp);
+    });
+    bench.run("std::array<double, 3*4*6>", [&] {
+        std::array<double, 3 * 4 * 6> temp;
+        ankerl::nanobench::doNotOptimizeAway(temp);
+    });
+    bench.run("std::array<qvec3d, 4*6>", [&] {
+        std::array<qvec3d, 4 * 6> temp;
+        ankerl::nanobench::doNotOptimizeAway(temp);
+    });
+    bench.run("polylib::winding_base_t<6> construct", [&] {
+        polylib::winding_base_t<6> temp;
+        ankerl::nanobench::doNotOptimizeAway(temp);
+    });
 }
