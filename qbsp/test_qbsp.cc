@@ -314,6 +314,17 @@ TEST(testmaps_q1, options_reset2)
     EXPECT_FALSE(options.transsky.value());
 }
 
+/**
+ * The brushes are touching but not intersecting, so ChopBrushes shouldn't change anything.
+ */
+TEST(testmaps_q1, chop_no_change)
+{
+    LoadTestmap("qbsp_chop_no_change.map");
+
+    // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
+}
+
+
 TEST(testmaps_q1, simple_sealed)
 {
     mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
