@@ -95,6 +95,18 @@ public:
         return false;
     }
 
+    template<typename F>
+    constexpr bool disjoint_or_touching(const aabb<F, N> &other, const F &epsilon = 0) const
+    {
+        for (size_t i = 0; i < N; i++) {
+            if (m_maxs[i] <= (other.m_mins[i] - epsilon))
+                return true;
+            if (m_mins[i] >= (other.m_maxs[i] + epsilon))
+                return true;
+        }
+        return false;
+    }
+
     constexpr bool contains(const aabb &other) const
     {
         for (size_t i = 0; i < N; i++) {
