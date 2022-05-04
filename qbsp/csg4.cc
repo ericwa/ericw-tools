@@ -112,86 +112,42 @@ Frees in. Returns {front, back}
 */
 std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
 {
-    vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
-    side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
-    std::array<size_t, SIDE_TOTAL> counts{};
-    vec_t dot;
-    size_t i, j;
-    face_t *newf, *new2;
-    qvec3d mid;
-
     if (in->w.size() < 0)
         Error("Attempting to split freed face");
 
     /* Fast test */
-    dot = split.distance_to(in->origin);
+    double dot = split.distance_to(in->origin);
     if (dot > in->radius) {
-        counts[SIDE_FRONT] = 1;
-        counts[SIDE_BACK] = 0;
+        // all in front
+        return {in, nullptr};
     } else if (dot < -in->radius) {
-        counts[SIDE_FRONT] = 0;
-        counts[SIDE_BACK] = 1;
-    } else {
-        counts = in->w.calc_sides(split, dists, sides, ON_EPSILON);
-    }
-
-    // Plane doesn't split this face after all
-    if (!counts[SIDE_FRONT]) {
+        // all behind
         return {nullptr, in};
     }
-    if (!counts[SIDE_BACK]) {
+
+    auto [front_winding, back_winding] = in->w.clip(split, ON_EPSILON, true);
+
+    if (front_winding && !back_winding) {
+        // all in front
         return {in, nullptr};
+    } else if (back_winding && !front_winding) {
+        // all behind
+        return {nullptr, in};
     }
 
-    newf = NewFaceFromFace(in);
-    new2 = NewFaceFromFace(in);
+    face_t *new_front = NewFaceFromFace(in);
+    new_front->w = std::move(front_winding.value());
 
-    // distribute the points and generate splits
-    for (i = 0; i < in->w.size(); i++) {
-        // Note: Possible for numpoints on newf or new2 to exceed MAXEDGES if
-        // in->w.numpoints == MAXEDGES and it is a really devious split.
-        const qvec3d &p1 = in->w[i];
+    face_t *new_back = NewFaceFromFace(in);
+    new_back->w = std::move(back_winding.value());
 
-        if (sides[i] == SIDE_ON) {
-            newf->w.push_back(p1);
-            new2->w.push_back(p1);
-            continue;
-        }
-
-        if (sides[i] == SIDE_FRONT) {
-            new2->w.push_back(p1);
-        } else {
-            newf->w.push_back(p1);
-        }
-
-        if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
-            continue;
-
-        // generate a split point
-        const qvec3d &p2 = in->w[(i + 1) % in->w.size()];
-
-        dot = dists[i] / (dists[i] - dists[i + 1]);
-        for (j = 0; j < 3; j++) { // avoid round off error when possible
-            if (split.normal[j] == 1)
-                mid[j] = split.dist;
-            else if (split.normal[j] == -1)
-                mid[j] = -split.dist;
-            else
-                mid[j] = p1[j] + dot * (p2[j] - p1[j]);
-        }
-
-        newf->w.push_back(mid);
-        new2->w.push_back(mid);
-    }
-
-    if (newf->w.size() > MAXEDGES || new2->w.size() > MAXEDGES)
+    if (new_front->w.size() > MAXEDGES || new_back->w.size() > MAXEDGES)
         FError("Internal error: numpoints > MAXEDGES");
 
     /* free the original face now that it is represented by the fragments */
     delete in;
 
-    // {front, back}
-    return {new2, newf};
+    return {new_front, new_back};
 }
 
 face_t *MirrorFace(const face_t *face)
