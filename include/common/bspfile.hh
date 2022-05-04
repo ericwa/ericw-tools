@@ -1484,6 +1484,10 @@ struct dareaportal_t
 
     // serialize for streams
     auto stream_data() { return std::tie(portalnum, otherarea); }
+    auto tuple() const { return std::tie(portalnum, otherarea); }
+
+    // comparison operator for tests
+    bool operator==(const dareaportal_t &other) const { return tuple() == other.tuple(); }
 };
 
 struct darea_t
@@ -1493,6 +1497,10 @@ struct darea_t
 
     // serialize for streams
     auto stream_data() { return std::tie(numareaportals, firstareaportal); }
+    auto tuple() const { return std::tie(numareaportals, firstareaportal); }
+
+    // comparison operator for tests
+    bool operator==(const darea_t &other) const { return tuple() == other.tuple(); }
 };
 
 // Q1-esque maps can use one of these two.

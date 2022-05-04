@@ -92,6 +92,18 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     return std::get<mbsp_t>(bspdata.bsp);
 }
 
+static mbsp_t LoadBsp(const std::filesystem::path &path_in)
+{
+    std::filesystem::path path = path_in;
+
+    bspdata_t bspdata;
+    LoadBSPFile(path, &bspdata);
+
+    ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    return std::get<mbsp_t>(bspdata.bsp);
+}
+
 static std::map<std::string, std::vector<const mface_t *>> MakeTextureToFaceMap(const mbsp_t &bsp)
 { 
     std::map<std::string, std::vector<const mface_t *>> result;
@@ -834,6 +846,56 @@ TEST(testmaps_q2, playerclip)
     // check for brush
     EXPECT_EQ(1, Leaf_Brushes(&bsp, playerclip_leaf).size());
     EXPECT_EQ(Q2_CONTENTS_PLAYERCLIP, Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
+}
+
+TEST(testmaps_q2, areaportal)
+{
+    using namespace testing;
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_areaportal.map", {"-q2bsp"});
+
+    EXPECT_FALSE(map.leakfile);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    // area 0 is a placeholder
+    // areaportal 0 is a placeholder
+    // 
+    // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
+    EXPECT_THAT(bsp.dareaportals, UnorderedElementsAre(dareaportal_t{0, 0}, dareaportal_t{1, 1}, dareaportal_t{1, 2}));
+    EXPECT_THAT(bsp.dareas, UnorderedElementsAre(darea_t{0, 0}, darea_t{1, 1}, darea_t{1, 2}));
+
+    // look up the leafs
+    const qvec3d player_start{-88, -112, 120};
+    const qvec3d other_room{128, -112, 120};
+    const qvec3d areaportal_pos{32, -112, 120};
+    const qvec3d void_pos{-408, -112, 120};
+
+    auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
+    auto *other_room_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], other_room);
+    auto *areaportal_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], areaportal_pos);
+    auto *void_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], void_pos);
+
+    // check leaf contents
+    EXPECT_EQ(0, player_start_leaf->contents);
+    EXPECT_EQ(0, other_room_leaf->contents);
+    EXPECT_EQ(Q2_CONTENTS_AREAPORTAL, areaportal_leaf->contents);
+    EXPECT_EQ(Q2_CONTENTS_SOLID, void_leaf->contents);
+
+    // make sure faces at these locations aren't clipped away
+    const qvec3d floor_under_areaportal{32, -136, 96};
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_areaportal, {0, 0, 1}));
+
+    // check for brushes
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, areaportal_leaf).size());
+    EXPECT_EQ(Q2_CONTENTS_AREAPORTAL, Leaf_Brushes(&bsp, areaportal_leaf).at(0)->contents);
+
+    EXPECT_EQ(1, Leaf_Brushes(&bsp, void_leaf).size());
+    EXPECT_EQ(Q2_CONTENTS_SOLID, Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
+
+    // check leaf areas
+    EXPECT_THAT((std::vector<int32_t>{1, 2}), UnorderedElementsAre(player_start_leaf->area, other_room_leaf->area));
+    // the areaportal leaf itself actually gets assigned to one of the two sides' areas
+    EXPECT_THAT(areaportal_leaf->area, AnyOf(1, 2));    
+    EXPECT_THAT(0, void_leaf->area); // a solid leaf gets the invalid area
 }
 
 TEST(testmaps_q2, base1)
