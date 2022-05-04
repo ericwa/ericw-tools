@@ -347,7 +347,7 @@ std::vector<std::unique_ptr<brush_t>> ChopBrushes(const std::vector<std::unique_
             if (brush == clipbrush) {
                 continue;
             }
-            if (brush->bounds.disjoint(clipbrush->bounds)) {
+            if (brush->bounds.disjoint_or_touching(clipbrush->bounds)) {
                 continue;
             }
 
