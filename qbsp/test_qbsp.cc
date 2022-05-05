@@ -939,6 +939,14 @@ TEST(testmaps_q2, base1)
 #endif
 }
 
+TEST(testmaps_q2, base1leak)
+{
+    const mbsp_t bsp = LoadTestmap("base1leak.map", {"-q2bsp", "-debugchop"});
+
+    EXPECT_FALSE(map.leakfile);
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+}
+
 TEST(benchmark, winding) {
     ankerl::nanobench::Bench bench;
 
