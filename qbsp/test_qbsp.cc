@@ -945,6 +945,17 @@ TEST(testmaps_q2, base1leak)
 
     EXPECT_FALSE(map.leakfile);
     EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    EXPECT_EQ(8, map.brushes.size());
+    EXPECT_EQ(8, bsp.dbrushes.size());
+
+    EXPECT_EQ(8, bsp.dleafs.size()); // 1 placeholder + 1 empty (room interior) + 6 solid (sides of room)
+
+    const qvec3d in_plus_y_wall{-776, 976, -24};
+    auto *plus_y_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_plus_y_wall);
+    EXPECT_EQ(Q2_CONTENTS_SOLID, plus_y_wall_leaf->contents);
+
+    EXPECT_EQ(3, plus_y_wall_leaf->numleafbrushes);
 }
 
 TEST(benchmark, winding) {
