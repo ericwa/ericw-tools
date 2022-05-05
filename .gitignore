@@ -14,6 +14,7 @@ testmaps/*.vis
 testmaps/*.texinfo
 testmaps/*.texinfo.json
 testmaps/*.bsp.json
+testmaps/*.chop.map
 testmaps/quake_map_source/*.bsp
 testmaps/quake_map_source/*.log
 testmaps/quake_map_source/*.prt
