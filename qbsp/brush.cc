@@ -376,7 +376,6 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 
         f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
         f.planenum = FindPlane(plane, &f.planeside);
-        f.src_entity = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
 
         CheckFace(&f, mapface);
         UpdateFaceSphere(&f);
@@ -941,6 +940,10 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             continue;
 
         brush->lmshift = lmshift;
+
+        if (classname == std::string_view("func_areaportal")) {
+            brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
+        }
 
         if (brush->contents.is_solid(options.target_game)) {
             stats.solid++;

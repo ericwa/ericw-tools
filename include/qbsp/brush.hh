@@ -26,6 +26,8 @@
 #include <common/aabb.hh>
 #include <optional>
 
+class mapentity_t;
+
 struct brush_t
 {
     /**
@@ -39,6 +41,7 @@ struct brush_t
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
+    mapentity_t *func_areaportal;
 
     void update_bounds();
 };

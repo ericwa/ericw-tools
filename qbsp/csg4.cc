@@ -78,7 +78,6 @@ face_t *NewFaceFromFace(const face_t *in)
     newf->planeside = in->planeside;
     newf->contents = in->contents;
     newf->lmshift = in->lmshift;
-    newf->src_entity = in->src_entity;
 
     newf->origin = in->origin;
     newf->radius = in->radius;
