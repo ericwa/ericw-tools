@@ -678,6 +678,7 @@ twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, co
         // fixme-brushbsp: add a brush_t copy constructor to make sure we get all fields
         result[i]->contents = brush->contents;
         result[i]->lmshift = brush->lmshift;
+        result[i]->func_areaportal = brush->func_areaportal;
     }
 
     // split all the current windings
