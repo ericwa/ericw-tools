@@ -544,6 +544,9 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
             FError("Mislinked portal");
 
         winding = winding->clip(clipplane, ON_EPSILON, true)[SIDE_FRONT];
+        if (winding && WindingIsTiny(*winding)) {
+            winding = std::nullopt;
+        }
         if (!winding) {
             logging::funcprint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0],
                 portal->winding->at(0)[1], portal->winding->at(0)[2]);
@@ -573,6 +576,13 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
 
         /* cut the portal into two portals, one on each side of the cut plane */
         auto windings = portal->winding->clip(plane, ON_EPSILON);
+
+        if (windings[SIDE_BACK] && WindingIsTiny(*windings[SIDE_BACK])) {
+            windings[SIDE_BACK] = std::nullopt;
+        }
+        if (windings[SIDE_FRONT] && WindingIsTiny(*windings[SIDE_FRONT])) {
+            windings[SIDE_FRONT] = std::nullopt;
+        }
 
         if (!windings[SIDE_FRONT]) {
             if (side == SIDE_FRONT)

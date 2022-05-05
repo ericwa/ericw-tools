@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <qbsp/winding.hh>
 #include <common/qvec.hh>
 
 #include <atomic>
@@ -37,5 +38,6 @@ class mapentity_t;
 
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);
+bool WindingIsTiny(const winding_t &w);
 twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, const qplane3d &split);
 node_t *SolidBSP(mapentity_t *entity, bool midsplit);
