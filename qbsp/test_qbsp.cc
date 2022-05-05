@@ -896,6 +896,14 @@ TEST(testmaps_q2, areaportal)
     // the areaportal leaf itself actually gets assigned to one of the two sides' areas
     EXPECT_THAT(areaportal_leaf->area, AnyOf(1, 2));    
     EXPECT_THAT(0, void_leaf->area); // a solid leaf gets the invalid area
+
+    // check the func_areaportal entity had its "style" set
+    auto ents = EntData_Parse(bsp.dentdata);
+    auto it = std::find_if(ents.begin(), ents.end(),
+        [](const entdict_t &dict) { return dict.get("classname") == "func_areaportal"; });
+
+    ASSERT_NE(it, ents.end());
+    ASSERT_EQ("1", it->get("style"));
 }
 
 TEST(testmaps_q2, base1)

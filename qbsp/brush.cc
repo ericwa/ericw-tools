@@ -745,16 +745,6 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
-    /*
-     * The brush list needs to be ordered (lowest to highest priority):
-     * - detail_illusionary (which is saved as empty)
-     * - liquid
-     * - detail_fence
-     * - detail (which is solid)
-     * - sky
-     * - solid
-     */
-
     classname = ValueForKey(src, "classname");
 
     /* Origin brush support */
