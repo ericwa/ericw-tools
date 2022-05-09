@@ -117,6 +117,19 @@ add_executable(testlight ${LIGHT_TEST_SOURCE})
 target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} gtest fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
+
+	# HACK: copy .dll dependencies
+	add_custom_command(TARGET testlight POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testlight>"
+			           COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>" "$<TARGET_FILE_DIR:testlight>")
+
+	# HACK: copy embree's tbb12.dll
+	# FIXME: this is only desired with the .zip release of embree, not e.g. vcpkg
+	if (WIN32)
+		add_custom_command(TARGET testlight POST_BUILD
+				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE_DIR:embree>/tbb12.dll" "$<TARGET_FILE_DIR:testlight>")
+	endif()
+
 	add_definitions(-DHAVE_EMBREE)
 endif (embree_FOUND)
 

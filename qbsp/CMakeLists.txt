@@ -51,5 +51,9 @@ set(QBSP_TEST_SOURCE
 add_executable(testqbsp ${QBSP_TEST_SOURCE})
 target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest gmock fmt::fmt nanobench::nanobench)
 
+# HACK: copy .dll dependencies
+add_custom_command(TARGET testqbsp POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testqbsp>")
+
 include(GoogleTest)
 gtest_discover_tests(testqbsp)
