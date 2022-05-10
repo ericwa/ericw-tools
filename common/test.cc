@@ -1,6 +1,8 @@
 #include "gtest/gtest.h"
 #include "common/settings.hh"
 
+#include <type_traits>
+
 // test booleans
 TEST(settings, booleanFlagImplicit)
 {
@@ -197,6 +199,91 @@ TEST(settings, grouping)
         &settings, "filename", "filename.bat", "file.bat", &others, "some batch file");
     ASSERT_TRUE(settings.grouped().begin()->first == &performance);
     // settings.printHelp();
+}
+
+TEST(settings, copy)
+{
+    settings::setting_container settings;
+    settings::setting_scalar scaleSetting(&settings, "scale", 1.5);
+    settings::setting_scalar waitSetting(&settings, "wait", 0.0);
+    settings::setting_string stringSetting(&settings, "string", "test");
+
+    EXPECT_EQ(settings::source::DEFAULT, scaleSetting.getSource());
+    EXPECT_EQ(settings::source::DEFAULT, waitSetting.getSource());
+    EXPECT_EQ(0, waitSetting.value());
+
+    EXPECT_TRUE(waitSetting.copyFrom(scaleSetting));
+    EXPECT_EQ(settings::source::DEFAULT, waitSetting.getSource());
+    EXPECT_EQ(1.5, waitSetting.value());
+
+    // if copy fails, the value remains unchanged
+    EXPECT_FALSE(waitSetting.copyFrom(stringSetting));
+    EXPECT_EQ(settings::source::DEFAULT, waitSetting.getSource());
+    EXPECT_EQ(1.5, waitSetting.value());
+
+    scaleSetting.setValue(2.5);
+    EXPECT_EQ(settings::source::MAP, scaleSetting.getSource());
+
+    // source is also copied
+    EXPECT_TRUE(waitSetting.copyFrom(scaleSetting));
+    EXPECT_EQ(settings::source::MAP, waitSetting.getSource());
+    EXPECT_EQ(2.5, waitSetting.value());
+}
+
+TEST(settings, copyContainer)
+{
+    settings::setting_container settings1;
+    settings::setting_bool boolSetting1(&settings1, "boolSetting", false);
+    EXPECT_FALSE(boolSetting1.value());
+    EXPECT_EQ(settings::source::DEFAULT, boolSetting1.getSource());
+
+    boolSetting1.setValue(true);
+    EXPECT_TRUE(boolSetting1.value());
+    EXPECT_EQ(settings::source::MAP, boolSetting1.getSource());
+
+    {
+        settings::setting_container settings2;
+        settings::setting_bool boolSetting2(&settings2, "boolSetting", false);
+        EXPECT_FALSE(boolSetting2.value());
+
+        settings2.copyFrom(settings1);
+        EXPECT_TRUE(boolSetting2.value());
+        EXPECT_EQ(settings::source::MAP, boolSetting2.getSource());
+    }
+}
+
+const settings::setting_group test_group{"Test"};
+
+TEST(settings, copyContainerSubclass)
+{
+    struct my_settings : public settings::setting_container {
+        settings::setting_bool boolSetting {this, "boolSetting", false, &test_group};
+        settings::setting_string stringSetting {this, "stringSetting", "default", "\"str\"", &test_group};
+    };
+
+    static_assert(!std::is_copy_constructible_v<settings::setting_container>);
+    static_assert(!std::is_copy_constructible_v<settings::setting_bool>);
+    static_assert(!std::is_copy_constructible_v<my_settings>);
+
+    my_settings s1;
+    EXPECT_EQ(&s1.boolSetting, s1.findSetting("boolSetting"));
+    EXPECT_EQ(&s1.stringSetting, s1.findSetting("stringSetting"));
+    EXPECT_EQ(1, s1.grouped().size());
+    EXPECT_EQ((std::set<settings::setting_base *>{ &s1.boolSetting, &s1.stringSetting }), s1.grouped().at(&test_group));
+    s1.boolSetting.setValue(true);
+    EXPECT_EQ(settings::source::MAP, s1.boolSetting.getSource());
+
+    my_settings s2;
+    s2.copyFrom(s1);
+    EXPECT_EQ(&s2.boolSetting, s2.findSetting("boolSetting"));
+    EXPECT_EQ(s2.grouped().size(), 1);
+    EXPECT_EQ((std::set<settings::setting_base *>{ &s2.boolSetting, &s2.stringSetting }), s2.grouped().at(&test_group));
+    EXPECT_TRUE(s2.boolSetting.value());
+    EXPECT_EQ(settings::source::MAP, s2.boolSetting.getSource());
+
+    // s2.stringSetting is still at its default
+    EXPECT_EQ("default", s2.stringSetting.value());
+    EXPECT_EQ(settings::source::DEFAULT, s2.stringSetting.getSource());
 }
 
 int main(int argc, char **argv)

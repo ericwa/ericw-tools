@@ -138,6 +138,20 @@ protected:
     }
 
 public:
+    ~setting_base() = default;
+
+    // copy constructor is deleted. the trick we use with:
+    //
+    // class some_settings public settings_container {
+    //     setting_bool s {this, "s", false};
+    // }
+    //
+    // is incompatible with the settings_container/setting_base types being copyable.
+    setting_base(const setting_base& other) = delete;
+
+    // copy assignment
+    setting_base& operator=(const setting_base& other) = delete;
+
     inline const std::string &primaryName() const { return _names.at(0); }
     inline const nameset &names() const { return _names; }
     inline const setting_group *getGroup() const { return _group; }
@@ -145,6 +159,7 @@ public:
 
     constexpr bool isChanged() const { return _source != source::DEFAULT; }
     constexpr bool isLocked() const { return _source == source::COMMANDLINE; }
+    constexpr source getSource() const { return _source; }
 
     constexpr const char *sourceString() const
     {
@@ -156,6 +171,11 @@ public:
         }
     }
 
+    // copies value and source
+    bool copyFrom(const setting_base& other);
+
+    // resets value to default, and source to source::DEFAULT
+    virtual void reset() {}; // fixme: = 0;
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) = 0;
     virtual std::string stringValue() const = 0;
     virtual std::string format() const = 0;
@@ -582,6 +602,20 @@ class setting_container
 
 public:
     std::string programName, remainderName = "filename", usage;
+
+    inline setting_container() {}
+
+    ~setting_container();
+
+    // copy constructor (can't be copyable, see setting_base)
+    setting_container(const setting_container& other) = delete;
+
+    // copy assignment
+    setting_container& operator=(const setting_container& other) = delete;
+
+    void reset();
+
+    void copyFrom(const setting_container& other);
 
     inline void registerSetting(setting_base *setting)
     {
