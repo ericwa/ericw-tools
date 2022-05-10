@@ -1258,36 +1258,36 @@ std::map<int, qvec3f> GetDirectLighting(
         result[0] += color;
     }
 
-    for (const light_t &entity : GetLights()) {
+    for (const auto &entity : GetLights()) {
         qvec3d surfpointToLightDir;
         float surfpointToLightDist;
         qvec3d color, normalcontrib;
 
-        if (entity.nostaticlight.value()) {
+        if (entity->nostaticlight.value()) {
             continue;
         }
 
         // Skip styled lights if "bouncestyled" setting is off.
-        if (entity.style.value() != 0 && !cfg.bouncestyled.value()) {
+        if (entity->style.value() != 0 && !cfg.bouncestyled.value()) {
             continue;
         }
 
         GetLightContrib(
-            cfg, &entity, normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
+            cfg, entity.get(), normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
 
-        color *= entity.bouncescale.value();
+        color *= entity->bouncescale.value();
 
         // NOTE: Skip negative lights, which would make no sense to bounce!
         if (LightSample_Brightness(color) <= options.gate.value()) {
             continue;
         }
 
-        const hitresult_t hit = TestLight(entity.origin.value(), origin, NULL);
+        const hitresult_t hit = TestLight(entity->origin.value(), origin, NULL);
         if (!hit.blocked) {
             continue;
         }
 
-        int lightstyle = entity.style.value();
+        int lightstyle = entity->style.value();
         if (lightstyle == 0) {
             // switchable shadow only blocks style 0 lights, otherwise switchable lights become always on when shadow is
             // hidden
@@ -1608,21 +1608,21 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
 
     /* Cast rays for local minlight entities */
     for (const auto &entity : GetLights()) {
-        if (entity.getFormula() != LF_LOCALMIN) {
+        if (entity->getFormula() != LF_LOCALMIN) {
             continue;
         }
-        if (entity.nostaticlight.value()) {
+        if (entity->nostaticlight.value()) {
             continue;
         }
 
-        if (CullLight(&entity, lightsurf)) {
+        if (CullLight(entity.get(), lightsurf)) {
             continue;
         }
 
         raystream_occlusion_t *rs = lightsurf->occlusion_stream;
         rs->clearPushedRays();
 
-        lightmap = Lightmap_ForStyle(lightmaps, entity.style.value(), lightsurf);
+        lightmap = Lightmap_ForStyle(lightmaps, entity->style.value(), lightsurf);
 
         hit = false;
         for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -1631,9 +1631,9 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
 
             const lightsample_t *sample = &lightmap->samples[i];
             const qvec3d &surfpoint = lightsurf->points[i];
-            if (cfg.addminlight.value() || LightSample_Brightness(sample->color) < entity.light.value()) {
+            if (cfg.addminlight.value() || LightSample_Brightness(sample->color) < entity->light.value()) {
                 qvec3d surfpointToLightDir;
-                const vec_t surfpointToLightDist = GetDir(surfpoint, entity.origin.value(), surfpointToLightDir);
+                const vec_t surfpointToLightDist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir);
 
                 rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
             }
@@ -1650,15 +1650,15 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             }
 
             int i = rs->getPushedRayPointIndex(j);
-            vec_t value = entity.light.value();
+            vec_t value = entity->light.value();
             lightsample_t *sample = &lightmap->samples[i];
 
             value *=
-                Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], &entity, 0.0 /* TODO: pass distance */, lightsurf);
+                Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], entity.get(), 0.0 /* TODO: pass distance */, lightsurf);
             if (cfg.addminlight.value()) {
-                sample->color += entity.color.value() * (value / 255.0);
+                sample->color += entity->color.value() * (value / 255.0);
             } else {
-                Light_ClampMin(sample, value, entity.color.value());
+                Light_ClampMin(sample, value, entity->color.value());
             }
 
             hit = true;
@@ -1666,7 +1666,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         }
 
         if (hit) {
-            Lightmap_Save(lightmaps, lightsurf, lightmap, entity.style.value());
+            Lightmap_Save(lightmaps, lightsurf, lightmap, entity->style.value());
         }
     }
 }
@@ -2272,7 +2272,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
     if (!dirt_in_use) {
         // check entities, maybe only a few lights use it
         for (const auto &light : GetLights()) {
-            if (light.dirt.boolValue()) {
+            if (light->dirt.boolValue()) {
                 dirt_in_use = true;
                 break;
             }
@@ -3209,12 +3209,12 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
         /* positive lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
             for (const auto &entity : GetLights()) {
-                if (entity.getFormula() == LF_LOCALMIN)
+                if (entity->getFormula() == LF_LOCALMIN)
                     continue;
-                if (entity.nostaticlight.value())
+                if (entity->nostaticlight.value())
                     continue;
-                if (entity.light.value() > 0)
-                    LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
+                if (entity->light.value() > 0)
+                    LightFace_Entity(bsp, entity.get(), lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight > 0)
@@ -3245,12 +3245,12 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
         /* negative lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
             for (const auto &entity : GetLights()) {
-                if (entity.getFormula() == LF_LOCALMIN)
+                if (entity->getFormula() == LF_LOCALMIN)
                     continue;
-                if (entity.nostaticlight.value())
+                if (entity->nostaticlight.value())
                     continue;
-                if (entity.light.value() < 0)
-                    LightFace_Entity(bsp, &entity, lightsurf, lightmaps);
+                if (entity->light.value() < 0)
+                    LightFace_Entity(bsp, entity.get(), lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight < 0)

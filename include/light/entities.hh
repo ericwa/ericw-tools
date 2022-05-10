@@ -122,7 +122,7 @@ public:
  */
 
 std::string TargetnameForLightStyle(int style);
-const std::vector<light_t> &GetLights();
+const std::vector<std::unique_ptr<light_t>> &GetLights();
 const std::vector<sun_t> &GetSuns();
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);

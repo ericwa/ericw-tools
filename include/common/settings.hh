@@ -138,6 +138,20 @@ protected:
     }
 
 public:
+    ~setting_base() = default;
+
+    // copy constructor is deleted. the trick we use with:
+    //
+    // class some_settings public settings_container {
+    //     setting_bool s {this, "s", false};
+    // }
+    //
+    // is incompatible with the settings_container/setting_base types being copyable.
+    setting_base(const setting_base& other) = delete;
+
+    // copy assignment
+    setting_base& operator=(const setting_base& other) = delete;
+
     inline const std::string &primaryName() const { return _names.at(0); }
     inline const nameset &names() const { return _names; }
     inline const setting_group *getGroup() const { return _group; }
@@ -145,6 +159,7 @@ public:
 
     constexpr bool isChanged() const { return _source != source::DEFAULT; }
     constexpr bool isLocked() const { return _source == source::COMMANDLINE; }
+    constexpr source getSource() const { return _source; }
 
     constexpr const char *sourceString() const
     {
@@ -156,6 +171,11 @@ public:
         }
     }
 
+    // copies value and source
+    virtual bool copyFrom(const setting_base& other) = 0;
+
+    // resets value to default, and source to source::DEFAULT
+    virtual void reset() = 0;
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) = 0;
     virtual std::string stringValue() const = 0;
     virtual std::string format() const = 0;
@@ -176,6 +196,12 @@ public:
     {
     }
 
+    inline bool copyFrom(const setting_base& other) override {
+        return true;
+    }
+
+    inline void reset() override {}
+
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         _func();
@@ -192,6 +218,7 @@ template<typename T>
 class setting_value : public setting_base
 {
 protected:
+    T _default;
     T _value;
 
     virtual void setValueInternal(T value, source newSource)
@@ -213,7 +240,7 @@ protected:
 public:
     inline setting_value(setting_container *dictionary, const nameset &names, T v, const setting_group *group = nullptr,
         const char *description = "")
-        : setting_base(dictionary, names, group, description), _value(v)
+        : setting_base(dictionary, names, group, description), _default(v), _value(v)
     {
     }
 
@@ -222,13 +249,24 @@ public:
     inline void setValueLocked(T f) { setValueInternal(f, source::COMMANDLINE); }
 
     inline void setValue(T f) { setValueInternal(f, source::MAP); }
+
+    inline bool copyFrom(const setting_base& other) override {
+        if (auto *casted = dynamic_cast<const setting_value<T> *>(&other)) {
+            _value = casted->_value;
+            _source = casted->_source;
+            return true;
+        }
+        return false;
+    }
+
+    inline void reset() override {
+        _value = _default;
+        _source = source::DEFAULT;
+    }
 };
 
 class setting_bool : public setting_value<bool>
 {
-private:
-    bool _default;
-
 protected:
     bool parseInternal(parser_base_t &parser, bool locked, bool truthValue)
     {
@@ -257,7 +295,7 @@ protected:
 public:
     inline setting_bool(setting_container *dictionary, const nameset &names, bool v,
         const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _default(v)
+        : setting_value(dictionary, names, v, group, description)
     {
     }
 
@@ -312,6 +350,12 @@ public:
         : setting_base(dictionary, names, group, description), _settings(settings)
     {
     }
+
+    inline bool copyFrom(const setting_base& other) override {
+        return true;
+    }
+
+    inline void reset() override {}
 
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
@@ -582,6 +626,20 @@ class setting_container
 
 public:
     std::string programName, remainderName = "filename", usage;
+
+    inline setting_container() {}
+
+    ~setting_container();
+
+    // copy constructor (can't be copyable, see setting_base)
+    setting_container(const setting_container& other) = delete;
+
+    // copy assignment
+    setting_container& operator=(const setting_container& other) = delete;
+
+    void reset();
+
+    void copyFrom(const setting_container& other);
 
     inline void registerSetting(setting_base *setting)
     {
