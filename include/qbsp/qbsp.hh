@@ -90,6 +90,20 @@ public:
 
     constexpr const std::set<wadpath> &pathsValue() const { return _paths; }
 
+    inline bool copyFrom(const setting_base& other) override {
+        if (auto *casted = dynamic_cast<const setting_wadpathset *>(&other)) {
+            _paths = casted->_paths;
+            _source = casted->_source;
+            return true;
+        }
+        return false;
+    }
+
+    inline void reset() override {
+        _paths = {};
+        _source = source::DEFAULT;
+    }
+
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (auto value = parseString(parser)) {

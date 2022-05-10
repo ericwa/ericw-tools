@@ -172,10 +172,10 @@ public:
     }
 
     // copies value and source
-    bool copyFrom(const setting_base& other);
+    virtual bool copyFrom(const setting_base& other) = 0;
 
     // resets value to default, and source to source::DEFAULT
-    virtual void reset() {}; // fixme: = 0;
+    virtual void reset() = 0;
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) = 0;
     virtual std::string stringValue() const = 0;
     virtual std::string format() const = 0;
@@ -196,6 +196,12 @@ public:
     {
     }
 
+    inline bool copyFrom(const setting_base& other) override {
+        return true;
+    }
+
+    inline void reset() override {}
+
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         _func();
@@ -212,6 +218,7 @@ template<typename T>
 class setting_value : public setting_base
 {
 protected:
+    T _default;
     T _value;
 
     virtual void setValueInternal(T value, source newSource)
@@ -233,7 +240,7 @@ protected:
 public:
     inline setting_value(setting_container *dictionary, const nameset &names, T v, const setting_group *group = nullptr,
         const char *description = "")
-        : setting_base(dictionary, names, group, description), _value(v)
+        : setting_base(dictionary, names, group, description), _default(v), _value(v)
     {
     }
 
@@ -242,13 +249,24 @@ public:
     inline void setValueLocked(T f) { setValueInternal(f, source::COMMANDLINE); }
 
     inline void setValue(T f) { setValueInternal(f, source::MAP); }
+
+    inline bool copyFrom(const setting_base& other) override {
+        if (auto *casted = dynamic_cast<const setting_value<T> *>(&other)) {
+            _value = casted->_value;
+            _source = casted->_source;
+            return true;
+        }
+        return false;
+    }
+
+    inline void reset() override {
+        _value = _default;
+        _source = source::DEFAULT;
+    }
 };
 
 class setting_bool : public setting_value<bool>
 {
-private:
-    bool _default;
-
 protected:
     bool parseInternal(parser_base_t &parser, bool locked, bool truthValue)
     {
@@ -277,7 +295,7 @@ protected:
 public:
     inline setting_bool(setting_container *dictionary, const nameset &names, bool v,
         const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _default(v)
+        : setting_value(dictionary, names, v, group, description)
     {
     }
 
@@ -332,6 +350,12 @@ public:
         : setting_base(dictionary, names, group, description), _settings(settings)
     {
     }
+
+    inline bool copyFrom(const setting_base& other) override {
+        return true;
+    }
+
+    inline void reset() override {}
 
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {

@@ -230,6 +230,24 @@ TEST(settings, copy)
     EXPECT_EQ(2.5, waitSetting.value());
 }
 
+TEST(settings, copyMangle)
+{
+    settings::setting_container settings;
+    settings::setting_mangle sunvec{&settings, {"sunlight_mangle"}, 0.0, 0.0, 0.0};
+
+    EXPECT_TRUE(sunvec.parse("", parser_t(std::string_view("0.0 -90.0 0.0"))));
+    EXPECT_NEAR(0, sunvec.value()[0], 1e-6);
+    EXPECT_NEAR(0, sunvec.value()[1], 1e-6);
+    EXPECT_NEAR(-1, sunvec.value()[2], 1e-6);
+
+    settings::setting_mangle sunvec2{&settings, {"sunlight_mangle2"}, 0.0, 0.0, 0.0};
+    sunvec2.copyFrom(sunvec);
+
+    EXPECT_NEAR(0, sunvec2.value()[0], 1e-6);
+    EXPECT_NEAR(0, sunvec2.value()[1], 1e-6);
+    EXPECT_NEAR(-1, sunvec2.value()[2], 1e-6);
+}
+
 TEST(settings, copyContainer)
 {
     settings::setting_container settings1;
@@ -284,6 +302,51 @@ TEST(settings, copyContainerSubclass)
     // s2.stringSetting is still at its default
     EXPECT_EQ("default", s2.stringSetting.value());
     EXPECT_EQ(settings::source::DEFAULT, s2.stringSetting.getSource());
+}
+
+TEST(settings, resetBool)
+{
+    settings::setting_container settings;
+    settings::setting_bool boolSetting1(&settings, "boolSetting", false);
+
+    boolSetting1.setValue(true);
+    EXPECT_EQ(settings::source::MAP, boolSetting1.getSource());
+    EXPECT_TRUE(boolSetting1.value());
+
+    boolSetting1.reset();
+    EXPECT_EQ(settings::source::DEFAULT, boolSetting1.getSource());
+    EXPECT_FALSE(boolSetting1.value());
+}
+
+TEST(settings, resetScalar)
+{
+    settings::setting_container settings;
+    settings::setting_scalar scalarSetting1(&settings, "scalarSetting", 12.34);
+
+    scalarSetting1.setValue(-2);
+    EXPECT_EQ(settings::source::MAP, scalarSetting1.getSource());
+    EXPECT_EQ(-2, scalarSetting1.value());
+
+    scalarSetting1.reset();
+    EXPECT_EQ(settings::source::DEFAULT, scalarSetting1.getSource());
+    EXPECT_EQ(12.34, scalarSetting1.value());
+}
+
+TEST(settings, resetContainer)
+{
+    settings::setting_container settings;
+    settings::setting_vec3 vec3Setting1(&settings, "vec", 3, 4, 5);
+    settings::setting_string stringSetting1(&settings, "name", "abc");
+
+    vec3Setting1.setValue(qvec3d(-1, -2, -3));
+    stringSetting1.setValue("test");
+    settings.reset();
+
+    EXPECT_EQ(settings::source::DEFAULT, vec3Setting1.getSource());
+    EXPECT_EQ(qvec3d(3, 4, 5), vec3Setting1.value());
+
+    EXPECT_EQ(settings::source::DEFAULT, stringSetting1.getSource());
+    EXPECT_EQ("abc", stringSetting1.value());
 }
 
 int main(int argc, char **argv)
