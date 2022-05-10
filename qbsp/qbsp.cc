@@ -1146,7 +1146,8 @@ void InitQBSP(int argc, const char **argv)
 {
     // In case we're launched more than once, in testqbsp
     map.reset();
-    // HACK: should have a better way of clearing the options system
+    options.reset();
+    // fixme-brushbsp: clear any other members of qbsp_settings
     options.target_game = nullptr;
     options.target_version = nullptr;
 
