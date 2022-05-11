@@ -20,6 +20,11 @@
 */
 // csg4.c
 
+#include <qbsp/brush.hh>
+#include <qbsp/csg4.hh>
+#include <qbsp/map.hh>
+#include <qbsp/merge.hh>
+#include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 
 #include <atomic>
@@ -69,7 +74,7 @@ Duplicates the non point information of a face, used by SplitFace and
 MergeFace.
 ==================
 */
-face_t *NewFaceFromFace(face_t *in)
+face_t *NewFaceFromFace(const face_t *in)
 {
     face_t *newf = new face_t{};
 
@@ -442,7 +447,7 @@ std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefa
 {
     std::vector<surface_t> surfaces;
 
-    for (int i = 0; i < map.numplanes(); i++) {
+    for (int i = 0; i < map.planes.size(); i++) {
         const auto entry = planefaces.find(i);
 
         if (entry == planefaces.end())

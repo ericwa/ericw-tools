@@ -22,6 +22,7 @@
 #include <cstring>
 #include <string>
 
+#include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 
@@ -263,7 +264,7 @@ static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
 
 static void WADList_LoadTextures()
 {
-    for (size_t i = 0; i < map.nummiptex(); i++) {
+    for (size_t i = 0; i < map.miptex.size(); i++) {
         // already loaded?
         if (map.bsp.dtex.textures[i].data[0])
             continue;
@@ -277,7 +278,7 @@ static void WADList_LoadTextures()
 
 static void WADList_AddAnimationFrames()
 {
-    size_t oldcount = map.nummiptex();
+    size_t oldcount = map.miptex.size();
 
     for (size_t i = 0; i < oldcount; i++) {
         const std::string &existing_name = map.miptexTextureName(i);
@@ -293,7 +294,7 @@ static void WADList_AddAnimationFrames()
         }
     }
 
-    logging::print(logging::flag::STAT, "     {:8} texture frames added\n", map.nummiptex() - oldcount);
+    logging::print(logging::flag::STAT, "     {:8} texture frames added\n", map.miptex.size() - oldcount);
 }
 
 void WADList_Process()
@@ -306,12 +307,12 @@ void WADList_Process()
     }
 
     /* Default texture data to store in worldmodel */
-    map.bsp.dtex.textures.resize(map.nummiptex());
+    map.bsp.dtex.textures.resize(map.miptex.size());
 
     WADList_LoadTextures();
 
     /* Last pass, mark unfound textures as such */
-    for (size_t i = 0; i < map.nummiptex(); i++) {
+    for (size_t i = 0; i < map.miptex.size(); i++) {
         if (!map.bsp.dtex.textures[i].data[0]) {
             logging::print("WARNING: Texture {} not found\n", map.miptexTextureName(i));
         }

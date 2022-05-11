@@ -19,6 +19,10 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/outside.hh>
+#include <qbsp/brush.hh>
+#include <qbsp/map.hh>
+#include <qbsp/portals.hh>
 #include <qbsp/qbsp.hh>
 
 #include <climits>
@@ -68,18 +72,6 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
         }
         return back;
     }
-}
-
-static std::ofstream InitPtsFile(void)
-{
-    options.szBSPName.replace_extension("pts");
-
-    std::ofstream ptsfile(options.szBSPName);
-
-    if (!ptsfile)
-        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
-
-    return ptsfile;
 }
 
 static void ClearOccupied_r(node_t *node)
@@ -259,7 +251,13 @@ leakline should be a sequence of portals leading from leakentity to the void
 */
 static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<portal_t *> &leakline)
 {
-    std::ofstream ptsfile = InitPtsFile();
+    fs::path name = options.bsp_path;
+    name.replace_extension("pts");
+
+    std::ofstream ptsfile(name);
+
+    if (!ptsfile)
+        FError("Failed to open {}: {}", name, strerror(errno));
 
     qvec3d prevpt = leakentity->origin;
 
@@ -272,7 +270,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
         prevpt = currpt;
     }
 
-    logging::print("Leak file written to {}\n", options.szBSPName);
+    logging::print("Leak file written to {}\n", name);
 }
 
 /*
@@ -286,7 +284,7 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 {
     std::vector<node_t *> result;
 
-    for (int i = 1; i < map.numentities(); i++) {
+    for (int i = 1; i < map.entities.size(); i++) {
         mapentity_t *entity = &map.entities.at(i);
 
         /* skip entities at (0 0 0) (bmodels) */
@@ -485,8 +483,11 @@ bool FillOutside(node_t *node, const int hullnum)
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
-        options.szBSPName.replace_extension("prt");
-        remove(options.szBSPName);
+        if (!options.keepprt.value()) {
+            fs::path name = options.bsp_path;
+            name.replace_extension("prt");
+            remove(name);
+        }
 
         if (options.leaktest.value()) {
             logging::print("Aborting because -leaktest was used.\n");

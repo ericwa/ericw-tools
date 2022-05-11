@@ -21,6 +21,7 @@
 // tjunc.c
 
 #include <qbsp/qbsp.hh>
+#include <qbsp/map.hh>
 
 constexpr size_t MAXPOINTS = 60;
 

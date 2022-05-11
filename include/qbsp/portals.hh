@@ -21,6 +21,9 @@
 
 #pragma once
 
+#include <common/bspfile.hh>
+#include <qbsp/qbsp.hh>
+
 struct portal_t
 {
     int planenum;

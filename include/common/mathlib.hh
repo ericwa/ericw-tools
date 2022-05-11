@@ -27,6 +27,7 @@
 #include <array>
 #include <utility>
 #include <string>
+#include <algorithm>
 
 using std::max, std::min, std::clamp;
 

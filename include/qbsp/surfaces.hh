@@ -23,5 +23,10 @@
 
 #include <list>
 
+struct node_t;
+class mapentity_t;
+struct face_t;
+
 std::vector<surface_t> GatherNodeFaces(node_t *headnode);
 void FreeNodes(node_t *node);
+std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, std::list<face_t *> &surfaces);

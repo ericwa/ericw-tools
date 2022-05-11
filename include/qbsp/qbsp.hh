@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <array>
 #include <optional>
+#include <string>
 
 #include <cassert>
 #include <cctype>
@@ -39,6 +40,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+
+#include <qbsp/winding.hh>
 
 #include <common/bspfile.hh>
 #include <common/aabb.hh>
@@ -193,6 +196,8 @@ public:
     setting_bool contenthack{this, "contenthack", false, &debugging_group,
         "hack to fix leaks through solids. causes missing faces in some cases so disabled by default"};
     setting_bool leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"};
+    setting_bool keepprt{this, "keepprt", false, &debugging_group,
+        "avoid deleting the .prt file on leaking maps"};
     setting_bool includeskip{this, "includeskip", false, &common_format_group,
         "don't cull skip faces from the list of renderable surfaces (Q2RTX)"};
     setting_scalar worldextent{
@@ -233,10 +238,10 @@ public:
     bool fVerbose = true;
     bool fAllverbose = false;
     bool fNoverbose = false;
-    const bspversion_t *target_version;
-    const gamedef_t *target_game;
-    fs::path szMapName;
-    fs::path szBSPName;
+    const bspversion_t *target_version = nullptr;
+    const gamedef_t *target_game = nullptr;
+    fs::path map_path;
+    fs::path bsp_path;
 };
 }; // namespace settings
 
@@ -250,9 +255,6 @@ extern settings::qbsp_settings options;
  * suitably modified engine).
  */
 #define MAX_BSP_CLIPNODES 0xfff0
-
-// Various other geometry maximums
-constexpr size_t MAXEDGES = 64;
 
 // 0-2 are axial planes
 // 3-5 are non-axial planes snapped to the nearest
@@ -300,7 +302,6 @@ enum
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
-#include <qbsp/winding.hh>
 
 struct mtexinfo_t
 {
@@ -438,15 +439,8 @@ struct node_t
     bool opaque() const;
 };
 
-#include <qbsp/brush.hh>
-#include <qbsp/csg4.hh>
-#include <qbsp/solidbsp.hh>
-#include <qbsp/merge.hh>
-#include <qbsp/surfaces.hh>
-#include <qbsp/portals.hh>
-#include <qbsp/region.hh>
-#include <qbsp/writebsp.hh>
-#include <qbsp/outside.hh>
-#include <qbsp/map.hh>
+void InitQBSP(int argc, const char **argv);
+void InitQBSP(const std::vector<std::string>& args);
+void ProcessFile();
 
 int qbsp_main(int argc, const char **argv);

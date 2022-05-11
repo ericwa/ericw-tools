@@ -20,6 +20,7 @@
 */
 // writebsp.c
 
+#include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
 
@@ -316,7 +317,7 @@ void BeginBSPFile(void)
  */
 static void WriteExtendedTexinfoFlags(void)
 {
-    auto file = fs::path(options.szBSPName).replace_extension("texinfo.json");
+    auto file = fs::path(options.bsp_path).replace_extension("texinfo.json");
     bool needwrite = false;
 
     if (fs::exists(file)) {
@@ -426,10 +427,10 @@ static void WriteBSPFile()
         Q_assert(ConvertBSPFormat(&bspdata, extendedLimitsFormat));
     }
 
-    options.szBSPName.replace_extension("bsp");
+    options.bsp_path.replace_extension("bsp");
 
-    WriteBSPFile(options.szBSPName, &bspdata);
-    logging::print("Wrote {}\n", options.szBSPName);
+    WriteBSPFile(options.bsp_path, &bspdata);
+    logging::print("Wrote {}\n", options.bsp_path);
 
     PrintBSPFileSizes(&bspdata);
 }
@@ -465,12 +466,12 @@ void UpdateBSPFileEntitiesLump()
 {
     bspdata_t bspdata;
 
-    options.szBSPName.replace_extension("bsp");
+    options.bsp_path.replace_extension("bsp");
 
     // load the .bsp
-    LoadBSPFile(options.szBSPName, &bspdata);
+    LoadBSPFile(options.bsp_path, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.szBSPName, options);
+    bspdata.version->game->init_filesystem(options.bsp_path, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -481,7 +482,7 @@ void UpdateBSPFileEntitiesLump()
 
     // write the .bsp back to disk
     ConvertBSPFormat(&bspdata, bspdata.loadversion);
-    WriteBSPFile(options.szBSPName, &bspdata);
+    WriteBSPFile(options.bsp_path, &bspdata);
 
-    logging::print("Wrote {}\n", options.szBSPName);
+    logging::print("Wrote {}\n", options.bsp_path);
 }

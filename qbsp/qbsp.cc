@@ -28,8 +28,19 @@
 #include <common/fs.hh>
 #include <common/threads.hh>
 #include <common/settings.hh>
+
+#include <qbsp/brush.hh>
+#include <qbsp/csg4.hh>
+#include <qbsp/map.hh>
+#include <qbsp/merge.hh>
+#include <qbsp/portals.hh>
+#include <qbsp/solidbsp.hh>
+#include <qbsp/surfaces.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
+#include <qbsp/writebsp.hh>
+#include <qbsp/outside.hh>
+
 #include <fmt/chrono.h>
 
 #include "tbb/global_control.h"
@@ -69,10 +80,10 @@ void qbsp_settings::initialize(int argc, const char **argv)
             printHelp();
         }
 
-        options.szMapName = remainder[0];
+        options.map_path = remainder[0];
 
         if (remainder.size() == 2) {
-            options.szBSPName = remainder[1];
+            options.bsp_path = remainder[1];
         }
     }
     catch (parse_exception ex)
@@ -138,9 +149,9 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
     /* If no wadpath given, default to the map directory */
     if (wadpaths.pathsValue().empty()) {
-        wadpath wp{options.szMapName.parent_path(), false};
+        wadpath wp{options.map_path.parent_path(), false};
 
-        // If options.szMapName is a relative path, StrippedFilename will return the empty string.
+        // If options.map_path is a relative path, StrippedFilename will return the empty string.
         // In that case, don't add it as a wad path.
         if (!wp.path.empty()) {
             wadpaths.addPath(wp);
@@ -620,7 +631,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
-    if (!entity->nummapbrushes && entity != pWorldEnt())
+    if (!entity->nummapbrushes && entity != map.world_entity())
         return;
 
     /*
@@ -631,7 +642,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         return;
 
     // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
-    bool discarded_trigger = (entity != pWorldEnt() &&
+    bool discarded_trigger = (entity != map.world_entity() &&
         options.notriggermodels.value() &&
         entity->mapbrush(0).face(0).texname.find_last_of("trigger") == entity->mapbrush(0).face(0).texname.size() - strlen("trigger"));
 
@@ -642,8 +653,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             map.bsp.dmodels.emplace_back();
         }
 
-        if (entity != pWorldEnt()) {
-            if (entity == pWorldEnt() + 1)
+        if (entity != map.world_entity()) {
+            if (entity == map.world_entity() + 1)
                 logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
 
             std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
@@ -697,9 +708,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         logging::print(logging::flag::STAT, "     {:8} liquid brushes\n", stats.liquid);
     }
 
-    logging::print(logging::flag::STAT, "     {:8} planes\n", map.numplanes());
+    logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
 
-    if (entity->brushes.empty() && hullnum && entity != pWorldEnt()) {
+    if (entity->brushes.empty() && hullnum && entity != map.world_entity()) {
         PrintEntity(entity);
         FError("Entity with no valid brushes");
     }
@@ -710,13 +721,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     std::vector<surface_t> surfs = CSGFaces(entity);
 
-    if (options.objexport.value() && entity == pWorldEnt() && hullnum <= 0) {
+    if (options.objexport.value() && entity == map.world_entity() && hullnum <= 0) {
         ExportObj_Surfaces("post_csg", surfs);
     }
 
     if (hullnum > 0) {
         nodes = SolidBSP(entity, surfs, true);
-        if (entity == pWorldEnt() && !options.nofill.value()) {
+        if (entity == map.world_entity() && !options.nofill.value()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
             if (!options.nofill.value() && FillOutside(nodes, hullnum)) {
@@ -745,11 +756,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         if (options.forcegoodtree.value())
             nodes = SolidBSP(entity, surfs, false);
         else
-            nodes = SolidBSP(entity, surfs, entity == pWorldEnt());
+            nodes = SolidBSP(entity, surfs, entity == map.world_entity());
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        if (entity == pWorldEnt()) {
+        if (entity == map.world_entity()) {
             // assume non-world bmodels are simple
             PortalizeWorld(entity, nodes, hullnum);
             if (!options.nofill.value() && FillOutside(nodes, hullnum)) {
@@ -785,14 +796,14 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         }
 
         // bmodels
-        if (entity != pWorldEnt() && !options.notjunc.value()) {
+        if (entity != map.world_entity() && !options.notjunc.value()) {
             TJunc(entity, nodes);
         }
 
         // convert detail leafs to solid (in case we didn't make the call above)
         DetailToSolid(nodes);
 
-        if (options.objexport.value() && entity == pWorldEnt()) {
+        if (options.objexport.value() && entity == map.world_entity()) {
             ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", nodes);
         }
@@ -818,14 +829,14 @@ UpdateEntLump
 */
 static void UpdateEntLump(void)
 {
-    int modnum, i;
+    int modnum;
     char modname[10];
     mapentity_t *entity;
 
     logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
     modnum = 1;
-    for (i = 1; i < map.numentities(); i++) {
+    for (int i = 1; i < map.entities.size(); i++) {
         entity = &map.entities.at(i);
 
         /* Special handling for misc_external_map.
@@ -983,10 +994,6 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
 /* for generating BRUSHLIST bspx lump */
 static void BSPX_CreateBrushList(void)
 {
-    mapentity_t *ent;
-    int entnum;
-    int modelnum;
-    const char *mod;
     struct bspxbrushes_s ctx;
 
     if (!options.wrbrushes.value())
@@ -994,12 +1001,13 @@ static void BSPX_CreateBrushList(void)
 
     BSPX_Brushes_Init(&ctx);
 
-    for (entnum = 0; entnum < map.numentities(); entnum++) {
-        ent = &map.entities.at(entnum);
-        if (ent == pWorldEnt())
+    for (int entnum = 0; entnum < map.entities.size(); ++entnum) {
+        mapentity_t *ent = &map.entities.at(entnum);
+        int modelnum;
+        if (ent == map.world_entity()) {
             modelnum = 0;
-        else {
-            mod = ValueForKey(ent, "model");
+        } else {
+            const char *mod = ValueForKey(ent, "model");
             if (*mod != '*')
                 continue;
             modelnum = atoi(mod + 1);
@@ -1026,15 +1034,11 @@ CreateSingleHull
 */
 static void CreateSingleHull(const int hullnum)
 {
-    int i;
-    mapentity_t *entity;
-
     logging::print("Processing hull {}...\n", hullnum);
 
     // for each entity in the map file that has geometry
-    for (i = 0; i < map.numentities(); i++) {
-        entity = &map.entities.at(i);
-        ProcessEntity(entity, hullnum);
+    for (auto &entity : map.entities) {
+        ProcessEntity(&entity, hullnum);
         if (!options.fAllverbose) {
             options.fVerbose = false; // don't print rest of entities
             logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
@@ -1071,18 +1075,16 @@ static void CreateHulls(void)
     }
 }
 
-static bool wadlist_tried_loading = false;
-
 void EnsureTexturesLoaded()
 {
-    if (wadlist_tried_loading)
+    if (map.wadlist_tried_loading)
         return;
 
-    wadlist_tried_loading = true;
+    map.wadlist_tried_loading = true;
 
-    const char *wadstring = ValueForKey(pWorldEnt(), "_wad");
+    const char *wadstring = ValueForKey(map.world_entity(), "_wad");
     if (!wadstring[0])
-        wadstring = ValueForKey(pWorldEnt(), "wad");
+        wadstring = ValueForKey(map.world_entity(), "wad");
     if (!wadstring[0])
         logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
     else
@@ -1093,7 +1095,7 @@ void EnsureTexturesLoaded()
             logging::print("WARNING: No valid WAD filenames in worldmodel\n");
 
         /* Try the default wad name */
-        fs::path defaultwad = options.szMapName;
+        fs::path defaultwad = options.map_path;
         defaultwad.replace_extension("wad");
 
         WADList_Init(defaultwad.string().c_str());
@@ -1108,7 +1110,7 @@ void EnsureTexturesLoaded()
 ProcessFile
 =================
 */
-static void ProcessFile(void)
+void ProcessFile()
 {
     // load brushes and entities
     LoadMapFile();
@@ -1154,42 +1156,62 @@ static void ProcessFile(void)
 InitQBSP
 ==================
 */
-static void InitQBSP(int argc, const char **argv)
+void InitQBSP(int argc, const char **argv)
 {
+    // In case we're launched more than once, in testqbsp
+    map.reset();
+    options.reset();
+    // fixme-brushbsp: clear any other members of qbsp_settings
+    options.target_game = nullptr;
+    options.target_version = nullptr;
+
     options.run(argc, argv);
 
-    options.szMapName.replace_extension("map");
+    options.map_path.replace_extension("map");
 
     // The .map extension gets removed right away anyways...
-    if (options.szBSPName.empty())
-        options.szBSPName = options.szMapName;
+    if (options.bsp_path.empty())
+        options.bsp_path = options.map_path;
 
     /* Start logging to <bspname>.log */
-    logging::init(fs::path(options.szBSPName).replace_extension("log"), options);
+    logging::init(fs::path(options.bsp_path).replace_extension("log"), options);
 
     // Remove already existing files
     if (!options.onlyents.value() && options.convertmapformat.value() == conversion_t::none) {
-        options.szBSPName.replace_extension("bsp");
-        remove(options.szBSPName);
+        options.bsp_path.replace_extension("bsp");
+        remove(options.bsp_path);
 
         // Probably not the best place to do this
-        logging::print("Input file: {}\n", options.szMapName);
-        logging::print("Output file: {}\n\n", options.szBSPName);
+        logging::print("Input file: {}\n", options.map_path);
+        logging::print("Output file: {}\n\n", options.bsp_path);
 
-        options.szBSPName.replace_extension("prt");
-        remove(options.szBSPName);
+        fs::path prtfile = options.bsp_path;
+        prtfile.replace_extension("prt");
+        remove(prtfile);
 
-        options.szBSPName.replace_extension("pts");
-        remove(options.szBSPName);
+        fs::path ptsfile = options.bsp_path;
+        ptsfile.replace_extension("pts");
+        remove(ptsfile);
 
-        options.szBSPName.replace_extension("por");
-        remove(options.szBSPName);
+        fs::path porfile = options.bsp_path;
+        porfile.replace_extension("por");
+        remove(porfile);
     }
 
     // onlyents might not load this yet
     if (options.target_game) {
-        options.target_game->init_filesystem(options.szMapName, options);
+        options.target_game->init_filesystem(options.map_path, options);
     }
+}
+
+void InitQBSP(const std::vector<std::string>& args)
+{
+    std::vector<const char *> argPtrs;
+    for (const std::string &arg : args) {
+        argPtrs.push_back(arg.data());
+    }
+
+    InitQBSP(argPtrs.size(), argPtrs.data());
 }
 
 #include <fstream>
@@ -1210,9 +1232,6 @@ int qbsp_main(int argc, const char **argv)
 
     logging::print("\n{:.3} seconds elapsed\n", (end - start));
 
-    //      FreeAllMem();
-    //      PrintMem();
-    
     logging::close();
 
     return 0;

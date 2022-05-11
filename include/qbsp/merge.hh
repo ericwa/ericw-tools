@@ -21,7 +21,12 @@
 
 #pragma once
 
+#include <qbsp/qbsp.hh>
+
 #include <list>
+#include <vector>
+
+struct face_t;
 
 void MergeFaceToList(face_t *face, std::list<face_t *> &list);
 void MergeAll(std::vector<surface_t> &surfhead);

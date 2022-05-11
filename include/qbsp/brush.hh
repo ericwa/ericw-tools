@@ -22,7 +22,11 @@
 #pragma once
 
 #include <qbsp/winding.hh>
+#include <qbsp/qbsp.hh>
 #include <common/aabb.hh>
+#include <optional>
+
+class mapentity_t;
 
 struct brush_t
 {

@@ -27,7 +27,7 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: false
 BinPackArguments: true
 BinPackParameters: true
-BreakBeforeBraces: Custom
+BreakBeforeBraces: Linux
 BraceWrapping:
   AfterCaseLabel:  false
   AfterClass:      true

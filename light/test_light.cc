@@ -784,6 +784,10 @@ TEST(mathlib, aabb_disjoint)
 
     // an intersection with a volume
     EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(5, 5, 5), qvec3f(10, 6, 6))), b1.intersectWith(no3));
+
+    EXPECT_TRUE(b1.disjoint_or_touching(aabb3f(qvec3f(10, 1, 1), qvec3f(20, 10, 10))));
+    EXPECT_TRUE(b1.disjoint_or_touching(aabb3f(qvec3f(11, 1, 1), qvec3f(20, 10, 10))));
+    EXPECT_FALSE(b1.disjoint_or_touching(aabb3f(qvec3f(9.99, 1, 1), qvec3f(20, 10, 10))));  
 }
 
 TEST(mathlib, aabb_contains)

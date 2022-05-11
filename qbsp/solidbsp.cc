@@ -21,7 +21,11 @@
 
 #include <climits>
 
+#include <qbsp/brush.hh>
+#include <qbsp/csg4.hh>
+#include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/surfaces.hh>
 
 #include <list>
 #include <atomic>
@@ -827,7 +831,7 @@ node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bo
 
     PartitionSurfaces(surfhead, headnode);
 
-    logging::percent(csgmergefaces, csgmergefaces, entity == pWorldEnt());
+    logging::percent(csgmergefaces, csgmergefaces, entity == map.world_entity());
 
     logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
     logging::print(logging::flag::STAT, "     {:8} solid leafs\n", c_solid.load());

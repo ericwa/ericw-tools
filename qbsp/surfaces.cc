@@ -19,7 +19,14 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/brush.hh>
+#include <qbsp/portals.hh>
+#include <qbsp/csg4.hh>
+#include <qbsp/map.hh>
+#include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/writebsp.hh>
+
 #include <map>
 #include <list>
 
@@ -495,7 +502,7 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     firstface = static_cast<int>(map.bsp.dfaces.size());
     MakeFaceEdges_r(entity, headnode, 0);
-    logging::percent(splitnodes, splitnodes, entity == pWorldEnt());
+    logging::percent(splitnodes, splitnodes, entity == map.world_entity());
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();

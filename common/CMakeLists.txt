@@ -32,16 +32,17 @@ add_library(common STATIC
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json)
 
-# test (copied from light/CMakeLists.txt)
+# test (see: https://google.github.io/googletest/quickstart-cmake.html)
+
+enable_testing()
 
 set(COMMON_TEST_SOURCE 
 	test.cc)
-
-add_executable(testcommon EXCLUDE_FROM_ALL ${COMMON_TEST_SOURCE})
-add_test(testcommon testcommon)
-
+add_executable(testcommon ${COMMON_TEST_SOURCE})
 # HACK: copy .dll dependencies
 add_custom_command(TARGET testcommon POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testcommon>")
+target_link_libraries (testcommon common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest gmock fmt::fmt)
 
-target_link_libraries (testcommon common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest fmt::fmt)
+include(GoogleTest)
+gtest_discover_tests(testcommon)

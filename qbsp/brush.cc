@@ -23,6 +23,9 @@
 #include <cstring>
 #include <list>
 
+#include <qbsp/brush.hh>
+#include <qbsp/csg4.hh>
+#include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
 /*
@@ -798,7 +801,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         const mapbrush_t *mapbrush = &src->mapbrush(i);
         const contentflags_t contents = Brush_GetContents(mapbrush);
         if (contents.is_origin()) {
-            if (dst == pWorldEnt()) {
+            if (dst == map.world_entity()) {
                 logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
             }
@@ -945,7 +948,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         }
 
         /* entities in some games never use water merging */
-        if (dst != pWorldEnt() && !options.target_game->allow_contented_bmodels) {
+        if (dst != map.world_entity() && !options.target_game->allow_contented_bmodels) {
             contents = options.target_game->create_solid_contents();
 
             /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
@@ -1003,7 +1006,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         dst->bounds += brush->bounds;
     }
 
-    logging::percent(src->nummapbrushes, src->nummapbrushes, src == pWorldEnt());
+    logging::percent(src->nummapbrushes, src->nummapbrushes, src == map.world_entity());
 }
 
 /*
@@ -1024,12 +1027,12 @@ brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
      * If this is the world entity, find all func_group and func_detail
      * entities and add their brushes with the appropriate contents flag set.
      */
-    if (entity == pWorldEnt()) {
+    if (entity == map.world_entity()) {
         /*
          * We no longer care about the order of adding func_detail and func_group,
          * Entity_SortBrushes will sort the brushes
          */
-        for (int i = 1; i < map.numentities(); i++) {
+        for (int i = 1; i < map.entities.size(); i++) {
             mapentity_t *source = &map.entities.at(i);
 
             /* Load external .map and change the classname, if needed */

@@ -21,13 +21,16 @@
 
 #pragma once
 
+#include <common/qvec.hh>
+
 #include <list>
 #include <tuple>
+#include <vector>
 
 extern int csgmergefaces;
 
 // build surfaces is also used by GatherNodeFaces
 std::vector<surface_t> BuildSurfaces(std::map<int, std::list<face_t *>> &planefaces);
-face_t *NewFaceFromFace(face_t *in);
+face_t *NewFaceFromFace(const face_t *in);
 std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);

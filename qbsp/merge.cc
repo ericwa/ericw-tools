@@ -20,7 +20,12 @@
 */
 // merge.c
 
+#include <qbsp/merge.hh>
+
 #include <qbsp/qbsp.hh>
+#include <qbsp/csg4.hh>
+#include <qbsp/map.hh>
+#include <qbsp/surfaces.hh>
 
 #ifdef PARANOID
 static void CheckColinear(face_t *f)
