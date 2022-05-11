@@ -119,5 +119,5 @@ public:
         }
     };
 
-    constexpr reference operator[](const size_t &index) { return {bits, index >> shift, 1ULL << (index & mask)}; }
+    constexpr reference operator[](const size_t &index) { return {bits, index >> shift, 1u << (index & mask)}; }
 };

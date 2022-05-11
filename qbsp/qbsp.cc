@@ -56,12 +56,14 @@ void qbsp_settings::initialize(int argc, const char **argv)
 {
     if (auto file = fs::load("qbsp.ini")) {
         logging::print("Loading options from qbsp.ini\n");
-        parse(parser_t(file->data(), file->size()));
+        parser_t p(file->data(), file->size());
+        parse(p);
     }
     
     try
     {
-        auto remainder = parse(token_parser_t(argc - 1, argv + 1));
+        token_parser_t p(argc - 1, argv + 1);
+        auto remainder = parse(p);
 
         if (remainder.size() <= 0 || remainder.size() > 2) {
             printHelp();

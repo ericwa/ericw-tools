@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <algorithm> // for std::min
 #include <cassert>
 #include <cstring>
 #include <cstdlib>
@@ -765,7 +766,7 @@ protected:
             return traits_type::eof();
         }
 
-        ptrdiff_t free_space = epptr() - pptr();
+        std::streamsize free_space = epptr() - pptr();
         std::streamsize num_write = std::min(free_space, n);
 
         memcpy(pptr(), s, n);
@@ -783,7 +784,7 @@ protected:
             return traits_type::eof();
         }
 
-        ptrdiff_t free_space = egptr() - gptr();
+        std::streamsize free_space = egptr() - gptr();
         std::streamsize num_read = std::min(free_space, n);
 
         memcpy(s, gptr(), n);

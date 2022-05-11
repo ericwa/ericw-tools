@@ -393,29 +393,28 @@ protected:
     virtual void setValueInternal(T f, source newsource) override
     {
         if (f < _min) {
-            logging::print("WARNING: '{}': {} is less than minimum value {}.\n", primaryName(), f, _min);
+            logging::print("WARNING: '{}': {} is less than minimum value {}.\n", this->primaryName(), f, _min);
             f = _min;
         }
         if (f > _max) {
-            logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", primaryName(), f, _max);
+            logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", this->primaryName(), f, _max);
             f = _max;
         }
 
-        setting_value::setValueInternal(f, newsource);
+        this->setting_value<T>::setValueInternal(f, newsource);
     }
 
 public:
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
         const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _min(minval), _max(maxval)
+        : setting_value<T>(dictionary, names, v, group, description), _min(minval), _max(maxval)
     {
         // check the default value is valid
         Q_assert(_min < _max);
-        Q_assert(_value >= _min);
-        Q_assert(_value <= _max);
+        Q_assert(this->_value >= _min);
+        Q_assert(this->_value <= _max);
     }
 
-    template<typename = std::enable_if_t<!std::is_enum_v<T>>>
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v,
         const setting_group *group = nullptr, const char *description = "")
         : setting_numeric(
@@ -423,10 +422,9 @@ public:
     {
     }
 
-    template<typename = std::enable_if_t<!std::is_enum_v<T>>>
     inline bool boolValue() const
     {
-        return _value > 0;
+        return this->_value > 0;
     }
 
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
@@ -444,7 +442,7 @@ public:
                 f = static_cast<T>(std::stoull(parser.token));
             }
 
-            setValueFromParse(f, locked);
+            this->setValueFromParse(f, locked);
 
             return true;
         }
@@ -453,7 +451,7 @@ public:
         }
     }
 
-    virtual std::string stringValue() const override { return std::to_string(_value); }
+    virtual std::string stringValue() const override { return std::to_string(this->_value); }
 
     virtual std::string format() const override { return "n"; }
 };
@@ -471,7 +469,7 @@ public:
     inline setting_enum(setting_container *dictionary, const nameset &names, T v,
         const std::initializer_list<std::pair<const char *, T>> &enumValues, const setting_group *group = nullptr,
         const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _values(enumValues.begin(), enumValues.end())
+        : setting_value<T>(dictionary, names, v, group, description), _values(enumValues.begin(), enumValues.end())
     {
     }
 
@@ -690,7 +688,8 @@ public:
             return;
         }
 
-        setting->parse(name, parser_t{value}, locked);
+        parser_t p{value};
+        setting->parse(name, p, locked);
     }
 
     inline void setSettings(const entdict_t &epairs, bool locked)
@@ -747,7 +746,10 @@ public:
     // before the parsing routine; set up options, members, etc
     virtual void preinitialize(int argc, const char **argv) { setParameters(argc, argv); }
     // do the actual parsing
-    virtual void initialize(int argc, const char **argv) { parse(token_parser_t(argc, argv)); }
+    virtual void initialize(int argc, const char **argv) {
+        token_parser_t p(argc, argv);
+        parse(p);
+    }
     // after parsing has concluded, handle the side effects
     virtual void postinitialize(int argc, const char **argv);
 

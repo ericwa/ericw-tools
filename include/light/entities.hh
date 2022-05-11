@@ -73,7 +73,7 @@ public:
     settings::setting_numeric<light_formula_t> formula{this, "delay", LF_LINEAR, LF_LINEAR, LF_INVERSE2A};
     settings::setting_scalar spotangle{this, "angle", 40.0};
     settings::setting_scalar spotangle2{this, "softangle", 0.0};
-    settings::setting_numeric<int32_t> style{this, "style", 0.0, 0, 254};
+    settings::setting_numeric<int32_t> style{this, "style", 0, 0, 254};
     settings::setting_scalar anglescale{this, {"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
     settings::setting_scalar dirtscale{this, "dirtscale", 0.0};
     settings::setting_scalar dirtgain{this, "dirtgain", 0};

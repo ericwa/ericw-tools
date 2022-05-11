@@ -50,7 +50,8 @@ setting_group advanced_group{"Advanced", 300};
 
 void vis_settings::initialize(int argc, const char **argv)
 {
-    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
+    token_parser_t p(argc - 1, argv + 1);
+    auto remainder = parse(p);
 
     if (remainder.size() <= 0 || remainder.size() > 1) {
         printHelp();

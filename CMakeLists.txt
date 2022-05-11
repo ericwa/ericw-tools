@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.14)
 cmake_policy(SET CMP0028 NEW)
 
 project (ericw-tools)
@@ -13,6 +13,11 @@ execute_process(
   OUTPUT_VARIABLE GIT_DESCRIBE
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+	add_compile_options(/EHsc)
+	message(STATUS "working around exceptions not being enabled by default on clang-cl")
+endif()
 
 include_directories(
 	"${CMAKE_SOURCE_DIR}/include"
@@ -73,10 +78,6 @@ if (ERICWTOOLS_ASAN)
 	message(STATUS "Enabling ASan on all targets")
 	add_compile_options(-fsanitize=address)
 	add_link_options(-fsanitize=address)
-endif()
-
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
-	add_compile_options(/EHsc)
 endif()
 
 # 10.9: minimum version that supports unordered_map
