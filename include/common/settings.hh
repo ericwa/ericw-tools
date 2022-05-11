@@ -43,7 +43,7 @@ private:
 public:
     parse_exception(std::string str) : _what(std::move(str)) { }
 
-    const char *what() const override { return _what.c_str(); }
+    const char *what() const noexcept override { return _what.c_str(); }
 };
 
 enum class source
