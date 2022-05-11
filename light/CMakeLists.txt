@@ -103,10 +103,9 @@ endif(embree_FOUND)
 install(TARGETS light RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
 
-# test
+# test (see: https://google.github.io/googletest/quickstart-cmake.html)
 
-#see https://cmake.org/Wiki/CMakeEmulateMakeCheck
-add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND})
+enable_testing()
 
 set(LIGHT_TEST_SOURCE 
 	test.cc
@@ -114,13 +113,25 @@ set(LIGHT_TEST_SOURCE
 	test_ltface.cc
 	test_light.cc
 	test_common.cc)
-
-add_executable(testlight EXCLUDE_FROM_ALL ${LIGHT_TEST_SOURCE})
-add_test(testlight testlight)
-add_dependencies(check testlight)
-
-target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} gtest fmt::fmt)
+add_executable(testlight ${LIGHT_TEST_SOURCE})
+target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} gtest gmock fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
+
+	# HACK: copy .dll dependencies
+	add_custom_command(TARGET testlight POST_BUILD
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testlight>"
+			           COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>" "$<TARGET_FILE_DIR:testlight>")
+
+	# HACK: copy embree's tbb12.dll
+	# FIXME: this is only desired with the .zip release of embree, not e.g. vcpkg
+	if (WIN32)
+		add_custom_command(TARGET testlight POST_BUILD
+				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE_DIR:embree>/tbb12.dll" "$<TARGET_FILE_DIR:testlight>")
+	endif()
+
 	add_definitions(-DHAVE_EMBREE)
 endif (embree_FOUND)
+
+include(GoogleTest)
+gtest_discover_tests(testlight)

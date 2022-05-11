@@ -32,19 +32,33 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
+#include <qbsp/brush.hh>
+#include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/wad.hh>
+
 #include <common/parser.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
-#include <qbsp/wad.hh>
-
 #include <common/qvec.hh>
+
+mapdata_t map;
+
+// Useful shortcuts
+mapentity_t *mapdata_t::world_entity()
+{
+    return &entities.at(0);
+}
+
+void mapdata_t::reset()
+{
+    *this = mapdata_t{};
+}
+
 
 #define info_player_start 1
 #define info_player_deathmatch 2
 #define info_player_coop 4
-
-static int rgfStartSpots;
 
 struct texdef_valve_t
 {
@@ -122,11 +136,11 @@ static void AddAnimTex(const char *name)
     snprintf(framename, sizeof(framename), "%s", name);
     for (i = 0; i < frame; i++) {
         framename[1] = basechar + i;
-        for (j = 0; j < map.nummiptex(); j++) {
+        for (j = 0; j < map.miptex.size(); j++) {
             if (!Q_strcasecmp(framename, map.miptex.at(j).name.c_str()))
                 break;
         }
-        if (j < map.nummiptex())
+        if (j < map.miptex.size())
             continue;
 
         map.miptex.push_back({framename});
@@ -171,7 +185,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             extended_info = extended_texinfo_t{};
         }
 
-        for (i = 0; i < map.nummiptex(); i++) {
+        for (i = 0; i < map.miptex.size(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str())) {
@@ -198,7 +212,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             extended_info = extended_texinfo_t{};
         }
 
-        for (i = 0; i < map.nummiptex(); i++) {
+        for (i = 0; i < map.miptex.size(); i++) {
             const texdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
@@ -439,14 +453,14 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
             // Quake II uses multiple starts for level transitions/backtracking.
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
-            if (options.target_game->id != GAME_QUAKE_II && (rgfStartSpots & info_player_start)) {
+            if (options.target_game->id != GAME_QUAKE_II && (map.start_spots & info_player_start)) {
                 logging::print("WARNING: Multiple info_player_start entities\n");
             }
-            rgfStartSpots |= info_player_start;
+            map.start_spots |= info_player_start;
         } else if (string_iequals(parser.token, "info_player_deathmatch")) {
-            rgfStartSpots |= info_player_deathmatch;
+            map.start_spots |= info_player_deathmatch;
         } else if (string_iequals(parser.token, "info_player_coop")) {
-            rgfStartSpots |= info_player_coop;
+            map.start_spots |= info_player_coop;
         }
     }
 }
@@ -1871,10 +1885,10 @@ void LoadMapFile(void)
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     {
-        auto file = fs::load(options.szMapName);
+        auto file = fs::load(options.map_path);
 
         if (!file) {
-            FError("Couldn't load map file \"{}\".\n", options.szMapName);
+            FError("Couldn't load map file \"{}\".\n", options.map_path);
             return;
         }
 
@@ -1894,22 +1908,22 @@ void LoadMapFile(void)
     }
 
     // Print out warnings for entities
-    if (!(rgfStartSpots & info_player_start))
+    if (!(map.start_spots & info_player_start))
         logging::print("WARNING: No info_player_start entity in level\n");
-    if (!(rgfStartSpots & info_player_deathmatch))
+    if (!(map.start_spots & info_player_deathmatch))
         logging::print("WARNING: No info_player_deathmatch entities in level\n");
-    //      if (!(rgfStartSpots & info_player_coop))
+    //      if (!(map.start_spots & info_player_coop))
     //              logging::print("WARNING: No info_player_coop entities in level\n");
 
-    logging::print(logging::flag::STAT, "     {:8} faces\n", map.numfaces());
-    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.numbrushes());
-    logging::print(logging::flag::STAT, "     {:8} entities\n", map.numentities());
-    logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.nummiptex());
-    logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.numtexinfo());
+    logging::print(logging::flag::STAT, "     {:8} faces\n", map.faces.size());
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.brushes.size());
+    logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());
+    logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.miptex.size());
+    logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.mtexinfos.size());
     logging::print(logging::flag::STAT, "\n");
 
     if (options.expand.value()) {
-        TestExpandBrushes(pWorldEnt());
+        TestExpandBrushes(map.world_entity());
     }
 }
 
@@ -2080,8 +2094,8 @@ void ConvertMapFile(void)
         default: FError("Internal error: unknown conversion_t\n");
     }
 
-    fs::path filename = options.szBSPName;
-    filename.replace_filename(options.szBSPName.stem().string() + append).replace_extension(".map");
+    fs::path filename = options.bsp_path;
+    filename.replace_filename(options.bsp_path.stem().string() + append).replace_extension(".map");
 
     std::ofstream f(filename);
 

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.14)
 cmake_policy(SET CMP0028 NEW)
 
 project (ericw-tools)
@@ -13,6 +13,11 @@ execute_process(
   OUTPUT_VARIABLE GIT_DESCRIBE
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+	add_compile_options(/EHsc)
+	message(STATUS "working around exceptions not being enabled by default on clang-cl")
+endif()
 
 include_directories(
 	"${CMAKE_SOURCE_DIR}/include"
@@ -31,14 +36,10 @@ if (UNIX)
 endif (UNIX)
 
 # set our C/C++ dialects
-if (CMAKE_VERSION VERSION_LESS "3.1")
-	set (CMAKE_CXX_FLAGS "-std=gnu++11 ${CMAKE_CXX_FLAGS}")
-	set (CMAKE_C_FLAGS "-std=gnu11 ${CMAKE_C_FLAGS}")
-else ()
-	set(CMAKE_CXX_STANDARD 17)
-	set(CMAKE_CXX_STANDARD_REQUIRED ON)
-	set(CMAKE_C_STANDARD 99)
-endif ()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 99)
+
 
 add_definitions(-DERICWTOOLS_VERSION=${GIT_DESCRIBE})
 
@@ -75,12 +76,24 @@ if (ERICWTOOLS_ASAN)
 	add_link_options(-fsanitize=address)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+	add_compile_options(/EHsc)
+endif()
+
 # 10.9: minimum version that supports unordered_map
 # 10.14: required by tbb 2021.3.0 (due to use of alignas)
 # 10.15: required by std::filesytstem
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 find_package(TBB REQUIRED)
+
+set(TEST_QUAKE_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake maps to this directory (useful for testing in game)")
+set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake 2 maps to this directory (useful for testing in game)")
+
+# just creates testmaps.hh with absolute path to the testmaps source directory.
+# include it as #include <testmaps.hh>
+configure_file(testmaps.hh.in testmaps.hh @ONLY)
+include_directories(${CMAKE_BINARY_DIR})
 
 add_subdirectory(3rdparty)
 add_subdirectory(common)
@@ -98,6 +111,9 @@ add_subdirectory(docs)
 
 install(FILES README.md DESTINATION bin)
 install(FILES changelog.md DESTINATION bin)
+
+#CTest
+enable_testing()
 
 #CPack configuration
 

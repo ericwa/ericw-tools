@@ -103,7 +103,8 @@ setting_group experimental_group{"Experimental options", 60};
 
 void light_settings::initialize(int argc, const char **argv)
 {
-    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
+    token_parser_t p(argc - 1, argv + 1);
+    auto remainder = parse(p);
 
     if (remainder.size() <= 0 || remainder.size() > 1) {
         printHelp();
@@ -369,7 +370,7 @@ static void FindModelInfo(const mbsp_t *bsp)
     /* The world always casts shadows */
     modelinfo_t *world = new modelinfo_t{bsp, &bsp->dmodels[0], lightmapscale};
     world->shadow.setValue(1.0f); /* world always casts shadows */
-    world->phong_angle = options.phongangle;
+    world->phong_angle.copyFrom(options.phongangle);
     modelinfo.push_back(world);
     tracelist.push_back(world);
 
@@ -735,8 +736,8 @@ static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
 {
     // check lights
     for (const auto &light : GetLights()) {
-        if (!qv::epsilonEqual(vec3_white, light.color.value(), EQUAL_EPSILON) ||
-            light.projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
+        if (!qv::epsilonEqual(vec3_white, light->color.value(), EQUAL_EPSILON) ||
+            light->projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
             SetLitNeeded();
             return;
         }
@@ -897,9 +898,7 @@ int light_main(int argc, const char **argv)
 
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
     if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.rangescale.isChanged()) {
-        options.rangescale =
-            std::move(settings::setting_scalar(nullptr, options.rangescale.primaryName().c_str(), 1.0f, 0.0f,
-                100.0f)); // Gross hacks to avoid displaying this in OptionsSummary...
+        options.rangescale.setValue(1.0f);
     }
 
     img::init_palette(bspdata.loadversion->game);

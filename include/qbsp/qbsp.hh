@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <array>
 #include <optional>
+#include <string>
 
 #include <cassert>
 #include <cctype>
@@ -39,6 +40,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+
+#include <qbsp/winding.hh>
 
 #include <common/bspfile.hh>
 #include <common/aabb.hh>
@@ -90,7 +93,21 @@ public:
 
     constexpr const std::set<wadpath> &pathsValue() const { return _paths; }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    inline bool copyFrom(const setting_base& other) override {
+        if (auto *casted = dynamic_cast<const setting_wadpathset *>(&other)) {
+            _paths = casted->_paths;
+            _source = casted->_source;
+            return true;
+        }
+        return false;
+    }
+
+    inline void reset() override {
+        _paths = {};
+        _source = source::DEFAULT;
+    }
+
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (auto value = parseString(parser)) {
             if (changeSource(locked ? source::COMMANDLINE : source::MAP)) {
@@ -103,7 +120,7 @@ public:
         return false;
     }
 
-    virtual std::string stringValue() const
+    std::string stringValue() const override
     {
         std::string paths;
 
@@ -122,7 +139,7 @@ public:
         return paths;
     }
 
-    virtual std::string format() const { return "path/to/wads"; }
+    std::string format() const override { return "path/to/wads"; }
 };
 
 extern setting_group game_target_group;
@@ -177,6 +194,8 @@ public:
     setting_bool contenthack{this, "contenthack", false, &debugging_group,
         "hack to fix leaks through solids. causes missing faces in some cases so disabled by default"};
     setting_bool leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"};
+    setting_bool keepprt{this, "keepprt", false, &debugging_group,
+        "avoid deleting the .prt file on leaking maps"};
     setting_bool includeskip{this, "includeskip", false, &common_format_group,
         "don't cull skip faces from the list of renderable surfaces (Q2RTX)"};
     setting_scalar worldextent{
@@ -205,22 +224,22 @@ public:
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
 
-    virtual void setParameters(int argc, const char **argv) override
+    void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
         usage = "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
         remainderName = "sourcefile.map [destfile.bsp]";
     }
-    virtual void initialize(int argc, const char **argv) override;
-    virtual void postinitialize(int argc, const char **argv) override;
+    void initialize(int argc, const char **argv) override;
+    void postinitialize(int argc, const char **argv) override;
 
     bool fVerbose = true;
     bool fAllverbose = false;
     bool fNoverbose = false;
     const bspversion_t *target_version = nullptr;
     const gamedef_t *target_game = nullptr;
-    fs::path szMapName;
-    fs::path szBSPName;
+    fs::path map_path;
+    fs::path bsp_path;
 };
 }; // namespace settings
 
@@ -272,7 +291,6 @@ enum
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
-#include <qbsp/winding.hh>
 
 struct mtexinfo_t
 {
@@ -410,15 +428,8 @@ struct node_t
     bool opaque() const;
 };
 
-#include <qbsp/brush.hh>
-#include <qbsp/csg4.hh>
-#include <qbsp/solidbsp.hh>
-#include <qbsp/merge.hh>
-#include <qbsp/surfaces.hh>
-#include <qbsp/portals.hh>
-#include <qbsp/region.hh>
-#include <qbsp/writebsp.hh>
-#include <qbsp/outside.hh>
-#include <qbsp/map.hh>
+void InitQBSP(int argc, const char **argv);
+void InitQBSP(const std::vector<std::string>& args);
+void ProcessFile();
 
 int qbsp_main(int argc, const char **argv);

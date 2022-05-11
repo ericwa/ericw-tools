@@ -21,6 +21,9 @@
 
 #pragma once
 
+#include <qbsp/qbsp.hh>
+
+#include <common/bspfile.hh>
 #include <common/parser.hh>
 #include "common/cmdlib.hh"
 
@@ -130,16 +133,8 @@ struct mapdata_t
     /* map from plane hash code to list of indicies in `planes` vector */
     std::unordered_map<int, std::vector<int>> planehash;
 
-    /* Number of items currently used */
-    int numfaces() const { return faces.size(); };
-    int numbrushes() const { return brushes.size(); };
-    int numentities() const { return entities.size(); };
-    int numplanes() const { return planes.size(); };
-    int nummiptex() const { return miptex.size(); };
-    int numtexinfo() const { return mtexinfos.size(); };
-
     /* Misc other global state for the compile process */
-    bool leakfile; /* Flag once we've written a leak (.por/.pts) file */
+    bool leakfile = false; /* Flag once we've written a leak (.por/.pts) file */
 
     // Final, exported BSP
     mbsp_t bsp;
@@ -150,19 +145,25 @@ struct mapdata_t
     std::vector<uint8_t> exported_bspxbrushes;
 
     // Q2 stuff
-    int32_t numareaportals;
+    int32_t numareaportals = 0;
+
+    // misc
+    int start_spots = 0;
+    bool wadlist_tried_loading = false;
 
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
 
     const std::string &texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
+
+    mapentity_t *world_entity();
+
+    void reset();
 };
 
 extern mapdata_t map;
 
 void CalculateWorldExtent(void);
-
-extern mapentity_t *pWorldEnt();
 
 bool ParseEntity(parser_t &parser, mapentity_t *entity);
 

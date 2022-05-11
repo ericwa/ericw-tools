@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include <light/light.hh>
+#include <light/entities.hh>
 
 #include <random>
 #include <algorithm> // for std::sort
@@ -783,6 +784,10 @@ TEST(mathlib, aabb_disjoint)
 
     // an intersection with a volume
     EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(5, 5, 5), qvec3f(10, 6, 6))), b1.intersectWith(no3));
+
+    EXPECT_TRUE(b1.disjoint_or_touching(aabb3f(qvec3f(10, 1, 1), qvec3f(20, 10, 10))));
+    EXPECT_TRUE(b1.disjoint_or_touching(aabb3f(qvec3f(11, 1, 1), qvec3f(20, 10, 10))));
+    EXPECT_FALSE(b1.disjoint_or_touching(aabb3f(qvec3f(9.99, 1, 1), qvec3f(20, 10, 10))));  
 }
 
 TEST(mathlib, aabb_contains)
@@ -917,4 +922,39 @@ TEST(trace, clamp_texcoord)
     EXPECT_EQ(0, clamp_texcoord(-127.5f, 128));
     EXPECT_EQ(0, clamp_texcoord(-128.0f, 128));
     EXPECT_EQ(127, clamp_texcoord(-129.0f, 128));
+}
+
+TEST(settings, delayDefault)
+{
+    light_t light;
+    EXPECT_EQ(LF_LINEAR, light.formula.value());
+}
+
+TEST(settings, delayParseInt)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("2"));
+    EXPECT_EQ(LF_INVERSE2, light.formula.value());
+}
+
+TEST(settings, delayParseIntUnknown)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("500"));
+    // not sure if we should be strict and reject parsing this?
+    EXPECT_EQ(500, light.formula.value());
+}
+
+TEST(settings, delayParseFloat)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("2.0"));
+    EXPECT_EQ(LF_INVERSE2, light.formula.value());
+}
+
+TEST(settings, delayParseString)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("inverse2"));
+    EXPECT_EQ(LF_INVERSE2, light.formula.value());
 }

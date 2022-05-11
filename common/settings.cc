@@ -34,9 +34,36 @@ setting_base::setting_base(
     }
 }
 
+bool setting_base::parseString(const std::string &string, bool locked)
+{
+    parser_t p{string};
+    return parse("", p, locked);
+}
+
 setting_group performance_group{"Performance", 10};
 setting_group logging_group{"Logging", 5};
 setting_group game_group{"Game", 15};
+
+setting_container::~setting_container() = default;
+
+void setting_container::reset()
+{
+    for (auto setting : _settings) {
+        setting->reset();
+    }
+}
+
+void setting_container::copyFrom(const setting_container& other)
+{
+    for (auto setting : _settings) {
+        const std::string& pri_name = setting->primaryName();
+        const auto *other_setting = other.findSetting(pri_name);
+
+        if (other_setting) {
+            setting->copyFrom(*other_setting);
+        }
+    }
+}
 
 [[noreturn]] void setting_container::printHelp()
 {

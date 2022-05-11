@@ -21,9 +21,10 @@
 
 #include <common/bspfile.hh>
 #include <common/mathlib.hh>
-#include <string>
-
 #include <common/qvec.hh>
+
+#include <string>
+#include <vector>
 
 const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp);
 int Face_GetNum(const mbsp_t *bsp, const mface_t *f);
@@ -51,6 +52,9 @@ int Face_ContentsOrSurfaceFlags(
 const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
 bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
 bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
+
+std::vector<const mface_t *> BSP_FindFacesAtPoint(
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
 /**
  * Searches for a face touching a point and facing a certain way.
  * Sometimes (water, sky?) there will be 2 overlapping candidates facing opposite ways, the provided normal
@@ -58,7 +62,17 @@ bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
  */
 const mface_t *BSP_FindFaceAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
+/**
+ * Searches for a decision node in hull0 that contains `point`, and has a plane normal of either 
+ * wanted_normal or -wanted_normal.
+ */
+const bsp2_dnode_t *BSP_FindNodeAtPoint(
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wanted_normal);
 
+const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
+
+std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *leaf);
+std::vector<const dbrush_t *> Leaf_Brushes(const mbsp_t *bsp, const mleaf_t *leaf);
 const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f);
 const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);
 qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f);

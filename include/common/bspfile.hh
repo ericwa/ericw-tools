@@ -515,13 +515,13 @@ struct dplane_t : qplane3f
 
 // Q1 contents
 
-#define CONTENTS_EMPTY -1
-#define CONTENTS_SOLID -2
-#define CONTENTS_WATER -3
-#define CONTENTS_SLIME -4
-#define CONTENTS_LAVA -5
-#define CONTENTS_SKY -6
-#define CONTENTS_MIN CONTENTS_SKY
+constexpr int CONTENTS_EMPTY = -1;
+constexpr int CONTENTS_SOLID = -2;
+constexpr int CONTENTS_WATER = -3;
+constexpr int CONTENTS_SLIME = -4;
+constexpr int CONTENTS_LAVA = -5;
+constexpr int CONTENTS_SKY = -6;
+constexpr int CONTENTS_MIN = CONTENTS_SKY;
 
 // Q2 contents (from qfiles.h)
 
@@ -1490,6 +1490,10 @@ struct dareaportal_t
 
     // serialize for streams
     auto stream_data() { return std::tie(portalnum, otherarea); }
+    auto tuple() const { return std::tie(portalnum, otherarea); }
+
+    // comparison operator for tests
+    bool operator==(const dareaportal_t &other) const { return tuple() == other.tuple(); }
 };
 
 struct darea_t
@@ -1499,6 +1503,10 @@ struct darea_t
 
     // serialize for streams
     auto stream_data() { return std::tie(numareaportals, firstareaportal); }
+    auto tuple() const { return std::tie(numareaportals, firstareaportal); }
+
+    // comparison operator for tests
+    bool operator==(const darea_t &other) const { return tuple() == other.tuple(); }
 };
 
 // Q1-esque maps can use one of these two.

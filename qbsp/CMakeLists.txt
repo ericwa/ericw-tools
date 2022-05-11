@@ -8,7 +8,6 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/outside.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/portals.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/region.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/solidbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/surfaces.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
@@ -16,7 +15,6 @@ set(QBSP_INCLUDES
 set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/qbsp/brush.cc
 	${CMAKE_SOURCE_DIR}/qbsp/csg4.cc
-	${CMAKE_SOURCE_DIR}/qbsp/globals.cc
 	${CMAKE_SOURCE_DIR}/qbsp/map.cc
 	${CMAKE_SOURCE_DIR}/qbsp/merge.cc
 	${CMAKE_SOURCE_DIR}/qbsp/outside.cc
@@ -42,13 +40,20 @@ install(TARGETS qbsp RUNTIME DESTINATION bin)
 add_custom_command(TARGET qbsp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:qbsp>")
 
-# test (copied from light/CMakeLists.txt)
+# test (see: https://google.github.io/googletest/quickstart-cmake.html)
 
-set(QBSP_TEST_SOURCE 
+enable_testing()
+
+set(QBSP_TEST_SOURCE
 	test.cc
-	test_qbsp.cc)
+	test_qbsp.cc
+	${CMAKE_BINARY_DIR}/testmaps.hh)
+add_executable(testqbsp ${QBSP_TEST_SOURCE})
+target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest gmock fmt::fmt nanobench::nanobench)
 
-add_executable(testqbsp EXCLUDE_FROM_ALL ${QBSP_TEST_SOURCE})
-add_test(testqbsp testqbsp)
+# HACK: copy .dll dependencies
+add_custom_command(TARGET testqbsp POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testqbsp>")
 
-target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest fmt::fmt)
+include(GoogleTest)
+gtest_discover_tests(testqbsp)

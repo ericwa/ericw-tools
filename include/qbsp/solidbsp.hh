@@ -21,9 +21,22 @@
 
 #pragma once
 
+#include <qbsp/surfaces.hh>
+#include <qbsp/winding.hh>
+#include <common/qvec.hh>
+
 #include <atomic>
+#include <list>
+#include <optional>
+#include <memory>
+#include <vector>
 
 extern std::atomic<int> splitnodes;
 
+struct brush_t;
+struct node_t;
+struct face_t;
+class mapentity_t;
+
 void DetailToSolid(node_t *node);
-std::list<face_t *>::iterator SubdivideFace(std::list<face_t *>::iterator it, std::list<face_t *> &surfaces);
+node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bool midsplit);

@@ -43,7 +43,7 @@ private:
 public:
     parse_exception(std::string str) : _what(std::move(str)) { }
 
-    const char *what() const override { return _what.c_str(); }
+    const char *what() const noexcept override { return _what.c_str(); }
 };
 
 enum class source
@@ -138,6 +138,20 @@ protected:
     }
 
 public:
+    ~setting_base() = default;
+
+    // copy constructor is deleted. the trick we use with:
+    //
+    // class some_settings public settings_container {
+    //     setting_bool s {this, "s", false};
+    // }
+    //
+    // is incompatible with the settings_container/setting_base types being copyable.
+    setting_base(const setting_base& other) = delete;
+
+    // copy assignment
+    setting_base& operator=(const setting_base& other) = delete;
+
     inline const std::string &primaryName() const { return _names.at(0); }
     inline const nameset &names() const { return _names; }
     inline const setting_group *getGroup() const { return _group; }
@@ -145,6 +159,7 @@ public:
 
     constexpr bool isChanged() const { return _source != source::DEFAULT; }
     constexpr bool isLocked() const { return _source == source::COMMANDLINE; }
+    constexpr source getSource() const { return _source; }
 
     constexpr const char *sourceString() const
     {
@@ -156,6 +171,14 @@ public:
         }
     }
 
+    // copies value and source
+    virtual bool copyFrom(const setting_base& other) = 0;
+
+    // convenience form of parse() that constructs a temporary parser_t
+    bool parseString(const std::string &string, bool locked = false);
+
+    // resets value to default, and source to source::DEFAULT
+    virtual void reset() = 0;
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) = 0;
     virtual std::string stringValue() const = 0;
     virtual std::string format() const = 0;
@@ -176,15 +199,21 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    inline bool copyFrom(const setting_base& other) override {
+        return true;
+    }
+
+    inline void reset() override {}
+
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         _func();
         return true;
     }
 
-    virtual std::string stringValue() const override { return ""; }
+    std::string stringValue() const override { return ""; }
 
-    virtual std::string format() const override { return ""; }
+    std::string format() const override { return ""; }
 };
 
 // base class for a setting that has its own value
@@ -192,6 +221,7 @@ template<typename T>
 class setting_value : public setting_base
 {
 protected:
+    T _default;
     T _value;
 
     virtual void setValueInternal(T value, source newSource)
@@ -213,7 +243,7 @@ protected:
 public:
     inline setting_value(setting_container *dictionary, const nameset &names, T v, const setting_group *group = nullptr,
         const char *description = "")
-        : setting_base(dictionary, names, group, description), _value(v)
+        : setting_base(dictionary, names, group, description), _default(v), _value(v)
     {
     }
 
@@ -222,13 +252,24 @@ public:
     inline void setValueLocked(T f) { setValueInternal(f, source::COMMANDLINE); }
 
     inline void setValue(T f) { setValueInternal(f, source::MAP); }
+
+    inline bool copyFrom(const setting_base& other) override {
+        if (auto *casted = dynamic_cast<const setting_value<T> *>(&other)) {
+            _value = casted->_value;
+            _source = casted->_source;
+            return true;
+        }
+        return false;
+    }
+
+    inline void reset() override {
+        _value = _default;
+        _source = source::DEFAULT;
+    }
 };
 
 class setting_bool : public setting_value<bool>
 {
-private:
-    bool _default;
-
 protected:
     bool parseInternal(parser_base_t &parser, bool locked, bool truthValue)
     {
@@ -257,18 +298,18 @@ protected:
 public:
     inline setting_bool(setting_container *dictionary, const nameset &names, bool v,
         const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _default(v)
+        : setting_value(dictionary, names, v, group, description)
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         return parseInternal(parser, locked, true);
     }
 
-    virtual std::string stringValue() const override { return _value ? "1" : "0"; }
+    std::string stringValue() const override { return _value ? "1" : "0"; }
 
-    virtual std::string format() const override { return _default ? "[0]" : ""; }
+    std::string format() const override { return _default ? "[0]" : ""; }
 };
 
 // an extension to setting_bool; this automatically adds "no" versions
@@ -294,7 +335,7 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         return parseInternal(parser, locked, settingName.compare(0, 2, "no") == 0 ? false : true);
     }
@@ -313,7 +354,13 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    inline bool copyFrom(const setting_base& other) override {
+        return true;
+    }
+
+    inline void reset() override {}
+
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         // this is a bit ugly, but we run the parse function for
         // every setting that we redirect from. for every entry
@@ -335,43 +382,43 @@ public:
         return true;
     }
 
-    virtual std::string stringValue() const override { return _settings[0]->stringValue(); }
+    std::string stringValue() const override { return _settings[0]->stringValue(); }
 
-    virtual std::string format() const override { return _settings[0]->format(); }
+    std::string format() const override { return _settings[0]->format(); }
 };
 
 template<typename T>
 class setting_numeric : public setting_value<T>
 {
+    static_assert(!std::is_enum_v<T>, "use setting_enum for enums");
 protected:
     T _min, _max;
 
-    virtual void setValueInternal(T f, source newsource) override
+    void setValueInternal(T f, source newsource) override
     {
         if (f < _min) {
-            logging::print("WARNING: '{}': {} is less than minimum value {}.\n", primaryName(), f, _min);
+            logging::print("WARNING: '{}': {} is less than minimum value {}.\n", this->primaryName(), f, _min);
             f = _min;
         }
         if (f > _max) {
-            logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", primaryName(), f, _max);
+            logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", this->primaryName(), f, _max);
             f = _max;
         }
 
-        setting_value::setValueInternal(f, newsource);
+        this->setting_value<T>::setValueInternal(f, newsource);
     }
 
 public:
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
         const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _min(minval), _max(maxval)
+        : setting_value<T>(dictionary, names, v, group, description), _min(minval), _max(maxval)
     {
         // check the default value is valid
         Q_assert(_min < _max);
-        Q_assert(_value >= _min);
-        Q_assert(_value <= _max);
+        Q_assert(this->_value >= _min);
+        Q_assert(this->_value <= _max);
     }
 
-    template<typename = std::enable_if_t<!std::is_enum_v<T>>>
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v,
         const setting_group *group = nullptr, const char *description = "")
         : setting_numeric(
@@ -379,13 +426,12 @@ public:
     {
     }
 
-    template<typename = std::enable_if_t<!std::is_enum_v<T>>>
     inline bool boolValue() const
     {
-        return _value > 0;
+        return this->_value > 0;
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (!parser.parse_token()) {
             return false;
@@ -400,7 +446,7 @@ public:
                 f = static_cast<T>(std::stoull(parser.token));
             }
 
-            setValueFromParse(f, locked);
+            this->setValueFromParse(f, locked);
 
             return true;
         }
@@ -409,9 +455,9 @@ public:
         }
     }
 
-    virtual std::string stringValue() const override { return std::to_string(_value); }
+    std::string stringValue() const override { return std::to_string(this->_value); }
 
-    virtual std::string format() const override { return "n"; }
+    std::string format() const override { return "n"; }
 };
 
 using setting_scalar = setting_numeric<vec_t>;
@@ -427,14 +473,14 @@ public:
     inline setting_enum(setting_container *dictionary, const nameset &names, T v,
         const std::initializer_list<std::pair<const char *, T>> &enumValues, const setting_group *group = nullptr,
         const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _values(enumValues.begin(), enumValues.end())
+        : setting_value<T>(dictionary, names, v, group, description), _values(enumValues.begin(), enumValues.end())
     {
     }
 
-    virtual std::string stringValue() const override
+    std::string stringValue() const override
     {
         for (auto &value : _values) {
-            if (value.second == _value) {
+            if (value.second == this->_value) {
                 return value.first;
             }
         }
@@ -442,7 +488,7 @@ public:
         throw std::exception();
     }
 
-    virtual std::string format() const override
+    std::string format() const override
     {
         std::string f;
 
@@ -457,15 +503,26 @@ public:
         return f;
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (!parser.parse_token()) {
             return false;
         }
 
+        // see if it's a string enum case label
         if (auto it = _values.find(parser.token); it != _values.end()) {
-            setValueFromParse(it->second, locked);
+            this->setValueFromParse(it->second, locked);
             return true;
+        }
+
+        // see if it's an integer
+        try {
+            const int i = std::stoi(parser.token);
+
+            this->setValueFromParse(static_cast<T>(i), locked);
+            return true;
+        } catch (std::invalid_argument &) {
+        } catch (std::out_of_range &) {
         }
 
         return false;
@@ -484,7 +541,7 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (auto value = parseString(parser)) {
             setValueFromParse(std::move(*value), locked);
@@ -494,9 +551,9 @@ public:
         return false;
     }
 
-    [[deprecated("use value()")]] virtual std::string stringValue() const override { return _value; }
+    [[deprecated("use value()")]] std::string stringValue() const override { return _value; }
 
-    virtual std::string format() const override { return _format; }
+    std::string format() const override { return _format; }
 };
 
 class setting_vec3 : public setting_value<qvec3d>
@@ -504,7 +561,7 @@ class setting_vec3 : public setting_value<qvec3d>
 protected:
     virtual qvec3d transformVec3Value(const qvec3d &val) const { return val; }
 
-    virtual void setValueInternal(qvec3d f, source newsource) override
+    void setValueInternal(qvec3d f, source newsource) override
     {
         setting_value::setValueInternal(transformVec3Value(f), newsource);
     }
@@ -516,7 +573,7 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         qvec3d vec;
 
@@ -538,15 +595,15 @@ public:
         return true;
     }
 
-    virtual std::string stringValue() const override { return qv::to_string(_value); }
+    std::string stringValue() const override { return qv::to_string(_value); }
 
-    virtual std::string format() const override { return "x y z"; }
+    std::string format() const override { return "x y z"; }
 };
 
 class setting_mangle : public setting_vec3
 {
 protected:
-    virtual qvec3d transformVec3Value(const qvec3d &val) const override { return qv::vec_from_mangle(val); }
+    qvec3d transformVec3Value(const qvec3d &val) const override { return qv::vec_from_mangle(val); }
 
 public:
     using setting_vec3::setting_vec3;
@@ -555,7 +612,7 @@ public:
 class setting_color : public setting_vec3
 {
 protected:
-    virtual qvec3d transformVec3Value(const qvec3d &val) const override { return qv::normalize_color_format(val); }
+    qvec3d transformVec3Value(const qvec3d &val) const override { return qv::normalize_color_format(val); }
 
 public:
     using setting_vec3::setting_vec3;
@@ -582,6 +639,20 @@ class setting_container
 
 public:
     std::string programName, remainderName = "filename", usage;
+
+    inline setting_container() {}
+
+    ~setting_container();
+
+    // copy constructor (can't be copyable, see setting_base)
+    setting_container(const setting_container& other) = delete;
+
+    // copy assignment
+    setting_container& operator=(const setting_container& other) = delete;
+
+    void reset();
+
+    void copyFrom(const setting_container& other);
 
     inline void registerSetting(setting_base *setting)
     {
@@ -632,7 +703,8 @@ public:
             return;
         }
 
-        setting->parse(name, parser_t{value}, locked);
+        parser_t p{value};
+        setting->parse(name, p, locked);
     }
 
     inline void setSettings(const entdict_t &epairs, bool locked)
@@ -689,7 +761,10 @@ public:
     // before the parsing routine; set up options, members, etc
     virtual void preinitialize(int argc, const char **argv) { setParameters(argc, argv); }
     // do the actual parsing
-    virtual void initialize(int argc, const char **argv) { parse(token_parser_t(argc, argv)); }
+    virtual void initialize(int argc, const char **argv) {
+        token_parser_t p(argc, argv);
+        parse(p);
+    }
     // after parsing has concluded, handle the side effects
     virtual void postinitialize(int argc, const char **argv);
 

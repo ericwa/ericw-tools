@@ -281,7 +281,15 @@ public:
         return *this;
     }
 
+    inline bool empty() const { return count == 0; }
+
+    inline explicit operator bool() const { return count != 0; }
+
     inline const size_t &size() const { return count; }
+
+    inline const qvec3d *data() const { return isVector ? vector.data() : array.data(); }
+
+    inline qvec3d *data() { return isVector ? vector.data() : array.data(); }
 
     inline qvec3d &at(const size_t &index)
     {
@@ -307,9 +315,19 @@ public:
         return array[index];
     }
 
-    inline qvec3d &operator[](const size_t &index) { return at(index); }
+    // un-bounds-checked
+    inline qvec3d &operator[](const size_t &index) { 
+        if (isVector)
+            return vector[index];
+        return array[index];
+    }
 
-    inline const qvec3d &operator[](const size_t &index) const { return at(index); }
+    // un-bounds-checked
+    inline const qvec3d &operator[](const size_t &index) const {
+        if (isVector)
+            return vector[index];
+        return array[index];
+    }
 
     using const_iterator = iterator_base<typename array_type::const_iterator, vector_type::const_iterator>;
 

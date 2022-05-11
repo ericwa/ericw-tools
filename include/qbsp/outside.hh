@@ -21,5 +21,10 @@
 
 #pragma once
 
+#include <vector>
+
+struct node_t;
+
 bool FillOutside(node_t *node, const int hullnum);
 std::vector<node_t *> FindOccupiedClusters(node_t *headnode);
+

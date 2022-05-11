@@ -20,8 +20,13 @@
 */
 // portals.c
 
+#include <qbsp/brush.hh>
+#include <qbsp/portals.hh>
 #include <fstream>
 #include <fmt/ostream.h>
+
+#include <qbsp/map.hh>
+#include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 
 node_t outside_node; // portals outside the world face this
@@ -247,11 +252,12 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     NumberLeafs_r(headnode, state, -1);
 
     // write the file
-    options.szBSPName.replace_extension("prt");
+    fs::path name = options.bsp_path;
+    name.replace_extension("prt");
 
-    std::ofstream portalFile(options.szBSPName, std::ios_base::binary | std::ios_base::out);
+    std::ofstream portalFile(name, std::ios_base::binary | std::ios_base::out);
     if (!portalFile)
-        FError("Failed to open {}: {}", options.szBSPName, strerror(errno));
+        FError("Failed to open {}: {}", name, strerror(errno));
 
     // q2 uses a PRT1 file, but with clusters.
     // (Since q2bsp natively supports clusters, we don't need PRT2.)
@@ -623,7 +629,7 @@ void PortalizeWorld(const mapentity_t *entity, node_t *headnode, const int hulln
     MakeHeadnodePortals(entity, headnode);
     CutNodePortals_r(headnode, &state);
 
-    logging::percent(splitnodes, splitnodes, entity == pWorldEnt());
+    logging::percent(splitnodes, splitnodes, entity == map.world_entity());
 
     if (hullnum <= 0) {
         /* save portal file for vis tracing */
