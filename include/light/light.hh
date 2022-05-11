@@ -332,7 +332,7 @@ public:
     public:
         using setting_int32::setting_int32;
 
-        virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+        bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
         {
             if (!parser.parse_token()) {
                 return false;
@@ -357,7 +357,7 @@ public:
             }
         }
 
-        virtual std::string format() const { return "[n]"; }
+        std::string format() const override { return "[n]"; }
     };
 
     class setting_extra : public setting_value<int32_t>
@@ -365,7 +365,7 @@ public:
     public:
         using setting_value::setting_value;
 
-        virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false)
+        bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
         {
             if (settingName.back() == '4') {
                 setValueFromParse(4, locked);
@@ -376,9 +376,9 @@ public:
             return true;
         }
 
-        virtual std::string stringValue() const override { return std::to_string(_value); };
+        std::string stringValue() const override { return std::to_string(_value); };
 
-        virtual std::string format() const override { return ""; };
+        std::string format() const override { return ""; };
     };
 
     setting_bool surflight_dump{this, "surflight_dump", false, &debug_group, "dump surface lights to a .map file"};
@@ -497,15 +497,15 @@ public:
     bitflags<lightfile> write_luxfile = lightfile::none;
     debugmodes debugmode = debugmodes::none;
 
-    virtual void setParameters(int argc, const char **argv) override
+    void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
         usage = "light compiles lightmap data for BSPs\n\n";
         remainderName = "mapname.bsp";
     }
 
-    virtual void initialize(int argc, const char **argv) override;
-    virtual void postinitialize(int argc, const char **argv) override;
+    void initialize(int argc, const char **argv) override;
+    void postinitialize(int argc, const char **argv) override;
 };
 }; // namespace settings
 

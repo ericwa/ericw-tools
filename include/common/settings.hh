@@ -202,15 +202,15 @@ public:
 
     inline void reset() override {}
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         _func();
         return true;
     }
 
-    virtual std::string stringValue() const override { return ""; }
+    std::string stringValue() const override { return ""; }
 
-    virtual std::string format() const override { return ""; }
+    std::string format() const override { return ""; }
 };
 
 // base class for a setting that has its own value
@@ -299,14 +299,14 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         return parseInternal(parser, locked, true);
     }
 
-    virtual std::string stringValue() const override { return _value ? "1" : "0"; }
+    std::string stringValue() const override { return _value ? "1" : "0"; }
 
-    virtual std::string format() const override { return _default ? "[0]" : ""; }
+    std::string format() const override { return _default ? "[0]" : ""; }
 };
 
 // an extension to setting_bool; this automatically adds "no" versions
@@ -332,7 +332,7 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         return parseInternal(parser, locked, settingName.compare(0, 2, "no") == 0 ? false : true);
     }
@@ -357,7 +357,7 @@ public:
 
     inline void reset() override {}
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         // this is a bit ugly, but we run the parse function for
         // every setting that we redirect from. for every entry
@@ -379,9 +379,9 @@ public:
         return true;
     }
 
-    virtual std::string stringValue() const override { return _settings[0]->stringValue(); }
+    std::string stringValue() const override { return _settings[0]->stringValue(); }
 
-    virtual std::string format() const override { return _settings[0]->format(); }
+    std::string format() const override { return _settings[0]->format(); }
 };
 
 template<typename T>
@@ -390,7 +390,7 @@ class setting_numeric : public setting_value<T>
 protected:
     T _min, _max;
 
-    virtual void setValueInternal(T f, source newsource) override
+    void setValueInternal(T f, source newsource) override
     {
         if (f < _min) {
             logging::print("WARNING: '{}': {} is less than minimum value {}.\n", this->primaryName(), f, _min);
@@ -427,7 +427,7 @@ public:
         return this->_value > 0;
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (!parser.parse_token()) {
             return false;
@@ -451,9 +451,9 @@ public:
         }
     }
 
-    virtual std::string stringValue() const override { return std::to_string(this->_value); }
+    std::string stringValue() const override { return std::to_string(this->_value); }
 
-    virtual std::string format() const override { return "n"; }
+    std::string format() const override { return "n"; }
 };
 
 using setting_scalar = setting_numeric<vec_t>;
@@ -473,10 +473,10 @@ public:
     {
     }
 
-    virtual std::string stringValue() const override
+    std::string stringValue() const override
     {
         for (auto &value : _values) {
-            if (value.second == _value) {
+            if (value.second == this->_value) {
                 return value.first;
             }
         }
@@ -484,7 +484,7 @@ public:
         throw std::exception();
     }
 
-    virtual std::string format() const override
+    std::string format() const override
     {
         std::string f;
 
@@ -499,14 +499,14 @@ public:
         return f;
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (!parser.parse_token()) {
             return false;
         }
 
         if (auto it = _values.find(parser.token); it != _values.end()) {
-            setValueFromParse(it->second, locked);
+            this->setValueFromParse(it->second, locked);
             return true;
         }
 
@@ -526,7 +526,7 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (auto value = parseString(parser)) {
             setValueFromParse(std::move(*value), locked);
@@ -536,9 +536,9 @@ public:
         return false;
     }
 
-    [[deprecated("use value()")]] virtual std::string stringValue() const override { return _value; }
+    [[deprecated("use value()")]] std::string stringValue() const override { return _value; }
 
-    virtual std::string format() const override { return _format; }
+    std::string format() const override { return _format; }
 };
 
 class setting_vec3 : public setting_value<qvec3d>
@@ -546,7 +546,7 @@ class setting_vec3 : public setting_value<qvec3d>
 protected:
     virtual qvec3d transformVec3Value(const qvec3d &val) const { return val; }
 
-    virtual void setValueInternal(qvec3d f, source newsource) override
+    void setValueInternal(qvec3d f, source newsource) override
     {
         setting_value::setValueInternal(transformVec3Value(f), newsource);
     }
@@ -558,7 +558,7 @@ public:
     {
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         qvec3d vec;
 
@@ -580,15 +580,15 @@ public:
         return true;
     }
 
-    virtual std::string stringValue() const override { return qv::to_string(_value); }
+    std::string stringValue() const override { return qv::to_string(_value); }
 
-    virtual std::string format() const override { return "x y z"; }
+    std::string format() const override { return "x y z"; }
 };
 
 class setting_mangle : public setting_vec3
 {
 protected:
-    virtual qvec3d transformVec3Value(const qvec3d &val) const override { return qv::vec_from_mangle(val); }
+    qvec3d transformVec3Value(const qvec3d &val) const override { return qv::vec_from_mangle(val); }
 
 public:
     using setting_vec3::setting_vec3;
@@ -597,7 +597,7 @@ public:
 class setting_color : public setting_vec3
 {
 protected:
-    virtual qvec3d transformVec3Value(const qvec3d &val) const override { return qv::normalize_color_format(val); }
+    qvec3d transformVec3Value(const qvec3d &val) const override { return qv::normalize_color_format(val); }
 
 public:
     using setting_vec3::setting_vec3;
