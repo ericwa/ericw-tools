@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include <light/light.hh>
+#include <light/entities.hh>
 
 #include <random>
 #include <algorithm> // for std::sort
@@ -921,4 +922,39 @@ TEST(trace, clamp_texcoord)
     EXPECT_EQ(0, clamp_texcoord(-127.5f, 128));
     EXPECT_EQ(0, clamp_texcoord(-128.0f, 128));
     EXPECT_EQ(127, clamp_texcoord(-129.0f, 128));
+}
+
+TEST(settings, delayDefault)
+{
+    light_t light;
+    EXPECT_EQ(LF_LINEAR, light.formula.value());
+}
+
+TEST(settings, delayParseInt)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("2"));
+    EXPECT_EQ(LF_INVERSE2, light.formula.value());
+}
+
+TEST(settings, delayParseIntUnknown)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("500"));
+    // not sure if we should be strict and reject parsing this?
+    EXPECT_EQ(500, light.formula.value());
+}
+
+TEST(settings, delayParseFloat)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("2.0"));
+    EXPECT_EQ(LF_INVERSE2, light.formula.value());
+}
+
+TEST(settings, delayParseString)
+{
+    light_t light;
+    EXPECT_TRUE(light.formula.parseString("inverse2"));
+    EXPECT_EQ(LF_INVERSE2, light.formula.value());
 }

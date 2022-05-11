@@ -86,7 +86,7 @@ inline void print(const char *fmt, const Args &...args)
 
 // TODO: C++20 source_location
 #ifdef _MSC_VER
-#define funcprint(fmt, ...) print(__FUNCTION__ ": " fmt, ##__VA_ARGS__)
+#define funcprint(fmt, ...) print("{}: " fmt, __FUNCTION__, ##__VA_ARGS__)
 #else
 #define funcprint(fmt, ...) print("{}: " fmt, __func__, ##__VA_ARGS__)
 #endif

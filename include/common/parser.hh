@@ -93,9 +93,9 @@ private:
     std::vector<untied_t<state_type>> _states;
 
 public:
-    virtual void push_state() override { _states.push_back(state()); }
+    void push_state() override { _states.push_back(state()); }
 
-    virtual void pop_state() override
+    void pop_state() override
     {
         state() = _states.back();
         _states.pop_back();
@@ -144,9 +144,9 @@ private:
     std::vector<untied_t<state_type>> _states;
 
 public:
-    virtual void push_state() override { _states.push_back(state()); }
+    void push_state() override { _states.push_back(state()); }
 
-    virtual void pop_state() override
+    void pop_state() override
     {
         state() = _states.back();
         _states.pop_back();

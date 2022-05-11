@@ -622,14 +622,6 @@ template<typename T>
 }
 
 template<typename T>
-inline qvec<T, 3> vec_from_mangle(const qvec<T, 3> &m)
-{
-    const qvec<T, 3> mRadians = m * static_cast<T>(Q_PI / 180.0);
-    const qmat3x3d rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
-    return {rotations * qvec3d(1, 0, 0)};
-}
-
-template<typename T>
 inline qvec<T, 3> mangle_from_vec(const qvec<T, 3> &v)
 {
     static constexpr qvec<T, 3> up(0, 0, 1);
@@ -1147,3 +1139,15 @@ struct twosided
     constexpr bool operator==(const twosided &other) const { return front == other.front && back == other.back; }
     constexpr bool operator!=(const twosided &other) const { return !(*this == other); }
 };
+
+namespace qv {
+
+template<typename T>
+inline qvec<T, 3> vec_from_mangle(const qvec<T, 3> &m)
+{
+    const qvec<T, 3> mRadians = m * static_cast<T>(Q_PI / 180.0);
+    const qmat3x3d rotations = RotateAboutZ(mRadians[0]) * RotateAboutY(-mRadians[1]);
+    return {rotations * qvec3d(1, 0, 0)};
+}
+
+}

@@ -103,7 +103,8 @@ setting_group experimental_group{"Experimental options", 60};
 
 void light_settings::initialize(int argc, const char **argv)
 {
-    auto remainder = parse(token_parser_t(argc - 1, argv + 1));
+    token_parser_t p(argc - 1, argv + 1);
+    auto remainder = parse(p);
 
     if (remainder.size() <= 0 || remainder.size() > 1) {
         printHelp();

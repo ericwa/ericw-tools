@@ -107,7 +107,7 @@ public:
         _source = source::DEFAULT;
     }
 
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (auto value = parseString(parser)) {
             if (changeSource(locked ? source::COMMANDLINE : source::MAP)) {
@@ -120,7 +120,7 @@ public:
         return false;
     }
 
-    virtual std::string stringValue() const
+    std::string stringValue() const override
     {
         std::string paths;
 
@@ -139,7 +139,7 @@ public:
         return paths;
     }
 
-    virtual std::string format() const { return "path/to/wads"; }
+    std::string format() const override { return "path/to/wads"; }
 };
 
 extern setting_group game_target_group;
@@ -229,14 +229,14 @@ public:
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
 
-    virtual void setParameters(int argc, const char **argv) override
+    void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
         usage = "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
         remainderName = "sourcefile.map [destfile.bsp]";
     }
-    virtual void initialize(int argc, const char **argv) override;
-    virtual void postinitialize(int argc, const char **argv) override;
+    void initialize(int argc, const char **argv) override;
+    void postinitialize(int argc, const char **argv) override;
 
     bool fVerbose = true;
     bool fAllverbose = false;

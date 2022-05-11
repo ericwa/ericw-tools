@@ -232,13 +232,13 @@ public:
 
     fs::path sourceMap;
 
-    virtual void setParameters(int argc, const char **argv) override
+    void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
         usage = "vis calculates the visibility (and hearability) sets for \n.BSP files.\n\n";
         remainderName = "mapname.bsp";
     }
-    virtual void initialize(int argc, const char **argv) override;
+    void initialize(int argc, const char **argv) override;
 };
 
 } // namespace settings
