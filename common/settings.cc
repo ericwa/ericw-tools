@@ -34,6 +34,12 @@ setting_base::setting_base(
     }
 }
 
+bool setting_base::parseString(const std::string &string, bool locked)
+{
+    parser_t p{string};
+    return parse("", p, locked);
+}
+
 setting_group performance_group{"Performance", 10};
 setting_group logging_group{"Logging", 5};
 setting_group game_group{"Game", 15};

@@ -70,7 +70,8 @@ public:
 
     settings::setting_scalar light{this, "light", DEFAULTLIGHTLEVEL};
     settings::setting_scalar atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()};
-    settings::setting_numeric<light_formula_t> formula{this, "delay", LF_LINEAR, LF_LINEAR, LF_INVERSE2A};
+    settings::setting_enum<light_formula_t> formula{this, "delay", LF_LINEAR,
+        {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE}, {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}};
     settings::setting_scalar spotangle{this, "angle", 40.0};
     settings::setting_scalar spotangle2{this, "softangle", 0.0};
     settings::setting_numeric<int32_t> style{this, "style", 0, 0, 254};

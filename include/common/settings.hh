@@ -174,6 +174,9 @@ public:
     // copies value and source
     virtual bool copyFrom(const setting_base& other) = 0;
 
+    // convenience form of parse() that constructs a temporary parser_t
+    bool parseString(const std::string &string, bool locked = false);
+
     // resets value to default, and source to source::DEFAULT
     virtual void reset() = 0;
     virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) = 0;
@@ -387,6 +390,7 @@ public:
 template<typename T>
 class setting_numeric : public setting_value<T>
 {
+    static_assert(!std::is_enum_v<T>, "use setting_enum for enums");
 protected:
     T _min, _max;
 
@@ -415,7 +419,6 @@ public:
         Q_assert(this->_value <= _max);
     }
 
-    template<typename T1 = T, typename = std::enable_if_t<!std::is_enum_v<T1>>>
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v,
         const setting_group *group = nullptr, const char *description = "")
         : setting_numeric(
@@ -423,7 +426,6 @@ public:
     {
     }
 
-    template<typename T1 = T, typename = std::enable_if_t<!std::is_enum_v<T1>>>
     inline bool boolValue() const
     {
         return this->_value > 0;
@@ -507,9 +509,20 @@ public:
             return false;
         }
 
+        // see if it's a string enum case label
         if (auto it = _values.find(parser.token); it != _values.end()) {
             this->setValueFromParse(it->second, locked);
             return true;
+        }
+
+        // see if it's an integer
+        try {
+            const int i = std::stoi(parser.token);
+
+            this->setValueFromParse(static_cast<T>(i), locked);
+            return true;
+        } catch (std::invalid_argument &) {
+        } catch (std::out_of_range &) {
         }
 
         return false;
