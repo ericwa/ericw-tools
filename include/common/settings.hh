@@ -415,6 +415,7 @@ public:
         Q_assert(this->_value <= _max);
     }
 
+    template<typename T1 = T, typename = std::enable_if_t<!std::is_enum_v<T1>>>
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v,
         const setting_group *group = nullptr, const char *description = "")
         : setting_numeric(
@@ -422,6 +423,7 @@ public:
     {
     }
 
+    template<typename T1 = T, typename = std::enable_if_t<!std::is_enum_v<T1>>>
     inline bool boolValue() const
     {
         return this->_value > 0;
