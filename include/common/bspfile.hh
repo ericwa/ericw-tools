@@ -769,6 +769,13 @@ struct bsp2_dclipnode_t
     auto stream_data() { return std::tie(planenum, children); }
 };
 
+/*
+* Clipnodes need to be stored as a 16-bit offset. Originally, this was a
+* signed value and only the positive values up to 32767 were available. Since
+* the negative range was unused apart from a few values reserved for flags,
+* this has been extended to allow up to 65520 (0xfff0) clipnodes (with a
+* suitably modified engine).
+*/
 struct bsp29_dclipnode_t
 {
     int32_t planenum;

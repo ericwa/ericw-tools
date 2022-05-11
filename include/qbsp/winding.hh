@@ -23,6 +23,8 @@
 
 #include "common/polylib.hh"
 
+constexpr size_t MAXEDGES = 64;
+
 using winding_t = polylib::winding_base_t<MAXEDGES>;
 
 winding_t BaseWindingForPlane(const qplane3d &p);

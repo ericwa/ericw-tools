@@ -2081,7 +2081,7 @@ void ConvertMapFile(void)
     }
 
     fs::path filename = options.szBSPName;
-    filename.replace_filename(options.szBSPName.stem().string() + append);
+    filename.replace_filename(options.szBSPName.stem().string() + append).replace_extension(".map");
 
     std::ofstream f(filename);
 

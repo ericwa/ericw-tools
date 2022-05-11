@@ -133,8 +133,6 @@ extern setting_group debugging_group;
 class qbsp_settings : public common_settings
 {
 public:
-    inline qbsp_settings() { }
-
     setting_bool hexen2{this, "hexen2", false, &game_target_group, "target Hexen II's BSP format"};
     setting_bool hlbsp{this, "hlbsp", false, &game_target_group, "target Half Life's BSP format"};
     setting_bool q2bsp{this, "q2bsp", false, &game_target_group, "target Quake II's BSP format"};
@@ -219,26 +217,14 @@ public:
     bool fVerbose = true;
     bool fAllverbose = false;
     bool fNoverbose = false;
-    const bspversion_t *target_version;
-    const gamedef_t *target_game;
+    const bspversion_t *target_version = nullptr;
+    const gamedef_t *target_game = nullptr;
     fs::path szMapName;
     fs::path szBSPName;
 };
 }; // namespace settings
 
 extern settings::qbsp_settings options;
-
-/*
- * Clipnodes need to be stored as a 16-bit offset. Originally, this was a
- * signed value and only the positive values up to 32767 were available. Since
- * the negative range was unused apart from a few values reserved for flags,
- * this has been extended to allow up to 65520 (0xfff0) clipnodes (with a
- * suitably modified engine).
- */
-#define MAX_BSP_CLIPNODES 0xfff0
-
-// Various other geometry maximums
-constexpr size_t MAXEDGES = 64;
 
 // 0-2 are axial planes
 // 3-5 are non-axial planes snapped to the nearest
@@ -249,7 +235,7 @@ constexpr size_t MAXEDGES = 64;
 #define PLANE_ANYY 4
 #define PLANE_ANYZ 5
 
-// planenum for a leaf (?)
+// planenum for a leaf
 constexpr int32_t PLANENUM_LEAF = -1;
 
 /*

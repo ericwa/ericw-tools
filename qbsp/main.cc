@@ -23,5 +23,9 @@
 
 int main(int argc, const char **argv)
 {
+    settings::qbsp_settings s;
+    s = std::move(settings::qbsp_settings {});
+    const char *cmd = "foo";
+    s.run(1, &cmd);
     return qbsp_main(argc, argv);
 }
