@@ -114,7 +114,7 @@ set(LIGHT_TEST_SOURCE
 	test_light.cc
 	test_common.cc)
 add_executable(testlight ${LIGHT_TEST_SOURCE})
-target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} gtest fmt::fmt)
+target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} gtest gmock fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
 

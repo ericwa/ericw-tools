@@ -112,6 +112,9 @@ add_subdirectory(docs)
 install(FILES README.md DESTINATION bin)
 install(FILES changelog.md DESTINATION bin)
 
+#CTest
+enable_testing()
+
 #CPack configuration
 
 set(CPACK_GENERATOR ZIP)
