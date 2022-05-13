@@ -207,7 +207,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uin
             std::vector<uint32_t> brushes;
 
             for (auto &b : entity->brushes) {
-                if (node->bounds.intersectWith(b.bounds)) {
+                if (!node->bounds.disjoint_or_touching(b.bounds)) {
                     brushes.push_back(b_id);
                 }
                 b_id++;
