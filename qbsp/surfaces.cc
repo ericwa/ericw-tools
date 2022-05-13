@@ -30,6 +30,21 @@
 #include <map>
 #include <list>
 
+static bool ShouldOmitFace(face_t *f)
+{
+    if (!options.includeskip.value() && map.mtexinfos.at(f->texinfo).flags.is_skip)
+        return true;
+    if (map.mtexinfos.at(f->texinfo).flags.is_hint)
+        return true;
+
+    // HACK: to save a few faces, don't output the interior faces of sky brushes
+    if (f->contents[0].is_sky(options.target_game)) {
+        return true;
+    }
+
+    return false;
+}
+
 /*
 ===============
 SubdivideFace
@@ -336,9 +351,7 @@ FindFaceEdges
 */
 static void FindFaceEdges(mapentity_t *entity, face_t *face)
 {
-    if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
-        return;
-    if (map.mtexinfos.at(face->texinfo).flags.is_hint)
+    if (ShouldOmitFace(face))
         return;
 
     FindFaceFragmentEdges(entity, face, face);
@@ -411,9 +424,7 @@ EmitFace
 */
 static void EmitFace(mapentity_t *entity, face_t *face)
 {
-    if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
-        return;
-    if (map.mtexinfos.at(face->texinfo).flags.is_hint)
+    if (ShouldOmitFace(face))
         return;
 
     EmitFaceFragment(entity, face, face);
@@ -450,9 +461,7 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
 
 static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t &vertexesCount)
 {
-    if (!options.includeskip.value() && map.mtexinfos.at(f->texinfo).flags.is_skip)
-        return;
-    if (map.mtexinfos.at(f->texinfo).flags.is_hint)
+    if (ShouldOmitFace(f))
         return;
 
     if (f->lmshift[1] != 4)
