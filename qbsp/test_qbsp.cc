@@ -16,6 +16,8 @@
 #include <set>
 #include <map>
 
+using namespace testing;
+
 // FIXME: Clear global data (planes, etc) between each test
 
 static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brush, const std::string &texname)
@@ -492,7 +494,12 @@ TEST(testmaps_q1, simple_worldspawn_sky)
     EXPECT_EQ(5, textureToFace.at("orangestuff8").size());
 
     // leaf/node counts
-    EXPECT_EQ(6, bsp.dnodes.size());
+    // - we'd get 7 nodes if it's cut like a cube (solid outside), with 1 additional cut inside to divide sky / empty
+    // - we'd get 11 if it's cut as the sky plane (1), then two open cubes (5 nodes each)
+    // - can get in between values if it does some vertical cuts, then the sky plane, then other vertical cuts
+    //
+    // the 7 solution is better but the BSP heuristics won't help reach that one in this trivial test map
+    EXPECT_THAT(bsp.dnodes.size(), AllOf(Ge(7), Le(11)));
     EXPECT_EQ(3, bsp.dleafs.size()); // shared solid leaf + empty + sky
 
     // check contents
