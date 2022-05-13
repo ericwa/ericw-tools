@@ -497,10 +497,16 @@ TEST(testmaps_q1, simple_worldspawn_sky)
 
     // check contents
     const qvec3d player_pos{-88, -64, 120};
+    const double inside_sky_z = 232;
 
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos)->contents);
 
-    EXPECT_EQ(CONTENTS_SKY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0,0,500))->contents);
+    // way above map is solid - sky should not fill outwards
+    // (otherwise, if you had sky with a floor further up above it, it's not clear where the leafs would be divided, or
+    // if the floor contents would turn to sky, etc.)
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0,0,500))->contents);
+
+    EXPECT_EQ(CONTENTS_SKY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d(player_pos[0], player_pos[1], inside_sky_z))->contents);
 
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d( 500,    0,    0))->contents);
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(-500,    0,    0))->contents);
