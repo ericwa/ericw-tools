@@ -2095,7 +2095,7 @@ void ConvertMapFile(void)
     }
 
     fs::path filename = options.bsp_path;
-    filename.replace_filename(options.bsp_path.stem().string() + append);
+    filename.replace_filename(options.bsp_path.stem().string() + append).replace_extension(".map");
 
     std::ofstream f(filename);
 

@@ -64,6 +64,15 @@ if (embree_FOUND)
 		message(STATUS "Found embree license: ${EMBREE_LICENSE}")
 	endif()
 
+	# HACK: Windows embree .dll's from https://github.com/embree/embree/releases ship with a tbb12.dll
+	# and we need to copy it from the embree/bin directory to our light.exe/testlight.exe dir in order for them to run
+	find_file(EMBREE_TBB_DLL tbb12.dll
+              "${EMBREE_ROOT_DIR}/bin"
+              NO_DEFAULT_PATH)
+	if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
+		message(STATUS "Found embree EMBREE_TBB_DLL: ${EMBREE_TBB_DLL}")
+	endif()
+
 	add_custom_command(TARGET light POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:light>"
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:light>")
@@ -71,6 +80,10 @@ if (embree_FOUND)
 	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
 		add_custom_command(TARGET light POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_LICENSE}"       "$<TARGET_FILE_DIR:light>/LICENSE-embree.txt")
+	endif()
+	if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
+		add_custom_command(TARGET light POST_BUILD
+				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:light>")
 	endif()
 
 	# so the executable will search for dylib's in the same directory as the executable 
@@ -123,11 +136,9 @@ if (embree_FOUND)
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testlight>"
 			           COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>" "$<TARGET_FILE_DIR:testlight>")
 
-	# HACK: copy embree's tbb12.dll
-	# FIXME: this is only desired with the .zip release of embree, not e.g. vcpkg
-	if (WIN32)
+	if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 		add_custom_command(TARGET testlight POST_BUILD
-				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE_DIR:embree>/tbb12.dll" "$<TARGET_FILE_DIR:testlight>")
+				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:testlight>")
 	endif()
 
 	add_definitions(-DHAVE_EMBREE)

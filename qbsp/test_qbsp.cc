@@ -16,6 +16,8 @@
 #include <set>
 #include <map>
 
+using namespace testing;
+
 // FIXME: Clear global data (planes, etc) between each test
 
 static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brush, const std::string &texname)
@@ -492,15 +494,26 @@ TEST(testmaps_q1, simple_worldspawn_sky)
     EXPECT_EQ(5, textureToFace.at("orangestuff8").size());
 
     // leaf/node counts
-    EXPECT_EQ(6, bsp.dnodes.size());
+    // - we'd get 7 nodes if it's cut like a cube (solid outside), with 1 additional cut inside to divide sky / empty
+    // - we'd get 11 if it's cut as the sky plane (1), then two open cubes (5 nodes each)
+    // - can get in between values if it does some vertical cuts, then the sky plane, then other vertical cuts
+    //
+    // the 7 solution is better but the BSP heuristics won't help reach that one in this trivial test map
+    EXPECT_THAT(bsp.dnodes.size(), AllOf(Ge(7), Le(11)));
     EXPECT_EQ(3, bsp.dleafs.size()); // shared solid leaf + empty + sky
 
     // check contents
     const qvec3d player_pos{-88, -64, 120};
+    const double inside_sky_z = 232;
 
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos)->contents);
 
-    EXPECT_EQ(CONTENTS_SKY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0,0,500))->contents);
+    // way above map is solid - sky should not fill outwards
+    // (otherwise, if you had sky with a floor further up above it, it's not clear where the leafs would be divided, or
+    // if the floor contents would turn to sky, etc.)
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0,0,500))->contents);
+
+    EXPECT_EQ(CONTENTS_SKY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d(player_pos[0], player_pos[1], inside_sky_z))->contents);
 
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d( 500,    0,    0))->contents);
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(-500,    0,    0))->contents);
@@ -752,30 +765,31 @@ TEST(testmaps_q2, detail) {
 
     // stats
     EXPECT_EQ(1, bsp.dmodels.size());
+    // Q2 reserves leaf 0 as an invalid leaf
+
     // leafs:
-    //  6 solid leafs outside the room
+    //  6 solid leafs outside the room (* can be more depending on when the "divider" is cut)
     //  1 empty leaf filling the room above the divider
     //  2 empty leafs + 1 solid leaf for divider
     //  1 detail leaf for button
     //  4 empty leafs around + 1 on top of button 
-    // total: 16
-    // Q2 reserves leaf 0 as an invalid leaf, so dleafs size is 17
-    EXPECT_EQ(17, bsp.dleafs.size());
 
     std::map<int32_t, int> counts_by_contents;
     for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
         ++counts_by_contents[bsp.dleafs[i].contents];
     }
+    EXPECT_EQ(3, counts_by_contents.size()); // number of types
 
-    EXPECT_EQ((std::map<int32_t, int>{{Q2_CONTENTS_SOLID, 7}, {Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL, 1}, {0, 8}}),
-        counts_by_contents);
+
+    EXPECT_EQ(1, counts_by_contents.at(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL));
+    EXPECT_EQ(8, counts_by_contents.at(0)); // empty leafs
+    EXPECT_THAT(counts_by_contents.at(Q2_CONTENTS_SOLID), AllOf(Ge(7), Le(9)));
 
     // clusters:
-    //  6 solid leafs outside the room
-    //  1 empty leaf filling the room above the divider
-    //  2 empty leafs + 1 solid leaf for divider
+    //  1 empty cluster filling the room above the divider
+    //  2 empty clusters created by divider
     //  1 cluster for the part of the room with the button
-    // total: 10
+
     std::set<int> clusters;
     // first add the empty leafs
     for (size_t i = 1; i < bsp.dleafs.size(); ++i) {

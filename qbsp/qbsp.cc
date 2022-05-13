@@ -109,7 +109,8 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         set_target_version(&bspver_hl);
     }
 
-    if (q2bsp.value() || q2rtx.value()) {
+    if (q2bsp.value() || 
+        (q2rtx.value() && !q2bsp.isChanged() && !qbism.isChanged())) {
         set_target_version(&bspver_q2);
     }
 
@@ -166,10 +167,6 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
         if (!includeskip.isChanged()) {
             includeskip.setValueLocked(true);
-        }
-        
-        if (!notriggermodels.isChanged()) {
-            notriggermodels.setValueLocked(true);
         }
     }
 
@@ -596,6 +593,23 @@ winding_t BaseWindingForPlane(const qplane3d &p)
     return winding_t::from_plane(p, options.worldextent.value());
 }
 
+static bool IsTrigger(const mapentity_t *entity)
+{
+    auto &tex = entity->mapbrush(0).face(0).texname;
+
+    if (tex.length() < 6) {
+        return false;
+    }
+
+    size_t trigger_pos = tex.rfind("trigger");
+
+    if (trigger_pos == std::string::npos) {
+        return false;
+    }
+
+    return trigger_pos == (tex.size() - strlen("trigger"));
+}
+
 /*
 ===============
 ProcessEntity
@@ -619,9 +633,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         return;
 
     // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
-    bool discarded_trigger = (entity != map.world_entity() &&
+    bool discarded_trigger = entity != map.world_entity() &&
         options.notriggermodels.value() &&
-        entity->mapbrush(0).face(0).texname.find_last_of("trigger") == entity->mapbrush(0).face(0).texname.size() - strlen("trigger"));
+        IsTrigger(entity);
 
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
     if (!discarded_trigger) {

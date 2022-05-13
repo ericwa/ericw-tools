@@ -318,6 +318,10 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs:
             node.push_back({"maxs", src_node.maxs});
             node.push_back({"firstface", src_node.firstface});
             node.push_back({"numfaces", src_node.numfaces});
+
+            // human-readable plane
+            auto& plane = bsp.dplanes.at(src_node.planenum);
+            node.push_back({"plane", json::array({plane.normal[0], plane.normal[1], plane.normal[2], plane.dist})});
         }
     }
 
