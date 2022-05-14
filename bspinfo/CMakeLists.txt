@@ -1,8 +1,5 @@
-set(BSPINFO_SOURCES
-	bspinfo.cc)
-
-add_executable(bspinfo ${BSPINFO_SOURCES})
-target_link_libraries(bspinfo common fmt::fmt nlohmann_json::nlohmann_json)
+add_executable(bspinfo main.cc)
+target_link_libraries(bspinfo common fmt::fmt)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET bspinfo POST_BUILD
