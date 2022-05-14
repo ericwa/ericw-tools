@@ -51,13 +51,3 @@ if ( $? -eq $false ) {
 if ( $? -eq $false ) {
   throw "testqbsp failed"
 }
-
-$env:Path += ";$(pwd)\qbsp\Release;$(pwd)\vis\Release;$(pwd)\light\Release;$(pwd)\bspinfo\Release;$(pwd)\bsputil\Release"
-
-cd ..\testmaps
-
-. "C:\Program Files\Git\usr\bin\bash.exe" .\automatated_tests.sh
-
-if ( $LastExitCode -ne 0 ) {
-  throw "automatated_tests.sh failed"
-}
