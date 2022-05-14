@@ -1101,7 +1101,7 @@ void EnsureTexturesLoaded()
     else
         WADList_Init(wadstring);
 
-    if (!wadlist.size()) {
+    if (!map.wadlist.size()) {
         if (wadstring[0])
             logging::print("WARNING: No valid WAD filenames in worldmodel\n");
 
@@ -1111,7 +1111,7 @@ void EnsureTexturesLoaded()
 
         WADList_Init(defaultwad.string().c_str());
 
-        if (wadlist.size())
+        if (map.wadlist.size())
             logging::print("Using default WAD: {}\n", defaultwad);
     }
 }
@@ -1158,8 +1158,6 @@ void ProcessFile()
     WADList_Process();
     BSPX_CreateBrushList();
     FinishBSPFile();
-
-    wadlist.clear();
 }
 
 /*

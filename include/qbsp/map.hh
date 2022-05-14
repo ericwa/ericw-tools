@@ -118,6 +118,7 @@ struct texdata_t
 };
 
 #include <common/imglib.hh>
+#include <qbsp/wad.hh>
 
 struct mapdata_t
 {
@@ -156,6 +157,7 @@ struct mapdata_t
     // misc
     int start_spots = 0;
     bool wadlist_tried_loading = false;
+    std::list<wad_t> wadlist;
 
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
