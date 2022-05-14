@@ -196,9 +196,6 @@ static struct
     uint32_t total_leaf_brushes;
 } brush_state;
 
-// running total
-static uint32_t brush_offset;
-
 static void ExportBrushList_r(const mapentity_t *entity, node_t *node, const uint32_t &brush_offset)
 {
     if (node->planenum == PLANENUM_LEAF) {
@@ -825,7 +822,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         firstface = MakeFaceEdges(entity, nodes);
 
         if (options.target_game->id == GAME_QUAKE_II) {
-            ExportBrushList(entity, nodes, brush_offset);
+            ExportBrushList(entity, nodes, map.brush_offset);
         }
 
         ExportDrawNodes(entity, nodes, firstface);

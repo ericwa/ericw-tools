@@ -146,6 +146,8 @@ struct mapdata_t
 
     // Q2 stuff
     int32_t numareaportals = 0;
+    // running total
+    uint32_t brush_offset = 0;
 
     // misc
     int start_spots = 0;
