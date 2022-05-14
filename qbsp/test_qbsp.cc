@@ -47,6 +47,8 @@ static mapentity_t LoadMap(const char *map)
     return worldspawn;
 }
 
+#include <common/bspinfo.hh>
+
 static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
     auto map_path = std::filesystem::path(testmaps_dir) / name;
@@ -90,6 +92,9 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     bspdata.version->game->init_filesystem(options.bsp_path, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    // write to .json for inspection
+    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(options.bsp_path).replace_extension(".bsp.json"));
 
     return std::get<mbsp_t>(bspdata.bsp);
 }
