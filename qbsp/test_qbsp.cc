@@ -972,6 +972,34 @@ TEST(testmaps_q2, areaportal)
     ASSERT_EQ("1", it->get("style"));
 }
 
+TEST(testmaps_q2, nodraw_light) {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_light.map", {"-q2bsp", "-includeskip"});
+
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    const qvec3d topface_center {160, -148, 208};
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
+    ASSERT_NE(nullptr, topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    EXPECT_STREQ(texinfo->texture.data(), "e1u1/trigger");
+    EXPECT_EQ(texinfo->flags.native, Q2_SURF_LIGHT | Q2_SURF_NODRAW);
+}
+
+TEST(testmaps_q2, nodraw_detail_light) {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_detail_light.map", {"-q2bsp", "-includeskip"});
+
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    const qvec3d topface_center {160, -148, 208};
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
+    ASSERT_NE(nullptr, topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    EXPECT_STREQ(texinfo->texture.data(), "e1u1/trigger");
+    EXPECT_EQ(texinfo->flags.native, Q2_SURF_LIGHT | Q2_SURF_NODRAW);
+}
+
 TEST(testmaps_q2, base1)
 {
 #if 0
