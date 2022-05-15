@@ -19,19 +19,19 @@ TEST(mathlib, MakeCDF)
     std::vector<float> pdfUnnormzlied{25, 50, 25};
     std::vector<float> cdf = MakeCDF(pdfUnnormzlied);
 
-    ASSERT_EQ(3u, cdf.size());
+    ASSERT_TRUE(3u == cdf.size());
     ASSERT_FLOAT_EQ(0.25, cdf.at(0));
     ASSERT_FLOAT_EQ(0.75, cdf.at(1));
     ASSERT_FLOAT_EQ(1.0, cdf.at(2));
 
     // TODO: return pdf
-    ASSERT_EQ(0, SampleCDF(cdf, 0));
-    ASSERT_EQ(0, SampleCDF(cdf, 0.1));
-    ASSERT_EQ(0, SampleCDF(cdf, 0.25));
-    ASSERT_EQ(1, SampleCDF(cdf, 0.26));
-    ASSERT_EQ(1, SampleCDF(cdf, 0.75));
-    ASSERT_EQ(2, SampleCDF(cdf, 0.76));
-    ASSERT_EQ(2, SampleCDF(cdf, 1));
+    ASSERT_TRUE(0 == SampleCDF(cdf, 0));
+    ASSERT_TRUE(0 == SampleCDF(cdf, 0.1));
+    ASSERT_TRUE(0 == SampleCDF(cdf, 0.25));
+    ASSERT_TRUE(1 == SampleCDF(cdf, 0.26));
+    ASSERT_TRUE(1 == SampleCDF(cdf, 0.75));
+    ASSERT_TRUE(2 == SampleCDF(cdf, 0.76));
+    ASSERT_TRUE(2 == SampleCDF(cdf, 1));
 }
 
 static void checkBox(const vector<qvec4f> &edges, const vector<qvec3f> &poly)
@@ -41,10 +41,10 @@ static void checkBox(const vector<qvec4f> &edges, const vector<qvec3f> &poly)
     EXPECT_TRUE(GLM_EdgePlanes_PointInside(edges, qvec3f(32, 32, 0)));
     EXPECT_TRUE(GLM_EdgePlanes_PointInside(edges, qvec3f(32, 32, 32))); // off plane
 
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-0.1, 0, 0)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(64.1, 0, 0)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, -0.1, 0)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 64.1, 0)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(-0.1, 0, 0)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(64.1, 0, 0)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(0, -0.1, 0)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(0, 64.1, 0)));
 }
 
 TEST(mathlib, EdgePlanesOfNonConvexPoly)
@@ -53,7 +53,7 @@ TEST(mathlib, EdgePlanesOfNonConvexPoly)
     const vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {0, 64, 0}, {64, 0, 0}};
 
     const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-    //    EXPECT_EQ(vector<qvec4f>(), edges);
+    //    EXPECT_TRUE(vector<qvec4f>() == edges);
 }
 
 TEST(mathlib, SlightlyConcavePoly)
@@ -64,7 +64,7 @@ TEST(mathlib, SlightlyConcavePoly)
         qvec3f(80, -1924, 1631), qvec3f(80, -1744, 1616)};
 
     const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-    ASSERT_FALSE(edges.empty());
+    ASSERT_TRUE(!edges.empty());
     EXPECT_TRUE(GLM_EdgePlanes_PointInside(edges, qvec3f(152.636963, -1814, 1702)));
 }
 
@@ -92,8 +92,8 @@ TEST(mathlib, PointInPolygon_DegenerateFaceHandling1)
     const vector<qvec3f> poly{};
 
     const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
 }
 
 TEST(mathlib, PointInPolygon_DegenerateFaceHandling2)
@@ -105,9 +105,9 @@ TEST(mathlib, PointInPolygon_DegenerateFaceHandling2)
     };
 
     const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
 }
 
 TEST(mathlib, PointInPolygon_DegenerateFaceHandling3)
@@ -119,9 +119,9 @@ TEST(mathlib, PointInPolygon_DegenerateFaceHandling3)
     };
 
     const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
-    EXPECT_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
+    EXPECT_TRUE(!GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
 }
 
 TEST(mathlib, PointInPolygon_ColinearPointHandling)
@@ -137,7 +137,7 @@ TEST(mathlib, PointInPolygon_ColinearPointHandling)
 
 TEST(mathlib, ClosestPointOnLineSegment_Degenerate)
 {
-    EXPECT_EQ(qvec3f(0, 0, 0), ClosestPointOnLineSegment(qvec3f(0, 0, 0), qvec3f(0, 0, 0), qvec3f(10, 10, 10)));
+    EXPECT_TRUE(qvec3f(0, 0, 0) == ClosestPointOnLineSegment(qvec3f(0, 0, 0), qvec3f(0, 0, 0), qvec3f(10, 10, 10)));
 }
 
 TEST(mathlib, ClosestPointOnPolyBoundary)
@@ -150,13 +150,13 @@ TEST(mathlib, ClosestPointOnPolyBoundary)
         {64, 0, 0} // edge 3 start, edge 2 end
     };
 
-    EXPECT_EQ(make_pair(0, qvec3f(0, 0, 0)), GLM_ClosestPointOnPolyBoundary(poly, qvec3f(0, 0, 0)));
+    EXPECT_TRUE(make_pair(0, qvec3f(0, 0, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(0, 0, 0)));
 
     // Either edge 1 or 2 contain the point qvec3f(64,64,0), but we expect the first edge to be returned
-    EXPECT_EQ(make_pair(1, qvec3f(64, 64, 0)), GLM_ClosestPointOnPolyBoundary(poly, qvec3f(100, 100, 100)));
-    EXPECT_EQ(make_pair(2, qvec3f(64, 32, 0)), GLM_ClosestPointOnPolyBoundary(poly, qvec3f(100, 32, 0)));
+    EXPECT_TRUE(make_pair(1, qvec3f(64, 64, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(100, 100, 100)));
+    EXPECT_TRUE(make_pair(2, qvec3f(64, 32, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(100, 32, 0)));
 
-    EXPECT_EQ(make_pair(0, qvec3f(0, 0, 0)), GLM_ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
+    EXPECT_TRUE(make_pair(0, qvec3f(0, 0, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
 }
 
 TEST(mathlib, PolygonCentroid_empty)
@@ -172,13 +172,13 @@ TEST(mathlib, PolygonCentroid_empty)
 TEST(mathlib, PolygonCentroid_point)
 {
     const std::initializer_list<qvec3d> point{{1, 1, 1}};
-    EXPECT_EQ(*point.begin(), qv::PolyCentroid(point.begin(), point.end()));
+    EXPECT_TRUE(*point.begin() == qv::PolyCentroid(point.begin(), point.end()));
 }
 
 TEST(mathlib, PolygonCentroid_line)
 {
     const std::initializer_list<qvec3d> line{{0, 0, 0}, {2, 2, 2}};
-    EXPECT_EQ(qvec3d(1, 1, 1), qv::PolyCentroid(line.begin(), line.end()));
+    EXPECT_TRUE(qvec3d(1, 1, 1) == qv::PolyCentroid(line.begin(), line.end()));
 }
 
 TEST(mathlib, PolygonCentroid)
@@ -187,7 +187,7 @@ TEST(mathlib, PolygonCentroid)
     const std::initializer_list<qvec3d> poly{{0, 0, 0}, {0, 32, 0}, // colinear
         {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(qvec3f(32, 32, 0), qv::PolyCentroid(poly.begin(), poly.end()));
+    EXPECT_TRUE(qvec3f(32, 32, 0) == qv::PolyCentroid(poly.begin(), poly.end()));
 }
 
 TEST(mathlib, PolygonArea)
@@ -196,12 +196,12 @@ TEST(mathlib, PolygonArea)
     const std::initializer_list<qvec3d> poly{{0, 0, 0}, {0, 32, 0}, // colinear
         {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(64.0f * 64.0f, qv::PolyArea(poly.begin(), poly.end()));
+    EXPECT_TRUE(64.0f * 64.0f == qv::PolyArea(poly.begin(), poly.end()));
 
     // 0, 1, or 2 vertices return 0 area
-    EXPECT_EQ(0.0f, qv::PolyArea(poly.begin(), poly.begin()));
-    EXPECT_EQ(0.0f, qv::PolyArea(poly.begin(), poly.begin() + 1));
-    EXPECT_EQ(0.0f, qv::PolyArea(poly.begin(), poly.begin() + 2));
+    EXPECT_TRUE(0.0f == qv::PolyArea(poly.begin(), poly.begin()));
+    EXPECT_TRUE(0.0f == qv::PolyArea(poly.begin(), poly.begin() + 1));
+    EXPECT_TRUE(0.0f == qv::PolyArea(poly.begin(), poly.begin() + 2));
 }
 
 TEST(mathlib, BarycentricFromPoint)
@@ -209,13 +209,13 @@ TEST(mathlib, BarycentricFromPoint)
     // clockwise
     const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(qvec3f(1, 0, 0), qv::Barycentric_FromPoint(tri[0], tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(0, 1, 0), qv::Barycentric_FromPoint(tri[1], tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(0, 0, 1), qv::Barycentric_FromPoint(tri[2], tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(1, 0, 0) == qv::Barycentric_FromPoint(tri[0], tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(0, 1, 0) == qv::Barycentric_FromPoint(tri[1], tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(0, 0, 1) == qv::Barycentric_FromPoint(tri[2], tri[0], tri[1], tri[2]));
 
-    EXPECT_EQ(qvec3f(0.5, 0.5, 0.0), qv::Barycentric_FromPoint({0, 32, 0}, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(0.0, 0.5, 0.5), qv::Barycentric_FromPoint({32, 32, 0}, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(0.5, 0.0, 0.5), qv::Barycentric_FromPoint({32, 0, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(0.5, 0.5, 0.0) == qv::Barycentric_FromPoint({0, 32, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(0.0, 0.5, 0.5) == qv::Barycentric_FromPoint({32, 32, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(0.5, 0.0, 0.5) == qv::Barycentric_FromPoint({32, 0, 0}, tri[0], tri[1], tri[2]));
 }
 
 TEST(mathlib, BarycentricToPoint)
@@ -223,13 +223,13 @@ TEST(mathlib, BarycentricToPoint)
     // clockwise
     const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
-    EXPECT_EQ(tri[0], qv::Barycentric_ToPoint({1, 0, 0}, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(tri[1], qv::Barycentric_ToPoint({0, 1, 0}, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(tri[2], qv::Barycentric_ToPoint({0, 0, 1}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(tri[0] == qv::Barycentric_ToPoint({1, 0, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(tri[1] == qv::Barycentric_ToPoint({0, 1, 0}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(tri[2] == qv::Barycentric_ToPoint({0, 0, 1}, tri[0], tri[1], tri[2]));
 
-    EXPECT_EQ(qvec3f(0, 32, 0), qv::Barycentric_ToPoint({0.5, 0.5, 0.0}, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(32, 32, 0), qv::Barycentric_ToPoint({0.0, 0.5, 0.5}, tri[0], tri[1], tri[2]));
-    EXPECT_EQ(qvec3f(32, 0, 0), qv::Barycentric_ToPoint({0.5, 0.0, 0.5}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(0, 32, 0) == qv::Barycentric_ToPoint({0.5, 0.5, 0.0}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(32, 32, 0) == qv::Barycentric_ToPoint({0.0, 0.5, 0.5}, tri[0], tri[1], tri[2]));
+    EXPECT_TRUE(qvec3f(32, 0, 0) == qv::Barycentric_ToPoint({0.5, 0.0, 0.5}, tri[0], tri[1], tri[2]));
 }
 
 TEST(mathlib, BarycentricRandom)
@@ -276,8 +276,8 @@ TEST(mathlib, RotateFromUpToSurfaceNormal)
 
 TEST(mathlib, MakePlane)
 {
-    EXPECT_EQ(qvec4f(0, 0, 1, 10), GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(0, 0, 10)));
-    EXPECT_EQ(qvec4f(0, 0, 1, 10), GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(100, 100, 10)));
+    EXPECT_TRUE(qvec4f(0, 0, 1, 10) == GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(0, 0, 10)));
+    EXPECT_TRUE(qvec4f(0, 0, 1, 10) == GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(100, 100, 10)));
 }
 
 TEST(mathlib, DistAbovePlane)
@@ -289,9 +289,9 @@ TEST(mathlib, DistAbovePlane)
 
 TEST(mathlib, InterpolateNormalsDegenerate)
 {
-    EXPECT_FALSE(GLM_InterpolateNormal({}, std::vector<qvec3f>{}, qvec3f(0, 0, 0)).first);
-    EXPECT_FALSE(GLM_InterpolateNormal({qvec3f(0, 0, 0)}, {qvec3f(0, 0, 1)}, qvec3f(0, 0, 0)).first);
-    EXPECT_FALSE(
+    EXPECT_TRUE(!GLM_InterpolateNormal({}, std::vector<qvec3f>{}, qvec3f(0, 0, 0)).first);
+    EXPECT_TRUE(!GLM_InterpolateNormal({qvec3f(0, 0, 0)}, {qvec3f(0, 0, 1)}, qvec3f(0, 0, 0)).first);
+    EXPECT_TRUE(!
         GLM_InterpolateNormal({qvec3f(0, 0, 0), qvec3f(10, 0, 0)}, {qvec3f(0, 0, 1), qvec3f(0, 0, 1)}, qvec3f(0, 0, 0))
             .first);
 }
@@ -314,19 +314,19 @@ TEST(mathlib, InterpolateNormals)
     // First try all the known points
     for (int i = 0; i < poly.size(); i++) {
         const auto res = GLM_InterpolateNormal(poly, normals, poly.at(i));
-        EXPECT_EQ(true, res.first);
+        EXPECT_TRUE(true == res.first);
         EXPECT_TRUE(qv::epsilonEqual(normals.at(i), res.second, static_cast<float>(POINT_EQUAL_EPSILON)));
     }
 
     {
         const qvec3f firstTriCentroid = (poly[0] + poly[1] + poly[2]) / 3.0f;
         const auto res = GLM_InterpolateNormal(poly, normals, firstTriCentroid);
-        EXPECT_EQ(true, res.first);
+        EXPECT_TRUE(true == res.first);
         EXPECT_TRUE(qv::epsilonEqual(qvec3f(1 / 3.0f), res.second, static_cast<float>(POINT_EQUAL_EPSILON)));
     }
 
     // Outside poly
-    EXPECT_FALSE(GLM_InterpolateNormal(poly, normals, qvec3f(-0.1, 0, 0)).first);
+    EXPECT_TRUE(!GLM_InterpolateNormal(poly, normals, qvec3f(-0.1, 0, 0)).first);
 }
 
 static bool polysEqual(const vector<qvec3f> &p1, const vector<qvec3f> &p2)
@@ -399,7 +399,7 @@ TEST(mathlib, ConcavityTest_concave)
     const qvec3f face1normal{0, 0, 1};
     const qvec3f face2normal{-1, 0, 0};
 
-    EXPECT_EQ(concavity_t::Concave, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+    EXPECT_TRUE(concavity_t::Concave == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
 TEST(mathlib, ConcavityTest_concave2)
@@ -410,7 +410,7 @@ TEST(mathlib, ConcavityTest_concave2)
     const qvec3f face1normal{0, 0, 1};
     const qvec3f face2normal{1, 0, 0};
 
-    EXPECT_EQ(concavity_t::Concave, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+    EXPECT_TRUE(concavity_t::Concave == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
 TEST(mathlib, ConcavityTest_convex)
@@ -421,7 +421,7 @@ TEST(mathlib, ConcavityTest_convex)
     const qvec3f face1normal{0, 0, 1};
     const qvec3f face2normal{1, 0, 0};
 
-    EXPECT_EQ(concavity_t::Convex, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+    EXPECT_TRUE(concavity_t::Convex == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
 TEST(mathlib, ConcavityTest_convex2)
@@ -432,7 +432,7 @@ TEST(mathlib, ConcavityTest_convex2)
     const qvec3f face1normal{0, 0, 1};
     const qvec3f face2normal{-1, 0, 0};
 
-    EXPECT_EQ(concavity_t::Convex, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+    EXPECT_TRUE(concavity_t::Convex == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
 TEST(mathlib, ConcavityTest_coplanar)
@@ -443,7 +443,7 @@ TEST(mathlib, ConcavityTest_coplanar)
     const qvec3f face1normal{0, 0, 1};
     const qvec3f face2normal{0, 0, 1};
 
-    EXPECT_EQ(concavity_t::Coplanar, FacePairConcavity(face1center, face1normal, face2center, face2normal));
+    EXPECT_TRUE(concavity_t::Coplanar == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 static const float MANGLE_EPSILON = 0.1f;
 
@@ -479,14 +479,14 @@ TEST(mathlib, bilinearInterpolate)
     const qvec4f v3(1, 1, 1, 1);
     const qvec4f v4(2, 2, 2, 2);
 
-    EXPECT_EQ(v1, bilinearInterpolate(v1, v2, v3, v4, 0.0f, 0.0f));
-    EXPECT_EQ(v2, bilinearInterpolate(v1, v2, v3, v4, 1.0f, 0.0f));
-    EXPECT_EQ(v3, bilinearInterpolate(v1, v2, v3, v4, 0.0f, 1.0f));
-    EXPECT_EQ(v4, bilinearInterpolate(v1, v2, v3, v4, 1.0f, 1.0f));
+    EXPECT_TRUE(v1 == bilinearInterpolate(v1, v2, v3, v4, 0.0f, 0.0f));
+    EXPECT_TRUE(v2 == bilinearInterpolate(v1, v2, v3, v4, 1.0f, 0.0f));
+    EXPECT_TRUE(v3 == bilinearInterpolate(v1, v2, v3, v4, 0.0f, 1.0f));
+    EXPECT_TRUE(v4 == bilinearInterpolate(v1, v2, v3, v4, 1.0f, 1.0f));
 
-    EXPECT_EQ(qvec4f(1.5, 1.5, 1.5, 1.5), bilinearInterpolate(v1, v2, v3, v4, 0.5f, 1.0f));
-    EXPECT_EQ(qvec4f(2, 3, 4, 5), bilinearInterpolate(v1, v2, v3, v4, 0.5f, 0.0f));
-    EXPECT_EQ(qvec4f(1.75, 2.25, 2.75, 3.25), bilinearInterpolate(v1, v2, v3, v4, 0.5f, 0.5f));
+    EXPECT_TRUE(qvec4f(1.5, 1.5, 1.5, 1.5) == bilinearInterpolate(v1, v2, v3, v4, 0.5f, 1.0f));
+    EXPECT_TRUE(qvec4f(2, 3, 4, 5) == bilinearInterpolate(v1, v2, v3, v4, 0.5f, 0.0f));
+    EXPECT_TRUE(qvec4f(1.75, 2.25, 2.75, 3.25) == bilinearInterpolate(v1, v2, v3, v4, 0.5f, 0.5f));
 }
 
 TEST(mathlib, bilinearWeightsAndCoords)
@@ -499,7 +499,7 @@ TEST(mathlib, bilinearWeightsAndCoords)
         const qvec2i intPos = res[i].first;
         sum += qvec2f(intPos) * weight;
     }
-    EXPECT_EQ(qvec2f(0.5, 0.25), sum);
+    EXPECT_TRUE(qvec2f(0.5, 0.25) == sum);
 }
 
 TEST(mathlib, bilinearWeightsAndCoords2)
@@ -512,14 +512,14 @@ TEST(mathlib, bilinearWeightsAndCoords2)
         const qvec2i intPos = res[i].first;
         sum += qvec2f(intPos) * weight;
     }
-    EXPECT_EQ(qvec2f(1.0, 0.5), sum);
+    EXPECT_TRUE(qvec2f(1.0, 0.5) == sum);
 }
 
 TEST(mathlib, pointsAlongLine)
 {
     const auto res = PointsAlongLine(qvec3f(1, 0, 0), qvec3f(3.5, 0, 0), 1.5f);
 
-    ASSERT_EQ(2, res.size());
+    ASSERT_TRUE(2 == res.size());
     ASSERT_TRUE(qv::epsilonEqual(qvec3f(1, 0, 0), res[0], static_cast<float>(POINT_EQUAL_EPSILON)));
     ASSERT_TRUE(qv::epsilonEqual(qvec3f(2.5, 0, 0), res[1], static_cast<float>(POINT_EQUAL_EPSILON)));
 }
@@ -558,11 +558,11 @@ TEST(mathlib, RandomPointInPoly) {
     
     ASSERT_LT(min[0], 4);
     ASSERT_LT(min[1], 4);
-    ASSERT_EQ(min[2], 0);
+    ASSERT_TRUE(min[2] == 0);
     
     ASSERT_GT(max[0], 60);
     ASSERT_GT(max[1], 60);
-    ASSERT_EQ(max[2], 0);
+    ASSERT_TRUE(max[2] == 0);
     
     ASSERT_LT(qv::length(avg - qvec3f(32, 32, 0)), 4);
 }
@@ -648,12 +648,12 @@ TEST(mathlib, linesOverlap_only_tips_touching)
 
 TEST(mathlib, linesOverlap_non_colinear)
 {
-    ASSERT_FALSE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {5, 0, 0}, {5, 0, 1}));
+    ASSERT_TRUE(!LinesOverlap({0, 0, 0}, {0, 0, 1}, {5, 0, 0}, {5, 0, 1}));
 }
 
 TEST(mathlib, linesOverlap_colinear_not_touching)
 {
-    ASSERT_FALSE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 0, 3}));
+    ASSERT_TRUE(!LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 0, 3}));
 }
 
 // qvec
@@ -663,10 +663,10 @@ TEST(mathlib, qvec_expand)
     const qvec2f test(1, 2);
     const qvec4f test2(test);
 
-    EXPECT_EQ(1, test2[0]);
-    EXPECT_EQ(2, test2[1]);
-    EXPECT_EQ(0, test2[2]);
-    EXPECT_EQ(0, test2[3]);
+    EXPECT_TRUE(1 == test2[0]);
+    EXPECT_TRUE(2 == test2[1]);
+    EXPECT_TRUE(0 == test2[2]);
+    EXPECT_TRUE(0 == test2[3]);
 }
 
 TEST(mathlib, qvec_contract)
@@ -674,8 +674,8 @@ TEST(mathlib, qvec_contract)
     const qvec4f test(1, 2, 0, 0);
     const qvec2f test2(test);
 
-    EXPECT_EQ(1, test2[0]);
-    EXPECT_EQ(2, test2[1]);
+    EXPECT_TRUE(1 == test2[0]);
+    EXPECT_TRUE(2 == test2[1]);
 }
 
 TEST(mathlib, qvec_copy)
@@ -683,38 +683,38 @@ TEST(mathlib, qvec_copy)
     const qvec2f test(1, 2);
     const qvec2f test2(test);
 
-    EXPECT_EQ(1, test2[0]);
-    EXPECT_EQ(2, test2[1]);
+    EXPECT_TRUE(1 == test2[0]);
+    EXPECT_TRUE(2 == test2[1]);
 }
 
 TEST(mathlib, qvec_constructor_init)
 {
     const qvec2f test{};
-    EXPECT_EQ(0, test[0]);
-    EXPECT_EQ(0, test[1]);
+    EXPECT_TRUE(0 == test[0]);
+    EXPECT_TRUE(0 == test[1]);
 }
 
 TEST(mathlib, qvec_constructor_1)
 {
     const qvec2f test(42);
-    EXPECT_EQ(42, test[0]);
-    EXPECT_EQ(42, test[1]);
+    EXPECT_TRUE(42 == test[0]);
+    EXPECT_TRUE(42 == test[1]);
 }
 
 TEST(mathlib, qvec_constructor_fewer)
 {
     const qvec4f test(1, 2, 3);
-    EXPECT_EQ(1, test[0]);
-    EXPECT_EQ(2, test[1]);
-    EXPECT_EQ(3, test[2]);
-    EXPECT_EQ(0, test[3]);
+    EXPECT_TRUE(1 == test[0]);
+    EXPECT_TRUE(2 == test[1]);
+    EXPECT_TRUE(3 == test[2]);
+    EXPECT_TRUE(0 == test[3]);
 }
 
 TEST(mathlib, qvec_constructor_extra)
 {
     const qvec2f test(1, 2, 3);
-    EXPECT_EQ(1, test[0]);
-    EXPECT_EQ(2, test[1]);
+    EXPECT_TRUE(1 == test[0]);
+    EXPECT_TRUE(2 == test[1]);
 }
 
 // aabb3f
@@ -723,16 +723,16 @@ TEST(mathlib, aabb_basic)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
-    EXPECT_EQ(qvec3f(1, 1, 1), b1.mins());
-    EXPECT_EQ(qvec3f(10, 10, 10), b1.maxs());
-    EXPECT_EQ(qvec3f(9, 9, 9), b1.size());
+    EXPECT_TRUE(qvec3f(1, 1, 1) == b1.mins());
+    EXPECT_TRUE(qvec3f(10, 10, 10) == b1.maxs());
+    EXPECT_TRUE(qvec3f(9, 9, 9) == b1.size());
 }
 
 TEST(mathlib, aabb_grow)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
-    EXPECT_EQ(aabb3f(qvec3f(0, 0, 0), qvec3f(11, 11, 11)), b1.grow(qvec3f(1, 1, 1)));
+    EXPECT_TRUE(aabb3f(qvec3f(0, 0, 0), qvec3f(11, 11, 11)) == b1.grow(qvec3f(1, 1, 1)));
 }
 
 TEST(mathlib, aabb_unionwith)
@@ -740,22 +740,22 @@ TEST(mathlib, aabb_unionwith)
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
     const aabb3f b2(qvec3f(11, 11, 11), qvec3f(12, 12, 12));
 
-    EXPECT_EQ(aabb3f(qvec3f(1, 1, 1), qvec3f(12, 12, 12)), b1.unionWith(b2));
+    EXPECT_TRUE(aabb3f(qvec3f(1, 1, 1), qvec3f(12, 12, 12)) == b1.unionWith(b2));
 }
 
 TEST(mathlib, aabb_expand)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
-    EXPECT_EQ(b1, b1.expand(qvec3f(1, 1, 1)));
-    EXPECT_EQ(b1, b1.expand(qvec3f(5, 5, 5)));
-    EXPECT_EQ(b1, b1.expand(qvec3f(10, 10, 10)));
+    EXPECT_TRUE(b1 == b1.expand(qvec3f(1, 1, 1)));
+    EXPECT_TRUE(b1 == b1.expand(qvec3f(5, 5, 5)));
+    EXPECT_TRUE(b1 == b1.expand(qvec3f(10, 10, 10)));
 
     const aabb3f b2(qvec3f(1, 1, 1), qvec3f(100, 10, 10));
-    EXPECT_EQ(b2, b1.expand(qvec3f(100, 10, 10)));
+    EXPECT_TRUE(b2 == b1.expand(qvec3f(100, 10, 10)));
 
     const aabb3f b3(qvec3f(0, 1, 1), qvec3f(10, 10, 10));
-    EXPECT_EQ(b3, b1.expand(qvec3f(0, 1, 1)));
+    EXPECT_TRUE(b3 == b1.expand(qvec3f(0, 1, 1)));
 }
 
 TEST(mathlib, aabb_disjoint)
@@ -771,23 +771,23 @@ TEST(mathlib, aabb_disjoint)
 
     EXPECT_TRUE(b1.disjoint(yes1));
     EXPECT_TRUE(b1.disjoint(yes2));
-    EXPECT_FALSE(b1.disjoint(no1));
-    EXPECT_FALSE(b1.disjoint(no2));
-    EXPECT_FALSE(b1.disjoint(no3));
+    EXPECT_TRUE(!b1.disjoint(no1));
+    EXPECT_TRUE(!b1.disjoint(no2));
+    EXPECT_TRUE(!b1.disjoint(no3));
 
-    EXPECT_FALSE(b1.intersectWith(yes1));
-    EXPECT_FALSE(b1.intersectWith(yes2));
+    EXPECT_TRUE(!b1.intersectWith(yes1));
+    EXPECT_TRUE(!b1.intersectWith(yes2));
 
     // these intersections are single points
-    EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(1, 1, 1), qvec3f(1, 1, 1))), b1.intersectWith(no1));
-    EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(10, 10, 10), qvec3f(10, 10, 10))), b1.intersectWith(no2));
+    EXPECT_TRUE(aabb3f::intersection_t(aabb3f(qvec3f(1, 1, 1), qvec3f(1, 1, 1))) == b1.intersectWith(no1));
+    EXPECT_TRUE(aabb3f::intersection_t(aabb3f(qvec3f(10, 10, 10), qvec3f(10, 10, 10))) == b1.intersectWith(no2));
 
     // an intersection with a volume
-    EXPECT_EQ(aabb3f::intersection_t(aabb3f(qvec3f(5, 5, 5), qvec3f(10, 6, 6))), b1.intersectWith(no3));
+    EXPECT_TRUE(aabb3f::intersection_t(aabb3f(qvec3f(5, 5, 5), qvec3f(10, 6, 6))) == b1.intersectWith(no3));
 
     EXPECT_TRUE(b1.disjoint_or_touching(aabb3f(qvec3f(10, 1, 1), qvec3f(20, 10, 10))));
     EXPECT_TRUE(b1.disjoint_or_touching(aabb3f(qvec3f(11, 1, 1), qvec3f(20, 10, 10))));
-    EXPECT_FALSE(b1.disjoint_or_touching(aabb3f(qvec3f(9.99, 1, 1), qvec3f(20, 10, 10))));  
+    EXPECT_TRUE(!b1.disjoint_or_touching(aabb3f(qvec3f(9.99, 1, 1), qvec3f(20, 10, 10))));
 }
 
 TEST(mathlib, aabb_contains)
@@ -802,8 +802,8 @@ TEST(mathlib, aabb_contains)
 
     EXPECT_TRUE(b1.contains(yes1));
     EXPECT_TRUE(b1.contains(yes2));
-    EXPECT_FALSE(b1.contains(no1));
-    EXPECT_FALSE(b1.contains(no2));
+    EXPECT_TRUE(!b1.contains(no1));
+    EXPECT_TRUE(!b1.contains(no2));
 }
 
 TEST(mathlib, aabb_containsPoint)
@@ -821,9 +821,9 @@ TEST(mathlib, aabb_containsPoint)
     EXPECT_TRUE(b1.containsPoint(yes1));
     EXPECT_TRUE(b1.containsPoint(yes2));
     EXPECT_TRUE(b1.containsPoint(yes3));
-    EXPECT_FALSE(b1.containsPoint(no1));
-    EXPECT_FALSE(b1.containsPoint(no2));
-    EXPECT_FALSE(b1.containsPoint(no3));
+    EXPECT_TRUE(!b1.containsPoint(no1));
+    EXPECT_TRUE(!b1.containsPoint(no2));
+    EXPECT_TRUE(!b1.containsPoint(no3));
 }
 
 TEST(mathlib, aabb_create_invalid)
@@ -831,8 +831,8 @@ TEST(mathlib, aabb_create_invalid)
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(-1, -1, -1));
     const aabb3f fixed(qvec3f(1, 1, 1), qvec3f(1, 1, 1));
 
-    EXPECT_EQ(fixed, b1);
-    EXPECT_EQ(qvec3f(0, 0, 0), b1.size());
+    EXPECT_TRUE(fixed == b1);
+    EXPECT_TRUE(qvec3f(0, 0, 0) == b1.size());
 }
 
 TEST(qvec, matrix2x2inv)
@@ -846,7 +846,7 @@ TEST(qvec, matrix2x2inv)
             randMat.at(i, j) = dis(engine);
 
     qmat2x2f randInv = qv::inverse(randMat);
-    ASSERT_FALSE(std::isnan(randInv.at(0, 0)));
+    ASSERT_TRUE(!std::isnan(randInv.at(0, 0)));
 
     qmat2x2f prod = randMat * randInv;
     for (int i = 0; i < 2; i++) {
@@ -872,7 +872,7 @@ TEST(qvec, matrix4x4inv)
             randMat.at(i, j) = dis(engine);
 
     qmat4x4f randInv = qv::inverse(randMat);
-    ASSERT_FALSE(std::isnan(randInv.at(0, 0)));
+    ASSERT_TRUE(!std::isnan(randInv.at(0, 0)));
 
     qmat4x4f prod = randMat * randInv;
     for (int i = 0; i < 4; i++) {
@@ -890,51 +890,51 @@ TEST(qvec, matrix4x4inv)
 TEST(trace, clamp_texcoord_small)
 {
     // positive
-    EXPECT_EQ(0, clamp_texcoord(0.0f, 2));
-    EXPECT_EQ(0, clamp_texcoord(0.5f, 2));
-    EXPECT_EQ(1, clamp_texcoord(1.0f, 2));
-    EXPECT_EQ(1, clamp_texcoord(1.5f, 2));
-    EXPECT_EQ(0, clamp_texcoord(2.0f, 2));
-    EXPECT_EQ(0, clamp_texcoord(2.5f, 2));
+    EXPECT_TRUE(0 == clamp_texcoord(0.0f, 2));
+    EXPECT_TRUE(0 == clamp_texcoord(0.5f, 2));
+    EXPECT_TRUE(1 == clamp_texcoord(1.0f, 2));
+    EXPECT_TRUE(1 == clamp_texcoord(1.5f, 2));
+    EXPECT_TRUE(0 == clamp_texcoord(2.0f, 2));
+    EXPECT_TRUE(0 == clamp_texcoord(2.5f, 2));
 
     // negative
-    EXPECT_EQ(1, clamp_texcoord(-0.5f, 2));
-    EXPECT_EQ(1, clamp_texcoord(-1.0f, 2));
-    EXPECT_EQ(0, clamp_texcoord(-1.5f, 2));
-    EXPECT_EQ(0, clamp_texcoord(-2.0f, 2));
-    EXPECT_EQ(1, clamp_texcoord(-2.5f, 2));
+    EXPECT_TRUE(1 == clamp_texcoord(-0.5f, 2));
+    EXPECT_TRUE(1 == clamp_texcoord(-1.0f, 2));
+    EXPECT_TRUE(0 == clamp_texcoord(-1.5f, 2));
+    EXPECT_TRUE(0 == clamp_texcoord(-2.0f, 2));
+    EXPECT_TRUE(1 == clamp_texcoord(-2.5f, 2));
 }
 
 TEST(trace, clamp_texcoord)
 {
     // positive
-    EXPECT_EQ(0, clamp_texcoord(0.0f, 128));
-    EXPECT_EQ(64, clamp_texcoord(64.0f, 128));
-    EXPECT_EQ(64, clamp_texcoord(64.5f, 128));
-    EXPECT_EQ(127, clamp_texcoord(127.0f, 128));
-    EXPECT_EQ(0, clamp_texcoord(128.0f, 128));
-    EXPECT_EQ(1, clamp_texcoord(129.0f, 128));
+    EXPECT_TRUE(0 == clamp_texcoord(0.0f, 128));
+    EXPECT_TRUE(64 == clamp_texcoord(64.0f, 128));
+    EXPECT_TRUE(64 == clamp_texcoord(64.5f, 128));
+    EXPECT_TRUE(127 == clamp_texcoord(127.0f, 128));
+    EXPECT_TRUE(0 == clamp_texcoord(128.0f, 128));
+    EXPECT_TRUE(1 == clamp_texcoord(129.0f, 128));
 
     // negative
-    EXPECT_EQ(127, clamp_texcoord(-0.5f, 128));
-    EXPECT_EQ(127, clamp_texcoord(-1.0f, 128));
-    EXPECT_EQ(1, clamp_texcoord(-127.0f, 128));
-    EXPECT_EQ(0, clamp_texcoord(-127.5f, 128));
-    EXPECT_EQ(0, clamp_texcoord(-128.0f, 128));
-    EXPECT_EQ(127, clamp_texcoord(-129.0f, 128));
+    EXPECT_TRUE(127 == clamp_texcoord(-0.5f, 128));
+    EXPECT_TRUE(127 == clamp_texcoord(-1.0f, 128));
+    EXPECT_TRUE(1 == clamp_texcoord(-127.0f, 128));
+    EXPECT_TRUE(0 == clamp_texcoord(-127.5f, 128));
+    EXPECT_TRUE(0 == clamp_texcoord(-128.0f, 128));
+    EXPECT_TRUE(127 == clamp_texcoord(-129.0f, 128));
 }
 
 TEST(settings, delayDefault)
 {
     light_t light;
-    EXPECT_EQ(LF_LINEAR, light.formula.value());
+    EXPECT_TRUE(LF_LINEAR == light.formula.value());
 }
 
 TEST(settings, delayParseInt)
 {
     light_t light;
     EXPECT_TRUE(light.formula.parseString("2"));
-    EXPECT_EQ(LF_INVERSE2, light.formula.value());
+    EXPECT_TRUE(LF_INVERSE2 == light.formula.value());
 }
 
 TEST(settings, delayParseIntUnknown)
@@ -942,19 +942,19 @@ TEST(settings, delayParseIntUnknown)
     light_t light;
     EXPECT_TRUE(light.formula.parseString("500"));
     // not sure if we should be strict and reject parsing this?
-    EXPECT_EQ(500, light.formula.value());
+    EXPECT_TRUE(500 == light.formula.value());
 }
 
 TEST(settings, delayParseFloat)
 {
     light_t light;
     EXPECT_TRUE(light.formula.parseString("2.0"));
-    EXPECT_EQ(LF_INVERSE2, light.formula.value());
+    EXPECT_TRUE(LF_INVERSE2 == light.formula.value());
 }
 
 TEST(settings, delayParseString)
 {
     light_t light;
     EXPECT_TRUE(light.formula.parseString("inverse2"));
-    EXPECT_EQ(LF_INVERSE2, light.formula.value());
+    EXPECT_TRUE(LF_INVERSE2 == light.formula.value());
 }

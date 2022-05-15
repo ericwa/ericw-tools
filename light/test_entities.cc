@@ -13,9 +13,9 @@ TEST(entities, CheckEmptyValues)
 
     EXPECT_TRUE(EntDict_CheckNoEmptyValues(nullptr, good1));
     EXPECT_TRUE(EntDict_CheckNoEmptyValues(nullptr, good2));
-    EXPECT_FALSE(EntDict_CheckNoEmptyValues(nullptr, bad1));
-    EXPECT_FALSE(EntDict_CheckNoEmptyValues(nullptr, bad2));
-    EXPECT_FALSE(EntDict_CheckNoEmptyValues(nullptr, bad3));
+    EXPECT_TRUE(!EntDict_CheckNoEmptyValues(nullptr, bad1));
+    EXPECT_TRUE(!EntDict_CheckNoEmptyValues(nullptr, bad2));
+    EXPECT_TRUE(!EntDict_CheckNoEmptyValues(nullptr, bad3));
 }
 
 TEST(entities, CheckTargetKeysMatched)
@@ -27,8 +27,8 @@ TEST(entities, CheckTargetKeysMatched)
     EXPECT_TRUE(EntDict_CheckTargetKeysMatched(nullptr, edicts.at(0), edicts));
     EXPECT_TRUE(EntDict_CheckTargetKeysMatched(nullptr, edicts.at(1), edicts));
     EXPECT_TRUE(EntDict_CheckTargetKeysMatched(nullptr, edicts.at(2), edicts));
-    EXPECT_FALSE(EntDict_CheckTargetKeysMatched(nullptr, edicts.at(3), edicts));
-    EXPECT_FALSE(EntDict_CheckTargetKeysMatched(nullptr, edicts.at(4), edicts));
+    EXPECT_TRUE(!EntDict_CheckTargetKeysMatched(nullptr, edicts.at(3), edicts));
+    EXPECT_TRUE(!EntDict_CheckTargetKeysMatched(nullptr, edicts.at(4), edicts));
 }
 
 TEST(entities, CheckTargetnameKeyMatched)
@@ -39,5 +39,5 @@ TEST(entities, CheckTargetnameKeyMatched)
         {{"targetname", "unmatched"}}};
     EXPECT_TRUE(EntDict_CheckTargetnameKeyMatched(nullptr, edicts.at(0), edicts));
     EXPECT_TRUE(EntDict_CheckTargetnameKeyMatched(nullptr, edicts.at(1), edicts));
-    EXPECT_FALSE(EntDict_CheckTargetnameKeyMatched(nullptr, edicts.at(2), edicts));
+    EXPECT_TRUE(!EntDict_CheckTargetnameKeyMatched(nullptr, edicts.at(2), edicts));
 }
