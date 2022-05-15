@@ -178,7 +178,7 @@ static const texvecf &GetTexvecs(const char *map, const char *texname)
 }
 
 // https://github.com/ericwa/ericw-tools/issues/158
-TEST(qbsp, testTextureIssue)
+TEST_CASE("testTextureIssue", "[qbsp]")
 {
     const char *bufActual = R"(
     {
@@ -223,7 +223,7 @@ TEST(qbsp, testTextureIssue)
 #endif
 }
 
-TEST(qbsp, duplicatePlanes)
+TEST_CASE("duplicatePlanes", "[qbsp]")
 {
     // a brush from e1m4.map with 7 planes, only 6 unique.
     const char *mapWithDuplicatePlanes = R"(
@@ -255,7 +255,7 @@ TEST(qbsp, duplicatePlanes)
 /**
  * Test that this skip face gets auto-corrected.
  */
-TEST(qbsp, InvalidTextureProjection)
+TEST_CASE("InvalidTextureProjection", "[qbsp]")
 {
     const char *map = R"(
     // entity 0
@@ -285,7 +285,7 @@ TEST(qbsp, InvalidTextureProjection)
 /**
  * Same as above but the texture scales are 0
  */
-TEST(qbsp, InvalidTextureProjection2)
+TEST_CASE("InvalidTextureProjection2", "[qbsp]")
 {
     const char *map = R"(
     // entity 0
@@ -315,7 +315,7 @@ TEST(qbsp, InvalidTextureProjection2)
 /**
  * More realistic: *lava1 has tex vecs perpendicular to face
  */
-TEST(qbsp, InvalidTextureProjection3)
+TEST_CASE("InvalidTextureProjection3", "[qbsp]")
 {
     const char *map = R"(
     // entity 0
@@ -343,7 +343,7 @@ TEST(qbsp, InvalidTextureProjection3)
     CHECK(IsValidTextureProjection(qvec3f(face->plane.normal), texvecs.row(0), texvecs.row(1)));
 }
 
-TEST(mathlib, WindingArea)
+TEST_CASE("WindingArea", "[mathlib]")
 {
     winding_t w{5};
 
@@ -363,7 +363,7 @@ TEST(mathlib, WindingArea)
  * checks that options are reset across tests.
  * set two random options and check that they don't carry over.
  */
-TEST(testmaps_q1, options_reset1)
+TEST_CASE("options_reset1", "[testmaps_q1]")
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-transsky"});
 
@@ -371,7 +371,7 @@ TEST(testmaps_q1, options_reset1)
     CHECK(options.transsky.value());
 }
 
-TEST(testmaps_q1, options_reset2)
+TEST_CASE("options_reset2", "[testmaps_q1]")
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-forcegoodtree"});
         
@@ -382,7 +382,7 @@ TEST(testmaps_q1, options_reset2)
 /**
  * The brushes are touching but not intersecting, so ChopBrushes shouldn't change anything.
  */
-TEST(testmaps_q1, chop_no_change)
+TEST_CASE("chop_no_change", "[testmaps_q1]")
 {
     LoadTestmap("qbsp_chop_no_change.map");
 
@@ -390,7 +390,7 @@ TEST(testmaps_q1, chop_no_change)
 }
 
 
-TEST(testmaps_q1, simple_sealed)
+TEST_CASE("simple_sealed", "[testmaps_q1]")
 {
     mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
 
@@ -405,7 +405,7 @@ TEST(testmaps_q1, simple_sealed)
     REQUIRE(result.dfaces.size() == 6);
 }
 
-TEST(testmaps_q1, simple_sealed2)
+TEST_CASE("simple_sealed2", "[testmaps_q1]")
 {
     mbsp_t bsp = LoadTestmap("qbsp_simple_sealed2.map");
 
@@ -446,7 +446,7 @@ TEST(testmaps_q1, simple_sealed2)
 }
 
 
-TEST(testmaps_q1, simple_worldspawn_worldspawn)
+TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_worldspawn.map");
 
@@ -478,7 +478,7 @@ TEST(testmaps_q1, simple_worldspawn_worldspawn)
     REQUIRE(room_faces == 9);
 }
 
-TEST(testmaps_q1, simple_worldspawn_detail_wall)
+TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_wall.map");
 
@@ -493,7 +493,7 @@ TEST(testmaps_q1, simple_worldspawn_detail_wall)
     REQUIRE(bsp.dfaces.size() == 11);
 }
 
-TEST(testmaps_q1, simple_worldspawn_detail)
+TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail.map");
 
@@ -508,7 +508,7 @@ TEST(testmaps_q1, simple_worldspawn_detail)
     REQUIRE(bsp.dfaces.size() == 14);
 }
 
-TEST(testmaps_q1, simple_worldspawn_detail_illusionary)
+TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_illusionary.map");
 
@@ -531,7 +531,7 @@ TEST(testmaps_q1, simple_worldspawn_detail_illusionary)
     CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], illusionary_in_void)->contents);
 }
 
-TEST(testmaps_q1, simple_worldspawn_sky)
+TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_sky.map");
 
@@ -572,7 +572,7 @@ TEST(testmaps_q1, simple_worldspawn_sky)
     CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(   0,    0, -500))->contents);
 }
 
-TEST(testmaps_q1, water_detail_illusionary)
+TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_water_detail_illusionary.map");
 
@@ -592,7 +592,7 @@ TEST(testmaps_q1, water_detail_illusionary)
     CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0}));
 }
 
-TEST(testmaps_q1, noclipfaces)
+TEST_CASE("noclipfaces", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces.map");
 
@@ -610,7 +610,7 @@ TEST(testmaps_q1, noclipfaces)
 /**
  * Same as previous test, but the T shaped brush entity has _mirrorinside
  */
-TEST(testmaps_q1, noclipfaces_mirrorinside)
+TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces_mirrorinside.map");
 
@@ -625,7 +625,7 @@ TEST(testmaps_q1, noclipfaces_mirrorinside)
     }
 }
 
-TEST(testmaps_q1, detail_illusionary_intersecting)
+TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_illusionary_intersecting.map");
 
@@ -647,7 +647,7 @@ TEST(testmaps_q1, detail_illusionary_intersecting)
     CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -52, 116), qvec3d(0, -1, 0)).size());
 }
 
-TEST(testmaps_q1, detail_illusionary_noclipfaces_intersecting)
+TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_illusionary_noclipfaces_intersecting.map");
 
@@ -664,14 +664,14 @@ TEST(testmaps_q1, detail_illusionary_noclipfaces_intersecting)
     CHECK(1 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -52, 116), qvec3d(0, -1, 0)).size());
 }
 
-TEST(testmaps_q1, detail_doesnt_seal)
+TEST_CASE("detail_doesnt_seal", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_seal.map");
 
     REQUIRE(map.leakfile);
 }
 
-TEST(testmaps_q1, detail_doesnt_remove_world_nodes)
+TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_remove_world_nodes.map");
 
@@ -699,7 +699,7 @@ TEST(testmaps_q1, detail_doesnt_remove_world_nodes)
     }
 }
 
-TEST(testmaps_q1, merge)
+TEST_CASE("merge", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_merge.map");
 
@@ -709,7 +709,7 @@ TEST(testmaps_q1, merge)
     REQUIRE(6 == bsp.dfaces.size());
 }
 
-TEST(testmaps_q1, tjunc_many_sided_face)
+TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_tjunc_many_sided_face.map");
 
@@ -734,7 +734,7 @@ TEST(testmaps_q1, tjunc_many_sided_face)
  * Because it comes second, the sbutt2 brush should "win" in clipping against the floor,
  * in both a worldspawn test case, as well as a func_wall.
  */
-TEST(testmaps_q1, brush_clipping_order)
+TEST_CASE("brush_clipping_order", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_brush_clipping_order.map");
 
@@ -763,7 +763,7 @@ TEST(testmaps_q1, brush_clipping_order)
 /**
  * Box room with a rotating fan (just a cube). Works in a mod with hiprotate - AD, Quoth, etc.
  */
-TEST(testmaps_q1, origin)
+TEST_CASE("origin", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_origin.map");
 
@@ -787,7 +787,7 @@ TEST(testmaps_q1, origin)
     REQUIRE("216 -216 340" == it->get("origin"));
 }
 
-TEST(testmaps_q1, simple)
+TEST_CASE("simple", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_simple.map");
 
@@ -798,7 +798,7 @@ TEST(testmaps_q1, simple)
 /**
  * Lots of features in one map, more for testing in game than automated testing
  */
-TEST(testmaps_q1, features)
+TEST_CASE("features", "[testmaps_q1]")
 {
     const mbsp_t bsp = LoadTestmap("qbspfeatures.map");
 
@@ -807,7 +807,7 @@ TEST(testmaps_q1, features)
 
 // q2 testmaps
 
-TEST(testmaps_q2, detail) {
+TEST_CASE("detail", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_detail.map", {"-q2bsp"});
 
     CHECK_FALSE(map.leakfile);
@@ -884,7 +884,7 @@ TEST(testmaps_q2, detail) {
     CHECK(empty_leaf_side_room->contents != detail_leaf->cluster);
 }
 
-TEST(testmaps_q2, playerclip)
+TEST_CASE("playerclip", "[testmaps_q2]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_playerclip.map", {"-q2bsp"});
 
@@ -913,7 +913,7 @@ TEST(testmaps_q2, playerclip)
     CHECK(Q2_CONTENTS_PLAYERCLIP == Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
 }
 
-TEST(testmaps_q2, areaportal)
+TEST_CASE("areaportal", "[testmaps_q2]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_areaportal.map", {"-q2bsp"});
 
@@ -970,7 +970,7 @@ TEST(testmaps_q2, areaportal)
     REQUIRE("1" == it->get("style"));
 }
 
-TEST(testmaps_q2, nodraw_light) {
+TEST_CASE("nodraw_light", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_light.map", {"-q2bsp", "-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -984,7 +984,7 @@ TEST(testmaps_q2, nodraw_light) {
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST(testmaps_q2, nodraw_detail_light) {
+TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_detail_light.map", {"-q2bsp", "-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -998,7 +998,7 @@ TEST(testmaps_q2, nodraw_detail_light) {
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST(testmaps_q2, base1)
+TEST_CASE("base1", "[testmaps_q2]")
 {
 #if 0
     const mbsp_t bsp = LoadTestmap("base1.map", {"-q2bsp"});
@@ -1031,7 +1031,7 @@ TEST(testmaps_q2, base1)
 #endif
 }
 
-TEST(testmaps_q2, base1leak)
+TEST_CASE("base1leak", "[testmaps_q2]")
 {
     const mbsp_t bsp = LoadTestmap("base1leak.map", {"-q2bsp"});
 
@@ -1050,7 +1050,7 @@ TEST(testmaps_q2, base1leak)
     CHECK(3 == plus_y_wall_leaf->numleafbrushes);
 }
 
-TEST(benchmark, winding) {
+TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;
 
     bench.run("std::vector<double> reserve(3*4*6)", [&] {

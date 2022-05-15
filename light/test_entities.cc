@@ -3,7 +3,7 @@
 #include <light/entities.hh>
 #include <vector>
 
-TEST(entities, CheckEmptyValues)
+TEST_CASE("CheckEmptyValues", "[entities]")
 {
     entdict_t good1{};
     entdict_t good2{{"foo", "bar"}};
@@ -18,7 +18,7 @@ TEST(entities, CheckEmptyValues)
     CHECK_FALSE(EntDict_CheckNoEmptyValues(nullptr, bad3));
 }
 
-TEST(entities, CheckTargetKeysMatched)
+TEST_CASE("CheckTargetKeysMatched", "[entities]")
 {
     std::vector<entdict_t> edicts{// good
         {{"target", "matched"}}, {{"target2", "matched"}}, {{"targetname", "matched"}},
@@ -31,7 +31,7 @@ TEST(entities, CheckTargetKeysMatched)
     CHECK_FALSE(EntDict_CheckTargetKeysMatched(nullptr, edicts.at(4), edicts));
 }
 
-TEST(entities, CheckTargetnameKeyMatched)
+TEST_CASE("CheckTargetnameKeyMatched", "[entities]")
 {
     std::vector<entdict_t> edicts{// good
         {{"some_mod_specific_target_key", "matched"}}, {{"targetname", "matched"}},

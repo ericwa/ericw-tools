@@ -6,7 +6,7 @@
 #include <type_traits>
 
 // test booleans
-TEST(settings, booleanFlagImplicit)
+TEST_CASE("booleanFlagImplicit", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
@@ -16,7 +16,7 @@ TEST(settings, booleanFlagImplicit)
     REQUIRE(boolSetting.value() == true);
 }
 
-TEST(settings, booleanFlagExplicit)
+TEST_CASE("booleanFlagExplicit", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
@@ -26,7 +26,7 @@ TEST(settings, booleanFlagExplicit)
     REQUIRE(boolSetting.value() == true);
 }
 
-TEST(settings, booleanFlagStray)
+TEST_CASE("booleanFlagStray", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
@@ -37,7 +37,7 @@ TEST(settings, booleanFlagStray)
 }
 
 // test scalars
-TEST(settings, scalarSimple)
+TEST_CASE("scalarSimple", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
@@ -47,7 +47,7 @@ TEST(settings, scalarSimple)
     REQUIRE(scalarSetting.value() == 1.25);
 }
 
-TEST(settings, scalarNegative)
+TEST_CASE("scalarNegative", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
@@ -57,7 +57,7 @@ TEST(settings, scalarNegative)
     REQUIRE(scalarSetting.value() == -0.25);
 }
 
-TEST(settings, scalarInfinity)
+TEST_CASE("scalarInfinity", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0, 0.0, std::numeric_limits<vec_t>::infinity());
@@ -67,7 +67,7 @@ TEST(settings, scalarInfinity)
     REQUIRE(scalarSetting.value() == std::numeric_limits<vec_t>::infinity());
 }
 
-TEST(settings, scalarNAN)
+TEST_CASE("scalarNAN", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
@@ -77,7 +77,7 @@ TEST(settings, scalarNAN)
     REQUIRE(std::isnan(scalarSetting.value()));
 }
 
-TEST(settings, scalarScientific)
+TEST_CASE("scalarScientific", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
@@ -87,7 +87,7 @@ TEST(settings, scalarScientific)
     REQUIRE(scalarSetting.value() == 1.54334E-34);
 }
 
-TEST(settings, scalarEOF)
+TEST_CASE("scalarEOF", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
@@ -96,7 +96,7 @@ TEST(settings, scalarEOF)
     REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
-TEST(settings, scalarStray)
+TEST_CASE("scalarStray", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
@@ -106,7 +106,7 @@ TEST(settings, scalarStray)
 }
 
 // test scalars
-TEST(settings, vec3Simple)
+TEST_CASE("vec3Simple", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
@@ -116,7 +116,7 @@ TEST(settings, vec3Simple)
     REQUIRE(scalarSetting.value() == (qvec3d{1, 2, 3}));
 }
 
-TEST(settings, vec3Complex)
+TEST_CASE("vec3Complex", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
@@ -128,7 +128,7 @@ TEST(settings, vec3Complex)
     REQUIRE(std::isnan(scalarSetting.value()[2]));
 }
 
-TEST(settings, vec3Incomplete)
+TEST_CASE("vec3Incomplete", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
@@ -137,7 +137,7 @@ TEST(settings, vec3Incomplete)
     REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
-TEST(settings, vec3Stray)
+TEST_CASE("vec3Stray", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
@@ -147,7 +147,7 @@ TEST(settings, vec3Stray)
 }
 
 // test string formatting
-TEST(settings, stringSimple)
+TEST_CASE("stringSimple", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
@@ -157,7 +157,7 @@ TEST(settings, stringSimple)
     REQUIRE(stringSetting.value() == arguments[2]);
 }
 
-TEST(settings, stringSpan)
+TEST_CASE("stringSpan", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
@@ -167,7 +167,7 @@ TEST(settings, stringSpan)
     REQUIRE(stringSetting.value() == "i am a string");
 }
 
-TEST(settings, stringSpanWithBlockingOption)
+TEST_CASE("stringSpanWithBlockingOption", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
@@ -180,7 +180,7 @@ TEST(settings, stringSpanWithBlockingOption)
 }
 
 // test remainder
-TEST(settings, remainder)
+TEST_CASE("remainder", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
@@ -194,7 +194,7 @@ TEST(settings, remainder)
 }
 
 // test double-hyphens
-TEST(settings, doubleHyphen)
+TEST_CASE("doubleHyphen", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
@@ -207,7 +207,7 @@ TEST(settings, doubleHyphen)
 }
 
 // test groups; ensure that performance is the first group
-TEST(settings, grouping)
+TEST_CASE("grouping", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_group performance{"Performance", -1000};
@@ -222,7 +222,7 @@ TEST(settings, grouping)
     // settings.printHelp();
 }
 
-TEST(settings, copy)
+TEST_CASE("copy", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scaleSetting(&settings, "scale", 1.5);
@@ -251,7 +251,7 @@ TEST(settings, copy)
     CHECK(2.5 == waitSetting.value());
 }
 
-TEST(settings, copyMangle)
+TEST_CASE("copyMangle", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_mangle sunvec{&settings, {"sunlight_mangle"}, 0.0, 0.0, 0.0};
@@ -270,7 +270,7 @@ TEST(settings, copyMangle)
     CHECK(Approx(-1).epsilon(1e-6) == sunvec2.value()[2]);
 }
 
-TEST(settings, copyContainer)
+TEST_CASE("copyContainer", "[settings]")
 {
     settings::setting_container settings1;
     settings::setting_bool boolSetting1(&settings1, "boolSetting", false);
@@ -294,7 +294,7 @@ TEST(settings, copyContainer)
 
 const settings::setting_group test_group{"Test"};
 
-TEST(settings, copyContainerSubclass)
+TEST_CASE("copyContainerSubclass", "[settings]")
 {
     struct my_settings : public settings::setting_container {
         settings::setting_bool boolSetting {this, "boolSetting", false, &test_group};
@@ -326,7 +326,7 @@ TEST(settings, copyContainerSubclass)
     CHECK(settings::source::DEFAULT == s2.stringSetting.getSource());
 }
 
-TEST(settings, resetBool)
+TEST_CASE("resetBool", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting1(&settings, "boolSetting", false);
@@ -340,7 +340,7 @@ TEST(settings, resetBool)
     CHECK_FALSE(boolSetting1.value());
 }
 
-TEST(settings, resetScalar)
+TEST_CASE("resetScalar", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting1(&settings, "scalarSetting", 12.34);
@@ -354,7 +354,7 @@ TEST(settings, resetScalar)
     CHECK(12.34 == scalarSetting1.value());
 }
 
-TEST(settings, resetContainer)
+TEST_CASE("resetContainer", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 vec3Setting1(&settings, "vec", 3, 4, 5);

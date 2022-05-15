@@ -4,7 +4,7 @@
 #include <string>
 #include <common/cmdlib.hh>
 
-TEST(common, StripFilename)
+TEST_CASE("StripFilename", "[common]")
 {
     REQUIRE("/home/foo" == fs::path("/home/foo/bar.txt").parent_path());
     REQUIRE("" == fs::path("bar.txt").parent_path());
