@@ -723,7 +723,9 @@ class setting_container
     std::map<const setting_group *, std::set<setting_base *>, less> _groupedSettings;
 
 public:
-    std::string programName, remainderName = "filename", usage;
+    std::string programName;
+    std::string remainderName = "filename";
+    std::string programDescription;
 
     inline setting_container() {}
 

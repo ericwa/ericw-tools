@@ -235,7 +235,7 @@ public:
     void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
-        usage = "vis calculates the visibility (and hearability) sets for \n.BSP files.\n\n";
+        programDescription = "vis calculates the visibility (and hearability) sets for \n.BSP files.\n\n";
         remainderName = "mapname.bsp";
     }
     void initialize(int argc, const char **argv) override;

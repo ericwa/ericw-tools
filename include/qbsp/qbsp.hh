@@ -228,7 +228,7 @@ public:
     void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
-        usage = "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
+        programDescription = "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
         remainderName = "sourcefile.map [destfile.bsp]";
     }
     void initialize(int argc, const char **argv) override;

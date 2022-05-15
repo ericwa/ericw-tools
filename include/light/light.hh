@@ -500,7 +500,7 @@ public:
     void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
-        usage = "light compiles lightmap data for BSPs\n\n";
+        programDescription = "light compiles lightmap data for BSPs\n\n";
         remainderName = "mapname.bsp";
     }
 
