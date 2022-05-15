@@ -46,6 +46,14 @@ public:
     const char *what() const noexcept override { return _what.c_str(); }
 };
 
+// thrown after displaying `--help` text.
+// the command-line tools should catch this and exit with status 0.
+// tests should let the test framework catch this and fail.
+// (previously, the `--help` code called exit(0); directly which caused
+// spurious test successes.)
+struct quit_after_help_exception : public std::exception
+{};
+
 enum class source
 {
     DEFAULT = 0,
@@ -722,7 +730,7 @@ public:
 
     inline auto grouped() const { return _groupedSettings; }
 
-    [[noreturn]] void printHelp();
+    void printHelp();
     void printSummary();
 
     /**
