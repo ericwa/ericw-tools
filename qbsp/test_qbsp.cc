@@ -9,12 +9,16 @@
 #include <common/qvec.hh>
 #include <testmaps.hh>
 
+#include <subprocess.h>
 #include <nanobench.h>
 
 #include <algorithm>
 #include <cstring>
 #include <set>
+#include <stdexcept>
 #include <map>
+
+using namespace testing;
 
 // FIXME: Clear global data (planes, etc) between each test
 
@@ -43,6 +47,53 @@ static mapentity_t LoadMap(const char *map)
     CalculateWorldExtent();
 
     return worldspawn;
+}
+
+#include <common/bspinfo.hh>
+
+static mbsp_t LoadTestmapRef(const std::filesystem::path &name)
+{
+    const char *destdir = test_quake2_maps_dir;
+    if (strlen(destdir) == 0) {
+        return {};
+    }
+
+    auto testmap_path = std::filesystem::path(testmaps_dir) / name;
+    auto map_in_game_path = fs::path(destdir) / name;
+    fs::copy(testmap_path, map_in_game_path, fs::copy_options::overwrite_existing);
+
+    std::string map_string = map_in_game_path.generic_string();
+
+    const char *command_line[] = {R"(C:\Users\Eric\Documents\q2tools-220\x64\Debug\4bsp.exe)",
+        map_string.c_str(),
+        NULL};
+
+    struct subprocess_s subprocess;
+    int result = subprocess_create(command_line, 0, &subprocess);
+    if (0 != result) {
+        throw std::runtime_error("error launching process");
+    }
+
+    int retcode;
+    if (0 != subprocess_join(&subprocess, &retcode)) {
+        throw std::runtime_error("error joining");
+    }
+
+    // re-open the .bsp and return it
+    fs::path bsp_path = map_in_game_path;
+    bsp_path.replace_extension("bsp");
+
+    bspdata_t bspdata;
+    LoadBSPFile(bsp_path, &bspdata);
+
+    bspdata.version->game->init_filesystem(bsp_path, options);
+
+    ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    // write to .json for inspection
+    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(bsp_path).replace_extension(".bsp.json"));
+
+    return std::get<mbsp_t>(bspdata.bsp);
 }
 
 static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
@@ -88,6 +139,9 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     bspdata.version->game->init_filesystem(options.bsp_path, options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    // write to .json for inspection
+    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(options.bsp_path).replace_extension(".bsp.json"));
 
     return std::get<mbsp_t>(bspdata.bsp);
 }
@@ -492,15 +546,26 @@ TEST(testmaps_q1, simple_worldspawn_sky)
     EXPECT_EQ(5, textureToFace.at("orangestuff8").size());
 
     // leaf/node counts
-    EXPECT_EQ(6, bsp.dnodes.size());
+    // - we'd get 7 nodes if it's cut like a cube (solid outside), with 1 additional cut inside to divide sky / empty
+    // - we'd get 11 if it's cut as the sky plane (1), then two open cubes (5 nodes each)
+    // - can get in between values if it does some vertical cuts, then the sky plane, then other vertical cuts
+    //
+    // the 7 solution is better but the BSP heuristics won't help reach that one in this trivial test map
+    EXPECT_THAT(bsp.dnodes.size(), AllOf(Ge(7), Le(11)));
     EXPECT_EQ(3, bsp.dleafs.size()); // shared solid leaf + empty + sky
 
     // check contents
     const qvec3d player_pos{-88, -64, 120};
+    const double inside_sky_z = 232;
 
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos)->contents);
 
-    EXPECT_EQ(CONTENTS_SKY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0,0,500))->contents);
+    // way above map is solid - sky should not fill outwards
+    // (otherwise, if you had sky with a floor further up above it, it's not clear where the leafs would be divided, or
+    // if the floor contents would turn to sky, etc.)
+    EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0,0,500))->contents);
+
+    EXPECT_EQ(CONTENTS_SKY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d(player_pos[0], player_pos[1], inside_sky_z))->contents);
 
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d( 500,    0,    0))->contents);
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(-500,    0,    0))->contents);
@@ -752,30 +817,31 @@ TEST(testmaps_q2, detail) {
 
     // stats
     EXPECT_EQ(1, bsp.dmodels.size());
+    // Q2 reserves leaf 0 as an invalid leaf
+
     // leafs:
-    //  6 solid leafs outside the room
+    //  6 solid leafs outside the room (* can be more depending on when the "divider" is cut)
     //  1 empty leaf filling the room above the divider
     //  2 empty leafs + 1 solid leaf for divider
     //  1 detail leaf for button
     //  4 empty leafs around + 1 on top of button 
-    // total: 16
-    // Q2 reserves leaf 0 as an invalid leaf, so dleafs size is 17
-    EXPECT_EQ(17, bsp.dleafs.size());
 
     std::map<int32_t, int> counts_by_contents;
     for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
         ++counts_by_contents[bsp.dleafs[i].contents];
     }
+    EXPECT_EQ(3, counts_by_contents.size()); // number of types
 
-    EXPECT_EQ((std::map<int32_t, int>{{Q2_CONTENTS_SOLID, 7}, {Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL, 1}, {0, 8}}),
-        counts_by_contents);
+
+    EXPECT_EQ(1, counts_by_contents.at(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL));
+    EXPECT_EQ(8, counts_by_contents.at(0)); // empty leafs
+    EXPECT_THAT(counts_by_contents.at(Q2_CONTENTS_SOLID), AllOf(Ge(7), Le(9)));
 
     // clusters:
-    //  6 solid leafs outside the room
-    //  1 empty leaf filling the room above the divider
-    //  2 empty leafs + 1 solid leaf for divider
+    //  1 empty cluster filling the room above the divider
+    //  2 empty clusters created by divider
     //  1 cluster for the part of the room with the button
-    // total: 10
+
     std::set<int> clusters;
     // first add the empty leafs
     for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
@@ -906,6 +972,34 @@ TEST(testmaps_q2, areaportal)
     ASSERT_EQ("1", it->get("style"));
 }
 
+TEST(testmaps_q2, nodraw_light) {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_light.map", {"-q2bsp", "-includeskip"});
+
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    const qvec3d topface_center {160, -148, 208};
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
+    ASSERT_NE(nullptr, topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    EXPECT_STREQ(texinfo->texture.data(), "e1u1/trigger");
+    EXPECT_EQ(texinfo->flags.native, Q2_SURF_LIGHT | Q2_SURF_NODRAW);
+}
+
+TEST(testmaps_q2, nodraw_detail_light) {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_detail_light.map", {"-q2bsp", "-includeskip"});
+
+    EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+
+    const qvec3d topface_center {160, -148, 208};
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
+    ASSERT_NE(nullptr, topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    EXPECT_STREQ(texinfo->texture.data(), "e1u1/trigger");
+    EXPECT_EQ(texinfo->flags.native, Q2_SURF_LIGHT | Q2_SURF_NODRAW);
+}
+
 TEST(testmaps_q2, base1)
 {
 #if 0
@@ -941,7 +1035,7 @@ TEST(testmaps_q2, base1)
 
 TEST(testmaps_q2, base1leak)
 {
-    const mbsp_t bsp = LoadTestmap("base1leak.map", {"-q2bsp", "-debugchop"});
+    const mbsp_t bsp = LoadTestmap("base1leak.map", {"-q2bsp"});
 
     EXPECT_FALSE(map.leakfile);
     EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);

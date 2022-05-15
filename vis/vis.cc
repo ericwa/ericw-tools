@@ -846,12 +846,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     }
 }
 
-/*
-  ===========
-  main
-  ===========
-*/
-int main(int argc, const char **argv)
+static int vis_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
     const bspversion_t *loadversion;
@@ -909,8 +904,17 @@ int main(int argc, const char **argv)
 
     endtime = I_FloatTime();
     logging::print("{:.2} elapsed\n", (endtime - starttime));
-    
+
     logging::close();
 
     return 0;
+}
+
+int main(int argc, const char **argv)
+{
+    try {
+        return vis_main(argc, argv);
+    } catch (const settings::quit_after_help_exception&) {
+        return 0;
+    }
 }

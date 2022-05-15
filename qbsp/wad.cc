@@ -137,7 +137,7 @@ static void WADList_OpenWad(const fs::path &fpath, bool external)
             logging::print("Opened WAD: {}\n", fpath);
 
         if (WAD_LoadInfo(wad, external)) {
-            wadlist.emplace_front(std::move(wad));
+            map.wadlist.emplace_front(std::move(wad));
             return;
         }
 
@@ -181,7 +181,7 @@ void WADList_Init(const char *wadstring)
 
 static const lumpinfo_t *WADList_FindTexture(const std::string &name)
 {
-    for (auto &wad : wadlist) {
+    for (auto &wad : map.wadlist) {
         auto it = wad.lumps.find(name);
 
         if (it == wad.lumps.end()) {
@@ -269,7 +269,7 @@ static void WADList_LoadTextures()
         if (map.bsp.dtex.textures[i].data[0])
             continue;
 
-        for (auto &wad : wadlist) {
+        for (auto &wad : map.wadlist) {
             if (WAD_LoadLump(wad, map.miptexTextureName(i).c_str(), map.bsp.dtex.textures[i]))
                 break;
         }
@@ -321,7 +321,7 @@ void WADList_Process()
 
 const texture_t *WADList_GetTexture(const char *name)
 {
-    for (auto &wad : wadlist) {
+    for (auto &wad : map.wadlist) {
         auto it = wad.textures.find(name);
 
         if (it == wad.textures.end()) {
@@ -333,5 +333,3 @@ const texture_t *WADList_GetTexture(const char *name)
 
     return nullptr;
 }
-
-std::list<wad_t> wadlist;

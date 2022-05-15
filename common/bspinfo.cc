@@ -17,6 +17,7 @@
     See file, 'COPYING', for details.
 */
 
+#include <common/bspinfo.hh>
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 
@@ -219,7 +220,7 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
     return str;
 }
 
-static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
+void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
 {
     json j = json::object();
 
@@ -318,6 +319,10 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs:
             node.push_back({"maxs", src_node.maxs});
             node.push_back({"firstface", src_node.firstface});
             node.push_back({"numfaces", src_node.numfaces});
+
+            // human-readable plane
+            auto& plane = bsp.dplanes.at(src_node.planenum);
+            node.push_back({"plane", json::array({plane.normal[0], plane.normal[1], plane.normal[2], plane.dist})});
         }
     }
 
@@ -469,79 +474,4 @@ static void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs:
     }
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
-}
-
-#include "common/polylib.hh"
-#include "common/bsputils.hh"
-
-static void PrintBSPTextureUsage(const mbsp_t &bsp)
-{
-    std::unordered_map<std::string, vec_t> areas;
-
-    for (auto &face : bsp.dfaces) {
-        const char *name = Face_TextureName(&bsp, &face);
-
-        if (!name || !*name) {
-            continue;
-        }
-
-        auto points = GLM_FacePoints(&bsp, &face);
-        polylib::winding_t w(points.begin(), points.end());
-        vec_t area = w.area();
-
-        areas[name] += area;
-    }
-
-    std::vector<std::tuple<std::string, vec_t>> areasVec;
-
-    for (auto &area : areas) {
-        areasVec.push_back(std::make_tuple(area.first, area.second));
-    }
-
-    std::sort(areasVec.begin(), areasVec.end(), [](auto &l, auto &r) { return std::get<1>(r) < std::get<1>(l); });
-
-    printf("\n");
-
-    for (auto &area : areasVec) {
-        fmt::print("{},{:.0f}\n", std::get<0>(area), std::get<1>(area));
-    }
-}
-
-// TODO
-settings::common_settings options;
-
-int main(int argc, char **argv)
-{
-    printf("---- bspinfo / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
-    if (argc == 1) {
-        printf("usage: bspinfo bspfile [bspfiles]\n");
-        exit(1);
-    }
-
-    for (int32_t i = 1; i < argc; i++) {
-        printf("---------------------\n");
-        fs::path source = DefaultExtension(argv[i], ".bsp");
-        fmt::print("{}\n", source);
-
-        bspdata_t bsp;
-        LoadBSPFile(source, &bsp);
-
-        bsp.version->game->init_filesystem(source, options);
-
-        PrintBSPFileSizes(&bsp);
-
-        // WriteBSPFile(fs::path(source).replace_extension("bsp.rewrite"), &bsp);
-
-        ConvertBSPFormat(&bsp, &bspver_generic);
-
-        serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), fs::path(source).replace_extension("bsp.json"));
-
-        PrintBSPTextureUsage(std::get<mbsp_t>(bsp.bsp));
-
-        printf("---------------------\n");
-
-        fs::clear();
-    }
-
-    return 0;
 }

@@ -66,6 +66,3 @@ void WADList_Init(const char *wadstring);
 void WADList_Process();
 const texture_t *WADList_GetTexture(const char *name);
 // for getting a texture width/height
-
-// FIXME: don't like global state like this :(
-extern std::list<wad_t> wadlist;
