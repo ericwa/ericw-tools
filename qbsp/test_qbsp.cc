@@ -960,7 +960,7 @@ TEST(testmaps_q2, base1)
 
 TEST(testmaps_q2, base1leak)
 {
-    const mbsp_t bsp = LoadTestmap("base1leak.map", {"-q2bsp", "-debugchop"});
+    const mbsp_t bsp = LoadTestmap("base1leak.map", {"-q2bsp"});
 
     EXPECT_FALSE(map.leakfile);
     EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
