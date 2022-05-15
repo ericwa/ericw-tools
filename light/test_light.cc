@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include <Catch2/catch.hpp>
 
 #include <light/light.hh>
 #include <light/entities.hh>

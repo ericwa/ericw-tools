@@ -1,5 +1,4 @@
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include <Catch2/catch.hpp>
 
 #include <qbsp/brush.hh>
 #include <qbsp/qbsp.hh>
@@ -17,8 +16,6 @@
 #include <set>
 #include <stdexcept>
 #include <map>
-
-using namespace testing;
 
 // FIXME: Clear global data (planes, etc) between each test
 

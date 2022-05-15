@@ -1,3 +1,3 @@
-#include "gtest/gtest.h"
+#include <Catch2/catch.hpp>
 
 #include <light/ltface.hh>

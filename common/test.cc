@@ -1,4 +1,6 @@
-#include "gtest/gtest.h"
+#define CATCH_CONFIG_MAIN // request a main()
+#include <Catch2/catch.hpp>
+
 #include "common/settings.hh"
 
 #include <type_traits>
@@ -367,10 +369,4 @@ TEST(settings, resetContainer)
 
     EXPECT_TRUE(settings::source::DEFAULT == stringSetting1.getSource());
     EXPECT_TRUE("abc" == stringSetting1.value());
-}
-
-int main(int argc, char **argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }
