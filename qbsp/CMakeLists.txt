@@ -55,6 +55,5 @@ target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tb
 add_custom_command(TARGET testqbsp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testqbsp>")
 
-include(CTest)
 include(Catch)
 catch_discover_tests(testqbsp)

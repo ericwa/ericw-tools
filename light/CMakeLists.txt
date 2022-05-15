@@ -144,6 +144,5 @@ if (embree_FOUND)
 	add_definitions(-DHAVE_EMBREE)
 endif (embree_FOUND)
 
-include(CTest)
 include(Catch)
 catch_discover_tests(testlight)

@@ -46,6 +46,5 @@ add_custom_command(TARGET testcommon POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testcommon>")
 target_link_libraries (testcommon common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb Catch2::Catch2 fmt::fmt)
 
-include(CTest)
 include(Catch)
 catch_discover_tests(testcommon)
