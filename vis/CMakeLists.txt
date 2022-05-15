@@ -15,7 +15,7 @@ target_link_libraries(libvis PRIVATE common ${CMAKE_THREAD_LIBS_INIT} fmt::fmt)
 # FIXME: still needed?
 find_library(M_LIB m)
 if (M_LIB)
-    target_link_libraries (vis PRIVATE ${M_LIB})
+    target_link_libraries(libvis PRIVATE ${M_LIB})
 endif (M_LIB)
 
 add_executable(vis main.cc)
