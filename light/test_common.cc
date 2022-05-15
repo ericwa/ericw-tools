@@ -6,6 +6,6 @@
 
 TEST(common, StripFilename)
 {
-    ASSERT_TRUE("/home/foo" == fs::path("/home/foo/bar.txt").parent_path());
-    ASSERT_TRUE("" == fs::path("bar.txt").parent_path());
+    REQUIRE("/home/foo" == fs::path("/home/foo/bar.txt").parent_path());
+    REQUIRE("" == fs::path("bar.txt").parent_path());
 }
