@@ -1,4 +1,4 @@
-#include <Catch2/catch.hpp>
+#include <catch2/catch.hpp>
 
 #include <light/entities.hh>
 #include <vector>

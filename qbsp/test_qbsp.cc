@@ -1,4 +1,4 @@
-#include <Catch2/catch.hpp>
+#include <catch2/catch.hpp>
 
 #include <qbsp/brush.hh>
 #include <qbsp/qbsp.hh>
