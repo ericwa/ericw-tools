@@ -17,15 +17,9 @@
     See file, 'COPYING', for details.
 */
 
-#include <qbsp/qbsp.hh>
-#include <common/settings.hh>
-#include <common/fs.hh>
+#include "common/fs.hh"
 
-int main(int argc, const char **argv)
-{
-    try {
-        return qbsp_main(argc, argv);
-    } catch (const settings::quit_after_help_exception&) {
-        return 0;
-    }
-}
+struct bspdata_t;
+struct mbsp_t;
+
+void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name);

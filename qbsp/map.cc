@@ -147,14 +147,11 @@ static void AddAnimTex(const char *name)
     }
 }
 
-// Small cache for .wals
-static std::unordered_map<std::string, std::optional<img::texture_meta>> wal_cache;
-
 static std::optional<img::texture_meta> LoadWal(const char *name)
 {
-    auto it = wal_cache.find(name);
+    auto it = map.wal_cache.find(name);
 
-    if (it != wal_cache.end()) {
+    if (it != map.wal_cache.end()) {
         return it->second;
     }
 
@@ -163,11 +160,11 @@ static std::optional<img::texture_meta> LoadWal(const char *name)
 
     if (!wal) {
         logging::print("WARNING: Couldn't locate wal for {}\n", name);
-        wal_cache.emplace(name, std::nullopt);
+        map.wal_cache.emplace(name, std::nullopt);
         return std::nullopt;
     }
 
-    return wal_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
+    return map.wal_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
 }
 
 int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal)

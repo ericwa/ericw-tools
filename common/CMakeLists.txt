@@ -1,4 +1,5 @@
 add_library(common STATIC 
+    ${CMAKE_SOURCE_DIR}/common/bspinfo.cc
     ${CMAKE_SOURCE_DIR}/common/bspfile.cc
     ${CMAKE_SOURCE_DIR}/common/bsputils.cc
     ${CMAKE_SOURCE_DIR}/common/cmdlib.cc
@@ -14,6 +15,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/common/debugger.natvis
     ${CMAKE_SOURCE_DIR}/include/common/aabb.hh
     ${CMAKE_SOURCE_DIR}/include/common/bitflags.hh
+    ${CMAKE_SOURCE_DIR}/include/common/bspinfo.hh
     ${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
     ${CMAKE_SOURCE_DIR}/include/common/bsputils.hh
     ${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh

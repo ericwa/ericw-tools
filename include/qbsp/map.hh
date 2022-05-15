@@ -119,6 +119,9 @@ struct texdata_t
     int32_t animation_miptex = -1;
 };
 
+#include <common/imglib.hh>
+#include <qbsp/wad.hh>
+
 struct mapdata_t
 {
     /* Arrays of actual items */
@@ -147,11 +150,17 @@ struct mapdata_t
     std::vector<uint8_t> exported_bspxbrushes;
 
     // Q2 stuff
+    int32_t c_areas = 0;
     int32_t numareaportals = 0;
+    // running total
+    uint32_t brush_offset = 0;
+    // Small cache for .wals
+    std::unordered_map<std::string, std::optional<img::texture_meta>> wal_cache;
 
     // misc
     int start_spots = 0;
     bool wadlist_tried_loading = false;
+    std::list<wad_t> wadlist;
 
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }

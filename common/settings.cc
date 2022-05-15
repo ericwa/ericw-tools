@@ -65,7 +65,7 @@ void setting_container::copyFrom(const setting_container& other)
     }
 }
 
-[[noreturn]] void setting_container::printHelp()
+void setting_container::printHelp()
 {
     fmt::print("{} ({})usage: {} [-help/-h/-?] [-options] {}\n\n", usage, stringify(ERICWTOOLS_VERSION), programName, remainderName);
 
@@ -87,7 +87,7 @@ void setting_container::copyFrom(const setting_container& other)
         printf("\n");
     }
 
-    exit(0);
+    throw quit_after_help_exception();
 }
 
 void setting_container::printSummary()

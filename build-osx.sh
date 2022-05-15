@@ -53,15 +53,6 @@ otool -L ./bspinfo/bspinfo
 otool -L ./bsputil/bsputil
 
 # run tests
+./common/testcommon || exit 1
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
-
-# run regression tests
-cd ..
-export PATH="$(pwd)/$BUILD_DIR/qbsp:$PATH"
-export PATH="$(pwd)/$BUILD_DIR/vis:$PATH"
-export PATH="$(pwd)/$BUILD_DIR/light:$PATH"
-export PATH="$(pwd)/$BUILD_DIR/bspinfo:$PATH"
-export PATH="$(pwd)/$BUILD_DIR/bsputil:$PATH"
-cd testmaps
-./automatated_tests.sh || exit 1
