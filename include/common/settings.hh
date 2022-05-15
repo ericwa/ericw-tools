@@ -32,6 +32,7 @@
 #include <set>
 #include <limits>
 #include <optional>
+#include <unordered_set>
 
 namespace settings
 {
@@ -224,14 +225,14 @@ protected:
     T _default;
     T _value;
 
-    virtual void setValueInternal(T value, source newSource)
+    virtual void setValueInternal(const T &value, source newSource)
     {
         if (changeSource(newSource)) {
             _value = value;
         }
     }
 
-    inline void setValueFromParse(T value, bool locked)
+    inline void setValueFromParse(const T &value, bool locked)
     {
         if (locked) {
             setValueLocked(value);
@@ -249,9 +250,9 @@ public:
 
     const T &value() const { return _value; }
 
-    inline void setValueLocked(T f) { setValueInternal(f, source::COMMANDLINE); }
+    inline void setValueLocked(const T &f) { setValueInternal(f, source::COMMANDLINE); }
 
-    inline void setValue(T f) { setValueInternal(f, source::MAP); }
+    inline void setValue(const T &f) { setValueInternal(f, source::MAP); }
 
     inline bool copyFrom(const setting_base& other) override {
         if (auto *casted = dynamic_cast<const setting_value<T> *>(&other)) {
@@ -394,18 +395,16 @@ class setting_numeric : public setting_value<T>
 protected:
     T _min, _max;
 
-    void setValueInternal(T f, source newsource) override
+    void setValueInternal(const T &f, source newsource) override
     {
         if (f < _min) {
             logging::print("WARNING: '{}': {} is less than minimum value {}.\n", this->primaryName(), f, _min);
-            f = _min;
         }
         if (f > _max) {
             logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", this->primaryName(), f, _max);
-            f = _max;
         }
 
-        this->setting_value<T>::setValueInternal(f, newsource);
+        this->setting_value<T>::setValueInternal(std::clamp(f, _min, _max), newsource);
     }
 
 public:
@@ -544,7 +543,7 @@ public:
     bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
         if (auto value = parseString(parser)) {
-            setValueFromParse(std::move(*value), locked);
+            setValueFromParse(*value, locked);
             return true;
         }
 
@@ -556,12 +555,90 @@ public:
     std::string format() const override { return _format; }
 };
 
+class setting_set : public setting_base
+{
+private:
+    std::unordered_set<std::string> _values;
+    std::string _format;
+
+    virtual void addValueInternal(const std::string &value, source newSource)
+    {
+        if (changeSource(newSource)) {
+            _values.insert(value);
+        }
+    }
+
+    inline void addValueFromParse(const std::string &value, bool locked)
+    {
+        if (locked) {
+            setValueLocked(value);
+        } else {
+            setValue(value);
+        }
+    }
+
+public:
+    inline setting_set(setting_container *dictionary, const nameset &names,
+        const std::string_view &format = "\"str\" <multiple allowed>", const setting_group *group = nullptr, const char *description = "")
+        : setting_base(dictionary, names, group, description),
+        _format(format)
+    {
+    }
+
+    const std::unordered_set<std::string> &values() { return _values; }
+
+    inline void setValueLocked(const std::string &f) { addValueInternal(f, source::COMMANDLINE); }
+
+    inline void setValue(const std::string &f) { addValueInternal(f, source::MAP); }
+
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    {
+        if (auto value = parseString(parser)) {
+            addValueFromParse(*value, locked);
+            return true;
+        }
+
+        return false;
+    }
+
+    inline bool copyFrom(const setting_base& other) override {
+        if (auto *casted = dynamic_cast<const setting_set *>(&other)) {
+            _values = casted->_values;
+            _source = casted->_source;
+            return true;
+        }
+        return false;
+    }
+
+    inline void reset() override {
+        _values.clear();
+        _source = source::DEFAULT;
+    }
+
+    std::string format() const override { return _format; }
+
+    std::string stringValue() const override
+    {
+        std::string result;
+
+        for (auto &v : _values) {
+            if (!result.empty()) {
+                result += ' ';
+            }
+
+            result += '\"' + v + '\"';
+        }
+
+        return result;
+    }
+};
+
 class setting_vec3 : public setting_value<qvec3d>
 {
 protected:
     virtual qvec3d transformVec3Value(const qvec3d &val) const { return val; }
 
-    void setValueInternal(qvec3d f, source newsource) override
+    void setValueInternal(const qvec3d &f, source newsource) override
     {
         setting_value::setValueInternal(transformVec3Value(f), newsource);
     }

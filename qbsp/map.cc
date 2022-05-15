@@ -1326,6 +1326,8 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
         // Read extra Q2 params
         extinfo = ParseExtendedTX(parser);
+
+        mapface.raw_info = extinfo.info;
     } else if (brush->format == brushformat_t::NORMAL) {
         parser.parse_token(PARSE_SAMELINE);
         mapface.texname = parser.token;
@@ -1358,6 +1360,8 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             } else {
                 tx_type = TX_QUAKED;
             }
+
+            mapface.raw_info = extinfo.info;
         }
     } else {
         FError("Bad brush format");
@@ -1998,9 +2002,8 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, quakeed.scale[0]);
             fprintDoubleAndSpc(f, quakeed.scale[1]);
 
-            if (format == conversion_t::quake2) {
-                // TODO??
-                f << "0 0 0";
+            if (mapface.raw_info.has_value()) {
+                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " " << mapface.raw_info->value;
             }
 
             break;
@@ -2022,7 +2025,10 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, valve.scale[0]);
             fprintDoubleAndSpc(f, valve.scale[1]);
 
-            // TODO: Q2
+            if (mapface.raw_info.has_value()) {
+                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " " << mapface.raw_info->value;
+            }
+
             break;
         }
         case conversion_t::bp: {
@@ -2041,7 +2047,14 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, bp.at(1, 2));
 
             // N.B.: always print the Q2/Q3 flags
-            fmt::print(f, ") ) {} 0 0 0", mapface.texname);
+            fmt::print(f, ") ) {} ", mapface.texname);
+
+            if (mapface.raw_info.has_value()) {
+                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " " << mapface.raw_info->value;
+            } else {
+                f << "0 0 0";
+            }
+
             break;
         }
         default: FError("Internal error: unknown texcoord_style_t\n");
