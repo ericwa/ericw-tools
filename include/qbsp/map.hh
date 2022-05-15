@@ -148,6 +148,7 @@ struct mapdata_t
     std::vector<uint8_t> exported_bspxbrushes;
 
     // Q2 stuff
+    int32_t c_areas = 0;
     int32_t numareaportals = 0;
     // running total
     uint32_t brush_offset = 0;

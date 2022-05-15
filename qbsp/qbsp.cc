@@ -401,8 +401,6 @@ FLOOD AREAS
 =========================================================
 */
 
-int32_t c_areas;
-
 /*
 ===============
 Portal_EntityFlood
@@ -429,12 +427,23 @@ static bool Portal_EntityFlood(const portal_t *p, int32_t s)
 
 static void ApplyArea_r(node_t *node)
 {
-    node->area = c_areas;
+    node->area = map.c_areas;
 
     if (node->planenum != PLANENUM_LEAF) {
         ApplyArea_r(node->children[0]);
         ApplyArea_r(node->children[1]);
     }
+}
+
+static mapentity_t *AreanodeEntityForLeaf(node_t *node)
+{
+    for (auto *face : node->markfaces) {
+        const char *classname = ValueForKey(face->src_entity, "classname");
+        if (0 == Q_strcasecmp(classname, "func_areaportal")) {
+            return face->src_entity;
+        }
+    }
+    return nullptr;
 }
 
 /*
@@ -446,12 +455,13 @@ static void FloodAreas_r(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF && node->contents.native == Q2_CONTENTS_AREAPORTAL) {
         // grab the func_areanode entity
-        mapentity_t *entity = node->markfaces[0]->src_entity;
+        mapentity_t *entity = AreanodeEntityForLeaf(node);
+        Q_assert(entity != nullptr);
 
         // this node is part of an area portal;
         // if the current area has allready touched this
         // portal, we are done
-        if (entity->portalareas[0] == c_areas || entity->portalareas[1] == c_areas)
+        if (entity->portalareas[0] == map.c_areas || entity->portalareas[1] == map.c_areas)
             return;
 
         // note the current area as bounding the portal
@@ -463,9 +473,9 @@ static void FloodAreas_r(node_t *node)
         }
 
         if (entity->portalareas[0])
-            entity->portalareas[1] = c_areas;
+            entity->portalareas[1] = map.c_areas;
         else
-            entity->portalareas[0] = c_areas;
+            entity->portalareas[0] = map.c_areas;
 
         return;
     }
@@ -473,7 +483,7 @@ static void FloodAreas_r(node_t *node)
     if (node->area)
         return; // already got it
 
-    node->area = c_areas;
+    node->area = map.c_areas;
 
     // propagate area assignment to descendants if we're a cluster
     if (!(node->planenum == PLANENUM_LEAF)) {
@@ -515,7 +525,7 @@ static void FindAreas(node_t *node)
         if (leaf->contents.native == Q2_CONTENTS_AREAPORTAL)
             return;
 
-        c_areas++;
+        map.c_areas++;
         FloodAreas_r(leaf);
     }
 }
@@ -543,7 +553,7 @@ static void SetAreaPortalAreas_r(node_t *node)
         return; // already set
 
     // grab the func_areanode entity
-    mapentity_t *entity = node->markfaces[0]->src_entity;
+    mapentity_t *entity = AreanodeEntityForLeaf(node);
 
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
@@ -566,7 +576,7 @@ static void FloodAreas(mapentity_t *entity, node_t *headnode)
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
     FindAreas(headnode);
     SetAreaPortalAreas_r(headnode);
-    logging::print(logging::flag::STAT, "{:5} areas\n", c_areas);
+    logging::print(logging::flag::STAT, "{:5} areas\n", map.c_areas);
 }
 
 /*
@@ -582,7 +592,7 @@ static void EmitAreaPortals(node_t *headnode)
     map.bsp.dareaportals.emplace_back();
     map.bsp.dareas.emplace_back();
 
-    for (size_t i = 1; i <= c_areas; i++) {
+    for (size_t i = 1; i <= map.c_areas; i++) {
         darea_t &area = map.bsp.dareas.emplace_back();
         area.firstareaportal = map.bsp.dareaportals.size();
 
