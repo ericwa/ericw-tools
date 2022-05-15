@@ -226,6 +226,7 @@ public:
     setting_wadpathset wadpaths{this, {"wadpath", "xwadpath"}, &debugging_group,
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
+    setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
 
     void setParameters(int argc, const char **argv) override
     {

@@ -1,171 +1,173 @@
-#include "gtest/gtest.h"
+#define CATCH_CONFIG_MAIN // request a main()
+#include <catch2/catch.hpp>
+
 #include "common/settings.hh"
 
 #include <type_traits>
 
 // test booleans
-TEST(settings, booleanFlagImplicit)
+TEST_CASE("booleanFlagImplicit", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(boolSetting.value(), true);
+    REQUIRE(boolSetting.value() == true);
 }
 
-TEST(settings, booleanFlagExplicit)
+TEST_CASE("booleanFlagExplicit", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked", "1"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(boolSetting.value(), true);
+    REQUIRE(boolSetting.value() == true);
 }
 
-TEST(settings, booleanFlagStray)
+TEST_CASE("booleanFlagStray", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked", "stray"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(boolSetting.value(), true);
+    REQUIRE(boolSetting.value() == true);
 }
 
 // test scalars
-TEST(settings, scalarSimple)
+TEST_CASE("scalarSimple", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "1.25"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(scalarSetting.value(), 1.25);
+    REQUIRE(scalarSetting.value() == 1.25);
 }
 
-TEST(settings, scalarNegative)
+TEST_CASE("scalarNegative", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "-0.25"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(scalarSetting.value(), -0.25);
+    REQUIRE(scalarSetting.value() == -0.25);
 }
 
-TEST(settings, scalarInfinity)
+TEST_CASE("scalarInfinity", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0, 0.0, std::numeric_limits<vec_t>::infinity());
     const char *arguments[] = {"qbsp.exe", "-scale", "INFINITY"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(scalarSetting.value(), std::numeric_limits<vec_t>::infinity());
+    REQUIRE(scalarSetting.value() == std::numeric_limits<vec_t>::infinity());
 }
 
-TEST(settings, scalarNAN)
+TEST_CASE("scalarNAN", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "NAN"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_TRUE(std::isnan(scalarSetting.value()));
+    REQUIRE(std::isnan(scalarSetting.value()));
 }
 
-TEST(settings, scalarScientific)
+TEST_CASE("scalarScientific", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "1.54334E-34"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(scalarSetting.value(), 1.54334E-34);
+    REQUIRE(scalarSetting.value() == 1.54334E-34);
 }
 
-TEST(settings, scalarEOF)
+TEST_CASE("scalarEOF", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
-    ASSERT_THROW(settings.parse(p), settings::parse_exception);
+    REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
-TEST(settings, scalarStray)
+TEST_CASE("scalarStray", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "stray"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
-    ASSERT_THROW(settings.parse(p), settings::parse_exception);
+    REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
 // test scalars
-TEST(settings, vec3Simple)
+TEST_CASE("vec3Simple", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "1", "2", "3"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(scalarSetting.value(), (qvec3d{1, 2, 3}));
+    REQUIRE(scalarSetting.value() == (qvec3d{1, 2, 3}));
 }
 
-TEST(settings, vec3Complex)
+TEST_CASE("vec3Complex", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "-12.5", "-INFINITY", "NAN"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(scalarSetting.value()[0], -12.5);
-    ASSERT_EQ(scalarSetting.value()[1], -std::numeric_limits<vec_t>::infinity());
-    ASSERT_TRUE(std::isnan(scalarSetting.value()[2]));
+    REQUIRE(scalarSetting.value()[0] == -12.5);
+    REQUIRE(scalarSetting.value()[1] == -std::numeric_limits<vec_t>::infinity());
+    REQUIRE(std::isnan(scalarSetting.value()[2]));
 }
 
-TEST(settings, vec3Incomplete)
+TEST_CASE("vec3Incomplete", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "1", "2"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
-    ASSERT_THROW(settings.parse(p), settings::parse_exception);
+    REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
-TEST(settings, vec3Stray)
+TEST_CASE("vec3Stray", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "1", "2", "abc"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
-    ASSERT_THROW(settings.parse(p), settings::parse_exception);
+    REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
 // test string formatting
-TEST(settings, stringSimple)
+TEST_CASE("stringSimple", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
     const char *arguments[] = {"qbsp.exe", "-name", "i am a string with spaces in it"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(stringSetting.value(), arguments[2]);
+    REQUIRE(stringSetting.value() == arguments[2]);
 }
 
-TEST(settings, stringSpan)
+TEST_CASE("stringSpan", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
     const char *arguments[] = {"qbsp.exe", "-name", "i", "am", "a", "string"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(stringSetting.value(), "i am a string");
+    REQUIRE(stringSetting.value() == "i am a string");
 }
 
-TEST(settings, stringSpanWithBlockingOption)
+TEST_CASE("stringSpanWithBlockingOption", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
@@ -173,12 +175,12 @@ TEST(settings, stringSpanWithBlockingOption)
     const char *arguments[] = {"qbsp.exe", "-name", "i", "am", "a", "string", "-flag"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(stringSetting.value(), "i am a string");
-    ASSERT_EQ(flagSetting.value(), true);
+    REQUIRE(stringSetting.value() == "i am a string");
+    REQUIRE(flagSetting.value() == true);
 }
 
 // test remainder
-TEST(settings, remainder)
+TEST_CASE("remainder", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
@@ -187,12 +189,12 @@ TEST(settings, remainder)
         "qbsp.exe", "-name", "i", "am", "a", "string", "-flag", "remainder one", "remainder two"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     auto remainder = settings.parse(p);
-    ASSERT_EQ(remainder[0], "remainder one");
-    ASSERT_EQ(remainder[1], "remainder two");
+    REQUIRE(remainder[0] == "remainder one");
+    REQUIRE(remainder[1] == "remainder two");
 }
 
 // test double-hyphens
-TEST(settings, doubleHyphen)
+TEST_CASE("doubleHyphen", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
@@ -200,12 +202,12 @@ TEST(settings, doubleHyphen)
     const char *arguments[] = {"qbsp.exe", "--locked", "--name", "my name!"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     settings.parse(p);
-    ASSERT_EQ(boolSetting.value(), true);
-    ASSERT_EQ(stringSetting.value(), "my name!");
+    REQUIRE(boolSetting.value() == true);
+    REQUIRE(stringSetting.value() == "my name!");
 }
 
 // test groups; ensure that performance is the first group
-TEST(settings, grouping)
+TEST_CASE("grouping", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_group performance{"Performance", -1000};
@@ -216,83 +218,83 @@ TEST(settings, grouping)
         &settings, "fast", false, &performance, "use faster algorithm, for quick compiles");
     settings::setting_string stringSetting(
         &settings, "filename", "filename.bat", "file.bat", &others, "some batch file");
-    ASSERT_TRUE(settings.grouped().begin()->first == &performance);
+    REQUIRE(settings.grouped().begin()->first == &performance);
     // settings.printHelp();
 }
 
-TEST(settings, copy)
+TEST_CASE("copy", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scaleSetting(&settings, "scale", 1.5);
     settings::setting_scalar waitSetting(&settings, "wait", 0.0);
     settings::setting_string stringSetting(&settings, "string", "test");
 
-    EXPECT_EQ(settings::source::DEFAULT, scaleSetting.getSource());
-    EXPECT_EQ(settings::source::DEFAULT, waitSetting.getSource());
-    EXPECT_EQ(0, waitSetting.value());
+    CHECK(settings::source::DEFAULT == scaleSetting.getSource());
+    CHECK(settings::source::DEFAULT == waitSetting.getSource());
+    CHECK(0 == waitSetting.value());
 
-    EXPECT_TRUE(waitSetting.copyFrom(scaleSetting));
-    EXPECT_EQ(settings::source::DEFAULT, waitSetting.getSource());
-    EXPECT_EQ(1.5, waitSetting.value());
+    CHECK(waitSetting.copyFrom(scaleSetting));
+    CHECK(settings::source::DEFAULT == waitSetting.getSource());
+    CHECK(1.5 == waitSetting.value());
 
     // if copy fails, the value remains unchanged
-    EXPECT_FALSE(waitSetting.copyFrom(stringSetting));
-    EXPECT_EQ(settings::source::DEFAULT, waitSetting.getSource());
-    EXPECT_EQ(1.5, waitSetting.value());
+    CHECK_FALSE(waitSetting.copyFrom(stringSetting));
+    CHECK(settings::source::DEFAULT == waitSetting.getSource());
+    CHECK(1.5 == waitSetting.value());
 
     scaleSetting.setValue(2.5);
-    EXPECT_EQ(settings::source::MAP, scaleSetting.getSource());
+    CHECK(settings::source::MAP == scaleSetting.getSource());
 
     // source is also copied
-    EXPECT_TRUE(waitSetting.copyFrom(scaleSetting));
-    EXPECT_EQ(settings::source::MAP, waitSetting.getSource());
-    EXPECT_EQ(2.5, waitSetting.value());
+    CHECK(waitSetting.copyFrom(scaleSetting));
+    CHECK(settings::source::MAP == waitSetting.getSource());
+    CHECK(2.5 == waitSetting.value());
 }
 
-TEST(settings, copyMangle)
+TEST_CASE("copyMangle", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_mangle sunvec{&settings, {"sunlight_mangle"}, 0.0, 0.0, 0.0};
 
     parser_t p(std::string_view("0.0 -90.0 0.0"));
-    EXPECT_TRUE(sunvec.parse("", p));
-    EXPECT_NEAR(0, sunvec.value()[0], 1e-6);
-    EXPECT_NEAR(0, sunvec.value()[1], 1e-6);
-    EXPECT_NEAR(-1, sunvec.value()[2], 1e-6);
+    CHECK(sunvec.parse("", p));
+    CHECK(Approx(0).margin(1e-6) == sunvec.value()[0]);
+    CHECK(Approx(0).margin(1e-6) == sunvec.value()[1]);
+    CHECK(Approx(-1).margin(1e-6) == sunvec.value()[2]);
 
     settings::setting_mangle sunvec2{&settings, {"sunlight_mangle2"}, 0.0, 0.0, 0.0};
     sunvec2.copyFrom(sunvec);
 
-    EXPECT_NEAR(0, sunvec2.value()[0], 1e-6);
-    EXPECT_NEAR(0, sunvec2.value()[1], 1e-6);
-    EXPECT_NEAR(-1, sunvec2.value()[2], 1e-6);
+    CHECK(Approx(0).margin(1e-6) == sunvec2.value()[0]);
+    CHECK(Approx(0).margin(1e-6) == sunvec2.value()[1]);
+    CHECK(Approx(-1).margin(1e-6) == sunvec2.value()[2]);
 }
 
-TEST(settings, copyContainer)
+TEST_CASE("copyContainer", "[settings]")
 {
     settings::setting_container settings1;
     settings::setting_bool boolSetting1(&settings1, "boolSetting", false);
-    EXPECT_FALSE(boolSetting1.value());
-    EXPECT_EQ(settings::source::DEFAULT, boolSetting1.getSource());
+    CHECK_FALSE(boolSetting1.value());
+    CHECK(settings::source::DEFAULT == boolSetting1.getSource());
 
     boolSetting1.setValue(true);
-    EXPECT_TRUE(boolSetting1.value());
-    EXPECT_EQ(settings::source::MAP, boolSetting1.getSource());
+    CHECK(boolSetting1.value());
+    CHECK(settings::source::MAP == boolSetting1.getSource());
 
     {
         settings::setting_container settings2;
         settings::setting_bool boolSetting2(&settings2, "boolSetting", false);
-        EXPECT_FALSE(boolSetting2.value());
+        CHECK_FALSE(boolSetting2.value());
 
         settings2.copyFrom(settings1);
-        EXPECT_TRUE(boolSetting2.value());
-        EXPECT_EQ(settings::source::MAP, boolSetting2.getSource());
+        CHECK(boolSetting2.value());
+        CHECK(settings::source::MAP == boolSetting2.getSource());
     }
 }
 
 const settings::setting_group test_group{"Test"};
 
-TEST(settings, copyContainerSubclass)
+TEST_CASE("copyContainerSubclass", "[settings]")
 {
     struct my_settings : public settings::setting_container {
         settings::setting_bool boolSetting {this, "boolSetting", false, &test_group};
@@ -304,55 +306,55 @@ TEST(settings, copyContainerSubclass)
     static_assert(!std::is_copy_constructible_v<my_settings>);
 
     my_settings s1;
-    EXPECT_EQ(&s1.boolSetting, s1.findSetting("boolSetting"));
-    EXPECT_EQ(&s1.stringSetting, s1.findSetting("stringSetting"));
-    EXPECT_EQ(1, s1.grouped().size());
-    EXPECT_EQ((std::set<settings::setting_base *>{ &s1.boolSetting, &s1.stringSetting }), s1.grouped().at(&test_group));
+    CHECK(&s1.boolSetting == s1.findSetting("boolSetting"));
+    CHECK(&s1.stringSetting == s1.findSetting("stringSetting"));
+    CHECK(1 == s1.grouped().size());
+    CHECK((std::set<settings::setting_base *>{ &s1.boolSetting, &s1.stringSetting }) == s1.grouped().at(&test_group));
     s1.boolSetting.setValue(true);
-    EXPECT_EQ(settings::source::MAP, s1.boolSetting.getSource());
+    CHECK(settings::source::MAP == s1.boolSetting.getSource());
 
     my_settings s2;
     s2.copyFrom(s1);
-    EXPECT_EQ(&s2.boolSetting, s2.findSetting("boolSetting"));
-    EXPECT_EQ(s2.grouped().size(), 1);
-    EXPECT_EQ((std::set<settings::setting_base *>{ &s2.boolSetting, &s2.stringSetting }), s2.grouped().at(&test_group));
-    EXPECT_TRUE(s2.boolSetting.value());
-    EXPECT_EQ(settings::source::MAP, s2.boolSetting.getSource());
+    CHECK(&s2.boolSetting == s2.findSetting("boolSetting"));
+    CHECK(s2.grouped().size() == 1);
+    CHECK((std::set<settings::setting_base *>{ &s2.boolSetting, &s2.stringSetting }) == s2.grouped().at(&test_group));
+    CHECK(s2.boolSetting.value());
+    CHECK(settings::source::MAP == s2.boolSetting.getSource());
 
     // s2.stringSetting is still at its default
-    EXPECT_EQ("default", s2.stringSetting.value());
-    EXPECT_EQ(settings::source::DEFAULT, s2.stringSetting.getSource());
+    CHECK("default" == s2.stringSetting.value());
+    CHECK(settings::source::DEFAULT == s2.stringSetting.getSource());
 }
 
-TEST(settings, resetBool)
+TEST_CASE("resetBool", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_bool boolSetting1(&settings, "boolSetting", false);
 
     boolSetting1.setValue(true);
-    EXPECT_EQ(settings::source::MAP, boolSetting1.getSource());
-    EXPECT_TRUE(boolSetting1.value());
+    CHECK(settings::source::MAP == boolSetting1.getSource());
+    CHECK(boolSetting1.value());
 
     boolSetting1.reset();
-    EXPECT_EQ(settings::source::DEFAULT, boolSetting1.getSource());
-    EXPECT_FALSE(boolSetting1.value());
+    CHECK(settings::source::DEFAULT == boolSetting1.getSource());
+    CHECK_FALSE(boolSetting1.value());
 }
 
-TEST(settings, resetScalar)
+TEST_CASE("resetScalar", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_scalar scalarSetting1(&settings, "scalarSetting", 12.34);
 
     scalarSetting1.setValue(-2);
-    EXPECT_EQ(settings::source::MAP, scalarSetting1.getSource());
-    EXPECT_EQ(-2, scalarSetting1.value());
+    CHECK(settings::source::MAP == scalarSetting1.getSource());
+    CHECK(-2 == scalarSetting1.value());
 
     scalarSetting1.reset();
-    EXPECT_EQ(settings::source::DEFAULT, scalarSetting1.getSource());
-    EXPECT_EQ(12.34, scalarSetting1.value());
+    CHECK(settings::source::DEFAULT == scalarSetting1.getSource());
+    CHECK(12.34 == scalarSetting1.value());
 }
 
-TEST(settings, resetContainer)
+TEST_CASE("resetContainer", "[settings]")
 {
     settings::setting_container settings;
     settings::setting_vec3 vec3Setting1(&settings, "vec", 3, 4, 5);
@@ -362,15 +364,9 @@ TEST(settings, resetContainer)
     stringSetting1.setValue("test");
     settings.reset();
 
-    EXPECT_EQ(settings::source::DEFAULT, vec3Setting1.getSource());
-    EXPECT_EQ(qvec3d(3, 4, 5), vec3Setting1.value());
+    CHECK(settings::source::DEFAULT == vec3Setting1.getSource());
+    CHECK(qvec3d(3, 4, 5) == vec3Setting1.value());
 
-    EXPECT_EQ(settings::source::DEFAULT, stringSetting1.getSource());
-    EXPECT_EQ("abc", stringSetting1.value());
-}
-
-int main(int argc, char **argv)
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    CHECK(settings::source::DEFAULT == stringSetting1.getSource());
+    CHECK("abc" == stringSetting1.value());
 }

@@ -127,7 +127,7 @@ set(LIGHT_TEST_SOURCE
 	test_light.cc
 	test_common.cc)
 add_executable(testlight ${LIGHT_TEST_SOURCE})
-target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} gtest gmock fmt::fmt)
+target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} Catch2::Catch2 fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
 
@@ -144,5 +144,5 @@ if (embree_FOUND)
 	add_definitions(-DHAVE_EMBREE)
 endif (embree_FOUND)
 
-include(GoogleTest)
-gtest_discover_tests(testlight)
+include(Catch)
+catch_discover_tests(testlight)

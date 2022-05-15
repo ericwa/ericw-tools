@@ -43,6 +43,14 @@ struct qbsp_plane_t : qplane3d
     [[nodiscard]] constexpr qbsp_plane_t operator-() const { return {qplane3d::operator-(), type}; }
 };
 
+struct extended_texinfo_t
+{
+    contentflags_t contents = {0};
+    surfflags_t flags = {0};
+    int value = 0;
+    std::string animation;
+};
+
 struct mapface_t
 {
     qbsp_plane_t plane{};
@@ -56,6 +64,9 @@ struct mapface_t
     // Q2 stuff
     contentflags_t contents{};
     int value = 0;
+
+    // for convert
+    std::optional<extended_texinfo_t> raw_info;
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);
 
@@ -186,14 +197,6 @@ bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity);
 void LoadMapFile(void);
 mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);
-
-struct extended_texinfo_t
-{
-    contentflags_t contents = {0};
-    surfflags_t flags = {0};
-    int value = 0;
-    std::string animation;
-};
 
 struct quark_tx_info_t
 {

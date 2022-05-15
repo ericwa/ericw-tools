@@ -44,7 +44,7 @@ add_executable(testcommon ${COMMON_TEST_SOURCE})
 # HACK: copy .dll dependencies
 add_custom_command(TARGET testcommon POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testcommon>")
-target_link_libraries (testcommon common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb gtest gmock fmt::fmt)
+target_link_libraries (testcommon common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb Catch2::Catch2 fmt::fmt)
 
-include(GoogleTest)
-gtest_discover_tests(testcommon)
+include(Catch)
+catch_discover_tests(testcommon)
