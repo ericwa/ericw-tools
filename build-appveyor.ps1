@@ -40,6 +40,12 @@ if ( $? -eq $false ) {
   throw "package failed"
 }
 
+.\common\Release\testcommon.exe
+
+if ( $? -eq $false ) {
+  throw "testcommon failed"
+}
+
 .\light\Release\testlight.exe
 
 if ( $? -eq $false ) {

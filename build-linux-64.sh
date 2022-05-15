@@ -39,6 +39,7 @@ make -j8 VERBOSE=1 testqbsp || exit 1
 cpack || exit 1
 
 # run tests
+./common/testcommon || exit 1
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
 
