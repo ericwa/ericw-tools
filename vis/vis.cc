@@ -846,7 +846,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     }
 }
 
-static int vis_main(int argc, const char **argv)
+int vis_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
     const bspversion_t *loadversion;
@@ -908,13 +908,4 @@ static int vis_main(int argc, const char **argv)
     logging::close();
 
     return 0;
-}
-
-int main(int argc, const char **argv)
-{
-    try {
-        return vis_main(argc, argv);
-    } catch (const settings::quit_after_help_exception&) {
-        return 0;
-    }
 }

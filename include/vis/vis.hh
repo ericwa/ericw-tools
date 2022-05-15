@@ -244,3 +244,5 @@ public:
 } // namespace settings
 
 extern settings::vis_settings options;
+
+int vis_main(int argc, const char **argv);

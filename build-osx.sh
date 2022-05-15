@@ -41,8 +41,6 @@ else
   cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
 fi
 make -j8 || exit 1
-make -j8 testlight || exit 1
-make -j8 testqbsp || exit 1
 cpack || exit 1
 
 # print shared libraries used
@@ -56,3 +54,4 @@ otool -L ./bsputil/bsputil
 ./common/testcommon || exit 1
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
+./vis/testvis || exit 1

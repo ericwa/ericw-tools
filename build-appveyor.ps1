@@ -22,18 +22,6 @@ cmake .. -T v142 -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\
 
 $cmakePlatform = "x64"
 
-msbuild /target:testlight /p:Configuration=Release /p:Platform=$cmakePlatform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" ericw-tools.sln
-
-if ( $? -eq $false ) {
-  throw "testlight failed to build"
-}
-
-msbuild /target:testqbsp /p:Configuration=Release /p:Platform=$cmakePlatform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" ericw-tools.sln
-
-if ( $? -eq $false ) {
-  throw "testqbsp failed to build"
-}
-
 msbuild /p:Configuration=Release /p:Platform=$cmakePlatform /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll" PACKAGE.vcxproj
 
 if ( $? -eq $false ) {
@@ -56,4 +44,10 @@ if ( $? -eq $false ) {
 
 if ( $? -eq $false ) {
   throw "testqbsp failed"
+}
+
+.\vis\Release\testvis.exe
+
+if ( $? -eq $false ) {
+  throw "testvis failed"
 }
