@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cstring>
 #include <set>
+#include <stdexcept>
 #include <map>
 
 using namespace testing;
@@ -70,12 +71,12 @@ static mbsp_t LoadTestmapRef(const std::filesystem::path &name)
     struct subprocess_s subprocess;
     int result = subprocess_create(command_line, 0, &subprocess);
     if (0 != result) {
-        throw std::exception("error launching process");
+        throw std::runtime_error("error launching process");
     }
 
     int retcode;
     if (0 != subprocess_join(&subprocess, &retcode)) {
-        throw std::exception("error joining");
+        throw std::runtime_error("error joining");
     }
 
     // re-open the .bsp and return it
