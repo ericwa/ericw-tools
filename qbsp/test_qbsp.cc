@@ -440,7 +440,7 @@ TEST_CASE("simple_sealed2", "[testmaps_q1]")
     auto *other_plus_y =
         BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-64, -368, 128), qvec3d(0, 1, 0)); // back wall +Y normal
 
-    CHECK_THAT(other_markfaces, Catch::UnorderedEquals({
+    CHECK_THAT(other_markfaces, Catch::UnorderedEquals(std::vector<const mface_t*>{
         other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y
     }));
 }
@@ -924,8 +924,8 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     // areaportal 0 is a placeholder
     // 
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
-    CHECK_THAT(bsp.dareaportals, Catch::UnorderedEquals(dareaportal_t{0, 0}, dareaportal_t{1, 1}, dareaportal_t{1, 2}));
-    CHECK_THAT(bsp.dareas, Catch::UnorderedEquals(darea_t{0, 0}, darea_t{1, 1}, darea_t{1, 2}));
+    CHECK_THAT(bsp.dareaportals, Catch::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareas, Catch::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
 
     // look up the leafs
     const qvec3d player_start{-88, -112, 120};
@@ -956,9 +956,9 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     CHECK(Q2_CONTENTS_SOLID == Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
 
     // check leaf areas
-    CHECK_THAT(std::vector<int32_t>{1, 2}, Catch::UnorderedEquals(player_start_leaf->area, other_room_leaf->area));
+    CHECK_THAT((std::vector<int32_t>{1, 2}), Catch::UnorderedEquals(std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area}));
     // the areaportal leaf itself actually gets assigned to one of the two sides' areas
-    CHECK(areaportal_leaf->area == 1 || areaportal_leaf->area == 2);
+    CHECK((areaportal_leaf->area == 1 || areaportal_leaf->area == 2));
     CHECK(0 == void_leaf->area); // a solid leaf gets the invalid area
 
     // check the func_areaportal entity had its "style" set
