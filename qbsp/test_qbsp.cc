@@ -9,6 +9,7 @@
 #include <common/qvec.hh>
 #include <testmaps.hh>
 
+#include <subprocess.h>
 #include <nanobench.h>
 
 #include <algorithm>
@@ -48,6 +49,51 @@ static mapentity_t LoadMap(const char *map)
 }
 
 #include <common/bspinfo.hh>
+
+static mbsp_t LoadTestmapRef(const std::filesystem::path &name)
+{
+    const char *destdir = test_quake2_maps_dir;
+    if (strlen(destdir) == 0) {
+        return {};
+    }
+
+    auto testmap_path = std::filesystem::path(testmaps_dir) / name;
+    auto map_in_game_path = fs::path(destdir) / name;
+    fs::copy(testmap_path, map_in_game_path, fs::copy_options::overwrite_existing);
+
+    std::string map_string = map_in_game_path.generic_string();
+
+    const char *command_line[] = {R"(C:\Users\Eric\Documents\q2tools-220\x64\Debug\4bsp.exe)",
+        map_string.c_str(),
+        NULL};
+
+    struct subprocess_s subprocess;
+    int result = subprocess_create(command_line, 0, &subprocess);
+    if (0 != result) {
+        throw std::exception("error launching process");
+    }
+
+    int retcode;
+    if (0 != subprocess_join(&subprocess, &retcode)) {
+        throw std::exception("error joining");
+    }
+
+    // re-open the .bsp and return it
+    fs::path bsp_path = map_in_game_path;
+    bsp_path.replace_extension("bsp");
+
+    bspdata_t bspdata;
+    LoadBSPFile(bsp_path, &bspdata);
+
+    bspdata.version->game->init_filesystem(bsp_path, options);
+
+    ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    // write to .json for inspection
+    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(bsp_path).replace_extension(".bsp.json"));
+
+    return std::get<mbsp_t>(bspdata.bsp);
+}
 
 static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
