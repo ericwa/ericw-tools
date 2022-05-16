@@ -334,7 +334,7 @@ public:
 
         bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
         {
-            if (!parser.parse_token()) {
+            if (!parser.parse_token(PARSE_PEEK)) {
                 return false;
             }
 
@@ -342,6 +342,8 @@ public:
                 int32_t f = static_cast<int32_t>(std::stoull(parser.token));
 
                 setValueFromParse(f, locked);
+
+                parser.parse_token();
 
                 return true;
             }
@@ -396,7 +398,7 @@ public:
     setting_vec3 debugvert{this, "debugvert", std::numeric_limits<vec_t>::quiet_NaN(),
         std::numeric_limits<vec_t>::quiet_NaN(), std::numeric_limits<vec_t>::quiet_NaN(), &debug_group, ""};
     setting_bool highlightseams{this, "highlightseams", false, &debug_group, ""};
-    setting_soft soft{this, "soft", 0, 0, std::numeric_limits<int32_t>::max(), &postprocessing_group,
+    setting_soft soft{this, "soft", 0, -1, std::numeric_limits<int32_t>::max(), &postprocessing_group,
         "blurs the lightmap. specify n to blur radius in samples, otherwise auto"};
     setting_string radlights{this, "radlights", "", "\"filename.rad\"", &experimental_group,
         "loads a <surfacename> <r> <g> <b> <intensity> file"};
