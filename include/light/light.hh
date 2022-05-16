@@ -348,12 +348,8 @@ public:
             catch (std::exception &) {
                 // if we didn't provide a (valid) number, then
                 // assume it's meant to be the default of -1
-                if (parser.token[0] == '-') {
-                    setValueFromParse(-1, locked);
-                    return true;
-                } else {
-                    return false;
-                }
+                setValueFromParse(-1, locked);
+                return true;
             }
         }
 
