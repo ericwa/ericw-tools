@@ -215,7 +215,7 @@ public:
     inline winding_base_t(const size_t &initial_size) : count(initial_size), isVector(count > N)
     {
         if (isVector) {
-            vector.reserve(count);
+            vector.resize(count);
         }
     }
 

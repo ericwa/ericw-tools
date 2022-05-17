@@ -67,7 +67,7 @@ void setting_container::copyFrom(const setting_container& other)
 
 void setting_container::printHelp()
 {
-    fmt::print("{} ({})usage: {} [-help/-h/-?] [-options] {}\n\n", usage, stringify(ERICWTOOLS_VERSION), programName, remainderName);
+    fmt::print("{}usage: {} [-help/-h/-?] [-options] {}\n\n", programDescription, programName, remainderName);
 
     for (auto grouped : grouped()) {
         if (grouped.first) {

@@ -34,14 +34,13 @@ fi
 export ASAN_OPTIONS=exitcode=0
 
 make -j8 VERBOSE=1 || exit 1
-make -j8 VERBOSE=1 testlight || exit 1
-make -j8 VERBOSE=1 testqbsp || exit 1
 cpack || exit 1
 
 # run tests
 ./common/testcommon || exit 1
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
+./vis/testvis || exit 1
 
 # check rpath
 readelf -d ./light/light

@@ -334,7 +334,7 @@ public:
 
         bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
         {
-            if (!parser.parse_token()) {
+            if (!parser.parse_token(PARSE_PEEK)) {
                 return false;
             }
 
@@ -343,17 +343,15 @@ public:
 
                 setValueFromParse(f, locked);
 
+                parser.parse_token();
+
                 return true;
             }
             catch (std::exception &) {
                 // if we didn't provide a (valid) number, then
                 // assume it's meant to be the default of -1
-                if (parser.token[0] == '-') {
-                    setValueFromParse(-1, locked);
-                    return true;
-                } else {
-                    return false;
-                }
+                setValueFromParse(-1, locked);
+                return true;
             }
         }
 
@@ -400,7 +398,7 @@ public:
     setting_vec3 debugvert{this, "debugvert", std::numeric_limits<vec_t>::quiet_NaN(),
         std::numeric_limits<vec_t>::quiet_NaN(), std::numeric_limits<vec_t>::quiet_NaN(), &debug_group, ""};
     setting_bool highlightseams{this, "highlightseams", false, &debug_group, ""};
-    setting_soft soft{this, "soft", 0, 0, std::numeric_limits<int32_t>::max(), &postprocessing_group,
+    setting_soft soft{this, "soft", 0, -1, std::numeric_limits<int32_t>::max(), &postprocessing_group,
         "blurs the lightmap. specify n to blur radius in samples, otherwise auto"};
     setting_string radlights{this, "radlights", "", "\"filename.rad\"", &experimental_group,
         "loads a <surfacename> <r> <g> <b> <intensity> file"};
@@ -500,7 +498,7 @@ public:
     void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
-        usage = "light compiles lightmap data for BSPs\n\n";
+        programDescription = "light compiles lightmap data for BSPs\n\n";
         remainderName = "mapname.bsp";
     }
 
