@@ -222,7 +222,7 @@ struct compiled_brush_t
                 side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2),
                 side.valve.shift[1], 0.0, side.valve.scale[0], side.valve.scale[1]);
 
-            if (contents.native || side.flags.native || side.value) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II && (contents.native || side.flags.native || side.value)) {
                 wal_metadata_t *meta = nullptr;
 
                 auto it = wals.find(side.texture_name);
