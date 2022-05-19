@@ -109,15 +109,15 @@ public:
 
     bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
-        if (auto value = parseString(parser)) {
-            if (changeSource(locked ? source::COMMANDLINE : source::MAP)) {
-                _paths.insert(wadpath{fs::path(*value), settingName[0] == 'x'});
-            }
-
-            return true;
+        if (!parser.parse_token()) {
+            return false;
         }
 
-        return false;
+        if (changeSource(locked ? source::COMMANDLINE : source::MAP)) {
+            _paths.insert(wadpath{fs::path(parser.token), settingName[0] == 'x'});
+        }
+
+        return true;
     }
 
     std::string stringValue() const override
