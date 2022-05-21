@@ -323,10 +323,8 @@ FindOccupiedLeafs
 sets node->occupant
 ==================
 */
-std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
+static void MarkOccupiedClusters(node_t *headnode)
 {
-    std::vector<node_t *> result;
-
     for (int i = 1; i < map.entities.size(); i++) {
         mapentity_t *entity = &map.entities.at(i);
 
@@ -347,10 +345,33 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
         }
 
         cluster->occupant = entity;
+    }
+}
 
-        result.push_back(cluster);
+static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *>& result)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        FindOccupiedClusters_R(node->children[0], result);
+        FindOccupiedClusters_R(node->children[1], result);
+        return;
     }
 
+    if (node->occupant) {
+        result.push_back(node);
+    }
+}
+
+/*
+==================
+FindOccupiedClusters
+
+Requires that FillOutside has run
+==================
+*/
+std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
+{
+    std::vector<node_t *> result;
+    FindOccupiedClusters_R(headnode, result);
     return result;
 }
 
@@ -508,6 +529,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     ClearOccupied_r(node);
 
     // Sets leaf->occupant
+    MarkOccupiedClusters(node);
     const std::vector<node_t *> occupied_clusters = FindOccupiedClusters(node);
 
     for (auto *occupied_cluster : occupied_clusters) {
