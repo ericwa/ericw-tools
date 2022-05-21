@@ -645,7 +645,7 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
         ++c_nodefaces;
 
         // csg it
-        std::list<face_t *> faces{face};
+        std::list<face_t *> faces = CSGFace(face, entity, srcbrush, node);
 
         // clip them to the descendant parts of the BSP
         // (otherwise we could have faces floating in the void on this node)

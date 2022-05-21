@@ -149,6 +149,106 @@ std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
     return {new_front, new_back};
 }
 
+/*
+=================
+RemoveOutsideFaces
+
+Quick test before running ClipInside; move any faces that are completely
+outside the brush to the outside list, without splitting them. This saves us
+time in mergefaces later on (and sometimes a lot of memory)
+
+Input is a list of faces in the param `inside`.
+On return, the ones touching `brush` remain in `inside`, the rest are added to `outside`.
+=================
+*/
+static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside, std::list<face_t *> *outside)
+{
+    std::list<face_t *> oldinside;
+
+    // clear `inside`, transfer it to `oldinside`
+    std::swap(*inside, oldinside);
+
+    for (face_t *face : oldinside) {
+        std::optional<winding_t> w = face->w;
+        for (auto &clipface : brush.faces) {
+            w = w->clip(Face_Plane(&clipface), ON_EPSILON, false)[SIDE_BACK];
+            if (!w)
+                break;
+        }
+        if (!w) {
+            /* The face is completely outside this brush */
+            outside->push_front(face);
+        } else {
+            inside->push_front(face);
+        }
+    }
+}
+
+/*
+=================
+ClipInside
+
+Clips all of the faces in the inside list, possibly moving them to the
+outside list or spliting it into a piece in each list.
+
+Faces exactly on the plane will stay inside unless overdrawn by later brush
+=================
+*/
+static void ClipInside(
+    const face_t *clipface, bool precedence, std::list<face_t *> *inside, std::list<face_t *> *outside)
+{
+    std::list<face_t *> oldinside;
+
+    // effectively make a copy of `inside`, and clear it
+    std::swap(*inside, oldinside);
+
+    const qbsp_plane_t &splitplane = map.planes[clipface->planenum];
+
+    for (face_t *face : oldinside) {
+        /* HACK: Check for on-plane but not the same planenum
+          ( https://github.com/ericwa/ericw-tools/issues/174 )
+         */
+        bool spurious_onplane = false;
+        {
+            std::array<size_t, SIDE_TOTAL> counts = face->w.calc_sides(splitplane, nullptr, nullptr, ON_EPSILON);
+
+            if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
+                spurious_onplane = true;
+            }
+        }
+
+        std::array<face_t *, 2> frags;
+
+        /* Handle exactly on-plane faces */
+        if (face->planenum == clipface->planenum || spurious_onplane) {
+            const qplane3d faceplane = Face_Plane(face);
+            const qplane3d clipfaceplane = Face_Plane(clipface);
+            const vec_t dp = qv::dot(faceplane.normal, clipfaceplane.normal);
+            const bool opposite = (dp < 0);
+
+            if (opposite || precedence) {
+                /* always clip off opposite facing */
+                frags[clipface->planeside] = {};
+                frags[!clipface->planeside] = {face};
+            } else {
+                /* leave it on the outside */
+                frags[clipface->planeside] = {face};
+                frags[!clipface->planeside] = {};
+            }
+        } else {
+            /* proper split */
+            std::tie(frags[0], frags[1]) = SplitFace(face, splitplane);
+        }
+
+        if (frags[clipface->planeside]) {
+            outside->push_front(frags[clipface->planeside]);
+        }
+        if (frags[!clipface->planeside]) {
+            inside->push_front(frags[!clipface->planeside]);
+        }
+    }
+}
+
 face_t *MirrorFace(const face_t *face)
 {
     face_t *newface = NewFaceFromFace(face);
@@ -175,6 +275,157 @@ static std::vector<std::unique_ptr<brush_t>> SingleBrush(std::unique_ptr<brush_t
     std::vector<std::unique_ptr<brush_t>> res;
     res.push_back(std::move(a));
     return res;
+}
+
+static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbrush)
+{
+    if (clipbrush.contents.is_empty(options.target_game)) {
+        /* Ensure hint never clips anything */
+        return false;
+    }
+
+    if (clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY) &&
+        !brush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+        /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
+        return false;
+    }
+
+    if (clipbrush.contents.is_detail(CFLAGS_DETAIL_FENCE) && !brush.contents.is_detail(CFLAGS_DETAIL_FENCE)) {
+        /* CONTENTS_DETAIL_FENCE never clips anything but itself */
+        return false;
+    }
+
+    if (clipbrush.contents.types_equal(brush.contents, options.target_game) &&
+        !clipbrush.contents.clips_same_type()) {
+        /* _noclipfaces key */
+        return false;
+    }
+
+    /*
+     * If the brush is solid and the clipbrush is not, then we need to
+     * keep the inside faces and set the outside contents to those of
+     * the clipbrush. Otherwise, these inside surfaces are hidden and
+     * should be discarded.
+     *
+     * FIXME: clean this up, the predicate seems to be "can you see 'brush' from inside 'clipbrush'"
+     */
+    if ((brush.contents.is_solid(options.target_game) && !clipbrush.contents.is_solid(options.target_game))
+
+        ||
+        (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                        !clipbrush.contents.is_sky(options.target_game)))
+
+        || (brush.contents.is_detail(CFLAGS_DETAIL) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                        !clipbrush.contents.is_sky(options.target_game) &&
+                                                        !clipbrush.contents.is_detail(CFLAGS_DETAIL)))
+
+        || (brush.contents.is_liquid(options.target_game) &&
+            clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
+
+        || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))) {
+        return false;
+    }
+
+    return true;
+}
+
+static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const mapentity_t *srcentity, const brush_t *srcbrush, const brush_t *clipbrush)
+{
+    if (srcbrush == clipbrush) {
+        logging::print("    ignoring self-clip\n");
+        return input;
+    }
+
+    const int srcindex = srcbrush->file_order;
+    const int clipindex = clipbrush->file_order;
+
+    if (!ShouldClipbrushEatBrush(*srcbrush, *clipbrush)) {
+        return {input};
+    }
+
+    std::list<face_t *> inside {input};
+    std::list<face_t *> outside;
+    RemoveOutsideFaces(*clipbrush, &inside, &outside);
+
+    // at this point, inside = the faces of `input` which are touching `clipbrush`
+    //                outside = the other faces of `input`
+
+    const bool overwrite = (srcindex < clipindex);
+
+    for (auto &clipface : clipbrush->faces)
+        ClipInside(&clipface, overwrite, &inside, &outside);
+
+    // inside = parts of `brush` that are inside `clipbrush`
+    // outside = parts of `brush` that are outside `clipbrush`
+
+    return outside;
+}
+
+// fixme-brushbsp: determinism: sort `result` set by .map file order
+// fixme-brushbsp: add bounds test
+#if 0
+static void GatherPossibleClippingBrushes_R(const node_t *node, const face_t *srcface, std::set<const brush_t *> &result)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        for (auto *brush : node->original_brushes) {
+            result.insert(brush);
+        }
+        return;
+    }
+
+    GatherPossibleClippingBrushes_R(node->children[0], srcface, result);
+    GatherPossibleClippingBrushes_R(node->children[1], srcface, result);
+}
+#endif
+
+/*
+==================
+GatherPossibleClippingBrushes
+
+Starting a search at `node`, returns brushes that possibly intersect `srcface`.
+==================
+*/
+static std::set<const brush_t *> GatherPossibleClippingBrushes(const mapentity_t* srcentity, const node_t *node, const face_t *srcface)
+{
+    std::set<const brush_t *> result;
+    // fixme-brushbsp: implement this, need node->original_brushes working
+#if 0
+    GatherPossibleClippingBrushes_R(node, srcface, result);
+#else
+    for (auto &brush : srcentity->brushes) {
+        result.insert(brush.get());
+    }
+#endif
+    return result;
+}
+
+/*
+==================
+CSGFace
+
+Given `srcface`, which was produced from `srcbrush` and lies on `srcnode`:
+
+ - search srcnode as well as its children for brushes which might clip
+   srcface.
+
+ - clip srcface against all such brushes
+
+Frees srcface.
+==================
+*/
+std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t *srcentity, const brush_t *srcbrush, const node_t *srcnode)
+{
+    const auto possible_clipbrushes = GatherPossibleClippingBrushes(srcentity, srcnode, srcface);
+
+    logging::print("face {} has {} possible clipbrushes\n", (void *)srcface, possible_clipbrushes.size());
+
+    std::list<face_t *> result{srcface};
+
+    for (const brush_t *possible_clipbrush : possible_clipbrushes) {
+        result = CSGFace_ClipAgainstSingleBrush(std::move(result), srcentity, srcbrush, possible_clipbrush);
+    }
+
+    return result;
 }
 
 /*
