@@ -350,14 +350,14 @@ static void MarkOccupiedClusters(node_t *headnode)
 
 static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *>& result)
 {
+    // node could be a leaf or detail separator node
+    if (node->occupant) {
+        result.push_back(node);
+    }
+
     if (node->planenum != PLANENUM_LEAF) {
         FindOccupiedClusters_R(node->children[0], result);
         FindOccupiedClusters_R(node->children[1], result);
-        return;
-    }
-
-    if (node->occupant) {
-        result.push_back(node);
     }
 }
 
