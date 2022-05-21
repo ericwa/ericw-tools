@@ -21,6 +21,7 @@
 
 #include <climits>
 
+#include <common/vectorutils.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
@@ -48,6 +49,12 @@ static int mapbrushes;
 
 void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
+    // merge the children's brush lists
+    node->original_brushes = concat(
+        node->children[0]->original_brushes,
+        node->children[1]->original_brushes);
+    sort_and_remove_duplicates(node->original_brushes);
+
     node->planenum = PLANENUM_LEAF;
 
     for (int i = 0; i < 2; ++i) {

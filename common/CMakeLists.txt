@@ -30,7 +30,8 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/threads.hh
     ${CMAKE_SOURCE_DIR}/include/common/fs.hh
     ${CMAKE_SOURCE_DIR}/include/common/imglib.hh
-	${CMAKE_SOURCE_DIR}/include/common/settings.hh)
+    ${CMAKE_SOURCE_DIR}/include/common/settings.hh
+    ${CMAKE_SOURCE_DIR}/include/common/vectorutils.hh)
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json)
 
