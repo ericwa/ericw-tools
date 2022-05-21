@@ -867,26 +867,46 @@ int vis_main(int argc, const char **argv)
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
-    portalfile = fs::path(options.sourceMap).replace_extension("prt");
-    LoadPortals(portalfile, &bsp);
+    if (options.phsonly.value())
+    {
+        if (bsp.loadversion->game->id != GAME_QUAKE_II)
+        {
+            logging::print("error: need a Q2-esque BSP for -phsonly");
+        }
+        else
+        {
+            portalleafs = bsp.dvis.bit_offsets.size();
+            leafbytes = ((portalleafs + 63) & ~63) >> 3;
+            leaflongs = leafbytes / sizeof(long);
 
-    statefile = fs::path(options.sourceMap).replace_extension("vis");
-    statetmpfile = fs::path(options.sourceMap).replace_extension("vi0");
-
-    if (bsp.loadversion->game->id != GAME_QUAKE_II) {
-        uncompressed = new uint8_t[portalleafs * leafbytes_real]{};
-    } else {
-        uncompressed_q2 = new uint8_t[portalleafs * leafbytes]{};
+            if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+                originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
+            }
+        }
     }
+    else
+    {
+        portalfile = fs::path(options.sourceMap).replace_extension("prt");
+        LoadPortals(portalfile, &bsp);
 
-    CalcVis(&bsp);
+        statefile = fs::path(options.sourceMap).replace_extension("vis");
+        statetmpfile = fs::path(options.sourceMap).replace_extension("vi0");
 
-    logging::print("c_noclip: {}\n", c_noclip);
-    logging::print("c_chains: {}\n", c_chains);
+        if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+            uncompressed = new uint8_t[portalleafs * leafbytes_real]{};
+        } else {
+            uncompressed_q2 = new uint8_t[portalleafs * leafbytes]{};
+        }
 
-    bsp.dvis.bits.resize(vismap_p - bsp.dvis.bits.data());
-    bsp.dvis.bits.shrink_to_fit();
-    logging::print("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
+        CalcVis(&bsp);
+
+        logging::print("c_noclip: {}\n", c_noclip);
+        logging::print("c_chains: {}\n", c_chains);
+
+        bsp.dvis.bits.resize(vismap_p - bsp.dvis.bits.data());
+        bsp.dvis.bits.shrink_to_fit();
+        logging::print("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
+    }
 
     // no ambient sounds for Q2
     if (bsp.loadversion->game->id != GAME_QUAKE_II) {
