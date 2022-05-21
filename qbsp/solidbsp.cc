@@ -93,6 +93,7 @@ void DetailToSolid(node_t *node)
             // This discards any faces on-node. Should be safe (?)
             ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
         }
+        // fixme-brushbsp: merge with PruneNodes
     }
 }
 
@@ -111,6 +112,10 @@ static void PruneNodes_R(node_t *node, int &count_pruned)
         ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
         ++count_pruned;
     }
+
+    // fixme-brushbsp: corner case where two solid leafs shouldn't merge is two noclipfaces fence brushes touching
+    // fixme-brushbsp: also merge other content types
+    // fixme-brushbsp: maybe merge if same content type, and all faces on node are invisible?
 }
 
 void PruneNodes(node_t *node)
@@ -290,6 +295,8 @@ inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
         return SplitPlaneMetric_NonAxial(p, bounds);
 }
 
+// fixme-brushbsp: restore
+#if 0
 /*
 ==================
 ChooseMidPlaneFromList
@@ -297,7 +304,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static face_t *ChooseMidPlaneFromList(std::vector<std::unique_ptr<brush_t>> &brushes, const aabb3d &bounds)
+static const face_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<brush_t>> &brushes, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     vec_t bestaxialmetric = VECT_MAX;
@@ -353,6 +360,7 @@ static face_t *ChooseMidPlaneFromList(std::vector<std::unique_ptr<brush_t>> &bru
     auto bestsurface = (bestaxialsurface == nullptr) ? bestanysurface : bestaxialsurface;
     return bestsurface;
 }
+#endif
 
 /*
 ==================
@@ -363,17 +371,25 @@ The real BSP heuristic
 fixme-brushbsp: prefer splits that include a lot of brush sides?
 ==================
 */
-static face_t *ChoosePlaneFromList(std::vector<std::unique_ptr<brush_t>> &brushes, const aabb3d &bounds)
+static const face_t *ChoosePlaneFromList(const std::vector<std::unique_ptr<brush_t>> &brushes, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     int minsplits = INT_MAX - 1;
     vec_t bestdistribution = VECT_MAX;
     face_t *bestsurface = nullptr;
 
-    /* Two passes - exhaust all non-detail faces before details */
-    for (int pass = 0; pass < 2; pass++) {
+    /* passes:
+     * 0: structural visible
+     * 1: structural non-visible
+     * 2: detail visible
+     * 3: detail non-visible
+     * */
+    for (int pass = 0; pass < 4; pass++) {
+        const bool pass_wants_detail = (pass >= 2);
+        const bool pass_wants_visible = (pass == 0 || pass == 2);
+
         for (auto &brush : brushes) {
-            if (brush->contents.is_detail() != (pass == 1)) {
+            if (brush->contents.is_detail() != pass_wants_detail) {
                 continue;
             }
 
@@ -381,8 +397,7 @@ static face_t *ChoosePlaneFromList(std::vector<std::unique_ptr<brush_t>> &brushe
                 if (face.onnode) {
                     continue;
                 }
-                if (!face.visible) {
-                    // never use as a bsp splitter, efffectively filling the brush outwards
+                if (face.visible != pass_wants_visible) {
                     continue;
                 }
 
@@ -458,7 +473,7 @@ returns NULL if the surface list can not be divided any more (a leaf)
 Called in parallel.
 ==================
 */
-static face_t *SelectPartition(std::vector<std::unique_ptr<brush_t>> &brushes)
+static const face_t *SelectPartition(const std::vector<std::unique_ptr<brush_t>> &brushes)
 {
     // calculate a bounding box of the entire surfaceset
     aabb3d bounds;
@@ -486,10 +501,10 @@ static face_t *SelectPartition(std::vector<std::unique_ptr<brush_t>> &brushes)
                         (bounds.maxs()[2] - bounds.mins()[2]) > maxnodesize;
         }
     }
-
+#if 0
     if (usemidsplit || largenode) // do fast way for clipping hull
         return ChooseMidPlaneFromList(brushes, bounds);
-
+#endif
     // do slow way to save poly splits for drawing hull
     return ChoosePlaneFromList(brushes, bounds);
 }
@@ -862,7 +877,7 @@ Called in parallel.
 */
 static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node_t *node)
 {
-    face_t *split = SelectPartition(brushes);
+    face_t *split = const_cast<face_t *>(SelectPartition(brushes));
 
     if (split == nullptr) { // this is a leaf node
         node->planenum = PLANENUM_LEAF;

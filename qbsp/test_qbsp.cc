@@ -99,7 +99,7 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    std::vector<std::string> args{"", "-nopercent", "-noprogress", "-keepprt"};
+    std::vector<std::string> args{"", "-nopercent", "-keepprt"};
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }

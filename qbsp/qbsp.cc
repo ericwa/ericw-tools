@@ -679,16 +679,16 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         entity->brushes[i]->file_order = i;
     }
 
-    entity->brushes = ChopBrushes(entity->brushes);
+    //entity->brushes = ChopBrushes(entity->brushes);
 
-    if (entity == map.world_entity() && hullnum <= 0) {
-        if (options.debugchop.value()) {
-            fs::path path = options.bsp_path;
-            path.replace_extension(".chop.map");
-
-            WriteBspBrushMap(path, entity->brushes);
-        }
-    }
+//    if (entity == map.world_entity() && hullnum <= 0) {
+//        if (options.debugchop.value()) {
+//            fs::path path = options.bsp_path;
+//            path.replace_extension(".chop.map");
+//
+//            WriteBspBrushMap(path, entity->brushes);
+//        }
+//    }
 
     // we're discarding the brush
     if (discarded_trigger) {
@@ -773,6 +773,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
                 // make the real portals for vis tracing
                 PortalizeEntity(entity, nodes, hullnum);
+
+                // fill again so PruneNodes works
+                FillOutside(entity, nodes, hullnum);
             }
 
             // Area portals

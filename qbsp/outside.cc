@@ -474,8 +474,11 @@ static int OutLeafsToSolid(node_t *node)
 ===========
 FillOutside
 
-Goal is to mark brush sides which only touch void as "unbounded" (aka Q2 skip),
-so they're not used as BSP splitters in the next phase and basically expand outwards.
+Goal is to mark brush sides which are only seen from the void as `visible = false`.
+They will still lbe used as BSP splitters, but the idea of q2bsp tools is to
+use them as splitters after all of the `visible = true` splitters have been used.
+
+This should allow PruneNodes to prune most void nodes like Q1 was able to.
 
 Brush sides which cross between void and non-void are problematic for this, so
 the process looks like:
