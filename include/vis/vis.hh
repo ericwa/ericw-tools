@@ -229,6 +229,7 @@ public:
     setting_scalar visdist{
         this, "visdist", 0.0, &advanced_group, "control the distance required for a portal to be considered seen"};
     setting_bool nostate{this, "nostate", false, &advanced_group, "ignore saved state files, for forced re-runs"};
+    setting_bool phsonly{this, "phsonly", false, &advanced_group, "re-calculate the PHS of a Quake II BSP without touching the PVS"};
 
     fs::path sourceMap;
 
