@@ -389,10 +389,11 @@ TEST_CASE("chop_no_change", "[testmaps_q1]")
     // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
 }
 
-
 TEST_CASE("simple_sealed", "[testmaps_q1]")
 {
-    mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
+    auto mapname = GENERATE("qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map");
+
+    mbsp_t result = LoadTestmap(mapname);
 
     REQUIRE(map.brushes.size() == 6);
 
