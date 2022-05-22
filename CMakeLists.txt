@@ -75,6 +75,11 @@ if (ERICWTOOLS_ASAN)
 	message(STATUS "Enabling ASan on all targets")
 	add_compile_options(-fsanitize=address)
 	add_link_options(-fsanitize=address)
+
+	# https://github.com/catchorg/Catch2/issues/898#issuecomment-841733322
+	if (WIN32)
+		add_compile_definitions(CATCH_CONFIG_NO_WINDOWS_SEH)
+	endif()
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
