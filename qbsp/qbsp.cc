@@ -790,7 +790,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             nodes = SolidBSP(entity, false);
         }
 
+        FreeAllPortals(nodes);
+
         PruneNodes(nodes);
+
+        PortalizeEntity(entity, nodes, hullnum);
 
         MakeVisibleFaces(entity, nodes);
 

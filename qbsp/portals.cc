@@ -621,6 +621,16 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     CutNodePortals_r(back, state);
 }
 
+static void AssertNoPortals(node_t *node)
+{
+    Q_assert(!node->portals);
+
+    if (node->planenum != PLANENUM_LEAF) {
+        AssertNoPortals(node->children[0]);
+        AssertNoPortals(node->children[1]);
+    }
+}
+
 /*
 ==================
 PortalizeWorld
@@ -636,6 +646,7 @@ void PortalizeEntity(const mapentity_t *entity, node_t *headnode, const int hull
 
     state.iNodesDone = 0;
 
+    AssertNoPortals(headnode);
     MakeHeadnodePortals(entity, headnode);
     CutNodePortals_r(headnode, &state);
 
