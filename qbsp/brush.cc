@@ -294,7 +294,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
     vec_t r;
     std::optional<winding_t> w;
     qbsp_plane_t plane;
-    std::list<face_t> facelist;
+    std::vector<face_t> facelist;
     qvec3d point;
     vec_t max, min;
 
@@ -404,7 +404,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         hullbrush->bounds = {-delta, delta};
     }
 
-    return {std::make_move_iterator(facelist.begin()), std::make_move_iterator(facelist.end())};
+    return facelist;
 }
 
 /*
