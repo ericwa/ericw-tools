@@ -38,6 +38,6 @@ class mapentity_t;
 
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);
-bool WindingIsTiny(const winding_t &w);
+bool WindingIsTiny(const winding_t &w, double size = 0.2);
 twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, const qplane3d &split);
 node_t *SolidBSP(mapentity_t *entity, bool midsplit);

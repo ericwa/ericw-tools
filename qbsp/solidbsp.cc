@@ -19,6 +19,8 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/solidbsp.hh>
+
 #include <climits>
 
 #include <common/vectorutils.hh>
@@ -527,7 +529,7 @@ existance by the vertex snapping.
 ================
 */
 #define EDGE_LENGTH 0.2
-bool WindingIsTiny(const winding_t &w)
+bool WindingIsTiny(const winding_t &w, double size)
 {
 #if 0
 	if (WindingArea (w) < 1)
@@ -539,7 +541,7 @@ bool WindingIsTiny(const winding_t &w)
         size_t j = (i + 1) % w.size();
         const qvec3d delta = w[j] - w[i];
         const double len = qv::length(delta);
-        if (len > EDGE_LENGTH) {
+        if (len > size) {
             if (++edges == 3)
                 return false;
         }
