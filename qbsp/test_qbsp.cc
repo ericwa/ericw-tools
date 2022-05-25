@@ -806,6 +806,39 @@ TEST_CASE("features", "[testmaps_q1]")
     REQUIRE_FALSE(map.leakfile);
 }
 
+TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_func_detail.map");
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(1 == bsp.dmodels.size());
+
+    const qvec3d in_func_detail{56, -56, 120};
+    const qvec3d in_func_detail_wall{56, -136, 120};
+    const qvec3d in_func_detail_illusionary{56, -216, 120};
+    const qvec3d in_func_detail_illusionary_mirrorinside{56, -296, 120};
+
+    const double floor_z = 96;
+
+    // detail clips away world faces, others don't
+    CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_wall  - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary_mirrorinside - qvec3d(0,0,24), {0, 0, 1}));
+
+    // check for correct contents
+    auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail);
+    auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_wall);
+    auto *detail_illusionary_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary);
+    auto *detail_illusionary_mirrorinside_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary_mirrorinside);
+
+    CHECK(CONTENTS_SOLID == detail_leaf->contents);
+    CHECK(CONTENTS_SOLID == detail_wall_leaf->contents);
+    CHECK(CONTENTS_EMPTY == detail_illusionary_leaf->contents);
+    CHECK(CONTENTS_EMPTY == detail_illusionary_mirrorinside_leaf->contents);
+}
+
 // q2 testmaps
 
 TEST_CASE("detail", "[testmaps_q2]") {
