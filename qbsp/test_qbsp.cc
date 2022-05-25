@@ -839,6 +839,23 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
     CHECK(CONTENTS_EMPTY == detail_illusionary_mirrorinside_leaf->contents);
 }
 
+TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_angled_brush.map");
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(1 == bsp.dmodels.size());
+    // tilted cuboid floating in a box room, so shared solid leaf + 6 empty leafs around the cube
+    CHECK(6 + 1 == bsp.dleafs.size());
+}
+
+TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_sealing_point_entity_on_outside.map");
+
+    CHECK_FALSE(map.leakfile);
+}
+
 // q2 testmaps
 
 TEST_CASE("detail", "[testmaps_q2]") {
