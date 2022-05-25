@@ -204,9 +204,6 @@ extern time_point starttime, endtime, statetime;
 void SaveVisState(void);
 bool LoadVisState(void);
 
-void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed);
-int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out);
-
 #include <common/settings.hh>
 #include <common/fs.hh>
 
