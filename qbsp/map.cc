@@ -167,7 +167,7 @@ static std::optional<img::texture_meta> LoadWal(const char *name)
     return map.wal_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
 }
 
-int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal)
+int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal, bool recursive)
 {
     const char *pathsep;
     int i;
@@ -223,8 +223,29 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         map.miptex.push_back({name, extended_info->flags, extended_info->value, extended_info->animation});
 
         /* Handle animating textures carefully */
-        if (!extended_info->animation.empty()) {
-            map.miptex[i].animation_miptex = FindMiptex(extended_info->animation.data(), internal);
+        if (!extended_info->animation.empty() && recursive) {
+
+            int last_i = i;
+
+            // recursively load animated textures until we loop back to us
+            while (true)
+            {
+                // looped back
+                if (wal->animation == name)
+                    break;
+
+                // texinfo base for animated wal
+                std::optional<extended_texinfo_t> animation_info = extended_info;
+                animation_info->animation = wal->animation;
+
+                // fetch animation chain
+                int next_i = FindMiptex(wal->animation.data(), animation_info, internal, false);
+                map.miptex[last_i].animation_miptex = next_i;
+                last_i = next_i;
+
+                // wal for next chain
+                wal = LoadWal(wal->animation.c_str());
+            }
         }
     }
 
