@@ -511,3 +511,63 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
             point[1], point[2], edge);
     }
 }
+
+/*
+===============
+CompressRow
+===============
+*/
+int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
+{
+    int i, rep;
+    uint8_t *dst;
+
+    dst = out;
+    for (i = 0; i < numbytes; i++) {
+        *dst++ = vis[i];
+        if (vis[i])
+            continue;
+
+        rep = 1;
+        for (i++; i < numbytes; i++)
+            if (vis[i] || rep == 255)
+                break;
+            else
+                rep++;
+        *dst++ = rep;
+        i--;
+    }
+
+    return dst - out;
+}
+
+/*
+===================
+DecompressRow
+===================
+*/
+void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
+{
+    int c;
+    uint8_t *out;
+    int row;
+
+    row = numbytes;
+    out = decompressed;
+
+    do {
+        if (*in) {
+            *out++ = *in++;
+            continue;
+        }
+
+        c = in[1];
+        if (!c)
+            FError("0 repeat");
+        in += 2;
+        while (c) {
+            *out++ = 0;
+            c--;
+        }
+    } while (out - decompressed < row);
+}

@@ -79,3 +79,6 @@ qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f);
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face);
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face);
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
+
+int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out);
+void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed);

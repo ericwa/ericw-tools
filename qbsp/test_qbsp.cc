@@ -99,7 +99,7 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    std::vector<std::string> args{"", "-nopercent", "-noprogress", "-keepprt"};
+    std::vector<std::string> args{"", "-nopercent", "-keepprt"};
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }
@@ -389,10 +389,11 @@ TEST_CASE("chop_no_change", "[testmaps_q1]")
     // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
 }
 
-
 TEST_CASE("simple_sealed", "[testmaps_q1]")
 {
-    mbsp_t result = LoadTestmap("qbsp_simple_sealed.map");
+    auto mapname = GENERATE("qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map");
+
+    mbsp_t result = LoadTestmap(mapname);
 
     REQUIRE(map.brushes.size() == 6);
 
@@ -803,6 +804,56 @@ TEST_CASE("features", "[testmaps_q1]")
     const mbsp_t bsp = LoadTestmap("qbspfeatures.map");
 
     REQUIRE_FALSE(map.leakfile);
+}
+
+TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_func_detail.map");
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(1 == bsp.dmodels.size());
+
+    const qvec3d in_func_detail{56, -56, 120};
+    const qvec3d in_func_detail_wall{56, -136, 120};
+    const qvec3d in_func_detail_illusionary{56, -216, 120};
+    const qvec3d in_func_detail_illusionary_mirrorinside{56, -296, 120};
+
+    const double floor_z = 96;
+
+    // detail clips away world faces, others don't
+    CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_wall  - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary_mirrorinside - qvec3d(0,0,24), {0, 0, 1}));
+
+    // check for correct contents
+    auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail);
+    auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_wall);
+    auto *detail_illusionary_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary);
+    auto *detail_illusionary_mirrorinside_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary_mirrorinside);
+
+    CHECK(CONTENTS_SOLID == detail_leaf->contents);
+    CHECK(CONTENTS_SOLID == detail_wall_leaf->contents);
+    CHECK(CONTENTS_EMPTY == detail_illusionary_leaf->contents);
+    CHECK(CONTENTS_EMPTY == detail_illusionary_mirrorinside_leaf->contents);
+}
+
+TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_angled_brush.map");
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(1 == bsp.dmodels.size());
+    // tilted cuboid floating in a box room, so shared solid leaf + 6 empty leafs around the cube
+    CHECK(6 + 1 == bsp.dleafs.size());
+}
+
+TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_sealing_point_entity_on_outside.map");
+
+    CHECK_FALSE(map.leakfile);
 }
 
 // q2 testmaps
