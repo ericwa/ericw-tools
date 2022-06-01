@@ -466,9 +466,9 @@ static void FloodAreas_r(node_t *node)
 
         // note the current area as bounding the portal
         if (entity->portalareas[1]) {
-            // FIXME: entity #
-            logging::print("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n", node->bounds.mins(),
-                node->bounds.maxs());
+            logging::print("WARNING: areaportal entity {} touches > 2 areas\n  Entity Bounds: {} -> {}\n",
+                entity - map.entities.data(), entity->bounds.mins(),
+                entity->bounds.maxs());
             return;
         }
 
@@ -557,9 +557,9 @@ static void SetAreaPortalAreas_r(node_t *node)
 
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
-        // FIXME: entity #
-        logging::print("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n",
-            qv::to_string(entity->bounds.mins()), qv::to_string(entity->bounds.maxs()));
+        logging::print("WARNING: areaportal entity {} doesn't touch two areas\n  Entity Bounds: {} -> {}\n",
+            entity - map.entities.data(),
+            entity->bounds.mins(), entity->bounds.maxs());
         return;
     }
 }
@@ -1107,7 +1107,11 @@ void EnsureTexturesLoaded()
     if (!wadstring[0])
         wadstring = ValueForKey(map.world_entity(), "wad");
     if (!wadstring[0])
-        logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
+    {
+        // Q2 doesn't need this
+        if (options.target_game->id != GAME_QUAKE_II)
+            logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
+    }
     else
         WADList_Init(wadstring);
 
