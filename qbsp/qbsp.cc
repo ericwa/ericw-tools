@@ -456,7 +456,14 @@ static void FloodAreas_r(node_t *node)
     if (node->planenum == PLANENUM_LEAF && node->contents.native == Q2_CONTENTS_AREAPORTAL) {
         // grab the func_areanode entity
         mapentity_t *entity = AreanodeEntityForLeaf(node);
-        Q_assert(entity != nullptr);
+
+        if (entity == nullptr)
+        {
+            logging::print("WARNING: areaportal contents in node, but no entity found {} -> {}\n",
+                node->bounds.mins(),
+                node->bounds.maxs());
+            return;
+        }
 
         // this node is part of an area portal;
         // if the current area has allready touched this
@@ -554,6 +561,13 @@ static void SetAreaPortalAreas_r(node_t *node)
 
     // grab the func_areanode entity
     mapentity_t *entity = AreanodeEntityForLeaf(node);
+
+    if (!entity)
+    {
+        logging::print("WARNING: areaportal missing for node: {} -> {}\n",
+            node->bounds.mins(), node->bounds.maxs());
+        return;
+    }
 
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {

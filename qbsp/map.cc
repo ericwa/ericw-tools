@@ -1400,6 +1400,9 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         } else if (!extinfo.info) {
             extinfo.info = extended_texinfo_t{};
         }
+
+        // remove TRANSLUCENT; it's only meant to be set by the compiler
+        extinfo.info->contents.native &= ~Q2_CONTENTS_TRANSLUCENT;
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
