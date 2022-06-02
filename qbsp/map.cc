@@ -361,12 +361,6 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     } else {
         flags.native = texinfo.flags.native;
 
-        // This fixes a bug in some old maps.
-        if ((flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
-            flags.native &= ~Q2_SURF_NODRAW;
-            // logging::print("Corrected invalid SKY flag\n");
-        }
-
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
             flags.is_skip = true;
         if ((flags.native & Q2_SURF_HINT) || IsHintName(texname))
@@ -1403,6 +1397,12 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
         // remove TRANSLUCENT; it's only meant to be set by the compiler
         extinfo.info->contents.native &= ~Q2_CONTENTS_TRANSLUCENT;
+
+        // This fixes a bug in some old maps.
+        if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
+            extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
+            //logging::print("corrected invalid SKY flag\n");
+        }
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
