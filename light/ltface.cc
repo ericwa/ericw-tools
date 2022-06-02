@@ -3241,9 +3241,6 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
             LightFace_Bounce(bsp, face, lightsurf, lightmaps);
         }
 
-        if (cfg.minlight.value())
-            __debugbreak();
-
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
         if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {

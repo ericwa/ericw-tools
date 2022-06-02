@@ -1411,8 +1411,26 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     tx->flags = mapface.flags = {extinfo.info->flags};
     tx->value = mapface.value = extinfo.info->value;
 
-    if (!contentflags_t{mapface.contents}.is_valid(options.target_game, false))  
+    if (!contentflags_t{mapface.contents}.is_valid(options.target_game, false))
+    {
         logging::print("WARNING: line {}: face has invalid contents {} ({})\n", mapface.linenum, mapface.contents.to_string(options.target_game), mapface.contents.native);
+        
+        // TODO: move into game
+        if (options.target_game->id == GAME_QUAKE_II) {
+            bool got = false;
+
+            for (int i = 0; i < 8; i++) {
+                if (!got) {
+                    if (mapface.contents.native & (1 << i)) {
+                        got = true;
+                        continue;
+                    }
+                } else {
+                    mapface.contents.native &= ~(1 << i);
+                }
+            }
+        }
+    }
 
     switch (tx_type) {
         case TX_QUARK_TYPE1:
