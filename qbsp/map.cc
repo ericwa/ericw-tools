@@ -230,21 +230,21 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             // recursively load animated textures until we loop back to us
             while (true)
             {
-                // looped back
-                if (wal->animation == name)
-                    break;
+                // wal for next chain
+                wal = LoadWal(wal->animation.c_str());
 
                 // texinfo base for animated wal
                 std::optional<extended_texinfo_t> animation_info = extended_info;
                 animation_info->animation = wal->animation;
 
                 // fetch animation chain
-                int next_i = FindMiptex(wal->animation.data(), animation_info, internal, false);
+                int next_i = FindMiptex(wal->name.data(), animation_info, internal, false);
                 map.miptex[last_i].animation_miptex = next_i;
                 last_i = next_i;
 
-                // wal for next chain
-                wal = LoadWal(wal->animation.c_str());
+                // looped back
+                if (wal->animation == name)
+                    break;
             }
         }
     }
