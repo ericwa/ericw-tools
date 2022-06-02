@@ -1021,6 +1021,24 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     REQUIRE("1" == it->get("style"));
 }
 
+/**
+ *  Similar to above test, but there's a detail brush sticking into the area portal
+ */
+TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_areaportal_with_detail.map", {"-q2bsp"});
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // area 0 is a placeholder
+    // areaportal 0 is a placeholder
+    //
+    // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
+    CHECK_THAT(bsp.dareaportals, Catch::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareas, Catch::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+}
+
 TEST_CASE("nodraw_light", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_light.map", {"-q2bsp", "-includeskip"});
 

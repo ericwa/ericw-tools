@@ -437,6 +437,14 @@ static void ApplyArea_r(node_t *node)
 
 static mapentity_t *AreanodeEntityForLeaf(node_t *node)
 {
+    // if detail cluster, search the children recursively
+    if (node->planenum != PLANENUM_LEAF) {
+        if (auto *child0result = AreanodeEntityForLeaf(node->children[0]); child0result) {
+            return child0result;
+        }
+        return AreanodeEntityForLeaf(node->children[1]);
+    }
+
     for (auto *face : node->markfaces) {
         const char *classname = ValueForKey(face->src_entity, "classname");
         if (0 == Q_strcasecmp(classname, "func_areaportal")) {
@@ -453,7 +461,7 @@ FloodAreas_r
 */
 static void FloodAreas_r(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF && node->contents.native == Q2_CONTENTS_AREAPORTAL) {
+    if ((node->planenum == PLANENUM_LEAF || node->detail_separator) && (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)) {
         // grab the func_areanode entity
         mapentity_t *entity = AreanodeEntityForLeaf(node);
 
@@ -529,7 +537,7 @@ static void FindAreas(node_t *node)
 
         // area portals are always only flooded into, never
         // out of
-        if (leaf->contents.native == Q2_CONTENTS_AREAPORTAL)
+        if (ClusterContents(leaf).native & Q2_CONTENTS_AREAPORTAL)
             return;
 
         map.c_areas++;
