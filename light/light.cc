@@ -120,8 +120,8 @@ void light_settings::postinitialize(int argc, const char **argv)
     }
 
     if (radlights.isChanged()) {
-        if (!ParseLightsFile(radlights.value())) {
-            logging::print("Unable to read surfacelights file {}\n", radlights.value());
+        if (!ParseLightsFile(*radlights.values().begin())) {
+            logging::print("Unable to read surfacelights file {}\n", *radlights.values().begin());
         }
     }
 

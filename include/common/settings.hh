@@ -601,12 +601,12 @@ public:
 
     bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
-        if (auto value = parseString(parser)) {
-            addValueFromParse(*value, locked);
-            return true;
-        }
+        if (!parser.parse_token(PARSE_PEEK))
+            return false;
 
-        return false;
+        parser.parse_token();
+        addValueFromParse(parser.token, locked);
+        return true;
     }
 
     inline bool copyFrom(const setting_base& other) override {

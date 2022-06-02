@@ -400,7 +400,7 @@ public:
     setting_bool highlightseams{this, "highlightseams", false, &debug_group, ""};
     setting_soft soft{this, "soft", 0, -1, std::numeric_limits<int32_t>::max(), &postprocessing_group,
         "blurs the lightmap. specify n to blur radius in samples, otherwise auto"};
-    setting_string radlights{this, "radlights", "", "\"filename.rad\"", &experimental_group,
+    setting_set radlights{this, "radlights", "\"filename.rad\"", &experimental_group,
         "loads a <surfacename> <r> <g> <b> <intensity> file"};
     setting_int32 lmscale{
         this, "lmscale", 0, &experimental_group, "change lightmap scale, vanilla engines only allow 16"};
