@@ -614,7 +614,7 @@ static void EmitAreaPortals(node_t *headnode)
 
             if (!e.areaportalnum)
                 continue;
-            dareaportal_t &dp = map.bsp.dareaportals.emplace_back();
+            dareaportal_t dp = {};
 
             if (e.portalareas[0] == i) {
                 dp.portalnum = e.areaportalnum;
@@ -623,6 +623,17 @@ static void EmitAreaPortals(node_t *headnode)
                 dp.portalnum = e.areaportalnum;
                 dp.otherarea = e.portalareas[0];
             }
+
+            size_t j = 0;
+
+            for (; j < map.bsp.dareaportals.size(); j++)
+            {
+                if (map.bsp.dareaportals[j] == dp)
+                    break;
+            }
+
+            if (j == map.bsp.dareaportals.size())
+                map.bsp.dareaportals.push_back(dp);
         }
 
         area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;

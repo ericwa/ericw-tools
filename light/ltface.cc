@@ -711,9 +711,20 @@ static bool Lightsurf_Init(
         lightsurf->nodirt = extended_flags.no_dirt;
     }
 
+    lightsurf->minlightMottle = modelinfo->minlightMottle.value();
+
     // minlight
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.value();
+
+        // Q2 uses a 0-1 range for minlight
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            lightsurf->minlight *= 128.f;
+
+            if (!modelinfo->minlightMottle.isChanged()) {
+                lightsurf->minlightMottle = true;
+            }
+        }
     } else {
         lightsurf->minlight = extended_flags.minlight;
     }
@@ -1592,6 +1603,9 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         if (cfg.addminlight.value()) {
             sample->color += color * (value / 255.0);
         } else {
+            if (lightsurf->minlightMottle) {
+                value += rand() % 48;
+            }
             Light_ClampMin(sample, value, color);
         }
 
@@ -3226,6 +3240,9 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
             /* add indirect lighting */
             LightFace_Bounce(bsp, face, lightsurf, lightmaps);
         }
+
+        if (cfg.minlight.value())
+            __debugbreak();
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...

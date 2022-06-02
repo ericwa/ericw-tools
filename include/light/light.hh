@@ -115,7 +115,7 @@ struct lightsurf_t
     /* these take precedence the values in modelinfo */
     vec_t minlight;
     qvec3d minlight_color;
-    bool nodirt;
+    bool nodirt, minlightMottle;
 
     qplane3d plane;
     qvec3d snormal;
@@ -219,6 +219,7 @@ public:
     qvec3d offset{};
 
     settings::setting_scalar minlight{this, "minlight", 0};
+    settings::setting_bool minlightMottle{this, "minlightMottle", false};
     settings::setting_scalar shadow{this, "shadow", 0};
     settings::setting_scalar shadowself{this, {"shadowself", "selfshadow"}, 0};
     settings::setting_scalar shadowworldonly{this, "shadowworldonly", 0};

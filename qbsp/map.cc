@@ -1785,6 +1785,8 @@ void ProcessExternalMapEntity(mapentity_t *entity)
     SetKeyValue(entity, "origin", "0 0 0");
 }
 
+int MakeSkipTexinfo();
+
 void ProcessAreaPortal(mapentity_t *entity)
 {
     Q_assert(!options.onlyents.value());
@@ -1805,6 +1807,7 @@ void ProcessAreaPortal(mapentity_t *entity)
 
         for (size_t f = map.brushes[i].firstface; f < map.brushes[i].firstface + map.brushes[i].numfaces; f++) {
             map.faces[f].contents.native = Q2_CONTENTS_AREAPORTAL;
+            map.faces[f].texinfo = MakeSkipTexinfo();
         }
     }
     entity->areaportalnum = ++map.numareaportals;

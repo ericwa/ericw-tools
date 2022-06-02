@@ -900,6 +900,12 @@ int light_main(int argc, const char **argv)
     if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.rangescale.isChanged()) {
         options.rangescale.setValue(1.0f);
     }
+    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncecolorscale.isChanged()) {
+        options.bouncecolorscale.setValue(1.0f);
+    }
+    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncescale.isChanged()) {
+        options.bouncescale.setValue(2.0f);
+    }
 
     img::init_palette(bspdata.loadversion->game);
     img::load_textures(&bsp);

@@ -52,7 +52,7 @@ std::mutex csgfaces_lock;
 MakeSkipTexinfo
 ==================
 */
-static int MakeSkipTexinfo()
+int MakeSkipTexinfo()
 {
     // FindMiptex, FindTexinfo not threadsafe
     std::unique_lock<std::mutex> lck{csgfaces_lock};
