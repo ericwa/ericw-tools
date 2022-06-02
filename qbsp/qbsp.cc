@@ -538,7 +538,7 @@ static void FindAreas(node_t *node)
         // area portals are always only flooded into, never
         // out of
         if (ClusterContents(leaf).native & Q2_CONTENTS_AREAPORTAL)
-            return;
+            continue;
 
         map.c_areas++;
         FloodAreas_r(leaf);
