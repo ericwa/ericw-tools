@@ -230,21 +230,21 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             // recursively load animated textures until we loop back to us
             while (true)
             {
-                // looped back
-                if (wal->animation == name)
-                    break;
+                // wal for next chain
+                wal = LoadWal(wal->animation.c_str());
 
                 // texinfo base for animated wal
                 std::optional<extended_texinfo_t> animation_info = extended_info;
                 animation_info->animation = wal->animation;
 
                 // fetch animation chain
-                int next_i = FindMiptex(wal->animation.data(), animation_info, internal, false);
+                int next_i = FindMiptex(wal->name.data(), animation_info, internal, false);
                 map.miptex[last_i].animation_miptex = next_i;
                 last_i = next_i;
 
-                // wal for next chain
-                wal = LoadWal(wal->animation.c_str());
+                // looped back
+                if (wal->animation == name)
+                    break;
             }
         }
     }
@@ -360,12 +360,6 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
             flags.native |= TEX_SPECIAL;
     } else {
         flags.native = texinfo.flags.native;
-
-        // This fixes a bug in some old maps.
-        if ((flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
-            flags.native &= ~Q2_SURF_NODRAW;
-            // logging::print("Corrected invalid SKY flag\n");
-        }
 
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
             flags.is_skip = true;
@@ -1403,6 +1397,12 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
         // remove TRANSLUCENT; it's only meant to be set by the compiler
         extinfo.info->contents.native &= ~Q2_CONTENTS_TRANSLUCENT;
+
+        // This fixes a bug in some old maps.
+        if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
+            extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
+            //logging::print("corrected invalid SKY flag\n");
+        }
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
@@ -1411,8 +1411,26 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     tx->flags = mapface.flags = {extinfo.info->flags};
     tx->value = mapface.value = extinfo.info->value;
 
-    if (!contentflags_t{mapface.contents}.is_valid(options.target_game, false))  
+    if (!contentflags_t{mapface.contents}.is_valid(options.target_game, false))
+    {
         logging::print("WARNING: line {}: face has invalid contents {} ({})\n", mapface.linenum, mapface.contents.to_string(options.target_game), mapface.contents.native);
+        
+        // TODO: move into game
+        if (options.target_game->id == GAME_QUAKE_II) {
+            bool got = false;
+
+            for (int i = 0; i < 8; i++) {
+                if (!got) {
+                    if (mapface.contents.native & (1 << i)) {
+                        got = true;
+                        continue;
+                    }
+                } else {
+                    mapface.contents.native &= ~(1 << i);
+                }
+            }
+        }
+    }
 
     switch (tx_type) {
         case TX_QUARK_TYPE1:

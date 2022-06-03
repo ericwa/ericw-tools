@@ -85,6 +85,8 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     if (src.outputnum.has_value())
         return src.outputnum.value();
+    else if (!options.includeskip.value() && src.flags.is_skip)
+        return -1;
 
     // this will be the index of the exported texinfo in the BSP lump
     const size_t i = map.bsp.texinfo.size();
