@@ -223,9 +223,18 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return;
     }
 
+    qvec3f total = {};
+
     for (auto &styleColor : sum) {
         styleColor.second *= (1.0f / totalarea);
         styleColor.second /= 255.0f;
+
+        total += styleColor.second;
+    }
+    
+    // no bounced color, we can leave early
+    if (qv::emptyExact(total)) {
+        return;
     }
 
     // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
