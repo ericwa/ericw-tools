@@ -1244,7 +1244,7 @@ std::map<int, qvec3f> GetDirectLighting(
         qvec3d surfpointToLightDir;
         // FIXME: this is always 128 because vpl.pos and origin are always equal it seems?
         const float surfpointToLightDist =
-            max(128.0, GetDir(vpl.pos, origin,
+            max(128.0, GetDir(origin, vpl.pos,
                            surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
         const vec_t angle = qv::dot(surfpointToLightDir, normal);
         if (angle <= 0)
