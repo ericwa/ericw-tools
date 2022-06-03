@@ -1830,7 +1830,7 @@ static qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
 
     const float dp1 = qv::dot(vpl->surfnormal, dir);
     const qvec3f sp_vpl = dir * -1.0f;
-    float dp2 = qv::dot(sp_vpl, normal);
+    float dp2 = 1.f;//qv::dot(sp_vpl, normal);
 
     if (!vpl->omnidirectional) {
         if (dp1 < 0.0f)
