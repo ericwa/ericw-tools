@@ -120,8 +120,8 @@ void light_settings::postinitialize(int argc, const char **argv)
     }
 
     if (radlights.isChanged()) {
-        if (!ParseLightsFile(radlights.value())) {
-            logging::print("Unable to read surfacelights file {}\n", radlights.value());
+        if (!ParseLightsFile(*radlights.values().begin())) {
+            logging::print("Unable to read surfacelights file {}\n", *radlights.values().begin());
         }
     }
 
@@ -899,6 +899,12 @@ int light_main(int argc, const char **argv)
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
     if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.rangescale.isChanged()) {
         options.rangescale.setValue(1.0f);
+    }
+    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncecolorscale.isChanged()) {
+        options.bouncecolorscale.setValue(0.5f);
+    }
+    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncescale.isChanged()) {
+        options.bouncescale.setValue(1.0f);
     }
 
     img::init_palette(bspdata.loadversion->game);

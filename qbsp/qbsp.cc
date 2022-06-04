@@ -416,7 +416,20 @@ static void ApplyArea_r(node_t *node)
 
 static mapentity_t *AreanodeEntityForLeaf(node_t *node)
 {
-    return node->original_brushes.at(0)->func_areaportal;
+    // if detail cluster, search the children recursively
+    if (node->planenum != PLANENUM_LEAF) {
+        if (auto *child0result = AreanodeEntityForLeaf(node->children[0]); child0result) {
+            return child0result;
+        }
+        return AreanodeEntityForLeaf(node->children[1]);
+    }
+
+    for (auto &brush : node->original_brushes) {
+        if (brush->func_areaportal) {
+            return brush->func_areaportal;
+        }
+    }
+    return nullptr;
 }
 
 /*
@@ -426,10 +439,17 @@ FloodAreas_r
 */
 static void FloodAreas_r(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF && node->contents.native == Q2_CONTENTS_AREAPORTAL) {
+    if ((node->planenum == PLANENUM_LEAF || node->detail_separator) && (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)) {
         // grab the func_areanode entity
         mapentity_t *entity = AreanodeEntityForLeaf(node);
-        Q_assert(entity != nullptr);
+
+        if (entity == nullptr)
+        {
+            logging::print("WARNING: areaportal contents in node, but no entity found {} -> {}\n",
+                node->bounds.mins(),
+                node->bounds.maxs());
+            return;
+        }
 
         // this node is part of an area portal;
         // if the current area has allready touched this
@@ -439,9 +459,9 @@ static void FloodAreas_r(node_t *node)
 
         // note the current area as bounding the portal
         if (entity->portalareas[1]) {
-            // FIXME: entity #
-            logging::print("WARNING: areaportal entity touches > 2 areas\n  Node Bounds: {} -> {}\n", node->bounds.mins(),
-                node->bounds.maxs());
+            logging::print("WARNING: areaportal entity {} touches > 2 areas\n  Entity Bounds: {} -> {}\n",
+                entity - map.entities.data(), entity->bounds.mins(),
+                entity->bounds.maxs());
             return;
         }
 
@@ -495,8 +515,8 @@ static void FindAreas(node_t *node)
 
         // area portals are always only flooded into, never
         // out of
-        if (leaf->contents.native == Q2_CONTENTS_AREAPORTAL)
-            return;
+        if (ClusterContents(leaf).native & Q2_CONTENTS_AREAPORTAL)
+            continue;
 
         map.c_areas++;
         FloodAreas_r(leaf);
@@ -528,11 +548,18 @@ static void SetAreaPortalAreas_r(node_t *node)
     // grab the func_areanode entity
     mapentity_t *entity = AreanodeEntityForLeaf(node);
 
+    if (!entity)
+    {
+        logging::print("WARNING: areaportal missing for node: {} -> {}\n",
+            node->bounds.mins(), node->bounds.maxs());
+        return;
+    }
+
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
-        // FIXME: entity #
-        logging::print("WARNING: areaportal entity doesn't touch two areas\n  Node Bounds: {} -> {}\n",
-            qv::to_string(entity->bounds.mins()), qv::to_string(entity->bounds.maxs()));
+        logging::print("WARNING: areaportal entity {} doesn't touch two areas\n  Entity Bounds: {} -> {}\n",
+            entity - map.entities.data(),
+            entity->bounds.mins(), entity->bounds.maxs());
         return;
     }
 }
@@ -573,7 +600,7 @@ static void EmitAreaPortals(node_t *headnode)
 
             if (!e.areaportalnum)
                 continue;
-            dareaportal_t &dp = map.bsp.dareaportals.emplace_back();
+            dareaportal_t dp = {};
 
             if (e.portalareas[0] == i) {
                 dp.portalnum = e.areaportalnum;
@@ -582,6 +609,17 @@ static void EmitAreaPortals(node_t *headnode)
                 dp.portalnum = e.areaportalnum;
                 dp.otherarea = e.portalareas[0];
             }
+
+            size_t j = 0;
+
+            for (; j < map.bsp.dareaportals.size(); j++)
+            {
+                if (map.bsp.dareaportals[j] == dp)
+                    break;
+            }
+
+            if (j == map.bsp.dareaportals.size())
+                map.bsp.dareaportals.push_back(dp);
         }
 
         area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
@@ -1098,7 +1136,11 @@ void EnsureTexturesLoaded()
     if (!wadstring[0])
         wadstring = ValueForKey(map.world_entity(), "wad");
     if (!wadstring[0])
-        logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
+    {
+        // Q2 doesn't need this
+        if (options.target_game->id != GAME_QUAKE_II)
+            logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
+    }
     else
         WADList_Init(wadstring);
 

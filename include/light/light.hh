@@ -115,7 +115,7 @@ struct lightsurf_t
     /* these take precedence the values in modelinfo */
     vec_t minlight;
     qvec3d minlight_color;
-    bool nodirt;
+    bool nodirt, minlightMottle;
 
     qplane3d plane;
     qvec3d snormal;
@@ -219,6 +219,7 @@ public:
     qvec3d offset{};
 
     settings::setting_scalar minlight{this, "minlight", 0};
+    settings::setting_bool minlightMottle{this, "minlightMottle", false};
     settings::setting_scalar shadow{this, "shadow", 0};
     settings::setting_scalar shadowself{this, {"shadowself", "selfshadow"}, 0};
     settings::setting_scalar shadowworldonly{this, "shadowworldonly", 0};
@@ -400,7 +401,7 @@ public:
     setting_bool highlightseams{this, "highlightseams", false, &debug_group, ""};
     setting_soft soft{this, "soft", 0, -1, std::numeric_limits<int32_t>::max(), &postprocessing_group,
         "blurs the lightmap. specify n to blur radius in samples, otherwise auto"};
-    setting_string radlights{this, "radlights", "", "\"filename.rad\"", &experimental_group,
+    setting_set radlights{this, "radlights", "\"filename.rad\"", &experimental_group,
         "loads a <surfacename> <r> <g> <b> <intensity> file"};
     setting_int32 lmscale{
         this, "lmscale", 0, &experimental_group, "change lightmap scale, vanilla engines only allow 16"};

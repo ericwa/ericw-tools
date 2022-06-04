@@ -806,6 +806,56 @@ TEST_CASE("features", "[testmaps_q1]")
     REQUIRE_FALSE(map.leakfile);
 }
 
+TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_func_detail.map");
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(1 == bsp.dmodels.size());
+
+    const qvec3d in_func_detail{56, -56, 120};
+    const qvec3d in_func_detail_wall{56, -136, 120};
+    const qvec3d in_func_detail_illusionary{56, -216, 120};
+    const qvec3d in_func_detail_illusionary_mirrorinside{56, -296, 120};
+
+    const double floor_z = 96;
+
+    // detail clips away world faces, others don't
+    CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_wall  - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary - qvec3d(0,0,24), {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary_mirrorinside - qvec3d(0,0,24), {0, 0, 1}));
+
+    // check for correct contents
+    auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail);
+    auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_wall);
+    auto *detail_illusionary_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary);
+    auto *detail_illusionary_mirrorinside_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary_mirrorinside);
+
+    CHECK(CONTENTS_SOLID == detail_leaf->contents);
+    CHECK(CONTENTS_SOLID == detail_wall_leaf->contents);
+    CHECK(CONTENTS_EMPTY == detail_illusionary_leaf->contents);
+    CHECK(CONTENTS_EMPTY == detail_illusionary_mirrorinside_leaf->contents);
+}
+
+TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_angled_brush.map");
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(1 == bsp.dmodels.size());
+    // tilted cuboid floating in a box room, so shared solid leaf + 6 empty leafs around the cube
+    CHECK(6 + 1 == bsp.dleafs.size());
+}
+
+TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_sealing_point_entity_on_outside.map");
+
+    CHECK_FALSE(map.leakfile);
+}
+
 // q2 testmaps
 
 TEST_CASE("detail", "[testmaps_q2]") {
@@ -971,6 +1021,24 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     REQUIRE("1" == it->get("style"));
 }
 
+/**
+ *  Similar to above test, but there's a detail brush sticking into the area portal
+ */
+TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
+{
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_areaportal_with_detail.map", {"-q2bsp"});
+
+    CHECK_FALSE(map.leakfile);
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // area 0 is a placeholder
+    // areaportal 0 is a placeholder
+    //
+    // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
+    CHECK_THAT(bsp.dareaportals, Catch::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareas, Catch::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+}
+
 TEST_CASE("nodraw_light", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_light.map", {"-q2bsp", "-includeskip"});
 
@@ -1049,6 +1117,41 @@ TEST_CASE("base1leak", "[testmaps_q2]")
     CHECK(Q2_CONTENTS_SOLID == plus_y_wall_leaf->contents);
 
     CHECK(3 == plus_y_wall_leaf->numleafbrushes);
+}
+
+/**
+ * e1u1/brlava brush intersecting e1u1/clip
+ **/
+TEST_CASE("lavaclip", "[testmaps_q2]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_lavaclip.map", {"-q2bsp"});
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // not touching the lava, but inside the clip
+    const qvec3d playerclip_outside1 { -88, -32, 8};
+    const qvec3d playerclip_outside2 { 88, -32, 8};
+
+    // inside both clip and lava
+    const qvec3d playerclip_inside_lava { 0, -32, 8};
+
+    const qvec3d in_lava_only {0, 32, 8};
+
+    // near the player start's feet. There should be a lava face here
+    const qvec3d lava_top_face_in_playerclip { 0, -32, 16};
+
+    // check leaf contents
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside1)->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside2)->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_inside_lava)->contents);
+    CHECK(Q2_CONTENTS_LAVA == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_lava_only)->contents);
+
+    // search for face
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], lava_top_face_in_playerclip, {0, 0, 1});
+    REQUIRE(nullptr != topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    CHECK(std::string(texinfo->texture.data()) == "e1u1/brlava");
+    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_WARP));
 }
 
 TEST_CASE("winding", "[benchmark]") {

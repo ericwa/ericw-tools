@@ -532,58 +532,58 @@ constexpr int CONTENTS_MIN = CONTENTS_SKY;
 // these definitions also need to be in q_shared.h!
 
 // lower bits are stronger, and will eat weaker brushes completely
-#define Q2_CONTENTS_SOLID 1 // an eye is never valid in a solid
-#define Q2_CONTENTS_WINDOW 2 // translucent, but not watery
-#define Q2_CONTENTS_AUX 4
-#define Q2_CONTENTS_LAVA 8
-#define Q2_CONTENTS_SLIME 16
-#define Q2_CONTENTS_WATER 32
-#define Q2_CONTENTS_MIST 64
-#define Q2_LAST_VISIBLE_CONTENTS 64
+constexpr int Q2_CONTENTS_SOLID = 1; // an eye is never valid in a solid
+constexpr int Q2_CONTENTS_WINDOW = 2; // translucent, but not watery
+constexpr int Q2_CONTENTS_AUX = 4;
+constexpr int Q2_CONTENTS_LAVA = 8;
+constexpr int Q2_CONTENTS_SLIME = 16;
+constexpr int Q2_CONTENTS_WATER = 32;
+constexpr int Q2_CONTENTS_MIST = 64;
+constexpr int Q2_LAST_VISIBLE_CONTENTS = 64;
 
-#define Q2_CONTENTS_LIQUID (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER) // mxd
+constexpr int Q2_CONTENTS_LIQUID = (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER); // mxd
 
 // remaining contents are non-visible, and don't eat brushes
 
-#define Q2_CONTENTS_AREAPORTAL 0x8000
+constexpr int Q2_CONTENTS_AREAPORTAL = 0x8000;
 
-#define Q2_CONTENTS_PLAYERCLIP 0x10000
-#define Q2_CONTENTS_MONSTERCLIP 0x20000
+constexpr int Q2_CONTENTS_PLAYERCLIP = 0x10000;
+constexpr int Q2_CONTENTS_MONSTERCLIP = 0x20000;
 
 // currents can be added to any other contents, and may be mixed
-#define Q2_CONTENTS_CURRENT_0 0x40000
-#define Q2_CONTENTS_CURRENT_90 0x80000
-#define Q2_CONTENTS_CURRENT_180 0x100000
-#define Q2_CONTENTS_CURRENT_270 0x200000
-#define Q2_CONTENTS_CURRENT_UP 0x400000
-#define Q2_CONTENTS_CURRENT_DOWN 0x800000
+constexpr int Q2_CONTENTS_CURRENT_0 = 0x40000;
+constexpr int Q2_CONTENTS_CURRENT_90 = 0x80000;
+constexpr int Q2_CONTENTS_CURRENT_180 = 0x100000;
+constexpr int Q2_CONTENTS_CURRENT_270 = 0x200000;
+constexpr int Q2_CONTENTS_CURRENT_UP = 0x400000;
+constexpr int Q2_CONTENTS_CURRENT_DOWN = 0x800000;
 
-#define Q2_CONTENTS_ORIGIN 0x1000000 // removed before bsping an entity
+constexpr int Q2_CONTENTS_ORIGIN = 0x1000000; // removed before bsping an entity
 
-#define Q2_CONTENTS_MONSTER 0x2000000 // should never be on a brush, only in game
-#define Q2_CONTENTS_DEADMONSTER 0x4000000
-#define Q2_CONTENTS_DETAIL 0x8000000 // brushes to be added after vis leafs
-#define Q2_CONTENTS_TRANSLUCENT 0x10000000 // auto set if any surface has trans
-#define Q2_CONTENTS_LADDER 0x20000000
+constexpr int Q2_CONTENTS_MONSTER = 0x2000000; // should never be on a brush, only in game
+constexpr int Q2_CONTENTS_DEADMONSTER = 0x4000000;
+constexpr int Q2_CONTENTS_DETAIL = 0x8000000; // brushes to be added after vis leafs
+constexpr int Q2_CONTENTS_TRANSLUCENT = 0x10000000; // auto set if any surface has trans
+constexpr int Q2_CONTENTS_LADDER = 0x20000000;
 
 // Special contents flags for the compiler only
-#define CFLAGS_BMODEL_MIRROR_INSIDE                                                                                    \
-    (1 << 3) /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
-#define CFLAGS_NO_CLIPPING_SAME_TYPE                                                                                   \
-    (1 << 4) /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
+constexpr int CFLAGS_BMODEL_MIRROR_INSIDE =
+    (1 << 3); /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
+constexpr int CFLAGS_NO_CLIPPING_SAME_TYPE =
+    (1 << 4); /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
 // only one of these flags below should ever be set.
-#define CFLAGS_HINT (1 << 5)
-#define CFLAGS_CLIP (1 << 6)
-#define CFLAGS_ORIGIN (1 << 7)
-#define CFLAGS_DETAIL (1 << 8)
-#define CFLAGS_DETAIL_ILLUSIONARY (1 << 9)
-#define CFLAGS_DETAIL_FENCE (1 << 10)
-#define CFLAGS_ILLUSIONARY_VISBLOCKER (1 << 11)
+constexpr int CFLAGS_HINT = (1 << 5);
+constexpr int CFLAGS_CLIP = (1 << 6);
+constexpr int CFLAGS_ORIGIN = (1 << 7);
+constexpr int CFLAGS_DETAIL = (1 << 8);
+constexpr int CFLAGS_DETAIL_ILLUSIONARY = (1 << 9);
+constexpr int CFLAGS_DETAIL_FENCE = (1 << 10);
+constexpr int CFLAGS_ILLUSIONARY_VISBLOCKER = (1 << 11);
 // all of the detail values
-#define CFLAGS_DETAIL_MASK (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE)
+constexpr int CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE);
 // all of the special content types
-#define CFLAGS_CONTENTS_MASK                                                                                           \
-    (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
+constexpr int CFLAGS_CONTENTS_MASK =
+    (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER);
 
 struct gamedef_t;
 

@@ -167,7 +167,7 @@ static std::optional<img::texture_meta> LoadWal(const char *name)
     return map.wal_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
 }
 
-int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal)
+int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal, bool recursive)
 {
     const char *pathsep;
     int i;
@@ -223,8 +223,29 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         map.miptex.push_back({name, extended_info->flags, extended_info->value, extended_info->animation});
 
         /* Handle animating textures carefully */
-        if (!extended_info->animation.empty()) {
-            map.miptex[i].animation_miptex = FindMiptex(extended_info->animation.data(), internal);
+        if (!extended_info->animation.empty() && recursive) {
+
+            int last_i = i;
+
+            // recursively load animated textures until we loop back to us
+            while (true)
+            {
+                // wal for next chain
+                wal = LoadWal(wal->animation.c_str());
+
+                // texinfo base for animated wal
+                std::optional<extended_texinfo_t> animation_info = extended_info;
+                animation_info->animation = wal->animation;
+
+                // fetch animation chain
+                int next_i = FindMiptex(wal->name.data(), animation_info, internal, false);
+                map.miptex[last_i].animation_miptex = next_i;
+                last_i = next_i;
+
+                // looped back
+                if (wal->animation == name)
+                    break;
+            }
         }
     }
 
@@ -339,12 +360,6 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
             flags.native |= TEX_SPECIAL;
     } else {
         flags.native = texinfo.flags.native;
-
-        // This fixes a bug in some old maps.
-        if ((flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
-            flags.native &= ~Q2_SURF_NODRAW;
-            // logging::print("Corrected invalid SKY flag\n");
-        }
 
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
             flags.is_skip = true;
@@ -1379,6 +1394,15 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         } else if (!extinfo.info) {
             extinfo.info = extended_texinfo_t{};
         }
+
+        // remove TRANSLUCENT; it's only meant to be set by the compiler
+        extinfo.info->contents.native &= ~Q2_CONTENTS_TRANSLUCENT;
+
+        // This fixes a bug in some old maps.
+        if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
+            extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
+            //logging::print("corrected invalid SKY flag\n");
+        }
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
@@ -1387,7 +1411,26 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     tx->flags = mapface.flags = {extinfo.info->flags};
     tx->value = mapface.value = extinfo.info->value;
 
-    Q_assert(contentflags_t{mapface.contents}.is_valid(options.target_game, false));
+    if (!contentflags_t{mapface.contents}.is_valid(options.target_game, false))
+    {
+        logging::print("WARNING: line {}: face has invalid contents {} ({})\n", mapface.linenum, mapface.contents.to_string(options.target_game), mapface.contents.native);
+        
+        // TODO: move into game
+        if (options.target_game->id == GAME_QUAKE_II) {
+            bool got = false;
+
+            for (int i = 0; i < 8; i++) {
+                if (!got) {
+                    if (mapface.contents.native & (1 << i)) {
+                        got = true;
+                        continue;
+                    }
+                } else {
+                    mapface.contents.native &= ~(1 << i);
+                }
+            }
+        }
+    }
 
     switch (tx_type) {
         case TX_QUARK_TYPE1:
@@ -1760,6 +1803,8 @@ void ProcessExternalMapEntity(mapentity_t *entity)
     SetKeyValue(entity, "origin", "0 0 0");
 }
 
+int MakeSkipTexinfo();
+
 void ProcessAreaPortal(mapentity_t *entity)
 {
     Q_assert(!options.onlyents.value());
@@ -1780,6 +1825,7 @@ void ProcessAreaPortal(mapentity_t *entity)
 
         for (size_t f = map.brushes[i].firstface; f < map.brushes[i].firstface + map.brushes[i].numfaces; f++) {
             map.faces[f].contents.native = Q2_CONTENTS_AREAPORTAL;
+            map.faces[f].texinfo = MakeSkipTexinfo();
         }
     }
     entity->areaportalnum = ++map.numareaportals;

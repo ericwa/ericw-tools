@@ -64,6 +64,26 @@ static void PrintBSPTextureUsage(const mbsp_t &bsp)
     }
 }
 
+static void FindInfiniteChains(const mbsp_t &bsp)
+{
+    for (auto &ti : bsp.texinfo)
+    {
+        if (ti.nexttexinfo == -1)
+            continue;
+
+        int loop = 0;
+
+        for (int i = ti.nexttexinfo; i != -1; i = bsp.texinfo[i].nexttexinfo, loop++)
+        {
+            if (loop > bsp.texinfo.size())
+            {
+                printf("INFINITE LOOP!");
+                exit(1);
+            }
+        }
+    }
+}
+
 // TODO
 settings::common_settings options;
 
@@ -94,6 +114,8 @@ int main(int argc, char **argv)
         serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), fs::path(source).replace_extension("bsp.json"));
 
         PrintBSPTextureUsage(std::get<mbsp_t>(bsp.bsp));
+
+        FindInfiniteChains(std::get<mbsp_t>(bsp.bsp));
 
         printf("---------------------\n");
 

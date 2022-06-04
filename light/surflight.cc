@@ -116,7 +116,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     // Add surfacelight...
     surfacelight_t l;
     l.surfnormal = facenormal;
-    l.omnidirectional = (info->flags.native & Q2_SURF_SKY) ? true : false;
+    l.omnidirectional = true;//(info->flags.native & Q2_SURF_SKY) ? true : false;
     l.points = points;
     l.pos = facemidpoint;
 

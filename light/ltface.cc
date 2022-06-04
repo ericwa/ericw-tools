@@ -711,9 +711,20 @@ static bool Lightsurf_Init(
         lightsurf->nodirt = extended_flags.no_dirt;
     }
 
+    lightsurf->minlightMottle = modelinfo->minlightMottle.value();
+
     // minlight
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.value();
+
+        // Q2 uses a 0-1 range for minlight
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            lightsurf->minlight *= 128.f;
+
+            if (!modelinfo->minlightMottle.isChanged()) {
+                lightsurf->minlightMottle = true;
+            }
+        }
     } else {
         lightsurf->minlight = extended_flags.minlight;
     }
@@ -1233,7 +1244,7 @@ std::map<int, qvec3f> GetDirectLighting(
         qvec3d surfpointToLightDir;
         // FIXME: this is always 128 because vpl.pos and origin are always equal it seems?
         const float surfpointToLightDist =
-            max(128.0, GetDir(vpl.pos, origin,
+            max(128.0, GetDir(origin, vpl.pos,
                            surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
         const vec_t angle = qv::dot(surfpointToLightDir, normal);
         if (angle <= 0)
@@ -1592,6 +1603,9 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         if (cfg.addminlight.value()) {
             sample->color += color * (value / 255.0);
         } else {
+            if (lightsurf->minlightMottle) {
+                value += rand() % 48;
+            }
             Light_ClampMin(sample, value, color);
         }
 
@@ -1816,7 +1830,7 @@ static qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
 
     const float dp1 = qv::dot(vpl->surfnormal, dir);
     const qvec3f sp_vpl = dir * -1.0f;
-    float dp2 = qv::dot(sp_vpl, normal);
+    float dp2 = 1.f;//qv::dot(sp_vpl, normal);
 
     if (!vpl->omnidirectional) {
         if (dp1 < 0.0f)
