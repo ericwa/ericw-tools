@@ -1119,6 +1119,41 @@ TEST_CASE("base1leak", "[testmaps_q2]")
     CHECK(3 == plus_y_wall_leaf->numleafbrushes);
 }
 
+/**
+ * e1u1/brlava brush intersecting e1u1/clip
+ **/
+TEST_CASE("lavaclip", "[testmaps_q2]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_lavaclip.map", {"-q2bsp"});
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // not touching the lava, but inside the clip
+    const qvec3d playerclip_outside1 { -88, -32, 8};
+    const qvec3d playerclip_outside2 { 88, -32, 8};
+
+    // inside both clip and lava
+    const qvec3d playerclip_inside_lava { 0, -32, 8};
+
+    const qvec3d in_lava_only {0, 32, 8};
+
+    // near the player start's feet. There should be a lava face here
+    const qvec3d lava_top_face_in_playerclip { 0, -32, 16};
+
+    // check leaf contents
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside1)->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside2)->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_inside_lava)->contents);
+    CHECK(Q2_CONTENTS_LAVA == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_lava_only)->contents);
+
+    // search for face
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], lava_top_face_in_playerclip, {0, 0, 1});
+    REQUIRE(nullptr != topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    CHECK(std::string(texinfo->texture.data()) == "e1u1/brlava");
+    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_WARP));
+}
+
 TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;
 
