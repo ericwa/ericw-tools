@@ -800,7 +800,7 @@ static compiled_brush_t DecompileLeafTaskGeometryOnly(
 }
 
 static compiled_brush_t DecompileLeafTask(
-    const mbsp_t *bsp, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     compiled_brush_t brush;
     brush.source = task.brush;
@@ -808,11 +808,12 @@ static compiled_brush_t DecompileLeafTask(
     brush.contents = {task.brush ? task.brush->contents : task.leaf->contents};
 
     std::vector<decomp_brush_t> finalBrushes;
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
         // Q2 doesn't need this - we assume each brush in the brush lump corresponds to exactly one .map file brush
         // and so each side of the brush can only have 1 texture at this point.
         finalBrushes = {BuildInitialBrush_Q2(bsp, task, task.allPlanes)};
     } else {
+        // Q1 (or Q2, with options.ignoreBrushes)
         RemoveRedundantPlanes(task.allPlanes);
 
         if (task.allPlanes.empty()) {
@@ -832,7 +833,13 @@ static compiled_brush_t DecompileLeafTask(
         // Next, for each plane in reducedPlanes, if there are 2+ faces on the plane with non-equal
         // texinfo, we need to clip the brush perpendicular to the face until there are no longer
         // 2+ faces on a plane with non-equal texinfo.
-        finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
+        if (!options.ignoreBrushes) {
+            finalBrushes = SplitDifferentTexturedPartsOfBrush(bsp, initialBrush);
+        } else {
+            // we don't really care about accurate textures with options.ignoreBrushes, just
+            // want to reconstuct the leafs
+            finalBrushes = {initialBrush};
+        }
     }
 
     for (const decomp_brush_t &finalBrush : finalBrushes) {
@@ -974,7 +981,7 @@ static compiled_brush_t DecompileBrushTask(
     if (options.geometryOnly) {
         return DecompileLeafTaskGeometryOnly(bsp, task, brush_offset);
     } else {
-        return DecompileLeafTask(bsp, task, brush_offset);
+        return DecompileLeafTask(bsp, options, task, brush_offset);
     }
 }
 
@@ -1122,7 +1129,7 @@ static void DecompileEntity(
                 if (options.geometryOnly) {
                     compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
                 } else {
-                    compiledBrushes[i] = DecompileLeafTask(bsp, tasks[i], brush_offset);
+                    compiledBrushes[i] = DecompileLeafTask(bsp, options, tasks[i], brush_offset);
                 }
             });
         }
