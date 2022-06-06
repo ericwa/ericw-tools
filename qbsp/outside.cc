@@ -608,7 +608,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
 
     MarkVisibleBrushSides_R(node);
 
-    if (options.outsidedebug.value() && hullnum == 0) {
+    if (options.outsidedebug.value() && (options.target_game->get_hull_sizes().size() == 0 || hullnum == 0)) {
         fs::path path = options.bsp_path;
         path.replace_extension(".outside.map");
 
