@@ -1053,7 +1053,7 @@ static void DecompileEntity(
 
         // If we have brush info, we'll use that directly
         // TODO: support BSPX brushes too
-        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
             std::unordered_map<const dbrush_t *, leaf_decompile_task> brushes;
 
             auto handle_leaf = [&brushes, bsp, model](const mleaf_t *leaf) {
