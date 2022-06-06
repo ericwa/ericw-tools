@@ -44,6 +44,29 @@
 
 mapdata_t map;
 
+#include <shared_mutex>
+
+static std::shared_mutex mapdata_plane_mutex;
+
+size_t mapdata_t::plane_size() const
+{
+    std::shared_lock lock(mapdata_plane_mutex);
+    return planes.size();
+}
+
+qbsp_plane_t mapdata_t::plane(size_t i) const
+{
+    std::shared_lock lock(mapdata_plane_mutex);
+    return planes[i];
+}
+
+void mapdata_t::emplace_plane(const qbsp_plane_t &plane, size_t &out_index)
+{
+    std::unique_lock lock(mapdata_plane_mutex);
+    out_index = planes.size();
+    planes.emplace_back(plane);
+}
+
 // Useful shortcuts
 mapentity_t *mapdata_t::world_entity()
 {
@@ -1803,8 +1826,6 @@ void ProcessExternalMapEntity(mapentity_t *entity)
     SetKeyValue(entity, "origin", "0 0 0");
 }
 
-int MakeSkipTexinfo();
-
 void ProcessAreaPortal(mapentity_t *entity)
 {
     Q_assert(!options.onlyents.value());
@@ -1825,7 +1846,7 @@ void ProcessAreaPortal(mapentity_t *entity)
 
         for (size_t f = map.brushes[i].firstface; f < map.brushes[i].firstface + map.brushes[i].numfaces; f++) {
             map.faces[f].contents.native = Q2_CONTENTS_AREAPORTAL;
-            map.faces[f].texinfo = MakeSkipTexinfo();
+            map.faces[f].texinfo = map.skip_texinfo;
         }
     }
     entity->areaportalnum = ++map.numareaportals;
@@ -2341,13 +2362,8 @@ void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<br
         fmt::print(f, "{{\n");
         for (auto &face : brush->faces) {
             // FIXME: Factor out this mess
-            qbsp_plane_t plane = map.planes.at(face.planenum);
-
-            if (face.planeside) {
-                plane = -plane;
-            }
-
-            winding_t w = BaseWindingForPlane(plane);
+            const qbsp_plane_t &plane = map.plane_ref(face.planenum);
+            winding_t w = BaseWindingForPlane(face.planeside ? -plane : plane);
 
             fmt::print(f, "( {} ) ", w[0]);
             fmt::print(f, "( {} ) ", w[1]);

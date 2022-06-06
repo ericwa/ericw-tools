@@ -232,7 +232,14 @@ public:
     }
 
     // copy constructor
-    inline winding_base_t(const winding_base_t &copy) : winding_base_t(copy.begin(), copy.end()) { }
+    inline winding_base_t(const winding_base_t &copy) : winding_base_t(copy.size())
+    {
+        if (isVector) {
+            memcpy(&vector.front(), &copy.vector.front(), count * sizeof(qvec3d));
+        } else {
+            memcpy(&array.front(), &copy.array.front(), count * sizeof(qvec3d));
+        }
+    }
 
     // move constructor
     inline winding_base_t(winding_base_t &&move) noexcept : count(move.count)
@@ -244,7 +251,7 @@ public:
             vector = std::move(move.vector);
             move.isVector = false;
         } else {
-            std::copy(move.begin(), move.begin() + move.count, array.begin());
+            memcpy(&array.front(), &move.array.front(), count * sizeof(qvec3d));
         }
         move.count = 0;
     }
@@ -254,11 +261,11 @@ public:
     {
         count = copy.count;
         isVector = copy.isVector;
-
+        
         if (isVector) {
-            vector = copy.vector;
+            memcpy(&vector.front(), &copy.vector.front(), count * sizeof(qvec3d));
         } else {
-            std::copy(copy.begin(), copy.begin() + copy.count, array.begin());
+            memcpy(&array.front(), &copy.array.front(), count * sizeof(qvec3d));
         }
 
         return *this;
@@ -274,7 +281,7 @@ public:
             vector = std::move(move.vector);
             move.isVector = false;
         } else {
-            std::copy(move.begin(), move.begin() + move.count, array.begin());
+            memcpy(&array.front(), &move.array.front(), count * sizeof(qvec3d));
         }
         move.count = 0;
 

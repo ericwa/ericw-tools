@@ -325,7 +325,7 @@ struct face_fragment_t
 struct face_t : face_fragment_t
 {
     int planenum;
-    int planeside; // which side is the front of the face
+    side_t planeside; // which side is the front of the face
     int texinfo;
     twosided<contentflags_t> contents;
     twosided<int16_t> lmshift;

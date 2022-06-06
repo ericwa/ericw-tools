@@ -304,8 +304,6 @@ inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
         return SplitPlaneMetric_NonAxial(p, bounds);
 }
 
-// fixme-brushbsp: restore
-#if 0
 /*
 ==================
 ChooseMidPlaneFromList
@@ -335,7 +333,7 @@ static const face_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<br
                     continue;
                 }
 
-                const qbsp_plane_t &plane = map.planes[face.planenum];
+                qbsp_plane_t plane = map.plane(face.planenum);
                 bool axial = false;
 
                 /* check for axis aligned surfaces */
@@ -369,7 +367,6 @@ static const face_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<br
     auto bestsurface = (bestaxialsurface == nullptr) ? bestanysurface : bestaxialsurface;
     return bestsurface;
 }
-#endif
 
 /*
 ==================
@@ -412,7 +409,7 @@ static const face_t *ChoosePlaneFromList(const std::vector<std::unique_ptr<brush
 
                 const bool hintsplit = map.mtexinfos.at(face.texinfo).flags.is_hint;
 
-                const qbsp_plane_t &plane = map.planes[face.planenum];
+                qbsp_plane_t plane = map.plane(face.planenum);
                 int splits = 0;
 
                 // now check all of the other faces in `brushes` and count how many
@@ -510,10 +507,10 @@ static const face_t *SelectPartition(const std::vector<std::unique_ptr<brush_t>>
                         (bounds.maxs()[2] - bounds.mins()[2]) > maxnodesize;
         }
     }
-#if 0
+
     if (usemidsplit || largenode) // do fast way for clipping hull
         return ChooseMidPlaneFromList(brushes, bounds);
-#endif
+
     // do slow way to save poly splits for drawing hull
     return ChoosePlaneFromList(brushes, bounds);
 }
@@ -758,6 +755,7 @@ twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, co
         if (result[0]) {
             result.front = std::move(brush);
         }
+        // fixme: use of move here, might move twice. should it be `else`?
         if (result[1]) {
             result.back = std::move(brush);
         }
@@ -773,7 +771,7 @@ twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, co
         // for the brush on the front side of the plane, the `midwinding`
         // (the face that is touching the plane) should have a normal opposite the plane's normal
         cs.planenum = FindPlane(brushOnFront ? -split : split, &cs.planeside);
-        cs.texinfo = MakeSkipTexinfo();
+        cs.texinfo = map.skip_texinfo;
 
         // fixme-brushbsp: configure any other settings on the face?
 
@@ -902,7 +900,7 @@ static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node
     node->planenum = split->planenum;
     node->detail_separator = AllDetail(brushes);
 
-    const qbsp_plane_t &splitplane = map.planes[split->planenum];
+    qbsp_plane_t splitplane = map.plane(split->planenum);
 
     DivideNodeBounds(node, splitplane);
 
@@ -938,16 +936,10 @@ static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node
         }
     }
 
-    // FIXME: can't parallelize until we lock all map.planes reads/writes
-#if 0
     tbb::task_group g;
-    g.run([&]() { PartitionBrushes(frontlist, node->children[0]); });
-    g.run([&]() { PartitionBrushes(backlist, node->children[1]); });
+    g.run([&]() { PartitionBrushes(std::move(frontlist), node->children[0]); });
+    g.run([&]() { PartitionBrushes(std::move(backlist), node->children[1]); });
     g.wait();
-#else
-    PartitionBrushes(std::move(frontlist), node->children[0]);
-    PartitionBrushes(std::move(backlist), node->children[1]);
-#endif
 }
 
 /*

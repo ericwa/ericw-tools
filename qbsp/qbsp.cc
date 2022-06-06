@@ -221,7 +221,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
         int32_t planenum = f.planenum;
 
         if (f.planeside) {
-            planenum = FindPlane(-map.planes[f.planenum], nullptr);
+            planenum = FindPlane(-map.plane_ref(f.planenum), nullptr);
         }
 
         int32_t outputplanenum = ExportMapPlane(planenum);
@@ -306,7 +306,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
                     // behind this plane, it is a proper edge bevel
                     for (; it != b.faces.end(); it++) {
                         auto &f = *it;
-                        auto &plane = map.planes[f.planenum];
+                        const auto &plane = map.plane_ref(f.planenum);
                         qplane3d temp = f.planeside ? -plane : plane;
 
                         // if this plane has allready been used, skip it
@@ -756,7 +756,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         logging::print(logging::flag::STAT, "     {:8} liquid brushes\n", stats.liquid);
     }
 
-    logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
+    logging::print(logging::flag::STAT, "     {:8} planes\n", map.plane_size());
 
     if (hullnum > 0) {
         nodes = SolidBSP(entity, true);
@@ -959,8 +959,9 @@ static void BSPX_Brushes_AddModel(
         permodel.numbrushes++;
         for (auto &f : b->faces) {
             /*skip axial*/
-            if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
-                fabs(map.planes[f.planenum].normal[2]) == 1)
+            const auto &plane = map.plane_ref(f.planenum);
+            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
+                fabs(plane.normal[2]) == 1)
                 continue;
             permodel.numfaces++;
         }
@@ -980,8 +981,9 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->faces) {
             /*skip axial*/
-            if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
-                fabs(map.planes[f.planenum].normal[2]) == 1)
+            const auto &plane = map.plane_ref(f.planenum);
+            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
+                fabs(plane.normal[2]) == 1)
                 continue;
             perbrush.numfaces++;
         }
@@ -1021,16 +1023,17 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->faces) {
             /*skip axial*/
-            if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
-                fabs(map.planes[f.planenum].normal[2]) == 1)
+            const auto &plane = map.plane_ref(f.planenum);
+            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
+                fabs(plane.normal[2]) == 1)
                 continue;
 
             bspxbrushes_perface perface;
 
             if (f.planeside) {
-                perface = -map.planes[f.planenum];
+                perface = -plane;
             } else {
-                perface = map.planes[f.planenum];
+                perface = plane;
             }
 
             str <= std::tie(perface.normal, perface.dist);
@@ -1205,6 +1208,21 @@ void ProcessFile()
 
 /*
 ==================
+MakeSkipTexinfo
+==================
+*/
+static int MakeSkipTexinfo()
+{
+    mtexinfo_t mt{};
+
+    mt.miptex = FindMiptex("skip", true);
+    mt.flags.is_skip = true;
+
+    return FindTexinfo(mt);
+}
+
+/*
+==================
 InitQBSP
 ==================
 */
@@ -1254,6 +1272,9 @@ void InitQBSP(int argc, const char **argv)
     if (options.target_game) {
         options.target_game->init_filesystem(options.map_path, options);
     }
+
+    // make skip texinfo, in case map needs it (it'll get culled out if not)
+    map.skip_texinfo = MakeSkipTexinfo();
 }
 
 void InitQBSP(const std::vector<std::string>& args)

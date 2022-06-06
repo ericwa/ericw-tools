@@ -30,7 +30,6 @@
 struct brush_t;
 struct face_t;
 
-int MakeSkipTexinfo();
 face_t *NewFaceFromFace(const face_t *in);
 face_t *CopyFace(const face_t *in);
 face_t *MirrorFace(const face_t *face);

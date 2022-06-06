@@ -66,7 +66,6 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
     int i, j, k, l;
     qvec3d normal, delta, planenormal;
     vec_t dot;
-    qbsp_plane_t *plane;
     bool keep1, keep2;
 
     if (!f1->w.size() || !f2->w.size() || f1->planeside != f2->planeside || f1->texinfo != f2->texinfo ||
@@ -99,8 +98,8 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
-    plane = &map.planes[f1->planenum];
-    planenormal = plane->normal;
+    const auto &plane = map.plane_ref(f1->planenum);
+    planenormal = plane.normal;
     if (f1->planeside)
         planenormal = -planenormal;
 

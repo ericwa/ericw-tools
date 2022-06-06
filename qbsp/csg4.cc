@@ -39,28 +39,6 @@ Brushes that touch still need to be split at the cut point to make a tjunction
 
 */
 
-// acquire this for anything that can't run in parallel during CSGFaces
-std::mutex csgfaces_lock;
-
-/*
-==================
-MakeSkipTexinfo
-==================
-*/
-int MakeSkipTexinfo()
-{
-    // FindMiptex, FindTexinfo not threadsafe
-    std::unique_lock<std::mutex> lck{csgfaces_lock};
-
-    mtexinfo_t mt{};
-
-    mt.miptex = FindMiptex("skip", true);
-    mt.flags = {};
-    mt.flags.is_skip = true;
-
-    return FindTexinfo(mt);
-}
-
 /*
 ==================
 NewFaceFromFace
@@ -202,7 +180,7 @@ static void ClipInside(
     // effectively make a copy of `inside`, and clear it
     std::swap(*inside, oldinside);
 
-    const qbsp_plane_t &splitplane = map.planes[clipface->planenum];
+    const qbsp_plane_t &splitplane = map.plane_ref(clipface->planenum);
 
     for (face_t *face : oldinside) {
         /* HACK: Check for on-plane but not the same planenum
@@ -253,7 +231,7 @@ face_t *MirrorFace(const face_t *face)
 {
     face_t *newface = NewFaceFromFace(face);
     newface->w = face->w.flip();
-    newface->planeside = face->planeside ^ 1;
+    newface->planeside = static_cast<side_t>(face->planeside ^ 1);
     newface->contents.swap();
     newface->lmshift.swap();
 
@@ -332,7 +310,7 @@ static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbru
 static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const mapentity_t *srcentity, const brush_t *srcbrush, const brush_t *clipbrush)
 {
     if (srcbrush == clipbrush) {
-        logging::print("    ignoring self-clip\n");
+        //logging::print("    ignoring self-clip\n");
         return input;
     }
 
@@ -417,7 +395,7 @@ std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t *srcentity, const
 {
     const auto possible_clipbrushes = GatherPossibleClippingBrushes(srcentity, srcnode, srcface);
 
-    logging::print("face {} has {} possible clipbrushes\n", (void *)srcface, possible_clipbrushes.size());
+    //logging::print("face {} has {} possible clipbrushes\n", (void *)srcface, possible_clipbrushes.size());
 
     std::list<face_t *> result{srcface};
 

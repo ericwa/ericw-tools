@@ -76,7 +76,7 @@ static node_t *PointInCluster(node_t *node, const qvec3d &point)
         return node;
     }
 
-    auto &plane = map.planes[node->planenum];
+    const auto &plane = map.plane_ref(node->planenum);
     vec_t dist = plane.distance_to(point);
 
     if (dist > 0) {

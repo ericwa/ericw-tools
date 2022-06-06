@@ -105,7 +105,6 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
 {
     const portal_t *p, *next;
     std::optional<winding_t> w;
-    const qbsp_plane_t *pl;
     int i, front, back;
     qplane3d plane2;
 
@@ -136,9 +135,9 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
          * changeover point between different axis.  interpret the plane the
          * same way vis will, and flip the side orders if needed
          */
-        pl = &map.planes[p->planenum];
+        const auto &pl = map.plane_ref(p->planenum);
         plane2 = w->plane();
-        if (qv::dot(pl->normal, plane2.normal) < 1.0 - ANGLEEPSILON)
+        if (qv::dot(pl.normal, plane2.normal) < 1.0 - ANGLEEPSILON)
             fmt::print(portalFile, "{} {} {} ", w->size(), back, front);
         else
             fmt::print(portalFile, "{} {} {} ", w->size(), front, back);
@@ -366,7 +365,7 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
     int i, j, n;
     portal_t *p, *portals[6];
     qbsp_plane_t bplanes[6];
-    int side;
+    side_t side;
 
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = entity->bounds.grow(SIDESPACE);
@@ -504,7 +503,6 @@ CutNodePortals_r
 */
 static void CutNodePortals_r(node_t *node, portal_state_t *state)
 {
-    qbsp_plane_t clipplane;
     node_t *front, *back, *other_node;
     portal_t *portal, *new_portal, *next_portal;
     int side;
@@ -521,7 +519,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     if (node->detail_separator)
         return;
 
-    const qbsp_plane_t &plane = map.planes[node->planenum];
+    const qbsp_plane_t &plane = map.plane_ref(node->planenum);
     front = node->children[SIDE_FRONT];
     back = node->children[SIDE_BACK];
 
@@ -534,16 +532,15 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
 
     std::optional<winding_t> winding = BaseWindingForPlane(plane);
     for (portal = node->portals; portal; portal = portal->next[side]) {
-        clipplane = map.planes[portal->planenum];
+        const auto &clipplane = map.plane_ref(portal->planenum);
         if (portal->nodes[0] == node)
             side = SIDE_FRONT;
         else if (portal->nodes[1] == node) {
-            clipplane = -clipplane;
             side = SIDE_BACK;
         } else
             FError("Mislinked portal");
 
-        winding = winding->clip(clipplane, ON_EPSILON, true)[SIDE_FRONT];
+        winding = winding->clip(side == SIDE_FRONT ? clipplane : -clipplane, ON_EPSILON, true)[SIDE_FRONT];
         if (winding && WindingIsTiny(*winding, 0.5)) {
             winding = std::nullopt;
         }

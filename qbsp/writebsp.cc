@@ -62,7 +62,7 @@ static contentflags_t RemapContentsForExport(const contentflags_t &content)
  */
 size_t ExportMapPlane(size_t planenum)
 {
-    qbsp_plane_t &plane = map.planes.at(planenum);
+    qbsp_plane_t &plane = map.plane_ref(planenum);
 
     if (plane.outputplanenum.has_value())
         return plane.outputplanenum.value(); // already output.
