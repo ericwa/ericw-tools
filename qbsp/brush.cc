@@ -944,6 +944,9 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
         brush->lmshift = lmshift;
 
+        for (auto &face : brush->faces)
+            face.lmshift = { (short) lmshift, (short) lmshift };
+
         if (classname == std::string_view("func_areaportal")) {
             brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
         }
