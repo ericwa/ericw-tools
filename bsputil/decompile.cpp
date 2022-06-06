@@ -860,7 +860,7 @@ static compiled_brush_t DecompileLeafTask(
                 side.valve = finalSide.plane.normal;
                 DefaultSkipSide(side, bsp);
             } else {
-                const char *name;
+                const char *name = nullptr;
                 const gtexinfo_t *ti;
 
                 auto faces = finalSide.faces;
@@ -871,10 +871,12 @@ static compiled_brush_t DecompileLeafTask(
                     ti = Face_Texinfo(bsp, face);
                 } else if (finalSide.plane.source) {
                     ti = BSP_GetTexinfo(bsp, finalSide.plane.source->texinfo);
-                    name = ti->texture.data();
+                    if (ti) {
+                        name = ti->texture.data();
+                    }
                 }
 
-                if (!name && !*name) {
+                if (!name || !name[0]) {
                     DefaultSkipSide(side, bsp);
                 } else {
                     OverrideTextureForContents(side, bsp, name, brush.contents);
