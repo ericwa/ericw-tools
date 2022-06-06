@@ -617,8 +617,9 @@ int main(int argc, char **argv)
             WriteBSPFile(source, &bspdata);
 
             return 0;
-        } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly")) {
+        } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly") || !strcmp(argv[i], "--decompile-ignore-brushes")) {
             const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
+            const bool ignoreBrushes = !strcmp(argv[i], "--decompile-ignore-brushes");
 
             source.replace_extension("");
             source.replace_filename(source.stem().string() + "-decompile");
@@ -632,6 +633,7 @@ int main(int argc, char **argv)
 
             decomp_options options;
             options.geometryOnly = geomOnly;
+            options.ignoreBrushes = ignoreBrushes;
 
             DecompileBSP(&bsp, options, f);
 
