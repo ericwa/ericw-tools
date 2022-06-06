@@ -518,7 +518,7 @@ static void AddMarksurfaces_r(face_t *face, face_t *face_copy, node_t *node)
         return;
     }
 
-    const qbsp_plane_t &splitplane = map.plane_ref(node->planenum);
+    const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
 
     auto [frontFragment, backFragment] = SplitFace(face_copy, splitplane);
     if (frontFragment) {
@@ -583,7 +583,7 @@ static std::list<face_t *> ClipFacesToTree_r(node_t *node, const brush_t *srcbru
         return faces;
     }
 
-    const qbsp_plane_t &splitplane = map.plane_ref(node->planenum);
+    const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
 
     std::list<face_t *> front, back;
 
@@ -679,7 +679,7 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
 
     // fixme-brushbsp: we need to handle the case of the face being near enough that it gets clipped away,
     // but not face->planenum == node->planenum
-    auto [frontWinding, backWinding] = face->w.clip(map.plane_ref(node->planenum));
+    auto [frontWinding, backWinding] = face->w.clip(map.planes.at(node->planenum));
     if (frontWinding) {
         auto *newFace = new face_t{*face};
         newFace->w = *frontWinding;

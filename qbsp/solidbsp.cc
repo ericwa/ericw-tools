@@ -333,7 +333,7 @@ static const face_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<br
                     continue;
                 }
 
-                qbsp_plane_t plane = map.plane(face.planenum);
+                const qbsp_plane_t &plane = map.planes.at(face.planenum);
                 bool axial = false;
 
                 /* check for axis aligned surfaces */
@@ -409,7 +409,7 @@ static const face_t *ChoosePlaneFromList(const std::vector<std::unique_ptr<brush
 
                 const bool hintsplit = map.mtexinfos.at(face.texinfo).flags.is_hint;
 
-                qbsp_plane_t plane = map.plane(face.planenum);
+                const qbsp_plane_t &plane = map.planes.at(face.planenum);
                 int splits = 0;
 
                 // now check all of the other faces in `brushes` and count how many
@@ -900,7 +900,7 @@ static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node
     node->planenum = split->planenum;
     node->detail_separator = AllDetail(brushes);
 
-    qbsp_plane_t splitplane = map.plane(split->planenum);
+    const qbsp_plane_t &splitplane = map.planes.at(split->planenum);
 
     DivideNodeBounds(node, splitplane);
 

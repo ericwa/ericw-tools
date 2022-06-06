@@ -105,6 +105,7 @@ void print(flag logflag, const char *str)
 
 static time_point start_time;
 static bool is_timing = false;
+static uint64_t last_count = -1;
 
 void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {

@@ -221,7 +221,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
         int32_t planenum = f.planenum;
 
         if (f.planeside) {
-            planenum = FindPlane(-map.plane_ref(f.planenum), nullptr);
+            planenum = FindPlane(-map.planes.at(f.planenum), nullptr);
         }
 
         int32_t outputplanenum = ExportMapPlane(planenum);
@@ -306,7 +306,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
                     // behind this plane, it is a proper edge bevel
                     for (; it != b.faces.end(); it++) {
                         auto &f = *it;
-                        const auto &plane = map.plane_ref(f.planenum);
+                        const auto &plane = map.planes.at(f.planenum);
                         qplane3d temp = f.planeside ? -plane : plane;
 
                         // if this plane has allready been used, skip it
@@ -756,7 +756,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         logging::print(logging::flag::STAT, "     {:8} liquid brushes\n", stats.liquid);
     }
 
-    logging::print(logging::flag::STAT, "     {:8} planes\n", map.plane_size());
+    logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
 
     if (hullnum > 0) {
         nodes = SolidBSP(entity, true);
@@ -959,7 +959,7 @@ static void BSPX_Brushes_AddModel(
         permodel.numbrushes++;
         for (auto &f : b->faces) {
             /*skip axial*/
-            const auto &plane = map.plane_ref(f.planenum);
+            const auto &plane = map.planes.at(f.planenum);
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
                 fabs(plane.normal[2]) == 1)
                 continue;
@@ -981,7 +981,7 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->faces) {
             /*skip axial*/
-            const auto &plane = map.plane_ref(f.planenum);
+            const auto &plane = map.planes.at(f.planenum);
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
                 fabs(plane.normal[2]) == 1)
                 continue;
@@ -1023,7 +1023,7 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->faces) {
             /*skip axial*/
-            const auto &plane = map.plane_ref(f.planenum);
+            const auto &plane = map.planes.at(f.planenum);
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
                 fabs(plane.normal[2]) == 1)
                 continue;

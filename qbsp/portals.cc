@@ -135,7 +135,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
          * changeover point between different axis.  interpret the plane the
          * same way vis will, and flip the side orders if needed
          */
-        const auto &pl = map.plane_ref(p->planenum);
+        const auto &pl = map.planes.at(p->planenum);
         plane2 = w->plane();
         if (qv::dot(pl.normal, plane2.normal) < 1.0 - ANGLEEPSILON)
             fmt::print(portalFile, "{} {} {} ", w->size(), back, front);
@@ -519,7 +519,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
     if (node->detail_separator)
         return;
 
-    const qbsp_plane_t &plane = map.plane_ref(node->planenum);
+    const qbsp_plane_t &plane = map.planes.at(node->planenum);
     front = node->children[SIDE_FRONT];
     back = node->children[SIDE_BACK];
 
@@ -532,7 +532,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
 
     std::optional<winding_t> winding = BaseWindingForPlane(plane);
     for (portal = node->portals; portal; portal = portal->next[side]) {
-        const auto &clipplane = map.plane_ref(portal->planenum);
+        const auto &clipplane = map.planes.at(portal->planenum);
         if (portal->nodes[0] == node)
             side = SIDE_FRONT;
         else if (portal->nodes[1] == node) {
@@ -545,8 +545,8 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
             winding = std::nullopt;
         }
         if (!winding) {
-            logging::funcprint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0],
-                portal->winding->at(0)[1], portal->winding->at(0)[2]);
+            //logging::funcprint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0],
+            //    portal->winding->at(0)[1], portal->winding->at(0)[2]);
             break;
         }
     }

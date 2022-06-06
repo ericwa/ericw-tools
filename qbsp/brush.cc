@@ -56,7 +56,7 @@ Face_Plane
 */
 qplane3d Face_Plane(const face_t *face)
 {
-    qplane3d result = map.plane(face->planenum);
+    const qplane3d &result = map.planes.at(face->planenum);
 
     if (face->planeside) {
         return -result;
@@ -74,7 +74,7 @@ Note: this will not catch 0 area polygons
 */
 static void CheckFace(face_t *face, const mapface_t &sourceface)
 {
-    qbsp_plane_t plane = map.plane(face->planenum);
+    const qbsp_plane_t &plane = map.planes.at(face->planenum);
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
@@ -185,14 +185,9 @@ inline int plane_hash_fn(const qplane3d &p)
     return Q_rint(fabs(p.dist));
 }
 
-#include <shared_mutex>
-
-static std::shared_mutex planehash_mutex;
-
 static void PlaneHash_Add(const qplane3d &p, int index)
 {
     const int hash = plane_hash_fn(p);
-    std::unique_lock lock(planehash_mutex);
     map.planehash[hash].push_back(index);
 }
 
@@ -207,16 +202,16 @@ static int NewPlane(const qplane3d &plane, side_t *side)
     if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
 
-    size_t index;
-    qbsp_plane_t in_plane = qbsp_plane_t{plane};
-    bool out_flipped = NormalizePlane(in_plane, side != nullptr);
-    map.emplace_plane(in_plane, index);
+    size_t index = map.planes.size();
+    qbsp_plane_t &added_plane = map.planes.emplace_back(qbsp_plane_t{plane});
+
+    bool out_flipped = NormalizePlane(added_plane, side != nullptr);
 
     if (side) {
         *side = out_flipped ? SIDE_BACK : SIDE_FRONT;
     }
 
-    PlaneHash_Add(in_plane, index);
+    PlaneHash_Add(added_plane, index);
     return index;
 }
 
@@ -227,23 +222,18 @@ static int NewPlane(const qplane3d &plane, side_t *side)
  */
 int FindPlane(const qplane3d &plane, side_t *side)
 {
-    {
-        std::shared_lock lock(planehash_mutex);
-
-        for (int i : map.planehash[plane_hash_fn(plane)]) {
-            qbsp_plane_t p = map.plane(i);
-            if (qv::epsilonEqual(p, plane)) {
-                if (side) {
-                    *side = SIDE_FRONT;
-                }
-                return i;
-            } else if (side && qv::epsilonEqual(-p, plane)) {
-                *side = SIDE_BACK;
-                return i;
+    for (int i : map.planehash[plane_hash_fn(plane)]) {
+        const qbsp_plane_t &p = map.planes.at(i);
+        if (qv::epsilonEqual(p, plane)) {
+            if (side) {
+                *side = SIDE_FRONT;
             }
+            return i;
+        } else if (side && qv::epsilonEqual(-p, plane)) {
+            *side = SIDE_BACK;
+            return i;
         }
     }
-
     return NewPlane(plane, side);
 }
 

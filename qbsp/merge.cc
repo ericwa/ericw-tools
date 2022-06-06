@@ -98,7 +98,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
-    const auto &plane = map.plane_ref(f1->planenum);
+    const auto &plane = map.planes.at(f1->planenum);
     planenormal = plane.normal;
     if (f1->planeside)
         planenormal = -planenormal;

@@ -180,7 +180,7 @@ static void ClipInside(
     // effectively make a copy of `inside`, and clear it
     std::swap(*inside, oldinside);
 
-    const qbsp_plane_t &splitplane = map.plane_ref(clipface->planenum);
+    const qbsp_plane_t &splitplane = map.planes[clipface->planenum];
 
     for (face_t *face : oldinside) {
         /* HACK: Check for on-plane but not the same planenum
@@ -341,7 +341,6 @@ static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> in
 
 // fixme-brushbsp: determinism: sort `result` set by .map file order
 // fixme-brushbsp: add bounds test
-#if 0
 static void GatherPossibleClippingBrushes_R(const node_t *node, const face_t *srcface, std::set<const brush_t *> &result)
 {
     if (node->planenum == PLANENUM_LEAF) {
@@ -354,7 +353,6 @@ static void GatherPossibleClippingBrushes_R(const node_t *node, const face_t *sr
     GatherPossibleClippingBrushes_R(node->children[0], srcface, result);
     GatherPossibleClippingBrushes_R(node->children[1], srcface, result);
 }
-#endif
 
 /*
 ==================
@@ -366,14 +364,9 @@ Starting a search at `node`, returns brushes that possibly intersect `srcface`.
 static std::set<const brush_t *> GatherPossibleClippingBrushes(const mapentity_t* srcentity, const node_t *node, const face_t *srcface)
 {
     std::set<const brush_t *> result;
-    // fixme-brushbsp: implement this, need node->original_brushes working
-#if 0
+
     GatherPossibleClippingBrushes_R(node, srcface, result);
-#else
-    for (auto &brush : srcentity->brushes) {
-        result.insert(brush.get());
-    }
-#endif
+
     return result;
 }
 

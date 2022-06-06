@@ -44,29 +44,6 @@
 
 mapdata_t map;
 
-#include <shared_mutex>
-
-static std::shared_mutex mapdata_plane_mutex;
-
-size_t mapdata_t::plane_size() const
-{
-    std::shared_lock lock(mapdata_plane_mutex);
-    return planes.size();
-}
-
-qbsp_plane_t mapdata_t::plane(size_t i) const
-{
-    std::shared_lock lock(mapdata_plane_mutex);
-    return planes[i];
-}
-
-void mapdata_t::emplace_plane(const qbsp_plane_t &plane, size_t &out_index)
-{
-    std::unique_lock lock(mapdata_plane_mutex);
-    out_index = planes.size();
-    planes.emplace_back(plane);
-}
-
 // Useful shortcuts
 mapentity_t *mapdata_t::world_entity()
 {
@@ -2362,7 +2339,7 @@ void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<br
         fmt::print(f, "{{\n");
         for (auto &face : brush->faces) {
             // FIXME: Factor out this mess
-            const qbsp_plane_t &plane = map.plane_ref(face.planenum);
+            const qbsp_plane_t &plane = map.planes.at(face.planenum);
             winding_t w = BaseWindingForPlane(face.planeside ? -plane : plane);
 
             fmt::print(f, "( {} ) ", w[0]);

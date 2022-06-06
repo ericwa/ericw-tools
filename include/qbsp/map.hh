@@ -135,24 +135,11 @@ struct texdata_t
 
 struct mapdata_t
 {
-private:
-    // protected by read/write lock
-    std::vector<qbsp_plane_t> planes;
-public:
-    size_t plane_size() const;
-    qbsp_plane_t plane(size_t i) const;
-    void emplace_plane(const qbsp_plane_t &plane, size_t &out_index);
-
-    // only use for output/when it's safe; not locked
-    inline qbsp_plane_t &mapdata_t::plane_ref(size_t i)
-    {
-        return planes[i];
-    }
-
     /* Arrays of actual items */
     std::vector<mapface_t> faces;
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
+    std::vector<qbsp_plane_t> planes;
     std::vector<texdata_t> miptex;
     std::vector<mtexinfo_t> mtexinfos;
 
