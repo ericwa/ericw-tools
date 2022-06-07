@@ -901,10 +901,10 @@ int light_main(int argc, const char **argv)
         options.rangescale.setValue(1.0f);
     }
     if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncecolorscale.isChanged()) {
-        options.bouncecolorscale.setValue(0.5f);
+        options.bouncecolorscale.setValue(1.0f);
     }
     if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncescale.isChanged()) {
-        options.bouncescale.setValue(1.0f);
+        options.bouncescale.setValue(1.5f);
     }
 
     img::init_palette(bspdata.loadversion->game);
