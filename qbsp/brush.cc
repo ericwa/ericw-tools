@@ -256,6 +256,22 @@ int FindPositivePlane(int planenum)
     return FindPlane(-plane, nullptr);
 }
 
+int FindPositivePlane(const qplane3d &plane, side_t *side)
+{
+    int planenum = FindPlane(plane, side);
+    int positive_plane = FindPositivePlane(planenum);
+
+    if (planenum == positive_plane) {
+        return planenum;
+    }
+
+    // planenum itself isn't positive, so flip the planeside and return the positive version
+    if (side) {
+        *side = (*side == SIDE_FRONT) ? SIDE_BACK : SIDE_FRONT;
+    }
+    return positive_plane;
+}
+
 /*
 =============================================================================
 
@@ -397,7 +413,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         plane.dist = qv::dot(plane.normal, point);
 
         f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
-        f.planenum = FindPlane(plane, &f.planeside);
+        f.planenum = FindPositivePlane(plane, &f.planeside);
 
         CheckFace(&f, mapface);
         UpdateFaceSphere(&f);
