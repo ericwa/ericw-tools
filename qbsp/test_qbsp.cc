@@ -1155,6 +1155,20 @@ TEST_CASE("lavaclip", "[testmaps_q2]") {
 }
 
 /**
+ * e1u1/brlava brush intersecting e1u1/brwater
+ **/
+TEST_CASE("lavawater", "[testmaps_q2]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_lavawater.map", {"-q2bsp"});
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d inside_both { 0, 32, 8};
+
+    // check leaf contents
+    CHECK((Q2_CONTENTS_LAVA | Q2_CONTENTS_WATER) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_both)->contents);
+}
+
+/**
  * Weird mystery issue with a func_wall with broken collision
  */
 TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
