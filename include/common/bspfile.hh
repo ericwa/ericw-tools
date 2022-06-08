@@ -532,14 +532,16 @@ constexpr int CONTENTS_MIN = CONTENTS_SKY;
 // these definitions also need to be in q_shared.h!
 
 // lower bits are stronger, and will eat weaker brushes completely
+constexpr int Q2_CONTENTS_EMPTY = 0; // unofficial, for code clarity
 constexpr int Q2_CONTENTS_SOLID = 1; // an eye is never valid in a solid
-constexpr int Q2_CONTENTS_WINDOW = 2; // translucent, but not watery
-constexpr int Q2_CONTENTS_AUX = 4;
+constexpr int Q2_CONTENTS_WINDOW = 2; // solid, translucent, but not watery
+constexpr int Q2_CONTENTS_AUX = 4; // secondary MIST. implicity mirrorinside, non-solid
 constexpr int Q2_CONTENTS_LAVA = 8;
 constexpr int Q2_CONTENTS_SLIME = 16;
 constexpr int Q2_CONTENTS_WATER = 32;
-constexpr int Q2_CONTENTS_MIST = 64;
+constexpr int Q2_CONTENTS_MIST = 64; // implicity mirrorinside, non-solid
 constexpr int Q2_LAST_VISIBLE_CONTENTS = 64;
+constexpr int Q2_VISIBLE_CONTENTS_MASK = (Q2_LAST_VISIBLE_CONTENTS << 1) - 1;
 
 constexpr int Q2_CONTENTS_LIQUID = (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER); // mxd
 
@@ -547,8 +549,8 @@ constexpr int Q2_CONTENTS_LIQUID = (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CO
 
 constexpr int Q2_CONTENTS_AREAPORTAL = 0x8000;
 
-constexpr int Q2_CONTENTS_PLAYERCLIP = 0x10000;
-constexpr int Q2_CONTENTS_MONSTERCLIP = 0x20000;
+constexpr int Q2_CONTENTS_PLAYERCLIP = 0x10000; // blocks player
+constexpr int Q2_CONTENTS_MONSTERCLIP = 0x20000; // blocks monsters
 
 // currents can be added to any other contents, and may be mixed
 constexpr int Q2_CONTENTS_CURRENT_0 = 0x40000;
