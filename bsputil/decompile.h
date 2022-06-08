@@ -14,6 +14,11 @@ struct decomp_options
      * For debugging (there's not much that can go wrong).
      */
     bool geometryOnly = false;
+    /**
+     * If true, don't use brushes in Q2 .bsp's and instead decompile the leafs.
+     * Intended for visualizing leafs.
+     */
+    bool ignoreBrushes = false;
 };
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file);
