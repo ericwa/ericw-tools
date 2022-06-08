@@ -62,3 +62,4 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
 void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const qplane3d &plane, side_t *side);
+int FindPositivePlane(int planenum);

@@ -212,6 +212,10 @@ static int NewPlane(const qplane3d &plane, side_t *side)
     }
 
     PlaneHash_Add(added_plane, index);
+
+    // add the back side, too
+    FindPlane(-plane, nullptr);
+
     return index;
 }
 
@@ -235,6 +239,21 @@ int FindPlane(const qplane3d &plane, side_t *side)
         }
     }
     return NewPlane(plane, side);
+}
+
+/*
+ * FindPositivePlane
+ * - Only used for nodes; always finds a positive matching plane.
+ */
+int FindPositivePlane(int planenum)
+{
+    const auto &plane = map.planes[planenum];
+
+    // already positive, or it's PLANE_ANY_x which doesn't matter
+    if (plane.type >= PLANE_ANYX || (plane.normal[0] + plane.normal[1] + plane.normal[2]) > 0)
+        return planenum;
+
+    return FindPlane(-plane, nullptr);
 }
 
 /*

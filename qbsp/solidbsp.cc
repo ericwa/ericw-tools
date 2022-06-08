@@ -898,10 +898,11 @@ static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node
 
     node->children[0] = new node_t{};
     node->children[1] = new node_t{};
-    node->planenum = split->planenum;
+    node->planenum = FindPositivePlane(split->planenum);
+
     node->detail_separator = AllDetail(brushes);
 
-    const qbsp_plane_t &splitplane = map.planes.at(split->planenum);
+    const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
 
     DivideNodeBounds(node, splitplane);
 
