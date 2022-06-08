@@ -53,3 +53,4 @@ void FreeBrushes(mapentity_t *ent);
 
 int FindPlane(const qplane3d &plane, int *side);
 int FindPositivePlane(int planenum);
+int FindPositivePlane(const qplane3d &plane, int *side);
