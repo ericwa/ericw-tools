@@ -1154,6 +1154,19 @@ TEST_CASE("lavaclip", "[testmaps_q2]") {
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_WARP));
 }
 
+/**
+ * Weird mystery issue with a func_wall with broken collision
+ */
+TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_q2_bmodel_collision.map", {"-q2bsp"});
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_bmodel {-544, -312, -258};
+    REQUIRE(2 == bsp.dmodels.size());
+    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
+}
+
 TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;
 
