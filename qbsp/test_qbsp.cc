@@ -879,13 +879,13 @@ TEST_CASE("detail", "[testmaps_q2]") {
     for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
         ++counts_by_contents[bsp.dleafs[i].contents];
     }
-    CHECK(3 == counts_by_contents.size()); // number of types
+    CHECK(2 == counts_by_contents.size()); // number of types
 
 
-    CHECK(1 == counts_by_contents.at(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL));
+    CHECK(counts_by_contents.find(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == counts_by_contents.end()); // the detail bit gets cleared
     CHECK(8 == counts_by_contents.at(0)); // empty leafs
-    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) >= 7);
-    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) <= 9);
+    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) >= 8);
+    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) <= 10);
 
     // clusters:
     //  1 empty cluster filling the room above the divider
@@ -914,7 +914,7 @@ TEST_CASE("detail", "[testmaps_q2]") {
 
     // check for correct contents
     auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
-    CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == detail_leaf->contents);
+    CHECK(Q2_CONTENTS_SOLID == detail_leaf->contents);
 
     // check for button (detail) brush
     CHECK(1 == Leaf_Brushes(&bsp, detail_leaf).size());
