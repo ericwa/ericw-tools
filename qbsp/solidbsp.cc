@@ -741,10 +741,11 @@ static void PartitionSurfaces(std::vector<surface_t> &surfaces, node_t *node)
     node->facelist = LinkNodeFaces(*split);
     node->children[0] = new node_t{};
     node->children[1] = new node_t{};
-    node->planenum = split->planenum;
+    node->planenum = FindPositivePlane(split->planenum);
+
     node->detail_separator = split->detail_separator;
 
-    const qbsp_plane_t &splitplane = map.planes[split->planenum];
+    const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
 
     DivideNodeBounds(node, splitplane);
 
