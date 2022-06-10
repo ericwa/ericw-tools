@@ -70,6 +70,8 @@ struct gamedef_generic_t : public gamedef_t
 
     contentflags_t create_liquid_contents(const int32_t &, const int32_t &) const { throw std::bad_cast(); }
 
+    bool contents_are_any_detail(const contentflags_t &) const { throw std::bad_cast(); }
+
     bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
@@ -203,6 +205,12 @@ struct gamedef_q1_like_t : public gamedef_t
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {liquid_type, cflags};
+    }
+
+    bool contents_are_any_detail(const contentflags_t &contents) const
+    {
+        // in Q1, there are only CFLAGS_DETAIL, CFLAGS_DETAIL_ILLUSIONARY, or CFLAGS_DETAIL_FENCE
+        return ((contents.extended & CFLAGS_DETAIL_MASK) != 0);
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -526,6 +534,11 @@ struct gamedef_q2_t : public gamedef_t
         }
     }
 
+    bool contents_are_any_detail(const contentflags_t &contents) const
+    {
+        return ((contents.native & Q2_CONTENTS_DETAIL) != 0);
+    }
+
     bool contents_are_empty(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
@@ -595,9 +608,9 @@ struct gamedef_q2_t : public gamedef_t
         if (!visible_contents(c0 ^ c1))
             return true;
 
-        if ((c0 & Q2_CONTENTS_TRANSLUCENT) || contents0.is_detail())
+        if ((c0 & Q2_CONTENTS_TRANSLUCENT) || contents0.is_any_detail(this))
             c0 = 0;
-        if ((c1 & Q2_CONTENTS_TRANSLUCENT) || contents1.is_detail())
+        if ((c1 & Q2_CONTENTS_TRANSLUCENT) || contents1.is_any_detail(this))
             c1 = 0;
 
         // identical on both sides
@@ -989,6 +1002,11 @@ int32_t contentflags_t::priority(const gamedef_t *game) const
 bool contentflags_t::chops(const gamedef_t* game) const
 {
     return game->chops(*this);
+}
+
+bool contentflags_t::is_any_detail(const gamedef_t *game) const
+{
+    return game->contents_are_any_detail(*this);
 }
 
 bool contentflags_t::is_empty(const gamedef_t *game) const

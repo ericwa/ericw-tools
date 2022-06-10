@@ -610,6 +610,9 @@ struct contentflags_t
         return (extended & CFLAGS_DETAIL_MASK) & types;
     }
 
+    // is any kind of detail? (solid, liquid, etc.)
+    bool is_any_detail(const gamedef_t *game) const;
+
     bool is_empty(const gamedef_t *game) const;
 
     // solid, not detail or any other extended content types
@@ -1796,6 +1799,7 @@ struct gamedef_t
     virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
+    virtual bool contents_are_any_detail(const contentflags_t &contents) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;

@@ -321,7 +321,7 @@ static const face_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<br
 
     for (int pass = 0; pass < 2; pass++) {
         for (auto &brush : brushes) {
-            if (brush->contents.is_detail() != (pass == 1)) {
+            if (brush->contents.is_any_detail(options.target_game) != (pass == 1)) {
                 continue;
             }
 
@@ -395,7 +395,7 @@ static const face_t *ChoosePlaneFromList(const std::vector<std::unique_ptr<brush
         const bool pass_wants_visible = (pass == 0 || pass == 2);
 
         for (auto &brush : brushes) {
-            if (brush->contents.is_detail() != pass_wants_detail) {
+            if (brush->contents.is_any_detail(options.target_game) != pass_wants_detail) {
                 continue;
             }
 
@@ -812,7 +812,7 @@ inline void DivideNodeBounds(node_t *node, const qbsp_plane_t &split)
 static bool AllDetail(const std::vector<std::unique_ptr<brush_t>> &brushes)
 {
     for (auto &brush : brushes) {
-        if (!brush->contents.is_detail()) {
+        if (!brush->contents.is_any_detail(options.target_game)) {
             return false;
         }
     }

@@ -661,7 +661,7 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
             bool mirror = (srcbrush->contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE);
                 
             if (!(srcbrush->contents.is_solid(options.target_game) ||
-                    srcbrush->contents.is_detail() ||
+                    srcbrush->contents.is_any_detail(options.target_game) ||
                     srcbrush->contents.is_sky(options.target_game))) {
                 mirror = true;
             }
