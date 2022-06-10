@@ -581,7 +581,7 @@ struct gamedef_q2_t : public gamedef_t
         if (!(c0 ^ c1))
             return true;
 
-        return visible_contents(c0 ^ c1);
+        return !visible_contents(c0 ^ c1);
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
