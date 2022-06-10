@@ -826,7 +826,6 @@ struct is_iterator<T,
 template<class T>
 constexpr bool is_iterator_v = is_iterator<T>::value;
 
-void CRC_Init(unsigned short *crcvalue);
-void CRC_ProcessByte(unsigned short *crcvalue, uint8_t data);
-unsigned short CRC_Value(unsigned short crcvalue);
-unsigned short CRC_Block(const unsigned char *start, int count);
+void CRC_Init(uint16_t &crcvalue);
+void CRC_ProcessByte(uint16_t &crcvalue, uint8_t data);
+uint16_t CRC_Block(const uint8_t *start, int count);
