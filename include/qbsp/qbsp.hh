@@ -246,15 +246,6 @@ public:
 
 extern settings::qbsp_settings options;
 
-// 0-2 are axial planes
-// 3-5 are non-axial planes snapped to the nearest
-#define PLANE_X 0
-#define PLANE_Y 1
-#define PLANE_Z 2
-#define PLANE_ANYX 3
-#define PLANE_ANYY 4
-#define PLANE_ANYZ 5
-
 // planenum for a leaf
 constexpr int32_t PLANENUM_LEAF = -1;
 
@@ -265,30 +256,17 @@ constexpr int32_t PLANENUM_LEAF = -1;
  *   epsilons to be such that EQUAL_EPSILON < T_EPSILON < CONTINUOUS_EPSILON.
  *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
  */
-#define ANGLEEPSILON 0.000001
-#define ZERO_EPSILON 0.0001
-#define DISTEPSILON 0.0001
-#define POINT_EPSILON 0.0001
-#define ON_EPSILON options.epsilon.value()
-#define EQUAL_EPSILON 0.0001
-#define T_EPSILON 0.0002
-#define CONTINUOUS_EPSILON 0.0005
-
-// from q3map
-#define MAX_WORLD_COORD (128 * 1024)
-#define MIN_WORLD_COORD (-128 * 1024)
-#define WORLD_SIZE (MAX_WORLD_COORD - MIN_WORLD_COORD)
+constexpr vec_t ANGLEEPSILON = 0.000001;
+constexpr vec_t ZERO_EPSILON = 0.0001;
+constexpr vec_t DISTEPSILON = 0.0001;
+constexpr vec_t POINT_EPSILON = 0.0001;
+constexpr vec_t EQUAL_EPSILON = 0.0001;
+constexpr vec_t T_EPSILON = 0.0002;
+constexpr vec_t CONTINUOUS_EPSILON = 0.0005;
 
 // the exact bounding box of the brushes is expanded some for the headnode
 // volume.  is this still needed?
-#define SIDESPACE 24
-
-// AllocMem types
-enum
-{
-    WINDING,
-    OTHER
-};
+constexpr double SIDESPACE = 24.0;
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>

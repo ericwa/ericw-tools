@@ -479,15 +479,18 @@ struct dmiptexlump_t
     }
 };
 
-/* 0-2 are axial planes */
-#define PLANE_X 0
-#define PLANE_Y 1
-#define PLANE_Z 2
-
-/* 3-5 are non-axial planes snapped to the nearest */
-#define PLANE_ANYX 3
-#define PLANE_ANYY 4
-#define PLANE_ANYZ 5
+// 0-2 are axial planes
+// 3-5 are non-axial planes snapped to the nearest
+enum class plane_type_t
+{
+    PLANE_INVALID = -1,
+    PLANE_X = 0,
+    PLANE_Y = 1,
+    PLANE_Z = 2,
+    PLANE_ANYX = 3,
+    PLANE_ANYY = 4,
+    PLANE_ANYZ = 5,
+};
 
 struct dplane_t : qplane3f
 {
@@ -502,10 +505,10 @@ struct dplane_t : qplane3f
     template<typename T>
     inline T distance_to_fast(const qvec<T, 3> &point) const
     {
-        switch (type) {
-            case PLANE_X: return point[0] - dist;
-            case PLANE_Y: return point[1] - dist;
-            case PLANE_Z: return point[2] - dist;
+        switch (static_cast<plane_type_t>(type)) {
+            case plane_type_t::PLANE_X: return point[0] - dist;
+            case plane_type_t::PLANE_Y: return point[1] - dist;
+            case plane_type_t::PLANE_Z: return point[2] - dist;
             default: {
                 return qplane3f::distance_to(point);
             }

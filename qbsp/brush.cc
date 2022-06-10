@@ -100,14 +100,14 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
 
         /* check the point is on the face plane */
         vec_t dist = plane.distance_to(p1);
-        if (dist < -ON_EPSILON || dist > ON_EPSILON)
+        if (dist < -options.epsilon.value() || dist > options.epsilon.value())
             logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
                 p1[1], p1[2], dist);
 
         /* check the edge isn't degenerate */
         qvec3d edgevec = p2 - p1;
         vec_t length = qv::length(edgevec);
-        if (length < ON_EPSILON) {
+        if (length < options.epsilon.value()) {
             logging::print("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
                 length, p1[0], p1[1], p1[2]);
             for (size_t j = i + 1; j < face->w.size(); j++)
@@ -119,7 +119,7 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
 
         qvec3d edgenormal = qv::normalize(qv::cross(facenormal, edgevec));
         vec_t edgedist = qv::dot(p1, edgenormal);
-        edgedist += ON_EPSILON;
+        edgedist += options.epsilon.value();
 
         /* all other points must be on front side */
         for (size_t j = 0; j < face->w.size(); j++) {
@@ -141,7 +141,7 @@ static bool NormalizePlane(qbsp_plane_t &p, bool flip = true)
         if (p.normal[i] == 1.0) {
             p.normal[(i + 1) % 3] = 0;
             p.normal[(i + 2) % 3] = 0;
-            p.type = PLANE_X + i;
+            p.type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
             return 0; /* no flip */
         }
         if (p.normal[i] == -1.0) {
@@ -151,7 +151,7 @@ static bool NormalizePlane(qbsp_plane_t &p, bool flip = true)
             }
             p.normal[(i + 1) % 3] = 0;
             p.normal[(i + 2) % 3] = 0;
-            p.type = PLANE_X + i;
+            p.type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
             return 1; /* plane flipped */
         }
     }
@@ -160,14 +160,25 @@ static bool NormalizePlane(qbsp_plane_t &p, bool flip = true)
     vec_t ay = fabs(p.normal[1]);
     vec_t az = fabs(p.normal[2]);
 
-    if (ax >= ay && ax >= az)
-        p.type = PLANE_ANYX;
-    else if (ay >= ax && ay >= az)
-        p.type = PLANE_ANYY;
-    else
-        p.type = PLANE_ANYZ;
+    size_t nearest;
 
-    if (flip && p.normal[p.type - PLANE_ANYX] < 0) {
+    if (ax >= ay && ax >= az)
+    {
+        nearest = 0;
+        p.type = plane_type_t::PLANE_ANYX;
+    }
+    else if (ay >= ax && ay >= az)
+    {
+        nearest = 1;
+        p.type = plane_type_t::PLANE_ANYY;
+    }
+    else
+    {
+        nearest = 2;
+        p.type = plane_type_t::PLANE_ANYZ;
+    }
+
+    if (flip && p.normal[nearest] < 0) {
         p = -p;
         return true; /* plane flipped */
     }
@@ -196,7 +207,7 @@ static int NewPlane(const qplane3d &plane, int *side)
 {
     vec_t len = qv::length(plane.normal);
 
-    if (len < 1 - ON_EPSILON || len > 1 + ON_EPSILON)
+    if (len < 1 - options.epsilon.value() || len > 1 + options.epsilon.value())
         FError("invalid normal (vector length {:.4})", len);
 
     size_t index = map.planes.size();
@@ -247,8 +258,9 @@ int FindPositivePlane(int planenum)
     const auto &plane = map.planes[planenum];
 
     // already positive, or it's PLANE_ANY_x which doesn't matter
-    if (plane.type >= PLANE_ANYX || (plane.normal[0] + plane.normal[1] + plane.normal[2]) > 0)
+    if (plane.type >= plane_type_t::PLANE_ANYX || (plane.normal[0] + plane.normal[1] + plane.normal[2]) > 0) {
         return planenum;
+    }
 
     return FindPlane(-plane, nullptr);
 }
@@ -358,7 +370,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             // flip the plane, because we want to keep the back side
             plane = -mapface2.plane;
 
-            w = w->clip(plane, ON_EPSILON, false)[SIDE_FRONT];
+            w = w->clip(plane, options.epsilon.value(), false)[SIDE_FRONT];
         }
 
         if (!w) {
@@ -475,7 +487,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, const qplane3d &plane)
 
     for (auto &mapface : hullbrush->faces) {
         if (qv::epsilonEqual(mapface.plane.normal, plane.normal, EQUAL_EPSILON) &&
-            fabs(mapface.plane.dist - plane.dist) < ON_EPSILON)
+            fabs(mapface.plane.dist - plane.dist) < options.epsilon.value())
             return;
     }
 
@@ -515,11 +527,11 @@ static void TestAddPlane(hullbrush_t *hullbrush, qplane3d &plane)
 
     for (auto &corner : hullbrush->corners) {
         d = plane.distance_to(corner);
-        if (d < -ON_EPSILON) {
+        if (d < -options.epsilon.value()) {
             if (points_front)
                 return;
             points_back = 1;
-        } else if (d > ON_EPSILON) {
+        } else if (d > options.epsilon.value()) {
             if (points_back)
                 return;
             points_front = 1;
