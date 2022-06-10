@@ -63,8 +63,6 @@ const char *light_t::classname() const
 
 static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 
-#define MAX_SWITCHABLE_STYLES 64
-
 static entdict_t &WorldEnt()
 {
     if (entdicts.size() == 0 || entdicts.at(0).get("classname") != "worldspawn") {
@@ -101,8 +99,8 @@ static int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const s
     const int newStylenum = cfg.compilerstyle_start.value() + lightstyleForTargetname.size();
 
     // check if full
-    if (newStylenum >= MAX_SWITCHABLE_STYLES) {
-        FError("Too many unique light targetnames (max={})\n", MAX_SWITCHABLE_STYLES);
+    if (newStylenum >= cfg.compilerstyle_max.value()) {
+        FError("Too many unique light targetnames (max={})\n", cfg.compilerstyle_max.value());
     }
 
     lightstyleForTargetname.emplace_back(targetname, newStylenum);
@@ -1197,7 +1195,7 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp)
 
     /* FIXME - why are we printing this here? */
     logging::print("{} switchable light styles ({} max)\n", lightstyleForTargetname.size(),
-        MAX_SWITCHABLE_STYLES - cfg.compilerstyle_start.value());
+        cfg.compilerstyle_max.value() - cfg.compilerstyle_start.value());
 }
 
 /*

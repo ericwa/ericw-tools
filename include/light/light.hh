@@ -270,6 +270,8 @@ public:
     setting_bool spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group}; // mxd
     setting_int32 compilerstyle_start{
         this, "compilerstyle_start", 32, &worldspawn_group}; // start index for switchable light styles, default 32
+    setting_int32 compilerstyle_max{
+        this, "compilerstyle_max", 64, &worldspawn_group}; // max index for switchable light styles, default 64
 
     /* dirt */
     setting_bool globalDirt{this, {"dirt", "dirty"}, false,
