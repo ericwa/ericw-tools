@@ -34,7 +34,7 @@ using nlohmann::json;
 
 static contentflags_t RemapContentsForExport(const contentflags_t &content)
 {
-    if (content.extended & CFLAGS_DETAIL_FENCE) {
+    if (content.is_detail_fence(options.target_game)) {
         /*
          * A bit of a hack for Q2, to ensure that structural faces which are completely covered by CFLAGS_DETAIL_FENCE
          * still render.

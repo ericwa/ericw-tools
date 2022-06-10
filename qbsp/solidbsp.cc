@@ -858,11 +858,11 @@ static void CreateLeaf(std::vector<std::unique_ptr<brush_t>> brushes, node_t *le
 
     if (leafnode->contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
         c_illusionary_visblocker++;
-    } else if (leafnode->contents.extended & CFLAGS_DETAIL_FENCE) {
+    } else if (leafnode->contents.is_detail_fence(options.target_game)) {
         c_detail_fence++;
-    } else if (leafnode->contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+    } else if (leafnode->contents.is_detail_illusionary(options.target_game)) {
         c_detail_illusionary++;
-    } else if (leafnode->contents.extended & CFLAGS_DETAIL) {
+    } else if (leafnode->contents.is_detail_solid(options.target_game)) {
         c_detail++;
     } else if (leafnode->contents.is_empty(options.target_game)) {
         c_empty++;
