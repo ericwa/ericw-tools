@@ -89,7 +89,7 @@ settings::common_settings options;
 
 int main(int argc, char **argv)
 {
-    printf("---- bspinfo / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
+    fmt::print("---- bspinfo / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
     if (argc == 1) {
         printf("usage: bspinfo bspfile [bspfiles]\n");
         exit(1);

@@ -352,7 +352,7 @@ static void PortalCompleted(portal_t *completed)
              */
             while (changed) {
                 bit = ffsl(changed) - 1;
-                changed &= ~(1UL << bit);
+                changed &= ~nth_bit(bit);
                 leafnum = (j << leafbits_t::shift) + bit;
                 UpdateMightsee(leafs + leafnum, myleaf);
             }
@@ -443,7 +443,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         outbuffer = uncompressed_q2 + clusternum * leafbytes;
         for (i = 0; i < portalleafs; i++) {
             if (buffer[i]) {
-                outbuffer[i >> 3] |= (1 << (i & 7));
+                outbuffer[i >> 3] |= nth_bit(i & 7);
                 numvis++;
             }
         }
@@ -451,7 +451,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         outbuffer = uncompressed + clusternum * leafbytes_real;
         for (i = 0; i < portalleafs_real; i++) {
             if (buffer[bsp->dleafs[i + 1].cluster]) {
-                outbuffer[i >> 3] |= (1 << (i & 7));
+                outbuffer[i >> 3] |= nth_bit(i & 7);
                 numvis++;
             }
         }

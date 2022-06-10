@@ -78,3 +78,10 @@ public:
     inline bool operator==(const Enum &r) const { return _bits == bitflags(r)._bits; }
     inline bool operator!=(const Enum &r) const { return _bits != bitflags(r)._bits; }
 };
+
+// fetch integral representation of the value at bit N
+template<typename T>
+constexpr auto nth_bit(T l)
+{
+    return static_cast<T>(1) << l;
+}

@@ -1416,12 +1416,12 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
             for (int i = 0; i < 8; i++) {
                 if (!got) {
-                    if (mapface.contents.native & (1 << i)) {
+                    if (mapface.contents.native & nth_bit(i)) {
                         got = true;
                         continue;
                     }
                 } else {
-                    mapface.contents.native &= ~(1 << i);
+                    mapface.contents.native &= ~nth_bit(i);
                 }
             }
         }

@@ -98,7 +98,7 @@ public:
     constexpr uint32_t *data() { return bits; }
     constexpr const uint32_t *data() const { return bits; }
 
-    constexpr bool operator[](const size_t &index) const { return !!(bits[index >> shift] & (1UL << (index & mask))); }
+    constexpr bool operator[](const size_t &index) const { return !!(bits[index >> shift] & nth_bit(index & mask)); }
 
     struct reference
     {
@@ -119,5 +119,5 @@ public:
         }
     };
 
-    constexpr reference operator[](const size_t &index) { return {bits, index >> shift, static_cast<size_t>(1) << (index & mask)}; }
+    constexpr reference operator[](const size_t &index) { return {bits, index >> shift, nth_bit(index & mask)}; }
 };

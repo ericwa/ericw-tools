@@ -464,7 +464,7 @@ int main(int argc, char **argv)
     bspdata_t bspdata;
     mbsp_t &bsp = bspdata.bsp.emplace<mbsp_t>();
 
-    printf("---- bsputil / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n");
+    fmt::print("---- bsputil / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
     if (argc == 1) {
         printf(
             "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"

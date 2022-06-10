@@ -32,20 +32,35 @@
 #include <fmt/format.h>
 #include <common/log.hh>
 
-#define stringify__(x) #x
-#define stringify(x) stringify__(x)
-
-#ifdef _WIN32
-#define Q_strncasecmp _strnicmp
-#define Q_strcasecmp _stricmp
-#elif defined(__has_include) && __has_include(<strings.h>)
+#if defined(__has_include) && __has_include(<strings.h>)
 #include <strings.h>
-#define Q_strncasecmp strncasecmp
-#define Q_strcasecmp strcasecmp
-#else
-#define Q_strncasecmp strnicmp
-#define Q_strcasecmp stricmp
 #endif
+
+inline int32_t Q_strncasecmp(const char *a, const char *b, size_t maxcount)
+{
+    return
+#ifdef _WIN32
+    _strnicmp
+#elif defined(__has_include) && __has_include(<strings.h>)
+    strncasecmp
+#else
+    strnicmp
+#endif
+    (a, b, maxcount);
+}
+
+inline int32_t Q_strcasecmp(const char *a, const char *b)
+{
+    return
+#ifdef _WIN32
+    _stricmp
+#elif defined(__has_include) && __has_include(<strings.h>)
+    strcasecmp
+#else
+    stricmp
+#endif
+    (a, b);
+}
 
 bool string_iequals(const std::string &a, const std::string &b); // mxd
 
@@ -255,7 +270,9 @@ inline float BigFloat(float l)
 /**
  * assertion macro that is used in all builds (debug/release)
  */
-#define Q_assert(x) logging::assert_((x), stringify(x), __FILE__, __LINE__)
+#define Q_stringify__(x) #x
+#define Q_stringify(x) Q_stringify__(x)
+#define Q_assert(x) logging::assert_((x), Q_stringify(x), __FILE__, __LINE__)
 
 #define Q_assert_unreachable() Q_assert(false)
 
@@ -470,6 +487,14 @@ inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_wr
     return s;
 }
 
+template<typename T>
+inline std::enable_if_t<std::is_enum_v<T>, std::ostream &> operator<=(
+    std::ostream &s, const T &obj)
+{
+    s <= reinterpret_cast<const std::underlying_type_t<T> &>(obj);
+    return s;
+}
+
 template<size_t n>
 inline std::istream &operator>=(std::istream &s, padding<n> &)
 {
@@ -608,6 +633,14 @@ inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_re
     std::istream &s, T &obj)
 {
     obj.stream_read(s);
+    return s;
+}
+
+template<typename T>
+inline std::enable_if_t<std::is_enum_v<T>, std::istream &> operator>=(
+    std::istream &s, T &obj)
+{
+    s >= reinterpret_cast<std::underlying_type_t<T> &>(obj);
     return s;
 }
 

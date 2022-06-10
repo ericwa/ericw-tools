@@ -51,7 +51,7 @@ static wedge_t *pWEdges;
 
 //============================================================================
 
-#define NUM_HASH 1024
+constexpr size_t NUM_HASH = 1024;
 
 static wedge_t *wedge_hash[NUM_HASH];
 static qvec3d hash_min, hash_scale;

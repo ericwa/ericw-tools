@@ -687,7 +687,7 @@ void Matrix4x4_CM_Projection_Inf(std::array<vec_t, 16> &proj, vec_t fovx, vec_t 
 
     proj[2] = 0;
     proj[6] = 0;
-    proj[10] = -1 * ((vec_t)(1 << 21) / (1 << 22));
+    proj[10] = -1 * 0.5;
     proj[14] = -2 * neard * nudge;
 
     proj[3] = 0;
@@ -1026,7 +1026,7 @@ static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
         }
     }
 
-    logging::print("WARNING: couldn't nudge light in solid at {}\n", point);
+    logging::print("WARNING: couldn't nudge light out of solid at {}\n", point);
     return point;
 }
 

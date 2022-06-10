@@ -32,41 +32,6 @@
 #include <common/aabb.hh>
 #include <common/settings.hh>
 
-/* upper design bounds */
-
-#define MAX_MAP_HULLS_Q1 4
-#define MAX_MAP_HULLS_H2 8
-
-#define MAX_MAP_MODELS 256
-#define MAX_MAP_BRUSHES 4096
-#define MAX_MAP_PLANES 16384
-#define MAX_MAP_NODES 32767 /* negative shorts are contents */
-#define MAX_MAP_CLIPNODES 65520 /* = 0xfff0; larger are contents */
-#define MAX_MAP_LEAFS 32767 /* BSP file format limitation */
-#define MAX_MAP_VERTS 65535
-#define MAX_MAP_FACES 65535
-#define MAX_MAP_MARKSURFACES 65535
-#define MAX_MAP_TEXINFO 8192
-#define MAX_MAP_EDGES 256000
-#define MAX_MAP_SURFEDGES 512000
-#define MAX_MAP_MIPTEX 0x0800000
-#define MAX_MAP_LIGHTING 0x8000000
-#define MAX_MAP_VISIBILITY 0x8000000
-
-/* key / value pair sizes */
-#define MAX_ENT_KEY 32
-#define MAX_ENT_VALUE 1024
-
-#define NO_VERSION -1
-
-#define BSPVERSION 29
-#define BSP2RMQVERSION (('B' << 24) | ('S' << 16) | ('P' << 8) | '2')
-#define BSP2VERSION ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24))
-#define BSPHLVERSION 30 // 24bit lighting, and private palettes in the textures lump.
-#define Q2_BSPIDENT (('P' << 24) + ('S' << 16) + ('B' << 8) + 'I')
-#define Q2_BSPVERSION 38
-#define Q2_QBISMIDENT (('P' << 24) + ('S' << 16) + ('B' << 8) + 'Q')
-
 struct lump_t
 {
     int32_t fileofs;
@@ -75,45 +40,60 @@ struct lump_t
     auto stream_data() { return std::tie(fileofs, filelen); }
 };
 
-#define LUMP_ENTITIES 0
-#define LUMP_PLANES 1
-#define LUMP_TEXTURES 2
-#define LUMP_VERTEXES 3
-#define LUMP_VISIBILITY 4
-#define LUMP_NODES 5
-#define LUMP_TEXINFO 6
-#define LUMP_FACES 7
-#define LUMP_LIGHTING 8
-#define LUMP_CLIPNODES 9
-#define LUMP_LEAFS 10
-#define LUMP_MARKSURFACES 11
-#define LUMP_EDGES 12
-#define LUMP_SURFEDGES 13
-#define LUMP_MODELS 14
+constexpr int32_t BSPVERSION = 29;
+constexpr int32_t BSP2RMQVERSION = (('B' << 24) | ('S' << 16) | ('P' << 8) | '2');
+constexpr int32_t BSP2VERSION = ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24));
+constexpr int32_t BSPHLVERSION = 30; // 24bit lighting, and private palettes in the textures lump.
 
-#define BSP_LUMPS 15
+enum q1_lump_t
+{
+    LUMP_ENTITIES,
+    LUMP_PLANES,
+    LUMP_TEXTURES,
+    LUMP_VERTEXES,
+    LUMP_VISIBILITY,
+    LUMP_NODES,
+    LUMP_TEXINFO,
+    LUMP_FACES,
+    LUMP_LIGHTING,
+    LUMP_CLIPNODES,
+    LUMP_LEAFS,
+    LUMP_MARKSURFACES,
+    LUMP_EDGES,
+    LUMP_SURFEDGES,
+    LUMP_MODELS,
 
-#define Q2_LUMP_ENTITIES 0
-#define Q2_LUMP_PLANES 1
-#define Q2_LUMP_VERTEXES 2
-#define Q2_LUMP_VISIBILITY 3
-#define Q2_LUMP_NODES 4
-#define Q2_LUMP_TEXINFO 5
-#define Q2_LUMP_FACES 6
-#define Q2_LUMP_LIGHTING 7
-#define Q2_LUMP_LEAFS 8
-#define Q2_LUMP_LEAFFACES 9
-#define Q2_LUMP_LEAFBRUSHES 10
-#define Q2_LUMP_EDGES 11
-#define Q2_LUMP_SURFEDGES 12
-#define Q2_LUMP_MODELS 13
-#define Q2_LUMP_BRUSHES 14
-#define Q2_LUMP_BRUSHSIDES 15
-#define Q2_LUMP_POP 16
-#define Q2_LUMP_AREAS 17
-#define Q2_LUMP_AREAPORTALS 18
+    BSP_LUMPS
+};
 
-#define Q2_HEADER_LUMPS 19
+constexpr int32_t Q2_BSPVERSION = 38;
+constexpr int32_t Q2_BSPIDENT = (('P' << 24) + ('S' << 16) + ('B' << 8) + 'I');
+constexpr int32_t Q2_QBISMIDENT = (('P' << 24) + ('S' << 16) + ('B' << 8) + 'Q');
+
+enum q2_lump_t
+{
+    Q2_LUMP_ENTITIES,
+    Q2_LUMP_PLANES,
+    Q2_LUMP_VERTEXES,
+    Q2_LUMP_VISIBILITY,
+    Q2_LUMP_NODES,
+    Q2_LUMP_TEXINFO,
+    Q2_LUMP_FACES,
+    Q2_LUMP_LIGHTING,
+    Q2_LUMP_LEAFS,
+    Q2_LUMP_LEAFFACES,
+    Q2_LUMP_LEAFBRUSHES,
+    Q2_LUMP_EDGES,
+    Q2_LUMP_SURFEDGES,
+    Q2_LUMP_MODELS,
+    Q2_LUMP_BRUSHES,
+    Q2_LUMP_BRUSHSIDES,
+    Q2_LUMP_POP,
+    Q2_LUMP_AREAS,
+    Q2_LUMP_AREAPORTALS,
+
+    Q2_HEADER_LUMPS
+};
 
 struct bspx_header_t
 {
@@ -164,6 +144,8 @@ inline qvec<T, 3> aabb_maxs_cast(const qvec<F, 3> &f, const char *overflow_messa
             numeric_cast<T>(f[2], overflow_message)};
 }
 
+constexpr size_t MAX_MAP_HULLS_H2 = 8;
+
 struct dmodelh2_t
 {
     qvec3f mins;
@@ -195,6 +177,8 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
 
     return dest;
 }
+
+constexpr size_t MAX_MAP_HULLS_Q1 = 4;
 
 struct dmodelq1_t
 {
@@ -518,13 +502,17 @@ struct dplane_t : qplane3f
 
 // Q1 contents
 
-constexpr int CONTENTS_EMPTY = -1;
-constexpr int CONTENTS_SOLID = -2;
-constexpr int CONTENTS_WATER = -3;
-constexpr int CONTENTS_SLIME = -4;
-constexpr int CONTENTS_LAVA = -5;
-constexpr int CONTENTS_SKY = -6;
-constexpr int CONTENTS_MIN = CONTENTS_SKY;
+enum q1_contents_t : int32_t
+{
+    CONTENTS_EMPTY = -1,
+    CONTENTS_SOLID = -2,
+    CONTENTS_WATER = -3,
+    CONTENTS_SLIME = -4,
+    CONTENTS_LAVA = -5,
+    CONTENTS_SKY = -6,
+
+    CONTENTS_MIN = CONTENTS_SKY
+};
 
 // Q2 contents (from qfiles.h)
 
@@ -532,63 +520,67 @@ constexpr int CONTENTS_MIN = CONTENTS_SKY;
 // a given brush can contribute multiple content bits
 // multiple brushes can be in a single leaf
 
-// these definitions also need to be in q_shared.h!
-
 // lower bits are stronger, and will eat weaker brushes completely
-constexpr int Q2_CONTENTS_SOLID = 1; // an eye is never valid in a solid
-constexpr int Q2_CONTENTS_WINDOW = 2; // translucent, but not watery
-constexpr int Q2_CONTENTS_AUX = 4;
-constexpr int Q2_CONTENTS_LAVA = 8;
-constexpr int Q2_CONTENTS_SLIME = 16;
-constexpr int Q2_CONTENTS_WATER = 32;
-constexpr int Q2_CONTENTS_MIST = 64;
-constexpr int Q2_LAST_VISIBLE_CONTENTS = 64;
+enum q2_contents_t : int32_t
+{
+    Q2_CONTENTS_SOLID = nth_bit(0), // an eye is never valid in a solid
+    Q2_CONTENTS_WINDOW = nth_bit(1), // translucent, but not watery
+    Q2_CONTENTS_AUX = nth_bit(2),
+    Q2_CONTENTS_LAVA = nth_bit(3),
+    Q2_CONTENTS_SLIME = nth_bit(4),
+    Q2_CONTENTS_WATER = nth_bit(5),
+    Q2_CONTENTS_MIST = nth_bit(6),
+    Q2_LAST_VISIBLE_CONTENTS = Q2_CONTENTS_MIST,
+    Q2_ALL_VISIBLE_CONTENTS = Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_AUX | Q2_CONTENTS_LAVA |
+                              Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER | Q2_CONTENTS_MIST,
 
-constexpr int Q2_CONTENTS_LIQUID = (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER); // mxd
+    Q2_CONTENTS_LIQUID = (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER), // mxd
 
-// remaining contents are non-visible, and don't eat brushes
+    // remaining contents are non-visible, and don't eat brushes
 
-constexpr int Q2_CONTENTS_AREAPORTAL = 0x8000;
+    Q2_CONTENTS_AREAPORTAL = nth_bit(15),
 
-constexpr int Q2_CONTENTS_PLAYERCLIP = 0x10000;
-constexpr int Q2_CONTENTS_MONSTERCLIP = 0x20000;
+    Q2_CONTENTS_PLAYERCLIP = nth_bit(16),
+    Q2_CONTENTS_MONSTERCLIP = nth_bit(17),
 
-// currents can be added to any other contents, and may be mixed
-constexpr int Q2_CONTENTS_CURRENT_0 = 0x40000;
-constexpr int Q2_CONTENTS_CURRENT_90 = 0x80000;
-constexpr int Q2_CONTENTS_CURRENT_180 = 0x100000;
-constexpr int Q2_CONTENTS_CURRENT_270 = 0x200000;
-constexpr int Q2_CONTENTS_CURRENT_UP = 0x400000;
-constexpr int Q2_CONTENTS_CURRENT_DOWN = 0x800000;
+    // currents can be added to any other contents, and may be mixed
+    Q2_CONTENTS_CURRENT_0 = nth_bit(18),
+    Q2_CONTENTS_CURRENT_90 = nth_bit(19),
+    Q2_CONTENTS_CURRENT_180 = nth_bit(20),
+    Q2_CONTENTS_CURRENT_270 = nth_bit(21),
+    Q2_CONTENTS_CURRENT_UP = nth_bit(22),
+    Q2_CONTENTS_CURRENT_DOWN = nth_bit(23),
 
-constexpr int Q2_CONTENTS_ORIGIN = 0x1000000; // removed before bsping an entity
+    Q2_CONTENTS_ORIGIN = nth_bit(24), // removed before bsping an entity
 
-constexpr int Q2_CONTENTS_MONSTER = 0x2000000; // should never be on a brush, only in game
-constexpr int Q2_CONTENTS_DEADMONSTER = 0x4000000;
-constexpr int Q2_CONTENTS_DETAIL = 0x8000000; // brushes to be added after vis leafs
-constexpr int Q2_CONTENTS_TRANSLUCENT = 0x10000000; // auto set if any surface has trans
-constexpr int Q2_CONTENTS_LADDER = 0x20000000;
+    Q2_CONTENTS_MONSTER = nth_bit(25), // should never be on a brush, only in game
+    Q2_CONTENTS_DEADMONSTER = nth_bit(26),
+    Q2_CONTENTS_DETAIL = nth_bit(27), // brushes to be added after vis leafs
+    Q2_CONTENTS_TRANSLUCENT = nth_bit(28), // auto set if any surface has trans
+    Q2_CONTENTS_LADDER = nth_bit(29)
+};
 
 // Special contents flags for the compiler only
-constexpr int CFLAGS_STRUCTURAL_COVERED_BY_DETAIL = (1 << 0);
-constexpr int CFLAGS_WAS_ILLUSIONARY = (1 << 1); /* was illusionary, got changed to something else */
-constexpr int CFLAGS_BMODEL_MIRROR_INSIDE =
-    (1 << 3); /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
-constexpr int CFLAGS_NO_CLIPPING_SAME_TYPE =
-    (1 << 4); /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
-// only one of these flags below should ever be set.
-constexpr int CFLAGS_HINT = (1 << 5);
-constexpr int CFLAGS_CLIP = (1 << 6);
-constexpr int CFLAGS_ORIGIN = (1 << 7);
-constexpr int CFLAGS_DETAIL = (1 << 8);
-constexpr int CFLAGS_DETAIL_ILLUSIONARY = (1 << 9);
-constexpr int CFLAGS_DETAIL_FENCE = (1 << 10);
-constexpr int CFLAGS_ILLUSIONARY_VISBLOCKER = (1 << 11);
-// all of the detail values
-constexpr int CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE);
-// all of the special content types
-constexpr int CFLAGS_CONTENTS_MASK =
-    (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER);
+enum extended_cflags_t : uint16_t
+{
+    CFLAGS_STRUCTURAL_COVERED_BY_DETAIL = nth_bit(0u),
+    CFLAGS_WAS_ILLUSIONARY = nth_bit(1), /* was illusionary, got changed to something else */
+    CFLAGS_BMODEL_MIRROR_INSIDE = nth_bit(3), /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
+    CFLAGS_NO_CLIPPING_SAME_TYPE = nth_bit(4), /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
+    // only one of these flags below should ever be set.
+    CFLAGS_HINT = nth_bit(5),
+    CFLAGS_CLIP = nth_bit(6),
+    CFLAGS_ORIGIN = nth_bit(7),
+    CFLAGS_DETAIL = nth_bit(8),
+    CFLAGS_DETAIL_ILLUSIONARY = nth_bit(9),
+    CFLAGS_DETAIL_FENCE = nth_bit(10),
+    CFLAGS_ILLUSIONARY_VISBLOCKER = nth_bit(11),
+    // all of the detail values
+    CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE),
+    // all of the special content types
+    CFLAGS_CONTENTS_MASK =
+        (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
+};
 
 struct gamedef_t;
 
@@ -598,7 +590,7 @@ struct contentflags_t
     int32_t native;
 
     // extra flags, specific to BSP only
-    int32_t extended;
+    uint16_t extended;
 
     // for CFLAGS_STRUCTURAL_COVERED_BY_DETAIL
     int32_t covered_native;
@@ -816,24 +808,30 @@ private:
 };
 
 // Q1 Texture flags.
-#define TEX_SPECIAL 1 /* sky or slime, no lightmap or 256 subdivision */
+enum q1_surf_flags_t : int32_t
+{
+    TEX_SPECIAL = nth_bit(0) /* sky or slime, no lightmap or 256 subdivision */
+};
 
 // Q2 Texture flags.
-#define Q2_SURF_LIGHT 0x1 // value will hold the light strength
+enum q2_surf_flags_t : int32_t
+{
+    Q2_SURF_LIGHT = nth_bit(0), // value will hold the light strength
 
-#define Q2_SURF_SLICK 0x2 // effects game physics
+    Q2_SURF_SLICK = nth_bit(1), // effects game physics
 
-#define Q2_SURF_SKY 0x4 // don't draw, but add to skybox
-#define Q2_SURF_WARP 0x8 // turbulent water warp
-#define Q2_SURF_TRANS33 0x10
-#define Q2_SURF_TRANS66 0x20
-#define Q2_SURF_FLOWING 0x40 // scroll towards angle
-#define Q2_SURF_NODRAW 0x80 // don't bother referencing the texture
+    Q2_SURF_SKY = nth_bit(2), // don't draw, but add to skybox
+    Q2_SURF_WARP = nth_bit(3), // turbulent water warp
+    Q2_SURF_TRANS33 = nth_bit(4),
+    Q2_SURF_TRANS66 = nth_bit(5),
+    Q2_SURF_FLOWING = nth_bit(6), // scroll towards angle
+    Q2_SURF_NODRAW = nth_bit(7), // don't bother referencing the texture
 
-#define Q2_SURF_HINT 0x100 // make a primary bsp splitter
-#define Q2_SURF_SKIP 0x200 // completely ignore, allowing non-closed brushes
+    Q2_SURF_HINT = nth_bit(8), // make a primary bsp splitter
+    Q2_SURF_SKIP = nth_bit(9), // ONLY FOR HINT! "nodraw" = Q1 "skip"
 
-#define Q2_SURF_TRANSLUCENT (Q2_SURF_TRANS33 | Q2_SURF_TRANS66) // mxd
+    Q2_SURF_TRANSLUCENT = (Q2_SURF_TRANS33 | Q2_SURF_TRANS66), // mxd
+};
 
 struct surfflags_t
 {
@@ -1160,11 +1158,15 @@ struct q2_dface_qbism_t
  * all other leafs need visibility info
  */
 /* Ambient Sounds */
-#define AMBIENT_WATER 0
-#define AMBIENT_SKY 1
-#define AMBIENT_SLIME 2
-#define AMBIENT_LAVA 3
-constexpr size_t NUM_AMBIENTS = 4;
+enum ambient_type_t : uint8_t
+{
+    AMBIENT_WATER,
+    AMBIENT_SKY,
+    AMBIENT_SLIME,
+    AMBIENT_LAVA,
+
+    NUM_AMBIENTS = 4
+};
 
 struct mleaf_t
 {
@@ -1790,11 +1792,11 @@ struct gamedef_t
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
     virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
-    virtual contentflags_t create_extended_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_empty_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
-    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_extended_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_empty_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_solid_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_sky_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
@@ -1808,6 +1810,8 @@ struct gamedef_t
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
 };
+
+constexpr int32_t NO_VERSION = -1;
 
 // BSP version struct & instances
 struct bspversion_t

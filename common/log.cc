@@ -49,7 +49,7 @@ void init(const fs::path &filename, const settings::common_settings &settings)
 {
     if (settings.log.value()) {
         logfile.open(filename);
-        fmt::print(logfile, "---- {} / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n", settings.programName);
+        fmt::print(logfile, "---- {} / ericw-tools {} ----\n", settings.programName, ERICWTOOLS_VERSION);
     }
 }
 
