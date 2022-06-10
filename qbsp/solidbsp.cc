@@ -81,9 +81,9 @@ void DetailToSolid(node_t *node)
         }
 
         // We need to remap CONTENTS_DETAIL to a standard quake content type
-        if (node->contents.is_detail(CFLAGS_DETAIL)) {
+        if (node->contents.is_detail_solid(options.target_game)) {
             node->contents = options.target_game->create_solid_contents();
-        } else if (node->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+        } else if (node->contents.is_detail_illusionary(options.target_game)) {
             node->contents = options.target_game->create_empty_contents();
         }
         /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,

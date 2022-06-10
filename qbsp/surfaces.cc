@@ -568,7 +568,7 @@ static std::list<face_t *> ClipFacesToTree_r(node_t *node, const brush_t *srcbru
     if (node->planenum == PLANENUM_LEAF) {
         // fixme-brushbsp: move to contentflags_t?
         if (node->contents.is_solid(options.target_game) 
-            || node->contents.is_detail(CFLAGS_DETAIL)
+            || node->contents.is_detail_solid(options.target_game)
             || node->contents.is_sky(options.target_game)) {
             // solids eat any faces that reached this point
             return {};

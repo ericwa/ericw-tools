@@ -604,14 +604,11 @@ struct contentflags_t
 
     constexpr bool operator!=(const contentflags_t &other) const { return !(*this == other); }
 
-    // check if these contents are marked as any (or a specific kind of) detail brush.
-    constexpr bool is_detail(int32_t types = CFLAGS_DETAIL_MASK) const
-    {
-        return (extended & CFLAGS_DETAIL_MASK) & types;
-    }
-
     // is any kind of detail? (solid, liquid, etc.)
     bool is_any_detail(const gamedef_t *game) const;
+    bool is_detail_solid(const gamedef_t *game) const;
+    bool is_detail_fence(const gamedef_t *game) const;
+    bool is_detail_illusionary(const gamedef_t *game) const;
 
     bool is_empty(const gamedef_t *game) const;
 
@@ -1800,6 +1797,9 @@ struct gamedef_t
     virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
     virtual bool contents_are_any_detail(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_detail_solid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;

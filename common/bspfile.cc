@@ -72,6 +72,12 @@ struct gamedef_generic_t : public gamedef_t
 
     bool contents_are_any_detail(const contentflags_t &) const { throw std::bad_cast(); }
 
+    bool contents_are_detail_solid(const contentflags_t &contents) const { throw std::bad_cast(); }
+
+    bool contents_are_detail_fence(const contentflags_t &contents) const { throw std::bad_cast(); }
+
+    bool contents_are_detail_illusionary(const contentflags_t &contents) const { throw std::bad_cast(); }
+
     bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
@@ -211,6 +217,21 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         // in Q1, there are only CFLAGS_DETAIL, CFLAGS_DETAIL_ILLUSIONARY, or CFLAGS_DETAIL_FENCE
         return ((contents.extended & CFLAGS_DETAIL_MASK) != 0);
+    }
+
+    bool contents_are_detail_solid(const contentflags_t &contents) const
+    {
+        return ((contents.extended & CFLAGS_DETAIL) != 0);
+    }
+
+    bool contents_are_detail_fence(const contentflags_t &contents) const
+    {
+        return ((contents.extended & CFLAGS_DETAIL_FENCE) != 0);
+    }
+
+    bool contents_are_detail_illusionary(const contentflags_t &contents) const
+    {
+        return ((contents.extended & CFLAGS_DETAIL_ILLUSIONARY) != 0);
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -537,6 +558,24 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_any_detail(const contentflags_t &contents) const
     {
         return ((contents.native & Q2_CONTENTS_DETAIL) != 0);
+    }
+
+    bool contents_are_detail_solid(const contentflags_t &contents) const
+    {
+        // fixme-brushbsp: check native flag
+        return ((contents.extended & CFLAGS_DETAIL) != 0);
+    }
+
+    bool contents_are_detail_fence(const contentflags_t &contents) const
+    {
+        // fixme-brushbsp: check native flag
+        return ((contents.extended & CFLAGS_DETAIL_FENCE) != 0);
+    }
+
+    bool contents_are_detail_illusionary(const contentflags_t &contents) const
+    {
+        // fixme-brushbsp: check native flag
+        return ((contents.extended & CFLAGS_DETAIL_ILLUSIONARY) != 0);
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -1007,6 +1046,21 @@ bool contentflags_t::chops(const gamedef_t* game) const
 bool contentflags_t::is_any_detail(const gamedef_t *game) const
 {
     return game->contents_are_any_detail(*this);
+}
+
+bool contentflags_t::is_detail_solid(const gamedef_t *game) const
+{
+    return game->contents_are_detail_solid(*this);
+}
+
+bool contentflags_t::is_detail_fence(const gamedef_t *game) const
+{
+    return game->contents_are_detail_fence(*this);
+}
+
+bool contentflags_t::is_detail_illusionary(const gamedef_t *game) const
+{
+    return game->contents_are_detail_illusionary(*this);
 }
 
 bool contentflags_t::is_empty(const gamedef_t *game) const

@@ -262,13 +262,13 @@ static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbru
         return false;
     }
 
-    if (clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY) &&
-        !brush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+    if (clipbrush.contents.is_detail_illusionary(options.target_game) &&
+        !brush.contents.is_detail_illusionary(options.target_game)) {
         /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
         return false;
     }
 
-    if (clipbrush.contents.is_detail(CFLAGS_DETAIL_FENCE) && !brush.contents.is_detail(CFLAGS_DETAIL_FENCE)) {
+    if (clipbrush.contents.is_detail_fence(options.target_game) && !brush.contents.is_detail_fence(options.target_game)) {
         /* CONTENTS_DETAIL_FENCE never clips anything but itself */
         return false;
     }
@@ -293,12 +293,12 @@ static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbru
         (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
                                                         !clipbrush.contents.is_sky(options.target_game)))
 
-        || (brush.contents.is_detail(CFLAGS_DETAIL) && (!clipbrush.contents.is_solid(options.target_game) &&
-                                                        !clipbrush.contents.is_sky(options.target_game) &&
-                                                        !clipbrush.contents.is_detail(CFLAGS_DETAIL)))
+        || (brush.contents.is_detail_solid(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
+                                                                          !clipbrush.contents.is_sky(options.target_game) &&
+                                                                          !clipbrush.contents.is_detail_solid(options.target_game)))
 
         || (brush.contents.is_liquid(options.target_game) &&
-            clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
+            clipbrush.contents.is_detail_illusionary(options.target_game))
 
         || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))) {
         return false;

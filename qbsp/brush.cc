@@ -990,11 +990,11 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             stats.solid++;
         } else if (brush->contents.is_sky(options.target_game)) {
             stats.sky++;
-        } else if (brush->contents.is_detail(CFLAGS_DETAIL)) {
+        } else if (brush->contents.is_detail_solid(options.target_game)) {
             stats.detail++;
-        } else if (brush->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
+        } else if (brush->contents.is_detail_illusionary(options.target_game)) {
             stats.detail_illusionary++;
-        } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
+        } else if (brush->contents.is_detail_fence(options.target_game)) {
             stats.detail_fence++;
         } else {
             stats.liquid++;
