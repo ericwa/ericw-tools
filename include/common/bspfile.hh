@@ -626,7 +626,9 @@ struct contentflags_t
 
     constexpr bool clips_same_type() const { return !(extended & CFLAGS_NO_CLIPPING_SAME_TYPE); }
 
-    constexpr bool is_fence() const { return (extended & (CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_ILLUSIONARY)) != 0; }
+    bool is_fence(const gamedef_t *game) const {
+        return is_detail_fence(game) || is_detail_illusionary(game);
+    }
 
     // check if this content's `type` - which is distinct from various
     // flags that turn things on/off - match. Exactly what the native
@@ -1796,6 +1798,9 @@ struct gamedef_t
     virtual contentflags_t create_solid_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_sky_contents(const int32_t &cflags = 0) const = 0;
     virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const = 0;
+    virtual contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const = 0;
+    virtual contentflags_t create_detail_fence_contents(const contentflags_t &original) const = 0;
+    virtual contentflags_t create_detail_solid_contents(const contentflags_t &original) const = 0;
     virtual bool contents_are_any_detail(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;

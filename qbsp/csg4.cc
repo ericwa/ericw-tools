@@ -300,7 +300,7 @@ static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbru
         || (brush.contents.is_liquid(options.target_game) &&
             clipbrush.contents.is_detail_illusionary(options.target_game))
 
-        || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))) {
+        || (brush.contents.is_fence(options.target_game) && clipbrush.contents.is_liquid(options.target_game))) {
         return false;
     }
 

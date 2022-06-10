@@ -36,13 +36,14 @@ static contentflags_t RemapContentsForExport(const contentflags_t &content)
 {
     if (content.is_detail_fence(options.target_game)) {
         /*
-         * A bit of a hack for Q2, to ensure that structural faces which are completely covered by CFLAGS_DETAIL_FENCE
+         * A bit of a hack for Q2, to ensure that structural faces which are completely covered by detail fence
          * still render.
          *
          * If we export the detail fence leaf as CONTENTS_SOLID, Q2 engines will refuse to render the covered sturctural
          * face because of a short-circuit in GL_DrawLeaf.
          */
         if (options.target_game->id == GAME_QUAKE_II) {
+            // fixme-brushbsp: can remove this once we use WINDOW natively for detail_fence
             return {Q2_CONTENTS_WINDOW, 0};
         }
         /*

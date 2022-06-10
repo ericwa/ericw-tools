@@ -70,6 +70,12 @@ struct gamedef_generic_t : public gamedef_t
 
     contentflags_t create_liquid_contents(const int32_t &, const int32_t &) const { throw std::bad_cast(); }
 
+    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const { throw std::bad_cast(); }
+
+    contentflags_t create_detail_fence_contents(const contentflags_t &original) const { throw std::bad_cast(); }
+
+    contentflags_t create_detail_solid_contents(const contentflags_t &original) const { throw std::bad_cast(); }
+
     bool contents_are_any_detail(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_detail_solid(const contentflags_t &contents) const { throw std::bad_cast(); }
@@ -211,6 +217,19 @@ struct gamedef_q1_like_t : public gamedef_t
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {liquid_type, cflags};
+    }
+
+    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const {
+        // ignore the original contents in Q1
+        return {0, CFLAGS_DETAIL_ILLUSIONARY};
+    }
+
+    contentflags_t create_detail_fence_contents(const contentflags_t &original) const {
+        return {0, CFLAGS_DETAIL_FENCE};
+    }
+
+    contentflags_t create_detail_solid_contents(const contentflags_t &original) const {
+        return {0, CFLAGS_DETAIL};
     }
 
     bool contents_are_any_detail(const contentflags_t &contents) const
@@ -555,6 +574,26 @@ struct gamedef_q2_t : public gamedef_t
         }
     }
 
+    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const {
+        contentflags_t result = original;
+        result.native &= ~Q2_CONTENTS_SOLID;
+        result.native |= Q2_CONTENTS_MIST | Q2_CONTENTS_DETAIL;
+        return result;
+    }
+
+    contentflags_t create_detail_fence_contents(const contentflags_t &original) const {
+        contentflags_t result = original;
+        result.native &= ~Q2_CONTENTS_SOLID;
+        result.native |= (Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_DETAIL);
+        return result;
+    }
+
+    contentflags_t create_detail_solid_contents(const contentflags_t &original) const {
+        contentflags_t result = original;
+        result.native |= (Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL);
+        return result;
+    }
+
     bool contents_are_any_detail(const contentflags_t &contents) const
     {
         return ((contents.native & Q2_CONTENTS_DETAIL) != 0);
@@ -562,20 +601,32 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_detail_solid(const contentflags_t &contents) const
     {
-        // fixme-brushbsp: check native flag
-        return ((contents.extended & CFLAGS_DETAIL) != 0);
+        int32_t test = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_SOLID);
+
+        return ((contents.native & test) == test);
     }
 
     bool contents_are_detail_fence(const contentflags_t &contents) const
     {
-        // fixme-brushbsp: check native flag
-        return ((contents.extended & CFLAGS_DETAIL_FENCE) != 0);
+        if (contents.native & Q2_CONTENTS_SOLID) {
+            return false;
+        }
+
+        int32_t test = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_WINDOW);
+        return ((contents.native & test) == test);
     }
 
     bool contents_are_detail_illusionary(const contentflags_t &contents) const
     {
-        // fixme-brushbsp: check native flag
-        return ((contents.extended & CFLAGS_DETAIL_ILLUSIONARY) != 0);
+        if (contents.native & Q2_CONTENTS_SOLID) {
+            return false;
+        }
+
+        int32_t mist1_type = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_MIST);
+        int32_t mist2_type = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_AUX);
+
+        return ((contents.native & mist1_type) == mist1_type)
+            || ((contents.native & mist2_type) == mist2_type);
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -740,6 +791,7 @@ struct gamedef_q2_t : public gamedef_t
         // FIXME: this is a bit of a hack, but this is because clip
         // and liquids and stuff are already handled *like* detail by
         // the compiler.
+        // fixme-brushbsp: remove this
         if (surf_contents.extended & CFLAGS_DETAIL) {
             if (!(surf_contents.native & Q2_CONTENTS_SOLID)) {
                 surf_contents.extended &= ~CFLAGS_DETAIL;

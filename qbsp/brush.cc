@@ -896,11 +896,11 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(options.target_game)) {
             if (detail_illusionary) {
-                contents = {contents.native, CFLAGS_DETAIL_ILLUSIONARY};
+                contents = options.target_game->create_detail_illusionary_contents(contents);
             } else if (detail_fence) {
-                contents = {contents.native, CFLAGS_DETAIL_FENCE};
+                contents = options.target_game->create_detail_fence_contents(contents);
             } else if (detail) {
-                contents = {contents.native, CFLAGS_DETAIL};
+                contents = options.target_game->create_detail_solid_contents(contents);
             }
         }
 
@@ -950,7 +950,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 contents type.
                 */
             if (hullnum <= 0 && mirrorinside) {
-                contents = {contents.native, CFLAGS_DETAIL_FENCE};
+                contents = options.target_game->create_detail_fence_contents(contents);
             }
         }
 
