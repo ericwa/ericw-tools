@@ -21,7 +21,7 @@
 
 #include <common/bspfile.hh>
 
-#define LIT_VERSION 1
+constexpr int32_t LIT_VERSION = 1;
 
 struct litheader_t
 {

@@ -63,8 +63,6 @@ const char *light_t::classname() const
 
 static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 
-#define MAX_SWITCHABLE_STYLES 64
-
 static entdict_t &WorldEnt()
 {
     if (entdicts.size() == 0 || entdicts.at(0).get("classname") != "worldspawn") {
@@ -101,8 +99,8 @@ static int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const s
     const int newStylenum = cfg.compilerstyle_start.value() + lightstyleForTargetname.size();
 
     // check if full
-    if (newStylenum >= MAX_SWITCHABLE_STYLES) {
-        FError("Too many unique light targetnames (max={})\n", MAX_SWITCHABLE_STYLES);
+    if (newStylenum >= cfg.compilerstyle_max.value()) {
+        FError("Too many unique light targetnames (max={})\n", cfg.compilerstyle_max.value());
     }
 
     lightstyleForTargetname.emplace_back(targetname, newStylenum);
@@ -689,7 +687,7 @@ void Matrix4x4_CM_Projection_Inf(std::array<vec_t, 16> &proj, vec_t fovx, vec_t 
 
     proj[2] = 0;
     proj[6] = 0;
-    proj[10] = -1 * ((vec_t)(1 << 21) / (1 << 22));
+    proj[10] = -1 * 0.5;
     proj[14] = -2 * neard * nudge;
 
     proj[3] = 0;
@@ -1028,7 +1026,7 @@ static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
         }
     }
 
-    logging::print("WARNING: couldn't nudge light in solid at {}\n", point);
+    logging::print("WARNING: couldn't nudge light out of solid at {}\n", point);
     return point;
 }
 
@@ -1197,7 +1195,7 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp)
 
     /* FIXME - why are we printing this here? */
     logging::print("{} switchable light styles ({} max)\n", lightstyleForTargetname.size(),
-        MAX_SWITCHABLE_STYLES - cfg.compilerstyle_start.value());
+        cfg.compilerstyle_max.value() - cfg.compilerstyle_start.value());
 }
 
 /*

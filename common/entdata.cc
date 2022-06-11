@@ -138,8 +138,6 @@ std::vector<entdict_t> EntData_Parse(const std::string &entdata)
 
             if (parser.token == "}")
                 break;
-            if (parser.token.length() > MAX_ENT_KEY - 1)
-                FError("Key length > {}: '{}'", MAX_ENT_KEY - 1, parser.token);
 
             std::string keystr = parser.token;
 
@@ -149,8 +147,6 @@ std::vector<entdict_t> EntData_Parse(const std::string &entdata)
 
             if (parser.token == "}")
                 FError("closing brace without data");
-            if (parser.token.length() > MAX_ENT_VALUE - 1)
-                FError("Value length > {}", MAX_ENT_VALUE - 1);
 
             entity.set(keystr, parser.token);
         }

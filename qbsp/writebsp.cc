@@ -74,7 +74,7 @@ size_t ExportMapPlane(size_t planenum)
     dplane.normal[1] = plane.normal[1];
     dplane.normal[2] = plane.normal[2];
     dplane.dist = plane.dist;
-    dplane.type = plane.type;
+    dplane.type = static_cast<int32_t>(plane.type);
 
     plane.outputplanenum = newIndex;
     return newIndex;

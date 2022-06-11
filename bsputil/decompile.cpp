@@ -542,7 +542,7 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
 static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentflags_t &contents)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        int visible = contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1);
+        int visible = contents.native & Q2_ALL_VISIBLE_CONTENTS;
 
         if (visible & Q2_CONTENTS_WATER) {
             return "e1u1/water4";

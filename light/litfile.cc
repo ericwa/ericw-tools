@@ -57,7 +57,7 @@ void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const fs::path &filenam
             extents[i * 2 + 0] = LittleShort(facesup[i].extent[0]);
             extents[i * 2 + 1] = LittleShort(facesup[i].extent[1]);
             j = 0;
-            while ((1u << j) < facesup[i].lmscale)
+            while (nth_bit(j) < facesup[i].lmscale)
                 j++;
             shifts[i] = j;
         }

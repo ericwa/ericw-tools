@@ -167,7 +167,7 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
 void common_settings::setParameters(int argc, const char **argv)
 {
     programName = fs::path(argv[0]).stem().string();
-    fmt::print("---- {} / ericw-tools " stringify(ERICWTOOLS_VERSION) " ----\n", programName);
+    fmt::print("---- {} / ericw-tools {} ----\n", programName, ERICWTOOLS_VERSION);
 }
 
 void common_settings::postinitialize(int argc, const char **argv)

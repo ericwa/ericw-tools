@@ -60,15 +60,15 @@ struct gamedef_generic_t : public gamedef_t
 
     bool chops(const contentflags_t &) const { throw std::bad_cast(); }
 
-    contentflags_t create_extended_contents(const int32_t &) const { throw std::bad_cast(); }
+    contentflags_t create_extended_contents(const uint16_t &) const { throw std::bad_cast(); }
 
-    contentflags_t create_empty_contents(const int32_t &) const { throw std::bad_cast(); }
+    contentflags_t create_empty_contents(const uint16_t &) const { throw std::bad_cast(); }
 
-    contentflags_t create_solid_contents(const int32_t &) const { throw std::bad_cast(); }
+    contentflags_t create_solid_contents(const uint16_t &) const { throw std::bad_cast(); }
 
-    contentflags_t create_sky_contents(const int32_t &) const { throw std::bad_cast(); }
+    contentflags_t create_sky_contents(const uint16_t &) const { throw std::bad_cast(); }
 
-    contentflags_t create_liquid_contents(const int32_t &, const int32_t &) const { throw std::bad_cast(); }
+    contentflags_t create_liquid_contents(const int32_t &, const uint16_t &) const { throw std::bad_cast(); }
 
     contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const { throw std::bad_cast(); }
 
@@ -191,30 +191,30 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents_are_solid(contents) || contents_are_sky(contents) || (contents.extended & CFLAGS_DETAIL);
     }
 
-    contentflags_t create_extended_contents(const int32_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_extended_contents(const uint16_t &cflags) const { return {0, cflags}; }
 
-    contentflags_t create_empty_contents(const int32_t &cflags = 0) const
+    contentflags_t create_empty_contents(const uint16_t &cflags = 0) const
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {CONTENTS_EMPTY, cflags};
     }
 
-    contentflags_t create_solid_contents(const int32_t &cflags = 0) const
+    contentflags_t create_solid_contents(const uint16_t &cflags = 0) const
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {CONTENTS_SOLID, cflags};
     }
 
-    contentflags_t create_sky_contents(const int32_t &cflags = 0) const
+    contentflags_t create_sky_contents(const uint16_t &cflags = 0) const
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {CONTENTS_SKY, cflags};
     }
 
-    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags = 0) const
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
@@ -501,12 +501,9 @@ struct gamedef_q2_t : public gamedef_t
         max_entity_key = 256;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const
-    {
-        return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY | Q2_SURF_NODRAW)); // mxd. +Q2_SURF_NODRAW
-    }
+    bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & Q2_SURF_NODRAW); }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const { return !(flags.native & (Q2_SURF_WARP | Q2_SURF_SKY)); }
+    bool surf_is_subdivided(const surfflags_t &flags) const { return true; }
 
     bool surfflags_are_valid(const surfflags_t &flags) const
     {
@@ -522,7 +519,7 @@ struct gamedef_q2_t : public gamedef_t
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
     {
-        contentflags_t c = {contents0.native | contents1.native, contents0.extended | contents1.extended};
+        contentflags_t c = {contents0.native | contents1.native, static_cast<uint16_t>(contents0.extended | contents1.extended)};
 
         // a cluster may include some solid detail areas, but
         // still be seen into
@@ -534,7 +531,7 @@ struct gamedef_q2_t : public gamedef_t
 
     int32_t get_content_type(const contentflags_t &contents) const
     {
-        return contents.native & (((Q2_LAST_VISIBLE_CONTENTS << 1) - 1) |
+        return contents.native & (Q2_ALL_VISIBLE_CONTENTS |
                                      (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
                                          Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
     }
@@ -550,7 +547,7 @@ struct gamedef_q2_t : public gamedef_t
         } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
             return 2;
         } else {
-            switch (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1)) {
+            switch (contents.native & Q2_ALL_VISIBLE_CONTENTS) {
                 case Q2_CONTENTS_SOLID: return 10;
                 case Q2_CONTENTS_WINDOW: return 9;
                 case Q2_CONTENTS_AUX: return 5;
@@ -568,15 +565,15 @@ struct gamedef_q2_t : public gamedef_t
         return !!(contents.native & Q2_CONTENTS_SOLID);
     }
 
-    contentflags_t create_extended_contents(const int32_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_extended_contents(const uint16_t &cflags) const { return {0, cflags}; }
 
-    contentflags_t create_empty_contents(const int32_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_empty_contents(const uint16_t &cflags) const { return {0, cflags}; }
 
-    contentflags_t create_solid_contents(const int32_t &cflags) const { return {Q2_CONTENTS_SOLID, cflags}; }
+    contentflags_t create_solid_contents(const uint16_t &cflags) const { return {Q2_CONTENTS_SOLID, cflags}; }
 
-    contentflags_t create_sky_contents(const int32_t &cflags) const { return create_solid_contents(cflags); }
+    contentflags_t create_sky_contents(const uint16_t &cflags) const { return create_solid_contents(cflags); }
 
-    contentflags_t create_liquid_contents(const int32_t &liquid_type, const int32_t &cflags) const
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags) const
     {
         switch (liquid_type) {
             case CONTENTS_WATER: return {Q2_CONTENTS_WATER, cflags};
@@ -650,7 +647,7 @@ struct gamedef_q2_t : public gamedef_t
             return false; // HACK: needs to return false in order for LinkConvexFaces to assign Q2_CONTENTS_AREAPORTAL
                           // to the leaf
 
-        return !(contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
+        return !(contents.native & Q2_ALL_VISIBLE_CONTENTS);
     }
 
     bool contents_are_solid(const contentflags_t &contents) const
@@ -677,7 +674,8 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_valid(const contentflags_t &contents, bool strict) const
     {
-        const int32_t x = (contents.native & Q2_VISIBLE_CONTENTS_MASK);
+        // check that we don't have more than one visible contents type
+        const int32_t x = contents.native & Q2_ALL_VISIBLE_CONTENTS;
 
         // TODO: check other invalid mixes
         if (!x && strict) {
@@ -716,7 +714,7 @@ struct gamedef_q2_t : public gamedef_t
         if (!(c0 ^ c1))
             return true;
 
-        return visible_contents(c0 ^ c1);
+        return !visible_contents(c0 ^ c1);
     }
 
     bool contents_seals_map(const contentflags_t& contents) const override

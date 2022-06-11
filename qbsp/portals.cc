@@ -406,7 +406,7 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
         for (j = 0; j < 6; j++) {
             if (j == i)
                 continue;
-            portals[i]->winding = portals[i]->winding->clip(bplanes[j], ON_EPSILON, true)[SIDE_FRONT];
+            portals[i]->winding = portals[i]->winding->clip(bplanes[j], options.epsilon.value(), true)[SIDE_FRONT];
         }
     }
 }
@@ -540,7 +540,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
         } else
             FError("Mislinked portal");
 
-        winding = winding->clip(side == SIDE_FRONT ? clipplane : -clipplane, ON_EPSILON, true)[SIDE_FRONT];
+        winding = winding->clip(side == SIDE_FRONT ? clipplane : -clipplane, options.epsilon.value(), true)[SIDE_FRONT];
         if (winding && WindingIsTiny(*winding, 0.5)) {
             winding = std::nullopt;
         }
@@ -572,7 +572,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
         RemovePortalFromNode(portal, portal->nodes[1]);
 
         /* cut the portal into two portals, one on each side of the cut plane */
-        auto windings = portal->winding->clip(plane, ON_EPSILON);
+        auto windings = portal->winding->clip(plane, options.epsilon.value());
 
         if (windings[SIDE_BACK] && WindingIsTiny(*windings[SIDE_BACK], 0.5)) {
             windings[SIDE_BACK] = std::nullopt;

@@ -102,7 +102,7 @@ std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
         return {nullptr, in};
     }
 
-    auto [front_winding, back_winding] = in->w.clip(split, ON_EPSILON, true);
+    auto [front_winding, back_winding] = in->w.clip(split, options.epsilon.value(), true);
 
     if (front_winding && !back_winding) {
         // all in front
@@ -149,7 +149,7 @@ static void RemoveOutsideFaces(const brush_t &brush, std::list<face_t *> *inside
     for (face_t *face : oldinside) {
         std::optional<winding_t> w = face->w;
         for (auto &clipface : brush.faces) {
-            w = w->clip(Face_Plane(&clipface), ON_EPSILON, false)[SIDE_BACK];
+            w = w->clip(Face_Plane(&clipface), options.epsilon.value(), false)[SIDE_BACK];
             if (!w)
                 break;
         }
@@ -188,7 +188,7 @@ static void ClipInside(
          */
         bool spurious_onplane = false;
         {
-            std::array<size_t, SIDE_TOTAL> counts = face->w.calc_sides(splitplane, nullptr, nullptr, ON_EPSILON);
+            std::array<size_t, SIDE_TOTAL> counts = face->w.calc_sides(splitplane, nullptr, nullptr, options.epsilon.value());
 
             if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
                 spurious_onplane = true;

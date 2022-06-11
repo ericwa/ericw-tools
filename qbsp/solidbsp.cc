@@ -151,15 +151,15 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
 
     have_front = have_back = false;
 
-    if (split.type < 3) {
+    if (split.type < plane_type_t::PLANE_ANYX) {
         /* shortcut for axial planes */
-        const vec_t *p = &in->w[0][split.type];
+        const vec_t *p = &in->w[0][static_cast<size_t>(split.type)];
         for (i = 0; i < in->w.size(); i++, p += 3) {
-            if (*p > split.dist + ON_EPSILON) {
+            if (*p > split.dist + options.epsilon.value()) {
                 if (have_back)
                     return SIDE_ON;
                 have_front = true;
-            } else if (*p < split.dist - ON_EPSILON) {
+            } else if (*p < split.dist - options.epsilon.value()) {
                 if (have_front)
                     return SIDE_ON;
                 have_back = true;
@@ -169,11 +169,11 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
         /* sloping planes take longer */
         for (i = 0; i < in->w.size(); i++) {
             const vec_t dot = split.distance_to(in->w[i]);
-            if (dot > ON_EPSILON) {
+            if (dot > options.epsilon.value()) {
                 if (have_back)
                     return SIDE_ON;
                 have_front = true;
-            } else if (dot < -ON_EPSILON) {
+            } else if (dot < -options.epsilon.value()) {
                 if (have_front)
                     return SIDE_ON;
                 have_back = true;
@@ -215,8 +215,8 @@ static void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
 
     front_bounds = back_bounds = in_bounds;
 
-    if (split.type < 3) {
-        front_bounds[0][split.type] = back_bounds[1][split.type] = split.dist;
+    if (split.type < plane_type_t::PLANE_ANYX) {
+        front_bounds[0][static_cast<size_t>(split.type)] = back_bounds[1][static_cast<size_t>(split.type)] = split.dist;
         return;
     }
 
@@ -267,7 +267,7 @@ inline vec_t SplitPlaneMetric_Axial(const qbsp_plane_t &p, const aabb3d &bounds)
 {
     vec_t value = 0;
     for (int i = 0; i < 3; i++) {
-        if (i == p.type) {
+        if (static_cast<plane_type_t>(i) == p.type) {
             const vec_t dist = p.dist * p.normal[i];
             value += (bounds.maxs()[i] - dist) * (bounds.maxs()[i] - dist);
             value += (dist - bounds.mins()[i]) * (dist - bounds.mins()[i]);
@@ -298,7 +298,7 @@ inline vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t &p, const aabb3d &boun
 
 inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
 {
-    if (p.type < 3)
+    if (p.type < plane_type_t::PLANE_ANYX)
         return SplitPlaneMetric_Axial(p, bounds);
     else
         return SplitPlaneMetric_NonAxial(p, bounds);
@@ -337,7 +337,7 @@ static const face_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<br
                 bool axial = false;
 
                 /* check for axis aligned surfaces */
-                if (plane.type < 3) {
+                if (plane.type < plane_type_t::PLANE_ANYX) {
                     axial = true;
                 }
 
@@ -446,8 +446,8 @@ static const face_t *ChoosePlaneFromList(const std::vector<std::unique_ptr<brush
                  * if equal numbers axial planes win, otherwise decide on spatial
                  * subdivision
                  */
-                if (splits < minsplits || (splits == minsplits && plane.type < 3)) {
-                    if (plane.type < 3) {
+                if (splits < minsplits || (splits == minsplits && plane.type < plane_type_t::PLANE_ANYX)) {
+                    if (plane.type < plane_type_t::PLANE_ANYX) {
                         const vec_t distribution = SplitPlaneMetric(plane, bounds);
                         if (distribution > bestdistribution && splits == minsplits)
                             continue;
@@ -500,7 +500,7 @@ static const face_t *SelectPartition(const std::vector<std::unique_ptr<brush_t>>
     } else {
         // old way (ericw-tools 0.15.2+)
         if (options.maxnodesize.value() >= 64) {
-            const vec_t maxnodesize = options.maxnodesize.value() - ON_EPSILON;
+            const vec_t maxnodesize = options.maxnodesize.value() - options.epsilon.value();
 
             largenode = (bounds.maxs()[0] - bounds.mins()[0]) > maxnodesize ||
                         (bounds.maxs()[1] - bounds.mins()[1]) > maxnodesize ||

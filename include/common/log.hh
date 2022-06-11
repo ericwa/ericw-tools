@@ -43,11 +43,11 @@ namespace logging
 enum class flag : uint8_t
 {
     NONE        = 0,      // none of the below (still prints though)
-    DEFAULT     = 1 << 0, // prints everywhere
-    VERBOSE     = 1 << 1, // prints everywhere, if enabled
-    PROGRESS    = 1 << 2, // prints only to stdout
-    PERCENT     = 1 << 3, // prints everywhere, if enabled
-    STAT        = 1 << 4, // prints everywhere, if enabled
+    DEFAULT     = nth_bit(0), // prints everywhere
+    VERBOSE     = nth_bit(1), // prints everywhere, if enabled
+    PROGRESS    = nth_bit(2), // prints only to stdout
+    PERCENT     = nth_bit(3), // prints everywhere, if enabled
+    STAT        = nth_bit(4), // prints everywhere, if enabled
     ALL         = 0xFF
 };
 

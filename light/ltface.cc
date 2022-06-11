@@ -2254,9 +2254,9 @@ static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *li
 
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
 
-#define DIRT_NUM_ANGLE_STEPS 16
-#define DIRT_NUM_ELEVATION_STEPS 3
-#define DIRT_NUM_VECTORS (DIRT_NUM_ANGLE_STEPS * DIRT_NUM_ELEVATION_STEPS)
+constexpr size_t DIRT_NUM_ANGLE_STEPS = 16;
+constexpr size_t DIRT_NUM_ELEVATION_STEPS = 3;
+constexpr size_t DIRT_NUM_VECTORS = (DIRT_NUM_ANGLE_STEPS * DIRT_NUM_ELEVATION_STEPS);
 
 static qvec3d dirtVectors[DIRT_NUM_VECTORS];
 int numDirtVectors = 0;

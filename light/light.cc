@@ -407,6 +407,11 @@ static void FindModelInfo(const mbsp_t *bsp)
     Q_assert(modelinfo.size() == bsp->dmodels.size());
 }
 
+// FIXME: in theory can't we calculate the exact amount of
+// storage required? we'd have to expand it by 4 to account for
+// lightstyles though
+static constexpr size_t MAX_MAP_LIGHTING = 0x8000000;
+
 /*
  * =============
  *  LightWorld
@@ -455,7 +460,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
         if (lmshift_lump != bspdata->bspx.entries.end()) {
             for (int i = 0; i < bsp.dfaces.size(); i++)
-                faces_sup[i].lmscale = 1 << reinterpret_cast<const char *>(lmshift_lump->second.lumpdata.get())[i];
+                faces_sup[i].lmscale = nth_bit(reinterpret_cast<const char *>(lmshift_lump->second.lumpdata.get())[i]);
         } else {
             for (int i = 0; i < bsp.dfaces.size(); i++)
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;

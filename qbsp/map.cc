@@ -55,11 +55,6 @@ void mapdata_t::reset()
     *this = mapdata_t{};
 }
 
-
-#define info_player_start 1
-#define info_player_deathmatch 2
-#define info_player_coop 4
-
 struct texdef_valve_t
 {
     qmat<vec_t, 2, 3> axis{};
@@ -465,14 +460,14 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
             // Quake II uses multiple starts for level transitions/backtracking.
             // TODO: instead, this should check targetnames. There should only be
             // one info_player_start per targetname in Q2.
-            if (options.target_game->id != GAME_QUAKE_II && (map.start_spots & info_player_start)) {
+            if (options.target_game->id != GAME_QUAKE_II && (map.start_spots.has_info_player_start())) {
                 logging::print("WARNING: Multiple info_player_start entities\n");
             }
-            map.start_spots |= info_player_start;
+            map.start_spots.set_info_player_start(true);
         } else if (string_iequals(parser.token, "info_player_deathmatch")) {
-            map.start_spots |= info_player_deathmatch;
+            map.start_spots.set_info_player_deathmatch(true);
         } else if (string_iequals(parser.token, "info_player_coop")) {
-            map.start_spots |= info_player_coop;
+            map.start_spots.set_info_player_coop(true);
         }
     }
 }
@@ -1421,12 +1416,12 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
             for (int i = 0; i < 8; i++) {
                 if (!got) {
-                    if (mapface.contents.native & (1 << i)) {
+                    if (mapface.contents.native & nth_bit(i)) {
                         got = true;
                         continue;
                     }
                 } else {
-                    mapface.contents.native &= ~(1 << i);
+                    mapface.contents.native &= ~nth_bit(i);
                 }
             }
         }
@@ -1953,9 +1948,9 @@ void LoadMapFile(void)
     }
 
     // Print out warnings for entities
-    if (!(map.start_spots & info_player_start))
+    if (!map.start_spots.has_info_player_start())
         logging::print("WARNING: No info_player_start entity in level\n");
-    if (!(map.start_spots & info_player_deathmatch))
+    if (!map.start_spots.has_info_player_deathmatch())
         logging::print("WARNING: No info_player_deathmatch entities in level\n");
     //      if (!(map.start_spots & info_player_coop))
     //              logging::print("WARNING: No info_player_coop entities in level\n");

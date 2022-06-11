@@ -42,7 +42,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 
 
-add_definitions(-DERICWTOOLS_VERSION=${GIT_DESCRIBE})
+add_definitions(-DERICWTOOLS_VERSION="${GIT_DESCRIBE}")
 
 if (WIN32)
 	set("NO_ITERATOR_DEBUG" FALSE CACHE BOOL "Whether to use MSVC iterator debugging or not")

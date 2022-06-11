@@ -65,7 +65,7 @@ void CalcAmbientSounds(mbsp_t *bsp)
     mleaf_t *leaf, *hit;
     uint8_t *vis;
     float d, maxd;
-    int ambient_type;
+    ambient_type_t ambient_type;
     float dists[NUM_AMBIENTS];
     float vol;
 
@@ -85,7 +85,7 @@ void CalcAmbientSounds(mbsp_t *bsp)
         }
 
         for (j = 0; j < portalleafs_real; j++) {
-            if (!(vis[j >> 3] & (1 << (j & 7))))
+            if (!(vis[j >> 3] & nth_bit(j & 7)))
                 continue;
 
             //
@@ -181,7 +181,7 @@ void CalcPHS(mbsp_t *bsp)
             if (!bitbyte)
                 continue;
             for (int32_t k = 0; k < 8; k++) {
-                if (!(bitbyte & (1 << k)))
+                if (!(bitbyte & nth_bit(k)))
                     continue;
                 // OR this pvs row into the phs
                 int32_t index = ((j << 3) + k);
@@ -196,7 +196,7 @@ void CalcPHS(mbsp_t *bsp)
             }
         }
         for (int32_t j = 0; j < portalleafs; j++)
-            if (uncompressed[j >> 3] & (1 << (j & 7)))
+            if (uncompressed[j >> 3] & nth_bit(j & 7))
                 count++;
 
         //
