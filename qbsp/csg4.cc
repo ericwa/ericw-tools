@@ -257,54 +257,15 @@ static std::vector<std::unique_ptr<brush_t>> SingleBrush(std::unique_ptr<brush_t
 
 static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbrush)
 {
-    if (clipbrush.contents.is_empty(options.target_game)) {
-        /* Ensure hint never clips anything */
-        return false;
+    if (clipbrush.contents.is_any_solid(options.target_game)) {
+        return true;
     }
 
-    if (clipbrush.contents.is_detail_illusionary(options.target_game) &&
-        !brush.contents.is_detail_illusionary(options.target_game)) {
-        /* CONTENTS_DETAIL_ILLUSIONARY never clips anything but itself */
-        return false;
+    if (clipbrush.contents.types_equal(brush.contents, options.target_game)) {
+        return clipbrush.contents.clips_same_type();
     }
 
-    if (clipbrush.contents.is_detail_fence(options.target_game) && !brush.contents.is_detail_fence(options.target_game)) {
-        /* CONTENTS_DETAIL_FENCE never clips anything but itself */
-        return false;
-    }
-
-    if (clipbrush.contents.types_equal(brush.contents, options.target_game) &&
-        !clipbrush.contents.clips_same_type()) {
-        /* _noclipfaces key */
-        return false;
-    }
-
-    /*
-     * If the brush is solid and the clipbrush is not, then we need to
-     * keep the inside faces and set the outside contents to those of
-     * the clipbrush. Otherwise, these inside surfaces are hidden and
-     * should be discarded.
-     *
-     * FIXME: clean this up, the predicate seems to be "can you see 'brush' from inside 'clipbrush'"
-     */
-    if ((brush.contents.is_solid(options.target_game) && !clipbrush.contents.is_solid(options.target_game))
-
-        ||
-        (brush.contents.is_sky(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
-                                                        !clipbrush.contents.is_sky(options.target_game)))
-
-        || (brush.contents.is_detail_solid(options.target_game) && (!clipbrush.contents.is_solid(options.target_game) &&
-                                                                          !clipbrush.contents.is_sky(options.target_game) &&
-                                                                          !clipbrush.contents.is_detail_solid(options.target_game)))
-
-        || (brush.contents.is_liquid(options.target_game) &&
-            clipbrush.contents.is_detail_illusionary(options.target_game))
-
-        || (brush.contents.is_fence(options.target_game) && clipbrush.contents.is_liquid(options.target_game))) {
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> input, const mapentity_t *srcentity, const brush_t *srcbrush, const brush_t *clipbrush)

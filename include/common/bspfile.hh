@@ -612,6 +612,12 @@ struct contentflags_t
 
     bool is_empty(const gamedef_t *game) const;
 
+    // detail solid or structural solid
+    bool is_any_solid(const gamedef_t *game) const {
+        return is_solid(game)
+            || is_detail_solid(game);
+    }
+
     // solid, not detail or any other extended content types
     bool is_solid(const gamedef_t *game) const;
     bool is_sky(const gamedef_t *game) const;
