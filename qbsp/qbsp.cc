@@ -998,7 +998,7 @@ static void BSPX_Brushes_AddModel(
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (b->contents.is_clip()) {
+                if (b->contents.is_clip(options.target_game)) {
                     perbrush.contents = -8;
                 } else {
                     perbrush.contents = b->contents.native;
@@ -1008,7 +1008,7 @@ static void BSPX_Brushes_AddModel(
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (b->contents.is_clip()) {
+                if (b->contents.is_clip(options.target_game)) {
                     perbrush.contents = -8;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",

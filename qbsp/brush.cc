@@ -333,6 +333,25 @@ void FixRotateOrigin(mapentity_t *entity)
 
     SetKeyValue(entity, "origin", qv::to_string(offset).c_str());
 }
+
+static bool Brush_IsHint(const hullbrush_t &brush)
+{
+    for (auto &f : brush.faces)
+        if (f.flags.is_hint)
+            return true;
+
+    return false;
+}
+
+static bool MapBrush_IsHint(const mapbrush_t &brush)
+{
+    for (size_t i = 0; i < brush.numfaces; i++)
+        if (brush.face(i).flags.is_hint)
+            return true;
+
+    return false;
+}
+
 /*
 =================
 CreateBrushFaces
@@ -354,7 +373,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
     hullbrush->bounds = {};
 
     for (auto &mapface : hullbrush->faces) {
-        if (hullnum <= 0 && hullbrush->contents.is_hint()) {
+        if (hullnum <= 0 && Brush_IsHint(*hullbrush)) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
@@ -802,7 +821,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
         const contentflags_t contents = Brush_GetContents(mapbrush);
-        if (contents.is_origin()) {
+        if (contents.is_origin(options.target_game)) {
             if (dst == map.world_entity()) {
                 logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
@@ -859,10 +878,11 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
     /* _mirrorinside key (for func_water etc.) */
     const bool mirrorinside_set = *ValueForKey(src, "_mirrorinside");
-    const bool all_mirrorinside = !!atoi(ValueForKey(src, "_mirrorinside"));
+    const std::optional<bool> mirrorinside = mirrorinside_set ? decltype(mirrorinside)(atoi(ValueForKey(src, "_mirrorinside")) ? true : false) : std::nullopt;
 
     /* _noclipfaces */
-    const bool noclipfaces = !!atoi(ValueForKey(src, "_noclipfaces"));
+    const bool noclipfaces_set = *ValueForKey(src, "_noclipfaces");
+    const std::optional<bool> clipsametype = noclipfaces_set ? decltype(clipsametype)(atoi(ValueForKey(src, "_noclipfaces")) ? false : true) : std::nullopt;
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
@@ -880,21 +900,14 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         bool detail = false;
         bool detail_illusionary = false;
         bool detail_fence = false;
-        bool mirrorinside = all_mirrorinside;
 
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
 
-        if (!mirrorinside_set) {
-            if (options.target_game->id == GAME_QUAKE_II && (contents.native & (Q2_CONTENTS_AUX | Q2_CONTENTS_MIST))) {
-                mirrorinside = true;
-            }
-        }
-
         /* "origin" brushes always discarded */
-        if (contents.is_origin())
+        if (contents.is_origin(options.target_game))
             continue;
 
         /* -omitdetail option omits all types of detail */
@@ -927,7 +940,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (contents.is_clip() && hullnum != HULL_COLLISION) {
+        if (hullnum != HULL_COLLISION && contents.is_clip(options.target_game)) {
             if (hullnum == 0) {
                 std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
 
@@ -943,7 +956,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         }
 
         /* "hint" brushes don't affect the collision hulls */
-        if (contents.is_hint()) {
+        if (MapBrush_IsHint(*mapbrush)) {
             if (hullnum > 0)
                 continue;
             contents = options.target_game->create_empty_contents();
@@ -975,12 +988,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             contents = options.target_game->create_solid_contents();
 
         // apply extended flags
-        if (mirrorinside) {
-            contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
-        }
-        if (noclipfaces) {
-            contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
-        }
+        contents.set_mirrored(mirrorinside);
+        contents.set_clips_same_type(clipsametype);
         if (func_illusionary_visblocker) {
             contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
         }

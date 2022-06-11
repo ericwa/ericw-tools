@@ -25,6 +25,7 @@
 #include <variant>
 #include <vector>
 #include <unordered_map>
+#include <any>
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
@@ -523,6 +524,7 @@ enum q1_contents_t : int32_t
 // lower bits are stronger, and will eat weaker brushes completely
 enum q2_contents_t : int32_t
 {
+    Q2_CONTENTS_EMPTY = 0,
     Q2_CONTENTS_SOLID = nth_bit(0), // an eye is never valid in a solid
     Q2_CONTENTS_WINDOW = nth_bit(1), // translucent, but not watery
     Q2_CONTENTS_AUX = nth_bit(2),
@@ -563,12 +565,7 @@ enum q2_contents_t : int32_t
 // Special contents flags for the compiler only
 enum extended_cflags_t : uint16_t
 {
-    CFLAGS_BMODEL_MIRROR_INSIDE = nth_bit(3), /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
-    CFLAGS_NO_CLIPPING_SAME_TYPE = nth_bit(4), /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
     // only one of these flags below should ever be set.
-    CFLAGS_HINT = nth_bit(5),
-    CFLAGS_CLIP = nth_bit(6),
-    CFLAGS_ORIGIN = nth_bit(7),
     CFLAGS_DETAIL = nth_bit(8),
     CFLAGS_DETAIL_ILLUSIONARY = nth_bit(9),
     CFLAGS_DETAIL_FENCE = nth_bit(10),
@@ -577,7 +574,7 @@ enum extended_cflags_t : uint16_t
     CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE),
     // all of the special content types
     CFLAGS_CONTENTS_MASK =
-        (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
+        (CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
 };
 
 struct gamedef_t;
@@ -590,25 +587,36 @@ struct contentflags_t
     // extra flags, specific to BSP only
     uint16_t extended;
 
-    constexpr bool operator==(const contentflags_t &other) const
-    {
-        return native == other.native && extended == other.extended;
-    }
+    // extra data supplied by the game
+    std::any game_data;
 
-    constexpr bool operator!=(const contentflags_t &other) const { return !(*this == other); }
+    // the value set directly from `_mirrorinside` on the brush, if available.
+    // don't check this directly, use `is_mirror_inside` to allow the game to decide.
+    std::optional<bool> mirror_inside = std::nullopt;
+
+    // Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY.
+    // don't check this directly, use `will_clip_same_type` to allow the game to decide.
+    std::optional<bool> clips_same_type = std::nullopt;
+
+    bool equals(const gamedef_t *game, const contentflags_t &other) const;
 
     // is any kind of detail? (solid, liquid, etc.)
     bool is_any_detail(const gamedef_t *game) const;
     bool is_detail_solid(const gamedef_t *game) const;
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
+    
+    bool is_mirrored(const gamedef_t *game) const;
+    contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value) { mirror_inside = mirror_inside_value; return *this; }
+    
+    inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
+    bool will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const;
+    contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value) { clips_same_type = clips_same_type_value; return *this; }
 
     bool is_empty(const gamedef_t *game) const;
 
-    bool is_mirrored(const gamedef_t *game) const;
-
     // detail solid or structural solid
-    bool is_any_solid(const gamedef_t *game) const {
+    inline bool is_any_solid(const gamedef_t *game) const {
         return is_solid(game)
             || is_detail_solid(game);
     }
@@ -618,16 +626,10 @@ struct contentflags_t
     bool is_sky(const gamedef_t *game) const;
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
+    bool is_clip(const gamedef_t *game) const;
+    bool is_origin(const gamedef_t *game) const;
 
-    constexpr bool is_hint() const { return extended & CFLAGS_HINT; }
-
-    constexpr bool is_clip() const { return extended & CFLAGS_CLIP; }
-
-    constexpr bool is_origin() const { return extended & CFLAGS_ORIGIN; }
-
-    constexpr bool clips_same_type() const { return !(extended & CFLAGS_NO_CLIPPING_SAME_TYPE); }
-
-    bool is_fence(const gamedef_t *game) const {
+    inline bool is_fence(const gamedef_t *game) const {
         return is_detail_fence(game) || is_detail_illusionary(game);
     }
 
@@ -1801,10 +1803,8 @@ struct gamedef_t
     // FIXME: fix so that we don't have to pass a name here
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
-    virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
     virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
     virtual bool chops(const contentflags_t &) const = 0;
-    virtual contentflags_t create_extended_contents(const uint16_t &cflags = 0) const = 0;
     virtual contentflags_t create_empty_contents(const uint16_t &cflags = 0) const = 0;
     virtual contentflags_t create_solid_contents(const uint16_t &cflags = 0) const = 0;
     virtual contentflags_t create_sky_contents(const uint16_t &cflags = 0) const = 0;
@@ -1812,12 +1812,17 @@ struct gamedef_t
     virtual contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_fence_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_solid_contents(const contentflags_t &original) const = 0;
+    virtual bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
+    virtual bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
     virtual bool contents_are_any_detail(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
     virtual bool contents_are_mirrored(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_origin(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_clip(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
+    virtual bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;

@@ -574,11 +574,11 @@ static std::list<face_t *> ClipFacesToTree_r(node_t *node, const brush_t *srcbru
             return {};
         }
 
-        // translucent contents also clip faces 
-        if (node->contents == srcbrush->contents 
-            && srcbrush->contents.clips_same_type()) {
+        // see what the game thinks about the clip
+        if (srcbrush->contents.will_clip_same_type(options.target_game, node->contents)) {
             return {};
         }
+
         // other content types let the faces thorugh
         return faces;
     }
