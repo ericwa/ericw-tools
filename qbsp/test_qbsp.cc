@@ -885,7 +885,7 @@ TEST_CASE("detail", "[testmaps_q2]") {
     CHECK(counts_by_contents.find(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == counts_by_contents.end()); // the detail bit gets cleared
     CHECK(8 == counts_by_contents.at(0)); // empty leafs
     CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) >= 8);
-    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) <= 10);
+    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) <= 12);
 
     // clusters:
     //  1 empty cluster filling the room above the divider
@@ -902,13 +902,13 @@ TEST_CASE("detail", "[testmaps_q2]") {
     CHECK(4 == clusters.size());
 
     // various points in the main room cluster
-    const qvec3d under_button{46, -64, 96}; // directly on the main floor plane
-    const qvec3d inside_button{46, -64, 98};
-    const qvec3d above_button{46, -64, 120};
-    const qvec3d beside_button{46, -96, 100}; // should be a different empty leaf than above_button, but same cluster
+    const qvec3d under_button{246, 436, 96}; // directly on the main floor plane
+    const qvec3d inside_button{246, 436, 98};
+    const qvec3d above_button{246, 436, 120};
+    const qvec3d beside_button{246, 400, 100}; // should be a different empty leaf than above_button, but same cluster
 
     // side room (different cluster)
-    const qvec3d side_room{-62, 76, 140};    
+    const qvec3d side_room{138, 576, 140};
 
     // detail clips away world faces
     CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], under_button, {0, 0, 1}));
