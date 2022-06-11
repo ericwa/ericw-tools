@@ -1812,6 +1812,7 @@ struct gamedef_t
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
     virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual bool contents_seals_map(const contentflags_t &contents) const = 0;
+    virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(

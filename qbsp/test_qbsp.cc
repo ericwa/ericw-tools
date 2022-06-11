@@ -858,7 +858,7 @@ TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
 
 // q2 testmaps
 
-TEST_CASE("detail", "[testmaps_q2][!mayfail]") {
+TEST_CASE("detail", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_detail.map", {"-q2bsp"});
 
     CHECK_FALSE(map.leakfile);
@@ -1024,7 +1024,7 @@ TEST_CASE("areaportal", "[testmaps_q2]")
 /**
  *  Similar to above test, but there's a detail brush sticking into the area portal
  */
-TEST_CASE("areaportal_with_detail", "[testmaps_q2][!mayfail]")
+TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
 {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_areaportal_with_detail.map", {"-q2bsp"});
 
@@ -1122,7 +1122,7 @@ TEST_CASE("base1leak", "[testmaps_q2]")
 /**
  * e1u1/brlava brush intersecting e1u1/clip
  **/
-TEST_CASE("lavaclip", "[testmaps_q2][!mayfail]") {
+TEST_CASE("lavaclip", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_lavaclip.map", {"-q2bsp"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -1157,7 +1157,7 @@ TEST_CASE("lavaclip", "[testmaps_q2][!mayfail]") {
 /**
  * e1u1/brlava brush intersecting e1u1/brwater
  **/
-TEST_CASE("lavawater", "[testmaps_q2][!mayfail]") {
+TEST_CASE("lavawater", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q2_lavawater.map", {"-q2bsp"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);

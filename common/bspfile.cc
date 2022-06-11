@@ -98,6 +98,8 @@ struct gamedef_generic_t : public gamedef_t
 
     bool contents_seals_map(const contentflags_t &contents) const { throw std::bad_cast(); }
 
+    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const { throw std::bad_cast(); }
+
     std::string get_contents_display(const contentflags_t &) const { throw std::bad_cast(); }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
@@ -311,6 +313,18 @@ struct gamedef_q1_like_t : public gamedef_t
     bool contents_seals_map(const contentflags_t &contents) const override
     {
         return contents_are_solid(contents) || contents_are_sky(contents);
+    }
+
+    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        int32_t a_pri = contents_priority(a);
+        int32_t b_pri = contents_priority(b);
+
+        if (a_pri > b_pri) {
+            return a;
+        } else {
+            return b;
+        }
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
@@ -663,7 +677,7 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_valid(const contentflags_t &contents, bool strict) const
     {
-        const int32_t x = (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
+        const int32_t x = (contents.native & Q2_VISIBLE_CONTENTS_MASK);
 
         // TODO: check other invalid mixes
         if (!x && strict) {
@@ -708,6 +722,15 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_seals_map(const contentflags_t& contents) const override
     {
         return contents_are_solid(contents) || contents_are_sky(contents);
+    }
+
+    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        if ((a.native & Q2_CONTENTS_SOLID) || (b.native & Q2_CONTENTS_SOLID)) {
+            // NOTE: strips off any extra flags
+            return {Q2_CONTENTS_SOLID, 0};
+        }
+        return {a.native | b.native, a.extended | b.extended};
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
@@ -758,7 +781,7 @@ struct gamedef_q2_t : public gamedef_t
         // if we have TRANS33 or TRANS66, we have to be marked as WINDOW,
         // so unset SOLID, give us WINDOW, and give us TRANSLUCENT
         if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) {
-            surf_contents.native |= Q2_CONTENTS_TRANSLUCENT;
+            surf_contents.native |= Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_DETAIL;
 
             if (surf_contents.native & Q2_CONTENTS_SOLID) {
                 surf_contents.native = (surf_contents.native & ~Q2_CONTENTS_SOLID) | Q2_CONTENTS_WINDOW;
@@ -774,6 +797,7 @@ struct gamedef_q2_t : public gamedef_t
 
         if (surf_contents.native & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
             surf_contents.extended |= CFLAGS_CLIP;
+            surf_contents.native |= Q2_CONTENTS_DETAIL;
         }
 
         if (surf_contents.native & Q2_CONTENTS_ORIGIN) {

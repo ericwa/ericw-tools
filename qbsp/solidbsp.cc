@@ -819,19 +819,6 @@ static bool AllDetail(const std::vector<std::unique_ptr<brush_t>> &brushes)
     return true;
 }
 
-static contentflags_t MergeContents(contentflags_t a, contentflags_t b)
-{
-    // fixme-brushbsp: Q2 can combine the two content types (under some circumstances?)
-
-    auto a_pri = a.priority(options.target_game);
-    auto b_pri = b.priority(options.target_game);
-
-    if (a_pri > b_pri) {
-        return a;
-    }
-    return b;
-}
-
 /*
 ==================
 CreateLeaf
@@ -849,7 +836,7 @@ static void CreateLeaf(std::vector<std::unique_ptr<brush_t>> brushes, node_t *le
 
     leafnode->contents = options.target_game->create_empty_contents();
     for (auto &brush : brushes) {
-        leafnode->contents = MergeContents(leafnode->contents, brush->contents);
+        leafnode->contents = options.target_game->combine_contents(leafnode->contents, brush->contents);
     }
     for (auto &brush : brushes) {
         Q_assert(brush->original != nullptr);
