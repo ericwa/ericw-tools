@@ -944,7 +944,7 @@ TEST_CASE("playerclip", "[testmaps_q2]")
 
     const qvec3d in_playerclip{32, -136, 144};
     auto *playerclip_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_playerclip);
-    CHECK(Q2_CONTENTS_PLAYERCLIP == playerclip_leaf->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL) == playerclip_leaf->contents);
 
     // make sure faces at these locations aren't clipped away
     const qvec3d floor_under_clip{32, -136, 96};
@@ -961,7 +961,7 @@ TEST_CASE("playerclip", "[testmaps_q2]")
 
     // check for brush
     CHECK(1 == Leaf_Brushes(&bsp, playerclip_leaf).size());
-    CHECK(Q2_CONTENTS_PLAYERCLIP == Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
 }
 
 TEST_CASE("areaportal", "[testmaps_q2]")
