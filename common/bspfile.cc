@@ -1201,7 +1201,7 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     // FIXME: how do we conditionally display this only when it matters (when it's not default basically)?
     s += fmt::format("|MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
 
-    s += fmt::format("|CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
+    s += fmt::format("|CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
 
     if (extended & CFLAGS_HINT) {
         s += "|HINT";
