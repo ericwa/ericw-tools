@@ -85,8 +85,10 @@ struct gamedef_generic_t : public gamedef_t
     bool contents_are_detail_illusionary(const contentflags_t &contents) const { throw std::bad_cast(); }
 
     bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
-
+    
     bool contents_are_mirrored(const contentflags_t &) const { throw std::bad_cast(); }
+
+    bool contents_clip_same_type(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
 
@@ -262,12 +264,17 @@ struct gamedef_q1_like_t : public gamedef_t
         // if we have mirrorinside set, go ahead
         if (contents.mirror_inside.has_value()) {
             return contents.mirror_inside.value();
-    }
+        }
 
         // If the brush is non-solid, mirror faces for the inside view
         return (contents.native == CONTENTS_WATER)
                || (contents.native == CONTENTS_SLIME)
                || (contents.native == CONTENTS_LAVA);
+    }
+
+    bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const
+    {
+        return self == other && self.clips_same_type.value_or(true);
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -664,6 +671,11 @@ struct gamedef_q2_t : public gamedef_t
         // the only exception is that 4bsp has the unused AUX
         // contents to default to not mirroring the insides.
         return !(contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_AUX));
+    }
+    
+    bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const
+    {
+        return (self.native & Q2_ALL_VISIBLE_CONTENTS) == (other.native & Q2_ALL_VISIBLE_CONTENTS) && self.clips_same_type.value_or(true);
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -1152,6 +1164,11 @@ bool contentflags_t::is_mirrored(const gamedef_t *game) const
     return game->contents_are_mirrored(*this);
 }
 
+bool contentflags_t::will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const
+{
+    return game->contents_clip_same_type(*this, other);
+}
+
 bool contentflags_t::is_empty(const gamedef_t *game) const
 {
     return game->contents_are_empty(*this);
@@ -1182,11 +1199,10 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     std::string s = game->get_contents_display(*this);
 
     // FIXME: how do we conditionally display this only when it matters (when it's not default basically)?
-    s += fmt::format("|MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
+    s += fmt::format("|MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
 
-    if (extended & CFLAGS_NO_CLIPPING_SAME_TYPE) {
-        s += "|NO_CLIPPING_SAME_TYPE";
-    }
+    s += fmt::format("|CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
+
     if (extended & CFLAGS_HINT) {
         s += "|HINT";
     }

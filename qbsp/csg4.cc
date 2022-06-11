@@ -262,7 +262,7 @@ static bool ShouldClipbrushEatBrush(const brush_t &brush, const brush_t &clipbru
     }
 
     if (clipbrush.contents.types_equal(brush.contents, options.target_game)) {
-        return clipbrush.contents.clips_same_type();
+        return clipbrush.contents.will_clip_same_type(options.target_game);
     }
 
     return false;
@@ -426,7 +426,7 @@ Returns a >= b as far as brush clipping
 bool BrushGE(const brush_t& a, const brush_t& b)
 {
     // same contents clip each other
-    if (a.contents == b.contents && a.contents.clips_same_type()) {
+    if (a.contents == b.contents && a.contents.will_clip_same_type(options.target_game)) {
         // map file order
         return a.file_order > b.file_order;
     }

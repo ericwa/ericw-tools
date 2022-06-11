@@ -563,7 +563,6 @@ enum q2_contents_t : int32_t
 // Special contents flags for the compiler only
 enum extended_cflags_t : uint16_t
 {
-    CFLAGS_NO_CLIPPING_SAME_TYPE = nth_bit(4), /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
     // only one of these flags below should ever be set.
     CFLAGS_HINT = nth_bit(5),
     CFLAGS_CLIP = nth_bit(6),
@@ -590,8 +589,12 @@ struct contentflags_t
     uint16_t extended;
 
     // the value set directly from `_mirrorinside` on the brush, if available.
-    // don't use this directly, use `is_mirror_inside` to allow the game to decide.
+    // don't check this directly, use `is_mirror_inside` to allow the game to decide.
     std::optional<bool> mirror_inside = std::nullopt;
+
+    // Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY.
+    // don't check this directly, use `will_clip_same_type` to allow the game to decide.
+    std::optional<bool> clips_same_type = std::nullopt;
 
     constexpr bool operator==(const contentflags_t &other) const
     {
@@ -605,9 +608,13 @@ struct contentflags_t
     bool is_detail_solid(const gamedef_t *game) const;
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
-
+    
     bool is_mirrored(const gamedef_t *game) const;
     contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value) { mirror_inside = mirror_inside_value; return *this; }
+    
+    inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
+    bool will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const;
+    contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value) { clips_same_type = clips_same_type_value; return *this; }
 
     bool is_empty(const gamedef_t *game) const;
 
@@ -628,8 +635,6 @@ struct contentflags_t
     constexpr bool is_clip() const { return extended & CFLAGS_CLIP; }
 
     constexpr bool is_origin() const { return extended & CFLAGS_ORIGIN; }
-
-    constexpr bool clips_same_type() const { return !(extended & CFLAGS_NO_CLIPPING_SAME_TYPE); }
 
     bool is_fence(const gamedef_t *game) const {
         return is_detail_fence(game) || is_detail_illusionary(game);
@@ -1822,6 +1827,7 @@ struct gamedef_t
     virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
     virtual bool contents_are_mirrored(const contentflags_t &contents) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
+    virtual bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
