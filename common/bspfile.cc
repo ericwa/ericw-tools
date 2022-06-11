@@ -84,6 +84,8 @@ struct gamedef_generic_t : public gamedef_t
 
     bool contents_are_detail_illusionary(const contentflags_t &contents) const { throw std::bad_cast(); }
 
+    bool contents_are_mirror_inside(const contentflags_t &contents) const { throw std::bad_cast(); }
+
     bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
@@ -253,6 +255,23 @@ struct gamedef_q1_like_t : public gamedef_t
     bool contents_are_detail_illusionary(const contentflags_t &contents) const
     {
         return ((contents.extended & CFLAGS_DETAIL_ILLUSIONARY) != 0);
+    }
+
+    bool contents_are_mirror_inside(const contentflags_t &contents) const
+    {
+        // if we have mirrorinside set, go ahead
+        if (contents.mirror_inside.has_value())
+            return contents.mirror_inside.value();
+
+        // by default, solid, detail and sky are false, and everything else
+        // (liquid, etc) is true.
+        if (!(contents.is_solid(this) ||
+              contents.is_any_detail(this) ||
+              contents.is_sky(this))) {
+            return true;
+        }
+
+        return false;
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -636,6 +655,22 @@ struct gamedef_q2_t : public gamedef_t
 
         return ((contents.native & mist1_type) == mist1_type)
             || ((contents.native & mist2_type) == mist2_type);
+    }
+
+    bool contents_are_mirror_inside(const contentflags_t &contents) const
+    {
+        // if we have mirrorinside set, go ahead
+        if (contents.mirror_inside.has_value())
+            return contents.mirror_inside.value();
+
+        // Q2 is a bit different here. in vanilla tools,
+        // every content except SOLID is implicitly mirrorinside.
+        // the only exception is that 4bsp has the unused AUX
+        // contents to default to not mirroring the insides.
+        if (contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_AUX))
+            return false;
+
+        return true;
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -1119,6 +1154,11 @@ bool contentflags_t::is_detail_illusionary(const gamedef_t *game) const
     return game->contents_are_detail_illusionary(*this);
 }
 
+bool contentflags_t::is_mirror_inside(const gamedef_t *game) const
+{
+    return game->contents_are_mirror_inside(*this);
+}
+
 bool contentflags_t::is_empty(const gamedef_t *game) const
 {
     return game->contents_are_empty(*this);
@@ -1148,8 +1188,8 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
 {
     std::string s = game->get_contents_display(*this);
 
-    if (extended & CFLAGS_BMODEL_MIRROR_INSIDE) {
-        s += "|BMODEL_MIRROR_INSIDE";
+    if (is_mirror_inside(game)) {
+        s += fmt::format("|BMODEL_MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
     }
     if (extended & CFLAGS_NO_CLIPPING_SAME_TYPE) {
         s += "|NO_CLIPPING_SAME_TYPE";

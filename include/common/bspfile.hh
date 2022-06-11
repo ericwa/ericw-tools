@@ -563,7 +563,6 @@ enum q2_contents_t : int32_t
 // Special contents flags for the compiler only
 enum extended_cflags_t : uint16_t
 {
-    CFLAGS_BMODEL_MIRROR_INSIDE = nth_bit(3), /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
     CFLAGS_NO_CLIPPING_SAME_TYPE = nth_bit(4), /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
     // only one of these flags below should ever be set.
     CFLAGS_HINT = nth_bit(5),
@@ -590,6 +589,10 @@ struct contentflags_t
     // extra flags, specific to BSP only
     uint16_t extended;
 
+    // the value set directly from `_mirrorinside` on the brush, if available.
+    // don't use this directly, use `is_mirror_inside` to allow the game to decide.
+    std::optional<bool> mirror_inside = std::nullopt;
+
     constexpr bool operator==(const contentflags_t &other) const
     {
         return native == other.native && extended == other.extended;
@@ -602,6 +605,9 @@ struct contentflags_t
     bool is_detail_solid(const gamedef_t *game) const;
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
+
+    bool is_mirror_inside(const gamedef_t *game) const;
+    contentflags_t &set_mirror_inside(const std::optional<bool> &mirror_inside_value) { mirror_inside = mirror_inside_value; return *this; }
 
     bool is_empty(const gamedef_t *game) const;
 
@@ -1814,6 +1820,7 @@ struct gamedef_t
     virtual bool contents_are_detail_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_mirror_inside(const contentflags_t &contents) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;

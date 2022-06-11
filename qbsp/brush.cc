@@ -859,7 +859,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
     /* _mirrorinside key (for func_water etc.) */
     const bool mirrorinside_set = *ValueForKey(src, "_mirrorinside");
-    const bool all_mirrorinside = !!atoi(ValueForKey(src, "_mirrorinside"));
+    const std::optional<bool> mirrorinside = mirrorinside_set ? decltype(mirrorinside)(atoi(ValueForKey(src, "_mirrorinside")) ? true : false) : std::nullopt;
 
     /* _noclipfaces */
     const bool noclipfaces = !!atoi(ValueForKey(src, "_noclipfaces"));
@@ -880,18 +880,11 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         bool detail = false;
         bool detail_illusionary = false;
         bool detail_fence = false;
-        bool mirrorinside = all_mirrorinside;
 
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
-
-        if (!mirrorinside_set) {
-            if (options.target_game->id == GAME_QUAKE_II && (contents.native & (Q2_CONTENTS_AUX | Q2_CONTENTS_MIST))) {
-                mirrorinside = true;
-            }
-        }
 
         /* "origin" brushes always discarded */
         if (contents.is_origin())
@@ -975,9 +968,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             contents = options.target_game->create_solid_contents();
 
         // apply extended flags
-        if (mirrorinside) {
-            contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
-        }
+        contents.set_mirror_inside(mirrorinside);
+
         if (noclipfaces) {
             contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
         }
