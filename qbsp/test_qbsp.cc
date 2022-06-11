@@ -143,6 +143,16 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     return std::get<mbsp_t>(bspdata.bsp);
 }
 
+static mbsp_t LoadTestmapQ2(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
+{
+#if 0
+    return LoadTestmapRef(name);
+#else
+    extra_args.insert(extra_args.begin(), "-q2bsp");
+    return LoadTestmap(name, extra_args);
+#endif
+}
+
 static mbsp_t LoadBsp(const std::filesystem::path &path_in)
 {
     std::filesystem::path path = path_in;
@@ -859,9 +869,8 @@ TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
 // q2 testmaps
 
 TEST_CASE("detail", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_detail.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_detail.map");
 
-    CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
     // stats
@@ -942,9 +951,8 @@ TEST_CASE("detail", "[testmaps_q2]") {
 
 TEST_CASE("playerclip", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_playerclip.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_playerclip.map");
 
-    CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
     const qvec3d in_playerclip{32, -136, 144};
@@ -971,9 +979,8 @@ TEST_CASE("playerclip", "[testmaps_q2]")
 
 TEST_CASE("areaportal", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_areaportal.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_areaportal.map");
 
-    CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
     // area 0 is a placeholder
@@ -1031,9 +1038,8 @@ TEST_CASE("areaportal", "[testmaps_q2]")
  */
 TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_areaportal_with_detail.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_areaportal_with_detail.map");
 
-    CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
     // area 0 is a placeholder
@@ -1075,9 +1081,8 @@ TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
 TEST_CASE("base1", "[testmaps_q2]")
 {
 #if 0
-    const mbsp_t bsp = LoadTestmap("base1.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("base1.map");
 
-    CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
     // bspinfo output from a compile done with
@@ -1107,15 +1112,14 @@ TEST_CASE("base1", "[testmaps_q2]")
 
 TEST_CASE("base1leak", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmap("base1leak.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("base1leak.map");
 
-    CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
-    CHECK(8 == map.brushes.size());
     CHECK(8 == bsp.dbrushes.size());
 
-    CHECK(8 == bsp.dleafs.size()); // 1 placeholder + 1 empty (room interior) + 6 solid (sides of room)
+    CHECK(bsp.dleafs.size() >= 8); // 1 placeholder + 1 empty (room interior) + 6 solid (sides of room)
+    CHECK(bsp.dleafs.size() <= 12); //q2tools-220 generates 12
 
     const qvec3d in_plus_y_wall{-776, 976, -24};
     auto *plus_y_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_plus_y_wall);
@@ -1128,7 +1132,7 @@ TEST_CASE("base1leak", "[testmaps_q2]")
  * e1u1/brlava brush intersecting e1u1/clip
  **/
 TEST_CASE("lavaclip", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_lavaclip.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_lavaclip.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1163,7 +1167,7 @@ TEST_CASE("lavaclip", "[testmaps_q2]") {
  * e1u1/brlava brush intersecting e1u1/brwater
  **/
 TEST_CASE("lavawater", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_lavawater.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_lavawater.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1177,7 +1181,7 @@ TEST_CASE("lavawater", "[testmaps_q2]") {
  * Weird mystery issue with a func_wall with broken collision
  */
 TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_bmodel_collision.map", {"-q2bsp"});
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_bmodel_collision.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
