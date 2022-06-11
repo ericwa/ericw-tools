@@ -426,7 +426,7 @@ Returns a >= b as far as brush clipping
 bool BrushGE(const brush_t& a, const brush_t& b)
 {
     // same contents clip each other
-    if (a.contents == b.contents && a.contents.will_clip_same_type(options.target_game)) {
+    if (a.contents.will_clip_same_type(options.target_game, b.contents)) {
         // map file order
         return a.file_order > b.file_order;
     }

@@ -881,8 +881,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     const std::optional<bool> mirrorinside = mirrorinside_set ? decltype(mirrorinside)(atoi(ValueForKey(src, "_mirrorinside")) ? true : false) : std::nullopt;
 
     /* _noclipfaces */
-    const bool noclipfaces_set = *ValueForKey(src, "_mirrorinside");
-    const std::optional<bool> noclipfaces = mirrorinside_set ? decltype(noclipfaces)(atoi(ValueForKey(src, "_noclipfaces")) ? false : true) : std::nullopt;
+    const bool noclipfaces_set = *ValueForKey(src, "_noclipfaces");
+    const std::optional<bool> clipsametype = noclipfaces_set ? decltype(clipsametype)(atoi(ValueForKey(src, "_noclipfaces")) ? false : true) : std::nullopt;
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
@@ -989,7 +989,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
         // apply extended flags
         contents.set_mirrored(mirrorinside);
-        contents.set_clips_same_type(noclipfaces);
+        contents.set_clips_same_type(clipsametype);
         if (func_illusionary_visblocker) {
             contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
         }
