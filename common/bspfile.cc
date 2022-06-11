@@ -728,7 +728,7 @@ struct gamedef_q2_t : public gamedef_t
             // NOTE: strips off any extra flags
             return {Q2_CONTENTS_SOLID, 0};
         }
-        return {a.native | b.native, a.extended | b.extended};
+        return {a.native | b.native, static_cast<uint16_t>(a.extended | b.extended)};
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
