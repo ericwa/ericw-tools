@@ -1179,6 +1179,7 @@ TEST_CASE("lavawater", "[testmaps_q2]") {
 
 /**
  * Weird mystery issue with a func_wall with broken collision
+ * (ended up being a PLANE_X/Y/Z plane with negative facing normal, which is illegal - engine assumes they are positive)
  */
 TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
     const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_bmodel_collision.map");
@@ -1188,6 +1189,15 @@ TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
     const qvec3d in_bmodel {-544, -312, -258};
     REQUIRE(2 == bsp.dmodels.size());
     CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
+}
+
+TEST_CASE("q2_liquids", "[testmaps_q2]")
+{
+    const mbsp_t bsp = LoadTestmapQ2("q2_liquids.map");
+
+    // water is two sided
+    const qvec3d water_top {-116, -168, 144};
+    CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], water_top).size());
 }
 
 TEST_CASE("winding", "[benchmark]") {

@@ -968,7 +968,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             contents = options.target_game->create_solid_contents();
 
         // apply extended flags
-        contents.set_mirror_inside(mirrorinside);
+        contents.set_mirrored(mirrorinside);
 
         if (noclipfaces) {
             contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;

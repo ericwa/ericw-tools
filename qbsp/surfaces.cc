@@ -654,17 +654,10 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
         for (face_t *part : faces) {
             node->facelist.push_back(part);
 
-            /*
-             * If the brush is non-solid, mirror faces for the inside view
-             */
-            if (srcbrush->contents.is_mirror_inside(options.target_game)) {
+            if (srcbrush->contents.is_mirrored(options.target_game)) {
                 node->facelist.push_back(MirrorFace(part));
             }
         }
-
-        // fixme-brushbsp: need to continue clipping it down the bsp tree,
-        // this currently leaves bits floating in the void that happen to touch splitting nodes
-        
         return;
     }
 
