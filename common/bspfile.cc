@@ -527,11 +527,11 @@ struct gamedef_q2_t : public gamedef_t
 
     int32_t contents_priority(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_DETAIL) {
+        if (contents_are_detail_solid(contents)) {
             return 8;
-        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        } else if (contents_are_detail_illusionary(contents)) {
             return 6;
-        } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
+        } else if (contents_are_detail_fence(contents)) {
             return 7;
         } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
             return 2;
@@ -551,9 +551,7 @@ struct gamedef_q2_t : public gamedef_t
 
     bool chops(const contentflags_t &contents) const
     {
-        // TODO: ideally this could just check for Q2_CONTENTS_SOLID
-        // once we implement detail as Q2_CONTENTS_SOLID|Q2_CONTENTS_DETAIL
-        return contents_are_solid(contents) || (contents.extended & CFLAGS_DETAIL);
+        return !!(contents.native & Q2_CONTENTS_SOLID);
     }
 
     contentflags_t create_extended_contents(const int32_t &cflags) const { return {0, cflags}; }
@@ -646,7 +644,8 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
 
-        return contents.native & Q2_CONTENTS_SOLID;
+        return (contents.native & Q2_CONTENTS_SOLID)
+               && !(contents.native & Q2_CONTENTS_DETAIL);
     }
 
     bool contents_are_sky(const contentflags_t &contents) const { return false; }
@@ -664,11 +663,7 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_valid(const contentflags_t &contents, bool strict) const
     {
-        // check that we don't have more than one visible contents type
         const int32_t x = (contents.native & ((Q2_LAST_VISIBLE_CONTENTS << 1) - 1));
-        if ((x & (x - 1)) != 0) {
-            return false;
-        }
 
         // TODO: check other invalid mixes
         if (!x && strict) {
@@ -772,12 +767,9 @@ struct gamedef_q2_t : public gamedef_t
 
         // translucent objects are automatically classified as detail
         if (surf_contents.native & Q2_CONTENTS_WINDOW) {
-            surf_contents.extended |= CFLAGS_DETAIL;
+            surf_contents.native |= Q2_CONTENTS_DETAIL;
         } else if (surf_contents.native & (Q2_CONTENTS_MIST | Q2_CONTENTS_AUX)) {
-            surf_contents.extended |= CFLAGS_DETAIL_ILLUSIONARY;
-            // if we used the DETAIL contents flag, copy over DETAIL
-        } else if (surf_contents.native & Q2_CONTENTS_DETAIL) {
-            surf_contents.extended |= CFLAGS_DETAIL;
+            surf_contents.native |= Q2_CONTENTS_DETAIL;
         }
 
         if (surf_contents.native & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
@@ -786,16 +778,6 @@ struct gamedef_q2_t : public gamedef_t
 
         if (surf_contents.native & Q2_CONTENTS_ORIGIN) {
             surf_contents.extended |= CFLAGS_ORIGIN;
-        }
-
-        // FIXME: this is a bit of a hack, but this is because clip
-        // and liquids and stuff are already handled *like* detail by
-        // the compiler.
-        // fixme-brushbsp: remove this
-        if (surf_contents.extended & CFLAGS_DETAIL) {
-            if (!(surf_contents.native & Q2_CONTENTS_SOLID)) {
-                surf_contents.extended &= ~CFLAGS_DETAIL;
-            }
         }
 
         return surf_contents;
