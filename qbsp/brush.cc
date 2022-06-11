@@ -940,7 +940,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (contents.is_clip(options.target_game) && hullnum != HULL_COLLISION) {
+        if (hullnum != HULL_COLLISION && contents.is_clip(options.target_game)) {
             if (hullnum == 0) {
                 std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
 

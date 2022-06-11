@@ -1134,10 +1134,6 @@ struct twosided
 
     // swap the front and back values
     constexpr void swap() { std::swap(front, back); }
-
-    // equality checks
-    constexpr bool operator==(const twosided &other) const { return front == other.front && back == other.back; }
-    constexpr bool operator!=(const twosided &other) const { return !(*this == other); }
 };
 
 namespace qv {

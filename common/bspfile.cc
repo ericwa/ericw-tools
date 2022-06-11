@@ -72,6 +72,8 @@ struct gamedef_generic_t : public gamedef_t
 
     contentflags_t create_detail_solid_contents(const contentflags_t &original) const { throw std::bad_cast(); }
 
+    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const { throw std::bad_cast(); }
+
     bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const { throw std::bad_cast(); }
 
     bool contents_are_any_detail(const contentflags_t &) const { throw std::bad_cast(); }
@@ -130,7 +132,7 @@ struct q1_contentflags_data
     constexpr bool operator==(const q1_contentflags_data &other) const { return origin == other.origin && clip == other.clip; }
     constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
 
-    constexpr explicit operator bool() const { return origin && clip; }
+    constexpr explicit operator bool() const { return origin || clip; }
 };
 
 template<gameid_t ID>
@@ -156,7 +158,7 @@ struct gamedef_q1_like_t : public gamedef_t
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
     {
-        if (contents0 == contents1)
+        if (contents0.equals(this, contents1))
             return contents0;
 
         /*
@@ -251,7 +253,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return {0, CFLAGS_DETAIL};
     }
 
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
+    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const
     {
         if (self.game_data.has_value() != other.game_data.has_value()) {
             return false;
@@ -266,6 +268,11 @@ struct gamedef_q1_like_t : public gamedef_t
 
         return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
                self.native == other.native;
+    }
+
+    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
+    {
+        return contents_are_type_equal(self, other);
     }
 
     bool contents_are_any_detail(const contentflags_t &contents) const
@@ -314,7 +321,7 @@ struct gamedef_q1_like_t : public gamedef_t
 
     bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const
     {
-        return self == other && self.clips_same_type.value_or(true);
+        return self.equals(this, other) && self.clips_same_type.value_or(true);
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -377,7 +384,7 @@ struct gamedef_q1_like_t : public gamedef_t
     bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
     {
         /* If contents values are the same and not solid, can see through */
-        return !(contents0.is_solid(this) || contents1.is_solid(this)) && contents0 == contents1;
+        return !(contents0.is_solid(this) || contents1.is_solid(this)) && contents0.equals(this, contents1);
     }
 
     bool contents_seals_map(const contentflags_t &contents) const override
@@ -672,10 +679,16 @@ struct gamedef_q2_t : public gamedef_t
         return result;
     }
 
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
+    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const
     {
         return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
                get_content_type(self) == get_content_type(other);
+    }
+
+    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
+    {
+        return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
+               self.native == other.native;
     }
 
     bool contents_are_any_detail(const contentflags_t &contents) const
@@ -746,11 +759,7 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
 
-        if (contents.native & Q2_CONTENTS_AREAPORTAL)
-            return false; // HACK: needs to return false in order for LinkConvexFaces to assign Q2_CONTENTS_AREAPORTAL
-                          // to the leaf
-
-        return !(contents.native & Q2_ALL_VISIBLE_CONTENTS);
+        return !get_content_type(contents);
     }
 
     bool contents_are_solid(const contentflags_t &contents) const
@@ -1179,9 +1188,16 @@ bool surfflags_t::is_valid(const gamedef_t *game) const
     return game->surfflags_are_valid(*this);
 }
 
+bool contentflags_t::equals(const gamedef_t *game, const contentflags_t &other) const
+{
+    return game->contents_are_equal(*this, other) &&
+        mirror_inside == other.mirror_inside &&
+        clips_same_type == other.clips_same_type;
+}
+
 bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
 {
-    return game->contents_are_equal(*this, other);
+    return game->contents_are_type_equal(*this, other);
 }
 
 int32_t contentflags_t::priority(const gamedef_t *game) const

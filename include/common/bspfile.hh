@@ -598,12 +598,7 @@ struct contentflags_t
     // don't check this directly, use `will_clip_same_type` to allow the game to decide.
     std::optional<bool> clips_same_type = std::nullopt;
 
-    constexpr bool operator==(const contentflags_t &other) const
-    {
-        return native == other.native && extended == other.extended;
-    }
-
-    constexpr bool operator!=(const contentflags_t &other) const { return !(*this == other); }
+    bool equals(const gamedef_t *game, const contentflags_t &other) const;
 
     // is any kind of detail? (solid, liquid, etc.)
     bool is_any_detail(const gamedef_t *game) const;
@@ -1817,6 +1812,7 @@ struct gamedef_t
     virtual contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_fence_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_solid_contents(const contentflags_t &original) const = 0;
+    virtual bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
     virtual bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
     virtual bool contents_are_any_detail(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_solid(const contentflags_t &contents) const = 0;
