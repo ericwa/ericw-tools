@@ -187,6 +187,15 @@ static const texvecf &GetTexvecs(const char *map, const char *texname)
     return mapface->get_texvecs();
 }
 
+static std::vector<std::string> TexNames(const mbsp_t &bsp, std::vector<const mface_t *> faces)
+{
+    std::vector<std::string> result;
+    for (auto &face : faces) {
+        result.push_back(Face_TextureName(&bsp, face));
+    }
+    return result;
+}
+
 // https://github.com/ericwa/ericw-tools/issues/158
 TEST_CASE("testTextureIssue", "[qbsp]")
 {
@@ -1195,9 +1204,46 @@ TEST_CASE("q2_liquids", "[testmaps_q2]")
 {
     const mbsp_t bsp = LoadTestmapQ2("q2_liquids.map");
 
-    // water is two sided
-    const qvec3d water_top {-116, -168, 144};
-    CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], water_top).size());
+    // water/air face is two sided
+    {
+        const qvec3d watertrans66_air{-116, -168, 144};
+        const qvec3d watertrans33_trans66 = watertrans66_air - qvec3d(0, 0, 48);
+        const qvec3d wateropaque_trans33 = watertrans33_trans66 - qvec3d(0, 0, 48);
+        const qvec3d floor_wateropaque = wateropaque_trans33 - qvec3d(0, 0, 48);
+
+        CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
+            Catch::UnorderedEquals<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
+        CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans33_trans66).size());
+        CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], wateropaque_trans33).size());
+        CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
+            Catch::UnorderedEquals<std::string>({"e1u1/c_met11_2"}));
+    }
+
+    const qvec3d watertrans66_slimetrans66{-116, -144, 116};
+
+    // water trans66 / slime trans66
+    {
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, -1, 0))),
+            Catch::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, 1, 0))),
+            Catch::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+    }
+
+    // slime trans66 / lava trans66
+    const qvec3d slimetrans66_lavatrans66 = watertrans66_slimetrans66 + qvec3d(0, 48, 0);
+    {
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, -1, 0))),
+            Catch::UnorderedEquals<std::string>({"e1u1/brlava"}));
+
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, 1, 0))),
+            Catch::UnorderedEquals<std::string>({"e1u1/brlava"}));
+    }
+
 }
 
 TEST_CASE("winding", "[benchmark]") {
