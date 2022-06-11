@@ -54,7 +54,7 @@ bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d
 bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
 
 std::vector<const mface_t *> BSP_FindFacesAtPoint(
-    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal = qvec3d(0,0,0));
 /**
  * Searches for a face touching a point and facing a certain way.
  * Sometimes (water, sky?) there will be 2 overlapping candidates facing opposite ways, the provided normal

@@ -605,6 +605,8 @@ struct contentflags_t
 
     bool is_empty(const gamedef_t *game) const;
 
+    bool is_mirrored(const gamedef_t *game) const;
+
     // detail solid or structural solid
     bool is_any_solid(const gamedef_t *game) const {
         return is_solid(game)
@@ -1815,6 +1817,7 @@ struct gamedef_t
     virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_mirrored(const contentflags_t &contents) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;

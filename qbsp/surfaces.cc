@@ -654,26 +654,10 @@ static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush
         for (face_t *part : faces) {
             node->facelist.push_back(part);
 
-            // fixme-brushbsp: move to contentflags_t helper
-            /*
-             * If the brush is non-solid, mirror faces for the inside view
-             */
-            bool mirror = (srcbrush->contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE);
-                
-            if (!(srcbrush->contents.is_solid(options.target_game) ||
-                    srcbrush->contents.is_any_detail(options.target_game) ||
-                    srcbrush->contents.is_sky(options.target_game))) {
-                mirror = true;
-            }
-
-            if (mirror) {
+            if (srcbrush->contents.is_mirrored(options.target_game)) {
                 node->facelist.push_back(MirrorFace(part));
             }
         }
-
-        // fixme-brushbsp: need to continue clipping it down the bsp tree,
-        // this currently leaves bits floating in the void that happen to touch splitting nodes
-        
         return;
     }
 

@@ -86,6 +86,8 @@ struct gamedef_generic_t : public gamedef_t
 
     bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
 
+    bool contents_are_mirrored(const contentflags_t &) const { throw std::bad_cast(); }
+
     bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_sky(const contentflags_t &) const { throw std::bad_cast(); }
@@ -261,6 +263,18 @@ struct gamedef_q1_like_t : public gamedef_t
             return false;
 
         return contents.native == CONTENTS_EMPTY;
+    }
+
+    bool contents_are_mirrored(const contentflags_t &contents) const
+    {
+        if (contents.extended & CFLAGS_BMODEL_MIRROR_INSIDE) {
+            return true;
+        }
+
+        // If the brush is non-solid, mirror faces for the inside view
+        return (contents.native == CONTENTS_WATER)
+               || (contents.native == CONTENTS_SLIME)
+               || (contents.native == CONTENTS_LAVA);
     }
 
     bool contents_are_solid(const contentflags_t &contents) const
@@ -648,6 +662,14 @@ struct gamedef_q2_t : public gamedef_t
                           // to the leaf
 
         return !(contents.native & Q2_ALL_VISIBLE_CONTENTS);
+    }
+
+    bool contents_are_mirrored(const contentflags_t &contents) const
+    {
+        // fixme-brushbsp: support some way of opting out of mirrorinside
+
+        // If the brush is non-solid, mirror faces for the inside view
+        return !(contents.native & Q2_CONTENTS_SOLID);
     }
 
     bool contents_are_solid(const contentflags_t &contents) const
@@ -1122,6 +1144,11 @@ bool contentflags_t::is_detail_illusionary(const gamedef_t *game) const
 bool contentflags_t::is_empty(const gamedef_t *game) const
 {
     return game->contents_are_empty(*this);
+}
+
+bool contentflags_t::is_mirrored(const gamedef_t *game) const
+{
+    return game->contents_are_mirrored(*this);
 }
 
 bool contentflags_t::is_solid(const gamedef_t *game) const
