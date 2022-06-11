@@ -71,7 +71,8 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
         fmt::print(f, "vt {:.9} {:.9}\n", uv[0], -uv[1]);
     }
-
+    
+    // fixme-brushbsp
     fmt::print(f, "usemtl contents{}_{}\n", face->contents[0].native, face->contents[0].extended);
     f << 'f';
     for (int i = 0; i < face->w.size(); i++) {
@@ -108,8 +109,9 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
     WriteContentsMaterial(mtlfile, {CONTENTS_LAVA}, 0.2, 0.0, 0.0);
 
     WriteContentsMaterial(mtlfile, {CONTENTS_SKY}, 0.8, 0.8, 1.0);
-    WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_CLIP}, 1, 0.8, 0.8);
-    WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY, CFLAGS_HINT}, 1, 1, 1);
+    // fixme-brushbsp
+    //WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_CLIP}, 1, 0.8, 0.8);
+    //WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY, CFLAGS_HINT}, 1, 1, 1);
 
     WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_DETAIL}, 0.5, 0.5, 0.5);
 

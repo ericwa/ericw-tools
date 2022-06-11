@@ -54,13 +54,9 @@ struct gamedef_generic_t : public gamedef_t
 
     contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
-    int32_t get_content_type(const contentflags_t &) const { throw std::bad_cast(); }
-
     int32_t contents_priority(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool chops(const contentflags_t &) const { throw std::bad_cast(); }
-
-    contentflags_t create_extended_contents(const uint16_t &) const { throw std::bad_cast(); }
 
     contentflags_t create_empty_contents(const uint16_t &) const { throw std::bad_cast(); }
 
@@ -76,6 +72,8 @@ struct gamedef_generic_t : public gamedef_t
 
     contentflags_t create_detail_solid_contents(const contentflags_t &original) const { throw std::bad_cast(); }
 
+    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const { throw std::bad_cast(); }
+
     bool contents_are_any_detail(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_detail_solid(const contentflags_t &contents) const { throw std::bad_cast(); }
@@ -87,6 +85,10 @@ struct gamedef_generic_t : public gamedef_t
     bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
     
     bool contents_are_mirrored(const contentflags_t &) const { throw std::bad_cast(); }
+
+    bool contents_are_origin(const contentflags_t &contents) const { throw std::bad_cast(); }
+
+    bool contents_are_clip(const contentflags_t &contents) const { throw std::bad_cast(); }
 
     bool contents_clip_same_type(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
@@ -116,6 +118,19 @@ struct gamedef_generic_t : public gamedef_t
     void init_filesystem(const fs::path &, const settings::common_settings &) const { throw std::bad_cast(); };
 
     const std::vector<qvec3b> &get_default_palette() const { throw std::bad_cast(); };
+};
+
+// extra data for contentflags_t for Quake-like
+struct q1_contentflags_data
+{
+    bool origin = false; // is an origin brush
+
+    bool clip = false; // is a clip brush
+    
+    constexpr bool operator==(const q1_contentflags_data &other) const { return origin == other.origin && clip == other.clip; }
+    constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
+
+    constexpr explicit operator bool() const { return origin && clip; }
 };
 
 template<gameid_t ID>
@@ -161,8 +176,6 @@ struct gamedef_q1_like_t : public gamedef_t
         return create_solid_contents();
     }
 
-    int32_t get_content_type(const contentflags_t &contents) const { return contents.native; }
-
     int32_t contents_priority(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_DETAIL) {
@@ -195,7 +208,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents_are_solid(contents) || contents_are_sky(contents) || (contents.extended & CFLAGS_DETAIL);
     }
 
-    contentflags_t create_extended_contents(const uint16_t &cflags) const { return {0, cflags}; }
+    inline contentflags_t create_extended_contents(const q1_contentflags_data &data) const { return {0, 0, data}; }
 
     contentflags_t create_empty_contents(const uint16_t &cflags = 0) const
     {
@@ -238,6 +251,23 @@ struct gamedef_q1_like_t : public gamedef_t
         return {0, CFLAGS_DETAIL};
     }
 
+    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
+    {
+        if (self.game_data.has_value() != other.game_data.has_value()) {
+            return false;
+        }
+
+        if (self.game_data.has_value()) {
+            if (std::any_cast<const q1_contentflags_data &>(self.game_data) !=
+                std::any_cast<const q1_contentflags_data &>(other.game_data)) {
+                return false;
+            }
+        }
+
+        return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
+               self.native == other.native;
+    }
+
     bool contents_are_any_detail(const contentflags_t &contents) const
     {
         // in Q1, there are only CFLAGS_DETAIL, CFLAGS_DETAIL_ILLUSIONARY, or CFLAGS_DETAIL_FENCE
@@ -272,6 +302,16 @@ struct gamedef_q1_like_t : public gamedef_t
                || (contents.native == CONTENTS_LAVA);
     }
 
+    bool contents_are_origin(const contentflags_t &contents) const
+    {
+        return contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data).origin;
+    }
+
+    bool contents_are_clip(const contentflags_t &contents) const
+    {
+        return contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data).clip;
+    }
+
     bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const
     {
         return self == other && self.clips_same_type.value_or(true);
@@ -281,6 +321,8 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
+        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
+            return false;
 
         return contents.native == CONTENTS_EMPTY;
     }
@@ -288,6 +330,8 @@ struct gamedef_q1_like_t : public gamedef_t
     bool contents_are_solid(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
             return false;
 
         return contents.native == CONTENTS_SOLID;
@@ -297,6 +341,8 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
+        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
+            return false;
 
         return contents.native == CONTENTS_SKY;
     }
@@ -304,6 +350,8 @@ struct gamedef_q1_like_t : public gamedef_t
     bool contents_are_liquid(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
+            return false;
+        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
             return false;
 
         return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
@@ -375,11 +423,11 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
-            return create_extended_contents(CFLAGS_ORIGIN);
+            return create_extended_contents({ true, false });
         } else if (!Q_strcasecmp(texname.data(), "hint") || !Q_strcasecmp(texname.data(), "hintskip")) {
-            return create_extended_contents(CFLAGS_HINT);
+            return create_empty_contents();
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
-            return create_extended_contents(CFLAGS_CLIP);
+            return create_extended_contents({ false, true });
         } else if (texname[0] == '*') {
             if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
                 return create_liquid_contents(CONTENTS_LAVA);
@@ -390,10 +438,10 @@ struct gamedef_q1_like_t : public gamedef_t
             }
         } else if (!Q_strncasecmp(texname.data(), "sky", 3)) {
             return create_sky_contents();
-        } else {
-            // and anything else is assumed to be a regular solid.
-            return create_solid_contents();
         }
+
+        // and anything else is assumed to be a regular solid.
+        return create_solid_contents();
     }
 
     void init_filesystem(const fs::path &, const settings::common_settings &) const
@@ -551,8 +599,9 @@ struct gamedef_q2_t : public gamedef_t
         return c;
     }
 
-    int32_t get_content_type(const contentflags_t &contents) const
+    inline int32_t get_content_type(const contentflags_t &contents) const
     {
+        // fixme-brushbsp: should TRANSLUCENT be here? does it need to be?
         return contents.native & (Q2_ALL_VISIBLE_CONTENTS |
                                      (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
                                          Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
@@ -586,8 +635,6 @@ struct gamedef_q2_t : public gamedef_t
     {
         return !!(contents.native & Q2_CONTENTS_SOLID);
     }
-
-    contentflags_t create_extended_contents(const uint16_t &cflags) const { return {0, cflags}; }
 
     contentflags_t create_empty_contents(const uint16_t &cflags) const { return {0, cflags}; }
 
@@ -623,6 +670,12 @@ struct gamedef_q2_t : public gamedef_t
         contentflags_t result = original;
         result.native |= (Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL);
         return result;
+    }
+
+    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
+    {
+        return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
+               get_content_type(self) == get_content_type(other);
     }
 
     bool contents_are_any_detail(const contentflags_t &contents) const
@@ -671,6 +724,16 @@ struct gamedef_q2_t : public gamedef_t
         // the only exception is that 4bsp has the unused AUX
         // contents to default to not mirroring the insides.
         return !(contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_AUX));
+    }
+
+    bool contents_are_origin(const contentflags_t &contents) const
+    {
+        return contents.native & Q2_CONTENTS_ORIGIN;
+    }
+
+    bool contents_are_clip(const contentflags_t &contents) const
+    {
+        return contents.native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP);
     }
     
     bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const
@@ -803,10 +866,8 @@ struct gamedef_q2_t : public gamedef_t
         const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const
     {
         // hints and skips are never detail, and have no content
-        if (flags.native & Q2_SURF_HINT) {
-            return {0, CFLAGS_HINT};
-        } else if (flags.native & Q2_SURF_SKIP) {
-            return {0, 0};
+        if (flags.native & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
+            return {Q2_CONTENTS_EMPTY};
         }
 
         contentflags_t surf_contents = contents;
@@ -819,7 +880,7 @@ struct gamedef_q2_t : public gamedef_t
         // if we have TRANS33 or TRANS66, we have to be marked as WINDOW,
         // so unset SOLID, give us WINDOW, and give us TRANSLUCENT
         if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) {
-            surf_contents.native |= Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_DETAIL;
+            surf_contents.native |= Q2_CONTENTS_TRANSLUCENT;
 
             if (surf_contents.native & Q2_CONTENTS_SOLID) {
                 surf_contents.native = (surf_contents.native & ~Q2_CONTENTS_SOLID) | Q2_CONTENTS_WINDOW;
@@ -827,19 +888,14 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         // translucent objects are automatically classified as detail
-        if (surf_contents.native & Q2_CONTENTS_WINDOW) {
+        if (surf_contents.native & Q2_CONTENTS_TRANSLUCENT) {
             surf_contents.native |= Q2_CONTENTS_DETAIL;
         } else if (surf_contents.native & (Q2_CONTENTS_MIST | Q2_CONTENTS_AUX)) {
             surf_contents.native |= Q2_CONTENTS_DETAIL;
         }
 
         if (surf_contents.native & (Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PLAYERCLIP)) {
-            surf_contents.extended |= CFLAGS_CLIP;
             surf_contents.native |= Q2_CONTENTS_DETAIL;
-        }
-
-        if (surf_contents.native & Q2_CONTENTS_ORIGIN) {
-            surf_contents.extended |= CFLAGS_ORIGIN;
         }
 
         return surf_contents;
@@ -1125,8 +1181,7 @@ bool surfflags_t::is_valid(const gamedef_t *game) const
 
 bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
 {
-    return (extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
-           game->get_content_type(*this) == game->get_content_type(other);
+    return game->contents_are_equal(*this, other);
 }
 
 int32_t contentflags_t::priority(const gamedef_t *game) const
@@ -1194,6 +1249,16 @@ bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
     return game->contents_are_valid(*this, strict);
 }
 
+bool contentflags_t::is_clip(const gamedef_t *game) const
+{
+    return game->contents_are_clip(*this);
+}
+
+bool contentflags_t::is_origin(const gamedef_t *game) const
+{
+    return game->contents_are_origin(*this);
+}
+
 std::string contentflags_t::to_string(const gamedef_t *game) const
 {
     std::string s = game->get_contents_display(*this);
@@ -1203,15 +1268,15 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
 
     s += fmt::format("|CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
 
-    if (extended & CFLAGS_HINT) {
-        s += "|HINT";
-    }
-    if (extended & CFLAGS_CLIP) {
+    // FIXME: duped for Q2, move to Q1?
+    if (is_clip(game)) {
         s += "|CLIP";
     }
-    if (extended & CFLAGS_ORIGIN) {
+    if (is_origin(game)) {
         s += "|ORIGIN";
     }
+    
+    // FIXME: duped for Q2, move to Q1?
     if (extended & CFLAGS_DETAIL) {
         s += "|DETAIL";
     }

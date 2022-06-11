@@ -333,6 +333,25 @@ void FixRotateOrigin(mapentity_t *entity)
 
     SetKeyValue(entity, "origin", qv::to_string(offset).c_str());
 }
+
+static bool Brush_IsHint(const hullbrush_t &brush)
+{
+    for (auto &f : brush.faces)
+        if (f.flags.is_hint)
+            return true;
+
+    return false;
+}
+
+static bool MapBrush_IsHint(const mapbrush_t &brush)
+{
+    for (size_t i = 0; i < brush.numfaces; i++)
+        if (brush.face(i).flags.is_hint)
+            return true;
+
+    return false;
+}
+
 /*
 =================
 CreateBrushFaces
@@ -354,7 +373,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
     hullbrush->bounds = {};
 
     for (auto &mapface : hullbrush->faces) {
-        if (hullnum <= 0 && hullbrush->contents.is_hint()) {
+        if (hullnum <= 0 && Brush_IsHint(*hullbrush)) {
             /* Don't generate hintskip faces */
             const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
@@ -802,7 +821,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
         const contentflags_t contents = Brush_GetContents(mapbrush);
-        if (contents.is_origin()) {
+        if (contents.is_origin(options.target_game)) {
             if (dst == map.world_entity()) {
                 logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
@@ -888,7 +907,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         detail_fence |= all_detail_fence;
 
         /* "origin" brushes always discarded */
-        if (contents.is_origin())
+        if (contents.is_origin(options.target_game))
             continue;
 
         /* -omitdetail option omits all types of detail */
@@ -921,7 +940,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (contents.is_clip() && hullnum != HULL_COLLISION) {
+        if (contents.is_clip(options.target_game) && hullnum != HULL_COLLISION) {
             if (hullnum == 0) {
                 std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
 
@@ -937,7 +956,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         }
 
         /* "hint" brushes don't affect the collision hulls */
-        if (contents.is_hint()) {
+        if (MapBrush_IsHint(*mapbrush)) {
             if (hullnum > 0)
                 continue;
             contents = options.target_game->create_empty_contents();
