@@ -905,6 +905,7 @@ TEST_CASE("detail", "[testmaps_q2]") {
     const qvec3d under_button{46, -64, 96}; // directly on the main floor plane
     const qvec3d inside_button{46, -64, 98};
     const qvec3d above_button{46, -64, 120};
+    const qvec3d beside_button{46, -96, 100}; // should be a different empty leaf than above_button, but same cluster
 
     // side room (different cluster)
     const qvec3d side_room{-62, 76, 140};    
@@ -915,6 +916,7 @@ TEST_CASE("detail", "[testmaps_q2]") {
     // check for correct contents
     auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
     CHECK(Q2_CONTENTS_SOLID == detail_leaf->contents);
+    CHECK(-1 == detail_leaf->cluster);
 
     // check for button (detail) brush
     CHECK(1 == Leaf_Brushes(&bsp, detail_leaf).size());
@@ -929,10 +931,13 @@ TEST_CASE("detail", "[testmaps_q2]") {
     auto *empty_leaf_side_room = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], side_room);
     CHECK(0 == empty_leaf_side_room->contents);
     CHECK(0 == Leaf_Brushes(&bsp, empty_leaf_side_room).size());
+    CHECK(empty_leaf_side_room->cluster != empty_leaf_above_button->cluster);
 
-    // check cluster indices
-    CHECK(empty_leaf_above_button->cluster == detail_leaf->cluster);
-    CHECK(empty_leaf_side_room->contents != detail_leaf->cluster);
+    auto *empty_leaf_beside_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], beside_button);
+    CHECK(0 == empty_leaf_beside_button->contents);
+    CHECK(-1 != empty_leaf_beside_button->cluster);
+    CHECK(empty_leaf_above_button->cluster == empty_leaf_beside_button->cluster);
+    CHECK(empty_leaf_above_button != empty_leaf_beside_button);
 }
 
 TEST_CASE("playerclip", "[testmaps_q2]")
