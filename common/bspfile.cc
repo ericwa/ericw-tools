@@ -115,6 +115,12 @@ struct gamedef_generic_t : public gamedef_t
     void init_filesystem(const fs::path &, const settings::common_settings &) const override { throw std::bad_cast(); }
 
     const std::vector<qvec3b> &get_default_palette() const override { throw std::bad_cast(); }
+
+    std::any create_content_stats() const override { throw std::bad_cast(); }
+
+    void count_contents_in_stats(const contentflags_t &contents, std::any &stats) const override { throw std::bad_cast(); }
+
+    void print_content_stats(const std::any &stats, const char *what) const override { throw std::bad_alloc(); }
 };
 
 template<gameid_t ID>
@@ -530,6 +536,81 @@ public:
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
+
+private:
+    struct content_stats_t
+    {
+        std::atomic<size_t> solid;
+        std::atomic<size_t> empty;
+        std::atomic<size_t> liquid;
+        std::atomic<size_t> detail;
+        std::atomic<size_t> detail_illusionary;
+        std::atomic<size_t> detail_fence;
+        std::atomic<size_t> sky;
+        std::atomic<size_t> illusionary_visblocker;
+        
+        content_stats_t() = default;
+        inline content_stats_t(const content_stats_t &copy) { }
+    };
+
+public:
+    std::any create_content_stats() const override
+    {
+        return content_stats_t{};
+    }
+
+    void count_contents_in_stats(const contentflags_t &contents, std::any &stats_any) const override
+    {
+        content_stats_t &stats = std::any_cast<content_stats_t &>(stats_any);
+        
+        if (contents_are_solid(contents)) {
+            stats.solid++;
+        } else if (contents_are_sky(contents)) {
+            stats.sky++;
+        } else if (contents_are_detail_solid(contents)) {
+            stats.detail++;
+        } else if (contents_are_detail_illusionary(contents)) {
+            stats.detail_illusionary++;
+        } else if (contents_are_detail_fence(contents)) {
+            stats.detail_fence++;
+        } else if (contents.illusionary_visblocker) {
+            stats.illusionary_visblocker++;
+        } else if (contents_are_liquid(contents)) {
+            stats.liquid++;
+        } else {
+            stats.empty++;
+        }
+    }
+
+    void print_content_stats(const std::any &stats_any, const char *what) const override
+    {
+        const content_stats_t &stats = std::any_cast<const content_stats_t &>(stats_any);
+
+        if (stats.empty) {
+            logging::print(logging::flag::STAT, "     {:8} empty {}\n", stats.empty, what);
+        }
+        if (stats.solid) {
+            logging::print(logging::flag::STAT, "     {:8} solid {}\n", stats.solid, what);
+        }
+        if (stats.sky) {
+            logging::print(logging::flag::STAT, "     {:8} sky {}\n", stats.sky, what);
+        }
+        if (stats.detail) {
+            logging::print(logging::flag::STAT, "     {:8} detail {}\n", stats.detail, what);
+        }
+        if (stats.detail_illusionary) {
+            logging::print(logging::flag::STAT, "     {:8} detail illusionary {}\n", stats.detail_illusionary, what);
+        }
+        if (stats.detail_fence) {
+            logging::print(logging::flag::STAT, "     {:8} detail fence {}\n", stats.detail_fence, what);
+        }
+        if (stats.liquid) {
+            logging::print(logging::flag::STAT, "     {:8} liquid {}\n", stats.liquid, what);
+        }
+        if (stats.illusionary_visblocker) {
+            logging::print(logging::flag::STAT, "     {:8} illusionary visblocker {}\n", stats.illusionary_visblocker, what);
+        }
+    }
 };
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
@@ -603,6 +684,8 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         return palette;
     }
 };
+
+#include <mutex>
 
 struct gamedef_q2_t : public gamedef_t
 {
@@ -883,6 +966,10 @@ struct gamedef_q2_t : public gamedef_t
 
     std::string get_contents_display(const contentflags_t &contents) const
     {
+        if (!contents.native) {
+            return "EMPTY";
+        }
+
         constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
             "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP",
             "CURRENT_0", "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER",
@@ -1047,6 +1134,66 @@ public:
             155, 167, 139, 119, 135, 107, 87, 159, 91, 83};
         static const auto palette = make_palette(palette_bytes);
         return palette;
+    }
+
+private:
+    struct content_stats_t
+    {
+        //std::array<std::atomic<size_t>, 32> native_types;
+        std::unordered_map<int32_t, size_t> native_types;
+        std::atomic<size_t> total_brushes;
+        std::atomic<size_t> visblocker_brushes;
+
+        content_stats_t() = default;
+        inline content_stats_t(const content_stats_t &copy) { }
+    };
+
+public:
+    std::any create_content_stats() const override
+    {
+        return content_stats_t{};
+    }
+
+    void count_contents_in_stats(const contentflags_t &contents, std::any &stats_any) const override
+    {
+        content_stats_t &stats = std::any_cast<content_stats_t &>(stats_any);
+
+        /*for (int32_t i = 0; i < 32; i++) {
+            if (contents.native & nth_bit(i)) {
+                stats.native_types[i]++;
+            }
+        }*/
+        static std::mutex stat_mutex;
+        {
+            std::unique_lock lock(stat_mutex);
+            stats.native_types[contents.native]++;
+        }
+
+        if (contents.illusionary_visblocker) {
+            stats.visblocker_brushes++;
+        }
+
+        stats.total_brushes++;
+    }
+
+    void print_content_stats(const std::any &stats_any, const char *what) const override
+    {
+        const content_stats_t &stats = std::any_cast<const content_stats_t &>(stats_any);
+
+        /*for (int32_t i = 0; i < 32; i++) {
+            if (stats.native_types[i]) {
+                logging::print(logging::flag::STAT, "     {:8} {} {}\n", stats.native_types[i], get_contents_display({nth_bit(i)}), what);
+            }
+        }*/
+        for (auto &it : stats.native_types) {
+            logging::print(logging::flag::STAT, "     {:8} {} {}\n", it.second, get_contents_display({it.first}), what);
+        }
+
+        if (stats.visblocker_brushes) {
+            logging::print(logging::flag::STAT, "     {:8} VISBLOCKER {}\n", stats.visblocker_brushes, what);
+        }
+
+        logging::print(logging::flag::STAT, "     {:8} {} total\n", stats.total_brushes, what);
     }
 };
 

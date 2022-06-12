@@ -38,8 +38,7 @@ std::atomic<int> splitnodes;
 
 static std::atomic<int> leaffaces;
 static std::atomic<int> nodefaces;
-static std::atomic<int> c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_fence;
-static std::atomic<int> c_illusionary_visblocker;
+static std::any leafstats;
 static bool usemidsplit;
 
 /**
@@ -843,24 +842,7 @@ static void CreateLeaf(std::vector<std::unique_ptr<brush_t>> brushes, node_t *le
         leafnode->original_brushes.push_back(brush->original);
     }
 
-    if (leafnode->contents.illusionary_visblocker) {
-        c_illusionary_visblocker++;
-    } else if (leafnode->contents.is_detail_fence(options.target_game)) {
-        c_detail_fence++;
-    } else if (leafnode->contents.is_detail_illusionary(options.target_game)) {
-        c_detail_illusionary++;
-    } else if (leafnode->contents.is_detail_solid(options.target_game)) {
-        c_detail++;
-    } else if (leafnode->contents.is_empty(options.target_game)) {
-        c_empty++;
-    } else if (leafnode->contents.is_solid(options.target_game)) {
-        c_solid++;
-    } else if (leafnode->contents.is_liquid(options.target_game) || leafnode->contents.is_sky(options.target_game)) {
-        c_water++;
-    } else {
-        // FIXME: what to call here? is_valid()? this hits in Q2 a lot
-        // FError("Bad contents in face: {}", leafnode->contents.to_string(options.target_game));
-    }
+    options.target_game->count_contents_in_stats(leafnode->contents, leafstats);
 }
 
 /*
@@ -985,13 +967,7 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     splitnodes = 0;
     leaffaces = 0;
     nodefaces = 0;
-    c_solid = 0;
-    c_empty = 0;
-    c_water = 0;
-    c_detail = 0;
-    c_detail_illusionary = 0;
-    c_detail_fence = 0;
-    c_illusionary_visblocker = 0;
+    leafstats = options.target_game->create_content_stats();
     // count map surfaces; this is used when deciding to switch between midsplit and the expensive partitioning
     mapbrushes = entity->brushes.size();
 
@@ -1007,13 +983,7 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     //logging::percent(csgmergefaces, csgmergefaces, entity == map.pWorldEnt());
 
     logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
-    logging::print(logging::flag::STAT, "     {:8} solid leafs\n", c_solid.load());
-    logging::print(logging::flag::STAT, "     {:8} empty leafs\n", c_empty.load());
-    logging::print(logging::flag::STAT, "     {:8} water leafs\n", c_water.load());
-    logging::print(logging::flag::STAT, "     {:8} detail leafs\n", c_detail.load());
-    logging::print(logging::flag::STAT, "     {:8} detail illusionary leafs\n", c_detail_illusionary.load());
-    logging::print(logging::flag::STAT, "     {:8} detail fence leafs\n", c_detail_fence.load());
-    logging::print(logging::flag::STAT, "     {:8} illusionary visblocker leafs\n", c_illusionary_visblocker.load());
+    options.target_game->print_content_stats(leafstats, "leaves");
     logging::print(logging::flag::STAT, "     {:8} leaffaces\n", leaffaces.load());
     logging::print(logging::flag::STAT, "     {:8} nodefaces\n", nodefaces.load());
 

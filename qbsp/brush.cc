@@ -804,7 +804,7 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, brush_stats_t &stats)
+static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, std::any &stats)
 {
     const char *classname;
     const mapbrush_t *mapbrush;
@@ -1005,19 +1005,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
         }
 
-        if (brush->contents.is_solid(options.target_game)) {
-            stats.solid++;
-        } else if (brush->contents.is_sky(options.target_game)) {
-            stats.sky++;
-        } else if (brush->contents.is_detail_solid(options.target_game)) {
-            stats.detail++;
-        } else if (brush->contents.is_detail_illusionary(options.target_game)) {
-            stats.detail_illusionary++;
-        } else if (brush->contents.is_detail_fence(options.target_game)) {
-            stats.detail_fence++;
-        } else {
-            stats.liquid++;
-        }
+        options.target_game->count_contents_in_stats(brush->contents, stats);
         dst->brushes.push_back(std::make_unique<brush_t>(brush.value()));
         dst->bounds += brush->bounds;
     }
@@ -1033,9 +1021,9 @@ hullnum HULL_COLLISION should contain ALL brushes. (used by BSPX_CreateBrushList
 hullnum 0 does not contain clip brushes.
 ============
 */
-brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 {
-    brush_stats_t stats{};
+    std::any stats = options.target_game->create_content_stats();
 
     Brush_LoadEntity(entity, entity, hullnum, stats);
 
@@ -1062,7 +1050,7 @@ brush_stats_t Brush_LoadEntity(mapentity_t *entity, const int hullnum)
         }
     }
 
-    return stats;
+    options.target_game->print_content_stats(stats, "brushes");
 }
 
 void brush_t::update_bounds()

@@ -1820,6 +1820,9 @@ struct gamedef_t
         const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
+    virtual std::any create_content_stats() const = 0;
+    virtual void count_contents_in_stats(const contentflags_t &contents, std::any &stats) const = 0;
+    virtual void print_content_stats(const std::any &stats, const char *what) const = 0;
 };
 
 constexpr int32_t NO_VERSION = -1;

@@ -710,7 +710,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
     logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
-    auto stats = Brush_LoadEntity(entity, hullnum);
+    Brush_LoadEntity(entity, hullnum);
 
     // assign brush file order
     for (size_t i = 0; i < entity->brushes.size(); ++i) {
@@ -734,26 +734,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         SetKeyValue(entity, "mins", fmt::to_string(entity->bounds.mins()).c_str());
         SetKeyValue(entity, "maxs", fmt::to_string(entity->bounds.maxs()).c_str());
         return;
-    }
-
-    /* Print brush counts */
-    if (stats.solid) {
-        logging::print(logging::flag::STAT, "     {:8} solid brushes\n", stats.solid);
-    }
-    if (stats.sky) {
-        logging::print(logging::flag::STAT, "     {:8} sky brushes\n", stats.sky);
-    }
-    if (stats.detail) {
-        logging::print(logging::flag::STAT, "     {:8} detail brushes\n", stats.detail);
-    }
-    if (stats.detail_illusionary) {
-        logging::print(logging::flag::STAT, "     {:8} detail illusionary brushes\n", stats.detail_illusionary);
-    }
-    if (stats.detail_fence) {
-        logging::print(logging::flag::STAT, "     {:8} detail fence brushes\n", stats.detail_fence);
-    }
-    if (stats.liquid) {
-        logging::print(logging::flag::STAT, "     {:8} liquid brushes\n", stats.liquid);
     }
 
     logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
