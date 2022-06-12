@@ -1200,7 +1200,7 @@ TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
     CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
 }
 
-TEST_CASE("q2_liquids", "[testmaps_q2]")
+TEST_CASE("q2_liquids", "[testmaps_q2][!mayfail]")
 {
     const mbsp_t bsp = LoadTestmapQ2("q2_liquids.map");
 
