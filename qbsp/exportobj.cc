@@ -73,7 +73,7 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
     }
     
     // fixme-brushbsp
-    fmt::print(f, "usemtl contents{}_{}\n", face->contents[0].native, face->contents[0].extended);
+    fmt::print(f, "usemtl contents{}\n", face->contents[0].native);
     f << 'f';
     for (int i = 0; i < face->w.size(); i++) {
         // .obj vertexes start from 1
@@ -88,7 +88,8 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
 
 static void WriteContentsMaterial(std::ofstream &mtlf, contentflags_t contents, float r, float g, float b)
 {
-    fmt::print(mtlf, "newmtl contents{}_{}\n", contents.native, contents.extended);
+    // fixme-brushbsp
+    fmt::print(mtlf, "newmtl contents{}\n", contents.native);
     mtlf << "Ka 0 0 0\n";
     fmt::print(mtlf, "Kd {} {} {}\n", r, g, b);
     mtlf << "Ks 0 0 0\n";
@@ -113,7 +114,7 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
     //WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_CLIP}, 1, 0.8, 0.8);
     //WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY, CFLAGS_HINT}, 1, 1, 1);
 
-    WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_DETAIL}, 0.5, 0.5, 0.5);
+    //WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_DETAIL}, 0.5, 0.5, 0.5);
 
     int vertcount = 0;
     for (const face_t *face : faces) {

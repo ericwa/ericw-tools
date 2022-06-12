@@ -44,100 +44,119 @@ struct gamedef_generic_t : public gamedef_t
 {
     gamedef_generic_t() : gamedef_t("") { id = GAME_UNKNOWN; }
 
-    bool surf_is_lightmapped(const surfflags_t &) const { throw std::bad_cast(); }
+    bool surf_is_lightmapped(const surfflags_t &) const override { throw std::bad_cast(); }
 
-    bool surf_is_subdivided(const surfflags_t &) const { throw std::bad_cast(); }
+    bool surf_is_subdivided(const surfflags_t &) const override { throw std::bad_cast(); }
 
-    bool surfflags_are_valid(const surfflags_t &) const { throw std::bad_cast(); }
+    bool surfflags_are_valid(const surfflags_t &) const override { throw std::bad_cast(); }
 
-    bool texinfo_is_hintskip(const surfflags_t &, const std::string &) const { throw std::bad_cast(); }
+    bool texinfo_is_hintskip(const surfflags_t &, const std::string &) const override { throw std::bad_cast(); }
 
-    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
+    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
 
-    int32_t contents_priority(const contentflags_t &) const { throw std::bad_cast(); }
+    int32_t contents_priority(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool chops(const contentflags_t &) const { throw std::bad_cast(); }
+    bool chops(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    contentflags_t create_empty_contents(const uint16_t &) const { throw std::bad_cast(); }
+    contentflags_t create_empty_contents() const override { throw std::bad_cast(); }
 
-    contentflags_t create_solid_contents(const uint16_t &) const { throw std::bad_cast(); }
+    contentflags_t create_solid_contents() const override { throw std::bad_cast(); }
 
-    contentflags_t create_sky_contents(const uint16_t &) const { throw std::bad_cast(); }
+    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
 
-    contentflags_t create_liquid_contents(const int32_t &, const uint16_t &) const { throw std::bad_cast(); }
+    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
 
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const { throw std::bad_cast(); }
+    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
 
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const { throw std::bad_cast(); }
+    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override { throw std::bad_cast(); }
 
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const { throw std::bad_cast(); }
+    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override { throw std::bad_cast(); }
 
-    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const { throw std::bad_cast(); }
+    bool contents_are_any_detail(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const { throw std::bad_cast(); }
+    bool contents_are_detail_solid(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
-    bool contents_are_any_detail(const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_are_detail_fence(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
-    bool contents_are_detail_solid(const contentflags_t &contents) const { throw std::bad_cast(); }
+    bool contents_are_detail_illusionary(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
-    bool contents_are_detail_fence(const contentflags_t &contents) const { throw std::bad_cast(); }
-
-    bool contents_are_detail_illusionary(const contentflags_t &contents) const { throw std::bad_cast(); }
-
-    bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_are_empty(const contentflags_t &) const override { throw std::bad_cast(); }
     
-    bool contents_are_mirrored(const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_are_mirrored(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool contents_are_origin(const contentflags_t &contents) const { throw std::bad_cast(); }
+    bool contents_are_origin(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
-    bool contents_are_clip(const contentflags_t &contents) const { throw std::bad_cast(); }
+    bool contents_are_clip(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
-    bool contents_clip_same_type(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_clip_same_type(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_are_solid(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool contents_are_sky(const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_are_sky(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool contents_are_liquid(const contentflags_t &) const { throw std::bad_cast(); }
+    bool contents_are_liquid(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool contents_are_valid(const contentflags_t &, bool) const { throw std::bad_cast(); }
+    bool contents_are_valid(const contentflags_t &, bool) const override { throw std::bad_cast(); }
 
-    bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
+    bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
 
-    bool contents_seals_map(const contentflags_t &contents) const { throw std::bad_cast(); }
+    bool contents_seals_map(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
-    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const { throw std::bad_cast(); }
+    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
-    std::string get_contents_display(const contentflags_t &) const { throw std::bad_cast(); }
+    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override { throw std::bad_cast(); }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
+    std::string get_contents_display(const contentflags_t &) const override { throw std::bad_cast(); }
 
-    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const
-    {
-        throw std::bad_cast();
-    };
+    const std::initializer_list<aabb3d> &get_hull_sizes() const override { throw std::bad_cast(); }
 
-    void init_filesystem(const fs::path &, const settings::common_settings &) const { throw std::bad_cast(); };
+    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
 
-    const std::vector<qvec3b> &get_default_palette() const { throw std::bad_cast(); };
+    void init_filesystem(const fs::path &, const settings::common_settings &) const override { throw std::bad_cast(); }
+
+    const std::vector<qvec3b> &get_default_palette() const override { throw std::bad_cast(); }
 };
 
 template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
 private:
+    enum class detail_type_t
+    {
+        STRUCTURAL,
+        DETAIL,
+        ILLUSIONARY,
+        FENCE
+    };
+
     // extra data for contentflags_t for Quake-like
     struct q1_contentflags_data
     {
+        // detail type
+        detail_type_t detail = detail_type_t::STRUCTURAL;
+
         bool origin = false; // is an origin brush
 
         bool clip = false; // is a clip brush
     
-        constexpr bool operator==(const q1_contentflags_data &other) const { return origin == other.origin && clip == other.clip; }
+        constexpr bool operator==(const q1_contentflags_data &other) const { return detail == other.detail && origin == other.origin && clip == other.clip; }
         constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
 
-        constexpr explicit operator bool() const { return origin || clip; }
+        constexpr explicit operator bool() const { return detail != detail_type_t::STRUCTURAL || origin || clip; }
     };
+
+    // returns a blank entry if the given contents don't have
+    // any game data
+    inline const q1_contentflags_data &get_data(const contentflags_t &contents) const
+    {
+        static const q1_contentflags_data blank_data;
+
+        if (!contents.game_data.has_value()) {
+            return blank_data;
+        }
+
+        return std::any_cast<const q1_contentflags_data &>(contents.game_data);
+    }
 public:
 
     gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir) { this->id = ID; }
@@ -156,6 +175,16 @@ public:
     {
         // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
         return !string_iequals(name, "hint");
+    }
+
+    constexpr contentflags_t create_sky_contents() const
+    {
+        return {CONTENTS_SKY};
+    }
+
+    constexpr contentflags_t create_liquid_contents(const int32_t &liquid_type) const
+    {
+        return {liquid_type};
     }
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
@@ -182,95 +211,69 @@ public:
 
     int32_t contents_priority(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_DETAIL) {
-            return 5;
-        } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
-            return 4;
-        } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
+        switch (get_data(contents).detail) {
+            case detail_type_t::DETAIL: return 5;
+            case detail_type_t::FENCE: return 4;
+            case detail_type_t::ILLUSIONARY: return 2;
+        }
+
+        if (contents.illusionary_visblocker) {
             return 2;
-        } else if (contents.illusionary_visblocker) {
-            return 2;
-        } else {
-            switch (contents.native) {
-                case CONTENTS_SOLID: return 7;
+        }
 
-                case CONTENTS_SKY: return 6;
+        switch (contents.native) {
+            case CONTENTS_SOLID: return 7;
 
-                case CONTENTS_WATER: return 3;
-                case CONTENTS_SLIME: return 3;
-                case CONTENTS_LAVA: return 3;
+            case CONTENTS_SKY: return 6;
 
-                case CONTENTS_EMPTY: return 1;
-                case 0: return 0;
+            case CONTENTS_WATER: return 3;
+            case CONTENTS_SLIME: return 3;
+            case CONTENTS_LAVA: return 3;
 
-                default: FError("Bad contents in face"); return 0;
-            }
+            case CONTENTS_EMPTY: return 1;
+            case 0: return 0;
+
+            default: FError("Bad contents in face"); return 0;
         }
     }
 
     bool chops(const contentflags_t &contents) const { 
-        return contents_are_solid(contents) || contents_are_sky(contents) || (contents.extended & CFLAGS_DETAIL);
+        return contents_are_solid(contents) || contents_are_sky(contents) || get_data(contents).detail != detail_type_t::STRUCTURAL;
     }
 
-    inline contentflags_t create_extended_contents(const q1_contentflags_data &data) const { return {0, 0, data}; }
+    inline contentflags_t create_extended_contents(const q1_contentflags_data &data) const { return {0, data}; }
 
-    contentflags_t create_empty_contents(const uint16_t &cflags = 0) const
+    contentflags_t create_empty_contents() const
     {
-        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
-
-        return {CONTENTS_EMPTY, cflags};
+        return {CONTENTS_EMPTY};
     }
 
-    contentflags_t create_solid_contents(const uint16_t &cflags = 0) const
+    contentflags_t create_solid_contents() const
     {
-        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
-
-        return {CONTENTS_SOLID, cflags};
-    }
-
-    contentflags_t create_sky_contents(const uint16_t &cflags = 0) const
-    {
-        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
-
-        return {CONTENTS_SKY, cflags};
-    }
-
-    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const
-    {
-        Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
-
-        return {liquid_type, cflags};
+        return {CONTENTS_SOLID};
     }
 
     contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const {
         // ignore the original contents in Q1
-        return {0, CFLAGS_DETAIL_ILLUSIONARY};
+        return create_extended_contents({detail_type_t::ILLUSIONARY});
     }
 
     contentflags_t create_detail_fence_contents(const contentflags_t &original) const {
-        return {0, CFLAGS_DETAIL_FENCE};
+        return create_extended_contents({detail_type_t::FENCE});
     }
 
     contentflags_t create_detail_solid_contents(const contentflags_t &original) const {
-        return {0, CFLAGS_DETAIL};
+        return create_extended_contents({detail_type_t::DETAIL});
     }
 
     bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const
     {
-        if (self.game_data.has_value() != other.game_data.has_value()) {
+        if (get_data(self) != get_data(other)) {
             return false;
         }
 
-        if (self.game_data.has_value()) {
-            if (std::any_cast<const q1_contentflags_data &>(self.game_data) !=
-                std::any_cast<const q1_contentflags_data &>(other.game_data)) {
-                return false;
-            }
-        }
-
-        return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
-                self.illusionary_visblocker == other.illusionary_visblocker &&
-                self.native == other.native;
+        return self.illusionary_visblocker == other.illusionary_visblocker &&
+               self.native == other.native;
     }
 
     bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
@@ -281,22 +284,22 @@ public:
     bool contents_are_any_detail(const contentflags_t &contents) const
     {
         // in Q1, there are only CFLAGS_DETAIL, CFLAGS_DETAIL_ILLUSIONARY, or CFLAGS_DETAIL_FENCE
-        return ((contents.extended & CFLAGS_DETAIL_MASK) != 0);
+        return get_data(contents).detail != detail_type_t::STRUCTURAL;
     }
 
     bool contents_are_detail_solid(const contentflags_t &contents) const
     {
-        return ((contents.extended & CFLAGS_DETAIL) != 0);
+        return get_data(contents).detail == detail_type_t::DETAIL;
     }
 
     bool contents_are_detail_fence(const contentflags_t &contents) const
     {
-        return ((contents.extended & CFLAGS_DETAIL_FENCE) != 0);
+        return get_data(contents).detail == detail_type_t::FENCE;
     }
 
     bool contents_are_detail_illusionary(const contentflags_t &contents) const
     {
-        return ((contents.extended & CFLAGS_DETAIL_ILLUSIONARY) != 0);
+        return get_data(contents).detail == detail_type_t::ILLUSIONARY;
     }
 
     bool contents_are_mirrored(const contentflags_t &contents) const
@@ -314,12 +317,12 @@ public:
 
     bool contents_are_origin(const contentflags_t &contents) const
     {
-        return contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data).origin;
+        return get_data(contents).origin;
     }
 
     bool contents_are_clip(const contentflags_t &contents) const
     {
-        return contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data).clip;
+        return get_data(contents).clip;
     }
 
     bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const
@@ -329,11 +332,11 @@ public:
 
     inline bool contents_has_extended(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_CONTENTS_MASK)
+        if (get_data(contents).detail != detail_type_t::STRUCTURAL)
             return true;
         else if (contents.illusionary_visblocker)
             return true;
-        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
+        else if (get_data(contents))
             return true;
 
         return false;
@@ -387,6 +390,21 @@ public:
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
+    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override
+    {
+        /*
+         * This is for func_detail_wall.. we want to write a solid leaf that has faces,
+         * because it may be possible to see inside (fence textures).
+         *
+         * Normally solid leafs are not written and just referenced as leaf 0.
+         */
+        if (contents_are_detail_fence(contents)) {
+            return create_solid_contents();
+        }
+
+        return contents;
+    }
+
     contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
         int32_t a_pri = contents_priority(a);
@@ -401,16 +419,39 @@ public:
 
     std::string get_contents_display(const contentflags_t &contents) const
     {
+        std::string base;
+
         switch (contents.native) {
-            case 0: return "UNSET";
-            case CONTENTS_EMPTY: return "EMPTY";
-            case CONTENTS_SOLID: return "SOLID";
-            case CONTENTS_SKY: return "SKY";
-            case CONTENTS_WATER: return "WATER";
-            case CONTENTS_SLIME: return "SLIME";
-            case CONTENTS_LAVA: return "LAVA";
-            default: return fmt::to_string(contents.native);
+            case 0: base = "UNSET"; break;
+            case CONTENTS_EMPTY: base = "EMPTY"; break;
+            case CONTENTS_SOLID: base = "SOLID"; break;
+            case CONTENTS_SKY: base = "SKY"; break;
+            case CONTENTS_WATER: base = "WATER"; break;
+            case CONTENTS_SLIME: base = "SLIME"; break;
+            case CONTENTS_LAVA: base = "LAVA"; break;
+            default: base = fmt::to_string(contents.native); break;
         }
+
+        if (contents_are_clip(contents)) {
+            base += "| CLIP";
+        }
+        if (contents_are_origin(contents)) {
+            base += "| ORIGIN";
+        }
+    
+        switch (get_data(contents).detail) {
+            case detail_type_t::DETAIL:
+                base += "| DETAIL";
+                break;
+            case detail_type_t::ILLUSIONARY:
+                base += "| DETAIL[ILLUSIONARY]";
+                break;
+            case detail_type_t::FENCE:
+                base += "| DETAIL[FENCE]";
+                break;
+        }
+
+        return base;
     }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const
@@ -425,11 +466,11 @@ public:
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
-            return create_extended_contents({ true, false });
+            return create_extended_contents({ detail_type_t::STRUCTURAL, true, false });
         } else if (!Q_strcasecmp(texname.data(), "hint") || !Q_strcasecmp(texname.data(), "hintskip")) {
             return create_empty_contents();
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
-            return create_extended_contents({ false, true });
+            return create_extended_contents({ detail_type_t::STRUCTURAL, false, true });
         } else if (texname[0] == '*') {
             if (!Q_strncasecmp(texname.data() + 1, "lava", 4)) {
                 return create_liquid_contents(CONTENTS_LAVA);
@@ -591,12 +632,15 @@ struct gamedef_q2_t : public gamedef_t
 
     contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
     {
-        contentflags_t c = {contents0.native | contents1.native, static_cast<uint16_t>(contents0.extended | contents1.extended)};
+        contentflags_t c = {contents0.native | contents1.native};
+
+        c.illusionary_visblocker = contents0.illusionary_visblocker || contents1.illusionary_visblocker;
 
         // a cluster may include some solid detail areas, but
         // still be seen into
-        if (!(contents0.native & Q2_CONTENTS_SOLID) || !(contents1.native & Q2_CONTENTS_SOLID))
+        if (!(contents0.native & Q2_CONTENTS_SOLID) || !(contents1.native & Q2_CONTENTS_SOLID)) {
             c.native &= ~Q2_CONTENTS_SOLID;
+        }
 
         return c;
     }
@@ -638,21 +682,9 @@ struct gamedef_q2_t : public gamedef_t
         return !!(contents.native & Q2_CONTENTS_SOLID);
     }
 
-    contentflags_t create_empty_contents(const uint16_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_empty_contents() const { return {Q2_CONTENTS_EMPTY}; }
 
-    contentflags_t create_solid_contents(const uint16_t &cflags) const { return {Q2_CONTENTS_SOLID, cflags}; }
-
-    contentflags_t create_sky_contents(const uint16_t &cflags) const { return create_solid_contents(cflags); }
-
-    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags) const
-    {
-        switch (liquid_type) {
-            case CONTENTS_WATER: return {Q2_CONTENTS_WATER, cflags};
-            case CONTENTS_SLIME: return {Q2_CONTENTS_SLIME, cflags};
-            case CONTENTS_LAVA: return {Q2_CONTENTS_LAVA, cflags};
-            default: FError("bad contents");
-        }
-    }
+    contentflags_t create_solid_contents() const { return {Q2_CONTENTS_SOLID}; }
 
     contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const {
         contentflags_t result = original;
@@ -676,16 +708,14 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const
     {
-        return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
-                self.illusionary_visblocker == other.illusionary_visblocker &&
-                get_content_type(self) == get_content_type(other);
+        return self.illusionary_visblocker == other.illusionary_visblocker &&
+               get_content_type(self) == get_content_type(other);
     }
 
     bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
     {
-        return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
-                self.illusionary_visblocker == other.illusionary_visblocker &&
-                self.native == other.native;
+        return self.illusionary_visblocker == other.illusionary_visblocker &&
+               self.native == other.native;
     }
 
     bool contents_are_any_detail(const contentflags_t &contents) const
@@ -753,12 +783,7 @@ struct gamedef_q2_t : public gamedef_t
 
     inline bool contents_has_extended(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_CONTENTS_MASK)
-            return true;
-        else if (contents.illusionary_visblocker)
-            return true;
-
-        return false;
+        return contents.illusionary_visblocker;
     }
 
     bool contents_are_empty(const contentflags_t &contents) const
@@ -801,9 +826,11 @@ struct gamedef_q2_t : public gamedef_t
 
     constexpr int32_t visible_contents(const int32_t &contents) const
     {
-        for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1)
-            if (contents & i)
+        for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
+            if (contents & i) {
                 return i;
+            }
+        }
 
         return 0;
     }
@@ -813,16 +840,20 @@ struct gamedef_q2_t : public gamedef_t
         int32_t c0 = contents0.native, c1 = contents1.native;
 
         // can't see through solid
-        if ((c0 | c1) & Q2_CONTENTS_SOLID)
+        if ((c0 | c1) & Q2_CONTENTS_SOLID) {
             return false;
+        }
 
-        if (!visible_contents(c0 ^ c1))
+        if (!visible_contents(c0 ^ c1)) {
             return true;
+        }
 
-        if ((c0 & Q2_CONTENTS_TRANSLUCENT) || contents0.is_any_detail(this))
+        if ((c0 & Q2_CONTENTS_TRANSLUCENT) || contents0.is_any_detail(this)) {
             c0 = 0;
-        if ((c1 & Q2_CONTENTS_TRANSLUCENT) || contents1.is_any_detail(this))
+        }
+        if ((c1 & Q2_CONTENTS_TRANSLUCENT) || contents1.is_any_detail(this)) {
             c1 = 0;
+        }
 
         // identical on both sides
         if (!(c0 ^ c1))
@@ -836,13 +867,18 @@ struct gamedef_q2_t : public gamedef_t
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
+    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override
+    {
+        return contents;
+    }
+
     contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
         if ((a.native & Q2_CONTENTS_SOLID) || (b.native & Q2_CONTENTS_SOLID)) {
-            // NOTE: strips off any extra flags
-            return {Q2_CONTENTS_SOLID, 0};
+            return {Q2_CONTENTS_SOLID};
         }
-        return {a.native | b.native, static_cast<uint16_t>(a.extended | b.extended)};
+
+        return {a.native | b.native};
     }
 
     std::string get_contents_display(const contentflags_t &contents) const
@@ -855,12 +891,12 @@ struct gamedef_q2_t : public gamedef_t
         std::string s;
 
         for (int32_t i = 0; i < std::size(bitflag_names); i++) {
-            if (contents.native & (1 << i)) {
+            if (contents.native & nth_bit(i)) {
                 if (s.size()) {
-                    s += " | " + std::string(bitflag_names[i]);
-                } else {
-                    s += bitflag_names[i];
+                    s += " | ";
                 }
+                
+                s += bitflag_names[i];
             }
         }
 
@@ -1282,30 +1318,12 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     std::string s = game->get_contents_display(*this);
 
     // FIXME: how do we conditionally display this only when it matters (when it's not default basically)?
-    s += fmt::format("|MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+    s += fmt::format("| MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
 
-    s += fmt::format("|CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+    s += fmt::format("| CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
 
-    // FIXME: duped for Q2, move to Q1?
-    if (is_clip(game)) {
-        s += "|CLIP";
-    }
-    if (is_origin(game)) {
-        s += "|ORIGIN";
-    }
-    
-    // FIXME: duped for Q2, move to Q1?
-    if (extended & CFLAGS_DETAIL) {
-        s += "|DETAIL";
-    }
-    if (extended & CFLAGS_DETAIL_ILLUSIONARY) {
-        s += "|DETAIL_ILLUSIONARY";
-    }
-    if (extended & CFLAGS_DETAIL_FENCE) {
-        s += "|FENCE";
-    }
     if (illusionary_visblocker) {
-        s += "|ILLUSIONARY_VISBLOCKER";
+        s += "| ILLUSIONARY_VISBLOCKER";
     }
 
     return s;

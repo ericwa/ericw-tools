@@ -562,29 +562,12 @@ enum q2_contents_t : int32_t
     Q2_CONTENTS_LADDER = nth_bit(29)
 };
 
-// Special contents flags for the compiler only
-enum extended_cflags_t : uint16_t
-{
-    // only one of these flags below should ever be set.
-    CFLAGS_DETAIL = nth_bit(8),
-    CFLAGS_DETAIL_ILLUSIONARY = nth_bit(9),
-    CFLAGS_DETAIL_FENCE = nth_bit(10),
-    // all of the detail values
-    CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE),
-    // all of the special content types
-    CFLAGS_CONTENTS_MASK =
-        CFLAGS_DETAIL_MASK
-};
-
 struct gamedef_t;
 
 struct contentflags_t
 {
     // native flags value; what's written to the BSP basically
-    int32_t native;
-
-    // extra flags, specific to BSP only
-    uint16_t extended;
+    int32_t native = 0;
 
     // extra data supplied by the game
     std::any game_data;
@@ -1807,10 +1790,8 @@ struct gamedef_t
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
     virtual bool chops(const contentflags_t &) const = 0;
-    virtual contentflags_t create_empty_contents(const uint16_t &cflags = 0) const = 0;
-    virtual contentflags_t create_solid_contents(const uint16_t &cflags = 0) const = 0;
-    virtual contentflags_t create_sky_contents(const uint16_t &cflags = 0) const = 0;
-    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_empty_contents() const = 0;
+    virtual contentflags_t create_solid_contents() const = 0;
     virtual contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_fence_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_solid_contents(const contentflags_t &original) const = 0;
@@ -1831,6 +1812,7 @@ struct gamedef_t
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
     virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual bool contents_seals_map(const contentflags_t &contents) const = 0;
+    virtual contentflags_t contents_remap_for_export(const contentflags_t &contents) const = 0;
     virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;

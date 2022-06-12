@@ -32,32 +32,6 @@
 
 using nlohmann::json;
 
-static contentflags_t RemapContentsForExport(const contentflags_t &content)
-{
-    if (content.is_detail_fence(options.target_game)) {
-        /*
-         * A bit of a hack for Q2, to ensure that structural faces which are completely covered by detail fence
-         * still render.
-         *
-         * If we export the detail fence leaf as CONTENTS_SOLID, Q2 engines will refuse to render the covered sturctural
-         * face because of a short-circuit in GL_DrawLeaf.
-         */
-        if (options.target_game->id == GAME_QUAKE_II) {
-            // fixme-brushbsp: can remove this once we use WINDOW natively for detail_fence
-            return {Q2_CONTENTS_WINDOW, 0};
-        }
-        /*
-         * This is for func_detail_wall.. we want to write a solid leaf that has faces,
-         * because it may be possible to see inside (fence textures).
-         *
-         * Normally solid leafs are not written and just referenced as leaf 0.
-         */
-        return options.target_game->create_solid_contents();
-    }
-
-    return content;
-}
-
 /**
  * Returns the output plane number
  */
@@ -173,7 +147,7 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
 {
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
-    const contentflags_t remapped = RemapContentsForExport(node->contents);
+    const contentflags_t remapped = options.target_game->contents_remap_for_export(node->contents);
 
     if (!remapped.is_valid(options.target_game, false)) {
         FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1,
