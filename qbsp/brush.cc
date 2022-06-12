@@ -990,9 +990,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         // apply extended flags
         contents.set_mirrored(mirrorinside);
         contents.set_clips_same_type(clipsametype);
-        if (func_illusionary_visblocker) {
-            contents.extended |= CFLAGS_ILLUSIONARY_VISBLOCKER;
-        }
+        contents.illusionary_visblocker = func_illusionary_visblocker;
 
         std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)

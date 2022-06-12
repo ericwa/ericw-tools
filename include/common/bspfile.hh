@@ -569,12 +569,11 @@ enum extended_cflags_t : uint16_t
     CFLAGS_DETAIL = nth_bit(8),
     CFLAGS_DETAIL_ILLUSIONARY = nth_bit(9),
     CFLAGS_DETAIL_FENCE = nth_bit(10),
-    CFLAGS_ILLUSIONARY_VISBLOCKER = nth_bit(11),
     // all of the detail values
     CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE),
     // all of the special content types
     CFLAGS_CONTENTS_MASK =
-        (CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)
+        CFLAGS_DETAIL_MASK
 };
 
 struct gamedef_t;
@@ -594,9 +593,12 @@ struct contentflags_t
     // don't check this directly, use `is_mirror_inside` to allow the game to decide.
     std::optional<bool> mirror_inside = std::nullopt;
 
-    // Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY.
+    // don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY.
     // don't check this directly, use `will_clip_same_type` to allow the game to decide.
     std::optional<bool> clips_same_type = std::nullopt;
+
+    // always blocks vis, even if it normally wouldn't
+    bool illusionary_visblocker = false;
 
     bool equals(const gamedef_t *game, const contentflags_t &other) const;
 

@@ -843,7 +843,7 @@ static void CreateLeaf(std::vector<std::unique_ptr<brush_t>> brushes, node_t *le
         leafnode->original_brushes.push_back(brush->original);
     }
 
-    if (leafnode->contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+    if (leafnode->contents.illusionary_visblocker) {
         c_illusionary_visblocker++;
     } else if (leafnode->contents.is_detail_fence(options.target_game)) {
         c_detail_fence++;

@@ -74,7 +74,7 @@ static bool PortalThru(const portal_t *p)
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
     /* Can't see through func_illusionary_visblocker */
-    if ((contents0.extended | contents1.extended) & CFLAGS_ILLUSIONARY_VISBLOCKER)
+    if (contents0.illusionary_visblocker || contents1.illusionary_visblocker)
         return false;
 
     // FIXME: we can't move this directly to portal_can_see_through because

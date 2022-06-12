@@ -122,22 +122,24 @@ struct gamedef_generic_t : public gamedef_t
     const std::vector<qvec3b> &get_default_palette() const { throw std::bad_cast(); };
 };
 
-// extra data for contentflags_t for Quake-like
-struct q1_contentflags_data
-{
-    bool origin = false; // is an origin brush
-
-    bool clip = false; // is a clip brush
-    
-    constexpr bool operator==(const q1_contentflags_data &other) const { return origin == other.origin && clip == other.clip; }
-    constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
-
-    constexpr explicit operator bool() const { return origin || clip; }
-};
-
 template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
+private:
+    // extra data for contentflags_t for Quake-like
+    struct q1_contentflags_data
+    {
+        bool origin = false; // is an origin brush
+
+        bool clip = false; // is a clip brush
+    
+        constexpr bool operator==(const q1_contentflags_data &other) const { return origin == other.origin && clip == other.clip; }
+        constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
+
+        constexpr explicit operator bool() const { return origin || clip; }
+    };
+public:
+
     gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir) { this->id = ID; }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
@@ -186,7 +188,7 @@ struct gamedef_q1_like_t : public gamedef_t
             return 4;
         } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
             return 2;
-        } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+        } else if (contents.illusionary_visblocker) {
             return 2;
         } else {
             switch (contents.native) {
@@ -267,7 +269,8 @@ struct gamedef_q1_like_t : public gamedef_t
         }
 
         return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
-               self.native == other.native;
+                self.illusionary_visblocker == other.illusionary_visblocker &&
+                self.native == other.native;
     }
 
     bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
@@ -324,44 +327,36 @@ struct gamedef_q1_like_t : public gamedef_t
         return self.equals(this, other) && self.clips_same_type.value_or(true);
     }
 
-    bool contents_are_empty(const contentflags_t &contents) const
+    inline bool contents_has_extended(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
-            return false;
+            return true;
+        else if (contents.illusionary_visblocker)
+            return true;
         else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
-            return false;
+            return true;
 
-        return contents.native == CONTENTS_EMPTY;
+        return false;
+    }
+
+    bool contents_are_empty(const contentflags_t &contents) const
+    {
+        return !contents_has_extended(contents) && contents.native == CONTENTS_EMPTY;
     }
 
     bool contents_are_solid(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_CONTENTS_MASK)
-            return false;
-        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
-            return false;
-
-        return contents.native == CONTENTS_SOLID;
+        return !contents_has_extended(contents) && contents.native == CONTENTS_SOLID;
     }
 
     bool contents_are_sky(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_CONTENTS_MASK)
-            return false;
-        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
-            return false;
-
-        return contents.native == CONTENTS_SKY;
+        return !contents_has_extended(contents) && contents.native == CONTENTS_SKY;
     }
 
     bool contents_are_liquid(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_CONTENTS_MASK)
-            return false;
-        else if (contents.game_data.has_value() && std::any_cast<const q1_contentflags_data &>(contents.game_data))
-            return false;
-
-        return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
+        return !contents_has_extended(contents) && contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
     }
 
     bool contents_are_valid(const contentflags_t &contents, bool strict) const
@@ -622,7 +617,7 @@ struct gamedef_q2_t : public gamedef_t
             return 6;
         } else if (contents_are_detail_fence(contents)) {
             return 7;
-        } else if (contents.extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+        } else if (contents.illusionary_visblocker) {
             return 2;
         } else {
             switch (contents.native & Q2_ALL_VISIBLE_CONTENTS) {
@@ -682,13 +677,15 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const
     {
         return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
-               get_content_type(self) == get_content_type(other);
+                self.illusionary_visblocker == other.illusionary_visblocker &&
+                get_content_type(self) == get_content_type(other);
     }
 
     bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const
     {
         return (self.extended & CFLAGS_CONTENTS_MASK) == (other.extended & CFLAGS_CONTENTS_MASK) &&
-               self.native == other.native;
+                self.illusionary_visblocker == other.illusionary_visblocker &&
+                self.native == other.native;
     }
 
     bool contents_are_any_detail(const contentflags_t &contents) const
@@ -754,28 +751,33 @@ struct gamedef_q2_t : public gamedef_t
         return (self.native & Q2_ALL_VISIBLE_CONTENTS) == (other.native & Q2_ALL_VISIBLE_CONTENTS) && self.clips_same_type.value_or(true);
     }
 
-    bool contents_are_empty(const contentflags_t &contents) const
+    inline bool contents_has_extended(const contentflags_t &contents) const
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
-            return false;
+            return true;
+        else if (contents.illusionary_visblocker)
+            return true;
 
-        return !get_content_type(contents);
+        return false;
+    }
+
+    bool contents_are_empty(const contentflags_t &contents) const
+    {
+        return !contents_has_extended(contents) && !get_content_type(contents);
     }
 
     bool contents_are_solid(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_CONTENTS_MASK)
-            return false;
-
-        return (contents.native & Q2_CONTENTS_SOLID)
-               && !(contents.native & Q2_CONTENTS_DETAIL);
+        return !contents_has_extended(contents) && 
+               (contents.native & Q2_CONTENTS_SOLID) &&
+              !(contents.native & Q2_CONTENTS_DETAIL);
     }
 
     bool contents_are_sky(const contentflags_t &contents) const { return false; }
 
     bool contents_are_liquid(const contentflags_t &contents) const
     {
-        if (contents.extended & CFLAGS_CONTENTS_MASK)
+        if (contents_has_extended(contents))
             return false;
 
         if (contents.native & Q2_CONTENTS_AREAPORTAL)
@@ -1302,7 +1304,7 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     if (extended & CFLAGS_DETAIL_FENCE) {
         s += "|FENCE";
     }
-    if (extended & CFLAGS_ILLUSIONARY_VISBLOCKER) {
+    if (illusionary_visblocker) {
         s += "|ILLUSIONARY_VISBLOCKER";
     }
 
