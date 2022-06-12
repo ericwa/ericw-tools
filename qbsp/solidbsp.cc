@@ -36,8 +36,6 @@
 
 std::atomic<int> splitnodes;
 
-static std::atomic<int> leaffaces;
-static std::atomic<int> nodefaces;
 static std::any leafstats;
 static bool usemidsplit;
 
@@ -965,8 +963,6 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
 
     // recursively partition everything
     splitnodes = 0;
-    leaffaces = 0;
-    nodefaces = 0;
     leafstats = options.target_game->create_content_stats();
     // count map surfaces; this is used when deciding to switch between midsplit and the expensive partitioning
     mapbrushes = entity->brushes.size();
@@ -984,8 +980,6 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
 
     logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
     options.target_game->print_content_stats(leafstats, "leaves");
-    logging::print(logging::flag::STAT, "     {:8} leaffaces\n", leaffaces.load());
-    logging::print(logging::flag::STAT, "     {:8} nodefaces\n", nodefaces.load());
 
     return headnode;
 }

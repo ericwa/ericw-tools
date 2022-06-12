@@ -705,5 +705,5 @@ void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
         }
     }
 
-    logging::print("{} nodefaces\n", c_nodefaces);
+    logging::print(logging::flag::STAT, "{} nodefaces\n", c_nodefaces);
 }
