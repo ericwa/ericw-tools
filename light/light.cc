@@ -902,14 +902,16 @@ int light_main(int argc, const char **argv)
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
-    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.rangescale.isChanged()) {
-        options.rangescale.setValue(1.0f);
-    }
-    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncecolorscale.isChanged()) {
-        options.bouncecolorscale.setValue(1.0f);
-    }
-    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncescale.isChanged()) {
-        options.bouncescale.setValue(1.5f);
+    if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
+        if (!options.rangescale.isChanged()) {
+            options.rangescale.setValue(1.0f);
+        }
+        if (!options.bouncecolorscale.isChanged()) {
+            options.bouncecolorscale.setValue(1.0f);
+        }
+        if (!options.bouncescale.isChanged()) {
+            options.bouncescale.setValue(1.5f);
+        }
     }
 
     img::init_palette(bspdata.loadversion->game);
