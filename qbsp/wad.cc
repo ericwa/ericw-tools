@@ -299,12 +299,12 @@ static void WADList_AddAnimationFrames()
 
 void WADList_Process()
 {
-    WADList_AddAnimationFrames();
-
     // Q2 doesn't use texdata
     if (options.target_game->id == GAME_QUAKE_II) {
         return;
     }
+
+    WADList_AddAnimationFrames();
 
     /* Default texture data to store in worldmodel */
     map.bsp.dtex.textures.resize(map.miptex.size());

@@ -2352,7 +2352,7 @@ static void TestExpandBrushes(const mapentity_t *src)
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
         std::optional<brush_t> hull1brush = LoadBrush(
-            src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? -1 : 1);
+            src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
         if (hull1brush) {
             hull1brushes.emplace_back(
