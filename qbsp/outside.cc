@@ -506,6 +506,16 @@ static int OutLeafsToSolid(node_t *node)
 
 //=============================================================================
 
+static void SetOccupied_R(node_t *node, int dist)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        SetOccupied_R(node->children[0], dist);
+        SetOccupied_R(node->children[1], dist);
+    }
+
+    node->occupied = dist;
+}
+
 /*
 ==================
 precondition: all leafs have occupied set to 0
@@ -527,7 +537,11 @@ static void BFSFloodFillFromOccupiedLeafs(const std::vector<node_t *> &occupied_
 
         if (node->occupied == 0) {
             // we haven't visited this node yet
-            node->occupied = dist;
+            if (node->detail_separator) {
+                SetOccupied_R(node, dist);
+            } else {
+                node->occupied = dist;
+            }
 
             // push neighbouring nodes onto the back of the queue
             int side;
