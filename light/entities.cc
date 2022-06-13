@@ -176,95 +176,6 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
     return ok;
 }
 
-/**
- * Checks `edicts` for unmatched targets/targetnames and prints warnings
- */
-bool EntDict_CheckTargetKeysMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
-{
-    bool ok = true;
-
-    // TODO: what if we just do this for any key that contains `target` not immediately followed by `name`?
-    const std::vector<std::string> targetKeys{
-        "target", "killtarget", "target2", "angrytarget", "deathtarget" // from AD
-    };
-
-    const std::string &targetname = EntDict_StringForKey(entity, "targetname");
-
-    // search for "target" values such that no entity has a matching "targetname"
-
-    for (const auto &targetKey : targetKeys) {
-        const auto &targetVal = EntDict_StringForKey(entity, targetKey);
-        if (!targetVal.length())
-            continue;
-
-        if (targetVal == targetname) {
-            logging::print("WARNING: {} has \"{}\" set to itself\n", EntDict_PrettyDescription(bsp, entity), targetKey);
-            ok = false;
-            continue;
-        }
-
-        bool found = false;
-        for (const entdict_t &target : all_edicts) {
-            if (&target == &entity) {
-                continue;
-            }
-
-            if (string_iequals(targetVal, EntDict_StringForKey(target, "targetname"))) {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            logging::print("WARNING: {} has unmatched \"{}\" ({})\n", EntDict_PrettyDescription(bsp, entity), targetKey,
-                targetVal);
-            ok = false;
-        }
-    }
-
-    return ok;
-}
-
-bool EntDict_CheckTargetnameKeyMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
-{
-    // search for "targetname" values such that no entity has a matching "target"
-    // accept any key name as a target, so we don't print false positive
-    // if the map has "some_mod_specific_target" "foo"
-
-    bool ok = true;
-
-    const auto &targetnameVal = EntDict_StringForKey(entity, "targetname");
-    if (targetnameVal.length()) {
-        bool found = false;
-        for (const entdict_t &targetter : all_edicts) {
-            if (&targetter == &entity) {
-                continue;
-            }
-
-            for (const auto &targetter_keyval : targetter) {
-                if (targetnameVal == targetter_keyval.second) {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (found) {
-                break;
-            }
-        }
-
-        if (!found) {
-            logging::print("WARNING: {} has targetname \"{}\", which is not targeted by anything.\n",
-                EntDict_PrettyDescription(bsp, entity), targetnameVal);
-            ok = false;
-        }
-    }
-
-    return ok;
-}
-
 static void SetupSpotlights(const settings::worldspawn_keys &cfg)
 {
     for (auto &entity : all_lights) {
@@ -861,8 +772,6 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     // Make warnings
     for (auto &entdict : entdicts) {
         EntDict_CheckNoEmptyValues(bsp, entdict);
-        EntDict_CheckTargetKeysMatched(bsp, entdict, entdicts);
-        EntDict_CheckTargetnameKeyMatched(bsp, entdict, entdicts);
     }
 
     /* handle worldspawn */

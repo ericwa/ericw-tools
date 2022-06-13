@@ -140,9 +140,3 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp);
 aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point);
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
-
-bool EntDict_CheckTargetKeysMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
-
-bool EntDict_CheckTargetnameKeyMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);

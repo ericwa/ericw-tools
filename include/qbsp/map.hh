@@ -133,21 +133,6 @@ struct texdata_t
 #include <common/imglib.hh>
 #include <qbsp/wad.hh>
 
-struct start_spots_t
-{
-private:
-    std::bitset<3> bits {};
-
-public:
-    constexpr bool has_info_player_start() const { return bits[0]; }
-    constexpr bool has_info_player_coop() const { return bits[1]; }
-    constexpr bool has_info_player_deathmatch() const { return bits[2]; }
-    
-    void set_info_player_start(bool value) { bits.set(0, value); }
-    void set_info_player_coop(bool value) { bits.set(1, value); }
-    void set_info_player_deathmatch(bool value) { bits.set(2, value); }
-};
-
 struct mapdata_t
 {
     /* Arrays of actual items */
@@ -186,9 +171,6 @@ struct mapdata_t
     // misc
     bool wadlist_tried_loading = false;
     std::list<wad_t> wadlist;
-    
-    // todo type-cleanup: move to gamedef
-    start_spots_t start_spots;
 
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }

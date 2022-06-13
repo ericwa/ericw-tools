@@ -167,6 +167,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
     const char *pathsep;
     int i;
 
+    // FIXME: figure out a way that we can move this to gamedef
     if (options.target_game->id != GAME_QUAKE_II) {
         /* Ignore leading path in texture names (Q2 map compatibility) */
         pathsep = strrchr(name, '/');
@@ -346,6 +347,8 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     // into a special function, like.. I dunno,
     // game->surface_flags_from_name(surfflags_t &inout, const char *name)
     // which we can just call instead of this block.
+    // the only annoyance is we can't access the various options (noskip,
+    // splitturb, etc) from there.
     if (options.target_game->id != GAME_QUAKE_II) {
         if (IsSkipName(texname))
             flags.is_skip = true;
@@ -455,20 +458,6 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
 
     if (string_iequals(key, "origin")) {
         GetVectorForKey(entity, key.c_str(), entity->origin);
-    } else if (string_iequals(key, "classname")) {
-        if (string_iequals(parser.token, "info_player_start")) {
-            // Quake II uses multiple starts for level transitions/backtracking.
-            // TODO: instead, this should check targetnames. There should only be
-            // one info_player_start per targetname in Q2.
-            if (options.target_game->id != GAME_QUAKE_II && (map.start_spots.has_info_player_start())) {
-                logging::print("WARNING: Multiple info_player_start entities\n");
-            }
-            map.start_spots.set_info_player_start(true);
-        } else if (string_iequals(parser.token, "info_player_deathmatch")) {
-            map.start_spots.set_info_player_deathmatch(true);
-        } else if (string_iequals(parser.token, "info_player_coop")) {
-            map.start_spots.set_info_player_coop(true);
-        }
     }
 }
 
@@ -1946,14 +1935,6 @@ void LoadMapFile(void)
         assert(map.entities.back().brushes.empty());
         map.entities.pop_back();
     }
-
-    // Print out warnings for entities
-    if (!map.start_spots.has_info_player_start())
-        logging::print("WARNING: No info_player_start entity in level\n");
-    if (!map.start_spots.has_info_player_deathmatch())
-        logging::print("WARNING: No info_player_deathmatch entities in level\n");
-    //      if (!(map.start_spots & info_player_coop))
-    //              logging::print("WARNING: No info_player_coop entities in level\n");
 
     logging::print(logging::flag::STAT, "     {:8} faces\n", map.faces.size());
     logging::print(logging::flag::STAT, "     {:8} brushes\n", map.brushes.size());
