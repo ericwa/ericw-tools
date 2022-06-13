@@ -147,6 +147,12 @@ extern setting_group map_development_group;
 extern setting_group common_format_group;
 extern setting_group debugging_group;
 
+enum class filltype_t
+{
+    OUTSIDE,
+    INSIDE
+};
+
 class qbsp_settings : public common_settings
 {
 public:
@@ -227,6 +233,8 @@ public:
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
     setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
+    setting_enum<filltype_t> filltype{this, "filltype", filltype_t::OUTSIDE, { { "inside", filltype_t::INSIDE }, { "outside", filltype_t::OUTSIDE } }, &common_format_group,
+        "whether to fill the map from the outside in (lenient) or from the inside out (aggressive)"};
 
     void setParameters(int argc, const char **argv) override
     {
@@ -346,6 +354,7 @@ struct node_t
     int viscluster; // detail cluster for faster vis
     int outside_distance; // -1 = can't reach outside, 0 = first void node, >0 = distance from void, in number of
                           // portals used to write leak lines that take the shortest path to the void
+    int occupied; // 0=can't reach entity, 1 = has entity, >1 = distance from leaf with entity
     mapentity_t *occupant; // example occupant, for leak hunting
     bool detail_separator; // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs,
                            // are detail.

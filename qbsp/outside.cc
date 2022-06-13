@@ -103,6 +103,7 @@ static void ClearOccupied_r(node_t *node)
 {
     // we need to clear this on leaf nodes and detail separators (clusters).. just clear it on everything
     node->outside_distance = -1;
+    node->occupied = 0;
     node->occupant = nullptr;
 
     if (node->planenum != PLANENUM_LEAF) {
@@ -476,12 +477,20 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
     }
 
     // skip leafs reachable from entities
-    if (node->outside_distance == -1)
-        return;
+    if (options.filltype.value() == settings::filltype_t::INSIDE) {
+        if (node->occupied > 0) {
+            return;
+        }
+    } else {
+        if (node->outside_distance == -1) {
+            return;
+        }
+    }
 
     // Don't fill sky, or count solids as outleafs
-    if (options.target_game->contents_seals_map(node->contents))
+    if (options.target_game->contents_seals_map(node->contents)) {
         return;
+    }
 
      // Finally, we can fill it in as void.
     node->contents = options.target_game->create_solid_contents();
@@ -496,6 +505,95 @@ static int OutLeafsToSolid(node_t *node)
 }
 
 //=============================================================================
+
+/*
+==================
+precondition: all leafs have occupied set to 0
+==================
+*/
+static void BFSFloodFillFromOccupiedLeafs(const std::vector<node_t *> &occupied_leafs)
+{
+    std::list<std::pair<node_t *, int>> queue;
+    for (node_t *leaf : occupied_leafs) {
+        queue.push_back(std::make_pair(leaf, 1));
+    }
+
+    while (!queue.empty()) {
+        auto pair = queue.front();
+        queue.pop_front();
+
+        node_t *node = pair.first;
+        const int dist = pair.second;
+
+        if (node->occupied == 0) {
+            // we haven't visited this node yet
+            node->occupied = dist;
+
+            // push neighbouring nodes onto the back of the queue
+            int side;
+            for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
+                side = (portal->nodes[0] == node);
+
+                if (!OutsideFill_Passable(portal))
+                    continue;
+
+                node_t *neighbour = portal->nodes[side];
+                queue.push_back(std::make_pair(neighbour, dist + 1));
+            }
+        }
+    }
+}
+
+static std::vector<portal_t *> MakeLeakLine(node_t *outleaf, mapentity_t *&leakentity)
+{
+    std::vector<portal_t *> result;
+
+    Q_assert(outleaf->occupied > 0);
+
+    node_t *node = outleaf;
+    while (1) {
+        // exit?
+        if (node->occupied == 1)
+            break; // this node contains an entity
+
+        // find the next node...
+
+        node_t *bestneighbour = nullptr;
+        portal_t *bestportal = nullptr;
+        int bestoccupied = node->occupied;
+
+        int side;
+        for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
+            side = (portal->nodes[0] == node);
+
+            if (!OutsideFill_Passable(portal))
+                continue;
+
+            node_t *neighbour = portal->nodes[side];
+            Q_assert(neighbour != node);
+            Q_assert(neighbour->occupied > 0);
+
+            if (neighbour->occupied < bestoccupied) {
+                bestneighbour = neighbour;
+                bestportal = portal;
+                bestoccupied = neighbour->occupied;
+            }
+        }
+
+        Q_assert(bestneighbour != nullptr);
+        Q_assert(bestoccupied < node->occupied);
+
+        // go through bestportal
+        result.push_back(bestportal);
+        node = bestneighbour;
+    }
+
+    Q_assert(node->occupant != nullptr);
+    Q_assert(node->occupied == 1);
+
+    leakentity = node->occupant;
+    return result;
+}
 
 /*
 ===========
@@ -540,6 +638,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
 
     for (auto *occupied_cluster : occupied_clusters) {
         Q_assert(occupied_cluster->outside_distance == -1);
+        Q_assert(occupied_cluster->occupied == 0);
     }
 
     if (occupied_clusters.empty()) {
@@ -547,32 +646,48 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
         return false;
     }
 
-    // Flood fill from outside -> in.
-    //
-    // We tried inside -> out and it leads to things like monster boxes getting inadvertently sealed,
-    // or even whole sections of the map with no point entities - problems compounded by hull expansion.
-    FloodFillClustersFromVoid();
+    mapentity_t *leakentity = nullptr;
+    std::vector<portal_t *> leakline;
 
-    // check for the occupied leaf closest to the void
-    int best_leak_dist = INT_MAX;
-    node_t *best_leak = nullptr;
+    if (options.filltype.value() == settings::filltype_t::INSIDE) {
+        BFSFloodFillFromOccupiedLeafs(occupied_clusters);
 
-    for (node_t *leaf : occupied_clusters) {
-        if (leaf->outside_distance == -1)
-            continue;
+        /* first check to see if an occupied leaf is hit */
+        const int side = (outside_node.portals->nodes[0] == &outside_node);
+        node_t *fillnode = outside_node.portals->nodes[side];
 
-        if (leaf->outside_distance < best_leak_dist) {
-            best_leak_dist = leaf->outside_distance;
-            best_leak = leaf;
+        if (fillnode->occupied > 0) {
+            leakline = MakeLeakLine(fillnode, leakentity);
+        }
+    } else {
+        // Flood fill from outside -> in.
+        //
+        // We tried inside -> out and it leads to things like monster boxes getting inadvertently sealed,
+        // or even whole sections of the map with no point entities - problems compounded by hull expansion.
+        FloodFillClustersFromVoid();
+
+        // check for the occupied leaf closest to the void
+        int best_leak_dist = INT_MAX;
+        node_t *best_leak = nullptr;
+
+        for (node_t *leaf : occupied_clusters) {
+            if (leaf->outside_distance == -1)
+                continue;
+
+            if (leaf->outside_distance < best_leak_dist) {
+                best_leak_dist = leaf->outside_distance;
+                best_leak = leaf;
+            }
+        }
+
+        if (best_leak) {
+            leakentity = best_leak->occupant;
+            Q_assert(leakentity != nullptr);
+            leakline = FindPortalsToVoid(best_leak);
         }
     }
 
-    if (best_leak) {
-        const auto leakline = FindPortalsToVoid(best_leak);
-
-        mapentity_t *leakentity = best_leak->occupant;
-        Q_assert(leakentity != nullptr);
-
+    if (leakentity) {
         logging::print("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n",
             ValueForKey(leakentity, "classname"), leakentity->origin);
         if (map.leakfile)
