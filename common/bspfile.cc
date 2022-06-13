@@ -98,7 +98,7 @@ struct gamedef_generic_t : public gamedef_t
 
     bool contents_are_valid(const contentflags_t &, bool) const override { throw std::bad_cast(); }
 
-    bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
+    bool portal_can_see_through(const contentflags_t &, const contentflags_t &, bool, bool) const override { throw std::bad_cast(); }
 
     bool contents_seals_map(const contentflags_t &contents) const override { throw std::bad_cast(); }
 
@@ -385,8 +385,24 @@ public:
         }
     }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const
     {
+        /* If water is transparent, liquids are like empty space */
+        if (transwater) {
+            if (contents_are_liquid(contents0) && contents_are_empty(contents1))
+                return true;
+            if (contents_are_liquid(contents1) && contents_are_empty(contents0))
+                return true;
+        }
+
+        /* If sky is transparent, then sky is like empty space */
+        if (transsky) {
+            if (contents_are_sky(contents0) && contents_are_empty(contents1))
+                return true;
+            if (contents_are_empty(contents0) && contents_are_sky(contents1))
+                return true;
+        }
+
         /* If contents values are the same and not solid, can see through */
         return !(contents0.is_solid(this) || contents1.is_solid(this)) && contents0.equals(this, contents1);
     }
@@ -918,7 +934,7 @@ struct gamedef_q2_t : public gamedef_t
         return 0;
     }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool, bool) const
     {
         int32_t c0 = contents0.native, c1 = contents1.native;
 

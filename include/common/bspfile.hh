@@ -1810,7 +1810,7 @@ struct gamedef_t
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
-    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const = 0;
     virtual bool contents_seals_map(const contentflags_t &contents) const = 0;
     virtual contentflags_t contents_remap_for_export(const contentflags_t &contents) const = 0;
     virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;

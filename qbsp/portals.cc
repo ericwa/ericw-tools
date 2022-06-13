@@ -77,28 +77,8 @@ static bool PortalThru(const portal_t *p)
     if (contents0.illusionary_visblocker || contents1.illusionary_visblocker)
         return false;
 
-    // FIXME: we can't move this directly to portal_can_see_through because
-    // "options" isn't exposed there.
-    if (options.target_game->id != GAME_QUAKE_II) {
-        /* If water is transparent, liquids are like empty space */
-        if (options.transwater.value()) {
-            if (contents0.is_liquid(options.target_game) && contents1.is_empty(options.target_game))
-                return true;
-            if (contents1.is_liquid(options.target_game) && contents0.is_empty(options.target_game))
-                return true;
-        }
-
-        /* If sky is transparent, then sky is like empty space */
-        if (options.transsky.value()) {
-            if (contents0.is_sky(options.target_game) && contents1.is_empty(options.target_game))
-                return true;
-            if (contents0.is_empty(options.target_game) && contents1.is_sky(options.target_game))
-                return true;
-        }
-    }
-
     // Check per-game visibility
-    return options.target_game->portal_can_see_through(contents0, contents1);
+    return options.target_game->portal_can_see_through(contents0, contents1, options.transwater.value(), options.transsky.value());
 }
 
 static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool clusters)
