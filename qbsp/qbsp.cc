@@ -170,13 +170,6 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         }
     }
 
-    // side effects from Quake II
-    if (q2bsp.value() || qbism.value()) {
-        if (!filltype.isChanged()) {
-            filltype.setValueLocked(filltype_t::INSIDE);
-        }
-    }
-
     common_settings::postinitialize(argc, argv);
 }
 }; // namespace settings

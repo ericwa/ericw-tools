@@ -468,16 +468,16 @@ static void MarkVisibleBrushSides_R(node_t *node)
 
 //=============================================================================
 
-static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
+static void OutLeafsToSolid_r(node_t *node, int *outleafs_count, settings::filltype_t filltype)
 {
     if (node->planenum != PLANENUM_LEAF) {
-        OutLeafsToSolid_r(node->children[0], outleafs_count);
-        OutLeafsToSolid_r(node->children[1], outleafs_count);
+        OutLeafsToSolid_r(node->children[0], outleafs_count, filltype);
+        OutLeafsToSolid_r(node->children[1], outleafs_count, filltype);
         return;
     }
 
     // skip leafs reachable from entities
-    if (options.filltype.value() == settings::filltype_t::INSIDE) {
+    if (filltype == settings::filltype_t::INSIDE) {
         if (node->occupied > 0) {
             return;
         }
@@ -497,10 +497,10 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count)
     *outleafs_count += 1;
 }
 
-static int OutLeafsToSolid(node_t *node)
+static int OutLeafsToSolid(node_t *node, settings::filltype_t filltype)
 {
     int count = 0;
-    OutLeafsToSolid_r(node, &count);
+    OutLeafsToSolid_r(node, &count, filltype);
     return count;
 }
 
@@ -663,7 +663,13 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     mapentity_t *leakentity = nullptr;
     std::vector<portal_t *> leakline;
 
-    if (options.filltype.value() == settings::filltype_t::INSIDE) {
+    settings::filltype_t filltype = options.filltype.value();
+    
+    if (filltype == settings::filltype_t::AUTO) {
+        filltype = hullnum > 0 ? settings::filltype_t::OUTSIDE : settings::filltype_t::INSIDE;
+    }
+
+    if (filltype == settings::filltype_t::INSIDE) {
         BFSFloodFillFromOccupiedLeafs(occupied_clusters);
 
         /* first check to see if an occupied leaf is hit */
@@ -729,7 +735,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     }
 
     // change the leaf contents
-    const int outleafs = OutLeafsToSolid(node);
+    const int outleafs = OutLeafsToSolid(node, filltype);
 
     // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
     
