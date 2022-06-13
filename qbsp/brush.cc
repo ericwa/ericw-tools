@@ -931,7 +931,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
         /* func_detail_illusionary don't exist in the collision hull
          * (or bspx export) except for Q2, who needs them in there */
-        if ((options.target_game->id != GAME_QUAKE_II && hullnum) && detail_illusionary) {
+        if (hullnum > 0 && detail_illusionary) {
             continue;
         }
 
