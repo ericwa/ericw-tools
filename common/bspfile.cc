@@ -26,6 +26,8 @@
 
 #include <fmt/format.h>
 
+#include <atomic>
+
 static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
 {
     Q_assert((bytes.size() % 3) == 0);
