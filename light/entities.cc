@@ -49,7 +49,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 
-const std::string &light_t::classname() const
+std::string light_t::classname() const
 {
     return epairs->get("classname");
 }

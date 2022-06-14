@@ -138,6 +138,35 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
     }
 }
 
+void qbsp_settings::load_entity_def(const std::string &pathname)
+{
+    if (!fs::exists(pathname)) {
+        FError("can't find aliasdef file {}", pathname);
+    }
+
+    fs::data data = fs::load(pathname);
+    parser_t parser(data);
+
+    while (true) {
+        if (!parser.parse_token() || parser.at_end()) {
+            break;
+        }
+
+        std::string classname = std::move(parser.token);
+
+        if (!parser.parse_token(PARSE_PEEK)) {
+            FError("expected {{ in alias def {}, got end of file", pathname);
+        }
+
+        if (parser.token != "{") {
+            FError("expected {{ in alias def {}, got {}", pathname, parser.token);
+        }
+
+        // parse ent dict
+        loaded_entity_defs[classname] = parser;
+    }
+}
+
 void qbsp_settings::postinitialize(int argc, const char **argv)
 {
     // side effects from common
@@ -218,6 +247,10 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
     // load texture defs
     for (auto &def : texturedefs.values()) {
         load_texture_def(def);
+    }
+
+    for (auto &def : aliasdefs.values()) {
+        load_entity_def(def);
     }
 
     common_settings::postinitialize(argc, argv);

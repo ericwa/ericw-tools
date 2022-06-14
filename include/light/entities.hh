@@ -98,7 +98,7 @@ public:
     settings::setting_string suntexture{this, "suntexture", ""};
     settings::setting_bool nostaticlight{this, "nostaticlight", false};
 
-    const std::string &classname() const;
+    std::string classname() const;
 
     const light_formula_t &getFormula() const { return formula.value(); }
 

@@ -255,9 +255,11 @@ public:
     fs::path map_path;
     fs::path bsp_path;
     std::unordered_map<std::string, std::tuple<std::string, std::optional<extended_texinfo_t>>> loaded_texture_defs;
+    std::unordered_map<std::string, entdict_t> loaded_entity_defs;
 
 private:
     void load_texture_def(const std::string &pathname);
+    void load_entity_def(const std::string &pathname);
 };
 }; // namespace settings
 

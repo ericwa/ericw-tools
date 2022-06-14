@@ -35,7 +35,7 @@ entdict_t::entdict_t(std::initializer_list<keyvalue_t> l) : keyvalues(l) { }
 
 entdict_t::entdict_t() = default;
 
-const std::string &entdict_t::get(const std::string_view &key) const
+std::string entdict_t::get(const std::string_view &key) const
 {
     if (auto it = find(key); it != keyvalues.end()) {
         return it->second;
