@@ -481,7 +481,7 @@ bool FillOutside(node_t *node, const int hullnum)
         Q_assert(leakentity != nullptr);
 
         logging::print("WARNING: Reached occupant \"{}\" at ({}), no filling performed.\n",
-            ValueForKey(leakentity, "classname"), leakentity->origin);
+            leakentity->epairs.get("classname"), leakentity->origin);
         if (map.leakfile)
             return false;
 

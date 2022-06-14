@@ -391,8 +391,8 @@ static void LoadTextures(const mbsp_t *bsp)
     // FIXME: I'm sure we can resolve this so we don't parse entdata twice.
     auto entdicts = EntData_Parse(bsp->dentdata);
     for (auto &entdict : entdicts) {
-        if (EntDict_StringForKey(entdict, "classname").find("light") == 0) {
-            const auto &tex = EntDict_StringForKey(entdict, "_project_texture");
+        if (entdict.get("classname").find("light") == 0) {
+            const auto &tex = entdict.get("_project_texture");
             if (!tex.empty()) {
                 AddTextureName(tex.c_str());
             }

@@ -62,7 +62,7 @@ struct wad_t
     qfile_t file = {nullptr, nullptr};
 };
 
-void WADList_Init(const char *wadstring);
+void WADList_Init(const std::string_view &wadstring);
 void WADList_Process();
 const texture_t *WADList_GetTexture(const char *name);
 // for getting a texture width/height
