@@ -1396,7 +1396,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             if (!(extinfo.info->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
                 extinfo.info->contents.native |= Q2_CONTENTS_DETAIL;
 
-                logging::print("face at line {}: swapped TRANSLUCENT for DETAIL\n", mapface.linenum);
+                logging::print("WARNING: face at line {}: swapped TRANSLUCENT for DETAIL\n", mapface.linenum);
             }
         }
 
