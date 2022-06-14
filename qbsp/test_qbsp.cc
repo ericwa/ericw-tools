@@ -1278,6 +1278,42 @@ TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2][!mayfail]") {
     CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
 }
 
+/**
+ * Q1 sealing test:
+ * - hull0 can use Q2 method (fill inside)
+ * - hull1+ can't, because it would cause areas containing no entities but connected by a thin gap to the
+ *   rest of the world to get sealed off as solid.
+ **/
+TEST_CASE("qbsp_q1_sealing", "[testmaps_q1][!mayfail]") {
+    const mbsp_t bsp = LoadTestmap("qbsp_q1_sealing.map");
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    const qvec3d in_start_room {-192, 144, 104};
+    const qvec3d in_emptyroom {-168, 544, 104};
+    const qvec3d in_void {-16, -800, 56};
+    const qvec3d connected_by_thin_gap {72, 136, 104};
+
+    // check leaf contents in hull 0
+    CHECK(CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_emptyroom)->contents); // can get sealed, since there are no entities
+    CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
+    CHECK(CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], connected_by_thin_gap)->contents);
+
+    // check leaf contents in hull 1
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], in_start_room));
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], in_emptyroom));
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], in_void));
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], connected_by_thin_gap));
+
+    // check leaf contents in hull 2
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_start_room));
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_emptyroom));
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_void));
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], connected_by_thin_gap));
+}
+
+
 TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;
 

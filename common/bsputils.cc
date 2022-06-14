@@ -448,6 +448,32 @@ const mleaf_t* BSP_FindLeafAtPoint(const mbsp_t* bsp, const dmodelh2_t* model, c
     return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point);
 }
 
+static int BSP_FindClipnodeAtPoint_r(
+    const mbsp_t *bsp, const int clipnodenum, const qvec3d &point)
+{
+    if (clipnodenum < 0) {
+        // actually contents
+        return clipnodenum;
+    }
+
+    const auto *node = &bsp->dclipnodes.at(clipnodenum);
+    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+
+    if (dist >= 0) {
+        return BSP_FindClipnodeAtPoint_r(bsp, node->children[0], point);
+    } else {
+        return BSP_FindClipnodeAtPoint_r(bsp, node->children[1], point);
+    }
+}
+
+int BSP_FindContentsAtPoint(const mbsp_t *bsp, int hull, const dmodelh2_t *model, const qvec3d &point)
+{
+    if (hull == 0) {
+        return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point)->contents;
+    }
+    return BSP_FindClipnodeAtPoint_r(bsp, model->headnode.at(hull), point);
+}
+
 std::vector<const mface_t*> Leaf_Markfaces(const mbsp_t* bsp, const mleaf_t* leaf)
 {
     std::vector<const mface_t *> result;

@@ -70,6 +70,7 @@ const bsp2_dnode_t *BSP_FindNodeAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wanted_normal);
 
 const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
+int BSP_FindContentsAtPoint(const mbsp_t *bsp, int hull, const dmodelh2_t *model, const qvec3d &point);
 
 std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *leaf);
 std::vector<const dbrush_t *> Leaf_Brushes(const mbsp_t *bsp, const mleaf_t *leaf);
