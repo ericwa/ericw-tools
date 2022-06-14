@@ -1246,6 +1246,24 @@ TEST_CASE("q2_liquids", "[testmaps_q2][!mayfail]")
 
 }
 
+/**
+ * Empty rooms are sealed to solid in Q2
+ **/
+TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_seal_empty_rooms.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_start_room {-240, 80, 56};
+    const qvec3d in_empty_room {-244, 476, 68};
+
+    // check leaf contents
+    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_empty_room)->contents);
+
+    CHECK(8 == bsp.dleafs.size());
+}
+
 TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;
 
