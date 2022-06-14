@@ -1260,8 +1260,22 @@ TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
     // check leaf contents
     CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
     CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_empty_room)->contents);
+}
 
-    CHECK(8 == bsp.dleafs.size());
+/**
+ * Detail seals in Q2
+ **/
+TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2]") {
+    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_detail_seals.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_start_room {-240, 80, 56};
+    const qvec3d in_void {-336, 80, 56};
+
+    // check leaf contents
+    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
 }
 
 TEST_CASE("winding", "[benchmark]") {
