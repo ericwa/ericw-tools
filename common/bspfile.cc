@@ -183,12 +183,12 @@ public:
         return !string_iequals(name, "hint");
     }
 
-    constexpr contentflags_t create_sky_contents() const
+    contentflags_t create_sky_contents() const
     {
         return {CONTENTS_SKY};
     }
 
-    constexpr contentflags_t create_liquid_contents(const int32_t &liquid_type) const
+    contentflags_t create_liquid_contents(const int32_t &liquid_type) const
     {
         return {liquid_type};
     }
