@@ -127,3 +127,8 @@
 "classname" "info_player_start"
 "origin" "-240 80 56"
 }
+// entity 2
+{
+"classname" "light_fluorospark"
+"origin" "-192 144 104"
+}

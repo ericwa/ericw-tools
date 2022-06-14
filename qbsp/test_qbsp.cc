@@ -1284,7 +1284,7 @@ TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2][!mayfail]") {
  * - hull1+ can't, because it would cause areas containing no entities but connected by a thin gap to the
  *   rest of the world to get sealed off as solid.
  **/
-TEST_CASE("qbsp_q1_sealing", "[testmaps_q1][!mayfail]") {
+TEST_CASE("qbsp_q1_sealing", "[testmaps_q1]") {
     const mbsp_t bsp = LoadTestmap("qbsp_q1_sealing.map");
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -1312,7 +1312,6 @@ TEST_CASE("qbsp_q1_sealing", "[testmaps_q1][!mayfail]") {
     CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_void));
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], connected_by_thin_gap));
 }
-
 
 TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;

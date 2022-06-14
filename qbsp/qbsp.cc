@@ -750,6 +750,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 // make a really good tree
                 nodes = SolidBSP(entity, false);
 
+                // fill again so PruneNodes works
+                PortalizeEntity(entity, nodes, hullnum);
+                FillOutside(entity, nodes, hullnum);
+                PruneNodes(nodes);
                 DetailToSolid(nodes);
             }
         }
