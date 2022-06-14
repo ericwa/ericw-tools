@@ -49,7 +49,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 
-const std::string &light_t::classname() const
+std::string light_t::classname() const
 {
     return epairs->get("classname");
 }
@@ -181,12 +181,12 @@ bool EntDict_CheckTargetKeysMatched(
         "target", "killtarget", "target2", "angrytarget", "deathtarget" // from AD
     };
 
-    const std::string &targetname = EntDict_StringForKey(entity, "targetname");
+    const std::string &targetname = entity.get("targetname");
 
     // search for "target" values such that no entity has a matching "targetname"
 
     for (const auto &targetKey : targetKeys) {
-        const auto &targetVal = EntDict_StringForKey(entity, targetKey);
+        const auto &targetVal = entity.get(targetKey);
         if (!targetVal.length())
             continue;
 
@@ -202,7 +202,7 @@ bool EntDict_CheckTargetKeysMatched(
                 continue;
             }
 
-            if (string_iequals(targetVal, EntDict_StringForKey(target, "targetname"))) {
+            if (string_iequals(targetVal, target.get("targetname"))) {
                 found = true;
                 break;
             }
@@ -227,7 +227,7 @@ bool EntDict_CheckTargetnameKeyMatched(
 
     bool ok = true;
 
-    const auto &targetnameVal = EntDict_StringForKey(entity, "targetname");
+    const auto &targetnameVal = entity.get("targetname");
     if (targetnameVal.length()) {
         bool found = false;
         for (const entdict_t &targetter : all_edicts) {

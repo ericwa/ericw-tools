@@ -930,14 +930,14 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         bool detail = false;
         bool detail_illusionary = false;
         bool detail_fence = false;
-        bool mirrorinside = all_mirrorinside;
+        std::optional<bool> mirrorinside = all_mirrorinside;
 
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
 
-        if (!mirrorinside_set) {
+        if (!mirrorinside) {
             if (options.target_game->id == GAME_QUAKE_II && (contents.native & (Q2_CONTENTS_AUX | Q2_CONTENTS_MIST))) {
                 mirrorinside = true;
             }
@@ -1011,7 +1011,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
                 contents type.
                 */
-            if (hullnum <= 0 && mirrorinside) {
+            if (hullnum <= 0 && mirrorinside.value_or(false)) {
                 contents = {contents.native, CFLAGS_DETAIL_FENCE};
             }
         }
@@ -1025,10 +1025,10 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             contents = options.target_game->create_solid_contents();
 
         // apply extended flags
-        if (mirrorinside) {
+        if (mirrorinside.value_or(false)) {
             contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
         }
-        if (noclipfaces) {
+        if (clipsametype.value_or(false)) {
             contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
         }
         if (func_illusionary_visblocker) {

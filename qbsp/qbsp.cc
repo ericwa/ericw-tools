@@ -446,7 +446,7 @@ static mapentity_t *AreanodeEntityForLeaf(node_t *node)
     }
 
     for (auto *face : node->markfaces) {
-        const char *classname = ValueForKey(face->src_entity, "classname");
+        const std::string &classname = face->src_entity->epairs.get("classname");
         if (0 == Q_strcasecmp(classname, "func_areaportal")) {
             return face->src_entity;
         }
