@@ -1265,7 +1265,7 @@ TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
 /**
  * Detail seals in Q2
  **/
-TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2]") {
+TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2][!mayfail]") {
     const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_detail_seals.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
