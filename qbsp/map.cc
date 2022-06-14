@@ -1655,6 +1655,15 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
             ParseEpair(parser, entity);
     } while (1);
 
+    // replace aliases
+    auto alias_it = options.loaded_entity_defs.find(entity->epairs.get("classname"));
+
+    if (alias_it != options.loaded_entity_defs.end()) {
+        for (auto &pair : alias_it->second) {
+            entity->epairs.set(pair.first, pair.second);
+        }
+    }
+
     return true;
 }
 
