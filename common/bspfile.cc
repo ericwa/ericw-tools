@@ -26,6 +26,8 @@
 
 #include <fmt/format.h>
 
+#include <atomic>
+
 static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
 {
     Q_assert((bytes.size() % 3) == 0);
@@ -183,12 +185,12 @@ public:
         return !string_iequals(name, "hint");
     }
 
-    constexpr contentflags_t create_sky_contents() const
+    contentflags_t create_sky_contents() const
     {
         return {CONTENTS_SKY};
     }
 
-    constexpr contentflags_t create_liquid_contents(const int32_t &liquid_type) const
+    contentflags_t create_liquid_contents(const int32_t &liquid_type) const
     {
         return {liquid_type};
     }
