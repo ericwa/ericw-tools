@@ -1660,7 +1660,9 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
 
     if (alias_it != options.loaded_entity_defs.end()) {
         for (auto &pair : alias_it->second) {
-            entity->epairs.set(pair.first, pair.second);
+            if (pair.first == "classname" || !entity->epairs.has(pair.first)) {
+                entity->epairs.set(pair.first, pair.second);
+            }
         }
     }
 
