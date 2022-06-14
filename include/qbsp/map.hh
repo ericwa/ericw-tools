@@ -43,14 +43,6 @@ struct qbsp_plane_t : qplane3d
     [[nodiscard]] constexpr qbsp_plane_t operator-() const { return {qplane3d::operator-(), type}; }
 };
 
-struct extended_texinfo_t
-{
-    contentflags_t contents = {0};
-    surfflags_t flags = {0};
-    int value = 0;
-    std::string animation;
-};
-
 struct mapface_t
 {
     qbsp_plane_t plane{};

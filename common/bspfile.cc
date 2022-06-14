@@ -746,7 +746,6 @@ struct gamedef_q2_t : public gamedef_t
 
     inline int32_t get_content_type(const contentflags_t &contents) const
     {
-        // fixme-brushbsp: should TRANSLUCENT be here? does it need to be?
         return contents.native & (Q2_ALL_VISIBLE_CONTENTS |
                                      (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
                                          Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));

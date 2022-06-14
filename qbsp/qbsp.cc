@@ -93,6 +93,51 @@ void qbsp_settings::initialize(int argc, const char **argv)
     }
 }
 
+void qbsp_settings::load_texture_def(const std::string &pathname)
+{
+    if (!fs::exists(pathname)) {
+        FError("can't find texturedef file {}", pathname);
+    }
+
+    fs::data data = fs::load(pathname);
+    parser_t parser(data);
+
+    while (true) {
+        if (!parser.parse_token() || parser.at_end()) {
+            break;
+        }
+
+        std::string from = std::move(parser.token);
+
+        if (!parser.parse_token(PARSE_SAMELINE)) {
+            break;
+        }
+        
+        std::string to = std::move(parser.token);
+        std::optional<extended_texinfo_t> texinfo;
+
+        // FIXME: why is this necessary? is it a trailing \0? only happens on release
+        // repro with a texdef with no newline at the end
+        while (std::isspace(to[to.size() - 1])) {
+            to.resize(to.size() - 1);
+        }
+        
+        if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
+            texinfo = extended_texinfo_t { std::stoi(parser.token) };
+        
+            if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
+                texinfo->flags.native = std::stoi(parser.token);
+            }
+        
+            if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
+                texinfo->value = std::stoi(parser.token);
+            }
+        }
+
+        loaded_texture_defs[from] = { to, texinfo };
+    }
+}
+
 void qbsp_settings::postinitialize(int argc, const char **argv)
 {
     // side effects from common
@@ -168,6 +213,11 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         if (!includeskip.isChanged()) {
             includeskip.setValueLocked(true);
         }
+    }
+
+    // load texture defs
+    for (auto &def : texturedefs.values()) {
+        load_texture_def(def);
     }
 
     common_settings::postinitialize(argc, argv);

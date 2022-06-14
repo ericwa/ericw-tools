@@ -1356,11 +1356,20 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             } else {
                 tx_type = TX_QUAKED;
             }
-
-            mapface.raw_info = extinfo.info;
         }
+
+        mapface.raw_info = extinfo.info;
     } else {
         FError("Bad brush format");
+    }
+
+    // if we have texture defs, see if we should remap this one
+    if (auto it = options.loaded_texture_defs.find(mapface.texname); it != options.loaded_texture_defs.end()) {
+        mapface.texname = std::get<0>(it->second);
+        
+        if (std::get<1>(it->second).has_value()) {
+            mapface.raw_info = extinfo.info = std::get<1>(it->second).value();
+        }
     }
 
     // If we're not Q2 but we're loading a Q2 map, just remove the extra
@@ -1379,13 +1388,21 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             extinfo.info = extended_texinfo_t{};
         }
 
-        // remove TRANSLUCENT; it's only meant to be set by the compiler
-        extinfo.info->contents.native &= ~Q2_CONTENTS_TRANSLUCENT;
+        if (extinfo.info->contents.native & Q2_CONTENTS_TRANSLUCENT) {
+            // remove TRANSLUCENT; it's only meant to be set by the compiler
+            extinfo.info->contents.native &= ~Q2_CONTENTS_TRANSLUCENT;
+
+            // but give us detail if we lack trans. this is likely what they intended
+            if (!(extinfo.info->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
+                extinfo.info->contents.native |= Q2_CONTENTS_DETAIL;
+
+                logging::print("face at line {}: swapped TRANSLUCENT for DETAIL\n", mapface.linenum);
+            }
+        }
 
         // This fixes a bug in some old maps.
         if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
-            //logging::print("corrected invalid SKY flag\n");
         }
     }
 

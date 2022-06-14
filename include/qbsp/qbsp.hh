@@ -234,6 +234,7 @@ public:
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
     setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
+    setting_set texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to a texture definition file, which can transform textures in the .map into other textures."};
     setting_enum<filltype_t> filltype{this, "filltype", filltype_t::AUTO, { { "auto", filltype_t::AUTO }, { "inside", filltype_t::INSIDE }, { "outside", filltype_t::OUTSIDE } }, &common_format_group,
         "whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used."};
 
@@ -253,6 +254,10 @@ public:
     const gamedef_t *target_game = nullptr;
     fs::path map_path;
     fs::path bsp_path;
+    std::unordered_map<std::string, std::tuple<std::string, std::optional<extended_texinfo_t>>> loaded_texture_defs;
+
+private:
+    void load_texture_def(const std::string &pathname);
 };
 }; // namespace settings
 

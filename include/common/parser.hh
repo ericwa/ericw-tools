@@ -78,6 +78,10 @@ struct parser_t : parser_base_t
     // duration of the parser's life time
     inline parser_t(const std::string_view &view) : parser_t(&view.front(), view.size()) { }
 
+    // pull from fs::data; note that the data must live for the entire
+    // duration of the parser's life time, and must has_value()
+    inline parser_t(const fs::data &data) : parser_t(data.value().data(), data.value().size()) { }
+
     // pull from C string; made explicit because this is error-prone
     explicit parser_t(const char *str) : parser_t(str, strlen(str)) { }
 
