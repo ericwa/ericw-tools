@@ -99,7 +99,7 @@ public:
     int nummapbrushes = 0;
 
     // key/value pairs in the order they were parsed
-    std::vector<std::pair<std::string, std::string>> epairs;
+    entdict_t epairs;
 
     aabb3d bounds;
     std::vector<std::unique_ptr<brush_t>> brushes;
@@ -188,7 +188,6 @@ void ProcessAreaPortal(mapentity_t *entity);
 bool IsWorldBrushEntity(const mapentity_t *entity);
 bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity);
 void LoadMapFile(void);
-mapentity_t LoadExternalMap(const char *filename);
 void ConvertMapFile(void);
 
 struct quark_tx_info_t
@@ -208,13 +207,10 @@ inline int FindMiptex(const char *name, bool internal = false, bool recursive = 
 int FindTexinfo(const mtexinfo_t &texinfo);
 
 void PrintEntity(const mapentity_t *entity);
-const char *ValueForKey(const mapentity_t *entity, const char *key);
-void SetKeyValue(mapentity_t *entity, const char *key, const char *value);
-int GetVectorForKey(const mapentity_t *entity, const char *szKey, qvec3d &vec);
 
 void WriteEntitiesToString();
 
-void FixRotateOrigin(mapentity_t *entity);
+qvec3d FixRotateOrigin(mapentity_t *entity);
 
 /** Special ID for the collision-only hull; used for wrbrushes/Q2 */
 constexpr int HULL_COLLISION = -1;

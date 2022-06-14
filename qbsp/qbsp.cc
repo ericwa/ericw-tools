@@ -746,7 +746,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
             if (hullnum <= 0)
                 logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
-            SetKeyValue(entity, "model", mod.c_str());
+            entity->epairs.set("model", mod);
         }
     }
 
@@ -781,8 +781,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     // we're discarding the brush
     if (discarded_trigger) {
         entity->brushes.clear();
-        SetKeyValue(entity, "mins", fmt::to_string(entity->bounds.mins()).c_str());
-        SetKeyValue(entity, "maxs", fmt::to_string(entity->bounds.maxs()).c_str());
+        entity->epairs.set("mins", fmt::to_string(entity->bounds.mins()));
+        entity->epairs.set("maxs", fmt::to_string(entity->bounds.maxs()));
         return;
     }
 
@@ -913,7 +913,6 @@ UpdateEntLump
 static void UpdateEntLump(void)
 {
     int modnum;
-    char modname[10];
     mapentity_t *entity;
 
     logging::print(logging::flag::STAT, "     Updating entities lump...\n");
@@ -925,11 +924,11 @@ static void UpdateEntLump(void)
         /* Special handling for misc_external_map.
            Duplicates some logic from ProcessExternalMapEntity. */
         bool is_misc_external_map = false;
-        if (!Q_strcasecmp(ValueForKey(entity, "classname"), "misc_external_map")) {
-            const char *new_classname = ValueForKey(entity, "_external_map_classname");
+        if (!Q_strcasecmp(entity->epairs.get("classname"), "misc_external_map")) {
+            const std::string &new_classname = entity->epairs.get("_external_map_classname");
 
-            SetKeyValue(entity, "classname", new_classname);
-            SetKeyValue(entity, "origin", "0 0 0");
+            entity->epairs.set("classname", new_classname);
+            entity->epairs.set("origin", "0 0 0");
 
             /* Note: the classname could have switched to
              * a IsWorldBrushEntity entity (func_group, func_detail),
@@ -945,14 +944,14 @@ static void UpdateEntLump(void)
         if (IsWorldBrushEntity(entity) || IsNonRemoveWorldBrushEntity(entity))
             continue;
 
-        snprintf(modname, sizeof(modname), "*%d", modnum);
-        SetKeyValue(entity, "model", modname);
+        entity->epairs.set("model", fmt::format("*{}", modnum));
         modnum++;
 
         /* Do extra work for rotating entities if necessary */
-        const char *classname = ValueForKey(entity, "classname");
-        if (!strncmp(classname, "rotate_", 7))
+        const std::string &classname = entity->epairs.get("classname");
+        if (!classname.compare(0, 7, "rotate_")) {
             FixRotateOrigin(entity);
+        }
     }
 
     WriteEntitiesToString();
@@ -1094,10 +1093,10 @@ static void BSPX_CreateBrushList(void)
         if (ent == map.world_entity()) {
             modelnum = 0;
         } else {
-            const char *mod = ValueForKey(ent, "model");
-            if (*mod != '*')
+            const std::string &mod = ent->epairs.get("model");
+            if (mod[0] != '*')
                 continue;
-            modelnum = atoi(mod + 1);
+            modelnum = std::stoi(mod.substr(1));
         }
 
         ent->brushes.clear();
@@ -1168,28 +1167,33 @@ void EnsureTexturesLoaded()
         return;
 
     map.wadlist_tried_loading = true;
-
-    const char *wadstring = ValueForKey(map.world_entity(), "_wad");
-    if (!wadstring[0])
-        wadstring = ValueForKey(map.world_entity(), "wad");
-    if (!wadstring[0])
-    {
-        // Q2 doesn't need this
-        if (options.target_game->id != GAME_QUAKE_II)
-            logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
+    
+    // Q2 doesn't need this
+    if (options.target_game->id == GAME_QUAKE_II) {
+        return;
     }
+
+    std::string_view wadstring = map.world_entity()->epairs.get("_wad");
+
+    if (wadstring.empty()) {
+        wadstring = map.world_entity()->epairs.get("wad");
+    }
+
+    if (wadstring.empty())
+        logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
     else
         WADList_Init(wadstring);
 
     if (!map.wadlist.size()) {
-        if (wadstring[0])
+        if (!wadstring.empty()) {
             logging::print("WARNING: No valid WAD filenames in worldmodel\n");
+        }
 
         /* Try the default wad name */
         fs::path defaultwad = options.map_path;
         defaultwad.replace_extension("wad");
 
-        WADList_Init(defaultwad.string().c_str());
+        WADList_Init(defaultwad.string());
 
         if (map.wadlist.size())
             logging::print("Using default WAD: {}\n", defaultwad);

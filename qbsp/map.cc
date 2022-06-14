@@ -339,7 +339,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
 {
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
-    const int shadow = atoi(ValueForKey(entity, "_shadow"));
+    const int shadow = entity->epairs.get_int("_shadow");
     // These flags are pulled from surf flags in Q2.
     // TODO: the Q1 version of this block can now be moved into texinfo
     // loading by shoving them inside of texinfo.flags like
@@ -366,13 +366,13 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     }
     if (IsNoExpandName(texname))
         flags.no_expand = true;
-    if (atoi(ValueForKey(entity, "_dirt")) == -1)
+    if (entity->epairs.get_int("_dirt") == -1)
         flags.no_dirt = true;
-    if (atoi(ValueForKey(entity, "_bounce")) == -1)
+    if (entity->epairs.get_int("_bounce") == -1)
         flags.no_bounce = true;
-    if (atoi(ValueForKey(entity, "_minlight")) == -1)
+    if (entity->epairs.get_int("_minlight") == -1)
         flags.no_minlight = true;
-    if (atoi(ValueForKey(entity, "_lightignore")) == 1)
+    if (entity->epairs.get_int("_lightignore") == 1)
         flags.light_ignore = true;
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
@@ -382,15 +382,15 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
             key += std::to_string(i);
         }
 
-        const char *excludeTex = ValueForKey(entity, key.c_str());
-        if (strlen(excludeTex) > 0 && !Q_strcasecmp(texname, excludeTex)) {
+        const std::string &excludeTex = entity->epairs.get(key.c_str());
+        if (!excludeTex.empty() && !Q_strcasecmp(texname, excludeTex)) {
             flags.no_minlight = true;
         }
     }
 
     if (shadow == -1)
         flags.no_shadow = true;
-    if (!Q_strcasecmp("func_detail_illusionary", ValueForKey(entity, "classname"))) {
+    if (!Q_strcasecmp("func_detail_illusionary", entity->epairs.get("classname"))) {
         /* Mark these entities as TEX_NOSHADOW unless the mapper set "_shadow" "1" */
         if (shadow != 1) {
             flags.no_shadow = true;
@@ -398,8 +398,8 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     }
 
     // handle "_phong" and "_phong_angle" and "_phong_angle_concave"
-    vec_t phongangle = atof(ValueForKey(entity, "_phong_angle"));
-    const int phong = atoi(ValueForKey(entity, "_phong"));
+    vec_t phongangle = entity->epairs.get_float("_phong_angle");
+    const int phong = entity->epairs.get_int("_phong");
 
     if (phong && (phongangle == 0.0)) {
         phongangle = 89.0; // default _phong_angle
@@ -409,13 +409,11 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
         flags.phong_angle = clamp(phongangle, 0.0, 360.0);
     }
 
-    const vec_t phong_angle_concave = atof(ValueForKey(entity, "_phong_angle_concave"));
-    {
+    const vec_t phong_angle_concave = entity->epairs.get_float("_phong_angle_concave");
         flags.phong_angle_concave = clamp(phong_angle_concave, 0.0, 360.0);
-    }
 
     // handle "_minlight"
-    const vec_t minlight = atof(ValueForKey(entity, "_minlight"));
+    const vec_t minlight = entity->epairs.get_float("_minlight");
     if (minlight > 0) {
         // CHECK: allow > 510 now that we're float? or is it not worth it since it will
         // be beyond max?
@@ -426,9 +424,9 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     {
         qvec3d mincolor{};
 
-        GetVectorForKey(entity, "_mincolor", mincolor);
+        entity->epairs.get_vector("_mincolor", mincolor);
         if (qv::epsilonEmpty(mincolor, EQUAL_EPSILON)) {
-            GetVectorForKey(entity, "_minlight_color", mincolor);
+            entity->epairs.get_vector("_minlight_color", mincolor);
         }
 
         mincolor = qv::normalize_color_format(mincolor);
@@ -440,7 +438,7 @@ static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity
     }
 
     // handle "_light_alpha"
-    const vec_t lightalpha = atof(ValueForKey(entity, "_light_alpha"));
+    const vec_t lightalpha = entity->epairs.get_float("_light_alpha");
     if (lightalpha != 0.0) {
         flags.light_alpha = clamp(lightalpha, 0.0, 1.0);
     }
@@ -454,10 +452,10 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
 
     parser.parse_token(PARSE_SAMELINE);
 
-    SetKeyValue(entity, key.c_str(), parser.token.c_str());
+    entity->epairs.set(key, parser.token);
 
     if (string_iequals(key, "origin")) {
-        GetVectorForKey(entity, key.c_str(), entity->origin);
+        entity->epairs.get_vector(key, entity->origin);
     }
 }
 
@@ -1746,19 +1744,71 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
     face->set_texvecs(newtexvecs);
 }
 
+/**
+ * Loads an external .map file.
+ *
+ * The loaded brushes/planes/etc. will be stored in the global mapdata_t.
+ */
+static mapentity_t LoadExternalMap(const std::string &filename)
+{
+    mapentity_t dest{};
+
+    auto file = fs::load(filename);
+
+    if (!file) {
+        FError("Couldn't load external map file \"{}\".\n", filename);
+    }
+
+    parser_t parser(file->data(), file->size());
+
+    // parse the worldspawn
+    if (!ParseEntity(parser, &dest)) {
+        FError("'{}': Couldn't parse worldspawn entity\n", filename);
+    }
+    const std::string &classname = dest.epairs.get("classname");
+    if (Q_strcasecmp("worldspawn", classname)) {
+        FError("'{}': Expected first entity to be worldspawn, got: '{}'\n", filename, classname);
+    }
+
+    // parse any subsequent entities, move any brushes to worldspawn
+    mapentity_t dummy{};
+    while (ParseEntity(parser, &dummy)) {
+        // this is kind of fragile, but move the brushes to the worldspawn.
+        if (dummy.nummapbrushes) {
+            // special case for when the external map's worldspawn has no brushes
+            if (!dest.firstmapbrush) {
+                dest.firstmapbrush = dummy.firstmapbrush;
+            }
+            dest.nummapbrushes += dummy.nummapbrushes;
+        }
+
+        // clear for the next loop iteration
+        dummy = mapentity_t();
+    }
+
+    if (!dest.nummapbrushes) {
+        FError("Expected at least one brush for external map {}\n", filename);
+    }
+
+    logging::print(logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
+
+    return dest;
+}
+
 void ProcessExternalMapEntity(mapentity_t *entity)
 {
     Q_assert(!options.onlyents.value());
 
-    const char *classname = ValueForKey(entity, "classname");
+    const std::string &classname = entity->epairs.get("classname");
     if (Q_strcasecmp(classname, "misc_external_map"))
         return;
 
-    const char *file = ValueForKey(entity, "_external_map");
-    const char *new_classname = ValueForKey(entity, "_external_map_classname");
+    const std::string &file = entity->epairs.get("_external_map");
+    const std::string &new_classname = entity->epairs.get("_external_map_classname");
 
-    Q_assert(file && file[0]);
-    Q_assert(new_classname && new_classname[0]);
+    // FIXME: throw specific error message instead? this might be confusing for mappers
+    Q_assert(!file.empty());
+    Q_assert(!new_classname.empty());
 
     Q_assert(0 == entity->nummapbrushes); // misc_external_map must be a point entity
 
@@ -1769,16 +1819,16 @@ void ProcessExternalMapEntity(mapentity_t *entity)
     entity->nummapbrushes = external_worldspawn.nummapbrushes;
 
     qvec3d origin;
-    GetVectorForKey(entity, "origin", origin);
+    entity->epairs.get_vector("origin", origin);
 
     qvec3d angles;
-    GetVectorForKey(entity, "_external_map_angles", angles);
+    entity->epairs.get_vector("_external_map_angles", angles);
     if (qv::epsilonEmpty(angles, EQUAL_EPSILON)) {
-        angles[1] = atof(ValueForKey(entity, "_external_map_angle"));
+        angles[1] = entity->epairs.get_float("_external_map_angle");
     }
 
     qvec3d scale;
-    int ncomps = GetVectorForKey(entity, "_external_map_scale", scale);
+    int ncomps = entity->epairs.get_vector("_external_map_scale", scale);
     if (ncomps < 3) {
         if (scale[0] == 0.0) {
             scale = 1;
@@ -1799,16 +1849,16 @@ void ProcessExternalMapEntity(mapentity_t *entity)
         }
     }
 
-    SetKeyValue(entity, "classname", new_classname);
+    entity->epairs.set("classname", new_classname);
     // FIXME: Should really just delete the origin key?
-    SetKeyValue(entity, "origin", "0 0 0");
+    entity->epairs.set("origin", "0 0 0");
 }
 
 void ProcessAreaPortal(mapentity_t *entity)
 {
     Q_assert(!options.onlyents.value());
 
-    const char *classname = ValueForKey(entity, "classname");
+    const std::string &classname = entity->epairs.get("classname");
 
     if (Q_strcasecmp(classname, "func_areaportal"))
         return;
@@ -1829,7 +1879,7 @@ void ProcessAreaPortal(mapentity_t *entity)
     }
     entity->areaportalnum = ++map.numareaportals;
     // set the portal number as "style"
-    SetKeyValue(entity, "style", std::to_string(map.numareaportals).c_str());
+    entity->epairs.set("style", std::to_string(map.numareaportals));
 }
 
 /*
@@ -1838,7 +1888,7 @@ void ProcessAreaPortal(mapentity_t *entity)
  */
 bool IsWorldBrushEntity(const mapentity_t *entity)
 {
-    const char *classname = ValueForKey(entity, "classname");
+    const std::string &classname = entity->epairs.get("classname");
 
     /*
      These entities should have their classname remapped to the value of
@@ -1867,63 +1917,12 @@ bool IsWorldBrushEntity(const mapentity_t *entity)
  */
 bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity)
 {
-    const char *classname = ValueForKey(entity, "classname");
+    const std::string &classname = entity->epairs.get("classname");
 
     if (!Q_strcasecmp(classname, "func_areaportal"))
         return true;
 
     return false;
-}
-
-/**
- * Loads an external .map file.
- *
- * The loaded brushes/planes/etc. will be stored in the global mapdata_t.
- */
-mapentity_t LoadExternalMap(const char *filename)
-{
-    mapentity_t dest{};
-
-    auto file = fs::load(filename);
-
-    if (!file) {
-        FError("Couldn't load external map file \"{}\".\n", filename);
-    }
-
-    parser_t parser(file->data(), file->size());
-
-    // parse the worldspawn
-    if (!ParseEntity(parser, &dest)) {
-        FError("'{}': Couldn't parse worldspawn entity\n", filename);
-    }
-    const char *classname = ValueForKey(&dest, "classname");
-    if (Q_strcasecmp("worldspawn", classname)) {
-        FError("'{}': Expected first entity to be worldspawn, got: '{}'\n", filename, classname);
-    }
-
-    // parse any subsequent entities, move any brushes to worldspawn
-    mapentity_t dummy{};
-    while (ParseEntity(parser, &dummy)) {
-        // this is kind of fragile, but move the brushes to the worldspawn.
-        if (dummy.nummapbrushes) {
-            // special case for when the external map's worldspawn has no brushes
-            if (!dest.firstmapbrush) {
-                dest.firstmapbrush = dummy.firstmapbrush;
-            }
-            dest.nummapbrushes += dummy.nummapbrushes;
-        }
-
-        // clear for the next loop iteration
-        dummy = mapentity_t();
-    }
-
-    if (!dest.nummapbrushes) {
-        FError("Expected at least one brush for external map {}\n", filename);
-    }
-
-    logging::print(logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
-
-    return dest;
 }
 
 void LoadMapFile(void)
@@ -2164,37 +2163,6 @@ void PrintEntity(const mapentity_t *entity)
         logging::print(logging::flag::STAT, "     {:20} : {}\n", epair.first, epair.second);
 }
 
-const char *ValueForKey(const mapentity_t *entity, const char *key)
-{
-    for (auto &epair : entity->epairs) {
-        if (!Q_strcasecmp(key, epair.first.c_str())) {
-            return epair.second.c_str();
-        }
-    }
-    return "";
-}
-
-void SetKeyValue(mapentity_t *entity, const char *key, const char *value)
-{
-    for (auto &epair : entity->epairs) {
-        if (!Q_strcasecmp(key, epair.first.c_str())) {
-            epair.second = value;
-            return;
-        }
-    }
-    entity->epairs.emplace_back(key, value);
-}
-
-/**
- * returnts number of vector components read
- */
-int GetVectorForKey(const mapentity_t *entity, const char *szKey, qvec3d &vec)
-{
-    const char *value = ValueForKey(entity, szKey);
-    vec = {};
-    return sscanf(value, "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
-}
-
 void WriteEntitiesToString()
 {
     for (auto &entity : map.entities) {
@@ -2208,13 +2176,13 @@ void WriteEntitiesToString()
         for (auto &ep : entity.epairs) {
 
             if (ep.first.size() >= options.target_game->max_entity_key - 1) {
-                logging::print("WARNING: {} at {} has long key {} (length {} >= {})\n", ValueForKey(&entity, "classname"),
+                logging::print("WARNING: {} at {} has long key {} (length {} >= {})\n", entity.epairs.get("classname"),
                     entity.origin, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
             }
 
             if (ep.second.size() >= options.target_game->max_entity_value - 1) {
                 logging::print("WARNING: {} at {} has long value for key {} (length {} >= {})\n",
-                    ValueForKey(&entity, "classname"), entity.origin, ep.first, ep.second.size(),
+                    entity.epairs.get("classname"), entity.origin, ep.first, ep.second.size(),
                     options.target_game->max_entity_value - 1);
             }
 

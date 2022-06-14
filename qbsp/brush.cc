@@ -297,11 +297,11 @@ int FindPositivePlane(const qplane3d &plane, side_t *side)
 FindTargetEntity
 =================
 */
-static const mapentity_t *FindTargetEntity(const char *target)
+static const mapentity_t *FindTargetEntity(const std::string &target)
 {
     for (const auto &entity : map.entities) {
-        const char *name = ValueForKey(&entity, "targetname");
-        if (!Q_strcasecmp(target, name))
+        const std::string &name = entity.epairs.get("targetname");
+        if (!string_iequals(target, name))
             return &entity;
     }
 
@@ -313,25 +313,26 @@ static const mapentity_t *FindTargetEntity(const char *target)
 FixRotateOrigin
 =================
 */
-void FixRotateOrigin(mapentity_t *entity)
+qvec3d FixRotateOrigin(mapentity_t *entity)
 {
-    const char *search = ValueForKey(entity, "target");
+    const std::string &search = entity->epairs.get("target");
     const mapentity_t *target = nullptr;
 
-    if (search[0])
+    if (!search.empty()) {
         target = FindTargetEntity(search);
+    }
 
     qvec3d offset;
 
     if (target) {
-        GetVectorForKey(target, "origin", offset);
+        target->epairs.get_vector("origin", offset);
     } else {
-        search = ValueForKey(entity, "classname");
-        logging::print("WARNING: No target for rotation entity \"{}\"", search);
+        logging::print("WARNING: No target for rotation entity \"{}\"", entity->epairs.get("classname"));
         offset = {};
     }
 
-    SetKeyValue(entity, "origin", qv::to_string(offset).c_str());
+    entity->epairs.set("origin", qv::to_string(offset));
+    return offset;
 }
 
 static bool Brush_IsHint(const hullbrush_t &brush)
@@ -806,15 +807,13 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
 
 static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, std::any &stats)
 {
-    const char *classname;
     const mapbrush_t *mapbrush;
     qvec3d rotate_offset{};
     int i;
     int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
-    classname = ValueForKey(src, "classname");
-
+    const std::string &classname = src->epairs.get("classname");
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
 
@@ -832,7 +831,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             if (brush) {
                 rotate_offset = brush->bounds.centroid();
 
-                SetKeyValue(dst, "origin", qv::to_string(rotate_offset).c_str());
+                dst->epairs.set("origin", qv::to_string(rotate_offset));
 
                 rottype = rotation_t::origin_brush;
             }
@@ -841,9 +840,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
     /* Hipnotic rotation */
     if (rottype == rotation_t::none) {
-        if (!strncmp(classname, "rotate_", 7)) {
-            FixRotateOrigin(dst);
-            GetVectorForKey(dst, "origin", rotate_offset);
+        if (!Q_strncasecmp(classname, "rotate_", 7)) {
+            rotate_offset = FixRotateOrigin(dst);
             rottype = rotation_t::hipnotic;
         }
     }
@@ -867,7 +865,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     }
 
     /* entities with custom lmscales are important for the qbsp to know about */
-    i = 16 * atof(ValueForKey(src, "_lmscale"));
+    i = 16 * src->epairs.get_int("_lmscale");
     if (!i)
         i = 16; // if 0, pick a suitable default
     lmshift = 0;
@@ -877,18 +875,24 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     }
 
     /* _mirrorinside key (for func_water etc.) */
-    const bool mirrorinside_set = *ValueForKey(src, "_mirrorinside");
-    const std::optional<bool> mirrorinside = mirrorinside_set ? decltype(mirrorinside)(atoi(ValueForKey(src, "_mirrorinside")) ? true : false) : std::nullopt;
+    std::optional<bool> mirrorinside;
+
+    if (src->epairs.has("_mirrorinside")) {
+        mirrorinside = src->epairs.get_int("_mirrorinside") ? true : false;
+    }
 
     /* _noclipfaces */
-    const bool noclipfaces_set = *ValueForKey(src, "_noclipfaces");
-    const std::optional<bool> clipsametype = noclipfaces_set ? decltype(clipsametype)(atoi(ValueForKey(src, "_noclipfaces")) ? false : true) : std::nullopt;
+    std::optional<bool> clipsametype;
+
+    if (src->epairs.has("_noclipfaces")) {
+        clipsametype = src->epairs.get_int("_noclipfaces") ? false : true;
+    }
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
-    if (atoi(ValueForKey(src, "_omitbrushes")))
+    if (src->epairs.get_int("_omitbrushes"))
         return;
 
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {

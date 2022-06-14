@@ -98,7 +98,7 @@ public:
     settings::setting_string suntexture{this, "suntexture", ""};
     settings::setting_bool nostaticlight{this, "nostaticlight", false};
 
-    const char *classname() const;
+    const std::string &classname() const;
 
     const light_formula_t &getFormula() const { return formula.value(); }
 
@@ -127,11 +127,6 @@ const std::vector<std::unique_ptr<light_t>> &GetLights();
 const std::vector<sun_t> &GetSuns();
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
-const char *ValueForKey(const light_t *ent, const char *key);
-qvec3d EntDict_VectorForKey(const entdict_t &ent, const std::string &key);
-
-void SetWorldKeyValue(const std::string &key, const std::string &value);
-const std::string &WorldValueForKey(const std::string &key);
 
 void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
 void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
@@ -140,3 +135,5 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp);
 aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point);
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
+
+entdict_t &WorldEnt();

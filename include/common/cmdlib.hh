@@ -28,6 +28,7 @@
 #include <ctime>
 #include <cstdarg>
 #include <string>
+#include <string_view>
 #include <memory>
 #include <fmt/format.h>
 #include <common/log.hh>
@@ -36,7 +37,7 @@
 #include <strings.h>
 #endif
 
-inline int32_t Q_strncasecmp(const char *a, const char *b, size_t maxcount)
+inline int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size_t maxcount)
 {
     return
 #ifdef _WIN32
@@ -46,10 +47,10 @@ inline int32_t Q_strncasecmp(const char *a, const char *b, size_t maxcount)
 #else
     strnicmp
 #endif
-    (a, b, maxcount);
+    (a.data(), b.data(), maxcount);
 }
 
-inline int32_t Q_strcasecmp(const char *a, const char *b)
+inline int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b)
 {
     return
 #ifdef _WIN32
@@ -59,7 +60,7 @@ inline int32_t Q_strcasecmp(const char *a, const char *b)
 #else
     stricmp
 #endif
-    (a, b);
+    (a.data(), b.data());
 }
 
 bool string_iequals(const std::string &a, const std::string &b); // mxd

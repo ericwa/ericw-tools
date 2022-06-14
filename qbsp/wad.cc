@@ -148,18 +148,20 @@ static void WADList_OpenWad(const fs::path &fpath, bool external)
     }
 }
 
-void WADList_Init(const char *wadstring)
+void WADList_Init(const std::string_view &wadstring)
 {
-    if (!wadstring || !wadstring[0])
+    if (wadstring.empty())
         return;
 
-    const int len = strlen(wadstring);
-    const char *pos = wadstring;
-    while (pos - wadstring < len) {
+    const size_t len = wadstring.size();
+    const char *pos = wadstring.data();
+
+    while (pos - wadstring.data() < len) {
         // split string by ';' and copy the current component into fpath
         const char *const fname = pos;
-        while (*pos && *pos != ';')
+        while (*pos && *pos != ';') {
             pos++;
+        }
 
         const size_t fpathLen = pos - fname;
         std::string fpathstr;

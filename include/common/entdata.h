@@ -24,9 +24,13 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <string_view>
+#include "qvec.hh"
 
 using keyvalue_t = std::pair<std::string, std::string>;
 using keyvalues_t = std::vector<keyvalue_t>;
+
+struct parser_base_t;
 
 class entdict_t
 {
@@ -35,24 +39,35 @@ class entdict_t
 public:
     entdict_t(std::initializer_list<keyvalue_t> l);
     entdict_t();
+    inline entdict_t(parser_base_t &parser) { parse(parser); }
 
-    const std::string &get(const std::string &key) const;
-    void set(const std::string &key, const std::string &value);
-    void remove(const std::string &key);
+    const std::string &get(const std::string_view &key) const;
+    vec_t get_float(const std::string_view &key) const;
+    int32_t get_int(const std::string_view &key) const;
+    // returns number of vector components read
+    int32_t get_vector(const std::string_view &key, qvec3d &out) const;
+    void set(const std::string_view &key, const std::string_view &value);
+    void remove(const std::string_view &key);
+    void rename(const std::string_view &from, const std::string_view &to);
 
-    keyvalues_t::iterator find(std::string_view key);
-    keyvalues_t::const_iterator find(std::string_view key) const;
+    keyvalues_t::iterator find(const std::string_view &key);
+    keyvalues_t::const_iterator find(const std::string_view &key) const;
 
-    keyvalues_t::const_iterator begin() const;
-    keyvalues_t::const_iterator end() const;
+    bool has(const std::string_view &key) const;
 
-    keyvalues_t::iterator begin();
-    keyvalues_t::iterator end();
+    inline keyvalues_t::const_iterator entdict_t::begin() const { return keyvalues.begin(); }
+    inline keyvalues_t::const_iterator entdict_t::end() const { return keyvalues.end(); }
+
+    inline keyvalues_t::iterator entdict_t::begin() { return keyvalues.begin(); }
+    inline keyvalues_t::iterator entdict_t::end() { return keyvalues.end(); }
+
+    inline size_t size() { return keyvalues.size(); }
+
+    // parse dictionary out of the input parser.
+    // the parser must be at a position where { is
+    // the next token parsed.
+    void parse(parser_base_t &parser);
 };
 
 std::vector<entdict_t> EntData_Parse(const std::string &entdata);
 std::string EntData_Write(const std::vector<entdict_t> &ents);
-const std::string &EntDict_StringForKey(const entdict_t &dict, const std::string &key);
-float EntDict_FloatForKey(const entdict_t &dict, const std::string &key);
-void EntDict_RemoveValueForKey(entdict_t &dict, const std::string &key);
-void EntDict_RenameKey(entdict_t &dict, const std::string &from, const std::string &to);

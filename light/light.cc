@@ -345,10 +345,10 @@ static void FindModelInfo(const mbsp_t *bsp)
     }
 
     if (options.lmscale.isChanged()) {
-        SetWorldKeyValue("_lightmap_scale", options.lmscale.stringValue());
+        WorldEnt().set("_lightmap_scale", options.lmscale.stringValue());
     }
 
-    float lightmapscale = atoi(WorldValueForKey("_lightmap_scale").c_str());
+    float lightmapscale = WorldEnt().get_int("_lightmap_scale");
     if (!lightmapscale)
         lightmapscale = 16; /* the default */
     if (lightmapscale <= 0)
@@ -401,7 +401,7 @@ static void FindModelInfo(const mbsp_t *bsp)
         }
 
         /* Set up the offset for rotate_* entities */
-        info->offset = EntDict_VectorForKey(*entdict, "origin");
+        entdict->get_vector("origin", info->offset);
     }
 
     Q_assert(modelinfo.size() == bsp->dmodels.size());

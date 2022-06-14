@@ -49,9 +49,9 @@ static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
 
-const char *light_t::classname() const
+const std::string &light_t::classname() const
 {
-    return ValueForKey(this, "classname");
+    return epairs->get("classname");
 }
 
 /*
@@ -63,21 +63,12 @@ const char *light_t::classname() const
 
 static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 
-static entdict_t &WorldEnt()
+entdict_t &WorldEnt()
 {
     if (entdicts.size() == 0 || entdicts.at(0).get("classname") != "worldspawn") {
         Error("WorldEnt() failed to get worldspawn");
     }
     return entdicts.at(0);
-}
-
-void SetWorldKeyValue(const std::string &key, const std::string &value)
-{
-    WorldEnt().set(key, value);
-}
-const std::string &WorldValueForKey(const std::string &key)
-{
-    return EntDict_StringForKey(WorldEnt(), key);
 }
 
 /**
@@ -132,12 +123,13 @@ std::string TargetnameForLightStyle(int style)
 static void MatchTargets(void)
 {
     for (auto &entity : all_lights) {
-        std::string targetstr{ValueForKey(entity.get(), "target")};
-        if (!targetstr.length())
+        const std::string &targetstr = entity->epairs->get("target");
+        if (targetstr.empty()) {
             continue;
+        }
 
         for (const entdict_t &target : entdicts) {
-            if (string_iequals(targetstr, EntDict_StringForKey(target, "targetname"))) {
+            if (string_iequals(targetstr, target.get("targetname"))) {
                 entity->targetent = &target;
                 break;
             }
@@ -148,18 +140,18 @@ static void MatchTargets(void)
 static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t &entity)
 {
     // get the submodel's bbox if it's a brush entity
-    if (bsp != nullptr && EntDict_StringForKey(entity, "origin") == "" && EntDict_StringForKey(entity, "model") != "") {
-        const std::string &submodel_str = EntDict_StringForKey(entity, "model");
+    if (bsp != nullptr && entity.get("origin") == "" && entity.get("model") != "") {
+        const std::string &submodel_str = entity.get("model");
         const dmodelh2_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
             return fmt::format("brush entity with mins [{}] maxs [{}] ({})", info->mins, info->maxs,
-                EntDict_StringForKey(entity, "classname"));
+                entity.get("classname"));
         }
     }
 
     return fmt::format(
-        "entity at ({}) ({})", EntDict_StringForKey(entity, "origin"), EntDict_StringForKey(entity, "classname"));
+        "entity at ({}) ({})", entity.get("origin"), entity.get("classname"));
 }
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
@@ -181,7 +173,8 @@ static void SetupSpotlights(const settings::worldspawn_keys &cfg)
     for (auto &entity : all_lights) {
         vec_t targetdist = 0.0; // mxd
         if (entity->targetent) {
-            qvec3d targetOrigin = EntDict_VectorForKey(*entity->targetent, "origin");
+            qvec3d targetOrigin;
+            entity->targetent->get_vector("origin", targetOrigin);
             entity->spotvec = targetOrigin - entity->origin.value();
             targetdist = qv::normalizeInPlace(entity->spotvec); // mxd
             entity->spotlight = true;
@@ -354,7 +347,8 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
             // Set sun vector
             qvec3d sunvec;
             if (entity->targetent) {
-                qvec3d target_pos = EntDict_VectorForKey(*entity->targetent, "origin");
+                qvec3d target_pos;
+                entity->targetent->get_vector("origin", target_pos);
                 sunvec = target_pos - entity->origin.value();
             } else if (qv::length2(entity->mangle.value()) > 0) {
                 sunvec = entity->mangle.value();
@@ -778,6 +772,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     for (const auto &epair : WorldEnt()) {
         SetGlobalSetting(epair.first, epair.second, false);
     }
+
     /* apply side effects of settings (in particular "dirt") */
     FixupGlobalSettings();
     // NOTE: cfg is not valid until now.
@@ -787,19 +782,20 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     for (auto &entdict : entdicts) {
 
         // fix "lightmap_scale"
-        const std::string &lmscale = EntDict_StringForKey(entdict, "lightmap_scale");
+        const std::string &lmscale = entdict.get("lightmap_scale");
         if (!lmscale.empty()) {
-            logging::print("lightmap_scale should be _lightmap_scale\n");
+            // FIXME: line number
+            logging::print("WARNING: lightmap_scale should be _lightmap_scale\n");
 
-            EntDict_RemoveValueForKey(entdict, "lightmap_scale");
+            entdict.remove("lightmap_scale");
             entdict.set("_lightmap_scale", lmscale);
         }
 
         // setup light styles for switchable lights
         // NOTE: this also handles "_sun" "1" entities without any extra work.
-        const std::string &classname = EntDict_StringForKey(entdict, "classname");
+        const std::string &classname = entdict.get("classname");
         if (classname.find("light") == 0) {
-            const std::string &targetname = EntDict_StringForKey(entdict, "targetname");
+            const std::string &targetname = entdict.get("targetname");
             if (!targetname.empty()) {
                 const int style = LightStyleForTargetname(cfg, targetname);
                 entdict.set("style", std::to_string(style));
@@ -807,8 +803,8 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
         }
 
         // setup light styles for dynamic shadow entities
-        if (EntDict_StringForKey(entdict, "_switchableshadow") == "1") {
-            const std::string &targetname = EntDict_StringForKey(entdict, "targetname");
+        if (entdict.get_int("_switchableshadow") == 1) {
+            const std::string &targetname = entdict.get("targetname");
             // if targetname is "", generates a new unique lightstyle
             const int style = LightStyleForTargetname(cfg, targetname);
             // TODO: Configurable key?
@@ -832,27 +828,27 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
         /*
          * Check light entity fields and any global settings in worldspawn.
          */
-        if (EntDict_StringForKey(entdict, "classname").find("light") == 0) {
+        if (entdict.get("classname").find("light") == 0) {
             // mxd. Convert some Arghrad3 settings...
             if (options.arghradcompat.value()) {
-                EntDict_RenameKey(entdict, "_falloff", "delay"); // _falloff -> delay
-                EntDict_RenameKey(entdict, "_distance", "_falloff"); // _distance -> _falloff
-                EntDict_RenameKey(entdict, "_fade", "wait"); // _fade -> wait
+                entdict.rename("_falloff", "delay"); // _falloff -> delay
+                entdict.rename("_distance", "_falloff"); // _distance -> _falloff
+                entdict.rename("_fade", "wait"); // _fade -> wait
 
                 // _angfade or _angwait -> _anglescale
-                EntDict_RenameKey(entdict, "_angfade", "_anglescale");
-                EntDict_RenameKey(entdict, "_angwait", "_anglescale");
+                entdict.rename("_angfade", "_anglescale");
+                entdict.rename("_angwait", "_anglescale");
                 const auto anglescale = entdict.find("_anglescale");
                 if (anglescale != entdict.end()) {
                     // Convert from 0..2 to 0..1 range...
-                    const vec_t val = min(1.0, max(0.0, EntDict_FloatForKey(entdict, "_anglescale") * 0.5));
+                    const vec_t val = min(1.0, max(0.0, entdict.get_float("_anglescale") * 0.5));
                     entdict.set("_anglescale", std::to_string(val));
                 }
             }
 
             // Skip non-switchable lights if we're skipping world lighting
-            if (options.nolighting.value() && EntDict_StringForKey(entdict, "style").empty() &&
-                EntDict_StringForKey(entdict, "switchshadstyle").empty()) {
+            if (options.nolighting.value() && entdict.get("style").empty() &&
+                entdict.get("switchshadstyle").empty()) {
                 continue;
             }
 
@@ -885,7 +881,8 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
                 if (!entity->projangle.isChanged()) { // mxd
                     // Copy from angles
-                    qvec3d angles = EntDict_VectorForKey(entdict, "angles");
+                    qvec3d angles;
+                    entdict.get_vector("angles", angles);
                     qvec3d mangle{angles[1], -angles[0], angles[2]}; // -pitch yaw roll -> yaw pitch roll
                     entity->projangle.setValue(mangle);
 
@@ -1076,19 +1073,11 @@ const char *ValueForKey(const light_t *ent, const char *key)
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value)
 {
     for (const auto &entdict : entdicts) {
-        if (EntDict_StringForKey(entdict, key) == value) {
+        if (entdict.get(key) == value) {
             return &entdict;
         }
     }
     return nullptr;
-}
-
-qvec3d EntDict_VectorForKey(const entdict_t &ent, const std::string &key)
-{
-    const std::string &value = EntDict_StringForKey(ent, key);
-    qvec3d vec{};
-    sscanf(value.c_str(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
-    return vec;
 }
 
 /*
@@ -1123,7 +1112,7 @@ static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3d &pos)
     Q_assert(entity->epairs != nullptr);
 
     entdict_t epairs{*entity->epairs};
-    EntDict_RemoveValueForKey(epairs, "_surface");
+    epairs.remove("_surface");
     epairs.set("origin", qv::to_string(pos));
 
     surflights_dump_file << EntData_Write({epairs});
