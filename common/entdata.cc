@@ -47,7 +47,7 @@ std::string entdict_t::get(const std::string_view &key) const
 
 vec_t entdict_t::get_float(const std::string_view &key) const
 {
-    auto &s = get(key);
+    auto s = get(key);
 
     if (s.empty()) {
         return 0;
@@ -63,7 +63,7 @@ vec_t entdict_t::get_float(const std::string_view &key) const
 
 int32_t entdict_t::get_int(const std::string_view &key) const
 {
-    auto &s = get(key);
+    auto s = get(key);
 
     if (s.empty()) {
         return 0;
