@@ -55,11 +55,11 @@ public:
 
     bool has(const std::string_view &key) const;
 
-    inline keyvalues_t::const_iterator entdict_t::begin() const { return keyvalues.begin(); }
-    inline keyvalues_t::const_iterator entdict_t::end() const { return keyvalues.end(); }
+    inline keyvalues_t::const_iterator begin() const { return keyvalues.begin(); }
+    inline keyvalues_t::const_iterator end() const { return keyvalues.end(); }
 
-    inline keyvalues_t::iterator entdict_t::begin() { return keyvalues.begin(); }
-    inline keyvalues_t::iterator entdict_t::end() { return keyvalues.end(); }
+    inline keyvalues_t::iterator begin() { return keyvalues.begin(); }
+    inline keyvalues_t::iterator end() { return keyvalues.end(); }
 
     inline size_t size() { return keyvalues.size(); }
 
