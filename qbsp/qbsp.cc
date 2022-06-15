@@ -1140,7 +1140,7 @@ void EnsureTexturesLoaded()
         return;
     }
 
-    std::string_view wadstring = map.world_entity()->epairs.get("_wad");
+    std::string wadstring = map.world_entity()->epairs.get("_wad");
 
     if (wadstring.empty()) {
         wadstring = map.world_entity()->epairs.get("wad");
