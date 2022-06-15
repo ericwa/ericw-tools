@@ -93,7 +93,7 @@ static mbsp_t LoadTestmapRef(const std::filesystem::path &name)
     return std::get<mbsp_t>(bspdata.bsp);
 }
 
-static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
+static bspdata_t LoadTestmap_BSPData(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
     auto map_path = std::filesystem::path(testmaps_dir) / name;
     auto bsp_path = map_path;
@@ -140,6 +140,11 @@ static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::st
     // write to .json for inspection
     serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(options.bsp_path).replace_extension(".bsp.json"));
 
+    return bspdata;
+}
+
+static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {}) {
+    bspdata_t bspdata = LoadTestmap_BSPData(name, extra_args);
     return std::get<mbsp_t>(bspdata.bsp);
 }
 
@@ -412,17 +417,21 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 {
     auto mapname = GENERATE("qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map");
 
-    mbsp_t result = LoadTestmap(mapname);
+    auto result = LoadTestmap_BSPData(mapname);
+    const mbsp_t &bsp = std::get<mbsp_t>(result.bsp);
 
     REQUIRE(map.brushes.size() == 6);
 
-    REQUIRE(result.dleafs.size() == 2);
+    REQUIRE(bsp.dleafs.size() == 2);
 
-    REQUIRE(result.dleafs[0].contents == CONTENTS_SOLID);
-    REQUIRE(result.dleafs[1].contents == CONTENTS_EMPTY);
+    REQUIRE(bsp.dleafs[0].contents == CONTENTS_SOLID);
+    REQUIRE(bsp.dleafs[1].contents == CONTENTS_EMPTY);
     
     // just a hollow box
-    REQUIRE(result.dfaces.size() == 6);
+    REQUIRE(bsp.dfaces.size() == 6);
+
+    // no bspx lumps
+    CHECK(result.bspx.entries.empty());
 }
 
 TEST_CASE("simple_sealed2", "[testmaps_q1]")
