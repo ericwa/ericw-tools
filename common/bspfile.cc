@@ -110,6 +110,8 @@ struct gamedef_generic_t : public gamedef_t
 
     std::string get_contents_display(const contentflags_t &) const override { throw std::bad_cast(); }
 
+    void contents_make_valid(contentflags_t &contents) const override { throw std::bad_cast(); }
+
     const std::initializer_list<aabb3d> &get_hull_sizes() const override { throw std::bad_cast(); }
 
     contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
@@ -457,25 +459,34 @@ public:
         }
 
         if (contents_are_clip(contents)) {
-            base += "| CLIP";
+            base += " | CLIP";
         }
         if (contents_are_origin(contents)) {
-            base += "| ORIGIN";
+            base += " | ORIGIN";
         }
     
         switch (get_data(contents).detail) {
             case detail_type_t::DETAIL:
-                base += "| DETAIL";
+                base += " | DETAIL";
                 break;
             case detail_type_t::ILLUSIONARY:
-                base += "| DETAIL[ILLUSIONARY]";
+                base += " | DETAIL[ILLUSIONARY]";
                 break;
             case detail_type_t::FENCE:
-                base += "| DETAIL[FENCE]";
+                base += " | DETAIL[FENCE]";
                 break;
         }
 
         return base;
+    }
+
+    void contents_make_valid(contentflags_t &contents) const override
+    {
+        // todo: anything smarter we can do here?
+        // think this can't even happen in Q1 anyways
+        if (!contents_are_valid(contents, false)) {
+            contents = { CONTENTS_SOLID };
+        }
     }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const
@@ -1007,6 +1018,26 @@ struct gamedef_q2_t : public gamedef_t
         return s;
     }
 
+    void contents_make_valid(contentflags_t &contents) const override
+    {
+        if (contents_are_valid(contents, false)) {
+            return;
+        }
+
+        bool got = false;
+
+        for (int32_t i = 0; i < 8; i++) {
+            if (!got) {
+                if (contents.native & nth_bit(i)) {
+                    got = true;
+                    continue;
+                }
+            } else {
+                contents.native &= ~nth_bit(i);
+            }
+        }
+    }
+
     const std::initializer_list<aabb3d> &get_hull_sizes() const
     {
         static constexpr std::initializer_list<aabb3d> hulls = {};
@@ -1475,6 +1506,11 @@ bool contentflags_t::is_clip(const gamedef_t *game) const
 bool contentflags_t::is_origin(const gamedef_t *game) const
 {
     return game->contents_are_origin(*this);
+}
+
+void contentflags_t::make_valid(const gamedef_t *game)
+{
+    game->contents_make_valid(*this);
 }
 
 std::string contentflags_t::to_string(const gamedef_t *game) const

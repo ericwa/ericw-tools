@@ -614,6 +614,8 @@ struct contentflags_t
     bool is_clip(const gamedef_t *game) const;
     bool is_origin(const gamedef_t *game) const;
 
+    void make_valid(const gamedef_t *game);
+
     inline bool is_fence(const gamedef_t *game) const {
         return is_detail_fence(game) || is_detail_illusionary(game);
     }
@@ -1825,6 +1827,7 @@ struct gamedef_t
     virtual contentflags_t contents_remap_for_export(const contentflags_t &contents) const = 0;
     virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
+    virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
