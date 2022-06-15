@@ -29,8 +29,6 @@
 #include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 
-node_t outside_node; // portals outside the world face this
-
 class portal_state_t
 {
 public:
@@ -340,7 +338,7 @@ MakeHeadnodePortals
 The created portals will face the global outside_node
 ================
 */
-static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
+static void MakeHeadnodePortals(const mapentity_t *entity, tree_t *tree)
 {
     int i, j, n;
     portal_t *p, *portals[6];
@@ -350,9 +348,9 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = entity->bounds.grow(SIDESPACE);
 
-    outside_node.planenum = PLANENUM_LEAF;
-    outside_node.contents = options.target_game->create_solid_contents();
-    outside_node.portals = NULL;
+    tree->outside_node.planenum = PLANENUM_LEAF;
+    tree->outside_node.contents = options.target_game->create_solid_contents();
+    tree->outside_node.portals = NULL;
 
     // create 6 portals forming a cube around the bounds of the map.
     // these portals will have `outside_node` on one side, and headnode on the other.
@@ -376,9 +374,9 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
 
             p->winding = BaseWindingForPlane(pl);
             if (side)
-                AddPortalToNodes(p, &outside_node, node);
+                AddPortalToNodes(p, &tree->outside_node, tree->headnode);
             else
-                AddPortalToNodes(p, node, &outside_node);
+                AddPortalToNodes(p, tree->headnode, &tree->outside_node);
         }
 
     // clip the basewindings by all the other planes
@@ -509,6 +507,7 @@ static void CutNodePortals_r(node_t *node, portal_state_t *state)
      */
     new_portal = new portal_t{};
     new_portal->planenum = node->planenum;
+    new_portal->onnode = node;
 
     std::optional<winding_t> winding = BaseWindingForPlane(plane);
     for (portal = node->portals; portal; portal = portal->next[side]) {
@@ -615,7 +614,7 @@ PortalizeWorld
 Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
-void PortalizeEntity(const mapentity_t *entity, node_t *headnode, const int hullnum)
+void PortalizeEntity(const mapentity_t *entity, tree_t *tree, const int hullnum)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
@@ -623,15 +622,16 @@ void PortalizeEntity(const mapentity_t *entity, node_t *headnode, const int hull
 
     state.iNodesDone = 0;
 
-    AssertNoPortals(headnode);
-    MakeHeadnodePortals(entity, headnode);
-    CutNodePortals_r(headnode, &state);
+    AssertNoPortals(tree->headnode);
+    MakeHeadnodePortals(entity, tree);
+    CutNodePortals_r(tree->headnode, &state);
 
     logging::percent(splitnodes, splitnodes, entity == map.world_entity());
 
+    // fixme-brushbsp: extract this out like q2 tools
     if (hullnum <= 0 && entity == map.world_entity()) {
         /* save portal file for vis tracing */
-        WritePortalfile(headnode, &state);
+        WritePortalfile(tree->headnode, &state);
 
         logging::print(logging::flag::STAT, "     {:8} vis leafs\n", state.num_visleafs);
         logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);

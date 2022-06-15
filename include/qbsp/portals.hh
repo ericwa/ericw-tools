@@ -27,13 +27,19 @@
 struct portal_t
 {
     int planenum;
+    node_t *onnode; // nullptr = portal to the outside of the world (one of six sides of a box)
     node_t *nodes[2]; // [0] = front side of planenum
     portal_t *next[2]; // [0] = next portal in nodes[0]'s list of portals
     std::optional<winding_t> winding;
 };
 
-extern node_t outside_node; // portals outside the world face this
+struct tree_t
+{
+    node_t *headnode;
+    node_t outside_node = {}; // portals outside the world face this
+    aabb3d bounds;
+};
 
 contentflags_t ClusterContents(const node_t *node);
-void PortalizeEntity(const mapentity_t *entity, node_t *headnode, const int hullnum);
+void PortalizeEntity(const mapentity_t *entity, tree_t *tree, const int hullnum);
 void FreeAllPortals(node_t *node);

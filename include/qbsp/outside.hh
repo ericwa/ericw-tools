@@ -25,8 +25,9 @@
 
 class mapentity_t;
 struct node_t;
+struct tree_t;
 
-bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum);
+bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum);
 std::vector<node_t *> FindOccupiedClusters(node_t *headnode);
 
-void FillBrushEntity(mapentity_t *entity, node_t *node, const int hullnum);
+void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum);

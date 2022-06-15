@@ -742,7 +742,6 @@ ProcessEntity
 static void ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     int firstface;
-    node_t *nodes;
 
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
@@ -821,26 +820,27 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
 
+    tree_t *tree = nullptr;
     if (hullnum > 0) {
-        nodes = SolidBSP(entity, true);
+        tree = BrushBSP(entity, true);
         if (entity == map.world_entity() && !options.nofill.value()) {
             // assume non-world bmodels are simple
-            PortalizeEntity(entity, nodes, hullnum);
-            if (FillOutside(entity, nodes, hullnum)) {
+            PortalizeEntity(entity, tree, hullnum);
+            if (FillOutside(entity, tree, hullnum)) {
                 // fixme-brushbsp: re-add
                 // FreeNodes(nodes);
 
                 // make a really good tree
-                nodes = SolidBSP(entity, false);
+                tree = BrushBSP(entity, false);
 
                 // fill again so PruneNodes works
-                PortalizeEntity(entity, nodes, hullnum);
-                FillOutside(entity, nodes, hullnum);
-                PruneNodes(nodes);
-                DetailToSolid(nodes);
+                PortalizeEntity(entity, tree, hullnum);
+                FillOutside(entity, tree, hullnum);
+                PruneNodes(tree->headnode);
+                DetailToSolid(tree->headnode);
             }
         }
-        ExportClipNodes(entity, nodes, hullnum);
+        ExportClipNodes(entity, tree->headnode, hullnum);
 
         // fixme-brushbsp: return here?
     } else {
@@ -856,80 +856,80 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
          * longer processing time.
          */
         if (options.forcegoodtree.value())
-            nodes = SolidBSP(entity, false);
+            tree = BrushBSP(entity, false);
         else
-            nodes = SolidBSP(entity, entity == map.world_entity());
+            tree = BrushBSP(entity, entity == map.world_entity());
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        PortalizeEntity(entity, nodes, hullnum);
+        PortalizeEntity(entity, tree, hullnum);
 
         if (entity == map.world_entity()) {
             // flood fills from the void.
             // marks brush sides which are *only* touching void;
             // we can skip using them as BSP splitters on the "really good tree"
             // (effectively expanding those brush sides outwards).
-            if (!options.nofill.value() && FillOutside(entity, nodes, hullnum)) {
+            if (!options.nofill.value() && FillOutside(entity, tree, hullnum)) {
                 // fixme-brushbsp: re-add
                 //FreeNodes(nodes);
 
                 // make a really good tree
-                nodes = SolidBSP(entity, false);
+                tree = BrushBSP(entity, false);
 
                 // make the real portals for vis tracing
-                PortalizeEntity(entity, nodes, hullnum);
+                PortalizeEntity(entity, tree, hullnum);
 
                 // fill again so PruneNodes works
-                FillOutside(entity, nodes, hullnum);
+                FillOutside(entity, tree, hullnum);
             }
 
             // Area portals
             if (options.target_game->id == GAME_QUAKE_II) {
-                FloodAreas(entity, nodes);
-                EmitAreaPortals(nodes);
+                FloodAreas(entity, tree->headnode);
+                EmitAreaPortals(tree->headnode);
             }
         } else {
-            FillBrushEntity(entity, nodes, hullnum);
+            FillBrushEntity(entity, tree, hullnum);
 
             // rebuild BSP now that we've marked invisible brush sides
-            nodes = SolidBSP(entity, false);
+            tree = BrushBSP(entity, false);
         }
 
-        FreeAllPortals(nodes);
+        FreeAllPortals(tree->headnode);
 
-        PruneNodes(nodes);
+        PruneNodes(tree->headnode);
 
-        PortalizeEntity(entity, nodes, hullnum);
+        PortalizeEntity(entity, tree, hullnum);
 
-        MakeVisibleFaces(entity, nodes);
+        MakeVisibleFaces(entity, tree->headnode);
 
         // merge polygons
-        MergeAll(nodes);
+        MergeAll(tree->headnode);
 
         // needs to come after any face creation
-        MakeMarkFaces(entity, nodes);
+        MakeMarkFaces(entity, tree->headnode);
 
         // convert detail leafs to solid (in case we didn't make the call above)
-        DetailToSolid(nodes);
+        DetailToSolid(tree->headnode);
 
         // fixme-brushbsp: prune nodes
 
         if (!options.notjunc.value()) {
-            TJunc(entity, nodes);
+            TJunc(entity, tree->headnode);
         }
 
         if (options.objexport.value() && entity == map.world_entity()) {
-            ExportObj_Nodes("pre_makefaceedges_plane_faces", nodes);
-            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", nodes);
+            ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode);
+            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
         }
 
-        firstface = MakeFaceEdges(entity, nodes);
+        firstface = MakeFaceEdges(entity, tree->headnode);
 
         if (options.target_game->id == GAME_QUAKE_II) {
-            ExportBrushList(entity, nodes);
+            ExportBrushList(entity, tree->headnode);
         }
 
-        ExportDrawNodes(entity, nodes, firstface);
+        ExportDrawNodes(entity, tree->headnode, firstface);
     }
 
     FreeBrushes(entity);

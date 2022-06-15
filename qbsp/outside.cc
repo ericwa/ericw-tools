@@ -114,8 +114,8 @@ static void ClearOccupied_r(node_t *node)
 
 static bool OutsideFill_Passable(const portal_t *p)
 {
-    if (p->nodes[0] == &outside_node || p->nodes[1] == &outside_node) {
-        // need this because the outside_node doesn't have PLANENUM_LEAF set
+    if (!p->onnode) {
+        // portal to outside_node
         return false;
     }
 
@@ -166,7 +166,7 @@ preconditions:
 - all leafs have outside_distance set to -1
 ==================
 */
-static void FloodFillClustersFromVoid()
+static void FloodFillClustersFromVoid(tree_t *tree)
 {
     // breadth-first search
     std::list<std::pair<node_t *, int>> queue;
@@ -175,10 +175,10 @@ static void FloodFillClustersFromVoid()
     // push a node onto the queue which is in the void, but has a portal to outside_node
     // NOTE: remember, the headnode has no relationship to the outside of the map.
     {
-        const int side = (outside_node.portals->nodes[0] == &outside_node);
-        node_t *fillnode = outside_node.portals->nodes[side];
+        const int side = (tree->outside_node.portals->nodes[0] == &tree->outside_node);
+        node_t *fillnode = tree->outside_node.portals->nodes[side];
 
-        Q_assert(fillnode != &outside_node);
+        Q_assert(fillnode != &tree->outside_node);
 
         // this must be true because the map is made from closed brushes, beyion which is void
         Q_assert(!ClusterSealsMap(fillnode));
@@ -639,8 +639,10 @@ get incorrectly marked as "invisible").
 Special cases: structural fully covered by detail still needs to be marked "visible".
 ===========
 */
-bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
+bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
 {
+    node_t *node = tree->headnode;
+
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     /* Clear the outside filling state on all nodes */
@@ -673,8 +675,8 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
         BFSFloodFillFromOccupiedLeafs(occupied_clusters);
 
         /* first check to see if an occupied leaf is hit */
-        const int side = (outside_node.portals->nodes[0] == &outside_node);
-        node_t *fillnode = outside_node.portals->nodes[side];
+        const int side = (tree->outside_node.portals->nodes[0] == &tree->outside_node);
+        node_t *fillnode = tree->outside_node.portals->nodes[side];
 
         if (fillnode->occupied > 0) {
             leakline = MakeLeakLine(fillnode, leakentity);
@@ -684,7 +686,7 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
         //
         // We tried inside -> out and it leads to things like monster boxes getting inadvertently sealed,
         // or even whole sections of the map with no point entities - problems compounded by hull expansion.
-        FloodFillClustersFromVoid();
+        FloodFillClustersFromVoid(tree);
 
         // check for the occupied leaf closest to the void
         int best_leak_dist = INT_MAX;
@@ -754,14 +756,14 @@ bool FillOutside(mapentity_t *entity, node_t *node, const int hullnum)
     return true;
 }
 
-void FillBrushEntity(mapentity_t* entity, node_t* node, const int hullnum)
+void FillBrushEntity(mapentity_t* entity, tree_t *tree, const int hullnum)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     // Clear the outside filling state on all nodes
-    ClearOccupied_r(node);
+    ClearOccupied_r(tree->headnode);
 
     MarkBrushSidesInvisible(entity);
 
-    MarkVisibleBrushSides_R(node);
+    MarkVisibleBrushSides_R(tree->headnode);
 }

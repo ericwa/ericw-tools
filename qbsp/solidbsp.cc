@@ -27,6 +27,7 @@
 #include <qbsp/brush.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
+#include <qbsp/portals.hh>
 #include <qbsp/qbsp.hh>
 
 #include <list>
@@ -916,8 +917,10 @@ static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node
 SolidBSP
 ==================
 */
-node_t *SolidBSP(mapentity_t *entity, bool midsplit)
+tree_t *BrushBSP(mapentity_t *entity, bool midsplit)
 {
+    tree_t *tree = new tree_t{};
+
     if (entity->brushes.empty()) {
         /*
          * We allow an entity to be constructed with no visible brushes
@@ -934,7 +937,10 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = options.target_game->create_empty_contents();
 
-        return headnode;
+        tree->headnode = headnode;
+        tree->bounds = headnode->bounds;
+
+        return tree;
     }
 
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
@@ -981,5 +987,8 @@ node_t *SolidBSP(mapentity_t *entity, bool midsplit)
     logging::print(logging::flag::STAT, "     {:8} split nodes\n", splitnodes.load());
     options.target_game->print_content_stats(leafstats, "leaves");
 
-    return headnode;
+    tree->bounds = headnode->bounds;
+    tree->headnode = headnode;
+
+    return tree;
 }

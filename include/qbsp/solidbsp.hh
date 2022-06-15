@@ -35,9 +35,10 @@ struct brush_t;
 struct node_t;
 struct face_t;
 class mapentity_t;
+struct tree_t;
 
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);
 bool WindingIsTiny(const winding_t &w, double size = 0.2);
 twosided<std::unique_ptr<brush_t>> SplitBrush(std::unique_ptr<brush_t> brush, const qplane3d &split);
-node_t *SolidBSP(mapentity_t *entity, bool midsplit);
+tree_t *BrushBSP(mapentity_t *entity, bool midsplit);
