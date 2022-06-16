@@ -66,6 +66,16 @@ enum class conversion_t
     bp
 };
 
+// data representation of only extended flags
+// used by Q2 format; used by various systems.
+struct extended_texinfo_t
+{
+    contentflags_t contents = {0};
+    surfflags_t flags = {0};
+    int value = 0;
+    std::string animation;
+};
+
 namespace settings
 {
 struct wadpath

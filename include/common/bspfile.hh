@@ -899,23 +899,6 @@ public:
     bool is_valid(const gamedef_t *game) const;
 };
 
-// header before tightly packed surfflags_t[num_texinfo]
-struct extended_flags_header_t
-{
-    uint32_t num_texinfo;
-    uint32_t surfflags_size; // sizeof(surfflags_t)
-};
-
-// data representation of only extended flags
-// used by Q2 format; used by various systems.
-struct extended_texinfo_t
-{
-    contentflags_t contents = {0};
-    surfflags_t flags = {0};
-    int value = 0;
-    std::string animation;
-};
-
 template<typename T>
 struct texvec : qmat<T, 2, 4>
 {
