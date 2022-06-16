@@ -895,7 +895,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             tree = BrushBSP(entity, false);
         }
 
-        FreeAllPortals(tree->headnode);
+        FreeTreePortals_r(tree->headnode);
 
         PruneNodes(tree->headnode);
 

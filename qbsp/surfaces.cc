@@ -157,7 +157,7 @@ std::list<face_t *> SubdivideFace(face_t *f)
 
 static void FreeNode(node_t *node)
 {
-    FreeAllPortals(node);
+    FreeTreePortals_r(node);
     for (face_t *f : node->facelist) {
         delete f;
     }

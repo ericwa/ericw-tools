@@ -620,7 +620,7 @@ void MakeTreePortals(tree_t *tree)
 
     state.iNodesDone = 0;
 
-    FreeAllPortals(tree->headnode);
+    FreeTreePortals_r(tree->headnode);
 
     AssertNoPortals(tree->headnode);
     MakeHeadnodePortals(tree);
@@ -640,10 +640,11 @@ void WritePortalFile(tree_t *tree)
 
     state.iNodesDone = 0;
 
-    FreeAllPortals(tree->headnode);
+    FreeTreePortals_r(tree->headnode);
 
     AssertNoPortals(tree->headnode);
     MakeHeadnodePortals(tree);
+
     CutNodePortals_r(tree->headnode, &state);
 
     /* save portal file for vis tracing */
@@ -656,17 +657,17 @@ void WritePortalFile(tree_t *tree)
 
 /*
 ==================
-FreeAllPortals
+FreeTreePortals_r
 
 ==================
 */
-void FreeAllPortals(node_t *node)
+void FreeTreePortals_r(node_t *node)
 {
     portal_t *p, *nextp;
 
     if (node->planenum != PLANENUM_LEAF) {
-        FreeAllPortals(node->children[0]);
-        FreeAllPortals(node->children[1]);
+        FreeTreePortals_r(node->children[0]);
+        FreeTreePortals_r(node->children[1]);
     }
 
     for (p = node->portals; p; p = nextp) {
