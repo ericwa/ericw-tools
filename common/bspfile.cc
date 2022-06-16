@@ -1252,8 +1252,8 @@ static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
 
-const bspversion_t bspver_generic{NO_VERSION, NO_VERSION, "mbsp", "generic BSP", {}, &gamedef_generic};
-const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP",
+const bspversion_t bspver_generic{MBSPIDENT, std::nullopt, "mbsp", "generic BSP", {}, &gamedef_generic};
+const bspversion_t bspver_q1{BSPVERSION, std::nullopt, "bsp29", "Quake BSP",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1272,7 +1272,7 @@ const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP",
         {"models", sizeof(dmodelq1_t)},
     },
     &gamedef_q1, &bspver_bsp2};
-const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2",
+const bspversion_t bspver_bsp2{BSP2VERSION, std::nullopt, "bsp2", "Quake BSP2",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1291,7 +1291,7 @@ const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2",
         {"models", sizeof(dmodelq1_t)},
     },
     &gamedef_q1};
-const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ",
+const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, std::nullopt, "bsp2rmq", "Quake BSP2-RMQ",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1311,7 +1311,7 @@ const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake 
     },
     &gamedef_q1};
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
-const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP",
+const bspversion_t bspver_h2{BSPVERSION, std::nullopt, "hexen2", "Hexen II BSP",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1330,7 +1330,7 @@ const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP",
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2, &bspver_h2bsp2};
-const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2",
+const bspversion_t bspver_h2bsp2{BSP2VERSION, std::nullopt, "hexen2bsp2", "Hexen II BSP2",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1349,7 +1349,7 @@ const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen I
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2};
-const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ",
+const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, std::nullopt, "hexen2bsp2rmq", "Hexen II BSP2-RMQ",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1368,7 +1368,7 @@ const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq",
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2};
-const bspversion_t bspver_hl{BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
+const bspversion_t bspver_hl{BSPHLVERSION, std::nullopt, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
 const bspversion_t bspver_q2{Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP",
     {
         {"entities", sizeof(char)},
@@ -1529,7 +1529,7 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     return s;
 }
 
-static bool BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_version)
+static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
@@ -1976,7 +1976,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         dheader_t q1header;
         stream >= q1header;
 
-        temp_version.version = NO_VERSION;
+        temp_version.version = std::nullopt;
         std::copy(q1header.lumps.begin(), q1header.lumps.end(), std::back_inserter(lumps));
     }
 
@@ -2075,7 +2075,7 @@ private:
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -2112,7 +2112,7 @@ private:
 
         Q_assert(lumpspec.size == 1);
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -2144,7 +2144,7 @@ private:
 
         Q_assert(lumpspec.size == 1);
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -2269,11 +2269,11 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     // headers are union'd, so this sets both
     bspfile.q2header.ident = bspfile.version->ident;
 
-    if (bspfile.version->version != NO_VERSION) {
-        bspfile.q2header.version = bspfile.version->version;
+    if (bspfile.version->version.has_value()) {
+        bspfile.q2header.version = bspfile.version->version.value();
     }
 
-    logging::print("Writing {} as BSP version {}\n", filename, *bspdata->version);
+    logging::print("Writing {} as {}\n", filename, *bspdata->version);
     bspfile.stream.open(filename, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 
     if (!bspfile.stream)
@@ -2282,7 +2282,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     bspfile.stream << endianness<std::endian::little>;
 
     /* Save header space, updated after adding the lumps */
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version->version.has_value()) {
         bspfile.stream <= bspfile.q2header;
     } else {
         bspfile.stream <= bspfile.q1header;
@@ -2296,7 +2296,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     bspfile.stream.seekp(0);
 
     // write the real header
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version->version.has_value()) {
         bspfile.stream <= bspfile.q2header;
     } else {
         bspfile.stream <= bspfile.q1header;

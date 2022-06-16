@@ -41,6 +41,8 @@ struct lump_t
     auto stream_data() { return std::tie(fileofs, filelen); }
 };
 
+constexpr int32_t MBSPIDENT = -1;
+
 constexpr int32_t BSPVERSION = 29;
 constexpr int32_t BSP2RMQVERSION = (('B' << 24) | ('S' << 16) | ('P' << 8) | '2');
 constexpr int32_t BSP2VERSION = ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24));
@@ -94,31 +96,6 @@ enum q2_lump_t
     Q2_LUMP_AREAPORTALS,
 
     Q2_HEADER_LUMPS
-};
-
-struct bspx_header_t
-{
-    std::array<char, 4> id = {'B', 'S', 'P', 'X'}; //'BSPX'
-    uint32_t numlumps;
-
-    bspx_header_t(uint32_t numlumps) : numlumps(numlumps) { }
-
-    auto stream_data() { return std::tie(id, numlumps); }
-};
-
-struct bspx_lump_t
-{
-    std::array<char, 24> lumpname{};
-    uint32_t fileofs;
-    uint32_t filelen;
-
-    auto stream_data() { return std::tie(lumpname, fileofs, filelen); }
-};
-
-struct lumpspec_t
-{
-    const char *name;
-    size_t size;
 };
 
 // helper functions to quickly numerically cast mins/maxs
@@ -1673,43 +1650,7 @@ struct q2_dheader_t
     auto stream_data() { return std::tie(ident, version, lumps); }
 };
 
-/* ========================================================================= */
-
-// BRUSHLIST BSPX lump
-struct bspxbrushes_permodel
-{
-    int32_t ver;
-    int32_t modelnum;
-    int32_t numbrushes;
-    int32_t numfaces;
-
-    auto stream_data() { return std::tie(ver, modelnum, numbrushes, numfaces); }
-};
-
-struct bspxbrushes_perbrush
-{
-    aabb3f bounds;
-    int16_t contents;
-    uint16_t numfaces;
-
-    auto stream_data() { return std::tie(bounds, contents, numfaces); }
-};
-
-using bspxbrushes_perface = qplane3f;
-
-// BSPX data
-
-struct bspxentry_t
-{
-    std::unique_ptr<uint8_t[]> lumpdata;
-    size_t lumpsize;
-
-    // bspxentry_t takes ownership over the pointer and will
-    // free it automatically.
-    bspxentry_t(void *lumpdata, size_t lumpsize) : lumpdata(reinterpret_cast<uint8_t *>(lumpdata)), lumpsize(lumpsize)
-    {
-    }
-};
+#include "bspxfile.hh"
 
 struct bspdata_t
 {
@@ -1821,15 +1762,22 @@ struct gamedef_t
     virtual void print_content_stats(const std::any &stats, const char *what) const = 0;
 };
 
-constexpr int32_t NO_VERSION = -1;
+// Lump specification; stores the name and size
+// of an individual entry in the lump. Count is
+// calculated as (lump_size / size)
+struct lumpspec_t
+{
+    const char *name;
+    size_t size;
+};
 
 // BSP version struct & instances
 struct bspversion_t
 {
     /* identifier value, the first int32_t in the header */
     int32_t ident;
-    /* version value, if supported; use NO_VERSION if a version is not required */
-    int32_t version;
+    /* version value, if supported */
+    std::optional<int32_t> version;
     /* short name used for command line args, etc */
     const char *short_name;
     /* full display name for printing */
@@ -1852,14 +1800,17 @@ struct fmt::formatter<bspversion_t>
     auto format(const bspversion_t &v, FormatContext &ctx) -> decltype(ctx.out())
     {
         if (v.name) {
-            return format_to(ctx.out(), "{}", v.name);
+            format_to(ctx.out(), "{} ", v.name);
         }
 
-        if (v.version != NO_VERSION) {
-            return format_to(ctx.out(), "{}:{}", v.version, v.ident);
+        // Q2-esque BSPs are printed as, ex, IBSP:38
+        if (v.version.has_value()) {
+            char ident[5] = { (char) (v.ident & 0xFF), (char) ((v.ident >> 8) & 0xFF), (char) ((v.ident >> 16) & 0xFF), (char) ((v.ident >> 24) & 0xFF), '\0' };
+            return format_to(ctx.out(), "{}:{}", ident, v.version.value());
         }
 
-        return format_to(ctx.out(), "{}", v.version, v.ident);
+        // Q1-esque BSPs are printed as, ex, 29
+        return format_to(ctx.out(), "{}", v.version.value());
     }
 };
 
