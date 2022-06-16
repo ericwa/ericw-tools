@@ -978,7 +978,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
                 contents type.
                 */
-            if (hullnum <= 0 && mirrorinside) {
+            if (hullnum <= 0 && mirrorinside.value_or(false)) {
                 contents = options.target_game->create_detail_fence_contents(contents);
             }
         }
