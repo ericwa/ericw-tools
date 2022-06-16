@@ -376,7 +376,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
     for (auto &mapface : hullbrush->faces) {
         if (hullnum <= 0 && Brush_IsHint(*hullbrush)) {
             /* Don't generate hintskip faces */
-            const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+            const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
             if (options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
                 continue;
@@ -430,7 +430,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 
         // account for texture offset, from txqbsp-xt
         if (!options.oldrottex.value()) {
-            mtexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
+            maptexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
             texInfoNew.outputnum = std::nullopt;
 
             texInfoNew.vecs.at(0, 3) += qv::dot(rotate_offset, texInfoNew.vecs.row(0).xyz());
@@ -720,7 +720,7 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
     // validate that all of the sides have valid contents
     for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
-        const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+        const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
         contentflags_t contents =
             options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);

@@ -56,7 +56,7 @@ size_t ExportMapPlane(size_t planenum)
 
 size_t ExportMapTexinfo(size_t texinfonum)
 {
-    mtexinfo_t &src = map.mtexinfos.at(texinfonum);
+    maptexinfo_t &src = map.mtexinfos.at(texinfonum);
 
     if (src.outputnum.has_value())
         return src.outputnum.value();
@@ -313,9 +313,9 @@ static void WriteExtendedTexinfoFlags(void)
         return;
 
     // sort by output texinfo number
-    std::vector<mtexinfo_t> texinfos_sorted(map.mtexinfos);
+    std::vector<maptexinfo_t> texinfos_sorted(map.mtexinfos);
     std::sort(texinfos_sorted.begin(), texinfos_sorted.end(),
-        [](const mtexinfo_t &a, const mtexinfo_t &b) { return a.outputnum < b.outputnum; });
+        [](const maptexinfo_t &a, const maptexinfo_t &b) { return a.outputnum < b.outputnum; });
 
     json texinfofile = json::object();
 

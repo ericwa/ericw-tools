@@ -60,7 +60,7 @@ std::list<face_t *> SubdivideFace(face_t *f)
     int axis;
     qbsp_plane_t plane;
     face_t *front, *back;
-    const mtexinfo_t *tex;
+    const maptexinfo_t *tex;
     vec_t subdiv;
     vec_t extent;
     int lmshift;

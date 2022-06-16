@@ -290,7 +290,7 @@ constexpr double SIDESPACE = 24.0;
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 
-struct mtexinfo_t
+struct maptexinfo_t
 {
     texvecf vecs; /* [s/t][xyz offset] */
     int32_t miptex = 0;
@@ -301,9 +301,9 @@ struct mtexinfo_t
 
     constexpr auto as_tuple() const { return std::tie(vecs, miptex, flags, value, next); }
 
-    constexpr bool operator<(const mtexinfo_t &other) const { return as_tuple() < other.as_tuple(); }
+    constexpr bool operator<(const maptexinfo_t &other) const { return as_tuple() < other.as_tuple(); }
 
-    constexpr bool operator>(const mtexinfo_t &other) const { return as_tuple() > other.as_tuple(); }
+    constexpr bool operator>(const maptexinfo_t &other) const { return as_tuple() > other.as_tuple(); }
 };
 
 class mapentity_t;
