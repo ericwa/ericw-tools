@@ -41,5 +41,6 @@ struct tree_t
 };
 
 contentflags_t ClusterContents(const node_t *node);
-void PortalizeEntity(const mapentity_t *entity, tree_t *tree, const int hullnum);
+void MakeTreePortals(tree_t *tree);
 void FreeAllPortals(node_t *node);
+void WritePortalFile(tree_t *tree);

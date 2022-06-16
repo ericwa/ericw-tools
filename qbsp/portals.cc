@@ -338,7 +338,7 @@ MakeHeadnodePortals
 The created portals will face the global outside_node
 ================
 */
-static void MakeHeadnodePortals(const mapentity_t *entity, tree_t *tree)
+static void MakeHeadnodePortals(tree_t *tree)
 {
     int i, j, n;
     portal_t *p, *portals[6];
@@ -346,7 +346,7 @@ static void MakeHeadnodePortals(const mapentity_t *entity, tree_t *tree)
     side_t side;
 
     // pad with some space so there will never be null volume leafs
-    aabb3d bounds = entity->bounds.grow(SIDESPACE);
+    aabb3d bounds = tree->bounds.grow(SIDESPACE);
 
     tree->outside_node.planenum = PLANENUM_LEAF;
     tree->outside_node.contents = options.target_game->create_solid_contents();
@@ -614,7 +614,25 @@ PortalizeWorld
 Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
-void PortalizeEntity(const mapentity_t *entity, tree_t *tree, const int hullnum)
+void MakeTreePortals(tree_t *tree)
+{
+    portal_state_t state{};
+
+    state.iNodesDone = 0;
+
+    FreeAllPortals(tree->headnode);
+
+    AssertNoPortals(tree->headnode);
+    MakeHeadnodePortals(tree);
+    CutNodePortals_r(tree->headnode, &state);
+}
+
+/*
+==================
+WritePortalFile
+==================
+*/
+void WritePortalFile(tree_t *tree)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
@@ -622,21 +640,18 @@ void PortalizeEntity(const mapentity_t *entity, tree_t *tree, const int hullnum)
 
     state.iNodesDone = 0;
 
+    FreeAllPortals(tree->headnode);
+
     AssertNoPortals(tree->headnode);
-    MakeHeadnodePortals(entity, tree);
+    MakeHeadnodePortals(tree);
     CutNodePortals_r(tree->headnode, &state);
 
-    logging::percent(splitnodes, splitnodes, entity == map.world_entity());
+    /* save portal file for vis tracing */
+    WritePortalfile(tree->headnode, &state);
 
-    // fixme-brushbsp: extract this out like q2 tools
-    if (hullnum <= 0 && entity == map.world_entity()) {
-        /* save portal file for vis tracing */
-        WritePortalfile(tree->headnode, &state);
-
-        logging::print(logging::flag::STAT, "     {:8} vis leafs\n", state.num_visleafs);
-        logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);
-        logging::print(logging::flag::STAT, "     {:8} vis portals\n", state.num_visportals);
-    }
+    logging::print(logging::flag::STAT, "     {:8} vis leafs\n", state.num_visleafs);
+    logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);
+    logging::print(logging::flag::STAT, "     {:8} vis portals\n", state.num_visportals);
 }
 
 /*
@@ -663,5 +678,5 @@ void FreeAllPortals(node_t *node)
         RemovePortalFromNode(p, p->nodes[1]);
         delete p;
     }
-    node->portals = NULL;
+    node->portals = nullptr;
 }
