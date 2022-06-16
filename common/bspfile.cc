@@ -42,91 +42,6 @@ static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
     return result;
 }
 
-struct gamedef_generic_t : public gamedef_t
-{
-    gamedef_generic_t() : gamedef_t("") { id = GAME_UNKNOWN; }
-
-    bool surf_is_lightmapped(const surfflags_t &) const override { throw std::bad_cast(); }
-
-    bool surf_is_subdivided(const surfflags_t &) const override { throw std::bad_cast(); }
-
-    bool surfflags_are_valid(const surfflags_t &) const override { throw std::bad_cast(); }
-
-    bool texinfo_is_hintskip(const surfflags_t &, const std::string &) const override { throw std::bad_cast(); }
-
-    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
-
-    int32_t contents_priority(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool chops(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    contentflags_t create_empty_contents() const override { throw std::bad_cast(); }
-
-    contentflags_t create_solid_contents() const override { throw std::bad_cast(); }
-
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
-
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
-
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
-
-    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override { throw std::bad_cast(); }
-
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override { throw std::bad_cast(); }
-
-    bool contents_are_any_detail(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_detail_solid(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_detail_fence(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_detail_illusionary(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_empty(const contentflags_t &) const override { throw std::bad_cast(); }
-    
-    bool contents_are_mirrored(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_origin(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_clip(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_clip_same_type(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_solid(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_sky(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_liquid(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_valid(const contentflags_t &, bool) const override { throw std::bad_cast(); }
-
-    bool portal_can_see_through(const contentflags_t &, const contentflags_t &, bool, bool) const override { throw std::bad_cast(); }
-
-    bool contents_seals_map(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override { throw std::bad_cast(); }
-
-    std::string get_contents_display(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    void contents_make_valid(contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override { throw std::bad_cast(); }
-
-    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
-
-    void init_filesystem(const fs::path &, const settings::common_settings &) const override { throw std::bad_cast(); }
-
-    const std::vector<qvec3b> &get_default_palette() const override { throw std::bad_cast(); }
-
-    std::any create_content_stats() const override { throw std::bad_cast(); }
-
-    void count_contents_in_stats(const contentflags_t &contents, std::any &stats) const override { throw std::bad_cast(); }
-
-    void print_content_stats(const std::any &stats, const char *what) const override { throw std::bad_alloc(); }
-};
-
 template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
@@ -1246,13 +1161,12 @@ public:
 };
 
 // Game definitions, used for the bsp versions below
-static const gamedef_generic_t gamedef_generic;
 static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
 static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
 
-const bspversion_t bspver_generic{MBSPIDENT, std::nullopt, "mbsp", "generic BSP", {}, &gamedef_generic};
+const bspversion_t bspver_generic{MBSPIDENT, std::nullopt, "mbsp", "generic BSP", {}};
 const bspversion_t bspver_q1{BSPVERSION, std::nullopt, "bsp29", "Quake BSP",
     {
         {"entities", sizeof(char)},
