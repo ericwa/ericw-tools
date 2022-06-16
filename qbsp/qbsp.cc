@@ -825,7 +825,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         tree = BrushBSP(entity, true);
         if (entity == map.world_entity() && !options.nofill.value()) {
             // assume non-world bmodels are simple
-            PortalizeEntity(entity, tree, hullnum);
+            MakeTreePortals(tree);
             if (FillOutside(entity, tree, hullnum)) {
                 // fixme-brushbsp: re-add
                 // FreeNodes(nodes);
@@ -834,7 +834,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 tree = BrushBSP(entity, false);
 
                 // fill again so PruneNodes works
-                PortalizeEntity(entity, tree, hullnum);
+                MakeTreePortals(tree);
                 FillOutside(entity, tree, hullnum);
                 PruneNodes(tree->headnode);
                 DetailToSolid(tree->headnode);
@@ -862,7 +862,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        PortalizeEntity(entity, tree, hullnum);
+        MakeTreePortals(tree);
 
         if (entity == map.world_entity()) {
             // flood fills from the void.
@@ -877,7 +877,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 tree = BrushBSP(entity, false);
 
                 // make the real portals for vis tracing
-                PortalizeEntity(entity, tree, hullnum);
+                MakeTreePortals(tree);
 
                 // fill again so PruneNodes works
                 FillOutside(entity, tree, hullnum);
@@ -899,9 +899,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         PruneNodes(tree->headnode);
 
-        PortalizeEntity(entity, tree, hullnum);
+        MakeTreePortals(tree);
 
         MakeVisibleFaces(entity, tree->headnode);
+
+        if (hullnum <= 0 && entity == map.world_entity() && !map.leakfile) {
+            WritePortalFile(tree);
+        }
 
         // merge polygons
         MergeAll(tree->headnode);
