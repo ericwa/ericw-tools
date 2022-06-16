@@ -27,6 +27,7 @@
 #include <vis/vis.hh>
 #include <common/cmdlib.hh>
 #include "common/fs.hh"
+#include <fstream>
 
 constexpr uint32_t VIS_STATE_VERSION = ('T' << 24 | 'Y' << 16 | 'R' << 8 | '1');
 
@@ -37,6 +38,8 @@ struct dvisstate_t
     uint32_t numleafs;
     uint32_t testlevel;
     uint32_t time_elapsed;
+
+    auto stream_data() { return std::tie(version, numportals, numleafs, testlevel, time_elapsed); }
 };
 
 struct dportal_t
@@ -46,6 +49,8 @@ struct dportal_t
     uint32_t vis;
     uint32_t nummightsee;
     uint32_t numcansee;
+
+    auto stream_data() { return std::tie(status, might, vis, nummightsee, numcansee); }
 };
 
 static int CompressBits(uint8_t *out, const leafbits_t &in)
@@ -134,16 +139,17 @@ void SaveVisState(void)
     uint8_t *vis;
     uint8_t *might;
 
-    auto outfile = SafeOpenWrite(statetmpfile.string().c_str());
+    std::ofstream out(statetmpfile, std::ios_base::out | std::ios_base::binary);
+    out << endianness<std::endian::little>;
 
     /* Write out a header */
-    state.version = LittleLong(VIS_STATE_VERSION);
-    state.numportals = LittleLong(numportals);
-    state.numleafs = LittleLong(portalleafs);
-    state.testlevel = LittleLong(options.visdist.value());
-    state.time_elapsed = LittleLong((uint32_t)(statetime - starttime).count());
+    state.version = VIS_STATE_VERSION;
+    state.numportals = numportals;
+    state.numleafs = portalleafs;
+    state.testlevel = options.visdist.value();
+    state.time_elapsed = (uint32_t)(statetime - starttime).count();
 
-    SafeWrite(outfile, &state, sizeof(state));
+    out <= state;
 
     /* Allocate memory for compressed bitstrings */
     might = new uint8_t[(portalleafs + 7) >> 3];
@@ -156,19 +162,19 @@ void SaveVisState(void)
         else
             vis_len = 0;
 
-        pstate.status = LittleLong(p->status);
-        pstate.might = LittleLong(might_len);
-        pstate.vis = LittleLong(vis_len);
-        pstate.nummightsee = LittleLong(p->nummightsee);
-        pstate.numcansee = LittleLong(p->numcansee);
+        pstate.status = p->status;
+        pstate.might = might_len;
+        pstate.vis = vis_len;
+        pstate.nummightsee = p->nummightsee;
+        pstate.numcansee = p->numcansee;
 
-        SafeWrite(outfile, &pstate, sizeof(pstate));
-        SafeWrite(outfile, might, might_len);
+        out <= pstate;
+        out.write((const char *) might, might_len);
         if (vis_len)
-            SafeWrite(outfile, vis, vis_len);
+            out.write((const char *) vis, vis_len);
     }
 
-    outfile.reset();
+    out.close();
 
     delete[] might;
     delete[] vis;
@@ -218,14 +224,10 @@ bool LoadVisState(void)
         return false;
     }
 
-    auto infile = SafeOpenRead(statefile, true);
+    std::ifstream in(statefile, std::ios_base::in | std::ios_base::binary);
+    in >> endianness<std::endian::little>;
 
-    SafeRead(infile, &state, sizeof(state));
-    state.version = LittleLong(state.version);
-    state.numportals = LittleLong(state.numportals);
-    state.numleafs = LittleLong(state.numleafs);
-    state.testlevel = LittleLong(state.testlevel);
-    state.time_elapsed = LittleLong(state.time_elapsed);
+    in >= state;
 
     /* Sanity check the headers */
     if (state.version != VIS_STATE_VERSION) {
@@ -243,18 +245,13 @@ bool LoadVisState(void)
 
     /* Update the portal information */
     for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        SafeRead(infile, &pstate, sizeof(pstate));
-        pstate.status = LittleLong(pstate.status);
-        pstate.might = LittleLong(pstate.might);
-        pstate.vis = LittleLong(pstate.vis);
-        pstate.nummightsee = LittleLong(pstate.nummightsee);
-        pstate.numcansee = LittleLong(pstate.numcansee);
+        in >= pstate;
 
         p->status = static_cast<pstatus_t>(pstate.status);
         p->nummightsee = pstate.nummightsee;
         p->numcansee = pstate.numcansee;
 
-        SafeRead(infile, compressed, pstate.might);
+        in.read((char *) compressed, pstate.might);
         p->mightsee.resize(portalleafs);
 
         if (pstate.might < numbytes)
@@ -265,7 +262,7 @@ bool LoadVisState(void)
         p->visbits.resize(portalleafs);
 
         if (pstate.vis) {
-            SafeRead(infile, compressed, pstate.vis);
+            in.read((char *) compressed, pstate.vis);
             if (pstate.vis < numbytes)
                 DecompressBits(p->visbits, compressed);
             else
