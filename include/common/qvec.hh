@@ -706,7 +706,7 @@ public:
 
     // generic case
     template<typename F>
-    inline F distance_to(const qvec<F, 3> &point) const
+    [[nodiscard]] inline F distance_to(const qvec<F, 3> &point) const
     {
         return qv::dot(point, normal) - dist;
     }
