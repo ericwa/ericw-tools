@@ -391,7 +391,7 @@ static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
  */
 static int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
 {
-    const gtexinfo_t *texinfo = BSP_GetTexinfo(bsp, face->texinfo);
+    const mtexinfo_t *texinfo = BSP_GetTexinfo(bsp, face->texinfo);
     if (texinfo != nullptr) {
         if (texinfo->value != 0 && ((texinfo->flags.native & Q2_SURF_LIGHT) == 0)) {
             return texinfo->value;

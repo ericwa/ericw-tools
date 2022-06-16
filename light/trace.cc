@@ -55,7 +55,7 @@ qvec4b SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point
         return {};
     }
 
-    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
 
     qvec2d texcoord = WorldToTexCoord(point, tex);
 

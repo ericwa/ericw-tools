@@ -113,7 +113,7 @@ public:
     const mapbrush_t &mapbrush(int i) const;
 };
 
-struct texdata_t
+struct maptexdata_t
 {
     std::string name;
     surfflags_t flags;
@@ -132,11 +132,11 @@ struct mapdata_t
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
     std::vector<qbsp_plane_t> planes;
-    std::vector<texdata_t> miptex;
-    std::vector<mtexinfo_t> mtexinfos;
+    std::vector<maptexdata_t> miptex;
+    std::vector<maptexinfo_t> mtexinfos;
 
     /* quick lookup for texinfo */
-    std::map<mtexinfo_t, int> mtexinfo_lookup;
+    std::map<maptexinfo_t, int> mtexinfo_lookup;
 
     /* map from plane hash code to list of indicies in `planes` vector */
     std::unordered_map<int, std::vector<int>> planehash;
@@ -204,7 +204,7 @@ inline int FindMiptex(const char *name, bool internal = false, bool recursive = 
     std::optional<extended_texinfo_t> extended_info;
     return FindMiptex(name, extended_info, internal, recursive);
 }
-int FindTexinfo(const mtexinfo_t &texinfo);
+int FindTexinfo(const maptexinfo_t &texinfo);
 
 void PrintEntity(const mapentity_t *entity);
 

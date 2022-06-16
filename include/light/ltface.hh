@@ -72,7 +72,7 @@ public:
 
 qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f);
 qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f);
-qvec2d WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex);
+qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex);
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, vec_t dist);

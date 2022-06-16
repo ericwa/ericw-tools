@@ -43,7 +43,7 @@ std::atomic<uint32_t> fully_transparent_lightmaps;
 
 /* ======================================================================== */
 
-qvec2d WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex)
+qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex)
 {
     /*
      * The (long double) casts below are important: The original code
@@ -65,7 +65,7 @@ qvec2d WorldToTexCoord(const qvec3d &world, const gtexinfo_t *tex)
 
 static qvec2f Face_WorldToTexCoord(const mbsp_t *bsp, const mface_t *face, const qvec3f &world)
 {
-    const gtexinfo_t *tex = Face_Texinfo(bsp, face);
+    const mtexinfo_t *tex = Face_Texinfo(bsp, face);
 
     if (tex == nullptr)
         return {};
@@ -198,7 +198,7 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
 
 qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
 {
-    const gtexinfo_t *tex = Face_Texinfo(bsp, f);
+    const mtexinfo_t *tex = Face_Texinfo(bsp, f);
     if (tex == nullptr) {
         Q_assert_unreachable();
         return qmat4x4f();
@@ -227,7 +227,7 @@ constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg)
 /* Debug helper - move elsewhere? */
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
 {
-    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
     logging::print("face {}, texture {}, {} edges; vectors:\n"
@@ -260,7 +260,7 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
     maxs[0] = maxs[1] = -VECT_MAX;
     worldmaxs[0] = worldmaxs[1] = worldmaxs[2] = -VECT_MAX;
     worldmins[0] = worldmins[1] = worldmins[2] = VECT_MAX;
-    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
 
     for (int i = 0; i < face->numedges; i++) {
         const int edge = bsp->dsurfedges[face->firstedge + i];
@@ -772,7 +772,7 @@ static bool Lightsurf_Init(
         return false;
     }
 
-    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
     lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
 
@@ -2876,7 +2876,7 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
 
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
 {
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
     if (texinfo == nullptr)
         return false;
@@ -3242,7 +3242,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
         }
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
-        const gtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
+        const mtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
         if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
             LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), texinfo->value * 2.0f, lightsurf,
                 lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface

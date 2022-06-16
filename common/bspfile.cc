@@ -42,91 +42,6 @@ static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
     return result;
 }
 
-struct gamedef_generic_t : public gamedef_t
-{
-    gamedef_generic_t() : gamedef_t("") { id = GAME_UNKNOWN; }
-
-    bool surf_is_lightmapped(const surfflags_t &) const override { throw std::bad_cast(); }
-
-    bool surf_is_subdivided(const surfflags_t &) const override { throw std::bad_cast(); }
-
-    bool surfflags_are_valid(const surfflags_t &) const override { throw std::bad_cast(); }
-
-    bool texinfo_is_hintskip(const surfflags_t &, const std::string &) const override { throw std::bad_cast(); }
-
-    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
-
-    int32_t contents_priority(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool chops(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    contentflags_t create_empty_contents() const override { throw std::bad_cast(); }
-
-    contentflags_t create_solid_contents() const override { throw std::bad_cast(); }
-
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
-
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
-
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override { throw std::bad_cast(); }
-
-    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override { throw std::bad_cast(); }
-
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override { throw std::bad_cast(); }
-
-    bool contents_are_any_detail(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_detail_solid(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_detail_fence(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_detail_illusionary(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_empty(const contentflags_t &) const override { throw std::bad_cast(); }
-    
-    bool contents_are_mirrored(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_origin(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_are_clip(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    bool contents_clip_same_type(const contentflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_solid(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_sky(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_liquid(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    bool contents_are_valid(const contentflags_t &, bool) const override { throw std::bad_cast(); }
-
-    bool portal_can_see_through(const contentflags_t &, const contentflags_t &, bool, bool) const override { throw std::bad_cast(); }
-
-    bool contents_seals_map(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override { throw std::bad_cast(); }
-
-    std::string get_contents_display(const contentflags_t &) const override { throw std::bad_cast(); }
-
-    void contents_make_valid(contentflags_t &contents) const override { throw std::bad_cast(); }
-
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override { throw std::bad_cast(); }
-
-    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const override { throw std::bad_cast(); }
-
-    void init_filesystem(const fs::path &, const settings::common_settings &) const override { throw std::bad_cast(); }
-
-    const std::vector<qvec3b> &get_default_palette() const override { throw std::bad_cast(); }
-
-    std::any create_content_stats() const override { throw std::bad_cast(); }
-
-    void count_contents_in_stats(const contentflags_t &contents, std::any &stats) const override { throw std::bad_cast(); }
-
-    void print_content_stats(const std::any &stats, const char *what) const override { throw std::bad_alloc(); }
-};
-
 template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
@@ -1246,14 +1161,13 @@ public:
 };
 
 // Game definitions, used for the bsp versions below
-static const gamedef_generic_t gamedef_generic;
 static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
 static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
 
-const bspversion_t bspver_generic{NO_VERSION, NO_VERSION, "mbsp", "generic BSP", {}, &gamedef_generic};
-const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP",
+const bspversion_t bspver_generic{MBSPIDENT, std::nullopt, "mbsp", "generic BSP", {}};
+const bspversion_t bspver_q1{BSPVERSION, std::nullopt, "bsp29", "Quake BSP",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1272,7 +1186,7 @@ const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP",
         {"models", sizeof(dmodelq1_t)},
     },
     &gamedef_q1, &bspver_bsp2};
-const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2",
+const bspversion_t bspver_bsp2{BSP2VERSION, std::nullopt, "bsp2", "Quake BSP2",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1291,7 +1205,7 @@ const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2",
         {"models", sizeof(dmodelq1_t)},
     },
     &gamedef_q1};
-const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ",
+const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, std::nullopt, "bsp2rmq", "Quake BSP2-RMQ",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1311,7 +1225,7 @@ const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake 
     },
     &gamedef_q1};
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
-const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP",
+const bspversion_t bspver_h2{BSPVERSION, std::nullopt, "hexen2", "Hexen II BSP",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1330,7 +1244,7 @@ const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP",
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2, &bspver_h2bsp2};
-const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2",
+const bspversion_t bspver_h2bsp2{BSP2VERSION, std::nullopt, "hexen2bsp2", "Hexen II BSP2",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1349,7 +1263,7 @@ const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen I
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2};
-const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ",
+const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, std::nullopt, "hexen2bsp2rmq", "Hexen II BSP2-RMQ",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -1368,7 +1282,7 @@ const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq",
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2};
-const bspversion_t bspver_hl{BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
+const bspversion_t bspver_hl{BSPHLVERSION, std::nullopt, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
 const bspversion_t bspver_q2{Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP",
     {
         {"entities", sizeof(char)},
@@ -1517,19 +1431,22 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
 {
     std::string s = game->get_contents_display(*this);
 
-    // FIXME: how do we conditionally display this only when it matters (when it's not default basically)?
-    s += fmt::format("| MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+    if (contentflags_t{native}.is_mirrored(game) != is_mirrored(game)) {
+        s += fmt::format(" | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+    }
 
-    s += fmt::format("| CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+    if (contentflags_t{native}.will_clip_same_type(game) != will_clip_same_type(game)) {
+        s += fmt::format(" | CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+    }
 
     if (illusionary_visblocker) {
-        s += "| ILLUSIONARY_VISBLOCKER";
+        s += " | ILLUSIONARY_VISBLOCKER";
     }
 
     return s;
 }
 
-static bool BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_version)
+static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
@@ -1976,7 +1893,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         dheader_t q1header;
         stream >= q1header;
 
-        temp_version.version = NO_VERSION;
+        temp_version.version = std::nullopt;
         std::copy(q1header.lumps.begin(), q1header.lumps.end(), std::back_inserter(lumps));
     }
 
@@ -2075,7 +1992,7 @@ private:
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -2112,7 +2029,7 @@ private:
 
         Q_assert(lumpspec.size == 1);
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -2144,7 +2061,7 @@ private:
 
         Q_assert(lumpspec.size == 1);
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -2269,11 +2186,11 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     // headers are union'd, so this sets both
     bspfile.q2header.ident = bspfile.version->ident;
 
-    if (bspfile.version->version != NO_VERSION) {
-        bspfile.q2header.version = bspfile.version->version;
+    if (bspfile.version->version.has_value()) {
+        bspfile.q2header.version = bspfile.version->version.value();
     }
 
-    logging::print("Writing {} as BSP version {}\n", filename, *bspdata->version);
+    logging::print("Writing {} as {}\n", filename, *bspdata->version);
     bspfile.stream.open(filename, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 
     if (!bspfile.stream)
@@ -2282,7 +2199,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     bspfile.stream << endianness<std::endian::little>;
 
     /* Save header space, updated after adding the lumps */
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version->version.has_value()) {
         bspfile.stream <= bspfile.q2header;
     } else {
         bspfile.stream <= bspfile.q1header;
@@ -2296,7 +2213,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     bspfile.stream.seekp(0);
 
     // write the real header
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version->version.has_value()) {
         bspfile.stream <= bspfile.q2header;
     } else {
         bspfile.stream <= bspfile.q1header;

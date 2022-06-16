@@ -179,7 +179,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         }
 
         for (i = 0; i < map.miptex.size(); i++) {
-            const texdata_t &tex = map.miptex.at(i);
+            const maptexdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str())) {
                 return i;
@@ -206,7 +206,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         }
 
         for (i = 0; i < map.miptex.size(); i++) {
-            const texdata_t &tex = map.miptex.at(i);
+            const maptexdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
                 tex.value == extended_info->value && tex.animation == extended_info->animation) {
@@ -299,7 +299,7 @@ FindTexinfo
 Returns a global texinfo number
 ===============
 */
-int FindTexinfo(const mtexinfo_t &texinfo)
+int FindTexinfo(const maptexinfo_t &texinfo)
 {
     // NaN's will break mtexinfo_lookup, since they're being used as a std::map key and don't compare properly with <.
     // They should have been stripped out already in ValidateTextureProjection.
@@ -320,12 +320,12 @@ int FindTexinfo(const mtexinfo_t &texinfo)
     map.mtexinfos.emplace_back(texinfo);
     map.mtexinfo_lookup[texinfo] = num_texinfo;
 
-    // catch broken < implementations in mtexinfo_t
+    // catch broken < implementations in maptexinfo_t
     assert(map.mtexinfo_lookup.find(texinfo) != map.mtexinfo_lookup.end());
 
     // create a copy of the miptex for animation chains
     if (map.miptex[texinfo.miptex].animation_miptex != -1) {
-        mtexinfo_t anim_next = texinfo;
+        maptexinfo_t anim_next = texinfo;
 
         anim_next.miptex = map.miptex[texinfo.miptex].animation_miptex;
 
@@ -335,7 +335,7 @@ int FindTexinfo(const mtexinfo_t &texinfo)
     return num_texinfo;
 }
 
-static surfflags_t SurfFlagsForEntity(const mtexinfo_t &texinfo, const mapentity_t *entity)
+static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapentity_t *entity)
 {
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
@@ -949,7 +949,7 @@ static void SetTexinfo_QuakeEd_New(
 }
 
 static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3d, 3> &planepts, const qvec2d &shift,
-    const vec_t &rotate, const qvec2d &scale, mtexinfo_t *out)
+    const vec_t &rotate, const qvec2d &scale, maptexinfo_t *out)
 {
     int i, j;
     qvec3d vecs[2];
@@ -1033,7 +1033,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
 }
 
 static void SetTexinfo_QuArK(
-    parser_t &parser, const std::array<qvec3d, 3> &planepts, texcoord_style_t style, mtexinfo_t *out)
+    parser_t &parser, const std::array<qvec3d, 3> &planepts, texcoord_style_t style, maptexinfo_t *out)
 {
     int i;
     qvec3d vecs[2];
@@ -1095,7 +1095,7 @@ static void SetTexinfo_QuArK(
     out->vecs.at(1, 3) = -qv::dot(vecs[1], planepts[0]);
 }
 
-static void SetTexinfo_Valve220(qmat<vec_t, 2, 3> &axis, const qvec2d &shift, const qvec2d &scale, mtexinfo_t *out)
+static void SetTexinfo_Valve220(qmat<vec_t, 2, 3> &axis, const qvec2d &shift, const qvec2d &scale, maptexinfo_t *out)
 {
     int i;
 
@@ -1299,7 +1299,7 @@ parse_error:
     FError("line {}: couldn't parse Brush Primitives texture info", parser.linenum);
 }
 
-static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t *brush, mtexinfo_t *tx,
+static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t *brush, maptexinfo_t *tx,
     std::array<qvec3d, 3> &planepts, const qbsp_plane_t &plane)
 {
     vec_t rotate;
@@ -1459,7 +1459,7 @@ const texvecf &mapface_t::get_texvecs() const
 void mapface_t::set_texvecs(const texvecf &vecs)
 {
     // start with a copy of the current texinfo structure
-    mtexinfo_t texInfoNew = map.mtexinfos.at(this->texinfo);
+    maptexinfo_t texInfoNew = map.mtexinfos.at(this->texinfo);
     texInfoNew.outputnum = std::nullopt;
     texInfoNew.vecs = vecs;
     this->texinfo = FindTexinfo(texInfoNew);
@@ -1484,12 +1484,12 @@ bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, con
     return true;
 }
 
-inline bool IsValidTextureProjection(const mapface_t &mapface, const mtexinfo_t *tx)
+inline bool IsValidTextureProjection(const mapface_t &mapface, const maptexinfo_t *tx)
 {
     return IsValidTextureProjection(mapface.plane.normal, tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
 }
 
-static void ValidateTextureProjection(mapface_t &mapface, mtexinfo_t *tx)
+static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
         logging::print("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
@@ -1509,7 +1509,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrus
 {
     std::array<qvec3d, 3> planepts;
     bool normal_ok;
-    mtexinfo_t tx;
+    maptexinfo_t tx;
     int i, j;
     std::unique_ptr<mapface_t> face{new mapface_t};
 
@@ -2009,7 +2009,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
     EnsureTexturesLoaded();
     const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
 
-    const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+    const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
     // Write plane points
     for (int i = 0; i < 3; i++) {

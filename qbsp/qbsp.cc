@@ -1288,7 +1288,7 @@ MakeSkipTexinfo
 */
 static int MakeSkipTexinfo()
 {
-    mtexinfo_t mt{};
+    maptexinfo_t mt{};
 
     mt.miptex = FindMiptex("skip", true);
     mt.flags.is_skip = true;

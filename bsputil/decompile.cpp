@@ -868,7 +868,7 @@ static compiled_brush_t DecompileLeafTask(
                 DefaultSkipSide(side, bsp);
             } else {
                 const char *name = nullptr;
-                const gtexinfo_t *ti;
+                const mtexinfo_t *ti;
 
                 auto faces = finalSide.faces;
 

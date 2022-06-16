@@ -51,7 +51,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     const mface_t *face = BSP_GetFace(bsp, i);
 
     // Face casts light?
-    const gtexinfo_t *info = Face_Texinfo(bsp, face);
+    const mtexinfo_t *info = Face_Texinfo(bsp, face);
     if (info == nullptr)
         return;
     if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
