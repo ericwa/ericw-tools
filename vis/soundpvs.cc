@@ -60,7 +60,7 @@ static aabb3d SurfaceBBox(const mbsp_t *bsp, const mface_t *surf)
 void CalcAmbientSounds(mbsp_t *bsp)
 {
     const mface_t *surf;
-    const gtexinfo_t *info;
+    const mtexinfo_t *info;
     int i, j, k, l;
     mleaf_t *leaf, *hit;
     uint8_t *vis;

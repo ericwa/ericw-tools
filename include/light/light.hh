@@ -85,7 +85,7 @@ constexpr size_t MAXDIMENSION = 255 + 1;
 struct texorg_t
 {
     qmat4x4f texSpaceToWorld;
-    const gtexinfo_t *texinfo;
+    const mtexinfo_t *texinfo;
     vec_t planedist;
 };
 

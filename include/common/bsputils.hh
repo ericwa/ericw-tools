@@ -35,13 +35,13 @@ const mleaf_t *BSP_GetLeaf(const mbsp_t *bsp, int leafnum);
 const mleaf_t *BSP_GetLeafFromNodeNum(const mbsp_t *bsp, int nodenum);
 const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum);
 const mface_t *BSP_GetFace(const mbsp_t *bsp, int fnum);
-const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo);
+const mtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo);
 mface_t *BSP_GetFace(mbsp_t *bsp, int fnum);
 
 int Face_VertexAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
 const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
 qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f);
-const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
+const mtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face);
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face);
 const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v);

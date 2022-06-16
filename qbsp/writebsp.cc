@@ -66,7 +66,7 @@ size_t ExportMapTexinfo(size_t texinfonum)
     // this will be the index of the exported texinfo in the BSP lump
     const size_t i = map.bsp.texinfo.size();
 
-    gtexinfo_t &dest = map.bsp.texinfo.emplace_back();
+    mtexinfo_t &dest = map.bsp.texinfo.emplace_back();
 
     // make sure we don't write any non-native flags.
     // e.g. Quake only accepts 0 or TEX_SPECIAL.

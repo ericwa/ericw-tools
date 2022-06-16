@@ -73,7 +73,7 @@ const mface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
     return &bsp->dfaces[fnum];
 }
 
-const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
+const mtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
 {
     if (texinfo < 0) {
         return nullptr;
@@ -81,7 +81,7 @@ const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
     if (texinfo >= bsp->texinfo.size()) {
         return nullptr;
     }
-    const gtexinfo_t *tex = &bsp->texinfo[texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[texinfo];
     return tex;
 }
 
@@ -133,7 +133,7 @@ qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
     return result;
 }
 
-const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
+const mtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
 {
     if (face->texinfo < 0 || face->texinfo >= bsp->texinfo.size())
         return nullptr;
@@ -147,7 +147,7 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
     if (!bsp->dtex.textures.size())
         return nullptr;
 
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
     if (texinfo == nullptr)
         return nullptr;
@@ -163,7 +163,7 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
 
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
     if (!texinfo) {
         return "";
@@ -225,7 +225,7 @@ int // mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        const gtexinfo_t *info = Face_Texinfo(bsp, face);
+        const mtexinfo_t *info = Face_Texinfo(bsp, face);
         return info->flags.native;
     } else {
         return TextureName_Contents(Face_TextureName(bsp, face));
@@ -522,7 +522,7 @@ qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face)
 
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
 {
-    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
     logging::print("face {}, texture '{}', {} edges; vectors:\n"

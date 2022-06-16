@@ -962,7 +962,7 @@ struct fmt::formatter<texvec<T>> : formatter<qmat<T, 2, 4>>
 
 using texvecf = texvec<float>;
 
-struct gtexinfo_t
+struct mtexinfo_t
 {
     texvecf vecs; // [s/t][xyz offset]
     surfflags_t flags; // native miptex flags + extended flags
@@ -985,10 +985,10 @@ struct texinfo_t
     texinfo_t() = default;
 
     // convert from mbsp_t
-    texinfo_t(const gtexinfo_t &model) : vecs(model.vecs), miptex(model.miptex), flags(model.flags.native) { }
+    texinfo_t(const mtexinfo_t &model) : vecs(model.vecs), miptex(model.miptex), flags(model.flags.native) { }
 
     // convert to mbsp_t
-    operator gtexinfo_t() const { return {vecs, {flags}, miptex}; }
+    operator mtexinfo_t() const { return {vecs, {flags}, miptex}; }
 
     // serialize for streams
     auto stream_data() { return std::tie(vecs, miptex, flags); }
@@ -1005,14 +1005,14 @@ struct q2_texinfo_t
     q2_texinfo_t() = default;
 
     // convert from mbsp_t
-    q2_texinfo_t(const gtexinfo_t &model)
+    q2_texinfo_t(const mtexinfo_t &model)
         : vecs(model.vecs), flags(model.flags.native), value(model.value), texture(model.texture),
           nexttexinfo(model.nexttexinfo)
     {
     }
 
     // convert to mbsp_t
-    operator gtexinfo_t() const { return {vecs, {flags}, -1, value, texture, nexttexinfo}; }
+    operator mtexinfo_t() const { return {vecs, {flags}, -1, value, texture, nexttexinfo}; }
 
     // serialize for streams
     auto stream_data() { return std::tie(vecs, flags, value, texture, nexttexinfo); }
@@ -1660,7 +1660,7 @@ struct mbsp_t
     std::vector<dplane_t> dplanes;
     std::vector<qvec3f> dvertexes;
     std::vector<bsp2_dnode_t> dnodes;
-    std::vector<gtexinfo_t> texinfo;
+    std::vector<mtexinfo_t> texinfo;
     std::vector<mface_t> dfaces;
     std::vector<bsp2_dclipnode_t> dclipnodes;
     std::vector<bsp2_dedge_t> dedges;

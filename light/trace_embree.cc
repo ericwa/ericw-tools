@@ -520,7 +520,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
             }
 
             const int contents_or_surf_flags = Face_ContentsOrSurfaceFlags(bsp, face); // mxd
-            const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+            const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
             const bool is_q2 = bsp->loadversion->game->id == GAME_QUAKE_II;
 
             // mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
