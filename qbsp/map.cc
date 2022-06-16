@@ -179,7 +179,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         }
 
         for (i = 0; i < map.miptex.size(); i++) {
-            const texdata_t &tex = map.miptex.at(i);
+            const maptexdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str())) {
                 return i;
@@ -206,7 +206,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         }
 
         for (i = 0; i < map.miptex.size(); i++) {
-            const texdata_t &tex = map.miptex.at(i);
+            const maptexdata_t &tex = map.miptex.at(i);
 
             if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
                 tex.value == extended_info->value && tex.animation == extended_info->animation) {

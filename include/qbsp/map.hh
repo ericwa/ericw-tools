@@ -113,7 +113,7 @@ public:
     const mapbrush_t &mapbrush(int i) const;
 };
 
-struct texdata_t
+struct maptexdata_t
 {
     std::string name;
     surfflags_t flags;
@@ -132,7 +132,7 @@ struct mapdata_t
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
     std::vector<qbsp_plane_t> planes;
-    std::vector<texdata_t> miptex;
+    std::vector<maptexdata_t> miptex;
     std::vector<maptexinfo_t> mtexinfos;
 
     /* quick lookup for texinfo */
