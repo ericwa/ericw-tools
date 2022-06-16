@@ -351,8 +351,8 @@ struct fmt::formatter<bspversion_t>
             return format_to(ctx.out(), "{}:{}", ident, v.version.value());
         }
 
-        // Q1-esque BSPs are printed as, ex, 29
-        return format_to(ctx.out(), "{}", v.version.value());
+        // Q1-esque BSPs are printed as, ex, bsp29
+        return format_to(ctx.out(), "{}", v.short_name);
     }
 };
 
