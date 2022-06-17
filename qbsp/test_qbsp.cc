@@ -5,6 +5,7 @@
 #include <qbsp/map.hh>
 #include <common/fs.hh>
 #include <common/bsputils.hh>
+#include <common/prtfile.hh>
 #include <common/qvec.hh>
 #include <testmaps.hh>
 
@@ -15,6 +16,7 @@
 #include <cstring>
 #include <set>
 #include <stdexcept>
+#include <tuple>
 #include <map>
 
 // FIXME: Clear global data (planes, etc) between each test
@@ -48,7 +50,7 @@ static mapentity_t LoadMap(const char *map)
 
 #include <common/bspinfo.hh>
 
-static mbsp_t LoadTestmapRef(const std::filesystem::path &name)
+static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRef(const std::filesystem::path &name)
 {
     const char *destdir = test_quake2_maps_dir;
     if (strlen(destdir) == 0) {
@@ -90,10 +92,17 @@ static mbsp_t LoadTestmapRef(const std::filesystem::path &name)
     // write to .json for inspection
     serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(bsp_path).replace_extension(".bsp.json"));
 
-    return std::get<mbsp_t>(bspdata.bsp);
+    std::optional<prtfile_t> prtfile;
+    if (const auto prtpath = fs::path(bsp_path).replace_extension(".prt"); fs::exists(prtpath)) {
+        prtfile = {LoadPrtFile(prtpath, bspdata.loadversion)};
+    }
+
+    return std::make_tuple(std::move(std::get<mbsp_t>(bspdata.bsp)),
+        std::move(bspdata.bspx.entries),
+        std::move(prtfile));
 }
 
-static bspdata_t LoadTestmap_BSPData(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
+static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
     auto map_path = std::filesystem::path(testmaps_dir) / name;
     auto bsp_path = map_path;
@@ -140,15 +149,17 @@ static bspdata_t LoadTestmap_BSPData(const std::filesystem::path &name, std::vec
     // write to .json for inspection
     serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(options.bsp_path).replace_extension(".bsp.json"));
 
-    return bspdata;
+    std::optional<prtfile_t> prtfile;
+    if (const auto prtpath = fs::path(bsp_path).replace_extension(".prt"); fs::exists(prtpath)) {
+        prtfile = {LoadPrtFile(prtpath, bspdata.loadversion)};
+    }
+
+    return std::make_tuple(std::move(std::get<mbsp_t>(bspdata.bsp)),
+        std::move(bspdata.bspx.entries),
+        std::move(prtfile));
 }
 
-static mbsp_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {}) {
-    bspdata_t bspdata = LoadTestmap_BSPData(name, extra_args);
-    return std::get<mbsp_t>(bspdata.bsp);
-}
-
-static mbsp_t LoadTestmapQ2(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
+static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapQ2(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
 #if 0
     return LoadTestmapRef(name);
@@ -158,7 +169,7 @@ static mbsp_t LoadTestmapQ2(const std::filesystem::path &name, std::vector<std::
 #endif
 }
 
-static mbsp_t LoadTestmapQ1(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
+static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapQ1(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
     return LoadTestmap(name, extra_args);
 }
@@ -422,8 +433,7 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 {
     auto mapname = GENERATE("qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map");
 
-    auto result = LoadTestmap_BSPData(mapname);
-    const mbsp_t &bsp = std::get<mbsp_t>(result.bsp);
+    const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
     REQUIRE(map.brushes.size() == 6);
 
@@ -436,12 +446,12 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
     REQUIRE(bsp.dfaces.size() == 6);
 
     // no bspx lumps
-    CHECK(result.bspx.entries.empty());
+    CHECK(bspx.empty());
 }
 
 TEST_CASE("simple_sealed2", "[testmaps_q1]")
 {
-    mbsp_t bsp = LoadTestmapQ1("qbsp_simple_sealed2.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_sealed2.map");
 
     CHECK(map.brushes.size() == 14);
 
@@ -482,7 +492,7 @@ TEST_CASE("simple_sealed2", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map");
 
     // 6 for the room
     // 1 for the button
@@ -514,7 +524,7 @@ TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_detail_wall.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_wall.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -529,7 +539,7 @@ TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -544,7 +554,7 @@ TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_detail_illusionary.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_illusionary.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -567,7 +577,7 @@ TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -608,7 +618,7 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
 
 TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_water_detail_illusionary.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_water_detail_illusionary.map");
 
     CHECK_FALSE(map.leakfile);
 
@@ -628,7 +638,7 @@ TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 
 TEST_CASE("noclipfaces", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_noclipfaces.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -646,7 +656,7 @@ TEST_CASE("noclipfaces", "[testmaps_q1]")
  */
 TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_noclipfaces_mirrorinside.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces_mirrorinside.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -661,7 +671,7 @@ TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
 
 TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map");
 
     CHECK_FALSE(map.leakfile);
 
@@ -683,7 +693,7 @@ TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 
 TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map");
 
     CHECK_FALSE(map.leakfile);
 
@@ -700,14 +710,14 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 
 TEST_CASE("detail_doesnt_seal", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_doesnt_seal.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_seal.map");
 
     REQUIRE(map.leakfile);
 }
 
 TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_doesnt_remove_world_nodes.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_remove_world_nodes.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -735,7 +745,7 @@ TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
 
 TEST_CASE("merge", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_merge.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_merge.map");
 
     REQUIRE(9 == map.brushes.size());
 
@@ -745,7 +755,7 @@ TEST_CASE("merge", "[testmaps_q1]")
 
 TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -770,7 +780,7 @@ TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
  */
 TEST_CASE("brush_clipping_order", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_brush_clipping_order.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_brush_clipping_order.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -799,7 +809,7 @@ TEST_CASE("brush_clipping_order", "[testmaps_q1]")
  */
 TEST_CASE("origin", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_origin.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_origin.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -823,7 +833,7 @@ TEST_CASE("origin", "[testmaps_q1]")
 
 TEST_CASE("simple", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map");
 
     REQUIRE(map.leakfile);
 
@@ -834,13 +844,13 @@ TEST_CASE("simple", "[testmaps_q1]")
  */
 TEST_CASE("features", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmapQ1("qbspfeatures.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbspfeatures.map");
 
     REQUIRE_FALSE(map.leakfile);
 }
 
 TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_func_detail.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_func_detail.map");
 
     CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -873,7 +883,7 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
 }
 
 TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_angled_brush.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_angled_brush.map");
 
     CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -884,7 +894,7 @@ TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
 }
 
 TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
-    const mbsp_t bsp = LoadTestmapQ1("qbsp_sealing_point_entity_on_outside.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_sealing_point_entity_on_outside.map");
 
     CHECK_FALSE(map.leakfile);
 }
@@ -892,7 +902,7 @@ TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
 // q2 testmaps
 
 TEST_CASE("detail", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_detail.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -974,7 +984,7 @@ TEST_CASE("detail", "[testmaps_q2]") {
 
 TEST_CASE("playerclip", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_playerclip.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_playerclip.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1002,7 +1012,7 @@ TEST_CASE("playerclip", "[testmaps_q2]")
 
 TEST_CASE("areaportal", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_areaportal.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1061,7 +1071,7 @@ TEST_CASE("areaportal", "[testmaps_q2]")
  */
 TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_areaportal_with_detail.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal_with_detail.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1074,7 +1084,7 @@ TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
 }
 
 TEST_CASE("nodraw_light", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_light.map", {"-q2bsp", "-includeskip"});
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_light.map", {"-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1088,7 +1098,7 @@ TEST_CASE("nodraw_light", "[testmaps_q2]") {
 }
 
 TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_q2_nodraw_detail_light.map", {"-q2bsp", "-includeskip"});
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_detail_light.map", {"-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1104,7 +1114,7 @@ TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
 TEST_CASE("base1", "[testmaps_q2]")
 {
 #if 0
-    const mbsp_t bsp = LoadTestmapQ2("base1.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("base1.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1135,7 +1145,7 @@ TEST_CASE("base1", "[testmaps_q2]")
 
 TEST_CASE("base1leak", "[testmaps_q2]")
 {
-    const mbsp_t bsp = LoadTestmapQ2("base1leak.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("base1leak.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1155,7 +1165,7 @@ TEST_CASE("base1leak", "[testmaps_q2]")
  * e1u1/brlava brush intersecting e1u1/clip
  **/
 TEST_CASE("lavaclip", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_lavaclip.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavaclip.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1190,7 +1200,7 @@ TEST_CASE("lavaclip", "[testmaps_q2]") {
  * e1u1/brlava brush intersecting e1u1/brwater
  **/
 TEST_CASE("lavawater", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_lavawater.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavawater.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1205,7 +1215,7 @@ TEST_CASE("lavawater", "[testmaps_q2]") {
  * (ended up being a PLANE_X/Y/Z plane with negative facing normal, which is illegal - engine assumes they are positive)
  */
 TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_bmodel_collision.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_bmodel_collision.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1216,7 +1226,7 @@ TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
 
 TEST_CASE("q2_liquids", "[testmaps_q2][!mayfail]")
 {
-    const mbsp_t bsp = LoadTestmapQ2("q2_liquids.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_liquids.map");
 
     // water/air face is two sided
     {
@@ -1264,7 +1274,7 @@ TEST_CASE("q2_liquids", "[testmaps_q2][!mayfail]")
  * Empty rooms are sealed to solid in Q2
  **/
 TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_seal_empty_rooms.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_seal_empty_rooms.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1280,7 +1290,7 @@ TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
  * Detail seals in Q2
  **/
 TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2][!mayfail]") {
-    const mbsp_t bsp = LoadTestmapQ2("qbsp_q2_detail_seals.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail_seals.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -1299,7 +1309,7 @@ TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2][!mayfail]") {
  *   rest of the world to get sealed off as solid.
  **/
 TEST_CASE("qbsp_q1_sealing", "[testmaps_q1]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_q1_sealing.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_sealing.map");
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 

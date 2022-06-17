@@ -128,7 +128,7 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
     }
 
     if (magic == PORTALFILE2) {
-        result.dleafinfos.resize(result.portalleafs + 1);
+        result.dleafinfos.resize(result.portalleafs_real + 1);
 
         int i;
         for (i = 0; i < result.portalleafs; i++) {

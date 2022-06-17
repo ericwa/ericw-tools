@@ -407,6 +407,8 @@ using texvecf = texvec<float>;
 #include "bspfile_q2.hh"
 #include "bspxfile.hh"
 
+using bspxentries_t = std::unordered_map<std::string, bspxentry_t>;
+
 struct bspdata_t
 {
     const bspversion_t *version, *loadversion;
@@ -417,7 +419,7 @@ struct bspdata_t
     // This can be used with any BSP format.
     struct
     {
-        std::unordered_map<std::string, bspxentry_t> entries;
+        bspxentries_t entries;
 
         // convenience function to transfer a generic pointer into
         // the entries list
