@@ -158,6 +158,11 @@ static mbsp_t LoadTestmapQ2(const std::filesystem::path &name, std::vector<std::
 #endif
 }
 
+static mbsp_t LoadTestmapQ1(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
+{
+    return LoadTestmap(name, extra_args);
+}
+
 static mbsp_t LoadBsp(const std::filesystem::path &path_in)
 {
     std::filesystem::path path = path_in;
@@ -408,7 +413,7 @@ TEST_CASE("options_reset2", "[testmaps_q1]")
  */
 TEST_CASE("chop_no_change", "[testmaps_q1]")
 {
-    LoadTestmap("qbsp_chop_no_change.map");
+    LoadTestmapQ1("qbsp_chop_no_change.map");
 
     // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
 }
@@ -436,7 +441,7 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 
 TEST_CASE("simple_sealed2", "[testmaps_q1]")
 {
-    mbsp_t bsp = LoadTestmap("qbsp_simple_sealed2.map");
+    mbsp_t bsp = LoadTestmapQ1("qbsp_simple_sealed2.map");
 
     CHECK(map.brushes.size() == 14);
 
@@ -477,7 +482,7 @@ TEST_CASE("simple_sealed2", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_worldspawn.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map");
 
     // 6 for the room
     // 1 for the button
@@ -509,7 +514,7 @@ TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_wall.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_detail_wall.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -524,7 +529,7 @@ TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -539,7 +544,7 @@ TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_detail_illusionary.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_detail_illusionary.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -562,7 +567,7 @@ TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_simple_worldspawn_sky.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -603,7 +608,7 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
 
 TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_water_detail_illusionary.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_water_detail_illusionary.map");
 
     CHECK_FALSE(map.leakfile);
 
@@ -623,7 +628,7 @@ TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 
 TEST_CASE("noclipfaces", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_noclipfaces.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -641,7 +646,7 @@ TEST_CASE("noclipfaces", "[testmaps_q1]")
  */
 TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_noclipfaces_mirrorinside.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_noclipfaces_mirrorinside.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -656,7 +661,7 @@ TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
 
 TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_detail_illusionary_intersecting.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map");
 
     CHECK_FALSE(map.leakfile);
 
@@ -678,7 +683,7 @@ TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 
 TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_detail_illusionary_noclipfaces_intersecting.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map");
 
     CHECK_FALSE(map.leakfile);
 
@@ -695,14 +700,14 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 
 TEST_CASE("detail_doesnt_seal", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_seal.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_doesnt_seal.map");
 
     REQUIRE(map.leakfile);
 }
 
 TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_detail_doesnt_remove_world_nodes.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_detail_doesnt_remove_world_nodes.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -730,7 +735,7 @@ TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
 
 TEST_CASE("merge", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_merge.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_merge.map");
 
     REQUIRE(9 == map.brushes.size());
 
@@ -740,7 +745,7 @@ TEST_CASE("merge", "[testmaps_q1]")
 
 TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_tjunc_many_sided_face.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -765,7 +770,7 @@ TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
  */
 TEST_CASE("brush_clipping_order", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_brush_clipping_order.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_brush_clipping_order.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -794,7 +799,7 @@ TEST_CASE("brush_clipping_order", "[testmaps_q1]")
  */
 TEST_CASE("origin", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_origin.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_origin.map");
 
     REQUIRE_FALSE(map.leakfile);
 
@@ -818,7 +823,7 @@ TEST_CASE("origin", "[testmaps_q1]")
 
 TEST_CASE("simple", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbsp_simple.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_simple.map");
 
     REQUIRE(map.leakfile);
 
@@ -829,13 +834,13 @@ TEST_CASE("simple", "[testmaps_q1]")
  */
 TEST_CASE("features", "[testmaps_q1]")
 {
-    const mbsp_t bsp = LoadTestmap("qbspfeatures.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbspfeatures.map");
 
     REQUIRE_FALSE(map.leakfile);
 }
 
 TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_func_detail.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_func_detail.map");
 
     CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -868,7 +873,7 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
 }
 
 TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_angled_brush.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_angled_brush.map");
 
     CHECK_FALSE(map.leakfile);
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -879,7 +884,7 @@ TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
 }
 
 TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
-    const mbsp_t bsp = LoadTestmap("qbsp_sealing_point_entity_on_outside.map");
+    const mbsp_t bsp = LoadTestmapQ1("qbsp_sealing_point_entity_on_outside.map");
 
     CHECK_FALSE(map.leakfile);
 }
