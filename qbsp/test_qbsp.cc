@@ -618,6 +618,9 @@ TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
     // where the func_detail_illusionary sticks into the void
     const qvec3d illusionary_in_void{8, -40, 72};
     CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], illusionary_in_void)->contents);
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
 }
 
 TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
@@ -659,6 +662,9 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
     CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(   0,  500,    0))->contents);
     CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(   0, -500,    0))->contents);
     CHECK(CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(   0,    0, -500))->contents);
+
+    CHECK(prt->portals.size() == 0);
+    // FIXME: unsure what the expected number of visclusters is, does sky get one?
 }
 
 TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
@@ -694,6 +700,9 @@ TEST_CASE("noclipfaces", "[testmaps_q1]")
     for (auto &face : bsp.dfaces) {
         REQUIRE(std::string("{trigger") == Face_TextureName(&bsp, &face));
     }
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
 }
 
 /**
@@ -712,6 +721,9 @@ TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
     for (auto &face : bsp.dfaces) {
         REQUIRE(std::string("{trigger") == Face_TextureName(&bsp, &face));
     }
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
 }
 
 TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
@@ -734,6 +746,9 @@ TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 
     // interior face that should be clipped away
     CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -52, 116), qvec3d(0, -1, 0)).size());
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
 }
 
 TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
@@ -751,6 +766,9 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 
     // interior face not clipped away
     CHECK(1 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -52, 116), qvec3d(0, -1, 0)).size());
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
 }
 
 TEST_CASE("detail_doesnt_seal", "[testmaps_q1]")
@@ -938,6 +956,9 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
 
     CHECK(((PortalMatcher(prt->portals[0].winding, p0) && PortalMatcher(prt->portals[1].winding, p1))
         || (PortalMatcher(prt->portals[0].winding, p1) && PortalMatcher(prt->portals[1].winding, p0))));
+
+    CHECK(prt->portalleafs == 3);
+    CHECK(prt->portalleafs_real > 3);
 }
 
 TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
@@ -1038,6 +1059,10 @@ TEST_CASE("detail", "[testmaps_q2]") {
     CHECK(-1 != empty_leaf_beside_button->cluster);
     CHECK(empty_leaf_above_button->cluster == empty_leaf_beside_button->cluster);
     CHECK(empty_leaf_above_button != empty_leaf_beside_button);
+
+    CHECK(prt->portals.size() == 5);
+    CHECK(prt->portalleafs_real == 0); // not used by Q2
+    CHECK(prt->portalleafs == 4);
 }
 
 TEST_CASE("playerclip", "[testmaps_q2]")
@@ -1217,6 +1242,9 @@ TEST_CASE("base1leak", "[testmaps_q2]")
     CHECK(Q2_CONTENTS_SOLID == plus_y_wall_leaf->contents);
 
     CHECK(3 == plus_y_wall_leaf->numleafbrushes);
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
 }
 
 /**
@@ -1342,6 +1370,9 @@ TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
     // check leaf contents
     CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
     CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_empty_room)->contents);
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
 }
 
 /**
@@ -1393,6 +1424,10 @@ TEST_CASE("qbsp_q1_sealing", "[testmaps_q1]") {
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_emptyroom));
     CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], in_void));
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], connected_by_thin_gap));
+
+    CHECK(prt->portals.size() == 2);
+    CHECK(prt->portalleafs == 3); // 2 connected rooms + gap (other room is filled in with solid)
+    CHECK(prt->portalleafs_real == 3); // no detail, so same as above
 }
 
 TEST_CASE("winding", "[benchmark]") {
