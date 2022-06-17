@@ -179,7 +179,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t *prevs
     stack.numseparators[1] = 0;
 
     for (i = 0; i < STACK_WINDINGS; i++)
-        stack.windings[i].reset();
+        stack.windings_used[i] = false;
 
     leafbits_t local(portalleafs);
     stack.mightsee = &local;

@@ -150,14 +150,15 @@ struct pstack_t
     leaf_t *leaf;
     portal_t *portal; // portal exiting
     std::shared_ptr<winding_t> source, pass;
-    std::shared_ptr<winding_t> windings[STACK_WINDINGS]; // Fixed size windings
+    winding_t windings[STACK_WINDINGS]; // Fixed size windings
+    bool windings_used[STACK_WINDINGS]; // whether the winding is used currently
     qplane3d portalplane;
     leafbits_t *mightsee; // bit string
     qplane3d separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
 };
 
-std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack);
+std::shared_ptr<winding_t> AllocStackWinding(pstack_t *stack);
 void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack);
 std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, qplane3d *split);
 

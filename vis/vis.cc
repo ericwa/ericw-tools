@@ -63,6 +63,10 @@ void vis_settings::initialize(int argc, const char **argv)
 settings::vis_settings options;
 
 fs::path portalfile, statefile, statetmpfile;
+ 
+struct noop_delete {
+    void operator()(winding_t *p) const { }
+};
 
 /*
   ==================
@@ -71,11 +75,14 @@ fs::path portalfile, statefile, statetmpfile;
   Return a pointer to a free fixed winding on the stack
   ==================
 */
-std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack)
+std::shared_ptr<winding_t> AllocStackWinding(pstack_t *stack)
 {
-    for (auto &winding : stack->windings) {
-        if (!winding) {
-            return (winding = std::make_shared<winding_t>());
+    for (size_t i = 0; i < STACK_WINDINGS; i++) {
+        if (!stack->windings_used[i]) {
+            stack->windings_used[i] = true;
+            return std::shared_ptr<winding_t>(&stack->windings[i], [stack, i]([[maybe_unused]] winding_t *) {
+                stack->windings_used[i] = false;
+            });
         }
     }
 
@@ -89,14 +96,16 @@ std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack)
   As long as the winding passed in is local to the stack, free it. Otherwise,
   do nothing (the winding either belongs to a portal or another stack
   structure further up the call chain).
+
+  FIXME: is there some way we can refactor this out entirely? the deleter
+  for stack windings is safe
   ==================
 */
 void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack)
 {
-    for (auto &winding : stack->windings) {
-        if (winding == w) {
+    for (size_t i = 0; i < STACK_WINDINGS; i++) {
+        if (stack->windings_used[i] && &stack->windings[i] == w.get()) {
             w.reset();
-            winding.reset();
             return;
         }
     }
