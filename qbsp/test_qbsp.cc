@@ -892,6 +892,11 @@ TEST_CASE("features", "[testmaps_q1]")
     REQUIRE(prt.has_value());
 }
 
+bool PortalMatcher(const prtfile_winding_t& a, const prtfile_winding_t &b)
+{
+    return a.undirectional_equal(b);
+}
+
 TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_func_detail.map");
 
@@ -923,6 +928,16 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
     CHECK(CONTENTS_SOLID == detail_wall_leaf->contents);
     CHECK(CONTENTS_EMPTY == detail_illusionary_leaf->contents);
     CHECK(CONTENTS_EMPTY == detail_illusionary_mirrorinside_leaf->contents);
+
+    // portals
+
+    REQUIRE(2 == prt->portals.size());
+
+    const auto p0 = prtfile_winding_t{{-160, -8, 352}, {56, -8, 352}, {56, -8, 96}, {-160, -8, 96}};
+    const auto p1 = p0.translate({232, 0, 0});
+
+    CHECK(((PortalMatcher(prt->portals[0].winding, p0) && PortalMatcher(prt->portals[1].winding, p1))
+        || (PortalMatcher(prt->portals[0].winding, p1) && PortalMatcher(prt->portals[1].winding, p0))));
 }
 
 TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {

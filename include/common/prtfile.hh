@@ -26,8 +26,10 @@
 
 constexpr size_t PRT_MAX_WINDING_FIXED = 24;
 
+using prtfile_winding_t = polylib::winding_base_t<PRT_MAX_WINDING_FIXED>;
+
 struct prtfile_portal_t {
-    polylib::winding_base_t<PRT_MAX_WINDING_FIXED> winding;
+    prtfile_winding_t winding;
     int leafnums[2];
 };
 

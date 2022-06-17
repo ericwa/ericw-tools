@@ -231,6 +231,9 @@ public:
         }
     }
 
+    // initializer list constructor
+    inline winding_base_t(std::initializer_list<qvec3d> l) : winding_base_t(l.begin(), l.end()) {}
+
     // copy constructor
     inline winding_base_t(const winding_base_t &copy) : winding_base_t(copy.size())
     {
@@ -788,6 +791,54 @@ public:
         std::reverse_copy(begin(), end(), result.begin());
 
         return result;
+    }
+
+    winding_base_t translate(const qvec3d& offset) const
+    {
+        winding_base_t result(*this);
+
+        for (qvec3d& p : result) {
+            p += offset;
+        }
+
+        return result;
+    }
+
+    bool directional_equal(const winding_base_t& w,  const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
+    {
+        if (this->size() != w.size()) {
+            return false;
+        }
+
+        const auto this_size = size();
+
+        // try different start offsets in `this`
+        for (int i = 0; i < this_size; ++i) {
+            bool all_equal = true;
+
+            // index in `w` to compare
+            for (int j = 0; j < this_size; ++j) {
+                const qvec3d &our_point = (*this)[(i + j) % this_size];
+                const qvec3d &their_point = w[j];
+
+                if (!qv::epsilonEqual(our_point, their_point, equal_epsilon)) {
+                    all_equal = false;
+                    break;
+                }
+            }
+
+            if (all_equal) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    bool undirectional_equal(const winding_base_t& w,  const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
+    {
+        return directional_equal(w, equal_epsilon)
+            || directional_equal(w.flip(), equal_epsilon);
     }
 };
 
