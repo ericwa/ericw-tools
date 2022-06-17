@@ -12,6 +12,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/common/fs.cc
     ${CMAKE_SOURCE_DIR}/common/imglib.cc
     ${CMAKE_SOURCE_DIR}/common/settings.cc
+    ${CMAKE_SOURCE_DIR}/common/prtfile.cc
     ${CMAKE_SOURCE_DIR}/common/debugger.natvis
     ${CMAKE_SOURCE_DIR}/include/common/aabb.hh
     ${CMAKE_SOURCE_DIR}/include/common/bitflags.hh
@@ -31,6 +32,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/fs.hh
     ${CMAKE_SOURCE_DIR}/include/common/imglib.hh
     ${CMAKE_SOURCE_DIR}/include/common/settings.hh
+    ${CMAKE_SOURCE_DIR}/include/common/prtfile.hh
     ${CMAKE_SOURCE_DIR}/include/common/vectorutils.hh)
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json)

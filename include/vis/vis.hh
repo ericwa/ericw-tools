@@ -23,11 +23,9 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 #include <common/polylib.hh>
+#include <common/prtfile.hh>
 #include <vis/leafbits.hh>
 
-constexpr const char *PORTALFILE = "PRT1";
-constexpr const char *PORTALFILE2 = "PRT2";
-constexpr const char *PORTALFILEAM = "PRT1-AM";
 constexpr vec_t ON_EPSILON = 0.1;
 constexpr vec_t EQUAL_EPSILON = 0.001;
 
