@@ -30,9 +30,7 @@ int c_noclip = 0;
 
 bool showgetleaf = true;
 
-static uint8_t *vismap;
-static uint8_t *vismap_p;
-static uint8_t *vismap_end; // past visfile
+static std::vector<uint8_t> vismap;
 
 uint32_t originalvismapsize;
 
@@ -404,14 +402,14 @@ void LeafThread(size_t)
 */
 int64_t totalvis;
 
+static std::vector<uint8_t> compressed;
+
 static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 {
     leaf_t *leaf;
     uint8_t *outbuffer;
-    uint8_t *compressed;
-    int i, j, len;
+    int i, j;
     int numvis, numblocks;
-    uint8_t *dest;
     const portal_t *p;
 
     /*
@@ -477,23 +475,17 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         }
     }
 
+    compressed.clear();
+
     /* Allocate for worst case where RLE might grow the data (unlikely) */
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        compressed = new uint8_t[max(1, (portalleafs * 2) / 8)];
-        len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
+        CompressRow(outbuffer, (portalleafs + 7) >> 3, std::back_inserter(compressed));
     } else {
-        compressed = new uint8_t[max(1, (portalleafs_real * 2) / 8)];
-        len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
+        CompressRow(outbuffer, (portalleafs_real + 7) >> 3, std::back_inserter(compressed));
     }
 
-    dest = vismap_p;
-    vismap_p += len;
-
-    if (vismap_p > vismap_end)
-        FError("Vismap expansion overflow");
-
     /* leaf 0 is a common solid */
-    int32_t visofs = dest - vismap;
+    int32_t visofs = vismap.size();
 
     bsp->dvis.set_bit_offset(VIS_PVS, clusternum, visofs);
 
@@ -512,8 +504,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         }
     }
 
-    memcpy(dest, compressed, len);
-    delete[] compressed;
+    std::copy(compressed.begin(), compressed.end(), std::back_inserter(vismap));
 }
 
 /*
@@ -617,6 +608,14 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     portalleafs = prtfile.portalleafs;
     portalleafs_real = prtfile.portalleafs_real;
+
+    /* Allocate for worst case where RLE might grow the data (unlikely) */
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        compressed.reserve(max(1, (portalleafs * 2) / 8));
+    } else {
+        compressed.reserve(max(1, (portalleafs_real * 2) / 8));
+    }
+
     numportals = prtfile.portals.size();
 
     if (bsp->loadversion->game->id != GAME_QUAKE_II) {
@@ -648,10 +647,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     bsp->dvis.resize(portalleafs);
 
-    bsp->dvis.bits.resize(originalvismapsize * 2);
-
-    vismap = vismap_p = bsp->dvis.bits.data();
-    vismap_end = vismap + bsp->dvis.bits.size();
+    vismap.reserve(originalvismapsize * 2);
 
     for (i = 0, p = portals; i < numportals; i++) {
         const auto &sourceportal = prtfile.portals[i];
@@ -756,7 +752,7 @@ int vis_main(int argc, const char **argv)
         logging::print("c_noclip: {}\n", c_noclip);
         logging::print("c_chains: {}\n", c_chains);
 
-        bsp.dvis.bits.resize(vismap_p - bsp.dvis.bits.data());
+        bsp.dvis.bits = std::move(vismap);
         bsp.dvis.bits.shrink_to_fit();
         logging::print("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
     }

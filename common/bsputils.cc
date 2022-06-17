@@ -543,28 +543,27 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
 CompressRow
 ===============
 */
-int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
+void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it)
 {
-    int i, rep;
-    uint8_t *dst;
+    for (size_t i = 0; i < numbytes; i++) {
+        it++ = vis[i];
 
-    dst = out;
-    for (i = 0; i < numbytes; i++) {
-        *dst++ = vis[i];
-        if (vis[i])
+        if (vis[i]) {
             continue;
+        }
 
-        rep = 1;
-        for (i++; i < numbytes; i++)
-            if (vis[i] || rep == 255)
+        int32_t rep = 1;
+
+        for (i++; i < numbytes; i++) {
+            if (vis[i] || rep == 255) {
                 break;
-            else
-                rep++;
-        *dst++ = rep;
+            }
+            rep++;
+        }
+
+        it++ = rep;
         i--;
     }
-
-    return dst - out;
 }
 
 /*
