@@ -91,18 +91,14 @@ winding_t *AllocStackWinding(pstack_t &stack)
   do nothing (the winding either belongs to a portal or another stack
   structure further up the call chain).
 
-  FIXME: is there some way we can refactor this out entirely? the deleter
-  for stack windings is safe
+  FIXME: is there some way we can refactor this out entirely?
   ==================
 */
 void FreeStackWinding(winding_t *&w, pstack_t &stack)
 {
-    for (size_t i = 0; i < STACK_WINDINGS; i++) {
-        if (stack.windings_used[i] && &stack.windings[i] == w) {
-            stack.windings_used[i] = false;
-            w = nullptr;
-            return;
-        }
+    if (w >= stack.windings && w <= &stack.windings[STACK_WINDINGS]) {
+        stack.windings_used[w - stack.windings] = false;
+        w = nullptr;
     }
 }
 
