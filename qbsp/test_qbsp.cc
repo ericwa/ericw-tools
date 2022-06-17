@@ -435,8 +435,6 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 
     const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
-    REQUIRE(map.brushes.size() == 6);
-
     REQUIRE(bsp.dleafs.size() == 2);
 
     REQUIRE(bsp.dleafs[0].contents == CONTENTS_SOLID);
@@ -452,8 +450,6 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 TEST_CASE("simple_sealed2", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_sealed2.map");
-
-    CHECK(map.brushes.size() == 14);
 
     CHECK(bsp.dleafs.size() == 3);
     
@@ -494,10 +490,6 @@ TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map");
 
-    // 6 for the room
-    // 1 for the button
-    REQUIRE(map.brushes.size() == 7);
-
     // 1 solid leaf
     // 5 empty leafs around the button
     REQUIRE(bsp.dleafs.size() == 6);
@@ -526,11 +518,7 @@ TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_wall.map");
 
-    REQUIRE_FALSE(map.leakfile);
-
-    // 6 for the room
-    // 1 for the button
-    REQUIRE(map.brushes.size() == 7);
+    REQUIRE(prt.has_value());
 
     // 5 faces for the "button"
     // 6 faces for the room
@@ -541,11 +529,7 @@ TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map");
 
-    REQUIRE_FALSE(map.leakfile);
-
-    // 6 for the room
-    // 1 for the button
-    REQUIRE(map.brushes.size() == 7);
+    REQUIRE(prt.has_value());
 
     // 5 faces for the "button"
     // 9 faces for the room
@@ -556,11 +540,7 @@ TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_illusionary.map");
 
-    REQUIRE_FALSE(map.leakfile);
-
-    // 6 for the room
-    // 1 for the button
-    CHECK(map.brushes.size() == 7);
+    REQUIRE(prt.has_value());
 
     // 5 faces for the "button"
     // 6 faces for the room
@@ -579,7 +559,7 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     // just a box with sky on the ceiling
     const auto textureToFace = MakeTextureToFaceMap(bsp);
@@ -620,7 +600,7 @@ TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_water_detail_illusionary.map");
 
-    CHECK_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     const qvec3d inside_water_and_fence{-20, -52, 124};
     const qvec3d inside_fence{-20, -52, 172};
@@ -640,7 +620,7 @@ TEST_CASE("noclipfaces", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     REQUIRE(bsp.dfaces.size() == 2);
 
@@ -658,7 +638,7 @@ TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces_mirrorinside.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     REQUIRE(bsp.dfaces.size() == 4);
     
@@ -673,7 +653,7 @@ TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map");
 
-    CHECK_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     // sides: 3*4 = 12
     // top: 3
@@ -695,7 +675,7 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map");
 
-    CHECK_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     for (auto &face : bsp.dfaces) {
         CHECK(std::string("{trigger") == Face_TextureName(&bsp, &face));
@@ -712,14 +692,14 @@ TEST_CASE("detail_doesnt_seal", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_seal.map");
 
-    REQUIRE(map.leakfile);
+    REQUIRE_FALSE(prt.has_value());
 }
 
 TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_remove_world_nodes.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     {
         // check for a face under the start pos
@@ -747,9 +727,7 @@ TEST_CASE("merge", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_merge.map");
 
-    REQUIRE(9 == map.brushes.size());
-
-    REQUIRE(map.leakfile);
+    REQUIRE_FALSE(prt.has_value());
     REQUIRE(6 == bsp.dfaces.size());
 }
 
@@ -757,7 +735,7 @@ TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     std::map<qvec3d, std::vector<const mface_t *>> faces_by_normal;
     for (auto &face : bsp.dfaces) {
@@ -782,7 +760,7 @@ TEST_CASE("brush_clipping_order", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_brush_clipping_order.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     const qvec3d world_button{-8, -8, 16};
     const qvec3d func_wall_button{152, -8, 16};
@@ -811,7 +789,7 @@ TEST_CASE("origin", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_origin.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 
     // 0 = world, 1 = rotate_object
     REQUIRE(2 == bsp.dmodels.size());
@@ -835,7 +813,7 @@ TEST_CASE("simple", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map");
 
-    REQUIRE(map.leakfile);
+    REQUIRE_FALSE(prt.has_value());
 
 }
 
@@ -846,13 +824,13 @@ TEST_CASE("features", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbspfeatures.map");
 
-    REQUIRE_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 }
 
 TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_func_detail.map");
 
-    CHECK_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
     CHECK(1 == bsp.dmodels.size());
@@ -885,7 +863,7 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
 TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_angled_brush.map");
 
-    CHECK_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
     CHECK(1 == bsp.dmodels.size());
@@ -896,7 +874,7 @@ TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
 TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_sealing_point_entity_on_outside.map");
 
-    CHECK_FALSE(map.leakfile);
+    REQUIRE(prt.has_value());
 }
 
 // q2 testmaps
