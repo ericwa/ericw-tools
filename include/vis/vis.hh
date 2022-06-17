@@ -39,17 +39,6 @@ enum pstatus_t
     pstat_done
 };
 
-struct portal_t
-{
-    qplane3d plane; // normal pointing into neighbor
-    int leaf; // neighbor
-    std::shared_ptr<struct winding_t> winding;
-    pstatus_t status;
-    leafbits_t visbits, mightsee;
-    int nummightsee;
-    int numcansee;
-};
-
 struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
 {
     qvec3d origin; // Bounding sphere for fast clipping tests
@@ -106,17 +95,30 @@ struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
       Used for visdist to get the distance from a winding to a portal
       ============================================================================
     */
-    float distFromPortal(portal_t *p)
-    {
-        vec_t mindist = 1e20;
-
-        for (size_t i = 0; i < size(); ++i) {
-            mindist = std::min(mindist, fabs(p->plane.distance_to(at(i))));
-        }
-
-        return mindist;
-    }
+    inline float distFromPortal(struct portal_t *p);
 };
+
+struct portal_t
+{
+    qplane3d plane; // normal pointing into neighbor
+    int leaf; // neighbor
+    winding_t winding;
+    pstatus_t status;
+    leafbits_t visbits, mightsee;
+    int nummightsee;
+    int numcansee;
+};
+
+inline float winding_t::distFromPortal(struct portal_t *p)
+{
+    vec_t mindist = 1e20;
+
+    for (size_t i = 0; i < size(); ++i) {
+        mindist = std::min(mindist, fabs(p->plane.distance_to(at(i))));
+    }
+
+    return mindist;
+}
 
 struct sep_t
 {
@@ -149,7 +151,7 @@ struct pstack_t
     pstack_t *next;
     leaf_t *leaf;
     portal_t *portal; // portal exiting
-    std::shared_ptr<winding_t> source, pass;
+    winding_t *source, *pass;
     winding_t windings[STACK_WINDINGS]; // Fixed size windings
     bool windings_used[STACK_WINDINGS]; // whether the winding is used currently
     qplane3d portalplane;
@@ -158,9 +160,9 @@ struct pstack_t
     int numseparators[2];
 };
 
-std::shared_ptr<winding_t> AllocStackWinding(pstack_t *stack);
-void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack);
-std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, qplane3d *split);
+winding_t *AllocStackWinding(pstack_t &stack);
+void FreeStackWinding(winding_t *&w, pstack_t &stack);
+winding_t *ClipStackWinding(winding_t *&in, pstack_t &stack, const qplane3d &split);
 
 struct threaddata_t
 {

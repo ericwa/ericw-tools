@@ -784,11 +784,20 @@ public:
         return w;
     }
 
+    void flip_to(winding_base_t &winding_out) const
+    {
+        if (winding_out.size() < size()) {
+            winding_out.resize(size());
+        }
+
+        std::reverse_copy(begin(), end(), winding_out.begin());
+    }
+
     winding_base_t flip() const
     {
         winding_base_t result(count);
 
-        std::reverse_copy(begin(), end(), result.begin());
+        flip_to(result);
 
         return result;
     }
