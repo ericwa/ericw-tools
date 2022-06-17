@@ -67,6 +67,27 @@ struct bspxbrushes_perbrush
 
 using bspxbrushes_perface = qplane3f;
 
+// FACENORMALS BSPX lump
+// struct isn't actually used, but provides technical
+// specs of the lump
+struct bspxfacenormals_header
+{
+    // num unique normals
+    uint32_t num_normals;
+    qvec3f *normals; // [num_normals]
+
+    // the vertex data is stored per face, because vertex data
+    // in the BSP is shared between faces; this won't allow for mixed
+    // smoothing groups to work properly since they can't share normals.
+    // if the BSP has 4 faces with 4 vertices each, then what follows is
+    // 4 * 4 * (3 uint32_t); normal/tangent/bitangent per vertex per face.
+    // for each bsp face:
+        // for each face vertex:
+            uint32_t normal;
+            uint32_t tangent;
+            uint32_t bitangent;
+};
+
 // BSPX data
 
 struct bspxentry_t
