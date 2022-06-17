@@ -450,7 +450,7 @@ TEST_CASE("InvalidTextureProjection3", "[qbsp]")
 
 TEST_CASE("WindingArea", "[mathlib]")
 {
-    winding_t w{5};
+    winding_t w(5);
 
     // poor test.. but at least checks that the colinear point is treated correctly
     w[0] = {0, 0, 0};
