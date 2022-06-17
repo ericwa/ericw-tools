@@ -598,6 +598,8 @@ void CalcVis(mbsp_t *bsp)
 
 // ===========================================================================
 
+#include <fstream>
+
 /*
   ============
   LoadPortals
@@ -605,26 +607,28 @@ void CalcVis(mbsp_t *bsp)
 */
 static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 {
-    int i, j, count;
+    int i, j;
     portal_t *p;
     leaf_t *l;
-    char magic[80];
+    std::string magic;
     int numpoints;
     int leafnums[2];
     qplane3d plane;
-    qfile_t f = SafeOpenRead(name, true);
+    std::ifstream f(name);
 
     /*
      * Parse the portal file header
      */
-    count = fscanf(f.get(), "%79s\n", magic);
-    if (count != 1)
-        FError("unknown header: {}\n", magic);
+    std::getline(f, magic);
+    if (magic.empty()) {
+        FError("unknown header/empty portal file {}\n", name);
+    }
 
-    if (!strcmp(magic, PORTALFILE)) {
-        count = fscanf(f.get(), "%i\n%i\n", &portalleafs, &numportals);
-        if (count != 2)
-            FError("unable to parse {} HEADER\n", PORTALFILE);
+    if (magic == PORTALFILE) {
+        f >> portalleafs >> numportals;
+
+        if (f.bad())
+            FError("unable to parse {} header\n", PORTALFILE);
 
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
@@ -636,23 +640,25 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
             logging::print("{:6} leafs\n", portalleafs);
             logging::print("{:6} portals\n", numportals);
         }
-    } else if (!strcmp(magic, PORTALFILE2)) {
-        count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs_real, &portalleafs, &numportals);
-        if (count != 3)
-            FError("unable to parse {} HEADER\n", PORTALFILE);
+    } else if (magic == PORTALFILE2) {
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             FError("{} can not be used with Q2\n", PORTALFILE2);
         }
+        f >> portalleafs_real >> portalleafs >> numportals;
+
+        if (f.bad())
+            FError("unable to parse {} header\n", PORTALFILE);
         logging::print("{:6} leafs\n", portalleafs_real);
         logging::print("{:6} clusters\n", portalleafs);
         logging::print("{:6} portals\n", numportals);
-    } else if (!strcmp(magic, PORTALFILEAM)) {
-        count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs, &numportals, &portalleafs_real);
-        if (count != 3)
-            FError("unable to parse {} HEADER\n", PORTALFILE);
+    } else if (magic == PORTALFILEAM) {
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
             FError("{} can not be used with Q2\n", PORTALFILEAM);
         }
+        f >> portalleafs >> numportals >> portalleafs_real;
+
+        if (f.bad())
+            FError("unable to parse {} header\n", PORTALFILE);
         logging::print("{:6} leafs\n", portalleafs_real);
         logging::print("{:6} clusters\n", portalleafs);
         logging::print("{:6} portals\n", numportals);
@@ -688,7 +694,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     vismap_end = vismap + bsp->dvis.bits.size();
 
     for (i = 0, p = portals; i < numportals; i++) {
-        if (fscanf(f.get(), "%i %i %i ", &numpoints, &leafnums[0], &leafnums[1]) != 3)
+        f >> numpoints >> leafnums[0] >> leafnums[1];
+        if (f.bad())
             FError("reading portal {}", i);
         if (numpoints > MAX_WINDING)
             FError("portal {} has too many points", i);
@@ -698,10 +705,17 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
         winding_t &w = *(p->winding = std::make_shared<winding_t>(numpoints));
 
         for (j = 0; j < numpoints; j++) {
-            if (fscanf(f.get(), "(%lf %lf %lf ) ", &w[j][0], &w[j][1], &w[j][2]) != 3)
+            while (!f.bad() && f.get() != '(')
+                ;
+
+            f >> w[j][0] >> w[j][1] >> w[j][2];
+
+            while (!f.bad() && f.get() != ')')
+                ;
+
+            if (f.bad())
                 FError("reading portal {}", i);
         }
-        fscanf(f.get(), "\n");
 
         // calc plane
         plane = w.plane();
@@ -752,12 +766,12 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
         return;
     }
 
-    if (!strcmp(magic, PORTALFILE2)) {
+    if (magic == PORTALFILE2) {
         for (i = 0; i < portalleafs; i++) {
             while (1) {
                 int leafnum;
-                count = fscanf(f.get(), "%i", &leafnum);
-                if (!count || count == EOF)
+                f >> leafnum;
+                if (f.bad() || f.eof())
                     break;
                 if (leafnum < 0)
                     break;
@@ -765,16 +779,16 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
                     FError("Invalid leaf number in cluster map ({} >= {})", leafnum, portalleafs_real);
                 bsp->dleafs[leafnum + 1].cluster = i;
             }
-            if (count == EOF)
+            if (f.bad() || f.eof())
                 break;
         }
         if (i < portalleafs)
             FError("Couldn't read cluster map ({} / {})\n", i, portalleafs);
-    } else if (!strcmp(magic, PORTALFILEAM)) {
+    } else if (magic == PORTALFILEAM) {
         for (i = 0; i < portalleafs_real; i++) {
             int clusternum;
-            count = fscanf(f.get(), "%i", &clusternum);
-            if (!count || count == EOF) {
+            f >> clusternum;
+            if (f.bad() || f.eof()) {
                 Error("Unexpected end of cluster map\n");
             }
             if (clusternum < 0 || clusternum >= portalleafs) {

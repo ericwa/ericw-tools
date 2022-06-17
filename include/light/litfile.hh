@@ -27,13 +27,17 @@ struct litheader_t
 {
     struct
     {
-        char ident[4];
+        std::array<char, 4> ident = { 'Q', 'L', 'I', 'T' };
         int version;
+
+        auto stream_data() { return std::tie(ident, version); }
     } v1;
     struct
     {
         int numsurfs;
         int lmsamples;
+
+        auto stream_data() { return std::tie(numsurfs, lmsamples); }
     } v2;
 };
 

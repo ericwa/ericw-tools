@@ -59,43 +59,47 @@ uint8_t thepalette[768] = // Quake palette
 
 static bool WAD_LoadInfo(wad_t &wad, bool external)
 {
-    wadinfo_t *hdr = &wad.header;
-    int i, len;
+    wadinfo_t &hdr = wad.header;
+    int i;
     dmiptex_t miptex;
 
     external |= options.notextures.value();
 
-    len = SafeRead(wad.file, hdr, sizeof(wadinfo_t));
-    if (len != sizeof(wadinfo_t))
+    wad.file >= hdr;
+
+    if (wad.file.bad())
         return false;
 
     wad.version = 0;
-    if (!strncmp(hdr->identification, "WAD2", 4))
+    if (!strncmp(hdr.identification.data(), "WAD2", 4))
         wad.version = 2;
-    else if (!strncmp(hdr->identification, "WAD3", 4))
+    else if (!strncmp(hdr.identification.data(), "WAD3", 4))
         wad.version = 3;
     if (!wad.version)
         return false;
 
-    SafeSeek(wad.file, hdr->infotableofs, SEEK_SET);
+    wad.file.seekg(hdr.infotableofs, std::ios_base::beg);
     wad.lumps.reserve(wad.header.numlumps);
 
     /* Get the dimensions and make a texture_t */
     for (i = 0; i < wad.header.numlumps; i++) {
         lumpinfo_t lump;
+        wad.file >= lump;
 
-        len = SafeRead(wad.file, &lump, sizeof(lump));
-        if (len != sizeof(lump))
+        if (wad.file.bad())
             return false;
 
-        auto restore_pos = SafeTell(wad.file);
+        std::streampos restore_pos = wad.file.tellg();
+        wad.file.seekg(lump.filepos, std::ios_base::beg);
+        wad.file >= miptex;
+        miptex.name[15] = '\0'; // just in case we encounter a bad name
 
-        SafeSeek(wad.file, lump.filepos, SEEK_SET);
-        len = SafeRead(wad.file, &miptex, sizeof(miptex));
-
-        if (len == sizeof(miptex)) {
-            int w = LittleLong(miptex.width);
-            int h = LittleLong(miptex.height);
+        if (wad.file.bad()) {
+            lump.size = 0;
+            wad.lumps.insert({lump.name.data(), lump});
+        } else {
+            int w = miptex.width;
+            int h = miptex.height;
             lump.size =
                 sizeof(miptex) + (w >> 0) * (h >> 0) + (w >> 1) * (h >> 1) + (w >> 2) * (h >> 2) + (w >> 3) * (h >> 3);
             if (options.target_game->id == GAME_HALF_LIFE)
@@ -103,8 +107,7 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
             lump.size = (lump.size + 3) & ~3; // keep things aligned if we can.
 
             texture_t tex;
-            memcpy(tex.name, miptex.name.data(), 16);
-            tex.name[15] = '\0';
+            tex.name = miptex.name.data();
             tex.width = miptex.width;
             tex.height = miptex.height;
             wad.textures.insert({tex.name, tex});
@@ -115,12 +118,9 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
 
             // fmt::print("Created texture_t {} {} {}\n", tex->name, tex->width, tex->height);
             wad.lumps.insert({tex.name, lump});
-        } else {
-            lump.size = 0;
-            wad.lumps.insert({lump.name, lump});
         }
 
-        SafeSeek(wad.file, restore_pos, SEEK_SET);
+        wad.file.seekg(restore_pos, std::ios_base::beg);
     }
 
     return true;
@@ -130,7 +130,7 @@ static void WADList_OpenWad(const fs::path &fpath, bool external)
 {
     wad_t wad;
 
-    wad.file = SafeOpenRead(fpath);
+    wad.file.open(fpath, std::ios_base::in | std::ios_base::binary);
 
     if (wad.file) {
         if (options.fVerbose)
@@ -142,7 +142,7 @@ static void WADList_OpenWad(const fs::path &fpath, bool external)
         }
 
         logging::print("WARNING: {} isn't a wadfile\n", fpath);
-        wad.file.reset();
+        wad.file.close();
     } else {
         // Message?
     }
@@ -196,7 +196,7 @@ static const lumpinfo_t *WADList_FindTexture(const std::string &name)
     return NULL;
 }
 
-static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
+static bool WAD_LoadLump(wad_t &wad, const char *name, miptexhl_t &dest)
 {
     auto it = wad.lumps.find(name);
 
@@ -207,7 +207,7 @@ static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
 
     auto &lump = it->second;
 
-    SafeSeek(wad.file, lump.filepos, SEEK_SET);
+    wad.file.seekg(lump.filepos, std::ios_base::beg);
 
     if (lump.disksize < sizeof(dmiptex_t)) {
         logging::print("Wad texture {} is invalid", name);
@@ -215,7 +215,8 @@ static bool WAD_LoadLump(const wad_t &wad, const char *name, miptexhl_t &dest)
     }
 
     std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(lump.disksize);
-    size_t size = SafeRead(wad.file, buffer.get(), lump.disksize);
+    wad.file.read((char *) buffer.get(), lump.disksize);
+    size_t size = wad.file.gcount();
 
     if (size != lump.disksize)
         FError("Failure reading from file");

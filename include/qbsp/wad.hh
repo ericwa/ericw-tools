@@ -24,22 +24,25 @@
 #include <unordered_map>
 #include <vector>
 #include <list>
+#include <fstream>
 #include "common/cmdlib.hh"
 #include "common/fs.hh"
 
 // Texture data stored for quick searching
 struct texture_t
 {
-    char name[16];
+    std::string name;
     int width, height;
 };
 
 // WAD Format
 struct wadinfo_t
 {
-    char identification[4]; // should be WAD2
+    std::array<char, 4> identification; // should be WAD2
     int numlumps;
     int infotableofs;
+
+    auto stream_data() { return std::tie(identification, numlumps, infotableofs); }
 };
 
 struct lumpinfo_t
@@ -50,7 +53,9 @@ struct lumpinfo_t
     char type;
     char compression;
     char pad1, pad2;
-    char name[16]; // must be null terminated
+    std::array<char, 16> name; // must be null terminated
+
+    auto stream_data() { return std::tie(filepos, disksize, size, type, compression, pad1, pad2, name); }
 };
 
 struct wad_t
@@ -59,7 +64,7 @@ struct wad_t
     int version;
     std::unordered_map<std::string, lumpinfo_t, case_insensitive_hash, case_insensitive_equal> lumps;
     std::unordered_map<std::string, texture_t, case_insensitive_hash, case_insensitive_equal> textures;
-    qfile_t file = {nullptr, nullptr};
+    std::ifstream file;
 };
 
 void WADList_Init(const std::string_view &wadstring);
