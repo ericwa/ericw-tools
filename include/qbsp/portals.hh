@@ -40,7 +40,19 @@ struct tree_t
     aabb3d bounds;
 };
 
+class portal_state_t
+{
+public:
+    int num_visportals;
+    int num_visleafs; // leafs the player can be in
+    int num_visclusters; // clusters of leafs
+    int iNodesDone;
+    bool uses_detail;
+};
+
 contentflags_t ClusterContents(const node_t *node);
 void MakeTreePortals(tree_t *tree);
 void FreeTreePortals_r(node_t *node);
-void WritePortalFile(tree_t *tree);
+void AssertNoPortals(node_t *node);
+void MakeHeadnodePortals(tree_t *tree);
+void CutNodePortals_r(node_t *node, portal_state_t *state);
