@@ -349,6 +349,10 @@ void MakeTreePortals_r(node_t *node, portalstats_t &stats)
     if (node->bounds.mins()[0] >= node->bounds.maxs()[0])
     {
         printf ("WARNING: node without a volume\n");
+
+        // fixme-brushbsp: added this to work around leafs with no portals showing up in "qbspfeatures.map" among other
+        // test maps. Not sure if correct or there's another underlying problem.
+        node->bounds = { node->parent->bounds.mins(), node->parent->bounds.mins() };
     }
 
     for (int i = 0; i < 3; i++)
