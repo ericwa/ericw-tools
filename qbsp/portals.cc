@@ -436,8 +436,7 @@ void MakeTreePortals_r(node_t *node, portalstats_t &stats)
 
     for (int i = 0; i < 3; i++)
     {
-        // fixme-brushbsp: use proper map bounds
-        if (node->bounds.mins()[i] < -8000 || node->bounds.mins()[i] > 8000)
+        if (fabs(node->bounds.mins()[i]) > options.worldextent.value())
         {
             printf ("WARNING: node with unbounded volume\n");
             break;

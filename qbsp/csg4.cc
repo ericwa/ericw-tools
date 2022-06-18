@@ -300,9 +300,18 @@ static std::list<face_t *> CSGFace_ClipAgainstSingleBrush(std::list<face_t *> in
     return outside;
 }
 
-// fixme-brushbsp: determinism: sort `result` set by .map file order
+struct brush_ptr_less
+{
+    constexpr bool operator()(const brush_t *a, const brush_t *b) const
+    {
+        return a->file_order < b->file_order;
+    }
+};
+
+using brush_result_set_t = std::set<const brush_t *, brush_ptr_less>;
+
 // fixme-brushbsp: add bounds test
-static void GatherPossibleClippingBrushes_R(const node_t *node, const face_t *srcface, std::set<const brush_t *> &result)
+static void GatherPossibleClippingBrushes_R(const node_t *node, const face_t *srcface, brush_result_set_t &result)
 {
     if (node->planenum == PLANENUM_LEAF) {
         for (auto *brush : node->original_brushes) {
@@ -322,9 +331,9 @@ GatherPossibleClippingBrushes
 Starting a search at `node`, returns brushes that possibly intersect `srcface`.
 ==================
 */
-static std::set<const brush_t *> GatherPossibleClippingBrushes(const mapentity_t* srcentity, const node_t *node, const face_t *srcface)
+static brush_result_set_t GatherPossibleClippingBrushes(const mapentity_t* srcentity, const node_t *node, const face_t *srcface)
 {
-    std::set<const brush_t *> result;
+    brush_result_set_t result;
 
     GatherPossibleClippingBrushes_R(node, srcface, result);
 
