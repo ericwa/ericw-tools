@@ -34,27 +34,9 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
-static bool AllSolid(const node_t* node) {
-    if (node->planenum != PLANENUM_LEAF) {
-        return AllSolid(node->children[0]) && AllSolid(node->children[1]);
-    }
-
-    return node->contents.is_solid(options.target_game);
-}
-
-static bool ClusterSealsMap(const node_t *node)
+static bool LeafSealsMap(const node_t *node)
 {
-    Q_assert(node->planenum == PLANENUM_LEAF || node->detail_separator);
-
-    // detail separators can seal if all leafs have been turned to solid by outside filling
-    if (node->detail_separator && AllSolid(node)) {
-        return true;
-    }
-
-    // normally detail doesn't seal
-    if (node->detail_separator) {
-        return false;
-    }
+    Q_assert(node->planenum == PLANENUM_LEAF);
 
     return options.target_game->contents_seals_map(node->contents);
 }
@@ -70,9 +52,9 @@ This avoids spurious leaks if a point entity is on the outside
 of the map (exactly on a brush faces) - happens in base1.map.
 ===========
 */
-static node_t *PointInCluster(node_t *node, const qvec3d &point)
+static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 {
-    if (node->planenum == PLANENUM_LEAF || node->detail_separator) {
+    if (node->planenum == PLANENUM_LEAF) {
         return node;
     }
 
@@ -81,18 +63,18 @@ static node_t *PointInCluster(node_t *node, const qvec3d &point)
 
     if (dist > 0) {
         // point is on the front of the node plane
-        return PointInCluster(node->children[0], point);
+        return PointInLeaf(node->children[0], point);
     } else if (dist < 0) {
         // point is on the back of the node plane
-        return PointInCluster(node->children[1], point);
+        return PointInLeaf(node->children[1], point);
     } else {
         // point is exactly on the node plane
 
-        node_t *front = PointInCluster(node->children[0], point);
-        node_t *back = PointInCluster(node->children[1], point);
+        node_t *front = PointInLeaf(node->children[0], point);
+        node_t *back = PointInLeaf(node->children[1], point);
 
         // prefer the opaque one
-        if (ClusterSealsMap(front)) {
+        if (LeafSealsMap(front)) {
             return front;
         }
         return back;
@@ -101,7 +83,7 @@ static node_t *PointInCluster(node_t *node, const qvec3d &point)
 
 static void ClearOccupied_r(node_t *node)
 {
-    // we need to clear this on leaf nodes and detail separators (clusters).. just clear it on everything
+    // we need to clear this on leaf nodes.. just clear it on everything
     node->outside_distance = -1;
     node->occupied = 0;
     node->occupant = nullptr;
@@ -120,16 +102,9 @@ static bool OutsideFill_Passable(const portal_t *p)
     }
 
     auto leafOpaque = [](const node_t *l) {
-        Q_assert(l->planenum == PLANENUM_LEAF || l->detail_separator);
+        Q_assert(l->planenum == PLANENUM_LEAF);
 
-        // fixme-brushbsp: confirm, why was this not needed before?
-        // detail separators are treated as non-opaque because detail doesn't block vis
-        // fixme-brushbsp: should probably move to node_t::opaque()
-        if (l->detail_separator) {
-            return false;
-        }
-
-        return ClusterSealsMap(l);
+        return LeafSealsMap(l);
     };
 
     if (leafOpaque(p->nodes[0]) || leafOpaque(p->nodes[1]))
@@ -180,8 +155,8 @@ static void FloodFillClustersFromVoid(tree_t *tree)
 
         Q_assert(fillnode != &tree->outside_node);
 
-        // this must be true because the map is made from closed brushes, beyion which is void
-        Q_assert(!ClusterSealsMap(fillnode));
+        // this must be true because the map is made from closed brushes, beyond which is void
+        Q_assert(!LeafSealsMap(fillnode));
         queue.emplace_back(fillnode, 0);
     }
 
@@ -340,9 +315,9 @@ static void MarkOccupiedClusters(node_t *headnode)
 #endif
 
         /* find the leaf it's in. Skip opqaue leafs */
-        node_t *cluster = PointInCluster(headnode, entity->origin);
+        node_t *cluster = PointInLeaf(headnode, entity->origin);
 
-        if (ClusterSealsMap(cluster)) {
+        if (LeafSealsMap(cluster)) {
             continue;
         }
 
@@ -357,7 +332,6 @@ static void MarkOccupiedClusters(node_t *headnode)
 
 static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *>& result)
 {
-    // node could be a leaf or detail separator node
     if (node->occupant) {
         result.push_back(node);
     }
@@ -418,23 +392,19 @@ Set f->touchesOccupiedLeaf=true on faces that are touching occupied leafs
 */
 static void MarkVisibleBrushSides_R(node_t *node)
 {
-    // descent to clusters
-    if (!(node->planenum == PLANENUM_LEAF || node->detail_separator)) {
+    // descent to leafs
+    if (!(node->planenum == PLANENUM_LEAF)) {
         MarkVisibleBrushSides_R(node->children[0]);
         MarkVisibleBrushSides_R(node->children[1]);
         return;
     }
 
-    if (ClusterSealsMap(node)) {
+    if (LeafSealsMap(node)) {
         // this cluster is opaque
         return;
     }
 
-    if (node->detail_separator) {
-        // this is a detail cluster, so mark all descendant brushes (all sides) as visible
-        MarkAllBrushSidesVisible_R(node);
-    }
-
+    Q_assert(!node->detail_separator);
 
     // we also want to mark brush sides in the neighbouring cluster
     // as visible
@@ -458,11 +428,8 @@ static void MarkVisibleBrushSides_R(node_t *node)
                 }
             }
         } else {
-            // other case: neighbour is a detail separator, so it has detail at a finer granularity
-            // than the portal. Need to mark all brush sides as potentially visible.
-            Q_assert(neighbour_leaf->detail_separator);
-            MarkAllBrushSidesVisible_R(neighbour_leaf);
-        }        
+            Q_assert(false);
+        }
     }
 }
 
@@ -537,11 +504,8 @@ static void BFSFloodFillFromOccupiedLeafs(const std::vector<node_t *> &occupied_
 
         if (node->occupied == 0) {
             // we haven't visited this node yet
-            if (node->detail_separator) {
-                SetOccupied_R(node, dist);
-            } else {
-                node->occupied = dist;
-            }
+            Q_assert(!node->detail_separator);
+            node->occupied = dist;
 
             // push neighbouring nodes onto the back of the queue
             int side;

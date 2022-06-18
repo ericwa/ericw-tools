@@ -51,4 +51,3 @@ void MakeTreePortals(tree_t *tree);
 void FreeTreePortals_r(node_t *node);
 void AssertNoPortals(node_t *node);
 void MakeHeadnodePortals(tree_t *tree);
-void CutNodePortals_r(node_t *node);

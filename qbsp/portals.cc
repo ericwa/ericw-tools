@@ -146,89 +146,6 @@ void MakeHeadnodePortals(tree_t *tree)
 
 //============================================================================
 
-#ifdef PARANOID
-
-static void CheckWindingInNode(winding_t *w, node_t *node)
-{
-    int i, j;
-
-    for (i = 0; i < w->numpoints; i++) {
-        for (j = 0; j < 3; j++)
-            if (w->points[i][j] < node->mins[j] - 1 || w->points[i][j] > node->maxs[j] + 1) {
-                logging::print("WARNING: Winding outside node\n");
-                return;
-            }
-    }
-}
-
-static void CheckWindingArea(winding_t *w)
-{
-    int i;
-    vec_t total, add;
-    qvec3d v1, v2, cross;
-
-    total = 0;
-    for (i = 1; i < w->numpoints; i++) {
-        v1 = w->points[i] - w->points[0];
-        v2 = w->points[i + 1] - w->points[0];
-        cross = qv::cross(v1, v2);
-        add = qv::length(cross);
-        total += add * 0.5;
-    }
-    if (total < 16)
-        logging::print("WARNING: Winding with area {}\n", total);
-}
-
-static void CheckLeafPortalConsistancy(node_t *node)
-{
-    int side, side2;
-    portal_t *p, *p2;
-    qbsp_plane_t plane, plane2;
-    int i;
-    winding_t *w;
-    vec_t dist;
-
-    side = side2 = 0; // quiet compiler warning
-
-    for (p = node->portals; p; p = p->next[side]) {
-        if (p->nodes[0] == node)
-            side = 0;
-        else if (p->nodes[1] == node)
-            side = 1;
-        else
-            FError("Mislinked portal");
-
-        CheckWindingInNode(p->winding, node);
-        CheckWindingArea(p->winding);
-
-        // check that the side orders are correct
-        plane = map.planes[p->planenum];
-        plane2 = p->winding.plane();
-
-        for (p2 = node->portals; p2; p2 = p2->next[side2]) {
-            if (p2->nodes[0] == node)
-                side2 = 0;
-            else if (p2->nodes[1] == node)
-                side2 = 1;
-            else
-                FError("Mislinked portal");
-
-            w = p2->winding;
-            for (i = 0; i < w->numpoints; i++) {
-                dist = plane.distance_to(w->points[i]);
-                if ((side == 0 && dist < -1) || (side == 1 && dist > 1)) {
-                    logging::print("WARNING: Portal siding direction is wrong\n");
-                    return;
-                }
-            }
-        }
-    }
-}
-
-#endif /* PARANOID */
-
-//============================================================================
-
 /*
 ================
 BaseWindingForNode
@@ -448,10 +365,8 @@ void MakeTreePortals_r(node_t *node, portalstats_t &stats)
     MakeNodePortal(node, stats);
     SplitNodePortals(node, stats);
 
-    tbb::task_group g;
-    g.run([&]() { MakeTreePortals_r(node->children[0], stats); });
-    g.run([&]() { MakeTreePortals_r(node->children[1], stats); });
-    g.wait();
+    MakeTreePortals_r(node->children[0], stats);
+    MakeTreePortals_r(node->children[1], stats);
 }
 
 /*
@@ -459,132 +374,16 @@ void MakeTreePortals_r(node_t *node, portalstats_t &stats)
 MakeTreePortals
 ==================
 */
-void MakeTreePortals_new(tree_t *tree)
+void MakeTreePortals(tree_t *tree)
 {
+    FreeTreePortals_r(tree->headnode);
+
+    AssertNoPortals(tree->headnode);
+
     portalstats_t stats{};
 
     MakeHeadnodePortals(tree);
     MakeTreePortals_r(tree->headnode, stats);
-}
-
-/*
-================
-CutNodePortals_r
-================
-*/
-void CutNodePortals_r(node_t *node)
-{
-    node_t *front, *back, *other_node;
-    portal_t *portal, *new_portal, *next_portal;
-    int side;
-
-#ifdef PARANOID
-    CheckLeafPortalConsistancy(node);
-#endif
-
-    /* If a leaf, no more dividing */
-    if (node->planenum == PLANENUM_LEAF)
-        return;
-
-    /* No portals on detail separators */
-    if (node->detail_separator)
-        return;
-
-    const qbsp_plane_t &plane = map.planes.at(node->planenum);
-    front = node->children[SIDE_FRONT];
-    back = node->children[SIDE_BACK];
-
-    /*
-     * create the new portal by taking the full plane winding for the cutting
-     * plane and clipping it by all of the planes from the other portals
-     */
-    new_portal = new portal_t{};
-    new_portal->planenum = node->planenum;
-    new_portal->onnode = node;
-
-    std::optional<winding_t> winding = BaseWindingForPlane(plane);
-    for (portal = node->portals; portal; portal = portal->next[side]) {
-        const auto &clipplane = map.planes.at(portal->planenum);
-        if (portal->nodes[0] == node)
-            side = SIDE_FRONT;
-        else if (portal->nodes[1] == node) {
-            side = SIDE_BACK;
-        } else
-            FError("Mislinked portal");
-
-        winding = winding->clip(side == SIDE_FRONT ? clipplane : -clipplane, options.epsilon.value(), true)[SIDE_FRONT];
-        if (winding && WindingIsTiny(*winding, 0.5)) {
-            winding = std::nullopt;
-        }
-        if (!winding) {
-            //logging::funcprint("WARNING: New portal was clipped away near ({:.3} {:.3} {:.3})\n", portal->winding->at(0)[0],
-            //    portal->winding->at(0)[1], portal->winding->at(0)[2]);
-            break;
-        }
-    }
-
-    /* If the plane was not clipped on all sides, there was an error */
-    if (winding) {
-        new_portal->winding = winding;
-        AddPortalToNodes(new_portal, front, back);
-    }
-
-    /* partition the portals */
-    for (portal = node->portals; portal; portal = next_portal) {
-        if (portal->nodes[0] == node)
-            side = SIDE_FRONT;
-        else if (portal->nodes[1] == node)
-            side = SIDE_BACK;
-        else
-            FError("Mislinked portal");
-        next_portal = portal->next[side];
-
-        other_node = portal->nodes[!side];
-        RemovePortalFromNode(portal, portal->nodes[0]);
-        RemovePortalFromNode(portal, portal->nodes[1]);
-
-        /* cut the portal into two portals, one on each side of the cut plane */
-        auto windings = portal->winding->clip(plane, options.epsilon.value());
-
-        if (windings[SIDE_BACK] && WindingIsTiny(*windings[SIDE_BACK], 0.5)) {
-            windings[SIDE_BACK] = std::nullopt;
-        }
-        if (windings[SIDE_FRONT] && WindingIsTiny(*windings[SIDE_FRONT], 0.5)) {
-            windings[SIDE_FRONT] = std::nullopt;
-        }
-
-        if (!windings[SIDE_FRONT]) {
-            if (side == SIDE_FRONT)
-                AddPortalToNodes(portal, back, other_node);
-            else
-                AddPortalToNodes(portal, other_node, back);
-            continue;
-        }
-        if (!windings[SIDE_BACK]) {
-            if (side == SIDE_FRONT)
-                AddPortalToNodes(portal, front, other_node);
-            else
-                AddPortalToNodes(portal, other_node, front);
-            continue;
-        }
-
-        /* the winding is split */
-        new_portal = new portal_t{};
-        *new_portal = *portal;
-        new_portal->winding = std::move(windings[SIDE_BACK]);
-        portal->winding = std::move(windings[SIDE_FRONT]);
-
-        if (side == SIDE_FRONT) {
-            AddPortalToNodes(portal, front, other_node);
-            AddPortalToNodes(new_portal, back, other_node);
-        } else {
-            AddPortalToNodes(portal, other_node, front);
-            AddPortalToNodes(new_portal, other_node, back);
-        }
-    }
-
-    CutNodePortals_r(front);
-    CutNodePortals_r(back);
 }
 
 void AssertNoPortals(node_t *node)
@@ -595,22 +394,6 @@ void AssertNoPortals(node_t *node)
         AssertNoPortals(node->children[0]);
         AssertNoPortals(node->children[1]);
     }
-}
-
-/*
-==================
-PortalizeWorld
-
-Builds the exact polyhedrons for the nodes and leafs
-==================
-*/
-void MakeTreePortals(tree_t *tree)
-{
-    FreeTreePortals_r(tree->headnode);
-
-    AssertNoPortals(tree->headnode);
-    MakeHeadnodePortals(tree);
-    CutNodePortals_r(tree->headnode);
 }
 
 /*
