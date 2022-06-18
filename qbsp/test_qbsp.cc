@@ -510,6 +510,14 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 
     // no bspx lumps
     CHECK(bspx.empty());
+
+    // check markfaces
+    CHECK(bsp.dleafs[0].nummarksurfaces == 0);
+    CHECK(bsp.dleafs[0].firstmarksurface == 0);
+
+    CHECK(bsp.dleafs[1].nummarksurfaces == 6);
+    CHECK(bsp.dleafs[1].firstmarksurface == 0);
+    CHECK_THAT(bsp.dleaffaces, Catch::UnorderedEquals(std::vector<uint32_t>{0,1,2,3,4,5}));
 }
 
 TEST_CASE("simple_sealed2", "[testmaps_q1]")
@@ -908,6 +916,8 @@ TEST_CASE("features", "[testmaps_q1]")
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbspfeatures.map");
 
     REQUIRE(prt.has_value());
+
+    CHECK(bsp.loadversion == &bspver_q1);
 }
 
 bool PortalMatcher(const prtfile_winding_t& a, const prtfile_winding_t &b)
