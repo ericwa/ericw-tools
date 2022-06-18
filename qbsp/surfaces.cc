@@ -502,6 +502,27 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
 static int c_nodefaces;
 
+static node_t *FirstClusterLeaf_R(node_t *node, int cluster)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        if (node->viscluster == cluster) {
+            return node;
+        }
+    }
+    
+    for (int32_t i = 0; i < 2; i++) {
+        if (node->children[i]) {
+            node_t *child = FirstClusterLeaf_R(node->children[i], cluster);
+
+            if (child) {
+                return child;
+            }
+        }
+    }
+
+    return nullptr;
+}
+
 /*
 ================
 AddMarksurfaces_r
@@ -514,6 +535,16 @@ fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
 static void AddMarksurfaces_r(face_t *face, face_t *face_copy, node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
+
+        if (node->viscluster >= 0) {
+            node_t *head;
+
+            for (head = node; head->parent; head = head->parent)
+                ;
+
+            node = FirstClusterLeaf_R(head, node->viscluster);
+        }
+
         node->markfaces.push_back(face);
         return;
     }
