@@ -29,6 +29,8 @@
 
 #include <atomic>
 
+#include "tbb/task_group.h"
+
 /*
 =============
 AddPortalToNodes
@@ -265,6 +267,57 @@ struct portalstats_t {
 };
 
 /*
+==================
+MakeNodePortal
+
+create the new portal by taking the full plane winding for the cutting plane
+and clipping it by all of parents of this node, as well as all the other
+portals in the node.
+==================
+*/
+void MakeNodePortal(node_t *node, portalstats_t &stats)
+{
+    auto w = BaseWindingForNode(node);
+
+    // clip the portal by all the other portals in the node
+    int side = -1;
+    for (auto *p = node->portals; p && w; p = p->next[side]) {
+        qbsp_plane_t plane;
+        if (p->nodes[0] == node)
+        {
+            side = 0;
+            plane = map.planes.at(p->planenum);
+        }
+        else if (p->nodes[1] == node)
+        {
+            side = 1;
+            plane = -map.planes.at(p->planenum);
+        }
+        else
+            Error("CutNodePortals_r: mislinked portal");
+
+        w = w->clip(plane, 0.1, false)[SIDE_FRONT];
+    }
+
+    if (!w)
+    {
+        return;
+    }
+
+    if (WindingIsTiny(*w))
+    {
+        stats.c_tinyportals++;
+        return;
+    }
+
+    auto *new_portal = new portal_t{};
+    new_portal->planenum = node->planenum;
+    new_portal->onnode = node;
+    new_portal->winding = w;
+    AddPortalToNodes(new_portal, node->children[0], node->children[1]);
+}
+
+/*
 ==============
 SplitNodePortals
 
@@ -351,6 +404,72 @@ void SplitNodePortals(node_t *node, portalstats_t &stats)
     }
 
     node->portals = nullptr;
+}
+
+/*
+================
+CalcNodeBounds
+================
+*/
+void CalcNodeBounds(node_t *node)
+{
+    // calc mins/maxs for both leafs and nodes
+    node->bounds = aabb3d{};
+
+    for (portal_t *p = node->portals; p ;) {
+        int s = (p->nodes[1] == node);
+        for (auto &point : *p->winding) {
+            node->bounds += point;
+        }
+        p = p->next[s];
+    }
+}
+
+/*
+==================
+MakeTreePortals_r
+==================
+*/
+void MakeTreePortals_r(node_t *node, portalstats_t &stats)
+{
+    CalcNodeBounds(node);
+    if (node->bounds.mins()[0] >= node->bounds.maxs()[0])
+    {
+        printf ("WARNING: node without a volume\n");
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        // fixme-brushbsp: use proper map bounds
+        if (node->bounds.mins()[i] < -8000 || node->bounds.mins()[i] > 8000)
+        {
+            printf ("WARNING: node with unbounded volume\n");
+            break;
+        }
+    }
+    if (node->planenum == PLANENUM_LEAF)
+        return;
+
+    MakeNodePortal(node, stats);
+    SplitNodePortals(node, stats);
+
+    tbb::task_group g;
+    g.run([&]() { MakeTreePortals_r(node->children[0], stats); });
+    g.run([&]() { MakeTreePortals_r(node->children[1], stats); });
+    g.wait();
+}
+
+/*
+==================
+MakeTreePortals
+==================
+*/
+void MakeTreePortals_new(tree_t *tree)
+{
+    portalstats_t stats{};
+
+    MakeHeadnodePortals(tree);
+    MakeTreePortals_r(tree->headnode, stats);
 }
 
 /*
