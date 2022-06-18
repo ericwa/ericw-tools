@@ -308,7 +308,8 @@ void WritePortalFile(tree_t *tree)
     AssertNoPortals(tree->headnode);
     MakeHeadnodePortals(tree);
 
-    CutNodePortals_r(tree->headnode);
+    portalstats_t stats{};
+    CreateVisPortals_r(tree->headnode, stats);
 
     /* save portal file for vis tracing */
     WritePortalfile(tree->headnode, &state);
