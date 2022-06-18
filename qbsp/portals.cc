@@ -27,6 +27,8 @@
 #include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 
+#include <atomic>
+
 /*
 =============
 AddPortalToNodes
@@ -256,6 +258,99 @@ std::optional<winding_t> BaseWindingForNode(node_t *node)
     }
 
     return w;
+}
+
+struct portalstats_t {
+    std::atomic<int> c_tinyportals;
+};
+
+/*
+==============
+SplitNodePortals
+
+Move or split the portals that bound node so that the node's
+children have portals instead of node.
+==============
+*/
+void SplitNodePortals(node_t *node, portalstats_t &stats)
+{
+    const auto plane = map.planes.at(node->planenum);
+    node_t *f = node->children[0];
+    node_t *b = node->children[1];
+
+    portal_t *next_portal = nullptr;
+    for (portal_t *p = node->portals; p ; p = next_portal)
+    {
+        side_t side;
+        if (p->nodes[SIDE_FRONT] == node)
+            side = SIDE_FRONT;
+        else if (p->nodes[SIDE_BACK] == node)
+            side = SIDE_BACK;
+        else
+            FError("CutNodePortals_r: mislinked portal");
+        next_portal = p->next[side];
+
+        node_t *other_node = p->nodes[!side];
+        RemovePortalFromNode(p, p->nodes[0]);
+        RemovePortalFromNode(p, p->nodes[1]);
+
+        //
+        // cut the portal into two portals, one on each side of the cut plane
+        //
+        auto [frontwinding, backwinding] = p->winding->clip(plane, SPLIT_WINDING_EPSILON, true);
+
+        if (frontwinding && WindingIsTiny(*frontwinding))
+        {
+            frontwinding = {};
+            stats.c_tinyportals++;
+        }
+
+        if (backwinding && WindingIsTiny(*backwinding))
+        {
+            backwinding = {};
+            stats.c_tinyportals++;
+        }
+
+        if (!frontwinding && !backwinding)
+        {	// tiny windings on both sides
+            continue;
+        }
+
+        if (!frontwinding)
+        {
+            if (side == SIDE_FRONT)
+                AddPortalToNodes(p, b, other_node);
+            else
+                AddPortalToNodes(p, other_node, b);
+            continue;
+        }
+        if (!backwinding)
+        {
+            if (side == SIDE_FRONT)
+                AddPortalToNodes(p, f, other_node);
+            else
+                AddPortalToNodes(p, other_node, f);
+            continue;
+        }
+
+        // the winding is split
+        auto *new_portal = new portal_t{*p};
+        new_portal->winding = backwinding;
+        p->winding = frontwinding;
+
+        if (side == SIDE_FRONT)
+        {
+            AddPortalToNodes(p, f, other_node);
+            AddPortalToNodes(new_portal, b, other_node);
+        }
+        else
+        {
+            AddPortalToNodes(p, other_node, f);
+            AddPortalToNodes(new_portal, other_node, b);
+        }
+    }
+
+    node->portals = nullptr;
 }
 
 /*
