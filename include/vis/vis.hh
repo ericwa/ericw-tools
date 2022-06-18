@@ -160,9 +160,9 @@ struct pstack_t
     int numseparators[2];
 };
 
-winding_t *AllocStackWinding(pstack_t *stack);
-void FreeStackWinding(winding_t *&w, pstack_t *stack);
-winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, qplane3d *split);
+winding_t *AllocStackWinding(pstack_t &stack);
+void FreeStackWinding(winding_t *&w, pstack_t &stack);
+winding_t *ClipStackWinding(winding_t *in, pstack_t &stack, const qplane3d &split);
 
 struct threaddata_t
 {
