@@ -109,7 +109,7 @@ struct portal_t
     int numcansee;
 };
 
-inline float winding_t::distFromPortal(struct portal_t *p)
+inline float winding_t::distFromPortal(portal_t *p)
 {
     vec_t mindist = 1e20;
 
@@ -153,16 +153,16 @@ struct pstack_t
     portal_t *portal; // portal exiting
     winding_t *source, *pass;
     winding_t windings[STACK_WINDINGS]; // Fixed size windings
-    bool windings_used[STACK_WINDINGS]; // whether the winding is used currently
+    bool windings_used[STACK_WINDINGS];
     qplane3d portalplane;
     leafbits_t *mightsee; // bit string
     qplane3d separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
 };
 
-winding_t *AllocStackWinding(pstack_t &stack);
-void FreeStackWinding(winding_t *&w, pstack_t &stack);
-winding_t *ClipStackWinding(winding_t *&in, pstack_t &stack, const qplane3d &split);
+winding_t *AllocStackWinding(pstack_t *stack);
+void FreeStackWinding(winding_t *&w, pstack_t *stack);
+winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, qplane3d *split);
 
 struct threaddata_t
 {

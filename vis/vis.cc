@@ -71,12 +71,13 @@ fs::path portalfile, statefile, statetmpfile;
   Return a pointer to a free fixed winding on the stack
   ==================
 */
-winding_t *AllocStackWinding(pstack_t &stack)
+winding_t *AllocStackWinding(pstack_t *stack)
 {
     for (size_t i = 0; i < STACK_WINDINGS; i++) {
-        if (!stack.windings_used[i]) {
-            stack.windings_used[i] = true;
-            return &stack.windings[i];
+        if (!stack->windings_used[i]) {
+            stack->windings[i].clear();
+            stack->windings_used[i] = true;
+            return &stack->windings[i];
         }
     }
 
@@ -90,14 +91,12 @@ winding_t *AllocStackWinding(pstack_t &stack)
   As long as the winding passed in is local to the stack, free it. Otherwise,
   do nothing (the winding either belongs to a portal or another stack
   structure further up the call chain).
-
-  FIXME: is there some way we can refactor this out entirely?
   ==================
 */
-void FreeStackWinding(winding_t *&w, pstack_t &stack)
+void FreeStackWinding(winding_t *&w, pstack_t *stack)
 {
-    if (w >= stack.windings && w <= &stack.windings[STACK_WINDINGS]) {
-        stack.windings_used[w - stack.windings] = false;
+    if (w >= stack->windings && w <= &stack->windings[STACK_WINDINGS]) {
+        stack->windings_used[w - stack->windings] = false;
         w = nullptr;
     }
 }
@@ -112,7 +111,7 @@ void FreeStackWinding(winding_t *&w, pstack_t &stack)
   is returned.
   ==================
 */
-winding_t *ClipStackWinding(winding_t *&in, pstack_t &stack, const qplane3d &split)
+winding_t *ClipStackWinding(winding_t *in, pstack_t *stack, qplane3d *split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
     int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
@@ -120,10 +119,10 @@ winding_t *ClipStackWinding(winding_t *&in, pstack_t &stack, const qplane3d &spl
     int i, j;
 
     /* Fast test first */
-    vec_t dot = split.distance_to(in->origin);
+    vec_t dot = split->distance_to(in->origin);
     if (dot < -in->radius) {
         FreeStackWinding(in, stack);
-        return nullptr;
+        return NULL;
     } else if (dot > in->radius) {
         return in;
     }
@@ -135,7 +134,7 @@ winding_t *ClipStackWinding(winding_t *&in, pstack_t &stack, const qplane3d &spl
 
     /* determine sides for each point */
     for (i = 0; i < in->size(); i++) {
-        dot = split.distance_to((*in)[i]);
+        dot = split->distance_to((*in)[i]);
         dists[i] = dot;
         if (dot > ON_EPSILON)
             sides[i] = SIDE_FRONT;
@@ -158,7 +157,7 @@ winding_t *ClipStackWinding(winding_t *&in, pstack_t &stack, const qplane3d &spl
 
     if (!counts[0]) {
         FreeStackWinding(in, stack);
-        return nullptr;
+        return NULL;
     }
     if (!counts[1])
         return in;
@@ -192,10 +191,10 @@ winding_t *ClipStackWinding(winding_t *&in, pstack_t &stack, const qplane3d &spl
         vec_t fraction = dists[i] / (dists[i] - dists[i + 1]);
         for (j = 0; j < 3; j++) {
             /* avoid round off error when possible */
-            if (split.normal[j] == 1)
-                mid[j] = split.dist;
-            else if (split.normal[j] == -1)
-                mid[j] = -split.dist;
+            if (split->normal[j] == 1)
+                mid[j] = split->dist;
+            else if (split->normal[j] == -1)
+                mid[j] = -split->dist;
             else
                 mid[j] = p1[j] + fraction * (p2[j] - p1[j]);
         }
@@ -270,14 +269,16 @@ portal_t *GetNextPortal(void)
   Called with the lock held.
   =============
 */
-static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
+static void UpdateMightsee(const leaf_t *source, const leaf_t *dest)
 {
-    size_t leafnum = &dest - leafs;
-    for (size_t i = 0; i < source.numportals; i++) {
-        portal_t *p = source.portals[i];
-        if (p->status != pstat_none) {
+    int i, leafnum;
+    portal_t *p;
+
+    leafnum = dest - leafs;
+    for (i = 0; i < source->numportals; i++) {
+        p = source->portals[i];
+        if (p->status != pstat_none)
             continue;
-        }
         if (p->mightsee[leafnum]) {
             p->mightsee[leafnum] = false;
             p->nummightsee--;
@@ -301,6 +302,7 @@ static void PortalCompleted(portal_t *completed)
     int i, j, k, bit, numblocks;
     int leafnum;
     const portal_t *p, *p2;
+    const leaf_t *myleaf;
     const uint32_t *might, *vis;
     uint32_t changed;
 
@@ -312,9 +314,9 @@ static void PortalCompleted(portal_t *completed)
      * For each portal on the leaf, check the leafs we eliminated from
      * mightsee during the full vis so far.
      */
-    const leaf_t &myleaf = leafs[completed->leaf];
-    for (i = 0; i < myleaf.numportals; i++) {
-        p = myleaf.portals[i];
+    myleaf = &leafs[completed->leaf];
+    for (i = 0; i < myleaf->numportals; i++) {
+        p = myleaf->portals[i];
         if (p->status != pstat_done)
             continue;
 
@@ -330,10 +332,10 @@ static void PortalCompleted(portal_t *completed)
              * If any of these changed bits are still visible from another
              * portal, we can't update yet.
              */
-            for (k = 0; k < myleaf.numportals; k++) {
+            for (k = 0; k < myleaf->numportals; k++) {
                 if (k == i)
                     continue;
-                p2 = myleaf.portals[k];
+                p2 = myleaf->portals[k];
                 if (p2->status == pstat_done)
                     changed &= ~p2->visbits.data()[j];
                 else
@@ -349,7 +351,7 @@ static void PortalCompleted(portal_t *completed)
                 bit = ffsl(changed) - 1;
                 changed &= ~nth_bit(bit);
                 leafnum = (j << leafbits_t::shift) + bit;
-                UpdateMightsee(leafs[leafnum], myleaf);
+                UpdateMightsee(leafs + leafnum, myleaf);
             }
         }
     }
@@ -648,8 +650,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     for (i = 0, p = portals; i < numportals; i++) {
         const auto &sourceportal = prtfile.portals[i];
-        p->winding = { sourceportal.winding.begin(), sourceportal.winding.end() };
-        p->winding.SetWindingSphere();
+        p->winding = winding_t{sourceportal.winding.begin(), sourceportal.winding.end()};
 
         // calc plane
         plane = p->winding.plane();
@@ -663,6 +664,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
         p->plane = -plane;
         p->leaf = sourceportal.leafnums[1];
+        p->winding.SetWindingSphere();
         p++;
 
         // create backwards portal
@@ -673,10 +675,11 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
         l->numportals++;
 
         // Create a reverse winding
-        sourceportal.winding.flip_to(p->winding);
-        p->winding.SetWindingSphere();
+        const auto flipped = sourceportal.winding.flip();
+        p->winding = winding_t{flipped.begin(), flipped.end()};
         p->plane = plane;
         p->leaf = sourceportal.leafnums[0];
+        p->winding.SetWindingSphere();
         p++;
     }
 
