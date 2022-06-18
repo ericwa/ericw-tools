@@ -170,40 +170,25 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     dleaf.visofs = -1; // no vis info yet
 
     // write the marksurfaces
-    bool clustered = false;
+    dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
-    if (node->viscluster >= 0) {
-        for (auto &leaf : map.bsp.dleafs) {
-            if (&leaf != &dleaf && leaf.cluster == node->viscluster) {
-                clustered = true;
-                dleaf.firstmarksurface = leaf.firstmarksurface;
-                dleaf.nummarksurfaces = leaf.nummarksurfaces;
-                break;
-            }
+    for (auto &face : node->markfaces) {
+        if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
+            continue;
+        // FIXME: this can happen when compiling some Q2 maps
+        // as Q1.
+        if (!face->outputnumber.has_value())
+            continue;
+
+        /* emit a marksurface */
+        map.bsp.dleaffaces.push_back(face->outputnumber.value());
+
+        /* grab tjunction split faces */
+        for (auto &fragment : face->fragments) {
+            map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
         }
     }
-
-    if (!clustered) {
-        dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
-
-        for (auto &face : node->markfaces) {
-            if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
-                continue;
-            // FIXME: this can happen when compiling some Q2 maps
-            // as Q1.
-            if (!face->outputnumber.has_value())
-                continue;
-
-            /* emit a marksurface */
-            map.bsp.dleaffaces.push_back(face->outputnumber.value());
-
-            /* grab tjunction split faces */
-            for (auto &fragment : face->fragments) {
-                map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
-            }
-        }
-        dleaf.nummarksurfaces = static_cast<int>(map.bsp.dleaffaces.size()) - dleaf.firstmarksurface;
-    }
+    dleaf.nummarksurfaces = static_cast<int>(map.bsp.dleaffaces.size()) - dleaf.firstmarksurface;
 
     dleaf.area = node->area;
     dleaf.cluster = node->viscluster;
