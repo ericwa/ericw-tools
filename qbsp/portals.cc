@@ -457,8 +457,12 @@ void MakeTreePortals_r(node_t *node, portalstats_t &stats)
 MakeTreePortals
 ==================
 */
-void MakeTreePortals_new(tree_t *tree)
+void MakeTreePortals(tree_t *tree)
 {
+    FreeTreePortals_r(tree->headnode);
+
+    AssertNoPortals(tree->headnode);
+
     portalstats_t stats{};
 
     MakeHeadnodePortals(tree);
@@ -602,7 +606,7 @@ PortalizeWorld
 Builds the exact polyhedrons for the nodes and leafs
 ==================
 */
-void MakeTreePortals(tree_t *tree)
+void MakeTreePortals_old(tree_t *tree)
 {
     FreeTreePortals_r(tree->headnode);
 
