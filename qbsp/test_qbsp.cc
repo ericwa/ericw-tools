@@ -908,6 +908,8 @@ TEST_CASE("features", "[testmaps_q1]")
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbspfeatures.map");
 
     REQUIRE(prt.has_value());
+
+    CHECK(bsp.loadversion == &bspver_q1);
 }
 
 bool PortalMatcher(const prtfile_winding_t& a, const prtfile_winding_t &b)

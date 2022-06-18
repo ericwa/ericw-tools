@@ -30,6 +30,7 @@
 #include <common/json.hh>
 #include <fstream>
 
+#include <stdexcept>
 using nlohmann::json;
 
 /**
@@ -155,6 +156,10 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
     }
 
     dleaf.contents = remapped.native;
+
+    if (node->bounds.maxs()[0] < node->bounds.mins()[0]) {
+        throw std::runtime_error("leaf bounds was unassigned");
+    }
 
     /*
      * write bounding box info
