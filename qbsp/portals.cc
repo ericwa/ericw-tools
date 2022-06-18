@@ -262,10 +262,6 @@ std::optional<winding_t> BaseWindingForNode(node_t *node)
     return w;
 }
 
-struct portalstats_t {
-    std::atomic<int> c_tinyportals;
-};
-
 /*
 ==================
 MakeNodePortal

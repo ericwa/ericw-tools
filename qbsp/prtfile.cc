@@ -28,6 +28,8 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
+#include "tbb/task_group.h"
+
 /*
 ==============================================================================
 
@@ -261,6 +263,27 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
             fmt::print(portalFile, "-1\n");
         }
     }
+}
+
+/*
+================
+CreateVisPortals_r
+================
+*/
+void CreateVisPortals_r(node_t *node, portalstats_t &stats)
+{
+    // stop as soon as we get to a detail_seperator, which
+    // means that everything below is in a single cluster
+    if (node->planenum == PLANENUM_LEAF || node->detail_separator )
+        return;
+
+    MakeNodePortal(node, stats);
+    SplitNodePortals(node, stats);
+
+    tbb::task_group g;
+    g.run([&]() { CreateVisPortals_r(node->children[0], stats); });
+    g.run([&]() { CreateVisPortals_r(node->children[1], stats); });
+    g.wait();
 }
 
 /*

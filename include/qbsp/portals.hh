@@ -50,7 +50,13 @@ public:
     bool uses_detail;
 };
 
+struct portalstats_t {
+    std::atomic<int> c_tinyportals;
+};
+
 contentflags_t ClusterContents(const node_t *node);
+void MakeNodePortal(node_t *node, portalstats_t &stats);
+void SplitNodePortals(node_t *node, portalstats_t &stats);
 void MakeTreePortals(tree_t *tree);
 void FreeTreePortals_r(node_t *node);
 void AssertNoPortals(node_t *node);
