@@ -288,10 +288,8 @@ void CreateVisPortals_r(node_t *node, portalstats_t &stats)
     MakeNodePortal(node, stats);
     SplitNodePortals(node, stats);
 
-    tbb::task_group g;
-    g.run([&]() { CreateVisPortals_r(node->children[0], stats); });
-    g.run([&]() { CreateVisPortals_r(node->children[1], stats); });
-    g.wait();
+    CreateVisPortals_r(node->children[0], stats);
+    CreateVisPortals_r(node->children[1], stats);
 }
 
 /*
