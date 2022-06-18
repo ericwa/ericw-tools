@@ -95,7 +95,7 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
         const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
 
         for (auto &v : p1)
-            if (v > options.worldextent.value() || v < -options.worldextent.value())
+            if (fabs(v) > options.worldextent.value())
                 FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
 
         /* check the point is on the face plane */

@@ -558,7 +558,7 @@ bool WindingIsHuge(const winding_t &w)
 {
     for (size_t i = 0; i < w.size(); i++) {
         for (size_t  j = 0; j < 3; j++)
-            if (w[i][j] < -8000 || w[i][j] > 8000)
+            if (fabs(w[i][j]) > options.worldextent.value())
                 return true;
     }
     return false;
