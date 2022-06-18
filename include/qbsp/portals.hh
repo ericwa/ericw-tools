@@ -40,16 +40,6 @@ struct tree_t
     aabb3d bounds;
 };
 
-class portal_state_t
-{
-public:
-    int num_visportals;
-    int num_visleafs; // leafs the player can be in
-    int num_visclusters; // clusters of leafs
-    int iNodesDone;
-    bool uses_detail;
-};
-
 struct portalstats_t {
     std::atomic<int> c_tinyportals;
 };
@@ -61,4 +51,4 @@ void MakeTreePortals(tree_t *tree);
 void FreeTreePortals_r(node_t *node);
 void AssertNoPortals(node_t *node);
 void MakeHeadnodePortals(tree_t *tree);
-void CutNodePortals_r(node_t *node, portal_state_t *state);
+void CutNodePortals_r(node_t *node);

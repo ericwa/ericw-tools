@@ -147,6 +147,14 @@ static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int visclust
     return viscluster;
 }
 
+struct portal_state_t
+{
+    int num_visportals;
+    int num_visleafs; // leafs the player can be in
+    int num_visclusters; // clusters of leafs
+    bool uses_detail;
+};
+
 static void CountPortals(const node_t *node, portal_state_t *state)
 {
     const portal_t *portal;
@@ -297,14 +305,12 @@ void WritePortalFile(tree_t *tree)
 
     portal_state_t state{};
 
-    state.iNodesDone = 0;
-
     FreeTreePortals_r(tree->headnode);
 
     AssertNoPortals(tree->headnode);
     MakeHeadnodePortals(tree);
 
-    CutNodePortals_r(tree->headnode, &state);
+    CutNodePortals_r(tree->headnode);
 
     /* save portal file for vis tracing */
     WritePortalfile(tree->headnode, &state);

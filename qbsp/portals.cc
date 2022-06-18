@@ -473,7 +473,7 @@ void MakeTreePortals_new(tree_t *tree)
 CutNodePortals_r
 ================
 */
-void CutNodePortals_r(node_t *node, portal_state_t *state)
+void CutNodePortals_r(node_t *node)
 {
     node_t *front, *back, *other_node;
     portal_t *portal, *new_portal, *next_portal;
@@ -584,11 +584,8 @@ void CutNodePortals_r(node_t *node, portal_state_t *state)
         }
     }
 
-    /* Display progress */
-    logging::percent(state->iNodesDone++, splitnodes);
-
-    CutNodePortals_r(front, state);
-    CutNodePortals_r(back, state);
+    CutNodePortals_r(front);
+    CutNodePortals_r(back);
 }
 
 void AssertNoPortals(node_t *node)
@@ -610,15 +607,11 @@ Builds the exact polyhedrons for the nodes and leafs
 */
 void MakeTreePortals(tree_t *tree)
 {
-    portal_state_t state{};
-
-    state.iNodesDone = 0;
-
     FreeTreePortals_r(tree->headnode);
 
     AssertNoPortals(tree->headnode);
     MakeHeadnodePortals(tree);
-    CutNodePortals_r(tree->headnode, &state);
+    CutNodePortals_r(tree->headnode);
 }
 
 /*
