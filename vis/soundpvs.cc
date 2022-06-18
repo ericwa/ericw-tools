@@ -163,7 +163,7 @@ void CalcPHS(mbsp_t *bsp)
     // FIXME: should this use alloca?
     uint8_t *uncompressed = new uint8_t[leafbytes];
     uint8_t *uncompressed_2 = new uint8_t[leafbytes];
-    std::vector<uint8_t> compressed(leafbytes * 2);
+    uint8_t *compressed = new uint8_t[leafbytes * 2];
     uint8_t *uncompressed_orig = new uint8_t[leafbytes];
 
     int32_t count = 0;
@@ -202,16 +202,16 @@ void CalcPHS(mbsp_t *bsp)
         //
         // compress the bit string
         //
-        compressed.clear();
-        CompressRow(uncompressed, leafbytes, std::back_inserter(compressed));
+        int32_t j = CompressRow(uncompressed, leafbytes, compressed);
 
         bsp->dvis.set_bit_offset(VIS_PHS, i, bsp->dvis.bits.size());
 
-        std::copy(compressed.begin(), compressed.end(), std::back_inserter(bsp->dvis.bits));
+        std::copy(compressed, compressed + j, std::back_inserter(bsp->dvis.bits));
     }
 
     delete[] uncompressed;
     delete[] uncompressed_2;
+    delete[] compressed;
     delete[] uncompressed_orig;
 
     fmt::print("Average clusters hearable: {}\n", count / portalleafs);
