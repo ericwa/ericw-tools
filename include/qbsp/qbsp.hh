@@ -355,6 +355,7 @@ struct portal_t;
 struct node_t
 {
     aabb3d bounds; // bounding volume, not just points inside
+    node_t *parent;
 
     // information for decision nodes
     int planenum; // -1 = leaf node

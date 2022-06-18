@@ -865,7 +865,9 @@ static void PartitionBrushes(std::vector<std::unique_ptr<brush_t>> brushes, node
     splitnodes++;
 
     node->children[0] = new node_t{};
+    node->children[0]->parent = node;
     node->children[1] = new node_t{};
+    node->children[1]->parent = node;
     node->planenum = FindPositivePlane(split->planenum);
 
     node->detail_separator = AllDetail(brushes);
@@ -933,9 +935,11 @@ tree_t *BrushBSP(mapentity_t *entity, bool midsplit)
         headnode->children[0] = new node_t{};
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = options.target_game->create_empty_contents();
+        headnode->children[0]->parent = headnode;
         headnode->children[1] = new node_t{};
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = options.target_game->create_empty_contents();
+        headnode->children[1]->parent = headnode;
 
         tree->headnode = headnode;
         tree->bounds = headnode->bounds;

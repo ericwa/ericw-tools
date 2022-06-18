@@ -227,6 +227,39 @@ static void CheckLeafPortalConsistancy(node_t *node)
 
 /*
 ================
+BaseWindingForNode
+
+Creates a winding from the given node plane, clipped by all parent nodes.
+================
+*/
+#define	BASE_WINDING_EPSILON	0.001
+#define	SPLIT_WINDING_EPSILON	0.001
+
+std::optional<winding_t> BaseWindingForNode(node_t *node)
+{
+    auto plane = map.planes.at(node->planenum);
+
+    std::optional<winding_t> w = BaseWindingForPlane(plane);
+
+    // clip by all the parents
+    for (node_t *np = node->parent; np && w; )
+    {
+        plane = map.planes.at(np->planenum);
+
+        const side_t keep = (np->children[0] == node) ?
+            SIDE_FRONT : SIDE_BACK;
+
+        w = w->clip(plane, BASE_WINDING_EPSILON, false)[keep];
+
+        node = np;
+        np = np->parent;
+    }
+
+    return w;
+}
+
+/*
+================
 CutNodePortals_r
 ================
 */
