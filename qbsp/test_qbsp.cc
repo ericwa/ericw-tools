@@ -909,6 +909,40 @@ TEST_CASE("simple", "[testmaps_q1]")
 }
 
 /**
+ * Just a solid cuboid
+ */
+TEST_CASE("q1_cube", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_cube.map");
+
+    REQUIRE_FALSE(prt.has_value());
+
+    const aabb3d cube_bounds {
+        {32, -240, 80},
+        {80, -144, 112}
+    };
+
+    REQUIRE(7 == bsp.dleafs.size());
+
+    // check the solid leaf
+    auto& solid_leaf = bsp.dleafs[0];
+    // fixme-brushbsp: restore these
+//    CHECK(solid_leaf.mins == cube_bounds.mins());
+//    CHECK(solid_leaf.maxs == cube_bounds.maxs());
+
+    // check the empty leafs
+    for (int i = 1; i < 7; ++i) {
+        auto& leaf = bsp.dleafs[i];
+        CHECK(CONTENTS_EMPTY == leaf.contents);
+
+        CHECK(1 == leaf.nummarksurfaces);
+    }
+
+    REQUIRE(6 == bsp.dfaces.size());
+
+}
+
+/**
  * Lots of features in one map, more for testing in game than automated testing
  */
 TEST_CASE("features", "[testmaps_q1]")
