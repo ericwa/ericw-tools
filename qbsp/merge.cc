@@ -190,7 +190,7 @@ void MergeFaceToList(face_t *face, std::list<face_t *> &list)
 MergeFaceList
 ===============
 */
-inline std::list<face_t *> MergeFaceList(std::list<face_t *> input)
+std::list<face_t *> MergeFaceList(std::list<face_t *> input)
 {
     std::list<face_t *> result;
 

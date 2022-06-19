@@ -177,6 +177,7 @@ public:
     setting_int32 subdivide{this, "subdivide", 240, &common_format_group,
         "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"};
     setting_bool nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"};
+    setting_bool nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"};
     setting_bool noclip{this, "noclip", false, &common_format_group, "don't write clip nodes (Q1-like BSP formats)"};
     setting_bool noskip{this, "noskip", false, &debugging_group, "don't remove faces with the 'skip' texture"};
     setting_bool nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"};
@@ -326,6 +327,8 @@ struct face_fragment_t
                                         // write surfaces
 };
 
+struct portal_t;
+
 struct face_t : face_fragment_t
 {
     int planenum;
@@ -345,12 +348,12 @@ struct face_t : face_fragment_t
     bool visible = true; // can any part of this side be seen from non-void parts of the level?
                   // non-visible means we can discard the brush side 
                   // (avoiding generating a BSP spit, so expanding it outwards)
+    portal_t *portal;
 };
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
 struct brush_t;
-struct portal_t;
 
 struct node_t
 {

@@ -23,6 +23,7 @@
 #include <qbsp/portals.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
+#include <qbsp/merge.hh>
 #include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
@@ -43,6 +44,11 @@ static bool ShouldOmitFace(face_t *f)
     }
 
     return false;
+}
+
+static void MergeNodeFaces (node_t *node)
+{
+    node->facelist = MergeFaceList(node->facelist);
 }
 
 /*
@@ -153,6 +159,18 @@ std::list<face_t *> SubdivideFace(face_t *f)
     }
 
     return surfaces;
+}
+
+static void SubdivideNodeFaces(node_t *node)
+{
+    std::list<face_t *> result;
+
+    // subdivide each face and push the results onto subdivided
+    for (face_t *face : node->facelist) {
+        result.splice(result.end(), SubdivideFace(face));
+    }
+
+    node->facelist = result;
 }
 
 static void FreeNode(node_t *node)
@@ -706,4 +724,115 @@ void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
     }
 
     logging::print(logging::flag::STAT, "{} nodefaces\n", c_nodefaces);
+}
+
+struct makefaces_stats_t {
+    int	c_nodefaces;
+    int c_merge;
+    int c_subdivide;
+};
+
+/*
+============
+FaceFromPortal
+
+============
+*/
+static face_t *FaceFromPortal(portal_t *p, int pside)
+{
+    face_t *side = p->side;
+    if (!side)
+        return nullptr;	// portal does not bridge different visible contents
+
+    face_t *f = new face_t{};
+
+    f->texinfo = side->texinfo;
+    f->planenum = side->planenum;
+    f->planeside = static_cast<side_t>(pside);
+    f->portal = p;
+
+    // don't show insides of windows
+    if (!side->contents[1].is_mirrored(options.target_game))
+        return nullptr;
+
+    if (pside)
+    {
+        f->w = p->winding->flip();
+        // fixme-brushbsp: was just `f->contents` on qbsp3
+        f->contents[1] = p->nodes[1]->contents;
+    }
+    else
+    {
+        f->w = *p->winding;
+        f->contents[1] = p->nodes[0]->contents;
+    }
+    return f;
+}
+
+/*
+===============
+MakeFaces_r
+
+If a portal will make a visible face,
+mark the side that originally created it
+
+  solid / empty : solid
+  solid / water : solid
+  water / empty : water
+  water / water : none
+===============
+*/
+static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
+{
+    // recurse down to leafs
+    if (node->planenum != PLANENUM_LEAF)
+    {
+        MakeFaces_r(node->children[0], stats);
+        MakeFaces_r(node->children[1], stats);
+
+        // merge together all visible faces on the node
+        if (!options.nomerge.value())
+            MergeNodeFaces(node);
+        if (options.subdivide.boolValue())
+            SubdivideNodeFaces(node);
+
+        return;
+    }
+
+    // solid leafs never have visible faces
+    if (node->contents.is_any_solid(options.target_game))
+        return;
+
+    // see which portals are valid
+    int s;
+    for (portal_t *p = node->portals; p; p = p->next[s])
+    {
+        s = (p->nodes[1] == node);
+
+        face_t *f = FaceFromPortal(p, s);
+        if (f)
+        {
+            c_nodefaces++;
+            p->face[s] = f;
+            p->onnode->facelist.push_back(f);
+        }
+    }
+}
+
+/*
+============
+MakeFaces
+============
+*/
+void MakeFaces(node_t *node)
+{
+    logging::print("--- {} ---\n", __func__);
+
+    makefaces_stats_t stats{};
+
+    MakeFaces_r(node, stats);
+
+    logging::print(logging::flag::STAT, "{} makefaces\n", stats.c_nodefaces);
+    logging::print(logging::flag::STAT, "{} merged\n", stats.c_merge);
+    logging::print(logging::flag::STAT, "{} subdivided\n", stats.c_subdivide);
 }

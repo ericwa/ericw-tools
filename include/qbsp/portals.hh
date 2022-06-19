@@ -33,6 +33,9 @@ struct portal_t
     node_t *nodes[2]; // [0] = front side of planenum
     portal_t *next[2]; // [0] = next portal in nodes[0]'s list of portals
     std::optional<winding_t> winding;
+
+    face_t *side; // NULL = non-visible // fixme-brushbsp: change to side_t
+    face_t *face[2]; // output face in bsp file
 };
 
 struct tree_t
