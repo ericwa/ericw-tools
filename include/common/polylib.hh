@@ -155,6 +155,7 @@ public:
     inline winding_base_t(const size_t &initial_size) : count(initial_size)
     {
         if (count > N) {
+            vector.reserve(count);
             vector.resize(count - N);
         }
     }
@@ -215,6 +216,7 @@ public:
 
         // copy vector range, if required
         if (count > N) {
+            vector.reserve(count);
             vector.resize(count - N);
             memcpy(&vector.front(), &copy.vector.front(), (count - N) * sizeof(qvec3d));
         }
