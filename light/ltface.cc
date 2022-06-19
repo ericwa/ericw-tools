@@ -1537,9 +1537,6 @@ std::map<int, qvec3f> GetDirectLighting(
 
 static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *entleaf)
 {
-    if (options.visapprox.value() != visapprox_t::VIS) {
-        return false;
-    }
     if (pvs.empty()) {
         return false;
     }
@@ -1569,7 +1566,7 @@ static void LightFace_Entity(
     const qplane3d *plane = &lightsurf->plane;
 
     /* vis cull */
-    if (VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
+    if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
         return;
     }
 
@@ -2142,7 +2139,7 @@ static void LightFace_Bounce(
 
 #if 1
     for (const bouncelight_t &vpl : BounceLights()) {
-        if (VisCullEntity(bsp, lightsurf->pvs, vpl.leaf)) {
+        if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaf)) {
             continue;
         }
 
@@ -2330,7 +2327,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmap
         raystream_occlusion_t *rs = lightsurf->occlusion_stream;
 
         for (int c = 0; c < vpl.points.size(); c++) {
-            if (VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
+            if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
                 continue;
             }
 

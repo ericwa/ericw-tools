@@ -119,9 +119,14 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     l.omnidirectional = true;//(info->flags.native & Q2_SURF_SKY) ? true : false;
     l.points = points;
 
-    if (options.visapprox.value() == visapprox_t::VIS) {
-        for (auto &pt : points) {
+    // Init bbox...
+    l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
+
+    for (auto &pt : points) {
+        if (options.visapprox.value() == visapprox_t::VIS) {
             l.leaves.push_back(Light_PointInLeaf(bsp, pt + l.surfnormal));
+        } else if (options.visapprox.value() == visapprox_t::RAYS) {
+            l.bounds += EstimateVisibleBoundsAtPoint(pt);
         }
     }
 
@@ -131,13 +136,6 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     l.totalintensity = intensity * facearea;
     l.intensity = l.totalintensity / points.size();
     l.color = texturecolor;
-
-    // Init bbox...
-    l.bounds = qvec3d(0);
-
-    if (options.visapprox.value() == visapprox_t::RAYS) {
-        l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
-    }
 
     // Store light...
     unique_lock<mutex> lck{surfacelights_lock};
