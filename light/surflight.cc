@@ -46,6 +46,7 @@ std::vector<surfacelight_t> surfacelights;
 std::map<int, std::vector<int>> surfacelightsByFacenum;
 int total_surflight_points = 0;
 
+// FIXME: support this for Q1 mode too.
 static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, size_t i)
 {
     const mface_t *face = BSP_GetFace(bsp, i);
@@ -84,18 +85,18 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     total_surflight_points += points.size();
 
     // Get texture color
-    qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
+    qvec3f texturecolor;
 
     // Calculate emit color and intensity...
 
     // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
-    if (info->flags.native & Q2_SURF_SKY) {
+    if (cfg.sky_surface.isChanged() && (info->flags.native & Q2_SURF_SKY)) {
         // FIXME: this only handles the "_sky_surface"  "red green blue" format.
         //        There are other more complex variants we could handle documented in the link above.
         // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-        if (cfg.sky_surface.isChanged()) {
-            texturecolor = cfg.sky_surface.value();
-        }
+        texturecolor = cfg.sky_surface.value();
+    } else {
+        texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
     }
 
     texturecolor *= info->value; // Scale by light value
