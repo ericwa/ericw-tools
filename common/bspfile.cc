@@ -358,6 +358,28 @@ public:
         }
     }
 
+    contentflags_t visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        if (a.equals(this, b)) {
+            return create_empty_contents();
+        }
+
+        int32_t a_pri = contents_priority(a);
+        int32_t b_pri = contents_priority(b);
+
+        if (a_pri > b_pri) {
+            return a;
+        } else {
+            return b;
+        }
+        // fixme-brushbsp: support detail-illusionary intersecting liquids
+    }
+
+    bool contents_contains(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        return a.equals(this, b);
+    }
+
     std::string get_contents_display(const contentflags_t &contents) const override
     {
         std::string base;
@@ -850,6 +872,9 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
+    /**
+     * Returns the single content bit of the strongest visible content present
+     */
     constexpr int32_t visible_contents(const int32_t &contents) const
     {
         for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
@@ -905,6 +930,18 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return {a.native | b.native};
+    }
+
+    contentflags_t visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        int viscontents = visible_contents(a.native ^ b.native);
+
+        return {viscontents};
+    }
+
+    bool contents_contains(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        return (a.native & b.native) != 0;
     }
 
     std::string get_contents_display(const contentflags_t &contents) const override

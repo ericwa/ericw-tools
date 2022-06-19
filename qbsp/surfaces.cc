@@ -750,10 +750,12 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
     f->planenum = side->planenum;
     f->planeside = static_cast<side_t>(pside);
     f->portal = p;
+    f->lmshift = side->lmshift;
 
     // don't show insides of windows
-    if (!side->contents[1].is_mirrored(options.target_game))
-        return nullptr;
+    // fixme-brushbsp: restore this?
+//    if (!side->contents[1].is_mirrored(options.target_game))
+//        return nullptr;
 
     if (pside)
     {
@@ -766,6 +768,9 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
         f->w = *p->winding;
         f->contents[1] = p->nodes[0]->contents;
     }
+
+    UpdateFaceSphere(f);
+
     return f;
 }
 
@@ -812,7 +817,7 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
         face_t *f = FaceFromPortal(p, s);
         if (f)
         {
-            c_nodefaces++;
+            stats.c_nodefaces++;
             p->face[s] = f;
             p->onnode->facelist.push_back(f);
         }

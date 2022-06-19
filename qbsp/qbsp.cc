@@ -902,7 +902,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         MakeTreePortals(tree);
 
-        MakeVisibleFaces(entity, tree->headnode);
+        MarkVisibleSides(tree, entity);
+        MakeFaces(tree->headnode);
 
         if (hullnum <= 0 && entity == map.world_entity() && !map.leakfile) {
             WritePortalFile(tree);
