@@ -39,6 +39,8 @@ struct bouncelight_t
     qvec3f surfnormal;
     float area;
 
+    const mleaf_t *leaf;
+
     /* estimated visible AABB culling */
     aabb3d bounds;
 };

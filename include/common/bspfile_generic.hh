@@ -69,7 +69,7 @@ struct mvis_t
 
     // fetch the bit offset of the specified cluster/vistype
     // relative to the start of the bits array
-    inline int32_t get_bit_offset(vistype_t type, size_t cluster)
+    inline int32_t get_bit_offset(vistype_t type, size_t cluster) const
     {
         return bit_offsets[cluster][type] - header_offset();
     }
@@ -451,7 +451,7 @@ struct mleaf_t
 {
     // bsp2_dleaf_t
     int32_t contents;
-    int32_t visofs; /* -1 = no visibility info */
+    int32_t visofs; /* -1 = no visibility info; Q1 only! */
     qvec3f mins; /* for frustum culling     */
     qvec3f maxs;
     uint32_t firstmarksurface;

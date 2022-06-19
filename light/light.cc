@@ -646,6 +646,59 @@ static void ExportObj(const fs::path &filename, const mbsp_t *bsp)
 }
 
 // obj
+static vector<vector<const mleaf_t *>> faceleafs;
+static vector<bool> leafhassky;
+
+// index some stuff from the bsp
+static void BuildPvsIndex(const mbsp_t *bsp)
+{
+    // build leafsForFace
+    faceleafs.resize(bsp->dfaces.size());
+    for (size_t i = 0; i < bsp->dleafs.size(); i++) {
+        const mleaf_t &leaf = bsp->dleafs[i];
+        for (int k = 0; k < leaf.nummarksurfaces; k++) {
+            const int facenum = bsp->dleaffaces[leaf.firstmarksurface + k];
+            faceleafs.at(facenum).push_back(&leaf);
+        }
+    }
+    
+    // build leafhassky
+    leafhassky.resize(bsp->dleafs.size(), false);
+    for (size_t i = 0; i < bsp->dleafs.size(); i++) {
+        const bsp2_dleaf_t &leaf = bsp->dleafs[i];
+
+        // check for sky, contents check
+        if (bsp->loadversion->game->contents_are_sky({ leaf.contents })) {
+            leafhassky.at(i) = true;
+            continue;
+        }
+        
+        // search for sky faces
+        for (size_t k = 0; k < leaf.nummarksurfaces; k++) {
+            const mface_t &surf = bsp->dfaces[bsp->dleaffaces[leaf.firstmarksurface + k]];
+            const mtexinfo_t &texinfo = bsp->texinfo[surf.texinfo];
+
+            if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                if (texinfo.flags.native & Q2_SURF_SKY) {
+                    leafhassky.at(i) = true;
+                }
+                break;
+            }
+
+            const char *texname = Face_TextureName(bsp, &surf);
+            if (!strncmp("sky", texname, 3)) {
+                leafhassky.at(i) = true;
+                break;
+            }
+        }
+    }
+}
+
+bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf)
+{
+    const int leafnum = leaf - bsp->dleafs.data();
+    return leafhassky.at(leafnum);
+}
 
 // returns the face with a centroid nearest the given point.
 static const mface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &point)
@@ -914,9 +967,19 @@ int light_main(int argc, const char **argv)
         }
     }
 
+    // check vis approx type
+    if (options.visapprox.value() == visapprox_t::AUTO) {
+        if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
+            options.visapprox.setValue(visapprox_t::VIS);
+        } else {
+            options.visapprox.setValue(visapprox_t::RAYS);
+        }
+    }
+
     img::init_palette(bspdata.loadversion->game);
     img::load_textures(&bsp);
-
+    
+    BuildPvsIndex(&bsp);
     LoadExtendedTexinfoFlags(source, &bsp);
     LoadEntities(options, &bsp);
 

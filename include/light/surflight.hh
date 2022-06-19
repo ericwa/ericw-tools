@@ -32,6 +32,7 @@ struct surfacelight_t
      */
     bool omnidirectional;
     std::vector<qvec3f> points;
+    std::vector<const mleaf_t *> leaves;
 
     // Surface light settings...
     float intensity; // Surface light strength for each point

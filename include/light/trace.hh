@@ -107,3 +107,6 @@ raystream_intersection_t *MakeIntersectionRayStream(int maxrays);
 raystream_occlusion_t *MakeOcclusionRayStream(int maxrays);
 
 void MakeTnodes(const mbsp_t *bsp);
+
+const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const qvec3d &point );
+int Light_PointContents( const mbsp_t *bsp, const qvec3d &point );

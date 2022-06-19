@@ -66,6 +66,8 @@ public:
 
     bool generated = false; // if true, don't write to the bsp
 
+    const mleaf_t *leaf;
+
     aabb3d bounds;
 
     settings::setting_scalar light{this, "light", DEFAULTLIGHTLEVEL};

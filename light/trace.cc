@@ -27,6 +27,35 @@
 #include <cassert>
 
 /*
+==============
+Light_PointInLeaf
+ 
+from hmap2
+==============
+*/
+const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const qvec3d &point )
+{
+    int num = 0;
+    
+    while( num >= 0 )
+        num = bsp->dnodes[num].children[bsp->dplanes[bsp->dnodes[num].planenum].distance_to_fast(point) < 0];
+    
+    return &bsp->dleafs[-1 - num];
+}
+
+/*
+==============
+Light_PointContents
+
+from hmap2
+==============
+*/
+int Light_PointContents( const mbsp_t *bsp, const qvec3d &point )
+{
+    return Light_PointInLeaf(bsp, point)->contents;
+}
+
+/*
  * ============================================================================
  * FENCE TEXTURE TESTING
  * ============================================================================

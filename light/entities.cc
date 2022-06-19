@@ -945,6 +945,13 @@ void FixLightsOnFaces(const mbsp_t *bsp)
     }
 }
 
+static void SetupLightLeafnums(const mbsp_t *bsp)
+{
+    for (auto &entity : all_lights) {
+        entity->leaf = Light_PointInLeaf(bsp, entity->origin.value());
+    }
+}
+
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
 
 // from http://mathworld.wolfram.com/SpherePointPicking.html
@@ -1025,8 +1032,9 @@ inline void EstimateLightAABB(const std::unique_ptr<light_t> &light)
 
 void EstimateLightVisibility(void)
 {
-    if (options.novisapprox.value())
+    if (options.visapprox.value() != visapprox_t::RAYS) {
         return;
+    }
 
     logging::print("--- EstimateLightVisibility ---\n");
 
@@ -1054,6 +1062,9 @@ void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     SetupSkyDomes(cfg);
     FixLightsOnFaces(bsp);
     EstimateLightVisibility();
+    if (options.visapprox.value() == visapprox_t::VIS) {
+        SetupLightLeafnums(bsp);
+    }
 
     logging::print("Final count: {} lights, {} suns in use.\n", all_lights.size(), all_suns.size());
 

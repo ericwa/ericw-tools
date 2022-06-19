@@ -687,6 +687,179 @@ static void CalcPoints(
     }
 }
 
+static size_t DecompressedVisSize(const mbsp_t *bsp)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        return (bsp->dvis.bit_offsets.size() + 7) / 8;
+    }
+
+    return (bsp->dmodels[0].visleafs + 7) / 8;
+}
+
+// from DarkPlaces
+static void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend)
+{
+    int c;
+    uint8_t *outstart = out;
+    while (out < outend)
+    {
+        if (in == inend)
+        {
+            logging::print("Mod_Q1BSP_DecompressVis: input underrun (decompressed {} of {} output bytes)\n", (out - outstart), (outend - outstart));
+            return;
+        }
+
+        c = *in++;
+        if (c) {
+            *out++ = c;
+            continue;
+        }
+
+        if (in == inend)
+        {
+            logging::print("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n", (out - outstart), (outend - outstart));
+            return;
+        }
+
+        for (c = *in++;c > 0;c--)
+        {
+            if (out == outend)
+            {
+                logging::print("Mod_Q1BSP_DecompressVis: output overrun (decompressed {} of {} output bytes)\n", (out - outstart), (outend - outstart));
+                return;
+            }
+            *out++ = 0;
+        }
+    }
+}
+
+static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
+{
+    const size_t num_pvsclusterbytes = DecompressedVisSize(bsp);
+    
+    // init to all visible
+    memset(out, 0xFF, num_pvsclusterbytes);
+    
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        if (leaf->cluster < 0) {
+            return false;
+        }
+
+        if (leaf->cluster >= bsp->dvis.bit_offsets.size() ||
+            bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster) >= bsp->dvis.bits.size()) {
+            logging::print("Mod_LeafPvs: invalid visofs for cluster {}\n", leaf->cluster);
+            return false;
+        }
+
+        Mod_Q1BSP_DecompressVis(bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster),
+                                bsp->dvis.bits.data() + bsp->dvis.bits.size(),
+                                out,
+                                out + num_pvsclusterbytes);
+    } else {
+        if (leaf->visofs < 0) {
+            return false;
+        }
+
+        const ptrdiff_t leafnum = (leaf - bsp->dleafs.data());
+
+        // this is confusing.. "visleaf numbers" are the leaf number minus 1.
+        // they also don't go as high, bsp->dmodels[0].visleafs instead of bsp->numleafs
+        const int visleaf = leafnum - 1;
+        if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs) {
+            return false;
+        }
+    
+        if (leaf->visofs >= bsp->dvis.bits.size()) {
+            logging::print("Mod_LeafPvs: invalid visofs for leaf {}\n", leafnum);
+            return false;
+        }
+    
+        Mod_Q1BSP_DecompressVis(bsp->dvis.bits.data() + leaf->visofs,
+                                bsp->dvis.bits.data() + bsp->dvis.bits.size(),
+                                out,
+                                out + num_pvsclusterbytes);
+    }
+
+    return true;
+}
+
+// returns true if pvs can see leaf
+static bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *leaf)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        if (leaf->cluster < 0) {
+            return false;
+        }
+
+        if (leaf->cluster >= bsp->dvis.bit_offsets.size() ||
+            bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster) >= bsp->dvis.bits.size()) {
+            logging::print("Pvs_LeafVisible: invalid visofs for cluster {}\n", leaf->cluster);
+            return false;
+        }
+    
+        return !!(pvs[leaf->cluster>>3] & (1<<(leaf->cluster&7)));
+    } else {
+        const int leafnum = (leaf - bsp->dleafs.data());
+        const int visleaf = leafnum - 1;
+
+        if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs) {
+            logging::print("WARNING: bad/empty vis data on leaf?");
+            return false;
+        }
+    
+        return !!(pvs[visleaf>>3] & (1<<(visleaf&7)));
+    }
+}
+
+static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
+{
+    const int pvssize = DecompressedVisSize(bsp);
+    const mleaf_t *lastleaf = nullptr;
+
+    // set defaults
+    lightsurf->pvs.clear();
+    lightsurf->skyvisible = true;
+    
+    if (!bsp->dvis.bits.size()) {
+        return;
+    }
+    
+    // set lightsurf->pvs
+    uint8_t *pointpvs = (uint8_t *) alloca(pvssize);
+    lightsurf->pvs.resize(pvssize);
+    
+    for (int i = 0; i < lightsurf->numpoints; i++) {
+        const mleaf_t *leaf = Light_PointInLeaf (bsp, lightsurf->points[i]);
+	
+	    /* most/all of the surface points are probably in the same leaf */
+	    if (leaf == lastleaf)
+	        continue;
+	
+	    lastleaf = leaf;
+	
+	/* copy the pvs for this leaf into pointpvs */
+        Mod_LeafPvs(bsp, leaf, pointpvs);
+        
+        /* merge the pvs for this sample point into lightsurf->pvs */
+        for (int j=0; j<pvssize; j++) {
+            lightsurf->pvs[j] |= pointpvs[j];
+        }
+    }
+    
+    // set lightsurf->skyvisible
+    lightsurf->skyvisible = false;
+    for (int i = 0; i < bsp->dleafs.size(); i++) {
+        const mleaf_t *leaf = &bsp->dleafs[i];
+        if (Pvs_LeafVisible(bsp, lightsurf->pvs, leaf)) {
+            // we can see this leaf, search for sky faces in it
+            if (Leaf_HasSky(bsp, leaf)) {
+                lightsurf->skyvisible = true;
+                break;
+            }
+        }
+    }
+}
+
 static bool Lightsurf_Init(
     const modelinfo_t *modelinfo, const mface_t *face, const mbsp_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
 {
@@ -794,6 +967,12 @@ static bool Lightsurf_Init(
 
     lightsurf->intersection_stream = MakeIntersectionRayStream(lightsurf->numpoints);
     lightsurf->occlusion_stream = MakeOcclusionRayStream(lightsurf->numpoints);
+
+    /* Setup vis data */
+    if (options.visapprox.value() == visapprox_t::VIS) {
+        CalcPvs(bsp, lightsurf);
+    }
+
     return true;
 }
 
@@ -1204,7 +1383,7 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (!options.novisapprox.value() && entity->bounds.disjoint(lightsurf->bounds, 0.001)) {
+    if (options.visapprox.value() == visapprox_t::RAYS && entity->bounds.disjoint(lightsurf->bounds, 0.001)) {
         return true;
     }
 
@@ -1356,6 +1535,27 @@ std::map<int, qvec3f> GetDirectLighting(
     return result;
 }
 
+static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *entleaf)
+{
+    if (options.visapprox.value() != visapprox_t::VIS) {
+        return false;
+    }
+    if (pvs.empty()) {
+        return false;
+    }
+    if (entleaf == nullptr) {
+        return false;
+    }
+    
+    if (bsp->loadversion->game->contents_are_solid({ entleaf->contents }) ||
+        bsp->loadversion->game->contents_are_sky({ entleaf->contents })) {
+        return false;
+    }
+
+    return !Pvs_LeafVisible(bsp, pvs, entleaf);
+}
+
+
 /*
  * ================
  * LightFace_Entity
@@ -1367,6 +1567,11 @@ static void LightFace_Entity(
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const qplane3d *plane = &lightsurf->plane;
+
+    /* vis cull */
+    if (VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
+        return;
+    }
 
     const vec_t planedist = plane->distance_to(entity->origin.value());
 
@@ -1473,6 +1678,11 @@ static void LightFace_Entity(
  */
 static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
+    /* If vis data says we can't see any sky faces, skip raytracing */
+    if (!lightsurf->skyvisible) {
+        return;
+    }
+    
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const qplane3d *plane = &lightsurf->plane;
@@ -1861,8 +2071,9 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (!options.novisapprox.value() && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
+    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->bounds, 0.001)) {
         return true;
+    }
 
     const qvec3f dir = qvec3f(lightsurf->origin) - vpl->pos; // vpl -> sample point
     const float dist = qv::length(dir) + lightsurf->radius;
@@ -1876,8 +2087,9 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 {
-    if (!options.novisapprox.value() && vpl->bounds.disjoint(lightsurf->bounds, 0.001))
+    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->bounds, 0.001)) {
         return true;
+    }
 
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const qvec3f dir = qvec3f(lightsurf->origin) - qvec3f(vpl->pos); // vpl -> sample point
@@ -1930,6 +2142,10 @@ static void LightFace_Bounce(
 
 #if 1
     for (const bouncelight_t &vpl : BounceLights()) {
+        if (VisCullEntity(bsp, lightsurf->pvs, vpl.leaf)) {
+            continue;
+        }
+
         if (BounceLight_SphereCull(bsp, &vpl, lightsurf))
             continue;
 
@@ -2103,7 +2319,7 @@ static void LightFace_Bounce(
 }
 
 static void // mxd
-LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+LightFace_SurfaceLight(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
@@ -2114,6 +2330,10 @@ LightFace_SurfaceLight(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
         raystream_occlusion_t *rs = lightsurf->occlusion_stream;
 
         for (int c = 0; c < vpl.points.size(); c++) {
+            if (VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
+                continue;
+            }
+
             rs->clearPushedRays();
 
             for (int i = 0; i < lightsurf->numpoints; i++) {
@@ -3235,7 +3455,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
                     LightFace_Sky(&sun, lightsurf, lightmaps);
 
             // mxd. Add surface lights...
-            LightFace_SurfaceLight(lightsurf, lightmaps);
+            LightFace_SurfaceLight(bsp, lightsurf, lightmaps);
 
             /* add indirect lighting */
             LightFace_Bounce(bsp, face, lightsurf, lightmaps);
