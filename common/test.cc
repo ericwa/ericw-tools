@@ -370,3 +370,123 @@ TEST_CASE("resetContainer", "[settings]")
     CHECK(settings::source::DEFAULT == stringSetting1.getSource());
     CHECK("abc" == stringSetting1.value());
 }
+
+// this is insanely dumb, is there a better way of doing this?
+#define private public
+#include "common/polylib.hh"
+#undef private
+
+TEST_CASE("winding iterators", "[winding_base_t]")
+{
+    polylib::winding_base_t<4> winding;
+
+    CHECK(winding.begin() == winding.end());
+    
+    winding.emplace_back(0, 0, 0);
+
+    CHECK(winding.begin() != winding.end());
+    
+    winding.emplace_back(1, 1, 1);
+    winding.emplace_back(2, 2, 2);
+    winding.emplace_back(3, 3, 3);
+
+    CHECK(winding.size() == 4);
+
+    CHECK(winding.vector.size() == 0);
+
+    // check that iterators match up before expansion
+    {
+        auto it = winding.begin();
+
+        for (size_t i = 0; i < winding.size(); i++) {
+            CHECK((*it)[0] == i);
+
+            CHECK(it == (winding.begin() + i));
+
+            it++;
+        }
+
+        CHECK(it == winding.end());
+    }
+    
+    winding.emplace_back(4, 4, 4);
+    winding.emplace_back(5, 5, 5);
+
+    // check that iterators match up after expansion
+    {
+        auto it = winding.begin();
+
+        for (size_t i = 0; i < winding.size(); i++) {
+            CHECK((*it)[0] == i);
+
+            auto composed_it = winding.begin() + i;
+            CHECK(it == composed_it);
+
+            it++;
+        }
+
+        CHECK(it == winding.end());
+    }
+
+    // check that constructors work
+    {
+        polylib::winding_base_t<4> winding_other(winding);
+
+        {
+            auto it = winding_other.begin();
+
+            for (size_t i = 0; i < winding_other.size(); i++) {
+                CHECK((*it)[0] == i);
+
+                auto composed_it = winding_other.begin() + i;
+                CHECK(it == composed_it);
+
+                it++;
+            }
+
+            CHECK(it == winding_other.end());
+        }
+    }
+
+
+    {
+        polylib::winding_base_t<4> winding_other({ { 0, 0, 0 }, { 1, 1, 1 }, { 2, 2, 2 }, { 3, 3, 3 }, { 4, 4, 4 } });
+
+        {
+            auto it = winding_other.begin();
+
+            for (size_t i = 0; i < winding_other.size(); i++) {
+                CHECK((*it)[0] == i);
+
+                auto composed_it = winding_other.begin() + i;
+                CHECK(it == composed_it);
+
+                it++;
+            }
+
+            CHECK(it == winding_other.end());
+        }
+    }
+
+    {
+        polylib::winding_base_t<4> winding_other(std::move(winding));
+
+        CHECK(winding.size() == 0);
+        CHECK(winding.begin() == winding.end());
+
+        {
+            auto it = winding_other.begin();
+
+            for (size_t i = 0; i < winding_other.size(); i++) {
+                CHECK((*it)[0] == i);
+
+                auto composed_it = winding_other.begin() + i;
+                CHECK(it == composed_it);
+
+                it++;
+            }
+
+            CHECK(it == winding_other.end());
+        }
+    }
+}

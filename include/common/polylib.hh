@@ -36,7 +36,7 @@ inline bool PointInWindingEdges(const winding_edges_t &wi, const qvec3d &point)
 }
 
 // Polygonal winding; uses stack allocation for the first N
-// points, and moves to a dynamic array after that.
+// points, and uses a dynamic vector for storage after that.
 template<size_t N>
 struct winding_base_t
 {
@@ -45,83 +45,63 @@ private:
     using vector_type = std::vector<qvec3d>;
     using variant_type = std::variant<array_type, vector_type>;
     size_t count = 0;
-    bool isVector = false;
     array_type array;
     vector_type vector;
 
 public:
-    template<typename array_iterator, typename vector_iterator>
+    template<bool is_const>
     class iterator_base
     {
-        std::variant<array_iterator, vector_iterator> it;
+        friend struct winding_base_t;
+
+        using container_type = typename std::conditional_t<is_const, const winding_base_t *, winding_base_t *>;
+        size_t index;
+        container_type w;
+
+        iterator_base(size_t index_in, container_type w_in) : index(index_in), w(w_in) { }
 
     public:
-        using iterator_category = typename vector_iterator::iterator_category;
-        using value_type = typename vector_iterator::value_type;
-        using difference_type = typename vector_iterator::difference_type;
-        using pointer = typename vector_iterator::pointer;
-        using reference = typename vector_iterator::reference;
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = typename std::conditional_t<is_const, const qvec3d, qvec3d>;
+        using difference_type = ptrdiff_t;
+        using pointer = value_type*;
+        using reference = value_type&;
 
-        iterator_base(array_iterator it) : it(it) { }
+        iterator_base(const iterator_base &) = default;
+        iterator_base &operator=(const iterator_base &) noexcept = default;
 
-        iterator_base(vector_iterator it) : it(it) { }
-
-        [[nodiscard]] constexpr reference operator*() const noexcept
+        [[nodiscard]] inline reference operator*() const noexcept
         {
-            if (std::holds_alternative<array_iterator>(it))
-                return *std::get<array_iterator>(it);
-            return *std::get<vector_iterator>(it);
+            return (*w)[index];
         }
-
-        constexpr iterator_base &operator=(const iterator_base &) noexcept = default;
 
         constexpr iterator_base &operator++() noexcept
         {
-            if (std::holds_alternative<array_iterator>(it))
-                ++std::get<array_iterator>(it);
-            else
-                ++std::get<vector_iterator>(it);
-
+            index++;
             return *this;
         }
 
         constexpr iterator_base &operator++(int) noexcept
         {
-            if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it)++;
-            else
-                std::get<vector_iterator>(it)++;
-
+            index++;
             return *this;
         }
 
         constexpr iterator_base &operator--() noexcept
         {
-            if (std::holds_alternative<array_iterator>(it))
-                --std::get<array_iterator>(it);
-            else
-                --std::get<vector_iterator>(it);
-
+            index--;
             return *this;
         }
 
         constexpr iterator_base operator--(int) noexcept
         {
-            if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it)--;
-            else
-                std::get<vector_iterator>(it)--;
-
+            index--;
             return *this;
         }
 
         constexpr iterator_base &operator+=(const difference_type _Off) noexcept
         {
-            if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it) += _Off;
-            else
-                std::get<vector_iterator>(it) += _Off;
-
+            index += _Off;
             return *this;
         }
 
@@ -134,63 +114,23 @@ public:
 
         constexpr iterator_base &operator-=(const difference_type _Off) noexcept
         {
-            if (std::holds_alternative<array_iterator>(it))
-                std::get<array_iterator>(it) -= _Off;
-            else
-                std::get<vector_iterator>(it) -= _Off;
-
+            index -= _Off;
             return *this;
         }
 
         [[nodiscard]] constexpr bool operator==(const iterator_base &_Off) const noexcept
         {
-            if (std::holds_alternative<array_iterator>(it)) {
-                auto sit = std::get<array_iterator>(it);
-
-                Q_assert(std::holds_alternative<array_iterator>(_Off.it));
-
-                return sit == std::get<array_iterator>(_Off.it);
-            } else {
-                auto sit = std::get<vector_iterator>(it);
-
-                Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
-
-                return sit == std::get<vector_iterator>(_Off.it);
-            }
+            return w == _Off.w && index == _Off.index;
         }
 
         [[nodiscard]] constexpr bool operator!=(const iterator_base &_Off) const noexcept
         {
-            if (std::holds_alternative<array_iterator>(it)) {
-                auto sit = std::get<array_iterator>(it);
-
-                Q_assert(std::holds_alternative<array_iterator>(_Off.it));
-
-                return sit != std::get<array_iterator>(_Off.it);
-            } else {
-                auto sit = std::get<vector_iterator>(it);
-
-                Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
-
-                return sit != std::get<vector_iterator>(_Off.it);
-            }
+            return !(*this == _Off);
         }
 
         [[nodiscard]] constexpr difference_type operator-(const iterator_base &_Off) const noexcept
         {
-            if (std::holds_alternative<array_iterator>(it)) {
-                auto sit = std::get<array_iterator>(it);
-
-                Q_assert(std::holds_alternative<array_iterator>(_Off.it));
-
-                return sit - std::get<array_iterator>(_Off.it);
-            } else {
-                auto sit = std::get<vector_iterator>(it);
-
-                Q_assert(std::holds_alternative<vector_iterator>(_Off.it));
-
-                return sit - std::get<vector_iterator>(_Off.it);
-            }
+            return index - _Off.index;
         }
 
         [[nodiscard]] constexpr iterator_base operator-(const difference_type _Off) const noexcept
@@ -200,7 +140,7 @@ public:
             return _Tmp;
         }
 
-        [[nodiscard]] constexpr reference operator[](const difference_type _Off) const noexcept
+        [[nodiscard]] inline reference operator[](const difference_type _Off) const noexcept
         {
             return *(*this + _Off);
         }
@@ -212,35 +152,40 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_base_t(const size_t &initial_size) : count(initial_size), isVector(count > N)
+    inline winding_base_t(const size_t &initial_size) : count(initial_size)
     {
-        if (isVector) {
-            vector.resize(count);
+        if (count > N) {
+            vector.resize(count - N);
         }
     }
 
     // construct winding from range.
-    // iterators must have operator-.
+    // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_base_t(Iter begin, Iter end) : count(end - begin), isVector(count > N)
+    inline winding_base_t(Iter begin, Iter end) : winding_base_t(end - begin)
     {
-        if (isVector) {
-            vector = std::move(vector_type(begin, end));
-        } else {
-            std::copy(begin, end, array.begin());
+        // copy the array range
+        std::copy_n(begin, min(count, N), array.begin());
+
+        // copy the vector range, if required
+        if (count > N) {
+            std::copy(begin + N, end, vector.begin());
         }
     }
 
     // initializer list constructor
     inline winding_base_t(std::initializer_list<qvec3d> l) : winding_base_t(l.begin(), l.end()) {}
 
-    // copy constructor
+    // copy constructor; uses optimized method of copying
+    // data over.
     inline winding_base_t(const winding_base_t &copy) : winding_base_t(copy.size())
     {
-        if (isVector) {
-            memcpy(&vector.front(), &copy.vector.front(), count * sizeof(qvec3d));
-        } else {
-            memcpy(&array.front(), &copy.array.front(), count * sizeof(qvec3d));
+        // copy array range
+        memcpy(&array.front(), &copy.array.front(), min(count, N) * sizeof(qvec3d));
+
+        // copy vector range, if required
+        if (count > N) {
+            memcpy(&vector.front(), &copy.vector.front(), (count - N) * sizeof(qvec3d));
         }
     }
 
@@ -248,14 +193,15 @@ public:
     inline winding_base_t(winding_base_t &&move) noexcept : count(move.count)
     {
         count = move.count;
-        isVector = move.isVector;
 
-        if (move.isVector) {
+        // blit over array data
+        memcpy(&array.front(), &move.array.front(), min(count, N) * sizeof(qvec3d));
+
+        // move vector data, if available
+        if (count > N) {
             vector = std::move(move.vector);
-            move.isVector = false;
-        } else {
-            memcpy(&array.front(), &move.array.front(), count * sizeof(qvec3d));
         }
+
         move.count = 0;
     }
 
@@ -263,12 +209,14 @@ public:
     inline winding_base_t &operator=(const winding_base_t &copy)
     {
         count = copy.count;
-        isVector = copy.isVector;
-        
-        if (isVector) {
-            memcpy(&vector.front(), &copy.vector.front(), count * sizeof(qvec3d));
-        } else {
-            memcpy(&array.front(), &copy.array.front(), count * sizeof(qvec3d));
+
+        // copy array range
+        memcpy(&array.front(), &copy.array.front(), min(count, N) * sizeof(qvec3d));
+
+        // copy vector range, if required
+        if (count > N) {
+            vector.resize(count - N);
+            memcpy(&vector.front(), &copy.vector.front(), (count - N) * sizeof(qvec3d));
         }
 
         return *this;
@@ -278,14 +226,15 @@ public:
     inline winding_base_t &operator=(winding_base_t &&move)
     {
         count = move.count;
-        isVector = move.isVector;
 
-        if (move.isVector) {
+        // blit over array data
+        memcpy(&array.front(), &move.array.front(), min(count, N) * sizeof(qvec3d));
+
+        // move vector data, if available
+        if (count > N) {
             vector = std::move(move.vector);
-            move.isVector = false;
-        } else {
-            memcpy(&array.front(), &move.array.front(), count * sizeof(qvec3d));
         }
+
         move.count = 0;
 
         return *this;
@@ -297,10 +246,6 @@ public:
 
     inline const size_t &size() const { return count; }
 
-    inline const qvec3d *data() const { return isVector ? vector.data() : array.data(); }
-
-    inline qvec3d *data() { return isVector ? vector.data() : array.data(); }
-
     inline qvec3d &at(const size_t &index)
     {
 #ifdef _DEBUG
@@ -308,8 +253,10 @@ public:
             throw std::invalid_argument("index");
 #endif
 
-        if (isVector)
+        if (index >= N) {
             return vector[index];
+        }
+
         return array[index];
     }
 
@@ -320,69 +267,61 @@ public:
             throw std::invalid_argument("index");
 #endif
 
-        if (isVector)
+        if (index >= N) {
             return vector[index];
+        }
+
         return array[index];
     }
 
     // un-bounds-checked
     inline qvec3d &operator[](const size_t &index) { 
-        if (isVector)
-            return vector[index];
+        if (index >= N) {
+            return vector[index - N];
+        }
+
         return array[index];
     }
 
     // un-bounds-checked
     inline const qvec3d &operator[](const size_t &index) const {
-        if (isVector)
-            return vector[index];
+        if (index >= N) {
+            return vector[index - N];
+        }
+
         return array[index];
     }
 
-    using const_iterator = iterator_base<typename array_type::const_iterator, vector_type::const_iterator>;
+    using const_iterator = iterator_base<true>;
 
     const const_iterator begin() const
     {
-        if (isVector)
-            return const_iterator(vector.begin());
-        return const_iterator(array.begin());
+        return const_iterator(0, this);
     }
 
     const const_iterator end() const
     {
-        if (isVector)
-            return const_iterator(vector.end());
-        return const_iterator(array.begin() + count);
+        return const_iterator(count, this);
     }
 
-    using iterator = iterator_base<typename array_type::iterator, vector_type::iterator>;
+    using iterator = iterator_base<false>;
 
     iterator begin()
     {
-        if (isVector)
-            return iterator(vector.begin());
-        return iterator(array.begin());
+        return iterator(0, this);
     }
 
     iterator end()
     {
-        if (isVector)
-            return iterator(vector.end());
-        return iterator(array.begin() + count);
+        return iterator(count, this);
     }
 
     template<typename... Args>
     qvec3d &emplace_back(Args &&...vec)
     {
-        // move us to dynamic
-        if (count == N) {
-            vector = std::move(vector_type(begin(), end()));
-            isVector = true;
-        }
-
         count++;
 
-        if (isVector) {
+        if (count > N) {
             return vector.emplace_back(std::forward<Args>(vec)...);
         }
 
@@ -395,30 +334,16 @@ public:
 
     void resize(const size_t &new_size)
     {
-        // move us to dynamic if we'll expand too big
-        if (new_size > N && !isVector) {
-            vector.resize(new_size);
-            std::copy(begin(), end(), vector.begin());
-        } else if (isVector) {
-            if (new_size > N) {
-                vector.resize(new_size);
-                // move us to array if we're shrinking
-            } else {
-                std::copy_n(vector.begin(), new_size, array.begin());
-            }
+        // resize vector if necessary
+        if (new_size > N) {
+            vector.resize(new_size - N);
         }
 
         count = new_size;
-        isVector = count > N;
     }
 
     void clear()
     {
-        if (isVector) {
-            vector.clear();
-            isVector = false;
-        }
-
         count = 0;
     }
 
