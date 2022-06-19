@@ -24,6 +24,8 @@
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
 
+#include <atomic>
+
 struct portal_t
 {
     int planenum;
