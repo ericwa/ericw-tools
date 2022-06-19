@@ -896,14 +896,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             tree = BrushBSP(entity, false);
         }
 
-        FreeTreePortals_r(tree->headnode);
-
-        PruneNodes(tree->headnode);
-
         MakeTreePortals(tree);
 
         MarkVisibleSides(tree, entity);
         MakeFaces(tree->headnode);
+
+        FreeTreePortals_r(tree->headnode);
+        PruneNodes(tree->headnode);
 
         if (hullnum <= 0 && entity == map.world_entity() && !map.leakfile) {
             WritePortalFile(tree);

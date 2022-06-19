@@ -453,8 +453,11 @@ static void FindPortalSide(portal_t *p)
         node_t *n = p->nodes[j];
         auto p1 = map.planes.at(p->onnode->planenum);
 
-        for (brush_t *brush : n->original_brushes)
+        // iterate the n->original_brushes vector in reverse order, so later brushes
+        // in the map file order are prioritized
+        for (auto it = n->original_brushes.rbegin(); it != n->original_brushes.rend(); ++it)
         {
+            auto *brush = *it;
             if (!options.target_game->contents_contains(brush->contents, viscontents))
                 continue;
             for (face_t &side : brush->faces)
