@@ -101,16 +101,7 @@ static bool OutsideFill_Passable(const portal_t *p)
         return false;
     }
 
-    auto leafOpaque = [](const node_t *l) {
-        Q_assert(l->planenum == PLANENUM_LEAF);
-
-        return LeafSealsMap(l);
-    };
-
-    if (leafOpaque(p->nodes[0]) || leafOpaque(p->nodes[1]))
-        return false;
-
-    return true;
+    return !LeafSealsMap(p->nodes[0]) && !LeafSealsMap(p->nodes[1]);
 }
 
 /*
