@@ -736,6 +736,8 @@ struct makefaces_stats_t {
 ============
 FaceFromPortal
 
+pside is which side of portal (equivalently, which side of the node) we're in.
+Typically, we're in an empty leaf and the other side of the portal is a solid wall.
 ============
 */
 static face_t *FaceFromPortal(portal_t *p, int pside)
@@ -809,9 +811,13 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
         return;
 
     // see which portals are valid
+
+    // (Note, this is happening per leaf, so we can potentially generate faces
+    // for the same portal once from one leaf, and once from the neighbouring one)
     int s;
     for (portal_t *p = node->portals; p; p = p->next[s])
     {
+        // 1 means node is on the back side of planenum
         s = (p->nodes[1] == node);
 
         face_t *f = FaceFromPortal(p, s);
