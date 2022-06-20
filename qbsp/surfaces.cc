@@ -441,7 +441,7 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
     node->firstface = static_cast<int>(map.bsp.dfaces.size());
 
     for (face_t *face : node->facelist) {
-        Q_assert(face->planenum == node->planenum);
+        //Q_assert(face->planenum == node->planenum);
 
         // emit a region
         EmitFace(entity, face);
