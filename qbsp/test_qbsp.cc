@@ -770,7 +770,10 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
     }
 
     // top of cross has 2 faces Z-fighting, because we disabled clipping
-    CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -50, 120), qvec3d(0, 0, 1)).size());
+    // (with qbsp3 method, there won't ever be z-fighting since we only ever generate 1 face per portal)
+    size_t faces_at_top = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -50, 120), qvec3d(0, 0, 1)).size();
+    CHECK(faces_at_top >= 1);
+    CHECK(faces_at_top <= 2);
 
     // interior face not clipped away
     CHECK(1 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-58, -52, 116), qvec3d(0, -1, 0)).size());
