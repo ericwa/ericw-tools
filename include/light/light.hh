@@ -268,6 +268,13 @@ enum class visapprox_t
 // worldspawn keys / command-line settings
 //
 
+enum {
+    // Q1-style surface light copies
+    SURFLIGHT_Q1 = 0,
+    // Q2/Q3-style radiosity
+    SURFLIGHT_RAD = 1
+};
+
 namespace settings
 {
 extern setting_group worldspawn_group;
@@ -333,6 +340,7 @@ public:
     setting_scalar sun_deviance{this, "sunlight_penumbra", 0.0, 0.0, 180.0, &worldspawn_group};
     setting_vec3 sky_surface{
         this, {"sky_surface", "sun_surface"}, 0, 0, 0, &worldspawn_group} /* arghrad surface lights on sky faces */;
+    setting_int32 surflight_radiosity{this, "surflight_radiosity", SURFLIGHT_Q1, &worldspawn_group, "whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity"};
 };
 
 extern setting_group output_group;

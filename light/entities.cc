@@ -1182,8 +1182,17 @@ static aabb3d BoundPoly(int numverts, qvec3d *verts)
 bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight, int surf_type)
 {
     const char *texname = Face_TextureName(bsp, face);
+
+    int32_t radiosity_type;
+
+    if (surflight.epairs->has("_surface_radiosity")) {
+        radiosity_type = surflight.epairs->get_int("_surface_radiosity");
+    } else {
+        radiosity_type = options.surflight_radiosity.value();
+    }
+
     return !Q_strcasecmp(texname, surflight.epairs->get("_surface")) &&
-        !!surflight.epairs->get_int("_surface_radiosity") == surf_type;
+        radiosity_type == surf_type;
 }
 
 /*
