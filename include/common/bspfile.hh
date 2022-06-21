@@ -407,7 +407,7 @@ using texvecf = texvec<float>;
 #include "bspfile_q2.hh"
 #include "bspxfile.hh"
 
-using bspxentries_t = std::unordered_map<std::string, bspxentry_t>;
+using bspxentries_t = std::unordered_map<std::string, std::vector<uint8_t>>;
 
 struct bspdata_t
 {
@@ -420,21 +420,17 @@ struct bspdata_t
     struct
     {
         bspxentries_t entries;
-
-        // convenience function to transfer a generic pointer into
-        // the entries list
-        inline void transfer(const char *xname, uint8_t *&xdata, size_t xsize)
+        
+        // transfer ownership of the vector into a BSPX lump
+        inline void transfer(const char *xname, std::vector<uint8_t> &xdata)
         {
-            entries.insert_or_assign(xname, bspxentry_t{xdata, xsize});
-            xdata = nullptr;
+            entries.insert_or_assign(xname, std::move(xdata));
         }
-
-        // copies the data over to the BSP
-        void copy(const char *xname, const uint8_t *xdata, size_t xsize)
+        
+        // transfer ownership of the vector into a BSPX lump
+        inline void transfer(const char *xname, std::vector<uint8_t> &&xdata)
         {
-            uint8_t *copy = new uint8_t[xsize];
-            memcpy(copy, xdata, xsize);
-            transfer(xname, copy, xsize);
+            entries.insert_or_assign(xname, xdata);
         }
     } bspx;
 };

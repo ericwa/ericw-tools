@@ -42,11 +42,11 @@ static std::string hex_string(const uint8_t *bytes, const size_t count)
 /**
  * returns a JSON array of models
  */
-static json serialize_bspxbrushlist(const bspxentry_t &lump)
+static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
 {
     json j = json::array();
 
-    memstream p(lump.lumpdata.get(), lump.lumpsize, std::ios_base::in | std::ios_base::binary);
+    memstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
 
     p >> endianness<std::endian::little>;
 
@@ -468,7 +468,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             } else {
                 // unhandled BSPX lump, just write the raw data
                 entry["lumpdata"] =
-                    hex_string(reinterpret_cast<uint8_t *>(lump.second.lumpdata.get()), lump.second.lumpsize);
+                    hex_string(lump.second.data(), lump.second.size());
             }
         }
     }

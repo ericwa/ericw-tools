@@ -390,10 +390,10 @@ static void WriteBSPFile()
     bspdata.version = &bspver_generic;
 
     if (map.needslmshifts) {
-        bspdata.bspx.copy("LMSHIFT", map.exported_lmshifts.data(), map.exported_lmshifts.size());
+        bspdata.bspx.transfer("LMSHIFT", map.exported_lmshifts);
     }
     if (!map.exported_bspxbrushes.empty()) {
-        bspdata.bspx.copy("BRUSHLIST", map.exported_bspxbrushes.data(), map.exported_bspxbrushes.size());
+        bspdata.bspx.transfer("BRUSHLIST", map.exported_bspxbrushes);
     }
 
     if (!ConvertBSPFormat(&bspdata, options.target_version)) {

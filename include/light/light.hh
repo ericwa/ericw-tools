@@ -528,8 +528,8 @@ public:
 extern settings::light_settings options;
 
 extern uint8_t *filebase;
-extern uint8_t *lit_filebase;
-extern uint8_t *lux_filebase;
+extern std::vector<uint8_t> lit_filebase;
+extern std::vector<uint8_t> lux_filebase;
 
 extern std::vector<surfflags_t> extended_texinfo_flags;
 

@@ -1955,9 +1955,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
             while (xlumps-- > 0) {
                 uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
                 uint32_t len = LittleLong(xlump[xlumps].filelen);
-                uint8_t *lumpdata = new uint8_t[len];
-                memcpy(lumpdata, (const uint8_t *)file_data->data() + ofs, len);
-                bspdata->bspx.transfer(xlump[xlumps].lumpname.data(), lumpdata, len);
+                bspdata->bspx.transfer(xlump[xlumps].lumpname.data(), std::vector<uint8_t>(file_data->begin() + ofs, file_data->begin() + ofs + len - 1));
             }
         } else {
             if (memcmp(&bspx->id, "BSPX", 4))
@@ -2154,14 +2152,14 @@ public:
             static constexpr char pad[4]{};
 
             bspx_lump_t &lump = xlumps.emplace_back();
-            lump.filelen = x.second.lumpsize;
+            lump.filelen = x.second.size();
             lump.fileofs = stream.tellp();
             memcpy(lump.lumpname.data(), x.first.c_str(), std::min(x.first.size(), lump.lumpname.size() - 1));
 
-            stream.write(reinterpret_cast<const char *>(x.second.lumpdata.get()), x.second.lumpsize);
+            stream.write(reinterpret_cast<const char *>(x.second.data()), x.second.size());
 
-            if (x.second.lumpsize % 4)
-                stream.write(pad, 4 - (x.second.lumpsize % 4));
+            if (x.second.size() % 4)
+                stream.write(pad, 4 - (x.second.size() % 4));
         }
 
         stream.seekp(bspxheader);
@@ -2305,6 +2303,6 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
     }
 
     for (auto &x : bspdata->bspx.entries) {
-        logging::print("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.lumpsize);
+        logging::print("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.size());
     }
 }

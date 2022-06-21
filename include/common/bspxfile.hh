@@ -89,15 +89,3 @@ struct bspxfacenormals_header
 };
 
 // BSPX data
-
-struct bspxentry_t
-{
-    std::unique_ptr<uint8_t[]> lumpdata;
-    size_t lumpsize;
-
-    // bspxentry_t takes ownership over the pointer and will
-    // free it automatically.
-    inline bspxentry_t(void *lumpdata, size_t lumpsize) : lumpdata(reinterpret_cast<uint8_t *>(lumpdata)), lumpsize(lumpsize)
-    {
-    }
-};

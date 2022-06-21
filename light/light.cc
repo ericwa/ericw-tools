@@ -69,14 +69,14 @@ static int file_p;
 static int file_end;
 
 /// start of litfile data
-uint8_t *lit_filebase;
+std::vector<uint8_t> lit_filebase;
 /// offset of start of free space after litfile data (should be kept a multiple of 12)
 static int lit_file_p;
 /// offset of end of space for litfile data
 static int lit_file_end;
 
 /// start of luxfile data
-uint8_t *lux_filebase;
+std::vector<uint8_t> lux_filebase;
 /// offset of start of free space after luxfile data (should be kept a multiple of 12)
 static int lux_file_p;
 /// offset of end of space for luxfile data
@@ -219,8 +219,8 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
     light_mutex.lock();
 
     *lightdata = filebase + file_p;
-    *colordata = lit_filebase + lit_file_p;
-    *deluxdata = lux_filebase + lux_file_p;
+    *colordata = lit_filebase.data() + lit_file_p;
+    *deluxdata = lux_filebase.data() + lux_file_p;
 
     // if size isn't a multiple of 4, round up to the next multiple of 4
     if ((size % 4) != 0) {
@@ -253,11 +253,11 @@ void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, 
     *lightdata = filebase + lightofs;
 
     if (colordata) {
-        *colordata = lit_filebase + (lightofs * 3);
+        *colordata = lit_filebase.data() + (lightofs * 3);
     }
 
     if (deluxdata) {
-        *deluxdata = lux_filebase + (lightofs * 3);
+        *deluxdata = lux_filebase.data() + (lightofs * 3);
     }
 
     // NOTE: file_p et. al. are not updated, since we're not dynamically allocating the lightmaps
@@ -424,8 +424,8 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
     delete[] filebase;
-    delete[] lit_filebase;
-    delete[] lux_filebase;
+    lit_filebase.clear();
+    lux_filebase.clear();
 
     /* greyscale data stored in a separate buffer */
     filebase = new uint8_t[MAX_MAP_LIGHTING]{};
@@ -435,16 +435,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     file_end = MAX_MAP_LIGHTING;
 
     /* litfile data stored in a separate buffer */
-    lit_filebase = new uint8_t[MAX_MAP_LIGHTING * 3]{};
-    if (!lit_filebase)
-        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
+    lit_filebase.resize(MAX_MAP_LIGHTING * 3);
     lit_file_p = 0;
     lit_file_end = (MAX_MAP_LIGHTING * 3);
 
     /* lux data stored in a separate buffer */
-    lux_filebase = new uint8_t[MAX_MAP_LIGHTING * 3]{};
-    if (!lux_filebase)
-        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
+    lux_filebase.resize(MAX_MAP_LIGHTING * 3);
     lux_file_p = 0;
     lux_file_end = (MAX_MAP_LIGHTING * 3);
 
@@ -460,7 +456,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
         if (lmshift_lump != bspdata->bspx.entries.end()) {
             for (int i = 0; i < bsp.dfaces.size(); i++)
-                faces_sup[i].lmscale = nth_bit(reinterpret_cast<const char *>(lmshift_lump->second.lumpdata.get())[i]);
+                faces_sup[i].lmscale = nth_bit(reinterpret_cast<const char *>(lmshift_lump->second.data())[i]);
         } else {
             for (int i = 0; i < bsp.dfaces.size(); i++)
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
@@ -505,7 +501,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (!options.litonly.value()) {
         if (bsp.loadversion->game->has_rgb_lightmap) {
             bsp.dlightdata.resize(lit_file_p);
-            memcpy(bsp.dlightdata.data(), lit_filebase, bsp.dlightdata.size());
+            memcpy(bsp.dlightdata.data(), lit_filebase.data(), bsp.dlightdata.size());
         } else {
             bsp.dlightdata.resize(file_p);
             memcpy(bsp.dlightdata.data(), filebase, bsp.dlightdata.size());
@@ -520,15 +516,17 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     bspdata->bspx.entries.erase("LMOFFSET");
 
     if (faces_sup) {
-        uint8_t *styles = new uint8_t[4 * bsp.dfaces.size()];
-        int32_t *offsets = new int32_t[bsp.dfaces.size()];
+        std::vector<uint8_t> styles(4 * bsp.dfaces.size());
+        std::vector<uint8_t> offsets_mem(bsp.dfaces.size() * sizeof(int32_t));
+        memstream offsets(offsets_mem.data(), std::ios_base::out | std::ios_base::binary);
+        offsets << endianness<std::endian::little>;
         for (int i = 0; i < bsp.dfaces.size(); i++) {
-            offsets[i] = faces_sup[i].lightofs;
+            offsets <= faces_sup[i].lightofs;
             for (int j = 0; j < MAXLIGHTMAPS; j++)
                 styles[i * 4 + j] = faces_sup[i].styles[j];
         }
-        bspdata->bspx.transfer("LMSTYLE", styles, sizeof(*styles) * 4 * bsp.dfaces.size());
-        bspdata->bspx.transfer("LMOFFSET", (uint8_t *&)offsets, sizeof(*offsets) * bsp.dfaces.size());
+        bspdata->bspx.transfer("LMSTYLE", styles);
+        bspdata->bspx.transfer("LMOFFSET", offsets_mem);
     }
 }
 
@@ -860,8 +858,8 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
     }
 
     size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
-    uint8_t *data = new uint8_t[data_size];
-    memstream stream(data, data_size);
+    std::vector<uint8_t> data(data_size);
+    memstream stream(data.data(), data_size);
 
     stream << endianness<std::endian::little>;
     stream <= numeric_cast<uint32_t>(unique_normals.size());
@@ -887,33 +885,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 
     logging::print(logging::flag::VERBOSE, "Compressed {} normals down to {}\n", num_normals, unique_normals.size());
 
-    bspdata.bspx.transfer("FACENORMALS", data, data_size);
-
-    ofstream obj("test.obj");
-
-    size_t index_id = 1;
-
-    for (auto &face : bsp.dfaces) {
-        auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
-
-        for (size_t i = 0; i < cache.points().size(); i++) {
-            auto &pt = cache.points()[i];
-            auto &n = cache.normals()[i];
-
-            fmt::print(obj, "v {}\n", pt);
-            fmt::print(obj, "vn {}\n", n.normal);
-        }
-
-        for (size_t i = 1; i < cache.points().size() - 1; i++) {
-            size_t n1 = 0;
-            size_t n2 = i;
-            size_t n3 = (i + 1) % cache.points().size();
-
-            fmt::print(obj, "f {0}//{0} {1}//{1} {2}//{2}\n", index_id + n1, index_id + n2, index_id + n3);
-        }
-
-        index_id += cache.points().size();
-    }
+    bspdata.bspx.transfer("FACENORMALS", data);
 }
 
 /*
@@ -1035,13 +1007,15 @@ int light_main(int argc, const char **argv)
             WriteLitFile(&bsp, faces_sup, source, LIT_VERSION);
         }
         if (options.write_litfile & lightfile::bspx) {
-            bspdata.bspx.transfer("RGBLIGHTING", lit_filebase, bsp.dlightdata.size() * 3);
+            lit_filebase.resize(bsp.dlightdata.size() * 3);
+            bspdata.bspx.transfer("RGBLIGHTING", lit_filebase);
         }
         if (options.write_luxfile & lightfile::external) {
             WriteLuxFile(&bsp, source, LIT_VERSION);
         }
         if (options.write_luxfile & lightfile::bspx) {
-            bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase, bsp.dlightdata.size() * 3);
+            lux_filebase.resize(bsp.dlightdata.size() * 3);
+            bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase);
         }
     }
 

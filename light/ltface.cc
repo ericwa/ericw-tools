@@ -3226,7 +3226,7 @@ static void WriteLightmaps(
 
     // Q2/HL native colored lightmaps
     if (bsp->loadversion->game->has_rgb_lightmap) {
-        lightofs = lit - lit_filebase;
+        lightofs = lit - lit_filebase.data();
     } else {
         lightofs = out - filebase;
     }
