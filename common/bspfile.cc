@@ -386,7 +386,12 @@ public:
             return true;
         }
 
-        if (!a.is_mirrored(this) && a.will_clip_same_type(this)) {
+        if (!a.will_clip_same_type(this) && contents_are_type_equal(a, b)) {
+            // _noclipfaces
+            return true;
+        }
+
+        if (!a.is_mirrored(this)) {
             return false;
         }
 
