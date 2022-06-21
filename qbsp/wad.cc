@@ -100,10 +100,24 @@ static bool WAD_LoadInfo(wad_t &wad, bool external)
         } else {
             int w = miptex.width;
             int h = miptex.height;
-            lump.size =
-                sizeof(miptex) + (w >> 0) * (h >> 0) + (w >> 1) * (h >> 1) + (w >> 2) * (h >> 2) + (w >> 3) * (h >> 3);
+
+            lump.size = sizeof(miptex);
+
+            for (size_t m = 0; m < 4 && miptex.offsets[m] && lump.size < miptex.offsets[m] + (w>>m) * (h>>m); m++)
+                lump.size += (w>>m)*(h>>m);
+
             if (options.target_game->id == GAME_HALF_LIFE)
                 lump.size += 2 + 3 * 256; // palette size+palette data
+
+            wad.file.seekg(lump.filepos + lump.size, std::ios_base::beg);
+            uint32_t magic;
+            wad.file >= magic;
+
+            // if there's extension data in there then just load it as the size its meant to be instead of messing stuff up.
+            // we don't know what's actually in there.
+            if (magic == ((0x00<<8)|(0xfb<<8)|(0x2b<<16)|(0xafu<<24)) && !(lump.disksize & 3))
+                lump.size = lump.disksize;
+
             lump.size = (lump.size + 3) & ~3; // keep things aligned if we can.
 
             texture_t tex;
