@@ -55,6 +55,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     int32_t light_value = 0;
     bool is_sky = false, is_directional = false;
     int32_t style = 0;
+    std::optional<qvec3f> texture_color;
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         // first, check if it's a Q2 surface
@@ -83,10 +84,14 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
                 is_sky = surflight->epairs->get_int("_surface_is_sky");
                 is_directional = !!surflight->epairs->get_int("_surface_spotlight");
                 style = surflight->epairs->get_int("style");
+
+                if (surflight->color.isChanged()) {
+                    texture_color = surflight->color.value();
+                }
                 break;
             }
         }
-    }    
+    }
 
     // Create face points...
     auto poly = GLM_FacePoints(bsp, face);
@@ -109,32 +114,31 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     winding.dice(cfg.surflightsubdivision.value(), [&points](winding_t &w) { points.push_back(w.center()); });
     total_surflight_points += points.size();
 
-    // Get texture color
-    qvec3f texturecolor;
-
     // Calculate emit color and intensity...
 
     // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
-    if (cfg.sky_surface.isChanged() && is_sky) {
-        // FIXME: this only handles the "_sky_surface"  "red green blue" format.
-        //        There are other more complex variants we could handle documented in the link above.
-        // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-        texturecolor = cfg.sky_surface.value();
-    } else {
-        texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
+    if (!texture_color.has_value()) {
+        if (cfg.sky_surface.isChanged() && is_sky) {
+            // FIXME: this only handles the "_sky_surface"  "red green blue" format.
+            //        There are other more complex variants we could handle documented in the link above.
+            // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
+            texture_color = cfg.sky_surface.value();
+        } else {
+            texture_color = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
+        }
     }
 
-    texturecolor *= light_value; // Scale by light value
+    texture_color.value() *= light_value; // Scale by light value
 
     // Calculate intensity...
-    float intensity = qv::max(texturecolor);
+    float intensity = qv::max(texture_color.value());
 
     if (intensity == 0.0f)
         return;
 
     // Normalize color...
     if (intensity > 1.0f)
-        texturecolor *= 1.0f / intensity;
+        texture_color.value() *= 1.0f / intensity;
 
     // Sanity checks...
     Q_assert(!points.empty());
@@ -162,7 +166,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     // Store surfacelight settings...
     l.totalintensity = intensity * facearea;
     l.intensity = l.totalintensity / points.size();
-    l.color = texturecolor;
+    l.color = texture_color.value();
 
     // Store light...
     unique_lock<mutex> lck{surfacelights_lock};
