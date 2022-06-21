@@ -518,7 +518,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (faces_sup) {
         std::vector<uint8_t> styles(4 * bsp.dfaces.size());
         std::vector<uint8_t> offsets_mem(bsp.dfaces.size() * sizeof(int32_t));
-        memstream offsets(offsets_mem.data(), std::ios_base::out | std::ios_base::binary);
+        omemstream offsets(offsets_mem.data(), std::ios_base::out | std::ios_base::binary);
         offsets << endianness<std::endian::little>;
         for (int i = 0; i < bsp.dfaces.size(); i++) {
             offsets <= faces_sup[i].lightofs;
@@ -859,7 +859,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 
     size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
     std::vector<uint8_t> data(data_size);
-    memstream stream(data.data(), data_size);
+    omemstream stream(data.data(), data_size);
 
     stream << endianness<std::endian::little>;
     stream <= numeric_cast<uint32_t>(unique_normals.size());

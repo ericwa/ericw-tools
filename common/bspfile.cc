@@ -1857,8 +1857,6 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
 void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
 {
     int i;
-    uint32_t bspxofs;
-    const bspx_header_t *bspx;
 
     logging::funcprint("'{}'\n", filename);
 
@@ -1871,7 +1869,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
 
     filename = fs::resolveArchivePath(filename);
 
-    memstream stream(file_data->data(), file_data->size());
+    imemstream stream(file_data->data(), file_data->size());
 
     stream >> endianness<std::endian::little>;
 
@@ -1933,33 +1931,42 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         FError("Unknown format");
     }
 
+    size_t bspxofs;
+
     // detect BSPX
     /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
     for (i = 0, bspxofs = 0; i < lumps.size(); i++) {
-        if (bspxofs < lumps[i].fileofs + lumps[i].filelen)
-            bspxofs = lumps[i].fileofs + lumps[i].filelen;
+        bspxofs = max(bspxofs, static_cast<size_t>(lumps[i].fileofs + lumps[i].filelen));
     }
 
     bspxofs = (bspxofs + 3) & ~3;
+
     /*okay, so that's where it *should* be if it exists */
-    if (bspxofs + sizeof(*bspx) <= file_data->size()) {
-        int xlumps;
-        const bspx_lump_t *xlump;
-        bspx = (const bspx_header_t *)((const uint8_t *)file_data->data() + bspxofs);
-        xlump = (const bspx_lump_t *)(bspx + 1);
-        xlumps = LittleLong(bspx->numlumps);
-        if (!memcmp(&bspx->id, "BSPX", 4) && xlumps >= 0 &&
-            bspxofs + sizeof(*bspx) + sizeof(*xlump) * xlumps <= file_data->size()) {
-            /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring
-             * that they get written out anew*/
-            while (xlumps-- > 0) {
-                uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
-                uint32_t len = LittleLong(xlump[xlumps].filelen);
-                bspdata->bspx.transfer(xlump[xlumps].lumpname.data(), std::vector<uint8_t>(file_data->begin() + ofs, file_data->begin() + ofs + len - 1));
+    if (bspxofs + sizeof(bspx_header_t) <= file_data->size()) {
+        stream.seekg(bspxofs);
+
+        bspx_header_t bspx;
+        stream >= bspx;
+
+        if (!stream || memcmp(bspx.id.data(), "BSPX", 4)) {
+            logging::print("WARNING: invalid BSPX header\n");
+            return;
+        }
+
+        for (size_t i = 0; i < bspx.numlumps; i++) {
+            bspx_lump_t xlump;
+
+            if (!(stream >= xlump)) {
+                logging::print("WARNING: invalid BSPX lump at index {}\n", i);
+                return;
             }
-        } else {
-            if (memcmp(&bspx->id, "BSPX", 4))
-                printf("invalid bspx header\n");
+
+            if (xlump.fileofs > file_data->size() || (xlump.fileofs + xlump.filelen) > file_data->size()) {
+                logging::print("WARNING: invalid BSPX lump at index {}\n", i);
+                return;
+            }
+            
+            bspdata->bspx.transfer(xlump.lumpname.data(), std::vector<uint8_t>(file_data->begin() + xlump.fileofs, file_data->begin() + xlump.fileofs + xlump.filelen - 1));
         }
     }
 }
@@ -1985,7 +1992,6 @@ private:
     template<typename T>
     inline void write_lump(size_t lump_num, const std::vector<T> &data)
     {
-        static constexpr char pad[4]{};
         Q_assert(version->lumps.size() > lump_num);
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
@@ -2011,7 +2017,7 @@ private:
         lump.filelen = written;
 
         if (written % 4)
-            stream.write(pad, 4 - (written % 4));
+            stream <= padding_n(4 - (written % 4));
     }
 
     // this is only here to satisfy std::visit
@@ -2021,7 +2027,6 @@ private:
     inline void write_lump(size_t lump_num, const std::string &data)
     {
         Q_assert(version->lumps.size() > lump_num);
-        static constexpr char pad[4]{};
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
 
@@ -2046,14 +2051,13 @@ private:
         lump.filelen = written;
 
         if (written % 4)
-            stream.write(pad, 4 - (written % 4));
+            stream <= padding_n(4 - (written % 4));
     }
 
     // write structured lump data
     template<typename T, typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_write)>>>
     inline void write_lump(size_t lump_num, const T &data)
     {
-        static constexpr char pad[4]{};
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
 
@@ -2076,7 +2080,7 @@ private:
         lump.filelen = written;
 
         if (written % 4)
-            stream.write(pad, 4 - (written % 4));
+            stream <= padding_n(4 - (written % 4));
     }
 
 public:
@@ -2149,8 +2153,6 @@ public:
         xlumps.reserve(bspdata.bspx.entries.size());
 
         for (auto &x : bspdata.bspx.entries) {
-            static constexpr char pad[4]{};
-
             bspx_lump_t &lump = xlumps.emplace_back();
             lump.filelen = x.second.size();
             lump.fileofs = stream.tellp();
@@ -2159,7 +2161,7 @@ public:
             stream.write(reinterpret_cast<const char *>(x.second.data()), x.second.size());
 
             if (x.second.size() % 4)
-                stream.write(pad, 4 - (x.second.size() % 4));
+                stream <= padding_n(4 - (x.second.size() % 4));
         }
 
         stream.seekp(bspxheader);

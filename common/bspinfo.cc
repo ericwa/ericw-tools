@@ -46,7 +46,7 @@ static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
 {
     json j = json::array();
 
-    memstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
+    imemstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
 
     p >> endianness<std::endian::little>;
 
@@ -165,7 +165,7 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
     size_t bufsize = 122 + (width * height * 4);
     uint8_t *buf = new uint8_t[bufsize];
 
-    memstream s(buf, bufsize, std::ios_base::out | std::ios_base::binary);
+    omemstream s(buf, bufsize, std::ios_base::out | std::ios_base::binary);
 
     s << endianness<std::endian::little>;
 

@@ -31,6 +31,7 @@ struct bspx_header_t
     std::array<char, 4> id = {'B', 'S', 'P', 'X'}; //'BSPX'
     uint32_t numlumps;
 
+    bspx_header_t() = default;
     constexpr bspx_header_t(uint32_t numlumps) : numlumps(numlumps) { }
 
     auto stream_data() { return std::tie(id, numlumps); }

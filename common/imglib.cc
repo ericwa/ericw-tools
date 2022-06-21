@@ -51,7 +51,7 @@ static bool LoadPCXPalette(const fs::path &filename, std::vector<qvec3b> &palett
         return false;
     }
 
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
 
     // Parse the PCX file
@@ -111,7 +111,7 @@ struct q2_miptex_t
 
 std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool metaOnly)
 {
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
 
     // Parse WAL
@@ -174,7 +174,7 @@ LoadTGA
 */
 std::optional<texture> load_tga(const std::string &name, const fs::data &file, bool metaOnly)
 {
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
 
     // Parse TGA
