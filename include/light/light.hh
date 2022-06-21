@@ -450,6 +450,7 @@ public:
         &experimental_group, "writes both rgb and directions data into the bsp itself"};
     setting_bool litonly{this, "litonly", false, &output_group, "only write .lit file, don't modify BSP"};
     setting_bool nolights{this, "nolights", false, &output_group, "ignore light entities (only sunlight/minlight)"};
+    setting_int32 facestyles{this, "facestyles", 4, &output_group, "max amount of styles per face; requires BSPX lump"};
 
     inline void CheckNoDebugModeSet()
     {

@@ -76,7 +76,7 @@ public:
         {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE}, {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}};
     settings::setting_scalar spotangle{this, "angle", 40.0};
     settings::setting_scalar spotangle2{this, "softangle", 0.0};
-    settings::setting_numeric<int32_t> style{this, "style", 0, 0, 254};
+    settings::setting_numeric<int32_t> style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1};
     settings::setting_scalar anglescale{this, {"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
     settings::setting_scalar dirtscale{this, "dirtscale", 0.0};
     settings::setting_scalar dirtgain{this, "dirtgain", 0};

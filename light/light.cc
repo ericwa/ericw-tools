@@ -167,6 +167,11 @@ void light_settings::postinitialize(int argc, const char **argv)
             options.nolighting.setValueLocked(true);
         }
     }
+
+    // upgrade to uint16 if facestyles is specified 
+    if (options.facestyles.value() > MAXLIGHTMAPS && !options.compilerstyle_max.isChanged()) {
+        options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE);
+    }
     
     common_settings::postinitialize(argc, argv);
 }
@@ -318,13 +323,13 @@ static void LightThread(const mbsp_t *bsp, size_t facenum)
         LightFace(bsp, f, nullptr, options);
     else if (options.novanilla.value()) {
         f->lightofs = -1;
-        f->styles[0] = 255;
+        f->styles[0] = INVALID_LIGHTSTYLE_OLD;
         LightFace(bsp, f, faces_sup + facenum, options);
     } else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale) {
-        LightFace(bsp, f, nullptr, options);
-        faces_sup[facenum].lightofs = f->lightofs;
+        LightFace(bsp, f, faces_sup + facenum, options);
+        f->lightofs = faces_sup[facenum].lightofs;
         for (int i = 0; i < MAXLIGHTMAPS; i++)
-            faces_sup[facenum].styles[i] = f->styles[i];
+            f->styles[i] = faces_sup[facenum].styles[i];
     } else {
         LightFace(bsp, f, nullptr, options);
         LightFace(bsp, f, faces_sup + facenum, options);
@@ -449,7 +454,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
-    if (lmshift_lump == bspdata->bspx.entries.end() && options.write_litfile != lightfile::lit2)
+    if (lmshift_lump == bspdata->bspx.entries.end() && options.write_litfile != lightfile::lit2 && options.facestyles.value() <= 4)
         faces_sup = nullptr; // no scales, no lit2
     else { // we have scales or lit2 output. yay...
         faces_sup = new facesup_t[bsp.dfaces.size()]{};
@@ -518,21 +523,77 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     logging::print("lightdatasize: {}\n", bsp.dlightdata.size());
 
     // kill this stuff if its somehow found.
+    bspdata->bspx.entries.erase("LMSTYLE16");
     bspdata->bspx.entries.erase("LMSTYLE");
     bspdata->bspx.entries.erase("LMOFFSET");
 
     if (faces_sup) {
-        std::vector<uint8_t> styles(4 * bsp.dfaces.size());
-        std::vector<uint8_t> offsets_mem(bsp.dfaces.size() * sizeof(int32_t));
-        omemstream offsets(offsets_mem.data(), std::ios_base::out | std::ios_base::binary);
-        offsets << endianness<std::endian::little>;
+        bool needoffsets = false;
+        bool needstyles = false;
+        int maxstyle = 0;
+        int stylesperface = 0;
+
         for (int i = 0; i < bsp.dfaces.size(); i++) {
-            offsets <= faces_sup[i].lightofs;
-            for (int j = 0; j < MAXLIGHTMAPS; j++)
-                styles[i * 4 + j] = faces_sup[i].styles[j];
+            if (bsp.dfaces[i].lightofs != faces_sup[i].lightofs)
+                needoffsets = true;
+            int j = 0;
+            for (; j < MAXLIGHTMAPSSUP; j++) {
+                if (faces_sup[i].styles[j] == INVALID_LIGHTSTYLE)
+                    break;
+                if (bsp.dfaces[i].styles[j] != faces_sup[i].styles[j])
+                    needstyles = true;
+                if (maxstyle < faces_sup[i].styles[j])
+                    maxstyle = faces_sup[i].styles[j];
+            }
+            if (stylesperface < j)
+                stylesperface = j;
         }
-        bspdata->bspx.transfer("LMSTYLE", styles);
-        bspdata->bspx.transfer("LMOFFSET", offsets_mem);
+
+        needstyles |= (stylesperface>4);
+
+        logging::print("max {} styles per face{}\n", stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
+        
+        if (needstyles) {
+            if (maxstyle >= INVALID_LIGHTSTYLE_OLD) {
+                /*needs bigger datatype*/
+                std::vector<uint8_t> styles_mem(sizeof(uint16_t) * stylesperface * bsp.dfaces.size());
+
+                omemstream styles(styles_mem.data(), std::ios_base::out | std::ios_base::binary);
+                styles << endianness<std::endian::little>;
+
+                for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+                    for (size_t j = 0; j < stylesperface; j++) {
+                        styles <= faces_sup[i].styles[j];
+                    }
+                }
+
+                bspdata->bspx.transfer("LMSTYLE16", styles_mem);
+            } else {
+                /*original LMSTYLE lump was just for different lmshift info*/
+                std::vector<uint8_t> styles_mem(stylesperface * bsp.dfaces.size());
+
+                for (size_t i = 0, k = 0; i < bsp.dfaces.size(); i++) {
+                    for (size_t j = 0; j < stylesperface; j++, k++) {
+                        styles_mem[k] = faces_sup[i].styles[j];
+                    }
+                }
+
+                bspdata->bspx.transfer("LMSTYLE", styles_mem);
+            }
+        }
+
+        if (needoffsets) {
+            std::vector<uint8_t> offsets_mem(bsp.dfaces.size() * sizeof(int32_t));
+
+            omemstream offsets(offsets_mem.data(), std::ios_base::out | std::ios_base::binary);
+            offsets << endianness<std::endian::little>;
+
+            for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+                offsets <= faces_sup[i].lightofs;
+            }
+
+            bspdata->bspx.transfer("LMOFFSET", offsets_mem);
+        }
     }
 }
 

@@ -86,7 +86,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
                 style = surflight->epairs->get_int("style");
 
                 if (surflight->color.isChanged()) {
-                    texture_color = surflight->color.value();
+                    texture_color = surflight->color.value() / 255.f;
                 }
                 break;
             }

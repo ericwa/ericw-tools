@@ -399,6 +399,7 @@ struct mtexinfo_t
 };
 
 constexpr size_t MAXLIGHTMAPS = 4;
+constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
 
 struct mface_t
 {

@@ -1014,7 +1014,7 @@ static lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style,
 
     // no exact match, check for an unsaved one
     for (auto &lm : *lightmaps) {
-        if (lm.style == 255) {
+        if (lm.style == INVALID_LIGHTSTYLE) {
             Lightmap_AllocOrClear(&lm, lightsurf);
             return &lm;
         }
@@ -1022,7 +1022,7 @@ static lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style,
 
     // add a new one to the vector (invalidates existing lightmap_t pointers)
     lightmap_t &newLightmap = lightmaps->emplace_back();
-    newLightmap.style = 255;
+    newLightmap.style = INVALID_LIGHTSTYLE;
     Lightmap_AllocOrClear(&newLightmap, lightsurf);
     return &newLightmap;
 }
@@ -1030,7 +1030,7 @@ static lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style,
 static void Lightmap_ClearAll(lightmapdict_t *lightmaps)
 {
     for (auto &lm : *lightmaps) {
-        lm.style = 255;
+        lm.style = INVALID_LIGHTSTYLE;
     }
 }
 
@@ -1043,7 +1043,7 @@ static void Lightmap_ClearAll(lightmapdict_t *lightmaps)
 static void Lightmap_Save(
     lightmapdict_t *lightmaps, const lightsurf_t *lightsurf, lightmap_t *lightmap, const int style)
 {
-    if (lightmap->style == 255) {
+    if (lightmap->style == INVALID_LIGHTSTYLE) {
         lightmap->style = style;
     }
 }
@@ -3151,13 +3151,26 @@ static void WriteLightmaps(
         return;
     }
 
+    int maxfstyles = facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS;
+    if (maxfstyles > options.facestyles.value()) {
+        maxfstyles = options.facestyles.value(); //truncate it a little
+    }
+    int maxstyle = facesup ? INVALID_LIGHTSTYLE : INVALID_LIGHTSTYLE_OLD;
+
     // intermediate collection for sorting lightmaps
     std::vector<std::pair<float, const lightmap_t *>> sortable;
 
     for (const lightmap_t &lightmap : *lightmaps) {
         // skip un-saved lightmaps
-        if (lightmap.style == 255)
+        if (lightmap.style == INVALID_LIGHTSTYLE)
             continue;
+        if (lightmap.style > maxstyle) {
+            logging::print("WARNING: Style {} too high\n"
+                     "         lightmap point near {}\n",
+                     lightmap.style,
+                     lightsurf->points[0]);
+            continue;
+        }
 
         // skip lightmaps where all samples have brightness below 1
         if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff,
@@ -3177,7 +3190,7 @@ static void WriteLightmaps(
 
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
-        if (sorted.size() == MAXLIGHTMAPS) {
+        if (sorted.size() == maxfstyles) {
             logging::print("WARNING: Too many light styles on a face\n"
                      "         lightmap point near [{}]\n",
                 lightsurf->points[0]);
@@ -3189,7 +3202,7 @@ static void WriteLightmaps(
 
     /* final number of lightmaps */
     const int numstyles = static_cast<int>(sorted.size());
-    Q_assert(numstyles <= MAXLIGHTMAPS);
+    Q_assert(numstyles <= MAXLIGHTMAPSSUP);
 
     /* update face info (either core data or supplementary stuff) */
     if (facesup) {
@@ -3199,8 +3212,8 @@ static void WriteLightmaps(
         for (mapnum = 0; mapnum < numstyles; mapnum++) {
             facesup->styles[mapnum] = sorted.at(mapnum)->style;
         }
-        for (; mapnum < MAXLIGHTMAPS; mapnum++) {
-            facesup->styles[mapnum] = 255;
+        for (; mapnum < MAXLIGHTMAPSSUP; mapnum++) {
+            facesup->styles[mapnum] = INVALID_LIGHTSTYLE;
         }
         facesup->lmscale = lightsurf->lightmapscale;
     } else {
@@ -3209,7 +3222,7 @@ static void WriteLightmaps(
             face->styles[mapnum] = sorted.at(mapnum)->style;
         }
         for (; mapnum < MAXLIGHTMAPS; mapnum++) {
-            face->styles[mapnum] = 255;
+            face->styles[mapnum] = INVALID_LIGHTSTYLE_OLD;
         }
     }
 
@@ -3376,12 +3389,12 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
         /* some surfaces don't need lightmaps */
         if (facesup) {
             facesup->lightofs = -1;
-            for (int i = 0; i < MAXLIGHTMAPS; i++)
-                facesup->styles[i] = 255;
+            for (int i = 0; i < MAXLIGHTMAPSSUP; i++)
+                facesup->styles[i] = INVALID_LIGHTSTYLE;
         } else {
             face->lightofs = -1;
             for (int i = 0; i < MAXLIGHTMAPS; i++)
-                face->styles[i] = 255;
+                face->styles[i] = INVALID_LIGHTSTYLE_OLD;
         }
     }
 
