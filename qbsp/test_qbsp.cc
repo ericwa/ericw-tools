@@ -677,7 +677,11 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
 
 TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_water_detail_illusionary.map");
+    static const std::string basic_mapname = "qbsp_water_detail_illusionary.map";
+    static const std::string mirrorinside_mapname = "qbsp_water_detail_illusionary_mirrorinside.map";
+
+    auto mapname = GENERATE_REF(basic_mapname, mirrorinside_mapname);
+    const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
     REQUIRE(prt.has_value());
 
@@ -692,13 +696,27 @@ TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 
     // make sure the detail_illusionary face underwater isn't clipped away
     auto* underwater_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0});
-    REQUIRE(nullptr != underwater_face);
+    auto* underwater_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {1, 0, 0});
 
     auto* above_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0});
+    auto* above_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {1, 0, 0});
+
+    REQUIRE(nullptr != underwater_face);
     REQUIRE(nullptr != above_face);
 
     CHECK(std::string("{trigger") == Face_TextureName(&bsp, underwater_face));
     CHECK(std::string("{trigger") == Face_TextureName(&bsp, above_face));
+
+    if (mapname == mirrorinside_mapname) {
+        REQUIRE(underwater_face_inner != nullptr);
+        REQUIRE(above_face_inner != nullptr);
+
+        CHECK(std::string("{trigger") == Face_TextureName(&bsp, underwater_face_inner));
+        CHECK(std::string("{trigger") == Face_TextureName(&bsp, above_face_inner));
+    } else {
+        CHECK(underwater_face_inner == nullptr);
+        CHECK(above_face_inner == nullptr);
+    }
 }
 
 TEST_CASE("noclipfaces", "[testmaps_q1]")
