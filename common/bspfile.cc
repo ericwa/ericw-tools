@@ -1507,7 +1507,7 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     std::string s = game->get_contents_display(*this);
 
     if (contentflags_t{native}.is_mirrored(game) != is_mirrored(game)) {
-        s += fmt::format(" | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+        s += fmt::format(" | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
     }
 
     if (contentflags_t{native}.will_clip_same_type(game) != will_clip_same_type(game)) {
