@@ -1071,16 +1071,6 @@ void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     Q_assert(final_lightcount == all_lights.size());
 }
 
-const char *ValueForKey(const light_t *ent, const char *key)
-{
-    const auto iter = ent->epairs->find(key);
-    if (iter != ent->epairs->end()) {
-        return (*iter).second.c_str();
-    } else {
-        return "";
-    }
-}
-
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value)
 {
     for (const auto &entdict : entdicts) {
@@ -1115,6 +1105,11 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp)
 
 static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
 
+const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates()
+{
+    return surfacelight_templates;
+}
+
 static std::ofstream surflights_dump_file;
 static fs::path surflights_dump_filename;
 
@@ -1139,7 +1134,7 @@ static void CreateSurfaceLight(const qvec3d &origin, const qvec3d &normal, const
     entity->generated = true;
 
     /* set spotlight vector based on face normal */
-    if (atoi(ValueForKey(surflight_template, "_surface_spotlight"))) {
+    if (surflight_template->epairs->get_int("_surface_spotlight")) {
         entity->spotlight = true;
         entity->spotvec = normal;
     }
@@ -1161,7 +1156,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
         plane = -plane;
     }
 
-    vec_t offset = atof(ValueForKey(surflight_template, "_surface_offset"));
+    vec_t offset = surflight_template->epairs->get_float("_surface_offset");
     if (offset == 0)
         offset = 2.0;
 
@@ -1184,10 +1179,11 @@ static aabb3d BoundPoly(int numverts, qvec3d *verts)
     return bounds;
 }
 
-static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight)
+bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight, int surf_type)
 {
     const char *texname = Face_TextureName(bsp, face);
-    return !Q_strcasecmp(texname, ValueForKey(&surflight, "_surface"));
+    return !Q_strcasecmp(texname, surflight.epairs->get("_surface")) &&
+        !!surflight.epairs->get_int("_surface_radiosity") == surf_type;
 }
 
 /*
@@ -1262,7 +1258,7 @@ static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modeli
     }
 
     for (const auto &surflight : surfacelight_templates) {
-        if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight)) {
+        if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight, SURFLIGHT_Q1)) {
             CreateSurfaceLightOnFaceSubdivision(face, face_modelinfo, surflight.get(), bsp, numverts, verts);
         }
     }
@@ -1339,7 +1335,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     }
 
     for (auto &entity : all_lights) {
-        std::string tex = ValueForKey(entity.get(), "_surface");
+        std::string tex = entity->epairs->get("_surface");
         if (!tex.empty()) {
             surfacelight_templates.push_back(DuplicateEntity(*entity)); // makes a copy
 
@@ -1347,7 +1343,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             entity->light.setValue(0);
 
             logging::print("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
-                ValueForKey(entity.get(), "origin"));
+                entity->epairs->get("origin"));
         }
     }
 
@@ -1391,7 +1387,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
             /* Don't bother subdividing if it doesn't match any surface light templates */
             if (!std::any_of(surfacelight_templates.begin(), surfacelight_templates.end(),
-                    [&](const auto &surflight) { return FaceMatchesSurfaceLightTemplate(bsp, surf, *surflight); }))
+                    [&](const auto &surflight) { return FaceMatchesSurfaceLightTemplate(bsp, surf, *surflight, SURFLIGHT_Q1); }))
                 continue;
 
             /* Generate the lights */

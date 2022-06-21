@@ -163,9 +163,8 @@ static void Base64EncodeTo(const uint8_t *data, size_t in_len, T p)
 static std::string serialize_image(const qvec3b *palette, const uint8_t *image, int32_t width, int32_t height)
 {
     size_t bufsize = 122 + (width * height * 4);
-    uint8_t *buf = new uint8_t[bufsize];
-
-    omemstream s(buf, bufsize, std::ios_base::out | std::ios_base::binary);
+    std::vector<uint8_t> buf(bufsize);
+    omemstream s(buf.data(), bufsize, std::ios_base::out | std::ios_base::binary);
 
     s << endianness<std::endian::little>;
 
@@ -213,9 +212,7 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
 
     std::string str{"data:image/bmp;base64,"};
 
-    Base64EncodeTo(buf, bufsize, std::back_inserter(str));
-
-    delete[] buf;
+    Base64EncodeTo(buf.data(), bufsize, std::back_inserter(str));
 
     return str;
 }

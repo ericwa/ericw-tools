@@ -126,23 +126,25 @@ struct dmiptex_t
 // miptex in memory
 struct miptex_t
 {
+private:
+    static inline std::unique_ptr<uint8_t[]> copy_bytes(const std::unique_ptr<uint8_t[]> &in, size_t size)
+    {
+        std::unique_ptr<uint8_t[]> bytes = std::make_unique<uint8_t[]>(size);
+        memcpy(bytes.get(), in.get(), size);
+        return bytes;
+    }
+
+public:
     std::string name;
     uint32_t width, height;
     std::array<std::unique_ptr<uint8_t[]>, MIPLEVELS> data;
-
-    static inline uint8_t *copy_bytes(const uint8_t *in, size_t size)
-    {
-        uint8_t *bytes = new uint8_t[size];
-        memcpy(bytes, in, size);
-        return bytes;
-    }
 
     miptex_t() = default;
     miptex_t(const miptex_t &copy) : name(copy.name), width(copy.width), height(copy.height)
     {
         for (int32_t i = 0; i < data.size(); i++) {
             if (copy.data[i]) {
-                data[i] = std::unique_ptr<uint8_t[]>(copy_bytes(copy.data[i].get(), (width >> i) * (height >> i)));
+                data[i] = copy_bytes(copy.data[i], (width >> i) * (height >> i));
             }
         }
     }
@@ -155,7 +157,7 @@ struct miptex_t
 
         for (int32_t i = 0; i < data.size(); i++) {
             if (copy.data[i]) {
-                data[i] = std::unique_ptr<uint8_t[]>(copy_bytes(copy.data[i].get(), (width >> i) * (height >> i)));
+                data[i] = copy_bytes(copy.data[i], (width >> i) * (height >> i));
             }
         }
 

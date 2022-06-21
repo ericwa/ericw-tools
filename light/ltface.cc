@@ -1421,7 +1421,6 @@ std::map<int, qvec3f> GetDirectLighting(
     for (const surfacelight_t &vpl : SurfaceLights()) {
         // Bounce light falloff. Uses light surface center and intensity based on face area
         qvec3d surfpointToLightDir;
-        // FIXME: this is always 128 because vpl.pos and origin are always equal it seems?
         const float surfpointToLightDist =
             max(128.0, GetDir(origin, vpl.pos,
                            surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
@@ -1445,7 +1444,7 @@ std::map<int, qvec3f> GetDirectLighting(
         if (!TestLight(vpl.pos, origin, nullptr).blocked)
             continue;
 
-        result[0] += color;
+        result[vpl.style] += color;
     }
 
     for (const auto &entity : GetLights()) {
@@ -2373,7 +2372,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmap
             total_surflight_rays += rs->numPushedRays();
             rs->tracePushedRaysOcclusion(lightsurf->modelinfo);
 
-            const int lightmapstyle = 0;
+            const int lightmapstyle = vpl.style;
             lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, lightmapstyle, lightsurf);
 
             bool hit = false;
@@ -3459,6 +3458,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
         }
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
+        // FIXME: _surface 2 support
         const mtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
         if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
             LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), texinfo->value * 2.0f, lightsurf,

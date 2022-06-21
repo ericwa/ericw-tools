@@ -128,6 +128,17 @@ std::string TargetnameForLightStyle(int style);
 const std::vector<std::unique_ptr<light_t>> &GetLights();
 const std::vector<sun_t> &GetSuns();
 
+const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates();
+
+enum {
+    // Q1-style surface light copies
+    SURFLIGHT_Q1 = 0,
+    // Q2/Q3-style radiosity
+    SURFLIGHT_RAD = 1
+};
+
+bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight, int surf_type);
+
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
 
 void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);

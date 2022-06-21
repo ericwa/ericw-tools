@@ -465,16 +465,27 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     CalculateVertexNormals(&bsp);
 
+    const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
     const bool bouncerequired =
         options.bounce.value() && (options.debugmode == debugmodes::none || options.debugmode == debugmodes::bounce ||
                                       options.debugmode == debugmodes::bouncelights); // mxd
-    const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
 
-    if ((bouncerequired || isQuake2map) && !options.nolighting.value()) {
-        if (isQuake2map)
-            MakeSurfaceLights(options, &bsp);
-        if (bouncerequired)
+    MakeRadiositySurfaceLights(options, &bsp);
+
+    if (bouncerequired && !options.nolighting.value()) {
+        if (bouncerequired) {
             MakeBounceLights(options, &bsp);
+        }
+    }
+
+    if (SurfaceLights().size()) {
+        logging::print("{} surface lights ({} light points) in use.\n",
+            SurfaceLights().size(), TotalSurfacelightPoints());
+    }
+
+    if (BounceLights().size()) { // mxd. Print some extra stats...
+        logging::print("{} bounce lights in use.\n",
+            BounceLights().size());
     }
 
 #if 0
@@ -489,11 +500,6 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         LightThread(&bsp, i);
     });
 #endif
-
-    if ((bouncerequired || isQuake2map) && !options.nolighting.value()) { // mxd. Print some extra stats...
-        logging::print("Indirect lights: {} bounce lights, {} surface lights ({} light points) in use.\n",
-            BounceLights().size(), SurfaceLights().size(), TotalSurfacelightPoints());
-    }
 
     logging::print("Lighting Completed.\n\n");
 
@@ -936,6 +942,9 @@ int light_main(int argc, const char **argv)
         }
         if (!options.bouncescale.isChanged()) {
             options.bouncescale.setValue(1.5f);
+        }
+        if (!options.bounce.isChanged()) {
+            options.bounce.setValue(true);
         }
     }
 

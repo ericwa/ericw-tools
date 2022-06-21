@@ -46,22 +46,47 @@ std::vector<surfacelight_t> surfacelights;
 std::map<int, std::vector<int>> surfacelightsByFacenum;
 int total_surflight_points = 0;
 
-// FIXME: support this for Q1 mode too.
 static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, size_t i)
 {
     const mface_t *face = BSP_GetFace(bsp, i);
 
     // Face casts light?
-    const mtexinfo_t *info = Face_Texinfo(bsp, face);
-    if (info == nullptr)
-        return;
-    if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
-        if (info->flags.native & Q2_SURF_LIGHT) {
-            qvec3d wc = winding_t::from_face(bsp, face).center();
-            logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
+
+    int32_t light_value = 0;
+    bool is_sky = false, is_directional = false;
+    int32_t style = 0;
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // first, check if it's a Q2 surface
+        const mtexinfo_t *info = Face_Texinfo(bsp, face);
+
+        if (info == nullptr)
+            return;
+
+        if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
+            if (info->flags.native & Q2_SURF_LIGHT) {
+                qvec3d wc = winding_t::from_face(bsp, face).center();
+                logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
+            }
+            return;
         }
-        return;
+
+        light_value = info->value;
+        is_sky = (info->flags.native & Q2_SURF_SKY);
     }
+
+    // check matching templates
+    if (!light_value) {
+        for (const auto &surflight : GetSurfaceLightTemplates()) {
+            if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight, SURFLIGHT_RAD)) {
+                light_value = surflight->light.value();
+                is_sky = surflight->epairs->get_int("_surface_is_sky");
+                is_directional = !!surflight->epairs->get_int("_surface_spotlight");
+                style = surflight->epairs->get_int("style");
+                break;
+            }
+        }
+    }    
 
     // Create face points...
     auto poly = GLM_FacePoints(bsp, face);
@@ -90,7 +115,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     // Calculate emit color and intensity...
 
     // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
-    if (cfg.sky_surface.isChanged() && (info->flags.native & Q2_SURF_SKY)) {
+    if (cfg.sky_surface.isChanged() && is_sky) {
         // FIXME: this only handles the "_sky_surface"  "red green blue" format.
         //        There are other more complex variants we could handle documented in the link above.
         // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
@@ -99,7 +124,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
         texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
     }
 
-    texturecolor *= info->value; // Scale by light value
+    texturecolor *= light_value; // Scale by light value
 
     // Calculate intensity...
     float intensity = qv::max(texturecolor);
@@ -117,8 +142,9 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     // Add surfacelight...
     surfacelight_t l;
     l.surfnormal = facenormal;
-    l.omnidirectional = true;//(info->flags.native & Q2_SURF_SKY) ? true : false;
+    l.omnidirectional = !is_directional;
     l.points = points;
+    l.style = style;
 
     // Init bbox...
     l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
@@ -168,9 +194,9 @@ const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 }
 
 void // Quake 2 surface lights
-MakeSurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
+MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    logging::print("--- MakeSurfaceLights ---\n");
+    logging::print("--- MakeRadiositySurfaceLights ---\n");
 
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
 }

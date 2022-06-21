@@ -41,9 +41,11 @@ struct surfacelight_t
 
     // Estimated visible AABB culling
     aabb3d bounds;
+
+    int32_t style;
 };
 
 const std::vector<surfacelight_t> &SurfaceLights();
 int TotalSurfacelightPoints();
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
-void MakeSurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
+void MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
