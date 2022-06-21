@@ -765,6 +765,17 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
         return nullptr;
     }
 
+    if (!p->nodes[pside]->contents.is_empty(options.target_game)) {
+        bool our_contents_mirrorinside = options.target_game->contents_are_mirrored(p->nodes[pside]->contents);
+        if (!our_contents_mirrorinside) {
+            if (side->planeside != pside) {
+
+                return nullptr;
+            }
+        }
+    }
+
+
     if (pside)
     {
         f->w = p->winding->flip();
