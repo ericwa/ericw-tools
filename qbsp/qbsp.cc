@@ -908,9 +908,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             WritePortalFile(tree);
         }
 
-        // merge polygons
-        MergeAll(tree->headnode);
-
         // needs to come after any face creation
         MakeMarkFaces(entity, tree->headnode);
 
