@@ -293,6 +293,9 @@ struct gamedef_t
     virtual contentflags_t contents_remap_for_export(const contentflags_t &contents) const = 0;
     virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
     virtual contentflags_t visible_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
+    // counterpart to visible_contents. for a portal with contents from `a` to `b`, returns whether a viewer in `a`
+    // should see a face
+    virtual bool directional_visible_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
     virtual bool contents_contains(const contentflags_t &a, const contentflags_t &b) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;

@@ -738,6 +738,8 @@ FaceFromPortal
 
 pside is which side of portal (equivalently, which side of the node) we're in.
 Typically, we're in an empty leaf and the other side of the portal is a solid wall.
+
+see also FindPortalSide which populates p->side
 ============
 */
 static face_t *FaceFromPortal(portal_t *p, int pside)
@@ -754,10 +756,14 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
     f->portal = p;
     f->lmshift = side->lmshift;
 
-    // don't show insides of windows
-    // fixme-brushbsp: restore this?
-//    if (!side->contents[1].is_mirrored(options.target_game))
-//        return nullptr;
+    bool make_face = options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
+    if (!make_face) {
+        // content type / game rules requested to skip generating a face on this side
+        logging::print("skipped face for {} -> {} portal\n",
+            p->nodes[pside]->contents.to_string(options.target_game),
+            p->nodes[!pside]->contents.to_string(options.target_game));
+        return nullptr;
+    }
 
     if (pside)
     {

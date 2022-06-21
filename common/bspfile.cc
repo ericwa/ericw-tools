@@ -361,7 +361,11 @@ public:
     contentflags_t visible_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
         if (a.equals(this, b)) {
-            return create_empty_contents();
+            if (contents_clip_same_type(a, b)) {
+                return create_empty_contents();
+            } else {
+                return a;
+            }
         }
 
         int32_t a_pri = contents_priority(a);
@@ -373,6 +377,20 @@ public:
             return b;
         }
         // fixme-brushbsp: support detail-illusionary intersecting liquids
+    }
+
+    bool directional_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        if (a.is_empty(this)) {
+            // empty can always see whatever is in `b`
+            return true;
+        }
+
+        if (!a.is_mirrored(this) && a.will_clip_same_type(this)) {
+            return false;
+        }
+
+        return true;
     }
 
     bool contents_contains(const contentflags_t &a, const contentflags_t &b) const override
@@ -884,6 +902,17 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return 0;
+    }
+
+    /**
+     * For a portal from `a` to `b`, should the viewer on side `a` see a face?
+     */
+    bool directional_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        if ((a.native & Q2_CONTENTS_WINDOW) && visible_contents(a, b).native == Q2_CONTENTS_WINDOW)
+            return false; // don't show insides of windows
+
+        return true;
     }
 
     bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool, bool) const override
