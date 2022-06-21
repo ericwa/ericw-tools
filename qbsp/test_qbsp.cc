@@ -691,8 +691,14 @@ TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
     const qvec3d above_face_pos{-40, -52, 172};
 
     // make sure the detail_illusionary face underwater isn't clipped away
-    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0}));
-    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0}));
+    auto* underwater_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0});
+    REQUIRE(nullptr != underwater_face);
+
+    auto* above_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0});
+    REQUIRE(nullptr != above_face);
+
+    CHECK(std::string("{trigger") == Face_TextureName(&bsp, underwater_face));
+    CHECK(std::string("{trigger") == Face_TextureName(&bsp, above_face));
 }
 
 TEST_CASE("noclipfaces", "[testmaps_q1]")
