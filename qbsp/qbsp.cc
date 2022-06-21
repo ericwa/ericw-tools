@@ -1035,9 +1035,6 @@ static void BSPX_Brushes_AddModel(
         }
     }
 
-    permodel.numbrushes = LittleLong(permodel.numbrushes);
-    permodel.numfaces = LittleLong(permodel.numfaces);
-
     std::ostringstream str(std::ios_base::out | std::ios_base::binary);
 
     str << endianness<std::endian::little>;

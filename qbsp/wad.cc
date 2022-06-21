@@ -221,7 +221,7 @@ static bool WAD_LoadLump(wad_t &wad, const char *name, miptexhl_t &dest)
     if (size != lump.disksize)
         FError("Failure reading from file");
 
-    memstream stream(buffer.get(), size);
+    imemstream stream(buffer.get(), size);
 
     stream >> endianness<std::endian::little>;
 

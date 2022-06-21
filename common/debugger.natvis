@@ -21,12 +21,12 @@
 	<Type Name="polylib::winding_base_t&lt;*&gt;">
 		<DisplayString>{count} points</DisplayString>
 		<Expand>
-			<ExpandedItem Condition="isVector">vector</ExpandedItem>
-			<ArrayItems Condition="!isVector">
-				<Rank>1</Rank>
+			<Item Name="[size]">count</Item>
+			<IndexListItems>
 				<Size>count</Size>
-				<ValuePointer>&amp;array[0]</ValuePointer>
-			</ArrayItems>
+				<ValueNode Condition="$i &lt; $T1">array[$i]</ValueNode>
+				<ValueNode Condition="$i &gt;= $T1">vector[$i - $T1]</ValueNode>
+			</IndexListItems>
 		</Expand>
 	</Type>
 

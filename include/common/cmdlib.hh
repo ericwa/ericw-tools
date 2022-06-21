@@ -186,7 +186,9 @@ template<typename... Args>
  * ============================================================================
  */
 // C++20 polyfill
-// For cpp20, #include <bit> instead
+#if defined(__cpp_lib_endian) && __cpp_lib_endian >= 201907L
+#include <bit>
+#else
 namespace std
 {
 enum class endian
@@ -201,72 +203,7 @@ enum class endian
 #endif
 };
 } // namespace std
-
-// C/C++ portable and defined method of swapping bytes.
-template<typename T>
-inline T byte_swap(const T &val)
-{
-    T retVal;
-    const char *pVal = reinterpret_cast<const char *>(&val);
-    char *pRetVal = reinterpret_cast<char *>(&retVal);
-
-    for (size_t i = 0; i < sizeof(T); i++) {
-        pRetVal[sizeof(T) - 1 - i] = pVal[i];
-    }
-    unsigned short CRC_Block(const unsigned char *start, int count);
-
-    return retVal;
-}
-
-// little <-> native
-inline int16_t LittleShort(int16_t l)
-{
-    if constexpr (std::endian::native == std::endian::little)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline int32_t LittleLong(int32_t l)
-{
-    if constexpr (std::endian::native == std::endian::little)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline float LittleFloat(float l)
-{
-    if constexpr (std::endian::native == std::endian::little)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-// big <-> native
-inline int16_t BigShort(int16_t l)
-{
-    if constexpr (std::endian::native == std::endian::big)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline int32_t BigLong(int32_t l)
-{
-    if constexpr (std::endian::native == std::endian::big)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline float BigFloat(float l)
-{
-    if constexpr (std::endian::native == std::endian::big)
-        return l;
-    else
-        return byte_swap(l);
-}
+#endif
 
 /**
  * assertion macro that is used in all builds (debug/release)
@@ -337,10 +274,17 @@ inline std::ios_base &endianness(std::ios_base &os)
     return os;
 }
 
-// blank type used
+// blank type used for paddings
 template<size_t n>
 struct padding
 {
+};
+
+struct padding_n
+{
+    size_t n;
+
+    constexpr padding_n(size_t np) : n(np) { }
 };
 
 // using <= for ostream and >= for istream
@@ -348,6 +292,15 @@ template<size_t n>
 inline std::ostream &operator<=(std::ostream &s, const padding<n> &)
 {
     for (size_t i = 0; i < n; i++) {
+        s.put(0);
+    }
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const padding_n &p)
+{
+    for (size_t i = 0; i < p.n; i++) {
         s.put(0);
     }
 
@@ -500,6 +453,14 @@ template<size_t n>
 inline std::istream &operator>=(std::istream &s, padding<n> &)
 {
     s.seekg(n, std::ios_base::cur);
+
+    return s;
+}
+
+template<size_t n>
+inline std::istream &operator>=(std::istream &s, padding_n &p)
+{
+    s.seekg(p.n, std::ios_base::cur);
 
     return s;
 }
@@ -840,6 +801,22 @@ struct memstream : virtual membuf, std::ostream, std::istream
 
     inline memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
         : membuf(base, size, which), std::ostream(nullptr), std::istream(static_cast<std::streambuf *>(this))
+    {
+    }
+};
+
+struct omemstream : virtual membuf, std::ostream
+{
+    inline omemstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+        : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this))
+    {
+    }
+};
+
+struct imemstream : virtual membuf, std::istream
+{
+    inline imemstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+        : membuf(base, size, which), std::istream(static_cast<std::streambuf *>(this))
     {
     }
 };

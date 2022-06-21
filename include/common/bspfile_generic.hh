@@ -324,8 +324,7 @@ struct dmiptexlump_t
         for (auto &texture : textures) {
             if (texture.name[0]) {
                 if (stream.tellp() % 4) {
-                    constexpr const char pad[4]{};
-                    stream.write(pad, 4 - (stream.tellp() % 4));
+                    stream <= padding_n(4 - (stream.tellp() % 4));
                 }
                 texture.stream_write(stream);
             }
