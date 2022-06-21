@@ -675,7 +675,7 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
     // FIXME: unsure what the expected number of visclusters is, does sky get one?
 }
 
-TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
+TEST_CASE("water_detail_illusionary", "[testmaps_q1][!mayfail]")
 {
     static const std::string basic_mapname = "qbsp_water_detail_illusionary.map";
     static const std::string mirrorinside_mapname = "qbsp_water_detail_illusionary_mirrorinside.map";
