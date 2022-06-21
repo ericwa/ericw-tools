@@ -33,6 +33,10 @@ struct portal_t
     node_t *nodes[2]; // [0] = front side of planenum
     portal_t *next[2]; // [0] = next portal in nodes[0]'s list of portals
     std::optional<winding_t> winding;
+
+    bool sidefound; // false if ->side hasn't been checked
+    face_t *side; // NULL = non-visible // fixme-brushbsp: change to side_t
+    face_t *face[2]; // output face in bsp file
 };
 
 struct tree_t
@@ -53,3 +57,4 @@ void MakeTreePortals(tree_t *tree);
 void FreeTreePortals_r(node_t *node);
 void AssertNoPortals(node_t *node);
 void MakeHeadnodePortals(tree_t *tree);
+void MarkVisibleSides(tree_t *tree, mapentity_t* entity);

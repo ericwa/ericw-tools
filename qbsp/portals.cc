@@ -426,3 +426,122 @@ void FreeTreePortals_r(node_t *node)
     }
     node->portals = nullptr;
 }
+
+//==============================================================
+
+/*
+============
+FindPortalSide
+
+Finds a brush side to use for texturing the given portal
+============
+*/
+static void FindPortalSide(portal_t *p)
+{
+    // decide which content change is strongest
+    // solid > lava > water, etc
+    contentflags_t viscontents = options.target_game->visible_contents(p->nodes[0]->contents, p->nodes[1]->contents);
+    if (viscontents.is_empty(options.target_game))
+        return;
+
+    int planenum = p->onnode->planenum;
+    face_t *bestside = nullptr;
+    float bestdot = 0;
+
+    for (int j = 0; j < 2; j++)
+    {
+        node_t *n = p->nodes[j];
+        auto p1 = map.planes.at(p->onnode->planenum);
+
+        // iterate the n->original_brushes vector in reverse order, so later brushes
+        // in the map file order are prioritized
+        for (auto it = n->original_brushes.rbegin(); it != n->original_brushes.rend(); ++it)
+        {
+            auto *brush = *it;
+            if (!options.target_game->contents_contains(brush->contents, viscontents))
+                continue;
+            for (face_t &side : brush->faces)
+            {
+                // fixme-brushbsp: port these
+//                if (side.bevel)
+//                    continue;
+//                if (side.texinfo == TEXINFO_NODE)
+//                    continue;		// non-visible
+                if (side.planenum == planenum)
+                {	// exact match
+                    bestside = &side;
+                    goto gotit;
+                }
+                // see how close the match is
+                auto p2 = map.planes.at(side.planenum);
+                float dot = qv::dot(p1.normal, p2.normal);
+                if (dot > bestdot)
+                {
+                    bestdot = dot;
+                    bestside = &side;
+                }
+            }
+        }
+    }
+
+gotit:
+    if (!bestside)
+        logging::print("WARNING: side not found for portal\n");
+
+    p->sidefound = true;
+    p->side = bestside;
+}
+
+/*
+===============
+MarkVisibleSides_r
+
+===============
+*/
+static void MarkVisibleSides_r(node_t *node)
+{
+    if (node->planenum != PLANENUM_LEAF)
+    {
+        MarkVisibleSides_r(node->children[0]);
+        MarkVisibleSides_r(node->children[1]);
+        return;
+    }
+
+    // empty leafs are never boundary leafs
+    if (node->contents.is_empty(options.target_game))
+        return;
+
+    // see if there is a visible face
+    int s;
+    for (portal_t *p=node->portals ; p ; p = p->next[!s])
+    {
+        s = (p->nodes[0] == node);
+        if (!p->onnode)
+            continue;		// edge of world
+        if (!p->sidefound)
+            FindPortalSide(p);
+        if (p->side)
+            p->side->visible = true;
+    }
+}
+
+/*
+=============
+MarkVisibleSides
+
+=============
+*/
+void MarkVisibleSides(tree_t *tree, mapentity_t* entity)
+{
+    logging::print("--- {} ---\n", __func__);
+
+    // clear all the visible flags
+    for (auto &brush : entity->brushes) {
+        for (auto &face : brush->faces) {
+            face.visible = false;
+        }
+    }
+
+    // set visible flags on the sides that are used by portals
+    MarkVisibleSides_r (tree->headnode);
+}

@@ -358,6 +358,55 @@ public:
         }
     }
 
+    contentflags_t visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        if (a.equals(this, b)) {
+            if (contents_clip_same_type(a, b)) {
+                return create_empty_contents();
+            } else {
+                return a;
+            }
+        }
+
+        int32_t a_pri = contents_priority(a);
+        int32_t b_pri = contents_priority(b);
+
+        if (a_pri > b_pri) {
+            return a;
+        } else {
+            return b;
+        }
+        // fixme-brushbsp: support detail-illusionary intersecting liquids
+    }
+
+    bool directional_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        if (contents_priority(b) > contents_priority(a)) {
+            return true;
+        }
+
+        if (a.is_empty(this)) {
+            // empty can always see whatever is in `b`
+            return true;
+        }
+
+        if (!a.will_clip_same_type(this) && contents_are_type_equal(a, b)) {
+            // _noclipfaces
+            return true;
+        }
+
+        if (!a.is_mirrored(this)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool contents_contains(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        return a.equals(this, b);
+    }
+
     std::string get_contents_display(const contentflags_t &contents) const override
     {
         std::string base;
@@ -850,6 +899,9 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
+    /**
+     * Returns the single content bit of the strongest visible content present
+     */
     constexpr int32_t visible_contents(const int32_t &contents) const
     {
         for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
@@ -859,6 +911,17 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return 0;
+    }
+
+    /**
+     * For a portal from `a` to `b`, should the viewer on side `a` see a face?
+     */
+    bool directional_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        if ((a.native & Q2_CONTENTS_WINDOW) && visible_contents(a, b).native == Q2_CONTENTS_WINDOW)
+            return false; // don't show insides of windows
+
+        return true;
     }
 
     bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool, bool) const override
@@ -905,6 +968,18 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         return {a.native | b.native};
+    }
+
+    contentflags_t visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        int viscontents = visible_contents(a.native ^ b.native);
+
+        return {viscontents};
+    }
+
+    bool contents_contains(const contentflags_t &a, const contentflags_t &b) const override
+    {
+        return (a.native & b.native) != 0;
     }
 
     std::string get_contents_display(const contentflags_t &contents) const override
@@ -1432,7 +1507,7 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     std::string s = game->get_contents_display(*this);
 
     if (contentflags_t{native}.is_mirrored(game) != is_mirrored(game)) {
-        s += fmt::format(" | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+        s += fmt::format(" | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
     }
 
     if (contentflags_t{native}.will_clip_same_type(game) != will_clip_same_type(game)) {

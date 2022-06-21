@@ -23,6 +23,7 @@
 #include <qbsp/portals.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
+#include <qbsp/merge.hh>
 #include <qbsp/solidbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
@@ -43,6 +44,11 @@ static bool ShouldOmitFace(face_t *f)
     }
 
     return false;
+}
+
+static void MergeNodeFaces (node_t *node)
+{
+    node->facelist = MergeFaceList(node->facelist);
 }
 
 /*
@@ -153,6 +159,18 @@ std::list<face_t *> SubdivideFace(face_t *f)
     }
 
     return surfaces;
+}
+
+static void SubdivideNodeFaces(node_t *node)
+{
+    std::list<face_t *> result;
+
+    // subdivide each face and push the results onto subdivided
+    for (face_t *face : node->facelist) {
+        result.splice(result.end(), SubdivideFace(face));
+    }
+
+    node->facelist = result;
 }
 
 static void FreeNode(node_t *node)
@@ -423,7 +441,7 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
     node->firstface = static_cast<int>(map.bsp.dfaces.size());
 
     for (face_t *face : node->facelist) {
-        Q_assert(face->planenum == node->planenum);
+        //Q_assert(face->planenum == node->planenum);
 
         // emit a region
         EmitFace(entity, face);
@@ -561,149 +579,143 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
     MakeMarkFaces(entity, node->children[1]);
 }
 
-// the fronts of `faces` are facing `node`, determine what gets clipped away
-// (return the post-clipping result)
-static std::list<face_t *> ClipFacesToTree_r(node_t *node, const brush_t *srcbrush, std::list<face_t *> faces)
+struct makefaces_stats_t {
+    int	c_nodefaces;
+    int c_merge;
+    int c_subdivide;
+};
+
+/*
+============
+FaceFromPortal
+
+pside is which side of portal (equivalently, which side of the node) we're in.
+Typically, we're in an empty leaf and the other side of the portal is a solid wall.
+
+see also FindPortalSide which populates p->side
+============
+*/
+static face_t *FaceFromPortal(portal_t *p, int pside)
 {
-    if (node->planenum == PLANENUM_LEAF) {
-        // fixme-brushbsp: move to contentflags_t?
-        if (node->contents.is_solid(options.target_game) 
-            || node->contents.is_detail_solid(options.target_game)
-            || node->contents.is_sky(options.target_game)) {
-            // solids eat any faces that reached this point
-            return {};
-        }
+    face_t *side = p->side;
+    if (!side)
+        return nullptr;	// portal does not bridge different visible contents
 
-        // see what the game thinks about the clip
-        if (srcbrush->contents.will_clip_same_type(options.target_game, node->contents)) {
-            return {};
-        }
+    face_t *f = new face_t{};
 
-        // other content types let the faces thorugh
-        return faces;
+    f->texinfo = side->texinfo;
+    f->planenum = side->planenum;
+    f->planeside = static_cast<side_t>(pside);
+    f->portal = p;
+    f->lmshift = side->lmshift;
+
+    bool make_face = options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
+    if (!make_face) {
+        // content type / game rules requested to skip generating a face on this side
+        logging::print("skipped face for {} -> {} portal\n",
+            p->nodes[pside]->contents.to_string(options.target_game),
+            p->nodes[!pside]->contents.to_string(options.target_game));
+        return nullptr;
     }
 
-    const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
+    if (!p->nodes[pside]->contents.is_empty(options.target_game)) {
+        bool our_contents_mirrorinside = options.target_game->contents_are_mirrored(p->nodes[pside]->contents);
+        if (!our_contents_mirrorinside) {
+            if (side->planeside != pside) {
 
-    std::list<face_t *> front, back;
-
-    for (auto *face : faces) {
-        auto [frontFragment, backFragment] = SplitFace(face, splitplane);
-        if (frontFragment) {
-            front.push_back(frontFragment);            
-        }
-        if (backFragment) {
-            back.push_back(backFragment);
-        }
-    }
-
-    front = ClipFacesToTree_r(node->children[0], srcbrush, front);
-    back = ClipFacesToTree_r(node->children[1], srcbrush, back);
-
-    // merge lists
-    front.splice(front.end(), back);
-
-    return front;
-}
-
-static std::list<face_t *> ClipFacesToTree(node_t *node, const brush_t *srcbrush, std::list<face_t *> faces)
-{
-    // handles the first level - faces are all supposed to be lying exactly on `node`
-    for (auto *face : faces) {
-        Q_assert(face->planenum == node->planenum);
-    }
-
-    std::list<face_t *> front, back;
-    for (auto *face : faces) {
-        if (face->planeside == 0) {
-            front.push_back(face);
-        } else {
-            back.push_back(face);
-        }
-    }
-
-    front = ClipFacesToTree_r(node->children[0], srcbrush, front);
-    back = ClipFacesToTree_r(node->children[1], srcbrush, back);
-
-    // merge lists
-    front.splice(front.end(), back);
-
-    return front;
-}
-
-static void AddFaceToTree_r(mapentity_t* entity, face_t *face, brush_t *srcbrush, node_t* node)
-{
-    if (node->planenum == PLANENUM_LEAF) {
-        //FError("couldn't find node for face");
-        // after outside filling, this is completely expected
-        return;
-    }
-
-    if (face->planenum == node->planenum) {
-        // found the correct plane - add the face to it.
-
-        ++c_nodefaces;
-
-        // csg it
-        std::list<face_t *> faces = CSGFace(face, entity, srcbrush, node);
-
-        // clip them to the descendant parts of the BSP
-        // (otherwise we could have faces floating in the void on this node)
-        faces = ClipFacesToTree(node, srcbrush, faces);
-
-        for (face_t *part : faces) {
-            node->facelist.push_back(part);
-
-            if (srcbrush->contents.is_mirrored(options.target_game)) {
-                node->facelist.push_back(MirrorFace(part));
+                return nullptr;
             }
         }
-        return;
     }
 
-    // fixme-brushbsp: we need to handle the case of the face being near enough that it gets clipped away,
-    // but not face->planenum == node->planenum
-    auto [frontWinding, backWinding] = face->w.clip(map.planes.at(node->planenum));
-    if (frontWinding) {
-        auto *newFace = new face_t{*face};
-        newFace->w = *frontWinding;
-        AddFaceToTree_r(entity, newFace, srcbrush, node->children[0]);
+
+    if (pside)
+    {
+        f->w = p->winding->flip();
+        // fixme-brushbsp: was just `f->contents` on qbsp3
+        f->contents[0] = p->nodes[1]->contents;
+        f->contents[1] = p->nodes[0]->contents;
     }
-    if (backWinding) {
-        auto *newFace = new face_t{*face};
-        newFace->w = *backWinding;
-        AddFaceToTree_r(entity, newFace, srcbrush, node->children[1]);
+    else
+    {
+        f->w = *p->winding;
+        f->contents[0] = p->nodes[0]->contents;
+        f->contents[1] = p->nodes[1]->contents;
     }
 
-    delete face;
+    UpdateFaceSphere(f);
+
+    return f;
 }
 
 /*
-================
-MakeVisibleFaces
+===============
+MakeFaces_r
 
-Given a completed BSP tree and a list of the original brushes (in `entity`),
+If a portal will make a visible face,
+mark the side that originally created it
 
-- filters the brush faces into the BSP, finding the correct nodes they end up on
-- clips the faces by other brushes.
-  
-  first iteration, we can just do an exhaustive check against all brushes
-================
+  solid / empty : solid
+  solid / water : solid
+  water / empty : water
+  water / water : none
+===============
 */
-void MakeVisibleFaces(mapentity_t* entity, node_t* headnode)
+static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
 {
-    c_nodefaces = 0;
+    // recurse down to leafs
+    if (node->planenum != PLANENUM_LEAF)
+    {
+        MakeFaces_r(node->children[0], stats);
+        MakeFaces_r(node->children[1], stats);
 
-    for (auto &brush : entity->brushes) {
-        for (auto &face : brush->faces) {
-            if (!face.visible) {
-                continue;
-            }
-            face_t *temp = CopyFace(&face);
+        // merge together all visible faces on the node
+        if (!options.nomerge.value())
+            MergeNodeFaces(node);
+        if (options.subdivide.boolValue())
+            SubdivideNodeFaces(node);
 
-            AddFaceToTree_r(entity, temp, brush.get(), headnode);
-        }
+        return;
     }
 
-    logging::print(logging::flag::STAT, "{} nodefaces\n", c_nodefaces);
+    // solid leafs never have visible faces
+    if (node->contents.is_any_solid(options.target_game))
+        return;
+
+    // see which portals are valid
+
+    // (Note, this is happening per leaf, so we can potentially generate faces
+    // for the same portal once from one leaf, and once from the neighbouring one)
+    int s;
+    for (portal_t *p = node->portals; p; p = p->next[s])
+    {
+        // 1 means node is on the back side of planenum
+        s = (p->nodes[1] == node);
+
+        face_t *f = FaceFromPortal(p, s);
+        if (f)
+        {
+            stats.c_nodefaces++;
+            p->face[s] = f;
+            p->onnode->facelist.push_back(f);
+        }
+    }
+}
+
+/*
+============
+MakeFaces
+============
+*/
+void MakeFaces(node_t *node)
+{
+    logging::print("--- {} ---\n", __func__);
+
+    makefaces_stats_t stats{};
+
+    MakeFaces_r(node, stats);
+
+    logging::print(logging::flag::STAT, "{} makefaces\n", stats.c_nodefaces);
+    logging::print(logging::flag::STAT, "{} merged\n", stats.c_merge);
+    logging::print(logging::flag::STAT, "{} subdivided\n", stats.c_subdivide);
 }

@@ -896,20 +896,17 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             tree = BrushBSP(entity, false);
         }
 
-        FreeTreePortals_r(tree->headnode);
-
-        PruneNodes(tree->headnode);
-
         MakeTreePortals(tree);
 
-        MakeVisibleFaces(entity, tree->headnode);
+        MarkVisibleSides(tree, entity);
+        MakeFaces(tree->headnode);
+
+        FreeTreePortals_r(tree->headnode);
+        PruneNodes(tree->headnode);
 
         if (hullnum <= 0 && entity == map.world_entity() && !map.leakfile) {
             WritePortalFile(tree);
         }
-
-        // merge polygons
-        MergeAll(tree->headnode);
 
         // needs to come after any face creation
         MakeMarkFaces(entity, tree->headnode);
