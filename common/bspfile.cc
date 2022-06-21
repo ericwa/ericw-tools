@@ -381,6 +381,10 @@ public:
 
     bool directional_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
+        if (contents_priority(b) > contents_priority(a)) {
+            return true;
+        }
+
         if (a.is_empty(this)) {
             // empty can always see whatever is in `b`
             return true;

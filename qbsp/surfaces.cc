@@ -769,12 +769,14 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
     {
         f->w = p->winding->flip();
         // fixme-brushbsp: was just `f->contents` on qbsp3
-        f->contents[1] = p->nodes[1]->contents;
+        f->contents[0] = p->nodes[1]->contents;
+        f->contents[1] = p->nodes[0]->contents;
     }
     else
     {
         f->w = *p->winding;
-        f->contents[1] = p->nodes[0]->contents;
+        f->contents[0] = p->nodes[0]->contents;
+        f->contents[1] = p->nodes[1]->contents;
     }
 
     UpdateFaceSphere(f);
