@@ -1092,9 +1092,9 @@ int light_main(int argc, const char **argv)
         bsp.dlightdata.clear();
     }
 
-#if 0
-    ExportObj(source, bsp);
-#endif
+    if (options.exportobj.value()) {
+        ExportObj(fs::path{source}.replace_extension(".obj"), &bsp);
+    }
 
     WriteEntitiesToString(options, &bsp);
     /* Convert data format back if necessary */
