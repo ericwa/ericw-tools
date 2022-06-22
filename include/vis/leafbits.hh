@@ -23,92 +23,68 @@
 #include <cstring>
 #include <common/cmdlib.hh>
 
-/* Use some GCC builtins */
-#if !defined(ffsl) && defined(__GNUC__)
-#define ffsl __builtin_ffsl
-#elif defined(_WIN32)
-#include <intrin.h>
-inline int ffsl(long int val)
-{
-    unsigned long indexout;
-    unsigned char res = _BitScanForward(&indexout, val);
-    if (!res)
-        return 0;
-    else
-        return indexout + 1;
-}
-#endif
-
 class leafbits_t
 {
-    size_t _size;
-    uint32_t *bits;
+    size_t _size = 0;
+    std::unique_ptr<uint32_t[]> bits {};
 
     constexpr size_t block_size() const { return (_size + mask) >> shift; }
-    uint32_t *allocate() { return new uint32_t[block_size()]{}; }
-    constexpr size_t byte_size() const { return block_size() * sizeof(*bits); }
+    inline std::unique_ptr<uint32_t[]> allocate() { return std::make_unique<uint32_t[]>(block_size()); }
+    constexpr size_t byte_size() const { return block_size() * sizeof(*bits.get()); }
 
 public:
     static constexpr size_t shift = 5;
     static constexpr size_t mask = (sizeof(uint32_t) << 3) - 1UL;
 
-    constexpr leafbits_t() : _size(0), bits(nullptr) { }
+    leafbits_t() = default;
 
-    leafbits_t(size_t size) : _size(size), bits(allocate()) { }
+    inline leafbits_t(size_t size) : _size(size), bits(allocate()) { }
 
-    leafbits_t(const leafbits_t &copy) : leafbits_t(copy._size) { memcpy(bits, copy.bits, byte_size()); }
+    inline leafbits_t(const leafbits_t &copy) : leafbits_t(copy._size) { memcpy(bits.get(), copy.bits.get(), byte_size()); }
 
-    constexpr leafbits_t(leafbits_t &&move) noexcept : _size(move._size), bits(move.bits)
+    inline leafbits_t(leafbits_t &&move) noexcept : _size(move._size), bits(std::move(move.bits))
     {
         move._size = 0;
-        move.bits = nullptr;
     }
 
-    leafbits_t &operator=(leafbits_t &&move) noexcept
+    inline leafbits_t &operator=(leafbits_t &&move) noexcept
     {
         _size = move._size;
-        bits = move.bits;
+        bits = std::move(move.bits);
 
         move._size = 0;
-        move.bits = nullptr;
 
         return *this;
     }
 
-    leafbits_t &operator=(const leafbits_t &copy)
+    inline leafbits_t &operator=(const leafbits_t &copy)
     {
         resize(copy._size);
-        memcpy(bits, copy.bits, byte_size());
+        memcpy(bits.get(), copy.bits.get(), byte_size());
         return *this;
-    }
-
-    ~leafbits_t()
-    {
-        delete[] bits;
-        bits = nullptr;
     }
 
     constexpr const size_t &size() const { return _size; }
 
     // this clears existing bit data!
-    void resize(size_t new_size) { *this = leafbits_t(new_size); }
+    inline void resize(size_t new_size) { *this = leafbits_t(new_size); }
 
-    void clear() { memset(bits, 0, byte_size()); }
+    inline void clear() { memset(bits.get(), 0, byte_size()); }
 
-    constexpr uint32_t *data() { return bits; }
-    constexpr const uint32_t *data() const { return bits; }
+    inline uint32_t *data() { return bits.get(); }
+    inline const uint32_t *data() const { return bits.get(); }
 
-    constexpr bool operator[](const size_t &index) const { return !!(bits[index >> shift] & nth_bit(index & mask)); }
+    inline bool operator[](const size_t &index) const { return !!(bits[index >> shift] & nth_bit(index & mask)); }
 
     struct reference
     {
-        uint32_t *bits;
+        std::unique_ptr<uint32_t[]> &bits;
         size_t block_index;
         size_t mask;
 
-        constexpr operator bool() const { return !!(bits[block_index] & mask); }
+        inline explicit operator bool() const { return !!(bits[block_index] & mask); }
 
-        reference &operator=(bool value)
+        inline reference &operator=(bool value)
         {
             if (value)
                 bits[block_index] |= mask;
@@ -119,5 +95,5 @@ public:
         }
     };
 
-    constexpr reference operator[](const size_t &index) { return {bits, index >> shift, nth_bit(index & mask)}; }
+    inline reference operator[](const size_t &index) { return {bits, index >> shift, nth_bit(index & mask)}; }
 };

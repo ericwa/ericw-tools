@@ -13,6 +13,22 @@
 #include <common/parallel.hh>
 #include <fmt/chrono.h>
 
+/* Use some GCC builtins */
+#if !defined(ffsl) && defined(__GNUC__)
+#define ffsl __builtin_ffsl
+#elif defined(_WIN32)
+#include <intrin.h>
+inline int ffsl(long int val)
+{
+    unsigned long indexout;
+    unsigned char res = _BitScanForward(&indexout, val);
+    if (!res)
+        return 0;
+    else
+        return indexout + 1;
+}
+#endif
+
 /*
  * If the portal file is "PRT2" format, then the leafs we are dealing with are
  * really clusters of leaves. So, after the vis job is done we need to expand
@@ -300,7 +316,6 @@ static void PortalCompleted(portal_t *completed)
     int i, j, k, bit, numblocks;
     int leafnum;
     const portal_t *p, *p2;
-    const uint32_t *might, *vis;
     uint32_t changed;
 
     portal_mutex.lock();
@@ -317,8 +332,8 @@ static void PortalCompleted(portal_t *completed)
         if (p->status != pstat_done)
             continue;
 
-        might = p->mightsee.data();
-        vis = p->visbits.data();
+        auto might = p->mightsee.data();
+        auto vis = p->visbits.data();
         numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
         for (j = 0; j < numblocks; j++) {
             changed = might[j] & ~vis[j];
