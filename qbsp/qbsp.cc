@@ -904,7 +904,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         FreeTreePortals_r(tree->headnode);
         PruneNodes(tree->headnode);
 
-        if (hullnum <= 0 && entity == map.world_entity() && !map.leakfile) {
+        if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || options.keepprt.value())) {
             WritePortalFile(tree);
         }
 
