@@ -61,7 +61,7 @@ public:
 
 static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, winding_t &w)
 {
-    unique_ptr<patch_t> p{new patch_t};
+    unique_ptr<patch_t> p = std::make_unique<patch_t>();
     p->w = std::move(w);
 
     // cache some stuff
