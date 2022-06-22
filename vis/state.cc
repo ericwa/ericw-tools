@@ -190,6 +190,13 @@ void SaveVisState(void)
         FError("error renaming state file ({})", ec.message());
 }
 
+void CleanVisState(void)
+{
+    if (fs::exists(statefile)) {
+        fs::remove(statefile);
+    }
+}
+
 bool LoadVisState(void)
 {
     fs::file_time_type prt_time, state_time;

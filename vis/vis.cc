@@ -764,6 +764,10 @@ int vis_main(int argc, const char **argv)
     endtime = I_FloatTime();
     logging::print("{:.2} elapsed\n", (endtime - starttime));
 
+    if (options.autoclean.value()) {
+        CleanVisState();
+    }
+
     logging::close();
 
     return 0;
