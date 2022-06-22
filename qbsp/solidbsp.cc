@@ -506,8 +506,10 @@ static const face_t *SelectPartition(const std::vector<std::unique_ptr<brush_t>>
         }
     }
 
+#if 0
     if (usemidsplit || largenode) // do fast way for clipping hull
         return ChooseMidPlaneFromList(brushes, bounds);
+#endif
 
     // do slow way to save poly splits for drawing hull
     return ChoosePlaneFromList(brushes, bounds);
