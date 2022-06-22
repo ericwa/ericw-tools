@@ -187,9 +187,9 @@ public:
 
             stream.seekg(static_cast<uint32_t>(start) + dtex.offsets[g]);
             const size_t num_bytes = (dtex.width >> g) * (dtex.height >> g);
-            uint8_t *bytes = new uint8_t[num_bytes];
+            std::unique_ptr<uint8_t[]> bytes = std::make_unique<uint8_t[]>(num_bytes);
             stream.read(reinterpret_cast<char *>(bytes), num_bytes);
-            data[g] = std::unique_ptr<uint8_t[]>(bytes);
+            data[g].swap(bytes);
         }
     }
 
