@@ -169,7 +169,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    std::vector<std::string> args{"", "-nopercent", "-keepprt"};
+    std::vector<std::string> args{"", "-nopercent"};
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }
