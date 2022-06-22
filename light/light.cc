@@ -62,7 +62,7 @@ bool dirt_in_use = false;
 static facesup_t *faces_sup; // lit2/bspx stuff
 
 /// start of lightmap data
-uint8_t *filebase;
+std::vector<uint8_t> filebase;
 /// offset of start of free space after data (should be kept a multiple of 4)
 static int file_p;
 /// offset of end of free space for lightmap data
@@ -223,7 +223,7 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
 {
     light_mutex.lock();
 
-    *lightdata = filebase + file_p;
+    *lightdata = filebase.data() + file_p;
     *colordata = lit_filebase.data() + lit_file_p;
     *deluxdata = lux_filebase.data() + lux_file_p;
 
@@ -255,7 +255,7 @@ void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, 
 {
     Q_assert(lightofs >= 0);
 
-    *lightdata = filebase + lightofs;
+    *lightdata = filebase.data() + lightofs;
 
     if (colordata) {
         *colordata = lit_filebase.data() + (lightofs * 3);
@@ -428,14 +428,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
-    delete[] filebase;
+    filebase.clear();
     lit_filebase.clear();
     lux_filebase.clear();
 
     /* greyscale data stored in a separate buffer */
-    filebase = new uint8_t[MAX_MAP_LIGHTING]{};
-    if (!filebase)
-        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING);
+    filebase.resize(MAX_MAP_LIGHTING);
     file_p = 0;
     file_end = MAX_MAP_LIGHTING;
 
@@ -515,7 +513,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             memcpy(bsp.dlightdata.data(), lit_filebase.data(), bsp.dlightdata.size());
         } else {
             bsp.dlightdata.resize(file_p);
-            memcpy(bsp.dlightdata.data(), filebase, bsp.dlightdata.size());
+            memcpy(bsp.dlightdata.data(), filebase.data(), bsp.dlightdata.size());
         }
     } else {
         // NOTE: bsp.lightdatasize is already valid in the -litonly case

@@ -3240,7 +3240,7 @@ static void WriteLightmaps(
     if (bsp->loadversion->game->has_rgb_lightmap) {
         lightofs = lit - lit_filebase.data();
     } else {
-        lightofs = out - filebase;
+        lightofs = out - filebase.data();
     }
 
     if (facesup) {

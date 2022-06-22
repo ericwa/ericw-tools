@@ -1297,16 +1297,29 @@ static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_mod
     SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts, options.surflight_subdivide.value());
 }
 
+static bool ParseEntityLights(std::ifstream &f)
+{
+    std::string str{std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
+    parser_t p(str);
+
+    EntData_ParseInto(str, radlights);
+    return true;
+}
+
 bool ParseLightsFile(const fs::path &fname)
 {
-    // note: this creates dupes. super bright light! (and super slow, too)
-    std::string buf;
     std::ifstream f(fname);
 
     if (!f)
         return false;
 
+    // use entity-style format
+    if (fname.extension() == ".ent") {
+        return ParseEntityLights(f);
+    }
+
     while (!f.eof()) {
+        std::string buf;
         std::getline(f, buf);
 
         parser_t parser(buf);
@@ -1404,7 +1417,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
         }
     }
 
-    if (surflights_dump_file) {
+    if (surflights_dump_file.is_open()) {
         surflights_dump_file.close();
         fmt::print("wrote surface lights to '{}'\n", surflights_dump_filename);
     }

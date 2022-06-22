@@ -536,7 +536,7 @@ public:
 
 extern settings::light_settings options;
 
-extern uint8_t *filebase;
+extern std::vector<uint8_t> filebase;
 extern std::vector<uint8_t> lit_filebase;
 extern std::vector<uint8_t> lux_filebase;
 
