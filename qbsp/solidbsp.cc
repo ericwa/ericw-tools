@@ -528,12 +528,9 @@ existance by the vertex snapping.
 #define EDGE_LENGTH 0.2
 bool WindingIsTiny(const winding_t &w, double size)
 {
-    return w.area() < size;
 #if 0
-	if (WindingArea (w) < 1)
-		return true;
-	return false;
-#elif 0
+    return w.area() < size;
+#else
     int edges = 0;
     for (size_t i = 0; i < w.size(); i++) {
         size_t j = (i + 1) % w.size();
