@@ -269,8 +269,8 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     /* remove the headnode padding */
     for (size_t i = 0; i < 3; i++) {
-        dmodel.mins[i] = headnode->bounds.mins()[i] + SIDESPACE + 1;
-        dmodel.maxs[i] = headnode->bounds.maxs()[i] - SIDESPACE - 1;
+        dmodel.mins[i] = headnode->bounds.mins()[i] + SIDESPACE;
+        dmodel.maxs[i] = headnode->bounds.maxs()[i] - SIDESPACE;
     }
 }
 

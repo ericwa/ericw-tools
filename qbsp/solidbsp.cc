@@ -930,7 +930,7 @@ tree_t *BrushBSP(mapentity_t *entity, bool midsplit)
          * smarter, but this works.
          */
         node_t *headnode = new node_t{};
-        headnode->bounds = entity->bounds.grow(SIDESPACE);
+        headnode->bounds = entity->bounds;
         headnode->children[0] = new node_t{};
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = options.target_game->create_empty_contents();
@@ -968,7 +968,7 @@ tree_t *BrushBSP(mapentity_t *entity, bool midsplit)
     usemidsplit = midsplit;
 
     // calculate a bounding box for the entire model
-    headnode->bounds = entity->bounds.grow(SIDESPACE);
+    headnode->bounds = entity->bounds;
 
     // recursively partition everything
     splitnodes = 0;
