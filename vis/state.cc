@@ -136,8 +136,6 @@ void SaveVisState(void)
     const portal_t *p;
     dvisstate_t state;
     dportal_t pstate;
-    uint8_t *vis;
-    uint8_t *might;
 
     std::ofstream out(statetmpfile, std::ios_base::out | std::ios_base::binary);
     out << endianness<std::endian::little>;
@@ -152,13 +150,13 @@ void SaveVisState(void)
     out <= state;
 
     /* Allocate memory for compressed bitstrings */
-    might = new uint8_t[(portalleafs + 7) >> 3];
-    vis = new uint8_t[(portalleafs + 7) >> 3];
+    std::vector<uint8_t> might((portalleafs + 7) >> 3);
+    std::vector<uint8_t> vis((portalleafs + 7) >> 3);
 
     for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        might_len = CompressBits(might, p->mightsee);
+        might_len = CompressBits(might.data(), p->mightsee);
         if (p->status == pstat_done)
-            vis_len = CompressBits(vis, p->visbits);
+            vis_len = CompressBits(vis.data(), p->visbits);
         else
             vis_len = 0;
 
@@ -169,15 +167,12 @@ void SaveVisState(void)
         pstate.numcansee = p->numcansee;
 
         out <= pstate;
-        out.write((const char *) might, might_len);
+        out.write((const char *) might.data(), might_len);
         if (vis_len)
-            out.write((const char *) vis, vis_len);
+            out.write((const char *) vis.data(), vis_len);
     }
 
     out.close();
-
-    delete[] might;
-    delete[] vis;
 
     std::error_code ec;
 

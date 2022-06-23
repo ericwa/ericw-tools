@@ -1511,7 +1511,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrus
     bool normal_ok;
     maptexinfo_t tx;
     int i, j;
-    std::unique_ptr<mapface_t> face{new mapface_t};
+    std::unique_ptr<mapface_t> face = std::make_unique<mapface_t>();
 
     face->linenum = parser.linenum;
     ParsePlaneDef(parser, planepts);
