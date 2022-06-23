@@ -59,7 +59,7 @@ using namespace std;
 
 bool dirt_in_use = false;
 
-static facesup_t *faces_sup; // lit2/bspx stuff
+static std::vector<facesup_t> faces_sup; // lit2/bspx stuff
 
 /// start of lightmap data
 std::vector<uint8_t> filebase;
@@ -319,20 +319,21 @@ static void LightThread(const mbsp_t *bsp, size_t facenum)
         return;
     }
 
-    if (!faces_sup)
+    if (faces_sup.empty()) {
         LightFace(bsp, f, nullptr, options);
-    else if (options.novanilla.value()) {
+    } else if (options.novanilla.value()) {
         f->lightofs = -1;
         f->styles[0] = INVALID_LIGHTSTYLE_OLD;
-        LightFace(bsp, f, faces_sup + facenum, options);
+        LightFace(bsp, f, &faces_sup[facenum], options);
     } else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale) {
-        LightFace(bsp, f, faces_sup + facenum, options);
+        LightFace(bsp, f, &faces_sup[facenum], options);
         f->lightofs = faces_sup[facenum].lightofs;
-        for (int i = 0; i < MAXLIGHTMAPS; i++)
+        for (int i = 0; i < MAXLIGHTMAPS; i++) {
             f->styles[i] = faces_sup[facenum].styles[i];
+        }
     } else {
         LightFace(bsp, f, nullptr, options);
-        LightFace(bsp, f, faces_sup + facenum, options);
+        LightFace(bsp, f, &faces_sup[facenum], options);
     }
 
 }
@@ -452,17 +453,19 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
-    if (lmshift_lump == bspdata->bspx.entries.end() && options.write_litfile != lightfile::lit2 && options.facestyles.value() <= 4)
-        faces_sup = nullptr; // no scales, no lit2
-    else { // we have scales or lit2 output. yay...
-        faces_sup = new facesup_t[bsp.dfaces.size()]{};
+    if (lmshift_lump == bspdata->bspx.entries.end() && options.write_litfile != lightfile::lit2 && options.facestyles.value() <= 4) {
+        faces_sup.clear(); // no scales, no lit2
+    } else { // we have scales or lit2 output. yay...
+        faces_sup.resize(bsp.dfaces.size());
 
         if (lmshift_lump != bspdata->bspx.entries.end()) {
-            for (int i = 0; i < bsp.dfaces.size(); i++)
+            for (int i = 0; i < bsp.dfaces.size(); i++) {
                 faces_sup[i].lmscale = nth_bit(reinterpret_cast<const char *>(lmshift_lump->second.data())[i]);
+            }
         } else {
-            for (int i = 0; i < bsp.dfaces.size(); i++)
+            for (int i = 0; i < bsp.dfaces.size(); i++) {
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
+            }
         }
     }
 
@@ -525,7 +528,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     bspdata->bspx.entries.erase("LMSTYLE");
     bspdata->bspx.entries.erase("LMOFFSET");
 
-    if (faces_sup) {
+    if (!faces_sup.empty()) {
         bool needoffsets = false;
         bool needstyles = false;
         int maxstyle = 0;

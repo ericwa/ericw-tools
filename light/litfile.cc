@@ -26,7 +26,7 @@
 #include <common/cmdlib.hh>
 #include <common/fs.hh>
 
-void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const fs::path &filename, int version)
+void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version)
 {
     litheader_t header;
 
