@@ -38,8 +38,8 @@ int numportals;
 int portalleafs; /* leafs (PRT1) or clusters (PRT2) */
 int portalleafs_real; /* real no. of leafs after expanding PRT2 clusters. Not used for Q2. */
 
-portal_t *portals;
-leaf_t *leafs;
+std::vector<portal_t> portals; // always numportals * 2; front and back
+std::vector<leaf_t> leafs;
 
 int c_portaltest, c_portalpass, c_portalcheck, c_mightseeupdate;
 int c_noclip = 0;
@@ -248,19 +248,15 @@ static std::atomic_int64_t portalIndex;
 */
 portal_t *GetNextPortal(void)
 {
-    int i;
-    portal_t *p, *ret;
-    unsigned min;
+    portal_t *ret = nullptr;
+    uint32_t min = INT_MAX;
 
     portal_mutex.lock();
 
-    min = INT_MAX;
-    ret = NULL;
-
-    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        if (p->nummightsee < min && p->status == pstat_none) {
-            min = p->nummightsee;
-            ret = p;
+    for (auto &p : portals) {
+        if (p.nummightsee < min && p.status == pstat_none) {
+            min = p.nummightsee;
+            ret = &p;
         }
     }
 
@@ -287,7 +283,7 @@ portal_t *GetNextPortal(void)
 */
 static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
 {
-    size_t leafnum = &dest - leafs;
+    size_t leafnum = &dest - leafs.data();
     for (size_t i = 0; i < source.numportals; i++) {
         portal_t *p = source.portals[i];
         if (p->status != pstat_none) {
@@ -400,7 +396,7 @@ void LeafThread(size_t)
 
     PortalCompleted(p);
 
-    logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee,
+    logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals.data()), p->nummightsee,
         p->numcansee);
 }
 
@@ -519,14 +515,11 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 */
 void CalcPortalVis(const mbsp_t *bsp)
 {
-    int i;
-    portal_t *p;
-
     // fastvis just uses mightsee for a very loose bound
     if (options.fast.value()) {
-        for (i = 0; i < numportals * 2; i++) {
-            portals[i].visbits = portals[i].mightsee;
-            portals[i].status = pstat_done;
+        for (auto &p : portals) {
+            p.visbits = p.mightsee;
+            p.status = pstat_done;
         }
         return;
     }
@@ -535,10 +528,12 @@ void CalcPortalVis(const mbsp_t *bsp)
      * Count the already completed portals in case we loaded previous state
      */
     int32_t startcount = 0;
-    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        if (p->status == pstat_done)
+    for (auto &p : portals) {
+        if (p.status == pstat_done) {
             startcount++;
+        }
     }
+
     portalIndex = startcount;
     logging::parallel_for(startcount, numportals * 2, LeafThread);
 
@@ -607,7 +602,6 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     const prtfile_t prtfile = LoadPrtFile(name, bsp->loadversion);
 
     int i;
-    portal_t *p;
     leaf_t *l;
     qplane3d plane;
 
@@ -640,9 +634,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     }
 
     // each file portal is split into two memory portals
-    portals = new portal_t[numportals * 2]{};
-
-    leafs = new leaf_t[portalleafs]{};
+    portals.resize(numportals * 2);
+    leafs.resize(portalleafs);
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
@@ -654,39 +647,46 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     vismap.reserve(originalvismapsize * 2);
 
-    for (i = 0, p = portals; i < numportals; i++) {
-        const auto &sourceportal = prtfile.portals[i];
-        p->winding = winding_t{sourceportal.winding.begin(), sourceportal.winding.end()};
+    auto dest_portal_it = portals.begin();
 
-        // calc plane
-        plane = p->winding.plane();
+    for (auto source_portal_it = prtfile.portals.begin(); source_portal_it != prtfile.portals.end(); source_portal_it++) {
+        const auto &sourceportal = *source_portal_it;
 
-        // create forward portal
-        l = &leafs[sourceportal.leafnums[0]];
-        if (l->numportals == MAX_PORTALS_ON_LEAF)
-            FError("Leaf with too many portals");
-        l->portals[l->numportals] = p;
-        l->numportals++;
+        {
+            auto &p = *dest_portal_it;
+            p.winding = winding_t{sourceportal.winding.begin(), sourceportal.winding.end()};
 
-        p->plane = -plane;
-        p->leaf = sourceportal.leafnums[1];
-        p->winding.SetWindingSphere();
-        p++;
+            // calc plane
+            plane = p.winding.plane();
 
-        // create backwards portal
-        l = &leafs[sourceportal.leafnums[1]];
-        if (l->numportals == MAX_PORTALS_ON_LEAF)
-            FError("Leaf with too many portals");
-        l->portals[l->numportals] = p;
-        l->numportals++;
+            // create forward portal
+            l = &leafs[sourceportal.leafnums[0]];
+            if (l->numportals == MAX_PORTALS_ON_LEAF)
+                FError("Leaf with too many portals");
+            l->portals[l->numportals] = &p;
+            l->numportals++;
 
-        // Create a reverse winding
-        const auto flipped = sourceportal.winding.flip();
-        p->winding = winding_t{flipped.begin(), flipped.end()};
-        p->plane = plane;
-        p->leaf = sourceportal.leafnums[0];
-        p->winding.SetWindingSphere();
-        p++;
+            p.plane = -plane;
+            p.leaf = sourceportal.leafnums[1];
+            dest_portal_it++;
+        }
+        
+        {
+            auto &p = *dest_portal_it;
+            // create backwards portal
+            l = &leafs[sourceportal.leafnums[1]];
+            if (l->numportals == MAX_PORTALS_ON_LEAF)
+                FError("Leaf with too many portals");
+            l->portals[l->numportals] = &p;
+            l->numportals++;
+
+            // Create a reverse winding
+            const auto flipped = sourceportal.winding.flip();
+            p.winding = winding_t{flipped.begin(), flipped.end()};
+            p.plane = plane;
+            p.leaf = sourceportal.leafnums[0];
+            dest_portal_it++;
+        }
     }
 
     // Q2 doesn't need this, it's PRT1 has the data we need

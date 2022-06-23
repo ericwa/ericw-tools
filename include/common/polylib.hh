@@ -225,7 +225,7 @@ public:
     }
 
     // assignment move
-    inline winding_base_t &operator=(winding_base_t &&move)
+    inline winding_base_t &operator=(winding_base_t &&move) noexcept
     {
         count = move.count;
 

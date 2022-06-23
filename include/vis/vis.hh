@@ -44,37 +44,30 @@ struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
     qvec3d origin; // Bounding sphere for fast clipping tests
     vec_t radius; // Not updated, so won't shrink when clipping
 
-    using winding_base_t::winding_base_t;
+    inline winding_t() : polylib::winding_base_t<MAX_WINDING_FIXED>() { }
+
+    // construct winding from range.
+    // iterators must have operator+ and operator-.
+    template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
+    inline winding_t(Iter begin, Iter end) : polylib::winding_base_t<MAX_WINDING_FIXED>(begin, end)
+    {
+        set_winding_sphere();
+    }
+
+    // initializer list constructor
+    inline winding_t(std::initializer_list<qvec3d> l) : polylib::winding_base_t<MAX_WINDING_FIXED>(l)
+    {
+        set_winding_sphere();
+    }
 
     // copy constructor
-    winding_t(const winding_t &copy) : winding_base_t(copy), origin(copy.origin), radius(copy.radius) { }
+    inline winding_t(const winding_t &copy) : winding_base_t(copy), origin(copy.origin), radius(copy.radius) { }
 
     // move constructor
-    winding_t(winding_t &&move) : winding_base_t(move), origin(move.origin), radius(move.radius) { }
+    inline winding_t(winding_t &&move) noexcept : winding_base_t(move), origin(move.origin), radius(move.radius) { }
 
-    // assignment copy
-    inline winding_t &operator=(const winding_t &copy)
-    {
-        origin = copy.origin;
-        radius = copy.radius;
-
-        winding_base_t::operator=(copy);
-
-        return *this;
-    }
-
-    // assignment move
-    inline winding_t &operator=(winding_t &&move)
-    {
-        origin = move.origin;
-        radius = move.radius;
-
-        winding_base_t::operator=(move);
-
-        return *this;
-    }
-
-    void SetWindingSphere()
+    // sets origin & radius
+    inline void set_winding_sphere()
     {
         // set origin
         origin = {};
@@ -90,12 +83,34 @@ struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
         }
     }
 
+    // assignment copy
+    inline winding_t &operator=(const winding_t &copy)
+    {
+        origin = copy.origin;
+        radius = copy.radius;
+
+        winding_base_t::operator=(copy);
+
+        return *this;
+    }
+
+    // assignment move
+    inline winding_t &operator=(winding_t &&move) noexcept
+    {
+        origin = move.origin;
+        radius = move.radius;
+
+        winding_base_t::operator=(move);
+
+        return *this;
+    }
+
     /*
       ============================================================================
       Used for visdist to get the distance from a winding to a portal
       ============================================================================
     */
-    inline float distFromPortal(struct portal_t *p);
+    inline float distFromPortal(struct portal_t &p);
 };
 
 struct portal_t
@@ -109,12 +124,12 @@ struct portal_t
     int numcansee;
 };
 
-inline float winding_t::distFromPortal(portal_t *p)
+inline float winding_t::distFromPortal(portal_t &p)
 {
     vec_t mindist = 1e20;
 
     for (size_t i = 0; i < size(); ++i) {
-        mindist = std::min(mindist, fabs(p->plane.distance_to(at(i))));
+        mindist = std::min(mindist, fabs(p.plane.distance_to(at(i))));
     }
 
     return mindist;
@@ -175,8 +190,8 @@ extern int numportals;
 extern int portalleafs;
 extern int portalleafs_real;
 
-extern portal_t *portals;
-extern leaf_t *leafs;
+extern std::vector<portal_t> portals; // always numportals * 2; front and back
+extern std::vector<leaf_t> leafs;
 
 extern int c_noclip;
 extern int c_portaltest, c_portalpass, c_portalcheck;
