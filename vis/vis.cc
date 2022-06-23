@@ -50,9 +50,7 @@ static std::vector<uint8_t> vismap;
 
 uint32_t originalvismapsize;
 
-uint8_t *uncompressed; // [leafbytes_real*portalleafs]
-
-uint8_t *uncompressed_q2; // [leafbytes*portalleafs]
+std::vector<uint8_t> uncompressed;
 
 int leafbytes; // (portalleafs+63)>>3
 int leaflongs;
@@ -445,7 +443,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     numvis = 0;
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        outbuffer = uncompressed_q2 + clusternum * leafbytes;
+        outbuffer = uncompressed.data() + clusternum * leafbytes;
         for (i = 0; i < portalleafs; i++) {
             if (buffer[i]) {
                 outbuffer[i >> 3] |= nth_bit(i & 7);
@@ -453,7 +451,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
             }
         }
     } else {
-        outbuffer = uncompressed + clusternum * leafbytes_real;
+        outbuffer = uncompressed.data() + clusternum * leafbytes_real;
         for (i = 0; i < portalleafs_real; i++) {
             if (buffer[bsp->dleafs[i + 1].cluster]) {
                 outbuffer[i >> 3] |= nth_bit(i & 7);
@@ -601,10 +599,6 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 {
     const prtfile_t prtfile = LoadPrtFile(name, bsp->loadversion);
 
-    int i;
-    leaf_t *l;
-    qplane3d plane;
-
     portalleafs = prtfile.portalleafs;
     portalleafs_real = prtfile.portalleafs_real;
 
@@ -651,6 +645,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     for (auto source_portal_it = prtfile.portals.begin(); source_portal_it != prtfile.portals.end(); source_portal_it++) {
         const auto &sourceportal = *source_portal_it;
+        qplane3d plane;
 
         {
             auto &p = *dest_portal_it;
@@ -660,11 +655,11 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
             plane = p.winding.plane();
 
             // create forward portal
-            l = &leafs[sourceportal.leafnums[0]];
-            if (l->numportals == MAX_PORTALS_ON_LEAF)
+            auto &l = leafs[sourceportal.leafnums[0]];
+            if (l.numportals == MAX_PORTALS_ON_LEAF)
                 FError("Leaf with too many portals");
-            l->portals[l->numportals] = &p;
-            l->numportals++;
+            l.portals[l.numportals] = &p;
+            l.numportals++;
 
             p.plane = -plane;
             p.leaf = sourceportal.leafnums[1];
@@ -674,11 +669,11 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
         {
             auto &p = *dest_portal_it;
             // create backwards portal
-            l = &leafs[sourceportal.leafnums[1]];
-            if (l->numportals == MAX_PORTALS_ON_LEAF)
+            auto &l = leafs[sourceportal.leafnums[1]];
+            if (l.numportals == MAX_PORTALS_ON_LEAF)
                 FError("Leaf with too many portals");
-            l->portals[l->numportals] = &p;
-            l->numportals++;
+            l.portals[l.numportals] = &p;
+            l.numportals++;
 
             // Create a reverse winding
             const auto flipped = sourceportal.winding.flip();
@@ -723,19 +718,16 @@ int vis_main(int argc, const char **argv)
 
     if (options.phsonly.value())
     {
-        if (bsp.loadversion->game->id != GAME_QUAKE_II)
-        {
-            logging::print("error: need a Q2-esque BSP for -phsonly");
+        if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+            FError("need a Q2-esque BSP for -phsonly");
         }
-        else
-        {
-            portalleafs = bsp.dvis.bit_offsets.size();
-            leafbytes = ((portalleafs + 63) & ~63) >> 3;
-            leaflongs = leafbytes / sizeof(long);
 
-            if (bsp.loadversion->game->id == GAME_QUAKE_II) {
-                originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
-            }
+        portalleafs = bsp.dvis.bit_offsets.size();
+        leafbytes = ((portalleafs + 63) & ~63) >> 3;
+        leaflongs = leafbytes / sizeof(long);
+
+        if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+            originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
         }
     }
     else
@@ -747,9 +739,9 @@ int vis_main(int argc, const char **argv)
         statetmpfile = fs::path(options.sourceMap).replace_extension("vi0");
 
         if (bsp.loadversion->game->id != GAME_QUAKE_II) {
-            uncompressed = new uint8_t[portalleafs * leafbytes_real]{};
+            uncompressed.resize(portalleafs * leafbytes_real);
         } else {
-            uncompressed_q2 = new uint8_t[portalleafs * leafbytes]{};
+            uncompressed.resize(portalleafs * leafbytes);
         }
 
         CalcVis(&bsp);

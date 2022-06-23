@@ -200,7 +200,7 @@ extern unsigned long c_chains;
 
 extern bool showgetleaf;
 
-extern uint8_t *uncompressed;
+extern std::vector<uint8_t> uncompressed;
 extern int leafbytes;
 extern int leafbytes_real;
 extern int leaflongs;
