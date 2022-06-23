@@ -1511,6 +1511,24 @@ TEST_CASE("qbsp_q1_sealing", "[testmaps_q1]") {
     CHECK(prt->portalleafs_real == 3); // no detail, so same as above
 }
 
+/**
+ * Test for q2 bmodel bounds
+ **/
+TEST_CASE("q2_door", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_door.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const aabb3d world_tight_bounds {{-64, -64, -16}, {64, 80, 128}};
+    const aabb3d bmodel_tight_bounds {{-48, 48, 16}, {48, 64, 112}};
+
+    CHECK(world_tight_bounds.mins() == bsp.dmodels[0].mins);
+    CHECK(world_tight_bounds.maxs() == bsp.dmodels[0].maxs);
+
+    CHECK(bmodel_tight_bounds.mins() == bsp.dmodels[1].mins);
+    CHECK(bmodel_tight_bounds.maxs() == bsp.dmodels[1].maxs);
+}
+
 TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;
 
