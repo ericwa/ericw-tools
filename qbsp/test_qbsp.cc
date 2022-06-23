@@ -974,9 +974,9 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
     CHECK(cube_bounds_grown.mins() == headnode.mins);
     CHECK(cube_bounds_grown.maxs() == headnode.maxs);
 
-    // model bounds
-//    CHECK(cube_bounds_grown.mins() == bsp.dmodels[0].mins);
-//    CHECK(cube_bounds_grown.maxs() == bsp.dmodels[0].maxs);
+    // model bounds are shrunk by 1 unit on each side for some reason
+    CHECK(cube_bounds.grow(-1).mins() == bsp.dmodels[0].mins);
+    CHECK(cube_bounds.grow(-1).maxs() == bsp.dmodels[0].maxs);
 }
 
 /**
