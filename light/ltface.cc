@@ -2636,8 +2636,10 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 
     // batch implementation:
 
-    qvec3d *myUps = new qvec3d[lightsurf->points.size()];
-    qvec3d *myRts = new qvec3d[lightsurf->points.size()];
+    thread_local static std::vector<qvec3d> myUps, myRts;
+    
+    myUps.resize(lightsurf->points.size());
+    myRts.resize(lightsurf->points.size());
 
     // init
     for (int i = 0; i < lightsurf->points.size(); i++) {
@@ -2685,9 +2687,6 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
         vec_t avgHitdist = lightsurf->occlusion[i] / (float)numDirtVectors;
         lightsurf->occlusion[i] = 1 - (avgHitdist / cfg.dirtDepth.value());
     }
-
-    delete[] myUps;
-    delete[] myRts;
 }
 
 // clamps negative values. applies gamma and rangescale. clamps values over 255
