@@ -371,14 +371,17 @@ TEST_CASE("resetContainer", "[settings]")
     CHECK("abc" == stringSetting1.value());
 }
 
-// this is insanely dumb, is there a better way of doing this?
-#define private public
 #include "common/polylib.hh"
-#undef private
+
+struct winding_check_t : polylib::winding_base_t<4>
+{
+public:
+    inline size_t vector_size() { return vector.size(); }
+};
 
 TEST_CASE("winding iterators", "[winding_base_t]")
 {
-    polylib::winding_base_t<4> winding;
+    winding_check_t winding;
 
     CHECK(winding.begin() == winding.end());
     
@@ -392,7 +395,7 @@ TEST_CASE("winding iterators", "[winding_base_t]")
 
     CHECK(winding.size() == 4);
 
-    CHECK(winding.vector.size() == 0);
+    CHECK(winding.vector_size() == 0);
 
     // check that iterators match up before expansion
     {

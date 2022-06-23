@@ -40,7 +40,7 @@ inline bool PointInWindingEdges(const winding_edges_t &wi, const qvec3d &point)
 template<size_t N>
 struct winding_base_t
 {
-private:
+protected:
     using array_type = std::array<qvec3d, N>;
     using vector_type = std::vector<qvec3d>;
     using variant_type = std::variant<array_type, vector_type>;
