@@ -924,7 +924,8 @@ TEST_CASE("origin", "[testmaps_q1]")
         [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
 
     REQUIRE(it != ents.end());
-    REQUIRE("216 -216 340" == it->get("origin"));
+    CHECK_THAT(it->get("origin"), Catch::Equals("216 -216 340")
+                                      || Catch::Equals("216.00 -216.00 340.00"));
 }
 
 TEST_CASE("simple", "[testmaps_q1]")
