@@ -44,11 +44,11 @@ private:
     using array_type = std::array<qvec3d, N>;
     using vector_type = std::vector<qvec3d>;
     using variant_type = std::variant<array_type, vector_type>;
+
+public:
     size_t count = 0;
     array_type array;
     vector_type vector;
-
-public:
     template<bool is_const>
     class iterator_base
     {

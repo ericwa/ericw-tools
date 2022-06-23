@@ -371,10 +371,7 @@ TEST_CASE("resetContainer", "[settings]")
     CHECK("abc" == stringSetting1.value());
 }
 
-// this is insanely dumb, is there a better way of doing this?
-#define private public
 #include "common/polylib.hh"
-#undef private
 
 TEST_CASE("winding iterators", "[winding_base_t]")
 {
