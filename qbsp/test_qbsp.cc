@@ -954,9 +954,8 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
 
     // check the solid leaf
     auto& solid_leaf = bsp.dleafs[0];
-    // fixme-brushbsp: restore these
-//    CHECK(solid_leaf.mins == cube_bounds.mins());
-//    CHECK(solid_leaf.maxs == cube_bounds.maxs());
+    CHECK(solid_leaf.mins == qvec3d(0,0,0));
+    CHECK(solid_leaf.maxs == qvec3d(0,0,0));
 
     // check the empty leafs
     for (int i = 1; i < 7; ++i) {
@@ -968,6 +967,16 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
 
     REQUIRE(6 == bsp.dfaces.size());
 
+    // node bounds
+    auto cube_bounds_grown = cube_bounds.grow(24);
+
+    auto &headnode = bsp.dnodes[bsp.dmodels[0].headnode[0]];
+    CHECK(cube_bounds_grown.mins() == headnode.mins);
+    CHECK(cube_bounds_grown.maxs() == headnode.maxs);
+
+    // model bounds
+//    CHECK(cube_bounds_grown.mins() == bsp.dmodels[0].mins);
+//    CHECK(cube_bounds_grown.maxs() == bsp.dmodels[0].maxs);
 }
 
 /**
