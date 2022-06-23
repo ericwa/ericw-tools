@@ -272,6 +272,12 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
         dmodel.mins[i] = headnode->bounds.mins()[i] + SIDESPACE;
         dmodel.maxs[i] = headnode->bounds.maxs()[i] - SIDESPACE;
     }
+
+    // shrink the bounds in Q1 based games (Q1 engine compensates for this in Mod_LoadSubmodels)
+    if (options.target_game->id != GAME_QUAKE_II) {
+        dmodel.mins += qvec3d(1,1,1);
+        dmodel.maxs -= qvec3d(1,1,1);
+    }
 }
 
 //=============================================================================
