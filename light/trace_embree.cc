@@ -23,8 +23,6 @@
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
 #include <common/polylib.hh>
-#include <embree3/rtcore.h>
-#include <embree3/rtcore_ray.h>
 #include <vector>
 #include <cassert>
 #include <climits>
@@ -34,32 +32,9 @@
 using namespace std;
 using namespace polylib;
 
-class sceneinfo
-{
-public:
-    unsigned geomID;
-
-    std::vector<const mface_t *> triToFace;
-    std::vector<const modelinfo_t *> triToModelinfo;
-};
-
-class raystream_embree_common_t;
-
-struct ray_source_info : public RTCIntersectContext
-{
-    raystream_embree_common_t *raystream; // may be null if this ray is not from a ray stream
-    const modelinfo_t *self;
-    /// only used if raystream == null
-    int singleRayShadowStyle;
-
-    ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_)
-        : raystream(raystream_), self(self_), singleRayShadowStyle(0)
-    {
-        rtcInitIntersectContext(this);
-
-        flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
-    }
-};
+sceneinfo skygeom; // sky. always occludes.
+sceneinfo solidgeom; // solids. always occludes.
+sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
 
 /**
  * Returns 1.0 unless a custom alpha value is set.
@@ -220,28 +195,11 @@ static void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const
 RTCDevice device;
 RTCScene scene;
 
-sceneinfo skygeom; // sky. always occludes.
-sceneinfo solidgeom; // solids. always occludes.
-sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
-
 static const mbsp_t *bsp_static;
 
 void ErrorCallback(void *userptr, const RTCError code, const char *str)
 {
     fmt::print("RTC Error {}: {}\n", code, str);
-}
-
-static const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
-{
-    if (geomID == skygeom.geomID) {
-        return skygeom;
-    } else if (geomID == solidgeom.geomID) {
-        return solidgeom;
-    } else if (geomID == filtergeom.geomID) {
-        return filtergeom;
-    } else {
-        FError("unexpected geomID");
-    }
 }
 
 const mface_t *Embree_LookupFace(unsigned int geomID, unsigned int primID)
@@ -622,30 +580,6 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::print("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
-static RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &dir, vec_t dist)
-{
-    RTCRayHit ray;
-    ray.ray.org_x = start[0];
-    ray.ray.org_y = start[1];
-    ray.ray.org_z = start[2];
-    ray.ray.tnear = 0.f;
-
-    ray.ray.dir_x = dir[0]; // can be un-normalized
-    ray.ray.dir_y = dir[1];
-    ray.ray.dir_z = dir[2];
-    ray.ray.time = 0.f; // not using
-
-    ray.ray.tfar = dist;
-    ray.ray.mask = 1; // we're not using, but needs to be set if embree is compiled with masks
-    ray.ray.id = rayindex;
-    ray.ray.flags = 0; // reserved
-
-    ray.hit.geomID = RTC_INVALID_GEOMETRY_ID;
-    ray.hit.primID = RTC_INVALID_GEOMETRY_ID;
-    ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-    return ray;
-}
-
 static RTCRayHit SetupRay_StartStop(const qvec3d &start, const qvec3d &stop)
 {
     qvec3d dir = stop - start;
@@ -655,7 +589,7 @@ static RTCRayHit SetupRay_StartStop(const qvec3d &start, const qvec3d &stop)
 }
 
 // public
-hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
+hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
 {
     RTCRay ray = SetupRay_StartStop(start, stop).ray;
 
@@ -670,7 +604,7 @@ hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const mode
 }
 
 // public
-hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
+hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -694,289 +628,6 @@ hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modeli
     }
 
     return {hit_sky, ctx2.singleRayShadowStyle};
-}
-
-// public
-hittype_t Embree_DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, const modelinfo_t *self,
-    vec_t *hitdist_out, qplane3d *hitplane_out, const mface_t **face_out)
-{
-    RTCRayHit ray = SetupRay(0, start, dirn, dist);
-    ray_source_info ctx2(nullptr, self);
-    rtcIntersect1(scene, &ctx2, &ray);
-    ray.hit.Ng_x = -ray.hit.Ng_x;
-    ray.hit.Ng_y = -ray.hit.Ng_y;
-    ray.hit.Ng_z = -ray.hit.Ng_z;
-
-    if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID)
-        return hittype_t::NONE;
-
-    if (hitdist_out) {
-        *hitdist_out = ray.ray.tfar;
-    }
-    if (hitplane_out) {
-        hitplane_out->normal = qv::normalize(qvec3d{ray.hit.Ng_x, ray.hit.Ng_y, ray.hit.Ng_z});
-
-        qvec3d hitpoint = start + (dirn * ray.ray.tfar);
-
-        hitplane_out->dist = qv::dot(hitplane_out->normal, hitpoint);
-    }
-    if (face_out) {
-        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-        *face_out = si.triToFace.at(ray.hit.primID);
-    }
-
-    if (ray.hit.geomID == skygeom.geomID) {
-        return hittype_t::SKY;
-    } else {
-        return hittype_t::SOLID;
-    }
-}
-
-// enum class streamstate_t {
-//    READY, DID_OCCLUDE, DID_INTERSECT
-//};
-
-static void *q_aligned_malloc(size_t align, size_t size)
-{
-#ifdef _MSC_VER
-    return _aligned_malloc(size, align);
-#else
-    void *ptr;
-    if (0 != posix_memalign(&ptr, align, size)) {
-        return nullptr;
-    }
-    return ptr;
-#endif
-}
-
-static void q_aligned_free(void *ptr)
-{
-#ifdef _MSC_VER
-    _aligned_free(ptr);
-#else
-    free(ptr);
-#endif
-}
-
-class raystream_embree_common_t : public virtual raystream_common_t
-{
-public:
-    float *_rays_maxdist;
-    int *_point_indices;
-    qvec3d *_ray_colors;
-    qvec3d *_ray_normalcontribs;
-
-    // This is set to the modelinfo's switchshadstyle if the ray hit
-    // a dynamic shadow caster. (note that for rays that hit dynamic
-    // shadow casters, all of the other hit data is assuming the ray went
-    // straight through).
-    int *_ray_dynamic_styles;
-
-    int _numrays;
-    int _maxrays;
-    //    streamstate_t _state;
-
-public:
-    raystream_embree_common_t(int maxRays)
-        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{new qvec3d[maxRays]{}},
-          _ray_normalcontribs{new qvec3d[maxRays]{}}, _ray_dynamic_styles{new int[maxRays]}, _numrays{0}, _maxrays{
-                                                                                                              maxRays}
-    {
-    }
-    //,
-    //_state { streamstate_t::READY } {}
-
-    ~raystream_embree_common_t()
-    {
-        delete[] _rays_maxdist;
-        delete[] _point_indices;
-        delete[] _ray_colors;
-        delete[] _ray_normalcontribs;
-        delete[] _ray_dynamic_styles;
-    }
-
-    size_t numPushedRays() override { return _numrays; }
-
-    int getPushedRayPointIndex(size_t j) override
-    {
-        // Q_assert(_state != streamstate_t::READY);
-        Q_assert(j < _maxrays);
-        return _point_indices[j];
-    }
-
-    qvec3d &getPushedRayColor(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _ray_colors[j];
-    }
-
-    qvec3d &getPushedRayNormalContrib(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _ray_normalcontribs[j];
-    }
-
-    int getPushedRayDynamicStyle(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _ray_dynamic_styles[j];
-    }
-
-    void clearPushedRays() override
-    {
-        _numrays = 0;
-        //_state = streamstate_t::READY;
-    }
-};
-
-class raystream_embree_intersection_t : public raystream_embree_common_t, public raystream_intersection_t
-{
-public:
-    RTCRayHit *_rays;
-
-public:
-    raystream_embree_intersection_t(int maxRays)
-        : raystream_embree_common_t(maxRays), _rays{static_cast<RTCRayHit *>(
-                                                  q_aligned_malloc(16, sizeof(RTCRayHit) * maxRays))}
-    {
-    }
-
-    ~raystream_embree_intersection_t() { q_aligned_free(_rays); }
-
-    void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
-        const qvec3d *normalcontrib = nullptr) override
-    {
-        Q_assert(_numrays < _maxrays);
-        const RTCRayHit rayHit = SetupRay(_numrays, origin, dir, dist);
-        _rays[_numrays] = rayHit;
-        _rays_maxdist[_numrays] = dist;
-        _point_indices[_numrays] = i;
-        if (color) {
-            _ray_colors[_numrays] = *color;
-        }
-        if (normalcontrib) {
-            _ray_normalcontribs[_numrays] = *normalcontrib;
-        }
-        _ray_dynamic_styles[_numrays] = 0;
-        _numrays++;
-    }
-
-    void tracePushedRaysIntersection(const modelinfo_t *self) override
-    {
-        if (!_numrays)
-            return;
-
-        ray_source_info ctx2(this, self);
-        rtcIntersect1M(scene, &ctx2, _rays, _numrays, sizeof(_rays[0]));
-    }
-
-    qvec3d getPushedRayDir(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return {_rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z};
-    }
-
-    float getPushedRayHitDist(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _rays[j].ray.tfar;
-    }
-
-    hittype_t getPushedRayHitType(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-
-        const unsigned id = _rays[j].hit.geomID;
-        if (id == RTC_INVALID_GEOMETRY_ID) {
-            return hittype_t::NONE;
-        } else if (id == skygeom.geomID) {
-            return hittype_t::SKY;
-        } else {
-            return hittype_t::SOLID;
-        }
-    }
-
-    const mface_t *getPushedRayHitFace(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-
-        const RTCRayHit &ray = _rays[j];
-
-        if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID)
-            return nullptr;
-
-        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-        const mface_t *face = si.triToFace.at(ray.hit.primID);
-        Q_assert(face != nullptr);
-
-        return face;
-    }
-};
-
-class raystream_embree_occlusion_t : public raystream_embree_common_t, public raystream_occlusion_t
-{
-public:
-    RTCRay *_rays;
-
-public:
-    raystream_embree_occlusion_t(int maxRays)
-        : raystream_embree_common_t(maxRays), _rays{
-                                                  static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * maxRays))}
-    {
-    }
-
-    ~raystream_embree_occlusion_t() { q_aligned_free(_rays); }
-
-    void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
-        const qvec3d *normalcontrib = nullptr) override
-    {
-        Q_assert(_numrays < _maxrays);
-        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist).ray;
-        _rays_maxdist[_numrays] = dist;
-        _point_indices[_numrays] = i;
-        if (color) {
-            _ray_colors[_numrays] = *color;
-        }
-        if (normalcontrib) {
-            _ray_normalcontribs[_numrays] = *normalcontrib;
-        }
-        _ray_dynamic_styles[_numrays] = 0;
-        _numrays++;
-    }
-
-    void tracePushedRaysOcclusion(const modelinfo_t *self) override
-    {
-        // Q_assert(_state == streamstate_t::READY);
-
-        if (!_numrays)
-            return;
-
-        ray_source_info ctx2(this, self);
-        rtcOccluded1M(scene, &ctx2, _rays, _numrays, sizeof(_rays[0]));
-    }
-
-    bool getPushedRayOccluded(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return (_rays[j].tfar < 0.0f);
-    }
-
-    qvec3d getPushedRayDir(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-
-        return {_rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z};
-    }
-};
-
-raystream_occlusion_t *Embree_MakeOcclusionRayStream(int maxrays)
-{
-    return new raystream_embree_occlusion_t{maxrays};
-}
-
-raystream_intersection_t *Embree_MakeIntersectionRayStream(int maxrays)
-{
-    return new raystream_embree_intersection_t{maxrays};
 }
 
 static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor)

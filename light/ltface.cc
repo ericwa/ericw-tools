@@ -965,8 +965,8 @@ static bool Lightsurf_Init(
     /* Allocate occlusion array */
     lightsurf->occlusion = new float[lightsurf->numpoints]{};
 
-    lightsurf->intersection_stream = MakeIntersectionRayStream(lightsurf->numpoints);
-    lightsurf->occlusion_stream = MakeOcclusionRayStream(lightsurf->numpoints);
+    lightsurf->intersection_stream = raystream_intersection_t{lightsurf->numpoints};
+    lightsurf->occlusion_stream = raystream_occlusion_t{lightsurf->numpoints};
 
     /* Setup vis data */
     if (options.visapprox.value() == visapprox_t::VIS) {
@@ -1590,8 +1590,8 @@ static void LightFace_Entity(
     /*
      * Check it for real
      */
-    raystream_occlusion_t *rs = lightsurf->occlusion_stream;
-    rs->clearPushedRays();
+    raystream_occlusion_t &rs = lightsurf->occlusion_stream;
+    rs.clearPushedRays();
 
     for (int i = 0; i < lightsurf->numpoints; i++) {
         const qvec3d &surfpoint = lightsurf->points[i];
@@ -1616,25 +1616,25 @@ static void LightFace_Entity(
             continue;
         }
 
-        rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, &color, &normalcontrib);
+        rs.pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist, &color, &normalcontrib);
     }
 
     // don't need closest hit, just checking for occlusion between light and surface point
-    rs->tracePushedRaysOcclusion(modelinfo);
-    total_light_rays += rs->numPushedRays();
+    rs.tracePushedRaysOcclusion(modelinfo);
+    total_light_rays += rs.numPushedRays();
 
     int cached_style = entity->style.value();
     lightmap_t *cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
 
-    const int N = rs->numPushedRays();
+    const int N = rs.numPushedRays();
     for (int j = 0; j < N; j++) {
-        if (rs->getPushedRayOccluded(j)) {
+        if (rs.getPushedRayOccluded(j)) {
             continue;
         }
 
         total_light_ray_hits++;
 
-        int i = rs->getPushedRayPointIndex(j);
+        int i = rs.getPushedRayPointIndex(j);
 
         // check if we hit a dynamic shadow caster (only applies to style 0 lights)
         //
@@ -1649,7 +1649,7 @@ static void LightFace_Entity(
         // (if any), and handle it here.
         int desired_style = entity->style.value();
         if (desired_style == 0) {
-            desired_style = rs->getPushedRayDynamicStyle(j);
+            desired_style = rs.getPushedRayDynamicStyle(j);
         }
 
         // if necessary, switch which lightmap we are writing to.
@@ -1660,8 +1660,8 @@ static void LightFace_Entity(
 
         lightsample_t *sample = &cached_lightmap->samples[i];
 
-        sample->color += rs->getPushedRayColor(j);
-        sample->direction += rs->getPushedRayNormalContrib(j);
+        sample->color += rs.getPushedRayColor(j);
+        sample->direction += rs.getPushedRayNormalContrib(j);
 
         Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
     }
@@ -1672,7 +1672,7 @@ static void LightFace_Entity(
  * LightFace_Sky
  * =============
  */
-static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     /* If vis data says we can't see any sky faces, skip raytracing */
     if (!lightsurf->skyvisible) {
@@ -1695,8 +1695,8 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
     }
 
     /* Check each point... */
-    raystream_intersection_t *rs = lightsurf->intersection_stream;
-    rs->clearPushedRays();
+    raystream_intersection_t &rs = lightsurf->intersection_stream;
+    rs.clearPushedRays();
 
     for (int i = 0; i < lightsurf->numpoints; i++) {
         const qvec3d &surfpoint = lightsurf->points[i];
@@ -1729,39 +1729,39 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
 
         qvec3d normalcontrib = sun->sunvec * value;
 
-        rs->pushRay(i, surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
+        rs.pushRay(i, surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
     }
 
     // We need to check if the first hit face is a sky face, so we need
     // to test intersection (not occlusion)
-    rs->tracePushedRaysIntersection(modelinfo);
+    rs.tracePushedRaysIntersection(modelinfo);
 
     /* if sunlight is set, use a style 0 light map */
     int cached_style = sun->style;
     lightmap_t *cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
 
-    const int N = rs->numPushedRays();
+    const int N = rs.numPushedRays();
     for (int j = 0; j < N; j++) {
-        if (rs->getPushedRayHitType(j) != hittype_t::SKY) {
+        if (rs.getPushedRayHitType(j) != hittype_t::SKY) {
             continue;
         }
 
         // check if we hit the wrong texture
         // TODO: this could be faster!
         if (!sun->suntexture.empty()) {
-            const mface_t *face = rs->getPushedRayHitFace(j);
+            const mface_t *face = rs.getPushedRayHitFace(j);
             const char *facetex = Face_TextureName(lightsurf->bsp, face);
             if (sun->suntexture != facetex) {
                 continue;
             }
         }
 
-        const int i = rs->getPushedRayPointIndex(j);
+        const int i = rs.getPushedRayPointIndex(j);
 
         // check if we hit a dynamic shadow caster
         int desired_style = sun->style;
         if (desired_style == 0) {
-            desired_style = rs->getPushedRayDynamicStyle(j);
+            desired_style = rs.getPushedRayDynamicStyle(j);
         }
 
         // if necessary, switch which lightmap we are writing to.
@@ -1772,8 +1772,8 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
 
         lightsample_t *sample = &cached_lightmap->samples[i];
 
-        sample->color += rs->getPushedRayColor(j);
-        sample->direction += rs->getPushedRayNormalContrib(j);
+        sample->color += rs.getPushedRayColor(j);
+        sample->direction += rs.getPushedRayNormalContrib(j);
 
         Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
     }
@@ -1785,7 +1785,7 @@ static void LightFace_Sky(const sun_t *sun, const lightsurf_t *lightsurf, lightm
  * ============
  */
 static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &color, vec_t light,
-    const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+    lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1839,8 +1839,8 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             continue;
         }
 
-        raystream_occlusion_t *rs = lightsurf->occlusion_stream;
-        rs->clearPushedRays();
+        raystream_occlusion_t &rs = lightsurf->occlusion_stream;
+        rs.clearPushedRays();
 
         lightmap = Lightmap_ForStyle(lightmaps, entity->style.value(), lightsurf);
 
@@ -1855,21 +1855,21 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
                 qvec3d surfpointToLightDir;
                 const vec_t surfpointToLightDist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir);
 
-                rs->pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
+                rs.pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
             }
         }
 
         // local minlight just needs occlusion, not closest hit
-        rs->tracePushedRaysOcclusion(modelinfo);
-        total_light_rays += rs->numPushedRays();
+        rs.tracePushedRaysOcclusion(modelinfo);
+        total_light_rays += rs.numPushedRays();
 
-        const int N = rs->numPushedRays();
+        const int N = rs.numPushedRays();
         for (int j = 0; j < N; j++) {
-            if (rs->getPushedRayOccluded(j)) {
+            if (rs.getPushedRayOccluded(j)) {
                 continue;
             }
 
-            int i = rs->getPushedRayPointIndex(j);
+            int i = rs.getPushedRayPointIndex(j);
             vec_t value = entity->light.value();
             lightsample_t *sample = &lightmap->samples[i];
 
@@ -2125,7 +2125,7 @@ inline qvec3d CosineWeightedHemisphereSample(float u1, float u2)
 #endif
 
 static void LightFace_Bounce(
-    const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+    const mbsp_t *bsp, const mface_t *face, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     // const dmodelh2_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
@@ -2152,8 +2152,8 @@ static void LightFace_Bounce(
             const int style = styleColor.first;
             const qvec3f &color = styleColor.second;
 
-            raystream_occlusion_t *rs = lightsurf->occlusion_stream;
-            rs->clearPushedRays();
+            raystream_occlusion_t &rs = lightsurf->occlusion_stream;
+            rs.clearPushedRays();
 
             for (int i = 0; i < lightsurf->numpoints; i++) {
                 if (lightsurf->occluded[i])
@@ -2171,24 +2171,24 @@ static void LightFace_Bounce(
                 if (LightSample_Brightness(indirect) < 0.25)
                     continue;
 
-                rs->pushRay(i, vpl.pos, dir, dist, &indirect);
+                rs.pushRay(i, vpl.pos, dir, dist, &indirect);
             }
 
-            if (!rs->numPushedRays())
+            if (!rs.numPushedRays())
                 continue;
 
-            total_bounce_rays += rs->numPushedRays();
-            rs->tracePushedRaysOcclusion(lightsurf->modelinfo);
+            total_bounce_rays += rs.numPushedRays();
+            rs.tracePushedRaysOcclusion(lightsurf->modelinfo);
 
             lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
 
-            const int N = rs->numPushedRays();
+            const int N = rs.numPushedRays();
             for (int j = 0; j < N; j++) {
-                if (rs->getPushedRayOccluded(j))
+                if (rs.getPushedRayOccluded(j))
                     continue;
 
-                const int i = rs->getPushedRayPointIndex(j);
-                qvec3d indirect = rs->getPushedRayColor(j);
+                const int i = rs.getPushedRayPointIndex(j);
+                qvec3d indirect = rs.getPushedRayColor(j);
 
                 Q_assert(!std::isnan(indirect[0]));
 
@@ -2315,7 +2315,7 @@ static void LightFace_Bounce(
 }
 
 static void // mxd
-LightFace_SurfaceLight(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
@@ -2323,14 +2323,14 @@ LightFace_SurfaceLight(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmap
         if (SurfaceLight_SphereCull(&vpl, lightsurf))
             continue;
 
-        raystream_occlusion_t *rs = lightsurf->occlusion_stream;
+        raystream_occlusion_t &rs = lightsurf->occlusion_stream;
 
         for (int c = 0; c < vpl.points.size(); c++) {
             if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
                 continue;
             }
 
-            rs->clearPushedRays();
+            rs.clearPushedRays();
 
             for (int i = 0; i < lightsurf->numpoints; i++) {
                 if (lightsurf->occluded[i])
@@ -2363,26 +2363,26 @@ LightFace_SurfaceLight(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmap
                 else
                     dir /= dist;
 
-                rs->pushRay(i, pos, dir, dist, &indirect);
+                rs.pushRay(i, pos, dir, dist, &indirect);
             }
 
-            if (!rs->numPushedRays())
+            if (!rs.numPushedRays())
                 continue;
 
-            total_surflight_rays += rs->numPushedRays();
-            rs->tracePushedRaysOcclusion(lightsurf->modelinfo);
+            total_surflight_rays += rs.numPushedRays();
+            rs.tracePushedRaysOcclusion(lightsurf->modelinfo);
 
             const int lightmapstyle = vpl.style;
             lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, lightmapstyle, lightsurf);
 
             bool hit = false;
-            const int numrays = rs->numPushedRays();
+            const int numrays = rs.numPushedRays();
             for (int j = 0; j < numrays; j++) {
-                if (rs->getPushedRayOccluded(j))
+                if (rs.getPushedRayOccluded(j))
                     continue;
 
-                const int i = rs->getPushedRayPointIndex(j);
-                qvec3d indirect = rs->getPushedRayColor(j);
+                const int i = rs.getPushedRayPointIndex(j);
+                qvec3d indirect = rs.getPushedRayColor(j);
 
                 Q_assert(!std::isnan(indirect[0]));
 
@@ -2652,8 +2652,8 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
     }
 
     for (int j = 0; j < numDirtVectors; j++) {
-        raystream_intersection_t *rs = lightsurf->intersection_stream;
-        rs->clearPushedRays();
+        raystream_intersection_t &rs = lightsurf->intersection_stream;
+        rs.clearPushedRays();
 
         // fill in input buffers
 
@@ -2664,17 +2664,17 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             qvec3d dirtvec = GetDirtVector(cfg, j);
             qvec3d dir = TransformToTangentSpace(lightsurf->normals[i], myUps[i], myRts[i], dirtvec);
 
-            rs->pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.value());
+            rs.pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.value());
         }
 
         // trace the batch. need closest hit for dirt, so intersection.
-        rs->tracePushedRaysIntersection(lightsurf->modelinfo);
+        rs.tracePushedRaysIntersection(lightsurf->modelinfo);
 
         // accumulate hitdists
-        for (int k = 0; k < rs->numPushedRays(); k++) {
-            const int i = rs->getPushedRayPointIndex(k);
-            if (rs->getPushedRayHitType(k) == hittype_t::SOLID) {
-                vec_t dist = rs->getPushedRayHitDist(k);
+        for (int k = 0; k < rs.numPushedRays(); k++) {
+            const int i = rs.getPushedRayPointIndex(k);
+            if (rs.getPushedRayHitType(k) == hittype_t::SOLID) {
+                vec_t dist = rs.getPushedRayHitDist(k);
                 lightsurf->occlusion[i] += min(cfg.dirtDepth.value(), dist);
             } else {
                 lightsurf->occlusion[i] += cfg.dirtDepth.value();
@@ -3361,9 +3361,6 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
     delete[] lightsurf->occlusion;
     delete[] lightsurf->occluded;
     delete[] lightsurf->realfacenums;
-
-    delete lightsurf->occlusion_stream;
-    delete lightsurf->intersection_stream;
 
     delete lightsurf;
 }

@@ -167,8 +167,8 @@ struct lightsurf_t
     bool twosided;
 
     // ray batch stuff
-    raystream_occlusion_t *occlusion_stream;
-    raystream_intersection_t *intersection_stream;
+    raystream_occlusion_t occlusion_stream;
+    raystream_intersection_t intersection_stream;
 
     lightmapdict_t lightmapsByStyle;
 };

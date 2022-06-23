@@ -1030,7 +1030,7 @@ int light_main(int argc, const char **argv)
     FindDebugFace(&bsp);
     FindDebugVert(&bsp);
 
-    MakeTnodes(&bsp);
+    Embree_TraceInit(&bsp);
 
     if (options.debugmode == debugmodes::phong_obj) {
         CalculateVertexNormals(&bsp);

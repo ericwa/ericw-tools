@@ -93,27 +93,3 @@ qvec4b SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point
 
     return texture->pixels[(texture->meta.width * y) + x];
 }
-
-hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
-{
-    return Embree_TestSky(start, dirn, self, face_out);
-}
-
-hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
-{
-    return Embree_TestLight(start, stop, self);
-}
-
-raystream_intersection_t *MakeIntersectionRayStream(int maxrays)
-{
-    return Embree_MakeIntersectionRayStream(maxrays);
-}
-raystream_occlusion_t *MakeOcclusionRayStream(int maxrays)
-{
-    return Embree_MakeOcclusionRayStream(maxrays);
-}
-
-void MakeTnodes(const mbsp_t *bsp)
-{
-    Embree_TraceInit(bsp);
-}

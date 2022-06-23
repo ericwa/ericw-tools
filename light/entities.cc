@@ -981,7 +981,7 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
     const int N = 32;
     const int N2 = N * N;
 
-    raystream_intersection_t *rs = MakeIntersectionRayStream(N2);
+    raystream_intersection_t rs{N2};
 
     aabb3d bounds = point;
 
@@ -990,23 +990,21 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
             const vec_t u1 = static_cast<vec_t>(x) / static_cast<vec_t>(N - 1);
             const vec_t u2 = static_cast<vec_t>(y) / static_cast<vec_t>(N - 1);
 
-            rs->pushRay(0, point, UniformPointOnSphere(u1, u2), 65536.0);
+            rs.pushRay(0, point, UniformPointOnSphere(u1, u2), 65536.0);
         }
     }
 
-    rs->tracePushedRaysIntersection(nullptr);
+    rs.tracePushedRaysIntersection(nullptr);
 
     for (int i = 0; i < N2; i++) {
-        const vec_t dist = rs->getPushedRayHitDist(i);
-        qvec3d dir = rs->getPushedRayDir(i);
+        const vec_t &dist = rs.getPushedRayHitDist(i);
+        const qvec3d &dir = rs.getPushedRayDir(i);
 
         // get the intersection point
         qvec3d stop = point + (dir * dist);
 
         bounds += stop;
     }
-
-    delete rs;
 
     // grow it by 25% in each direction
     return bounds.grow(bounds.size() * 0.25);
