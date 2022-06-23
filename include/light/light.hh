@@ -130,7 +130,7 @@ struct lightsurf_t
     qvec2d exactmid;
     qvec3d midpoint;
 
-    int numpoints;
+    size_t numpoints;
     qvec3d *points; // new'ed array of numpoints
     qvec3d *normals; // new'ed array of numpoints
     bool *occluded; // new'ed array of numpoints

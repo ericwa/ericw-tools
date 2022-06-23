@@ -61,6 +61,17 @@ public:
 
     virtual ~raystream_embree_common_t() = default;
 
+    virtual void resize(size_t size)
+    {
+        _maxrays = size;
+
+        _rays_maxdist.resize(size);
+        _point_indices.resize(size);
+        _ray_colors.resize(size);
+        _ray_normalcontribs.resize(size);
+        _ray_dynamic_styles.resize(size);
+    }
+
     constexpr size_t numPushedRays() { return _numrays; }
 
     inline int &getPushedRayPointIndex(size_t j)
@@ -188,19 +199,30 @@ inline const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
 
 class raystream_intersection_t : public raystream_embree_common_t
 {
-public:
+private:
     RTCRayHit *_rays = nullptr;
 
 public:
     inline raystream_intersection_t() = default;
 
-    inline raystream_intersection_t(int maxRays)
+    inline raystream_intersection_t(size_t maxRays)
         : raystream_embree_common_t(maxRays), _rays{static_cast<RTCRayHit *>(
                                                   q_aligned_malloc(16, sizeof(RTCRayHit) * maxRays))}
     {
     }
 
     inline ~raystream_intersection_t() { q_aligned_free(_rays); _rays = nullptr; }
+
+    void resize(size_t size) override
+    {
+        if (_rays) {
+            q_aligned_free(_rays);
+        }
+
+        _rays = static_cast<RTCRayHit *>(q_aligned_malloc(16, sizeof(RTCRayHit) * size));
+
+        raystream_embree_common_t::resize(size);
+    }
 
     inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
         const qvec3d *normalcontrib = nullptr)
@@ -274,19 +296,30 @@ public:
 
 class raystream_occlusion_t : public raystream_embree_common_t
 {
-public:
+private:
     RTCRay *_rays = nullptr;
 
 public:
     inline raystream_occlusion_t() = default;
 
-    inline raystream_occlusion_t(int maxRays)
+    inline raystream_occlusion_t(size_t maxRays)
         : raystream_embree_common_t(maxRays), _rays{
                                                   static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * maxRays))}
     {
     }
 
     inline ~raystream_occlusion_t() { q_aligned_free(_rays); }
+
+    void resize(size_t size) override
+    {
+        if (_rays) {
+            q_aligned_free(_rays);
+        }
+
+        _rays = static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * size));
+
+        raystream_embree_common_t::resize(size);
+    }
 
     inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
         const qvec3d *normalcontrib = nullptr)

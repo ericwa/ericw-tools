@@ -965,8 +965,8 @@ static bool Lightsurf_Init(
     /* Allocate occlusion array */
     lightsurf->occlusion = new float[lightsurf->numpoints]{};
 
-    lightsurf->intersection_stream = raystream_intersection_t{lightsurf->numpoints};
-    lightsurf->occlusion_stream = raystream_occlusion_t{lightsurf->numpoints};
+    lightsurf->intersection_stream.resize(lightsurf->numpoints);
+    lightsurf->occlusion_stream.resize(lightsurf->numpoints);
 
     /* Setup vis data */
     if (options.visapprox.value() == visapprox_t::VIS) {
@@ -3361,8 +3361,6 @@ static void LightFaceShutdown(lightsurf_t *lightsurf)
     delete[] lightsurf->occlusion;
     delete[] lightsurf->occluded;
     delete[] lightsurf->realfacenums;
-
-    delete lightsurf;
 }
 
 /*
@@ -3413,26 +3411,26 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
         return;
 
     /* all good, this face is going to be lightmapped. */
-    lightsurf_t *lightsurf = new lightsurf_t{};
-    lightsurf->cfg = &cfg;
+    lightsurf_t lightsurf{};
+    lightsurf.cfg = &cfg;
 
     /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
      * lit water in mind. In that case receive light from both top and bottom.
      * (lit will only be rendered in compatible engines, but degrades gracefully.)
      */
     if (Face_IsTranslucent(bsp, face)) {
-        lightsurf->twosided = true;
+        lightsurf.twosided = true;
     }
 
-    if (!Lightsurf_Init(modelinfo, face, bsp, lightsurf, facesup)) {
+    if (!Lightsurf_Init(modelinfo, face, bsp, &lightsurf, facesup)) {
         /* invalid texture axes */
         return;
     }
-    lightmapdict_t *lightmaps = &lightsurf->lightmapsByStyle;
+    lightmapdict_t *lightmaps = &lightsurf.lightmapsByStyle;
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
     if (dirt_in_use && (options.debugmode != debugmodes::phong))
-        LightFace_CalculateDirt(lightsurf);
+        LightFace_CalculateDirt(&lightsurf);
 
     /*
      * The lighting procedure is: cast all positive lights, fix
@@ -3442,7 +3440,7 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
 
     if (options.debugmode == debugmodes::none) {
 
-        total_samplepoints += lightsurf->numpoints;
+        total_samplepoints += lightsurf.numpoints;
 
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
@@ -3454,33 +3452,33 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
                 if (entity->nostaticlight.value())
                     continue;
                 if (entity->light.value() > 0)
-                    LightFace_Entity(bsp, entity.get(), lightsurf, lightmaps);
+                    LightFace_Entity(bsp, entity.get(), &lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight > 0)
-                    LightFace_Sky(&sun, lightsurf, lightmaps);
+                    LightFace_Sky(&sun, &lightsurf, lightmaps);
 
             // mxd. Add surface lights...
-            LightFace_SurfaceLight(bsp, lightsurf, lightmaps);
+            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps);
 
             /* add indirect lighting */
-            LightFace_Bounce(bsp, face, lightsurf, lightmaps);
+            LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
         }
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
         // FIXME: _surface 2 support
         const mtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
         if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
-            LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), texinfo->value * 2.0f, lightsurf,
+            LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), texinfo->value * 2.0f, &lightsurf,
                 lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface
                             // is renered fullbright, when using arghrad3
-        } else if (lightsurf->minlight > cfg.minlight.value()) {
-            LightFace_Min(bsp, face, lightsurf->minlight_color, lightsurf->minlight, lightsurf, lightmaps);
+        } else if (lightsurf.minlight > cfg.minlight.value()) {
+            LightFace_Min(bsp, face, lightsurf.minlight_color, lightsurf.minlight, &lightsurf, lightmaps);
         } else {
             const float light = cfg.minlight.value();
             const qvec3d &color = cfg.minlight_color.value();
 
-            LightFace_Min(bsp, face, color, light, lightsurf, lightmaps);
+            LightFace_Min(bsp, face, color, light, &lightsurf, lightmaps);
         }
 
         /* negative lights */
@@ -3491,39 +3489,39 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
                 if (entity->nostaticlight.value())
                     continue;
                 if (entity->light.value() < 0)
-                    LightFace_Entity(bsp, entity.get(), lightsurf, lightmaps);
+                    LightFace_Entity(bsp, entity.get(), &lightsurf, lightmaps);
             }
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight < 0)
-                    LightFace_Sky(&sun, lightsurf, lightmaps);
+                    LightFace_Sky(&sun, &lightsurf, lightmaps);
         }
     }
 
     /* bounce debug */
     // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
     if (options.debugmode == debugmodes::bounce)
-        LightFace_Bounce(bsp, face, lightsurf, lightmaps);
+        LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
 
     /* replace lightmaps with AO for debugging */
     if (options.debugmode == debugmodes::dirt)
-        LightFace_DirtDebug(lightsurf, lightmaps);
+        LightFace_DirtDebug(&lightsurf, lightmaps);
 
     if (options.debugmode == debugmodes::phong)
-        LightFace_PhongDebug(lightsurf, lightmaps);
+        LightFace_PhongDebug(&lightsurf, lightmaps);
 
     if (options.debugmode == debugmodes::bouncelights)
-        LightFace_BounceLightsDebug(lightsurf, lightmaps);
+        LightFace_BounceLightsDebug(&lightsurf, lightmaps);
 
     if (options.debugmode == debugmodes::debugoccluded)
-        LightFace_OccludedDebug(lightsurf, lightmaps);
+        LightFace_OccludedDebug(&lightsurf, lightmaps);
 
     if (options.debugmode == debugmodes::debugneighbours)
-        LightFace_DebugNeighbours(lightsurf, lightmaps);
+        LightFace_DebugNeighbours(&lightsurf, lightmaps);
 
     /* Apply gamma, rangescale, and clamp */
-    LightFace_ScaleAndClamp(lightsurf, lightmaps);
+    LightFace_ScaleAndClamp(&lightsurf, lightmaps);
 
-    WriteLightmaps(bsp, face, facesup, lightsurf, lightmaps);
+    WriteLightmaps(bsp, face, facesup, &lightsurf, lightmaps);
 
-    LightFaceShutdown(lightsurf);
+    LightFaceShutdown(&lightsurf);
 }
