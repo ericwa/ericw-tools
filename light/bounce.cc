@@ -172,12 +172,6 @@ const std::vector<int> &BounceLightsForFaceNum(int facenum)
     return empty;
 }
 
-struct make_bounce_lights_args_t
-{
-    const mbsp_t *bsp;
-    const settings::worldspawn_keys &cfg;
-};
-
 static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face)
 {
     if (!Face_ShouldBounce(bsp, &face)) {

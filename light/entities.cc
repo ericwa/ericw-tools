@@ -978,15 +978,15 @@ inline qvec3d UniformPointOnSphere(vec_t u1, vec_t u2)
 
 aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
 {
-    const int N = 32;
-    const int N2 = N * N;
+    constexpr size_t N = 32;
+    constexpr size_t N2 = N * N;
 
     raystream_intersection_t rs{N2};
 
     aabb3d bounds = point;
 
-    for (int x = 0; x < N; x++) {
-        for (int y = 0; y < N; y++) {
+    for (size_t x = 0; x < N; x++) {
+        for (size_t y = 0; y < N; y++) {
             const vec_t u1 = static_cast<vec_t>(x) / static_cast<vec_t>(N - 1);
             const vec_t u2 = static_cast<vec_t>(y) / static_cast<vec_t>(N - 1);
 
