@@ -24,7 +24,7 @@
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
-#include <qbsp/solidbsp.hh>
+#include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
 

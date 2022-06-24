@@ -19,7 +19,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <qbsp/solidbsp.hh>
+#include <qbsp/brushbsp.hh>
 
 #include <climits>
 

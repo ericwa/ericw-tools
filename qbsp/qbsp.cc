@@ -35,7 +35,7 @@
 #include <qbsp/merge.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/prtfile.hh>
-#include <qbsp/solidbsp.hh>
+#include <qbsp/brushbsp.hh>
 #include <qbsp/surfaces.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/wad.hh>
