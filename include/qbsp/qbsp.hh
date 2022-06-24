@@ -343,11 +343,6 @@ struct face_t : face_fragment_t
     // filled by TJunc
     std::vector<face_fragment_t> fragments;
 
-    // fixme-brushbsp: move to a brush_side_t struct
-    bool onnode; // has this face been used as a BSP node plane yet?
-    bool visible = true; // can any part of this side be seen from non-void parts of the level?
-                  // non-visible means we can discard the brush side 
-                  // (avoiding generating a BSP spit, so expanding it outwards)
     portal_t *portal;
 };
 

@@ -31,10 +31,6 @@ class mapentity_t;
 struct side_t
 {
     winding_t w;
-    std::vector<size_t> edges; // only filled in MakeFaceEdges
-    std::optional<size_t> outputnumber; // only valid for original faces after
-                                        // write surfaces
-
     int planenum;
     planeside_t planeside; // which side is the front of the face
     int texinfo;
@@ -44,15 +40,10 @@ struct side_t
     qvec3d origin;
     vec_t radius;
 
-    // filled by TJunc
-    std::vector<face_fragment_t> fragments;
-
-    // fixme-brushbsp: move to a brush_side_t struct
     bool onnode; // has this face been used as a BSP node plane yet?
     bool visible = true; // can any part of this side be seen from non-void parts of the level?
                          // non-visible means we can discard the brush side
                          // (avoiding generating a BSP spit, so expanding it outwards)
-    portal_t *portal;
 };
 
 struct bspbrush_t {
