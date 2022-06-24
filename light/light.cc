@@ -55,9 +55,15 @@
 #include <common/qvec.hh>
 #include <common/json.hh>
 
-using namespace std;
-
 bool dirt_in_use = false;
+
+// intermediate representation of lightmap surfaces
+static std::vector<std::unique_ptr<lightsurf_t>> light_surfaces;
+
+std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces()
+{
+    return light_surfaces;
+}
 
 static std::vector<facesup_t> faces_sup; // lit2/bspx stuff
 
@@ -302,40 +308,70 @@ const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
     return img::find(name);
 }
 
-static void LightThread(const mbsp_t *bsp, size_t facenum)
+static void CreateLightmapSurfaces(mbsp_t *bsp)
 {
-#if defined(HAVE_EMBREE) && defined (__SSE2__)
-    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-//    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
-#endif
+    light_surfaces.resize(bsp->dfaces.size());
+    logging::print("--- CreateLightmapSurfaces ---\n");
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
+        auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
+        auto face = &bsp->dfaces[i];
 
-    mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum);
+        /* One extra lightmap is allocated to simplify handling overflow */
+        if (!options.litonly.value()) {
+            // if litonly is set we need to preserve the existing lightofs
 
-    /* Find the correct model offset */
-    const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
-    if (face_modelinfo == NULL) {
-        // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
-        // logging::print("warning: no model has face {}\n", facenum);
-        return;
-    }
-
-    if (faces_sup.empty()) {
-        LightFace(bsp, f, nullptr, options);
-    } else if (options.novanilla.value()) {
-        f->lightofs = -1;
-        f->styles[0] = INVALID_LIGHTSTYLE_OLD;
-        LightFace(bsp, f, &faces_sup[facenum], options);
-    } else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale) {
-        LightFace(bsp, f, &faces_sup[facenum], options);
-        f->lightofs = faces_sup[facenum].lightofs;
-        for (int i = 0; i < MAXLIGHTMAPS; i++) {
-            f->styles[i] = faces_sup[facenum].styles[i];
+            /* some surfaces don't need lightmaps */
+            if (facesup) {
+                facesup->lightofs = -1;
+                for (size_t i = 0; i < MAXLIGHTMAPSSUP; i++) {
+                    facesup->styles[i] = INVALID_LIGHTSTYLE;
+                }
+            } else {
+                face->lightofs = -1;
+                for (size_t i = 0; i < MAXLIGHTMAPS; i++) {
+                    face->styles[i] = INVALID_LIGHTSTYLE_OLD;
+                }
+            }
         }
-    } else {
-        LightFace(bsp, f, nullptr, options);
-        LightFace(bsp, f, &faces_sup[facenum], options);
-    }
 
+        light_surfaces[i] = std::move(CreateLightmapSurface(bsp, face, facesup, options));
+    });
+}
+
+static void SaveLightmapSurfaces(mbsp_t *bsp)
+{
+    logging::print("--- SaveLightmapSurfaces ---\n");
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
+        auto &surf = light_surfaces[i];
+
+        if (!surf) {
+            return;
+        }
+
+        FinishLightmapSurface(bsp, surf.get());
+
+        auto f = &bsp->dfaces[i];
+        const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
+
+        if (faces_sup.empty()) {
+            SaveLightmapSurface(bsp, f, nullptr, surf.get());
+        } else if (options.novanilla.value()) {
+            f->lightofs = -1;
+            f->styles[0] = INVALID_LIGHTSTYLE_OLD;
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+        } else if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+            f->lightofs = faces_sup[i].lightofs;
+            for (int i = 0; i < MAXLIGHTMAPS; i++) {
+                f->styles[i] = faces_sup[i].styles[i];
+            }
+        } else {
+            SaveLightmapSurface(bsp, f, nullptr, surf.get());
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+        }
+
+        light_surfaces[i].reset();
+    });
 }
 
 static void FindModelInfo(const mbsp_t *bsp)
@@ -429,6 +465,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
+    light_surfaces.clear();
     filebase.clear();
     lit_filebase.clear();
     lux_filebase.clear();
@@ -448,8 +485,9 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     lux_file_p = 0;
     lux_file_end = (MAX_MAP_LIGHTING * 3);
 
-    if (forcedscale)
+    if (forcedscale) {
         bspdata->bspx.entries.erase("LMSHIFT");
+    }
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
@@ -471,6 +509,9 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     CalculateVertexNormals(&bsp);
 
+    // create lightmap surfaces
+    CreateLightmapSurfaces(&bsp);
+
     const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
     const bool bouncerequired =
         options.bounce.value() && (options.debugmode == debugmodes::none || options.debugmode == debugmodes::bounce ||
@@ -484,16 +525,6 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         }
     }
 
-    if (SurfaceLights().size()) {
-        logging::print("{} surface lights ({} light points) in use.\n",
-            SurfaceLights().size(), TotalSurfacelightPoints());
-    }
-
-    if (BounceLights().size()) { // mxd. Print some extra stats...
-        logging::print("{} bounce lights in use.\n",
-            BounceLights().size());
-    }
-
 #if 0
     lightbatchthread_info_t info;
     info.all_batches = MakeLightingBatches(bsp);
@@ -503,9 +534,17 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 #else
     logging::print("--- LightThread ---\n"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-        LightThread(&bsp, i);
+        if (light_surfaces[i]) {
+#if defined(HAVE_EMBREE) && defined (__SSE2__)
+            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+#endif
+
+            LightFace(&bsp, *light_surfaces[i].get(), options);
+        }
     });
 #endif
+
+    SaveLightmapSurfaces(&bsp);
 
     logging::print("Lighting Completed.\n\n");
 
@@ -712,8 +751,8 @@ static void ExportObj(const fs::path &filename, const mbsp_t *bsp)
 }
 
 // obj
-static vector<vector<const mleaf_t *>> faceleafs;
-static vector<bool> leafhassky;
+static std::vector<std::vector<const mleaf_t *>> faceleafs;
+static std::vector<bool> leafhassky;
 
 // index some stuff from the bsp
 static void BuildPvsIndex(const mbsp_t *bsp)

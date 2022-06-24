@@ -44,7 +44,7 @@ using namespace polylib;
 mutex surfacelights_lock;
 std::vector<surfacelight_t> surfacelights;
 std::map<int, std::vector<int>> surfacelightsByFacenum;
-int total_surflight_points = 0;
+size_t total_surflight_points = 0;
 
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face, std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
@@ -175,11 +175,6 @@ const std::vector<surfacelight_t> &SurfaceLights()
     return surfacelights;
 }
 
-int TotalSurfacelightPoints()
-{
-    return total_surflight_points;
-}
-
 // No surflight_debug (yet?), so unused...
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 {
@@ -197,4 +192,9 @@ MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *b
     logging::print("--- MakeRadiositySurfaceLights ---\n");
 
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
+
+    if (surfacelights.size()) {
+        logging::print("{} surface lights ({} light points) in use.\n",
+            surfacelights.size(), total_surflight_points);
+    }
 }

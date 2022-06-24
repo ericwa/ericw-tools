@@ -860,19 +860,32 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
     }
 }
 
-static bool Lightsurf_Init(
-    const modelinfo_t *modelinfo, const mface_t *face, const mbsp_t *bsp, lightsurf_t *lightsurf, facesup_t *facesup)
+static std::unique_ptr<lightsurf_t> Lightsurf_Init(
+    const modelinfo_t *modelinfo, const settings::worldspawn_keys &cfg, const mface_t *face, const mbsp_t *bsp, const facesup_t *facesup)
 {
-    /*FIXME: memset can be slow on large datasets*/
-    //    memset(lightsurf, 0, sizeof(*lightsurf));
+    auto spaceToWorld = TexSpaceToWorld(bsp, face);
+
+    /* Check for invalid texture axes */
+    if (std::isnan(spaceToWorld.at(0, 0))) {
+        logging::print("Bad texture axes on face:\n");
+        PrintFaceInfo(face, bsp);
+        return nullptr;
+    }
+
+    auto lightsurf = std::make_unique<lightsurf_t>();
+    lightsurf->cfg = &cfg;
     lightsurf->modelinfo = modelinfo;
     lightsurf->bsp = bsp;
     lightsurf->face = face;
+    
+    /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
+     * lit water in mind. In that case receive light from both top and bottom.
+     * (lit will only be rendered in compatible engines, but degrades gracefully.)
+     */
+    lightsurf->twosided = Face_IsTranslucent(bsp, face);
 
-    if (facesup)
-        lightsurf->lightmapscale = facesup->lmscale;
-    else
-        lightsurf->lightmapscale = modelinfo->lightmapscale;
+    // pick the larger of the two scales
+    lightsurf->lightmapscale = (facesup && facesup->lmscale > modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
     lightsurf->curved = extended_flags.phong_angle != 0;
@@ -934,24 +947,17 @@ static bool Lightsurf_Init(
     }
 
     /* Set up the texorg for coordinate transformation */
-    lightsurf->texorg.texSpaceToWorld = TexSpaceToWorld(bsp, face);
+    lightsurf->texorg.texSpaceToWorld = spaceToWorld;
     lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
     lightsurf->texorg.planedist = plane.dist;
-
-    /* Check for invalid texture axes */
-    if (std::isnan(lightsurf->texorg.texSpaceToWorld.at(0, 0))) {
-        logging::print("Bad texture axes on face:\n");
-        PrintFaceInfo(face, bsp);
-        return false;
-    }
 
     const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
     lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
 
     /* Set up the surface points */
-    CalcFaceExtents(face, bsp, lightsurf);
-    CalcPoints(modelinfo, modelinfo->offset, lightsurf, bsp, face);
+    CalcFaceExtents(face, bsp, lightsurf.get());
+    CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
 
     /* Correct the plane for the model offset (must be done last,
        calculation of face extents / points needs the uncorrected plane) */
@@ -970,10 +976,10 @@ static bool Lightsurf_Init(
 
     /* Setup vis data */
     if (options.visapprox.value() == visapprox_t::VIS) {
-        CalcPvs(bsp, lightsurf);
+        CalcPvs(bsp, lightsurf.get());
     }
 
-    return true;
+    return lightsurf;
 }
 
 static void Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *lightsurf)
@@ -2691,11 +2697,11 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 
 // clamps negative values. applies gamma and rangescale. clamps values over 255
 // N.B. we want to do this before smoothing / downscaling, so huge values don't mess up the averaging.
-static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    for (lightmap_t &lightmap : *lightmaps) {
+    for (lightmap_t &lightmap : lightsurf->lightmapsByStyle) {
         for (int i = 0; i < lightsurf->points.size(); i++) {
             qvec3d &color = lightmap.samples[i].color;
 
@@ -2716,6 +2722,13 @@ static void LightFace_ScaleAndClamp(const lightsurf_t *lightsurf, lightmapdict_t
             }
         }
     }
+}
+
+void FinishLightmapSurface(
+    const mbsp_t *bsp, lightsurf_t *lightsurf)
+{
+    /* Apply gamma, rangescale, and clamp */
+    LightFace_ScaleAndClamp(lightsurf);
 }
 
 static float Lightmap_AvgBrightness(const lightmap_t *lm, const lightsurf_t *lightsurf)
@@ -3105,9 +3118,10 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
     const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux);
 
-static void WriteLightmaps(
-    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const lightmapdict_t *lightmaps)
+void SaveLightmapSurface(
+    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf)
 {
+    const lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
     const int actual_width = lightsurf->texsize[0] + 1;
     const int actual_height = lightsurf->texsize[1] + 1;
 
@@ -3132,7 +3146,7 @@ static void WriteLightmaps(
             }
 
             // see if we have computed lighting for this style
-            for (const lightmap_t &lm : *lightmaps) {
+            for (const lightmap_t &lm : lightmaps) {
                 if (lm.style == style) {
                     WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux);
                     break;
@@ -3157,7 +3171,7 @@ static void WriteLightmaps(
     // intermediate collection for sorting lightmaps
     std::vector<std::pair<float, const lightmap_t *>> sortable;
 
-    for (const lightmap_t &lightmap : *lightmaps) {
+    for (const lightmap_t &lightmap : lightmaps) {
         // skip un-saved lightmaps
         if (lightmap.style == INVALID_LIGHTSTYLE)
             continue;
@@ -3347,69 +3361,44 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     }
 }
 
-/*
- * ============
- * LightFace
- * ============
- */
-void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const settings::worldspawn_keys &cfg)
+std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup, const settings::worldspawn_keys &cfg)
 {
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
     if (modelinfo == nullptr) {
-        return;
-    }
-
-    /* One extra lightmap is allocated to simplify handling overflow */
-
-    if (!options.litonly.value()) {
-        // if litonly is set we need to preserve the existing lightofs
-
-        /* some surfaces don't need lightmaps */
-        if (facesup) {
-            facesup->lightofs = -1;
-            for (int i = 0; i < MAXLIGHTMAPSSUP; i++)
-                facesup->styles[i] = INVALID_LIGHTSTYLE;
-        } else {
-            face->lightofs = -1;
-            for (int i = 0; i < MAXLIGHTMAPS; i++)
-                face->styles[i] = INVALID_LIGHTSTYLE_OLD;
-        }
+        return nullptr;
     }
 
     /* don't bother with degenerate faces */
     if (face->numedges < 3)
-        return;
+        return nullptr;
 
     if (!Face_IsLightmapped(bsp, face))
-        return;
+        return nullptr;
 
     const char *texname = Face_TextureName(bsp, face);
 
     /* don't save lightmaps for "trigger" texture */
     if (!Q_strcasecmp(texname, "trigger"))
-        return;
+        return nullptr;
 
     /* don't save lightmaps for "skip" texture */
     if (!Q_strcasecmp(texname, "skip"))
-        return;
+        return nullptr;
 
-    /* all good, this face is going to be lightmapped. */
-    lightsurf_t lightsurf{};
-    lightsurf.cfg = &cfg;
+    return Lightsurf_Init(modelinfo, cfg, face, bsp, facesup);
+}
 
-    /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
-     * lit water in mind. In that case receive light from both top and bottom.
-     * (lit will only be rendered in compatible engines, but degrades gracefully.)
-     */
-    if (Face_IsTranslucent(bsp, face)) {
-        lightsurf.twosided = true;
-    }
+/*
+ * ============
+ * LightFace
+ * ============
+ */
+void LightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg)
+{
+    auto face = lightsurf.face;
+    const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
 
-    if (!Lightsurf_Init(modelinfo, face, bsp, &lightsurf, facesup)) {
-        /* invalid texture axes */
-        return;
-    }
     lightmapdict_t *lightmaps = &lightsurf.lightmapsByStyle;
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
@@ -3450,7 +3439,6 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
         }
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
-        // FIXME: _surface 2 support
         const mtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
         if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
             LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), texinfo->value * 2.0f, &lightsurf,
@@ -3501,9 +3489,4 @@ void LightFace(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const setti
 
     if (options.debugmode == debugmodes::debugneighbours)
         LightFace_DebugNeighbours(&lightsurf, lightmaps);
-
-    /* Apply gamma, rangescale, and clamp */
-    LightFace_ScaleAndClamp(&lightsurf, lightmaps);
-
-    WriteLightmaps(bsp, face, facesup, &lightsurf, lightmaps);
 }
