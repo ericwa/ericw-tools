@@ -28,16 +28,33 @@
 
 class mapentity_t;
 
-struct brush_t
+struct side_t
 {
+    winding_t w;
+    int planenum;
+    planeside_t planeside; // which side is the front of the face
+    int texinfo;
+
+    int16_t lmshift;
+
+    qvec3d origin;
+    vec_t radius;
+
+    bool onnode; // has this face been used as a BSP node plane yet?
+    bool visible = true; // can any part of this side be seen from non-void parts of the level?
+                         // non-visible means we can discard the brush side
+                         // (avoiding generating a BSP spit, so expanding it outwards)
+};
+
+struct bspbrush_t {
     /**
      * The brushes in the mapentity_t::brushes vector are considered originals. Brush fragments created during
      * the BrushBSP will have this pointing back to the original brush in mapentity_t::brushes.
      */
-    brush_t *original;
+    bspbrush_t *original;
     uint32_t file_order;
     aabb3d bounds;
-    std::vector<face_t> faces;
+    std::vector<side_t> sides;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
@@ -49,6 +66,7 @@ struct brush_t
 class mapbrush_t;
 
 qplane3d Face_Plane(const face_t *face);
+qplane3d Face_Plane(const side_t *face);
 
 enum class rotation_t
 {
@@ -57,10 +75,10 @@ enum class rotation_t
     origin_brush
 };
 
-std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 
-int FindPlane(const qplane3d &plane, side_t *side);
+int FindPlane(const qplane3d &plane, planeside_t *side);
 int FindPositivePlane(int planenum);
-int FindPositivePlane(const qplane3d &plane, side_t *side);
+int FindPositivePlane(const qplane3d &plane, planeside_t *side);

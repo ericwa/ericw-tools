@@ -73,7 +73,7 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
     }
     
     // fixme-brushbsp
-    fmt::print(f, "usemtl contents{}\n", face->contents[0].native);
+    fmt::print(f, "usemtl contents{}\n", face->contents.native);
     f << 'f';
     for (int i = 0; i < face->w.size(); i++) {
         // .obj vertexes start from 1
@@ -122,15 +122,8 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
     }
 }
 
-void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const brush_t *> &brushes)
+void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bspbrush_t *> &brushes)
 {
-    std::vector<const face_t *> faces;
-
-    for (const brush_t *brush : brushes)
-        for (auto &face : brush->faces)
-            faces.push_back(&face);
-
-    ExportObj_Faces(filesuffix, faces);
 }
 
 static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)

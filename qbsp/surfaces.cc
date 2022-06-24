@@ -24,7 +24,7 @@
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
-#include <qbsp/solidbsp.hh>
+#include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
 
@@ -39,7 +39,7 @@ static bool ShouldOmitFace(face_t *f)
         return true;
 
     // HACK: to save a few faces, don't output the interior faces of sky brushes
-    if (f->contents[0].is_sky(options.target_game)) {
+    if (f->contents.is_sky(options.target_game)) {
         return true;
     }
 
@@ -81,7 +81,7 @@ std::list<face_t *> SubdivideFace(face_t *f)
     // one lightmap block will always be added at the end, for smooth interpolation
 
     // engines that do support scaling will support 256*256 blocks (at whatever scale).
-    lmshift = f->lmshift[0];
+    lmshift = f->lmshift;
     if (lmshift > 4)
         lmshift = 4; // no bugging out with legacy lighting
 
@@ -292,7 +292,7 @@ Returns a global edge number, possibly negative to indicate a backwards edge.
 */
 inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, const face_t *face)
 {
-    if (!face->contents[0].is_valid(options.target_game, false))
+    if (!face->contents.is_valid(options.target_game, false))
         FError("Face with invalid contents");
 
     size_t v1 = GetVertex(p1);
@@ -304,7 +304,7 @@ inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, c
     auto it = hashedges.find(edge_hash_key);
     if (it != hashedges.end()) {
         for (const int i : it->second) {
-            if (pEdgeFaces1[i] == NULL && pEdgeFaces0[i]->contents[0].native == face->contents[0].native) {
+            if (pEdgeFaces1[i] == NULL && pEdgeFaces0[i]->contents.native == face->contents.native) {
                 pEdgeFaces1[i] = face;
                 return -i;
             }
@@ -392,7 +392,7 @@ static void EmitFaceFragment(mapentity_t *entity, face_t *face, face_fragment_t 
     mface_t &out = map.bsp.dfaces.emplace_back();
 
     // emit lmshift
-    map.exported_lmshifts.push_back(face->lmshift[1]);
+    map.exported_lmshifts.push_back(face->lmshift);
     Q_assert(map.bsp.dfaces.size() == map.exported_lmshifts.size());
 
     out.planenum = ExportMapPlane(face->planenum);
@@ -458,7 +458,7 @@ static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t
     if (ShouldOmitFace(f))
         return;
 
-    if (f->lmshift[1] != 4)
+    if (f->lmshift != 4)
         map.needslmshifts = true;
 
     facesCount++;
@@ -597,7 +597,7 @@ see also FindPortalSide which populates p->side
 */
 static face_t *FaceFromPortal(portal_t *p, int pside)
 {
-    face_t *side = p->side;
+    side_t *side = p->side;
     if (!side)
         return nullptr;	// portal does not bridge different visible contents
 
@@ -605,7 +605,7 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
 
     f->texinfo = side->texinfo;
     f->planenum = side->planenum;
-    f->planeside = static_cast<side_t>(pside);
+    f->planeside = static_cast<planeside_t>(pside);
     f->portal = p;
     f->lmshift = side->lmshift;
 
@@ -632,15 +632,12 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
     if (pside)
     {
         f->w = p->winding->flip();
-        // fixme-brushbsp: was just `f->contents` on qbsp3
-        f->contents[0] = p->nodes[1]->contents;
-        f->contents[1] = p->nodes[0]->contents;
+        f->contents = p->nodes[1]->contents;
     }
     else
     {
         f->w = *p->winding;
-        f->contents[0] = p->nodes[0]->contents;
-        f->contents[1] = p->nodes[1]->contents;
+        f->contents = p->nodes[0]->contents;
     }
 
     UpdateFaceSphere(f);

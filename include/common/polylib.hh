@@ -540,7 +540,7 @@ public:
 
     // dists/sides can be null, or must have (size() + 1) reserved
     inline std::array<size_t, SIDE_TOTAL> calc_sides(
-        const qplane3d &plane, vec_t *dists, side_t *sides, const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
+        const qplane3d &plane, vec_t *dists, planeside_t *sides, const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         std::array<size_t, SIDE_TOTAL> counts{};
 
@@ -554,7 +554,7 @@ public:
                 dists[i] = dot;
             }
 
-            side_t side;
+            planeside_t side;
 
             if (dot > on_epsilon)
                 side = SIDE_FRONT;
@@ -593,7 +593,7 @@ public:
         const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (count + 1));
-        side_t *sides = (side_t *)alloca(sizeof(side_t) * (count + 1));
+        planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (count + 1));
 
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
 

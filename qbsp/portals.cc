@@ -24,7 +24,7 @@
 #include <qbsp/portals.hh>
 
 #include <qbsp/map.hh>
-#include <qbsp/solidbsp.hh>
+#include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 
 #include <atomic>
@@ -98,7 +98,7 @@ void MakeHeadnodePortals(tree_t *tree)
     int i, j, n;
     portal_t *p, *portals[6];
     qbsp_plane_t bplanes[6];
-    side_t side;
+    planeside_t side;
 
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = tree->bounds.grow(SIDESPACE);
@@ -167,7 +167,7 @@ std::optional<winding_t> BaseWindingForNode(node_t *node)
     {
         plane = map.planes.at(np->planenum);
 
-        const side_t keep = (np->children[0] == node) ?
+        const planeside_t keep = (np->children[0] == node) ?
             SIDE_FRONT : SIDE_BACK;
 
         w = w->clip(plane, BASE_WINDING_EPSILON, false)[keep];
@@ -247,7 +247,7 @@ void SplitNodePortals(node_t *node, portalstats_t &stats)
     portal_t *next_portal = nullptr;
     for (portal_t *p = node->portals; p ; p = next_portal)
     {
-        side_t side;
+        planeside_t side;
         if (p->nodes[SIDE_FRONT] == node)
             side = SIDE_FRONT;
         else if (p->nodes[SIDE_BACK] == node)
@@ -445,7 +445,7 @@ static void FindPortalSide(portal_t *p)
         return;
 
     int planenum = p->onnode->planenum;
-    face_t *bestside = nullptr;
+    side_t *bestside = nullptr;
     float bestdot = 0;
 
     for (int j = 0; j < 2; j++)
@@ -460,7 +460,7 @@ static void FindPortalSide(portal_t *p)
             auto *brush = *it;
             if (!options.target_game->contents_contains(brush->contents, viscontents))
                 continue;
-            for (face_t &side : brush->faces)
+            for (auto &side : brush->sides)
             {
                 // fixme-brushbsp: port these
 //                if (side.bevel)
@@ -537,7 +537,7 @@ void MarkVisibleSides(tree_t *tree, mapentity_t* entity)
 
     // clear all the visible flags
     for (auto &brush : entity->brushes) {
-        for (auto &face : brush->faces) {
+        for (auto &face : brush->sides) {
             face.visible = false;
         }
     }

@@ -332,10 +332,10 @@ struct portal_t;
 struct face_t : face_fragment_t
 {
     int planenum;
-    side_t planeside; // which side is the front of the face
+    planeside_t planeside; // which side is the front of the face
     int texinfo;
-    twosided<contentflags_t> contents;
-    twosided<int16_t> lmshift;
+    contentflags_t contents; // contents on the front of the face
+    int16_t lmshift;
 
     qvec3d origin;
     vec_t radius;
@@ -343,17 +343,12 @@ struct face_t : face_fragment_t
     // filled by TJunc
     std::vector<face_fragment_t> fragments;
 
-    // fixme-brushbsp: move to a brush_side_t struct
-    bool onnode; // has this face been used as a BSP node plane yet?
-    bool visible = true; // can any part of this side be seen from non-void parts of the level?
-                  // non-visible means we can discard the brush side 
-                  // (avoiding generating a BSP spit, so expanding it outwards)
     portal_t *portal;
 };
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
-struct brush_t;
+struct bspbrush_t;
 
 struct node_t
 {
@@ -369,7 +364,7 @@ struct node_t
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
-    std::vector<brush_t *> original_brushes;
+    std::vector<bspbrush_t *> original_brushes;
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     portal_t *portals;
     int visleafnum; // -1 = solid

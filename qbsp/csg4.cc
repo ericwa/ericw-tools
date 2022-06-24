@@ -23,7 +23,7 @@
 #include <qbsp/brush.hh>
 #include <qbsp/csg4.hh>
 #include <qbsp/map.hh>
-#include <qbsp/solidbsp.hh>
+#include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 
 #include <atomic>
@@ -71,6 +71,16 @@ face_t* CopyFace(const face_t* in)
 }
 
 void UpdateFaceSphere(face_t *in)
+{
+    in->origin = in->w.center();
+    in->radius = 0;
+    for (size_t i = 0; i < in->w.size(); i++) {
+        in->radius = max(in->radius, qv::distance2(in->w[i], in->origin));
+    }
+    in->radius = sqrt(in->radius);
+}
+
+void UpdateFaceSphere(side_t *in)
 {
     in->origin = in->w.center();
     in->radius = 0;
@@ -131,9 +141,7 @@ face_t *MirrorFace(const face_t *face)
 {
     face_t *newface = NewFaceFromFace(face);
     newface->w = face->w.flip();
-    newface->planeside = static_cast<side_t>(face->planeside ^ 1);
-    newface->contents.swap();
-    newface->lmshift.swap();
+    newface->planeside = static_cast<planeside_t>(face->planeside ^ 1);
 
     return newface;
 }

@@ -26,6 +26,8 @@
 
 #include <atomic>
 
+struct side_t;
+
 struct portal_t
 {
     int planenum;
@@ -35,7 +37,7 @@ struct portal_t
     std::optional<winding_t> winding;
 
     bool sidefound; // false if ->side hasn't been checked
-    face_t *side; // NULL = non-visible // fixme-brushbsp: change to side_t
+    side_t *side; // NULL = non-visible
     face_t *face[2]; // output face in bsp file
 };
 

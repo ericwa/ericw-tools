@@ -65,6 +65,17 @@ qplane3d Face_Plane(const face_t *face)
     return result;
 }
 
+qplane3d Face_Plane(const side_t *face)
+{
+    const qplane3d &result = map.planes.at(face->planenum);
+
+    if (face->planeside) {
+        return -result;
+    }
+
+    return result;
+}
+
 /*
 =================
 CheckFace
@@ -72,7 +83,7 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-static void CheckFace(face_t *face, const mapface_t &sourceface)
+static void CheckFace(side_t *face, const mapface_t &sourceface)
 {
     const qbsp_plane_t &plane = map.planes.at(face->planenum);
 
@@ -206,7 +217,7 @@ static void PlaneHash_Add(const qplane3d &p, int index)
  * NewPlane
  * - Returns a global plane number and the side that will be the front
  */
-static int NewPlane(const qplane3d &plane, side_t *side)
+static int NewPlane(const qplane3d &plane, planeside_t *side)
 {
     vec_t len = qv::length(plane.normal);
 
@@ -235,7 +246,7 @@ static int NewPlane(const qplane3d &plane, side_t *side)
  * - Returns a global plane number and the side that will be the front
  * - if `side` is null, only an exact match will be fetched.
  */
-int FindPlane(const qplane3d &plane, side_t *side)
+int FindPlane(const qplane3d &plane, planeside_t *side)
 {
     for (int i : map.planehash[plane_hash_fn(plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
@@ -268,7 +279,7 @@ int FindPositivePlane(int planenum)
     return FindPlane(-plane, nullptr);
 }
 
-int FindPositivePlane(const qplane3d &plane, side_t *side)
+int FindPositivePlane(const qplane3d &plane, planeside_t *side)
 {
     int planenum = FindPlane(plane, side);
     int positive_plane = FindPositivePlane(planenum);
@@ -358,13 +369,13 @@ static bool MapBrush_IsHint(const mapbrush_t &brush)
 CreateBrushFaces
 =================
 */
-static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
+static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
     const rotation_t rottype = rotation_t::none, const qvec3d &rotate_offset = {})
 {
     vec_t r;
     std::optional<winding_t> w;
     qbsp_plane_t plane;
-    std::vector<face_t> facelist;
+    std::vector<side_t> facelist;
     qvec3d point;
     vec_t max, min;
 
@@ -405,7 +416,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         }
 
         // this face is a keeper
-        face_t &f = facelist.emplace_back();
+        side_t &f = facelist.emplace_back();
         f.planenum = PLANENUM_LEAF;
 
         f.w.resize(w->size());
@@ -660,7 +671,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
 ExpandBrush
 =============
 */
-static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::vector<face_t> &facelist)
+static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::vector<side_t> &facelist)
 {
     int x, s;
     qbsp_plane_t plane;
@@ -755,11 +766,11 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
-    std::vector<face_t> facelist;
+    std::vector<side_t> facelist;
 
     // create the faces
 
@@ -796,9 +807,9 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
     }
 
     // create the brush
-    brush_t brush{};
+    bspbrush_t brush{};
     brush.contents = contents;
-    brush.faces = std::move(facelist);
+    brush.sides = std::move(facelist);
     brush.bounds = hullbrush.bounds;
     return brush;
 }
@@ -826,7 +837,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 continue;
             }
 
-            std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
+            std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
 
             if (brush) {
                 rotate_offset = brush->bounds.centroid();
@@ -946,7 +957,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          */
         if (hullnum != HULL_COLLISION && contents.is_clip(options.target_game)) {
             if (hullnum == 0) {
-                std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+                std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
 
                 if (brush) {
                     dst->bounds += brush->bounds;
@@ -996,21 +1007,21 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+        std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
             continue;
 
         brush->lmshift = lmshift;
 
-        for (auto &face : brush->faces)
-            face.lmshift = { (short) lmshift, (short) lmshift };
+        for (auto &face : brush->sides)
+            face.lmshift = lmshift;
 
         if (classname == std::string_view("func_areaportal")) {
             brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
         }
 
         options.target_game->count_contents_in_stats(brush->contents, stats);
-        dst->brushes.push_back(std::make_unique<brush_t>(brush.value()));
+        dst->brushes.push_back(std::make_unique<bspbrush_t>(brush.value()));
         dst->bounds += brush->bounds;
     }
 
@@ -1057,10 +1068,10 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
     options.target_game->print_content_stats(stats, "brushes");
 }
 
-void brush_t::update_bounds()
+void bspbrush_t::update_bounds()
 {
     this->bounds = {};
-    for (const face_t &face : faces) {
+    for (const auto &face : sides) {
         this->bounds = this->bounds.unionWith(face.w.bounds());
     }
 }
