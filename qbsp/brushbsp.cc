@@ -569,10 +569,10 @@ BrushMostlyOnSide
 
 ==================
 */
-side_t BrushMostlyOnSide(const bspbrush_t &brush, const qplane3d &plane)
+planeside_t BrushMostlyOnSide(const bspbrush_t &brush, const qplane3d &plane)
 {
     vec_t max = 0;
-    side_t side = SIDE_FRONT;
+    planeside_t side = SIDE_FRONT;
     for (auto &face : brush.faces) {
         for (size_t j = 0; j < face.w.size(); j++) {
             vec_t d = qv::dot(face.w[j], plane.normal) - plane.dist;
@@ -673,7 +673,7 @@ twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> bru
     }
 
     if (!w || WindingIsTiny(*w)) { // the brush isn't really split
-        side_t side = BrushMostlyOnSide(*brush, split);
+        planeside_t side = BrushMostlyOnSide(*brush, split);
         if (side == SIDE_FRONT)
             result.front = std::move(brush);
         else

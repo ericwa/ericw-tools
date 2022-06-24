@@ -332,7 +332,7 @@ struct portal_t;
 struct face_t : face_fragment_t
 {
     int planenum;
-    side_t planeside; // which side is the front of the face
+    planeside_t planeside; // which side is the front of the face
     int texinfo;
     twosided<contentflags_t> contents;
     twosided<int16_t> lmshift;

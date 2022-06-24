@@ -131,7 +131,7 @@ face_t *MirrorFace(const face_t *face)
 {
     face_t *newface = NewFaceFromFace(face);
     newface->w = face->w.flip();
-    newface->planeside = static_cast<side_t>(face->planeside ^ 1);
+    newface->planeside = static_cast<planeside_t>(face->planeside ^ 1);
     newface->contents.swap();
     newface->lmshift.swap();
 

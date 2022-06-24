@@ -605,7 +605,7 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
 
     f->texinfo = side->texinfo;
     f->planenum = side->planenum;
-    f->planeside = static_cast<side_t>(pside);
+    f->planeside = static_cast<planeside_t>(pside);
     f->portal = p;
     f->lmshift = side->lmshift;
 

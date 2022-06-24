@@ -206,7 +206,7 @@ static void PlaneHash_Add(const qplane3d &p, int index)
  * NewPlane
  * - Returns a global plane number and the side that will be the front
  */
-static int NewPlane(const qplane3d &plane, side_t *side)
+static int NewPlane(const qplane3d &plane, planeside_t *side)
 {
     vec_t len = qv::length(plane.normal);
 
@@ -235,7 +235,7 @@ static int NewPlane(const qplane3d &plane, side_t *side)
  * - Returns a global plane number and the side that will be the front
  * - if `side` is null, only an exact match will be fetched.
  */
-int FindPlane(const qplane3d &plane, side_t *side)
+int FindPlane(const qplane3d &plane, planeside_t *side)
 {
     for (int i : map.planehash[plane_hash_fn(plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
@@ -268,7 +268,7 @@ int FindPositivePlane(int planenum)
     return FindPlane(-plane, nullptr);
 }
 
-int FindPositivePlane(const qplane3d &plane, side_t *side)
+int FindPositivePlane(const qplane3d &plane, planeside_t *side)
 {
     int planenum = FindPlane(plane, side);
     int positive_plane = FindPositivePlane(planenum);
