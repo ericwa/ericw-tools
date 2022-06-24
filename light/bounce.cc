@@ -62,6 +62,7 @@ public:
 static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, winding_t &w)
 {
     unique_ptr<patch_t> p = std::make_unique<patch_t>();
+
     p->w = std::move(w);
 
     // cache some stuff
@@ -114,8 +115,7 @@ qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
     return {127};
 }
 
-template<typename T>
-static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorByStyle, const qvec3d &surfnormal,
+static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3f> &colorByStyle, const qvec3d &surfnormal,
     vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
@@ -142,7 +142,6 @@ static void AddBounceLight(const T &pos, const std::map<int, qvec3f> &colorBySty
     l.componentwiseMaxColor = componentwiseMaxColor;
     l.surfnormal = surfnormal;
     l.area = area;
-    l.bounds = qvec3d(0);
 
     if (options.visapprox.value() == visapprox_t::VIS) {
         l.leaf = Light_PointInLeaf(bsp, pos);
