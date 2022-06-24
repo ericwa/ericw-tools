@@ -125,8 +125,9 @@ public:
  */
 
 std::string TargetnameForLightStyle(int style);
-const std::vector<std::unique_ptr<light_t>> &GetLights();
-const std::vector<sun_t> &GetSuns();
+std::vector<std::unique_ptr<light_t>> &GetLights();
+std::vector<sun_t> &GetSuns();
+std::vector<entdict_t> &GetRadLights();
 
 const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates();
 

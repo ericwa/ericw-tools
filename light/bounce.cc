@@ -49,36 +49,6 @@ mutex bouncelights_lock;
 static std::vector<bouncelight_t> bouncelights;
 std::map<int, std::vector<int>> bouncelightsByFacenum;
 
-class patch_t
-{
-public:
-    winding_t w;
-    qvec3d center;
-    qvec3d samplepoint; // 1 unit above center
-    qplane3d plane;
-    std::map<int, qvec3f> lightByStyle;
-};
-
-static unique_ptr<patch_t> MakePatch(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, winding_t &w)
-{
-    unique_ptr<patch_t> p = std::make_unique<patch_t>();
-
-    p->w = std::move(w);
-
-    // cache some stuff
-    p->center = p->w.center();
-    p->plane = p->w.plane();
-
-    // nudge the cernter point 1 unit off
-    p->samplepoint = p->center + p->plane.normal;
-
-    // calculate direct light
-
-    p->lightByStyle = GetDirectLighting(bsp, cfg, p->samplepoint, p->plane.normal);
-
-    return p;
-}
-
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
     // make bounce light, only if this face is shadow casting
@@ -115,7 +85,7 @@ qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
     return {127};
 }
 
-static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3f> &colorByStyle, const qvec3d &surfnormal,
+static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3d> &colorByStyle, const qvec3d &surfnormal,
     vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
@@ -178,52 +148,38 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return;
     }
 
-    vector<unique_ptr<patch_t>> patches;
+    auto &surf_ptr = LightSurfaces()[&face - bsp->dfaces.data()];
+
+    if (!surf_ptr) {
+        return;
+    }
+
+    auto &surf = *surf_ptr.get();
 
     winding_t winding = winding_t::from_face(bsp, &face);
 
-    // grab some info about the face winding
-    const vec_t facearea = winding.area();
-
-    // degenerate face
-    if (!facearea) {
-        return;
-    }
+    const vec_t sample_scalar = 1.f / winding.area();
 
     qplane3d faceplane = winding.plane();
 
     qvec3d facemidpoint = winding.center();
     facemidpoint += faceplane.normal; // lift 1 unit
 
-    winding.dice(64.0f, [&](winding_t &w) {
-        patches.push_back(MakePatch(bsp, cfg, w));
-    });
-
     // average them, area weighted
-    map<int, qvec3f> sum;
-    float totalarea = 0;
+    map<int, qvec3d> sum;
 
-    for (const auto &patch : patches) {
-        const float patcharea = patch->w.area();
-        totalarea += patcharea;
-
-        for (const auto &styleColor : patch->lightByStyle) {
-            sum[styleColor.first] = sum[styleColor.first] + (styleColor.second * patcharea);
+    for (const auto &lightmap : surf.lightmapsByStyle) {
+        for (const auto &sample : lightmap.samples) {
+            sum[lightmap.style] += sample.color;
         }
-        // fmt::print("  {} {} {}\n", patch->directlight[0], patch->directlight[1], patch->directlight[2]);
     }
 
-    // avoid small, or zero-area patches ("sum" would be nan)
-    if (totalarea < 1) {
-        return;
-    }
-
-    qvec3f total = {};
+    qvec3d total = {};
 
     for (auto &styleColor : sum) {
-        styleColor.second *= (1.0f / totalarea);
+        styleColor.second *= sample_scalar;
         styleColor.second /= 255.0f;
-
+        styleColor.second *= cfg.bouncescale.value();
         total += styleColor.second;
     }
     
@@ -233,20 +189,17 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
-    qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, &face)) / 255.0f;
-    qvec3f blendedcolor = mix(qvec3f{127.f / 255.f}, texturecolor, cfg.bouncecolorscale.value());
+    qvec3d texturecolor = qvec3d(Face_LookupTextureColor(bsp, &face)) / 255.0f;
+    qvec3d blendedcolor = mix(qvec3d{127. / 255.}, texturecolor, cfg.bouncecolorscale.value());
 
     // final colors to emit
-    map<int, qvec3f> emitcolors;
+    map<int, qvec3d> emitcolors;
+
     for (const auto &styleColor : sum) {
-        qvec3f emitcolor{};
-        for (int k = 0; k < 3; k++) {
-            emitcolor[k] = styleColor.second[k] * blendedcolor[k];
-        }
-        emitcolors[styleColor.first] = emitcolor;
+        emitcolors[styleColor.first] = styleColor.second * blendedcolor;
     }
 
-    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, facearea, &face, bsp);
+    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, winding.area(), &face, bsp);
 }
 
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)

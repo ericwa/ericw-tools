@@ -83,7 +83,8 @@ float DirtAtPoint(const settings::worldspawn_keys &cfg, raystream_intersection_t
     const qvec3d &normal, const modelinfo_t *selfshadow);
 std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup, const settings::worldspawn_keys &cfg);
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);
-void LightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
+void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
+void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 void FinishLightmapSurface(
     const mbsp_t *bsp, lightsurf_t *lightsurf);
 void SaveLightmapSurface(

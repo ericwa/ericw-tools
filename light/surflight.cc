@@ -41,10 +41,15 @@ See file, 'COPYING', for details.
 using namespace std;
 using namespace polylib;
 
-mutex surfacelights_lock;
-std::vector<surfacelight_t> surfacelights;
-std::map<int, std::vector<int>> surfacelightsByFacenum;
-size_t total_surflight_points = 0;
+static mutex surfacelights_lock;
+static std::vector<surfacelight_t> surfacelights;
+static std::map<int, std::vector<int>> surfacelightsByFacenum;
+static size_t total_surflight_points = 0;
+
+std::vector<surfacelight_t> &GetSurfaceLights()
+{
+    return surfacelights;
+}
 
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face, std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
@@ -168,11 +173,6 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
                 surflight->epairs->get_int("_surface_is_sky"), surflight->epairs->get_int("style"), surflight->light.value());
         }
     }
-}
-
-const std::vector<surfacelight_t> &SurfaceLights()
-{
-    return surfacelights;
 }
 
 // No surflight_debug (yet?), so unused...

@@ -127,7 +127,7 @@ void light_settings::postinitialize(int argc, const char **argv)
 
     if (radlights.isChanged()) {
         if (!ParseLightsFile(*radlights.values().begin())) {
-            logging::print("Unable to read surfacelights file {}\n", *radlights.values().begin());
+            logging::print("Unable to read surface lights file {}\n", *radlights.values().begin());
         }
     }
 
@@ -519,30 +519,36 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     MakeRadiositySurfaceLights(options, &bsp);
 
-    if (bouncerequired && !options.nolighting.value()) {
-        if (bouncerequired) {
-            MakeBounceLights(options, &bsp);
-        }
-    }
-
-#if 0
-    lightbatchthread_info_t info;
-    info.all_batches = MakeLightingBatches(bsp);
-    info.all_contribFaces = MakeContributingFaces(bsp);
-    info.bsp = bsp;
-    RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
-#else
-    logging::print("--- LightThread ---\n"); // mxd
+    logging::print("--- Direct Lighting ---\n"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
         if (light_surfaces[i]) {
 #if defined(HAVE_EMBREE) && defined (__SSE2__)
             _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
 
-            LightFace(&bsp, *light_surfaces[i].get(), options);
+            DirectLightFace(&bsp, *light_surfaces[i].get(), options);
         }
     });
-#endif
+
+    if (bouncerequired && !options.nolighting.value()) {
+        GetLights().clear();
+        GetRadLights().clear();
+        GetSuns().clear();
+        GetSurfaceLights().clear();
+
+        MakeBounceLights(options, &bsp);
+
+        logging::print("--- Indirect Lighting ---\n"); // mxd
+        logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
+            if (light_surfaces[i]) {
+    #if defined(HAVE_EMBREE) && defined (__SSE2__)
+                _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+    #endif
+
+                IndirectLightFace(&bsp, *light_surfaces[i].get(), options);
+            }
+        });
+    }
 
     SaveLightmapSurfaces(&bsp);
 

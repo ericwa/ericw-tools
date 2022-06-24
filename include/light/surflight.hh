@@ -45,6 +45,6 @@ struct surfacelight_t
     int32_t style;
 };
 
-const std::vector<surfacelight_t> &SurfaceLights();
+std::vector<surfacelight_t> &GetSurfaceLights();
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
 void MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);

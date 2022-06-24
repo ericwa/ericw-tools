@@ -1407,139 +1407,6 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     return fabs(GetLightValue(cfg, entity, dist)) <= options.gate.value();
 }
 
-/*
- * ================
- * GetDirectLighting
- *
- * Mesaures direct lighting at a point, currently only used for bounce lighting.
- * FIXME: factor out / merge with LightFace
- *
- * This gathers up how much a patch should bounce back into the level,
- * per-lightstyle.
- * ================
- */
-std::map<int, qvec3f> GetDirectLighting(
-    const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const qvec3d &origin, const qvec3d &normal)
-{
-    std::map<int, qvec3f> result;
-
-    // mxd. Surface lights...
-    for (const surfacelight_t &vpl : SurfaceLights()) {
-        // Bounce light falloff. Uses light surface center and intensity based on face area
-        qvec3d surfpointToLightDir;
-        const float surfpointToLightDist =
-            max(128.0, GetDir(origin, vpl.pos,
-                           surfpointToLightDir)); // Clamp away hotspots, also avoid division by 0...
-        const vec_t angle = qv::dot(surfpointToLightDir, normal);
-        if (angle <= 0)
-            continue;
-
-        // Exponential falloff
-        const float add = (vpl.totalintensity / SQR(surfpointToLightDist)) * angle;
-        if (add <= 0)
-            continue;
-
-        // Write out the final color
-        // color_out is expected to be in [0..255] range, vpl->color is in [0..1] range.
-        qvec3d color = (vpl.color * add) * cfg.surflightbouncescale.value();
-
-        // NOTE: Skip negative lights, which would make no sense to bounce!
-        if (LightSample_Brightness(color) <= options.gate.value())
-            continue;
-
-        if (!TestLight(vpl.pos, origin, nullptr).blocked)
-            continue;
-
-        result[vpl.style] += color;
-    }
-
-    for (const auto &entity : GetLights()) {
-        qvec3d surfpointToLightDir;
-        float surfpointToLightDist;
-        qvec3d color, normalcontrib;
-
-        if (entity->nostaticlight.value()) {
-            continue;
-        }
-
-        // Skip styled lights if "bouncestyled" setting is off.
-        if (entity->style.value() != 0 && !cfg.bouncestyled.value()) {
-            continue;
-        }
-
-        GetLightContrib(
-            cfg, entity.get(), normal, origin, false, color, surfpointToLightDir, normalcontrib, &surfpointToLightDist);
-
-        color *= entity->bouncescale.value();
-
-        // NOTE: Skip negative lights, which would make no sense to bounce!
-        if (LightSample_Brightness(color) <= options.gate.value()) {
-            continue;
-        }
-
-        const hitresult_t hit = TestLight(entity->origin.value(), origin, NULL);
-        if (!hit.blocked) {
-            continue;
-        }
-
-        int lightstyle = entity->style.value();
-        if (lightstyle == 0) {
-            // switchable shadow only blocks style 0 lights, otherwise switchable lights become always on when shadow is
-            // hidden
-            lightstyle = hit.passedSwitchableShadowStyle;
-        }
-
-        result[lightstyle] += color;
-    }
-
-    for (const sun_t &sun : GetSuns()) {
-        // Skip styled lights if "bouncestyled" setting is off.
-        if (sun.style != 0 && !cfg.bouncestyled.value()) {
-            continue;
-        }
-
-        // NOTE: Skip negative lights, which would make no sense to bounce!
-        if (sun.sunlight < 0)
-            continue;
-
-        qvec3d originLightDir = qv::normalize(sun.sunvec);
-
-        vec_t cosangle = qv::dot(originLightDir, normal);
-        if (cosangle < 0) {
-            continue;
-        }
-
-        // apply anglescale
-        cosangle = (1.0 - sun.anglescale) + sun.anglescale * cosangle;
-
-        const mface_t *face = nullptr;
-        const hitresult_t hit = TestSky(origin, sun.sunvec, NULL, &face);
-        if (!hit.blocked) {
-            continue;
-        }
-
-        int lightstyle = sun.style;
-        if (lightstyle == 0) {
-            lightstyle = hit.passedSwitchableShadowStyle; // switchable shadow only blocks style 0 suns
-        }
-
-        // check if we hit the wrong texture
-        // TODO: this could be faster!
-        // TODO: deduplicate from LightFace_Sky
-        if (!sun.suntexture.empty()) {
-            const char *facetex = Face_TextureName(bsp, face);
-            if (sun.suntexture != facetex) {
-                continue;
-            }
-        }
-
-        const qvec3f sunContrib = qvec3f(sun.sunlight_color) * (cosangle * sun.sunlight / 255.0f);
-        result[lightstyle] += sunContrib;
-    }
-
-    return result;
-}
-
 static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *entleaf)
 {
     if (pvs.empty()) {
@@ -1984,11 +1851,10 @@ inline qvec3f BounceLight_ColorAtDist(
     }
 
     const float dist2 = (dist * dist);
-    const float scale = (1.0f / dist2) * cfg.bouncescale.value();
+    const float scale = (1.0f / dist2);
 
     // get light contribution
-    const qvec3f result = bounceLightColor * area * (255.0f * scale);
-    return result;
+    return bounceLightColor * area * (255.0f * scale);
 }
 
 // mxd. Surface light falloff. Returns color in [0,255]
@@ -2140,7 +2006,6 @@ static void LightFace_Bounce(
     if (!(options.debugmode == debugmodes::bounce || options.debugmode == debugmodes::none))
         return;
 
-#if 1
     for (const bouncelight_t &vpl : BounceLights()) {
         if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaf)) {
             continue;
@@ -2216,106 +2081,6 @@ static void LightFace_Bounce(
                 Lightmap_Save(lightmaps, lightsurf, lightmap, style);
         }
     }
-
-#else
-
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
-
-    const int N = 1024;
-    raystream_t *rs = MakeRayStream(N);
-
-    for (int i = 0; i < lightsurf->numpoints; i++) {
-        if (lightsurf->occluded[i])
-            continue;
-
-        const qvec3f surfpoint = vec3_t_to_glm(lightsurf->points[i]);
-        const qvec3f surfnormal = vec3_t_to_glm(lightsurf->normals[i]);
-
-        const qmat3x3f rotationMatrix = RotateFromUpToSurfaceNormal(surfnormal);
-
-        rs->clearPushedRays();
-
-        for (int j = 0; j < N; j++) {
-            const qvec3f randomDirInUpCoordSystem = CosineWeightedHemisphereSample(Random(), Random());
-            const qvec3f rayDir = rotationMatrix * randomDirInUpCoordSystem;
-
-            if (!(qv::dot(rayDir, surfnormal) > -0.01)) {
-                // printf("bad dot\n");
-            }
-
-            rs->pushRay(i, surfpoint, rayDir, 8192);
-        }
-
-        rs->tracePushedRaysIntersection(lightsurf->modelinfo);
-
-        qvec3f colorAvg{};
-        int Nhits = 0;
-
-        for (int j = 0; j < N; j++) {
-            if (rs->getPushedRayHitType(j) == hittype_t::SKY)
-                continue;
-
-            const mface_t *face = rs->getPushedRayHitFace(j);
-            if (face == nullptr)
-                continue;
-
-            const int fnum = Face_GetNum(bsp, face);
-            const auto lights = BounceLightsForFaceNum(fnum); // FIXME: Slow
-            if (lights.empty())
-                continue;
-
-            Q_assert(lights.size() == 1);
-            const bouncelight_t &vpl = lights[0];
-
-            const auto it = vpl.colorByStyle.find(0);
-            if (it == vpl.colorByStyle.end())
-                continue;
-            const qvec3f color = it->second;
-
-            const qvec3f raydir = rs->getPushedRayDir(j);
-            if (!(qv::dot(raydir, surfnormal) > -0.01)) {
-                // printf("bad dot\n");
-                continue;
-            }
-
-            if (!(fabs(1.0f - qv::length(raydir)) < 0.1)) {
-                // fmt::print("bad raydir: {} {} {} (len {})\n", raydir.x, raydir.y, raydir.z, qv::length(raydir));
-                continue;
-            }
-
-            const float dist = rs->getPushedRayHitDist(j);
-            if (dist <= 0) {
-                // printf("bad dist\n");
-                continue;
-            }
-
-            const qplane3f plane = Face_Plane_E(bsp, face);
-            float scale = qv::dot(plane.normal(), -raydir);
-            if (scale < 0)
-                scale = 0;
-
-            // const qvec3f indirect = GetIndirectLighting(cfg, &vpl, color, -raydir, dist, surfpoint, surfnormal);
-
-            Q_assert(!std::isnan(color.x));
-            Q_assert(!std::isnan(color.y));
-            Q_assert(!std::isnan(color.z));
-
-            colorAvg += (color * scale * 255.0f);
-            Nhits++;
-        }
-
-        if (Nhits) {
-            colorAvg /= Nhits;
-
-            lightsample_t *sample = &lightmap->samples[i];
-            sample->color += colorAvg;
-        }
-    }
-
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
-    delete rs;
-
-#endif
 }
 
 static void // mxd
@@ -2323,7 +2088,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    for (const surfacelight_t &vpl : SurfaceLights()) {
+    for (const surfacelight_t &vpl : GetSurfaceLights()) {
         if (SurfaceLight_SphereCull(&vpl, lightsurf))
             continue;
 
@@ -3394,7 +3159,7 @@ std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mfac
  * LightFace
  * ============
  */
-void LightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg)
+void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg)
 {
     auto face = lightsurf.face;
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -3433,9 +3198,6 @@ void LightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worlds
 
             // mxd. Add surface lights...
             LightFace_SurfaceLight(bsp, &lightsurf, lightmaps);
-
-            /* add indirect lighting */
-            LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
         }
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
@@ -3469,11 +3231,6 @@ void LightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worlds
         }
     }
 
-    /* bounce debug */
-    // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
-    if (options.debugmode == debugmodes::bounce)
-        LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
-
     /* replace lightmaps with AO for debugging */
     if (options.debugmode == debugmodes::dirt)
         LightFace_DirtDebug(&lightsurf, lightmaps);
@@ -3489,4 +3246,40 @@ void LightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worlds
 
     if (options.debugmode == debugmodes::debugneighbours)
         LightFace_DebugNeighbours(&lightsurf, lightmaps);
+}
+
+
+/*
+ * ============
+ * LightFace
+ * ============
+ */
+void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg)
+{
+    auto face = lightsurf.face;
+    const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
+
+    lightmapdict_t *lightmaps = &lightsurf.lightmapsByStyle;
+
+    /*
+     * The lighting procedure is: cast all positive lights, fix
+     * minlight levels, then cast all negative lights. Finally, we
+     * clamp any values that may have gone negative.
+     */
+
+    if (options.debugmode == debugmodes::none) {
+        const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+
+        /* positive lights */
+        if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
+
+            /* add indirect lighting */
+            LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
+        }
+    }
+
+    /* bounce debug */
+    // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
+    if (options.debugmode == debugmodes::bounce)
+        LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
 }

@@ -34,14 +34,19 @@ std::vector<sun_t> all_suns;
 std::vector<entdict_t> entdicts;
 std::vector<entdict_t> radlights;
 
-const std::vector<std::unique_ptr<light_t>> &GetLights()
+std::vector<std::unique_ptr<light_t>> &GetLights()
 {
     return all_lights;
 }
 
-const std::vector<sun_t> &GetSuns()
+std::vector<sun_t> &GetSuns()
 {
     return all_suns;
+}
+
+std::vector<entdict_t> &GetRadLights()
+{
+    return radlights;
 }
 
 /* surface lights */
