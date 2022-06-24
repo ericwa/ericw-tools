@@ -460,7 +460,7 @@ static void FindPortalSide(portal_t *p)
             auto *brush = *it;
             if (!options.target_game->contents_contains(brush->contents, viscontents))
                 continue;
-            for (face_t &side : brush->faces)
+            for (face_t &side : brush->sides)
             {
                 // fixme-brushbsp: port these
 //                if (side.bevel)
@@ -537,7 +537,7 @@ void MarkVisibleSides(tree_t *tree, mapentity_t* entity)
 
     // clear all the visible flags
     for (auto &brush : entity->brushes) {
-        for (auto &face : brush->faces) {
+        for (auto &face : brush->sides) {
             face.visible = false;
         }
     }

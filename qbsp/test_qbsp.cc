@@ -354,7 +354,7 @@ TEST_CASE("duplicatePlanes", "[qbsp]")
     std::optional<bspbrush_t> brush =
         LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, {}, rotation_t::none, 0);
     REQUIRE(std::nullopt != brush);
-    CHECK(6 == brush->faces.size());
+    CHECK(6 == brush->sides.size());
 }
 
 /**

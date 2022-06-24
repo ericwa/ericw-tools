@@ -352,7 +352,7 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 static void MarkBrushSidesInvisible(mapentity_t *entity)
 {
     for (auto &brush : entity->brushes) {
-        for (auto &face : brush->faces) {
+        for (auto &face : brush->sides) {
             face.visible = false;
         }
     }
@@ -368,7 +368,7 @@ static void MarkAllBrushSidesVisible_R(node_t *node)
     }
 
     for (auto *brush : node->original_brushes) {
-        for (auto &side : brush->faces) {
+        for (auto &side : brush->sides) {
             side.visible = true;
         }
     }
@@ -410,7 +410,7 @@ static void MarkVisibleBrushSides_R(node_t *node)
             // optimized case: just mark the brush sides in the neighbouring
             // leaf that are coplanar
             for (auto *brush : neighbour_leaf->original_brushes) {
-                for (auto &side : brush->faces) {
+                for (auto &side : brush->sides) {
                     if (side.planenum == portal->planenum) {
                         // we've found a brush side in an original brush in the neighbouring
                         // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.

@@ -798,7 +798,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
     // create the brush
     bspbrush_t brush{};
     brush.contents = contents;
-    brush.faces = std::move(facelist);
+    brush.sides = std::move(facelist);
     brush.bounds = hullbrush.bounds;
     return brush;
 }
@@ -1002,7 +1002,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
         brush->lmshift = lmshift;
 
-        for (auto &face : brush->faces)
+        for (auto &face : brush->sides)
             face.lmshift = { (short) lmshift, (short) lmshift };
 
         if (classname == std::string_view("func_areaportal")) {
@@ -1060,7 +1060,7 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 void bspbrush_t::update_bounds()
 {
     this->bounds = {};
-    for (const face_t &face : faces) {
+    for (const face_t &face : sides) {
         this->bounds = this->bounds.unionWith(face.w.bounds());
     }
 }

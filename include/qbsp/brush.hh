@@ -63,7 +63,7 @@ struct bspbrush_t {
     bspbrush_t *original;
     uint32_t file_order;
     aabb3d bounds;
-    std::vector<face_t> faces;
+    std::vector<face_t> sides;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
     std::optional<uint32_t> outputnumber; /* only set for original brushes */

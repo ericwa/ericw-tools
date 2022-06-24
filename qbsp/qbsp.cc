@@ -301,7 +301,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const bspb
     // add already-present planes
     std::vector<std::tuple<size_t, const face_t *>> planes;
 
-    for (auto &f : b.faces) {
+    for (auto &f : b.sides) {
         int32_t planenum = f.planenum;
 
         if (f.planeside) {
@@ -336,7 +336,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const bspb
 
                 int32_t planenum = FindPlane(new_plane, nullptr);
                 int32_t outputplanenum = ExportMapPlane(planenum);
-                planes.emplace_back(outputplanenum, &b.faces.front());
+                planes.emplace_back(outputplanenum, &b.sides.front());
             }
 
             // if the plane is not in it canonical order, swap it
@@ -384,11 +384,11 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const bspb
                         continue;
                     current.dist = qv::dot(w[j], current.normal);
 
-                    auto it = b.faces.begin();
+                    auto it = b.sides.begin();
 
                     // if all the points on all the sides are
                     // behind this plane, it is a proper edge bevel
-                    for (; it != b.faces.end(); it++) {
+                    for (; it != b.sides.end(); it++) {
                         auto &f = *it;
                         const auto &plane = map.planes.at(f.planenum);
                         qplane3d temp = f.planeside ? -plane : plane;
@@ -410,13 +410,13 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const bspb
                             break;
                     }
 
-                    if (it != b.faces.end())
+                    if (it != b.sides.end())
                         continue; // wasn't part of the outer hull
 
                     // add this plane
                     int32_t planenum = FindPlane(current, nullptr);
                     int32_t outputplanenum = ExportMapPlane(planenum);
-                    planes.emplace_back(outputplanenum, &b.faces.front());
+                    planes.emplace_back(outputplanenum, &b.sides.front());
                 }
             }
         }
@@ -1025,7 +1025,7 @@ static void BSPX_Brushes_AddModel(
 
     for (auto &b : brushes) {
         permodel.numbrushes++;
-        for (auto &f : b->faces) {
+        for (auto &f : b->sides) {
             /*skip axial*/
             const auto &plane = map.planes.at(f.planenum);
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
@@ -1044,7 +1044,7 @@ static void BSPX_Brushes_AddModel(
     for (auto &b : brushes) {
         bspxbrushes_perbrush perbrush{};
 
-        for (auto &f : b->faces) {
+        for (auto &f : b->sides) {
             /*skip axial*/
             const auto &plane = map.planes.at(f.planenum);
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
@@ -1086,7 +1086,7 @@ static void BSPX_Brushes_AddModel(
 
         str <= perbrush;
 
-        for (auto &f : b->faces) {
+        for (auto &f : b->sides) {
             /*skip axial*/
             const auto &plane = map.planes.at(f.planenum);
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
