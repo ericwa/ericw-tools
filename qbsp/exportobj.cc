@@ -73,7 +73,7 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
     }
     
     // fixme-brushbsp
-    fmt::print(f, "usemtl contents{}\n", face->contents[0].native);
+    fmt::print(f, "usemtl contents{}\n", face->contents.native);
     f << 'f';
     for (int i = 0; i < face->w.size(); i++) {
         // .obj vertexes start from 1

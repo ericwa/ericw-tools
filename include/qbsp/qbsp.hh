@@ -334,8 +334,8 @@ struct face_t : face_fragment_t
     int planenum;
     planeside_t planeside; // which side is the front of the face
     int texinfo;
-    twosided<contentflags_t> contents;
-    twosided<int16_t> lmshift;
+    contentflags_t contents; // contents on the front of the face
+    int16_t lmshift;
 
     qvec3d origin;
     vec_t radius;

@@ -34,8 +34,8 @@ struct side_t
     int planenum;
     planeside_t planeside; // which side is the front of the face
     int texinfo;
-    twosided<contentflags_t> contents;
-    twosided<int16_t> lmshift;
+
+    int16_t lmshift;
 
     qvec3d origin;
     vec_t radius;
