@@ -32,7 +32,7 @@
 std::vector<std::unique_ptr<light_t>> all_lights;
 std::vector<sun_t> all_suns;
 std::vector<entdict_t> entdicts;
-static std::vector<entdict_t> radlights;
+std::vector<entdict_t> radlights;
 
 const std::vector<std::unique_ptr<light_t>> &GetLights()
 {
@@ -1030,10 +1030,6 @@ inline void EstimateLightAABB(const std::unique_ptr<light_t> &light)
 
 void EstimateLightVisibility(void)
 {
-    if (options.visapprox.value() != visapprox_t::RAYS) {
-        return;
-    }
-
     logging::print("--- EstimateLightVisibility ---\n");
 
     logging::parallel_for_each(all_lights, EstimateLightAABB);
@@ -1059,8 +1055,9 @@ void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     SetupSuns(cfg);
     SetupSkyDomes(cfg);
     FixLightsOnFaces(bsp);
-    EstimateLightVisibility();
-    if (options.visapprox.value() == visapprox_t::VIS) {
+    if (options.visapprox.value() == visapprox_t::RAYS) {
+        EstimateLightVisibility();
+    } else if (options.visapprox.value() == visapprox_t::VIS) {
         SetupLightLeafnums(bsp);
     }
 

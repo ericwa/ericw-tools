@@ -45,9 +45,9 @@
 using namespace std;
 using namespace polylib;
 
-mutex radlights_lock;
-static std::vector<bouncelight_t> radlights;
-std::map<int, std::vector<int>> radlightsByFacenum;
+mutex bouncelights_lock;
+static std::vector<bouncelight_t> bouncelights;
+std::map<int, std::vector<int>> bouncelightsByFacenum;
 
 class patch_t
 {
@@ -149,22 +149,22 @@ static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3f> &color
         l.bounds = EstimateVisibleBoundsAtPoint(pos);
     }
 
-    unique_lock<mutex> lck{radlights_lock};
-    radlights.push_back(l);
+    unique_lock<mutex> lck{bouncelights_lock};
+    bouncelights.push_back(l);
 
-    const int lastBounceLightIndex = static_cast<int>(radlights.size()) - 1;
-    radlightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
+    const int lastBounceLightIndex = static_cast<int>(bouncelights.size()) - 1;
+    bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
 }
 
 const std::vector<bouncelight_t> &BounceLights()
 {
-    return radlights;
+    return bouncelights;
 }
 
 const std::vector<int> &BounceLightsForFaceNum(int facenum)
 {
-    const auto &vec = radlightsByFacenum.find(facenum);
-    if (vec != radlightsByFacenum.end()) {
+    const auto &vec = bouncelightsByFacenum.find(facenum);
+    if (vec != bouncelightsByFacenum.end()) {
         return vec->second;
     }
 
@@ -257,5 +257,5 @@ void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
         MakeBounceLightsThread(cfg, bsp, face);
     });
 
-    logging::print("{} bounce lights created\n", radlights.size());
+    logging::print("{} bounce lights created\n", bouncelights.size());
 }

@@ -538,6 +538,8 @@ extern std::vector<uint8_t> filebase;
 extern std::vector<uint8_t> lit_filebase;
 extern std::vector<uint8_t> lux_filebase;
 
+std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces();
+
 extern std::vector<surfflags_t> extended_texinfo_flags;
 
 bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf);
