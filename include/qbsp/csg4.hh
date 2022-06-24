@@ -27,7 +27,7 @@
 #include <tuple>
 #include <vector>
 
-struct brush_t;
+struct bspbrush_t;
 struct face_t;
 
 face_t *NewFaceFromFace(const face_t *in);
@@ -35,5 +35,5 @@ face_t *CopyFace(const face_t *in);
 face_t *MirrorFace(const face_t *face);
 std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);
-bool BrushGE(const brush_t &a, const brush_t &b);
-std::vector<std::unique_ptr<brush_t>> ChopBrushes(const std::vector<std::unique_ptr<brush_t>> &input);
+bool BrushGE(const bspbrush_t &a, const bspbrush_t &b);
+std::vector<std::unique_ptr<bspbrush_t>> ChopBrushes(const std::vector<std::unique_ptr<bspbrush_t>> &input);

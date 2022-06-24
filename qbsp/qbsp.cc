@@ -296,7 +296,7 @@ Adds any additional planes necessary to allow the brush to be expanded
 against axial bounding boxes
 =================
 */
-static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brush_t &b)
+static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const bspbrush_t &b)
 {
     // add already-present planes
     std::vector<std::tuple<size_t, const face_t *>> planes;
@@ -1019,7 +1019,7 @@ hull sizes
 */
 
 static void BSPX_Brushes_AddModel(
-    struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<brush_t>> &brushes)
+    struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<bspbrush_t>> &brushes)
 {
     bspxbrushes_permodel permodel{1, modelnum};
 

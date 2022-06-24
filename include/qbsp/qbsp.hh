@@ -353,7 +353,7 @@ struct face_t : face_fragment_t
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
-struct brush_t;
+struct bspbrush_t;
 
 struct node_t
 {
@@ -369,7 +369,7 @@ struct node_t
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
-    std::vector<brush_t *> original_brushes;
+    std::vector<bspbrush_t *> original_brushes;
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     portal_t *portals;
     int visleafnum; // -1 = solid

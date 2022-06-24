@@ -2284,7 +2284,7 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<brush_t>> &list)
+void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<bspbrush_t>> &list)
 {
     logging::print("writing {}\n", name);
     std::ofstream f(name);
@@ -2330,16 +2330,16 @@ from q3map
 */
 static void TestExpandBrushes(const mapentity_t *src)
 {
-    std::vector<std::unique_ptr<brush_t>> hull1brushes;
+    std::vector<std::unique_ptr<bspbrush_t>> hull1brushes;
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        std::optional<brush_t> hull1brush = LoadBrush(
+        std::optional<bspbrush_t> hull1brush = LoadBrush(
             src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
         if (hull1brush) {
             hull1brushes.emplace_back(
-                std::make_unique<brush_t>(std::move(*hull1brush)));
+                std::make_unique<bspbrush_t>(std::move(*hull1brush)));
         }
     }
 

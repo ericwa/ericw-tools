@@ -28,13 +28,12 @@
 
 class mapentity_t;
 
-struct brush_t
-{
+struct bspbrush_t {
     /**
      * The brushes in the mapentity_t::brushes vector are considered originals. Brush fragments created during
      * the BrushBSP will have this pointing back to the original brush in mapentity_t::brushes.
      */
-    brush_t *original;
+    bspbrush_t *original;
     uint32_t file_order;
     aabb3d bounds;
     std::vector<face_t> faces;
@@ -57,7 +56,7 @@ enum class rotation_t
     origin_brush
 };
 
-std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 

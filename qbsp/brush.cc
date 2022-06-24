@@ -755,7 +755,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
@@ -796,7 +796,7 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
     }
 
     // create the brush
-    brush_t brush{};
+    bspbrush_t brush{};
     brush.contents = contents;
     brush.faces = std::move(facelist);
     brush.bounds = hullbrush.bounds;
@@ -826,7 +826,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 continue;
             }
 
-            std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
+            std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
 
             if (brush) {
                 rotate_offset = brush->bounds.centroid();
@@ -946,7 +946,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          */
         if (hullnum != HULL_COLLISION && contents.is_clip(options.target_game)) {
             if (hullnum == 0) {
-                std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+                std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
 
                 if (brush) {
                     dst->bounds += brush->bounds;
@@ -996,7 +996,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        std::optional<brush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+        std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
             continue;
 
@@ -1010,7 +1010,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         }
 
         options.target_game->count_contents_in_stats(brush->contents, stats);
-        dst->brushes.push_back(std::make_unique<brush_t>(brush.value()));
+        dst->brushes.push_back(std::make_unique<bspbrush_t>(brush.value()));
         dst->bounds += brush->bounds;
     }
 
@@ -1057,7 +1057,7 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
     options.target_game->print_content_stats(stats, "brushes");
 }
 
-void brush_t::update_bounds()
+void bspbrush_t::update_bounds()
 {
     this->bounds = {};
     for (const face_t &face : faces) {
