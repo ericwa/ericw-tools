@@ -124,13 +124,6 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
 
 void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bspbrush_t *> &brushes)
 {
-    std::vector<const face_t *> faces;
-
-    for (const bspbrush_t *brush : brushes)
-        for (auto &face : brush->sides)
-            faces.push_back(&face);
-
-    ExportObj_Faces(filesuffix, faces);
 }
 
 static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)

@@ -142,7 +142,7 @@ FaceSide
 For BSP hueristic
 ==================
 */
-static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
+static int FaceSide__(const winding_t &w, const qbsp_plane_t &split)
 {
     bool have_front, have_back;
     int i;
@@ -151,8 +151,8 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
 
     if (split.type < plane_type_t::PLANE_ANYX) {
         /* shortcut for axial planes */
-        const vec_t *p = &in->w[0][static_cast<size_t>(split.type)];
-        for (i = 0; i < in->w.size(); i++, p += 3) {
+        const vec_t *p = &w[0][static_cast<size_t>(split.type)];
+        for (i = 0; i < w.size(); i++, p += 3) {
             if (*p > split.dist + options.epsilon.value()) {
                 if (have_back)
                     return SIDE_ON;
@@ -165,8 +165,8 @@ static int FaceSide__(const face_t *in, const qbsp_plane_t &split)
         }
     } else {
         /* sloping planes take longer */
-        for (i = 0; i < in->w.size(); i++) {
-            const vec_t dot = split.distance_to(in->w[i]);
+        for (i = 0; i < w.size(); i++) {
+            const vec_t dot = split.distance_to(w[i]);
             if (dot > options.epsilon.value()) {
                 if (have_back)
                     return SIDE_ON;
@@ -196,7 +196,19 @@ inline int FaceSide(const face_t *in, const qbsp_plane_t &split)
     else if (dist < -in->radius)
         return SIDE_BACK;
     else
-        return FaceSide__(in, split);
+        return FaceSide__(in->w, split);
+}
+
+inline int FaceSide(const side_t *in, const qbsp_plane_t &split)
+{
+    vec_t dist = split.distance_to(in->origin);
+
+    if (dist > in->radius)
+        return SIDE_FRONT;
+    else if (dist < -in->radius)
+        return SIDE_BACK;
+    else
+        return FaceSide__(in->w, split);
 }
 
 /*
@@ -309,13 +321,13 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static const face_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const aabb3d &bounds)
+static const side_t *ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     vec_t bestaxialmetric = VECT_MAX;
-    face_t *bestaxialsurface = nullptr;
+    side_t *bestaxialsurface = nullptr;
     vec_t bestanymetric = VECT_MAX;
-    face_t *bestanysurface = nullptr;
+    side_t *bestanysurface = nullptr;
 
     for (int pass = 0; pass < 2; pass++) {
         for (auto &brush : brushes) {
@@ -375,12 +387,12 @@ The real BSP heuristic
 fixme-brushbsp: prefer splits that include a lot of brush sides?
 ==================
 */
-static const face_t *ChoosePlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const aabb3d &bounds)
+static const side_t *ChoosePlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const aabb3d &bounds)
 {
     /* pick the plane that splits the least */
     int minsplits = INT_MAX - 1;
     vec_t bestdistribution = VECT_MAX;
-    face_t *bestsurface = nullptr;
+    side_t *bestsurface = nullptr;
 
     /* passes:
      * 0: structural visible
@@ -477,7 +489,7 @@ returns NULL if the surface list can not be divided any more (a leaf)
 Called in parallel.
 ==================
 */
-static const face_t *SelectPartition(const std::vector<std::unique_ptr<bspbrush_t>> &brushes)
+static const side_t *SelectPartition(const std::vector<std::unique_ptr<bspbrush_t>> &brushes)
 {
     // calculate a bounding box of the entire surfaceset
     aabb3d bounds;
@@ -716,7 +728,7 @@ twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> bru
 #endif
 
             // add the clipped face to result[j]
-            face_t faceCopy = face;
+            side_t faceCopy = face;
             faceCopy.w = *cw[j];
             
             // fixme-brushbsp: configure any settings on the faceCopy?
@@ -762,7 +774,7 @@ twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> bru
 
     // add the midwinding to both sides
     for (int i = 0; i < 2; i++) {
-        face_t cs{};
+        side_t cs{};
         
         const bool brushOnFront = (i == 0);
         
@@ -852,7 +864,7 @@ Called in parallel.
 */
 static void PartitionBrushes(std::vector<std::unique_ptr<bspbrush_t>> brushes, node_t *node)
 {
-    face_t *split = const_cast<face_t *>(SelectPartition(brushes));
+    auto *split = const_cast<side_t *>(SelectPartition(brushes));
 
     if (split == nullptr) { // this is a leaf node
         node->planenum = PLANENUM_LEAF;

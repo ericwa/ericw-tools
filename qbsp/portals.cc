@@ -445,7 +445,7 @@ static void FindPortalSide(portal_t *p)
         return;
 
     int planenum = p->onnode->planenum;
-    face_t *bestside = nullptr;
+    side_t *bestside = nullptr;
     float bestdot = 0;
 
     for (int j = 0; j < 2; j++)
@@ -460,7 +460,7 @@ static void FindPortalSide(portal_t *p)
             auto *brush = *it;
             if (!options.target_game->contents_contains(brush->contents, viscontents))
                 continue;
-            for (face_t &side : brush->sides)
+            for (auto &side : brush->sides)
             {
                 // fixme-brushbsp: port these
 //                if (side.bevel)

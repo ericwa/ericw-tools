@@ -80,6 +80,16 @@ void UpdateFaceSphere(face_t *in)
     in->radius = sqrt(in->radius);
 }
 
+void UpdateFaceSphere(side_t *in)
+{
+    in->origin = in->w.center();
+    in->radius = 0;
+    for (size_t i = 0; i < in->w.size(); i++) {
+        in->radius = max(in->radius, qv::distance2(in->w[i], in->origin));
+    }
+    in->radius = sqrt(in->radius);
+}
+
 /*
 ==================
 SplitFace

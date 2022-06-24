@@ -296,10 +296,10 @@ Adds any additional planes necessary to allow the brush to be expanded
 against axial bounding boxes
 =================
 */
-static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const bspbrush_t &b)
+static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspbrush_t &b)
 {
     // add already-present planes
-    std::vector<std::tuple<size_t, const face_t *>> planes;
+    std::vector<std::tuple<size_t, const side_t *>> planes;
 
     for (auto &f : b.sides) {
         int32_t planenum = f.planenum;

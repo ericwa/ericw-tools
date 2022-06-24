@@ -63,7 +63,7 @@ struct bspbrush_t {
     bspbrush_t *original;
     uint32_t file_order;
     aabb3d bounds;
-    std::vector<face_t> sides;
+    std::vector<side_t> sides;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
@@ -75,6 +75,7 @@ struct bspbrush_t {
 class mapbrush_t;
 
 qplane3d Face_Plane(const face_t *face);
+qplane3d Face_Plane(const side_t *face);
 
 enum class rotation_t
 {

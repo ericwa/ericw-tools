@@ -65,6 +65,17 @@ qplane3d Face_Plane(const face_t *face)
     return result;
 }
 
+qplane3d Face_Plane(const side_t *face)
+{
+    const qplane3d &result = map.planes.at(face->planenum);
+
+    if (face->planeside) {
+        return -result;
+    }
+
+    return result;
+}
+
 /*
 =================
 CheckFace
@@ -72,7 +83,7 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-static void CheckFace(face_t *face, const mapface_t &sourceface)
+static void CheckFace(side_t *face, const mapface_t &sourceface)
 {
     const qbsp_plane_t &plane = map.planes.at(face->planenum);
 
@@ -358,13 +369,13 @@ static bool MapBrush_IsHint(const mapbrush_t &brush)
 CreateBrushFaces
 =================
 */
-static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
+static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
     const rotation_t rottype = rotation_t::none, const qvec3d &rotate_offset = {})
 {
     vec_t r;
     std::optional<winding_t> w;
     qbsp_plane_t plane;
-    std::vector<face_t> facelist;
+    std::vector<side_t> facelist;
     qvec3d point;
     vec_t max, min;
 
@@ -405,7 +416,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         }
 
         // this face is a keeper
-        face_t &f = facelist.emplace_back();
+        side_t &f = facelist.emplace_back();
         f.planenum = PLANENUM_LEAF;
 
         f.w.resize(w->size());
@@ -660,7 +671,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
 ExpandBrush
 =============
 */
-static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::vector<face_t> &facelist)
+static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::vector<side_t> &facelist)
 {
     int x, s;
     qbsp_plane_t plane;
@@ -759,7 +770,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
 {
     hullbrush_t hullbrush;
-    std::vector<face_t> facelist;
+    std::vector<side_t> facelist;
 
     // create the faces
 
@@ -1060,7 +1071,7 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 void bspbrush_t::update_bounds()
 {
     this->bounds = {};
-    for (const face_t &face : sides) {
+    for (const auto &face : sides) {
         this->bounds = this->bounds.unionWith(face.w.bounds());
     }
 }

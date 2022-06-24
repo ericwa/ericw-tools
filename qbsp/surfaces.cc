@@ -597,7 +597,7 @@ see also FindPortalSide which populates p->side
 */
 static face_t *FaceFromPortal(portal_t *p, int pside)
 {
-    face_t *side = p->side;
+    side_t *side = p->side;
     if (!side)
         return nullptr;	// portal does not bridge different visible contents
 
