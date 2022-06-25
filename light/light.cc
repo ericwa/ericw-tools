@@ -297,15 +297,26 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
     return modelinfo.at(i);
 }
 
+static std::vector<const img::texture *> face_textures;
+
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
 {
-    const char *name = Face_TextureName(bsp, face);
+    return face_textures[face - bsp->dfaces.data()];
+}
 
-    if (!name || !*name) {
-        return nullptr;
+static void CacheTextures(const mbsp_t &bsp)
+{
+    face_textures.resize(bsp.dfaces.size());
+    
+    for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+        const char *name = Face_TextureName(&bsp, &bsp.dfaces[i]);
+
+        if (!name || !*name) {
+            face_textures[i] = nullptr;
+        } else {
+            face_textures[i] = img::find(name);
+        }
     }
-
-    return img::find(name);
 }
 
 static void CreateLightmapSurfaces(mbsp_t *bsp)
@@ -1066,6 +1077,8 @@ int light_main(int argc, const char **argv)
 
     img::init_palette(bspdata.loadversion->game);
     img::load_textures(&bsp);
+
+    CacheTextures(bsp);
     
     BuildPvsIndex(&bsp);
     LoadExtendedTexinfoFlags(source, &bsp);
