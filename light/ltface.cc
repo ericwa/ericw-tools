@@ -1858,8 +1858,8 @@ inline qvec3f BounceLight_ColorAtDist(
 }
 
 // mxd. Surface light falloff. Returns color in [0,255]
-static qvec3f SurfaceLight_ColorAtDist(
-    const settings::worldspawn_keys &cfg, const float intensity, const qvec3f color, const float dist)
+inline qvec3f SurfaceLight_ColorAtDist(
+    const settings::worldspawn_keys &cfg, const float &intensity, const qvec3d &color, const float &dist)
 {
     // Exponential falloff
     const float d = max(dist, 16.0f); // Clamp away hotspots, also avoid division by 0...
@@ -1898,7 +1898,7 @@ inline qvec3f GetIndirectLighting(const settings::worldspawn_keys &cfg, const bo
 
 // dir: vpl -> sample point direction
 // mxd. returns color in [0,255]
-static qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t *vpl, const qvec3f &dir,
+inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t *vpl, const qvec3f &dir,
     const float dist, const qvec3f &normal)
 {
     qvec3f result;
@@ -1962,7 +1962,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
     const float dist = qv::length(dir) + lightsurf->radius;
 
     // Get light contribution
-    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, qvec3f(vpl->color), dist);
+    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vpl->color, dist);
 
     return LightSample_Brightness(color) < 0.25f;
 }
