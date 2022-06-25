@@ -214,10 +214,9 @@ const modelinfo_t *Embree_LookupModelinfo(unsigned int geomID, unsigned int prim
     return info.triToModelinfo.at(primID);
 }
 
-static qvec3d Embree_RayEndpoint(RTCRayN *ray, size_t N, size_t i)
+inline qvec3f Embree_RayEndpoint(RTCRayN *ray, const qvec3f &dir, size_t N, size_t i)
 {
-    qvec3d dir = qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
-    qvec3d org{RTCRayN_org_x(ray, N, i), RTCRayN_org_y(ray, N, i), RTCRayN_org_z(ray, N, i)};
+    qvec3f org{RTCRayN_org_x(ray, N, i), RTCRayN_org_y(ray, N, i), RTCRayN_org_z(ray, N, i)};
     float &tfar = RTCRayN_tfar(ray, N, i);
 
     return org + (dir * tfar);
@@ -320,7 +319,9 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
         }
 
         if (isFence || isGlass) {
-            qvec3d hitpoint = Embree_RayEndpoint(ray, N, i);
+            qvec3f rayDir =
+                qv::normalize(qvec3f{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
+            qvec3f hitpoint = Embree_RayEndpoint(ray, rayDir, N, i);
             const qvec4b sample = SampleTexture(face, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
 
             if (isGlass) {
@@ -330,12 +331,10 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 if (sample[3] < 255)
                     alpha = sample[3] / 255.0f;
 
-                qvec3d rayDir =
-                    qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
-                qvec3d potentialHitGeometryNormal = qv::normalize(qvec3d{RTCHitN_Ng_x(potentialHit, N, i),
+                qvec3f potentialHitGeometryNormal = qv::normalize(qvec3f{RTCHitN_Ng_x(potentialHit, N, i),
                     RTCHitN_Ng_y(potentialHit, N, i), RTCHitN_Ng_z(potentialHit, N, i)});
 
-                const vec_t raySurfaceCosAngle = qv::dot(rayDir, potentialHitGeometryNormal);
+                const float raySurfaceCosAngle = qv::dot(rayDir, potentialHitGeometryNormal);
 
                 // only pick up the color of the glass on the _exiting_ side of the glass.
                 // (we currently trace "backwards", from surface point --> light source)
