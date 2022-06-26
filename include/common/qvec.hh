@@ -421,7 +421,7 @@ template<size_t N, class T>
 [[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1, T &len)
 {
     len = length2(v1);
-    return len ? (v1 / (1.0 / std::sqrt(len))) : v1;
+    return len ? (v1 * (1.0 / std::sqrt(len))) : v1;
 }
 
 template<size_t N, class T>
