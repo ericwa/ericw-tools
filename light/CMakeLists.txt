@@ -121,13 +121,12 @@ install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
 enable_testing()
 
 set(LIGHT_TEST_SOURCE 
-	test.cc
 	test_entities.cc
 	test_ltface.cc
 	test_light.cc
 	test_common.cc)
 add_executable(testlight ${LIGHT_TEST_SOURCE})
-target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} Catch2::Catch2 fmt::fmt)
+target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} Catch2::Catch2WithMain fmt::fmt)
 if (embree_FOUND)
 	target_link_libraries (testlight PRIVATE embree)
 

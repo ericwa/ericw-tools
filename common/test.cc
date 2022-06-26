@@ -1,5 +1,4 @@
-#define CATCH_CONFIG_MAIN // request a main()
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include "common/settings.hh"
 
@@ -258,16 +257,16 @@ TEST_CASE("copyMangle", "[settings]")
 
     parser_t p(std::string_view("0.0 -90.0 0.0"));
     CHECK(sunvec.parse("", p));
-    CHECK(Approx(0).margin(1e-6) == sunvec.value()[0]);
-    CHECK(Approx(0).margin(1e-6) == sunvec.value()[1]);
-    CHECK(Approx(-1).margin(1e-6) == sunvec.value()[2]);
+    CHECK(Catch::Approx(0).margin(1e-6) == sunvec.value()[0]);
+    CHECK(Catch::Approx(0).margin(1e-6) == sunvec.value()[1]);
+    CHECK(Catch::Approx(-1).margin(1e-6) == sunvec.value()[2]);
 
     settings::setting_mangle sunvec2{&settings, {"sunlight_mangle2"}, 0.0, 0.0, 0.0};
     sunvec2.copyFrom(sunvec);
 
-    CHECK(Approx(0).margin(1e-6) == sunvec2.value()[0]);
-    CHECK(Approx(0).margin(1e-6) == sunvec2.value()[1]);
-    CHECK(Approx(-1).margin(1e-6) == sunvec2.value()[2]);
+    CHECK(Catch::Approx(0).margin(1e-6) == sunvec2.value()[0]);
+    CHECK(Catch::Approx(0).margin(1e-6) == sunvec2.value()[1]);
+    CHECK(Catch::Approx(-1).margin(1e-6) == sunvec2.value()[2]);
 }
 
 TEST_CASE("copyContainer", "[settings]")

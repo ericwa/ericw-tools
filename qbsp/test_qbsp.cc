@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include <qbsp/brush.hh>
 #include <qbsp/qbsp.hh>
@@ -322,7 +322,7 @@ TEST_CASE("testTextureIssue", "[qbsp]")
 #if 0
     for (int i=0; i<2; i++) {
         for (int j=0; j<4; j++) {
-            CHECK(Approx(texvecsExpected[i][j]) == texvecsActual[i][j]);
+            CHECK(Catch::Approx(texvecsExpected[i][j]) == texvecsActual[i][j]);
         }
     }
 #endif
@@ -517,7 +517,7 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 
     CHECK(bsp.dleafs[1].nummarksurfaces == 6);
     CHECK(bsp.dleafs[1].firstmarksurface == 0);
-    CHECK_THAT(bsp.dleaffaces, Catch::UnorderedEquals(std::vector<uint32_t>{0,1,2,3,4,5}));
+    CHECK_THAT(bsp.dleaffaces, Catch::Matchers::UnorderedEquals(std::vector<uint32_t>{0,1,2,3,4,5}));
 }
 
 TEST_CASE("simple_sealed2", "[testmaps_q1]")
@@ -553,7 +553,7 @@ TEST_CASE("simple_sealed2", "[testmaps_q1]")
     auto *other_plus_y =
         BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-64, -368, 128), qvec3d(0, 1, 0)); // back wall +Y normal
 
-    CHECK_THAT(other_markfaces, Catch::UnorderedEquals(std::vector<const mface_t*>{
+    CHECK_THAT(other_markfaces, Catch::Matchers::UnorderedEquals(std::vector<const mface_t*>{
         other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y
     }));
 }
@@ -924,8 +924,8 @@ TEST_CASE("origin", "[testmaps_q1]")
         [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
 
     REQUIRE(it != ents.end());
-    CHECK_THAT(it->get("origin"), Catch::Equals("216 -216 340")
-                                      || Catch::Equals("216.00 -216.00 340.00"));
+    CHECK_THAT(it->get("origin"), Catch::Matchers::Equals("216 -216 340")
+                                      || Catch::Matchers::Equals("216.00 -216.00 340.00"));
 }
 
 TEST_CASE("simple", "[testmaps_q1]")
@@ -1184,8 +1184,8 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     // areaportal 0 is a placeholder
     // 
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
-    CHECK_THAT(bsp.dareaportals, Catch::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
-    CHECK_THAT(bsp.dareas, Catch::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareaportals, Catch::Matchers::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareas, Catch::Matchers::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
 
     // look up the leafs
     const qvec3d player_start{-88, -112, 120};
@@ -1216,7 +1216,7 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     CHECK(Q2_CONTENTS_SOLID == Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
 
     // check leaf areas
-    CHECK_THAT((std::vector<int32_t>{1, 2}), Catch::UnorderedEquals(std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area}));
+    CHECK_THAT((std::vector<int32_t>{1, 2}), Catch::Matchers::UnorderedEquals(std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area}));
     // the areaportal leaf itself actually gets assigned to one of the two sides' areas
     CHECK((areaportal_leaf->area == 1 || areaportal_leaf->area == 2));
     CHECK(0 == void_leaf->area); // a solid leaf gets the invalid area
@@ -1243,8 +1243,8 @@ TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
     // areaportal 0 is a placeholder
     //
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
-    CHECK_THAT(bsp.dareaportals, Catch::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
-    CHECK_THAT(bsp.dareas, Catch::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareaportals, Catch::Matchers::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareas, Catch::Matchers::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
 }
 
 TEST_CASE("nodraw_light", "[testmaps_q2]") {
@@ -1403,11 +1403,11 @@ TEST_CASE("q2_liquids", "[testmaps_q2]")
         const qvec3d floor_wateropaque = wateropaque_trans33 - qvec3d(0, 0, 48);
 
         CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
-            Catch::UnorderedEquals<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
         CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans33_trans66).size());
         CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], wateropaque_trans33).size());
         CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
-            Catch::UnorderedEquals<std::string>({"e1u1/c_met11_2"}));
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/c_met11_2"}));
     }
 
     const qvec3d watertrans66_slimetrans66{-116, -144, 116};
@@ -1416,11 +1416,11 @@ TEST_CASE("q2_liquids", "[testmaps_q2]")
     {
         CHECK_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, -1, 0))),
-            Catch::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/sewer1"}));
 
         CHECK_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, 1, 0))),
-            Catch::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/sewer1"}));
     }
 
     // slime trans66 / lava trans66
@@ -1428,11 +1428,11 @@ TEST_CASE("q2_liquids", "[testmaps_q2]")
     {
         CHECK_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, -1, 0))),
-            Catch::UnorderedEquals<std::string>({"e1u1/brlava"}));
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/brlava"}));
 
         CHECK_THAT(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, 1, 0))),
-            Catch::UnorderedEquals<std::string>({"e1u1/brlava"}));
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/brlava"}));
     }
 
 }

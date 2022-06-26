@@ -32,9 +32,8 @@ install(TARGETS vis RUNTIME DESTINATION bin)
 enable_testing()
 
 add_executable(testvis
-		test.cc
 		test_vis.cc)
-target_link_libraries(testvis PRIVATE libvis common Catch2::Catch2 fmt::fmt)
+target_link_libraries(testvis PRIVATE libvis common Catch2::Catch2WithMain fmt::fmt)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET testvis POST_BUILD
