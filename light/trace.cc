@@ -76,15 +76,11 @@ uint32_t clamp_texcoord(vec_t in, uint32_t width)
     }
 }
 
-qvec4b SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point)
+qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3d &point)
 {
-    const auto *texture = Face_Texture(bsp, face);
-
     if (texture == nullptr || !texture->meta.width) {
         return {};
     }
-
-    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
 
     qvec2d texcoord = WorldToTexCoord(point, tex);
 

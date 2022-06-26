@@ -116,8 +116,37 @@ sceneinfo CreateGeometry(
             tri->v2 = Face_VertexAtIndex(bsp, face, 0);
             tri_index++;
 
-            s.triToFace.push_back(face);
-            s.triToModelinfo.push_back(modelinfo);
+            triinfo info;
+
+            info.face = face;
+            info.modelinfo = modelinfo;
+            info.texinfo = &bsp->texinfo[face->texinfo];
+
+            info.texture = Face_Texture(bsp, face);
+
+            info.shadowworldonly = modelinfo->shadowworldonly.boolValue();
+            info.shadowself = modelinfo->shadowself.boolValue();
+            info.switchableshadow = modelinfo->switchableshadow.boolValue();
+            info.switchshadstyle = modelinfo->switchshadstyle.value();
+
+            info.alpha = Face_Alpha(modelinfo, face);
+
+            // mxd
+            if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
+                info.is_fence = ((surf_flags & Q2_SURF_TRANSLUCENT) ==
+                           Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
+                info.is_glass = !info.is_fence && (surf_flags & Q2_SURF_TRANSLUCENT);
+                if (info.is_glass) {
+                    info.alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
+                }
+            } else {
+                const char *name = Face_TextureName(bsp, face);
+                info.is_fence = (name[0] == '{');
+                info.is_glass = (info.alpha < 1.0f);
+            }
+
+            s.triInfo.push_back(info);
         }
     }
 
@@ -202,16 +231,10 @@ void ErrorCallback(void *userptr, const RTCError code, const char *str)
     fmt::print("RTC Error {}: {}\n", code, str);
 }
 
-const mface_t *Embree_LookupFace(unsigned int geomID, unsigned int primID)
+const triinfo &Embree_LookupTriangleInfo(unsigned int geomID, unsigned int primID)
 {
     const sceneinfo &info = Embree_SceneinfoForGeomID(geomID);
-    return info.triToFace.at(primID);
-}
-
-const modelinfo_t *Embree_LookupModelinfo(unsigned int geomID, unsigned int primID)
-{
-    const sceneinfo &info = Embree_SceneinfoForGeomID(geomID);
-    return info.triToModelinfo.at(primID);
+    return info.triInfo.at(primID);
 }
 
 inline qvec3f Embree_RayEndpoint(RTCRayN *ray, const qvec3f &dir, size_t N, size_t i)
@@ -260,15 +283,16 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
         const unsigned rayIndex = rayID;
 
         const modelinfo_t *source_modelinfo = rsi->self;
-        const modelinfo_t *hit_modelinfo = Embree_LookupModelinfo(geomID, primID);
-        if (!hit_modelinfo) {
+        const triinfo &hit_triinfo = Embree_LookupTriangleInfo(geomID, primID);
+
+        if (!hit_triinfo.modelinfo) {
             // we hit a "skip" face with no associated model
             // reject hit (???)
             valid[i] = INVALID;
             continue;
         }
 
-        if (hit_modelinfo->shadowworldonly.boolValue()) {
+        if (hit_triinfo.shadowworldonly) {
             // we hit "_shadowworldonly" "1" geometry. Ignore the hit unless we are from world.
             if (!source_modelinfo || !source_modelinfo->isWorld()) {
                 // reject hit
@@ -277,20 +301,20 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             }
         }
 
-        if (hit_modelinfo->shadowself.boolValue()) {
+        if (hit_triinfo.shadowself) {
             // only casts shadows on itself
-            if (source_modelinfo != hit_modelinfo) {
+            if (source_modelinfo != hit_triinfo.modelinfo) {
                 // reject hit
                 valid[i] = INVALID;
                 continue;
             }
         }
 
-        if (hit_modelinfo->switchableshadow.boolValue()) {
+        if (hit_triinfo.switchableshadow) {
             // we hit a dynamic shadow caster. reject the hit, but store the
             // info about what we hit.
 
-            const int style = hit_modelinfo->switchshadstyle.value();
+            const int style = hit_triinfo.switchshadstyle;
 
             AddDynamicOccluderToRay(context, rayIndex, style);
 
@@ -299,32 +323,16 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             continue;
         }
 
+        float alpha = hit_triinfo.alpha;
+
         // test fence textures and glass
-        const mface_t *face = Embree_LookupFace(geomID, primID);
-        float alpha = Face_Alpha(hit_modelinfo, face);
-
-        // mxd
-        bool isFence, isGlass;
-        if (bsp_static->loadversion->game->id == GAME_QUAKE_II) {
-            const int surf_flags = Face_ContentsOrSurfaceFlags(bsp_static, face);
-            isFence = ((surf_flags & Q2_SURF_TRANSLUCENT) ==
-                       Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
-            isGlass = !isFence && (surf_flags & Q2_SURF_TRANSLUCENT);
-            if (isGlass)
-                alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
-        } else {
-            const char *name = Face_TextureName(bsp_static, face);
-            isFence = (name[0] == '{');
-            isGlass = (alpha < 1.0f);
-        }
-
-        if (isFence || isGlass) {
+        if (hit_triinfo.is_fence || hit_triinfo.is_glass) {
             qvec3f rayDir =
                 qv::normalize(qvec3f{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
             qvec3f hitpoint = Embree_RayEndpoint(ray, rayDir, N, i);
-            const qvec4b sample = SampleTexture(face, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
+            const qvec4b sample = SampleTexture(hit_triinfo.face, hit_triinfo.texinfo, hit_triinfo.texture, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
 
-            if (isGlass) {
+            if (hit_triinfo.is_glass) {
                 // hit glass...
 
                 // mxd. Adjust alpha by texture alpha?
@@ -347,7 +355,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 continue;
             }
 
-            if (isFence) {
+            if (hit_triinfo.is_fence) {
                 if (sample[3] < 255) {
                     // reject hit
                     valid[i] = INVALID;
@@ -620,7 +628,7 @@ hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *
     if (face_out) {
         if (hit_sky) {
             const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-            *face_out = si.triToFace.at(ray.hit.primID);
+            *face_out = si.triInfo.at(ray.hit.primID).face;
         } else {
             *face_out = nullptr;
         }

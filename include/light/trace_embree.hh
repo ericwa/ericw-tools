@@ -142,13 +142,27 @@ struct ray_source_info : public RTCIntersectContext
     }
 };
 
-class sceneinfo
+struct triinfo
 {
-public:
+    const modelinfo_t *modelinfo;
+    const mface_t *face;
+    const mtexinfo_t *texinfo;
+
+    const img::texture *texture;
+    float alpha;
+    bool is_fence, is_glass;
+
+    bool shadowworldonly;
+    bool shadowself;
+    bool switchableshadow;
+    int32_t switchshadstyle;
+};
+
+struct sceneinfo
+{
     unsigned geomID;
 
-    std::vector<const mface_t *> triToFace;
-    std::vector<const modelinfo_t *> triToModelinfo;
+    std::vector<triinfo> triInfo;
 };
 
 extern sceneinfo skygeom; // sky. always occludes.
@@ -240,17 +254,18 @@ public:
         }
     }
 
-    inline const mface_t *getPushedRayHitFace(size_t j)
+    inline const triinfo *getPushedRayHitFaceInfo(size_t j)
     {
         Q_assert(j < _maxrays);
 
         const RTCRayHit &ray = _rays[j];
 
-        if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID)
+        if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
             return nullptr;
+        }
 
         const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-        const mface_t *face = si.triToFace.at(ray.hit.primID);
+        const triinfo *face = &si.triInfo.at(ray.hit.primID);
         Q_assert(face != nullptr);
 
         return face;

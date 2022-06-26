@@ -1620,11 +1620,9 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
         }
 
         // check if we hit the wrong texture
-        // TODO: this could be faster!
-        if (!sun->suntexture.empty()) {
-            const mface_t *face = rs.getPushedRayHitFace(j);
-            const char *facetex = Face_TextureName(lightsurf->bsp, face);
-            if (sun->suntexture != facetex) {
+        if (sun->suntexture_value) {
+            const triinfo *face = rs.getPushedRayHitFaceInfo(j);
+            if (sun->suntexture_value != face->texture) {
                 continue;
             }
         }

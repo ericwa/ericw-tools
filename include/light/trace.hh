@@ -25,6 +25,7 @@
 #include <common/log.hh>
 #include <common/threads.hh>
 #include <common/polylib.hh>
+#include <common/imglib.hh>
 
 #include <vector>
 #include <map>
@@ -42,7 +43,7 @@ enum class hittype_t : uint8_t
 };
 
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
-qvec4b SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point); // mxd. Palette index -> RGBA
+qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3d &point); // mxd. Palette index -> RGBA
 
 class modelinfo_t;
 
