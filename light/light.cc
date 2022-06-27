@@ -912,7 +912,6 @@ int light_main(int argc, const char **argv)
         options.bouncescale.setValue(1.5f);
     }
 
-    img::init_palette(bspdata.loadversion->game);
     img::load_textures(&bsp);
 
     LoadExtendedTexinfoFlags(source, &bsp);
