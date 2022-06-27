@@ -1579,6 +1579,52 @@ TEST_CASE("q2_door", "[testmaps_q2]") {
     CHECK(bmodel_tight_bounds.maxs() == bsp.dmodels[1].maxs);
 }
 
+/**
+ * Test for WAD internal textures
+ **/
+TEST_CASE("q1_wad_internal", "[testmaps_q1]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map");
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(bsp.dtex.textures.size() == 4);
+    // skip is only here because of the water
+    CHECK(bsp.dtex.textures[0].name == "skip");
+
+    CHECK(bsp.dtex.textures[1].name == "orangestuff8");
+    CHECK(bsp.dtex.textures[2].name == "*zwater1");
+    CHECK(bsp.dtex.textures[3].name == "brown_brick");
+
+    CHECK(!bsp.dtex.textures[1].data.empty());
+    CHECK(!bsp.dtex.textures[2].data.empty());
+    CHECK(!bsp.dtex.textures[3].data.empty());
+
+    CHECK(img::load_mip("orangestuff8", bsp.dtex.textures[1].data, false, bsp.loadversion->game));
+    CHECK(img::load_mip("*zwater1", bsp.dtex.textures[2].data, false, bsp.loadversion->game));
+    CHECK(img::load_mip("brown_brick", bsp.dtex.textures[3].data, false, bsp.loadversion->game));
+}
+
+/**
+ * Test for WAD internal textures
+ **/
+TEST_CASE("q1_wad_external", "[testmaps_q1]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map", { "-xwadpath", "A:\\ericw-tools\\testmaps" });
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(bsp.dtex.textures.size() == 4);
+    // skip is only here because of the water
+    CHECK(bsp.dtex.textures[0].name == "skip");
+
+    CHECK(bsp.dtex.textures[1].name == "orangestuff8");
+    CHECK(bsp.dtex.textures[2].name == "*zwater1");
+    CHECK(bsp.dtex.textures[3].name == "brown_brick");
+
+    CHECK(bsp.dtex.textures[1].data.size() == sizeof(dmiptex_t));
+    CHECK(bsp.dtex.textures[2].data.size() == sizeof(dmiptex_t));
+    CHECK(bsp.dtex.textures[3].data.size() == sizeof(dmiptex_t));
+}
+
 TEST_CASE("winding", "[benchmark]") {
     ankerl::nanobench::Bench bench;
 
