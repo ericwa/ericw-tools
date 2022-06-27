@@ -272,6 +272,11 @@ public:
         return !contents_has_extended(contents) && contents.native == CONTENTS_EMPTY;
     }
 
+    bool contents_are_any_solid(const contentflags_t &contents) const override
+    {
+        return contents_are_solid(contents) || contents_are_detail_solid(contents);
+    }
+
     bool contents_are_solid(const contentflags_t &contents) const override
     {
         return !contents_has_extended(contents) && contents.native == CONTENTS_SOLID;
@@ -864,6 +869,11 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_empty(const contentflags_t &contents) const override
     {
         return !contents_has_extended(contents) && !get_content_type(contents);
+    }
+
+    bool contents_are_any_solid(const contentflags_t &contents) const override
+    {
+        return (contents.native & Q2_CONTENTS_SOLID) != 0;
     }
 
     bool contents_are_solid(const contentflags_t &contents) const override
@@ -1465,6 +1475,11 @@ bool contentflags_t::will_clip_same_type(const gamedef_t *game, const contentfla
 bool contentflags_t::is_empty(const gamedef_t *game) const
 {
     return game->contents_are_empty(*this);
+}
+
+bool contentflags_t::is_any_solid(const gamedef_t *game) const
+{
+    return game->contents_are_any_solid(*this);
 }
 
 bool contentflags_t::is_solid(const gamedef_t *game) const

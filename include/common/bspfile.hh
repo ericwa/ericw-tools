@@ -120,13 +120,7 @@ struct contentflags_t
     contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value) { clips_same_type = clips_same_type_value; return *this; }
 
     bool is_empty(const gamedef_t *game) const;
-
-    // detail solid or structural solid
-    inline bool is_any_solid(const gamedef_t *game) const {
-        return is_solid(game)
-            || is_detail_solid(game);
-    }
-
+    bool is_any_solid(const gamedef_t *game) const;
     // solid, not detail or any other extended content types
     bool is_solid(const gamedef_t *game) const;
     bool is_sky(const gamedef_t *game) const;
@@ -284,6 +278,7 @@ struct gamedef_t
     virtual bool contents_are_clip(const contentflags_t &contents) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
     virtual bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const = 0;
+    virtual bool contents_are_any_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
