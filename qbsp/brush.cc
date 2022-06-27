@@ -911,7 +911,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     std::optional<bool> clipsametype;
 
     if (src->epairs.has("_noclipfaces")) {
-        clipsametype = src->epairs.get_int("_noclipfaces") ? false : true;
+        clipsametype = static_cast<bool>(src->epairs.get_int("_noclipfaces"));
     }
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
