@@ -442,8 +442,10 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             tex.push_back({"width", src_tex.width});
             tex.push_back({"height", src_tex.height});
 
-            json &mips = tex["mips"] = json::array();
-            mips.emplace_back(serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
+            if (src_tex.data.size() > sizeof(dmiptex_t)) {
+                json &mips = tex["mips"] = json::array();
+                mips.emplace_back(serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
+            }
         }
     }
 

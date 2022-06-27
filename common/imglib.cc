@@ -184,8 +184,9 @@ std::optional<texture> load_mip(const std::string &name, const fs::data &file, b
     if (!meta_only) {
         // convert the data into RGBA.
         if (header.offsets[0] <= 0) {
+            // this should never happen under normal circumstances
             logging::funcprint("attempted to load external mip for {}\n", name);
-            return tex;
+            return std::nullopt;
         }
 
         // sanity check

@@ -1153,6 +1153,18 @@ static void LoadTextureData()
 
         if (!pos.archive->external) {
             miptex.data = std::move(file.value());
+        } else {
+            // construct fake data that solely contains the header.
+            miptex.data.resize(sizeof(dmiptex_t));
+            
+            dmiptex_t header {};
+            std::copy(miptex.name.begin(), miptex.name.end(), header.name.begin());
+            header.width = miptex.width;
+            header.height = miptex.height;
+            header.offsets = { -1, -1, -1, -1 };
+
+            omemstream stream(miptex.data.data(), miptex.data.size());
+            stream <= header;
         }
     }
 }
