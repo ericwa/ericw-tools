@@ -43,38 +43,61 @@
 
 mapdata_t map;
 
-const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const char *name)
+std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> mapdata_t::load_image_data(const std::string_view &name, bool meta_only)
+{
+    fs::path prefix;
+
+    if (options.target_game->id == GAME_QUAKE_II) {
+        prefix = "textures";
+    }
+
+    for (auto &ext : img::extension_list) {
+        fs::path p = (prefix / name) += ext.suffix;
+
+        if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
+            if (auto data = fs::load(pos)) {
+                std::optional<img::texture> texture;
+
+                switch (ext.id) {
+                    case img::ext::TGA:
+                        texture = img::load_tga(name.data(), data, meta_only);
+                        break;
+                    case img::ext::WAL:
+                        texture = img::load_wal(name.data(), data, meta_only);
+                        break;
+                    case img::ext::MIP:
+                        texture = img::load_mip(name.data(), data, meta_only, options.target_game);
+                        break;
+                }
+
+                if (texture) {
+                    return {texture, pos, data};
+                }
+            }
+        }
+    }
+
+    return {std::nullopt, {}, {}};
+}
+
+const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
 {
     static std::optional<img::texture_meta> nullmeta = std::nullopt;
-    auto it = meta_cache.find(name);
+    auto it = meta_cache.find(name.data());
 
     if (it != meta_cache.end()) {
         return it->second;
     }
 
-    // FIXME: better method
-    if (options.target_game->id == GAME_QUAKE_II) {
-        fs::path p = fs::path("textures") / name += ".wal";
-        fs::data wal = fs::load(p);
+    auto [texture, _0, _1] = load_image_data(name, true);
 
-        if (!wal) {
-            logging::print("WARNING: Couldn't locate texture for {}\n", name);
-            meta_cache.emplace(name, std::nullopt);
-            return nullmeta;
-        }
-
-        return meta_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
-    } else {
-        fs::data mip = fs::load(name);
-
-        if (!mip) {
-            logging::print("WARNING: Couldn't locate texture for {}\n", name);
-            meta_cache.emplace(name, std::nullopt);
-            return nullmeta;
-        }
-
-        return meta_cache.emplace(name, img::load_mip(name, mip, true, options.target_game)->meta).first->second;
+    if (texture) {
+        return meta_cache.emplace(name, texture->meta).first->second;
     }
+
+    logging::print("WARNING: Couldn't locate texture for {}\n", name);
+    meta_cache.emplace(name, std::nullopt);
+    return nullmeta;
 }
 
 static std::shared_ptr<fs::archive_like> LoadTexturePath(const fs::path &path)
@@ -96,6 +119,10 @@ static void EnsureTexturesLoaded()
         return;
 
     map.textures_loaded = true;
+
+    for (auto &path : options.paths.values()) {
+        fs::addArchive(path, true);
+    }
     
     // Q2 doesn't need this
     if (options.target_game->id == GAME_QUAKE_II) {
@@ -133,7 +160,7 @@ static void EnsureTexturesLoaded()
         defaultwad.replace_extension("wad");
 
         if (fs::exists(defaultwad)) {
-            logging::print("Using default WAD: {}\n", defaultwad);
+            logging::print("INFO: Using default WAD: {}\n", defaultwad);
             LoadTexturePath(defaultwad);
         }
     }

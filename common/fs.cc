@@ -287,7 +287,7 @@ resolve_result where(const path &p, bool prefer_loose)
     }
 
     for (int32_t pass = 0; pass < 2; pass++) {
-        if (prefer_loose == !!pass) {
+        if (prefer_loose != !!pass) {
             // check absolute + relative
             if (exists(p)) {
                 return {absrel_dir, p};
@@ -296,7 +296,7 @@ resolve_result where(const path &p, bool prefer_loose)
             for (int32_t archive_pass = 0; archive_pass < 2; archive_pass++) {
                 // check directories & archives, depending on whether
                 // we want loose first or not
-                for (auto &dir : (prefer_loose == !!archive_pass) ? directories : archives) {
+                for (auto &dir : (prefer_loose != !!archive_pass) ? directories : archives) {
                     if (dir->contains(p)) {
                         return {dir, p};
                     }

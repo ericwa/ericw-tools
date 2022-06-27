@@ -1131,18 +1131,14 @@ static void CreateHulls(void)
 static void LoadTextureData()
 {
     for (size_t i = 0; i < map.miptex.size(); i++) {
-        auto pos = fs::where(map.miptex[i].name, options.filepriority.value() == settings::search_priority_t::LOOSE);
-
-        if (!pos) {
-            logging::print("WARNING: Texture {} not found\n", map.miptex[i].name);
-            continue;
-        }
-
-        auto file = fs::load(pos);
-        auto tex = img::load_mip(map.miptex[i].name, file, true, options.target_game);
+        auto [tex, pos, file] = map.load_image_data(map.miptex[i].name, true);
 
         if (!tex) {
-            logging::print("WARNING: unable to load texture {} in archive {}\n", map.miptex[i].name, pos.archive->pathname);
+            if (pos.archive) {
+                logging::print("WARNING: unable to load texture {} in archive {}\n", map.miptex[i].name, pos.archive->pathname);
+            } else {
+                logging::print("WARNING: unable to find texture {}\n", map.miptex[i].name);
+            }
             continue;
         }
 
@@ -1151,14 +1147,21 @@ static void LoadTextureData()
         miptex.width = tex->meta.width;
         miptex.height = tex->meta.height;
 
-        if (!pos.archive->external) {
+        // only mips can be embedded directly
+        if (!pos.archive->external && tex->meta.extension == img::ext::MIP) {
             miptex.data = std::move(file.value());
         } else {
             // construct fake data that solely contains the header.
             miptex.data.resize(sizeof(dmiptex_t));
-            
+
             dmiptex_t header {};
-            std::copy(miptex.name.begin(), miptex.name.end(), header.name.begin());
+            if (miptex.name.size() >= 16) {
+                logging::print("WARNING: texture {} name too long for Quake miptex\n", miptex.name);
+                std::copy_n(miptex.name.begin(), 15, header.name.begin());
+            } else {
+                std::copy(miptex.name.begin(), miptex.name.end(), header.name.begin());
+            }
+            
             header.width = miptex.width;
             header.height = miptex.height;
             header.offsets = { -1, -1, -1, -1 };

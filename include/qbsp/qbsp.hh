@@ -220,8 +220,9 @@ public:
         "func_detail_fence brushes are omitted from the compile"};
     setting_bool expand{
         this, "expand", false, &common_format_group, "write hull 1 expanded brushes to expanded.map for debugging"};
-    setting_wadpathset wadpaths{this, {"wadpath", "xwadpath"}, &debugging_group,
+    setting_wadpathset wadpaths{this, {"wadpath", "xwadpath"}, &map_development_group,
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
+    setting_set paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &map_development_group, "additional paths or archives to add to the search path, mostly for loose files"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
     setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
 

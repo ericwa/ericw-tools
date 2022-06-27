@@ -27,6 +27,20 @@ See file, 'COPYING', for details.
 
 namespace img
 {
+enum class ext
+{
+    TGA,
+    WAL,
+    MIP
+};
+
+constexpr struct { const char *suffix; ext id; } extension_list[] = {
+    { ".tga", ext::TGA },
+    { ".wal", ext::WAL },
+    { ".mip", ext::MIP },
+    { "", ext::MIP }
+};
+
 extern std::vector<qvec3b> palette;
 
 // Palette
@@ -36,6 +50,8 @@ struct texture_meta
 {
     std::string name;
     uint32_t width, height;
+
+    ext extension;
 
     // This member is only set before insertion into the table
     // and not calculated by individual load functions.

@@ -130,6 +130,8 @@ std::optional<texture> load_wal(const std::string &name, const fs::data &file, b
 
     texture tex;
 
+    tex.meta.extension = ext::WAL;
+
     // note: this is a bit of a hack, but the name stored in
     // the .wal is ignored. it's extraneous and well-formed wals
     // will all match up anyways.
@@ -173,6 +175,8 @@ std::optional<texture> load_mip(const std::string &name, const fs::data &file, b
     }
 
     texture tex;
+
+    tex.meta.extension = ext::MIP;
     
     // note: this is a bit of a hack, but the name stored in
     // the mip is ignored. it's extraneous and well-formed mips
@@ -293,6 +297,8 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
     uint32_t numPixels = columns * rows;
 
     texture tex;
+
+    tex.meta.extension = ext::TGA;
 
     tex.meta.name = name;
     tex.meta.width = columns;
