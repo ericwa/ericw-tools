@@ -129,7 +129,6 @@ struct texdata_t
 };
 
 #include <common/imglib.hh>
-#include <qbsp/wad.hh>
 
 struct start_spots_t
 {
@@ -178,12 +177,12 @@ struct mapdata_t
     int32_t numareaportals = 0;
     // running total
     uint32_t brush_offset = 0;
-    // Small cache for .wals
-    std::unordered_map<std::string, std::optional<img::texture_meta>> wal_cache;
+    // Small cache for image meta in the current map
+    std::unordered_map<std::string, std::optional<img::texture_meta>> meta_cache;
 
-    // misc
-    bool wadlist_tried_loading = false;
-    std::list<wad_t> wadlist;
+    const std::optional<img::texture_meta> &load_image_meta(const char *name);
+    // whether we had attempted loading texture stuff
+    bool textures_loaded = false;
     
     // todo type-cleanup: move to gamedef
     start_spots_t start_spots;

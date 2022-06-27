@@ -68,9 +68,11 @@ static void ExportWad(std::ofstream &wadfile, mbsp_t *bsp)
 
     /* Count up the valid lumps */
     numvalid = 0;
-    for (auto &texture : texdata.textures)
-        if (texture.data[0])
+    for (auto &texture : texdata.textures) {
+        if (!texture.data.empty()) {
             numvalid++;
+        }
+    }
 
     // Write out
     wadinfo_t header;
@@ -83,7 +85,7 @@ static void ExportWad(std::ofstream &wadfile, mbsp_t *bsp)
     /* Miptex data will follow the lump headers */
     filepos = sizeof(header) + numvalid * sizeof(lump);
     for (auto &miptex : texdata.textures) {
-        if (!miptex.data[0])
+        if (miptex.data.empty())
             continue;
 
         lump.filepos = filepos;
@@ -97,10 +99,9 @@ static void ExportWad(std::ofstream &wadfile, mbsp_t *bsp)
         wadfile <= lump;
     }
     for (auto &miptex : texdata.textures) {
-        if (!miptex.data[0])
-            continue;
-
-        miptex.stream_write(wadfile);
+        if (!miptex.data.empty()) {
+            miptex.stream_write(wadfile);
+        }
     }
 }
 

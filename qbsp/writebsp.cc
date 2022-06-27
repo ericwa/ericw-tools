@@ -22,7 +22,6 @@
 
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
-#include <qbsp/wad.hh>
 
 #include <vector>
 #include <algorithm>

@@ -35,7 +35,6 @@
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
-#include <qbsp/wad.hh>
 
 #include <common/parser.hh>
 #include <common/fs.hh>
@@ -43,6 +42,102 @@
 #include <common/qvec.hh>
 
 mapdata_t map;
+
+const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const char *name)
+{
+    static std::optional<img::texture_meta> nullmeta = std::nullopt;
+    auto it = meta_cache.find(name);
+
+    if (it != meta_cache.end()) {
+        return it->second;
+    }
+
+    // FIXME: better method
+    if (options.target_game->id == GAME_QUAKE_II) {
+        fs::path p = fs::path("textures") / name += ".wal";
+        fs::data wal = fs::load(p);
+
+        if (!wal) {
+            logging::print("WARNING: Couldn't locate texture for {}\n", name);
+            meta_cache.emplace(name, std::nullopt);
+            return nullmeta;
+        }
+
+        return meta_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
+    } else {
+        fs::data mip = fs::load(name);
+
+        if (!mip) {
+            logging::print("WARNING: Couldn't locate texture for {}\n", name);
+            meta_cache.emplace(name, std::nullopt);
+            return nullmeta;
+        }
+
+        return meta_cache.emplace(name, img::load_mip(name, mip, true, options.target_game)->meta).first->second;
+    }
+}
+
+static std::shared_ptr<fs::archive_like> LoadTexturePath(const fs::path &path)
+{
+    if (options.wadpaths.pathsValue().empty() || path.is_absolute()) {
+        return fs::addArchive(path, false);
+    }
+
+    for (auto &wadpath : options.wadpaths.pathsValue()) {
+        return fs::addArchive(wadpath.path / path, wadpath.external);
+    }
+
+    return nullptr;
+}
+
+static void EnsureTexturesLoaded()
+{
+    if (map.textures_loaded)
+        return;
+
+    map.textures_loaded = true;
+    
+    // Q2 doesn't need this
+    if (options.target_game->id == GAME_QUAKE_II) {
+        return;
+    }
+
+    std::string wadstring = map.world_entity()->epairs.get("_wad");
+
+    if (wadstring.empty()) {
+        wadstring = map.world_entity()->epairs.get("wad");
+    }
+
+    bool loaded_any_archive = false;
+
+    if (wadstring.empty()) {
+        logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
+    } else {
+	    memstream stream(wadstring.data(), wadstring.size(), std::ios_base::in | std::ios_base::binary);
+        std::string wad;
+
+	    while (std::getline(stream, wad, ';')) {
+		    if (LoadTexturePath(wad)) {
+                loaded_any_archive = true;
+            }
+	    }
+    }
+
+    if (!loaded_any_archive) {
+        if (!wadstring.empty()) {
+            logging::print("WARNING: No valid WAD filenames in worldmodel\n");
+        }
+
+        /* Try the default wad name */
+        fs::path defaultwad = options.map_path;
+        defaultwad.replace_extension("wad");
+
+        if (fs::exists(defaultwad)) {
+            logging::print("Using default WAD: {}\n", defaultwad);
+            LoadTexturePath(defaultwad);
+        }
+    }
+}
 
 // Useful shortcuts
 mapentity_t *mapdata_t::world_entity()
@@ -142,26 +237,6 @@ static void AddAnimTex(const char *name)
     }
 }
 
-static std::optional<img::texture_meta> LoadWal(const char *name)
-{
-    auto it = map.wal_cache.find(name);
-
-    if (it != map.wal_cache.end()) {
-        return it->second;
-    }
-
-    fs::path p = fs::path("textures") / name += ".wal";
-    fs::data wal = fs::load(p);
-
-    if (!wal) {
-        logging::print("WARNING: Couldn't locate wal for {}\n", name);
-        map.wal_cache.emplace(name, std::nullopt);
-        return std::nullopt;
-    }
-
-    return map.wal_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
-}
-
 int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal, bool recursive)
 {
     const char *pathsep;
@@ -194,7 +269,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         }
     } else {
         // load .wal first
-        std::optional<img::texture_meta> wal = LoadWal(name);
+        auto wal = map.load_image_meta(name);
 
         if (wal && !internal && !extended_info.has_value()) {
             extended_info = extended_texinfo_t{wal->contents, wal->flags, wal->value, wal->animation};
@@ -226,7 +301,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             while (true)
             {
                 // wal for next chain
-                wal = LoadWal(wal->animation.c_str());
+                wal = map.load_image_meta(wal->animation.c_str());
 
                 // texinfo base for animated wal
                 std::optional<extended_texinfo_t> animation_info = extended_info;
@@ -605,10 +680,11 @@ void checkEq(const qvec2f &a, const qvec2f &b, float epsilon)
     }
 }
 
-qvec2f normalizeShift(const texture_t *texture, const qvec2f &in)
+qvec2f normalizeShift(const std::optional<img::texture_meta> &texture, const qvec2f &in)
 {
-    if (texture == nullptr)
+    if (!texture) {
         return in; // can't do anything without knowing the texture size.
+    }
 
     int fullWidthOffsets = static_cast<int>(in[0]) / texture->width;
     int fullHeightOffsets = static_cast<int>(in[1]) / texture->height;
@@ -619,7 +695,7 @@ qvec2f normalizeShift(const texture_t *texture, const qvec2f &in)
 }
 
 /// `texture` is optional. If given, the "shift" values can be normalized
-static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const texture_t *texture,
+static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const std::optional<img::texture_meta> &texture,
     const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
@@ -1021,7 +1097,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
 
     if (false) {
         // Self-test of TexDef_BSPToQuakeEd
-        texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(plane, nullptr, out->vecs, planepts);
+        texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(plane, std::nullopt, out->vecs, planepts);
 
         if (!EqualDegrees(reversed.rotate, rotate)) {
             reversed.rotate += 180;
@@ -1327,8 +1403,6 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         parser.parse_token(PARSE_SAMELINE);
         mapface.texname = parser.token;
 
-        EnsureTexturesLoaded();
-
         // Read extra Q2 params
         extinfo = ParseExtendedTX(parser);
 
@@ -1379,7 +1453,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     } else {
         // assign animation to extinfo, so that we load the animated
         // first one first
-        if (auto wal = LoadWal(mapface.texname.c_str())) {
+        if (auto &wal = map.load_image_meta(mapface.texname.c_str())) {
             if (!extinfo.info) {
                 extinfo.info = extended_texinfo_t{wal->contents, wal->flags, wal->value};
             }
@@ -1430,7 +1504,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         case TX_QUARK_TYPE2: SetTexinfo_QuArK(parser, planepts, tx_type, tx); break;
         case TX_VALVE_220: SetTexinfo_Valve220(axis, shift, scale, tx); break;
         case TX_BRUSHPRIM: {
-            const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
+            const auto &texture = map.load_image_meta(mapface.texname.c_str());
             const int32_t width = texture ? texture->width : 64;
             const int32_t height = texture ? texture->height : 64;
 
@@ -1638,6 +1712,9 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
         if (parser.token == "}")
             break;
         else if (parser.token == "{") {
+            // once we run into the first brush, set up textures state.
+            EnsureTexturesLoaded();
+
             mapbrush_t brush = ParseBrush(parser, entity);
 
             if (!entity->nummapbrushes)
@@ -2012,8 +2089,7 @@ static void fprintDoubleAndSpc(std::ofstream &f, double v)
 
 static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const conversion_t format)
 {
-    EnsureTexturesLoaded();
-    const texture_t *texture = WADList_GetTexture(mapface.texname.c_str());
+    const auto &texture = map.load_image_meta(mapface.texname.c_str());
 
     const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 

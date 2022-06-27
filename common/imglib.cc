@@ -82,13 +82,23 @@ void init_palette(const gamedef_t *game)
         if (LoadPCXPalette(colormap, palette)) {
             return;
         }
-
-        logging::print("INFO: Falling back to built-in palette.\n");
     }
+
+    logging::print("INFO: using built-in palette.\n");
 
     auto &pal = game->get_default_palette();
 
     std::copy(pal.begin(), pal.end(), std::back_inserter(palette));
+}
+
+static void convert_paletted_to_32_bit(const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::vector<qvec3b> &pal)
+{
+    output.resize(pixels.size());
+
+    for (size_t i = 0; i < pixels.size(); i++) {
+        // Last palette index is transparent color
+        output[i] = qvec4b(pal[pixels[i]], pixels[i] == 255 ? 0 : 255);
+    }
 }
 
 /*
@@ -109,7 +119,7 @@ struct q2_miptex_t
     auto stream_data() { return std::tie(name, width, height, offsets, animname, flags, contents, value); }
 };
 
-std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool metaOnly)
+std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool meta_only)
 {
     memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -118,10 +128,11 @@ std::optional<texture> load_wal(const std::string &name, const fs::data &file, b
     q2_miptex_t mt;
     stream >= mt;
 
-    size_t numPixels = mt.width * mt.height;
-
     texture tex;
 
+    // note: this is a bit of a hack, but the name stored in
+    // the .wal is ignored. it's extraneous and well-formed wals
+    // will all match up anyways.
     tex.meta.name = name;
     tex.meta.width = mt.width;
     tex.meta.height = mt.height;
@@ -130,18 +141,103 @@ std::optional<texture> load_wal(const std::string &name, const fs::data &file, b
     tex.meta.value = mt.value;
     tex.meta.animation = mt.animname.data();
 
-    if (!metaOnly) {
-        tex.pixels.resize(numPixels);
-
+    if (!meta_only) {
         stream.seekg(mt.offsets[0]);
+        std::vector<uint8_t> pixels(mt.width * mt.height);
+        stream.read(reinterpret_cast<char *>(pixels.data()), pixels.size());
+        convert_paletted_to_32_bit(pixels, tex.pixels, palette);
+    }
 
-        for (size_t i = 0; i < numPixels; i++) {
-            uint8_t pixel;
-            stream >= pixel;
+    return tex;
+}
 
-            // Last palette index is transparent color
-            tex.pixels[i] = qvec4b(palette[pixel], pixel == 255 ? 0 : 255);
+/*
+============================================================================
+Quake/Half Life MIP
+============================================================================
+*/
+
+std::optional<texture> load_mip(const std::string &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+{
+    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    stream >> endianness<std::endian::little>;
+
+    // read header
+    dmiptex_t header;
+    stream >= header;
+
+    // must be able to at least read the header
+    if (!stream) {
+        logging::funcprint("Failed to fully load mip {}. Header incomplete.\n", name);
+        return std::nullopt;
+    }
+
+    texture tex;
+    
+    // note: this is a bit of a hack, but the name stored in
+    // the mip is ignored. it's extraneous and well-formed mips
+    // will all match up anyways.
+    tex.meta.name = name;
+    tex.meta.width = header.width;
+    tex.meta.height = header.height;
+
+    if (!meta_only) {
+        // convert the data into RGBA.
+        if (header.offsets[0] <= 0) {
+            logging::funcprint("attempted to load external mip for {}\n", name);
+            return tex;
         }
+
+        // sanity check
+        if (header.offsets[0] + (header.width * header.height) > file->size()) {
+            logging::funcprint("mip offset0 overrun for {}\n", name);
+            return tex;
+        }
+
+        // fetch the full data for the first mip
+        stream.seekg(header.offsets[0]);
+        std::vector<uint8_t> pixels(header.width * header.height);
+        stream.read(reinterpret_cast<char *>(pixels.data()), pixels.size());
+
+        // Half Life will have a palette of 256 colors in a specific spot
+        // so use that instead of game-specific palette.
+        // FIXME: to support these palettes in other games we'd need to
+        // maybe pass through the archive it's loaded from. if it's a WAD3
+        // we can safely make the next assumptions, but WAD2s might have wildly
+        // different data after the mips...
+        if (game->id == GAME_HALF_LIFE) {
+            bool valid_mip_palette = true;
+
+            int32_t mip3_size = (header.width >> 3) + (header.height >> 3);
+            size_t palette_size = sizeof(uint16_t) + (sizeof(qvec3b) * 256);
+
+            if (header.offsets[3] <= 0) {
+                logging::funcprint("mip palette needs offset3 to work, for {}\n", name);
+                valid_mip_palette = false;
+            } else if (header.offsets[3] + mip3_size + palette_size > file->size()) {
+                logging::funcprint("mip palette overrun for {}\n", name);
+                valid_mip_palette = false;
+            }
+
+            if (valid_mip_palette) {
+                stream.seekg(header.offsets[3] + mip3_size + palette_size);
+
+                uint16_t num_colors;
+                stream >= num_colors;
+
+                if (num_colors != 256) {
+                    logging::funcprint("mip palette color num should be 256 for {}\n", name);
+                    valid_mip_palette = false;
+                } else {
+                    std::vector<qvec3b> mip_palette(256);
+                    stream.read(reinterpret_cast<char *>(mip_palette.data()), mip_palette.size() * sizeof(qvec3b));
+                    convert_paletted_to_32_bit(pixels, tex.pixels, mip_palette);
+                    return tex;
+                }
+            }
+        }
+
+        convert_paletted_to_32_bit(pixels, tex.pixels, palette);
     }
 
     return tex;
@@ -172,7 +268,7 @@ struct targa_t
 LoadTGA
 =============
 */
-std::optional<texture> load_tga(const std::string &name, const fs::data &file, bool metaOnly)
+std::optional<texture> load_tga(const std::string &name, const fs::data &file, bool meta_only)
 {
     memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -182,12 +278,12 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
     stream >= targa_header;
 
     if (targa_header.image_type != 2 && targa_header.image_type != 10) {
-        logging::funcprint("Failed to load TGA. Only type 2 and 10 targa RGB images supported.\n");
+        logging::funcprint("Failed to load {}. Only type 2 and 10 targa RGB images supported.\n", name);
         return std::nullopt;
     }
 
     if (targa_header.colormap_type != 0 || (targa_header.pixel_size != 32 && targa_header.pixel_size != 24)) {
-        logging::funcprint("Failed to load TGA. Only 32 or 24 bit images supported (no colormaps).\n");
+        logging::funcprint("Failed to load {}. Only 32 or 24 bit images supported (no colormaps).\n", name);
         return std::nullopt;
     }
 
@@ -201,7 +297,7 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
     tex.meta.width = columns;
     tex.meta.height = rows;
 
-    if (!metaOnly) {
+    if (!meta_only) {
         tex.pixels.resize(numPixels);
 
         if (targa_header.id_length != 0)
@@ -222,7 +318,7 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
                             *pixbuf++ = {red, green, blue, alphabyte};
                             break;
                         default:
-                            logging::funcprint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
+                            logging::funcprint("TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
                             return std::nullopt;
                     }
                 }
@@ -244,7 +340,7 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
                                 break;
                             case 32: stream >= blue >= green >= red >= alphabyte; break;
                             default:
-                                logging::funcprint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
+                                logging::funcprint("TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
                                 return std::nullopt;
                         }
 
@@ -272,7 +368,7 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
                                     *pixbuf++ = {red, green, blue, alphabyte};
                                     break;
                                 default:
-                                    logging::funcprint("unsupported pixel size: {}\n", targa_header.pixel_size); // mxd
+                                    logging::funcprint("TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
                                     return std::nullopt;
                             }
                             column++;
@@ -418,28 +514,20 @@ static void ConvertTextures(const mbsp_t *bsp)
         // Add empty to keep texture index in case of load problems...
         auto &tex = textures.emplace(miptex.name, texture{}).first->second;
 
-        if (!miptex.data[0]) {
+        // FIXME: fs::load
+        if (miptex.data.empty()) {
             logging::funcprint("WARNING: Texture {} is external\n", miptex.name);
             continue;
         }
 
-        // Create rgba_miptex_t...
-        tex.meta.name = miptex.name;
-        tex.meta.width = miptex.width;
-        tex.meta.height = miptex.height;
+        auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game);
 
-        // Convert to RGBA
-        size_t numPixels = miptex.width * miptex.height;
-
-        tex.pixels.resize(numPixels);
-
-        const uint8_t *data = miptex.data[0].get();
-        auto &pal = miptex.palette.empty() ? palette : miptex.palette;
-
-        for (size_t c = 0; c < numPixels; c++) {
-            const uint8_t palindex = data[c];
-            tex.pixels[c] = {pal[palindex], static_cast<uint8_t>(palindex == 255 ? 0 : 255)};
+        if (!loaded_tex) {
+            logging::funcprint("WARNING: Texture {} is invalid\n", miptex.name);
+            continue;
         }
+
+        tex = std::move(loaded_tex.value());
 
         tex.meta.averageColor = calculate_average(tex.pixels);
     }

@@ -242,7 +242,8 @@ struct q2_dmodel_t
     auto stream_data() { return std::tie(mins, maxs, origin, headnode, firstface, numfaces); }
 };
 
-// structured data from BSP
+// structured data from BSP. this is the header of the miptex used
+// in Quake-like formats.
 constexpr size_t MIPLEVELS = 4;
 struct dmiptex_t
 {
@@ -253,177 +254,82 @@ struct dmiptex_t
     auto stream_data() { return std::tie(name, width, height, offsets); }
 };
 
-// miptex in memory
+// semi-structured miptex data; we don't directly care about
+// the contents of the miptex beyond the header. we store
+// some of the data from the miptex (name, width, height) but
+// the full, raw miptex is also stored in `data`.
 struct miptex_t
 {
     std::string name;
     uint32_t width, height;
-    std::array<std::unique_ptr<uint8_t[]>, MIPLEVELS> data;
+    std::vector<uint8_t> data;
 
-    static inline uint8_t *copy_bytes(const uint8_t *in, size_t size)
+    inline size_t stream_size() const { return data.size(); }
+
+    inline void stream_read(std::istream &stream, size_t len)
     {
-        uint8_t *bytes = new uint8_t[size];
-        memcpy(bytes, in, size);
-        return bytes;
-    }
+        data.resize(len);
+        stream.read(reinterpret_cast<char *>(data.data()), len);
 
-    miptex_t() = default;
-    miptex_t(const miptex_t &copy) : name(copy.name), width(copy.width), height(copy.height)
-    {
-        for (int32_t i = 0; i < data.size(); i++) {
-            if (copy.data[i]) {
-                data[i] = std::unique_ptr<uint8_t[]>(copy_bytes(copy.data[i].get(), (width >> i) * (height >> i)));
-            }
-        }
-    }
-
-    inline miptex_t &operator=(const miptex_t &copy)
-    {
-        name = copy.name;
-        width = copy.width;
-        height = copy.height;
-
-        for (int32_t i = 0; i < data.size(); i++) {
-            if (copy.data[i]) {
-                data[i] = std::unique_ptr<uint8_t[]>(copy_bytes(copy.data[i].get(), (width >> i) * (height >> i)));
-            }
-        }
-
-        return *this;
-    }
-
-    virtual ~miptex_t() { }
-
-    virtual size_t stream_size() const { return sizeof(dmiptex_t) + width * height / 64 * 85; }
-
-    virtual void stream_read(std::istream &stream)
-    {
-        auto start = stream.tellg();
+        memstream miptex_stream(data.data(), len, std::ios_base::in | std::ios_base::binary);
 
         dmiptex_t dtex;
-        stream >= dtex;
+        miptex_stream >= dtex;
 
         name = dtex.name.data();
-
         width = dtex.width;
         height = dtex.height;
-
-        for (size_t g = 0; g < MIPLEVELS; g++) {
-            if (dtex.offsets[g] <= 0) {
-                continue;
-            }
-
-            stream.seekg(static_cast<uint32_t>(start) + dtex.offsets[g]);
-            const size_t num_bytes = (dtex.width >> g) * (dtex.height >> g);
-            uint8_t *bytes = new uint8_t[num_bytes];
-            stream.read(reinterpret_cast<char *>(bytes), num_bytes);
-            data[g] = std::unique_ptr<uint8_t[]>(bytes);
-        }
     }
 
-    virtual void stream_write(std::ostream &stream) const
+    inline void stream_write(std::ostream &stream) const
     {
-        std::array<char, 16> as_array{};
-        memcpy(as_array.data(), name.c_str(), name.size());
-
-        stream <= as_array <= width <= height;
-
-        uint32_t header_end = sizeof(dmiptex_t);
-
-        for (size_t i = 0; i < MIPLEVELS; i++) {
-            if (data[i] <= 0) {
-                stream <= (uint32_t)0;
-            } else {
-                stream <= header_end;
-                header_end += (width >> i) * (height >> i);
-            }
-        }
-
-        for (size_t i = 0; i < MIPLEVELS; i++) {
-            if (data[i]) {
-                stream.write(reinterpret_cast<char *>(data[i].get()), (width >> i) * (height >> i));
-            }
-        }
-    }
-};
-
-// Half Life miptex, which includes a palette
-struct miptexhl_t : miptex_t
-{
-    std::vector<qvec3b> palette;
-
-    miptexhl_t() = default;
-
-    // convert miptex_t to miptexhl_t
-    miptexhl_t(const miptex_t &copy) : miptex_t(copy) { }
-
-    virtual size_t stream_size() const
-    {
-        return miptex_t::stream_size() + sizeof(uint16_t) + (palette.size() * sizeof(qvec3b));
-    }
-
-    virtual void stream_read(std::istream &stream)
-    {
-        miptex_t::stream_read(stream);
-
-        uint16_t num_colors;
-        stream >= num_colors;
-
-        palette.resize(num_colors);
-        stream.read(reinterpret_cast<char *>(palette.data()), palette.size());
-    }
-
-    virtual void stream_write(std::ostream &stream) const
-    {
-        miptex_t::stream_write(stream);
-
-        stream <= static_cast<uint16_t>(palette.size());
-
-        stream.write(reinterpret_cast<const char *>(palette.data()), palette.size());
+        stream.write(reinterpret_cast<const char *>(data.data()), data.size());
     }
 };
 
 // structured miptex container lump
-template<typename T>
 struct dmiptexlump_t
 {
-    std::vector<T> textures;
-
-    dmiptexlump_t() = default;
-
-    // copy from a different lump type
-    template<typename T2>
-    dmiptexlump_t(const dmiptexlump_t<T2> &copy)
-    {
-        textures.reserve(copy.textures.size());
-
-        for (auto &m : copy.textures) {
-            textures.emplace_back(m);
-        }
-    }
+    std::vector<miptex_t> textures;
 
     void stream_read(std::istream &stream, const lump_t &lump)
     {
         int32_t nummiptex;
         stream >= nummiptex;
 
+        // load in all of the offsets, we need them
+        // to calculate individual data sizes
+        std::vector<int32_t> offsets(nummiptex);
+
         for (size_t i = 0; i < nummiptex; i++) {
-            int32_t mipofs;
+            stream >= offsets[i];
+        }
 
-            stream >= mipofs;
-
+        for (size_t i = 0; i < nummiptex; i++) {
             miptex_t &tex = textures.emplace_back();
 
-            if (mipofs < 0)
+            int32_t offset = offsets[i];
+
+            // dummy texture?
+            if (offset < 0) {
                 continue;
+            }
 
-            auto pos = stream.tellg();
+            // move to miptex position (technically required
+            // because there might be dummy data between the offsets
+            // and the mip textures themselves...)
+            stream.seekg(lump.fileofs + offset);
 
-            stream.seekg(lump.fileofs + mipofs);
+            // calculate the length of the data used for the individual miptex.
+            int32_t next_offset;
 
-            tex.stream_read(stream);
+            if (i == nummiptex - 1) {
+                next_offset = lump.filelen;
+            } else {
+                next_offset = offsets[i + 1];
+            }
 
-            stream.seekg(pos);
+            tex.stream_read(stream, next_offset - offset);
         }
     }
 
@@ -437,15 +343,20 @@ struct dmiptexlump_t
 
         size_t miptex_offset = 0;
 
+        // write out the miptex offsets
         for (auto &texture : textures) {
             if (!texture.name[0]) {
+                // dummy texture
                 stream <= static_cast<int32_t>(-1);
                 continue;
             }
+
             stream <= static_cast<int32_t>(header_size + miptex_offset);
 
             miptex_offset += texture.stream_size();
 
+            // Half Life requires the padding, but it's also a good idea
+            // in general to keep them padded to 4s
             if ((p + miptex_offset) % 4) {
                 miptex_offset += 4 - ((p + miptex_offset) % 4);
             }
@@ -453,6 +364,7 @@ struct dmiptexlump_t
 
         for (auto &texture : textures) {
             if (texture.name[0]) {
+                // fix up the padding to match the above conditions
                 if (stream.tellp() % 4) {
                     constexpr const char pad[4]{};
                     stream.write(pad, 4 - (stream.tellp() % 4));
@@ -1518,10 +1430,6 @@ struct darea_t
 using dmodelq1_vector = std::vector<dmodelq1_t>;
 using dmodelh2_vector = std::vector<dmodelh2_t>;
 
-// Q1-esque maps can use one of these two.
-using miptexq1_lump = dmiptexlump_t<miptex_t>;
-using miptexhl_lump = dmiptexlump_t<miptexhl_t>;
-
 // type tag used for type inference
 struct q1bsp_tag_t
 {
@@ -1532,7 +1440,7 @@ struct bsp29_t : q1bsp_tag_t
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
     std::vector<uint8_t> dlightdata;
-    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    dmiptexlump_t dtex;
     std::string dentdata;
     std::vector<bsp29_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
@@ -1551,7 +1459,7 @@ struct bsp2rmq_t : q1bsp_tag_t
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
     std::vector<uint8_t> dlightdata;
-    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    dmiptexlump_t dtex;
     std::string dentdata;
     std::vector<bsp2rmq_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
@@ -1570,7 +1478,7 @@ struct bsp2_t : q1bsp_tag_t
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
     std::vector<uint8_t> dlightdata;
-    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    dmiptexlump_t dtex;
     std::string dentdata;
     std::vector<bsp2_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
@@ -1644,7 +1552,7 @@ struct mbsp_t
     std::vector<dmodelh2_t> dmodels;
     mvis_t dvis;
     std::vector<uint8_t> dlightdata;
-    dmiptexlump_t<miptexhl_t> dtex;
+    dmiptexlump_t dtex;
     std::string dentdata;
     std::vector<mleaf_t> dleafs;
     std::vector<dplane_t> dplanes;

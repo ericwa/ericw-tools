@@ -30,6 +30,7 @@
 
 #include "common/polylib.hh"
 #include "common/bsputils.hh"
+#include "common/imglib.hh"
 
 static void PrintBSPTextureUsage(const mbsp_t &bsp)
 {
@@ -104,6 +105,7 @@ int main(int argc, char **argv)
         LoadBSPFile(source, &bsp);
 
         bsp.version->game->init_filesystem(source, options);
+        img::init_palette(bsp.version->game);
 
         PrintBSPFileSizes(&bsp);
 

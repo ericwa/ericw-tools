@@ -83,8 +83,8 @@ struct pak_archive : archive_like
     std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>, case_insensitive_hash, case_insensitive_equal>
         files;
 
-    inline pak_archive(const path &pathname)
-        : archive_like(pathname), pakstream(pathname, std::ios_base::in | std::ios_base::binary)
+    inline pak_archive(const path &pathname, bool external)
+        : archive_like(pathname, external), pakstream(pathname, std::ios_base::in | std::ios_base::binary)
     {
         pakstream >> endianness<std::endian::little>;
 
@@ -136,12 +136,15 @@ struct wad_archive : archive_like
     // WAD Format
     struct wad_header
     {
-        std::array<char, 4> identification{'W', 'A', 'D', '2'};
+        std::array<char, 4> identification;
         uint32_t numlumps;
         uint32_t infotableofs;
 
         auto stream_data() { return std::tie(identification, numlumps, infotableofs); }
     };
+    
+    static constexpr std::array<char, 4> wad2_ident = {'W', 'A', 'D', '2'};
+    static constexpr std::array<char, 4> wad3_ident = {'W', 'A', 'D', '3'};
 
     struct wad_lump_header
     {
@@ -150,17 +153,17 @@ struct wad_archive : archive_like
         uint32_t size; // uncompressed
         uint8_t type;
         uint8_t compression;
-        uint8_t pad1, pad2;
+        padding<2> pad;
         std::array<char, 16> name; // must be null terminated
 
-        auto stream_data() { return std::tie(filepos, disksize, size, type, compression, pad1, pad2, name); }
+        auto stream_data() { return std::tie(filepos, disksize, size, type, compression, pad, name); }
     };
 
     std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>, case_insensitive_hash, case_insensitive_equal>
         files;
 
-    inline wad_archive(const path &pathname)
-        : archive_like(pathname), wadstream(pathname, std::ios_base::in | std::ios_base::binary)
+    inline wad_archive(const path &pathname, bool external)
+        : archive_like(pathname, external), wadstream(pathname, std::ios_base::in | std::ios_base::binary)
     {
         wadstream >> endianness<std::endian::little>;
 
@@ -168,7 +171,8 @@ struct wad_archive : archive_like
 
         wadstream >= header;
 
-        if (header.identification != std::array<char, 4>{'W', 'A', 'D', '2'}) {
+        if (header.identification != wad2_ident &&
+            header.identification != wad3_ident) {
             throw std::runtime_error("Bad magic");
         }
 
@@ -176,7 +180,7 @@ struct wad_archive : archive_like
 
         wadstream.seekg(header.infotableofs);
 
-        for (size_t i = 0; i < header.infotableofs; i++) {
+        for (size_t i = 0; i < header.numlumps; i++) {
             wad_lump_header file;
 
             wadstream >= file;
@@ -203,7 +207,7 @@ struct wad_archive : archive_like
     }
 };
 
-static std::shared_ptr<directory_archive> absrel_dir = std::make_shared<directory_archive>("");
+static std::shared_ptr<directory_archive> absrel_dir = std::make_shared<directory_archive>("", false);
 std::list<std::shared_ptr<archive_like>> archives, directories;
 
 /** It's possible to compile quake 1/hexen 2 maps without a qdir */
@@ -217,7 +221,7 @@ void clear()
     directories.clear();
 }
 
-std::shared_ptr<archive_like> addArchive(const path &p)
+std::shared_ptr<archive_like> addArchive(const path &p, bool external)
 {
     if (p.empty()) {
         logging::funcprint("WARNING: can't add empty archive path\n");
@@ -225,7 +229,7 @@ std::shared_ptr<archive_like> addArchive(const path &p)
     }
 
     if (!exists(p)) {
-        logging::funcprint("WARNING: '{}' not found\n", p);
+        logging::funcprint("WARNING: archive '{}' not found\n", p);
         return nullptr;
     }
 
@@ -236,7 +240,7 @@ std::shared_ptr<archive_like> addArchive(const path &p)
             }
         }
 
-        auto &arch = directories.emplace_front(std::make_shared<directory_archive>(p));
+        auto &arch = directories.emplace_front(std::make_shared<directory_archive>(p, external));
         logging::print(logging::flag::VERBOSE, "Added directory '{}'\n", p);
         return arch;
     } else {
@@ -250,12 +254,12 @@ std::shared_ptr<archive_like> addArchive(const path &p)
 
         try {
             if (string_iequals(ext.generic_string(), ".pak")) {
-                auto &arch = archives.emplace_front(std::make_shared<pak_archive>(p));
+                auto &arch = archives.emplace_front(std::make_shared<pak_archive>(p, external));
                 auto &pak = reinterpret_cast<std::shared_ptr<pak_archive> &>(arch);
                 logging::print(logging::flag::VERBOSE, "Added pak '{}' with {} files\n", p, pak->files.size());
                 return arch;
             } else if (string_iequals(ext.generic_string(), ".wad")) {
-                auto &arch = archives.emplace_front(std::make_shared<wad_archive>(p));
+                auto &arch = archives.emplace_front(std::make_shared<wad_archive>(p, external));
                 auto &wad = reinterpret_cast<std::shared_ptr<wad_archive> &>(arch);
                 logging::print(logging::flag::VERBOSE, "Added wad '{}' with {} lumps\n", p, wad->files.size());
                 return arch;
@@ -309,17 +313,15 @@ resolve_result where(const path &p)
     return {};
 }
 
-data load(const path &p)
+data load(const resolve_result &pos)
 {
-    auto [arch, filename] = where(p);
-
-    if (!arch) {
+    if (!pos) {
         return std::nullopt;
     }
 
-    logging::print(logging::flag::VERBOSE, "Loaded '{}' from archive '{}'\n", filename, arch->pathname);
+    logging::print(logging::flag::VERBOSE, "Loaded '{}' from archive '{}'\n", pos.filename, pos.archive->pathname);
 
-    return arch->load(filename);
+    return pos.archive->load(pos.filename);
 }
 } // namespace fs
 

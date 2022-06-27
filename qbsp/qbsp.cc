@@ -37,7 +37,6 @@
 #include <qbsp/solidbsp.hh>
 #include <qbsp/surfaces.hh>
 #include <qbsp/qbsp.hh>
-#include <qbsp/wad.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
 
@@ -1128,43 +1127,74 @@ static void CreateHulls(void)
     }
 }
 
-void EnsureTexturesLoaded()
+// Fill the BSP's `dtex` data
+static void LoadTextureData()
 {
-    if (map.wadlist_tried_loading)
-        return;
+    for (size_t i = 0; i < map.miptex.size(); i++) {
+        auto pos = fs::where(map.miptex[i].name);
 
-    map.wadlist_tried_loading = true;
-    
-    // Q2 doesn't need this
+        if (!pos) {
+            logging::print("WARNING: Texture {} not found\n", map.miptex[i].name);
+            continue;
+        }
+
+        auto file = fs::load(pos);
+        auto tex = img::load_mip(map.miptex[i].name, file, true, options.target_game);
+
+        if (!tex) {
+            logging::print("WARNING: unable to load texture {} in archive {}\n", map.miptex[i].name, pos.archive->pathname);
+            continue;
+        }
+
+        auto &miptex = map.bsp.dtex.textures[i];
+        miptex.name = map.miptex[i].name;
+        miptex.width = tex->meta.width;
+        miptex.height = tex->meta.height;
+
+        if (!pos.archive->external) {
+            miptex.data = std::move(file.value());
+        }
+    }
+}
+
+static void AddAnimationFrames()
+{
+    size_t oldcount = map.miptex.size();
+
+    for (size_t i = 0; i < oldcount; i++) {
+        const std::string &existing_name = map.miptexTextureName(i);
+
+        if (existing_name[0] != '+' && (options.target_game->id != GAME_HALF_LIFE || existing_name[0] != '-')) {
+            continue;
+        }
+
+        std::string name = map.miptexTextureName(i);
+
+        /* Search for all animations (0-9) and alt-animations (A-J) */
+        for (size_t j = 0; j < 20; j++) {
+            name[1] = (j < 10) ? '0' + j : 'a' + j - 10;
+            if (fs::where(name)) {
+                FindMiptex(name.c_str());
+            }
+        }
+    }
+
+    logging::print(logging::flag::STAT, "     {:8} texture frames added\n", map.miptex.size() - oldcount);
+}
+
+static void LoadSecondaryTextures()
+{
+    // Q2 doesn't use any secondary textures
     if (options.target_game->id == GAME_QUAKE_II) {
         return;
     }
+    
+    AddAnimationFrames();
 
-    std::string wadstring = map.world_entity()->epairs.get("_wad");
+    /* Default texture data to store in worldmodel */
+    map.bsp.dtex.textures.resize(map.miptex.size());
 
-    if (wadstring.empty()) {
-        wadstring = map.world_entity()->epairs.get("wad");
-    }
-
-    if (wadstring.empty())
-        logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
-    else
-        WADList_Init(wadstring);
-
-    if (!map.wadlist.size()) {
-        if (!wadstring.empty()) {
-            logging::print("WARNING: No valid WAD filenames in worldmodel\n");
-        }
-
-        /* Try the default wad name */
-        fs::path defaultwad = options.map_path;
-        defaultwad.replace_extension("wad");
-
-        WADList_Init(defaultwad.string());
-
-        if (map.wadlist.size())
-            logging::print("Using default WAD: {}\n", defaultwad);
-    }
+    LoadTextureData();
 }
 
 /*
@@ -1186,8 +1216,8 @@ void ProcessFile()
         return;
     }
 
-    // this can happen earlier if brush primitives are in use, because we need texture sizes then
-    EnsureTexturesLoaded();
+    // initialize secondary textures
+    LoadSecondaryTextures();
 
     // init the tables to be shared by all models
     BeginBSPFile();
@@ -1206,7 +1236,6 @@ void ProcessFile()
     CreateHulls();
 
     WriteEntitiesToString();
-    WADList_Process();
     BSPX_CreateBrushList();
     FinishBSPFile();
 }
