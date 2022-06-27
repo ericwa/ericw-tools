@@ -61,7 +61,13 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels);
 const texture *find(const std::string &str);
 
 // Load wal
-std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool metaOnly);
+std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool meta_only);
+
+// Load TGA
+std::optional<texture> load_tga(const std::string &name, const fs::data &file, bool meta_only);
+
+// Load Quake/Half Life mip (raw data)
+std::optional<texture> load_mip(const std::string &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // Pull in texture data from the BSP into the textures map
 void load_textures(const mbsp_t *bsp);

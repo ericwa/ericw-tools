@@ -35,7 +35,9 @@ struct archive_like
 {
     path pathname;
 
-    inline archive_like(const path &pathname) : pathname(pathname) { }
+    bool external;
+
+    inline archive_like(const path &pathname, bool external) : pathname(pathname), external(external) { }
 
     virtual bool contains(const path &filename) = 0;
 
@@ -53,14 +55,16 @@ void clear();
 // path to the archive. Archives can be directories or archive-like
 // files. Returns the archive if it already exists, the new
 // archive added if one was added, or nullptr on error.
-std::shared_ptr<archive_like> addArchive(const path &p);
+// `external` is a stored hint as to if the caller should consider
+// the actual texture data embeddable.
+std::shared_ptr<archive_like> addArchive(const path &p, bool external = false);
 
 struct resolve_result
 {
     std::shared_ptr<archive_like> archive;
     path filename;
 
-    inline operator bool() { return (bool)archive; }
+    inline explicit operator bool() const { return (bool) archive; }
 };
 
 // attempt to resolve the specified file.
@@ -75,9 +79,15 @@ struct resolve_result
 // the filename is only different from p if p is an archive path.
 resolve_result where(const path &p);
 
-// attempt to load the specified file using the
-// archive found via where(p)
-data load(const path &p);
+// attempt to load the specified resolve result.
+data load(const resolve_result &pos);
+
+// attempt to load the specified file from the specified path.
+// shortcut to load(where(p))
+inline data load(const path &p)
+{
+    return load(where(p));
+}
 
 struct archive_components
 {

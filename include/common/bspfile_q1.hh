@@ -413,10 +413,6 @@ struct bsp2_dleaf_t
 using dmodelq1_vector = std::vector<dmodelq1_t>;
 using dmodelh2_vector = std::vector<dmodelh2_t>;
 
-// Q1-esque maps can use one of these two.
-using miptexq1_lump = dmiptexlump_t<miptex_t>;
-using miptexhl_lump = dmiptexlump_t<miptexhl_t>;
-
 // type tag used for type inference
 struct q1bsp_tag_t
 {
@@ -427,7 +423,7 @@ struct bsp29_t : q1bsp_tag_t
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
     std::vector<uint8_t> dlightdata;
-    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    dmiptexlump_t dtex;
     std::string dentdata;
     std::vector<bsp29_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
@@ -446,7 +442,7 @@ struct bsp2rmq_t : q1bsp_tag_t
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
     std::vector<uint8_t> dlightdata;
-    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    dmiptexlump_t dtex;
     std::string dentdata;
     std::vector<bsp2rmq_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;
@@ -465,7 +461,7 @@ struct bsp2_t : q1bsp_tag_t
     std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
     std::vector<uint8_t> dvisdata;
     std::vector<uint8_t> dlightdata;
-    std::variant<std::monostate, miptexq1_lump, miptexhl_lump> dtex;
+    dmiptexlump_t dtex;
     std::string dentdata;
     std::vector<bsp2_dleaf_t> dleafs;
     std::vector<dplane_t> dplanes;

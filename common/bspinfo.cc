@@ -27,6 +27,7 @@
 #include <fmt/ostream.h>
 #include <common/json.hh>
 #include "common/fs.hh"
+#include "common/imglib.hh"
 
 static std::string hex_string(const uint8_t *bytes, const size_t count)
 {
@@ -160,9 +161,15 @@ static void Base64EncodeTo(const uint8_t *data, size_t in_len, T p)
     }
 }
 
-static std::string serialize_image(const qvec3b *palette, const uint8_t *image, int32_t width, int32_t height)
+static std::string serialize_image(const std::optional<img::texture> &texture_opt)
 {
-    size_t bufsize = 122 + (width * height * 4);
+    if (!texture_opt) {
+        FError("can't serialize image in BSP?");
+    }
+
+    auto &texture = texture_opt.value();
+
+    size_t bufsize = 122 + (texture.meta.width * texture.meta.height * 4);
     std::vector<uint8_t> buf(bufsize);
     omemstream s(buf.data(), bufsize, std::ios_base::out | std::ios_base::binary);
 
@@ -174,12 +181,12 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
     s <= (int16_t)0;
     s <= (int32_t)122;
     s <= (int32_t)108;
-    s <= width;
-    s <= height;
+    s <= texture.meta.width;
+    s <= texture.meta.height;
     s <= (int16_t)1;
     s <= (int16_t)32;
     s <= (int32_t)3;
-    s <= (int32_t)(width * height * 4);
+    s <= (int32_t)(texture.meta.width * texture.meta.height * 4);
     s <= (int32_t)2835;
     s <= (int32_t)2835;
     s <= (int32_t)0;
@@ -194,21 +201,11 @@ static std::string serialize_image(const qvec3b *palette, const uint8_t *image, 
     s <= (int32_t)0;
     s <= (int32_t)0;
 
-    for (size_t y = 0; y < height; y++) {
-        for (size_t x = 0; x < width; x++) {
-            const uint8_t *pixel = image + ((height - y - 1) * width) + x;
-
-            if (*pixel == 255) {
-                s <= (int32_t)0;
-            } else {
-                const qvec3b &color = palette[*pixel];
-                s <= color[2];
-                s <= color[1];
-                s <= color[0];
-                s <= (uint8_t)255;
+    for (size_t y = 0; y < texture.meta.height; y++) {
+        for (size_t x = 0; x < texture.meta.width; x++) {
+            s <= texture.pixels[((texture.meta.height - y - 1) * texture.meta.width) + x];
             }
         }
-    }
 
     std::string str{"data:image/bmp;base64,"};
 
@@ -443,15 +440,9 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             tex.push_back({"height", src_tex.height});
 
             json &mips = tex["mips"] = json::array();
-
-            const qvec3b *pal = src_tex.palette.empty() ? bspdata.loadversion->game->get_default_palette().data()
-                                                        : src_tex.palette.data();
-
-            for (size_t i = 0; i < src_tex.data.size(); i++) {
-                mips.emplace_back(serialize_image(pal, src_tex.data[i].get(), src_tex.width >> i, src_tex.height >> i));
+            mips.emplace_back(serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
             }
         }
-    }
 
     if (!bspdata.bspx.entries.empty()) {
         json &bspxentries = (j.emplace("bspxentries", json::array())).first.value();

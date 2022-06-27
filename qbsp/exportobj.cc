@@ -21,7 +21,6 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>
-#include <qbsp/wad.hh>
 
 #include <unordered_set>
 #include <fstream>
@@ -57,7 +56,7 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
     const maptexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
     const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
 
-    const texture_t *texture = WADList_GetTexture(texname);
+    const auto &texture = map.load_image_meta(texname);
     const int width = texture ? texture->width : 64;
     const int height = texture ? texture->height : 64;
 

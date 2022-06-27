@@ -21,6 +21,7 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 #include <common/fs.hh>
+#include <common/imglib.hh>
 #include <cstdint>
 #include <limits.h>
 
@@ -495,6 +496,8 @@ public:
     {
         // Q1-like games don't care about the local
         // filesystem.
+        // they do care about the palette though.
+        img::init_palette(this);
     }
 
     const std::vector<qvec3b> &get_default_palette() const override
@@ -1145,6 +1148,9 @@ public:
 
         fs::addArchive(gamedir);
         discoverArchives(gamedir);
+
+        // load palette
+        img::init_palette(this);
     }
 
     const std::vector<qvec3b> &get_default_palette() const override
@@ -1611,11 +1617,7 @@ inline void ConvertQ1BSPToGeneric(T &bsp, mbsp_t &mbsp)
 {
     CopyArray(bsp.dentdata, mbsp.dentdata);
     CopyArray(bsp.dplanes, mbsp.dplanes);
-    if (std::holds_alternative<miptexhl_lump>(bsp.dtex)) {
-        CopyArray(std::get<miptexhl_lump>(bsp.dtex), mbsp.dtex);
-    } else {
-        CopyArray(std::get<miptexq1_lump>(bsp.dtex), mbsp.dtex);
-    }
+    CopyArray(bsp.dtex, mbsp.dtex);
     CopyArray(bsp.dvertexes, mbsp.dvertexes);
     CopyArray(bsp.dvisdata, mbsp.dvis.bits);
     CopyArray(bsp.dnodes, mbsp.dnodes);
@@ -1667,11 +1669,7 @@ inline T ConvertGenericToQ1BSP(mbsp_t &mbsp, const bspversion_t *to_version)
     // copy or convert data
     CopyArray(mbsp.dentdata, bsp.dentdata);
     CopyArray(mbsp.dplanes, bsp.dplanes);
-    if (to_version->game->id == GAME_HALF_LIFE) {
-        CopyArray(mbsp.dtex, bsp.dtex.template emplace<miptexhl_lump>());
-    } else {
-        CopyArray(mbsp.dtex, bsp.dtex.template emplace<miptexq1_lump>());
-    }
+    CopyArray(mbsp.dtex, bsp.dtex);
     CopyArray(mbsp.dvertexes, bsp.dvertexes);
     CopyArray(mbsp.dvis.bits, bsp.dvisdata);
     CopyArray(mbsp.dnodes, bsp.dnodes);
@@ -1839,6 +1837,8 @@ struct lump_reader
         } else {
             s.read(reinterpret_cast<char *>(buffer.data()), length);
         }
+
+        Q_assert((bool) s);
     }
 
     // read string from stream
@@ -1867,6 +1867,8 @@ struct lump_reader
             buffer.resize(lump.filelen - 1);
         }
         // TODO: warn about bad .bsp if missing \0?
+
+        Q_assert((bool) s);
     }
 
     // read structured lump data from stream into struct
@@ -1885,6 +1887,8 @@ struct lump_reader
         s.seekg(lump.fileofs);
 
         buffer.stream_read(s, lump);
+
+        Q_assert((bool) s);
     }
 };
 
@@ -1893,11 +1897,7 @@ inline void ReadQ1BSP(lump_reader &reader, T &bsp)
 {
     reader.read(LUMP_ENTITIES, bsp.dentdata);
     reader.read(LUMP_PLANES, bsp.dplanes);
-    if (reader.version->game->id == GAME_HALF_LIFE) {
-        reader.read(LUMP_TEXTURES, bsp.dtex.template emplace<miptexhl_lump>());
-    } else {
-        reader.read(LUMP_TEXTURES, bsp.dtex.template emplace<miptexq1_lump>());
-    }
+    reader.read(LUMP_TEXTURES, bsp.dtex);
     reader.read(LUMP_VERTEXES, bsp.dvertexes);
     reader.read(LUMP_VISIBILITY, bsp.dvisdata);
     reader.read(LUMP_NODES, bsp.dnodes);
@@ -2195,7 +2195,7 @@ public:
         write_lump(LUMP_LIGHTING, bsp.dlightdata);
         write_lump(LUMP_VISIBILITY, bsp.dvisdata);
         write_lump(LUMP_ENTITIES, bsp.dentdata);
-        std::visit([this](auto &&arg) { this->write_lump(LUMP_TEXTURES, arg); }, bsp.dtex);
+        write_lump(LUMP_TEXTURES, bsp.dtex);
     }
 
     template<typename T, typename std::enable_if_t<std::is_base_of_v<q2bsp_tag_t, T>, int> = 0>
@@ -2336,10 +2336,7 @@ inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
     PrintLumpSize(lumpspec.begin()[LUMP_EDGES], bsp.dedges.size());
     PrintLumpSize(lumpspec.begin()[LUMP_SURFEDGES], bsp.dsurfedges.size());
 
-    if (std::holds_alternative<miptexhl_lump>(bsp.dtex))
-        logging::print("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexhl_lump>(bsp.dtex).textures.size());
-    else
-        logging::print("{:7} {:<12} {:10}\n", "", "textures", std::get<miptexq1_lump>(bsp.dtex).textures.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "textures", bsp.dtex.textures.size());
     logging::print("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
     logging::print("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvisdata.size());
     logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator

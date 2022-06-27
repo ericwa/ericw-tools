@@ -1075,7 +1075,6 @@ int light_main(int argc, const char **argv)
         }
     }
 
-    img::init_palette(bspdata.loadversion->game);
     img::load_textures(&bsp);
 
     CacheTextures(bsp);

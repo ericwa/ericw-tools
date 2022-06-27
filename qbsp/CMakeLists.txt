@@ -1,6 +1,5 @@
 set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/wad.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
@@ -25,7 +24,6 @@ set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/qbsp/brushbsp.cc
 	${CMAKE_SOURCE_DIR}/qbsp/surfaces.cc
 	${CMAKE_SOURCE_DIR}/qbsp/tjunc.cc
-	${CMAKE_SOURCE_DIR}/qbsp/wad.cc
 	${CMAKE_SOURCE_DIR}/qbsp/writebsp.cc
 	${CMAKE_SOURCE_DIR}/qbsp/exportobj.cc
 	${QBSP_INCLUDES})

@@ -30,6 +30,7 @@
 
 #include "common/polylib.hh"
 #include "common/bsputils.hh"
+#include "common/imglib.hh"
 
 static void PrintBSPTextureUsage(const mbsp_t &bsp)
 {
