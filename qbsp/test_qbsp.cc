@@ -58,7 +58,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRe
     }
 
     auto testmap_path = std::filesystem::path(testmaps_dir) / name;
-    auto map_in_game_path = fs::path(destdir) / name;
+    auto map_in_game_path = fs::path(destdir) / name.filename();
     fs::copy(testmap_path, map_in_game_path, fs::copy_options::overwrite_existing);
 
     std::string map_string = map_in_game_path.generic_string();
@@ -169,7 +169,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    std::vector<std::string> args{"", "-nopercent"};
+    std::vector<std::string> args{""}; // first arg is the exe path, which we're ignoring in this case
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }
@@ -192,7 +192,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
 
     // copy .bsp to game's basedir/maps directory, for easy in-game testing
     if (strlen(destdir) > 0) {
-        auto dest = fs::path(destdir) / name;
+        auto dest = fs::path(destdir) / name.filename();
         dest.replace_extension(".bsp");
         fs::copy(options.bsp_path, dest, fs::copy_options::overwrite_existing);
     }
@@ -237,6 +237,30 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapQ1
 #else
     return LoadTestmap(name, extra_args);
 #endif
+}
+
+static void CheckFilled(const mbsp_t &bsp, int hullnum)
+{
+    int32_t contents = BSP_FindContentsAtPoint(&bsp, hullnum, &bsp.dmodels[0], qvec3d{8192, 8192, 8192});
+
+    if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+        CHECK(contents == Q2_CONTENTS_SOLID);
+    } else {
+        CHECK(contents == CONTENTS_SOLID);
+    }
+}
+
+
+static void CheckFilled(const mbsp_t &bsp)
+{
+    if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+        CheckFilled(bsp, 0);
+    } else {
+        auto hullsizes = bsp.loadversion->game->get_hull_sizes();
+        for (int i = 0; i < hullsizes.size(); ++i) {
+            CheckFilled(bsp, i);
+        }
+    }
 }
 
 static mbsp_t LoadBsp(const std::filesystem::path &path_in)
@@ -1275,12 +1299,14 @@ TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST_CASE("base1", "[testmaps_q2]")
+TEST_CASE("base1", "[testmaps_q2][.releaseonly][!mayfail]")
 {
-#if 0
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    CHECK(prt);
+    CheckFilled(bsp);
+
 
     // bspinfo output from a compile done with
     // https://github.com/qbism/q2tools-220 at 46fd97bbe1b3657ca9e93227f89aaf0fbd3677c9.
@@ -1304,7 +1330,29 @@ TEST_CASE("base1", "[testmaps_q2]")
     //      lightdata             0
     //      visdata               0
     //      entdata           53623
-#endif
+}
+
+TEST_CASE("quake maps", "[testmaps_q1][.releaseonly][!mayfail]")
+{
+    std::vector<std::string> quake_maps{"DM1.map"};
+    // fixme-brushbsp: enable the rest of these
+/*
+        "DM2.map", "DM3.map", "DM4.map", "DM5.map", "DM6.map", "DM7.map",
+        "E1M1.map", "E1M2.map", "E1M3.map", "E1M4.map", "E1M5.map", "E1M6.map", "E1M7.map", "E1M8.map", "E2M1.map",
+        "E2M2.map", "E2M3.map", "E2M4.map", "E2M5.map", "E2M6.map", "E2M7.map", "E3M1.map", "E3M2.map", "E3M3.map",
+        "E3M4.map", "E3M5.map", "E3M6.map", "E3M7.map", "E4M1.map", "E4M2.map", "E4M3.map", "E4M4.map", "E4M5.map",
+        "E4M6.map", "E4M7.map", "E4M8.map", "END.map"};
+*/
+
+    for (const auto& map : quake_maps) {
+        DYNAMIC_SECTION("testing " << map) {
+            const auto [bsp, bspx, prt] = LoadTestmapQ1("quake_map_source/" + map);
+
+            CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+            CHECK(prt);
+            CheckFilled(bsp);
+        }
+    }
 }
 
 TEST_CASE("base1leak", "[testmaps_q2]")

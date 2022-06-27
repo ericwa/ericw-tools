@@ -40,6 +40,7 @@ cpack || exit 1
 ./common/testcommon || exit 1
 ./light/testlight || exit 1
 ./qbsp/testqbsp || exit 1
+./qbsp/testqbsp [.] || exit 1 # run hidden tests (releaseonly)
 ./vis/testvis --allow-running-no-tests || exit 1
 
 # check rpath
