@@ -61,4 +61,6 @@ void MakeTreePortals(tree_t *tree);
 void FreeTreePortals_r(node_t *node);
 void AssertNoPortals(node_t *node);
 void MakeHeadnodePortals(tree_t *tree);
+void EmitAreaPortals(node_t *headnode);
+void FloodAreas(mapentity_t *entity, node_t *headnode);
 void MarkVisibleSides(tree_t *tree, mapentity_t* entity);

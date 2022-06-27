@@ -26,6 +26,7 @@
 #include <qbsp/map.hh>
 #include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/outside.hh>
 
 #include <atomic>
 
@@ -488,6 +489,239 @@ void FreeTreePortals_r(node_t *node)
         delete p;
     }
     node->portals = nullptr;
+}
+
+/*
+=========================================================
+
+FLOOD AREAS
+
+=========================================================
+*/
+
+static void ApplyArea_r(node_t *node)
+{
+    node->area = map.c_areas;
+
+    if (node->planenum != PLANENUM_LEAF) {
+        ApplyArea_r(node->children[0]);
+        ApplyArea_r(node->children[1]);
+    }
+}
+
+static mapentity_t *AreanodeEntityForLeaf(node_t *node)
+{
+    // if detail cluster, search the children recursively
+    if (node->planenum != PLANENUM_LEAF) {
+        if (auto *child0result = AreanodeEntityForLeaf(node->children[0]); child0result) {
+            return child0result;
+        }
+        return AreanodeEntityForLeaf(node->children[1]);
+    }
+
+    for (auto &brush : node->original_brushes) {
+        if (brush->func_areaportal) {
+            return brush->func_areaportal;
+        }
+    }
+    return nullptr;
+}
+
+/*
+=============
+FloodAreas_r
+=============
+*/
+static void FloodAreas_r(node_t *node)
+{
+    if ((node->planenum == PLANENUM_LEAF || node->detail_separator) && (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)) {
+        // grab the func_areanode entity
+        mapentity_t *entity = AreanodeEntityForLeaf(node);
+
+        if (entity == nullptr)
+        {
+            logging::print("WARNING: areaportal contents in node, but no entity found {} -> {}\n",
+                node->bounds.mins(),
+                node->bounds.maxs());
+            return;
+        }
+
+        // this node is part of an area portal;
+        // if the current area has allready touched this
+        // portal, we are done
+        if (entity->portalareas[0] == map.c_areas || entity->portalareas[1] == map.c_areas)
+            return;
+
+        // note the current area as bounding the portal
+        if (entity->portalareas[1]) {
+            logging::print("WARNING: areaportal entity {} touches > 2 areas\n  Entity Bounds: {} -> {}\n",
+                entity - map.entities.data(), entity->bounds.mins(),
+                entity->bounds.maxs());
+            return;
+        }
+
+        if (entity->portalareas[0])
+            entity->portalareas[1] = map.c_areas;
+        else
+            entity->portalareas[0] = map.c_areas;
+
+        return;
+    }
+
+    if (node->area)
+        return; // already got it
+
+    node->area = map.c_areas;
+
+    // propagate area assignment to descendants if we're a cluster
+    if (!(node->planenum == PLANENUM_LEAF)) {
+        ApplyArea_r(node);
+    }
+
+    int32_t s;
+
+    for (portal_t *p = node->portals; p; p = p->next[s]) {
+        s = (p->nodes[1] == node);
+#if 0
+		if (p->nodes[!s]->occupied)
+			continue;
+#endif
+        if (!Portal_EntityFlood(p, s))
+            continue;
+
+        FloodAreas_r(p->nodes[!s]);
+    }
+}
+
+/*
+=============
+FindAreas_r
+
+Just decend the tree, and for each node that hasn't had an
+area set, flood fill out from there
+=============
+*/
+static void FindAreas(node_t *node)
+{
+    auto leafs = FindOccupiedClusters(node);
+    for (auto *leaf : leafs) {
+        if (leaf->area)
+            continue;
+
+        // area portals are always only flooded into, never
+        // out of
+        if (ClusterContents(leaf).native & Q2_CONTENTS_AREAPORTAL)
+            continue;
+
+        map.c_areas++;
+        FloodAreas_r(leaf);
+    }
+}
+
+/*
+=============
+SetAreaPortalAreas_r
+
+Just decend the tree, and for each node that hasn't had an
+area set, flood fill out from there
+=============
+*/
+static void SetAreaPortalAreas_r(node_t *node)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        SetAreaPortalAreas_r(node->children[0]);
+        SetAreaPortalAreas_r(node->children[1]);
+        return;
+    }
+
+    if (node->contents.native != Q2_CONTENTS_AREAPORTAL)
+        return;
+
+    if (node->area)
+        return; // already set
+
+    // grab the func_areanode entity
+    mapentity_t *entity = AreanodeEntityForLeaf(node);
+
+    if (!entity)
+    {
+        logging::print("WARNING: areaportal missing for node: {} -> {}\n",
+            node->bounds.mins(), node->bounds.maxs());
+        return;
+    }
+
+    node->area = entity->portalareas[0];
+    if (!entity->portalareas[1]) {
+        logging::print("WARNING: areaportal entity {} doesn't touch two areas\n  Entity Bounds: {} -> {}\n",
+            entity - map.entities.data(),
+            entity->bounds.mins(), entity->bounds.maxs());
+        return;
+    }
+}
+
+/*
+=============
+EmitAreaPortals
+
+=============
+*/
+void EmitAreaPortals(node_t *headnode)
+{
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+
+    map.bsp.dareaportals.emplace_back();
+    map.bsp.dareas.emplace_back();
+
+    for (size_t i = 1; i <= map.c_areas; i++) {
+        darea_t &area = map.bsp.dareas.emplace_back();
+        area.firstareaportal = map.bsp.dareaportals.size();
+
+        for (auto &e : map.entities) {
+
+            if (!e.areaportalnum)
+                continue;
+            dareaportal_t dp = {};
+
+            if (e.portalareas[0] == i) {
+                dp.portalnum = e.areaportalnum;
+                dp.otherarea = e.portalareas[1];
+            } else if (e.portalareas[1] == i) {
+                dp.portalnum = e.areaportalnum;
+                dp.otherarea = e.portalareas[0];
+            }
+
+            size_t j = 0;
+
+            for (; j < map.bsp.dareaportals.size(); j++)
+            {
+                if (map.bsp.dareaportals[j] == dp)
+                    break;
+            }
+
+            if (j == map.bsp.dareaportals.size())
+                map.bsp.dareaportals.push_back(dp);
+        }
+
+        area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
+    }
+
+    logging::print(logging::flag::STAT, "{:5} numareas\n", map.bsp.dareas.size());
+    logging::print(logging::flag::STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
+}
+
+/*
+=============
+FloodAreas
+
+Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
+=============
+*/
+void FloodAreas(mapentity_t *entity, node_t *headnode)
+{
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    FindAreas(headnode);
+    SetAreaPortalAreas_r(headnode);
+    logging::print(logging::flag::STAT, "{:5} areas\n", map.c_areas);
 }
 
 //==============================================================
