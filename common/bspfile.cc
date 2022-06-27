@@ -21,6 +21,7 @@
 #include <common/mathlib.hh>
 #include <common/bspfile.hh>
 #include <common/fs.hh>
+#include <common/imglib.hh>
 #include <cstdint>
 #include <limits.h>
 

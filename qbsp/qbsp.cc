@@ -1131,7 +1131,7 @@ static void CreateHulls(void)
 static void LoadTextureData()
 {
     for (size_t i = 0; i < map.miptex.size(); i++) {
-        auto pos = fs::where(map.miptex[i].name);
+        auto pos = fs::where(map.miptex[i].name, options.filepriority.value() == settings::search_priority_t::LOOSE);
 
         if (!pos) {
             logging::print("WARNING: Texture {} not found\n", map.miptex[i].name);
@@ -1163,7 +1163,7 @@ static void LoadTextureData()
             header.height = miptex.height;
             header.offsets = { -1, -1, -1, -1 };
 
-            omemstream stream(miptex.data.data(), miptex.data.size());
+            memstream stream(miptex.data.data(), miptex.data.size(), std::ios_base::out | std::ios_base::binary);
             stream <= header;
         }
     }
