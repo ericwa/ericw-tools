@@ -497,6 +497,7 @@ public:
         // Q1-like games don't care about the local
         // filesystem.
         // they do care about the palette though.
+        fs::clear();
         img::init_palette(this);
     }
 
@@ -1107,6 +1108,8 @@ private:
 public:
     void init_filesystem(const fs::path &source, const settings::common_settings &settings) const override
     {
+        fs::clear();
+
         constexpr const char *MAPS_FOLDER = "maps";
 
         // detect gamedir (mod directory path)
