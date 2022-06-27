@@ -464,30 +464,6 @@ FLOOD AREAS
 =========================================================
 */
 
-/*
-===============
-Portal_EntityFlood
-
-The entity flood determines which areas are
-"outside" on the map, which are then filled in.
-Flowing from side s to side !s
-===============
-*/
-static bool Portal_EntityFlood(const portal_t *p, int32_t s)
-{
-    auto contents0 = ClusterContents(p->nodes[0]);
-    auto contents1 = ClusterContents(p->nodes[1]);
-
-    // can never cross to a solid
-    if (contents0.is_solid(options.target_game))
-        return false;
-    if (contents1.is_solid(options.target_game))
-        return false;
-
-    // can flood through everything else
-    return true;
-}
-
 static void ApplyArea_r(node_t *node)
 {
     node->area = map.c_areas;

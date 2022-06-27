@@ -53,6 +53,8 @@ struct portalstats_t {
 };
 
 contentflags_t ClusterContents(const node_t *node);
+bool Portal_VisFlood(const portal_t *p);
+bool Portal_EntityFlood(const portal_t *p, int32_t s);
 void MakeNodePortal(node_t *node, portalstats_t &stats);
 void SplitNodePortals(node_t *node, portalstats_t &stats);
 void MakeTreePortals(tree_t *tree);

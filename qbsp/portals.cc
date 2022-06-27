@@ -31,6 +31,69 @@
 
 #include "tbb/task_group.h"
 
+contentflags_t ClusterContents(const node_t *node)
+{
+    /* Pass the leaf contents up the stack */
+    if (node->planenum == PLANENUM_LEAF)
+        return node->contents;
+
+    return options.target_game->cluster_contents(
+        ClusterContents(node->children[0]), ClusterContents(node->children[1]));
+}
+
+/*
+=============
+Portal_VisFlood
+
+Returns true if the portal is empty or translucent, allowing
+the PVS calculation to see through it.
+The nodes on either side of the portal may actually be clusters,
+not leafs, so all contents should be ored together
+=============
+*/
+bool Portal_VisFlood(const portal_t *p)
+{
+    if (!p->onnode) {
+        return false; // to global outsideleaf
+    }
+
+    contentflags_t contents0 = ClusterContents(p->nodes[0]);
+    contentflags_t contents1 = ClusterContents(p->nodes[1]);
+
+    /* Can't see through func_illusionary_visblocker */
+    if (contents0.illusionary_visblocker || contents1.illusionary_visblocker)
+        return false;
+
+    // Check per-game visibility
+    return options.target_game->portal_can_see_through(contents0, contents1, options.transwater.value(), options.transsky.value());
+}
+
+/*
+===============
+Portal_EntityFlood
+
+The entity flood determines which areas are
+"outside" on the map, which are then filled in.
+Flowing from side s to side !s
+===============
+*/
+bool Portal_EntityFlood(const portal_t *p, int32_t s)
+{
+    if (p->nodes[0]->planenum != PLANENUM_LEAF
+        || p->nodes[1]->planenum != PLANENUM_LEAF) {
+        FError("Portal_EntityFlood: not a leaf");
+    }
+
+    // can never cross to a solid
+    if (p->nodes[0]->contents.is_any_solid(options.target_game)
+        || p->nodes[1]->contents.is_any_solid(options.target_game)) {
+        return false;
+    }
+
+    // can flood through everything else
+    return true;
+}
+
 /*
 =============
 AddPortalToNodes

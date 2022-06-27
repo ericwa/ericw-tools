@@ -1307,7 +1307,6 @@ TEST_CASE("base1", "[testmaps_q2][.releaseonly][!mayfail]")
     CHECK(prt);
     CheckFilled(bsp);
 
-
     // bspinfo output from a compile done with
     // https://github.com/qbism/q2tools-220 at 46fd97bbe1b3657ca9e93227f89aaf0fbd3677c9.
     // only took a couple of seconds (debug build)
@@ -1330,6 +1329,9 @@ TEST_CASE("base1", "[testmaps_q2][.releaseonly][!mayfail]")
     //      lightdata             0
     //      visdata               0
     //      entdata           53623
+
+    CHECK(3 == bsp.dareaportals.size());
+    CHECK(3 == bsp.dareas.size());
 }
 
 TEST_CASE("quake maps", "[testmaps_q1][.releaseonly][!mayfail]")

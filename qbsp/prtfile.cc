@@ -46,30 +46,6 @@ static void WriteFloat(std::ofstream &portalFile, vec_t v)
         fmt::print(portalFile, "{} ", v);
 }
 
-contentflags_t ClusterContents(const node_t *node)
-{
-    /* Pass the leaf contents up the stack */
-    if (node->planenum == PLANENUM_LEAF)
-        return node->contents;
-
-    return options.target_game->cluster_contents(
-        ClusterContents(node->children[0]), ClusterContents(node->children[1]));
-}
-
-/* Return true if possible to see the through the contents of the portals nodes */
-static bool PortalThru(const portal_t *p)
-{
-    contentflags_t contents0 = ClusterContents(p->nodes[0]);
-    contentflags_t contents1 = ClusterContents(p->nodes[1]);
-
-    /* Can't see through func_illusionary_visblocker */
-    if (contents0.illusionary_visblocker || contents1.illusionary_visblocker)
-        return false;
-
-    // Check per-game visibility
-    return options.target_game->portal_can_see_through(contents0, contents1, options.transwater.value(), options.transsky.value());
-}
-
 static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool clusters)
 {
     const portal_t *p, *next;
@@ -89,7 +65,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         next = (p->nodes[0] == node) ? p->next[0] : p->next[1];
         if (!p->winding || p->nodes[0] != node)
             continue;
-        if (!PortalThru(p))
+        if (!Portal_VisFlood(p))
             continue;
 
         w = p->winding;
@@ -162,7 +138,7 @@ static void CountPortals(const node_t *node, portal_state_t *state)
     for (portal = node->portals; portal;) {
         /* only write out from first leaf */
         if (portal->nodes[0] == node) {
-            if (PortalThru(portal))
+            if (Portal_VisFlood(portal))
                 state->num_visportals++;
             portal = portal->next[0];
         } else {
