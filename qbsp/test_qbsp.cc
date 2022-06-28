@@ -1608,7 +1608,7 @@ TEST_CASE("q1_wad_internal", "[testmaps_q1]") {
  * Test for WAD internal textures
  **/
 TEST_CASE("q1_wad_external", "[testmaps_q1]") {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map", { "-xwadpath", "A:\\ericw-tools\\testmaps" });
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map", { "-xwadpath", std::string(testmaps_dir) });
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
