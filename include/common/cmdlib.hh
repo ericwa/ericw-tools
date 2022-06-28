@@ -793,13 +793,13 @@ protected:
 
 struct memstream : virtual membuf, std::ostream, std::istream
 {
-    inline memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    inline memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary)
         : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
           std::istream(static_cast<std::streambuf *>(this))
     {
     }
 
-    inline memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+    inline memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary)
         : membuf(base, size, which), std::ostream(nullptr), std::istream(static_cast<std::streambuf *>(this))
     {
     }
@@ -807,7 +807,7 @@ struct memstream : virtual membuf, std::ostream, std::istream
 
 struct omemstream : virtual membuf, std::ostream
 {
-    inline omemstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    inline omemstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary)
         : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this))
     {
     }
@@ -815,7 +815,7 @@ struct omemstream : virtual membuf, std::ostream
 
 struct imemstream : virtual membuf, std::istream
 {
-    inline imemstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+    inline imemstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary)
         : membuf(base, size, which), std::istream(static_cast<std::streambuf *>(this))
     {
     }

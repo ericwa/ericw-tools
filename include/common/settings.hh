@@ -825,6 +825,12 @@ public:
 // global groups
 extern setting_group performance_group, logging_group, game_group;
 
+enum class search_priority_t
+{
+    LOOSE,
+    ARCHIVE
+};
+
 class common_settings : public virtual setting_container
 {
 public:
@@ -841,6 +847,8 @@ public:
     setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
     setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group, "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
     setting_string basedir{this, "basedir", "", "dir_name", &game_group, "override the default game base directory"};
+    setting_enum<search_priority_t> filepriority{this, "filepriority", search_priority_t::LOOSE, { { "loose", search_priority_t::LOOSE }, { "archive", search_priority_t::ARCHIVE } }, &game_group, "which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching" };
+    setting_set paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &game_group, "additional paths or archives to add to the search path, mostly for loose files"};
     setting_bool q2rtx{this, "q2rtx", false, &game_group, "adjust settings to best support Q2RTX"};
 
     virtual void setParameters(int argc, const char **argv);

@@ -1013,6 +1013,127 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 }
 
 /*
+==============================================================================
+Load (Quake 2) / Convert (Quake, Hexen 2) textures from paletted to RGBA (mxd)
+==============================================================================
+*/
+static void AddTextureName(const char *textureName, const mbsp_t *bsp)
+{
+    if (img::find(textureName)) {
+        return;
+    }
+
+    auto &tex = img::textures.emplace(textureName, img::texture{}).first->second;
+
+    // find wal first, since we'll use it for metadata
+    auto wal = fs::load("textures" / fs::path(textureName) += ".wal");
+
+    if (!wal) {
+        logging::funcprint("WARNING: can't find .wal for {}\n", textureName);
+    } else {
+        auto walTex = img::load_wal(textureName, wal, false, bsp->loadversion->game);
+
+        if (walTex) {
+            tex = std::move(*walTex);
+        }
+    }
+
+    // now check for replacements
+    auto [replacement_tex, _0, _1] = img::load_texture(textureName, false, bsp->loadversion->game, options);
+
+    // FIXME: I think this is fundamentally wrong; we need the
+    // original texture's size for texcoords
+    if (replacement_tex) {
+        tex.meta.width = replacement_tex->meta.width;
+        tex.meta.height = replacement_tex->meta.height;
+        tex.pixels = std::move(replacement_tex->pixels);
+    }
+
+    tex.meta.averageColor = img::calculate_average(tex.pixels);
+}
+
+// Load all of the referenced textures from the BSP texinfos into
+// the texture cache.
+static void LoadTextures(const mbsp_t *bsp)
+{
+    // gather all loadable textures...
+    for (auto &texinfo : bsp->texinfo) {
+        AddTextureName(texinfo.texture.data(), bsp);
+    }
+
+    // gather textures used by _project_texture.
+    // FIXME: I'm sure we can resolve this so we don't parse entdata twice.
+    auto entdicts = EntData_Parse(bsp->dentdata);
+    for (auto &entdict : entdicts) {
+        if (entdict.get("classname").find("light") == 0) {
+            const auto &tex = entdict.get("_project_texture");
+            if (!tex.empty()) {
+                AddTextureName(tex.c_str(), bsp);
+            }
+        }
+    }
+}
+
+// Load all of the paletted textures from the BSP into
+// the texture cache.
+static void ConvertTextures(const mbsp_t *bsp)
+{
+    if (!bsp->dtex.textures.size()) {
+        return;
+    }
+
+    for (auto &miptex : bsp->dtex.textures) {
+        if (img::find(miptex.name)) {
+            logging::funcprint("WARNING: Texture {} duplicated\n", miptex.name);
+            continue;
+        }
+
+        // Add empty to keep texture index in case of load problems...
+        auto &tex = img::textures.emplace(miptex.name, img::texture{}).first->second;
+
+        // try to load it externally first
+        auto [texture, _0, _1] = img::load_texture(miptex.name, false, bsp->loadversion->game, options);
+
+        if (texture) {
+            tex = std::move(texture.value());
+        } else {
+            if (miptex.data.size() <= sizeof(dmiptex_t)) {
+                logging::funcprint("WARNING: can't find texture {}\n", miptex.name);
+                continue;
+            }
+
+            auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game);
+
+            if (!loaded_tex) {
+                logging::funcprint("WARNING: Texture {} is invalid\n", miptex.name);
+                continue;
+            }
+
+            tex = std::move(loaded_tex.value());
+        }
+
+        tex.meta.averageColor = img::calculate_average(tex.pixels);
+    }
+}
+
+void load_textures(const mbsp_t *bsp)
+{
+    logging::print("--- {} ---\n", __func__);
+
+    for (auto &path : options.paths.values()) {
+        fs::addArchive(path, true);
+    }
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        LoadTextures(bsp);
+    } else if (bsp->dtex.textures.size() > 0) {
+        ConvertTextures(bsp);
+    } else {
+        logging::print("WARNING: failed to load or convert textures.\n");
+    }
+}
+
+/*
  * ==================
  * main
  * light modelfile
@@ -1075,7 +1196,7 @@ int light_main(int argc, const char **argv)
         }
     }
 
-    img::load_textures(&bsp);
+    load_textures(&bsp);
 
     CacheTextures(bsp);
     

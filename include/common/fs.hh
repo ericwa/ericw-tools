@@ -77,16 +77,16 @@ struct resolve_result
 // - registered archives in reverse order (ie, "c:/quake/pak1/maps/start.map", "c:/quake/pak0/maps/start.map")
 // returns the archive that it is contained in, and the filename.
 // the filename is only different from p if p is an archive path.
-resolve_result where(const path &p);
+resolve_result where(const path &p, bool prefer_loose = false);
 
 // attempt to load the specified resolve result.
 data load(const resolve_result &pos);
 
 // attempt to load the specified file from the specified path.
 // shortcut to load(where(p))
-inline data load(const path &p)
+inline data load(const path &p, bool prefer_loose = false)
 {
-    return load(where(p));
+    return load(where(p, prefer_loose));
 }
 
 struct archive_components

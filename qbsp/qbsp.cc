@@ -939,41 +939,49 @@ static void CreateHulls(void)
 static void LoadTextureData()
 {
     for (size_t i = 0; i < map.miptex.size(); i++) {
-        auto pos = fs::where(map.miptex[i].name);
-
-        if (!pos) {
-            logging::print("WARNING: Texture {} not found\n", map.miptex[i].name);
-            continue;
-        }
-
-        auto file = fs::load(pos);
-        auto tex = img::load_mip(map.miptex[i].name, file, true, options.target_game);
-
-        if (!tex) {
-            logging::print("WARNING: unable to load texture {} in archive {}\n", map.miptex[i].name, pos.archive->pathname);
-            continue;
-        }
-
+        // always fill the name even if we can't find it
         auto &miptex = map.bsp.dtex.textures[i];
         miptex.name = map.miptex[i].name;
-        miptex.width = tex->meta.width;
-        miptex.height = tex->meta.height;
 
-        if (!pos.archive->external) {
-            miptex.data = std::move(file.value());
-        } else {
-            // construct fake data that solely contains the header.
-            miptex.data.resize(sizeof(dmiptex_t));
-            
-            dmiptex_t header {};
-            std::copy(miptex.name.begin(), miptex.name.end(), header.name.begin());
-            header.width = miptex.width;
-            header.height = miptex.height;
-            header.offsets = { -1, -1, -1, -1 };
+        {
+            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, options.target_game, options);
 
-            omemstream stream(miptex.data.data(), miptex.data.size());
-            stream <= header;
+            if (!tex) {
+                if (pos.archive) {
+                    logging::print("WARNING: unable to load texture {} in archive {}\n", map.miptex[i].name, pos.archive->pathname);
+                } else {
+                    logging::print("WARNING: unable to find texture {}\n", map.miptex[i].name);
+                }
+            } else {
+                miptex.width = tex->meta.width;
+                miptex.height = tex->meta.height;
+
+                // only mips can be embedded directly
+                if (!pos.archive->external && tex->meta.extension == img::ext::MIP) {
+                    miptex.data = std::move(file.value());
+                    continue;
+                }
+            }
         }
+
+        // fall back to when we can't load the image.
+        // construct fake data that solely contains the header.
+        miptex.data.resize(sizeof(dmiptex_t));
+
+        dmiptex_t header {};
+        if (miptex.name.size() >= 16) {
+            logging::print("WARNING: texture {} name too long for Quake miptex\n", miptex.name);
+            std::copy_n(miptex.name.begin(), 15, header.name.begin());
+        } else {
+            std::copy(miptex.name.begin(), miptex.name.end(), header.name.begin());
+        }
+            
+        header.width = miptex.width;
+        header.height = miptex.height;
+        header.offsets = { -1, -1, -1, -1 };
+
+        omemstream stream(miptex.data.data(), miptex.data.size());
+        stream <= header;
     }
 }
 

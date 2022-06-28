@@ -43,38 +43,24 @@
 
 mapdata_t map;
 
-const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const char *name)
+const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
 {
     static std::optional<img::texture_meta> nullmeta = std::nullopt;
-    auto it = meta_cache.find(name);
+    auto it = meta_cache.find(name.data());
 
     if (it != meta_cache.end()) {
         return it->second;
     }
 
-    // FIXME: better method
-    if (options.target_game->id == GAME_QUAKE_II) {
-        fs::path p = fs::path("textures") / name += ".wal";
-        fs::data wal = fs::load(p);
+    auto [texture, _0, _1] = img::load_texture(name, true, options.target_game, options);
 
-        if (!wal) {
-            logging::print("WARNING: Couldn't locate texture for {}\n", name);
-            meta_cache.emplace(name, std::nullopt);
-            return nullmeta;
-        }
-
-        return meta_cache.emplace(name, img::load_wal(name, wal, true)->meta).first->second;
-    } else {
-        fs::data mip = fs::load(name);
-
-        if (!mip) {
-            logging::print("WARNING: Couldn't locate texture for {}\n", name);
-            meta_cache.emplace(name, std::nullopt);
-            return nullmeta;
-        }
-
-        return meta_cache.emplace(name, img::load_mip(name, mip, true, options.target_game)->meta).first->second;
+    if (texture) {
+        return meta_cache.emplace(name, texture->meta).first->second;
     }
+
+    logging::print("WARNING: Couldn't locate texture for {}\n", name);
+    meta_cache.emplace(name, std::nullopt);
+    return nullmeta;
 }
 
 static std::shared_ptr<fs::archive_like> LoadTexturePath(const fs::path &path)
@@ -96,6 +82,10 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
         return;
 
     map.textures_loaded = true;
+
+    for (auto &path : options.paths.values()) {
+        fs::addArchive(path, true);
+    }
     
     // Q2 doesn't need this
     if (options.target_game->id == GAME_QUAKE_II) {
@@ -113,7 +103,7 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
     if (wadstring.empty()) {
         logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
     } else {
-	    memstream stream(wadstring.data(), wadstring.size(), std::ios_base::in | std::ios_base::binary);
+	    imemstream stream(wadstring.data(), wadstring.size());
         std::string wad;
 
 	    while (std::getline(stream, wad, ';')) {
@@ -133,7 +123,7 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
         defaultwad.replace_extension("wad");
 
         if (fs::exists(defaultwad)) {
-            logging::print("Using default WAD: {}\n", defaultwad);
+            logging::print("INFO: Using default WAD: {}\n", defaultwad);
             LoadTexturePath(defaultwad);
         }
     }

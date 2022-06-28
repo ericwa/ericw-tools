@@ -275,38 +275,33 @@ std::shared_ptr<archive_like> addArchive(const path &p, bool external)
     return nullptr;
 }
 
-resolve_result where(const path &p)
+resolve_result where(const path &p, bool prefer_loose)
 {
-    // check absolute + relative first
-    if (exists(p)) {
-        return {absrel_dir, p};
-    }
-
-    // check direct archive loading
+    // check direct archive loading first; it can't ever
+    // be loose, so there's no sense for it to be in the
+    // loop below
     if (auto paths = splitArchivePath(p)) {
-        auto arch = addArchive(paths.archive);
-
-        if (arch) {
+        if (auto arch = addArchive(paths.archive)) {
             return {arch, paths.filename};
         }
     }
 
-    // absolute doesn't make sense for other load types
-    if (p.is_absolute()) {
-        return {};
-    }
-
-    // check directories
-    for (auto &dir : directories) {
-        if (dir->contains(p)) {
-            return {dir, p};
-        }
-    }
-
-    // check archives
-    for (auto &arch : archives) {
-        if (arch->contains(p)) {
-            return {arch, p};
+    for (int32_t pass = 0; pass < 2; pass++) {
+        if (prefer_loose != !!pass) {
+            // check absolute + relative
+            if (exists(p)) {
+                return {absrel_dir, p};
+            }
+        } else if (!p.is_absolute()) { // absolute doesn't make sense for other load types
+            for (int32_t archive_pass = 0; archive_pass < 2; archive_pass++) {
+                // check directories & archives, depending on whether
+                // we want loose first or not
+                for (auto &dir : (prefer_loose != !!archive_pass) ? directories : archives) {
+                    if (dir->contains(p)) {
+                        return {dir, p};
+                    }
+                }
+            }
         }
     }
 

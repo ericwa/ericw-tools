@@ -119,7 +119,7 @@ struct q2_miptex_t
     auto stream_data() { return std::tie(name, width, height, offsets, animname, flags, contents, value); }
 };
 
-std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool meta_only)
+std::optional<texture> load_wal(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -129,6 +129,8 @@ std::optional<texture> load_wal(const std::string &name, const fs::data &file, b
     stream >= mt;
 
     texture tex;
+
+    tex.meta.extension = ext::WAL;
 
     // note: this is a bit of a hack, but the name stored in
     // the .wal is ignored. it's extraneous and well-formed wals
@@ -157,9 +159,9 @@ Quake/Half Life MIP
 ============================================================================
 */
 
-std::optional<texture> load_mip(const std::string &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_mip(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size());
     stream >> endianness<std::endian::little>;
 
     // read header
@@ -173,6 +175,8 @@ std::optional<texture> load_mip(const std::string &name, const fs::data &file, b
     }
 
     texture tex;
+
+    tex.meta.extension = ext::MIP;
     
     // note: this is a bit of a hack, but the name stored in
     // the mip is ignored. it's extraneous and well-formed mips
@@ -269,7 +273,7 @@ struct targa_t
 LoadTGA
 =============
 */
-std::optional<texture> load_tga(const std::string &name, const fs::data &file, bool meta_only)
+std::optional<texture> load_tga(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -293,6 +297,8 @@ std::optional<texture> load_tga(const std::string &name, const fs::data &file, b
     uint32_t numPixels = columns * rows;
 
     texture tex;
+
+    tex.meta.extension = ext::TGA;
 
     tex.meta.name = name;
     tex.meta.width = columns;
@@ -395,9 +401,9 @@ breakOut:;
 // texture cache
 std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
 
-const texture *find(const std::string &str)
+const texture *find(const std::string_view &str)
 {
-    auto it = textures.find(str);
+    auto it = textures.find(str.data());
 
     if (it == textures.end()) {
         return nullptr;
@@ -422,128 +428,40 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
     return avg /= n;
 }
 
-/*
-==============================================================================
-Load (Quake 2) / Convert (Quake, Hexen 2) textures from paletted to RGBA (mxd)
-==============================================================================
-*/
-static void AddTextureName(const char *textureName)
+std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options)
 {
-    if (textures.find(textureName) != textures.end()) {
-        return;
+    fs::path prefix;
+
+    if (game->id == GAME_QUAKE_II) {
+        prefix = "textures";
     }
 
-    auto &tex = textures.emplace(textureName, texture{}).first->second;
+    for (auto &ext : img::extension_list) {
+        fs::path p = (prefix / name) += ext.suffix;
 
-    static constexpr struct
-    {
-        const char *name;
-        decltype(load_wal) *loader;
-    } supportedExtensions[] = {{"tga", load_tga}};
+        if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
+            if (auto data = fs::load(pos)) {
+                std::optional<img::texture> texture;
 
-    // find wal first, since we'll use it for metadata
-    auto wal = fs::load("textures" / fs::path(textureName) += ".wal");
+                switch (ext.id) {
+                    case img::ext::TGA:
+                        texture = img::load_tga(name.data(), data, meta_only, game);
+                        break;
+                    case img::ext::WAL:
+                        texture = img::load_wal(name.data(), data, meta_only, game);
+                        break;
+                    case img::ext::MIP:
+                        texture = img::load_mip(name.data(), data, meta_only, game);
+                        break;
+                }
 
-    if (!wal) {
-        logging::funcprint("WARNING: can't find .wal for {}\n", textureName);
-    } else {
-        auto walTex = load_wal(textureName, wal, false);
-
-        if (walTex) {
-            tex = std::move(*walTex);
-        }
-    }
-
-    // now check for replacements
-    for (auto &ext : supportedExtensions) {
-        auto replacement = fs::load(("textures" / fs::path(textureName) += ".") += ext.name);
-
-        if (!replacement) {
-            continue;
-        }
-
-        auto replacementTex = ext.loader(textureName, replacement, false);
-
-        if (replacementTex) {
-            tex.meta.width = replacementTex->meta.width;
-            tex.meta.height = replacementTex->meta.height;
-            tex.pixels = std::move(replacementTex->pixels);
-            break;
-        }
-    }
-
-    tex.meta.averageColor = calculate_average(tex.pixels);
-}
-
-// Load all of the referenced textures from the BSP texinfos into
-// the texture cache.
-static void LoadTextures(const mbsp_t *bsp)
-{
-    // gather all loadable textures...
-    for (auto &texinfo : bsp->texinfo) {
-        AddTextureName(texinfo.texture.data());
-    }
-
-    // gather textures used by _project_texture.
-    // FIXME: I'm sure we can resolve this so we don't parse entdata twice.
-    auto entdicts = EntData_Parse(bsp->dentdata);
-    for (auto &entdict : entdicts) {
-        if (entdict.get("classname").find("light") == 0) {
-            const auto &tex = entdict.get("_project_texture");
-            if (!tex.empty()) {
-                AddTextureName(tex.c_str());
+                if (texture) {
+                    return {texture, pos, data};
+                }
             }
         }
     }
-}
 
-// Load all of the paletted textures from the BSP into
-// the texture cache.
-// TODO: doesn't handle external wads...
-static void ConvertTextures(const mbsp_t *bsp)
-{
-    if (!bsp->dtex.textures.size()) {
-        return;
-    }
-
-    for (auto &miptex : bsp->dtex.textures) {
-        if (textures.find(miptex.name) != textures.end()) {
-            logging::funcprint("WARNING: Texture {} duplicated\n", miptex.name);
-            continue;
-        }
-
-        // Add empty to keep texture index in case of load problems...
-        auto &tex = textures.emplace(miptex.name, texture{}).first->second;
-
-        // FIXME: fs::load
-        if (miptex.data.empty()) {
-            logging::funcprint("WARNING: Texture {} is external\n", miptex.name);
-            continue;
-        }
-
-        auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game);
-
-        if (!loaded_tex) {
-            logging::funcprint("WARNING: Texture {} is invalid\n", miptex.name);
-            continue;
-        }
-
-        tex = std::move(loaded_tex.value());
-
-        tex.meta.averageColor = calculate_average(tex.pixels);
-    }
-}
-
-void load_textures(const mbsp_t *bsp)
-{
-    logging::print("--- {} ---\n", __func__);
-
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        LoadTextures(bsp);
-    } else if (bsp->dtex.textures.size() > 0) {
-        ConvertTextures(bsp);
-    } else {
-        logging::print("WARNING: failed to load or convert textures.\n");
-    }
+    return {std::nullopt, {}, {}};
 }
 } // namespace img

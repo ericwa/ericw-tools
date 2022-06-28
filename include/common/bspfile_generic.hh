@@ -112,10 +112,9 @@ struct mvis_t
     }
 };
 
-constexpr size_t MIPLEVELS = 4;
-
 // structured data from BSP. this is the header of the miptex used
 // in Quake-like formats.
+constexpr size_t MIPLEVELS = 4;
 struct dmiptex_t
 {
     std::array<char, 16> name;
@@ -142,7 +141,7 @@ struct miptex_t
         data.resize(len);
         stream.read(reinterpret_cast<char *>(data.data()), len);
 
-        memstream miptex_stream(data.data(), len, std::ios_base::in | std::ios_base::binary);
+        imemstream miptex_stream(data.data(), len);
 
         dmiptex_t dtex;
         miptex_stream >= dtex;
@@ -200,7 +199,9 @@ struct dmiptexlump_t
                 next_offset = offsets[i + 1];
             }
 
-            tex.stream_read(stream, next_offset - offset);
+            if (next_offset > offset) {
+                tex.stream_read(stream, next_offset - offset);
+            }
         }
     }
 
