@@ -459,7 +459,6 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         f.planenum = FindPositivePlane(plane, &f.planeside);
 
         CheckFace(&f, mapface);
-        UpdateFaceSphere(&f);
     }
 
     // Rotatable objects must have a bounding box big enough to

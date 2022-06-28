@@ -37,9 +37,6 @@ struct side_t
 
     int16_t lmshift;
 
-    qvec3d origin;
-    vec_t radius;
-
     bool onnode; // has this face been used as a BSP node plane yet?
     bool visible = true; // can any part of this side be seen from non-void parts of the level?
                          // non-visible means we can discard the brush side

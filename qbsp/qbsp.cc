@@ -36,7 +36,7 @@
 #include <qbsp/portals.hh>
 #include <qbsp/prtfile.hh>
 #include <qbsp/brushbsp.hh>
-#include <qbsp/surfaces.hh>
+#include <qbsp/faces.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>

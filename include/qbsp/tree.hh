@@ -21,20 +21,7 @@
 
 #pragma once
 
-#include <common/qvec.hh>
+struct node_t;
 
-#include <list>
-#include <tuple>
-#include <vector>
-
-struct bspbrush_t;
-struct face_t;
-struct side_t;
-
-face_t *NewFaceFromFace(const face_t *in);
-face_t *CopyFace(const face_t *in);
-face_t *MirrorFace(const face_t *face);
-std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split);
-void UpdateFaceSphere(face_t *in);
-bool BrushGE(const bspbrush_t &a, const bspbrush_t &b);
-std::vector<std::unique_ptr<bspbrush_t>> ChopBrushes(const std::vector<std::unique_ptr<bspbrush_t>> &input);
+void DetailToSolid(node_t *node);
+void PruneNodes(node_t *node);

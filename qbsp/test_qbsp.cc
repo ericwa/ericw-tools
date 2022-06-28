@@ -169,7 +169,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    std::vector<std::string> args{"", "-nopercent"}; // first arg is the exe path, which we're ignoring in this case
+    std::vector<std::string> args{"", "-noverbose"}; // first arg is the exe path, which we're ignoring in this case
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }
@@ -1608,7 +1608,7 @@ TEST_CASE("q1_wad_internal", "[testmaps_q1]") {
  * Test for WAD internal textures
  **/
 TEST_CASE("q1_wad_external", "[testmaps_q1]") {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map", { "-xwadpath", "A:\\ericw-tools\\testmaps" });
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map", { "-xwadpath", std::string(testmaps_dir) });
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
@@ -1625,7 +1625,7 @@ TEST_CASE("q1_wad_external", "[testmaps_q1]") {
     CHECK(bsp.dtex.textures[3].data.size() == sizeof(dmiptex_t));
 }
 
-TEST_CASE("winding", "[benchmark]") {
+TEST_CASE("winding", "[benchmark][.releaseonly]") {
     ankerl::nanobench::Bench bench;
 
     bench.run("std::vector<double> reserve(3*4*6)", [&] {
