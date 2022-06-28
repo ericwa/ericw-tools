@@ -169,7 +169,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    std::vector<std::string> args{"", "-nopercent"}; // first arg is the exe path, which we're ignoring in this case
+    std::vector<std::string> args{"", "-noverbose"}; // first arg is the exe path, which we're ignoring in this case
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }
