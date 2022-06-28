@@ -10,6 +10,7 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/prtfile.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brushbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/surfaces.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/tree.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
 
 set(QBSP_SOURCES
@@ -24,6 +25,7 @@ set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/qbsp/brushbsp.cc
 	${CMAKE_SOURCE_DIR}/qbsp/surfaces.cc
 	${CMAKE_SOURCE_DIR}/qbsp/tjunc.cc
+	${CMAKE_SOURCE_DIR}/qbsp/tree.cc
 	${CMAKE_SOURCE_DIR}/qbsp/writebsp.cc
 	${CMAKE_SOURCE_DIR}/qbsp/exportobj.cc
 	${QBSP_INCLUDES})
