@@ -441,21 +441,7 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
 
         if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
             if (auto data = fs::load(pos)) {
-                std::optional<img::texture> texture;
-
-                switch (ext.id) {
-                    case img::ext::TGA:
-                        texture = img::load_tga(name.data(), data, meta_only, game);
-                        break;
-                    case img::ext::WAL:
-                        texture = img::load_wal(name.data(), data, meta_only, game);
-                        break;
-                    case img::ext::MIP:
-                        texture = img::load_mip(name.data(), data, meta_only, game);
-                        break;
-                }
-
-                if (texture) {
+                if (auto texture = ext.loader(name.data(), data, meta_only, game)) {
                     return {texture, pos, data};
                 }
             }
