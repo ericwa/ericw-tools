@@ -329,7 +329,9 @@ struct dmiptexlump_t
                 next_offset = offsets[i + 1];
             }
 
-            tex.stream_read(stream, next_offset - offset);
+            if (next_offset > offset) {
+                tex.stream_read(stream, next_offset - offset);
+            }
         }
     }
 

@@ -181,8 +181,6 @@ struct mapdata_t
     std::unordered_map<std::string, std::optional<img::texture_meta>> meta_cache;
     // load or fetch image meta associated with the specified name
     const std::optional<img::texture_meta> &load_image_meta(const std::string_view &name);
-    // load image data for the specified name
-    std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_image_data(const std::string_view &name, bool meta_only);
     // whether we had attempted loading texture stuff
     bool textures_loaded = false;
     

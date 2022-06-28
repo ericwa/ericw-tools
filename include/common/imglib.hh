@@ -34,13 +34,6 @@ enum class ext
     MIP
 };
 
-constexpr struct { const char *suffix; ext id; } extension_list[] = {
-    { ".tga", ext::TGA },
-    { ".wal", ext::WAL },
-    { ".mip", ext::MIP },
-    { "", ext::MIP }
-};
-
 extern std::vector<qvec3b> palette;
 
 // Palette
@@ -74,17 +67,25 @@ extern std::unordered_map<std::string, texture, case_insensitive_hash, case_inse
 
 qvec3b calculate_average(const std::vector<qvec4b> &pixels);
 
-const texture *find(const std::string &str);
+const texture *find(const std::string_view &str);
 
 // Load wal
-std::optional<texture> load_wal(const std::string &name, const fs::data &file, bool meta_only);
+std::optional<texture> load_wal(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // Load TGA
-std::optional<texture> load_tga(const std::string &name, const fs::data &file, bool meta_only);
+std::optional<texture> load_tga(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // Load Quake/Half Life mip (raw data)
-std::optional<texture> load_mip(const std::string &name, const fs::data &file, bool meta_only, const gamedef_t *game);
+std::optional<texture> load_mip(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
-// Pull in texture data from the BSP into the textures map
-void load_textures(const mbsp_t *bsp);
+// list of supported extensions and their loaders
+constexpr struct { const char *suffix; ext id; decltype(load_wal) *loader; } extension_list[] = {
+    { ".tga", ext::TGA, load_tga },
+    { ".wal", ext::WAL, load_wal },
+    { ".mip", ext::MIP, load_mip },
+    { "", ext::MIP, load_mip }
+};
+
+// Attempt to load a texture from the specified name.
+std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options);
 }; // namespace img
