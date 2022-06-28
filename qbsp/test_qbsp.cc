@@ -1625,7 +1625,7 @@ TEST_CASE("q1_wad_external", "[testmaps_q1]") {
     CHECK(bsp.dtex.textures[3].data.size() == sizeof(dmiptex_t));
 }
 
-TEST_CASE("winding", "[benchmark]") {
+TEST_CASE("winding", "[benchmark][.releaseonly]") {
     ankerl::nanobench::Bench bench;
 
     bench.run("std::vector<double> reserve(3*4*6)", [&] {
