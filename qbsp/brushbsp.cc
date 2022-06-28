@@ -111,14 +111,7 @@ inline int FaceSide(const face_t *in, const qbsp_plane_t &split)
 
 inline int FaceSide(const side_t *in, const qbsp_plane_t &split)
 {
-    vec_t dist = split.distance_to(in->origin);
-
-    if (dist > in->radius)
-        return SIDE_FRONT;
-    else if (dist < -in->radius)
-        return SIDE_BACK;
-    else
-        return FaceSide__(in->w, split);
+    return FaceSide__(in->w, split);
 }
 
 /*
