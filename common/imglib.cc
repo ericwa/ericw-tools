@@ -494,7 +494,7 @@ std::optional<texture_meta> load_wal_json_meta(const std::string_view &name, con
     {
         auto json = json::parse(file->begin(), file->end());
 
-        texture_meta meta;
+        texture_meta meta{};
 
         if (json.contains("width") && json["width"].is_number_integer()) {
             meta.width = json["width"].get<int32_t>();
