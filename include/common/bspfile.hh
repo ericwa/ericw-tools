@@ -1697,6 +1697,7 @@ struct gamedef_t
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
     virtual bool surfflags_are_valid(const surfflags_t &flags) const = 0;
+    virtual int32_t surfflags_from_string(const std::string_view &str) const = 0;
     // FIXME: fix so that we don't have to pass a name here
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
@@ -1712,6 +1713,7 @@ struct gamedef_t
     virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
+    virtual int32_t contents_from_string(const std::string_view &str) const = 0;
     virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;

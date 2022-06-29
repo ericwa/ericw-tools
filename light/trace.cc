@@ -51,7 +51,7 @@ qvec4b SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point
 {
     const auto *texture = Face_Texture(bsp, face);
 
-    if (texture == nullptr || !texture->meta.width) {
+    if (texture == nullptr || !texture->width) {
         return {};
     }
 
@@ -59,10 +59,10 @@ qvec4b SampleTexture(const mface_t *face, const mbsp_t *bsp, const qvec3d &point
 
     qvec2d texcoord = WorldToTexCoord(point, tex);
 
-    const uint32_t x = clamp_texcoord(texcoord[0], texture->meta.width);
-    const uint32_t y = clamp_texcoord(texcoord[1], texture->meta.height);
+    const uint32_t x = clamp_texcoord(texcoord[0], texture->width);
+    const uint32_t y = clamp_texcoord(texcoord[1], texture->width);
 
-    return texture->pixels[(texture->meta.width * y) + x];
+    return texture->pixels[(texture->width * (y * texture->width_scale)) + (x * texture->height_scale)];
 }
 
 hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)

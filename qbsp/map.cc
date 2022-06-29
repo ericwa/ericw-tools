@@ -52,9 +52,28 @@ const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::st
         return it->second;
     }
 
-    auto [texture, _0, _1] = img::load_texture(name, true, options.target_game, options);
+    // try a meta-only texture first; this is all we really need anyways
+    if (auto [texture_meta, _0, _1] = img::load_texture_meta(name, options.target_game, options); texture_meta) {
+        // slight special case: if the meta has no width/height defined,
+        // pull it from the real texture.
+        if (!texture_meta->width || !texture_meta->height) {
+            auto [texture, _0, _1] = img::load_texture(name, true, options.target_game, options);
+            
+            if (texture) {
+                texture_meta->width = texture->meta.width;
+                texture_meta->height = texture->meta.height;
+            }
+        }
 
-    if (texture) {
+        if (!texture_meta->width || !texture_meta->height) {
+            logging::print("WARNING: texture {} has empty width/height \n", name);
+        }
+
+        return meta_cache.emplace(name, texture_meta).first->second;
+    }
+
+    // couldn't find a meta texture, so pull it from the pixel image
+    if (auto [texture, _0, _1] = img::load_texture(name, true, options.target_game, options); texture) {
         return meta_cache.emplace(name, texture->meta).first->second;
     }
 

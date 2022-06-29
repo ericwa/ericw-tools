@@ -39,7 +39,6 @@ void to_json(json &j, const qvec<T, N> &p)
 template<typename T, size_t N>
 void from_json(const json &j, qvec<T, N> &p)
 {
-
     for (size_t i = 0; i < N; i++) {
         p[i] = j[i].get<T>();
     }

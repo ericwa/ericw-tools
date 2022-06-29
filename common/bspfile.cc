@@ -51,6 +51,8 @@ struct gamedef_generic_t : public gamedef_t
 
     bool surfflags_are_valid(const surfflags_t &) const { throw std::bad_cast(); }
 
+    int32_t surfflags_from_string(const std::string_view &str) const { throw std::bad_cast(); }
+
     bool texinfo_is_hintskip(const surfflags_t &, const std::string &) const { throw std::bad_cast(); }
 
     contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
@@ -78,6 +80,8 @@ struct gamedef_generic_t : public gamedef_t
     bool contents_are_liquid(const contentflags_t &) const { throw std::bad_cast(); }
 
     bool contents_are_valid(const contentflags_t &, bool) const { throw std::bad_cast(); }
+
+    int32_t contents_from_string(const std::string_view &str) const { throw std::bad_cast(); }
 
     bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
 
@@ -108,6 +112,15 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         // Q1 only supports TEX_SPECIAL
         return (flags.native & ~TEX_SPECIAL) == 0;
+    }
+
+    int32_t surfflags_from_string(const std::string_view &str) const
+    {
+        if (string_iequals(str, "special")) {
+            return TEX_SPECIAL;
+        }
+
+        return 0;
     }
 
     bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const
@@ -245,6 +258,12 @@ struct gamedef_q1_like_t : public gamedef_t
             case CONTENTS_SKY: return true;
             default: return false;
         }
+    }
+
+    int32_t contents_from_string(const std::string_view &str) const
+    {
+        // Q1 doesn't get contents from files
+        return 0;
     }
 
     bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
@@ -440,6 +459,20 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
+    static constexpr const char *surf_bitflag_names[] = {"LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW",
+        "HINT" };
+
+    int32_t surfflags_from_string(const std::string_view &str) const
+    {
+        for (size_t i = 0; i < std::size(surf_bitflag_names); i++) {
+            if (string_iequals(str, surf_bitflag_names[i])) {
+                return nth_bit(i);
+            }
+        }
+
+        return 0;
+    }
+
     bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const
     {
         // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
@@ -556,6 +589,22 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
+    static constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
+        "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP",
+        "CURRENT_0", "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER",
+        "DEADMONSTER", "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
+
+    int32_t contents_from_string(const std::string_view &str) const
+    {
+        for (size_t i = 0; i < std::size(bitflag_names); i++) {
+            if (string_iequals(str, bitflag_names[i])) {
+                return nth_bit(i);
+            }
+        }
+
+        return 0;
+    }
+
     constexpr int32_t visible_contents(const int32_t &contents) const
     {
         for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1)
@@ -590,11 +639,6 @@ struct gamedef_q2_t : public gamedef_t
 
     std::string get_contents_display(const contentflags_t &contents) const
     {
-        constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
-            "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP",
-            "CURRENT_0", "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER",
-            "DEADMONSTER", "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
-
         std::string s;
 
         for (int32_t i = 0; i < std::size(bitflag_names); i++) {

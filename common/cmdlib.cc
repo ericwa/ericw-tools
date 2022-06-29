@@ -78,7 +78,7 @@ string_replaceall(std::string &str, const std::string &from, const std::string &
 }
 
 bool // mxd
-string_iequals(const std::string &a, const std::string &b)
+string_iequals(const std::string_view &a, const std::string_view &b)
 {
     size_t sz = a.size();
     if (b.size() != sz)

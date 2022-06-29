@@ -108,7 +108,7 @@ qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
     auto it = img::find(Face_TextureName(bsp, face));
 
     if (it) {
-        return it->meta.averageColor;
+        return it->averageColor;
     }
 
     return {127};

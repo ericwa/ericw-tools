@@ -864,43 +864,63 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 }
 
 /*
-==============================================================================
-Load (Quake 2) / Convert (Quake, Hexen 2) textures from paletted to RGBA (mxd)
-==============================================================================
+// Add empty to keep texture index in case of load problems...
+auto &tex = img::textures.emplace(miptex.name, img::texture{}).first->second;
+
+// try to load it externally first
+auto [texture, _0, _1] = img::load_texture(miptex.name, false, bsp->loadversion->game, options);
+
+if (texture) {
+    tex = std::move(texture.value());
+} else {
+    if (miptex.data.size() <= sizeof(dmiptex_t)) {
+        logging::funcprint("WARNING: can't find texture {}\n", miptex.name);
+        continue;
+    }
+
+    auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game);
+
+    if (!loaded_tex) {
+        logging::funcprint("WARNING: Texture {} is invalid\n", miptex.name);
+        continue;
+    }
+
+    tex = std::move(loaded_tex.value());
+}
+
+tex.meta.averageColor = img::calculate_average(tex.pixels);
 */
-static void AddTextureName(const char *textureName, const mbsp_t *bsp)
+
+// Load the specified texture from the BSP
+static void AddTextureName(const std::string_view &textureName, const mbsp_t *bsp)
 {
     if (img::find(textureName)) {
         return;
     }
 
+    // always add entry
     auto &tex = img::textures.emplace(textureName, img::texture{}).first->second;
 
-    // find wal first, since we'll use it for metadata
-    auto wal = fs::load("textures" / fs::path(textureName) += ".wal");
+    // find texture & meta
+    auto [ texture, _0, _1 ] = img::load_texture(textureName, false, bsp->loadversion->game, options);
 
-    if (!wal) {
-        logging::funcprint("WARNING: can't find .wal for {}\n", textureName);
+    if (!texture) {
+        logging::funcprint("WARNING: can't find pixel data for {}\n", textureName);
     } else {
-        auto walTex = img::load_wal(textureName, wal, false, bsp->loadversion->game);
-
-        if (walTex) {
-            tex = std::move(*walTex);
-        }
+        tex = std::move(texture.value());
     }
 
-    // now check for replacements
-    auto [replacement_tex, _0, _1] = img::load_texture(textureName, false, bsp->loadversion->game, options);
-
-    // FIXME: I think this is fundamentally wrong; we need the
-    // original texture's size for texcoords
-    if (replacement_tex) {
-        tex.meta.width = replacement_tex->meta.width;
-        tex.meta.height = replacement_tex->meta.height;
-        tex.pixels = std::move(replacement_tex->pixels);
+    auto [ texture_meta, __0, __1 ] = img::load_texture_meta(textureName, bsp->loadversion->game, options);
+    
+    if (!texture_meta) {
+        logging::funcprint("WARNING: can't find meta data for {}\n", textureName);
+    } else {
+        tex.meta = std::move(texture_meta.value());
     }
 
-    tex.meta.averageColor = img::calculate_average(tex.pixels);
+    tex.averageColor = img::calculate_average(tex.pixels);
+    tex.width_scale = (float) tex.width / (float) tex.meta.width;
+    tex.height_scale = (float) tex.height / (float) tex.meta.height;
 }
 
 // Load all of the referenced textures from the BSP texinfos into
@@ -939,31 +959,31 @@ static void ConvertTextures(const mbsp_t *bsp)
             continue;
         }
 
-        // Add empty to keep texture index in case of load problems...
+        // always add entry
         auto &tex = img::textures.emplace(miptex.name, img::texture{}).first->second;
 
-        // try to load it externally first
-        auto [texture, _0, _1] = img::load_texture(miptex.name, false, bsp->loadversion->game, options);
-
-        if (texture) {
-            tex = std::move(texture.value());
-        } else {
-            if (miptex.data.size() <= sizeof(dmiptex_t)) {
-                logging::funcprint("WARNING: can't find texture {}\n", miptex.name);
-                continue;
+        // if the miptex entry isn't a dummy, use it as our base
+        if (miptex.data.size() >= sizeof(dmiptex_t)) {
+            if (auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game)) {
+                tex = std::move(loaded_tex.value());
             }
-
-            auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game);
-
-            if (!loaded_tex) {
-                logging::funcprint("WARNING: Texture {} is invalid\n", miptex.name);
-                continue;
-            }
-
-            tex = std::move(loaded_tex.value());
         }
 
-        tex.meta.averageColor = img::calculate_average(tex.pixels);
+        // find replacement texture
+        if (auto [ texture, _0, _1 ] = img::load_texture(miptex.name, false, bsp->loadversion->game, options); texture) {
+            tex.width = texture->width;
+            tex.height = texture->height;
+            tex.pixels = std::move(texture->pixels);
+        }
+
+        if (!tex.pixels.size() || !tex.width || !tex.meta.width) {
+            logging::funcprint("WARNING: invalid size data for {}\n", miptex.name);
+            continue;
+        }
+
+        tex.averageColor = img::calculate_average(tex.pixels);
+        tex.width_scale = (float) tex.width / (float) tex.meta.width;
+        tex.height_scale = (float) tex.height / (float) tex.meta.height;
     }
 }
 
