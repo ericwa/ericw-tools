@@ -98,7 +98,16 @@ public:
     }
 
     bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
+    int32_t surfflags_from_string(const std::string_view &str) const
     {
+        if (string_iequals(str, "special")) {
+            return TEX_SPECIAL;
+        }
+
+        return 0;
+    }
+
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override    {
         // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
         return !string_iequals(name, "hint");
     }
@@ -310,8 +319,13 @@ public:
         }
     }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const override
+    int32_t contents_from_string(const std::string_view &str) const override
     {
+        // Q1 doesn't get contents from files
+        return 0;
+    }
+
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const override    {
         /* If water is transparent, liquids are like empty space */
         if (transwater) {
             if (contents_are_liquid(contents0) && contents_are_empty(contents1))
@@ -709,8 +723,21 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
+    static constexpr const char *surf_bitflag_names[] = {"LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW",
+        "HINT" };
+
+    int32_t surfflags_from_string(const std::string_view &str) const override
     {
+        for (size_t i = 0; i < std::size(surf_bitflag_names); i++) {
+            if (string_iequals(str, surf_bitflag_names[i])) {
+                return nth_bit(i);
+            }
+        }
+
+        return 0;
+    }
+
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override    {
         // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
         return !(flags.native & Q2_SURF_HINT);
     }
@@ -913,6 +940,22 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
+    static constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
+        "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP",
+        "CURRENT_0", "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER",
+        "DEADMONSTER", "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
+
+    int32_t contents_from_string(const std::string_view &str) const
+    {
+        for (size_t i = 0; i < std::size(bitflag_names); i++) {
+            if (string_iequals(str, bitflag_names[i])) {
+                return nth_bit(i);
+            }
+        }
+
+        return 0;
+    }
+
     /**
      * Returns the single content bit of the strongest visible content present
      */
@@ -1001,11 +1044,6 @@ struct gamedef_q2_t : public gamedef_t
         if (!contents.native) {
             return "EMPTY";
         }
-
-        constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
-            "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP",
-            "CURRENT_0", "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER",
-            "DEADMONSTER", "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
 
         std::string s;
 

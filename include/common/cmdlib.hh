@@ -63,7 +63,7 @@ inline int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b
     (a.data(), b.data());
 }
 
-bool string_iequals(const std::string &a, const std::string &b); // mxd
+bool string_iequals(const std::string_view &a, const std::string_view &b); // mxd
 
 struct case_insensitive_hash
 {

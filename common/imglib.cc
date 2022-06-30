@@ -3,6 +3,7 @@
 #include <common/fs.hh>
 #include <common/imglib.hh>
 #include <common/entdata.h>
+#include <common/json.hh>
 
 /*
 ============================================================================
@@ -136,8 +137,8 @@ std::optional<texture> load_wal(const std::string_view &name, const fs::data &fi
     // the .wal is ignored. it's extraneous and well-formed wals
     // will all match up anyways.
     tex.meta.name = name;
-    tex.meta.width = mt.width;
-    tex.meta.height = mt.height;
+    tex.meta.width = tex.width = mt.width;
+    tex.meta.height = tex.height = mt.height;
     tex.meta.contents = {mt.contents};
     tex.meta.flags = {mt.flags};
     tex.meta.value = mt.value;
@@ -182,17 +183,16 @@ std::optional<texture> load_mip(const std::string_view &name, const fs::data &fi
     // the mip is ignored. it's extraneous and well-formed mips
     // will all match up anyways.
     tex.meta.name = name;
-    tex.meta.width = header.width;
-    tex.meta.height = header.height;
+    tex.meta.width = tex.width = header.width;
+    tex.meta.height = tex.height = header.height;
 
     if (!meta_only) {
-        // convert the data into RGBA.
+        // miptex only has meta
         if (header.offsets[0] <= 0) {
-            // this should never happen under normal circumstances
-            logging::funcprint("attempted to load external mip for {}\n", name);
-            return std::nullopt;
+            return tex;
         }
-
+        
+        // convert the data into RGBA.
         // sanity check
         if (header.offsets[0] + (header.width * header.height) > file->size()) {
             logging::funcprint("mip offset0 overrun for {}\n", name);
@@ -301,8 +301,8 @@ std::optional<texture> load_tga(const std::string_view &name, const fs::data &fi
     tex.meta.extension = ext::TGA;
 
     tex.meta.name = name;
-    tex.meta.width = columns;
-    tex.meta.height = rows;
+    tex.meta.width = tex.width = columns;
+    tex.meta.height = tex.height = rows;
 
     if (!meta_only) {
         tex.pixels.resize(numPixels);
@@ -442,6 +442,135 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
         if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
             if (auto data = fs::load(pos)) {
                 if (auto texture = ext.loader(name.data(), data, meta_only, game)) {
+                    return {texture, pos, data};
+                }
+            }
+        }
+    }
+
+    return {std::nullopt, {}, {}};
+}
+
+/*
+    JSON meta format, meant to supplant .wal's metadata for external texture use.
+    All of the values are optional.
+    {
+        // valid instances of "contents"; either:
+        // - a case-insensitive string containing the textual representation
+        //   of the content type
+        // - a number
+        // - an array of the two above, which will be OR'd together
+        "contents": [ "SOLID", 8 ],
+        "contents": 24,
+        "contents": "SOLID",
+
+        // valid instances of "flags"; either:
+        // - a case-insensitive string containing the textual representation
+        //   of the surface flags
+        // - a number
+        // - an array of the two above, which will be OR'd together
+        "flags": [ "SKY", 16 ],
+        "flags": 24,
+        "flags": "SKY",
+
+        // "value" must be an integer
+        "value": 1234,
+
+        // "animation" must be the name of the next texture in
+        // the chain.
+        "animation": "e1u1/comp2",
+
+        // width/height are allowed to be supplied in order to
+        // have the editor treat the surface as if its dimensions
+        // are these rather than the ones pulled in from the image
+        // itself. they must be integers.
+        "width": 64,
+        "height": 64
+    }
+*/
+std::optional<texture_meta> load_wal_json_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game)
+{
+    try
+    {
+        auto json = json::parse(file->begin(), file->end());
+
+        texture_meta meta{};
+
+        if (json.contains("width") && json["width"].is_number_integer()) {
+            meta.width = json["width"].get<int32_t>();
+        }
+
+        if (json.contains("height") && json["height"].is_number_integer()) {
+            meta.height = json["height"].get<int32_t>();
+        }
+
+        if (json.contains("value") && json["value"].is_number_integer()) {
+            meta.value = json["value"].get<int32_t>();
+        }
+
+        if (json.contains("contents")) {
+            auto &contents = json["contents"];
+
+            if (contents.is_number_integer()) {
+                meta.contents.native = contents.get<int32_t>();
+            } else if (contents.is_string()) {
+                meta.contents.native = game->contents_from_string(contents.get<std::string>());
+            } else if (contents.is_array()) {
+                for (auto &content : contents) {
+                    if (content.is_number_integer()) {
+                        meta.contents.native |= content.get<int32_t>();
+                    } else if (content.is_string()) {
+                        meta.contents.native |= game->contents_from_string(content.get<std::string>());
+                    } 
+                }
+            }
+        }
+
+        if (json.contains("flags")) {
+            auto &flags = json["flags"];
+
+            if (flags.is_number_integer()) {
+                meta.flags.native = flags.get<int32_t>();
+            } else if (flags.is_string()) {
+                meta.flags.native = game->surfflags_from_string(flags.get<std::string>());
+            } else if (flags.is_array()) {
+                for (auto &flag : flags) {
+                    if (flag.is_number_integer()) {
+                        meta.flags.native |= flag.get<int32_t>();
+                    } else if (flag.is_string()) {
+                        meta.flags.native |= game->surfflags_from_string(flag.get<std::string>());
+                    } 
+                }
+            }
+        }
+
+        if (json.contains("animation") && json["animation"].is_string()) {
+            meta.animation = json["animation"].get<std::string>();
+        }
+
+        return meta;
+    }
+    catch (json::exception e)
+    {
+        logging::funcprint("{}, invalid JSON: {}\n", name, e.what());
+        return std::nullopt;
+    }
+}
+
+std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_texture_meta(const std::string_view &name, const gamedef_t *game, const settings::common_settings &options)
+{
+    fs::path prefix;
+
+    if (game->id == GAME_QUAKE_II) {
+        prefix = "textures";
+    }
+
+    for (auto &ext : img::meta_extension_list) {
+        fs::path p = (prefix / name) += ext.suffix;
+
+        if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
+            if (auto data = fs::load(pos)) {
+                if (auto texture = ext.loader(name.data(), data, game)) {
                     return {texture, pos, data};
                 }
             }
