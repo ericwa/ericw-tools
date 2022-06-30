@@ -1004,6 +1004,32 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
 }
 
 /**
+ * Ensure submodels that are all "clip" get bounds set correctly
+ */
+TEST_CASE("q1_clip_func_wall", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_clip_func_wall.map");
+
+    REQUIRE(prt.has_value());
+
+    const aabb3d cube_bounds {
+        {64, 64, 48},
+        {128, 128, 80}
+    };
+
+    REQUIRE(2 == bsp.dmodels.size());
+
+    // node bounds
+    auto &headnode = bsp.dnodes[bsp.dmodels[1].headnode[0]];
+    CHECK(cube_bounds.grow(24).mins() == headnode.mins);
+    CHECK(cube_bounds.grow(24).maxs() == headnode.maxs);
+
+    // model bounds are shrunk by 1 unit on each side for some reason
+    CHECK(cube_bounds.grow(-1).mins() == bsp.dmodels[1].mins);
+    CHECK(cube_bounds.grow(-1).maxs() == bsp.dmodels[1].maxs);
+}
+
+/**
  * Lots of features in one map, more for testing in game than automated testing
  */
 TEST_CASE("features", "[testmaps_q1]")
