@@ -41,6 +41,7 @@ struct side_t
     bool visible = true; // can any part of this side be seen from non-void parts of the level?
                          // non-visible means we can discard the brush side
                          // (avoiding generating a BSP spit, so expanding it outwards)
+    bool bevel;          // don't ever use for bsp splitting
 };
 
 struct bspbrush_t {
