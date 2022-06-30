@@ -97,8 +97,7 @@ public:
         return (flags.native & ~TEX_SPECIAL) == 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
-    int32_t surfflags_from_string(const std::string_view &str) const
+    int32_t surfflags_from_string(const std::string_view &str) const override
     {
         if (string_iequals(str, "special")) {
             return TEX_SPECIAL;
@@ -107,7 +106,8 @@ public:
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override    {
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
+    {
         // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
         return !string_iequals(name, "hint");
     }
