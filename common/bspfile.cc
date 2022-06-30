@@ -781,6 +781,8 @@ public:
 
         fs::addArchive(gamedir);
         discoverArchives(gamedir);
+
+        img::init_palette(this);
     }
 
     const std::vector<qvec3b> &get_default_palette() const
