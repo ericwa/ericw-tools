@@ -1477,7 +1477,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         // This fixes a bug in some old maps.
         if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
-            //logging::print("corrected invalid SKY flag\n");
+            logging::print("WARNING: face at line {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.linenum);
         }
     }
 
