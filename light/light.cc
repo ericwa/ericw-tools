@@ -55,28 +55,34 @@
 #include <common/qvec.hh>
 #include <common/json.hh>
 
-using namespace std;
-
 bool dirt_in_use = false;
 
-static facesup_t *faces_sup; // lit2/bspx stuff
+// intermediate representation of lightmap surfaces
+static std::vector<std::unique_ptr<lightsurf_t>> light_surfaces;
+
+std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces()
+{
+    return light_surfaces;
+}
+
+static std::vector<facesup_t> faces_sup; // lit2/bspx stuff
 
 /// start of lightmap data
-uint8_t *filebase;
+std::vector<uint8_t> filebase;
 /// offset of start of free space after data (should be kept a multiple of 4)
 static int file_p;
 /// offset of end of free space for lightmap data
 static int file_end;
 
 /// start of litfile data
-uint8_t *lit_filebase;
+std::vector<uint8_t> lit_filebase;
 /// offset of start of free space after litfile data (should be kept a multiple of 12)
 static int lit_file_p;
 /// offset of end of space for litfile data
 static int lit_file_end;
 
 /// start of luxfile data
-uint8_t *lux_filebase;
+std::vector<uint8_t> lux_filebase;
 /// offset of start of free space after luxfile data (should be kept a multiple of 12)
 static int lux_file_p;
 /// offset of end of space for luxfile data
@@ -121,7 +127,7 @@ void light_settings::postinitialize(int argc, const char **argv)
 
     if (radlights.isChanged()) {
         if (!ParseLightsFile(*radlights.values().begin())) {
-            logging::print("Unable to read surfacelights file {}\n", *radlights.values().begin());
+            logging::print("Unable to read surface lights file {}\n", *radlights.values().begin());
         }
     }
 
@@ -166,6 +172,11 @@ void light_settings::postinitialize(int argc, const char **argv)
         if (!options.nolighting.isChanged()) {
             options.nolighting.setValueLocked(true);
         }
+    }
+
+    // upgrade to uint16 if facestyles is specified 
+    if (options.facestyles.value() > MAXLIGHTMAPS && !options.compilerstyle_max.isChanged()) {
+        options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE);
     }
     
     common_settings::postinitialize(argc, argv);
@@ -218,9 +229,9 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
 {
     light_mutex.lock();
 
-    *lightdata = filebase + file_p;
-    *colordata = lit_filebase + lit_file_p;
-    *deluxdata = lux_filebase + lux_file_p;
+    *lightdata = filebase.data() + file_p;
+    *colordata = lit_filebase.data() + lit_file_p;
+    *deluxdata = lux_filebase.data() + lux_file_p;
 
     // if size isn't a multiple of 4, round up to the next multiple of 4
     if ((size % 4) != 0) {
@@ -250,14 +261,14 @@ void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, 
 {
     Q_assert(lightofs >= 0);
 
-    *lightdata = filebase + lightofs;
+    *lightdata = filebase.data() + lightofs;
 
     if (colordata) {
-        *colordata = lit_filebase + (lightofs * 3);
+        *colordata = lit_filebase.data() + (lightofs * 3);
     }
 
     if (deluxdata) {
-        *deluxdata = lux_filebase + (lightofs * 3);
+        *deluxdata = lux_filebase.data() + (lightofs * 3);
     }
 
     // NOTE: file_p et. al. are not updated, since we're not dynamically allocating the lightmaps
@@ -286,50 +297,92 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
     return modelinfo.at(i);
 }
 
+static std::vector<const img::texture *> face_textures;
+
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
 {
-    const char *name = Face_TextureName(bsp, face);
-
-    if (!name || !*name) {
-        return nullptr;
-    }
-
-    return img::find(name);
+    return face_textures[face - bsp->dfaces.data()];
 }
 
-static void LightThread(const mbsp_t *bsp, size_t facenum)
+static void CacheTextures(const mbsp_t &bsp)
 {
-#if defined(HAVE_EMBREE) && defined (__SSE2__)
-    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-//    _MM_SET_DENORMALS_ZERO_MODE(_MM_DENORMALS_ZERO_ON);
-#endif
+    face_textures.resize(bsp.dfaces.size());
+    
+    for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+        const char *name = Face_TextureName(&bsp, &bsp.dfaces[i]);
 
-    mface_t *f = BSP_GetFace(const_cast<mbsp_t *>(bsp), facenum);
-
-    /* Find the correct model offset */
-    const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, facenum);
-    if (face_modelinfo == NULL) {
-        // ericw -- silenced this warning becasue is causes spam when "skip" faces are used
-        // logging::print("warning: no model has face {}\n", facenum);
-        return;
+        if (!name || !*name) {
+            face_textures[i] = nullptr;
+        } else {
+            face_textures[i] = img::find(name);
+        }
     }
+}
 
-    if (!faces_sup)
-        LightFace(bsp, f, nullptr, options);
-    else if (options.novanilla.value()) {
-        f->lightofs = -1;
-        f->styles[0] = 255;
-        LightFace(bsp, f, faces_sup + facenum, options);
-    } else if (faces_sup[facenum].lmscale == face_modelinfo->lightmapscale) {
-        LightFace(bsp, f, nullptr, options);
-        faces_sup[facenum].lightofs = f->lightofs;
-        for (int i = 0; i < MAXLIGHTMAPS; i++)
-            faces_sup[facenum].styles[i] = f->styles[i];
-    } else {
-        LightFace(bsp, f, nullptr, options);
-        LightFace(bsp, f, faces_sup + facenum, options);
-    }
+static void CreateLightmapSurfaces(mbsp_t *bsp)
+{
+    light_surfaces.resize(bsp->dfaces.size());
+    logging::print("--- CreateLightmapSurfaces ---\n");
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
+        auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
+        auto face = &bsp->dfaces[i];
 
+        /* One extra lightmap is allocated to simplify handling overflow */
+        if (!options.litonly.value()) {
+            // if litonly is set we need to preserve the existing lightofs
+
+            /* some surfaces don't need lightmaps */
+            if (facesup) {
+                facesup->lightofs = -1;
+                for (size_t i = 0; i < MAXLIGHTMAPSSUP; i++) {
+                    facesup->styles[i] = INVALID_LIGHTSTYLE;
+                }
+            } else {
+                face->lightofs = -1;
+                for (size_t i = 0; i < MAXLIGHTMAPS; i++) {
+                    face->styles[i] = INVALID_LIGHTSTYLE_OLD;
+                }
+            }
+        }
+
+        light_surfaces[i] = std::move(CreateLightmapSurface(bsp, face, facesup, options));
+    });
+}
+
+static void SaveLightmapSurfaces(mbsp_t *bsp)
+{
+    logging::print("--- SaveLightmapSurfaces ---\n");
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
+        auto &surf = light_surfaces[i];
+
+        if (!surf) {
+            return;
+        }
+
+        FinishLightmapSurface(bsp, surf.get());
+
+        auto f = &bsp->dfaces[i];
+        const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
+
+        if (faces_sup.empty()) {
+            SaveLightmapSurface(bsp, f, nullptr, surf.get());
+        } else if (options.novanilla.value()) {
+            f->lightofs = -1;
+            f->styles[0] = INVALID_LIGHTSTYLE_OLD;
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+        } else if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+            f->lightofs = faces_sup[i].lightofs;
+            for (int i = 0; i < MAXLIGHTMAPS; i++) {
+                f->styles[i] = faces_sup[i].styles[i];
+            }
+        } else {
+            SaveLightmapSurface(bsp, f, nullptr, surf.get());
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+        }
+
+        light_surfaces[i].reset();
+    });
 }
 
 static void FindModelInfo(const mbsp_t *bsp)
@@ -423,81 +476,92 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
-    delete[] filebase;
-    delete[] lit_filebase;
-    delete[] lux_filebase;
+    light_surfaces.clear();
+    filebase.clear();
+    lit_filebase.clear();
+    lux_filebase.clear();
 
     /* greyscale data stored in a separate buffer */
-    filebase = new uint8_t[MAX_MAP_LIGHTING]{};
-    if (!filebase)
-        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING);
+    filebase.resize(MAX_MAP_LIGHTING);
     file_p = 0;
     file_end = MAX_MAP_LIGHTING;
 
     /* litfile data stored in a separate buffer */
-    lit_filebase = new uint8_t[MAX_MAP_LIGHTING * 3]{};
-    if (!lit_filebase)
-        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
+    lit_filebase.resize(MAX_MAP_LIGHTING * 3);
     lit_file_p = 0;
     lit_file_end = (MAX_MAP_LIGHTING * 3);
 
     /* lux data stored in a separate buffer */
-    lux_filebase = new uint8_t[MAX_MAP_LIGHTING * 3]{};
-    if (!lux_filebase)
-        FError("allocation of {} bytes failed.", MAX_MAP_LIGHTING * 3);
+    lux_filebase.resize(MAX_MAP_LIGHTING * 3);
     lux_file_p = 0;
     lux_file_end = (MAX_MAP_LIGHTING * 3);
 
-    if (forcedscale)
+    if (forcedscale) {
         bspdata->bspx.entries.erase("LMSHIFT");
+    }
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
-    if (lmshift_lump == bspdata->bspx.entries.end() && options.write_litfile != lightfile::lit2)
-        faces_sup = nullptr; // no scales, no lit2
-    else { // we have scales or lit2 output. yay...
-        faces_sup = new facesup_t[bsp.dfaces.size()]{};
+    if (lmshift_lump == bspdata->bspx.entries.end() && options.write_litfile != lightfile::lit2 && options.facestyles.value() <= 4) {
+        faces_sup.clear(); // no scales, no lit2
+    } else { // we have scales or lit2 output. yay...
+        faces_sup.resize(bsp.dfaces.size());
 
         if (lmshift_lump != bspdata->bspx.entries.end()) {
-            for (int i = 0; i < bsp.dfaces.size(); i++)
-                faces_sup[i].lmscale = nth_bit(reinterpret_cast<const char *>(lmshift_lump->second.lumpdata.get())[i]);
+            for (int i = 0; i < bsp.dfaces.size(); i++) {
+                faces_sup[i].lmscale = nth_bit(reinterpret_cast<const char *>(lmshift_lump->second.data())[i]);
+            }
         } else {
-            for (int i = 0; i < bsp.dfaces.size(); i++)
+            for (int i = 0; i < bsp.dfaces.size(); i++) {
                 faces_sup[i].lmscale = modelinfo.at(0)->lightmapscale;
+            }
         }
     }
 
     CalculateVertexNormals(&bsp);
 
+    // create lightmap surfaces
+    CreateLightmapSurfaces(&bsp);
+
+    const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
     const bool bouncerequired =
         options.bounce.value() && (options.debugmode == debugmodes::none || options.debugmode == debugmodes::bounce ||
                                       options.debugmode == debugmodes::bouncelights); // mxd
-    const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
 
-    if ((bouncerequired || isQuake2map) && !options.nolighting.value()) {
-        if (isQuake2map)
-            MakeSurfaceLights(options, &bsp);
-        if (bouncerequired)
-            MakeBounceLights(options, &bsp);
-    }
+    MakeRadiositySurfaceLights(options, &bsp);
 
-#if 0
-    lightbatchthread_info_t info;
-    info.all_batches = MakeLightingBatches(bsp);
-    info.all_contribFaces = MakeContributingFaces(bsp);
-    info.bsp = bsp;
-    RunThreadsOn(0, info.all_batches.size(), LightBatchThread, &info);
-#else
-    logging::print("--- LightThread ---\n"); // mxd
+    logging::print("--- Direct Lighting ---\n"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-        LightThread(&bsp, i);
-    });
+        if (light_surfaces[i]) {
+#if defined(HAVE_EMBREE) && defined (__SSE2__)
+            _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
 
-    if ((bouncerequired || isQuake2map) && !options.nolighting.value()) { // mxd. Print some extra stats...
-        logging::print("Indirect lights: {} bounce lights, {} surface lights ({} light points) in use.\n",
-            BounceLights().size(), SurfaceLights().size(), TotalSurfacelightPoints());
+            DirectLightFace(&bsp, *light_surfaces[i].get(), options);
+        }
+    });
+
+    if (bouncerequired && !options.nolighting.value()) {
+        GetLights().clear();
+        GetRadLights().clear();
+        GetSuns().clear();
+        GetSurfaceLights().clear();
+
+        MakeBounceLights(options, &bsp);
+
+        logging::print("--- Indirect Lighting ---\n"); // mxd
+        logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
+            if (light_surfaces[i]) {
+    #if defined(HAVE_EMBREE) && defined (__SSE2__)
+                _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+    #endif
+
+                IndirectLightFace(&bsp, *light_surfaces[i].get(), options);
+            }
+        });
     }
+
+    SaveLightmapSurfaces(&bsp);
 
     logging::print("Lighting Completed.\n\n");
 
@@ -505,10 +569,10 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (!options.litonly.value()) {
         if (bsp.loadversion->game->has_rgb_lightmap) {
             bsp.dlightdata.resize(lit_file_p);
-            memcpy(bsp.dlightdata.data(), lit_filebase, bsp.dlightdata.size());
+            memcpy(bsp.dlightdata.data(), lit_filebase.data(), bsp.dlightdata.size());
         } else {
             bsp.dlightdata.resize(file_p);
-            memcpy(bsp.dlightdata.data(), filebase, bsp.dlightdata.size());
+            memcpy(bsp.dlightdata.data(), filebase.data(), bsp.dlightdata.size());
         }
     } else {
         // NOTE: bsp.lightdatasize is already valid in the -litonly case
@@ -516,19 +580,77 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     logging::print("lightdatasize: {}\n", bsp.dlightdata.size());
 
     // kill this stuff if its somehow found.
+    bspdata->bspx.entries.erase("LMSTYLE16");
     bspdata->bspx.entries.erase("LMSTYLE");
     bspdata->bspx.entries.erase("LMOFFSET");
 
-    if (faces_sup) {
-        uint8_t *styles = new uint8_t[4 * bsp.dfaces.size()];
-        int32_t *offsets = new int32_t[bsp.dfaces.size()];
+    if (!faces_sup.empty()) {
+        bool needoffsets = false;
+        bool needstyles = false;
+        int maxstyle = 0;
+        int stylesperface = 0;
+
         for (int i = 0; i < bsp.dfaces.size(); i++) {
-            offsets[i] = faces_sup[i].lightofs;
-            for (int j = 0; j < MAXLIGHTMAPS; j++)
-                styles[i * 4 + j] = faces_sup[i].styles[j];
+            if (bsp.dfaces[i].lightofs != faces_sup[i].lightofs)
+                needoffsets = true;
+            int j = 0;
+            for (; j < MAXLIGHTMAPSSUP; j++) {
+                if (faces_sup[i].styles[j] == INVALID_LIGHTSTYLE)
+                    break;
+                if (bsp.dfaces[i].styles[j] != faces_sup[i].styles[j])
+                    needstyles = true;
+                if (maxstyle < faces_sup[i].styles[j])
+                    maxstyle = faces_sup[i].styles[j];
+            }
+            if (stylesperface < j)
+                stylesperface = j;
         }
-        bspdata->bspx.transfer("LMSTYLE", styles, sizeof(*styles) * 4 * bsp.dfaces.size());
-        bspdata->bspx.transfer("LMOFFSET", (uint8_t *&)offsets, sizeof(*offsets) * bsp.dfaces.size());
+
+        needstyles |= (stylesperface>4);
+
+        logging::print("max {} styles per face{}\n", stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
+        
+        if (needstyles) {
+            if (maxstyle >= INVALID_LIGHTSTYLE_OLD) {
+                /*needs bigger datatype*/
+                std::vector<uint8_t> styles_mem(sizeof(uint16_t) * stylesperface * bsp.dfaces.size());
+
+                omemstream styles(styles_mem.data(), std::ios_base::out | std::ios_base::binary);
+                styles << endianness<std::endian::little>;
+
+                for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+                    for (size_t j = 0; j < stylesperface; j++) {
+                        styles <= faces_sup[i].styles[j];
+                    }
+                }
+
+                bspdata->bspx.transfer("LMSTYLE16", styles_mem);
+            } else {
+                /*original LMSTYLE lump was just for different lmshift info*/
+                std::vector<uint8_t> styles_mem(stylesperface * bsp.dfaces.size());
+
+                for (size_t i = 0, k = 0; i < bsp.dfaces.size(); i++) {
+                    for (size_t j = 0; j < stylesperface; j++, k++) {
+                        styles_mem[k] = faces_sup[i].styles[j];
+                    }
+                }
+
+                bspdata->bspx.transfer("LMSTYLE", styles_mem);
+            }
+        }
+
+        if (needoffsets) {
+            std::vector<uint8_t> offsets_mem(bsp.dfaces.size() * sizeof(int32_t));
+
+            omemstream offsets(offsets_mem.data(), std::ios_base::out | std::ios_base::binary);
+            offsets << endianness<std::endian::little>;
+
+            for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+                offsets <= faces_sup[i].lightofs;
+            }
+
+            bspdata->bspx.transfer("LMOFFSET", offsets_mem);
+        }
     }
 }
 
@@ -646,6 +768,59 @@ static void ExportObj(const fs::path &filename, const mbsp_t *bsp)
 }
 
 // obj
+static std::vector<std::vector<const mleaf_t *>> faceleafs;
+static std::vector<bool> leafhassky;
+
+// index some stuff from the bsp
+static void BuildPvsIndex(const mbsp_t *bsp)
+{
+    // build leafsForFace
+    faceleafs.resize(bsp->dfaces.size());
+    for (size_t i = 0; i < bsp->dleafs.size(); i++) {
+        const mleaf_t &leaf = bsp->dleafs[i];
+        for (int k = 0; k < leaf.nummarksurfaces; k++) {
+            const int facenum = bsp->dleaffaces[leaf.firstmarksurface + k];
+            faceleafs.at(facenum).push_back(&leaf);
+        }
+    }
+    
+    // build leafhassky
+    leafhassky.resize(bsp->dleafs.size(), false);
+    for (size_t i = 0; i < bsp->dleafs.size(); i++) {
+        const bsp2_dleaf_t &leaf = bsp->dleafs[i];
+
+        // check for sky, contents check
+        if (bsp->loadversion->game->contents_are_sky({ leaf.contents })) {
+            leafhassky.at(i) = true;
+            continue;
+        }
+        
+        // search for sky faces
+        for (size_t k = 0; k < leaf.nummarksurfaces; k++) {
+            const mface_t &surf = bsp->dfaces[bsp->dleaffaces[leaf.firstmarksurface + k]];
+            const mtexinfo_t &texinfo = bsp->texinfo[surf.texinfo];
+
+            if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                if (texinfo.flags.native & Q2_SURF_SKY) {
+                    leafhassky.at(i) = true;
+                }
+                break;
+            }
+
+            const char *texname = Face_TextureName(bsp, &surf);
+            if (!strncmp("sky", texname, 3)) {
+                leafhassky.at(i) = true;
+                break;
+            }
+        }
+    }
+}
+
+bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf)
+{
+    const int leafnum = leaf - bsp->dleafs.data();
+    return leafhassky.at(leafnum);
+}
 
 // returns the face with a centroid nearest the given point.
 static const mface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &point)
@@ -807,8 +982,8 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
     }
 
     size_t data_size = sizeof(uint32_t) + (sizeof(qvec3f) * unique_normals.size()) + (sizeof(uint32_t) * num_normals);
-    uint8_t *data = new uint8_t[data_size];
-    memstream stream(data, data_size);
+    std::vector<uint8_t> data(data_size);
+    omemstream stream(data.data(), data_size);
 
     stream << endianness<std::endian::little>;
     stream <= numeric_cast<uint32_t>(unique_normals.size());
@@ -834,33 +1009,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 
     logging::print(logging::flag::VERBOSE, "Compressed {} normals down to {}\n", num_normals, unique_normals.size());
 
-    bspdata.bspx.transfer("FACENORMALS", data, data_size);
-
-    ofstream obj("test.obj");
-
-    size_t index_id = 1;
-
-    for (auto &face : bsp.dfaces) {
-        auto &cache = FaceCacheForFNum(&face - bsp.dfaces.data());
-
-        for (size_t i = 0; i < cache.points().size(); i++) {
-            auto &pt = cache.points()[i];
-            auto &n = cache.normals()[i];
-
-            fmt::print(obj, "v {}\n", pt);
-            fmt::print(obj, "vn {}\n", n.normal);
-        }
-
-        for (size_t i = 1; i < cache.points().size() - 1; i++) {
-            size_t n1 = 0;
-            size_t n2 = i;
-            size_t n3 = (i + 1) % cache.points().size();
-
-            fmt::print(obj, "f {0}//{0} {1}//{1} {2}//{2}\n", index_id + n1, index_id + n2, index_id + n3);
-        }
-
-        index_id += cache.points().size();
-    }
+    bspdata.bspx.transfer("FACENORMALS", data);
 }
 
 /*
@@ -1043,18 +1192,35 @@ int light_main(int argc, const char **argv)
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
-    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.rangescale.isChanged()) {
-        options.rangescale.setValue(1.0f);
+    if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
+        if (!options.rangescale.isChanged()) {
+            options.rangescale.setValue(1.0f);
+        }
+        if (!options.bouncecolorscale.isChanged()) {
+            options.bouncecolorscale.setValue(1.0f);
+        }
+        if (!options.bouncescale.isChanged()) {
+            options.bouncescale.setValue(1.5f);
+        }
+        if (!options.bounce.isChanged()) {
+            options.bounce.setValue(true);
+        }
     }
-    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncecolorscale.isChanged()) {
-        options.bouncecolorscale.setValue(1.0f);
-    }
-    if ((bspdata.loadversion->game->id == GAME_QUAKE_II) && !options.bouncescale.isChanged()) {
-        options.bouncescale.setValue(1.5f);
+
+    // check vis approx type
+    if (options.visapprox.value() == visapprox_t::AUTO) {
+        if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
+            options.visapprox.setValue(visapprox_t::VIS);
+        } else {
+            options.visapprox.setValue(visapprox_t::RAYS);
+        }
     }
 
     load_textures(&bsp);
 
+    CacheTextures(bsp);
+    
+    BuildPvsIndex(&bsp);
     LoadExtendedTexinfoFlags(source, &bsp);
     LoadEntities(options, &bsp);
 
@@ -1065,7 +1231,7 @@ int light_main(int argc, const char **argv)
     FindDebugFace(&bsp);
     FindDebugVert(&bsp);
 
-    MakeTnodes(&bsp);
+    Embree_TraceInit(&bsp);
 
     if (options.debugmode == debugmodes::phong_obj) {
         CalculateVertexNormals(&bsp);
@@ -1110,13 +1276,15 @@ int light_main(int argc, const char **argv)
             WriteLitFile(&bsp, faces_sup, source, LIT_VERSION);
         }
         if (options.write_litfile & lightfile::bspx) {
-            bspdata.bspx.transfer("RGBLIGHTING", lit_filebase, bsp.dlightdata.size() * 3);
+            lit_filebase.resize(bsp.dlightdata.size() * 3);
+            bspdata.bspx.transfer("RGBLIGHTING", lit_filebase);
         }
         if (options.write_luxfile & lightfile::external) {
             WriteLuxFile(&bsp, source, LIT_VERSION);
         }
         if (options.write_luxfile & lightfile::bspx) {
-            bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase, bsp.dlightdata.size() * 3);
+            lux_filebase.resize(bsp.dlightdata.size() * 3);
+            bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase);
         }
     }
 
@@ -1125,9 +1293,9 @@ int light_main(int argc, const char **argv)
         bsp.dlightdata.clear();
     }
 
-#if 0
-    ExportObj(source, bsp);
-#endif
+    if (options.exportobj.value()) {
+        ExportObj(fs::path{source}.replace_extension(".obj"), &bsp);
+    }
 
     WriteEntitiesToString(options, &bsp);
     /* Convert data format back if necessary */

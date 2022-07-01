@@ -57,7 +57,7 @@ skipspace:
     }
 
     /* comment field */
-    if (pos[0] == '/' && pos[1] == '/') {
+    if ((pos[0] == '/' && pos[1] == '/') || pos[0] == ';') { // quark writes ; comments in q2 maps
         if (flags & PARSE_COMMENT) {
             while (*pos && *pos != '\n') {
                 *token_p++ = *pos++;

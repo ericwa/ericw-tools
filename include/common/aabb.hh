@@ -75,6 +75,14 @@ public:
     {
     }
 
+    template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
+    constexpr aabb(Iter start, Iter end) : aabb()
+    {
+        for (auto it = start; it != end; it++) {
+            *this += *it;
+        }
+    }
+
     constexpr bool operator==(const aabb &other) const { return m_mins == other.m_mins && m_maxs == other.m_maxs; }
 
     constexpr const value_type &mins() const { return m_mins; }

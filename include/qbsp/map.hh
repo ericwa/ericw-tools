@@ -41,14 +41,6 @@ struct qbsp_plane_t : qplane3d
     [[nodiscard]] constexpr qbsp_plane_t operator-() const { return {qplane3d::operator-(), type}; }
 };
 
-struct extended_texinfo_t
-{
-    contentflags_t contents = {0};
-    surfflags_t flags = {0};
-    int value = 0;
-    std::string animation;
-};
-
 struct mapface_t
 {
     qbsp_plane_t plane{};
@@ -119,7 +111,7 @@ public:
     const mapbrush_t &mapbrush(int i) const;
 };
 
-struct texdata_t
+struct maptexdata_t
 {
     std::string name;
     surfflags_t flags;
@@ -130,21 +122,6 @@ struct texdata_t
 
 #include <common/imglib.hh>
 
-struct start_spots_t
-{
-private:
-    std::bitset<3> bits {};
-
-public:
-    constexpr bool has_info_player_start() const { return bits[0]; }
-    constexpr bool has_info_player_coop() const { return bits[1]; }
-    constexpr bool has_info_player_deathmatch() const { return bits[2]; }
-    
-    void set_info_player_start(bool value) { bits.set(0, value); }
-    void set_info_player_coop(bool value) { bits.set(1, value); }
-    void set_info_player_deathmatch(bool value) { bits.set(2, value); }
-};
-
 struct mapdata_t
 {
     /* Arrays of actual items */
@@ -152,11 +129,11 @@ struct mapdata_t
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
     std::vector<qbsp_plane_t> planes;
-    std::vector<texdata_t> miptex;
-    std::vector<mtexinfo_t> mtexinfos;
+    std::vector<maptexdata_t> miptex;
+    std::vector<maptexinfo_t> mtexinfos;
 
     /* quick lookup for texinfo */
-    std::map<mtexinfo_t, int> mtexinfo_lookup;
+    std::map<maptexinfo_t, int> mtexinfo_lookup;
 
     /* map from plane hash code to list of indicies in `planes` vector */
     std::unordered_map<int, std::vector<int>> planehash;
@@ -183,14 +160,13 @@ struct mapdata_t
     const std::optional<img::texture_meta> &load_image_meta(const std::string_view &name);
     // whether we had attempted loading texture stuff
     bool textures_loaded = false;
-    
-    // todo type-cleanup: move to gamedef
-    start_spots_t start_spots;
 
     // helpers
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
 
     const std::string &texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
+
+    int skip_texinfo;
 
     mapentity_t *world_entity();
 
@@ -203,7 +179,6 @@ void CalculateWorldExtent(void);
 
 bool ParseEntity(parser_t &parser, mapentity_t *entity);
 
-void EnsureTexturesLoaded();
 void ProcessExternalMapEntity(mapentity_t *entity);
 void ProcessAreaPortal(mapentity_t *entity);
 bool IsWorldBrushEntity(const mapentity_t *entity);
@@ -225,7 +200,7 @@ inline int FindMiptex(const char *name, bool internal = false, bool recursive = 
     std::optional<extended_texinfo_t> extended_info;
     return FindMiptex(name, extended_info, internal, recursive);
 }
-int FindTexinfo(const mtexinfo_t &texinfo);
+int FindTexinfo(const maptexinfo_t &texinfo);
 
 void PrintEntity(const mapentity_t *entity);
 

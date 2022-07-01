@@ -69,5 +69,6 @@ public:
     void parse(parser_base_t &parser);
 };
 
+void EntData_ParseInto(const std::string &entdata, std::vector<entdict_t> &vector);
 std::vector<entdict_t> EntData_Parse(const std::string &entdata);
 std::string EntData_Write(const std::vector<entdict_t> &ents);

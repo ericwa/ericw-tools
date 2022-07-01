@@ -66,6 +66,16 @@ enum class conversion_t
     bp
 };
 
+// data representation of only extended flags
+// used by Q2 format; used by various systems.
+struct extended_texinfo_t
+{
+    contentflags_t contents = {0};
+    surfflags_t flags = {0};
+    int value = 0;
+    std::string animation;
+};
+
 namespace settings
 {
 struct wadpath
@@ -224,6 +234,7 @@ public:
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
     setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
+    setting_set texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to a texture definition file, which can transform textures in the .map into other textures."};
 
     void setParameters(int argc, const char **argv) override
     {
@@ -241,6 +252,12 @@ public:
     const gamedef_t *target_game = nullptr;
     fs::path map_path;
     fs::path bsp_path;
+    std::unordered_map<std::string, std::tuple<std::string, std::optional<extended_texinfo_t>>> loaded_texture_defs;
+    std::unordered_map<std::string, entdict_t> loaded_entity_defs;
+
+private:
+    void load_texture_def(const std::string &pathname);
+    void load_entity_def(const std::string &pathname);
 };
 }; // namespace settings
 
@@ -271,7 +288,7 @@ constexpr double SIDESPACE = 24.0;
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 
-struct mtexinfo_t
+struct maptexinfo_t
 {
     texvecf vecs; /* [s/t][xyz offset] */
     int32_t miptex = 0;
@@ -282,9 +299,9 @@ struct mtexinfo_t
 
     constexpr auto as_tuple() const { return std::tie(vecs, miptex, flags, value, next); }
 
-    constexpr bool operator<(const mtexinfo_t &other) const { return as_tuple() < other.as_tuple(); }
+    constexpr bool operator<(const maptexinfo_t &other) const { return as_tuple() < other.as_tuple(); }
 
-    constexpr bool operator>(const mtexinfo_t &other) const { return as_tuple() > other.as_tuple(); }
+    constexpr bool operator>(const maptexinfo_t &other) const { return as_tuple() > other.as_tuple(); }
 };
 
 class mapentity_t;
@@ -300,7 +317,7 @@ struct face_fragment_t
 struct face_t : face_fragment_t
 {
     int planenum;
-    int planeside; // which side is the front of the face
+    planeside_t planeside; // which side is the front of the face
     int texinfo;
     twosided<contentflags_t> contents;
     twosided<int16_t> lmshift;

@@ -46,8 +46,8 @@ static int tjuncfaces;
 static int cWVerts;
 static int cWEdges;
 
-static wvert_t *pWVerts;
-static wedge_t *pWEdges;
+static std::vector<wvert_t> pWVerts;
+static std::vector<wedge_t> pWEdges;
 
 //============================================================================
 
@@ -155,7 +155,7 @@ static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t
 
     if (numwedges >= cWEdges)
         FError("Internal error: didn't allocate enough edges for tjuncs?");
-    edge = pWEdges + numwedges;
+    edge = &pWEdges[numwedges];
     numwedges++;
 
     edge->next = wedge_hash[h];
@@ -192,7 +192,7 @@ static void AddVert(wedge_t *edge, vec_t t)
     if (numwverts >= cWVerts)
         FError("Internal error: didn't allocate enough vertices for tjuncs?");
 
-    newv = pWVerts + numwverts;
+    newv = &pWVerts[numwverts];
     numwverts++;
 
     newv->t = t;
@@ -418,9 +418,11 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     tjunc_count_r(headnode);
     cWEdges = cWVerts;
     cWVerts *= 2;
-
-    pWVerts = new wvert_t[cWVerts]{};
-    pWEdges = new wedge_t[cWEdges]{};
+    
+    pWVerts.clear();
+    pWEdges.clear();
+    pWVerts.resize(cWVerts);
+    pWEdges.resize(cWEdges);
 
     qvec3d maxs;
     /*
@@ -447,9 +449,6 @@ void TJunc(const mapentity_t *entity, node_t *headnode)
     /* add extra vertexes on edges where needed */
     tjuncs = tjuncfaces = 0;
     tjunc_fix_r(headnode);
-
-    delete[] pWVerts;
-    delete[] pWEdges;
 
     logging::print(logging::flag::STAT, "     {:8} edges added by tjunctions\n", tjuncs);
     logging::print(logging::flag::STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);

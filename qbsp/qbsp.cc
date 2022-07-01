@@ -92,6 +92,80 @@ void qbsp_settings::initialize(int argc, const char **argv)
     }
 }
 
+void qbsp_settings::load_texture_def(const std::string &pathname)
+{
+    if (!fs::exists(pathname)) {
+        FError("can't find texturedef file {}", pathname);
+    }
+
+    fs::data data = fs::load(pathname);
+    parser_t parser(data);
+
+    while (true) {
+        if (!parser.parse_token() || parser.at_end()) {
+            break;
+        }
+
+        std::string from = std::move(parser.token);
+
+        if (!parser.parse_token(PARSE_SAMELINE)) {
+            break;
+        }
+        
+        std::string to = std::move(parser.token);
+        std::optional<extended_texinfo_t> texinfo;
+
+        // FIXME: why is this necessary? is it a trailing \0? only happens on release
+        // repro with a texdef with no newline at the end
+        while (std::isspace(to[to.size() - 1])) {
+            to.resize(to.size() - 1);
+        }
+        
+        if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
+            texinfo = extended_texinfo_t { std::stoi(parser.token) };
+        
+            if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
+                texinfo->flags.native = std::stoi(parser.token);
+            }
+        
+            if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
+                texinfo->value = std::stoi(parser.token);
+            }
+        }
+
+        loaded_texture_defs[from] = { to, texinfo };
+    }
+}
+
+void qbsp_settings::load_entity_def(const std::string &pathname)
+{
+    if (!fs::exists(pathname)) {
+        FError("can't find aliasdef file {}", pathname);
+    }
+
+    fs::data data = fs::load(pathname);
+    parser_t parser(data);
+
+    while (true) {
+        if (!parser.parse_token() || parser.at_end()) {
+            break;
+        }
+
+        std::string classname = std::move(parser.token);
+
+        if (!parser.parse_token(PARSE_PEEK)) {
+            FError("expected {{ in alias def {}, got end of file", pathname);
+        }
+
+        if (parser.token != "{") {
+            FError("expected {{ in alias def {}, got {}", pathname, parser.token);
+        }
+
+        // parse ent dict
+        loaded_entity_defs[classname] = parser;
+    }
+}
+
 void qbsp_settings::postinitialize(int argc, const char **argv)
 {
     // side effects from common
@@ -169,6 +243,15 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         }
     }
 
+    // load texture defs
+    for (auto &def : texturedefs.values()) {
+        load_texture_def(def);
+    }
+
+    for (auto &def : aliasdefs.values()) {
+        load_entity_def(def);
+    }
+
     common_settings::postinitialize(argc, argv);
 }
 }; // namespace settings
@@ -241,7 +324,7 @@ static std::vector<std::tuple<size_t, const face_t *>> AddBrushBevels(const brus
         int32_t planenum = f.planenum;
 
         if (f.planeside) {
-            planenum = FindPlane(-map.planes[f.planenum], nullptr);
+            planenum = FindPlane(-map.planes.at(f.planenum), nullptr);
         }
 
         int32_t outputplanenum = ExportMapPlane(planenum);
@@ -961,15 +1044,13 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
         permodel.numbrushes++;
         for (auto &f : b.faces) {
             /*skip axial*/
-            if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
-                fabs(map.planes[f.planenum].normal[2]) == 1)
+            const auto &plane = map.planes.at(f.planenum);
+            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
+                fabs(plane.normal[2]) == 1)
                 continue;
             permodel.numfaces++;
         }
     }
-
-    permodel.numbrushes = LittleLong(permodel.numbrushes);
-    permodel.numfaces = LittleLong(permodel.numfaces);
 
     std::ostringstream str(std::ios_base::out | std::ios_base::binary);
 
@@ -982,8 +1063,9 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
 
         for (auto &f : b.faces) {
             /*skip axial*/
-            if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
-                fabs(map.planes[f.planenum].normal[2]) == 1)
+            const auto &plane = map.planes.at(f.planenum);
+            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
+                fabs(plane.normal[2]) == 1)
                 continue;
             perbrush.numfaces++;
         }
@@ -1023,16 +1105,17 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, std::
 
         for (auto &f : b.faces) {
             /*skip axial*/
-            if (fabs(map.planes[f.planenum].normal[0]) == 1 || fabs(map.planes[f.planenum].normal[1]) == 1 ||
-                fabs(map.planes[f.planenum].normal[2]) == 1)
+            const auto &plane = map.planes.at(f.planenum);
+            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
+                fabs(plane.normal[2]) == 1)
                 continue;
 
             bspxbrushes_perface perface;
 
             if (f.planeside) {
-                perface = -map.planes[f.planenum];
+                perface = -plane;
             } else {
-                perface = map.planes[f.planenum];
+                perface = plane;
             }
 
             str <= std::tie(perface.normal, perface.dist);
@@ -1172,7 +1255,7 @@ static void LoadTextureData()
         header.height = miptex.height;
         header.offsets = { -1, -1, -1, -1 };
 
-        memstream stream(miptex.data.data(), miptex.data.size(), std::ios_base::out | std::ios_base::binary);
+        omemstream stream(miptex.data.data(), miptex.data.size());
         stream <= header;
     }
 }
@@ -1262,6 +1345,21 @@ void ProcessFile()
 
 /*
 ==================
+MakeSkipTexinfo
+==================
+*/
+static int MakeSkipTexinfo()
+{
+    maptexinfo_t mt{};
+
+    mt.miptex = FindMiptex("skip", true);
+    mt.flags.is_skip = true;
+
+    return FindTexinfo(mt);
+}
+
+/*
+==================
 InitQBSP
 ==================
 */
@@ -1311,6 +1409,9 @@ void InitQBSP(int argc, const char **argv)
     if (options.target_game) {
         options.target_game->init_filesystem(options.map_path, options);
     }
+
+    // make skip texinfo, in case map needs it (it'll get culled out if not)
+    map.skip_texinfo = MakeSkipTexinfo();
 }
 
 void InitQBSP(const std::vector<std::string>& args)

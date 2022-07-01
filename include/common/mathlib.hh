@@ -53,7 +53,7 @@ constexpr vec_t DIST_EPSILON = 0.0001;
 constexpr vec_t DEGREES_EPSILON = 0.001;
 constexpr vec_t DEFAULT_ON_EPSILON = 0.1;
 
-enum side_t : int8_t
+enum planeside_t : int8_t
 {
     SIDE_FRONT,
     SIDE_BACK,

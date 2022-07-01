@@ -46,7 +46,14 @@ if ( $? -eq $false ) {
   throw "testqbsp failed"
 }
 
-.\vis\Release\testvis.exe
+# run hidden tests (releaseonly)
+.\qbsp\Release\testqbsp.exe [.]
+
+if ( $? -eq $false ) {
+  throw "testqbsp [.] failed"
+}
+
+.\vis\Release\testvis.exe --allow-running-no-tests
 
 if ( $? -eq $false ) {
   throw "testvis failed"

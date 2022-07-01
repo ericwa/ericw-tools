@@ -105,12 +105,14 @@ void print(flag logflag, const char *str)
 
 static time_point start_time;
 static bool is_timing = false;
+static uint64_t last_count = -1;
 
 void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {
     if (!is_timing) {
         start_time = I_FloatTime();
         is_timing = true;
+        last_count = -1;
     }
 
     if (count == max) {
@@ -119,8 +121,13 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
         if (displayElapsed) {
             print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
         }
+        last_count = -1;
     } else {
-        print(flag::PERCENT, "[{:>3}%]\r", static_cast<uint32_t>((static_cast<float>(count) / max) * 100));
+        uint32_t pct = static_cast<uint32_t>((static_cast<float>(count) / max) * 100);
+        if (last_count != pct) {
+            print(flag::PERCENT, "[{:>3}%]\r", pct);
+            last_count = pct;
+        }
     }
 }
 };

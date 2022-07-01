@@ -23,9 +23,6 @@
 #include <sstream>
 #include <common/cmdlib.hh>
 
-#include <light/light.hh>
-#include <light/entities.hh>
-#include <light/ltface.hh>
 #include <common/bsputils.hh>
 #include <common/parser.hh>
 
@@ -173,14 +170,9 @@ void entdict_t::parse(parser_base_t &parser)
     }
 }
 
-/*
- * ==================
- * EntData_Parse
- * ==================
- */
-std::vector<entdict_t> EntData_Parse(const std::string &entdata)
+
+void EntData_ParseInto(const std::string &entdata, std::vector<entdict_t> &vector)
 {
-    std::vector<entdict_t> result;
     parser_t parser(entdata);
 
     /* go through all the entities */
@@ -190,8 +182,20 @@ std::vector<entdict_t> EntData_Parse(const std::string &entdata)
             break;
 
         // emplace a new entdict_t out of the parser
-        result.emplace_back(parser);
+        vector.emplace_back(parser);
     }
+}
+
+/*
+ * ==================
+ * EntData_Parse
+ * ==================
+ */
+std::vector<entdict_t> EntData_Parse(const std::string &entdata)
+{
+    std::vector<entdict_t> result;
+
+    EntData_ParseInto(entdata, result);
 
     return result;
 }

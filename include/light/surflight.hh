@@ -32,6 +32,7 @@ struct surfacelight_t
      */
     bool omnidirectional;
     std::vector<qvec3f> points;
+    std::vector<const mleaf_t *> leaves;
 
     // Surface light settings...
     float intensity; // Surface light strength for each point
@@ -40,9 +41,10 @@ struct surfacelight_t
 
     // Estimated visible AABB culling
     aabb3d bounds;
+
+    int32_t style;
 };
 
-const std::vector<surfacelight_t> &SurfaceLights();
-int TotalSurfacelightPoints();
+std::vector<surfacelight_t> &GetSurfaceLights();
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
-void MakeSurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
+void MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);

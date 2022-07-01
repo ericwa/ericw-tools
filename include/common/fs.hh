@@ -134,15 +134,6 @@ inline fs::path DefaultExtension(const fs::path &path, const fs::path &extension
     return fs::path(path).replace_extension(extension);
 }
 
-using qfile_t = std::unique_ptr<FILE, decltype(&fclose)>;
-
-qfile_t SafeOpenWrite(const fs::path &filename);
-qfile_t SafeOpenRead(const fs::path &filename, bool must_exist = false);
-size_t SafeRead(const qfile_t &f, void *buffer, size_t count);
-size_t SafeWrite(const qfile_t &f, const void *buffer, size_t count);
-void SafeSeek(const qfile_t &f, long offset, int32_t origin);
-long SafeTell(const qfile_t &f);
-
 #include <fmt/format.h>
 
 // TODO: no wchar_t support in this version apparently

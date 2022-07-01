@@ -95,10 +95,12 @@ static void CheckFace(face_t *face, const mapface_t &sourceface)
         const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
 
         for (auto &v : p1)
-            if (v > options.worldextent.value() || v < -options.worldextent.value())
+            if (fabs(v) > options.worldextent.value())
                 FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
 
         /* check the point is on the face plane */
+        // fixme check: plane's normal is not inverted by planeside check above,
+        // is this a bug? should `Face_Plane` be used instead?
         vec_t dist = plane.distance_to(p1);
         if (dist < -options.epsilon.value() || dist > options.epsilon.value())
             logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
@@ -190,6 +192,7 @@ static bool NormalizePlane(qbsp_plane_t &p, bool flip = true)
 
 inline int plane_hash_fn(const qplane3d &p)
 {
+    // FIXME: include normal..?
     return Q_rint(fabs(p.dist));
 }
 
@@ -203,7 +206,7 @@ static void PlaneHash_Add(const qplane3d &p, int index)
  * NewPlane
  * - Returns a global plane number and the side that will be the front
  */
-static int NewPlane(const qplane3d &plane, int *side)
+static int NewPlane(const qplane3d &plane, planeside_t *side)
 {
     vec_t len = qv::length(plane.normal);
 
@@ -232,7 +235,7 @@ static int NewPlane(const qplane3d &plane, int *side)
  * - Returns a global plane number and the side that will be the front
  * - if `side` is null, only an exact match will be fetched.
  */
-int FindPlane(const qplane3d &plane, int *side)
+int FindPlane(const qplane3d &plane, planeside_t *side)
 {
     for (int i : map.planehash[plane_hash_fn(plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
@@ -265,7 +268,7 @@ int FindPositivePlane(int planenum)
     return FindPlane(-plane, nullptr);
 }
 
-int FindPositivePlane(const qplane3d &plane, int *side)
+int FindPositivePlane(const qplane3d &plane, planeside_t *side)
 {
     int planenum = FindPlane(plane, side);
     int positive_plane = FindPositivePlane(planenum);
@@ -276,7 +279,7 @@ int FindPositivePlane(const qplane3d &plane, int *side)
 
     // planenum itself isn't positive, so flip the planeside and return the positive version
     if (side) {
-        *side = !*side;
+        *side = (*side == SIDE_FRONT) ? SIDE_BACK : SIDE_FRONT;
     }
     return positive_plane;
 }
@@ -354,7 +357,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
     for (auto &mapface : hullbrush->faces) {
         if (hullnum <= 0 && hullbrush->contents.is_hint()) {
             /* Don't generate hintskip faces */
-            const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+            const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
             if (options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
                 continue;
@@ -408,7 +411,7 @@ static std::vector<face_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 
         // account for texture offset, from txqbsp-xt
         if (!options.oldrottex.value()) {
-            mtexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
+            maptexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
             texInfoNew.outputnum = std::nullopt;
 
             texInfoNew.vecs.at(0, 3) += qv::dot(rotate_offset, texInfoNew.vecs.row(0).xyz());
@@ -699,7 +702,7 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
     // validate that all of the sides have valid contents
     for (int i = 0; i < mapbrush->numfaces; i++) {
         const mapface_t &mapface = mapbrush->face(i);
-        const mtexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+        const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
         contentflags_t contents =
             options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
@@ -901,17 +904,17 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     }
 
     /* _mirrorinside key (for func_water etc.) */
-    std::optional<bool> all_mirrorinside;
+    std::optional<bool> mirrorinside;
 
     if (src->epairs.has("_mirrorinside")) {
-        all_mirrorinside = src->epairs.get_int("_mirrorinside") ? true : false;
+        mirrorinside = src->epairs.get_int("_mirrorinside") ? true : false;
     }
 
     /* _noclipfaces */
     std::optional<bool> clipsametype;
 
     if (src->epairs.has("_noclipfaces")) {
-        clipsametype = static_cast<bool>(src->epairs.get_int("_noclipfaces"));
+        clipsametype = src->epairs.get_int("_noclipfaces") ? false : true;
     }
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
@@ -930,16 +933,16 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         bool detail = false;
         bool detail_illusionary = false;
         bool detail_fence = false;
-        std::optional<bool> mirrorinside = all_mirrorinside;
+        std::optional<bool> mirrorinside_brush = mirrorinside;
 
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
 
-        if (!mirrorinside) {
+        if (!mirrorinside_brush) {
             if (options.target_game->id == GAME_QUAKE_II && (contents.native & (Q2_CONTENTS_AUX | Q2_CONTENTS_MIST))) {
-                mirrorinside = true;
+                mirrorinside_brush = true;
             }
         }
 
@@ -1011,7 +1014,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
                 contents type.
                 */
-            if (hullnum <= 0 && mirrorinside.value_or(false)) {
+            if (hullnum <= 0 && mirrorinside_brush.value_or(false)) {
                 contents = {contents.native, CFLAGS_DETAIL_FENCE};
             }
         }
@@ -1025,10 +1028,10 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             contents = options.target_game->create_solid_contents();
 
         // apply extended flags
-        if (mirrorinside.value_or(false)) {
+        if (mirrorinside_brush.value_or(false)) {
             contents.extended |= CFLAGS_BMODEL_MIRROR_INSIDE;
         }
-        if (clipsametype.value_or(false)) {
+        if (!clipsametype.value_or(true)) {
             contents.extended |= CFLAGS_NO_CLIPPING_SAME_TYPE;
         }
         if (func_illusionary_visblocker) {

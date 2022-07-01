@@ -1,4 +1,4 @@
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 
 #include <light/light.hh>
 #include <light/entities.hh>
@@ -20,9 +20,9 @@ TEST_CASE("MakeCDF", "[mathlib]")
     std::vector<float> cdf = MakeCDF(pdfUnnormzlied);
 
     REQUIRE(3u == cdf.size());
-    REQUIRE(Approx(0.25) == cdf.at(0));
-    REQUIRE(Approx(0.75) == cdf.at(1));
-    REQUIRE(Approx(1.0) == cdf.at(2));
+    REQUIRE(Catch::Approx(0.25) == cdf.at(0));
+    REQUIRE(Catch::Approx(0.75) == cdf.at(1));
+    REQUIRE(Catch::Approx(1.0) == cdf.at(2));
 
     // TODO: return pdf
     REQUIRE(0 == SampleCDF(cdf, 0));
@@ -251,12 +251,12 @@ TEST_CASE("BarycentricRandom", "[mathlib]")
         REQUIRE(r1 <= 1);
 
         const auto bary = qv::Barycentric_Random(r0, r1);
-        CHECK(Approx(1.0f) == bary[0] + bary[1] + bary[2]);
+        CHECK(Catch::Approx(1.0f) == bary[0] + bary[1] + bary[2]);
 
         const qvec3f point = qv::Barycentric_ToPoint(bary, tri[0], tri[1], tri[2]);
         CHECK(GLM_EdgePlanes_PointInside(edges, point));
 
-        CHECK(Approx(0.0f) == GLM_DistAbovePlane(plane, point));
+        CHECK(Catch::Approx(0.0f) == GLM_DistAbovePlane(plane, point));
     }
 }
 
@@ -284,7 +284,7 @@ TEST_CASE("DistAbovePlane", "[mathlib]")
 {
     qvec4f plane(0, 0, 1, 10);
     qvec3f point(100, 100, 100);
-    CHECK(Approx(90) == GLM_DistAbovePlane(plane, point));
+    CHECK(Catch::Approx(90) == GLM_DistAbovePlane(plane, point));
 }
 
 TEST_CASE("InterpolateNormalsDegenerate", "[mathlib]")
@@ -386,9 +386,9 @@ TEST_CASE("SignedDegreesBetweenUnitVectors", "[mathlib]")
     const qvec3f fwd{0, 1, 0};
     const qvec3f right{1, 0, 0};
 
-    CHECK(Approx(-90) == SignedDegreesBetweenUnitVectors(right, fwd, up));
-    CHECK(Approx(90) == SignedDegreesBetweenUnitVectors(fwd, right, up));
-    CHECK(Approx(0) == SignedDegreesBetweenUnitVectors(right, right, up));
+    CHECK(Catch::Approx(-90) == SignedDegreesBetweenUnitVectors(right, fwd, up));
+    CHECK(Catch::Approx(90) == SignedDegreesBetweenUnitVectors(fwd, right, up));
+    CHECK(Catch::Approx(0) == SignedDegreesBetweenUnitVectors(right, right, up));
 }
 
 TEST_CASE("ConcavityTest_concave", "[mathlib]")
@@ -570,13 +570,13 @@ TEST_CASE("RandomPointInPoly", "[mathlib]") {
 
 TEST_CASE("FractionOfLine", "[mathlib]")
 {
-    REQUIRE(Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0, 0, 0)));
-    REQUIRE(Approx(0.5) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0.5, 0.5, 0.5)));
-    REQUIRE(Approx(1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(1, 1, 1)));
-    REQUIRE(Approx(2) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(2, 2, 2)));
-    REQUIRE(Approx(-1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(-1, -1, -1)));
+    REQUIRE(Catch::Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0, 0, 0)));
+    REQUIRE(Catch::Approx(0.5) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0.5, 0.5, 0.5)));
+    REQUIRE(Catch::Approx(1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(1, 1, 1)));
+    REQUIRE(Catch::Approx(2) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(2, 2, 2)));
+    REQUIRE(Catch::Approx(-1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(-1, -1, -1)));
 
-    REQUIRE(Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(0, 0, 0), qvec3f(0, 0, 0)));
+    REQUIRE(Catch::Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(0, 0, 0), qvec3f(0, 0, 0)));
 }
 
 TEST_CASE("DistToLine", "[mathlib]")

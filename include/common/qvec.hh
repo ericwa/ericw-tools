@@ -421,14 +421,14 @@ template<size_t N, class T>
 [[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1, T &len)
 {
     len = length(v1);
-    return len ? (v1 / len) : qvec<T, N>{};
+    return len ? (v1 / len) : v1;
 }
 
 template<size_t N, class T>
 [[nodiscard]] inline qvec<T, N> normalize(const qvec<T, N> &v1)
 {
     T len = length(v1);
-    return len ? (v1 / len) : qvec<T, N>{};
+    return len ? (v1 / len) : v1;
 }
 
 template<size_t N, class T>
@@ -437,8 +437,6 @@ inline T normalizeInPlace(qvec<T, N> &v1)
     T len = length(v1);
     if (len) {
         v1 /= len;
-    } else {
-        v1 = {};
     }
     return len;
 }
@@ -706,7 +704,7 @@ public:
 
     // generic case
     template<typename F>
-    inline F distance_to(const qvec<F, 3> &point) const
+    [[nodiscard]] inline F distance_to(const qvec<F, 3> &point) const
     {
         return qv::dot(point, normal) - dist;
     }

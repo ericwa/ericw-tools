@@ -4,7 +4,7 @@ cmake_policy(SET CMP0028 NEW)
 project (ericw-tools)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/3rdparty/Catch2/contrib")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/3rdparty/Catch2/extras")
 
 # Grab the git describe output and store it in GIT_DESCRIBE
 # Thanks to http://xit0.org/2013/04/cmake-use-git-branch-and-commit-details-in-project/
@@ -75,11 +75,6 @@ if (ERICWTOOLS_ASAN)
 	message(STATUS "Enabling ASan on all targets")
 	add_compile_options(-fsanitize=address)
 	add_link_options(-fsanitize=address)
-
-	# https://github.com/catchorg/Catch2/issues/898#issuecomment-841733322
-	if (WIN32)
-		add_compile_definitions(CATCH_CONFIG_NO_WINDOWS_SEH)
-	endif()
 endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")

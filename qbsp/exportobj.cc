@@ -53,7 +53,7 @@ static std::ofstream InitMtlFile(const std::string &filesuffix)
 
 static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
 {
-    const mtexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
+    const maptexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
     const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
 
     const auto &texture = map.load_image_meta(texname);

@@ -41,80 +41,22 @@ static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
     return result;
 }
 
-struct gamedef_generic_t : public gamedef_t
-{
-    gamedef_generic_t() : gamedef_t("") { id = GAME_UNKNOWN; }
-
-    bool surf_is_lightmapped(const surfflags_t &) const { throw std::bad_cast(); }
-
-    bool surf_is_subdivided(const surfflags_t &) const { throw std::bad_cast(); }
-
-    bool surfflags_are_valid(const surfflags_t &) const { throw std::bad_cast(); }
-
-    int32_t surfflags_from_string(const std::string_view &str) const { throw std::bad_cast(); }
-
-    bool texinfo_is_hintskip(const surfflags_t &, const std::string &) const { throw std::bad_cast(); }
-
-    contentflags_t cluster_contents(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
-
-    int32_t get_content_type(const contentflags_t &) const { throw std::bad_cast(); }
-
-    int32_t contents_priority(const contentflags_t &) const { throw std::bad_cast(); }
-
-    contentflags_t create_extended_contents(const uint16_t &) const { throw std::bad_cast(); }
-
-    contentflags_t create_empty_contents(const uint16_t &) const { throw std::bad_cast(); }
-
-    contentflags_t create_solid_contents(const uint16_t &) const { throw std::bad_cast(); }
-
-    contentflags_t create_sky_contents(const uint16_t &) const { throw std::bad_cast(); }
-
-    contentflags_t create_liquid_contents(const int32_t &, const uint16_t &) const { throw std::bad_cast(); }
-
-    bool contents_are_empty(const contentflags_t &) const { throw std::bad_cast(); }
-
-    bool contents_are_solid(const contentflags_t &) const { throw std::bad_cast(); }
-
-    bool contents_are_sky(const contentflags_t &) const { throw std::bad_cast(); }
-
-    bool contents_are_liquid(const contentflags_t &) const { throw std::bad_cast(); }
-
-    bool contents_are_valid(const contentflags_t &, bool) const { throw std::bad_cast(); }
-
-    int32_t contents_from_string(const std::string_view &str) const { throw std::bad_cast(); }
-
-    bool portal_can_see_through(const contentflags_t &, const contentflags_t &) const { throw std::bad_cast(); }
-
-    std::string get_contents_display(const contentflags_t &) const { throw std::bad_cast(); }
-
-    const std::initializer_list<aabb3d> &get_hull_sizes() const { throw std::bad_cast(); }
-
-    contentflags_t face_get_contents(const std::string &, const surfflags_t &, const contentflags_t &) const
-    {
-        throw std::bad_cast();
-    };
-
-    void init_filesystem(const fs::path &, const settings::common_settings &) const { throw std::bad_cast(); };
-
-    const std::vector<qvec3b> &get_default_palette() const { throw std::bad_cast(); };
-};
-
 template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {
     gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir) { this->id = ID; }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
+    bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const { return !(flags.native & TEX_SPECIAL); }
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
 
-    bool surfflags_are_valid(const surfflags_t &flags) const
+    bool surfflags_are_valid(const surfflags_t &flags) const override
     {
         // Q1 only supports TEX_SPECIAL
         return (flags.native & ~TEX_SPECIAL) == 0;
     }
 
-    int32_t surfflags_from_string(const std::string_view &str) const
+    int32_t surfflags_from_string(const std::string_view &str) const override
     {
         if (string_iequals(str, "special")) {
             return TEX_SPECIAL;
@@ -123,13 +65,13 @@ struct gamedef_q1_like_t : public gamedef_t
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
     {
         // anything texname other than "hint" in a hint brush is treated as "hintskip", and discarded
         return !string_iequals(name, "hint");
     }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const override
     {
         if (contents0 == contents1)
             return contents0;
@@ -151,9 +93,9 @@ struct gamedef_q1_like_t : public gamedef_t
         return create_solid_contents();
     }
 
-    int32_t get_content_type(const contentflags_t &contents) const { return contents.native; }
+    int32_t get_content_type(const contentflags_t &contents) const override { return contents.native; }
 
-    int32_t contents_priority(const contentflags_t &contents) const
+    int32_t contents_priority(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_DETAIL) {
             return 5;
@@ -181,37 +123,37 @@ struct gamedef_q1_like_t : public gamedef_t
         }
     }
 
-    contentflags_t create_extended_contents(const uint16_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_extended_contents(const uint16_t &cflags) const override { return {0, cflags}; }
 
-    contentflags_t create_empty_contents(const uint16_t &cflags = 0) const
+    contentflags_t create_empty_contents(const uint16_t &cflags = 0) const override
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {CONTENTS_EMPTY, cflags};
     }
 
-    contentflags_t create_solid_contents(const uint16_t &cflags = 0) const
+    contentflags_t create_solid_contents(const uint16_t &cflags = 0) const override
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {CONTENTS_SOLID, cflags};
     }
 
-    contentflags_t create_sky_contents(const uint16_t &cflags = 0) const
+    contentflags_t create_sky_contents(const uint16_t &cflags = 0) const override
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {CONTENTS_SKY, cflags};
     }
 
-    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const override
     {
         Q_assert(!(cflags & CFLAGS_CONTENTS_MASK));
 
         return {liquid_type, cflags};
     }
 
-    bool contents_are_empty(const contentflags_t &contents) const
+    bool contents_are_empty(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -219,7 +161,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents.native == CONTENTS_EMPTY;
     }
 
-    bool contents_are_solid(const contentflags_t &contents) const
+    bool contents_are_solid(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -227,7 +169,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents.native == CONTENTS_SOLID;
     }
 
-    bool contents_are_sky(const contentflags_t &contents) const
+    bool contents_are_sky(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -235,7 +177,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents.native == CONTENTS_SKY;
     }
 
-    bool contents_are_liquid(const contentflags_t &contents) const
+    bool contents_are_liquid(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -243,7 +185,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return contents.native <= CONTENTS_WATER && contents.native >= CONTENTS_LAVA;
     }
 
-    bool contents_are_valid(const contentflags_t &contents, bool strict) const
+    bool contents_are_valid(const contentflags_t &contents, bool strict) const override
     {
         if (!contents.native && !strict) {
             return true;
@@ -260,19 +202,19 @@ struct gamedef_q1_like_t : public gamedef_t
         }
     }
 
-    int32_t contents_from_string(const std::string_view &str) const
+    int32_t contents_from_string(const std::string_view &str) const override
     {
         // Q1 doesn't get contents from files
         return 0;
     }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const override
     {
         /* If contents values are the same and not solid, can see through */
         return !(contents0.is_solid(this) || contents1.is_solid(this)) && contents0 == contents1;
     }
 
-    std::string get_contents_display(const contentflags_t &contents) const
+    std::string get_contents_display(const contentflags_t &contents) const override
     {
         switch (contents.native) {
             case 0: return "UNSET";
@@ -286,7 +228,7 @@ struct gamedef_q1_like_t : public gamedef_t
         }
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const
+    const std::initializer_list<aabb3d> &get_hull_sizes() const override
     {
         static std::initializer_list<aabb3d> hulls = {
             {{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}}, {{-32, -32, -64}, {32, 32, 24}}};
@@ -294,7 +236,7 @@ struct gamedef_q1_like_t : public gamedef_t
         return hulls;
     }
 
-    contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &) const
+    contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &) const override
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
@@ -313,13 +255,13 @@ struct gamedef_q1_like_t : public gamedef_t
             }
         } else if (!Q_strncasecmp(texname.data(), "sky", 3)) {
             return create_sky_contents();
-        } else {
-            // and anything else is assumed to be a regular solid.
-            return create_solid_contents();
         }
+
+        // and anything else is assumed to be a regular solid.
+        return create_solid_contents();
     }
 
-    void init_filesystem(const fs::path &, const settings::common_settings &) const
+    void init_filesystem(const fs::path &, const settings::common_settings &) const override
     {
         // Q1-like games don't care about the local
         // filesystem.
@@ -328,7 +270,7 @@ struct gamedef_q1_like_t : public gamedef_t
         img::init_palette(this);
     }
 
-    const std::vector<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const override
     {
         static constexpr std::initializer_list<uint8_t> palette_bytes{0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63,
             63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139, 139, 139, 155, 155, 155, 171, 171, 171,
@@ -371,7 +313,7 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 {
     gamedef_h2_t() : gamedef_q1_like_t("DATA1") { }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const
+    const std::initializer_list<aabb3d> &get_hull_sizes() const override
     {
         static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
             {{-24, -24, -20}, {24, 24, 20}}, {{-16, -16, -16}, {16, 16, 12}},
@@ -381,7 +323,7 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
         return hulls;
     }
 
-    const std::vector<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const override
     {
         static constexpr std::initializer_list<uint8_t> palette_bytes{0, 0, 0, 0, 0, 0, 8, 8, 8, 16, 16, 16, 24, 24, 24,
             32, 32, 32, 40, 40, 40, 48, 48, 48, 56, 56, 56, 64, 64, 64, 72, 72, 72, 80, 80, 80, 84, 84, 84, 88, 88, 88,
@@ -424,7 +366,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 {
     gamedef_hl_t() : gamedef_q1_like_t("VALVE") { has_rgb_lightmap = true; }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const
+    const std::initializer_list<aabb3d> &get_hull_sizes() const override
     {
         static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},
             {{-32, -32, -32}, {32, 32, 32}}, {{-16, -16, -18}, {16, 16, 18}}};
@@ -432,7 +374,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         return hulls;
     }
 
-    const std::vector<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const override
     {
         static const std::vector<qvec3b> palette;
         return palette;
@@ -449,11 +391,11 @@ struct gamedef_q2_t : public gamedef_t
         max_entity_key = 256;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const { return !(flags.native & Q2_SURF_NODRAW); }
+    bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_NODRAW); }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const { return true; }
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return true; }
 
-    bool surfflags_are_valid(const surfflags_t &flags) const
+    bool surfflags_are_valid(const surfflags_t &flags) const override
     {
         // no rules in Quake II baby
         return true;
@@ -462,7 +404,7 @@ struct gamedef_q2_t : public gamedef_t
     static constexpr const char *surf_bitflag_names[] = {"LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW",
         "HINT" };
 
-    int32_t surfflags_from_string(const std::string_view &str) const
+    int32_t surfflags_from_string(const std::string_view &str) const override
     {
         for (size_t i = 0; i < std::size(surf_bitflag_names); i++) {
             if (string_iequals(str, surf_bitflag_names[i])) {
@@ -473,13 +415,13 @@ struct gamedef_q2_t : public gamedef_t
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
     {
         // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
         return !(flags.native & Q2_SURF_HINT);
     }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const
+    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const override
     {
         contentflags_t c = {contents0.native | contents1.native, static_cast<uint16_t>(contents0.extended | contents1.extended)};
 
@@ -498,7 +440,7 @@ struct gamedef_q2_t : public gamedef_t
                                          Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
     }
 
-    int32_t contents_priority(const contentflags_t &contents) const
+    int32_t contents_priority(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_DETAIL) {
             return 8;
@@ -522,15 +464,15 @@ struct gamedef_q2_t : public gamedef_t
         }
     }
 
-    contentflags_t create_extended_contents(const uint16_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_extended_contents(const uint16_t &cflags) const override { return {0, cflags}; }
 
-    contentflags_t create_empty_contents(const uint16_t &cflags) const { return {0, cflags}; }
+    contentflags_t create_empty_contents(const uint16_t &cflags) const override { return {0, cflags}; }
 
-    contentflags_t create_solid_contents(const uint16_t &cflags) const { return {Q2_CONTENTS_SOLID, cflags}; }
+    contentflags_t create_solid_contents(const uint16_t &cflags) const override { return {Q2_CONTENTS_SOLID, cflags}; }
 
-    contentflags_t create_sky_contents(const uint16_t &cflags) const { return create_solid_contents(cflags); }
+    contentflags_t create_sky_contents(const uint16_t &cflags) const override { return create_solid_contents(cflags); }
 
-    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags) const
+    contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags) const override
     {
         switch (liquid_type) {
             case CONTENTS_WATER: return {Q2_CONTENTS_WATER, cflags};
@@ -540,7 +482,7 @@ struct gamedef_q2_t : public gamedef_t
         }
     }
 
-    bool contents_are_empty(const contentflags_t &contents) const
+    bool contents_are_empty(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -552,7 +494,7 @@ struct gamedef_q2_t : public gamedef_t
         return !(contents.native & Q2_ALL_VISIBLE_CONTENTS);
     }
 
-    bool contents_are_solid(const contentflags_t &contents) const
+    bool contents_are_solid(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -560,9 +502,9 @@ struct gamedef_q2_t : public gamedef_t
         return contents.native & Q2_CONTENTS_SOLID;
     }
 
-    bool contents_are_sky(const contentflags_t &contents) const { return false; }
+    bool contents_are_sky(const contentflags_t &contents) const override { return false; }
 
-    bool contents_are_liquid(const contentflags_t &contents) const
+    bool contents_are_liquid(const contentflags_t &contents) const override
     {
         if (contents.extended & CFLAGS_CONTENTS_MASK)
             return false;
@@ -573,7 +515,7 @@ struct gamedef_q2_t : public gamedef_t
         return contents.native & Q2_CONTENTS_LIQUID;
     }
 
-    bool contents_are_valid(const contentflags_t &contents, bool strict) const
+    bool contents_are_valid(const contentflags_t &contents, bool strict) const override
     {
         // check that we don't have more than one visible contents type
         const int32_t x = contents.native & Q2_ALL_VISIBLE_CONTENTS;
@@ -605,30 +547,39 @@ struct gamedef_q2_t : public gamedef_t
         return 0;
     }
 
+    /**
+     * Returns the single content bit of the strongest visible content present
+     */
     constexpr int32_t visible_contents(const int32_t &contents) const
     {
-        for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1)
-            if (contents & i)
+        for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
+            if (contents & i) {
                 return i;
+            }
+        }
 
         return 0;
     }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const
+    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const override
     {
         int32_t c0 = contents0.native, c1 = contents1.native;
 
         // can't see through solid
-        if ((c0 | c1) & Q2_CONTENTS_SOLID)
+        if ((c0 | c1) & Q2_CONTENTS_SOLID) {
             return false;
+        }
 
-        if (!visible_contents(c0 ^ c1))
+        if (!visible_contents(c0 ^ c1)) {
             return true;
+        }
 
-        if ((c0 & Q2_CONTENTS_TRANSLUCENT) || contents0.is_detail())
+        if ((c0 & Q2_CONTENTS_TRANSLUCENT) || contents0.is_detail()) {
             c0 = 0;
-        if ((c1 & Q2_CONTENTS_TRANSLUCENT) || contents1.is_detail())
+        }
+        if ((c1 & Q2_CONTENTS_TRANSLUCENT) || contents1.is_detail()) {
             c1 = 0;
+        }
 
         // identical on both sides
         if (!(c0 ^ c1))
@@ -637,31 +588,31 @@ struct gamedef_q2_t : public gamedef_t
         return !visible_contents(c0 ^ c1);
     }
 
-    std::string get_contents_display(const contentflags_t &contents) const
+    std::string get_contents_display(const contentflags_t &contents) const override
     {
         std::string s;
 
         for (int32_t i = 0; i < std::size(bitflag_names); i++) {
-            if (contents.native & (1 << i)) {
+            if (contents.native & nth_bit(i)) {
                 if (s.size()) {
-                    s += " | " + std::string(bitflag_names[i]);
-                } else {
-                    s += bitflag_names[i];
+                    s += " | ";
                 }
+                
+                s += bitflag_names[i];
             }
         }
 
         return s;
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const
+    const std::initializer_list<aabb3d> &get_hull_sizes() const override
     {
         static constexpr std::initializer_list<aabb3d> hulls = {};
         return hulls;
     }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const
+        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const override
     {
         // hints and skips are never detail, and have no content
         if (flags.native & Q2_SURF_HINT) {
@@ -736,7 +687,7 @@ private:
     }
 
 public:
-    void init_filesystem(const fs::path &source, const settings::common_settings &settings) const
+    void init_filesystem(const fs::path &source, const settings::common_settings &settings) const override
     {
         fs::clear();
 
@@ -782,10 +733,11 @@ public:
         fs::addArchive(gamedir);
         discoverArchives(gamedir);
 
+        // load palette
         img::init_palette(this);
     }
 
-    const std::vector<qvec3b> &get_default_palette() const
+    const std::vector<qvec3b> &get_default_palette() const override
     {
         static constexpr std::initializer_list<uint8_t> palette_bytes{0, 0, 0, 15, 15, 15, 31, 31, 31, 47, 47, 47, 63,
             63, 63, 75, 75, 75, 91, 91, 91, 107, 107, 107, 123, 123, 123, 139, 139, 139, 155, 155, 155, 171, 171, 171,
@@ -824,14 +776,13 @@ public:
 };
 
 // Game definitions, used for the bsp versions below
-static const gamedef_generic_t gamedef_generic;
 static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
 static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
 
-const bspversion_t bspver_generic{NO_VERSION, NO_VERSION, "mbsp", "generic BSP", {}, &gamedef_generic};
-const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP",
+const bspversion_t bspver_generic{MBSPIDENT, std::nullopt, "mbsp", "generic BSP", {}};
+const bspversion_t bspver_q1{BSPVERSION, std::nullopt, "bsp29", "Quake BSP",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -850,7 +801,7 @@ const bspversion_t bspver_q1{BSPVERSION, NO_VERSION, "bsp29", "Quake BSP",
         {"models", sizeof(dmodelq1_t)},
     },
     &gamedef_q1, &bspver_bsp2};
-const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2",
+const bspversion_t bspver_bsp2{BSP2VERSION, std::nullopt, "bsp2", "Quake BSP2",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -869,7 +820,7 @@ const bspversion_t bspver_bsp2{BSP2VERSION, NO_VERSION, "bsp2", "Quake BSP2",
         {"models", sizeof(dmodelq1_t)},
     },
     &gamedef_q1};
-const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake BSP2-RMQ",
+const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, std::nullopt, "bsp2rmq", "Quake BSP2-RMQ",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -889,7 +840,7 @@ const bspversion_t bspver_bsp2rmq{BSP2RMQVERSION, NO_VERSION, "bsp2rmq", "Quake 
     },
     &gamedef_q1};
 /* Hexen II doesn't use a separate version, but we can still use a separate tag/name for it */
-const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP",
+const bspversion_t bspver_h2{BSPVERSION, std::nullopt, "hexen2", "Hexen II BSP",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -908,7 +859,7 @@ const bspversion_t bspver_h2{BSPVERSION, NO_VERSION, "hexen2", "Hexen II BSP",
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2, &bspver_h2bsp2};
-const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen II BSP2",
+const bspversion_t bspver_h2bsp2{BSP2VERSION, std::nullopt, "hexen2bsp2", "Hexen II BSP2",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -927,7 +878,7 @@ const bspversion_t bspver_h2bsp2{BSP2VERSION, NO_VERSION, "hexen2bsp2", "Hexen I
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2};
-const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq", "Hexen II BSP2-RMQ",
+const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, std::nullopt, "hexen2bsp2rmq", "Hexen II BSP2-RMQ",
     {
         {"entities", sizeof(char)},
         {"planes", sizeof(dplane_t)},
@@ -946,7 +897,7 @@ const bspversion_t bspver_h2bsp2rmq{BSP2RMQVERSION, NO_VERSION, "hexen2bsp2rmq",
         {"models", sizeof(dmodelh2_t)},
     },
     &gamedef_h2};
-const bspversion_t bspver_hl{BSPHLVERSION, NO_VERSION, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
+const bspversion_t bspver_hl{BSPHLVERSION, std::nullopt, "hl", "Half-Life BSP", bspver_q1.lumps, &gamedef_hl};
 const bspversion_t bspver_q2{Q2_BSPIDENT, Q2_BSPVERSION, "q2bsp", "Quake II BSP",
     {
         {"entities", sizeof(char)},
@@ -1041,7 +992,7 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     return s;
 }
 
-static bool BSPVersionSupported(int32_t ident, int32_t version, const bspversion_t **out_version)
+static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {
     for (const bspversion_t *bspver : bspversions) {
         if (bspver->ident == ident && bspver->version == version) {
@@ -1446,8 +1397,6 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
 void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
 {
     int i;
-    uint32_t bspxofs;
-    const bspx_header_t *bspx;
 
     logging::funcprint("'{}'\n", filename);
 
@@ -1460,7 +1409,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
 
     filename = fs::resolveArchivePath(filename);
 
-    memstream stream(file_data->data(), file_data->size());
+    imemstream stream(file_data->data(), file_data->size());
 
     stream >> endianness<std::endian::little>;
 
@@ -1482,7 +1431,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         dheader_t q1header;
         stream >= q1header;
 
-        temp_version.version = NO_VERSION;
+        temp_version.version = std::nullopt;
         std::copy(q1header.lumps.begin(), q1header.lumps.end(), std::back_inserter(lumps));
     }
 
@@ -1522,35 +1471,42 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         FError("Unknown format");
     }
 
+    size_t bspxofs;
+
     // detect BSPX
     /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
     for (i = 0, bspxofs = 0; i < lumps.size(); i++) {
-        if (bspxofs < lumps[i].fileofs + lumps[i].filelen)
-            bspxofs = lumps[i].fileofs + lumps[i].filelen;
+        bspxofs = max(bspxofs, static_cast<size_t>(lumps[i].fileofs + lumps[i].filelen));
     }
 
     bspxofs = (bspxofs + 3) & ~3;
+
     /*okay, so that's where it *should* be if it exists */
-    if (bspxofs + sizeof(*bspx) <= file_data->size()) {
-        int xlumps;
-        const bspx_lump_t *xlump;
-        bspx = (const bspx_header_t *)((const uint8_t *)file_data->data() + bspxofs);
-        xlump = (const bspx_lump_t *)(bspx + 1);
-        xlumps = LittleLong(bspx->numlumps);
-        if (!memcmp(&bspx->id, "BSPX", 4) && xlumps >= 0 &&
-            bspxofs + sizeof(*bspx) + sizeof(*xlump) * xlumps <= file_data->size()) {
-            /*header seems valid so far. just add the lumps as we normally would if we were generating them, ensuring
-             * that they get written out anew*/
-            while (xlumps-- > 0) {
-                uint32_t ofs = LittleLong(xlump[xlumps].fileofs);
-                uint32_t len = LittleLong(xlump[xlumps].filelen);
-                uint8_t *lumpdata = new uint8_t[len];
-                memcpy(lumpdata, (const uint8_t *)file_data->data() + ofs, len);
-                bspdata->bspx.transfer(xlump[xlumps].lumpname.data(), lumpdata, len);
+    if (bspxofs + sizeof(bspx_header_t) <= file_data->size()) {
+        stream.seekg(bspxofs);
+
+        bspx_header_t bspx;
+        stream >= bspx;
+
+        if (!stream || memcmp(bspx.id.data(), "BSPX", 4)) {
+            logging::print("WARNING: invalid BSPX header\n");
+            return;
+        }
+
+        for (size_t i = 0; i < bspx.numlumps; i++) {
+            bspx_lump_t xlump;
+
+            if (!(stream >= xlump)) {
+                logging::print("WARNING: invalid BSPX lump at index {}\n", i);
+                return;
             }
-        } else {
-            if (memcmp(&bspx->id, "BSPX", 4))
-                printf("invalid bspx header\n");
+
+            if (xlump.fileofs > file_data->size() || (xlump.fileofs + xlump.filelen) > file_data->size()) {
+                logging::print("WARNING: invalid BSPX lump at index {}\n", i);
+                return;
+            }
+            
+            bspdata->bspx.transfer(xlump.lumpname.data(), std::vector<uint8_t>(file_data->begin() + xlump.fileofs, file_data->begin() + xlump.fileofs + xlump.filelen - 1));
         }
     }
 }
@@ -1576,12 +1532,11 @@ private:
     template<typename T>
     inline void write_lump(size_t lump_num, const std::vector<T> &data)
     {
-        static constexpr char pad[4]{};
         Q_assert(version->lumps.size() > lump_num);
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -1602,7 +1557,7 @@ private:
         lump.filelen = written;
 
         if (written % 4)
-            stream.write(pad, 4 - (written % 4));
+            stream <= padding_n(4 - (written % 4));
     }
 
     // this is only here to satisfy std::visit
@@ -1612,13 +1567,12 @@ private:
     inline void write_lump(size_t lump_num, const std::string &data)
     {
         Q_assert(version->lumps.size() > lump_num);
-        static constexpr char pad[4]{};
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
 
         Q_assert(lumpspec.size == 1);
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -1637,20 +1591,19 @@ private:
         lump.filelen = written;
 
         if (written % 4)
-            stream.write(pad, 4 - (written % 4));
+            stream <= padding_n(4 - (written % 4));
     }
 
     // write structured lump data
     template<typename T, typename = std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_write)>>>
     inline void write_lump(size_t lump_num, const T &data)
     {
-        static constexpr char pad[4]{};
         const lumpspec_t &lumpspec = version->lumps.begin()[lump_num];
         lump_t *lumps;
 
         Q_assert(lumpspec.size == 1);
 
-        if (version->version != NO_VERSION) {
+        if (version->version.has_value()) {
             lumps = q2header.lumps.data();
         } else {
             lumps = q1header.lumps.data();
@@ -1667,7 +1620,7 @@ private:
         lump.filelen = written;
 
         if (written % 4)
-            stream.write(pad, 4 - (written % 4));
+            stream <= padding_n(4 - (written % 4));
     }
 
 public:
@@ -1740,17 +1693,15 @@ public:
         xlumps.reserve(bspdata.bspx.entries.size());
 
         for (auto &x : bspdata.bspx.entries) {
-            static constexpr char pad[4]{};
-
             bspx_lump_t &lump = xlumps.emplace_back();
-            lump.filelen = x.second.lumpsize;
+            lump.filelen = x.second.size();
             lump.fileofs = stream.tellp();
             memcpy(lump.lumpname.data(), x.first.c_str(), std::min(x.first.size(), lump.lumpname.size() - 1));
 
-            stream.write(reinterpret_cast<const char *>(x.second.lumpdata.get()), x.second.lumpsize);
+            stream.write(reinterpret_cast<const char *>(x.second.data()), x.second.size());
 
-            if (x.second.lumpsize % 4)
-                stream.write(pad, 4 - (x.second.lumpsize % 4));
+            if (x.second.size() % 4)
+                stream <= padding_n(4 - (x.second.size() % 4));
         }
 
         stream.seekp(bspxheader);
@@ -1775,11 +1726,11 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     // headers are union'd, so this sets both
     bspfile.q2header.ident = bspfile.version->ident;
 
-    if (bspfile.version->version != NO_VERSION) {
-        bspfile.q2header.version = bspfile.version->version;
+    if (bspfile.version->version.has_value()) {
+        bspfile.q2header.version = bspfile.version->version.value();
     }
 
-    logging::print("Writing {} as BSP version {}\n", filename, *bspdata->version);
+    logging::print("Writing {} as {}\n", filename, *bspdata->version);
     bspfile.stream.open(filename, std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
 
     if (!bspfile.stream)
@@ -1788,7 +1739,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     bspfile.stream << endianness<std::endian::little>;
 
     /* Save header space, updated after adding the lumps */
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version->version.has_value()) {
         bspfile.stream <= bspfile.q2header;
     } else {
         bspfile.stream <= bspfile.q1header;
@@ -1802,7 +1753,7 @@ void WriteBSPFile(const fs::path &filename, bspdata_t *bspdata)
     bspfile.stream.seekp(0);
 
     // write the real header
-    if (bspfile.version->version != NO_VERSION) {
+    if (bspfile.version->version.has_value()) {
         bspfile.stream <= bspfile.q2header;
     } else {
         bspfile.stream <= bspfile.q1header;
@@ -1891,6 +1842,6 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
     }
 
     for (auto &x : bspdata->bspx.entries) {
-        logging::print("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.lumpsize);
+        logging::print("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.size());
     }
 }

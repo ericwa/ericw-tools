@@ -366,7 +366,7 @@ static void MakeHeadnodePortals(const mapentity_t *entity, node_t *node)
     int i, j, n;
     portal_t *p, *portals[6];
     qbsp_plane_t bplanes[6];
-    int side;
+    planeside_t side;
 
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = entity->bounds.grow(SIDESPACE);

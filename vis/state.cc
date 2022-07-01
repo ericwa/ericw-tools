@@ -27,6 +27,7 @@
 #include <vis/vis.hh>
 #include <common/cmdlib.hh>
 #include "common/fs.hh"
+#include <fstream>
 
 constexpr uint32_t VIS_STATE_VERSION = ('T' << 24 | 'Y' << 16 | 'R' << 8 | '1');
 
@@ -37,6 +38,8 @@ struct dvisstate_t
     uint32_t numleafs;
     uint32_t testlevel;
     uint32_t time_elapsed;
+
+    auto stream_data() { return std::tie(version, numportals, numleafs, testlevel, time_elapsed); }
 };
 
 struct dportal_t
@@ -46,6 +49,8 @@ struct dportal_t
     uint32_t vis;
     uint32_t nummightsee;
     uint32_t numcansee;
+
+    auto stream_data() { return std::tie(status, might, vis, nummightsee, numcansee); }
 };
 
 static int CompressBits(uint8_t *out, const leafbits_t &in)
@@ -127,51 +132,48 @@ static void CopyLeafBits(leafbits_t &dst, const uint8_t *src, size_t numleafs)
 
 void SaveVisState(void)
 {
-    int i, vis_len, might_len;
-    const portal_t *p;
+    int vis_len, might_len;
     dvisstate_t state;
     dportal_t pstate;
-    uint8_t *vis;
-    uint8_t *might;
 
-    auto outfile = SafeOpenWrite(statetmpfile.string().c_str());
+    std::ofstream out(statetmpfile, std::ios_base::out | std::ios_base::binary);
+    out << endianness<std::endian::little>;
 
     /* Write out a header */
-    state.version = LittleLong(VIS_STATE_VERSION);
-    state.numportals = LittleLong(numportals);
-    state.numleafs = LittleLong(portalleafs);
-    state.testlevel = LittleLong(options.visdist.value());
-    state.time_elapsed = LittleLong((uint32_t)(statetime - starttime).count());
+    state.version = VIS_STATE_VERSION;
+    state.numportals = numportals;
+    state.numleafs = portalleafs;
+    state.testlevel = options.visdist.value();
+    state.time_elapsed = (uint32_t)(statetime - starttime).count();
 
-    SafeWrite(outfile, &state, sizeof(state));
+    out <= state;
 
     /* Allocate memory for compressed bitstrings */
-    might = new uint8_t[(portalleafs + 7) >> 3];
-    vis = new uint8_t[(portalleafs + 7) >> 3];
+    std::vector<uint8_t> might((portalleafs + 7) >> 3);
+    std::vector<uint8_t> vis((portalleafs + 7) >> 3);
 
-    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        might_len = CompressBits(might, p->mightsee);
-        if (p->status == pstat_done)
-            vis_len = CompressBits(vis, p->visbits);
-        else
+    for (const auto &p : portals) {
+        might_len = CompressBits(might.data(), p.mightsee);
+        if (p.status == pstat_done) {
+            vis_len = CompressBits(vis.data(), p.visbits);
+        } else {
             vis_len = 0;
+        }
 
-        pstate.status = LittleLong(p->status);
-        pstate.might = LittleLong(might_len);
-        pstate.vis = LittleLong(vis_len);
-        pstate.nummightsee = LittleLong(p->nummightsee);
-        pstate.numcansee = LittleLong(p->numcansee);
+        pstate.status = p.status;
+        pstate.might = might_len;
+        pstate.vis = vis_len;
+        pstate.nummightsee = p.nummightsee;
+        pstate.numcansee = p.numcansee;
 
-        SafeWrite(outfile, &pstate, sizeof(pstate));
-        SafeWrite(outfile, might, might_len);
-        if (vis_len)
-            SafeWrite(outfile, vis, vis_len);
+        out <= pstate;
+        out.write((const char *) might.data(), might_len);
+        if (vis_len) {
+            out.write((const char *) vis.data(), vis_len);
+        }
     }
 
-    outfile.reset();
-
-    delete[] might;
-    delete[] vis;
+    out.close();
 
     std::error_code ec;
 
@@ -184,14 +186,19 @@ void SaveVisState(void)
         FError("error renaming state file ({})", ec.message());
 }
 
+void CleanVisState(void)
+{
+    if (fs::exists(statefile)) {
+        fs::remove(statefile);
+    }
+}
+
 bool LoadVisState(void)
 {
     fs::file_time_type prt_time, state_time;
-    int i, numbytes;
-    portal_t *p;
+    int numbytes;
     dvisstate_t state;
     dportal_t pstate;
-    uint8_t *compressed;
 
     if (options.nostate.value()) {
         return false;
@@ -218,14 +225,10 @@ bool LoadVisState(void)
         return false;
     }
 
-    auto infile = SafeOpenRead(statefile, true);
+    std::ifstream in(statefile, std::ios_base::in | std::ios_base::binary);
+    in >> endianness<std::endian::little>;
 
-    SafeRead(infile, &state, sizeof(state));
-    state.version = LittleLong(state.version);
-    state.numportals = LittleLong(state.numportals);
-    state.numleafs = LittleLong(state.numleafs);
-    state.testlevel = LittleLong(state.testlevel);
-    state.time_elapsed = LittleLong(state.time_elapsed);
+    in >= state;
 
     /* Sanity check the headers */
     if (state.version != VIS_STATE_VERSION) {
@@ -239,45 +242,41 @@ bool LoadVisState(void)
     starttime -= duration(state.time_elapsed);
 
     numbytes = (portalleafs + 7) >> 3;
-    compressed = new uint8_t[numbytes];
+    std::vector<uint8_t> compressed(numbytes);
 
     /* Update the portal information */
-    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        SafeRead(infile, &pstate, sizeof(pstate));
-        pstate.status = LittleLong(pstate.status);
-        pstate.might = LittleLong(pstate.might);
-        pstate.vis = LittleLong(pstate.vis);
-        pstate.nummightsee = LittleLong(pstate.nummightsee);
-        pstate.numcansee = LittleLong(pstate.numcansee);
+    for (auto &p : portals) {
+        in >= pstate;
 
-        p->status = static_cast<pstatus_t>(pstate.status);
-        p->nummightsee = pstate.nummightsee;
-        p->numcansee = pstate.numcansee;
+        p.status = static_cast<pstatus_t>(pstate.status);
+        p.nummightsee = pstate.nummightsee;
+        p.numcansee = pstate.numcansee;
 
-        SafeRead(infile, compressed, pstate.might);
-        p->mightsee.resize(portalleafs);
+        in.read((char *) compressed.data(), pstate.might);
+        p.mightsee.resize(portalleafs);
 
-        if (pstate.might < numbytes)
-            DecompressBits(p->mightsee, compressed);
-        else
-            CopyLeafBits(p->mightsee, compressed, portalleafs);
+        if (pstate.might < numbytes) {
+            DecompressBits(p.mightsee, compressed.data());
+        } else {
+            CopyLeafBits(p.mightsee, compressed.data(), portalleafs);
+        }
 
-        p->visbits.resize(portalleafs);
+        p.visbits.resize(portalleafs);
 
         if (pstate.vis) {
-            SafeRead(infile, compressed, pstate.vis);
-            if (pstate.vis < numbytes)
-                DecompressBits(p->visbits, compressed);
-            else
-                CopyLeafBits(p->visbits, compressed, portalleafs);
+            in.read((char *) compressed.data(), pstate.vis);
+            if (pstate.vis < numbytes) {
+                DecompressBits(p.visbits, compressed.data());
+            } else {
+                CopyLeafBits(p.visbits, compressed.data(), portalleafs);
+            }
         }
 
         /* Portals that were in progress need to be started again */
-        if (p->status == pstat_working)
-            p->status = pstat_none;
+        if (p.status == pstat_working) {
+            p.status = pstat_none;
+        }
     }
-
-    delete[] compressed;
 
     return true;
 }

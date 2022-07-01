@@ -32,16 +32,21 @@
 std::vector<std::unique_ptr<light_t>> all_lights;
 std::vector<sun_t> all_suns;
 std::vector<entdict_t> entdicts;
-static std::vector<entdict_t> radlights;
+std::vector<entdict_t> radlights;
 
-const std::vector<std::unique_ptr<light_t>> &GetLights()
+std::vector<std::unique_ptr<light_t>> &GetLights()
 {
     return all_lights;
 }
 
-const std::vector<sun_t> &GetSuns()
+std::vector<sun_t> &GetSuns()
 {
     return all_suns;
+}
+
+std::vector<entdict_t> &GetRadLights()
+{
+    return radlights;
 }
 
 /* surface lights */
@@ -168,95 +173,6 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
     return ok;
 }
 
-/**
- * Checks `edicts` for unmatched targets/targetnames and prints warnings
- */
-bool EntDict_CheckTargetKeysMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
-{
-    bool ok = true;
-
-    // TODO: what if we just do this for any key that contains `target` not immediately followed by `name`?
-    const std::vector<std::string> targetKeys{
-        "target", "killtarget", "target2", "angrytarget", "deathtarget" // from AD
-    };
-
-    const std::string &targetname = entity.get("targetname");
-
-    // search for "target" values such that no entity has a matching "targetname"
-
-    for (const auto &targetKey : targetKeys) {
-        const auto &targetVal = entity.get(targetKey);
-        if (!targetVal.length())
-            continue;
-
-        if (targetVal == targetname) {
-            logging::print("WARNING: {} has \"{}\" set to itself\n", EntDict_PrettyDescription(bsp, entity), targetKey);
-            ok = false;
-            continue;
-        }
-
-        bool found = false;
-        for (const entdict_t &target : all_edicts) {
-            if (&target == &entity) {
-                continue;
-            }
-
-            if (string_iequals(targetVal, target.get("targetname"))) {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            logging::print("WARNING: {} has unmatched \"{}\" ({})\n", EntDict_PrettyDescription(bsp, entity), targetKey,
-                targetVal);
-            ok = false;
-        }
-    }
-
-    return ok;
-}
-
-bool EntDict_CheckTargetnameKeyMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts)
-{
-    // search for "targetname" values such that no entity has a matching "target"
-    // accept any key name as a target, so we don't print false positive
-    // if the map has "some_mod_specific_target" "foo"
-
-    bool ok = true;
-
-    const auto &targetnameVal = entity.get("targetname");
-    if (targetnameVal.length()) {
-        bool found = false;
-        for (const entdict_t &targetter : all_edicts) {
-            if (&targetter == &entity) {
-                continue;
-            }
-
-            for (const auto &targetter_keyval : targetter) {
-                if (targetnameVal == targetter_keyval.second) {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (found) {
-                break;
-            }
-        }
-
-        if (!found) {
-            logging::print("WARNING: {} has targetname \"{}\", which is not targeted by anything.\n",
-                EntDict_PrettyDescription(bsp, entity), targetnameVal);
-            ok = false;
-        }
-    }
-
-    return ok;
-}
-
 static void SetupSpotlights(const settings::worldspawn_keys &cfg)
 {
     for (auto &entity : all_lights) {
@@ -360,6 +276,7 @@ static void AddSun(const settings::worldspawn_keys &cfg, const qvec3d &sunvec, v
     sun.dirt = Dirt_ResolveFlag(cfg, dirtInt);
     sun.style = style;
     sun.suntexture = suntexture;
+    sun.suntexture_value = img::find(suntexture);
 
     // fmt::print( "sun is using vector {} {} {} light {} color {} {} {} anglescale {} dirt {} resolved to {}\n",
     //  sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
@@ -855,8 +772,6 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     // Make warnings
     for (auto &entdict : entdicts) {
         EntDict_CheckNoEmptyValues(bsp, entdict);
-        EntDict_CheckTargetKeysMatched(bsp, entdict, entdicts);
-        EntDict_CheckTargetnameKeyMatched(bsp, entdict, entdicts);
     }
 
     /* handle worldspawn */
@@ -1036,6 +951,13 @@ void FixLightsOnFaces(const mbsp_t *bsp)
     }
 }
 
+static void SetupLightLeafnums(const mbsp_t *bsp)
+{
+    for (auto &entity : all_lights) {
+        entity->leaf = Light_PointInLeaf(bsp, entity->origin.value());
+    }
+}
+
 // Maps uniform random variables U and V in [0, 1] to uniformly distributed points on a sphere
 
 // from http://mathworld.wolfram.com/SpherePointPicking.html
@@ -1062,35 +984,33 @@ inline qvec3d UniformPointOnSphere(vec_t u1, vec_t u2)
 
 aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
 {
-    const int N = 32;
-    const int N2 = N * N;
+    constexpr size_t N = 32;
+    constexpr size_t N2 = N * N;
 
-    raystream_intersection_t *rs = MakeIntersectionRayStream(N2);
+    raystream_intersection_t rs{N2};
 
     aabb3d bounds = point;
 
-    for (int x = 0; x < N; x++) {
-        for (int y = 0; y < N; y++) {
+    for (size_t x = 0; x < N; x++) {
+        for (size_t y = 0; y < N; y++) {
             const vec_t u1 = static_cast<vec_t>(x) / static_cast<vec_t>(N - 1);
             const vec_t u2 = static_cast<vec_t>(y) / static_cast<vec_t>(N - 1);
 
-            rs->pushRay(0, point, UniformPointOnSphere(u1, u2), 65536.0);
+            rs.pushRay(0, point, UniformPointOnSphere(u1, u2), 65536.0);
         }
     }
 
-    rs->tracePushedRaysIntersection(nullptr);
+    rs.tracePushedRaysIntersection(nullptr);
 
     for (int i = 0; i < N2; i++) {
-        const vec_t dist = rs->getPushedRayHitDist(i);
-        qvec3d dir = rs->getPushedRayDir(i);
+        const vec_t &dist = rs.getPushedRayHitDist(i);
+        const qvec3d &dir = rs.getPushedRayDir(i);
 
         // get the intersection point
         qvec3d stop = point + (dir * dist);
 
         bounds += stop;
     }
-
-    delete rs;
 
     // grow it by 25% in each direction
     return bounds.grow(bounds.size() * 0.25);
@@ -1116,9 +1036,6 @@ inline void EstimateLightAABB(const std::unique_ptr<light_t> &light)
 
 void EstimateLightVisibility(void)
 {
-    if (options.novisapprox.value())
-        return;
-
     logging::print("--- EstimateLightVisibility ---\n");
 
     logging::parallel_for_each(all_lights, EstimateLightAABB);
@@ -1144,21 +1061,15 @@ void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     SetupSuns(cfg);
     SetupSkyDomes(cfg);
     FixLightsOnFaces(bsp);
-    EstimateLightVisibility();
+    if (options.visapprox.value() == visapprox_t::RAYS) {
+        EstimateLightVisibility();
+    } else if (options.visapprox.value() == visapprox_t::VIS) {
+        SetupLightLeafnums(bsp);
+    }
 
     logging::print("Final count: {} lights, {} suns in use.\n", all_lights.size(), all_suns.size());
 
     Q_assert(final_lightcount == all_lights.size());
-}
-
-const char *ValueForKey(const light_t *ent, const char *key)
-{
-    const auto iter = ent->epairs->find(key);
-    if (iter != ent->epairs->end()) {
-        return (*iter).second.c_str();
-    } else {
-        return "";
-    }
 }
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value)
@@ -1195,6 +1106,11 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp)
 
 static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
 
+const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates()
+{
+    return surfacelight_templates;
+}
+
 static std::ofstream surflights_dump_file;
 static fs::path surflights_dump_filename;
 
@@ -1219,7 +1135,7 @@ static void CreateSurfaceLight(const qvec3d &origin, const qvec3d &normal, const
     entity->generated = true;
 
     /* set spotlight vector based on face normal */
-    if (atoi(ValueForKey(surflight_template, "_surface_spotlight"))) {
+    if (surflight_template->epairs->get_int("_surface_spotlight")) {
         entity->spotlight = true;
         entity->spotvec = normal;
     }
@@ -1241,7 +1157,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
         plane = -plane;
     }
 
-    vec_t offset = atof(ValueForKey(surflight_template, "_surface_offset"));
+    vec_t offset = surflight_template->epairs->get_float("_surface_offset");
     if (offset == 0)
         offset = 2.0;
 
@@ -1264,10 +1180,20 @@ static aabb3d BoundPoly(int numverts, qvec3d *verts)
     return bounds;
 }
 
-static bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight)
+bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight, int surf_type)
 {
     const char *texname = Face_TextureName(bsp, face);
-    return !Q_strcasecmp(texname, ValueForKey(&surflight, "_surface"));
+
+    int32_t radiosity_type;
+
+    if (surflight.epairs->has("_surface_radiosity")) {
+        radiosity_type = surflight.epairs->get_int("_surface_radiosity");
+    } else {
+        radiosity_type = options.surflight_radiosity.value();
+    }
+
+    return !Q_strcasecmp(texname, surflight.epairs->get("_surface")) &&
+        radiosity_type == surf_type;
 }
 
 /*
@@ -1342,7 +1268,7 @@ static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modeli
     }
 
     for (const auto &surflight : surfacelight_templates) {
-        if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight)) {
+        if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight, SURFLIGHT_Q1)) {
             CreateSurfaceLightOnFaceSubdivision(face, face_modelinfo, surflight.get(), bsp, numverts, verts);
         }
     }
@@ -1372,16 +1298,29 @@ static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_mod
     SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts, options.surflight_subdivide.value());
 }
 
+static bool ParseEntityLights(std::ifstream &f)
+{
+    std::string str{std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
+    parser_t p(str);
+
+    EntData_ParseInto(str, radlights);
+    return true;
+}
+
 bool ParseLightsFile(const fs::path &fname)
 {
-    // note: this creates dupes. super bright light! (and super slow, too)
-    std::string buf;
     std::ifstream f(fname);
 
     if (!f)
         return false;
 
+    // use entity-style format
+    if (fname.extension() == ".ent") {
+        return ParseEntityLights(f);
+    }
+
     while (!f.eof()) {
+        std::string buf;
         std::getline(f, buf);
 
         parser_t parser(buf);
@@ -1419,7 +1358,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     }
 
     for (auto &entity : all_lights) {
-        std::string tex = ValueForKey(entity.get(), "_surface");
+        std::string tex = entity->epairs->get("_surface");
         if (!tex.empty()) {
             surfacelight_templates.push_back(DuplicateEntity(*entity)); // makes a copy
 
@@ -1427,7 +1366,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             entity->light.setValue(0);
 
             logging::print("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
-                ValueForKey(entity.get(), "origin"));
+                entity->epairs->get("origin"));
         }
     }
 
@@ -1471,7 +1410,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
             /* Don't bother subdividing if it doesn't match any surface light templates */
             if (!std::any_of(surfacelight_templates.begin(), surfacelight_templates.end(),
-                    [&](const auto &surflight) { return FaceMatchesSurfaceLightTemplate(bsp, surf, *surflight); }))
+                    [&](const auto &surflight) { return FaceMatchesSurfaceLightTemplate(bsp, surf, *surflight, SURFLIGHT_Q1); }))
                 continue;
 
             /* Generate the lights */
@@ -1479,7 +1418,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
         }
     }
 
-    if (surflights_dump_file) {
+    if (surflights_dump_file.is_open()) {
         surflights_dump_file.close();
         fmt::print("wrote surface lights to '{}'\n", surflights_dump_filename);
     }

@@ -12,6 +12,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/common/fs.cc
     ${CMAKE_SOURCE_DIR}/common/imglib.cc
     ${CMAKE_SOURCE_DIR}/common/settings.cc
+    ${CMAKE_SOURCE_DIR}/common/prtfile.cc
     ${CMAKE_SOURCE_DIR}/common/debugger.natvis
     ${CMAKE_SOURCE_DIR}/include/common/aabb.hh
     ${CMAKE_SOURCE_DIR}/include/common/bitflags.hh
@@ -30,11 +31,13 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/threads.hh
     ${CMAKE_SOURCE_DIR}/include/common/fs.hh
     ${CMAKE_SOURCE_DIR}/include/common/imglib.hh
-	${CMAKE_SOURCE_DIR}/include/common/settings.hh)
+    ${CMAKE_SOURCE_DIR}/include/common/settings.hh
+    ${CMAKE_SOURCE_DIR}/include/common/prtfile.hh
+    ${CMAKE_SOURCE_DIR}/include/common/vectorutils.hh)
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json)
 
-# test (see: https://google.github.io/googletest/quickstart-cmake.html)
+# test target
 
 enable_testing()
 
@@ -44,7 +47,7 @@ add_executable(testcommon ${COMMON_TEST_SOURCE})
 # HACK: copy .dll dependencies
 add_custom_command(TARGET testcommon POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testcommon>")
-target_link_libraries (testcommon common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb Catch2::Catch2 fmt::fmt)
+target_link_libraries (testcommon common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb Catch2::Catch2WithMain fmt::fmt)
 
 include(Catch)
 catch_discover_tests(testcommon)

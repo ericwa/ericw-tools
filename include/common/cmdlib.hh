@@ -186,7 +186,9 @@ template<typename... Args>
  * ============================================================================
  */
 // C++20 polyfill
-// For cpp20, #include <bit> instead
+#if defined(__cpp_lib_endian) && __cpp_lib_endian >= 201907L
+#include <bit>
+#else
 namespace std
 {
 enum class endian
@@ -201,72 +203,7 @@ enum class endian
 #endif
 };
 } // namespace std
-
-// C/C++ portable and defined method of swapping bytes.
-template<typename T>
-inline T byte_swap(const T &val)
-{
-    T retVal;
-    const char *pVal = reinterpret_cast<const char *>(&val);
-    char *pRetVal = reinterpret_cast<char *>(&retVal);
-
-    for (size_t i = 0; i < sizeof(T); i++) {
-        pRetVal[sizeof(T) - 1 - i] = pVal[i];
-    }
-    unsigned short CRC_Block(const unsigned char *start, int count);
-
-    return retVal;
-}
-
-// little <-> native
-inline int16_t LittleShort(int16_t l)
-{
-    if constexpr (std::endian::native == std::endian::little)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline int32_t LittleLong(int32_t l)
-{
-    if constexpr (std::endian::native == std::endian::little)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline float LittleFloat(float l)
-{
-    if constexpr (std::endian::native == std::endian::little)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-// big <-> native
-inline int16_t BigShort(int16_t l)
-{
-    if constexpr (std::endian::native == std::endian::big)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline int32_t BigLong(int32_t l)
-{
-    if constexpr (std::endian::native == std::endian::big)
-        return l;
-    else
-        return byte_swap(l);
-}
-
-inline float BigFloat(float l)
-{
-    if constexpr (std::endian::native == std::endian::big)
-        return l;
-    else
-        return byte_swap(l);
-}
+#endif
 
 /**
  * assertion macro that is used in all builds (debug/release)
@@ -337,10 +274,17 @@ inline std::ios_base &endianness(std::ios_base &os)
     return os;
 }
 
-// blank type used
+// blank type used for paddings
 template<size_t n>
 struct padding
 {
+};
+
+struct padding_n
+{
+    size_t n;
+
+    constexpr padding_n(size_t np) : n(np) { }
 };
 
 // using <= for ostream and >= for istream
@@ -348,6 +292,15 @@ template<size_t n>
 inline std::ostream &operator<=(std::ostream &s, const padding<n> &)
 {
     for (size_t i = 0; i < n; i++) {
+        s.put(0);
+    }
+
+    return s;
+}
+
+inline std::ostream &operator<=(std::ostream &s, const padding_n &p)
+{
+    for (size_t i = 0; i < p.n; i++) {
         s.put(0);
     }
 
@@ -500,6 +453,14 @@ template<size_t n>
 inline std::istream &operator>=(std::istream &s, padding<n> &)
 {
     s.seekg(n, std::ios_base::cur);
+
+    return s;
+}
+
+template<size_t n>
+inline std::istream &operator>=(std::istream &s, padding_n &p)
+{
+    s.seekg(p.n, std::ios_base::cur);
 
     return s;
 }
@@ -832,14 +793,30 @@ protected:
 
 struct memstream : virtual membuf, std::ostream, std::istream
 {
-    inline memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
+    inline memstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary)
         : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
           std::istream(static_cast<std::streambuf *>(this))
     {
     }
 
-    inline memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
+    inline memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary)
         : membuf(base, size, which), std::ostream(nullptr), std::istream(static_cast<std::streambuf *>(this))
+    {
+    }
+};
+
+struct omemstream : virtual membuf, std::ostream
+{
+    inline omemstream(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary)
+        : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this))
+    {
+    }
+};
+
+struct imemstream : virtual membuf, std::istream
+{
+    inline imemstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary)
+        : membuf(base, size, which), std::istream(static_cast<std::streambuf *>(this))
     {
     }
 };
@@ -863,3 +840,159 @@ constexpr bool is_iterator_v = is_iterator<T>::value;
 void CRC_Init(uint16_t &crcvalue);
 void CRC_ProcessByte(uint16_t &crcvalue, uint8_t data);
 uint16_t CRC_Block(const uint8_t *start, int count);
+
+inline void *q_aligned_malloc(size_t align, size_t size)
+{
+#ifdef _mm_malloc
+    return _mm_malloc(size, align);
+#elif __STDC_VERSION__ >= 201112L
+    return aligned_alloc(align, size);
+#else
+    void *ptr;
+    if (0 != posix_memalign(&ptr, align, size)) {
+        return nullptr;
+    }
+    return ptr;
+#endif
+}
+
+inline void q_aligned_free(void *ptr)
+{
+#ifdef _mm_malloc
+    _mm_free(ptr);
+#else
+    free(ptr);
+#endif
+}
+
+/**
+ * Allocator for aligned data.
+ *
+ * Modified from the Mallocator from Stephan T. Lavavej.
+ * <http://blogs.msdn.com/b/vcblog/archive/2008/08/28/the-mallocator.aspx>
+ */
+template<typename T, std::size_t Alignment>
+class aligned_allocator
+{
+public:
+	// The following will be the same for virtually all allocators.
+	using pointer = T*;
+	using const_pointer = const T*;
+	using reference = T&;
+	using const_reference = const T&;
+	using value_type = T;
+    using size_type = std::size_t;
+	using difference_type = ptrdiff_t;
+
+	T *address(T &r) const
+	{
+		return &r;
+	}
+
+	const T *address(const T& s) const
+	{
+		return &s;
+	}
+
+	std::size_t max_size() const
+	{
+		// The following has been carefully written to be independent of
+		// the definition of size_t and to avoid signed/unsigned warnings.
+		return (static_cast<std::size_t>(0) - static_cast<std::size_t>(1)) / sizeof(T);
+	}
+
+	// The following must be the same for all allocators.
+	template <typename U>
+	struct rebind
+	{
+		typedef aligned_allocator<U, Alignment> other;
+	};
+ 
+	bool operator!=(const aligned_allocator &other) const
+	{
+		return !(*this == other);
+	}
+
+	void construct(T *const p, const T &t) const
+	{
+		void *const pv = reinterpret_cast<void *>(p);
+		new (pv) T(t);
+	}
+
+	void destroy(T *const p) const
+	{
+		p->~T();
+	}
+
+	// Returns true if and only if storage allocated from *this
+	// can be deallocated from other, and vice versa.
+	// Always returns true for stateless allocators.
+	bool operator==(const aligned_allocator& other) const
+	{
+		return true;
+	}
+
+	// Default constructor, copy constructor, rebinding constructor, and destructor.
+	// Empty for stateless allocators.
+	aligned_allocator() { }
+	aligned_allocator(const aligned_allocator &) { }
+	template<typename U>
+    aligned_allocator(const aligned_allocator<U, Alignment> &) { }
+	~aligned_allocator() { }
+
+	// The following will be different for each allocator.
+	T *allocate(const std::size_t n) const
+	{
+		// The return value of allocate(0) is unspecified.
+		// Mallocator returns NULL in order to avoid depending
+		// on malloc(0)'s implementation-defined behavior
+		// (the implementation can define malloc(0) to return NULL,
+		// in which case the bad_alloc check below would fire).
+		// All allocators can return NULL in this case.
+		if (n == 0) {
+			return nullptr;
+		}
+
+		// All allocators should contain an integer overflow check.
+		// The Standardization Committee recommends that std::length_error
+		// be thrown in the case of integer overflow.
+		if (n > max_size()) {
+			throw std::length_error("aligned_allocator<T>::allocate() - Integer overflow.");
+		}
+
+		// Mallocator wraps malloc().
+		void *const pv = q_aligned_malloc(Alignment, n * sizeof(T));
+
+		// Allocators should throw std::bad_alloc in the case of memory allocation failure.
+		if (pv == nullptr) {
+			throw std::bad_alloc();
+		}
+
+		return reinterpret_cast<T *>(pv);
+	}
+
+	void deallocate(T *const p, const std::size_t n) const
+	{
+		q_aligned_free(p);
+	}
+
+	// The following will be the same for all allocators that ignore hints.
+	template <typename U>
+	T *allocate(const std::size_t n, const U * /* const hint */) const
+	{
+		return allocate(n);
+	}
+
+	// Allocators are not required to be assignable, so
+	// all allocators should have a private unimplemented
+	// assignment operator. Note that this will trigger the
+	// off-by-default (enabled under /Wall) warning C4626
+	// "assignment operator could not be generated because a
+	// base class assignment operator is inaccessible" within
+	// the STL headers, but that warning is useless.
+private:
+	aligned_allocator& operator=(const aligned_allocator&);
+};
+
+template<typename T>
+using aligned_vector = std::vector<T, aligned_allocator<T, alignof(T)>>;

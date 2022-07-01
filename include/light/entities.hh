@@ -66,6 +66,8 @@ public:
 
     bool generated = false; // if true, don't write to the bsp
 
+    const mleaf_t *leaf;
+
     aabb3d bounds;
 
     settings::setting_scalar light{this, "light", DEFAULTLIGHTLEVEL};
@@ -74,7 +76,7 @@ public:
         {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE}, {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}};
     settings::setting_scalar spotangle{this, "angle", 40.0};
     settings::setting_scalar spotangle2{this, "softangle", 0.0};
-    settings::setting_numeric<int32_t> style{this, "style", 0, 0, 254};
+    settings::setting_numeric<int32_t> style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1};
     settings::setting_scalar anglescale{this, {"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
     settings::setting_scalar dirtscale{this, "dirtscale", 0.0};
     settings::setting_scalar dirtgain{this, "dirtgain", 0};
@@ -123,8 +125,13 @@ public:
  */
 
 std::string TargetnameForLightStyle(int style);
-const std::vector<std::unique_ptr<light_t>> &GetLights();
-const std::vector<sun_t> &GetSuns();
+std::vector<std::unique_ptr<light_t>> &GetLights();
+std::vector<sun_t> &GetSuns();
+std::vector<entdict_t> &GetRadLights();
+
+const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates();
+
+bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight, int surf_type);
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
 
@@ -137,9 +144,3 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point);
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
 
 entdict_t &WorldEnt();
-
-bool EntDict_CheckTargetKeysMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);
-
-bool EntDict_CheckTargetnameKeyMatched(
-    const mbsp_t *bsp, const entdict_t &entity, const std::vector<entdict_t> &all_edicts);

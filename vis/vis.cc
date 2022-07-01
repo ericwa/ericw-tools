@@ -13,6 +13,22 @@
 #include <common/parallel.hh>
 #include <fmt/chrono.h>
 
+/* Use some GCC builtins */
+#if !defined(ffsl) && defined(__GNUC__)
+#define ffsl __builtin_ffsl
+#elif defined(_WIN32)
+#include <intrin.h>
+inline int ffsl(long int val)
+{
+    unsigned long indexout;
+    unsigned char res = _BitScanForward(&indexout, val);
+    if (!res)
+        return 0;
+    else
+        return indexout + 1;
+}
+#endif
+
 /*
  * If the portal file is "PRT2" format, then the leafs we are dealing with are
  * really clusters of leaves. So, after the vis job is done we need to expand
@@ -22,23 +38,19 @@ int numportals;
 int portalleafs; /* leafs (PRT1) or clusters (PRT2) */
 int portalleafs_real; /* real no. of leafs after expanding PRT2 clusters. Not used for Q2. */
 
-portal_t *portals;
-leaf_t *leafs;
+std::vector<portal_t> portals; // always numportals * 2; front and back
+std::vector<leaf_t> leafs;
 
 int c_portaltest, c_portalpass, c_portalcheck, c_mightseeupdate;
 int c_noclip = 0;
 
 bool showgetleaf = true;
 
-static uint8_t *vismap;
-static uint8_t *vismap_p;
-static uint8_t *vismap_end; // past visfile
+static std::vector<uint8_t> vismap;
 
 uint32_t originalvismapsize;
 
-uint8_t *uncompressed; // [leafbytes_real*portalleafs]
-
-uint8_t *uncompressed_q2; // [leafbytes*portalleafs]
+std::vector<uint8_t> uncompressed;
 
 int leafbytes; // (portalleafs+63)>>3
 int leaflongs;
@@ -73,11 +85,13 @@ fs::path portalfile, statefile, statetmpfile;
   Return a pointer to a free fixed winding on the stack
   ==================
 */
-std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack)
+winding_t *AllocStackWinding(pstack_t &stack)
 {
-    for (auto &winding : stack->windings) {
-        if (!winding) {
-            return (winding = std::make_shared<winding_t>());
+    for (size_t i = 0; i < STACK_WINDINGS; i++) {
+        if (!stack.windings_used[i]) {
+            stack.windings[i].clear();
+            stack.windings_used[i] = true;
+            return &stack.windings[i];
         }
     }
 
@@ -93,14 +107,11 @@ std::shared_ptr<winding_t> &AllocStackWinding(pstack_t *stack)
   structure further up the call chain).
   ==================
 */
-void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack)
+void FreeStackWinding(winding_t *&w, pstack_t &stack)
 {
-    for (auto &winding : stack->windings) {
-        if (winding == w) {
-            w.reset();
-            winding.reset();
-            return;
-        }
+    if (w >= stack.windings && w <= &stack.windings[STACK_WINDINGS]) {
+        stack.windings_used[w - stack.windings] = false;
+        w = nullptr;
     }
 }
 
@@ -114,7 +125,7 @@ void FreeStackWinding(std::shared_ptr<winding_t> &w, pstack_t *stack)
   is returned.
   ==================
 */
-std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, pstack_t *stack, qplane3d *split)
+winding_t *ClipStackWinding(winding_t *in, pstack_t &stack, const qplane3d &split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
     int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
@@ -122,10 +133,10 @@ std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, psta
     int i, j;
 
     /* Fast test first */
-    vec_t dot = split->distance_to(in->origin);
+    vec_t dot = split.distance_to(in->origin);
     if (dot < -in->radius) {
         FreeStackWinding(in, stack);
-        return NULL;
+        return nullptr;
     } else if (dot > in->radius) {
         return in;
     }
@@ -137,7 +148,7 @@ std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, psta
 
     /* determine sides for each point */
     for (i = 0; i < in->size(); i++) {
-        dot = split->distance_to((*in)[i]);
+        dot = split.distance_to((*in)[i]);
         dists[i] = dot;
         if (dot > ON_EPSILON)
             sides[i] = SIDE_FRONT;
@@ -160,7 +171,7 @@ std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, psta
 
     if (!counts[0]) {
         FreeStackWinding(in, stack);
-        return NULL;
+        return nullptr;
     }
     if (!counts[1])
         return in;
@@ -194,10 +205,10 @@ std::shared_ptr<winding_t> ClipStackWinding(std::shared_ptr<winding_t> &in, psta
         vec_t fraction = dists[i] / (dists[i] - dists[i + 1]);
         for (j = 0; j < 3; j++) {
             /* avoid round off error when possible */
-            if (split->normal[j] == 1)
-                mid[j] = split->dist;
-            else if (split->normal[j] == -1)
-                mid[j] = -split->dist;
+            if (split.normal[j] == 1)
+                mid[j] = split.dist;
+            else if (split.normal[j] == -1)
+                mid[j] = -split.dist;
             else
                 mid[j] = p1[j] + fraction * (p2[j] - p1[j]);
         }
@@ -235,19 +246,15 @@ static std::atomic_int64_t portalIndex;
 */
 portal_t *GetNextPortal(void)
 {
-    int i;
-    portal_t *p, *ret;
-    unsigned min;
+    portal_t *ret = nullptr;
+    uint32_t min = INT_MAX;
 
     portal_mutex.lock();
 
-    min = INT_MAX;
-    ret = NULL;
-
-    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        if (p->nummightsee < min && p->status == pstat_none) {
-            min = p->nummightsee;
-            ret = p;
+    for (auto &p : portals) {
+        if (p.nummightsee < min && p.status == pstat_none) {
+            min = p.nummightsee;
+            ret = &p;
         }
     }
 
@@ -272,16 +279,14 @@ portal_t *GetNextPortal(void)
   Called with the lock held.
   =============
 */
-static void UpdateMightsee(const leaf_t *source, const leaf_t *dest)
+static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
 {
-    int i, leafnum;
-    portal_t *p;
-
-    leafnum = dest - leafs;
-    for (i = 0; i < source->numportals; i++) {
-        p = source->portals[i];
-        if (p->status != pstat_none)
+    size_t leafnum = &dest - leafs.data();
+    for (size_t i = 0; i < source.numportals; i++) {
+        portal_t *p = source.portals[i];
+        if (p->status != pstat_none) {
             continue;
+        }
         if (p->mightsee[leafnum]) {
             p->mightsee[leafnum] = false;
             p->nummightsee--;
@@ -305,8 +310,6 @@ static void PortalCompleted(portal_t *completed)
     int i, j, k, bit, numblocks;
     int leafnum;
     const portal_t *p, *p2;
-    const leaf_t *myleaf;
-    const uint32_t *might, *vis;
     uint32_t changed;
 
     portal_mutex.lock();
@@ -317,14 +320,14 @@ static void PortalCompleted(portal_t *completed)
      * For each portal on the leaf, check the leafs we eliminated from
      * mightsee during the full vis so far.
      */
-    myleaf = &leafs[completed->leaf];
-    for (i = 0; i < myleaf->numportals; i++) {
-        p = myleaf->portals[i];
+    const leaf_t &myleaf = leafs[completed->leaf];
+    for (i = 0; i < myleaf.numportals; i++) {
+        p = myleaf.portals[i];
         if (p->status != pstat_done)
             continue;
 
-        might = p->mightsee.data();
-        vis = p->visbits.data();
+        auto might = p->mightsee.data();
+        auto vis = p->visbits.data();
         numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
         for (j = 0; j < numblocks; j++) {
             changed = might[j] & ~vis[j];
@@ -335,10 +338,10 @@ static void PortalCompleted(portal_t *completed)
              * If any of these changed bits are still visible from another
              * portal, we can't update yet.
              */
-            for (k = 0; k < myleaf->numportals; k++) {
+            for (k = 0; k < myleaf.numportals; k++) {
                 if (k == i)
                     continue;
-                p2 = myleaf->portals[k];
+                p2 = myleaf.portals[k];
                 if (p2->status == pstat_done)
                     changed &= ~p2->visbits.data()[j];
                 else
@@ -354,7 +357,7 @@ static void PortalCompleted(portal_t *completed)
                 bit = ffsl(changed) - 1;
                 changed &= ~nth_bit(bit);
                 leafnum = (j << leafbits_t::shift) + bit;
-                UpdateMightsee(leafs + leafnum, myleaf);
+                UpdateMightsee(leafs[leafnum], myleaf);
             }
         }
     }
@@ -391,7 +394,7 @@ void LeafThread(size_t)
 
     PortalCompleted(p);
 
-    logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals), p->nummightsee,
+    logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals.data()), p->nummightsee,
         p->numcansee);
 }
 
@@ -404,14 +407,14 @@ void LeafThread(size_t)
 */
 int64_t totalvis;
 
+static std::vector<uint8_t> compressed;
+
 static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 {
     leaf_t *leaf;
     uint8_t *outbuffer;
-    uint8_t *compressed;
-    int i, j, len;
+    int i, j;
     int numvis, numblocks;
-    uint8_t *dest;
     const portal_t *p;
 
     /*
@@ -440,7 +443,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     numvis = 0;
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        outbuffer = uncompressed_q2 + clusternum * leafbytes;
+        outbuffer = uncompressed.data() + clusternum * leafbytes;
         for (i = 0; i < portalleafs; i++) {
             if (buffer[i]) {
                 outbuffer[i >> 3] |= nth_bit(i & 7);
@@ -448,7 +451,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
             }
         }
     } else {
-        outbuffer = uncompressed + clusternum * leafbytes_real;
+        outbuffer = uncompressed.data() + clusternum * leafbytes_real;
         for (i = 0; i < portalleafs_real; i++) {
             if (buffer[bsp->dleafs[i + 1].cluster]) {
                 outbuffer[i >> 3] |= nth_bit(i & 7);
@@ -477,34 +480,22 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         }
     }
 
+    compressed.clear();
+
     /* Allocate for worst case where RLE might grow the data (unlikely) */
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        compressed = new uint8_t[max(1, (portalleafs * 2) / 8)];
-        len = CompressRow(outbuffer, (portalleafs + 7) >> 3, compressed);
+        CompressRow(outbuffer, (portalleafs + 7) >> 3, std::back_inserter(compressed));
     } else {
-        compressed = new uint8_t[max(1, (portalleafs_real * 2) / 8)];
-        len = CompressRow(outbuffer, (portalleafs_real + 7) >> 3, compressed);
+        CompressRow(outbuffer, (portalleafs_real + 7) >> 3, std::back_inserter(compressed));
     }
 
-    dest = vismap_p;
-    vismap_p += len;
-
-    if (vismap_p > vismap_end)
-        FError("Vismap expansion overflow");
-
     /* leaf 0 is a common solid */
-    int32_t visofs = dest - vismap;
+    int32_t visofs = vismap.size();
 
     bsp->dvis.set_bit_offset(VIS_PVS, clusternum, visofs);
 
     // Set pointers
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        for (i = 1; i < bsp->dleafs.size(); i++) {
-            if (bsp->dleafs[i].cluster == clusternum) {
-                bsp->dleafs[i].visofs = visofs;
-            }
-        }
-    } else {
+    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
         for (i = 0; i < portalleafs_real; i++) {
             if (bsp->dleafs[i + 1].cluster == clusternum) {
                 bsp->dleafs[i + 1].visofs = visofs;
@@ -512,8 +503,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         }
     }
 
-    memcpy(dest, compressed, len);
-    delete[] compressed;
+    std::copy(compressed.begin(), compressed.end(), std::back_inserter(vismap));
 }
 
 /*
@@ -523,14 +513,11 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 */
 void CalcPortalVis(const mbsp_t *bsp)
 {
-    int i;
-    portal_t *p;
-
     // fastvis just uses mightsee for a very loose bound
     if (options.fast.value()) {
-        for (i = 0; i < numportals * 2; i++) {
-            portals[i].visbits = portals[i].mightsee;
-            portals[i].status = pstat_done;
+        for (auto &p : portals) {
+            p.visbits = p.mightsee;
+            p.status = pstat_done;
         }
         return;
     }
@@ -539,10 +526,12 @@ void CalcPortalVis(const mbsp_t *bsp)
      * Count the already completed portals in case we loaded previous state
      */
     int32_t startcount = 0;
-    for (i = 0, p = portals; i < numportals * 2; i++, p++) {
-        if (p->status == pstat_done)
+    for (auto &p : portals) {
+        if (p.status == pstat_done) {
             startcount++;
+        }
     }
+
     portalIndex = startcount;
     logging::parallel_for(startcount, numportals * 2, LeafThread);
 
@@ -598,6 +587,9 @@ void CalcVis(mbsp_t *bsp)
 
 // ===========================================================================
 
+#include <fstream>
+#include <common/prtfile.hh>
+
 /*
   ============
   LoadPortals
@@ -605,60 +597,26 @@ void CalcVis(mbsp_t *bsp)
 */
 static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 {
-    int i, j, count;
-    portal_t *p;
-    leaf_t *l;
-    char magic[80];
-    int numpoints;
-    int leafnums[2];
-    qplane3d plane;
-    qfile_t f = SafeOpenRead(name, true);
+    const prtfile_t prtfile = LoadPrtFile(name, bsp->loadversion);
 
-    /*
-     * Parse the portal file header
-     */
-    count = fscanf(f.get(), "%79s\n", magic);
-    if (count != 1)
-        FError("unknown header: {}\n", magic);
+    portalleafs = prtfile.portalleafs;
+    portalleafs_real = prtfile.portalleafs_real;
 
-    if (!strcmp(magic, PORTALFILE)) {
-        count = fscanf(f.get(), "%i\n%i\n", &portalleafs, &numportals);
-        if (count != 2)
-            FError("unable to parse {} HEADER\n", PORTALFILE);
-
-        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
-            portalleafs_real = 0;
-            logging::print("{:6} clusters\n", portalleafs);
-            logging::print("{:6} portals\n", numportals);
-        } else {
-            portalleafs_real = portalleafs;
-            logging::print("{:6} leafs\n", portalleafs);
-            logging::print("{:6} portals\n", numportals);
-        }
-    } else if (!strcmp(magic, PORTALFILE2)) {
-        count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs_real, &portalleafs, &numportals);
-        if (count != 3)
-            FError("unable to parse {} HEADER\n", PORTALFILE);
-        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            FError("{} can not be used with Q2\n", PORTALFILE2);
-        }
-        logging::print("{:6} leafs\n", portalleafs_real);
-        logging::print("{:6} clusters\n", portalleafs);
-        logging::print("{:6} portals\n", numportals);
-    } else if (!strcmp(magic, PORTALFILEAM)) {
-        count = fscanf(f.get(), "%i\n%i\n%i\n", &portalleafs, &numportals, &portalleafs_real);
-        if (count != 3)
-            FError("unable to parse {} HEADER\n", PORTALFILE);
-        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            FError("{} can not be used with Q2\n", PORTALFILEAM);
-        }
-        logging::print("{:6} leafs\n", portalleafs_real);
-        logging::print("{:6} clusters\n", portalleafs);
-        logging::print("{:6} portals\n", numportals);
+    /* Allocate for worst case where RLE might grow the data (unlikely) */
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        compressed.reserve(max(1, (portalleafs * 2) / 8));
     } else {
-        FError("unknown header: {}\n", magic);
+        compressed.reserve(max(1, (portalleafs_real * 2) / 8));
     }
+
+    numportals = prtfile.portals.size();
+
+    if (bsp->loadversion->game->id != GAME_QUAKE_II) {
+        // since q2bsp has native cluster support, we shouldn't look at portalleafs_real at all.
+        logging::print("{:6} leafs\n", portalleafs_real);
+    }
+    logging::print("{:6} clusters\n", portalleafs);
+    logging::print("{:6} portals\n", numportals);
 
     leafbytes = ((portalleafs + 63) & ~63) >> 3;
     leaflongs = leafbytes / sizeof(long);
@@ -670,9 +628,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     }
 
     // each file portal is split into two memory portals
-    portals = new portal_t[numportals * 2]{};
-
-    leafs = new leaf_t[portalleafs]{};
+    portals.resize(numportals * 2);
+    leafs.resize(portalleafs);
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
@@ -682,59 +639,49 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     bsp->dvis.resize(portalleafs);
 
-    bsp->dvis.bits.resize(originalvismapsize * 2);
+    vismap.reserve(originalvismapsize * 2);
 
-    vismap = vismap_p = bsp->dvis.bits.data();
-    vismap_end = vismap + bsp->dvis.bits.size();
+    auto dest_portal_it = portals.begin();
 
-    for (i = 0, p = portals; i < numportals; i++) {
-        if (fscanf(f.get(), "%i %i %i ", &numpoints, &leafnums[0], &leafnums[1]) != 3)
-            FError("reading portal {}", i);
-        if (numpoints > MAX_WINDING)
-            FError("portal {} has too many points", i);
-        if ((unsigned)leafnums[0] > (unsigned)portalleafs || (unsigned)leafnums[1] > (unsigned)portalleafs)
-            FError("out of bounds leaf in portal {}", i);
+    for (auto source_portal_it = prtfile.portals.begin(); source_portal_it != prtfile.portals.end(); source_portal_it++) {
+        const auto &sourceportal = *source_portal_it;
+        qplane3d plane;
 
-        winding_t &w = *(p->winding = std::make_shared<winding_t>(numpoints));
+        {
+            auto &p = *dest_portal_it;
+            p.winding = winding_t{sourceportal.winding.begin(), sourceportal.winding.end()};
 
-        for (j = 0; j < numpoints; j++) {
-            if (fscanf(f.get(), "(%lf %lf %lf ) ", &w[j][0], &w[j][1], &w[j][2]) != 3)
-                FError("reading portal {}", i);
+            // calc plane
+            plane = p.winding.plane();
+
+            // create forward portal
+            auto &l = leafs[sourceportal.leafnums[0]];
+            if (l.numportals == MAX_PORTALS_ON_LEAF)
+                FError("Leaf with too many portals");
+            l.portals[l.numportals] = &p;
+            l.numportals++;
+
+            p.plane = -plane;
+            p.leaf = sourceportal.leafnums[1];
+            dest_portal_it++;
         }
-        fscanf(f.get(), "\n");
+        
+        {
+            auto &p = *dest_portal_it;
+            // create backwards portal
+            auto &l = leafs[sourceportal.leafnums[1]];
+            if (l.numportals == MAX_PORTALS_ON_LEAF)
+                FError("Leaf with too many portals");
+            l.portals[l.numportals] = &p;
+            l.numportals++;
 
-        // calc plane
-        plane = w.plane();
-
-        // create forward portal
-        l = &leafs[leafnums[0]];
-        if (l->numportals == MAX_PORTALS_ON_LEAF)
-            FError("Leaf with too many portals");
-        l->portals[l->numportals] = p;
-        l->numportals++;
-
-        p->plane = -plane;
-        p->leaf = leafnums[1];
-        p->winding->SetWindingSphere();
-        p++;
-
-        // create backwards portal
-        l = &leafs[leafnums[1]];
-        if (l->numportals == MAX_PORTALS_ON_LEAF)
-            FError("Leaf with too many portals");
-        l->portals[l->numportals] = p;
-        l->numportals++;
-
-        // Create a reverse winding
-        p->winding = std::make_shared<winding_t>(numpoints);
-
-        for (j = 0; j < numpoints; ++j)
-            p->winding->at(j) = w[numpoints - (j + 1)];
-
-        p->plane = plane;
-        p->leaf = leafnums[0];
-        p->winding->SetWindingSphere();
-        p++;
+            // Create a reverse winding
+            const auto flipped = sourceportal.winding.flip();
+            p.winding = winding_t{flipped.begin(), flipped.end()};
+            p.plane = plane;
+            p.leaf = sourceportal.leafnums[0];
+            dest_portal_it++;
+        }
     }
 
     // Q2 doesn't need this, it's PRT1 has the data we need
@@ -742,48 +689,9 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
         return;
     }
 
-    // No clusters
-    if (portalleafs == portalleafs_real) {
-        // e.g. Quake 1, PRT1 (no func_detail).
-        // Assign the identity cluster numbers for consistency
-        for (i = 0; i < portalleafs; i++) {
-            bsp->dleafs[i + 1].cluster = i;
-        }
-        return;
-    }
-
-    if (!strcmp(magic, PORTALFILE2)) {
-        for (i = 0; i < portalleafs; i++) {
-            while (1) {
-                int leafnum;
-                count = fscanf(f.get(), "%i", &leafnum);
-                if (!count || count == EOF)
-                    break;
-                if (leafnum < 0)
-                    break;
-                if (leafnum >= portalleafs_real)
-                    FError("Invalid leaf number in cluster map ({} >= {})", leafnum, portalleafs_real);
-                bsp->dleafs[leafnum + 1].cluster = i;
-            }
-            if (count == EOF)
-                break;
-        }
-        if (i < portalleafs)
-            FError("Couldn't read cluster map ({} / {})\n", i, portalleafs);
-    } else if (!strcmp(magic, PORTALFILEAM)) {
-        for (i = 0; i < portalleafs_real; i++) {
-            int clusternum;
-            count = fscanf(f.get(), "%i", &clusternum);
-            if (!count || count == EOF) {
-                Error("Unexpected end of cluster map\n");
-            }
-            if (clusternum < 0 || clusternum >= portalleafs) {
-                FError("Invalid cluster number {} in cluster map, number of clusters: {}\n", clusternum, portalleafs);
-            }
-            bsp->dleafs[i + 1].cluster = clusternum;
-        }
-    } else {
-        FError("Unknown header {}\n", magic);
+    // Copy cluster mapping from .prt file
+    for (int i = 1; i < prtfile.dleafinfos.size(); ++i) {
+        bsp->dleafs[i].cluster = prtfile.dleafinfos[i].cluster;
     }
 }
 
@@ -810,19 +718,16 @@ int vis_main(int argc, const char **argv)
 
     if (options.phsonly.value())
     {
-        if (bsp.loadversion->game->id != GAME_QUAKE_II)
-        {
-            logging::print("error: need a Q2-esque BSP for -phsonly");
+        if (bsp.loadversion->game->id != GAME_QUAKE_II) {
+            FError("need a Q2-esque BSP for -phsonly");
         }
-        else
-        {
-            portalleafs = bsp.dvis.bit_offsets.size();
-            leafbytes = ((portalleafs + 63) & ~63) >> 3;
-            leaflongs = leafbytes / sizeof(long);
 
-            if (bsp.loadversion->game->id == GAME_QUAKE_II) {
-                originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
-            }
+        portalleafs = bsp.dvis.bit_offsets.size();
+        leafbytes = ((portalleafs + 63) & ~63) >> 3;
+        leaflongs = leafbytes / sizeof(long);
+
+        if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+            originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
         }
     }
     else
@@ -834,9 +739,9 @@ int vis_main(int argc, const char **argv)
         statetmpfile = fs::path(options.sourceMap).replace_extension("vi0");
 
         if (bsp.loadversion->game->id != GAME_QUAKE_II) {
-            uncompressed = new uint8_t[portalleafs * leafbytes_real]{};
+            uncompressed.resize(portalleafs * leafbytes_real);
         } else {
-            uncompressed_q2 = new uint8_t[portalleafs * leafbytes]{};
+            uncompressed.resize(portalleafs * leafbytes);
         }
 
         CalcVis(&bsp);
@@ -844,7 +749,7 @@ int vis_main(int argc, const char **argv)
         logging::print("c_noclip: {}\n", c_noclip);
         logging::print("c_chains: {}\n", c_chains);
 
-        bsp.dvis.bits.resize(vismap_p - bsp.dvis.bits.data());
+        bsp.dvis.bits = std::move(vismap);
         bsp.dvis.bits.shrink_to_fit();
         logging::print("visdatasize:{}  compressed from {}\n", bsp.dvis.bits.size(), originalvismapsize);
     }
@@ -865,6 +770,10 @@ int vis_main(int argc, const char **argv)
 
     endtime = I_FloatTime();
     logging::print("{:.2} elapsed\n", (endtime - starttime));
+
+    if (options.autoclean.value()) {
+        CleanVisState();
+    }
 
     logging::close();
 

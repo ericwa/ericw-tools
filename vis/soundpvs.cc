@@ -60,7 +60,7 @@ static aabb3d SurfaceBBox(const mbsp_t *bsp, const mface_t *surf)
 void CalcAmbientSounds(mbsp_t *bsp)
 {
     const mface_t *surf;
-    const gtexinfo_t *info;
+    const mtexinfo_t *info;
     int i, j, k, l;
     mleaf_t *leaf, *hit;
     uint8_t *vis;
@@ -160,21 +160,19 @@ void CalcPHS(mbsp_t *bsp)
     // increase the bits size with approximately how much space we'll need
     bsp->dvis.bits.reserve(bsp->dvis.bits.size() * 2);
 
-    // FIXME: should this use alloca?
-    uint8_t *uncompressed = new uint8_t[leafbytes];
-    uint8_t *uncompressed_2 = new uint8_t[leafbytes];
-    uint8_t *compressed = new uint8_t[leafbytes * 2];
-    uint8_t *uncompressed_orig = new uint8_t[leafbytes];
+    std::vector<uint8_t> uncompressed(leafbytes);
+    std::vector<uint8_t> uncompressed_2(leafbytes);
+    std::vector<uint8_t> compressed(leafbytes * 2);
+    std::vector<uint8_t> uncompressed_orig(leafbytes);
 
     int32_t count = 0;
     for (int32_t i = 0; i < portalleafs; i++) {
         const uint8_t *scan = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, i);
 
-        DecompressRow(scan, leafbytes, uncompressed);
-        memset(uncompressed_orig, 0, leafbytes);
-        memcpy(uncompressed_orig, uncompressed, leafbytes);
+        DecompressRow(scan, leafbytes, uncompressed.data());
+        std::copy(uncompressed.begin(), uncompressed.end(), uncompressed_orig.begin());
 
-        scan = uncompressed_orig;
+        scan = uncompressed_orig.data();
 
         for (int32_t j = 0; j < leafbytes; j++) {
             uint8_t bitbyte = scan[j];
@@ -188,9 +186,9 @@ void CalcPHS(mbsp_t *bsp)
                 if (index >= portalleafs)
                     FError("Bad bit in PVS"); // pad bits should be 0
                 const uint8_t *src_compressed = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, index);
-                DecompressRow(src_compressed, leafbytes, uncompressed_2);
-                const long *src = (long *)uncompressed_2;
-                long *dest = (long *)uncompressed;
+                DecompressRow(src_compressed, leafbytes, uncompressed_2.data());
+                const long *src = reinterpret_cast<long *>(uncompressed_2.data());
+                long *dest = reinterpret_cast<long *>(uncompressed.data());
                 for (int32_t l = 0; l < leaflongs; l++)
                     dest[l] |= src[l];
             }
@@ -202,17 +200,13 @@ void CalcPHS(mbsp_t *bsp)
         //
         // compress the bit string
         //
-        int32_t j = CompressRow(uncompressed, leafbytes, compressed);
+        compressed.clear();
+        CompressRow(uncompressed.data(), leafbytes, std::back_inserter(compressed));
 
         bsp->dvis.set_bit_offset(VIS_PHS, i, bsp->dvis.bits.size());
 
-        std::copy(compressed, compressed + j, std::back_inserter(bsp->dvis.bits));
+        std::copy(compressed.begin(), compressed.end(), std::back_inserter(bsp->dvis.bits));
     }
-
-    delete[] uncompressed;
-    delete[] uncompressed_2;
-    delete[] compressed;
-    delete[] uncompressed_orig;
 
     fmt::print("Average clusters hearable: {}\n", count / portalleafs);
 

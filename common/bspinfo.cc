@@ -43,11 +43,11 @@ static std::string hex_string(const uint8_t *bytes, const size_t count)
 /**
  * returns a JSON array of models
  */
-static json serialize_bspxbrushlist(const bspxentry_t &lump)
+static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
 {
     json j = json::array();
 
-    memstream p(lump.lumpdata.get(), lump.lumpsize, std::ios_base::in | std::ios_base::binary);
+    imemstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
 
     p >> endianness<std::endian::little>;
 
@@ -170,9 +170,8 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
     auto &texture = texture_opt.value();
 
     size_t bufsize = 122 + (texture.meta.width * texture.meta.height * 4);
-    uint8_t *buf = new uint8_t[bufsize];
-
-    memstream s(buf, bufsize, std::ios_base::out | std::ios_base::binary);
+    std::vector<uint8_t> buf(bufsize);
+    omemstream s(buf.data(), bufsize, std::ios_base::out | std::ios_base::binary);
 
     s << endianness<std::endian::little>;
 
@@ -205,14 +204,12 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
     for (size_t y = 0; y < texture.meta.height; y++) {
         for (size_t x = 0; x < texture.meta.width; x++) {
             s <= texture.pixels[((texture.meta.height - y - 1) * texture.meta.width) + x];
+            }
         }
-    }
 
     std::string str{"data:image/bmp;base64,"};
 
-    Base64EncodeTo(buf, bufsize, std::back_inserter(str));
-
-    delete[] buf;
+    Base64EncodeTo(buf.data(), bufsize, std::back_inserter(str));
 
     return str;
 }
@@ -443,8 +440,8 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             tex.push_back({"height", src_tex.height});
 
             if (src_tex.data.size() > sizeof(dmiptex_t)) {
-                json &mips = tex["mips"] = json::array();
-                mips.emplace_back(serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
+            	json &mips = tex["mips"] = json::array();
+            	mips.emplace_back(serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
             }
         }
     }
@@ -461,7 +458,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             } else {
                 // unhandled BSPX lump, just write the raw data
                 entry["lumpdata"] =
-                    hex_string(reinterpret_cast<uint8_t *>(lump.second.lumpdata.get()), lump.second.lumpsize);
+                    hex_string(lump.second.data(), lump.second.size());
             }
         }
     }

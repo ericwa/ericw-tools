@@ -233,7 +233,7 @@ struct compiled_brush_t
                     auto wal = fs::load((fs::path("textures") / side.texture_name) += ".wal");
 
                     if (wal) {
-                        memstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
+                        imemstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
                         stream >> endianness<std::endian::little>;
                         stream.seekg(88);
 
@@ -868,7 +868,7 @@ static compiled_brush_t DecompileLeafTask(
                 DefaultSkipSide(side, bsp);
             } else {
                 const char *name = nullptr;
-                const gtexinfo_t *ti;
+                const mtexinfo_t *ti;
 
                 auto faces = finalSide.faces;
 

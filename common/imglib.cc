@@ -52,7 +52,7 @@ static bool LoadPCXPalette(const fs::path &filename, std::vector<qvec3b> &palett
         return false;
     }
 
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
 
     // Parse the PCX file
@@ -122,7 +122,7 @@ struct q2_miptex_t
 
 std::optional<texture> load_wal(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
 
     // Parse WAL
@@ -162,7 +162,7 @@ Quake/Half Life MIP
 
 std::optional<texture> load_mip(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size());
     stream >> endianness<std::endian::little>;
 
     // read header
@@ -275,7 +275,7 @@ LoadTGA
 */
 std::optional<texture> load_tga(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
-    memstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
 
     // Parse TGA

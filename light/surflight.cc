@@ -41,27 +41,18 @@ See file, 'COPYING', for details.
 using namespace std;
 using namespace polylib;
 
-mutex surfacelights_lock;
-std::vector<surfacelight_t> surfacelights;
-std::map<int, std::vector<int>> surfacelightsByFacenum;
-int total_surflight_points = 0;
+static mutex surfacelights_lock;
+static std::vector<surfacelight_t> surfacelights;
+static std::map<int, std::vector<int>> surfacelightsByFacenum;
+static size_t total_surflight_points = 0;
 
-static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, size_t i)
+std::vector<surfacelight_t> &GetSurfaceLights()
 {
-    const mface_t *face = BSP_GetFace(bsp, i);
+    return surfacelights;
+}
 
-    // Face casts light?
-    const gtexinfo_t *info = Face_Texinfo(bsp, face);
-    if (info == nullptr)
-        return;
-    if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
-        if (info->flags.native & Q2_SURF_LIGHT) {
-            qvec3d wc = winding_t::from_face(bsp, face).center();
-            logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
-        }
-        return;
-    }
-
+static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face, std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
+{
     // Create face points...
     auto poly = GLM_FacePoints(bsp, face);
     const float facearea = qv::PolyArea(poly.begin(), poly.end());
@@ -83,32 +74,31 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     winding.dice(cfg.surflightsubdivision.value(), [&points](winding_t &w) { points.push_back(w.center()); });
     total_surflight_points += points.size();
 
-    // Get texture color
-    qvec3f texturecolor = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
-
     // Calculate emit color and intensity...
 
     // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
-    if (info->flags.native & Q2_SURF_SKY) {
-        // FIXME: this only handles the "_sky_surface"  "red green blue" format.
-        //        There are other more complex variants we could handle documented in the link above.
-        // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-        if (cfg.sky_surface.isChanged()) {
-            texturecolor = cfg.sky_surface.value();
+    if (!texture_color.has_value()) {
+        if (cfg.sky_surface.isChanged() && is_sky) {
+            // FIXME: this only handles the "_sky_surface"  "red green blue" format.
+            //        There are other more complex variants we could handle documented in the link above.
+            // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
+            texture_color = cfg.sky_surface.value();
+        } else {
+            texture_color = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
         }
     }
 
-    texturecolor *= info->value; // Scale by light value
+    texture_color.value() *= light_value; // Scale by light value
 
     // Calculate intensity...
-    float intensity = qv::max(texturecolor);
+    float intensity = qv::max(texture_color.value());
 
     if (intensity == 0.0f)
         return;
 
     // Normalize color...
     if (intensity > 1.0f)
-        texturecolor *= 1.0f / intensity;
+        texture_color.value() *= 1.0f / intensity;
 
     // Sanity checks...
     Q_assert(!points.empty());
@@ -116,20 +106,27 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     // Add surfacelight...
     surfacelight_t l;
     l.surfnormal = facenormal;
-    l.omnidirectional = true;//(info->flags.native & Q2_SURF_SKY) ? true : false;
+    l.omnidirectional = !is_directional;
     l.points = points;
+    l.style = style;
+
+    // Init bbox...
+    l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
+
+    for (auto &pt : points) {
+        if (options.visapprox.value() == visapprox_t::VIS) {
+            l.leaves.push_back(Light_PointInLeaf(bsp, pt + l.surfnormal));
+        } else if (options.visapprox.value() == visapprox_t::RAYS) {
+            l.bounds += EstimateVisibleBoundsAtPoint(pt);
+        }
+    }
+
     l.pos = facemidpoint;
 
     // Store surfacelight settings...
     l.totalintensity = intensity * facearea;
     l.intensity = l.totalintensity / points.size();
-    l.color = texturecolor;
-
-    // Init bbox...
-    l.bounds = qvec3d(0);
-
-    if (!options.novisapprox.value())
-        l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
+    l.color = texture_color.value();
 
     // Store light...
     unique_lock<mutex> lck{surfacelights_lock};
@@ -139,14 +136,43 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     surfacelightsByFacenum[Face_GetNum(bsp, face)].push_back(index);
 }
 
-const std::vector<surfacelight_t> &SurfaceLights()
+static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, size_t i)
 {
-    return surfacelights;
-}
+    const mface_t *face = BSP_GetFace(bsp, i);
 
-int TotalSurfacelightPoints()
-{
-    return total_surflight_points;
+    // Face casts light?
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // first, check if it's a Q2 surface
+        const mtexinfo_t *info = Face_Texinfo(bsp, face);
+
+        if (info == nullptr)
+            return;
+
+        if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
+            if (info->flags.native & Q2_SURF_LIGHT) {
+                qvec3d wc = winding_t::from_face(bsp, face).center();
+                logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
+            }
+            return;
+        }
+
+        MakeSurfaceLight(bsp, cfg, face, std::nullopt, false, (info->flags.native & Q2_SURF_SKY), 0, info->value);
+    }
+
+    // check matching templates
+    for (const auto &surflight : GetSurfaceLightTemplates()) {
+        if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight, SURFLIGHT_RAD)) {
+            std::optional<qvec3f> texture_color;
+
+            if (surflight->color.isChanged()) {
+                texture_color = surflight->color.value() / 255.f;
+            }
+
+            MakeSurfaceLight(bsp, cfg, face, texture_color, !!surflight->epairs->get_int("_surface_spotlight"),
+                surflight->epairs->get_int("_surface_is_sky"), surflight->epairs->get_int("style"), surflight->light.value());
+        }
+    }
 }
 
 // No surflight_debug (yet?), so unused...
@@ -161,9 +187,14 @@ const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 }
 
 void // Quake 2 surface lights
-MakeSurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
+MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    logging::print("--- MakeSurfaceLights ---\n");
+    logging::print("--- MakeRadiositySurfaceLights ---\n");
 
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
+
+    if (surfacelights.size()) {
+        logging::print("{} surface lights ({} light points) in use.\n",
+            surfacelights.size(), total_surflight_points);
+    }
 }

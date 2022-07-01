@@ -23,8 +23,6 @@
 #include <light/ltface.hh>
 #include <common/bsputils.hh>
 #include <common/polylib.hh>
-#include <embree3/rtcore.h>
-#include <embree3/rtcore_ray.h>
 #include <vector>
 #include <cassert>
 #include <climits>
@@ -34,32 +32,9 @@
 using namespace std;
 using namespace polylib;
 
-class sceneinfo
-{
-public:
-    unsigned geomID;
-
-    std::vector<const mface_t *> triToFace;
-    std::vector<const modelinfo_t *> triToModelinfo;
-};
-
-class raystream_embree_common_t;
-
-struct ray_source_info : public RTCIntersectContext
-{
-    raystream_embree_common_t *raystream; // may be null if this ray is not from a ray stream
-    const modelinfo_t *self;
-    /// only used if raystream == null
-    int singleRayShadowStyle;
-
-    ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_)
-        : raystream(raystream_), self(self_), singleRayShadowStyle(0)
-    {
-        rtcInitIntersectContext(this);
-
-        flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
-    }
-};
+sceneinfo skygeom; // sky. always occludes.
+sceneinfo solidgeom; // solids. always occludes.
+sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
 
 /**
  * Returns 1.0 unless a custom alpha value is set.
@@ -141,8 +116,37 @@ sceneinfo CreateGeometry(
             tri->v2 = Face_VertexAtIndex(bsp, face, 0);
             tri_index++;
 
-            s.triToFace.push_back(face);
-            s.triToModelinfo.push_back(modelinfo);
+            triinfo info;
+
+            info.face = face;
+            info.modelinfo = modelinfo;
+            info.texinfo = &bsp->texinfo[face->texinfo];
+
+            info.texture = Face_Texture(bsp, face);
+
+            info.shadowworldonly = modelinfo->shadowworldonly.boolValue();
+            info.shadowself = modelinfo->shadowself.boolValue();
+            info.switchableshadow = modelinfo->switchableshadow.boolValue();
+            info.switchshadstyle = modelinfo->switchshadstyle.value();
+
+            info.alpha = Face_Alpha(modelinfo, face);
+
+            // mxd
+            if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
+                info.is_fence = ((surf_flags & Q2_SURF_TRANSLUCENT) ==
+                           Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
+                info.is_glass = !info.is_fence && (surf_flags & Q2_SURF_TRANSLUCENT);
+                if (info.is_glass) {
+                    info.alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
+                }
+            } else {
+                const char *name = Face_TextureName(bsp, face);
+                info.is_fence = (name[0] == '{');
+                info.is_glass = (info.alpha < 1.0f);
+            }
+
+            s.triInfo.push_back(info);
         }
     }
 
@@ -220,10 +224,6 @@ static void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const
 RTCDevice device;
 RTCScene scene;
 
-sceneinfo skygeom; // sky. always occludes.
-sceneinfo solidgeom; // solids. always occludes.
-sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
-
 static const mbsp_t *bsp_static;
 
 void ErrorCallback(void *userptr, const RTCError code, const char *str)
@@ -231,35 +231,15 @@ void ErrorCallback(void *userptr, const RTCError code, const char *str)
     fmt::print("RTC Error {}: {}\n", code, str);
 }
 
-static const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
-{
-    if (geomID == skygeom.geomID) {
-        return skygeom;
-    } else if (geomID == solidgeom.geomID) {
-        return solidgeom;
-    } else if (geomID == filtergeom.geomID) {
-        return filtergeom;
-    } else {
-        FError("unexpected geomID");
-    }
-}
-
-const mface_t *Embree_LookupFace(unsigned int geomID, unsigned int primID)
+const triinfo &Embree_LookupTriangleInfo(unsigned int geomID, unsigned int primID)
 {
     const sceneinfo &info = Embree_SceneinfoForGeomID(geomID);
-    return info.triToFace.at(primID);
+    return info.triInfo.at(primID);
 }
 
-const modelinfo_t *Embree_LookupModelinfo(unsigned int geomID, unsigned int primID)
+inline qvec3f Embree_RayEndpoint(RTCRayN *ray, const qvec3f &dir, size_t N, size_t i)
 {
-    const sceneinfo &info = Embree_SceneinfoForGeomID(geomID);
-    return info.triToModelinfo.at(primID);
-}
-
-static qvec3d Embree_RayEndpoint(RTCRayN *ray, size_t N, size_t i)
-{
-    qvec3d dir = qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
-    qvec3d org{RTCRayN_org_x(ray, N, i), RTCRayN_org_y(ray, N, i), RTCRayN_org_z(ray, N, i)};
+    qvec3f org{RTCRayN_org_x(ray, N, i), RTCRayN_org_y(ray, N, i), RTCRayN_org_z(ray, N, i)};
     float &tfar = RTCRayN_tfar(ray, N, i);
 
     return org + (dir * tfar);
@@ -303,15 +283,16 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
         const unsigned rayIndex = rayID;
 
         const modelinfo_t *source_modelinfo = rsi->self;
-        const modelinfo_t *hit_modelinfo = Embree_LookupModelinfo(geomID, primID);
-        if (!hit_modelinfo) {
+        const triinfo &hit_triinfo = Embree_LookupTriangleInfo(geomID, primID);
+
+        if (!hit_triinfo.modelinfo) {
             // we hit a "skip" face with no associated model
             // reject hit (???)
             valid[i] = INVALID;
             continue;
         }
 
-        if (hit_modelinfo->shadowworldonly.boolValue()) {
+        if (hit_triinfo.shadowworldonly) {
             // we hit "_shadowworldonly" "1" geometry. Ignore the hit unless we are from world.
             if (!source_modelinfo || !source_modelinfo->isWorld()) {
                 // reject hit
@@ -320,20 +301,20 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             }
         }
 
-        if (hit_modelinfo->shadowself.boolValue()) {
+        if (hit_triinfo.shadowself) {
             // only casts shadows on itself
-            if (source_modelinfo != hit_modelinfo) {
+            if (source_modelinfo != hit_triinfo.modelinfo) {
                 // reject hit
                 valid[i] = INVALID;
                 continue;
             }
         }
 
-        if (hit_modelinfo->switchableshadow.boolValue()) {
+        if (hit_triinfo.switchableshadow) {
             // we hit a dynamic shadow caster. reject the hit, but store the
             // info about what we hit.
 
-            const int style = hit_modelinfo->switchshadstyle.value();
+            const int style = hit_triinfo.switchshadstyle;
 
             AddDynamicOccluderToRay(context, rayIndex, style);
 
@@ -342,42 +323,26 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             continue;
         }
 
+        float alpha = hit_triinfo.alpha;
+
         // test fence textures and glass
-        const mface_t *face = Embree_LookupFace(geomID, primID);
-        float alpha = Face_Alpha(hit_modelinfo, face);
+        if (hit_triinfo.is_fence || hit_triinfo.is_glass) {
+            qvec3f rayDir =
+                qv::normalize(qvec3f{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
+            qvec3f hitpoint = Embree_RayEndpoint(ray, rayDir, N, i);
+            const qvec4b sample = SampleTexture(hit_triinfo.face, hit_triinfo.texinfo, hit_triinfo.texture, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
 
-        // mxd
-        bool isFence, isGlass;
-        if (bsp_static->loadversion->game->id == GAME_QUAKE_II) {
-            const int surf_flags = Face_ContentsOrSurfaceFlags(bsp_static, face);
-            isFence = ((surf_flags & Q2_SURF_TRANSLUCENT) ==
-                       Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
-            isGlass = !isFence && (surf_flags & Q2_SURF_TRANSLUCENT);
-            if (isGlass)
-                alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
-        } else {
-            const char *name = Face_TextureName(bsp_static, face);
-            isFence = (name[0] == '{');
-            isGlass = (alpha < 1.0f);
-        }
-
-        if (isFence || isGlass) {
-            qvec3d hitpoint = Embree_RayEndpoint(ray, N, i);
-            const qvec4b sample = SampleTexture(face, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
-
-            if (isGlass) {
+            if (hit_triinfo.is_glass) {
                 // hit glass...
 
                 // mxd. Adjust alpha by texture alpha?
                 if (sample[3] < 255)
                     alpha = sample[3] / 255.0f;
 
-                qvec3d rayDir =
-                    qv::normalize(qvec3d{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
-                qvec3d potentialHitGeometryNormal = qv::normalize(qvec3d{RTCHitN_Ng_x(potentialHit, N, i),
+                qvec3f potentialHitGeometryNormal = qv::normalize(qvec3f{RTCHitN_Ng_x(potentialHit, N, i),
                     RTCHitN_Ng_y(potentialHit, N, i), RTCHitN_Ng_z(potentialHit, N, i)});
 
-                const vec_t raySurfaceCosAngle = qv::dot(rayDir, potentialHitGeometryNormal);
+                const float raySurfaceCosAngle = qv::dot(rayDir, potentialHitGeometryNormal);
 
                 // only pick up the color of the glass on the _exiting_ side of the glass.
                 // (we currently trace "backwards", from surface point --> light source)
@@ -390,7 +355,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 continue;
             }
 
-            if (isFence) {
+            if (hit_triinfo.is_fence) {
                 if (sample[3] < 255) {
                     // reject hit
                     valid[i] = INVALID;
@@ -520,7 +485,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
             }
 
             const int contents_or_surf_flags = Face_ContentsOrSurfaceFlags(bsp, face); // mxd
-            const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+            const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
             const bool is_q2 = bsp->loadversion->game->id == GAME_QUAKE_II;
 
             // mxd. Skip NODRAW faces, but not SKY ones (Q2's sky01.wal has both flags set)
@@ -622,30 +587,6 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::print("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
-static RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &dir, vec_t dist)
-{
-    RTCRayHit ray;
-    ray.ray.org_x = start[0];
-    ray.ray.org_y = start[1];
-    ray.ray.org_z = start[2];
-    ray.ray.tnear = 0.f;
-
-    ray.ray.dir_x = dir[0]; // can be un-normalized
-    ray.ray.dir_y = dir[1];
-    ray.ray.dir_z = dir[2];
-    ray.ray.time = 0.f; // not using
-
-    ray.ray.tfar = dist;
-    ray.ray.mask = 1; // we're not using, but needs to be set if embree is compiled with masks
-    ray.ray.id = rayindex;
-    ray.ray.flags = 0; // reserved
-
-    ray.hit.geomID = RTC_INVALID_GEOMETRY_ID;
-    ray.hit.primID = RTC_INVALID_GEOMETRY_ID;
-    ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-    return ray;
-}
-
 static RTCRayHit SetupRay_StartStop(const qvec3d &start, const qvec3d &stop)
 {
     qvec3d dir = stop - start;
@@ -655,7 +596,7 @@ static RTCRayHit SetupRay_StartStop(const qvec3d &start, const qvec3d &stop)
 }
 
 // public
-hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
+hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
 {
     RTCRay ray = SetupRay_StartStop(start, stop).ray;
 
@@ -670,7 +611,7 @@ hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const mode
 }
 
 // public
-hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
+hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
 {
     // trace from the sample point towards the sun, and
     // return true if we hit a sky poly.
@@ -687,296 +628,13 @@ hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modeli
     if (face_out) {
         if (hit_sky) {
             const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-            *face_out = si.triToFace.at(ray.hit.primID);
+            *face_out = si.triInfo.at(ray.hit.primID).face;
         } else {
             *face_out = nullptr;
         }
     }
 
     return {hit_sky, ctx2.singleRayShadowStyle};
-}
-
-// public
-hittype_t Embree_DirtTrace(const qvec3d &start, const qvec3d &dirn, vec_t dist, const modelinfo_t *self,
-    vec_t *hitdist_out, qplane3d *hitplane_out, const mface_t **face_out)
-{
-    RTCRayHit ray = SetupRay(0, start, dirn, dist);
-    ray_source_info ctx2(nullptr, self);
-    rtcIntersect1(scene, &ctx2, &ray);
-    ray.hit.Ng_x = -ray.hit.Ng_x;
-    ray.hit.Ng_y = -ray.hit.Ng_y;
-    ray.hit.Ng_z = -ray.hit.Ng_z;
-
-    if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID)
-        return hittype_t::NONE;
-
-    if (hitdist_out) {
-        *hitdist_out = ray.ray.tfar;
-    }
-    if (hitplane_out) {
-        hitplane_out->normal = qv::normalize(qvec3d{ray.hit.Ng_x, ray.hit.Ng_y, ray.hit.Ng_z});
-
-        qvec3d hitpoint = start + (dirn * ray.ray.tfar);
-
-        hitplane_out->dist = qv::dot(hitplane_out->normal, hitpoint);
-    }
-    if (face_out) {
-        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-        *face_out = si.triToFace.at(ray.hit.primID);
-    }
-
-    if (ray.hit.geomID == skygeom.geomID) {
-        return hittype_t::SKY;
-    } else {
-        return hittype_t::SOLID;
-    }
-}
-
-// enum class streamstate_t {
-//    READY, DID_OCCLUDE, DID_INTERSECT
-//};
-
-static void *q_aligned_malloc(size_t align, size_t size)
-{
-#ifdef _MSC_VER
-    return _aligned_malloc(size, align);
-#else
-    void *ptr;
-    if (0 != posix_memalign(&ptr, align, size)) {
-        return nullptr;
-    }
-    return ptr;
-#endif
-}
-
-static void q_aligned_free(void *ptr)
-{
-#ifdef _MSC_VER
-    _aligned_free(ptr);
-#else
-    free(ptr);
-#endif
-}
-
-class raystream_embree_common_t : public virtual raystream_common_t
-{
-public:
-    float *_rays_maxdist;
-    int *_point_indices;
-    qvec3d *_ray_colors;
-    qvec3d *_ray_normalcontribs;
-
-    // This is set to the modelinfo's switchshadstyle if the ray hit
-    // a dynamic shadow caster. (note that for rays that hit dynamic
-    // shadow casters, all of the other hit data is assuming the ray went
-    // straight through).
-    int *_ray_dynamic_styles;
-
-    int _numrays;
-    int _maxrays;
-    //    streamstate_t _state;
-
-public:
-    raystream_embree_common_t(int maxRays)
-        : _rays_maxdist{new float[maxRays]}, _point_indices{new int[maxRays]}, _ray_colors{new qvec3d[maxRays]{}},
-          _ray_normalcontribs{new qvec3d[maxRays]{}}, _ray_dynamic_styles{new int[maxRays]}, _numrays{0}, _maxrays{
-                                                                                                              maxRays}
-    {
-    }
-    //,
-    //_state { streamstate_t::READY } {}
-
-    ~raystream_embree_common_t()
-    {
-        delete[] _rays_maxdist;
-        delete[] _point_indices;
-        delete[] _ray_colors;
-        delete[] _ray_normalcontribs;
-        delete[] _ray_dynamic_styles;
-    }
-
-    size_t numPushedRays() override { return _numrays; }
-
-    int getPushedRayPointIndex(size_t j) override
-    {
-        // Q_assert(_state != streamstate_t::READY);
-        Q_assert(j < _maxrays);
-        return _point_indices[j];
-    }
-
-    qvec3d &getPushedRayColor(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _ray_colors[j];
-    }
-
-    qvec3d &getPushedRayNormalContrib(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _ray_normalcontribs[j];
-    }
-
-    int getPushedRayDynamicStyle(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _ray_dynamic_styles[j];
-    }
-
-    void clearPushedRays() override
-    {
-        _numrays = 0;
-        //_state = streamstate_t::READY;
-    }
-};
-
-class raystream_embree_intersection_t : public raystream_embree_common_t, public raystream_intersection_t
-{
-public:
-    RTCRayHit *_rays;
-
-public:
-    raystream_embree_intersection_t(int maxRays)
-        : raystream_embree_common_t(maxRays), _rays{static_cast<RTCRayHit *>(
-                                                  q_aligned_malloc(16, sizeof(RTCRayHit) * maxRays))}
-    {
-    }
-
-    ~raystream_embree_intersection_t() { q_aligned_free(_rays); }
-
-    void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
-        const qvec3d *normalcontrib = nullptr) override
-    {
-        Q_assert(_numrays < _maxrays);
-        const RTCRayHit rayHit = SetupRay(_numrays, origin, dir, dist);
-        _rays[_numrays] = rayHit;
-        _rays_maxdist[_numrays] = dist;
-        _point_indices[_numrays] = i;
-        if (color) {
-            _ray_colors[_numrays] = *color;
-        }
-        if (normalcontrib) {
-            _ray_normalcontribs[_numrays] = *normalcontrib;
-        }
-        _ray_dynamic_styles[_numrays] = 0;
-        _numrays++;
-    }
-
-    void tracePushedRaysIntersection(const modelinfo_t *self) override
-    {
-        if (!_numrays)
-            return;
-
-        ray_source_info ctx2(this, self);
-        rtcIntersect1M(scene, &ctx2, _rays, _numrays, sizeof(_rays[0]));
-    }
-
-    qvec3d getPushedRayDir(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return {_rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z};
-    }
-
-    float getPushedRayHitDist(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return _rays[j].ray.tfar;
-    }
-
-    hittype_t getPushedRayHitType(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-
-        const unsigned id = _rays[j].hit.geomID;
-        if (id == RTC_INVALID_GEOMETRY_ID) {
-            return hittype_t::NONE;
-        } else if (id == skygeom.geomID) {
-            return hittype_t::SKY;
-        } else {
-            return hittype_t::SOLID;
-        }
-    }
-
-    const mface_t *getPushedRayHitFace(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-
-        const RTCRayHit &ray = _rays[j];
-
-        if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID)
-            return nullptr;
-
-        const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-        const mface_t *face = si.triToFace.at(ray.hit.primID);
-        Q_assert(face != nullptr);
-
-        return face;
-    }
-};
-
-class raystream_embree_occlusion_t : public raystream_embree_common_t, public raystream_occlusion_t
-{
-public:
-    RTCRay *_rays;
-
-public:
-    raystream_embree_occlusion_t(int maxRays)
-        : raystream_embree_common_t(maxRays), _rays{
-                                                  static_cast<RTCRay *>(q_aligned_malloc(16, sizeof(RTCRay) * maxRays))}
-    {
-    }
-
-    ~raystream_embree_occlusion_t() { q_aligned_free(_rays); }
-
-    void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
-        const qvec3d *normalcontrib = nullptr) override
-    {
-        Q_assert(_numrays < _maxrays);
-        _rays[_numrays] = SetupRay(_numrays, origin, dir, dist).ray;
-        _rays_maxdist[_numrays] = dist;
-        _point_indices[_numrays] = i;
-        if (color) {
-            _ray_colors[_numrays] = *color;
-        }
-        if (normalcontrib) {
-            _ray_normalcontribs[_numrays] = *normalcontrib;
-        }
-        _ray_dynamic_styles[_numrays] = 0;
-        _numrays++;
-    }
-
-    void tracePushedRaysOcclusion(const modelinfo_t *self) override
-    {
-        // Q_assert(_state == streamstate_t::READY);
-
-        if (!_numrays)
-            return;
-
-        ray_source_info ctx2(this, self);
-        rtcOccluded1M(scene, &ctx2, _rays, _numrays, sizeof(_rays[0]));
-    }
-
-    bool getPushedRayOccluded(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-        return (_rays[j].tfar < 0.0f);
-    }
-
-    qvec3d getPushedRayDir(size_t j) override
-    {
-        Q_assert(j < _maxrays);
-
-        return {_rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z};
-    }
-};
-
-raystream_occlusion_t *Embree_MakeOcclusionRayStream(int maxrays)
-{
-    return new raystream_embree_occlusion_t{maxrays};
-}
-
-raystream_intersection_t *Embree_MakeIntersectionRayStream(int maxrays)
-{
-    return new raystream_embree_intersection_t{maxrays};
 }
 
 static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor)

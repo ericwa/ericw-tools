@@ -49,25 +49,6 @@ std::mutex csgfaces_lock;
 
 /*
 ==================
-MakeSkipTexinfo
-==================
-*/
-int MakeSkipTexinfo()
-{
-    // FindMiptex, FindTexinfo not threadsafe
-    std::unique_lock<std::mutex> lck{csgfaces_lock};
-
-    mtexinfo_t mt{};
-
-    mt.miptex = FindMiptex("skip", true);
-    mt.flags = {};
-    mt.flags.is_skip = true;
-
-    return FindTexinfo(mt);
-}
-
-/*
-==================
 NewFaceFromFace
 
 Duplicates the non point information of a face, used by SplitFace and
@@ -112,7 +93,7 @@ Frees in. Returns {front, back}
 std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->w.size() + 1));
-    side_t *sides = (side_t *)alloca(sizeof(side_t) * (in->w.size() + 1));
+    planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (in->w.size() + 1));
     std::array<size_t, SIDE_TOTAL> counts{};
     vec_t dot;
     size_t i, j;
@@ -322,7 +303,7 @@ static void SaveFacesToPlaneList(
         if (mirror) {
             face_t *newface = NewFaceFromFace(face);
             newface->w = face->w.flip();
-            newface->planeside = face->planeside ^ 1;
+            newface->planeside = face->planeside == SIDE_BACK ? SIDE_FRONT : SIDE_BACK;
             newface->contents.swap();
             newface->lmshift.swap();
 
@@ -342,7 +323,7 @@ static void SaveFacesToPlaneList(
 
                 // if CFLAGS_BMODEL_MIRROR_INSIDE is set, never change to skip
                 if (!(face->contents[1].extended & CFLAGS_BMODEL_MIRROR_INSIDE)) {
-                    newface->texinfo = MakeSkipTexinfo();
+                    newface->texinfo = map.skip_texinfo;
                 }
             }
 
@@ -402,7 +383,7 @@ static void SaveInsideFaces(const std::list<face_t *> &faces, const brush_t &cli
             int32_t old_native = face->contents[0].native;
             face->contents[0] = options.target_game->create_empty_contents(CFLAGS_STRUCTURAL_COVERED_BY_DETAIL);
             face->contents[0].covered_native = old_native;
-            face->texinfo = MakeSkipTexinfo();
+            face->texinfo = map.skip_texinfo;
         }
 
         // N.B.: We don't need a hack like above for when clipbrush->contents == CONTENTS_DETAIL_ILLUSIONARY.

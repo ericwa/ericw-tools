@@ -25,6 +25,7 @@
 #include <variant>
 #include <vector>
 #include <unordered_map>
+#include <any>
 
 #include <common/cmdlib.hh>
 #include <common/log.hh>
@@ -38,86 +39,6 @@ struct lump_t
     int32_t filelen;
 
     auto stream_data() { return std::tie(fileofs, filelen); }
-};
-
-constexpr int32_t BSPVERSION = 29;
-constexpr int32_t BSP2RMQVERSION = (('B' << 24) | ('S' << 16) | ('P' << 8) | '2');
-constexpr int32_t BSP2VERSION = ('B' | ('S' << 8) | ('P' << 16) | ('2' << 24));
-constexpr int32_t BSPHLVERSION = 30; // 24bit lighting, and private palettes in the textures lump.
-
-enum q1_lump_t
-{
-    LUMP_ENTITIES,
-    LUMP_PLANES,
-    LUMP_TEXTURES,
-    LUMP_VERTEXES,
-    LUMP_VISIBILITY,
-    LUMP_NODES,
-    LUMP_TEXINFO,
-    LUMP_FACES,
-    LUMP_LIGHTING,
-    LUMP_CLIPNODES,
-    LUMP_LEAFS,
-    LUMP_MARKSURFACES,
-    LUMP_EDGES,
-    LUMP_SURFEDGES,
-    LUMP_MODELS,
-
-    BSP_LUMPS
-};
-
-constexpr int32_t Q2_BSPVERSION = 38;
-constexpr int32_t Q2_BSPIDENT = (('P' << 24) + ('S' << 16) + ('B' << 8) + 'I');
-constexpr int32_t Q2_QBISMIDENT = (('P' << 24) + ('S' << 16) + ('B' << 8) + 'Q');
-
-enum q2_lump_t
-{
-    Q2_LUMP_ENTITIES,
-    Q2_LUMP_PLANES,
-    Q2_LUMP_VERTEXES,
-    Q2_LUMP_VISIBILITY,
-    Q2_LUMP_NODES,
-    Q2_LUMP_TEXINFO,
-    Q2_LUMP_FACES,
-    Q2_LUMP_LIGHTING,
-    Q2_LUMP_LEAFS,
-    Q2_LUMP_LEAFFACES,
-    Q2_LUMP_LEAFBRUSHES,
-    Q2_LUMP_EDGES,
-    Q2_LUMP_SURFEDGES,
-    Q2_LUMP_MODELS,
-    Q2_LUMP_BRUSHES,
-    Q2_LUMP_BRUSHSIDES,
-    Q2_LUMP_POP,
-    Q2_LUMP_AREAS,
-    Q2_LUMP_AREAPORTALS,
-
-    Q2_HEADER_LUMPS
-};
-
-struct bspx_header_t
-{
-    std::array<char, 4> id = {'B', 'S', 'P', 'X'}; //'BSPX'
-    uint32_t numlumps;
-
-    bspx_header_t(uint32_t numlumps) : numlumps(numlumps) { }
-
-    auto stream_data() { return std::tie(id, numlumps); }
-};
-
-struct bspx_lump_t
-{
-    std::array<char, 24> lumpname{};
-    uint32_t fileofs;
-    uint32_t filelen;
-
-    auto stream_data() { return std::tie(lumpname, fileofs, filelen); }
-};
-
-struct lumpspec_t
-{
-    const char *name;
-    size_t size;
 };
 
 // helper functions to quickly numerically cast mins/maxs
@@ -144,22 +65,6 @@ inline qvec<T, 3> aabb_maxs_cast(const qvec<F, 3> &f, const char *overflow_messa
             numeric_cast<T>(f[2], overflow_message)};
 }
 
-constexpr size_t MAX_MAP_HULLS_H2 = 8;
-
-struct dmodelh2_t
-{
-    qvec3f mins;
-    qvec3f maxs;
-    qvec3f origin;
-    std::array<int32_t, MAX_MAP_HULLS_H2> headnode; /* hexen2 only uses 6 */
-    int32_t visleafs; /* not including the solid leaf 0 */
-    int32_t firstface;
-    int32_t numfaces;
-
-    // serialize for streams
-    auto stream_data() { return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces); }
-};
-
 // shortcut template to trim (& convert) std::arrays
 // between two lengths
 template<typename ADest, typename ASrc>
@@ -177,302 +82,6 @@ constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src"
 
     return dest;
 }
-
-constexpr size_t MAX_MAP_HULLS_Q1 = 4;
-
-struct dmodelq1_t
-{
-    qvec3f mins;
-    qvec3f maxs;
-    qvec3f origin;
-    std::array<int32_t, MAX_MAP_HULLS_Q1> headnode; /* 4 for backward compat, only 3 hulls exist */
-    int32_t visleafs; /* not including the solid leaf 0 */
-    int32_t firstface;
-    int32_t numfaces;
-
-    dmodelq1_t() = default;
-
-    // convert from mbsp_t
-    dmodelq1_t(const dmodelh2_t &model)
-        : mins(model.mins), maxs(model.maxs), origin(model.origin),
-          headnode(array_cast<decltype(headnode)>(model.headnode, "dmodelh2_t::headnode")), visleafs(model.visleafs),
-          firstface(model.firstface), numfaces(model.numfaces)
-    {
-    }
-
-    // convert to mbsp_t
-    operator dmodelh2_t() const
-    {
-        return {mins, maxs, origin, array_cast<decltype(dmodelh2_t::headnode)>(headnode, "dmodelh2_t::headnode"),
-            visleafs, firstface, numfaces};
-    }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces); }
-};
-
-struct q2_dmodel_t
-{
-    qvec3f mins;
-    qvec3f maxs;
-    qvec3f origin; // for sounds or lights
-    int32_t headnode;
-    int32_t firstface;
-    int32_t numfaces; // submodels just draw faces
-                      // without walking the bsp tree
-
-    q2_dmodel_t() = default;
-
-    // convert from mbsp_t
-    q2_dmodel_t(const dmodelh2_t &model)
-        : mins(model.mins), maxs(model.maxs), origin(model.origin), headnode(model.headnode[0]),
-          firstface(model.firstface), numfaces(model.numfaces)
-    {
-    }
-
-    // convert to mbsp_t
-    operator dmodelh2_t() const
-    {
-        return {mins, maxs, origin, {headnode},
-            0, // visleafs
-            firstface, numfaces};
-    }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(mins, maxs, origin, headnode, firstface, numfaces); }
-};
-
-// structured data from BSP. this is the header of the miptex used
-// in Quake-like formats.
-constexpr size_t MIPLEVELS = 4;
-struct dmiptex_t
-{
-    std::array<char, 16> name;
-    uint32_t width, height;
-    std::array<int32_t, MIPLEVELS> offsets; /* four mip maps stored */
-
-    auto stream_data() { return std::tie(name, width, height, offsets); }
-};
-
-// semi-structured miptex data; we don't directly care about
-// the contents of the miptex beyond the header. we store
-// some of the data from the miptex (name, width, height) but
-// the full, raw miptex is also stored in `data`.
-struct miptex_t
-{
-    std::string name;
-    uint32_t width, height;
-    std::vector<uint8_t> data;
-
-    inline size_t stream_size() const { return data.size(); }
-
-    inline void stream_read(std::istream &stream, size_t len)
-    {
-        data.resize(len);
-        stream.read(reinterpret_cast<char *>(data.data()), len);
-
-        memstream miptex_stream(data.data(), len, std::ios_base::in | std::ios_base::binary);
-
-        dmiptex_t dtex;
-        miptex_stream >= dtex;
-
-        name = dtex.name.data();
-        width = dtex.width;
-        height = dtex.height;
-    }
-
-    inline void stream_write(std::ostream &stream) const
-    {
-        stream.write(reinterpret_cast<const char *>(data.data()), data.size());
-    }
-};
-
-// structured miptex container lump
-struct dmiptexlump_t
-{
-    std::vector<miptex_t> textures;
-
-    void stream_read(std::istream &stream, const lump_t &lump)
-    {
-        int32_t nummiptex;
-        stream >= nummiptex;
-
-        // load in all of the offsets, we need them
-        // to calculate individual data sizes
-        std::vector<int32_t> offsets(nummiptex);
-
-        for (size_t i = 0; i < nummiptex; i++) {
-            stream >= offsets[i];
-        }
-
-        for (size_t i = 0; i < nummiptex; i++) {
-            miptex_t &tex = textures.emplace_back();
-
-            int32_t offset = offsets[i];
-
-            // dummy texture?
-            if (offset < 0) {
-                continue;
-            }
-
-            // move to miptex position (technically required
-            // because there might be dummy data between the offsets
-            // and the mip textures themselves...)
-            stream.seekg(lump.fileofs + offset);
-
-            // calculate the length of the data used for the individual miptex.
-            int32_t next_offset;
-
-            if (i == nummiptex - 1) {
-                next_offset = lump.filelen;
-            } else {
-                next_offset = offsets[i + 1];
-            }
-
-            if (next_offset > offset) {
-                tex.stream_read(stream, next_offset - offset);
-            }
-        }
-    }
-
-    void stream_write(std::ostream &stream) const
-    {
-        auto p = (size_t)stream.tellp();
-
-        stream <= static_cast<int32_t>(textures.size());
-
-        const size_t header_size = sizeof(int32_t) + (sizeof(int32_t) * textures.size());
-
-        size_t miptex_offset = 0;
-
-        // write out the miptex offsets
-        for (auto &texture : textures) {
-            if (!texture.name[0]) {
-                // dummy texture
-                stream <= static_cast<int32_t>(-1);
-                continue;
-            }
-
-            stream <= static_cast<int32_t>(header_size + miptex_offset);
-
-            miptex_offset += texture.stream_size();
-
-            // Half Life requires the padding, but it's also a good idea
-            // in general to keep them padded to 4s
-            if ((p + miptex_offset) % 4) {
-                miptex_offset += 4 - ((p + miptex_offset) % 4);
-            }
-        }
-
-        for (auto &texture : textures) {
-            if (texture.name[0]) {
-                // fix up the padding to match the above conditions
-                if (stream.tellp() % 4) {
-                    constexpr const char pad[4]{};
-                    stream.write(pad, 4 - (stream.tellp() % 4));
-                }
-                texture.stream_write(stream);
-            }
-        }
-    }
-};
-
-// 0-2 are axial planes
-// 3-5 are non-axial planes snapped to the nearest
-enum class plane_type_t
-{
-    PLANE_INVALID = -1,
-    PLANE_X = 0,
-    PLANE_Y = 1,
-    PLANE_Z = 2,
-    PLANE_ANYX = 3,
-    PLANE_ANYY = 4,
-    PLANE_ANYZ = 5,
-};
-
-struct dplane_t : qplane3f
-{
-    int32_t type;
-
-    [[nodiscard]] constexpr dplane_t operator-() const { return {qplane3f::operator-(), type}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(normal, dist, type); }
-
-    // optimized case
-    template<typename T>
-    inline T distance_to_fast(const qvec<T, 3> &point) const
-    {
-        switch (static_cast<plane_type_t>(type)) {
-            case plane_type_t::PLANE_X: return point[0] - dist;
-            case plane_type_t::PLANE_Y: return point[1] - dist;
-            case plane_type_t::PLANE_Z: return point[2] - dist;
-            default: {
-                return qplane3f::distance_to(point);
-            }
-        }
-    }
-};
-
-// Q1 contents
-
-enum q1_contents_t : int32_t
-{
-    CONTENTS_EMPTY = -1,
-    CONTENTS_SOLID = -2,
-    CONTENTS_WATER = -3,
-    CONTENTS_SLIME = -4,
-    CONTENTS_LAVA = -5,
-    CONTENTS_SKY = -6,
-
-    CONTENTS_MIN = CONTENTS_SKY
-};
-
-// Q2 contents (from qfiles.h)
-
-// contents flags are seperate bits
-// a given brush can contribute multiple content bits
-// multiple brushes can be in a single leaf
-
-// lower bits are stronger, and will eat weaker brushes completely
-enum q2_contents_t : int32_t
-{
-    Q2_CONTENTS_SOLID = nth_bit(0), // an eye is never valid in a solid
-    Q2_CONTENTS_WINDOW = nth_bit(1), // translucent, but not watery
-    Q2_CONTENTS_AUX = nth_bit(2),
-    Q2_CONTENTS_LAVA = nth_bit(3),
-    Q2_CONTENTS_SLIME = nth_bit(4),
-    Q2_CONTENTS_WATER = nth_bit(5),
-    Q2_CONTENTS_MIST = nth_bit(6),
-    Q2_LAST_VISIBLE_CONTENTS = Q2_CONTENTS_MIST,
-    Q2_ALL_VISIBLE_CONTENTS = Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_AUX | Q2_CONTENTS_LAVA |
-                              Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER | Q2_CONTENTS_MIST,
-
-    Q2_CONTENTS_LIQUID = (Q2_CONTENTS_LAVA | Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER), // mxd
-
-    // remaining contents are non-visible, and don't eat brushes
-
-    Q2_CONTENTS_AREAPORTAL = nth_bit(15),
-
-    Q2_CONTENTS_PLAYERCLIP = nth_bit(16),
-    Q2_CONTENTS_MONSTERCLIP = nth_bit(17),
-
-    // currents can be added to any other contents, and may be mixed
-    Q2_CONTENTS_CURRENT_0 = nth_bit(18),
-    Q2_CONTENTS_CURRENT_90 = nth_bit(19),
-    Q2_CONTENTS_CURRENT_180 = nth_bit(20),
-    Q2_CONTENTS_CURRENT_270 = nth_bit(21),
-    Q2_CONTENTS_CURRENT_UP = nth_bit(22),
-    Q2_CONTENTS_CURRENT_DOWN = nth_bit(23),
-
-    Q2_CONTENTS_ORIGIN = nth_bit(24), // removed before bsping an entity
-
-    Q2_CONTENTS_MONSTER = nth_bit(25), // should never be on a brush, only in game
-    Q2_CONTENTS_DEADMONSTER = nth_bit(26),
-    Q2_CONTENTS_DETAIL = nth_bit(27), // brushes to be added after vis leafs
-    Q2_CONTENTS_TRANSLUCENT = nth_bit(28), // auto set if any surface has trans
-    Q2_CONTENTS_LADDER = nth_bit(29)
-};
 
 // Special contents flags for the compiler only
 enum extended_cflags_t : uint16_t
@@ -551,202 +160,6 @@ struct contentflags_t
     std::string to_string(const gamedef_t *game) const;
 };
 
-struct bsp2_dnode_t
-{
-    int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
-    qvec3f mins; /* for sphere culling */
-    qvec3f maxs;
-    uint32_t firstface;
-    uint32_t numfaces; /* counting both sides */
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
-};
-
-struct bsp29_dnode_t
-{
-    int32_t planenum;
-    std::array<int16_t, 2>
-        children; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
-    qvec3s mins; /* for sphere culling */
-    qvec3s maxs;
-    uint16_t firstface;
-    uint16_t numfaces; /* counting both sides */
-
-    bsp29_dnode_t() = default;
-
-    // convert from mbsp_t
-    bsp29_dnode_t(const bsp2_dnode_t &model)
-        : planenum(model.planenum), children(array_cast<decltype(children)>(model.children, "dnode_t::children")),
-          mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
-          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
-          firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
-          numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
-    {
-    }
-
-    // convert to mbsp_t
-    operator bsp2_dnode_t() const
-    {
-        return {planenum, array_cast<decltype(bsp2_dnode_t::children)>(children, "dnode_t::children"),
-            aabb_mins_cast<float>(mins, "dnode_t::mins"), aabb_mins_cast<float>(maxs, "dnode_t::maxs"), firstface,
-            numfaces};
-    }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
-};
-
-struct bsp2rmq_dnode_t
-{
-    int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
-    qvec3s mins; /* for sphere culling */
-    qvec3s maxs;
-    uint32_t firstface;
-    uint32_t numfaces; /* counting both sides */
-
-    bsp2rmq_dnode_t() = default;
-
-    // convert from mbsp_t
-    bsp2rmq_dnode_t(const bsp2_dnode_t &model)
-        : planenum(model.planenum), children(model.children),
-          mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
-          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")), firstface(model.firstface),
-          numfaces(model.numfaces)
-    {
-    }
-
-    // convert to mbsp_t
-    operator bsp2_dnode_t() const
-    {
-        return {planenum, children, aabb_mins_cast<float>(mins, "dnode_t::mins"),
-            aabb_mins_cast<float>(maxs, "dnode_t::maxs"), firstface, numfaces};
-    }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
-};
-
-struct q2_dnode_t
-{
-    int32_t planenum;
-    std::array<int32_t, 2> children; // negative numbers are -(leafs+1), not nodes
-    qvec3s mins; // for frustom culling
-    qvec3s maxs;
-    uint16_t firstface;
-    uint16_t numfaces; // counting both sides
-
-    q2_dnode_t() = default;
-
-    // convert from mbsp_t
-    q2_dnode_t(const bsp2_dnode_t &model)
-        : planenum(model.planenum), children(model.children),
-          mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
-          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
-          firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
-          numfaces(numeric_cast<uint16_t>(model.numfaces, "dnode_t::numfaces"))
-    {
-    }
-
-    // convert to mbsp_t
-    operator bsp2_dnode_t() const
-    {
-        return {planenum, children, aabb_mins_cast<float>(mins, "dnode_t::mins"),
-            aabb_mins_cast<float>(maxs, "dnode_t::maxs"), firstface, numfaces};
-    }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
-};
-
-using q2_dnode_qbism_t = bsp2_dnode_t;
-
-/*
- * Note that children are interpreted as unsigned values now, so that we can
- * handle > 32k clipnodes. Values > 0xFFF0 can be assumed to be CONTENTS
- * values and can be read as the signed value to be compatible with the above
- * (i.e. simply subtract 65536).
- */
-struct bsp2_dclipnode_t
-{
-    int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are contents */
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, children); }
-};
-
-/*
-* Clipnodes need to be stored as a 16-bit offset. Originally, this was a
-* signed value and only the positive values up to 32767 were available. Since
-* the negative range was unused apart from a few values reserved for flags,
-* this has been extended to allow up to 65520 (0xfff0) clipnodes (with a
-* suitably modified engine).
-*/
-struct bsp29_dclipnode_t
-{
-    int32_t planenum;
-    std::array<int16_t, 2> children; /* negative numbers are contents */
-
-    bsp29_dclipnode_t() = default;
-
-    // convert from mbsp_t
-    bsp29_dclipnode_t(const bsp2_dclipnode_t &model)
-        : planenum(model.planenum), children({downcast(model.children[0]), downcast(model.children[1])})
-    {
-    }
-
-    // convert to mbsp_t
-    operator bsp2_dclipnode_t() const { return {planenum, {upcast(children[0]), upcast(children[1])}}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, children); }
-
-    /* Slightly tricky since we support > 32k clipnodes */
-private:
-    static constexpr int16_t downcast(const int32_t &v)
-    {
-        if (v < -15 || v > 0xFFF0)
-            throw std::overflow_error("dclipmode_t::children");
-
-        return static_cast<int16_t>(v < 0 ? v + 0x10000 : v);
-    }
-
-    static constexpr int32_t upcast(const int16_t &v)
-    {
-        int32_t child = (uint16_t)v;
-        return child > 0xfff0 ? child - 0x10000 : child;
-    }
-};
-
-// Q1 Texture flags.
-enum q1_surf_flags_t : int32_t
-{
-    TEX_SPECIAL = nth_bit(0) /* sky or slime, no lightmap or 256 subdivision */
-};
-
-// Q2 Texture flags.
-enum q2_surf_flags_t : int32_t
-{
-    Q2_SURF_LIGHT = nth_bit(0), // value will hold the light strength
-
-    Q2_SURF_SLICK = nth_bit(1), // effects game physics
-
-    Q2_SURF_SKY = nth_bit(2), // don't draw, but add to skybox
-    Q2_SURF_WARP = nth_bit(3), // turbulent water warp
-    Q2_SURF_TRANS33 = nth_bit(4),
-    Q2_SURF_TRANS66 = nth_bit(5),
-    Q2_SURF_FLOWING = nth_bit(6), // scroll towards angle
-    Q2_SURF_NODRAW = nth_bit(7), // don't bother referencing the texture
-
-    Q2_SURF_HINT = nth_bit(8), // make a primary bsp splitter
-    Q2_SURF_SKIP = nth_bit(9), // ONLY FOR HINT! "nodraw" = Q1 "skip"
-
-    Q2_SURF_TRANSLUCENT = (Q2_SURF_TRANS33 | Q2_SURF_TRANS66), // mxd
-};
-
 struct surfflags_t
 {
     // native flags value; what's written to the BSP basically
@@ -813,11 +226,121 @@ public:
     bool is_valid(const gamedef_t *game) const;
 };
 
-// header before tightly packed surfflags_t[num_texinfo]
-struct extended_flags_header_t
+// native game target ID
+enum gameid_t
 {
-    uint32_t num_texinfo;
-    uint32_t surfflags_size; // sizeof(surfflags_t)
+    GAME_UNKNOWN,
+    GAME_QUAKE,
+    GAME_HEXEN_II,
+    GAME_HALF_LIFE,
+    GAME_QUAKE_II,
+
+    GAME_TOTAL
+};
+
+// Game definition, which contains data specific to
+// the game a BSP version is being compiled for.
+struct gamedef_t
+{
+    // ID, used for quick comparisons
+    gameid_t id = GAME_UNKNOWN;
+
+    // whether the game uses an RGB lightmap or not
+    bool has_rgb_lightmap = false;
+
+    // whether the game supports content flags on brush models
+    bool allow_contented_bmodels = false;
+
+    // base dir for searching for paths, in case we are in a mod dir
+    // note: we need this to be able to be overridden via options
+    const std::string default_base_dir = {};
+
+    // max values of entity key & value pairs, only used for
+    // printing warnings.
+    size_t max_entity_key = 32;
+    size_t max_entity_value = 128;
+
+    gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir) { }
+
+    virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
+    virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
+    virtual bool surfflags_are_valid(const surfflags_t &flags) const = 0;
+    virtual int32_t surfflags_from_string(const std::string_view &str) const = 0;
+    // FIXME: fix so that we don't have to pass a name here
+    virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
+    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
+    virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
+    virtual contentflags_t create_extended_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_empty_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_solid_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_sky_contents(const uint16_t &cflags = 0) const = 0;
+    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const = 0;
+    virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
+    virtual int32_t contents_from_string(const std::string_view &str) const = 0;
+    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
+    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
+    virtual contentflags_t face_get_contents(
+        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
+    virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
+    virtual const std::vector<qvec3b> &get_default_palette() const = 0;
+};
+
+// Lump specification; stores the name and size
+// of an individual entry in the lump. Count is
+// calculated as (lump_size / size)
+struct lumpspec_t
+{
+    const char *name;
+    size_t size;
+};
+
+// BSP version struct & instances
+struct bspversion_t
+{
+    /* identifier value, the first int32_t in the header */
+    int32_t ident;
+    /* version value, if supported */
+    std::optional<int32_t> version;
+    /* short name used for command line args, etc */
+    const char *short_name;
+    /* full display name for printing */
+    const char *name;
+    /* lump specification */
+    const std::initializer_list<lumpspec_t> lumps;
+    /* game ptr */
+    const gamedef_t *game;
+    /* if we surpass the limits of this format, upgrade to this one */
+    const bspversion_t *extended_limits;
+};
+
+// FMT support
+template<>
+struct fmt::formatter<bspversion_t>
+{
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
+
+    template<typename FormatContext>
+    auto format(const bspversion_t &v, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        if (v.name) {
+            format_to(ctx.out(), "{} ", v.name);
+        }
+
+        // Q2-esque BSPs are printed as, ex, IBSP:38
+        if (v.version.has_value()) {
+            char ident[5] = { (char) (v.ident & 0xFF), (char) ((v.ident >> 8) & 0xFF), (char) ((v.ident >> 16) & 0xFF), (char) ((v.ident >> 24) & 0xFF), '\0' };
+            return format_to(ctx.out(), "{}:{}", ident, v.version.value());
+        }
+
+        // Q1-esque BSPs are printed as, ex, bsp29
+        return format_to(ctx.out(), "{}", v.short_name);
+    }
 };
 
 template<typename T>
@@ -866,767 +389,12 @@ struct fmt::formatter<texvec<T>> : formatter<qmat<T, 2, 4>>
 
 using texvecf = texvec<float>;
 
-struct gtexinfo_t
-{
-    texvecf vecs; // [s/t][xyz offset]
-    surfflags_t flags; // native miptex flags + extended flags
-
-    // q1 only
-    int32_t miptex;
-
-    // q2 only
-    int32_t value; // light emission, etc
-    std::array<char, 32> texture; // texture name (textures/*.wal)
-    int32_t nexttexinfo = -1; // for animations, -1 = end of chain
-};
-
-struct texinfo_t
-{
-    texvecf vecs; /* [s/t][xyz offset] */
-    int32_t miptex;
-    int32_t flags;
-
-    texinfo_t() = default;
-
-    // convert from mbsp_t
-    texinfo_t(const gtexinfo_t &model) : vecs(model.vecs), miptex(model.miptex), flags(model.flags.native) { }
-
-    // convert to mbsp_t
-    operator gtexinfo_t() const { return {vecs, {flags}, miptex}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(vecs, miptex, flags); }
-};
-
-struct q2_texinfo_t
-{
-    texvecf vecs; // [s/t][xyz offset]
-    int32_t flags; // miptex flags + overrides
-    int32_t value; // light emission, etc
-    std::array<char, 32> texture; // texture name (textures/*.wal)
-    int32_t nexttexinfo; // for animations, -1 = end of chain
-
-    q2_texinfo_t() = default;
-
-    // convert from mbsp_t
-    q2_texinfo_t(const gtexinfo_t &model)
-        : vecs(model.vecs), flags(model.flags.native), value(model.value), texture(model.texture),
-          nexttexinfo(model.nexttexinfo)
-    {
-    }
-
-    // convert to mbsp_t
-    operator gtexinfo_t() const { return {vecs, {flags}, -1, value, texture, nexttexinfo}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(vecs, flags, value, texture, nexttexinfo); }
-};
-
-/*
- * Note that edge 0 is never used, because negative edge nums are used for
- * counterclockwise use of the edge in a face
- */
-using bsp29_dedge_t = std::array<uint16_t, 2>; /* vertex numbers */
-using bsp2_dedge_t = std::array<uint32_t, 2>; /* vertex numbers */
-
-constexpr size_t MAXLIGHTMAPS = 4;
-
-struct mface_t
-{
-    int64_t planenum;
-    int32_t side; // if true, the face is on the back side of the plane
-    int32_t firstedge; /* we must support > 64k edges */
-    int32_t numedges;
-    int32_t texinfo;
-
-    /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
-    int32_t lightofs; /* start of [numstyles*surfsize] samples */
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
-};
-
-struct bsp29_dface_t
-{
-    int16_t planenum;
-    int16_t side;
-    int32_t firstedge; /* we must support > 64k edges */
-    int16_t numedges;
-    int16_t texinfo;
-
-    /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
-    int32_t lightofs; /* start of [numstyles*surfsize] samples */
-
-    bsp29_dface_t() = default;
-
-    // convert from mbsp_t
-    bsp29_dface_t(const mface_t &model)
-        : planenum(numeric_cast<int16_t>(model.planenum, "dface_t::planenum")),
-          side(numeric_cast<int16_t>(model.side, "dface_t::side")), firstedge(model.firstedge),
-          numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
-          texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")), styles(model.styles),
-          lightofs(model.lightofs)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
-};
-
-struct bsp2_dface_t
-{
-    int32_t planenum;
-    int32_t side; // if true, the face is on the back side of the plane
-    int32_t firstedge; /* we must support > 64k edges */
-    int32_t numedges;
-    int32_t texinfo;
-
-    /* lighting info */
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
-    int32_t lightofs; /* start of [numstyles*surfsize] samples */
-
-    bsp2_dface_t() = default;
-
-    // convert from mbsp_t
-    bsp2_dface_t(const mface_t &model)
-        : planenum(numeric_cast<int32_t>(model.planenum, "dface_t::planenum")), side(model.side),
-          firstedge(model.firstedge), numedges(model.numedges), texinfo(model.texinfo), styles(model.styles),
-          lightofs(model.lightofs)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
-};
-
-struct q2_dface_t
-{
-    uint16_t planenum; // NOTE: only difference from bsp29_dface_t
-    int16_t side;
-    int32_t firstedge; // we must support > 64k edges
-    int16_t numedges;
-    int16_t texinfo;
-
-    // lighting info
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
-    int32_t lightofs; // start of [numstyles*surfsize] samples
-
-    q2_dface_t() = default;
-
-    // convert from mbsp_t
-    q2_dface_t(const mface_t &model)
-        : planenum(numeric_cast<uint16_t>(model.planenum, "dface_t::planenum")),
-          side(numeric_cast<int16_t>(model.side, "dface_t::side")), firstedge(model.firstedge),
-          numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
-          texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")), styles(model.styles),
-          lightofs(model.lightofs)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
-};
-
-struct q2_dface_qbism_t
-{
-    uint32_t planenum; // NOTE: only difference from bsp2_dface_t
-    int32_t side;
-    int32_t firstedge; // we must support > 64k edges
-    int32_t numedges;
-    int32_t texinfo;
-
-    // lighting info
-    std::array<uint8_t, MAXLIGHTMAPS> styles;
-    int32_t lightofs; // start of [numstyles*surfsize] samples
-
-    q2_dface_qbism_t() = default;
-
-    // convert from mbsp_t
-    q2_dface_qbism_t(const mface_t &model)
-        : planenum(numeric_cast<uint32_t>(model.planenum, "dface_t::planenum")), side(model.side),
-          firstedge(model.firstedge), numedges(model.numedges), texinfo(model.texinfo), styles(model.styles),
-          lightofs(model.lightofs)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
-};
-
-/*
- * leaf 0 is the generic CONTENTS_SOLID leaf, used for all solid areas (except Q2)
- * all other leafs need visibility info
- */
-/* Ambient Sounds */
-enum ambient_type_t : uint8_t
-{
-    AMBIENT_WATER,
-    AMBIENT_SKY,
-    AMBIENT_SLIME,
-    AMBIENT_LAVA,
-
-    NUM_AMBIENTS = 4
-};
-
-struct mleaf_t
-{
-    // bsp2_dleaf_t
-    int32_t contents;
-    int32_t visofs; /* -1 = no visibility info */
-    qvec3f mins; /* for frustum culling     */
-    qvec3f maxs;
-    uint32_t firstmarksurface;
-    uint32_t nummarksurfaces;
-    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
-
-    // q2 extras
-    int32_t cluster;
-    int32_t area;
-    uint32_t firstleafbrush;
-    uint32_t numleafbrushes;
-};
-
-struct bsp29_dleaf_t
-{
-    int32_t contents;
-    int32_t visofs; /* -1 = no visibility info */
-    qvec3s mins; /* for frustum culling     */
-    qvec3s maxs;
-    uint16_t firstmarksurface;
-    uint16_t nummarksurfaces;
-    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
-
-    bsp29_dleaf_t() = default;
-
-    // convert from mbsp_t
-    bsp29_dleaf_t(const mleaf_t &model)
-        : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
-          firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
-          nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
-          ambient_level(model.ambient_level)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mleaf_t() const
-    {
-        return {contents, visofs, aabb_mins_cast<float>(mins, "dleaf_t::mins"),
-            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"), firstmarksurface, nummarksurfaces, ambient_level};
-    }
-
-    // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
-    }
-};
-
-struct bsp2rmq_dleaf_t
-{
-    int32_t contents;
-    int32_t visofs; /* -1 = no visibility info */
-    qvec3s mins; /* for frustum culling     */
-    qvec3s maxs;
-    uint32_t firstmarksurface;
-    uint32_t nummarksurfaces;
-    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
-
-    bsp2rmq_dleaf_t() = default;
-
-    // convert from mbsp_t
-    bsp2rmq_dleaf_t(const mleaf_t &model)
-        : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-          maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")), firstmarksurface(model.firstmarksurface),
-          nummarksurfaces(model.nummarksurfaces), ambient_level(model.ambient_level)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mleaf_t() const
-    {
-        return {contents, visofs, aabb_mins_cast<float>(mins, "dleaf_t::mins"),
-            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"), firstmarksurface, nummarksurfaces, ambient_level};
-    }
-
-    // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
-    }
-};
-
-struct bsp2_dleaf_t
-{
-    int32_t contents;
-    int32_t visofs; /* -1 = no visibility info */
-    qvec3f mins; /* for frustum culling     */
-    qvec3f maxs;
-    uint32_t firstmarksurface;
-    uint32_t nummarksurfaces;
-    std::array<uint8_t, NUM_AMBIENTS> ambient_level;
-
-    bsp2_dleaf_t() = default;
-
-    // convert from mbsp_t
-    bsp2_dleaf_t(const mleaf_t &model)
-        : contents(model.contents), visofs(model.visofs), mins(model.mins), maxs(model.maxs),
-          firstmarksurface(model.firstmarksurface), nummarksurfaces(model.nummarksurfaces),
-          ambient_level(model.ambient_level)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mleaf_t() const
-    {
-        return {contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level};
-    }
-
-    // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
-    }
-};
-
-struct q2_dleaf_t
-{
-    int32_t contents; // OR of all brushes (not needed?)
-
-    int16_t cluster;
-    int16_t area;
-
-    qvec3s mins; // for frustum culling
-    qvec3s maxs;
-
-    uint16_t firstleafface;
-    uint16_t numleaffaces;
-
-    uint16_t firstleafbrush;
-    uint16_t numleafbrushes;
-
-    q2_dleaf_t() = default;
-
-    // convert from mbsp_t
-    q2_dleaf_t(const mleaf_t &model)
-        : contents(model.contents), cluster(numeric_cast<int16_t>(model.cluster, "dleaf_t::cluster")),
-          area(numeric_cast<int16_t>(model.area, "dleaf_t::area")),
-          mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-          maxs(aabb_mins_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
-          firstleafface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
-          numleaffaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
-          firstleafbrush(numeric_cast<uint16_t>(model.firstleafbrush, "dleaf_t::firstleafbrush")),
-          numleafbrushes(numeric_cast<uint16_t>(model.numleafbrushes, "dleaf_t::numleafbrushes"))
-    {
-    }
-
-    // convert to mbsp_t
-    operator mleaf_t() const
-    {
-        return {contents, -1, aabb_mins_cast<float>(mins, "dleaf_t::mins"),
-            aabb_mins_cast<float>(maxs, "dleaf_t::maxs"), firstleafface, numleaffaces, {}, cluster, area,
-            firstleafbrush, numleafbrushes};
-    }
-
-    // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(
-            contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
-    }
-};
-
-struct q2_dleaf_qbism_t
-{
-    int32_t contents; // OR of all brushes (not needed?)
-
-    int32_t cluster;
-    int32_t area;
-
-    qvec3f mins; // for frustum culling
-    qvec3f maxs;
-
-    uint32_t firstleafface;
-    uint32_t numleaffaces;
-
-    uint32_t firstleafbrush;
-    uint32_t numleafbrushes;
-
-    q2_dleaf_qbism_t() = default;
-
-    // convert from mbsp_t
-    q2_dleaf_qbism_t(const mleaf_t &model)
-        : contents(model.contents), cluster(model.cluster), area(model.area), mins(model.mins), maxs(model.maxs),
-          firstleafface(model.firstmarksurface), numleaffaces(model.nummarksurfaces),
-          firstleafbrush(model.firstleafbrush), numleafbrushes(model.numleafbrushes)
-    {
-    }
-
-    // convert to mbsp_t
-    operator mleaf_t() const
-    {
-        return {
-            contents, -1, mins, maxs, firstleafface, numleaffaces, {}, cluster, area, firstleafbrush, numleafbrushes};
-    }
-
-    // serialize for streams
-    auto stream_data()
-    {
-        return std::tie(
-            contents, cluster, area, mins, maxs, firstleafface, numleaffaces, firstleafbrush, numleafbrushes);
-    }
-};
-
-struct q2_dbrushside_qbism_t
-{
-    uint32_t planenum; // facing out of the leaf
-    int32_t texinfo;
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, texinfo); }
-};
-
-struct q2_dbrushside_t
-{
-    uint16_t planenum; // facing out of the leaf
-    int16_t texinfo;
-
-    q2_dbrushside_t() = default;
-
-    // convert from mbsp_t
-    q2_dbrushside_t(const q2_dbrushside_qbism_t &model)
-        : planenum(numeric_cast<uint16_t>(model.planenum, "dbrushside_t::planenum")),
-          texinfo(numeric_cast<int16_t>(model.texinfo, "dbrushside_t::texinfo"))
-    {
-    }
-
-    // convert to mbsp_t
-    operator q2_dbrushside_qbism_t() const { return {planenum, texinfo}; }
-
-    // serialize for streams
-    auto stream_data() { return std::tie(planenum, texinfo); }
-};
-
-struct dbrush_t
-{
-    int32_t firstside;
-    int32_t numsides;
-    int32_t contents;
-
-    // serialize for streams
-    auto stream_data() { return std::tie(firstside, numsides, contents); }
-};
-
-enum vistype_t
-{
-    VIS_PVS,
-    VIS_PHS
-};
-
-// the visibility lump consists of a header with a count, then
-// byte offsets for the PVS and PHS of each cluster, then the raw
-// compressed bit vectors.
-struct mvis_t
-{
-    std::vector<std::array<int32_t, 2>> bit_offsets;
-    std::vector<uint8_t> bits;
-
-    inline size_t header_offset() const { return sizeof(int32_t) + (sizeof(int32_t) * bit_offsets.size() * 2); }
-
-    // set a bit offset of the specified cluster/vistype *relative to the start of the bits array*
-    // (after the header)
-    inline void set_bit_offset(vistype_t type, size_t cluster, size_t offset)
-    {
-        bit_offsets[cluster][type] = offset + header_offset();
-    }
-
-    // fetch the bit offset of the specified cluster/vistype
-    // relative to the start of the bits array
-    inline int32_t get_bit_offset(vistype_t type, size_t cluster)
-    {
-        return bit_offsets[cluster][type] - header_offset();
-    }
-
-    void resize(size_t numclusters) { bit_offsets.resize(numclusters); }
-
-    void stream_read(std::istream &stream, const lump_t &lump)
-    {
-        int32_t numclusters;
-
-        stream >= numclusters;
-
-        resize(numclusters);
-
-        // read cluster -> offset tables
-        for (auto &bit_offset : bit_offsets)
-            stream >= bit_offset;
-
-        // pull in final bit set
-        auto remaining = lump.filelen - (static_cast<int32_t>(stream.tellg()) - lump.fileofs);
-        bits.resize(remaining);
-        stream.read(reinterpret_cast<char *>(bits.data()), remaining);
-    }
-
-    void stream_write(std::ostream &stream) const
-    {
-        // no vis data
-        if (!bit_offsets.size()) {
-            return;
-        }
-
-        stream <= static_cast<int32_t>(bit_offsets.size());
-
-        // write cluster -> offset tables
-        for (auto &bit_offset : bit_offsets)
-            stream <= bit_offset;
-
-        // write bitset
-        stream.write(reinterpret_cast<const char *>(bits.data()), bits.size());
-    }
-};
-
-// each area has a list of portals that lead into other areas
-// when portals are closed, other areas may not be visible or
-// hearable even if the vis info says that it should be
-struct dareaportal_t
-{
-    int32_t portalnum;
-    int32_t otherarea;
-
-    // serialize for streams
-    auto stream_data() { return std::tie(portalnum, otherarea); }
-    auto tuple() const { return std::tie(portalnum, otherarea); }
-
-    // comparison operator for tests
-    bool operator==(const dareaportal_t &other) const { return tuple() == other.tuple(); }
-};
-
-struct darea_t
-{
-    int32_t numareaportals;
-    int32_t firstareaportal;
-
-    // serialize for streams
-    auto stream_data() { return std::tie(numareaportals, firstareaportal); }
-    auto tuple() const { return std::tie(numareaportals, firstareaportal); }
-
-    // comparison operator for tests
-    bool operator==(const darea_t &other) const { return tuple() == other.tuple(); }
-};
-
-// Q1-esque maps can use one of these two.
-using dmodelq1_vector = std::vector<dmodelq1_t>;
-using dmodelh2_vector = std::vector<dmodelh2_t>;
-
-// type tag used for type inference
-struct q1bsp_tag_t
-{
-};
-
-struct bsp29_t : q1bsp_tag_t
-{
-    std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
-    std::vector<uint8_t> dvisdata;
-    std::vector<uint8_t> dlightdata;
-    dmiptexlump_t dtex;
-    std::string dentdata;
-    std::vector<bsp29_dleaf_t> dleafs;
-    std::vector<dplane_t> dplanes;
-    std::vector<qvec3f> dvertexes;
-    std::vector<bsp29_dnode_t> dnodes;
-    std::vector<texinfo_t> texinfo;
-    std::vector<bsp29_dface_t> dfaces;
-    std::vector<bsp29_dclipnode_t> dclipnodes;
-    std::vector<bsp29_dedge_t> dedges;
-    std::vector<uint16_t> dmarksurfaces;
-    std::vector<int32_t> dsurfedges;
-};
-
-struct bsp2rmq_t : q1bsp_tag_t
-{
-    std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
-    std::vector<uint8_t> dvisdata;
-    std::vector<uint8_t> dlightdata;
-    dmiptexlump_t dtex;
-    std::string dentdata;
-    std::vector<bsp2rmq_dleaf_t> dleafs;
-    std::vector<dplane_t> dplanes;
-    std::vector<qvec3f> dvertexes;
-    std::vector<bsp2rmq_dnode_t> dnodes;
-    std::vector<texinfo_t> texinfo;
-    std::vector<bsp2_dface_t> dfaces;
-    std::vector<bsp2_dclipnode_t> dclipnodes;
-    std::vector<bsp2_dedge_t> dedges;
-    std::vector<uint32_t> dmarksurfaces;
-    std::vector<int32_t> dsurfedges;
-};
-
-struct bsp2_t : q1bsp_tag_t
-{
-    std::variant<std::monostate, dmodelq1_vector, dmodelh2_vector> dmodels;
-    std::vector<uint8_t> dvisdata;
-    std::vector<uint8_t> dlightdata;
-    dmiptexlump_t dtex;
-    std::string dentdata;
-    std::vector<bsp2_dleaf_t> dleafs;
-    std::vector<dplane_t> dplanes;
-    std::vector<qvec3f> dvertexes;
-    std::vector<bsp2_dnode_t> dnodes;
-    std::vector<texinfo_t> texinfo;
-    std::vector<bsp2_dface_t> dfaces;
-    std::vector<bsp2_dclipnode_t> dclipnodes;
-    std::vector<bsp2_dedge_t> dedges;
-    std::vector<uint32_t> dmarksurfaces;
-    std::vector<int32_t> dsurfedges;
-};
-
-// type tag used for type inference
-struct q2bsp_tag_t
-{
-};
-
-struct q2bsp_t : q2bsp_tag_t
-{
-    std::vector<q2_dmodel_t> dmodels;
-
-    mvis_t dvis;
-
-    std::vector<uint8_t> dlightdata;
-    std::string dentdata;
-    std::vector<q2_dleaf_t> dleafs;
-    std::vector<dplane_t> dplanes;
-    std::vector<qvec3f> dvertexes;
-    std::vector<q2_dnode_t> dnodes;
-    std::vector<q2_texinfo_t> texinfo;
-    std::vector<q2_dface_t> dfaces;
-    std::vector<bsp29_dedge_t> dedges;
-    std::vector<uint16_t> dleaffaces;
-    std::vector<uint16_t> dleafbrushes;
-    std::vector<int32_t> dsurfedges;
-    std::vector<darea_t> dareas;
-    std::vector<dareaportal_t> dareaportals;
-    std::vector<dbrush_t> dbrushes;
-    std::vector<q2_dbrushside_t> dbrushsides;
-};
-
-struct q2bsp_qbism_t : q2bsp_tag_t
-{
-    std::vector<q2_dmodel_t> dmodels;
-    mvis_t dvis;
-    std::vector<uint8_t> dlightdata;
-    std::string dentdata;
-    std::vector<q2_dleaf_qbism_t> dleafs;
-    std::vector<dplane_t> dplanes;
-    std::vector<qvec3f> dvertexes;
-    std::vector<q2_dnode_qbism_t> dnodes;
-    std::vector<q2_texinfo_t> texinfo;
-    std::vector<q2_dface_qbism_t> dfaces;
-    std::vector<bsp2_dedge_t> dedges;
-    std::vector<uint32_t> dleaffaces;
-    std::vector<uint32_t> dleafbrushes;
-    std::vector<int32_t> dsurfedges;
-    std::vector<darea_t> dareas;
-    std::vector<dareaportal_t> dareaportals;
-    std::vector<dbrush_t> dbrushes;
-    std::vector<q2_dbrushside_qbism_t> dbrushsides;
-};
-
-struct bspversion_t;
-
-struct mbsp_t
-{
-    const bspversion_t *loadversion;
-
-    std::vector<dmodelh2_t> dmodels;
-    mvis_t dvis;
-    std::vector<uint8_t> dlightdata;
-    dmiptexlump_t dtex;
-    std::string dentdata;
-    std::vector<mleaf_t> dleafs;
-    std::vector<dplane_t> dplanes;
-    std::vector<qvec3f> dvertexes;
-    std::vector<bsp2_dnode_t> dnodes;
-    std::vector<gtexinfo_t> texinfo;
-    std::vector<mface_t> dfaces;
-    std::vector<bsp2_dclipnode_t> dclipnodes;
-    std::vector<bsp2_dedge_t> dedges;
-    std::vector<uint32_t> dleaffaces;
-    std::vector<uint32_t> dleafbrushes;
-    std::vector<int32_t> dsurfedges;
-    std::vector<darea_t> dareas;
-    std::vector<dareaportal_t> dareaportals;
-    std::vector<dbrush_t> dbrushes;
-    std::vector<q2_dbrushside_qbism_t> dbrushsides;
-}; // "generic" bsp - superset of all other supported types
-
-struct dheader_t
-{
-    int32_t ident;
-    std::array<lump_t, BSP_LUMPS> lumps;
-
-    auto stream_data() { return std::tie(ident, lumps); }
-};
-
-struct q2_dheader_t
-{
-    int32_t ident;
-    int32_t version;
-    std::array<lump_t, Q2_HEADER_LUMPS> lumps;
-
-    auto stream_data() { return std::tie(ident, version, lumps); }
-};
-
-/* ========================================================================= */
-
-// BRUSHLIST BSPX lump
-struct bspxbrushes_permodel
-{
-    int32_t ver;
-    int32_t modelnum;
-    int32_t numbrushes;
-    int32_t numfaces;
-
-    auto stream_data() { return std::tie(ver, modelnum, numbrushes, numfaces); }
-};
-
-struct bspxbrushes_perbrush
-{
-    aabb3f bounds;
-    int16_t contents;
-    uint16_t numfaces;
-
-    auto stream_data() { return std::tie(bounds, contents, numfaces); }
-};
-
-using bspxbrushes_perface = qplane3f;
-
-// BSPX data
-
-struct bspxentry_t
-{
-    std::unique_ptr<uint8_t[]> lumpdata;
-    size_t lumpsize;
-
-    // bspxentry_t takes ownership over the pointer and will
-    // free it automatically.
-    bspxentry_t(void *lumpdata, size_t lumpsize) : lumpdata(reinterpret_cast<uint8_t *>(lumpdata)), lumpsize(lumpsize)
-    {
-    }
-};
+#include "bspfile_generic.hh"
+#include "bspfile_q1.hh"
+#include "bspfile_q2.hh"
+#include "bspxfile.hh"
+
+using bspxentries_t = std::unordered_map<std::string, std::vector<uint8_t>>;
 
 struct bspdata_t
 {
@@ -1638,143 +406,21 @@ struct bspdata_t
     // This can be used with any BSP format.
     struct
     {
-        std::unordered_map<std::string, bspxentry_t> entries;
-
-        // convenience function to transfer a generic pointer into
-        // the entries list
-        inline void transfer(const char *xname, uint8_t *&xdata, size_t xsize)
+        bspxentries_t entries;
+        
+        // transfer ownership of the vector into a BSPX lump
+        inline void transfer(const char *xname, std::vector<uint8_t> &xdata)
         {
-            entries.insert_or_assign(xname, bspxentry_t{xdata, xsize});
-            xdata = nullptr;
+            entries.insert_or_assign(xname, std::move(xdata));
         }
-
-        // copies the data over to the BSP
-        void copy(const char *xname, const uint8_t *xdata, size_t xsize)
+        
+        // transfer ownership of the vector into a BSPX lump
+        inline void transfer(const char *xname, std::vector<uint8_t> &&xdata)
         {
-            uint8_t *copy = new uint8_t[xsize];
-            memcpy(copy, xdata, xsize);
-            transfer(xname, copy, xsize);
+            entries.insert_or_assign(xname, xdata);
         }
     } bspx;
 };
-
-// native game target ID
-enum gameid_t
-{
-    GAME_UNKNOWN,
-    GAME_QUAKE,
-    GAME_HEXEN_II,
-    GAME_HALF_LIFE,
-    GAME_QUAKE_II,
-
-    GAME_TOTAL
-};
-
-// Game definition, which contains data specific to
-// the game a BSP version is being compiled for.
-struct gamedef_t
-{
-    // ID, used for quick comparisons
-    gameid_t id;
-
-    // whether the game uses an RGB lightmap or not
-    bool has_rgb_lightmap = false;
-
-    // whether the game supports content flags on brush models
-    bool allow_contented_bmodels = false;
-
-    // base dir for searching for paths, in case we are in a mod dir
-    // note: we need this to be able to be overridden via options
-    const std::string default_base_dir;
-
-    // max values of entity key & value pairs, only used for
-    // printing warnings.
-    size_t max_entity_key = 32;
-    size_t max_entity_value = 128;
-
-    gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir) { }
-
-    virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
-    virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
-    virtual bool surfflags_are_valid(const surfflags_t &flags) const = 0;
-    virtual int32_t surfflags_from_string(const std::string_view &str) const = 0;
-    // FIXME: fix so that we don't have to pass a name here
-    virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
-    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
-    virtual int32_t get_content_type(const contentflags_t &contents) const = 0;
-    virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
-    virtual contentflags_t create_extended_contents(const uint16_t &cflags = 0) const = 0;
-    virtual contentflags_t create_empty_contents(const uint16_t &cflags = 0) const = 0;
-    virtual contentflags_t create_solid_contents(const uint16_t &cflags = 0) const = 0;
-    virtual contentflags_t create_sky_contents(const uint16_t &cflags = 0) const = 0;
-    virtual contentflags_t create_liquid_contents(const int32_t &liquid_type, const uint16_t &cflags = 0) const = 0;
-    virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
-    virtual int32_t contents_from_string(const std::string_view &str) const = 0;
-    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
-    virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
-    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
-    virtual contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
-    virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
-    virtual const std::vector<qvec3b> &get_default_palette() const = 0;
-};
-
-constexpr int32_t NO_VERSION = -1;
-
-// BSP version struct & instances
-struct bspversion_t
-{
-    /* identifier value, the first int32_t in the header */
-    int32_t ident;
-    /* version value, if supported; use NO_VERSION if a version is not required */
-    int32_t version;
-    /* short name used for command line args, etc */
-    const char *short_name;
-    /* full display name for printing */
-    const char *name;
-    /* lump specification */
-    const std::initializer_list<lumpspec_t> lumps;
-    /* game ptr */
-    const gamedef_t *game;
-    /* if we surpass the limits of this format, upgrade to this one */
-    const bspversion_t *extended_limits;
-};
-
-// FMT support
-template<>
-struct fmt::formatter<bspversion_t>
-{
-    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
-
-    template<typename FormatContext>
-    auto format(const bspversion_t &v, FormatContext &ctx) -> decltype(ctx.out())
-    {
-        if (v.name) {
-            return format_to(ctx.out(), "{}", v.name);
-        }
-
-        if (v.version != NO_VERSION) {
-            return format_to(ctx.out(), "{}:{}", v.version, v.ident);
-        }
-
-        return format_to(ctx.out(), "{}", v.version, v.ident);
-    }
-};
-
-extern const bspversion_t bspver_generic;
-extern const bspversion_t bspver_q1;
-extern const bspversion_t bspver_h2;
-extern const bspversion_t bspver_h2bsp2;
-extern const bspversion_t bspver_h2bsp2rmq;
-extern const bspversion_t bspver_bsp2;
-extern const bspversion_t bspver_bsp2rmq;
-extern const bspversion_t bspver_hl;
-extern const bspversion_t bspver_q2;
-extern const bspversion_t bspver_qbism;
 
 /* table of supported versions */
 constexpr const bspversion_t *const bspversions[] = {&bspver_generic, &bspver_q1, &bspver_h2, &bspver_h2bsp2,

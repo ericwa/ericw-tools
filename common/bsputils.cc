@@ -73,7 +73,7 @@ const mface_t *BSP_GetFace(const mbsp_t *bsp, int fnum)
     return &bsp->dfaces[fnum];
 }
 
-const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
+const mtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
 {
     if (texinfo < 0) {
         return nullptr;
@@ -81,7 +81,7 @@ const gtexinfo_t *BSP_GetTexinfo(const mbsp_t *bsp, int texinfo)
     if (texinfo >= bsp->texinfo.size()) {
         return nullptr;
     }
-    const gtexinfo_t *tex = &bsp->texinfo[texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[texinfo];
     return tex;
 }
 
@@ -133,7 +133,7 @@ qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
     return result;
 }
 
-const gtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
+const mtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face)
 {
     if (face->texinfo < 0 || face->texinfo >= bsp->texinfo.size())
         return nullptr;
@@ -147,7 +147,7 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
     if (!bsp->dtex.textures.size())
         return nullptr;
 
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
     if (texinfo == nullptr)
         return nullptr;
@@ -163,7 +163,7 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
 
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
-    const gtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+    const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
     if (!texinfo) {
         return "";
@@ -225,7 +225,7 @@ int // mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        const gtexinfo_t *info = Face_Texinfo(bsp, face);
+        const mtexinfo_t *info = Face_Texinfo(bsp, face);
         return info->flags.native;
     } else {
         return TextureName_Contents(Face_TextureName(bsp, face));
@@ -448,6 +448,32 @@ const mleaf_t* BSP_FindLeafAtPoint(const mbsp_t* bsp, const dmodelh2_t* model, c
     return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point);
 }
 
+static int BSP_FindClipnodeAtPoint_r(
+    const mbsp_t *bsp, const int clipnodenum, const qvec3d &point)
+{
+    if (clipnodenum < 0) {
+        // actually contents
+        return clipnodenum;
+    }
+
+    const auto *node = &bsp->dclipnodes.at(clipnodenum);
+    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+
+    if (dist >= 0) {
+        return BSP_FindClipnodeAtPoint_r(bsp, node->children[0], point);
+    } else {
+        return BSP_FindClipnodeAtPoint_r(bsp, node->children[1], point);
+    }
+}
+
+int BSP_FindContentsAtPoint(const mbsp_t *bsp, int hull, const dmodelh2_t *model, const qvec3d &point)
+{
+    if (hull == 0) {
+        return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point)->contents;
+    }
+    return BSP_FindClipnodeAtPoint_r(bsp, model->headnode.at(hull), point);
+}
+
 std::vector<const mface_t*> Leaf_Markfaces(const mbsp_t* bsp, const mleaf_t* leaf)
 {
     std::vector<const mface_t *> result;
@@ -496,7 +522,7 @@ qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face)
 
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
 {
-    const gtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     const char *texname = Face_TextureName(bsp, face);
 
     logging::print("face {}, texture '{}', {} edges; vectors:\n"
@@ -517,28 +543,27 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
 CompressRow
 ===============
 */
-int CompressRow(const uint8_t *vis, const int numbytes, uint8_t *out)
+void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it)
 {
-    int i, rep;
-    uint8_t *dst;
+    for (size_t i = 0; i < numbytes; i++) {
+        it++ = vis[i];
 
-    dst = out;
-    for (i = 0; i < numbytes; i++) {
-        *dst++ = vis[i];
-        if (vis[i])
+        if (vis[i]) {
             continue;
+        }
 
-        rep = 1;
-        for (i++; i < numbytes; i++)
-            if (vis[i] || rep == 255)
+        int32_t rep = 1;
+
+        for (i++; i < numbytes; i++) {
+            if (vis[i] || rep == 255) {
                 break;
-            else
-                rep++;
-        *dst++ = rep;
+            }
+            rep++;
+        }
+
+        it++ = rep;
         i--;
     }
-
-    return dst - out;
 }
 
 /*

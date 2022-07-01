@@ -27,24 +27,31 @@ struct litheader_t
 {
     struct
     {
-        char ident[4];
+        std::array<char, 4> ident = { 'Q', 'L', 'I', 'T' };
         int version;
+
+        auto stream_data() { return std::tie(ident, version); }
     } v1;
     struct
     {
         int numsurfs;
         int lmsamples;
+
+        auto stream_data() { return std::tie(numsurfs, lmsamples); }
     } v2;
 };
+
+constexpr size_t MAXLIGHTMAPSSUP = 16;
+constexpr uint16_t INVALID_LIGHTSTYLE = 0xffffu;
 
 /* internal representation for bspx/lit2 */
 struct facesup_t
 {
     float lmscale;
-    uint8_t styles[MAXLIGHTMAPS]; /* scaled styles */
+    uint16_t styles[MAXLIGHTMAPSSUP]; /* scaled styles */
     int32_t lightofs; /* scaled lighting */
-    unsigned short extent[2];
+    uint16_t extent[2];
 };
 
-void WriteLitFile(const mbsp_t *bsp, facesup_t *facesup, const fs::path &filename, int version);
+void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version);
 void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version);

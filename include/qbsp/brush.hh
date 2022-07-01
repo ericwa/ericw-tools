@@ -51,6 +51,6 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
 
-int FindPlane(const qplane3d &plane, int *side);
+int FindPlane(const qplane3d &plane, planeside_t *side);
 int FindPositivePlane(int planenum);
-int FindPositivePlane(const qplane3d &plane, int *side);
+int FindPositivePlane(const qplane3d &plane, planeside_t *side);
