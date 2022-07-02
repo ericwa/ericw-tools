@@ -1897,18 +1897,19 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     qvec3f result;
     float dotProductFactor = 1.0f;
 
-    const float dp1 = qv::dot(vpl->surfnormal, dir);
+    float dp1 = qv::dot(vpl->surfnormal, dir);
     const qvec3f sp_vpl = dir * -1.0f;
-    float dp2 = 1.f;//qv::dot(sp_vpl, normal);
+    float dp2 = qv::dot(sp_vpl, normal);
 
     if (!vpl->omnidirectional) {
         if (dp1 < 0.0f)
             return {0}; // sample point behind vpl
         if (dp2 < 0.0f)
             return {0}; // vpl behind sample face
-
-        dp2 =
-            0.5f + dp2 * 0.5f; // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
+        
+        // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
+        dp1 = 0.5f + dp1 * 0.5f;
+        dp2 = 0.5f + dp2 * 0.5f;
 
         dotProductFactor = dp1 * dp2;
     } else {
