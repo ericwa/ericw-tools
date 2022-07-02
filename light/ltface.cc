@@ -2106,8 +2106,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 const qvec3d &lightsurf_pos = lightsurf->points[i];
                 const qvec3d &lightsurf_normal = lightsurf->normals[i];
 
-                // Push 1 unit behind the surflight (fixes darkening near surflight face on neighbouring faces)
-                qvec3f pos = vpl.points[c] - vpl.surfnormal;
+                qvec3f pos = vpl.points[c];
                 qvec3f dir = lightsurf_pos - pos;
                 float dist = qv::length(dir);
 
@@ -2119,16 +2118,6 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
                 if (LightSample_Brightness(indirect) < 0.01f) // Each point contributes very little to the final result
                     continue;
-
-                // Push 1 unit in front of the surflight, so embree can properly process it ...
-                pos = vpl.points[c] + vpl.surfnormal;
-                dir = lightsurf_pos - pos;
-                dist = qv::length(dir);
-
-                if (dist == 0.0f)
-                    dir = lightsurf_normal;
-                else
-                    dir /= dist;
 
                 rs.pushRay(i, pos, dir, dist, &indirect);
             }

@@ -71,7 +71,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Dice winding...
     vector<qvec3f> points;
-    winding.dice(cfg.surflightsubdivision.value(), [&points](winding_t &w) { points.push_back(w.center()); });
+    winding.dice(cfg.surflightsubdivision.value(), [&points, &facenormal](winding_t &w) { points.push_back(w.center() + facenormal); });
     total_surflight_points += points.size();
 
     // Calculate emit color and intensity...
@@ -107,7 +107,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     surfacelight_t l;
     l.surfnormal = facenormal;
     l.omnidirectional = !is_directional;
-    l.points = points;
+    l.points = std::move(points);
     l.style = style;
 
     // Init bbox...
@@ -115,11 +115,11 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
     }
 
-    for (auto &pt : points) {
+    for (auto &pt : l.points) {
         if (options.visapprox.value() == visapprox_t::VIS) {
-            l.leaves.push_back(Light_PointInLeaf(bsp, pt + l.surfnormal));
+            l.leaves.push_back(Light_PointInLeaf(bsp, pt));
         } else if (options.visapprox.value() == visapprox_t::RAYS) {
-            l.bounds += EstimateVisibleBoundsAtPoint(pt + l.surfnormal);
+            l.bounds += EstimateVisibleBoundsAtPoint(pt);
         }
     }
 
@@ -127,7 +127,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Store surfacelight settings...
     l.totalintensity = intensity * facearea;
-    l.intensity = l.totalintensity / points.size();
+    l.intensity = l.totalintensity / l.points.size();
     l.color = texture_color.value();
 
     // Store light...
