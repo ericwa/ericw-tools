@@ -157,8 +157,13 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     auto &surf = *surf_ptr.get();
 
     winding_t winding = winding_t::from_face(bsp, &face);
+    const vec_t area = winding.area();
 
-    const vec_t sample_scalar = 1.f / winding.area();
+    if (!area) {
+        return;
+    }
+
+    const vec_t sample_scalar = 1.f / area;
 
     qplane3d faceplane = winding.plane();
 
@@ -199,7 +204,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         emitcolors[styleColor.first] = styleColor.second * blendedcolor;
     }
 
-    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, winding.area(), &face, bsp);
+    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, area, &face, bsp);
 }
 
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
