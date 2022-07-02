@@ -111,7 +111,9 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     l.style = style;
 
     // Init bbox...
-    l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
+    if (options.visapprox.value() == visapprox_t::RAYS) {
+        l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
+    }
 
     for (auto &pt : points) {
         if (options.visapprox.value() == visapprox_t::VIS) {
