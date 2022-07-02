@@ -315,7 +315,7 @@ public:
 
     /* Q2 surface lights (mxd) */
     setting_scalar surflightscale{
-        this, "surflightscale", 0.3, &worldspawn_group}; // Strange defaults to match arghrad3 look...
+        this, "surflightscale", 1.0, &worldspawn_group};
     setting_scalar surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0,
         &worldspawn_group}; // "choplight" - arghrad3 name
 

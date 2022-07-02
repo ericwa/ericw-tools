@@ -1197,10 +1197,13 @@ int light_main(int argc, const char **argv)
             options.rangescale.setValue(1.0f);
         }
         if (!options.bouncecolorscale.isChanged()) {
-            options.bouncecolorscale.setValue(1.0f);
+            options.bouncecolorscale.setValue(0.5f);
+        }
+        if (!options.surflightscale.isChanged()) {
+            options.surflightscale.setValue(0.65f);
         }
         if (!options.bouncescale.isChanged()) {
-            options.bouncescale.setValue(1.5f);
+            options.bouncescale.setValue(1.25f);
         }
         if (!options.bounce.isChanged()) {
             options.bounce.setValue(true);

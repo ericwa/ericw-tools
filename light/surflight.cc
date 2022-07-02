@@ -159,7 +159,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
             return;
         }
 
-        MakeSurfaceLight(bsp, cfg, face, std::nullopt, false/*!(info->flags.native & Q2_SURF_SKY)*/, (info->flags.native & Q2_SURF_SKY), 0, info->value);
+        MakeSurfaceLight(bsp, cfg, face, std::nullopt, !(info->flags.native & Q2_SURF_SKY), (info->flags.native & Q2_SURF_SKY), 0, info->value);
     }
 
     // check matching templates
