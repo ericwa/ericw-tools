@@ -1209,11 +1209,7 @@ int light_main(int argc, const char **argv)
 
     // check vis approx type
     if (options.visapprox.value() == visapprox_t::AUTO) {
-        if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
-            options.visapprox.setValue(visapprox_t::VIS);
-        } else {
-            options.visapprox.setValue(visapprox_t::RAYS);
-        }
+        options.visapprox.setValue(visapprox_t::RAYS);
     }
 
     load_textures(&bsp);
