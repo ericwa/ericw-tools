@@ -391,9 +391,9 @@ struct gamedef_q2_t : public gamedef_t
         max_entity_key = 256;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_NODRAW); }
+    bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKY)); }
 
-    bool surf_is_subdivided(const surfflags_t &flags) const override { return true; }
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_SKY); }
 
     bool surfflags_are_valid(const surfflags_t &flags) const override
     {
