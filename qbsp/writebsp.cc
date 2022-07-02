@@ -37,6 +37,7 @@ using nlohmann::json;
  */
 size_t ExportMapPlane(size_t planenum)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
     qbsp_plane_t &plane = map.planes.at(planenum);
 
     if (plane.outputplanenum.has_value())
@@ -106,8 +107,8 @@ static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
     const size_t nodenum = map.bsp.dclipnodes.size();
     map.bsp.dclipnodes.emplace_back();
 
-    const int child0 = ExportClipNodes(entity, node->children[0]);
-    const int child1 = ExportClipNodes(entity, node->children[1]);
+    const int child0 = ExportClipNodes(entity, node->children[0].get());
+    const int child1 = ExportClipNodes(entity, node->children[1].get());
 
     // Careful not to modify the vector while using this clipnode pointer
     bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
@@ -222,12 +223,12 @@ static void ExportDrawNodes(mapentity_t *entity, node_t *node)
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
                 const int32_t childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
-                ExportLeaf(entity, node->children[i]);
+                ExportLeaf(entity, node->children[i].get());
             }
         } else {
             const int32_t childnum = static_cast<int32_t>(map.bsp.dnodes.size());
             dnode->children[i] = childnum;
-            ExportDrawNodes(entity, node->children[i]);
+            ExportDrawNodes(entity, node->children[i].get());
 
             // Important: our dnode pointer may be invalid after the recursive call, if the vector got resized.
             // So re-set the pointer.

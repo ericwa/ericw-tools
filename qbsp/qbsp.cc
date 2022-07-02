@@ -40,6 +40,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
+#include <qbsp/tree.hh>
 
 #include <fmt/chrono.h>
 
@@ -283,8 +284,8 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
         return;
     }
 
-    ExportBrushList_r(entity, node->children[0]);
-    ExportBrushList_r(entity, node->children[1]);
+    ExportBrushList_r(entity, node->children[0].get());
+    ExportBrushList_r(entity, node->children[1].get());
 }
 
 /*
@@ -297,6 +298,8 @@ against axial bounding boxes
 */
 static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspbrush_t &b)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     // add already-present planes
     std::vector<std::tuple<size_t, const side_t *>> planes;
 
@@ -579,11 +582,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 // fill again so PruneNodes works
                 MakeTreePortals(tree);
                 FillOutside(entity, tree, hullnum);
-                PruneNodes(tree->headnode);
-                DetailToSolid(tree->headnode);
+                PruneNodes(tree->headnode.get());
+                DetailToSolid(tree->headnode.get());
             }
         }
-        ExportClipNodes(entity, tree->headnode, hullnum);
+        ExportClipNodes(entity, tree->headnode.get(), hullnum);
 
         // fixme-brushbsp: return here?
     } else {
@@ -628,8 +631,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
             // Area portals
             if (options.target_game->id == GAME_QUAKE_II) {
-                FloodAreas(entity, tree->headnode);
-                EmitAreaPortals(tree->headnode);
+                FloodAreas(entity, tree->headnode.get());
+                EmitAreaPortals(tree->headnode.get());
             }
         } else {
             FillBrushEntity(entity, tree, hullnum);
@@ -641,39 +644,39 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         MakeTreePortals(tree);
 
         MarkVisibleSides(tree, entity);
-        MakeFaces(tree->headnode);
+        MakeFaces(tree->headnode.get());
 
-        FreeTreePortals_r(tree->headnode);
-        PruneNodes(tree->headnode);
+        FreeTreePortals_r(tree->headnode.get());
+        PruneNodes(tree->headnode.get());
 
         if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || options.keepprt.value())) {
             WritePortalFile(tree);
         }
 
         // needs to come after any face creation
-        MakeMarkFaces(entity, tree->headnode);
+        MakeMarkFaces(entity, tree->headnode.get());
 
         // convert detail leafs to solid (in case we didn't make the call above)
-        DetailToSolid(tree->headnode);
+        DetailToSolid(tree->headnode.get());
 
         // fixme-brushbsp: prune nodes
 
         if (!options.notjunc.value()) {
-            TJunc(entity, tree->headnode);
+            TJunc(entity, tree->headnode.get());
         }
 
         if (options.objexport.value() && entity == map.world_entity()) {
-            ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode);
-            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
+            ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode.get());
+            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode.get());
         }
 
-        firstface = MakeFaceEdges(entity, tree->headnode);
+        firstface = MakeFaceEdges(entity, tree->headnode.get());
 
         if (options.target_game->id == GAME_QUAKE_II) {
-            ExportBrushList(entity, tree->headnode);
+            ExportBrushList(entity, tree->headnode.get());
         }
 
-        ExportDrawNodes(entity, tree->headnode, firstface);
+        ExportDrawNodes(entity, tree->headnode.get(), firstface);
     }
 
     FreeBrushes(entity);
@@ -763,6 +766,8 @@ hull sizes
 static void BSPX_Brushes_AddModel(
     struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<bspbrush_t>> &brushes)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     bspxbrushes_permodel permodel{1, modelnum};
 
     for (auto &b : brushes) {

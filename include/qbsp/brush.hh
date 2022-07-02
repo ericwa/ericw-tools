@@ -27,6 +27,7 @@
 #include <optional>
 
 class mapentity_t;
+struct maptexinfo_t;
 
 struct side_t
 {
@@ -42,16 +43,25 @@ struct side_t
                          // non-visible means we can discard the brush side
                          // (avoiding generating a BSP spit, so expanding it outwards)
     bool bevel;          // don't ever use for bsp splitting
+
+    bool tested;
+
+    const maptexinfo_t& get_texinfo() const;
 };
+
+class mapbrush_t;
 
 struct bspbrush_t {
     /**
      * The brushes in the mapentity_t::brushes vector are considered originals. Brush fragments created during
      * the BrushBSP will have this pointing back to the original brush in mapentity_t::brushes.
+     *
+     * fixme-brushbsp: this is supposed to be a mapbrush_t
      */
     bspbrush_t *original;
     uint32_t file_order;
     aabb3d bounds;
+    int	side, testside; // side of node during construction
     std::vector<side_t> sides;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
@@ -59,9 +69,9 @@ struct bspbrush_t {
     mapentity_t *func_areaportal;
 
     void update_bounds();
-};
 
-class mapbrush_t;
+    std::unique_ptr<bspbrush_t> copy_unique() const;
+};
 
 qplane3d Face_Plane(const face_t *face);
 qplane3d Face_Plane(const side_t *face);

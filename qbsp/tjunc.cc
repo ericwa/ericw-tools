@@ -370,8 +370,8 @@ static void tjunc_count_r(node_t *node)
         cWVerts += f->w.size();
     }
 
-    tjunc_count_r(node->children[0]);
-    tjunc_count_r(node->children[1]);
+    tjunc_count_r(node->children[0].get());
+    tjunc_count_r(node->children[1].get());
 }
 
 static void tjunc_find_r(node_t *node)
@@ -383,8 +383,8 @@ static void tjunc_find_r(node_t *node)
         AddFaceEdges(f);
     }
 
-    tjunc_find_r(node->children[0]);
-    tjunc_find_r(node->children[1]);
+    tjunc_find_r(node->children[0].get());
+    tjunc_find_r(node->children[1].get());
 }
 
 static void tjunc_fix_r(node_t *node)
@@ -396,8 +396,8 @@ static void tjunc_fix_r(node_t *node)
         FixFaceEdges(face);
     }
 
-    tjunc_fix_r(node->children[0]);
-    tjunc_fix_r(node->children[1]);
+    tjunc_fix_r(node->children[0].get());
+    tjunc_fix_r(node->children[1].get());
 }
 
 /*

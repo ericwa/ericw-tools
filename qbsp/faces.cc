@@ -185,8 +185,8 @@ static void FreeNode(node_t *node)
 void FreeNodes(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF) {
-        FreeNodes(node->children[0]);
-        FreeNodes(node->children[1]);
+        FreeNodes(node->children[0].get());
+        FreeNodes(node->children[1].get());
     }
     FreeNode(node);
 }
@@ -369,9 +369,8 @@ static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
         FindFaceEdges(entity, f);
     }
 
-    logging::percent(progress, splitnodes, entity);
-    progress = MakeFaceEdges_r(entity, node->children[0], progress);
-    progress = MakeFaceEdges_r(entity, node->children[1], progress);
+    progress = MakeFaceEdges_r(entity, node->children[0].get(), progress);
+    progress = MakeFaceEdges_r(entity, node->children[1].get(), progress);
 
     return progress;
 }
@@ -449,8 +448,8 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
 
-    GrowNodeRegion(entity, node->children[0]);
-    GrowNodeRegion(entity, node->children[1]);
+    GrowNodeRegion(entity, node->children[0].get());
+    GrowNodeRegion(entity, node->children[1].get());
 }
 
 static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t &vertexesCount)
@@ -479,8 +478,8 @@ static void CountData_r(mapentity_t *entity, node_t *node, size_t &facesCount, s
         CountFace(entity, f, facesCount, vertexesCount);
     }
 
-    CountData_r(entity, node->children[0], facesCount, vertexesCount);
-    CountData_r(entity, node->children[1], facesCount, vertexesCount);
+    CountData_r(entity, node->children[0].get(), facesCount, vertexesCount);
+    CountData_r(entity, node->children[1].get(), facesCount, vertexesCount);
 }
 
 /*
@@ -505,7 +504,6 @@ int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
 
     firstface = static_cast<int>(map.bsp.dfaces.size());
     MakeFaceEdges_r(entity, headnode, 0);
-    logging::percent(splitnodes, splitnodes, entity == map.world_entity());
 
     pEdgeFaces0.clear();
     pEdgeFaces1.clear();
@@ -536,14 +534,15 @@ static void AddMarksurfaces_r(face_t *face, face_t *face_copy, node_t *node)
         return;
     }
 
+    const auto lock = std::lock_guard(map_planes_lock);
     const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
 
     auto [frontFragment, backFragment] = SplitFace(face_copy, splitplane);
     if (frontFragment) {
-        AddMarksurfaces_r(face, frontFragment, node->children[0]);
+        AddMarksurfaces_r(face, frontFragment, node->children[0].get());
     }
     if (backFragment) {
-        AddMarksurfaces_r(face, backFragment, node->children[1]);
+        AddMarksurfaces_r(face, backFragment, node->children[1].get());
     }
 }
 
@@ -568,15 +567,15 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
         face_t *face_copy = CopyFace(face);
 
         if (face->planeside == 0) {
-            AddMarksurfaces_r(face, face_copy, node->children[0]);
+            AddMarksurfaces_r(face, face_copy, node->children[0].get());
         } else {
-            AddMarksurfaces_r(face, face_copy, node->children[1]);
+            AddMarksurfaces_r(face, face_copy, node->children[1].get());
         }
     }
 
     // process child nodes recursively
-    MakeMarkFaces(entity, node->children[0]);
-    MakeMarkFaces(entity, node->children[1]);
+    MakeMarkFaces(entity, node->children[0].get());
+    MakeMarkFaces(entity, node->children[1].get());
 }
 
 struct makefaces_stats_t {
@@ -663,8 +662,8 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
     // recurse down to leafs
     if (node->planenum != PLANENUM_LEAF)
     {
-        MakeFaces_r(node->children[0], stats);
-        MakeFaces_r(node->children[1], stats);
+        MakeFaces_r(node->children[0].get(), stats);
+        MakeFaces_r(node->children[1].get(), stats);
 
         // merge together all visible faces on the node
         if (!options.nomerge.value())

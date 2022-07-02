@@ -99,6 +99,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
+    const auto lock = std::lock_guard(map_planes_lock);
     const auto &plane = map.planes.at(f1->planenum);
     planenormal = plane.normal;
     if (f1->planeside)
@@ -211,8 +212,8 @@ static void CollectNodes_R(node_t *node, std::vector<node_t *> &allnodes)
         return;
     }
 
-    CollectNodes_R(node->children[0], allnodes);
-    CollectNodes_R(node->children[1], allnodes);
+    CollectNodes_R(node->children[0].get(), allnodes);
+    CollectNodes_R(node->children[1].get(), allnodes);
 }
 
 /*

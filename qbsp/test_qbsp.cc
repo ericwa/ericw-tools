@@ -1,6 +1,7 @@
 #include <catch2/catch_all.hpp>
 
 #include <qbsp/brush.hh>
+#include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
 #include <common/fs.hh>
@@ -870,7 +871,19 @@ TEST_CASE("merge", "[testmaps_q1]")
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_merge.map");
 
     REQUIRE_FALSE(prt.has_value());
-    REQUIRE(6 == bsp.dfaces.size());
+    REQUIRE(bsp.dfaces.size() >= 6);
+
+    // BrushBSP does a split through the middle first to keep the BSP balanced, which prevents
+    // two of the side face from being merged
+    REQUIRE(bsp.dfaces.size() <= 8);
+
+    const auto exp_bounds = aabb3d{{48,0,96}, {224,96,96}};
+
+    auto* top_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {48,0,96}, {0,0,1});
+    const auto top_winding = Face_Winding(&bsp, top_face);
+
+    CHECK(top_winding.bounds().mins() == exp_bounds.mins());
+    CHECK(top_winding.bounds().maxs() == exp_bounds.maxs());
 }
 
 TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
@@ -1676,4 +1689,38 @@ TEST_CASE("winding", "[benchmark][.releaseonly]") {
         polylib::winding_base_t<6> temp;
         ankerl::nanobench::doNotOptimizeAway(temp);
     });
+}
+
+TEST_CASE("BrushFromBounds") {
+    map.reset();
+    options.reset();
+    options.worldextent.setValue(1024);
+
+    auto brush = BrushFromBounds({{2,2,2}, {32, 32, 32}});
+
+    CHECK(brush->sides.size() == 6);
+
+    const auto top_winding = winding_t{{2, 2, 32}, {2, 32, 32}, {32, 32, 32}, {32, 2, 32}};
+    const auto bottom_winding = winding_t{{32, 2, 2},{32, 32, 2}, {2, 32, 2}, {2, 2, 2}};
+
+    int found = 0;
+
+    for (auto &side : brush->sides) {
+        CHECK(side.w);
+
+        if (side.w.directional_equal(top_winding)) {
+            found++;
+            auto plane = Face_Plane(&side);
+            CHECK(plane.normal == qvec3d{0,0,1});
+            CHECK(plane.dist == 32);
+        }
+
+        if (side.w.directional_equal(bottom_winding)) {
+            found++;
+            auto plane = Face_Plane(&side);
+            CHECK(plane.normal == qvec3d{0,0,-1});
+            CHECK(plane.dist == -2);
+        }
+    }
+    CHECK(found == 2);
 }

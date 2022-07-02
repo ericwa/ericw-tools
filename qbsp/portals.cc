@@ -39,7 +39,7 @@ contentflags_t ClusterContents(const node_t *node)
         return node->contents;
 
     return options.target_game->cluster_contents(
-        ClusterContents(node->children[0]), ClusterContents(node->children[1]));
+        ClusterContents(node->children[0].get()), ClusterContents(node->children[1].get()));
 }
 
 /*
@@ -193,9 +193,9 @@ void MakeHeadnodePortals(tree_t *tree)
 
             p->winding = BaseWindingForPlane(pl);
             if (side)
-                AddPortalToNodes(p, &tree->outside_node, tree->headnode);
+                AddPortalToNodes(p, &tree->outside_node, tree->headnode.get());
             else
-                AddPortalToNodes(p, tree->headnode, &tree->outside_node);
+                AddPortalToNodes(p, tree->headnode.get(), &tree->outside_node);
         }
 
     // clip the basewindings by all the other planes
@@ -222,6 +222,7 @@ Creates a winding from the given node plane, clipped by all parent nodes.
 
 std::optional<winding_t> BaseWindingForNode(node_t *node)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
     auto plane = map.planes.at(node->planenum);
 
     std::optional<winding_t> w = BaseWindingForPlane(plane);
@@ -231,7 +232,7 @@ std::optional<winding_t> BaseWindingForNode(node_t *node)
     {
         plane = map.planes.at(np->planenum);
 
-        const planeside_t keep = (np->children[0] == node) ?
+        const planeside_t keep = (np->children[0].get() == node) ?
             SIDE_FRONT : SIDE_BACK;
 
         w = w->clip(plane, BASE_WINDING_EPSILON, false)[keep];
@@ -254,6 +255,8 @@ portals in the node.
 */
 void MakeNodePortal(node_t *node, portalstats_t &stats)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     auto w = BaseWindingForNode(node);
 
     // clip the portal by all the other portals in the node
@@ -291,7 +294,7 @@ void MakeNodePortal(node_t *node, portalstats_t &stats)
     new_portal->planenum = node->planenum;
     new_portal->onnode = node;
     new_portal->winding = w;
-    AddPortalToNodes(new_portal, node->children[0], node->children[1]);
+    AddPortalToNodes(new_portal, node->children[0].get(), node->children[1].get());
 }
 
 /*
@@ -304,9 +307,11 @@ children have portals instead of node.
 */
 void SplitNodePortals(node_t *node, portalstats_t &stats)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     const auto plane = map.planes.at(node->planenum);
-    node_t *f = node->children[0];
-    node_t *b = node->children[1];
+    node_t *f = node->children[0].get();
+    node_t *b = node->children[1].get();
 
     portal_t *next_portal = nullptr;
     for (portal_t *p = node->portals; p ; p = next_portal)
@@ -433,8 +438,8 @@ void MakeTreePortals_r(node_t *node, portalstats_t &stats)
     MakeNodePortal(node, stats);
     SplitNodePortals(node, stats);
 
-    MakeTreePortals_r(node->children[0], stats);
-    MakeTreePortals_r(node->children[1], stats);
+    MakeTreePortals_r(node->children[0].get(), stats);
+    MakeTreePortals_r(node->children[1].get(), stats);
 }
 
 /*
@@ -444,14 +449,14 @@ MakeTreePortals
 */
 void MakeTreePortals(tree_t *tree)
 {
-    FreeTreePortals_r(tree->headnode);
+    FreeTreePortals_r(tree->headnode.get());
 
-    AssertNoPortals(tree->headnode);
+    AssertNoPortals(tree->headnode.get());
 
     portalstats_t stats{};
 
     MakeHeadnodePortals(tree);
-    MakeTreePortals_r(tree->headnode, stats);
+    MakeTreePortals_r(tree->headnode.get(), stats);
 }
 
 void AssertNoPortals(node_t *node)
@@ -459,8 +464,8 @@ void AssertNoPortals(node_t *node)
     Q_assert(!node->portals);
 
     if (node->planenum != PLANENUM_LEAF) {
-        AssertNoPortals(node->children[0]);
-        AssertNoPortals(node->children[1]);
+        AssertNoPortals(node->children[0].get());
+        AssertNoPortals(node->children[1].get());
     }
 }
 
@@ -475,8 +480,8 @@ void FreeTreePortals_r(node_t *node)
     portal_t *p, *nextp;
 
     if (node->planenum != PLANENUM_LEAF) {
-        FreeTreePortals_r(node->children[0]);
-        FreeTreePortals_r(node->children[1]);
+        FreeTreePortals_r(node->children[0].get());
+        FreeTreePortals_r(node->children[1].get());
     }
 
     for (p = node->portals; p; p = nextp) {
@@ -504,8 +509,8 @@ static void ApplyArea_r(node_t *node)
     node->area = map.c_areas;
 
     if (node->planenum != PLANENUM_LEAF) {
-        ApplyArea_r(node->children[0]);
-        ApplyArea_r(node->children[1]);
+        ApplyArea_r(node->children[0].get());
+        ApplyArea_r(node->children[1].get());
     }
 }
 
@@ -513,10 +518,10 @@ static mapentity_t *AreanodeEntityForLeaf(node_t *node)
 {
     // if detail cluster, search the children recursively
     if (node->planenum != PLANENUM_LEAF) {
-        if (auto *child0result = AreanodeEntityForLeaf(node->children[0]); child0result) {
+        if (auto *child0result = AreanodeEntityForLeaf(node->children[0].get()); child0result) {
             return child0result;
         }
-        return AreanodeEntityForLeaf(node->children[1]);
+        return AreanodeEntityForLeaf(node->children[1].get());
     }
 
     for (auto &brush : node->original_brushes) {
@@ -629,8 +634,8 @@ area set, flood fill out from there
 static void SetAreaPortalAreas_r(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF) {
-        SetAreaPortalAreas_r(node->children[0]);
-        SetAreaPortalAreas_r(node->children[1]);
+        SetAreaPortalAreas_r(node->children[0].get());
+        SetAreaPortalAreas_r(node->children[1].get());
         return;
     }
 
@@ -735,6 +740,8 @@ Finds a brush side to use for texturing the given portal
 */
 static void FindPortalSide(portal_t *p)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     // decide which content change is strongest
     // solid > lava > water, etc
     contentflags_t viscontents = options.target_game->visible_contents(p->nodes[0]->contents, p->nodes[1]->contents);
@@ -799,8 +806,8 @@ static void MarkVisibleSides_r(node_t *node)
 {
     if (node->planenum != PLANENUM_LEAF)
     {
-        MarkVisibleSides_r(node->children[0]);
-        MarkVisibleSides_r(node->children[1]);
+        MarkVisibleSides_r(node->children[0].get());
+        MarkVisibleSides_r(node->children[1].get());
         return;
     }
 
@@ -840,5 +847,5 @@ void MarkVisibleSides(tree_t *tree, mapentity_t* entity)
     }
 
     // set visible flags on the sides that are used by portals
-    MarkVisibleSides_r (tree->headnode);
+    MarkVisibleSides_r(tree->headnode.get());
 }

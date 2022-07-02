@@ -514,6 +514,17 @@ std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
     return points;
 }
 
+polylib::winding_t Face_Winding(const mbsp_t *bsp, const mface_t *face)
+{
+    polylib::winding_t w{};
+
+    for (int j = 0; j < face->numedges; j++) {
+        w.push_back(Face_PointAtIndex(bsp, face, j));
+    }
+
+    return w;
+}
+
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face)
 {
     auto points = GLM_FacePoints(bsp, face);

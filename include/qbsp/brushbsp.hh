@@ -29,16 +29,15 @@
 #include <optional>
 #include <memory>
 
-extern std::atomic<int> splitnodes;
-
 struct bspbrush_t;
 struct node_t;
 struct face_t;
 class mapentity_t;
 struct tree_t;
 
-void DetailToSolid(node_t *node);
-void PruneNodes(node_t *node);
 bool WindingIsTiny(const winding_t &w, double size = 0.2);
-twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, const qplane3d &split);
+std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds);
+tree_t *BrushBSP(std::vector<std::unique_ptr<bspbrush_t>> brushlist);
+
+// compatibility version
 tree_t *BrushBSP(mapentity_t *entity, bool midsplit);

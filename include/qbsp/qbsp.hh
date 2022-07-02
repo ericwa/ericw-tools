@@ -25,6 +25,7 @@
 #include <list>
 #include <vector>
 #include <map>
+#include <memory>
 #include <unordered_map>
 #include <array>
 #include <optional>
@@ -209,6 +210,8 @@ public:
         this, "oldrottex", false, &debugging_group, "use old rotate_ brush texturing aligned at (0 0 0)"};
     setting_scalar epsilon{
         this, "epsilon", 0.0001, 0.0, 1.0, &debugging_group, "customize epsilon value for point-on-plane checks"};
+    setting_scalar microvolume{
+        this, "microvolume", 1.0, 0.0, 1000.0, &debugging_group, "microbrush volume"};
     setting_bool contenthack{this, "contenthack", false, &debugging_group,
         "hack to fix leaks through solids. causes missing faces in some cases so disabled by default"};
     setting_bool leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"};
@@ -349,18 +352,23 @@ struct face_t : face_fragment_t
 // there is a node_t structure for every node and leaf in the bsp tree
 
 struct bspbrush_t;
+struct side_t;
 
 struct node_t
 {
+    // both leafs and nodes
     aabb3d bounds; // bounding volume, not just points inside
     node_t *parent;
+    // this is also a bounding volume like `bounds`
+    std::unique_ptr<bspbrush_t> volume; // one for each leaf/node
 
     // information for decision nodes
     int planenum; // -1 = leaf node
     int firstface; // decision node only
     int numfaces; // decision node only
-    node_t *children[2]; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
+    twosided<std::unique_ptr<node_t>> children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     std::list<face_t *> facelist; // decision nodes only, list for both sides
+    side_t *side; // the side that created the node
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
