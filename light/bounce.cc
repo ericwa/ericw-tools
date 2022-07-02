@@ -71,6 +71,14 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
         return false;
     }
 
+    // don't bounce *from* emission surfaces
+    // FIXME: better way that works for Q1 too
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        if (bsp->texinfo[face->texinfo].flags.native & Q2_SURF_LIGHT) {
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -163,7 +171,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return;
     }
 
-    const vec_t sample_scalar = 1.f / area;
+    const vec_t sample_scalar = 1.f / sqrt(area);
 
     qplane3d faceplane = winding.plane();
 
@@ -183,7 +191,6 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     for (auto &styleColor : sum) {
         styleColor.second *= sample_scalar;
-        styleColor.second /= 255.0f;
         styleColor.second *= cfg.bouncescale.value();
         total += styleColor.second;
     }
