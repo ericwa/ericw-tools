@@ -1841,18 +1841,13 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
 
 // returns color in [0,255]
 inline qvec3f BounceLight_ColorAtDist(
-    const settings::worldspawn_keys &cfg, float area, const qvec3f &bounceLightColor, float dist)
+    const settings::worldspawn_keys &cfg, float area, const qvec3f &color, float dist)
 {
-    // clamp away hotspots
-    if (dist < 128.0f) {
-        dist = 128.0f;
-    }
-
-    const float dist2 = (dist * dist);
-    const float scale = (1.0f / dist2);
+    const float d = max(dist, 128.f); // Clamp away hotspots, also avoid division by 0..
+    const float scale = (1.0f / (d * d));
 
     // get light contribution
-    return bounceLightColor * area * (255.0f * scale);
+    return color * area * scale;
 }
 
 // mxd. Surface light falloff. Returns color in [0,255]
