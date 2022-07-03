@@ -22,6 +22,7 @@
 #include <common/bspfile.hh>
 #include <common/mathlib.hh>
 #include <common/qvec.hh>
+#include <common/polylib.hh>
 
 #include <string>
 #include <vector>
@@ -78,6 +79,7 @@ const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f);
 const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);
 qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f);
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face);
+polylib::winding_t Face_Winding(const mbsp_t *bsp, const mface_t *face);
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face);
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
 

@@ -23,6 +23,7 @@
 
 #include <common/vectorutils.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/brush.hh>
 
 //============================================================================
 
@@ -37,7 +38,6 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     node->planenum = PLANENUM_LEAF;
 
     for (int i = 0; i < 2; ++i) {
-        delete node->children[i];
         node->children[i] = nullptr;
     }
     for (auto *face : node->facelist) {
@@ -68,8 +68,8 @@ void DetailToSolid(node_t *node)
          */
         return;
     } else {
-        DetailToSolid(node->children[0]);
-        DetailToSolid(node->children[1]);
+        DetailToSolid(node->children[0].get());
+        DetailToSolid(node->children[1].get());
 
         // If both children are solid, we can merge the two leafs into one.
         // DarkPlaces has an assertion that fails if both children are
@@ -89,8 +89,8 @@ static void PruneNodes_R(node_t *node, int &count_pruned)
         return;
     }
 
-    PruneNodes_R(node->children[0], count_pruned);
-    PruneNodes_R(node->children[1], count_pruned);
+    PruneNodes_R(node->children[0].get(), count_pruned);
+    PruneNodes_R(node->children[1].get(), count_pruned);
 
     if (node->children[0]->planenum == PLANENUM_LEAF && node->children[0]->contents.is_solid(options.target_game) &&
         node->children[1]->planenum == PLANENUM_LEAF && node->children[1]->contents.is_solid(options.target_game)) {

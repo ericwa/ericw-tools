@@ -25,6 +25,7 @@
 #include <qbsp/qbsp.hh>
 
 #include <atomic>
+#include <memory>
 
 struct side_t;
 
@@ -43,7 +44,7 @@ struct portal_t
 
 struct tree_t
 {
-    node_t *headnode;
+    std::unique_ptr<node_t> headnode;
     node_t outside_node = {}; // portals outside the world face this
     aabb3d bounds;
 };

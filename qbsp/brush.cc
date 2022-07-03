@@ -28,6 +28,18 @@
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
+const maptexinfo_t& side_t::get_texinfo() const
+{
+    return map.mtexinfos[this->texinfo];
+}
+
+std::unique_ptr<bspbrush_t> bspbrush_t::copy_unique() const
+{
+    bspbrush_t *copy = new bspbrush_t{*this};
+
+    return std::unique_ptr<bspbrush_t>(copy);
+}
+
 /*
  * Beveled clipping hull can generate many extra faces
  */
@@ -56,6 +68,7 @@ Face_Plane
 */
 qplane3d Face_Plane(const face_t *face)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
     const qplane3d &result = map.planes.at(face->planenum);
 
     if (face->planeside) {
@@ -67,6 +80,7 @@ qplane3d Face_Plane(const face_t *face)
 
 qplane3d Face_Plane(const side_t *face)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
     const qplane3d &result = map.planes.at(face->planenum);
 
     if (face->planeside) {
@@ -85,6 +99,7 @@ Note: this will not catch 0 area polygons
 */
 static void CheckFace(side_t *face, const mapface_t &sourceface)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
     const qbsp_plane_t &plane = map.planes.at(face->planenum);
 
     if (face->w.size() < 3) {
@@ -209,6 +224,8 @@ inline int plane_hash_fn(const qplane3d &p)
 
 static void PlaneHash_Add(const qplane3d &p, int index)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     const int hash = plane_hash_fn(p);
     map.planehash[hash].push_back(index);
 }
@@ -219,6 +236,8 @@ static void PlaneHash_Add(const qplane3d &p, int index)
  */
 static int NewPlane(const qplane3d &plane, planeside_t *side)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     vec_t len = qv::length(plane.normal);
 
     if (len < 1 - options.epsilon.value() || len > 1 + options.epsilon.value())
@@ -248,6 +267,8 @@ static int NewPlane(const qplane3d &plane, planeside_t *side)
  */
 int FindPlane(const qplane3d &plane, planeside_t *side)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     for (int i : map.planehash[plane_hash_fn(plane)]) {
         const qbsp_plane_t &p = map.planes.at(i);
         if (qv::epsilonEqual(p, plane)) {
@@ -269,6 +290,8 @@ int FindPlane(const qplane3d &plane, planeside_t *side)
  */
 int FindPositivePlane(int planenum)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     const auto &plane = map.planes[planenum];
 
     // already positive, or it's PLANE_ANY_x which doesn't matter

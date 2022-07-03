@@ -32,6 +32,7 @@
 #include <utility>
 #include <unordered_map>
 #include <list>
+#include <mutex>
 
 struct bspbrush_t;
 
@@ -124,6 +125,8 @@ struct maptexdata_t
 
 #include <common/imglib.hh>
 
+extern std::recursive_mutex map_planes_lock;
+
 struct mapdata_t
 {
     /* Arrays of actual items */
@@ -167,6 +170,11 @@ struct mapdata_t
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
 
     const std::string &texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
+
+    inline qbsp_plane_t get_plane(int pnum) {
+        const auto lock = std::lock_guard(map_planes_lock);
+        return planes.at(pnum);
+    }
 
     int skip_texinfo;
 

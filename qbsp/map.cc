@@ -42,6 +42,7 @@
 #include <common/qvec.hh>
 
 mapdata_t map;
+std::recursive_mutex map_planes_lock;
 
 const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
 {
@@ -2372,6 +2373,8 @@ from q3map
 */
 void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<bspbrush_t>> &list)
 {
+    const auto lock = std::lock_guard(map_planes_lock);
+
     logging::print("writing {}\n", name);
     std::ofstream f(name);
 
