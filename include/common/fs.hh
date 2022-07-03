@@ -44,10 +44,6 @@ struct archive_like
     virtual data load(const path &filename) = 0;
 };
 
-extern path qdir, // c:/Quake/, c:/Hexen II/ etc.
-    gamedir, // c:/Quake/mymod/
-    basedir; // c:/Quake/ID1/, c:/Quake 2/BASEQ2/ etc.
-
 // clear all initialized/loaded data from fs
 void clear();
 

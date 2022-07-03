@@ -1140,10 +1140,6 @@ void load_textures(const mbsp_t *bsp)
 {
     logging::print("--- {} ---\n", __func__);
 
-    for (auto &path : options.paths.values()) {
-        fs::addArchive(path, true);
-    }
-
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         LoadTextures(bsp);
     } else if (bsp->dtex.textures.size() > 0) {

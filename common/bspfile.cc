@@ -506,12 +506,17 @@ public:
         return create_solid_contents();
     }
 
-    void init_filesystem(const fs::path &, const settings::common_settings &) const override
+    void init_filesystem(const fs::path &, const settings::common_settings &options) const override
     {
         // Q1-like games don't care about the local
         // filesystem.
         // they do care about the palette though.
         fs::clear();
+
+        for (auto &path : options.paths.values()) {
+            fs::addArchive(path, true);
+        }
+
         img::init_palette(this);
     }
 
@@ -1144,51 +1149,95 @@ private:
     }
 
 public:
-    void init_filesystem(const fs::path &source, const settings::common_settings &settings) const override
+    inline void addArchive(const fs::path &path) const
+    {
+        fs::addArchive(path, true);
+        discoverArchives(path);
+    }
+
+    void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
     {
         fs::clear();
+        
+        if (options.defaultpaths.value()) {
+            constexpr const char *MAPS_FOLDER = "maps";
 
-        constexpr const char *MAPS_FOLDER = "maps";
+            // detect gamedir (mod directory path)
+            fs::path gamedir, basedir;
+        
+            // pull in from settings
+            if (options.gamedir.isChanged()) {
+                gamedir = options.gamedir.value();
+            }
+            if (options.basedir.isChanged()) {
+                basedir = options.basedir.value();
+            }
+        
+            // figure out the gamedir first
+            if (!gamedir.is_absolute()) {
+                if (!gamedir.empty() && basedir.is_absolute()) {
+                    // we passed in a relative gamedir. probably meant to
+                    // be derived from basedir.
+                    gamedir = basedir.parent_path() / gamedir;
+                }
 
-        // detect gamedir (mod directory path)
-        fs::path gamedir;
+                // no gamedir, so calculate it from the input
+                if (gamedir.empty()) {
+                    // expand canonicals, and fetch parent of source file
+                    if (auto paths = fs::splitArchivePath(source)) {
+                        // if the source is an archive, use the parent
+                        // of that folder as the mod directory
+                        // pak0.pak/maps/source.map -> C:/Quake/ID1
+                        gamedir = fs::canonical(paths.archive).parent_path();
+                    } else {
+                        // maps/source.map -> C:/Quake/ID1/maps
+                        // this is weak because the source may not exist yet
+                        gamedir = fs::weakly_canonical(source).parent_path();
 
-        // expand canonicals, and fetch parent of source file
-        if (auto paths = fs::splitArchivePath(source)) {
-            // if the source is an archive, use the parent
-            // of that folder as the mod directory
-            // pak0.pak/maps/source.map -> C:/Quake/ID1
-            gamedir = fs::canonical(paths.archive).parent_path();
-        } else {
-            // maps/source.map -> C:/Quake/ID1/maps
-            // this is weak because the source may not exist yet
-            gamedir = fs::weakly_canonical(source).parent_path();
+                        if (!string_iequals(gamedir.filename().generic_string(), MAPS_FOLDER)) {
+                            logging::print("WARNING: '{}' is not directly inside '{}'; gamedir can't be automatically determined.\n",
+                                source, MAPS_FOLDER);
+                        }
 
-            if (!string_iequals(gamedir.filename().generic_string(), "maps")) {
-                logging::print("WARNING: '{}' is not directly inside '{}'. This may confuse automated path detection.\n",
-                    source, MAPS_FOLDER);
-                return;
+                        // C:/Quake/ID1/maps -> C:/Quake/ID1
+                        gamedir = gamedir.parent_path();
+                    }
+                }
             }
 
-            // C:/Quake/ID1/maps -> C:/Quake/ID1
-            gamedir = gamedir.parent_path();
+            if (!exists(gamedir)) {
+                logging::print("WARNING: failed to find gamedir '{}'\n", gamedir);
+            }
+
+            // now find base dir, if we haven't set it yet
+            if (!basedir.is_absolute()) {
+                if (!gamedir.empty() && gamedir.is_absolute()) {
+                    // we passed in a relative basedir. probably meant to
+                    // be derived from gamedir.
+                    basedir = gamedir.parent_path() / basedir;
+                }
+
+                // no basedir, so calculate it from gamedir
+                if (basedir.empty()) {
+                    basedir = gamedir.parent_path() / default_base_dir;
+                }
+            }
+
+            if (!exists(basedir)) {
+                logging::print("WARNING: failed to find basedir '{}'\n", basedir);
+            } else if (!equivalent(gamedir, basedir)) {
+                addArchive(basedir);
+            }
+
+            if (exists(gamedir)) {
+                addArchive(gamedir);
+            }
         }
 
-        // C:/Quake/ID1 -> C:/Quake
-        fs::path qdir = gamedir.parent_path();
-
-        // Set base dir and make sure it exists
-        fs::path basedir = qdir / (settings.basedir.isChanged() ? settings.basedir.value() : default_base_dir);
-
-        if (!exists(basedir)) {
-            logging::print("WARNING: failed to find '{}' in '{}'\n", default_base_dir, qdir);
-        } else if (!equivalent(gamedir, basedir)) {
-            fs::addArchive(basedir);
-            discoverArchives(basedir);
+        // add secondary paths
+        for (auto &path : options.paths.values()) {
+            addArchive(path);
         }
-
-        fs::addArchive(gamedir);
-        discoverArchives(gamedir);
 
         // load palette
         img::init_palette(this);

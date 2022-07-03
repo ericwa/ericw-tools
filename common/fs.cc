@@ -31,8 +31,6 @@
 
 namespace fs
 {
-path qdir, gamedir, basedir;
-
 struct directory_archive : archive_like
 {
     using archive_like::archive_like;
@@ -213,10 +211,6 @@ std::list<std::shared_ptr<archive_like>> archives, directories;
 /** It's possible to compile quake 1/hexen 2 maps without a qdir */
 void clear()
 {
-    qdir.clear();
-    gamedir.clear();
-    basedir.clear();
-
     archives.clear();
     directories.clear();
 }
