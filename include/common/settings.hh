@@ -136,6 +136,11 @@ protected:
             }
         }
 
+        // skip end of named arguments
+        if (parser.token == "-" || parser.token == "--") {
+            parser.parse_token();
+        }
+
         while (std::isspace(value.back())) {
             value.pop_back();
         }
@@ -563,6 +568,31 @@ public:
     std::string format() const override { return _format; }
 };
 
+class setting_path : public setting_value<fs::path>
+{
+public:
+    inline setting_path(setting_container *dictionary, const nameset &names, fs::path v,
+        const setting_group *group = nullptr, const char *description = "")
+        : setting_value(dictionary, names, v, group, description)
+    {
+    }
+
+    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    {
+        // make sure we can parse token out
+        if (!parser.parse_token()) {
+            return false;
+        }
+        
+        setValueFromParse(parser.token, locked);
+        return true;
+    }
+    
+    std::string stringValue() const override { return _value.string(); }
+
+    std::string format() const override { return "\"relative/path\" or \"C:/absolute/path\""; }
+};
+
 class setting_set : public setting_base
 {
 private:
@@ -593,7 +623,7 @@ public:
     {
     }
 
-    const std::unordered_set<std::string> &values() { return _values; }
+    const std::unordered_set<std::string> &values() const { return _values; }
 
     inline void setValueLocked(const std::string &f) { addValueInternal(f, source::COMMANDLINE); }
 
@@ -846,10 +876,12 @@ public:
     setting_bool nostat{this, "nostat", false, &logging_group, "don't output statistic messages"};
     setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
     setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group, "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
-    setting_string basedir{this, "basedir", "", "dir_name", &game_group, "override the default game base directory"};
+    setting_path gamedir{this, "gamedir", "", &game_group, "override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified."};
+    setting_path basedir{this, "basedir", "", &game_group, "override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified."};
     setting_enum<search_priority_t> filepriority{this, "filepriority", search_priority_t::LOOSE, { { "loose", search_priority_t::LOOSE }, { "archive", search_priority_t::ARCHIVE } }, &game_group, "which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching" };
     setting_set paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &game_group, "additional paths or archives to add to the search path, mostly for loose files"};
     setting_bool q2rtx{this, "q2rtx", false, &game_group, "adjust settings to best support Q2RTX"};
+    setting_invertible_bool defaultpaths{this, "defaultpaths", true, &game_group, "whether the compiler should attempt to automatically derive game/base paths for games that support it"};
 
     virtual void setParameters(int argc, const char **argv);
 

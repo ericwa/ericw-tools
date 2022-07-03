@@ -101,10 +101,6 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
         return;
 
     map.textures_loaded = true;
-
-    for (auto &path : options.paths.values()) {
-        fs::addArchive(path, true);
-    }
     
     // Q2 doesn't need this
     if (options.target_game->id == GAME_QUAKE_II) {
