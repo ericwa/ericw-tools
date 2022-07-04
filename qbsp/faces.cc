@@ -59,7 +59,7 @@ If the face is >256 in either texture direction, carve a valid sized
 piece off and insert the remainder in the next link
 ===============
 */
-std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f)
+static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f)
 {
     vec_t mins, maxs;
     vec_t v;

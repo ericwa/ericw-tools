@@ -27,7 +27,5 @@ struct node_t;
 class mapentity_t;
 struct face_t;
 
-std::list<face_t *> SubdivideFace(face_t *f);
-void MakeVisibleFaces(mapentity_t *entity, node_t *headnode);
 void MakeMarkFaces(mapentity_t* entity, node_t* headnode);
 void MakeFaces(node_t *node);

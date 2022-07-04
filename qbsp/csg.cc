@@ -123,12 +123,3 @@ std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(std::uniq
 
     return {std::move(new_front), std::move(new_back)};
 }
-
-std::unique_ptr<face_t> MirrorFace(const face_t *face)
-{
-    auto newface = NewFaceFromFace(face);
-    newface->w = face->w.flip();
-    newface->planeside = static_cast<planeside_t>(face->planeside ^ 1);
-
-    return newface;
-}
