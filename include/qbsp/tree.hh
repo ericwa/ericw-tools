@@ -21,7 +21,21 @@
 
 #pragma once
 
+#include <qbsp/qbsp.hh>
+#include <qbsp/brush.hh>
+
+#include <common/qvec.hh>
+
+#include <memory>
+
 struct node_t;
+
+struct tree_t
+{
+    std::unique_ptr<node_t> headnode;
+    node_t outside_node = {}; // portals outside the world face this
+    aabb3d bounds;
+};
 
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);

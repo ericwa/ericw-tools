@@ -27,6 +27,7 @@
 #include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/outside.hh>
+#include <qbsp/tree.hh>
 
 #include <atomic>
 

@@ -29,6 +29,7 @@
 #include <memory>
 
 struct side_t;
+struct tree_t;
 
 struct portal_t
 {
@@ -41,13 +42,6 @@ struct portal_t
     bool sidefound; // false if ->side hasn't been checked
     side_t *side; // NULL = non-visible
     face_t *face[2]; // output face in bsp file
-};
-
-struct tree_t
-{
-    std::unique_ptr<node_t> headnode;
-    node_t outside_node = {}; // portals outside the world face this
-    aabb3d bounds;
 };
 
 struct portalstats_t {

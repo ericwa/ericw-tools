@@ -24,6 +24,7 @@
 #include <qbsp/map.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/tree.hh>
 
 #include <fstream>
 #include <fmt/ostream.h>
