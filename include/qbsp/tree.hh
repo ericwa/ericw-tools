@@ -46,5 +46,6 @@ struct tree_t
     portal_t *create_portal();
 };
 
+void FreeTreePortals(tree_t *tree);
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);

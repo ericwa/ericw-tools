@@ -479,30 +479,6 @@ void AssertNoPortals(tree_t *tree)
 }
 
 /*
-==================
-FreeTreePortals_r
-
-==================
-*/
-static void ClearNodePortals_r(node_t *node)
-{
-    if (node->planenum != PLANENUM_LEAF) {
-        ClearNodePortals_r(node->children[0].get());
-        ClearNodePortals_r(node->children[1].get());
-    }
-
-    node->portals = nullptr;
-}
-
-void FreeTreePortals(tree_t *tree)
-{
-    ClearNodePortals_r(tree->headnode.get());
-    tree->outside_node.portals = nullptr;
-
-    tree->portals.clear();
-}
-
-/*
 =========================================================
 
 FLOOD AREAS

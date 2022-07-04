@@ -37,6 +37,30 @@ portal_t *tree_t::create_portal()
     return result;
 }
 
+/*
+==================
+FreeTreePortals_r
+
+==================
+*/
+static void ClearNodePortals_r(node_t *node)
+{
+    if (node->planenum != PLANENUM_LEAF) {
+        ClearNodePortals_r(node->children[0].get());
+        ClearNodePortals_r(node->children[1].get());
+    }
+
+    node->portals = nullptr;
+}
+
+void FreeTreePortals(tree_t *tree)
+{
+    ClearNodePortals_r(tree->headnode.get());
+    tree->outside_node.portals = nullptr;
+
+    tree->portals.clear();
+}
+
 //============================================================================
 
 static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
