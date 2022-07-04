@@ -145,7 +145,6 @@ struct lightsurf_t
      the pvs at each of the sample points
      */
     std::vector<uint8_t> pvs;
-    bool skyvisible;
 
     /* for sphere culling */
     qvec3d origin;
@@ -541,8 +540,6 @@ extern std::vector<uint8_t> lux_filebase;
 std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces();
 
 extern std::vector<surfflags_t> extended_texinfo_flags;
-
-bool Leaf_HasSky(const mbsp_t *bsp, const mleaf_t *leaf);
 
 // public functions
 
