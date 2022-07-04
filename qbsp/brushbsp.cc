@@ -870,9 +870,9 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 BrushBSP
 ==================
 */
-static tree_t *BrushBSP(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist)
+static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist)
 {
-    auto *tree = new tree_t{};
+    auto tree = std::unique_ptr<tree_t>(new tree_t{});
 
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
@@ -955,7 +955,7 @@ static tree_t *BrushBSP(mapentity_t *entity, std::vector<std::unique_ptr<bspbrus
     return tree;
 }
 
-tree_t *BrushBSP(mapentity_t *entity, bool midsplit)
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, bool midsplit)
 {
     // set the original pointers
     std::vector<std::unique_ptr<bspbrush_t>> brushcopies;
@@ -965,7 +965,7 @@ tree_t *BrushBSP(mapentity_t *entity, bool midsplit)
         brushcopies.push_back(std::move(copy));
     }
 
-    tree_t *tree = BrushBSP(entity, std::move(brushcopies));
+    auto tree = BrushBSP(entity, std::move(brushcopies));
 
     return tree;
 }

@@ -37,7 +37,7 @@ struct tree_t;
 
 bool WindingIsTiny(const winding_t &w, double size = 0.2);
 std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds);
-tree_t *BrushBSP(std::vector<std::unique_ptr<bspbrush_t>> brushlist);
+std::unique_ptr<tree_t> BrushBSP(std::vector<std::unique_ptr<bspbrush_t>> brushlist);
 
 // compatibility version
-tree_t *BrushBSP(mapentity_t *entity, bool midsplit);
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, bool midsplit);

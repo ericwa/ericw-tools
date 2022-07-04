@@ -566,22 +566,19 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
 
-    tree_t *tree = nullptr;
+    std::unique_ptr<tree_t> tree = nullptr;
     if (hullnum > 0) {
         tree = BrushBSP(entity, true);
         if (entity == map.world_entity() && !options.nofill.value()) {
             // assume non-world bmodels are simple
-            MakeTreePortals(tree);
-            if (FillOutside(entity, tree, hullnum)) {
-                // fixme-brushbsp: re-add
-                // FreeNodes(nodes);
-
+            MakeTreePortals(tree.get());
+            if (FillOutside(entity, tree.get(), hullnum)) {
                 // make a really good tree
                 tree = BrushBSP(entity, false);
 
                 // fill again so PruneNodes works
-                MakeTreePortals(tree);
-                FillOutside(entity, tree, hullnum);
+                MakeTreePortals(tree.get());
+                FillOutside(entity, tree.get(), hullnum);
                 PruneNodes(tree->headnode.get());
                 DetailToSolid(tree->headnode.get());
             }
@@ -608,25 +605,22 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
-        MakeTreePortals(tree);
+        MakeTreePortals(tree.get());
 
         if (entity == map.world_entity()) {
             // flood fills from the void.
             // marks brush sides which are *only* touching void;
             // we can skip using them as BSP splitters on the "really good tree"
             // (effectively expanding those brush sides outwards).
-            if (!options.nofill.value() && FillOutside(entity, tree, hullnum)) {
-                // fixme-brushbsp: re-add
-                //FreeNodes(nodes);
-
+            if (!options.nofill.value() && FillOutside(entity, tree.get(), hullnum)) {
                 // make a really good tree
                 tree = BrushBSP(entity, false);
 
                 // make the real portals for vis tracing
-                MakeTreePortals(tree);
+                MakeTreePortals(tree.get());
 
                 // fill again so PruneNodes works
-                FillOutside(entity, tree, hullnum);
+                FillOutside(entity, tree.get(), hullnum);
             }
 
             // Area portals
@@ -635,22 +629,22 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 EmitAreaPortals(tree->headnode.get());
             }
         } else {
-            FillBrushEntity(entity, tree, hullnum);
+            FillBrushEntity(entity, tree.get(), hullnum);
 
             // rebuild BSP now that we've marked invisible brush sides
             tree = BrushBSP(entity, false);
         }
 
-        MakeTreePortals(tree);
+        MakeTreePortals(tree.get());
 
-        MarkVisibleSides(tree, entity);
+        MarkVisibleSides(tree.get(), entity);
         MakeFaces(tree->headnode.get());
 
-        FreeTreePortals(tree);
+        FreeTreePortals(tree.get());
         PruneNodes(tree->headnode.get());
 
         if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || options.keepprt.value())) {
-            WritePortalFile(tree);
+            WritePortalFile(tree.get());
         }
 
         // needs to come after any face creation
@@ -680,8 +674,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     FreeBrushes(entity);
-    // fixme-brushbsp: re-add
-    //FreeNodes(nodes);
 }
 
 /*
