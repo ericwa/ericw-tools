@@ -48,7 +48,7 @@ static bool ShouldOmitFace(face_t *f)
 
 static void MergeNodeFaces (node_t *node)
 {
-    node->facelist = MergeFaceList(node->facelist);
+    node->facelist = MergeFaceList(std::move(node->facelist));
 }
 
 /*
@@ -59,13 +59,12 @@ If the face is >256 in either texture direction, carve a valid sized
 piece off and insert the remainder in the next link
 ===============
 */
-std::list<face_t *> SubdivideFace(face_t *f)
+std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f)
 {
     vec_t mins, maxs;
     vec_t v;
     int axis;
     qbsp_plane_t plane;
-    face_t *front, *back;
     const maptexinfo_t *tex;
     vec_t subdiv;
     vec_t extent;
@@ -75,7 +74,9 @@ std::list<face_t *> SubdivideFace(face_t *f)
     tex = &map.mtexinfos.at(f->texinfo);
 
     if (tex->flags.is_skip || tex->flags.is_hint || !options.target_game->surf_is_subdivided(tex->flags)) {
-        return {f};
+        std::list<std::unique_ptr<face_t>> result;
+        result.push_back(std::move(f));
+        return result;
     }
     // subdivision is pretty much pointless other than because of lightmap block limits
     // one lightmap block will always be added at the end, for smooth interpolation
@@ -95,14 +96,15 @@ std::list<face_t *> SubdivideFace(face_t *f)
     // the bsp is possibly going to be used in both engines that support scaling and those that do not. this means we
     // always over-estimate by 16 rather than 1<<lmscale
 
-    std::list<face_t *> surfaces{f};
+    std::list<std::unique_ptr<face_t>> surfaces;
+    surfaces.push_back(std::move(f));
 
     for (axis = 0; axis < 2; axis++) {
         // we'll transfer faces that are chopped down to size to this list
-        std::list<face_t *> chopped;
+        std::list<std::unique_ptr<face_t>> chopped;
 
         while (!surfaces.empty()) {
-            f = surfaces.front();
+            f = std::move(surfaces.front());
             surfaces.pop_front();
 
             mins = VECT_MAX;
@@ -122,7 +124,7 @@ std::list<face_t *> SubdivideFace(face_t *f)
             //          extent = maxs - mins;
             if (extent <= subdiv) {
                 // this face is already good
-                chopped.push_back(f);
+                chopped.push_back(std::move(f));
                 continue;
             }
 
@@ -138,17 +140,19 @@ std::list<face_t *> SubdivideFace(face_t *f)
             //                plane.dist = (mins + subdiv) / v;
             plane.dist = (mins + subdiv - 16) / v;
 
-            std::tie(front, back) = SplitFace(f, plane);
+            std::unique_ptr<face_t> front;
+            std::unique_ptr<face_t> back;
+            std::tie(front, back) = SplitFace(std::move(f), plane);
             if (!front || !back) {
                 //logging::print("didn't split\n");
                 // FError("Didn't split the polygon");
             }
 
             if (front) {
-                surfaces.push_back(front);
+                surfaces.push_back(std::move(front));
             }
             if (back) {
-                chopped.push_front(back);
+                chopped.push_front(std::move(back));
             }
         }
 
@@ -163,14 +167,14 @@ std::list<face_t *> SubdivideFace(face_t *f)
 
 static void SubdivideNodeFaces(node_t *node)
 {
-    std::list<face_t *> result;
+    std::list<std::unique_ptr<face_t>> result;
 
     // subdivide each face and push the results onto subdivided
-    for (face_t *face : node->facelist) {
-        result.splice(result.end(), SubdivideFace(face));
+    for (auto &face : node->facelist) {
+        result.splice(result.end(), SubdivideFace(std::move(face)));
     }
 
-    node->facelist = result;
+    node->facelist = std::move(result);
 }
 
 //===========================================================================
@@ -347,8 +351,8 @@ static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
     if (node->planenum == PLANENUM_LEAF)
         return progress;
 
-    for (face_t *f : node->facelist) {
-        FindFaceEdges(entity, f);
+    for (auto &f : node->facelist) {
+        FindFaceEdges(entity, f.get());
     }
 
     progress = MakeFaceEdges_r(entity, node->children[0].get(), progress);
@@ -421,11 +425,11 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
 
     node->firstface = static_cast<int>(map.bsp.dfaces.size());
 
-    for (face_t *face : node->facelist) {
+    for (auto &face : node->facelist) {
         //Q_assert(face->planenum == node->planenum);
 
         // emit a region
-        EmitFace(entity, face);
+        EmitFace(entity, face.get());
     }
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
@@ -456,8 +460,8 @@ static void CountData_r(mapentity_t *entity, node_t *node, size_t &facesCount, s
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    for (face_t *f : node->facelist) {
-        CountFace(entity, f, facesCount, vertexesCount);
+    for (auto &f : node->facelist) {
+        CountFace(entity, f.get(), facesCount, vertexesCount);
     }
 
     CountData_r(entity, node->children[0].get(), facesCount, vertexesCount);
@@ -509,7 +513,7 @@ Adds the given face to the markfaces lists of all descendant leafs of `node`.
 fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
 ================
 */
-static void AddMarksurfaces_r(face_t *face, face_t *face_copy, node_t *node)
+static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
         node->markfaces.push_back(face);
@@ -519,12 +523,12 @@ static void AddMarksurfaces_r(face_t *face, face_t *face_copy, node_t *node)
     const auto lock = std::lock_guard(map_planes_lock);
     const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
 
-    auto [frontFragment, backFragment] = SplitFace(face_copy, splitplane);
+    auto [frontFragment, backFragment] = SplitFace(std::move(face_copy), splitplane);
     if (frontFragment) {
-        AddMarksurfaces_r(face, frontFragment, node->children[0].get());
+        AddMarksurfaces_r(face, std::move(frontFragment), node->children[0].get());
     }
     if (backFragment) {
-        AddMarksurfaces_r(face, backFragment, node->children[1].get());
+        AddMarksurfaces_r(face, std::move(backFragment), node->children[1].get());
     }
 }
 
@@ -542,16 +546,16 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
     }
 
     // for the faces on this splitting node..
-    for (face_t *face : node->facelist) {
+    for (auto &face : node->facelist) {
         // add this face to all descendant leafs it touches
         
         // make a copy we can clip
-        face_t *face_copy = CopyFace(face);
+        auto face_copy = CopyFace(face.get());
 
         if (face->planeside == 0) {
-            AddMarksurfaces_r(face, face_copy, node->children[0].get());
+            AddMarksurfaces_r(face.get(), std::move(face_copy), node->children[0].get());
         } else {
-            AddMarksurfaces_r(face, face_copy, node->children[1].get());
+            AddMarksurfaces_r(face.get(), std::move(face_copy), node->children[1].get());
         }
     }
 
@@ -576,13 +580,13 @@ Typically, we're in an empty leaf and the other side of the portal is a solid wa
 see also FindPortalSide which populates p->side
 ============
 */
-static face_t *FaceFromPortal(portal_t *p, int pside)
+static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
 {
     side_t *side = p->side;
     if (!side)
         return nullptr;	// portal does not bridge different visible contents
 
-    face_t *f = new face_t{};
+    auto f = std::unique_ptr<face_t>(new face_t{});
 
     f->texinfo = side->texinfo;
     f->planenum = side->planenum;
@@ -621,7 +625,7 @@ static face_t *FaceFromPortal(portal_t *p, int pside)
         f->contents = p->nodes[0]->contents;
     }
 
-    UpdateFaceSphere(f);
+    UpdateFaceSphere(f.get());
 
     return f;
 }
@@ -670,12 +674,12 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
         // 1 means node is on the back side of planenum
         s = (p->nodes[1] == node);
 
-        face_t *f = FaceFromPortal(p, s);
+        std::unique_ptr<face_t> f = FaceFromPortal(p, s);
         if (f)
         {
             stats.c_nodefaces++;
-            p->face[s] = f;
-            p->onnode->facelist.push_back(f);
+            p->face[s] = f.get();
+            p->onnode->facelist.push_back(std::move(f));
         }
     }
 }

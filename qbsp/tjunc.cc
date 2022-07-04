@@ -366,7 +366,7 @@ static void tjunc_count_r(node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    for (face_t *f : node->facelist) {
+    for (auto &f : node->facelist) {
         cWVerts += f->w.size();
     }
 
@@ -379,8 +379,8 @@ static void tjunc_find_r(node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    for (face_t *f : node->facelist) {
-        AddFaceEdges(f);
+    for (auto &f : node->facelist) {
+        AddFaceEdges(f.get());
     }
 
     tjunc_find_r(node->children[0].get());
@@ -392,8 +392,8 @@ static void tjunc_fix_r(node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    for (face_t *face : node->facelist) {
-        FixFaceEdges(face);
+    for (auto &face : node->facelist) {
+        FixFaceEdges(face.get());
     }
 
     tjunc_fix_r(node->children[0].get());

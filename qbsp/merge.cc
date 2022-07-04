@@ -59,10 +59,9 @@ Returns NULL if the faces couldn't be merged, or the new face.
 The originals will NOT be freed.
 =============
 */
-static face_t *TryMerge(face_t *f1, face_t *f2)
+static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
 {
     qvec3d p1, p2, p3, p4, back;
-    face_t *newf;
     int i, j, k, l;
     qvec3d normal, delta, planenormal;
     vec_t dot;
@@ -133,7 +132,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
         return NULL;
     }
 
-    newf = NewFaceFromFace(f1);
+    std::unique_ptr<face_t> newf = NewFaceFromFace(f1);
 
     // copy first polygon
     if (keep2)
@@ -153,7 +152,7 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
         newf->w.push_back(f2->w[l]);
     }
 
-    UpdateFaceSphere(newf);
+    UpdateFaceSphere(newf.get());
 
     return newf;
 }
@@ -163,27 +162,25 @@ static face_t *TryMerge(face_t *f1, face_t *f2)
 MergeFaceToList
 ===============
 */
-void MergeFaceToList(face_t *face, std::list<face_t *> &list)
+void MergeFaceToList(std::unique_ptr<face_t> face, std::list<std::unique_ptr<face_t>> &list)
 {
     for (auto it = list.begin(); it != list.end();) {
 #ifdef PARANOID
         CheckColinear(f);
 #endif
-        face_t *newf = TryMerge(face, *it);
+        std::unique_ptr<face_t> newf = TryMerge(face.get(), it->get());
 
         if (newf) {
-            delete face;
-            delete *it;
             list.erase(it);
             // restart, now trying to merge `newf` into the list
-            face = newf;
+            face = std::move(newf);
             it = list.begin();
         } else {
             it++;
         }
     }
 
-    list.emplace_back(face);
+    list.emplace_back(std::move(face));
 }
 
 /*
@@ -191,62 +188,13 @@ void MergeFaceToList(face_t *face, std::list<face_t *> &list)
 MergeFaceList
 ===============
 */
-std::list<face_t *> MergeFaceList(std::list<face_t *> input)
+std::list<std::unique_ptr<face_t>> MergeFaceList(std::list<std::unique_ptr<face_t>> input)
 {
-    std::list<face_t *> result;
+    std::list<std::unique_ptr<face_t>> result;
 
-    for (face_t * face : input) {
-        MergeFaceToList(face, result);
+    for (auto &face : input) {
+        MergeFaceToList(std::move(face), result);
     }
 
     return result;
-}
-
-#include <tbb/parallel_for_each.h>
-
-static void CollectNodes_R(node_t *node, std::vector<node_t *> &allnodes)
-{
-    allnodes.push_back(node);
-
-    if (node->planenum == PLANENUM_LEAF) {
-        return;
-    }
-
-    CollectNodes_R(node->children[0].get(), allnodes);
-    CollectNodes_R(node->children[1].get(), allnodes);
-}
-
-/*
-============
-MergeAll
-============
-*/
-void MergeAll(node_t *headnode)
-{
-    std::atomic<int> mergefaces = 0, premergefaces = 0;
-
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
-
-    std::vector<node_t *> allnodes;
-    CollectNodes_R(headnode, allnodes);
-
-    tbb::parallel_for_each(allnodes, [&](node_t *node) {
-        const size_t before = node->facelist.size();
-
-        std::list<face_t *> merged_pre_subdivide = MergeFaceList(node->facelist);
-
-        // re-subdivide after merging
-        node->facelist.clear();
-        for (face_t *face : merged_pre_subdivide) {
-            node->facelist.splice(node->facelist.end(), SubdivideFace(face));
-        }
-
-        const size_t after = node->facelist.size();
-
-        premergefaces += before;
-        mergefaces += after;
-    });
-
-    logging::print(logging::flag::STAT, "     {:8} mergefaces (from {}; {:.0}% merged)\n", mergefaces, premergefaces,
-        (static_cast<double>(mergefaces) / premergefaces) * 100.);
 }

@@ -24,6 +24,7 @@
 #include <common/qvec.hh>
 
 #include <list>
+#include <memory>
 #include <tuple>
 #include <vector>
 
@@ -31,10 +32,10 @@ struct bspbrush_t;
 struct face_t;
 struct side_t;
 
-face_t *NewFaceFromFace(const face_t *in);
-face_t *CopyFace(const face_t *in);
-face_t *MirrorFace(const face_t *face);
-std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split);
+std::unique_ptr<face_t> NewFaceFromFace(const face_t *in);
+std::unique_ptr<face_t> CopyFace(const face_t* in);
+std::unique_ptr<face_t> MirrorFace(const face_t *face);
+std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(std::unique_ptr<face_t> in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);
 bool BrushGE(const bspbrush_t &a, const bspbrush_t &b);
 std::vector<std::unique_ptr<bspbrush_t>> ChopBrushes(const std::vector<std::unique_ptr<bspbrush_t>> &input);

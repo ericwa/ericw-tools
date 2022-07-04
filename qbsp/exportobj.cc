@@ -131,8 +131,8 @@ static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *d
         return;
     }
 
-    for (face_t *face : node->facelist) {
-        dest->push_back(face);
+    for (auto &face : node->facelist) {
+        dest->push_back(face.get());
     }
 
     ExportObj_Nodes_r(node->children[0].get(), dest);

@@ -52,10 +52,7 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     for (int i = 0; i < 2; ++i) {
         node->children[i] = nullptr;
     }
-    for (auto *face : node->facelist) {
-        delete face;
-    }
-    node->facelist = {};
+    node->facelist.clear();
 
     node->contents = contents;
 

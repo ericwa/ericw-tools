@@ -47,9 +47,9 @@ Duplicates the non point information of a face, used by SplitFace and
 MergeFace.
 ==================
 */
-face_t *NewFaceFromFace(const face_t *in)
+std::unique_ptr<face_t> NewFaceFromFace(const face_t *in)
 {
-    face_t *newf = new face_t{};
+    auto newf = std::unique_ptr<face_t>(new face_t{});
 
     newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;
@@ -63,9 +63,9 @@ face_t *NewFaceFromFace(const face_t *in)
     return newf;
 }
 
-face_t* CopyFace(const face_t* in)
+std::unique_ptr<face_t> CopyFace(const face_t* in)
 {
-    face_t *temp = NewFaceFromFace(in);
+    auto temp = NewFaceFromFace(in);
     temp->w = in->w;
     return temp;
 }
@@ -87,7 +87,7 @@ SplitFace
 Frees in. Returns {front, back}
 ==================
 */
-std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
+std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(std::unique_ptr<face_t> in, const qplane3d &split)
 {
     if (in->w.size() < 0)
         Error("Attempting to split freed face");
@@ -96,40 +96,37 @@ std::tuple<face_t *, face_t *> SplitFace(face_t *in, const qplane3d &split)
     double dot = split.distance_to(in->origin);
     if (dot > in->radius) {
         // all in front
-        return {in, nullptr};
+        return {std::move(in), nullptr};
     } else if (dot < -in->radius) {
         // all behind
-        return {nullptr, in};
+        return {nullptr, std::move(in)};
     }
 
     auto [front_winding, back_winding] = in->w.clip(split, options.epsilon.value(), true);
 
     if (front_winding && !back_winding) {
         // all in front
-        return {in, nullptr};
+        return {std::move(in), nullptr};
     } else if (back_winding && !front_winding) {
         // all behind
-        return {nullptr, in};
+        return {nullptr, std::move(in)};
     }
 
-    face_t *new_front = NewFaceFromFace(in);
+    auto new_front = NewFaceFromFace(in.get());
     new_front->w = std::move(front_winding.value());
 
-    face_t *new_back = NewFaceFromFace(in);
+    auto new_back = NewFaceFromFace(in.get());
     new_back->w = std::move(back_winding.value());
 
     if (new_front->w.size() > MAXEDGES || new_back->w.size() > MAXEDGES)
         FError("Internal error: numpoints > MAXEDGES");
 
-    /* free the original face now that it is represented by the fragments */
-    delete in;
-
-    return {new_front, new_back};
+    return {std::move(new_front), std::move(new_back)};
 }
 
-face_t *MirrorFace(const face_t *face)
+std::unique_ptr<face_t> MirrorFace(const face_t *face)
 {
-    face_t *newface = NewFaceFromFace(face);
+    auto newface = NewFaceFromFace(face);
     newface->w = face->w.flip();
     newface->planeside = static_cast<planeside_t>(face->planeside ^ 1);
 
