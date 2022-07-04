@@ -51,132 +51,6 @@ static void MergeNodeFaces (node_t *node)
     node->facelist = MergeFaceList(std::move(node->facelist));
 }
 
-/*
-===============
-SubdivideFace
-
-If the face is >256 in either texture direction, carve a valid sized
-piece off and insert the remainder in the next link
-===============
-*/
-static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f)
-{
-    vec_t mins, maxs;
-    vec_t v;
-    int axis;
-    qbsp_plane_t plane;
-    const maptexinfo_t *tex;
-    vec_t subdiv;
-    vec_t extent;
-    int lmshift;
-
-    /* special (non-surface cached) faces don't need subdivision */
-    tex = &map.mtexinfos.at(f->texinfo);
-
-    if (tex->flags.is_skip || tex->flags.is_hint || !options.target_game->surf_is_subdivided(tex->flags)) {
-        std::list<std::unique_ptr<face_t>> result;
-        result.push_back(std::move(f));
-        return result;
-    }
-    // subdivision is pretty much pointless other than because of lightmap block limits
-    // one lightmap block will always be added at the end, for smooth interpolation
-
-    // engines that do support scaling will support 256*256 blocks (at whatever scale).
-    lmshift = f->lmshift;
-    if (lmshift > 4)
-        lmshift = 4; // no bugging out with legacy lighting
-
-    // legacy engines support 18*18 max blocks (at 1:16 scale).
-    // the 18*18 limit can be relaxed in certain engines, and doing so will generally give a performance boost.
-    subdiv = min(options.subdivide.value(), 255 << lmshift);
-
-    //      subdiv += 8;
-
-    // floating point precision from clipping means we should err on the low side
-    // the bsp is possibly going to be used in both engines that support scaling and those that do not. this means we
-    // always over-estimate by 16 rather than 1<<lmscale
-
-    std::list<std::unique_ptr<face_t>> surfaces;
-    surfaces.push_back(std::move(f));
-
-    for (axis = 0; axis < 2; axis++) {
-        // we'll transfer faces that are chopped down to size to this list
-        std::list<std::unique_ptr<face_t>> chopped;
-
-        while (!surfaces.empty()) {
-            f = std::move(surfaces.front());
-            surfaces.pop_front();
-
-            mins = VECT_MAX;
-            maxs = -VECT_MAX;
-
-            qvec3d tmp = tex->vecs.row(axis).xyz();
-
-            for (int32_t i = 0; i < f->w.size(); i++) {
-                v = qv::dot(f->w[i], tmp);
-                if (v < mins)
-                    mins = v;
-                if (v > maxs)
-                    maxs = v;
-            }
-
-            extent = ceil(maxs) - floor(mins);
-            //          extent = maxs - mins;
-            if (extent <= subdiv) {
-                // this face is already good
-                chopped.push_back(std::move(f));
-                continue;
-            }
-
-            // split it
-            plane.normal = tmp;
-            v = qv::normalizeInPlace(plane.normal);
-
-            // ericw -- reverted this, was causing https://github.com/ericwa/ericw-tools/issues/160
-            //            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this
-            //            should balance the load slightly */
-            //                plane.dist = (mins + subdiv/2) / v;
-            //            else
-            //                plane.dist = (mins + subdiv) / v;
-            plane.dist = (mins + subdiv - 16) / v;
-
-            std::unique_ptr<face_t> front;
-            std::unique_ptr<face_t> back;
-            std::tie(front, back) = SplitFace(std::move(f), plane);
-            if (!front || !back) {
-                //logging::print("didn't split\n");
-                // FError("Didn't split the polygon");
-            }
-
-            if (front) {
-                surfaces.push_back(std::move(front));
-            }
-            if (back) {
-                chopped.push_front(std::move(back));
-            }
-        }
-
-        // we've finished chopping on this axis, but we may need to chop on other axes
-        Q_assert(surfaces.empty());
-
-        surfaces = std::move(chopped);
-    }
-
-    return surfaces;
-}
-
-static void SubdivideNodeFaces(node_t *node)
-{
-    std::list<std::unique_ptr<face_t>> result;
-
-    // subdivide each face and push the results onto subdivided
-    for (auto &face : node->facelist) {
-        result.splice(result.end(), SubdivideFace(std::move(face)));
-    }
-
-    node->facelist = std::move(result);
-}
-
 //===========================================================================
 
 // This is a kludge.   Should be pEdgeFaces[2].
@@ -569,6 +443,132 @@ struct makefaces_stats_t {
     int c_merge;
     int c_subdivide;
 };
+
+/*
+===============
+SubdivideFace
+
+If the face is >256 in either texture direction, carve a valid sized
+piece off and insert the remainder in the next link
+===============
+*/
+static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f)
+{
+    vec_t mins, maxs;
+    vec_t v;
+    int axis;
+    qbsp_plane_t plane;
+    const maptexinfo_t *tex;
+    vec_t subdiv;
+    vec_t extent;
+    int lmshift;
+
+    /* special (non-surface cached) faces don't need subdivision */
+    tex = &map.mtexinfos.at(f->texinfo);
+
+    if (tex->flags.is_skip || tex->flags.is_hint || !options.target_game->surf_is_subdivided(tex->flags)) {
+        std::list<std::unique_ptr<face_t>> result;
+        result.push_back(std::move(f));
+        return result;
+    }
+    // subdivision is pretty much pointless other than because of lightmap block limits
+    // one lightmap block will always be added at the end, for smooth interpolation
+
+    // engines that do support scaling will support 256*256 blocks (at whatever scale).
+    lmshift = f->lmshift;
+    if (lmshift > 4)
+        lmshift = 4; // no bugging out with legacy lighting
+
+    // legacy engines support 18*18 max blocks (at 1:16 scale).
+    // the 18*18 limit can be relaxed in certain engines, and doing so will generally give a performance boost.
+    subdiv = min(options.subdivide.value(), 255 << lmshift);
+
+    //      subdiv += 8;
+
+    // floating point precision from clipping means we should err on the low side
+    // the bsp is possibly going to be used in both engines that support scaling and those that do not. this means we
+    // always over-estimate by 16 rather than 1<<lmscale
+
+    std::list<std::unique_ptr<face_t>> surfaces;
+    surfaces.push_back(std::move(f));
+
+    for (axis = 0; axis < 2; axis++) {
+        // we'll transfer faces that are chopped down to size to this list
+        std::list<std::unique_ptr<face_t>> chopped;
+
+        while (!surfaces.empty()) {
+            f = std::move(surfaces.front());
+            surfaces.pop_front();
+
+            mins = VECT_MAX;
+            maxs = -VECT_MAX;
+
+            qvec3d tmp = tex->vecs.row(axis).xyz();
+
+            for (int32_t i = 0; i < f->w.size(); i++) {
+                v = qv::dot(f->w[i], tmp);
+                if (v < mins)
+                    mins = v;
+                if (v > maxs)
+                    maxs = v;
+            }
+
+            extent = ceil(maxs) - floor(mins);
+            //          extent = maxs - mins;
+            if (extent <= subdiv) {
+                // this face is already good
+                chopped.push_back(std::move(f));
+                continue;
+            }
+
+            // split it
+            plane.normal = tmp;
+            v = qv::normalizeInPlace(plane.normal);
+
+            // ericw -- reverted this, was causing https://github.com/ericwa/ericw-tools/issues/160
+            //            if (subdiv > extent/2)      /* if we're near a boundary, just split the difference, this
+            //            should balance the load slightly */
+            //                plane.dist = (mins + subdiv/2) / v;
+            //            else
+            //                plane.dist = (mins + subdiv) / v;
+            plane.dist = (mins + subdiv - 16) / v;
+
+            std::unique_ptr<face_t> front;
+            std::unique_ptr<face_t> back;
+            std::tie(front, back) = SplitFace(std::move(f), plane);
+            if (!front || !back) {
+                //logging::print("didn't split\n");
+                // FError("Didn't split the polygon");
+            }
+
+            if (front) {
+                surfaces.push_back(std::move(front));
+            }
+            if (back) {
+                chopped.push_front(std::move(back));
+            }
+        }
+
+        // we've finished chopping on this axis, but we may need to chop on other axes
+        Q_assert(surfaces.empty());
+
+        surfaces = std::move(chopped);
+    }
+
+    return surfaces;
+}
+
+static void SubdivideNodeFaces(node_t *node)
+{
+    std::list<std::unique_ptr<face_t>> result;
+
+    // subdivide each face and push the results onto subdivided
+    for (auto &face : node->facelist) {
+        result.splice(result.end(), SubdivideFace(std::move(face)));
+    }
+
+    node->facelist = std::move(result);
+}
 
 /*
 ============
