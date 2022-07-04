@@ -30,7 +30,7 @@
 #include <common/settings.hh>
 
 #include <qbsp/brush.hh>
-#include <qbsp/csg4.hh>
+#include <qbsp/csg.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
 #include <qbsp/portals.hh>

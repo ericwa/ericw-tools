@@ -1,7 +1,7 @@
 set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
-	${CMAKE_SOURCE_DIR}/include/qbsp/csg4.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/csg.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/winding.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh
@@ -15,7 +15,7 @@ set(QBSP_INCLUDES
 
 set(QBSP_SOURCES
 	${CMAKE_SOURCE_DIR}/qbsp/brush.cc
-	${CMAKE_SOURCE_DIR}/qbsp/csg4.cc
+	${CMAKE_SOURCE_DIR}/qbsp/csg.cc
 	${CMAKE_SOURCE_DIR}/qbsp/map.cc
 	${CMAKE_SOURCE_DIR}/qbsp/merge.cc
 	${CMAKE_SOURCE_DIR}/qbsp/outside.cc
