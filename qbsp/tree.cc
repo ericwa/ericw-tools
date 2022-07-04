@@ -125,8 +125,8 @@ static void PruneNodes_R(node_t *node, int &count_pruned)
     PruneNodes_R(node->children[0].get(), count_pruned);
     PruneNodes_R(node->children[1].get(), count_pruned);
 
-    if (node->children[0]->planenum == PLANENUM_LEAF && node->children[0]->contents.is_solid(options.target_game) &&
-        node->children[1]->planenum == PLANENUM_LEAF && node->children[1]->contents.is_solid(options.target_game)) {
+    if (node->children[0]->planenum == PLANENUM_LEAF && node->children[0]->contents.is_any_solid(options.target_game) &&
+        node->children[1]->planenum == PLANENUM_LEAF && node->children[1]->contents.is_any_solid(options.target_game)) {
         // This discards any faces on-node. Should be safe (?)
         ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
         ++count_pruned;
