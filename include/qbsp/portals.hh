@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/bspfile.hh>
+#include <qbsp/brush.hh>
 #include <qbsp/qbsp.hh>
 
 #include <atomic>
