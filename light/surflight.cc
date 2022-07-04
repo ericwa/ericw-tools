@@ -138,6 +138,26 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     surfacelightsByFacenum[Face_GetNum(bsp, face)].push_back(index);
 }
 
+std::optional<int32_t> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // first, check if it's a Q2 surface
+        const mtexinfo_t *info = Face_Texinfo(bsp, face);
+
+        if (info != nullptr && (info->flags.native & Q2_SURF_LIGHT) && info->value > 0) {
+            return info->value;
+        }
+    }
+
+    for (const auto &surflight : GetSurfaceLightTemplates()) {
+        if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight, SURFLIGHT_RAD)) {
+            return surflight->light.value();
+        }
+    }
+
+    return std::nullopt;
+}
+
 static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, size_t i)
 {
     const mface_t *face = BSP_GetFace(bsp, i);
@@ -148,18 +168,17 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
         // first, check if it's a Q2 surface
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
 
-        if (info == nullptr)
-            return;
-
-        if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
-            if (info->flags.native & Q2_SURF_LIGHT) {
-                qvec3d wc = winding_t::from_face(bsp, face).center();
-                logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
+        if (info != nullptr)
+        {
+            if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
+                if (info->flags.native & Q2_SURF_LIGHT) {
+                    qvec3d wc = winding_t::from_face(bsp, face).center();
+                    logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
+                }
+            } else {
+                MakeSurfaceLight(bsp, cfg, face, std::nullopt, !(info->flags.native & Q2_SURF_SKY), (info->flags.native & Q2_SURF_SKY), 0, info->value);
             }
-            return;
         }
-
-        MakeSurfaceLight(bsp, cfg, face, std::nullopt, !(info->flags.native & Q2_SURF_SKY), (info->flags.native & Q2_SURF_SKY), 0, info->value);
     }
 
     // check matching templates
@@ -168,10 +187,10 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
             std::optional<qvec3f> texture_color;
 
             if (surflight->color.isChanged()) {
-                texture_color = surflight->color.value() / 255.f;
+                texture_color = surflight->color.value();
             }
 
-            MakeSurfaceLight(bsp, cfg, face, texture_color, !!surflight->epairs->get_int("_surface_spotlight"),
+            MakeSurfaceLight(bsp, cfg, face, texture_color, !surflight->epairs->has("_surface_spotlight") ? true : !!surflight->epairs->get_int("_surface_spotlight"),
                 surflight->epairs->get_int("_surface_is_sky"), surflight->epairs->get_int("style"), surflight->light.value());
         }
     }

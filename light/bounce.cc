@@ -26,6 +26,7 @@
 #include <light/light.hh>
 #include <light/bounce.hh>
 #include <light/ltface.hh>
+#include <light/surflight.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
@@ -72,11 +73,8 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
     }
 
     // don't bounce *from* emission surfaces
-    // FIXME: better way that works for Q1 too
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        if (bsp->texinfo[face->texinfo].flags.native & Q2_SURF_LIGHT) {
-            return false;
-        }
+    if (IsSurfaceLitFace(bsp, face)) {
+        return false;
     }
 
     return true;

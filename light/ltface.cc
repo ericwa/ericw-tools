@@ -818,7 +818,6 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
 
     // set defaults
     lightsurf->pvs.clear();
-    lightsurf->skyvisible = true;
     
     if (!bsp->dvis.bits.size()) {
         return;
@@ -843,19 +842,6 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
         /* merge the pvs for this sample point into lightsurf->pvs */
         for (int j=0; j<pvssize; j++) {
             lightsurf->pvs[j] |= pointpvs[j];
-        }
-    }
-    
-    // set lightsurf->skyvisible
-    lightsurf->skyvisible = false;
-    for (int i = 0; i < bsp->dleafs.size(); i++) {
-        const mleaf_t *leaf = &bsp->dleafs[i];
-        if (Pvs_LeafVisible(bsp, lightsurf->pvs, leaf)) {
-            // we can see this leaf, search for sky faces in it
-            if (Leaf_HasSky(bsp, leaf)) {
-                lightsurf->skyvisible = true;
-                break;
-            }
         }
     }
 }
@@ -975,9 +961,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     lightsurf->occlusion_stream.resize(lightsurf->points.size());
 
     /* Setup vis data */
-    if (options.visapprox.value() == visapprox_t::VIS) {
-        CalcPvs(bsp, lightsurf.get());
-    }
+    CalcPvs(bsp, lightsurf.get());
 
     return lightsurf;
 }
@@ -1547,11 +1531,6 @@ static void LightFace_Entity(
  */
 static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    /* If vis data says we can't see any sky faces, skip raytracing */
-    if (!lightsurf->skyvisible) {
-        return;
-    }
-    
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
     const qplane3d *plane = &lightsurf->plane;
@@ -1614,6 +1593,8 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
     lightmap_t *cached_lightmap = Lightmap_ForStyle(lightmaps, cached_style, lightsurf);
 
     const int N = rs.numPushedRays();
+    total_light_rays += N;
+
     for (int j = 0; j < N; j++) {
         if (rs.getPushedRayHitType(j) != hittype_t::SKY) {
             continue;
@@ -1645,6 +1626,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
 
         sample.color += rs.getPushedRayColor(j);
         sample.direction += rs.getPushedRayNormalContrib(j);
+        total_light_ray_hits++;
 
         Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
     }
@@ -3184,9 +3166,8 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
         }
 
         /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
-        const mtexinfo_t *texinfo = Face_Texinfo(bsp, face); // mxd. Surface lights...
-        if (texinfo != nullptr && texinfo->value > 0 && (texinfo->flags.native & Q2_SURF_LIGHT)) {
-            LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), texinfo->value * 2.0f, &lightsurf,
+        if (auto value = IsSurfaceLitFace(bsp, face)) {
+            LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), *value * 2.0f, &lightsurf,
                 lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface
                             // is renered fullbright, when using arghrad3
         } else if (lightsurf.minlight > cfg.minlight.value()) {
