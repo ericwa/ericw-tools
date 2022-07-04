@@ -27,14 +27,23 @@
 #include <common/qvec.hh>
 
 #include <memory>
+#include <vector>
 
 struct node_t;
+struct portal_t;
 
 struct tree_t
 {
     std::unique_ptr<node_t> headnode;
     node_t outside_node = {}; // portals outside the world face this
     aabb3d bounds;
+
+    // here for ownership/memory management - not intended to be iterated directly
+    std::vector<std::unique_ptr<portal_t>> portals;
+
+    // creates a new portal owned by `this` (stored in the `portals` vector) and
+    // returns a raw pointer to it
+    portal_t *create_portal();
 };
 
 void DetailToSolid(node_t *node);

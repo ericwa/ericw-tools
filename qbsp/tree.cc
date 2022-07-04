@@ -24,6 +24,18 @@
 #include <common/vectorutils.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/brush.hh>
+#include <qbsp/portals.hh>
+
+//============================================================================
+
+portal_t *tree_t::create_portal()
+{
+    auto *result = new portal_t{};
+
+    portals.push_back(std::unique_ptr<portal_t>(result));
+
+    return result;
+}
 
 //============================================================================
 

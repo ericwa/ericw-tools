@@ -178,7 +178,7 @@ void MakeHeadnodePortals(tree_t *tree)
         for (j = 0; j < 2; j++) {
             n = j * 3 + i;
 
-            p = new portal_t{};
+            p = tree->create_portal();
             portals[n] = p;
 
             qplane3d &pl = bplanes[n] = {};
@@ -254,7 +254,7 @@ and clipping it by all of parents of this node, as well as all the other
 portals in the node.
 ==================
 */
-void MakeNodePortal(node_t *node, portalstats_t &stats)
+void MakeNodePortal(tree_t *tree, node_t *node, portalstats_t &stats)
 {
     const auto lock = std::lock_guard(map_planes_lock);
 
@@ -291,7 +291,7 @@ void MakeNodePortal(node_t *node, portalstats_t &stats)
         return;
     }
 
-    auto *new_portal = new portal_t{};
+    portal_t *new_portal = tree->create_portal();
     new_portal->planenum = node->planenum;
     new_portal->onnode = node;
     new_portal->winding = w;
@@ -306,7 +306,7 @@ Move or split the portals that bound node so that the node's
 children have portals instead of node.
 ==============
 */
-void SplitNodePortals(node_t *node, portalstats_t &stats)
+void SplitNodePortals(tree_t *tree, node_t *node, portalstats_t &stats)
 {
     const auto lock = std::lock_guard(map_planes_lock);
 
@@ -370,7 +370,8 @@ void SplitNodePortals(node_t *node, portalstats_t &stats)
         }
 
         // the winding is split
-        auto *new_portal = new portal_t{*p};
+        portal_t *new_portal = tree->create_portal();
+        *new_portal = *p;
         new_portal->winding = backwinding;
         p->winding = frontwinding;
 
@@ -413,7 +414,7 @@ void CalcNodeBounds(node_t *node)
 MakeTreePortals_r
 ==================
 */
-void MakeTreePortals_r(node_t *node, portalstats_t &stats)
+void MakeTreePortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
 {
     CalcNodeBounds(node);
     if (node->bounds.mins()[0] >= node->bounds.maxs()[0])
@@ -436,11 +437,11 @@ void MakeTreePortals_r(node_t *node, portalstats_t &stats)
     if (node->planenum == PLANENUM_LEAF)
         return;
 
-    MakeNodePortal(node, stats);
-    SplitNodePortals(node, stats);
+    MakeNodePortal(tree, node, stats);
+    SplitNodePortals(tree, node, stats);
 
-    MakeTreePortals_r(node->children[0].get(), stats);
-    MakeTreePortals_r(node->children[1].get(), stats);
+    MakeTreePortals_r(tree, node->children[0].get(), stats);
+    MakeTreePortals_r(tree, node->children[1].get(), stats);
 }
 
 /*
@@ -450,24 +451,31 @@ MakeTreePortals
 */
 void MakeTreePortals(tree_t *tree)
 {
-    FreeTreePortals_r(tree->headnode.get());
+    FreeTreePortals(tree);
 
-    AssertNoPortals(tree->headnode.get());
+    AssertNoPortals(tree);
 
     portalstats_t stats{};
 
     MakeHeadnodePortals(tree);
-    MakeTreePortals_r(tree->headnode.get(), stats);
+    MakeTreePortals_r(tree, tree->headnode.get(), stats);
 }
 
-void AssertNoPortals(node_t *node)
+static void AssertNoPortals_r(node_t *node)
 {
     Q_assert(!node->portals);
 
     if (node->planenum != PLANENUM_LEAF) {
-        AssertNoPortals(node->children[0].get());
-        AssertNoPortals(node->children[1].get());
+        AssertNoPortals_r(node->children[0].get());
+        AssertNoPortals_r(node->children[1].get());
     }
+}
+
+void AssertNoPortals(tree_t *tree)
+{
+    AssertNoPortals_r(tree->headnode.get());
+    Q_assert(!tree->outside_node.portals);
+    Q_assert(tree->portals.empty());
 }
 
 /*
@@ -476,25 +484,22 @@ FreeTreePortals_r
 
 ==================
 */
-void FreeTreePortals_r(node_t *node)
+static void ClearNodePortals_r(node_t *node)
 {
-    portal_t *p, *nextp;
-
     if (node->planenum != PLANENUM_LEAF) {
-        FreeTreePortals_r(node->children[0].get());
-        FreeTreePortals_r(node->children[1].get());
+        ClearNodePortals_r(node->children[0].get());
+        ClearNodePortals_r(node->children[1].get());
     }
 
-    for (p = node->portals; p; p = nextp) {
-        if (p->nodes[0] == node)
-            nextp = p->next[0];
-        else
-            nextp = p->next[1];
-        RemovePortalFromNode(p, p->nodes[0]);
-        RemovePortalFromNode(p, p->nodes[1]);
-        delete p;
-    }
     node->portals = nullptr;
+}
+
+void FreeTreePortals(tree_t *tree)
+{
+    ClearNodePortals_r(tree->headnode.get());
+    tree->outside_node.portals = nullptr;
+
+    tree->portals.clear();
 }
 
 /*

@@ -173,24 +173,6 @@ static void SubdivideNodeFaces(node_t *node)
     node->facelist = result;
 }
 
-static void FreeNode(node_t *node)
-{
-    FreeTreePortals_r(node);
-    for (face_t *f : node->facelist) {
-        delete f;
-    }
-    delete node;
-}
-
-void FreeNodes(node_t *node)
-{
-    if (node->planenum != PLANENUM_LEAF) {
-        FreeNodes(node->children[0].get());
-        FreeNodes(node->children[1].get());
-    }
-    FreeNode(node);
-}
-
 //===========================================================================
 
 // This is a kludge.   Should be pEdgeFaces[2].

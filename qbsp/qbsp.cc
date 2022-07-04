@@ -646,7 +646,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         MarkVisibleSides(tree, entity);
         MakeFaces(tree->headnode.get());
 
-        FreeTreePortals_r(tree->headnode.get());
+        FreeTreePortals(tree);
         PruneNodes(tree->headnode.get());
 
         if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || options.keepprt.value())) {

@@ -257,18 +257,18 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
 CreateVisPortals_r
 ================
 */
-void CreateVisPortals_r(node_t *node, portalstats_t &stats)
+void CreateVisPortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
 {
     // stop as soon as we get to a detail_seperator, which
     // means that everything below is in a single cluster
     if (node->planenum == PLANENUM_LEAF || node->detail_separator )
         return;
 
-    MakeNodePortal(node, stats);
-    SplitNodePortals(node, stats);
+    MakeNodePortal(tree, node, stats);
+    SplitNodePortals(tree, node, stats);
 
-    CreateVisPortals_r(node->children[0].get(), stats);
-    CreateVisPortals_r(node->children[1].get(), stats);
+    CreateVisPortals_r(tree, node->children[0].get(), stats);
+    CreateVisPortals_r(tree, node->children[1].get(), stats);
 }
 
 /*
@@ -282,13 +282,13 @@ void WritePortalFile(tree_t *tree)
 
     portal_state_t state{};
 
-    FreeTreePortals_r(tree->headnode.get());
+    FreeTreePortals(tree);
 
-    AssertNoPortals(tree->headnode.get());
+    AssertNoPortals(tree);
     MakeHeadnodePortals(tree);
 
     portalstats_t stats{};
-    CreateVisPortals_r(tree->headnode.get(), stats);
+    CreateVisPortals_r(tree, tree->headnode.get(), stats);
 
     /* save portal file for vis tracing */
     WritePortalfile(tree->headnode.get(), &state);
