@@ -169,7 +169,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return;
     }
 
-    const vec_t sample_scalar = 1.f / sqrt(area);
+    const vec_t sample_scalar = 1.f / sqrt(area) / (options.extra.value() * options.extra.value());
 
     qplane3d faceplane = winding.plane();
 
