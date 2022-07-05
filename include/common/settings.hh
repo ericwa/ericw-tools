@@ -100,57 +100,6 @@ protected:
         return false;
     }
 
-    // convenience function for parsing a whole string
-    inline std::optional<std::string> parseString(parser_base_t &parser)
-    {
-        // peek the first token, if it was
-        // a quoted string we can exit now
-        if (!parser.parse_token(PARSE_PEEK)) {
-            return std::nullopt;
-        }
-
-        if (parser.was_quoted) {
-            parser.parse_token();
-            return parser.token;
-        }
-
-        std::string value;
-
-        // not a quoted string, so everything will be literal.
-        // go until we reach a -.
-        while (true) {
-            if (parser.token[0] == '-') {
-                break;
-            }
-
-            if (!value.empty()) {
-                value += ' ';
-            }
-
-            value += parser.token;
-
-            parser.parse_token();
-
-            if (!parser.parse_token(PARSE_PEEK)) {
-                break;
-            }
-        }
-
-        // skip end of named arguments
-        if (parser.token == "-" || parser.token == "--") {
-            parser.parse_token();
-        }
-
-        while (std::isspace(value.back())) {
-            value.pop_back();
-        }
-        while (std::isspace(value.front())) {
-            value.erase(value.begin());
-        }
-
-        return std::move(value);
-    }
-
 public:
     ~setting_base() = default;
 
@@ -555,8 +504,8 @@ public:
 
     bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
     {
-        if (auto value = parseString(parser)) {
-            setValueFromParse(*value, locked);
+        if (parser.parse_token()) {
+            setValueFromParse(parser.token, locked);
             return true;
         }
 
