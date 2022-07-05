@@ -3165,18 +3165,28 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
             LightFace_SurfaceLight(bsp, &lightsurf, lightmaps);
         }
 
-        /* minlight - Use Q2 surface light, or the greater of global or model minlight. */
-        if (auto value = IsSurfaceLitFace(bsp, face)) {
-            LightFace_Min(bsp, face, Face_LookupTextureColor(bsp, face), *value * 2.0f, &lightsurf,
-                lightmaps); // Playing by the eye here... 2.0 == 256 / 128; 128 is the light value, at which the surface
-                            // is renered fullbright, when using arghrad3
-        } else if (lightsurf.minlight > cfg.minlight.value()) {
-            LightFace_Min(bsp, face, lightsurf.minlight_color, lightsurf.minlight, &lightsurf, lightmaps);
-        } else {
-            const float light = cfg.minlight.value();
-            const qvec3d &color = cfg.minlight_color.value();
+        float minlight = 0;
+        qvec3d minlight_color;
 
-            LightFace_Min(bsp, face, color, light, &lightsurf, lightmaps);
+        /* minlight - use the greater of global or model minlight, or Q2 surface emission */
+        if (lightsurf.minlight > cfg.minlight.value()) {
+            minlight = lightsurf.minlight;
+            minlight_color = lightsurf.minlight_color;
+        } else {
+            minlight = cfg.minlight.value();
+            minlight_color = cfg.minlight_color.value();
+        }
+
+        if (!minlight) {
+            if (auto value = IsSurfaceLitFace(bsp, face)) {
+                minlight = *value * 64.0f;
+                minlight_color = Face_LookupTextureColor(bsp, face);
+            }
+        }
+
+        if (minlight) {
+            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf,
+                lightmaps);
         }
 
         /* negative lights */
