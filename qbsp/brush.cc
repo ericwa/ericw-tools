@@ -1096,4 +1096,7 @@ void bspbrush_t::update_bounds()
     for (const auto &face : sides) {
         this->bounds = this->bounds.unionWith(face.w.bounds());
     }
+
+    this->sphere_origin = (bounds.mins() + bounds.maxs()) / 2.0;
+    this->sphere_radius = qv::length((bounds.maxs() - bounds.mins()) / 2.0);
 }

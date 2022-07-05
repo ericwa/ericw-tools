@@ -68,6 +68,9 @@ struct bspbrush_t {
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
     mapentity_t *func_areaportal;
 
+    qvec3d sphere_origin;
+    double sphere_radius;
+
     void update_bounds();
 
     std::unique_ptr<bspbrush_t> copy_unique() const;
