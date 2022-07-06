@@ -874,7 +874,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     lightsurf->lightmapscale = (facesup && facesup->lmscale > modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
-    lightsurf->curved = extended_flags.phong_angle != 0;
+    lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
 
     // nodirt
     if (modelinfo->dirt.isChanged()) {
