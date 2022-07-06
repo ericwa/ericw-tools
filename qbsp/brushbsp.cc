@@ -218,6 +218,18 @@ static int BoxOnPlaneSide(const aabb3d& bounds, const qbsp_plane_t &plane)
     return side;
 }
 
+static int SphereOnPlaneSide(const qvec3d& sphere_origin, double sphere_radius, const qbsp_plane_t &plane)
+{
+    const double sphere_dist = plane.distAbove(sphere_origin);
+    if (sphere_dist > sphere_radius) {
+        return PSIDE_FRONT;
+    }
+    if (sphere_dist < -sphere_radius) {
+        return PSIDE_BACK;
+    }
+    return PSIDE_BOTH;
+}
+
 /*
 ============
 QuickTestBrushToPlanenum
@@ -282,8 +294,9 @@ static int TestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *numsp
         const auto lock = std::lock_guard(map_planes_lock);
         plane = map.planes[planenum];
     }
-    int s = BoxOnPlaneSide(brush.bounds, plane);
 
+    int s = SphereOnPlaneSide(brush.sphere_origin, brush.sphere_radius, plane);
+    //int s = BoxOnPlaneSide(brush.bounds, plane);
     if (s != PSIDE_BOTH)
         return s;
 
