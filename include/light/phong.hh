@@ -49,6 +49,7 @@ bool FacesSmoothed(const mface_t *f1, const mface_t *f2);
 const std::set<const mface_t *> &GetSmoothFaces(const mface_t *face);
 const std::vector<const mface_t *> &GetPlaneFaces(const mface_t *face);
 const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const int edgeindex);
+int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face);
 
 /// a directed edge can be used by more than one face, e.g. two cube touching just along an edge
 using edgeToFaceMap_t = std::map<std::pair<int, int>, std::vector<const mface_t *>>;

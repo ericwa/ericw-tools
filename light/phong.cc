@@ -389,7 +389,7 @@ static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
  * Q2: Returns nonzero if phong is requested on this face, in which case that is
  * the face tag to smooth with. Otherwise returns 0.
  */
-static int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
+int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
 {
     const mtexinfo_t *texinfo = BSP_GetTexinfo(bsp, face->texinfo);
     if (texinfo != nullptr) {
