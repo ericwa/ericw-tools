@@ -1380,7 +1380,7 @@ TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
     CHECK(3 == bsp.dareas.size());
 }
 
-TEST_CASE("quake maps", "[testmaps_q1][.releaseonly][!mayfail]")
+TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
 {
     std::vector<std::string> quake_maps{"DM1.map"};
     // fixme-brushbsp: enable the rest of these
