@@ -197,6 +197,34 @@ Options
    Set number of threads to use. By default, qbsp will attempt to
    use all available hardware threads.
 
+Game Path Specification
+-----------------------
+
+To compile a Q2 map, the compilers usually need to be able to locate an installation of the game. e.g. the .map might reference a texture name like ``e1u1/clip``, but qbsp needs to open the corresponding .wal file to look up the content/surface flags (playerclip, etc.) which are then written to the .bsp.
+
+We use the terminology:
+
+basedir
+  The directory containing the base game (e.g. ``id1`` or ``baseq2``). Can be an absolute path, e.g. ``c:/quake2/baseq2`` or ``c:/quake/id1``.
+
+gamedir
+  Optional mod directory, e.g. ``ad`` or ``c:/quake/ad``. If a gamedir is specified it will be added to the search path at a higher priority than the basedir.
+
+The common cases are:
+
+- place your .map in ``<quake2>/baseq2/maps`` and compile it there, qbsp will auto detect the basedir/gamedir.
+- for compiling a .map located elsewhere, use e.g.:
+
+  .. code::
+
+     qbsp -basedir "c:/quake2/baseq2" input.map
+
+  or
+
+  .. code::
+
+     qbsp -basedir "c:/quake2/baseq2" -gamedir mymod input.map
+
 Special Texture Names
 ---------------------
 
