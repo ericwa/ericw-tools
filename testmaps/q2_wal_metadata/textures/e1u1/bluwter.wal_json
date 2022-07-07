@@ -1,0 +1,5 @@
+{
+    "contents": ["WATER"],
+    "flags": ["LIGHT", "WARP", "TRANS33"],
+    "value": 100
+}

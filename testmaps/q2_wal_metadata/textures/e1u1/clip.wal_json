@@ -1,0 +1,4 @@
+{
+    "contents": ["MONSTERCLIP", "PLAYERCLIP"],
+    "flags": ["NODRAW"]
+}

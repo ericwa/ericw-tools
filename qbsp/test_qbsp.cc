@@ -170,7 +170,14 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     auto bsp_path = map_path;
     bsp_path.replace_extension(".bsp");
 
-    std::vector<std::string> args{"", "-noverbose"}; // first arg is the exe path, which we're ignoring in this case
+    auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
+
+    std::vector<std::string> args{
+        "", // the exe path, which we're ignoring in this case
+        "-noverbose",
+        "-path",
+        wal_metadata_path.string()
+    };
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }
@@ -1338,7 +1345,7 @@ TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST_CASE("base1", "[testmaps_q2][.releaseonly][!mayfail]")
+TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1.map");
 
