@@ -175,7 +175,7 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
     auto &texture = texture_opt.value();
     std::vector<uint8_t> buf;
     stbi_write_png_to_func([](void *context, void *data, int size) { std::copy(reinterpret_cast<uint8_t *>(data), reinterpret_cast<uint8_t *>(data) + size, std::back_inserter(*reinterpret_cast<decltype(buf) *>(context))); },
-        &buf, texture.meta.width, texture.meta.height, 4, texture.pixels.data(), texture.meta.width * 4);
+        &buf, texture.meta.width, texture.meta.height, 4, texture.pixels.data(), texture.width * 4);
 
     std::string str{"data:image/png;base64,"};
 
@@ -186,19 +186,41 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
 
 #include "common/bsputils.hh"
 
-static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const mface_t &face)
+static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bspx, const mface_t &face, bool use_bspx)
+{
+    if (!use_bspx) {
+        return { face, bsp, 16.0 };
+    }
+
+    return { face, bsp, (float) nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()]) };
+}
+
+static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bspxentries_t &bspx, const mface_t &face, bool use_bspx)
 {
     if (face.lightofs == -1) {
         return std::nullopt;
     }
 
     img::texture texture;
-    faceextents_t extents(face, bsp, 16.0);
-    texture.meta.width = extents.width();
-    texture.meta.height = extents.height();
+    faceextents_t extents = get_face_extents(bsp, bspx, face, use_bspx);
+    texture.meta.width = texture.width = extents.width();
+    texture.meta.height = texture.height = extents.height();
     texture.pixels.resize(texture.meta.width * texture.meta.height);
 
-    auto pixels = bsp.dlightdata.begin() + face.lightofs;
+    auto pixels = bsp.dlightdata.begin();
+    
+    if (!use_bspx) {
+        pixels += face.lightofs;
+    } else {
+        auto &lmoffset = bspx.at("LMOFFSET");
+        imemstream stream(lmoffset.data(), lmoffset.size());
+        stream >> endianness<std::endian::little>;
+        stream.seekg((&face - bsp.dfaces.data()) * sizeof(int32_t));
+        int32_t ofs;
+        stream >= ofs;
+        pixels += ofs;
+    }
+
     auto out_pixels = texture.pixels.begin();
 
     const bool is_rgb = bsp.loadversion->game->has_rgb_lightmap;
@@ -216,6 +238,114 @@ static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const mf
     }
 
     return texture;
+}
+
+static std::string generate_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, int32_t style, bool use_bspx)
+{
+    struct face_rect
+    {
+        const mface_t *face;
+        std::optional<img::texture> texture;
+        size_t atlas = 0;
+        size_t x = 0, y = 0;
+    };
+
+    constexpr size_t atlas_size = 512;
+
+    struct atlas
+    {
+        size_t current_x = 0, current_y = 0;
+        size_t tallest = 0;
+    };
+
+    std::vector<atlas> atlasses;
+    std::vector<face_rect> rectangles;
+    size_t current_atlas = 0;
+    rectangles.reserve(bsp.dfaces.size());
+
+    for (auto &face : bsp.dfaces) {
+        rectangles.emplace_back(face_rect { &face, get_lightmap_face(bsp, bspx, face, use_bspx) });
+    }
+
+    std::sort(rectangles.begin(), rectangles.end(), [](const face_rect &a, const face_rect &b) -> bool {
+        int32_t a_height = (a.texture ? a.texture->height : 0);
+        int32_t b_height = (b.texture ? b.texture->height : 0);
+
+        if (a_height == b_height) {
+            return b.face > a.face;
+        }
+
+        return a_height > b_height;
+    });
+
+    for (auto &rect : rectangles) {
+        if (!rect.texture) {
+            continue;
+        }
+
+        while (true) {
+            if (current_atlas == atlasses.size()) {
+                atlasses.emplace_back();
+            }
+
+            atlas &atl = atlasses[current_atlas];
+
+            if (atl.current_x + rect.texture->width >= atlas_size) {
+                atl.current_x = 0;
+                atl.current_y += atl.tallest;
+                atl.tallest = 0;
+            }
+
+            if (atl.current_y + rect.texture->height >= atlas_size) {
+                current_atlas++;
+                continue;
+            }
+
+            atl.tallest = max(atl.tallest, (size_t) rect.texture->height);
+            rect.x = atl.current_x;
+            rect.y = atl.current_y;
+
+            atl.current_x += rect.texture->width;
+            break;
+        }
+    }
+
+    img::texture full_atlas;
+    size_t sqrt_count = ceil(sqrt(atlasses.size()));
+    full_atlas.width = full_atlas.meta.width = sqrt_count * atlas_size;
+    full_atlas.height = full_atlas.meta.height = floor((atlasses.size() * atlas_size) / full_atlas.width) * atlas_size;
+    full_atlas.pixels.resize(full_atlas.width * full_atlas.height);
+
+    size_t trimmed_width = 0, trimmed_height = 0;
+
+    for (size_t i = 0; i < atlasses.size(); i++) {
+        size_t atlas_x = (i % sqrt_count) * atlas_size;
+        size_t atlas_y = (i / sqrt_count) * atlas_size;
+
+        for (auto &rect : rectangles) {
+            if (!rect.texture || rect.atlas != i) {
+                continue;
+            }
+            
+            trimmed_width = max(trimmed_width, rect.x + rect.texture->width);
+            trimmed_height = max(trimmed_height, rect.y + rect.texture->height);
+
+            for (size_t x = 0; x < rect.texture->width; x++) {
+                for (size_t y = 0; y < rect.texture->height; y++) {
+                    auto &src_pixel = rect.texture->pixels[(y * rect.texture->width) + x];
+                    auto &dst_pixel = full_atlas.pixels[((atlas_y + y + rect.y) * full_atlas.width) + (atlas_x + x + rect.x)];
+                    dst_pixel = src_pixel;
+                }
+            }
+        }
+    }
+    
+    // trim the edges off
+    full_atlas.meta.width = trimmed_width;
+    full_atlas.height = full_atlas.meta.height = trimmed_height;
+    full_atlas.pixels.resize(full_atlas.width * full_atlas.height);
+
+    return serialize_image(full_atlas);
 }
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
@@ -365,9 +495,11 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             }
             face.push_back({"vertices", verts});
 
-            if (auto lm = get_lightmap_face(bsp, src_face)) {
+#if 0
+            if (auto lm = get_lightmap_face(bsp, src_face, false)) {
                 face.push_back({"lightmap", serialize_image(lm)});
             }
+#endif
         }
     }
 
@@ -469,6 +601,13 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                     hex_string(lump.second.data(), lump.second.size());
             }
         }
+    }
+
+    // lightmap atlas
+    j.emplace("lightmap", generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, false));
+
+    if (bspdata.bspx.entries.find("LMOFFSET") != bspdata.bspx.entries.end()) {
+        j.emplace("bspx_lightmap", generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, true));
     }
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
