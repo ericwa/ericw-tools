@@ -88,7 +88,7 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
 void FinishLightmapSurface(
     const mbsp_t *bsp, lightsurf_t *lightsurf);
 void SaveLightmapSurface(
-    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf);
+    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const int (&texsize)[2], const int (&actual_texsize)[2]);
 
 inline qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
 {

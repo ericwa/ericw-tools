@@ -126,6 +126,8 @@ struct lightsurf_t
 
     int texmins[2];
     int texsize[2];
+    int vanilla_texmins[2];
+    int vanilla_texsize[2];
     qvec2d exactmid;
     qvec3d midpoint;
 
@@ -424,8 +426,8 @@ public:
         "blurs the lightmap. specify n to blur radius in samples, otherwise auto"};
     setting_set radlights{this, "radlights", "\"filename.rad\"", &experimental_group,
         "loads a <surfacename> <r> <g> <b> <intensity> file"};
-    setting_int32 lmscale{
-        this, "lmscale", 0, &experimental_group, "change lightmap scale, vanilla engines only allow 16"};
+    setting_int32 lightmap_scale{
+        this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"};
     setting_extra extra{
         this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"};
     setting_enum<visapprox_t> visapprox{

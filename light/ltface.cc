@@ -297,10 +297,9 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
     }
 
     for (int i = 0; i < 2; i++) {
-        mins[i] = floor(mins[i] / surf->lightmapscale);
-        maxs[i] = ceil(maxs[i] / surf->lightmapscale);
-        surf->texmins[i] = mins[i];
-        surf->texsize[i] = maxs[i] - mins[i];
+        surf->texmins[i] = floor(mins[i] / surf->lightmapscale);
+        surf->texsize[i] = ceil(maxs[i] / surf->lightmapscale) - surf->texmins[i];
+#if 0
         if (surf->texsize[i] >= MAXDIMENSION) {
             const dplane_t &plane = bsp->dplanes[face->planenum];
             const char *texname = Face_TextureName(bsp, face);
@@ -309,6 +308,21 @@ static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t 
                   "   texture {} at [{}]\n"
                   "   surface normal [{}]\n",
                 Face_GetNum(bsp, face), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname, worldpoint,
+                plane.normal);
+        }
+#endif
+
+        // FIXME: hardcoded 16
+        surf->vanilla_texmins[i] = floor(mins[i] / 16.0);
+        surf->vanilla_texsize[i] = ceil(maxs[i] / 16.0) - surf->vanilla_texmins[i];
+        if (surf->vanilla_texsize[i] >= MAXDIMENSION) {
+            const dplane_t &plane = bsp->dplanes[face->planenum];
+            const char *texname = Face_TextureName(bsp, face);
+            Error("Bad surface extents:\n"
+                  "   face {}, {} extents = {}, scale = 16\n"
+                  "   texture {} at [{}]\n"
+                  "   surface normal [{}]\n",
+                Face_GetNum(bsp, face), i ? "t" : "s", surf->vanilla_texsize[i], texname, worldpoint,
                 plane.normal);
         }
     }
@@ -871,7 +885,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     lightsurf->twosided = Face_IsTranslucent(bsp, face);
 
     // pick the larger of the two scales
-    lightsurf->lightmapscale = (facesup && facesup->lmscale > modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
+    lightsurf->lightmapscale = (facesup && facesup->lmscale < modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
     lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
@@ -2846,14 +2860,18 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
 }
 
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux);
+    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux, const int (&texsize)[2]);
 
 void SaveLightmapSurface(
-    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf)
+    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const int (&output_texsize)[2], const int (&actual_texsize)[2])
 {
     const lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
-    const int actual_width = lightsurf->texsize[0] + 1;
-    const int actual_height = lightsurf->texsize[1] + 1;
+    const int actual_width = actual_texsize[0] + 1;
+    const int actual_height = actual_texsize[1] + 1;
+    const int output_width = output_texsize[0] + 1;
+    const int output_height = output_texsize[1] + 1;
+
+    const int size = output_width * output_height;
 
     if (options.litonly.value()) {
         // special case for writing a .lit for a bsp without modifying the bsp.
@@ -2878,15 +2896,15 @@ void SaveLightmapSurface(
             // see if we have computed lighting for this style
             for (const lightmap_t &lm : lightmaps) {
                 if (lm.style == style) {
-                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux);
+                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux, output_texsize);
                     break;
                 }
             }
             // if we didn't find a matching lightmap, just don't write anything
 
-            out += (actual_width * actual_height);
-            lit += (actual_width * actual_height * 3);
-            lux += (actual_width * actual_height * 3);
+            out += size;
+            lit += (size * 3);
+            lux += (size * 3);
         }
 
         return;
@@ -2947,8 +2965,8 @@ void SaveLightmapSurface(
 
     /* update face info (either core data or supplementary stuff) */
     if (facesup) {
-        facesup->extent[0] = lightsurf->texsize[0] + 1;
-        facesup->extent[1] = lightsurf->texsize[1] + 1;
+        facesup->extent[0] = output_width;
+        facesup->extent[1] = output_height;
         int mapnum;
         for (mapnum = 0; mapnum < numstyles; mapnum++) {
             facesup->styles[mapnum] = sorted.at(mapnum)->style;
@@ -2969,8 +2987,6 @@ void SaveLightmapSurface(
 
     if (!numstyles)
         return;
-
-    const int size = (lightsurf->texsize[0] + 1) * (lightsurf->texsize[1] + 1);
 
     uint8_t *out, *lit, *lux;
     GetFileSpace(&out, &lit, &lux, size * numstyles);
@@ -3001,11 +3017,11 @@ void SaveLightmapSurface(
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
         const lightmap_t *lm = sorted.at(mapnum);
 
-        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux);
+        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux, output_texsize);
 
-        out += (actual_width * actual_height);
-        lit += (actual_width * actual_height * 3);
-        lux += (actual_width * actual_height * 3);
+        out += size;
+        lit += (size * 3);
+        lux += (size * 3);
     }
 }
 
@@ -3015,7 +3031,7 @@ void SaveLightmapSurface(
  * - Writes (actual_width * actual_height * 3) bytes to `lux`
  */
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux)
+    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux, const int (&output_texsize)[2])
 {
     const int oversampled_width = actual_width * options.extra.value();
     const int oversampled_height = actual_height * options.extra.value();
@@ -3046,10 +3062,14 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     }
 
     // copy from the float buffers to byte buffers in .bsp / .lit / .lux
+    const int output_width = output_texsize[0] + 1;
+    const int output_height = output_texsize[1] + 1;
 
-    for (int t = 0; t < actual_height; t++) {
-        for (int s = 0; s < actual_width; s++) {
-            const int sampleindex = (t * actual_width) + s;
+    for (int t = 0; t < output_height; t++) {
+        for (int s = 0; s < output_width; s++) {
+            const int input_sample_s = (s / (float) output_width) * actual_width;
+            const int input_sample_t = (t / (float) output_height) * actual_height;
+            const int sampleindex = (input_sample_t * actual_width) + input_sample_s;
             const qvec4f &color = output_color.at(sampleindex);
 
             *lit++ = color[0];
