@@ -77,12 +77,6 @@ public:
     const img::texture *suntexture_value;
 };
 
-/* for vanilla this would be 18. some engines allow higher limits though, which will be needed if we're scaling lightmap
- * resolution. */
-/*with extra sampling, lit+lux etc, we need at least 46mb space per thread. yes, that's a lot. on the plus side,
- * it doesn't affect bsp complexity (actually, can simplify it a little)*/
-constexpr size_t MAXDIMENSION = 255 + 1;
-
 struct texorg_t
 {
     qmat4x4f texSpaceToWorld;
