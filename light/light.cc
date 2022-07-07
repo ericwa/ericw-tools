@@ -365,20 +365,20 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
 
         if (faces_sup.empty()) {
-            SaveLightmapSurface(bsp, f, nullptr, surf.get());
+            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->texsize, surf->texsize);
         } else if (options.novanilla.value()) {
             f->lightofs = -1;
             f->styles[0] = INVALID_LIGHTSTYLE_OLD;
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->texsize, surf->texsize);
         } else if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->texsize, surf->texsize);
             f->lightofs = faces_sup[i].lightofs;
             for (int i = 0; i < MAXLIGHTMAPS; i++) {
                 f->styles[i] = faces_sup[i].styles[i];
             }
         } else {
-            SaveLightmapSurface(bsp, f, nullptr, surf.get());
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get());
+            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->vanilla_texsize, surf->texsize);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->texsize, surf->texsize);
         }
 
         light_surfaces[i].reset();
@@ -397,8 +397,8 @@ static void FindModelInfo(const mbsp_t *bsp)
         FError("Corrupt .BSP: bsp->nummodels is 0!");
     }
 
-    if (options.lmscale.isChanged()) {
-        WorldEnt().set("_lightmap_scale", options.lmscale.stringValue());
+    if (options.lightmap_scale.isChanged()) {
+        WorldEnt().set("_lightmap_scale", options.lightmap_scale.stringValue());
     }
 
     float lightmapscale = WorldEnt().get_int("_lightmap_scale");
@@ -406,7 +406,7 @@ static void FindModelInfo(const mbsp_t *bsp)
         lightmapscale = 16; /* the default */
     if (lightmapscale <= 0)
         FError("lightmap scale is 0 or negative\n");
-    if (options.lmscale.isChanged() || lightmapscale != 16)
+    if (options.lightmap_scale.isChanged() || lightmapscale != 16)
         logging::print("Forcing lightmap scale of {}qu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software
      * ones that might be able to just do some mip hacks). This tool doesn't really care.*/
@@ -1192,7 +1192,7 @@ int light_main(int argc, const char **argv)
 
         SetupDirt(options);
 
-        LightWorld(&bspdata, options.lmscale.isChanged());
+        LightWorld(&bspdata, options.lightmap_scale.isChanged());
 
         // invalidate normals
         bspdata.bspx.entries.erase("FACENORMALS");

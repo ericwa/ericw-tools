@@ -804,6 +804,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         }
     }
 
+    if (options.lmscale.isChanged() && !entity->epairs.has("_lmscale")) {
+        entity->epairs.set("_lmscale", std::to_string(options.lmscale.value()));
+    }
+
     /*
      * Init the entity
      */

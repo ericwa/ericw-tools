@@ -894,7 +894,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     }
 
     /* entities with custom lmscales are important for the qbsp to know about */
-    i = 16 * src->epairs.get_int("_lmscale");
+    i = 16 * src->epairs.get_float("_lmscale");
     if (!i)
         i = 16; // if 0, pick a suitable default
     lmshift = 0;

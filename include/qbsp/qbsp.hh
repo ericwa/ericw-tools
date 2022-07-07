@@ -235,6 +235,7 @@ public:
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
     setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
     setting_set texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to a texture definition file, which can transform textures in the .map into other textures."};
+    setting_numeric<vec_t> lmscale{this, "lmscale", 1.0, &common_format_group, "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump." };
 
     void setParameters(int argc, const char **argv) override
     {
