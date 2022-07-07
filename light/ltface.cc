@@ -61,90 +61,6 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
     }
 }
 
-/*
- * ================
- * CalcFaceExtents
- * Fills in surf->texmins[], surf->texsize[] and sets surf->exactmid[]
- * ================
- */
-// FIXME: duped by faceextents_t?
-static void CalcFaceExtents(const mface_t *face, const mbsp_t *bsp, lightsurf_t *surf)
-{
-    vec_t mins[2], maxs[2];
-    qvec3d worldmaxs, worldmins;
-
-    mins[0] = mins[1] = VECT_MAX;
-    maxs[0] = maxs[1] = -VECT_MAX;
-    worldmaxs[0] = worldmaxs[1] = worldmaxs[2] = -VECT_MAX;
-    worldmins[0] = worldmins[1] = worldmins[2] = VECT_MAX;
-    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-
-    for (int i = 0; i < face->numedges; i++) {
-        const int edge = bsp->dsurfedges[face->firstedge + i];
-        const int vert = (edge >= 0) ? bsp->dedges[edge][0] : bsp->dedges[-edge][1];
-        const qvec3d worldpoint = bsp->dvertexes[vert];
-
-        qvec2d texcoord = WorldToTexCoord(worldpoint, tex);
-        for (int j = 0; j < 2; j++) {
-            if (texcoord[j] < mins[j])
-                mins[j] = texcoord[j];
-            if (texcoord[j] > maxs[j])
-                maxs[j] = texcoord[j];
-        }
-
-        // ericw -- also save worldmaxs/worldmins, for calculating a bounding sphere
-        for (int j = 0; j < 3; j++) {
-            if (worldpoint[j] > worldmaxs[j])
-                worldmaxs[j] = worldpoint[j];
-            if (worldpoint[j] < worldmins[j])
-                worldmins[j] = worldpoint[j];
-        }
-    }
-
-    qvec3d worldpoint = Face_Centroid(bsp, face);
-    surf->exactmid = WorldToTexCoord(worldpoint, tex);
-
-    // calculate a bounding sphere for the face
-    {
-        qvec3d radius = (worldmaxs - worldmins) * 0.5;
-
-        surf->origin = worldmins + radius;
-        surf->radius = qv::length(radius);
-        surf->bounds = {worldmins, worldmaxs};
-    }
-
-    for (int i = 0; i < 2; i++) {
-        surf->texmins[i] = floor(mins[i] / surf->lightmapscale);
-        surf->texsize[i] = ceil(maxs[i] / surf->lightmapscale) - surf->texmins[i];
-#if 0
-        if (surf->texsize[i] >= MAXDIMENSION) {
-            const dplane_t &plane = bsp->dplanes[face->planenum];
-            const char *texname = Face_TextureName(bsp, face);
-            Error("Bad surface extents:\n"
-                  "   face {}, {} extents = {}, scale = {}\n"
-                  "   texture {} at [{}]\n"
-                  "   surface normal [{}]\n",
-                Face_GetNum(bsp, face), i ? "t" : "s", surf->texsize[i], surf->lightmapscale, texname, worldpoint,
-                plane.normal);
-        }
-#endif
-
-        // FIXME: hardcoded 16
-        surf->vanilla_texmins[i] = floor(mins[i] / 16.0);
-        surf->vanilla_texsize[i] = ceil(maxs[i] / 16.0) - surf->vanilla_texmins[i];
-        if (surf->vanilla_texsize[i] >= MAXDIMENSION) {
-            const dplane_t &plane = bsp->dplanes[face->planenum];
-            const char *texname = Face_TextureName(bsp, face);
-            Error("Bad surface extents:\n"
-                  "   face {}, {} extents = {}, scale = 16\n"
-                  "   texture {} at [{}]\n"
-                  "   surface normal [{}]\n",
-                Face_GetNum(bsp, face), i ? "t" : "s", surf->vanilla_texsize[i], texname, worldpoint,
-                plane.normal);
-        }
-    }
-}
-
 class position_t
 {
 public:
@@ -476,13 +392,13 @@ static void CalcPoints(
      * Fill in the surface points. The points are biased towards the center of
      * the surface to help avoid edge cases just inside walls
      */
-    surf->midpoint = TexCoordToWorld(surf->exactmid[0], surf->exactmid[1], &surf->texorg);
+    surf->midpoint = TexCoordToWorld(surf->extents.exact_mid[0], surf->extents.exact_mid[1], &surf->texorg);
     surf->midpoint += offset;
 
-    surf->width = (surf->texsize[0] + 1) * options.extra.value();
-    surf->height = (surf->texsize[1] + 1) * options.extra.value();
-    const float starts = (surf->texmins[0] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
-    const float startt = (surf->texmins[1] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
+    surf->width = surf->extents.width() * options.extra.value();
+    surf->height = surf->extents.height() * options.extra.value();
+    const float starts = (surf->extents.texmins[0] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
+    const float startt = (surf->extents.texmins[1] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
     const float st_step = surf->lightmapscale / options.extra.value();
 
     /* Allocate surf->points */
@@ -778,7 +694,9 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
 
     /* Set up the surface points */
-    CalcFaceExtents(face, bsp, lightsurf.get());
+    lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
+    lightsurf->vanilla_extents = faceextents_t(*face, *bsp, 16.0);
+
     CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
 
     /* Correct the plane for the model offset (must be done last,
@@ -787,8 +705,8 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     plane.dist = qv::dot(plane.normal, planepoint);
 
     /* Correct bounding sphere */
-    lightsurf->origin += modelinfo->offset;
-    lightsurf->bounds = lightsurf->bounds.translate(modelinfo->offset);
+    lightsurf->extents.origin += modelinfo->offset;
+    lightsurf->extents.bounds = lightsurf->extents.bounds.translate(modelinfo->offset);
 
     /* Allocate occlusion array */
     lightsurf->occlusion.resize(lightsurf->points.size());
@@ -1209,12 +1127,12 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (options.visapprox.value() == visapprox_t::RAYS && entity->bounds.disjoint(lightsurf->bounds, 0.001)) {
+    if (options.visapprox.value() == visapprox_t::RAYS && entity->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
-    qvec3d distvec = entity->origin.value() - lightsurf->origin;
-    const float dist = qv::length(distvec) - lightsurf->radius;
+    qvec3d distvec = entity->origin.value() - lightsurf->extents.origin;
+    const float dist = qv::length(distvec) - lightsurf->extents.radius;
 
     /* light is inside surface bounding sphere => can't cull */
     if (dist < 0) {
@@ -1749,12 +1667,12 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->bounds, 0.001)) {
+    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
-    const qvec3f dir = qvec3f(lightsurf->origin) - vpl->pos; // vpl -> sample point
-    const float dist = qv::length(dir) + lightsurf->radius;
+    const qvec3f dir = qvec3f(lightsurf->extents.origin) - vpl->pos; // vpl -> sample point
+    const float dist = qv::length(dir) + lightsurf->extents.radius;
 
     // get light contribution
     const qvec3f color = BounceLight_ColorAtDist(cfg, vpl->area, vpl->componentwiseMaxColor, dist);
@@ -1765,13 +1683,13 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 {
-    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->bounds, 0.001)) {
+    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    const qvec3f dir = qvec3f(lightsurf->origin) - qvec3f(vpl->pos); // vpl -> sample point
-    const float dist = qv::length(dir) + lightsurf->radius;
+    const qvec3f dir = qvec3f(lightsurf->extents.origin) - qvec3f(vpl->pos); // vpl -> sample point
+    const float dist = qv::length(dir) + lightsurf->extents.radius;
 
     // Get light contribution
     const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vpl->color, dist);
@@ -2681,19 +2599,108 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
     return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
 }
 
+/**
+ * - Writes (actual_width * actual_height) bytes to `out`
+ * - Writes (actual_width * actual_height * 3) bytes to `lit`
+ * - Writes (actual_width * actual_height * 3) bytes to `lux`
+ */
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux, const int (&texsize)[2]);
+    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux, const faceextents_t &output_extents)
+{
+    const int oversampled_width = actual_width * options.extra.value();
+    const int oversampled_height = actual_height * options.extra.value();
+
+    // allocate new float buffers for the output colors and directions
+    // these are the actual output width*height, without oversampling.
+
+    std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
+
+    if (options.highlightseams.value()) {
+        fullres = HighlightSeams(fullres, oversampled_width, oversampled_height);
+    }
+
+    // removes all transparent pixels by averaging from adjacent pixels
+    fullres = FloodFillTransparent(fullres, oversampled_width, oversampled_height);
+
+    if (options.soft.value() > 0) {
+        fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, options.soft.value());
+    }
+
+    const std::vector<qvec4f> output_color =
+        IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, options.extra.value());
+    std::optional<std::vector<qvec4f>> output_dir;
+
+    if (lux) {
+        output_dir = IntegerDownsampleImage(
+            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, options.extra.value());
+    }
+
+    // copy from the float buffers to byte buffers in .bsp / .lit / .lux
+    const int output_width = output_extents.width();
+    const int output_height = output_extents.height();
+
+    for (int t = 0; t < output_height; t++) {
+        for (int s = 0; s < output_width; s++) {
+            const int input_sample_s = (s / (float) output_width) * actual_width;
+            const int input_sample_t = (t / (float) output_height) * actual_height;
+            const int sampleindex = (input_sample_t * actual_width) + input_sample_s;
+
+            if (lit || out) {
+                const qvec4f &color = output_color.at(sampleindex);
+
+                if (lit) {
+                    *lit++ = color[0];
+                    *lit++ = color[1];
+                    *lit++ = color[2];
+                }
+
+                if (out) {
+                    /* Take the max() of the 3 components to get the value to write to the
+                    .bsp lightmap. this avoids issues with some engines
+                    that require the lit and internal lightmap to have the same
+                    intensity. (MarkV, some QW engines)
+
+                    This must be max(), see LightNormalize in MarkV 1036.
+                    */
+                    float light = max({color[0], color[1], color[2]});
+                    if (light < 0)
+                        light = 0;
+                    if (light > 255)
+                        light = 255;
+                    *out++ = light;
+                }
+            }
+
+            if (lux) {
+                qvec3d direction = output_dir->at(sampleindex).xyz();
+                qvec3d temp = {qv::dot(direction, lightsurf->snormal), qv::dot(direction, lightsurf->tnormal),
+                    qv::dot(direction, lightsurf->plane.normal)};
+
+                if (qv::emptyExact(temp))
+                    temp = {0, 0, 1};
+                else
+                    qv::normalizeInPlace(temp);
+
+                int v = (temp[0] + 1) * 128;
+                *lux++ = (v > 255) ? 255 : v;
+                v = (temp[1] + 1) * 128;
+                *lux++ = (v > 255) ? 255 : v;
+                v = (temp[2] + 1) * 128;
+                *lux++ = (v > 255) ? 255 : v;
+            }
+        }
+    }
+}
 
 void SaveLightmapSurface(
-    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const int (&output_texsize)[2], const int (&actual_texsize)[2])
+    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const faceextents_t &extents, const faceextents_t &output_extents)
 {
     const lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
-    const int actual_width = actual_texsize[0] + 1;
-    const int actual_height = actual_texsize[1] + 1;
-    const int output_width = output_texsize[0] + 1;
-    const int output_height = output_texsize[1] + 1;
-
-    const int size = output_width * output_height;
+    const int actual_width = extents.width();
+    const int actual_height = extents.height();
+    const int output_width = output_extents.width();
+    const int output_height = output_extents.height();
+    const int size = output_extents.numsamples();
 
     if (options.litonly.value()) {
         // special case for writing a .lit for a bsp without modifying the bsp.
@@ -2718,15 +2725,21 @@ void SaveLightmapSurface(
             // see if we have computed lighting for this style
             for (const lightmap_t &lm : lightmaps) {
                 if (lm.style == style) {
-                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux, output_texsize);
+                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux, output_extents);
                     break;
                 }
             }
             // if we didn't find a matching lightmap, just don't write anything
 
-            out += size;
-            lit += (size * 3);
-            lux += (size * 3);
+            if (out) {
+                out += size;
+            }
+            if (lit) {
+                lit += (size * 3);
+            }
+            if (lux) {
+                lux += (size * 3);
+            }
         }
 
         return;
@@ -2839,96 +2852,16 @@ void SaveLightmapSurface(
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
         const lightmap_t *lm = sorted.at(mapnum);
 
-        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux, output_texsize);
+        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux, output_extents);
 
-        out += size;
-        lit += (size * 3);
-        lux += (size * 3);
-    }
-}
-
-/**
- * - Writes (actual_width * actual_height) bytes to `out`
- * - Writes (actual_width * actual_height * 3) bytes to `lit`
- * - Writes (actual_width * actual_height * 3) bytes to `lux`
- */
-static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux, const int (&output_texsize)[2])
-{
-    const int oversampled_width = actual_width * options.extra.value();
-    const int oversampled_height = actual_height * options.extra.value();
-
-    // allocate new float buffers for the output colors and directions
-    // these are the actual output width*height, without oversampling.
-
-    std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
-
-    if (options.highlightseams.value()) {
-        fullres = HighlightSeams(fullres, oversampled_width, oversampled_height);
-    }
-
-    // removes all transparent pixels by averaging from adjacent pixels
-    fullres = FloodFillTransparent(fullres, oversampled_width, oversampled_height);
-
-    if (options.soft.value() > 0) {
-        fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, options.soft.value());
-    }
-
-    const std::vector<qvec4f> output_color =
-        IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, options.extra.value());
-    std::optional<std::vector<qvec4f>> output_dir;
-
-    if (lux) {
-        output_dir = IntegerDownsampleImage(
-            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, options.extra.value());
-    }
-
-    // copy from the float buffers to byte buffers in .bsp / .lit / .lux
-    const int output_width = output_texsize[0] + 1;
-    const int output_height = output_texsize[1] + 1;
-
-    for (int t = 0; t < output_height; t++) {
-        for (int s = 0; s < output_width; s++) {
-            const int input_sample_s = (s / (float) output_width) * actual_width;
-            const int input_sample_t = (t / (float) output_height) * actual_height;
-            const int sampleindex = (input_sample_t * actual_width) + input_sample_s;
-            const qvec4f &color = output_color.at(sampleindex);
-
-            *lit++ = color[0];
-            *lit++ = color[1];
-            *lit++ = color[2];
-
-            /* Take the max() of the 3 components to get the value to write to the
-            .bsp lightmap. this avoids issues with some engines
-            that require the lit and internal lightmap to have the same
-            intensity. (MarkV, some QW engines)
-
-            This must be max(), see LightNormalize in MarkV 1036.
-            */
-            float light = max({color[0], color[1], color[2]});
-            if (light < 0)
-                light = 0;
-            if (light > 255)
-                light = 255;
-            *out++ = light;
-
-            if (lux) {
-                qvec3d direction = output_dir->at(sampleindex).xyz();
-                qvec3d temp = {qv::dot(direction, lightsurf->snormal), qv::dot(direction, lightsurf->tnormal),
-                    qv::dot(direction, lightsurf->plane.normal)};
-
-                if (qv::emptyExact(temp))
-                    temp = {0, 0, 1};
-                else
-                    qv::normalizeInPlace(temp);
-
-                int v = (temp[0] + 1) * 128;
-                *lux++ = (v > 255) ? 255 : v;
-                v = (temp[1] + 1) * 128;
-                *lux++ = (v > 255) ? 255 : v;
-                v = (temp[2] + 1) * 128;
-                *lux++ = (v > 255) ? 255 : v;
-            }
+        if (out) {
+            out += size;
+        }
+        if (lit) {
+            lit += (size * 3);
+        }
+        if (lux) {
+            lux += (size * 3);
         }
     }
 }

@@ -229,9 +229,17 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
 {
     light_mutex.lock();
 
-    *lightdata = filebase.data() + file_p;
-    *colordata = lit_filebase.data() + lit_file_p;
-    *deluxdata = lux_filebase.data() + lux_file_p;
+    *lightdata = *colordata = *deluxdata = nullptr;
+
+    if (!filebase.empty()) {
+        *lightdata = filebase.data() + file_p;
+    }
+    if (!lit_filebase.empty()) {
+        *colordata = lit_filebase.data() + lit_file_p;
+    }
+    if (!lux_filebase.empty()) {
+        *deluxdata = lux_filebase.data() + lux_file_p;
+    }
 
     // if size isn't a multiple of 4, round up to the next multiple of 4
     if ((size % 4) != 0) {
@@ -240,9 +248,15 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
 
     // increment the next writing offsets, aligning them to 4 uint8_t boundaries (file_p)
     // and 12-uint8_t boundaries (lit_file_p/lux_file_p)
-    file_p += size;
-    lit_file_p += 3 * size;
-    lux_file_p += 3 * size;
+    if (!filebase.empty()) {
+        file_p += size;
+    }
+    if (!lit_filebase.empty()) {
+        lit_file_p += 3 * size;
+    }
+    if (!lux_filebase.empty()) {
+        lux_file_p += 3 * size;
+    }
 
     light_mutex.unlock();
 
@@ -260,14 +274,18 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
 void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs)
 {
     Q_assert(lightofs >= 0);
+    
+    *lightdata = *colordata = *deluxdata = nullptr;
 
-    *lightdata = filebase.data() + lightofs;
+    if (!filebase.empty()) {
+        *lightdata = filebase.data() + lightofs;
+    }
 
-    if (colordata) {
+    if (colordata && !lit_filebase.empty()) {
         *colordata = lit_filebase.data() + (lightofs * 3);
     }
 
-    if (deluxdata) {
+    if (deluxdata && !lux_filebase.empty()) {
         *deluxdata = lux_filebase.data() + (lightofs * 3);
     }
 
@@ -365,20 +383,20 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
 
         if (faces_sup.empty()) {
-            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->texsize, surf->texsize);
+            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->extents);
         } else if (options.novanilla.value()) {
             f->lightofs = -1;
             f->styles[0] = INVALID_LIGHTSTYLE_OLD;
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->texsize, surf->texsize);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
         } else if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->texsize, surf->texsize);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
             f->lightofs = faces_sup[i].lightofs;
             for (int i = 0; i < MAXLIGHTMAPS; i++) {
                 f->styles[i] = faces_sup[i].styles[i];
             }
         } else {
-            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->vanilla_texsize, surf->texsize);
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->texsize, surf->texsize);
+            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
         }
 
         light_surfaces[i].reset();
@@ -481,20 +499,26 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     lit_filebase.clear();
     lux_filebase.clear();
 
-    /* greyscale data stored in a separate buffer */
-    filebase.resize(MAX_MAP_LIGHTING);
-    file_p = 0;
-    file_end = MAX_MAP_LIGHTING;
+    if (!bsp.loadversion->game->has_rgb_lightmap) {
+        /* greyscale data stored in a separate buffer */
+        filebase.resize(MAX_MAP_LIGHTING);
+        file_p = 0;
+        file_end = MAX_MAP_LIGHTING;
+    }
 
-    /* litfile data stored in a separate buffer */
-    lit_filebase.resize(MAX_MAP_LIGHTING * 3);
-    lit_file_p = 0;
-    lit_file_end = (MAX_MAP_LIGHTING * 3);
+    if (bsp.loadversion->game->has_rgb_lightmap || options.write_litfile) {
+        /* litfile data stored in a separate buffer */
+        lit_filebase.resize(MAX_MAP_LIGHTING * 3);
+        lit_file_p = 0;
+        lit_file_end = (MAX_MAP_LIGHTING * 3);
+    }
 
-    /* lux data stored in a separate buffer */
-    lux_filebase.resize(MAX_MAP_LIGHTING * 3);
-    lux_file_p = 0;
-    lux_file_end = (MAX_MAP_LIGHTING * 3);
+    if (options.write_luxfile) {
+        /* lux data stored in a separate buffer */
+        lux_filebase.resize(MAX_MAP_LIGHTING * 3);
+        lux_file_p = 0;
+        lux_file_end = (MAX_MAP_LIGHTING * 3);
+    }
 
     if (forcedscale) {
         bspdata->bspx.entries.erase("LMSHIFT");
@@ -523,7 +547,6 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     // create lightmap surfaces
     CreateLightmapSurfaces(&bsp);
 
-    const bool isQuake2map = bsp.loadversion->game->id == GAME_QUAKE_II; // mxd
     const bool bouncerequired =
         options.bounce.value() && (options.debugmode == debugmodes::none || options.debugmode == debugmodes::bounce ||
                                       options.debugmode == debugmodes::bouncelights); // mxd
@@ -615,7 +638,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
                 /*needs bigger datatype*/
                 std::vector<uint8_t> styles_mem(sizeof(uint16_t) * stylesperface * bsp.dfaces.size());
 
-                omemstream styles(styles_mem.data(), std::ios_base::out | std::ios_base::binary);
+                omemstream styles(styles_mem.data(), styles_mem.size(), std::ios_base::out | std::ios_base::binary);
                 styles << endianness<std::endian::little>;
 
                 for (size_t i = 0; i < bsp.dfaces.size(); i++) {
@@ -642,7 +665,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         if (needoffsets) {
             std::vector<uint8_t> offsets_mem(bsp.dfaces.size() * sizeof(int32_t));
 
-            omemstream offsets(offsets_mem.data(), std::ios_base::out | std::ios_base::binary);
+            omemstream offsets(offsets_mem.data(), offsets_mem.size(), std::ios_base::out | std::ios_base::binary);
             offsets << endianness<std::endian::little>;
 
             for (size_t i = 0; i < bsp.dfaces.size(); i++) {

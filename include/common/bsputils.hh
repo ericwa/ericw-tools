@@ -157,72 +157,80 @@ constexpr size_t MAXDIMENSION = 255 + 1;
 
 class faceextents_t
 {
-    qvec2i m_texmins;
-    qvec2i m_texsize;
-    float m_lightmapscale;
-    qmat4x4f m_worldToTexCoord;
-    qmat4x4f m_texCoordToWorld;
-
 public:
+    qvec2i texmins;
+    qvec2i texextents;
+    float lightmapshift;
+    qmat4x4f worldToTexCoordMatrix;
+    qmat4x4f texCoordToWorldMatrix;
+
+    qvec3d origin;
+    vec_t radius;
+    aabb3d bounds;
+    qvec2d exact_mid;
+
     faceextents_t() = default;
 
-    inline faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmscale) :
-        m_lightmapscale(lmscale)
+    inline faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmshift) :
+        lightmapshift(lmshift)
     {
-        m_worldToTexCoord = WorldToTexSpace(&bsp, &face);
-        m_texCoordToWorld = TexSpaceToWorld(&bsp, &face);
+        worldToTexCoordMatrix = WorldToTexSpace(&bsp, &face);
+        texCoordToWorldMatrix = TexSpaceToWorld(&bsp, &face);
 
-        qvec2f mins(FLT_MAX, FLT_MAX);
-        qvec2f maxs(-FLT_MAX, -FLT_MAX);
+        aabb2d tex_bounds;
 
         for (int i = 0; i < face.numedges; i++) {
             const qvec3f &worldpoint = Face_PointAtIndex(&bsp, &face, i);
             const qvec2f texcoord = Face_WorldToTexCoord(&bsp, &face, worldpoint);
 
-    #ifdef PARANOID
+#ifdef PARANOID
             // self test
             auto texcoordRT = this->worldToTexCoord(worldpoint);
             auto worldpointRT = this->texCoordToWorld(texcoord);
             Q_assert(qv::epsilonEqual(texcoordRT, texcoord, 0.1f));
             Q_assert(qv::epsilonEqual(worldpointRT, worldpoint, 0.1f));
             // end self test
-    #endif
+#endif
 
-            for (int j = 0; j < 2; j++) {
-                if (texcoord[j] < mins[j])
-                    mins[j] = texcoord[j];
-                if (texcoord[j] > maxs[j])
-                    maxs[j] = texcoord[j];
-            }
+            tex_bounds += texcoord;
+            bounds += worldpoint;
         }
 
         for (int i = 0; i < 2; i++) {
-            mins[i] = floor(mins[i] / m_lightmapscale);
-            maxs[i] = ceil(maxs[i] / m_lightmapscale);
-            m_texmins[i] = static_cast<int>(mins[i]);
-            m_texsize[i] = static_cast<int>(maxs[i] - mins[i]);
+            tex_bounds[0][i] = floor(tex_bounds[0][i] / lightmapshift);
+            tex_bounds[1][i] = ceil(tex_bounds[1][i] / lightmapshift);
+            texmins[i] = static_cast<int>(tex_bounds[0][i]);
+            texextents[i] = static_cast<int>(tex_bounds[1][i] - tex_bounds[0][i]);
 
-            if (m_texsize[i] >= MAXDIMENSION) {
+            if (texextents[i] >= MAXDIMENSION * (16.0 / lightmapshift)) {
                 const qplane3d plane = Face_Plane(&bsp, &face);
                 const qvec3f &point = Face_PointAtIndex(&bsp, &face, 0); // grab first vert
                 const char *texname = Face_TextureName(&bsp, &face);
 
-                logging::print("WARNING: Bad surface extents:\n"
-                      "   surface {}, {} extents = {}, scale = {}\n"
+                logging::print("WARNING: Bad surface extents (may not load in vanilla Q1 engines):\n"
+                      "   surface {}, {} extents = {}, shift = {}\n"
                       "   texture {} at ({})\n"
                       "   surface normal ({})\n",
-                    Face_GetNum(&bsp, &face), i ? "t" : "s", m_texsize[i], m_lightmapscale, texname, point, plane.normal);
+                    Face_GetNum(&bsp, &face), i ? "t" : "s", texextents[i], lightmapshift, texname, point, plane.normal);
             }
         }
+
+        exact_mid = Face_WorldToTexCoord(&bsp, &face, Face_Centroid(&bsp, &face));
+
+        // calculate a bounding sphere for the face
+        qvec3d radius = (bounds.maxs() - bounds.mins()) * 0.5;
+
+        origin = bounds.mins() + radius;
+        radius = qv::length(radius);
     }
 
     constexpr int width() const
     {
-        return m_texsize[0] + 1;
+        return texextents[0] + 1;
     }
     constexpr int height() const
     {
-        return m_texsize[1] + 1;
+        return texextents[1] + 1;
     }
     constexpr int numsamples() const
     {
@@ -233,37 +241,20 @@ public:
         return {width(), height()};
     }
 
-    inline int indexOf(const qvec2i &lm) const
-    {
-        Q_assert(lm[0] >= 0 && lm[0] < width());
-        Q_assert(lm[1] >= 0 && lm[1] < height());
-        return lm[0] + (width() * lm[1]);
-    }
-
-    inline qvec2i intCoordsFromIndex(int index) const
-    {
-        Q_assert(index >= 0);
-        Q_assert(index < numsamples());
-
-        qvec2i res(index % width(), index / width());
-        Q_assert(indexOf(res) == index);
-        return res;
-    }
-
     constexpr qvec2f lightmapCoordToTexCoord(const qvec2f &LMCoord) const
     {
-        return { m_lightmapscale * (m_texmins[0] + LMCoord[0]), m_lightmapscale * (m_texmins[1] + LMCoord[1]) };
+        return { lightmapshift * (texmins[0] + LMCoord[0]), lightmapshift * (texmins[1] + LMCoord[1]) };
     }
 
     constexpr qvec2f texCoordToLightmapCoord(const qvec2f &tc) const
     {
-        return { (tc[0] / m_lightmapscale) - m_texmins[0], (tc[1] / m_lightmapscale) - m_texmins[1] };
+        return { (tc[0] / lightmapshift) - texmins[0], (tc[1] / lightmapshift) - texmins[1] };
     }
 
     inline qvec2f worldToTexCoord(qvec3f world) const
     {
         const qvec4f worldPadded(world, 1.0f);
-        const qvec4f res = m_worldToTexCoord * worldPadded;
+        const qvec4f res = worldToTexCoordMatrix * worldPadded;
 
         Q_assert(res[3] == 1.0f);
 
@@ -273,7 +264,7 @@ public:
     inline qvec3f texCoordToWorld(qvec2f tc) const
     {
         const qvec4f tcPadded(tc[0], tc[1], 0.0f, 1.0f);
-        const qvec4f res = m_texCoordToWorld * tcPadded;
+        const qvec4f res = texCoordToWorldMatrix * tcPadded;
 
         Q_assert(fabs(res[3] - 1.0f) < 0.01f);
 
