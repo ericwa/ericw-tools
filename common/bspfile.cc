@@ -2146,7 +2146,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
                 return;
             }
             
-            bspdata->bspx.transfer(xlump.lumpname.data(), std::vector<uint8_t>(file_data->begin() + xlump.fileofs, file_data->begin() + xlump.fileofs + xlump.filelen - 1));
+            bspdata->bspx.transfer(xlump.lumpname.data(), std::vector<uint8_t>(file_data->begin() + xlump.fileofs, file_data->begin() + xlump.fileofs + xlump.filelen));
         }
     }
 }
