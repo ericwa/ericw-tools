@@ -41,6 +41,7 @@
 #include <sstream>
 
 #include <common/qvec.hh>
+#include <common/bsputils.hh>
 
 constexpr vec_t ON_EPSILON = 0.1;
 constexpr vec_t ANGLE_EPSILON = 0.001;
@@ -118,11 +119,7 @@ struct lightsurf_t
     float lightmapscale;
     bool curved; /*normals are interpolated for smooth lighting*/
 
-    int texmins[2];
-    int texsize[2];
-    int vanilla_texmins[2];
-    int vanilla_texsize[2];
-    qvec2d exactmid;
+    faceextents_t extents, vanilla_extents;
     qvec3d midpoint;
 
     std::vector<qvec3d> points;
@@ -141,12 +138,6 @@ struct lightsurf_t
      the pvs at each of the sample points
      */
     std::vector<uint8_t> pvs;
-
-    /* for sphere culling */
-    qvec3d origin;
-    vec_t radius;
-    /* for AABB culling */
-    aabb3d bounds = qvec3d(0);
 
     // for radiosity
     qvec3d radiosity;

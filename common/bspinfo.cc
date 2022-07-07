@@ -304,6 +304,7 @@ static std::string generate_lightmap_atlas(const mbsp_t &bsp, const bspxentries_
             atl.tallest = max(atl.tallest, (size_t) rect.texture->height);
             rect.x = atl.current_x;
             rect.y = atl.current_y;
+            rect.atlas = current_atlas;
 
             atl.current_x += rect.texture->width;
             break;
@@ -313,7 +314,7 @@ static std::string generate_lightmap_atlas(const mbsp_t &bsp, const bspxentries_
     img::texture full_atlas;
     size_t sqrt_count = ceil(sqrt(atlasses.size()));
     full_atlas.width = full_atlas.meta.width = sqrt_count * atlas_size;
-    full_atlas.height = full_atlas.meta.height = floor((atlasses.size() * atlas_size) / full_atlas.width) * atlas_size;
+    full_atlas.height = full_atlas.meta.height = (floor((atlasses.size() * atlas_size) / full_atlas.width) + 1) * atlas_size;
     full_atlas.pixels.resize(full_atlas.width * full_atlas.height);
 
     size_t trimmed_width = 0, trimmed_height = 0;
@@ -327,8 +328,8 @@ static std::string generate_lightmap_atlas(const mbsp_t &bsp, const bspxentries_
                 continue;
             }
             
-            trimmed_width = max(trimmed_width, rect.x + rect.texture->width);
-            trimmed_height = max(trimmed_height, rect.y + rect.texture->height);
+            trimmed_width = max(trimmed_width, atlas_x + rect.x + rect.texture->width);
+            trimmed_height = max(trimmed_height, atlas_y + rect.y + rect.texture->height);
 
             for (size_t x = 0; x < rect.texture->width; x++) {
                 for (size_t y = 0; y < rect.texture->height; y++) {
