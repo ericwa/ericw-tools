@@ -44,35 +44,6 @@ extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 extern std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
 extern std::atomic<uint32_t> fully_transparent_lightmaps;
 
-class faceextents_t
-{
-private:
-    qvec2i m_texmins;
-    qvec2i m_texsize;
-    float m_lightmapscale;
-    qmat4x4f m_worldToTexCoord;
-    qmat4x4f m_texCoordToWorld;
-
-public:
-    faceextents_t() = default;
-    faceextents_t(const mface_t *face, const mbsp_t *bsp, float lmscale);
-    int width() const;
-    int height() const;
-    int numsamples() const;
-    qvec2i texsize() const;
-    int indexOf(const qvec2i &lm) const;
-    qvec2i intCoordsFromIndex(int index) const;
-    qvec2f LMCoordToTexCoord(const qvec2f &LMCoord) const;
-    qvec2f TexCoordToLMCoord(const qvec2f &tc) const;
-    qvec2f worldToTexCoord(qvec3f world) const;
-    qvec3f texCoordToWorld(qvec2f tc) const;
-    qvec2f worldToLMCoord(qvec3f world) const;
-    qvec3f LMCoordToWorld(qvec2f lm) const;
-};
-
-qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f);
-qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f);
-qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex);
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, vec_t dist);
@@ -89,8 +60,3 @@ void FinishLightmapSurface(
     const mbsp_t *bsp, lightsurf_t *lightsurf);
 void SaveLightmapSurface(
     const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const int (&texsize)[2], const int (&actual_texsize)[2]);
-
-inline qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
-{
-    return qv::inverse(WorldToTexSpace(bsp, f));
-}

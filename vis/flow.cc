@@ -2,6 +2,7 @@
 #include <vis/vis.hh>
 #include <vis/leafbits.hh>
 #include <common/parallel.hh>
+#include <atomic>
 
 unsigned long c_chains;
 int c_vistest, c_mighttest;

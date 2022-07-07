@@ -2337,6 +2337,7 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
 }
 
 #include "tbb/parallel_for_each.h"
+#include <atomic>
 
 void CalculateWorldExtent(void)
 {

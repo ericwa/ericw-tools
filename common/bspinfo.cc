@@ -29,6 +29,11 @@
 #include "common/fs.hh"
 #include "common/imglib.hh"
 
+#define STB_IMAGE_WRITE_STATIC
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STBI_WRITE_NO_STDIO
+#include "../3rdparty/stb_image_write.h"
+
 static std::string hex_string(const uint8_t *bytes, const size_t count)
 {
     std::stringstream str;
@@ -168,50 +173,49 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
     }
 
     auto &texture = texture_opt.value();
+    std::vector<uint8_t> buf;
+    stbi_write_png_to_func([](void *context, void *data, int size) { std::copy(reinterpret_cast<uint8_t *>(data), reinterpret_cast<uint8_t *>(data) + size, std::back_inserter(*reinterpret_cast<decltype(buf) *>(context))); },
+        &buf, texture.meta.width, texture.meta.height, 4, texture.pixels.data(), texture.meta.width * 4);
 
-    size_t bufsize = 122 + (texture.meta.width * texture.meta.height * 4);
-    std::vector<uint8_t> buf(bufsize);
-    omemstream s(buf.data(), bufsize, std::ios_base::out | std::ios_base::binary);
+    std::string str{"data:image/png;base64,"};
 
-    s << endianness<std::endian::little>;
-
-    s <= std::array<char, 2>{'B', 'M'};
-    s <= (int32_t)bufsize;
-    s <= (int16_t)0;
-    s <= (int16_t)0;
-    s <= (int32_t)122;
-    s <= (int32_t)108;
-    s <= texture.meta.width;
-    s <= texture.meta.height;
-    s <= (int16_t)1;
-    s <= (int16_t)32;
-    s <= (int32_t)3;
-    s <= (int32_t)(texture.meta.width * texture.meta.height * 4);
-    s <= (int32_t)2835;
-    s <= (int32_t)2835;
-    s <= (int32_t)0;
-    s <= (int32_t)0;
-    s <= (int32_t)0x00FF0000;
-    s <= (int32_t)0x0000FF00;
-    s <= (int32_t)0x000000FF;
-    s <= (int32_t)0xFF000000;
-    s <= std::array<char, 4>{'W', 'i', 'n', ' '};
-    s <= std::array<char, 36>{};
-    s <= (int32_t)0;
-    s <= (int32_t)0;
-    s <= (int32_t)0;
-
-    for (size_t y = 0; y < texture.meta.height; y++) {
-        for (size_t x = 0; x < texture.meta.width; x++) {
-            s <= texture.pixels[((texture.meta.height - y - 1) * texture.meta.width) + x];
-            }
-        }
-
-    std::string str{"data:image/bmp;base64,"};
-
-    Base64EncodeTo(buf.data(), bufsize, std::back_inserter(str));
+    Base64EncodeTo(buf.data(), buf.size(), std::back_inserter(str));
 
     return str;
+}
+
+#include "common/bsputils.hh"
+
+static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const mface_t &face)
+{
+    if (face.lightofs == -1) {
+        return std::nullopt;
+    }
+
+    img::texture texture;
+    faceextents_t extents(face, bsp, 16.0);
+    texture.meta.width = extents.width();
+    texture.meta.height = extents.height();
+    texture.pixels.resize(texture.meta.width * texture.meta.height);
+
+    auto pixels = bsp.dlightdata.begin() + face.lightofs;
+    auto out_pixels = texture.pixels.begin();
+
+    const bool is_rgb = bsp.loadversion->game->has_rgb_lightmap;
+
+    for (size_t i = 0; i < texture.pixels.size(); i++) {
+        if (is_rgb) {
+            uint8_t r = *pixels++;
+            uint8_t g = *pixels++;
+            uint8_t b = *pixels++;
+            *out_pixels++ = { r, g, b, 255 };
+        } else {
+            uint8_t l = *pixels++;
+            *out_pixels++ = { l, l, l, 255 };
+        }
+    }
+
+    return texture;
 }
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
@@ -360,6 +364,10 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                 verts.push_back(bsp.dvertexes[v]);
             }
             face.push_back({"vertices", verts});
+
+            if (auto lm = get_lightmap_face(bsp, src_face)) {
+                face.push_back({"lightmap", serialize_image(lm)});
+            }
         }
     }
 
