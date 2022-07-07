@@ -156,28 +156,6 @@ TEST_CASE("stringSimple", "[settings]")
     REQUIRE(stringSetting.value() == arguments[2]);
 }
 
-TEST_CASE("stringSpan", "[settings]")
-{
-    settings::setting_container settings;
-    settings::setting_string stringSetting(&settings, "name", "");
-    const char *arguments[] = {"qbsp.exe", "-name", "i", "am", "a", "string"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
-    settings.parse(p);
-    REQUIRE(stringSetting.value() == "i am a string");
-}
-
-TEST_CASE("stringSpanWithBlockingOption", "[settings]")
-{
-    settings::setting_container settings;
-    settings::setting_string stringSetting(&settings, "name", "");
-    settings::setting_bool flagSetting(&settings, "flag", false);
-    const char *arguments[] = {"qbsp.exe", "-name", "i", "am", "a", "string", "-flag"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
-    settings.parse(p);
-    REQUIRE(stringSetting.value() == "i am a string");
-    REQUIRE(flagSetting.value() == true);
-}
-
 // test remainder
 TEST_CASE("remainder", "[settings]")
 {
@@ -185,7 +163,7 @@ TEST_CASE("remainder", "[settings]")
     settings::setting_string stringSetting(&settings, "name", "");
     settings::setting_bool flagSetting(&settings, "flag", false);
     const char *arguments[] = {
-        "qbsp.exe", "-name", "i", "am", "a", "string", "-flag", "remainder one", "remainder two"};
+        "qbsp.exe", "-name", "string", "-flag", "remainder one", "remainder two"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1};
     auto remainder = settings.parse(p);
     REQUIRE(remainder[0] == "remainder one");
