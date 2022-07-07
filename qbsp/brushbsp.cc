@@ -295,8 +295,8 @@ static int TestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *numsp
         plane = map.planes[planenum];
     }
 
-    int s = SphereOnPlaneSide(brush.sphere_origin, brush.sphere_radius, plane);
-    //int s = BoxOnPlaneSide(brush.bounds, plane);
+    //int s = SphereOnPlaneSide(brush.sphere_origin, brush.sphere_radius, plane);
+    int s = BoxOnPlaneSide(brush.bounds, plane);
     if (s != PSIDE_BOTH)
         return s;
 
