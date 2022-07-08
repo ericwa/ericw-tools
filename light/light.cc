@@ -384,17 +384,15 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
 
         if (faces_sup.empty()) {
             SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->extents);
-        } else if (options.novanilla.value()) {
-            f->lightofs = -1;
+        } else if (options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
+            if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
+                f->lightofs = faces_sup[i].lightofs;
+            } else {
+                f->lightofs = -1;
+            }
             SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
             for (int j = 0; j < MAXLIGHTMAPS; j++) {
                 f->styles[j] = faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
-            }
-        } else if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
-            f->lightofs = faces_sup[i].lightofs;
-            for (int j = 0; j < MAXLIGHTMAPS; j++) {
-                f->styles[j] = faces_sup[i].styles[j];
             }
         } else {
             SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
