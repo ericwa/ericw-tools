@@ -407,6 +407,8 @@ static void WriteBSPFile()
 
         if (!extendedLimitsFormat) {
             FError("No extended limits version of {} available", options.target_version->name);
+        } else if (!options.allow_upgrade.value()) {
+            FError("Limits exceeded for {} and allow_upgrade was disabled", options.target_version->name);
         }
 
         logging::print("NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name,
