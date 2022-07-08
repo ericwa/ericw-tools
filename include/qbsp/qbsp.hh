@@ -236,6 +236,7 @@ public:
     setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
     setting_set texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to a texture definition file, which can transform textures in the .map into other textures."};
     setting_numeric<vec_t> lmscale{this, "lmscale", 1.0, &common_format_group, "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump." };
+    setting_invertible_bool allow_upgrade{this, "allowupgrade", true, &common_format_group, "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"};
 
     void setParameters(int argc, const char **argv) override
     {
