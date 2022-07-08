@@ -195,13 +195,18 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
     return { face, bsp, (float) nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()]) };
 }
 
-static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bspxentries_t &bspx, const mface_t &face, bool use_bspx)
+static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bspxentries_t &bspx, const mface_t &face, int32_t style, bool use_bspx)
 {
     img::texture texture;
     faceextents_t extents = get_face_extents(bsp, bspx, face, use_bspx);
     texture.meta.width = texture.width = extents.width();
     texture.meta.height = texture.height = extents.height();
     texture.pixels.resize(texture.meta.width * texture.meta.height);
+
+    // FIXME: LMSTYLE & LMSTYLE16 support
+    if (face.styles[style] == INVALID_LIGHTSTYLE_OLD) {
+        return std::nullopt;
+    }
 
     auto pixels = bsp.dlightdata.begin();
     
@@ -218,16 +223,20 @@ static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bs
         stream.seekg((&face - bsp.dfaces.data()) * sizeof(int32_t));
         int32_t ofs;
         stream >= ofs;
-        pixels += ofs;
 
         if (ofs == -1) {
             return std::nullopt;
         }
+
+        pixels += ofs;
     }
+    
+    // FIXME: bspx lit?
+    const bool is_rgb = bsp.loadversion->game->has_rgb_lightmap;
+
+    pixels += (texture.pixels.size() * (is_rgb ? 3 : 1)) * style;
 
     auto out_pixels = texture.pixels.begin();
-
-    const bool is_rgb = bsp.loadversion->game->has_rgb_lightmap;
 
     for (size_t i = 0; i < texture.pixels.size(); i++) {
         if (is_rgb) {
@@ -268,7 +277,7 @@ static std::optional<std::string> generate_lightmap_atlas(const mbsp_t &bsp, con
     rectangles.reserve(bsp.dfaces.size());
 
     for (auto &face : bsp.dfaces) {
-        face_rect rect { &face, get_lightmap_face(bsp, bspx, face, use_bspx) };
+        face_rect rect { &face, get_lightmap_face(bsp, bspx, face, style, use_bspx) };
 
         if (!rect.texture) {
             continue;
@@ -619,13 +628,15 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
     }
 
     // lightmap atlas
-    if (auto lm = generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, false)) {
-        j.emplace("lightmap", std::move(*lm));
-    }
+    for (int32_t i = 0; i < MAXLIGHTMAPS; i++) {
+        if (auto lm = generate_lightmap_atlas(bsp, bspdata.bspx.entries, i, false)) {
+            j.emplace(fmt::format("lightmap{}", i), std::move(*lm));
+        }
 
-    if (bspdata.bspx.entries.find("LMOFFSET") != bspdata.bspx.entries.end()) {
-        if (auto lm = generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, true)) {
-            j.emplace("bspx_lightmap", std::move(*lm));
+        if (bspdata.bspx.entries.find("LMOFFSET") != bspdata.bspx.entries.end()) {
+            if (auto lm = generate_lightmap_atlas(bsp, bspdata.bspx.entries, i, true)) {
+                j.emplace(fmt::format("bspx_lightmap{}", i), std::move(*lm));
+            }
         }
     }
 
