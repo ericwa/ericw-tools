@@ -386,8 +386,10 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
             SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->extents);
         } else if (options.novanilla.value()) {
             f->lightofs = -1;
-            f->styles[0] = INVALID_LIGHTSTYLE_OLD;
             SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
+            for (int i = 0; i < MAXLIGHTMAPS; i++) {
+                f->styles[i] = faces_sup[i].styles[i] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[i];
+            }
         } else if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
             SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
             f->lightofs = faces_sup[i].lightofs;
@@ -620,8 +622,9 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             for (; j < MAXLIGHTMAPSSUP; j++) {
                 if (faces_sup[i].styles[j] == INVALID_LIGHTSTYLE)
                     break;
-                if (bsp.dfaces[i].styles[j] != faces_sup[i].styles[j])
+                if (j < MAXLIGHTMAPS && bsp.dfaces[i].styles[j] != faces_sup[i].styles[j]) {
                     needstyles = true;
+                }
                 if (maxstyle < faces_sup[i].styles[j])
                     maxstyle = faces_sup[i].styles[j];
             }
