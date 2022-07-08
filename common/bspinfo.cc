@@ -197,10 +197,6 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
 
 static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bspxentries_t &bspx, const mface_t &face, bool use_bspx)
 {
-    if (face.lightofs == -1) {
-        return std::nullopt;
-    }
-
     img::texture texture;
     faceextents_t extents = get_face_extents(bsp, bspx, face, use_bspx);
     texture.meta.width = texture.width = extents.width();
@@ -210,6 +206,10 @@ static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bs
     auto pixels = bsp.dlightdata.begin();
     
     if (!use_bspx) {
+        if (face.lightofs == -1) {
+            return std::nullopt;
+        }
+
         pixels += face.lightofs;
     } else {
         auto &lmoffset = bspx.at("LMOFFSET");
@@ -219,6 +219,10 @@ static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bs
         int32_t ofs;
         stream >= ofs;
         pixels += ofs;
+
+        if (ofs == -1) {
+            return std::nullopt;
+        }
     }
 
     auto out_pixels = texture.pixels.begin();
