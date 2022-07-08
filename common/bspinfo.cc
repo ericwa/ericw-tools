@@ -240,7 +240,7 @@ static std::optional<img::texture> get_lightmap_face(const mbsp_t &bsp, const bs
     return texture;
 }
 
-static std::string generate_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, int32_t style, bool use_bspx)
+static std::optional<std::string> generate_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, int32_t style, bool use_bspx)
 {
     struct face_rect
     {
@@ -264,7 +264,17 @@ static std::string generate_lightmap_atlas(const mbsp_t &bsp, const bspxentries_
     rectangles.reserve(bsp.dfaces.size());
 
     for (auto &face : bsp.dfaces) {
-        rectangles.emplace_back(face_rect { &face, get_lightmap_face(bsp, bspx, face, use_bspx) });
+        face_rect rect { &face, get_lightmap_face(bsp, bspx, face, use_bspx) };
+
+        if (!rect.texture) {
+            continue;
+        }
+
+        rectangles.emplace_back(std::move(rect));
+    }
+    
+    if (!rectangles.size()) {
+        return std::nullopt;
     }
 
     std::sort(rectangles.begin(), rectangles.end(), [](const face_rect &a, const face_rect &b) -> bool {
@@ -605,10 +615,14 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
     }
 
     // lightmap atlas
-    j.emplace("lightmap", generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, false));
+    if (auto lm = generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, false)) {
+        j.emplace("lightmap", std::move(*lm));
+    }
 
     if (bspdata.bspx.entries.find("LMOFFSET") != bspdata.bspx.entries.end()) {
-        j.emplace("bspx_lightmap", generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, true));
+        if (auto lm = generate_lightmap_atlas(bsp, bspdata.bspx.entries, 0, true)) {
+            j.emplace("bspx_lightmap", std::move(*lm));
+        }
     }
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
