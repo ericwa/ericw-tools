@@ -661,7 +661,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
                 for (size_t i = 0, k = 0; i < bsp.dfaces.size(); i++) {
                     for (size_t j = 0; j < stylesperface; j++, k++) {
-                        styles_mem[k] = faces_sup[i].styles[j];
+                        styles_mem[k] = faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
                     }
                 }
                 
