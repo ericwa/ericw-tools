@@ -634,10 +634,15 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             if (stylesperface < j)
                 stylesperface = j;
         }
+        
+        if (stylesperface >= options.facestyles.value()) {
+            logging::print("WARNING: styles per face {} exceeds compiler-set max styles {}; use `-facestyles` if you need more.\n", stylesperface, options.facestyles.value());
+            stylesperface = options.facestyles.value();
+        }
 
         needstyles |= (stylesperface>4);
 
-        logging::print("max {} styles per face{}\n", stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
+        logging::print("max {} styles per face, {} used{}\n", options.facestyles.value(), stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
         
         if (needstyles) {
             if (maxstyle >= INVALID_LIGHTSTYLE_OLD) {
