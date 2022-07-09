@@ -2802,8 +2802,12 @@ void SaveLightmapSurface(
                 }
                 warned_about_light_map_overflow = true;
             }
-            logging::print(logging::flag::VERBOSE, "WARNING: {} light styles (max {}) on face near {}\n",
+            logging::print(logging::flag::VERBOSE, "WARNING: {} light styles (max {}) on face near {}; styles: ",
                 sortable.size(), maxfstyles, lightsurf->points[0]);
+            for (auto &p : sortable) {
+                logging::print(logging::flag::VERBOSE, "{} ", p.second->style);
+            }
+            logging::print(logging::flag::VERBOSE, "\n");
             break;
         }
 
