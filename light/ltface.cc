@@ -40,6 +40,7 @@ std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
 std::atomic<uint32_t> fully_transparent_lightmaps;
+bool warned_about_light_map_overflow, warned_about_light_style_overflow;
 
 /* Debug helper - move elsewhere? */
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
@@ -2745,10 +2746,7 @@ void SaveLightmapSurface(
         return;
     }
 
-    int maxfstyles = facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS;
-    if (maxfstyles > options.facestyles.value()) {
-        maxfstyles = options.facestyles.value(); //truncate it a little
-    }
+    size_t maxfstyles = min((size_t) options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS);
     int maxstyle = facesup ? INVALID_LIGHTSTYLE : INVALID_LIGHTSTYLE_OLD;
 
     // intermediate collection for sorting lightmaps
@@ -2758,9 +2756,18 @@ void SaveLightmapSurface(
         // skip un-saved lightmaps
         if (lightmap.style == INVALID_LIGHTSTYLE)
             continue;
-        if (lightmap.style > maxstyle) {
-            logging::print("WARNING: Style {} too high\n"
-                     "         lightmap point near {}\n",
+        if (lightmap.style > maxstyle || (facesup && lightmap.style > INVALID_LIGHTSTYLE_OLD)) {
+            if (!warned_about_light_style_overflow) {
+                if (IsOutputtingSupplementaryData()) {
+                    logging::print("INFO: a face has exceeded max light style id ({});\n LMSTYLE16 will be output to hold the non-truncated data.\n Use -verbose to find which faces.\n",
+                        maxstyle, lightsurf->points[0]);
+                } else {
+                    logging::print("WARNING: a face has exceeded max light style id ({}). Use -verbose to find which faces.\n",
+                        maxstyle, lightsurf->points[0]);
+                }
+                warned_about_light_map_overflow = true;
+            }
+            logging::print(logging::flag::VERBOSE, "WARNING: Style {} too high on face near {}\n",
                      lightmap.style,
                      lightsurf->points[0]);
             continue;
@@ -2785,9 +2792,18 @@ void SaveLightmapSurface(
     std::vector<const lightmap_t *> sorted;
     for (const auto &pair : sortable) {
         if (sorted.size() == maxfstyles) {
-            logging::print("WARNING: Too many light styles on a face\n"
-                     "         lightmap point near [{}]\n",
-                lightsurf->points[0]);
+            if (!warned_about_light_map_overflow) {
+                if (IsOutputtingSupplementaryData()) {
+                    logging::print("INFO: a face has exceeded max light styles ({});\n LMSTYLE/LMSTYLE16 will be output to hold the non-truncated data.\n Use -verbose to find which faces.\n",
+                        maxfstyles, lightsurf->points[0]);
+                } else {
+                    logging::print("WARNING: a face has exceeded max light styles ({}). Use -verbose to find which faces.\n",
+                        maxfstyles, lightsurf->points[0]);
+                }
+                warned_about_light_map_overflow = true;
+            }
+            logging::print(logging::flag::VERBOSE, "WARNING: {} light styles (max {}) on face near {}\n",
+                sortable.size(), maxfstyles, lightsurf->points[0]);
             break;
         }
 
@@ -2803,7 +2819,7 @@ void SaveLightmapSurface(
         facesup->extent[0] = output_width;
         facesup->extent[1] = output_height;
         int mapnum;
-        for (mapnum = 0; mapnum < numstyles; mapnum++) {
+        for (mapnum = 0; mapnum < numstyles && mapnum < MAXLIGHTMAPSSUP; mapnum++) {
             facesup->styles[mapnum] = sorted.at(mapnum)->style;
         }
         for (; mapnum < MAXLIGHTMAPSSUP; mapnum++) {
@@ -2812,7 +2828,7 @@ void SaveLightmapSurface(
         facesup->lmscale = lightsurf->lightmapscale;
     } else {
         int mapnum;
-        for (mapnum = 0; mapnum < numstyles; mapnum++) {
+        for (mapnum = 0; mapnum < numstyles && mapnum < MAXLIGHTMAPS; mapnum++) {
             face->styles[mapnum] = sorted.at(mapnum)->style;
         }
         for (; mapnum < MAXLIGHTMAPS; mapnum++) {
