@@ -2765,7 +2765,7 @@ void SaveLightmapSurface(
                     logging::print("WARNING: a face has exceeded max light style id ({}). Use -verbose to find which faces.\n",
                         maxstyle, lightsurf->points[0]);
                 }
-                warned_about_light_map_overflow = true;
+                warned_about_light_style_overflow = true;
             }
             logging::print(logging::flag::VERBOSE, "WARNING: Style {} too high on face near {}\n",
                      lightmap.style,
