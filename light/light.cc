@@ -67,6 +67,11 @@ std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces()
 
 static std::vector<facesup_t> faces_sup; // lit2/bspx stuff
 
+bool IsOutputtingSupplementaryData()
+{
+    return !faces_sup.empty();
+}
+
 /// start of lightmap data
 std::vector<uint8_t> filebase;
 /// offset of start of free space after data (should be kept a multiple of 4)
@@ -648,6 +653,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
                     }
                 }
 
+                logging::print("LMSTYLE16 BSPX lump written\n");
                 bspdata->bspx.transfer("LMSTYLE16", styles_mem);
             } else {
                 /*original LMSTYLE lump was just for different lmshift info*/
@@ -658,7 +664,8 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
                         styles_mem[k] = faces_sup[i].styles[j];
                     }
                 }
-
+                
+                logging::print("LMSTYLE BSPX lump written\n");
                 bspdata->bspx.transfer("LMSTYLE", styles_mem);
             }
         }
@@ -672,7 +679,8 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             for (size_t i = 0; i < bsp.dfaces.size(); i++) {
                 offsets <= faces_sup[i].lightofs;
             }
-
+            
+            logging::print("LMOFFSET BSPX lump written\n");
             bspdata->bspx.transfer("LMOFFSET", offsets_mem);
         }
     }
