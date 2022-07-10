@@ -396,11 +396,11 @@ static void CalcPoints(
     surf->midpoint = TexCoordToWorld(surf->extents.exact_mid[0], surf->extents.exact_mid[1], &surf->texorg);
     surf->midpoint += offset;
 
-    surf->width = surf->extents.width() * options.extra.value();
-    surf->height = surf->extents.height() * options.extra.value();
-    const float starts = (surf->extents.texmins[0] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
-    const float startt = (surf->extents.texmins[1] - 0.5 + (0.5 / options.extra.value())) * surf->lightmapscale;
-    const float st_step = surf->lightmapscale / options.extra.value();
+    surf->width = surf->extents.width() * light_options.extra.value();
+    surf->height = surf->extents.height() * light_options.extra.value();
+    const float starts = (surf->extents.texmins[0] - 0.5 + (0.5 / light_options.extra.value())) * surf->lightmapscale;
+    const float startt = (surf->extents.texmins[1] - 0.5 + (0.5 / light_options.extra.value())) * surf->lightmapscale;
+    const float st_step = surf->lightmapscale / light_options.extra.value();
 
     /* Allocate surf->points */
     size_t num_points = surf->width * surf->height;
@@ -1128,7 +1128,7 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (options.visapprox.value() == visapprox_t::RAYS && entity->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+    if (light_options.visapprox.value() == visapprox_t::RAYS && entity->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
@@ -1143,7 +1143,7 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     /* return true if the light level at the closest point on the
      surface bounding sphere to the light source is <= fadegate.
      need fabs to handle antilights. */
-    return fabs(GetLightValue(cfg, entity, dist)) <= options.gate.value();
+    return fabs(GetLightValue(cfg, entity, dist)) <= light_options.gate.value();
 }
 
 static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *entleaf)
@@ -1177,7 +1177,7 @@ static void LightFace_Entity(
     const qplane3d *plane = &lightsurf->plane;
 
     /* vis cull */
-    if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
+    if (light_options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
         return;
     }
 
@@ -1224,7 +1224,7 @@ static void LightFace_Entity(
         color *= occlusion;
 
         /* Quick distance check first */
-        if (fabs(LightSample_Brightness(color)) <= options.gate.value()) {
+        if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
             continue;
         }
 
@@ -1330,7 +1330,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
         qvec3d color = sun->sunlight_color * (value / 255.0);
 
         /* Quick distance check first */
-        if (fabs(LightSample_Brightness(color)) <= options.gate.value()) {
+        if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
             continue;
         }
 
@@ -1546,7 +1546,7 @@ static void LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *l
 
 static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    Q_assert(options.debugmode == debugmodes::bouncelights);
+    Q_assert(light_options.debugmode == debugmodes::bouncelights);
 
     // reset all lightmaps to black (lazily)
     Lightmap_ClearAll(lightmaps);
@@ -1668,7 +1668,7 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+    if (light_options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
@@ -1684,7 +1684,7 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 {
-    if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+    if (light_options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
@@ -1734,11 +1734,11 @@ static void LightFace_Bounce(
     if (!cfg.bounce.value())
         return;
 
-    if (!(options.debugmode == debugmodes::bounce || options.debugmode == debugmodes::none))
+    if (!(light_options.debugmode == debugmodes::bounce || light_options.debugmode == debugmodes::none))
         return;
 
     for (const bouncelight_t &vpl : BounceLights()) {
-        if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaf)) {
+        if (light_options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaf)) {
             continue;
         }
 
@@ -1795,7 +1795,7 @@ static void LightFace_Bounce(
                 /* Use dirt scaling on the indirect lighting.
                  * Except, not in bouncedebug mode.
                  */
-                if (options.debugmode != debugmodes::bounce) {
+                if (light_options.debugmode != debugmodes::bounce) {
                     const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
                     indirect *= dirtscale;
                 }
@@ -1826,7 +1826,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
         raystream_occlusion_t &rs = lightsurf->occlusion_stream;
 
         for (int c = 0; c < vpl.points.size(); c++) {
-            if (options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
+            if (light_options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
                 continue;
             }
 
@@ -1895,7 +1895,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
 static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    Q_assert(options.debugmode == debugmodes::debugoccluded);
+    Q_assert(light_options.debugmode == debugmodes::debugoccluded);
 
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -1917,7 +1917,7 @@ static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *ligh
 
 static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    Q_assert(options.debugmode == debugmodes::debugneighbours);
+    Q_assert(light_options.debugmode == debugmodes::debugneighbours);
 
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -2593,7 +2593,7 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
         return false;
 
     // Q2RTX should light nodraw faces
-    if (options.q2rtx.value() && (texinfo->flags.native & Q2_SURF_NODRAW)) {
+    if (light_options.q2rtx.value() && (texinfo->flags.native & Q2_SURF_NODRAW)) {
         return true;
     }
 
@@ -2608,32 +2608,32 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
     const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux, const faceextents_t &output_extents)
 {
-    const int oversampled_width = actual_width * options.extra.value();
-    const int oversampled_height = actual_height * options.extra.value();
+    const int oversampled_width = actual_width * light_options.extra.value();
+    const int oversampled_height = actual_height * light_options.extra.value();
 
     // allocate new float buffers for the output colors and directions
     // these are the actual output width*height, without oversampling.
 
     std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
 
-    if (options.highlightseams.value()) {
+    if (light_options.highlightseams.value()) {
         fullres = HighlightSeams(fullres, oversampled_width, oversampled_height);
     }
 
     // removes all transparent pixels by averaging from adjacent pixels
     fullres = FloodFillTransparent(fullres, oversampled_width, oversampled_height);
 
-    if (options.soft.value() > 0) {
-        fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, options.soft.value());
+    if (light_options.soft.value() > 0) {
+        fullres = BoxBlurImage(fullres, oversampled_width, oversampled_height, light_options.soft.value());
     }
 
     const std::vector<qvec4f> output_color =
-        IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, options.extra.value());
+        IntegerDownsampleImage(fullres, oversampled_width, oversampled_height, light_options.extra.value());
     std::optional<std::vector<qvec4f>> output_dir;
 
     if (lux) {
         output_dir = IntegerDownsampleImage(
-            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, options.extra.value());
+            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, light_options.extra.value());
     }
 
     // copy from the float buffers to byte buffers in .bsp / .lit / .lux
@@ -2703,7 +2703,7 @@ void SaveLightmapSurface(
     const int output_height = output_extents.height();
     const int size = output_extents.numsamples();
 
-    if (options.litonly.value()) {
+    if (light_options.litonly.value()) {
         // special case for writing a .lit for a bsp without modifying the bsp.
         // involves looking at which styles were written to the bsp in the previous lighting run, and then
         // writing the same styles to the same offsets in the .lit file.
@@ -2746,7 +2746,7 @@ void SaveLightmapSurface(
         return;
     }
 
-    size_t maxfstyles = min((size_t) options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS);
+    size_t maxfstyles = min((size_t)light_options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS);
     int maxstyle = facesup ? INVALID_LIGHTSTYLE : INVALID_LIGHTSTYLE_OLD;
 
     // intermediate collection for sorting lightmaps
@@ -2927,7 +2927,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
     lightmapdict_t *lightmaps = &lightsurf.lightmapsByStyle;
 
     /* calculate dirt (ambient occlusion) but don't use it yet */
-    if (dirt_in_use && (options.debugmode != debugmodes::phong))
+    if (dirt_in_use && (light_options.debugmode != debugmodes::phong))
         LightFace_CalculateDirt(&lightsurf);
 
     /*
@@ -2936,7 +2936,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
      * clamp any values that may have gone negative.
      */
 
-    if (options.debugmode == debugmodes::none) {
+    if (light_options.debugmode == debugmodes::none) {
 
         total_samplepoints += lightsurf.points.size();
 
@@ -3001,19 +3001,19 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
     }
 
     /* replace lightmaps with AO for debugging */
-    if (options.debugmode == debugmodes::dirt)
+    if (light_options.debugmode == debugmodes::dirt)
         LightFace_DirtDebug(&lightsurf, lightmaps);
 
-    if (options.debugmode == debugmodes::phong)
+    if (light_options.debugmode == debugmodes::phong)
         LightFace_PhongDebug(&lightsurf, lightmaps);
 
-    if (options.debugmode == debugmodes::bouncelights)
+    if (light_options.debugmode == debugmodes::bouncelights)
         LightFace_BounceLightsDebug(&lightsurf, lightmaps);
 
-    if (options.debugmode == debugmodes::debugoccluded)
+    if (light_options.debugmode == debugmodes::debugoccluded)
         LightFace_OccludedDebug(&lightsurf, lightmaps);
 
-    if (options.debugmode == debugmodes::debugneighbours)
+    if (light_options.debugmode == debugmodes::debugneighbours)
         LightFace_DebugNeighbours(&lightsurf, lightmaps);
 }
 
@@ -3036,7 +3036,7 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
      * clamp any values that may have gone negative.
      */
 
-    if (options.debugmode == debugmodes::none) {
+    if (light_options.debugmode == debugmodes::none) {
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
         /* positive lights */
@@ -3049,6 +3049,6 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
 
     /* bounce debug */
     // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
-    if (options.debugmode == debugmodes::bounce)
+    if (light_options.debugmode == debugmodes::bounce)
         LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
 }

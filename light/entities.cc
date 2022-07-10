@@ -301,7 +301,7 @@ static void SetupSun(const settings::worldspawn_keys &cfg, vec_t light, const qv
     const std::string &suntexture)
 {
     int i;
-    int sun_num_samples = (sun_deviance == 0 ? 1 : options.sunsamples.value()); // mxd
+    int sun_num_samples = (sun_deviance == 0 ? 1 : light_options.sunsamples.value()); // mxd
     vec_t sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
     vec_t sun_deviance_sq = sun_deviance * sun_deviance; // mxd
 
@@ -406,7 +406,7 @@ static void SetupSkyDome(const settings::worldspawn_keys &cfg, vec_t upperLight,
     qvec3d direction;
 
     /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
-    iterations = rint(sqrt((options.sunsamples.value() - 1) / 4)) + 1;
+    iterations = rint(sqrt((light_options.sunsamples.value() - 1) / 4)) + 1;
     iterations = max(iterations, 2);
 
     /* dummy check */
@@ -824,7 +824,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     }
 
     Q_assert(all_lights.empty());
-    if (options.nolights.value()) {
+    if (light_options.nolights.value()) {
         return;
     }
 
@@ -836,7 +836,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
          */
         if (entdict.get("classname").find("light") == 0) {
             // mxd. Convert some Arghrad3 settings...
-            if (options.arghradcompat.value()) {
+            if (light_options.arghradcompat.value()) {
                 entdict.rename("_falloff", "delay"); // _falloff -> delay
                 entdict.rename("_distance", "_falloff"); // _distance -> _falloff
                 entdict.rename("_fade", "wait"); // _fade -> wait
@@ -853,7 +853,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
             }
 
             // Skip non-switchable lights if we're skipping world lighting
-            if (options.nolighting.value() && entdict.get("style").empty() &&
+            if (light_options.nolighting.value() && entdict.get("style").empty() &&
                 entdict.get("switchshadstyle").empty()) {
                 continue;
             }
@@ -1061,9 +1061,9 @@ void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     SetupSuns(cfg);
     SetupSkyDomes(cfg);
     FixLightsOnFaces(bsp);
-    if (options.visapprox.value() == visapprox_t::RAYS) {
+    if (light_options.visapprox.value() == visapprox_t::RAYS) {
         EstimateLightVisibility();
-    } else if (options.visapprox.value() == visapprox_t::VIS) {
+    } else if (light_options.visapprox.value() == visapprox_t::VIS) {
         SetupLightLeafnums(bsp);
     }
 
@@ -1141,7 +1141,7 @@ static void CreateSurfaceLight(const qvec3d &origin, const qvec3d &normal, const
     }
 
     /* export it to a map file for debugging */
-    if (options.surflight_dump.value()) {
+    if (light_options.surflight_dump.value()) {
         SurfLights_WriteEntityToFile(entity.get(), origin);
     }
 }
@@ -1189,7 +1189,7 @@ bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, con
     if (surflight.epairs->has("_surface_radiosity")) {
         radiosity_type = surflight.epairs->get_int("_surface_radiosity");
     } else {
-        radiosity_type = options.surflight_radiosity.value();
+        radiosity_type = light_options.surflight_radiosity.value();
     }
 
     return !Q_strcasecmp(texname, surflight.epairs->get("_surface")) &&
@@ -1295,7 +1295,7 @@ static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_mod
         }
     }
 
-    SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts, options.surflight_subdivide.value());
+    SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts, light_options.surflight_subdivide.value());
 }
 
 static bool ParseEntityLights(std::ifstream &f)
@@ -1373,8 +1373,8 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     if (surfacelight_templates.empty())
         return;
 
-    if (options.surflight_dump.value()) {
-        surflights_dump_filename = options.sourceMap;
+    if (light_options.surflight_dump.value()) {
+        surflights_dump_filename = light_options.sourceMap;
         surflights_dump_filename.replace_filename(surflights_dump_filename.stem().string() + "-surflights")
             .replace_extension("map");
         surflights_dump_file.open(surflights_dump_filename);

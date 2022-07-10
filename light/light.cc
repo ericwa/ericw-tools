@@ -166,33 +166,33 @@ void light_settings::postinitialize(int argc, const char **argv)
     }
 
     if (debugmode == debugmodes::dirt) {
-        options.globalDirt.setValueLocked(true);
+        light_options.globalDirt.setValueLocked(true);
     } else if (debugmode == debugmodes::bounce || debugmode == debugmodes::bouncelights) {
-        options.bounce.setValueLocked(true);
+        light_options.bounce.setValueLocked(true);
     } else if (debugmode == debugmodes::debugneighbours && !debugface.isChanged()) {
         FError("-debugneighbours without -debugface specified\n");
     }
 
-    if (options.q2rtx.value()) {
-        if (!options.nolighting.isChanged()) {
-            options.nolighting.setValueLocked(true);
+    if (light_options.q2rtx.value()) {
+        if (!light_options.nolighting.isChanged()) {
+            light_options.nolighting.setValueLocked(true);
         }
     }
 
     // upgrade to uint16 if facestyles is specified 
-    if (options.facestyles.value() > MAXLIGHTMAPS && !options.compilerstyle_max.isChanged()) {
-        options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE);
+    if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.isChanged()) {
+        light_options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE);
     }
     
     common_settings::postinitialize(argc, argv);
 }
 } // namespace settings
 
-settings::light_settings options;
+settings::light_settings light_options;
 
 void SetGlobalSetting(std::string name, std::string value, bool cmdline)
 {
-    options.setSetting(name, value, cmdline);
+    light_options.setSetting(name, value, cmdline);
 }
 
 void FixupGlobalSettings()
@@ -208,15 +208,15 @@ void FixupGlobalSettings()
     // We can't just default "minlight_dirt" to "1" because that would enable
     // dirtmapping by default.
 
-    if (options.globalDirt.value()) {
-        if (!options.minlightDirt.isChanged()) {
-            options.minlightDirt.setValue(true);
+    if (light_options.globalDirt.value()) {
+        if (!light_options.minlightDirt.isChanged()) {
+            light_options.minlightDirt.setValue(true);
         }
-        if (!options.sunlight_dirt.isChanged()) {
-            options.sunlight_dirt.setValue(1);
+        if (!light_options.sunlight_dirt.isChanged()) {
+            light_options.sunlight_dirt.setValue(1);
         }
-        if (!options.sunlight2_dirt.isChanged()) {
-            options.sunlight2_dirt.setValue(1);
+        if (!light_options.sunlight2_dirt.isChanged()) {
+            light_options.sunlight2_dirt.setValue(1);
         }
     }
 }
@@ -351,7 +351,7 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
         auto face = &bsp->dfaces[i];
 
         /* One extra lightmap is allocated to simplify handling overflow */
-        if (!options.litonly.value()) {
+        if (!light_options.litonly.value()) {
             // if litonly is set we need to preserve the existing lightofs
 
             /* some surfaces don't need lightmaps */
@@ -368,7 +368,7 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
             }
         }
 
-        light_surfaces[i] = std::move(CreateLightmapSurface(bsp, face, facesup, options));
+        light_surfaces[i] = std::move(CreateLightmapSurface(bsp, face, facesup, light_options));
     });
 }
 
@@ -389,7 +389,7 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
 
         if (faces_sup.empty()) {
             SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->extents);
-        } else if (options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
+        } else if (light_options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
             if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
                 f->lightofs = faces_sup[i].lightofs;
             } else {
@@ -420,8 +420,8 @@ static void FindModelInfo(const mbsp_t *bsp)
         FError("Corrupt .BSP: bsp->nummodels is 0!");
     }
 
-    if (options.lightmap_scale.isChanged()) {
-        WorldEnt().set("_lightmap_scale", options.lightmap_scale.stringValue());
+    if (light_options.lightmap_scale.isChanged()) {
+        WorldEnt().set("_lightmap_scale", light_options.lightmap_scale.stringValue());
     }
 
     float lightmapscale = WorldEnt().get_int("_lightmap_scale");
@@ -429,7 +429,7 @@ static void FindModelInfo(const mbsp_t *bsp)
         lightmapscale = 16; /* the default */
     if (lightmapscale <= 0)
         FError("lightmap scale is 0 or negative\n");
-    if (options.lightmap_scale.isChanged() || lightmapscale != 16)
+    if (light_options.lightmap_scale.isChanged() || lightmapscale != 16)
         logging::print("Forcing lightmap scale of {}qu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software
      * ones that might be able to just do some mip hacks). This tool doesn't really care.*/
@@ -446,7 +446,7 @@ static void FindModelInfo(const mbsp_t *bsp)
     /* The world always casts shadows */
     modelinfo_t *world = new modelinfo_t{bsp, &bsp->dmodels[0], lightmapscale};
     world->shadow.setValue(1.0f); /* world always casts shadows */
-    world->phong_angle.copyFrom(options.phongangle);
+    world->phong_angle.copyFrom(light_options.phongangle);
     modelinfo.push_back(world);
     tracelist.push_back(world);
 
@@ -511,14 +511,14 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         file_end = MAX_MAP_LIGHTING;
     }
 
-    if (bsp.loadversion->game->has_rgb_lightmap || options.write_litfile) {
+    if (bsp.loadversion->game->has_rgb_lightmap || light_options.write_litfile) {
         /* litfile data stored in a separate buffer */
         lit_filebase.resize(MAX_MAP_LIGHTING * 3);
         lit_file_p = 0;
         lit_file_end = (MAX_MAP_LIGHTING * 3);
     }
 
-    if (options.write_luxfile) {
+    if (light_options.write_luxfile) {
         /* lux data stored in a separate buffer */
         lux_filebase.resize(MAX_MAP_LIGHTING * 3);
         lux_file_p = 0;
@@ -527,14 +527,14 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     if (forcedscale) {
         bspdata->bspx.entries.erase("LMSHIFT");
-    } else if (options.lmshift.isChanged()) {
+    } else if (light_options.lmshift.isChanged()) {
         // if we forcefully specified an lmshift lump, we have to generate one.
         bspdata->bspx.entries.erase("LMSHIFT");
 
         std::vector<uint8_t> shifts(bsp.dfaces.size());
 
         for (auto &shift : shifts) {
-            shift = options.lmshift.value();
+            shift = light_options.lmshift.value();
         }
 
         bspdata->bspx.transfer("LMSHIFT", shifts);
@@ -542,7 +542,8 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
-    if (lmshift_lump == bspdata->bspx.entries.end() && options.write_litfile != lightfile::lit2 && options.facestyles.value() <= 4) {
+    if (lmshift_lump == bspdata->bspx.entries.end() && light_options.write_litfile != lightfile::lit2 &&
+        light_options.facestyles.value() <= 4) {
         faces_sup.clear(); // no scales, no lit2
     } else { // we have scales or lit2 output. yay...
         faces_sup.resize(bsp.dfaces.size());
@@ -564,10 +565,10 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     CreateLightmapSurfaces(&bsp);
 
     const bool bouncerequired =
-        options.bounce.value() && (options.debugmode == debugmodes::none || options.debugmode == debugmodes::bounce ||
-                                      options.debugmode == debugmodes::bouncelights); // mxd
+        light_options.bounce.value() && (light_options.debugmode == debugmodes::none || light_options.debugmode == debugmodes::bounce ||
+            light_options.debugmode == debugmodes::bouncelights); // mxd
 
-    MakeRadiositySurfaceLights(options, &bsp);
+    MakeRadiositySurfaceLights(light_options, &bsp);
 
     logging::print("--- Direct Lighting ---\n"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
@@ -576,17 +577,17 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
 
-            DirectLightFace(&bsp, *light_surfaces[i].get(), options);
+            DirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
         }
     });
 
-    if (bouncerequired && !options.nolighting.value()) {
+    if (bouncerequired && !light_options.nolighting.value()) {
         GetLights().clear();
         GetRadLights().clear();
         GetSuns().clear();
         GetSurfaceLights().clear();
 
-        MakeBounceLights(options, &bsp);
+        MakeBounceLights(light_options, &bsp);
 
         logging::print("--- Indirect Lighting ---\n"); // mxd
         logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
@@ -595,7 +596,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
                 _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     #endif
 
-                IndirectLightFace(&bsp, *light_surfaces[i].get(), options);
+                IndirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
             }
         });
     }
@@ -605,7 +606,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     logging::print("Lighting Completed.\n\n");
 
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
-    if (!options.litonly.value()) {
+    if (!light_options.litonly.value()) {
         if (bsp.loadversion->game->has_rgb_lightmap) {
             bsp.dlightdata.resize(lit_file_p);
             memcpy(bsp.dlightdata.data(), lit_filebase.data(), bsp.dlightdata.size());
@@ -646,14 +647,14 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
                 stylesperface = j;
         }
         
-        if (stylesperface >= options.facestyles.value()) {
-            logging::print("WARNING: styles per face {} exceeds compiler-set max styles {}; use `-facestyles` if you need more.\n", stylesperface, options.facestyles.value());
-            stylesperface = options.facestyles.value();
+        if (stylesperface >= light_options.facestyles.value()) {
+            logging::print("WARNING: styles per face {} exceeds compiler-set max styles {}; use `-facestyles` if you need more.\n", stylesperface, light_options.facestyles.value());
+            stylesperface = light_options.facestyles.value();
         }
 
         needstyles |= (stylesperface>4);
 
-        logging::print("max {} styles per face, {} used{}\n", options.facestyles.value(), stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
+        logging::print("max {} styles per face, {} used{}\n", light_options.facestyles.value(), stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
         
         if (needstyles) {
             if (maxstyle >= INVALID_LIGHTSTYLE_OLD) {
@@ -840,10 +841,10 @@ static const mface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &poin
 
 static void FindDebugFace(const mbsp_t *bsp)
 {
-    if (!options.debugface.isChanged())
+    if (!light_options.debugface.isChanged())
         return;
 
-    const mface_t *f = Face_NearestCentroid(bsp, options.debugface.value());
+    const mface_t *f = Face_NearestCentroid(bsp, light_options.debugface.value());
     if (f == NULL)
         FError("f == NULL\n");
 
@@ -880,10 +881,10 @@ static int Vertex_NearestPoint(const mbsp_t *bsp, const qvec3d &point)
 
 static void FindDebugVert(const mbsp_t *bsp)
 {
-    if (!options.debugvert.isChanged())
+    if (!light_options.debugvert.isChanged())
         return;
 
-    int v = Vertex_NearestPoint(bsp, options.debugvert.value());
+    int v = Vertex_NearestPoint(bsp, light_options.debugvert.value());
 
     logging::funcprint("dumping vert {} at {}\n", v, bsp->dvertexes[v]);
 
@@ -892,13 +893,13 @@ static void FindDebugVert(const mbsp_t *bsp)
 
 static void SetLitNeeded()
 {
-    if (!options.write_litfile) {
-        if (options.novanilla.value()) {
-            options.write_litfile = lightfile::bspx;
+    if (!light_options.write_litfile) {
+        if (light_options.novanilla.value()) {
+            light_options.write_litfile = lightfile::bspx;
             logging::print("Colored light entities/settings detected: "
                      "bspxlit output enabled.\n");
         } else {
-            options.write_litfile = lightfile::external;
+            light_options.write_litfile = lightfile::external;
             logging::print("Colored light entities/settings detected: "
                      ".lit output enabled.\n");
         }
@@ -1044,7 +1045,7 @@ static void AddTextureName(const std::string_view &textureName, const mbsp_t *bs
     auto &tex = img::textures.emplace(textureName, img::texture{}).first->second;
 
     // find texture & meta
-    auto [ texture, _0, _1 ] = img::load_texture(textureName, false, bsp->loadversion->game, options);
+    auto [ texture, _0, _1 ] = img::load_texture(textureName, false, bsp->loadversion->game, light_options);
 
     if (!texture) {
         logging::funcprint("WARNING: can't find pixel data for {}\n", textureName);
@@ -1052,7 +1053,7 @@ static void AddTextureName(const std::string_view &textureName, const mbsp_t *bs
         tex = std::move(texture.value());
     }
 
-    auto [ texture_meta, __0, __1 ] = img::load_texture_meta(textureName, bsp->loadversion->game, options);
+    auto [ texture_meta, __0, __1 ] = img::load_texture_meta(textureName, bsp->loadversion->game, light_options);
     
     if (!texture_meta) {
         logging::funcprint("WARNING: can't find meta data for {}\n", textureName);
@@ -1112,7 +1113,7 @@ static void ConvertTextures(const mbsp_t *bsp)
         }
 
         // find replacement texture
-        if (auto [ texture, _0, _1 ] = img::load_texture(miptex.name, false, bsp->loadversion->game, options); texture) {
+        if (auto [ texture, _0, _1 ] = img::load_texture(miptex.name, false, bsp->loadversion->game, light_options); texture) {
             tex.width = texture->width;
             tex.height = texture->height;
             tex.pixels = std::move(texture->pixels);
@@ -1152,16 +1153,16 @@ int light_main(int argc, const char **argv)
 {
     bspdata_t bspdata;
 
-    options.preinitialize(argc, argv);
-    options.initialize(argc, argv);
+    light_options.preinitialize(argc, argv);
+    light_options.initialize(argc, argv);
 
     auto start = I_FloatTime();
-    fs::path source = options.sourceMap;
+    fs::path source = light_options.sourceMap;
 
-    logging::init(fs::path(source).replace_filename(source.stem().string() + "-light").replace_extension("log"), options);
+    logging::init(fs::path(source).replace_filename(source.stem().string() + "-light").replace_extension("log"), light_options);
 
     // delete previous litfile
-    if (!options.onlyents.value()) {
+    if (!light_options.onlyents.value()) {
         source.replace_extension("lit");
         remove(source);
     }
@@ -1174,7 +1175,7 @@ int light_main(int argc, const char **argv)
     source.replace_extension("bsp");
     LoadBSPFile(source, &bspdata);
 
-    bspdata.version->game->init_filesystem(source, options);
+    bspdata.version->game->init_filesystem(source, light_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -1182,26 +1183,26 @@ int light_main(int argc, const char **argv)
 
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
     if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
-        if (!options.rangescale.isChanged()) {
-            options.rangescale.setValue(1.0f);
+        if (!light_options.rangescale.isChanged()) {
+            light_options.rangescale.setValue(1.0f);
         }
-        if (!options.bouncecolorscale.isChanged()) {
-            options.bouncecolorscale.setValue(0.5f);
+        if (!light_options.bouncecolorscale.isChanged()) {
+            light_options.bouncecolorscale.setValue(0.5f);
         }
-        if (!options.surflightscale.isChanged()) {
-            options.surflightscale.setValue(0.65f);
+        if (!light_options.surflightscale.isChanged()) {
+            light_options.surflightscale.setValue(0.65f);
         }
-        if (!options.bouncescale.isChanged()) {
-            options.bouncescale.setValue(1.25f);
+        if (!light_options.bouncescale.isChanged()) {
+            light_options.bouncescale.setValue(1.25f);
         }
-        if (!options.bounce.isChanged()) {
-            options.bounce.setValue(true);
+        if (!light_options.bounce.isChanged()) {
+            light_options.bounce.setValue(true);
         }
     }
 
     // check vis approx type
-    if (options.visapprox.value() == visapprox_t::AUTO) {
-        options.visapprox.setValue(visapprox_t::RAYS);
+    if (light_options.visapprox.value() == visapprox_t::AUTO) {
+        light_options.visapprox.setValue(visapprox_t::RAYS);
     }
 
     load_textures(&bsp);
@@ -1209,9 +1210,9 @@ int light_main(int argc, const char **argv)
     CacheTextures(bsp);
 
     LoadExtendedTexinfoFlags(source, &bsp);
-    LoadEntities(options, &bsp);
+    LoadEntities(light_options, &bsp);
 
-    options.postinitialize(argc, argv);
+    light_options.postinitialize(argc, argv);
 
     FindModelInfo(&bsp);
 
@@ -1220,7 +1221,7 @@ int light_main(int argc, const char **argv)
 
     Embree_TraceInit(&bsp);
 
-    if (options.debugmode == debugmodes::phong_obj) {
+    if (light_options.debugmode == debugmodes::phong_obj) {
         CalculateVertexNormals(&bsp);
         source.replace_extension("obj");
         ExportObj(source, &bsp);
@@ -1229,23 +1230,23 @@ int light_main(int argc, const char **argv)
         return 0;
     }
 
-    SetupLights(options, &bsp);
+    SetupLights(light_options, &bsp);
 
     // PrintLights();
 
-    if (!options.onlyents.value()) {
+    if (!light_options.onlyents.value()) {
         if (!bspdata.loadversion->game->has_rgb_lightmap) {
-            CheckLitNeeded(options);
+            CheckLitNeeded(light_options);
         }
 
-        SetupDirt(options);
+        SetupDirt(light_options);
 
-        LightWorld(&bspdata, options.lightmap_scale.isChanged());
+        LightWorld(&bspdata, light_options.lightmap_scale.isChanged());
 
         // invalidate normals
         bspdata.bspx.entries.erase("FACENORMALS");
 
-        if (options.write_normals.value()) {
+        if (light_options.write_normals.value()) {
             WriteNormals(bsp, bspdata);
         }
 
@@ -1253,42 +1254,42 @@ int light_main(int argc, const char **argv)
         bspdata.bspx.entries.erase("RGBLIGHTING");
         bspdata.bspx.entries.erase("LIGHTINGDIR");
 
-        if (options.write_litfile == lightfile::lit2) {
+        if (light_options.write_litfile == lightfile::lit2) {
             WriteLitFile(&bsp, faces_sup, source, 2);
             return 0; // run away before any files are written
         }
 
         /*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
-        if (options.write_litfile & lightfile::external) {
+        if (light_options.write_litfile & lightfile::external) {
             WriteLitFile(&bsp, faces_sup, source, LIT_VERSION);
         }
-        if (options.write_litfile & lightfile::bspx) {
+        if (light_options.write_litfile & lightfile::bspx) {
             lit_filebase.resize(bsp.dlightdata.size() * 3);
             bspdata.bspx.transfer("RGBLIGHTING", lit_filebase);
         }
-        if (options.write_luxfile & lightfile::external) {
+        if (light_options.write_luxfile & lightfile::external) {
             WriteLuxFile(&bsp, source, LIT_VERSION);
         }
-        if (options.write_luxfile & lightfile::bspx) {
+        if (light_options.write_luxfile & lightfile::bspx) {
             lux_filebase.resize(bsp.dlightdata.size() * 3);
             bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase);
         }
     }
 
     /* -novanilla + internal lighting = no grey lightmap */
-    if (options.novanilla.value() && (options.write_litfile & lightfile::bspx)) {
+    if (light_options.novanilla.value() && (light_options.write_litfile & lightfile::bspx)) {
         bsp.dlightdata.clear();
     }
 
-    if (options.exportobj.value()) {
+    if (light_options.exportobj.value()) {
         ExportObj(fs::path{source}.replace_extension(".obj"), &bsp);
     }
 
-    WriteEntitiesToString(options, &bsp);
+    WriteEntitiesToString(light_options, &bsp);
     /* Convert data format back if necessary */
     ConvertBSPFormat(&bspdata, bspdata.loadversion);
 
-    if (!options.litonly.value()) {
+    if (!light_options.litonly.value()) {
         WriteBSPFile(source, &bspdata);
     }
 
