@@ -373,6 +373,54 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
         memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
     }
 
+    auto ExportObjFace = [&full_atlas](std::iostream &f, const mbsp_t *bsp, const face_rect &face, int &vertcount)
+    {
+        // export the vertices and uvs
+        for (int i = 0; i < face.face->numedges; i++) {
+            const int vertnum = Face_VertexAtIndex(bsp, face.face, i);
+            const qvec3f normal = bsp->dplanes[face.face->planenum].normal;
+            const qvec3f &pos = bsp->dvertexes[vertnum];
+            fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
+            fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
+
+            auto tc = face.extents.worldToLMCoord(pos);
+            tc[0] += face.x;
+            tc[1] += face.y;
+            
+            tc[0] /= full_atlas.width;
+            tc[1] /= full_atlas.height;
+
+            tc[1] = 1.0 - tc[1];
+
+            fmt::print(f, "vt {:.9} {:.9}\n", tc[0], tc[1]);
+        }
+
+        f << "f";
+        for (int i = 0; i < face.face->numedges; i++) {
+            // .obj vertexes start from 1
+            // .obj faces are CCW, quake is CW, so reverse the order
+            const int vertindex = vertcount + (face.face->numedges - 1 - i) + 1;
+            fmt::print(f, " {0}/{0}/{0}", vertindex);
+        }
+        f << '\n';
+
+        vertcount += face.face->numedges;
+    };
+
+    auto ExportObj = [&ExportObjFace, &rectangles](const mbsp_t *bsp)
+    {
+        std::stringstream objfile;
+        int vertcount = 0;
+
+        for (auto &rect : rectangles) {
+            ExportObjFace(objfile, bsp, rect, vertcount);
+        }
+
+        return objfile.str();
+    };
+
+    obj.emplace("obj", ExportObj(&bsp));
+
     return obj;
 }
 
