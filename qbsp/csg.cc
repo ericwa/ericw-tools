@@ -123,3 +123,16 @@ std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(std::uniq
 
     return {std::move(new_front), std::move(new_back)};
 }
+
+std::vector<std::unique_ptr<bspbrush_t>> MakeBspBrushList(mapentity_t *entity)
+{
+    // set the original pointers
+    std::vector<std::unique_ptr<bspbrush_t>> brushcopies;
+    for (const auto &original : entity->brushes) {
+        auto copy = original->copy_unique();
+        copy->original = original.get();
+        brushcopies.push_back(std::move(copy));
+    }
+
+    return brushcopies;
+}

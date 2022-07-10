@@ -40,4 +40,4 @@ std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds);
 std::unique_ptr<tree_t> BrushBSP(std::vector<std::unique_ptr<bspbrush_t>> brushlist);
 
 // compatibility version
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, bool midsplit);
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity);
