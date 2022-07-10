@@ -97,7 +97,7 @@ size_t ExportMapTexinfo(size_t texinfonum)
 ExportClipNodes
 ==================
 */
-static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
+static size_t ExportClipNodes(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
         return node->contents.native;
@@ -107,8 +107,8 @@ static size_t ExportClipNodes(mapentity_t *entity, node_t *node)
     const size_t nodenum = map.bsp.dclipnodes.size();
     map.bsp.dclipnodes.emplace_back();
 
-    const int child0 = ExportClipNodes(entity, node->children[0].get());
-    const int child1 = ExportClipNodes(entity, node->children[1].get());
+    const int child0 = ExportClipNodes(node->children[0].get());
+    const int child1 = ExportClipNodes(node->children[1].get());
 
     // Careful not to modify the vector while using this clipnode pointer
     bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
@@ -134,7 +134,7 @@ accomodate new data interleaved with old.
 void ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 {
     auto &model = map.bsp.dmodels.at(entity->outputmodelnumber.value());
-    model.headnode[hullnum] = ExportClipNodes(entity, nodes);
+    model.headnode[hullnum] = ExportClipNodes(nodes);
 }
 
 //===========================================================================
@@ -144,7 +144,7 @@ void ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
 ExportLeaf
 ==================
 */
-static void ExportLeaf(mapentity_t *entity, node_t *node)
+static void ExportLeaf(node_t *node)
 {
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
@@ -201,7 +201,7 @@ static void ExportLeaf(mapentity_t *entity, node_t *node)
 ExportDrawNodes
 ==================
 */
-static void ExportDrawNodes(mapentity_t *entity, node_t *node)
+static void ExportDrawNodes(node_t *node)
 {
     const size_t ourNodeIndex = map.bsp.dnodes.size();
     bsp2_dnode_t *dnode = &map.bsp.dnodes.emplace_back();
@@ -223,12 +223,12 @@ static void ExportDrawNodes(mapentity_t *entity, node_t *node)
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
                 const int32_t childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
-                ExportLeaf(entity, node->children[i].get());
+                ExportLeaf(node->children[i].get());
             }
         } else {
             const int32_t childnum = static_cast<int32_t>(map.bsp.dnodes.size());
             dnode->children[i] = childnum;
-            ExportDrawNodes(entity, node->children[i].get());
+            ExportDrawNodes(node->children[i].get());
 
             // Important: our dnode pointer may be invalid after the recursive call, if the vector got resized.
             // So re-set the pointer.
@@ -260,9 +260,9 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     const size_t mapleafsAtStart = map.bsp.dleafs.size();
 
     if (headnode->planenum == PLANENUM_LEAF)
-        ExportLeaf(entity, headnode);
+        ExportLeaf(headnode);
     else
-        ExportDrawNodes(entity, headnode);
+        ExportDrawNodes(headnode);
 
     // count how many leafs were exported by the above calls
     dmodel.visleafs = static_cast<int32_t>(map.bsp.dleafs.size() - mapleafsAtStart);

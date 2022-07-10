@@ -46,120 +46,104 @@ static bool ShouldOmitFace(face_t *f)
     return false;
 }
 
-static void MergeNodeFaces (node_t *node)
+static void MergeNodeFaces(node_t *node)
 {
     node->facelist = MergeFaceList(std::move(node->facelist));
 }
 
-//===========================================================================
-
-// This is a kludge.   Should be pEdgeFaces[2].
-static std::map<int, const face_t *> pEdgeFaces0;
-static std::map<int, const face_t *> pEdgeFaces1;
-
-//============================================================================
-
-struct hashvert_t
-{
-    qvec3d point;
-    size_t num;
-};
-
-static std::map<std::pair<size_t, size_t>, int64_t> hashedges;
-static std::map<qvec3i, std::list<hashvert_t>> hashverts;
-
-inline void InitHash()
-{
-    pEdgeFaces0.clear();
-    pEdgeFaces1.clear();
-    hashverts.clear();
-    hashedges.clear();
-}
-
-inline qvec3i HashVec(const qvec3d &vec)
-{
-    return {floor(vec[0]), floor(vec[1]), floor(vec[2])};
-}
-
-inline void AddHashVert(const hashvert_t &hv)
-{
-    // insert each vert at floor(pos[axis]) and floor(pos[axis]) + 1 (for each axis)
-    // so e.g. a vert at (0.99, 0.99, 0.99) shows up if we search at (1.01, 1.01, 1.01)
-    // this is a bit wasteful, since it inserts 8 copies of each vert.
-
-    for (int x = 0; x <= 1; x++) {
-        for (int y = 0; y <= 1; y++) {
-            for (int z = 0; z <= 1; z++) {
-                const qvec3i h{floor(hv.point[0]) + x, floor(hv.point[1]) + y, floor(hv.point[2]) + z};
-                hashverts[h].push_front(hv);
-            }
-        }
-    }
-}
-
 /*
 =============
-GetVertex
+EmitVertex
+NOTE: modifies input to be rounded!
 =============
 */
-inline size_t GetVertex(qvec3d vert)
+inline void EmitVertex(qvec3d &vert)
 {
+    // if we're extremely close to an integral point,
+    // snap us to it.
     for (auto &v : vert) {
         double rounded = Q_rint(v);
-        if (fabs(v - rounded) < ZERO_EPSILON)
+        if (fabs(v - rounded) < ZERO_EPSILON) {
             v = rounded;
-    }
-
-    const auto h = HashVec(vert);
-    auto it = hashverts.find(h);
-    if (it != hashverts.end()) {
-        for (hashvert_t &hv : it->second) {
-            if (fabs(hv.point[0] - vert[0]) < POINT_EPSILON && fabs(hv.point[1] - vert[1]) < POINT_EPSILON &&
-                fabs(hv.point[2] - vert[2]) < POINT_EPSILON) {
-
-                return hv.num;
-            }
         }
     }
 
-    const size_t global_vert_num = map.bsp.dvertexes.size();
+    // already added
+    if (auto v = map.find_emitted_hash_vector(vert)) {
+        return;
+    }
 
-    AddHashVert({vert, global_vert_num});
+    // add new vertex!
+    map.add_hash_vector(vert, map.bsp.dvertexes.size());
 
-    /* emit a vertex */
     map.bsp.dvertexes.emplace_back(vert);
+}
 
-    return global_vert_num;
+// snap windings & output final vertices
+static void EmitFaceVertices(face_t *f)
+{
+    if (ShouldOmitFace(f)) {
+        return;
+    }
+
+    for (auto &p : f->w) {
+        EmitVertex(p);
+    }
+
+    for (auto &frag : f->fragments) {
+        for (auto &p : frag.w) {
+            EmitVertex(p);
+        }
+    }
+}
+
+static void EmitVertices_R(node_t *node)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        return;
+    }
+
+    for (auto &f : node->facelist) {
+        EmitFaceVertices(f.get());
+    }
+
+    EmitVertices_R(node->children[0].get());
+    EmitVertices_R(node->children[1].get());
+}
+
+void EmitVertices(node_t *headnode)
+{
+    EmitVertices_R(headnode);
 }
 
 //===========================================================================
-
-inline void AddHashEdge(size_t v1, size_t v2, int64_t i)
-{
-    hashedges.emplace(std::make_pair(v1, v2), i);
-}
 
 /*
 ==================
 GetEdge
 
-Don't allow four way edges (FIXME: What is this?)
-
 Returns a global edge number, possibly negative to indicate a backwards edge.
 ==================
 */
-inline int64_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, const face_t *face)
+inline int64_t GetEdge(const qvec3d &p1, const qvec3d &p2, const face_t *face)
 {
     if (!face->contents.is_valid(options.target_game, false))
         FError("Face with invalid contents");
 
-    size_t v1 = GetVertex(p1);
-    size_t v2 = GetVertex(p2);
+    auto v1o = map.find_emitted_hash_vector(p1);
+    auto v2o = map.find_emitted_hash_vector(p2);
+
+    if (!v1o || !v2o) {
+        FError("invalid output vertex");
+    }
+
+    size_t v1 = *v1o;
+    size_t v2 = *v2o;
 
     // search for existing edges
-    if (auto it = hashedges.find(std::make_pair(v1, v2)); it != hashedges.end()) {
+    if (auto it = map.hashedges.find(std::make_pair(v1, v2)); it != map.hashedges.end()) {
         return it->second;
-    } else if (auto it = hashedges.find(std::make_pair(v2, v1)); it != hashedges.end()) {
+    } else if (auto it = map.hashedges.find(std::make_pair(v2, v1)); it != map.hashedges.end()) {
         return -it->second;
     }
 
@@ -168,13 +152,12 @@ inline int64_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, 
 
     map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
 
-    AddHashEdge(v1, v2, i);
+    map.add_hash_edge(v1, v2, i);
 
-    pEdgeFaces0[i] = face;
     return i;
 }
 
-static void FindFaceFragmentEdges(mapentity_t *entity, face_t *face, face_fragment_t *fragment)
+static void FindFaceFragmentEdges(face_t *face, face_fragment_t *fragment)
 {
     fragment->outputnumber = std::nullopt;
 
@@ -187,7 +170,7 @@ static void FindFaceFragmentEdges(mapentity_t *entity, face_t *face, face_fragme
     for (size_t i = 0; i < fragment->w.size(); i++) {
         const qvec3d &p1 = fragment->w[i];
         const qvec3d &p2 = fragment->w[(i + 1) % fragment->w.size()];
-        fragment->edges[i] = GetEdge(entity, p1, p2, face);
+        fragment->edges[i] = GetEdge(p1, p2, face);
     }
 }
 
@@ -196,15 +179,15 @@ static void FindFaceFragmentEdges(mapentity_t *entity, face_t *face, face_fragme
 FindFaceEdges
 ==================
 */
-static void FindFaceEdges(mapentity_t *entity, face_t *face)
+static void FindFaceEdges(face_t *face)
 {
     if (ShouldOmitFace(face))
         return;
 
-    FindFaceFragmentEdges(entity, face, face);
+    FindFaceFragmentEdges(face, face);
 
     for (auto &fragment : face->fragments) {
-        FindFaceFragmentEdges(entity, face, &fragment);
+        FindFaceFragmentEdges(face, &fragment);
     }
 }
 
@@ -213,19 +196,17 @@ static void FindFaceEdges(mapentity_t *entity, face_t *face)
 MakeFaceEdges_r
 ================
 */
-static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
+static void MakeFaceEdges_r(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF)
-        return progress;
+        return;
 
     for (auto &f : node->facelist) {
-        FindFaceEdges(entity, f.get());
+        FindFaceEdges(f.get());
     }
 
-    progress = MakeFaceEdges_r(entity, node->children[0].get(), progress);
-    progress = MakeFaceEdges_r(entity, node->children[1].get(), progress);
-
-    return progress;
+    MakeFaceEdges_r(node->children[0].get());
+    MakeFaceEdges_r(node->children[1].get());
 }
 
 /*
@@ -233,7 +214,7 @@ static int MakeFaceEdges_r(mapentity_t *entity, node_t *node, int progress)
 EmitFaceFragment
 ==============
 */
-static void EmitFaceFragment(mapentity_t *entity, face_t *face, face_fragment_t *fragment)
+static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
 {
     int i;
 
@@ -268,15 +249,15 @@ static void EmitFaceFragment(mapentity_t *entity, face_t *face, face_fragment_t 
 EmitFace
 ==============
 */
-static void EmitFace(mapentity_t *entity, face_t *face)
+static void EmitFace(face_t *face)
 {
     if (ShouldOmitFace(face))
         return;
 
-    EmitFaceFragment(entity, face, face);
+    EmitFaceFragment(face, face);
 
     for (auto &fragment : face->fragments) {
-        EmitFaceFragment(entity, face, &fragment);
+        EmitFaceFragment(face, &fragment);
     }
 }
 
@@ -285,7 +266,7 @@ static void EmitFace(mapentity_t *entity, face_t *face)
 GrowNodeRegion
 ==============
 */
-static void GrowNodeRegion(mapentity_t *entity, node_t *node)
+static void GrowNodeRegion(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF)
         return;
@@ -296,43 +277,13 @@ static void GrowNodeRegion(mapentity_t *entity, node_t *node)
         //Q_assert(face->planenum == node->planenum);
 
         // emit a region
-        EmitFace(entity, face.get());
+        EmitFace(face.get());
     }
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
 
-    GrowNodeRegion(entity, node->children[0].get());
-    GrowNodeRegion(entity, node->children[1].get());
-}
-
-static void CountFace(mapentity_t *entity, face_t *f, size_t &facesCount, size_t &vertexesCount)
-{
-    if (ShouldOmitFace(f))
-        return;
-
-    if (f->lmshift != 4)
-        map.needslmshifts = true;
-
-    facesCount++;
-    vertexesCount += f->w.size();
-}
-
-/*
-==============
-CountData_r
-==============
-*/
-static void CountData_r(mapentity_t *entity, node_t *node, size_t &facesCount, size_t &vertexesCount)
-{
-    if (node->planenum == PLANENUM_LEAF)
-        return;
-
-    for (auto &f : node->facelist) {
-        CountFace(entity, f.get(), facesCount, vertexesCount);
-    }
-
-    CountData_r(entity, node->children[0].get(), facesCount, vertexesCount);
-    CountData_r(entity, node->children[1].get(), facesCount, vertexesCount);
+    GrowNodeRegion(node->children[0].get());
+    GrowNodeRegion(node->children[1].get());
 }
 
 /*
@@ -340,29 +291,17 @@ static void CountData_r(mapentity_t *entity, node_t *node, size_t &facesCount, s
 MakeFaceEdges
 ================
 */
-int MakeFaceEdges(mapentity_t *entity, node_t *headnode)
+int MakeFaceEdges(node_t *headnode)
 {
     int firstface;
 
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
-    Q_assert(entity->firstoutputfacenumber == -1);
-    entity->firstoutputfacenumber = static_cast<int>(map.bsp.dfaces.size());
-
-    size_t facesCount = 0, vertexesCount = 0;
-    CountData_r(entity, headnode, facesCount, vertexesCount);
-
-    // Accessory data
-    InitHash();
-
     firstface = static_cast<int>(map.bsp.dfaces.size());
-    MakeFaceEdges_r(entity, headnode, 0);
-
-    pEdgeFaces0.clear();
-    pEdgeFaces1.clear();
+    MakeFaceEdges_r(headnode);
 
     logging::print(logging::flag::PROGRESS, "---- GrowRegions ----\n");
-    GrowNodeRegion(entity, headnode);
+    GrowNodeRegion(headnode);
 
     return firstface;
 }
@@ -406,7 +345,7 @@ MakeMarkFaces
 Populates the `markfaces` vectors of all leafs
 ================
 */
-void MakeMarkFaces(mapentity_t* entity, node_t* node)
+void MakeMarkFaces(node_t* node)
 {
     if (node->planenum == PLANENUM_LEAF) {
         return;
@@ -427,8 +366,8 @@ void MakeMarkFaces(mapentity_t* entity, node_t* node)
     }
 
     // process child nodes recursively
-    MakeMarkFaces(entity, node->children[0].get());
-    MakeMarkFaces(entity, node->children[1].get());
+    MakeMarkFaces(node->children[0].get());
+    MakeMarkFaces(node->children[1].get());
 }
 
 struct makefaces_stats_t {

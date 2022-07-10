@@ -487,8 +487,6 @@ ProcessEntity
 */
 static void ProcessEntity(mapentity_t *entity, const int hullnum)
 {
-    int firstface;
-
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
     if (!entity->nummapbrushes && entity != map.world_entity())
@@ -638,12 +636,15 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         }
 
         // needs to come after any face creation
-        MakeMarkFaces(entity, tree->headnode.get());
+        MakeMarkFaces(tree->headnode.get());
 
         // convert detail leafs to solid (in case we didn't make the call above)
         DetailToSolid(tree->headnode.get());
 
         // fixme-brushbsp: prune nodes
+
+        // output vertices first, since TJunc needs it
+        EmitVertices(tree->headnode.get());
 
         if (!options.notjunc.value()) {
             TJunc(entity, tree->headnode.get());
@@ -653,14 +654,16 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode.get());
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode.get());
         }
+        
+        Q_assert(entity->firstoutputfacenumber == -1);
 
-        firstface = MakeFaceEdges(entity, tree->headnode.get());
+        entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode.get());
 
         if (options.target_game->id == GAME_QUAKE_II) {
             ExportBrushList(entity, tree->headnode.get());
         }
 
-        ExportDrawNodes(entity, tree->headnode.get(), firstface);
+        ExportDrawNodes(entity, tree->headnode.get(), entity->firstoutputfacenumber);
     }
 
     FreeBrushes(entity);

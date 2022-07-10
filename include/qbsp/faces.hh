@@ -24,8 +24,6 @@
 #include <list>
 
 struct node_t;
-class mapentity_t;
-struct face_t;
 
-void MakeMarkFaces(mapentity_t* entity, node_t* headnode);
+void MakeMarkFaces(node_t* headnode);
 void MakeFaces(node_t *node);

@@ -294,7 +294,6 @@ constexpr int32_t PLANENUM_LEAF = -1;
 constexpr vec_t ANGLEEPSILON = 0.000001;
 constexpr vec_t ZERO_EPSILON = 0.0001;
 constexpr vec_t DISTEPSILON = 0.0001;
-constexpr vec_t POINT_EPSILON = 0.0001;
 constexpr vec_t EQUAL_EPSILON = 0.0001;
 constexpr vec_t T_EPSILON = 0.0002;
 constexpr vec_t CONTINUOUS_EPSILON = 0.0005;
