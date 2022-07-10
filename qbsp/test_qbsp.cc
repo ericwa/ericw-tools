@@ -994,6 +994,8 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
         {80, -144, 112}
     };
 
+    CHECK(bsp.dedges.size() == 13); // index 0 is reserved, and the cube has 12 edges
+
     REQUIRE(7 == bsp.dleafs.size());
 
     // check the solid leaf
@@ -1021,6 +1023,17 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
     // model bounds are shrunk by 1 unit on each side for some reason
     CHECK(cube_bounds.grow(-1).mins() == bsp.dmodels[0].mins);
     CHECK(cube_bounds.grow(-1).maxs() == bsp.dmodels[0].maxs);
+}
+
+/**
+ * Two solid cuboids touching along one edge
+ */
+TEST_CASE("q1_cubes", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_cubes.map");
+
+    // index 0 is reserved, and the first cube has 12 edges, the second can share one edge so only needs 11
+    CHECK(bsp.dedges.size() == 24);
 }
 
 /**
