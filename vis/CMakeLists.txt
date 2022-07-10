@@ -26,18 +26,3 @@ add_custom_command(TARGET vis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:vis>")
 
 install(TARGETS vis RUNTIME DESTINATION bin)
-
-# test
-
-enable_testing()
-
-add_executable(testvis
-		test_vis.cc)
-target_link_libraries(testvis PRIVATE libvis common Catch2::Catch2WithMain fmt::fmt)
-
-# HACK: copy .dll dependencies
-add_custom_command(TARGET testvis POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testvis>")
-
-include(Catch)
-catch_discover_tests(testvis)

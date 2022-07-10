@@ -51,8 +51,5 @@ otool -L ./bspinfo/bspinfo
 otool -L ./bsputil/bsputil
 
 # run tests
-./common/testcommon || exit 1
-./light/testlight || exit 1
-./qbsp/testqbsp || exit 1
-./qbsp/testqbsp [.] || exit 1 # run hidden tests (releaseonly)
-./vis/testvis --allow-running-no-tests || exit 1
+./tests/tests || exit 1
+./tests/tests [.] || exit 1 # run hidden tests (releaseonly)

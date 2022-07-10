@@ -115,33 +115,3 @@ endif(embree_FOUND)
 
 install(TARGETS light RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
-
-# test (see: https://google.github.io/googletest/quickstart-cmake.html)
-
-enable_testing()
-
-set(LIGHT_TEST_SOURCE 
-	test_entities.cc
-	test_ltface.cc
-	test_light.cc
-	test_common.cc)
-add_executable(testlight ${LIGHT_TEST_SOURCE})
-target_link_libraries (testlight PRIVATE liblight common ${CMAKE_THREAD_LIBS_INIT} Catch2::Catch2WithMain fmt::fmt)
-if (embree_FOUND)
-	target_link_libraries (testlight PRIVATE embree)
-
-	# HACK: copy .dll dependencies
-	add_custom_command(TARGET testlight POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testlight>"
-			           COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>" "$<TARGET_FILE_DIR:testlight>")
-
-	if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
-		add_custom_command(TARGET testlight POST_BUILD
-				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:testlight>")
-	endif()
-
-	add_definitions(-DHAVE_EMBREE)
-endif (embree_FOUND)
-
-include(Catch)
-catch_discover_tests(testlight)
