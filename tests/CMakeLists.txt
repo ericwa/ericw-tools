@@ -12,6 +12,8 @@ add_executable(tests
 )
 
 find_package(embree 3.0 REQUIRED)
+INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
+
 # HACK: Windows embree .dll's from https://github.com/embree/embree/releases ship with a tbb12.dll
 # and we need to copy it from the embree/bin directory to our light.exe/testlight.exe dir in order for them to run
 find_file(EMBREE_TBB_DLL tbb12.dll
