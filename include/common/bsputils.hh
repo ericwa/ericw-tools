@@ -221,7 +221,7 @@ public:
         qvec3d radius = (bounds.maxs() - bounds.mins()) * 0.5;
 
         origin = bounds.mins() + radius;
-        radius = qv::length(radius);
+        this->radius = qv::length(radius);
     }
 
     constexpr int width() const
