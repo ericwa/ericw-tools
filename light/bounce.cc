@@ -169,9 +169,8 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return;
     }
 
-    const vec_t sample_divisor = sqrt(area);
-    const vec_t extra_divisor = (options.extra.value() * options.extra.value());
-    const vec_t lmscale_divisor = (16.0 / surf.lightmapscale);
+    const vec_t area_divisor = sqrt(area);
+    const vec_t sample_divisor = surf.points.size() / (surf.vanilla_extents.width() * surf.vanilla_extents.height());
 
     qplane3d faceplane = winding.plane();
 
@@ -190,9 +189,8 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     qvec3d total = {};
 
     for (auto &styleColor : sum) {
+        styleColor.second /= area_divisor;
         styleColor.second /= sample_divisor;
-        styleColor.second /= extra_divisor;
-        styleColor.second /= lmscale_divisor;
         styleColor.second *= cfg.bouncescale.value();
         total += styleColor.second;
     }
