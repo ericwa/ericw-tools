@@ -65,9 +65,7 @@ struct hashvert_t
     size_t num;
 };
 
-using vertidx_t = size_t;
-using edgeidx_t = size_t;
-static std::map<std::pair<vertidx_t, vertidx_t>, std::list<edgeidx_t>> hashedges;
+static std::map<std::pair<size_t, size_t>, int64_t> hashedges;
 static std::map<qvec3i, std::list<hashvert_t>> hashverts;
 
 inline void InitHash()
@@ -76,11 +74,6 @@ inline void InitHash()
     pEdgeFaces1.clear();
     hashverts.clear();
     hashedges.clear();
-}
-
-inline void AddHashEdge(size_t v1, size_t v2, size_t i)
-{
-    hashedges[std::make_pair(v1, v2)].push_front(i);
 }
 
 inline qvec3i HashVec(const qvec3d &vec)
@@ -141,6 +134,11 @@ inline size_t GetVertex(qvec3d vert)
 
 //===========================================================================
 
+inline void AddHashEdge(size_t v1, size_t v2, int64_t i)
+{
+    hashedges.emplace(std::make_pair(v1, v2), i);
+}
+
 /*
 ==================
 GetEdge
@@ -150,7 +148,7 @@ Don't allow four way edges (FIXME: What is this?)
 Returns a global edge number, possibly negative to indicate a backwards edge.
 ==================
 */
-inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, const face_t *face)
+inline int64_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, const face_t *face)
 {
     if (!face->contents.is_valid(options.target_game, false))
         FError("Face with invalid contents");
@@ -158,21 +156,16 @@ inline size_t GetEdge(mapentity_t *entity, const qvec3d &p1, const qvec3d &p2, c
     size_t v1 = GetVertex(p1);
     size_t v2 = GetVertex(p2);
 
-    // search for an existing edge from v2->v1
-    const std::pair<int, int> edge_hash_key = std::make_pair(v2, v1);
-
-    auto it = hashedges.find(edge_hash_key);
-    if (it != hashedges.end()) {
-        for (const int i : it->second) {
-            if (pEdgeFaces1[i] == NULL && pEdgeFaces0[i]->contents.native == face->contents.native) {
-                pEdgeFaces1[i] = face;
-                return -i;
-            }
-        }
+    // search for existing edges
+    if (auto it = hashedges.find(std::make_pair(v1, v2)); it != hashedges.end()) {
+        return it->second;
+    } else if (auto it = hashedges.find(std::make_pair(v2, v1)); it != hashedges.end()) {
+        return -it->second;
     }
 
     /* emit an edge */
-    size_t i = map.bsp.dedges.size();
+    int64_t i = map.bsp.dedges.size();
+
     map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
 
     AddHashEdge(v1, v2, i);
