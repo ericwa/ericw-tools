@@ -407,6 +407,8 @@ tjunc
 */
 void TJunc(const mapentity_t *entity, node_t *headnode)
 {
+    // fixme-brushbsp: restore
+    return;
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     /*

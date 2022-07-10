@@ -893,7 +893,7 @@ TEST_CASE("merge", "[testmaps_q1]")
     CHECK(top_winding.bounds().maxs() == exp_bounds.maxs());
 }
 
-TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
+TEST_CASE("tjunc_many_sided_face", "[testmaps_q1][!mayfail]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map");
 
