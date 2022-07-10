@@ -33,13 +33,13 @@
 
 static bool ShouldOmitFace(face_t *f)
 {
-    if (!options.includeskip.value() && map.mtexinfos.at(f->texinfo).flags.is_skip)
+    if (!qbsp_options.includeskip.value() && map.mtexinfos.at(f->texinfo).flags.is_skip)
         return true;
     if (map.mtexinfos.at(f->texinfo).flags.is_hint)
         return true;
 
     // HACK: to save a few faces, don't output the interior faces of sky brushes
-    if (f->contents.is_sky(options.target_game)) {
+    if (f->contents.is_sky(qbsp_options.target_game)) {
         return true;
     }
 
@@ -127,7 +127,7 @@ Returns a global edge number, possibly negative to indicate a backwards edge.
 */
 inline int64_t GetEdge(const qvec3d &p1, const qvec3d &p2, const face_t *face)
 {
-    if (!face->contents.is_valid(options.target_game, false))
+    if (!face->contents.is_valid(qbsp_options.target_game, false))
         FError("Face with invalid contents");
 
     auto v1o = map.find_emitted_hash_vector(p1);
@@ -398,7 +398,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
     /* special (non-surface cached) faces don't need subdivision */
     tex = &map.mtexinfos.at(f->texinfo);
 
-    if (tex->flags.is_skip || tex->flags.is_hint || !options.target_game->surf_is_subdivided(tex->flags)) {
+    if (tex->flags.is_skip || tex->flags.is_hint || !qbsp_options.target_game->surf_is_subdivided(tex->flags)) {
         std::list<std::unique_ptr<face_t>> result;
         result.push_back(std::move(f));
         return result;
@@ -413,7 +413,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
 
     // legacy engines support 18*18 max blocks (at 1:16 scale).
     // the 18*18 limit can be relaxed in certain engines, and doing so will generally give a performance boost.
-    subdiv = min(options.subdivide.value(), 255 << lmshift);
+    subdiv = min(qbsp_options.subdivide.value(), 255 << lmshift);
 
     //      subdiv += 8;
 
@@ -526,17 +526,18 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
     f->portal = p;
     f->lmshift = side->lmshift;
 
-    bool make_face = options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
+    bool make_face =
+        qbsp_options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
     if (!make_face) {
         // content type / game rules requested to skip generating a face on this side
         logging::print("skipped face for {} -> {} portal\n",
-            p->nodes[pside]->contents.to_string(options.target_game),
-            p->nodes[!pside]->contents.to_string(options.target_game));
+            p->nodes[pside]->contents.to_string(qbsp_options.target_game),
+            p->nodes[!pside]->contents.to_string(qbsp_options.target_game));
         return nullptr;
     }
 
-    if (!p->nodes[pside]->contents.is_empty(options.target_game)) {
-        bool our_contents_mirrorinside = options.target_game->contents_are_mirrored(p->nodes[pside]->contents);
+    if (!p->nodes[pside]->contents.is_empty(qbsp_options.target_game)) {
+        bool our_contents_mirrorinside = qbsp_options.target_game->contents_are_mirrored(p->nodes[pside]->contents);
         if (!our_contents_mirrorinside) {
             if (side->planeside != pside) {
 
@@ -584,16 +585,16 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
         MakeFaces_r(node->children[1].get(), stats);
 
         // merge together all visible faces on the node
-        if (!options.nomerge.value())
+        if (!qbsp_options.nomerge.value())
             MergeNodeFaces(node);
-        if (options.subdivide.boolValue())
+        if (qbsp_options.subdivide.boolValue())
             SubdivideNodeFaces(node);
 
         return;
     }
 
     // solid leafs never have visible faces
-    if (node->contents.is_any_solid(options.target_game))
+    if (node->contents.is_any_solid(qbsp_options.target_game))
         return;
 
     // see which portals are valid

@@ -56,12 +56,12 @@ setting_group debugging_group{"Advanced/tool debugging", 500};
 
 inline void set_target_version(const bspversion_t *version)
 {
-    if (options.target_version) {
+    if (qbsp_options.target_version) {
         FError("BSP version was set by multiple flags; currently {}, tried to change to {}\n",
-            options.target_version->name, version->name);
+            qbsp_options.target_version->name, version->name);
     }
 
-    options.target_version = version;
+    qbsp_options.target_version = version;
 }
 
 void qbsp_settings::initialize(int argc, const char **argv)
@@ -81,10 +81,10 @@ void qbsp_settings::initialize(int argc, const char **argv)
             printHelp();
         }
 
-        options.map_path = remainder[0];
+        qbsp_options.map_path = remainder[0];
 
         if (remainder.size() == 2) {
-            options.bsp_path = remainder[1];
+            qbsp_options.bsp_path = remainder[1];
         }
     }
     catch (parse_exception ex)
@@ -172,11 +172,11 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 {
     // side effects from common
     if (logging::mask & logging::flag::VERBOSE) {
-        options.fAllverbose = true;
+        qbsp_options.fAllverbose = true;
     }
 
     if ((logging::mask & (bitflags<logging::flag>(logging::flag::PERCENT) | logging::flag::STAT | logging::flag::PROGRESS)) == logging::flag::NONE) {
-        options.fNoverbose = true;
+        qbsp_options.fNoverbose = true;
     }
 
     // set target BSP type
@@ -201,31 +201,31 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         set_target_version(&bspver_bsp2rmq);
     }
 
-    if (!options.target_version) {
+    if (!qbsp_options.target_version) {
         set_target_version(&bspver_q1);
     }
 
     // if we wanted hexen2, update it now
     if (hexen2.value()) {
-        if (options.target_version == &bspver_bsp2) {
-            options.target_version = &bspver_h2bsp2;
-        } else if (options.target_version == &bspver_bsp2rmq) {
-            options.target_version = &bspver_h2bsp2rmq;
+        if (qbsp_options.target_version == &bspver_bsp2) {
+            qbsp_options.target_version = &bspver_h2bsp2;
+        } else if (qbsp_options.target_version == &bspver_bsp2rmq) {
+            qbsp_options.target_version = &bspver_h2bsp2rmq;
         } else {
-            options.target_version = &bspver_h2;
+            qbsp_options.target_version = &bspver_h2;
         }
     } else {
-        if (!options.target_version) {
-            options.target_version = &bspver_q1;
+        if (!qbsp_options.target_version) {
+            qbsp_options.target_version = &bspver_q1;
         }
     }
 
     // update target game
-    options.target_game = options.target_version->game;
+    qbsp_options.target_game = qbsp_options.target_version->game;
 
     /* If no wadpath given, default to the map directory */
     if (wadpaths.pathsValue().empty()) {
-        wadpath wp{options.map_path.parent_path(), false};
+        wadpath wp{qbsp_options.map_path.parent_path(), false};
 
         // If options.map_path is a relative path, StrippedFilename will return the empty string.
         // In that case, don't add it as a wad path.
@@ -258,7 +258,7 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 }
 }; // namespace settings
 
-settings::qbsp_settings options;
+settings::qbsp_settings qbsp_options;
 
 // per-entity
 static struct
@@ -460,7 +460,7 @@ static void ExportBrushList(mapentity_t *entity, node_t *node)
 
 winding_t BaseWindingForPlane(const qplane3d &p)
 {
-    return winding_t::from_plane(p, options.worldextent.value());
+    return winding_t::from_plane(p, qbsp_options.worldextent.value());
 }
 
 static bool IsTrigger(const mapentity_t *entity)
@@ -500,8 +500,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         return;
 
     // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
-    bool discarded_trigger = entity != map.world_entity() &&
-        options.notriggermodels.value() &&
+    bool discarded_trigger = entity != map.world_entity() && qbsp_options.notriggermodels.value() &&
         IsTrigger(entity);
 
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
@@ -517,7 +516,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
             std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
 
-            if (options.fVerbose)
+            if (qbsp_options.fVerbose)
                 PrintEntity(entity);
 
             if (hullnum <= 0)
@@ -526,8 +525,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         }
     }
 
-    if (options.lmscale.isChanged() && !entity->epairs.has("_lmscale")) {
-        entity->epairs.set("_lmscale", std::to_string(options.lmscale.value()));
+    if (qbsp_options.lmscale.isChanged() && !entity->epairs.has("_lmscale")) {
+        entity->epairs.set("_lmscale", std::to_string(qbsp_options.lmscale.value()));
     }
 
     /*
@@ -571,7 +570,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     std::unique_ptr<tree_t> tree = nullptr;
     if (hullnum > 0) {
         tree = BrushBSP(entity);
-        if (entity == map.world_entity() && !options.nofill.value()) {
+        if (entity == map.world_entity() && !qbsp_options.nofill.value()) {
             // assume non-world bmodels are simple
             MakeTreePortals(tree.get());
             if (FillOutside(entity, tree.get(), hullnum)) {
@@ -600,7 +599,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             // marks brush sides which are *only* touching void;
             // we can skip using them as BSP splitters on the "really good tree"
             // (effectively expanding those brush sides outwards).
-            if (!options.nofill.value() && FillOutside(entity, tree.get(), hullnum)) {
+            if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum)) {
                 // make a really good tree
                 tree = BrushBSP(entity);
 
@@ -612,7 +611,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             }
 
             // Area portals
-            if (options.target_game->id == GAME_QUAKE_II) {
+            if (qbsp_options.target_game->id == GAME_QUAKE_II) {
                 FloodAreas(entity, tree->headnode.get());
                 EmitAreaPortals(tree->headnode.get());
             }
@@ -631,7 +630,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         FreeTreePortals(tree.get());
         PruneNodes(tree->headnode.get());
 
-        if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || options.keepprt.value())) {
+        if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || qbsp_options.keepprt.value())) {
             WritePortalFile(tree.get());
         }
 
@@ -646,11 +645,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         // output vertices first, since TJunc needs it
         EmitVertices(tree->headnode.get());
 
-        if (!options.notjunc.value()) {
+        if (!qbsp_options.notjunc.value()) {
             TJunc(entity, tree->headnode.get());
         }
 
-        if (options.objexport.value() && entity == map.world_entity()) {
+        if (qbsp_options.objexport.value() && entity == map.world_entity()) {
             ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode.get());
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode.get());
         }
@@ -659,7 +658,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode.get());
 
-        if (options.target_game->id == GAME_QUAKE_II) {
+        if (qbsp_options.target_game->id == GAME_QUAKE_II) {
             ExportBrushList(entity, tree->headnode.get());
         }
 
@@ -722,8 +721,8 @@ static void UpdateEntLump(void)
     WriteEntitiesToString();
     UpdateBSPFileEntitiesLump();
 
-    if (!options.fAllverbose) {
-        options.fVerbose = false;
+    if (!qbsp_options.fAllverbose) {
+        qbsp_options.fVerbose = false;
         logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 }
@@ -795,7 +794,7 @@ static void BSPX_Brushes_AddModel(
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (b->contents.is_clip(options.target_game)) {
+                if (b->contents.is_clip(qbsp_options.target_game)) {
                     perbrush.contents = -8;
                 } else {
                     perbrush.contents = b->contents.native;
@@ -805,11 +804,11 @@ static void BSPX_Brushes_AddModel(
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (b->contents.is_clip(options.target_game)) {
+                if (b->contents.is_clip(qbsp_options.target_game)) {
                     perbrush.contents = -8;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
-                        b->contents.to_string(options.target_game));
+                        b->contents.to_string(qbsp_options.target_game));
                     perbrush.contents = CONTENTS_SOLID;
                 }
                 break;
@@ -846,7 +845,7 @@ static void BSPX_CreateBrushList(void)
 {
     struct bspxbrushes_s ctx;
 
-    if (!options.wrbrushes.value())
+    if (!qbsp_options.wrbrushes.value())
         return;
 
     BSPX_Brushes_Init(&ctx);
@@ -889,8 +888,8 @@ static void CreateSingleHull(const int hullnum)
     // for each entity in the map file that has geometry
     for (auto &entity : map.entities) {
         ProcessEntity(&entity, hullnum);
-        if (!options.fAllverbose) {
-            options.fVerbose = false; // don't print rest of entities
+        if (!qbsp_options.fAllverbose) {
+            qbsp_options.fVerbose = false; // don't print rest of entities
             logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
         }
     }
@@ -904,18 +903,18 @@ CreateHulls
 static void CreateHulls(void)
 {
     /* create the hulls sequentially */
-    if (!options.fNoverbose) {
-        options.fVerbose = true;
+    if (!qbsp_options.fNoverbose) {
+        qbsp_options.fVerbose = true;
         logging::mask |= (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 
-    auto &hulls = options.target_game->get_hull_sizes();
+    auto &hulls = qbsp_options.target_game->get_hull_sizes();
 
     // game has no hulls, so we have to export brush lists and stuff.
     if (!hulls.size()) {
         CreateSingleHull(HULL_COLLISION);
         // only create hull 0 if fNoclip is set
-    } else if (options.noclip.value()) {
+    } else if (qbsp_options.noclip.value()) {
         CreateSingleHull(0);
         // do all the hulls
     } else {
@@ -934,7 +933,7 @@ static void LoadTextureData()
         miptex.name = map.miptex[i].name;
 
         {
-            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, options.target_game, options);
+            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, qbsp_options.target_game, qbsp_options);
 
             if (!tex) {
                 if (pos.archive) {
@@ -982,7 +981,7 @@ static void AddAnimationFrames()
     for (size_t i = 0; i < oldcount; i++) {
         const std::string &existing_name = map.miptexTextureName(i);
 
-        if (existing_name[0] != '+' && (options.target_game->id != GAME_HALF_LIFE || existing_name[0] != '-')) {
+        if (existing_name[0] != '+' && (qbsp_options.target_game->id != GAME_HALF_LIFE || existing_name[0] != '-')) {
             continue;
         }
 
@@ -1003,7 +1002,7 @@ static void AddAnimationFrames()
 static void LoadSecondaryTextures()
 {
     // Q2 doesn't use any secondary textures
-    if (options.target_game->id == GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         return;
     }
     
@@ -1025,11 +1024,11 @@ void ProcessFile()
     // load brushes and entities
     LoadMapFile();
 
-    if (options.convertmapformat.value() != conversion_t::none) {
+    if (qbsp_options.convertmapformat.value() != conversion_t::none) {
         ConvertMapFile();
         return;
     }
-    if (options.onlyents.value()) {
+    if (qbsp_options.onlyents.value()) {
         UpdateEntLump();
         return;
     }
@@ -1040,13 +1039,13 @@ void ProcessFile()
     // init the tables to be shared by all models
     BeginBSPFile();
 
-    if (!options.fAllverbose) {
-        options.fVerbose = false;
+    if (!qbsp_options.fAllverbose) {
+        qbsp_options.fVerbose = false;
         logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
     }
 
     // calculate extents, if required
-    if (!options.worldextent.value()) {
+    if (!qbsp_options.worldextent.value()) {
         CalculateWorldExtent();
     }
 
@@ -1082,47 +1081,47 @@ void InitQBSP(int argc, const char **argv)
 {
     // In case we're launched more than once, in testqbsp
     map.reset();
-    options.reset();
+    qbsp_options.reset();
     // fixme-brushbsp: clear any other members of qbsp_settings
-    options.target_game = nullptr;
-    options.target_version = nullptr;
+    qbsp_options.target_game = nullptr;
+    qbsp_options.target_version = nullptr;
 
-    options.run(argc, argv);
+    qbsp_options.run(argc, argv);
 
-    options.map_path.replace_extension("map");
+    qbsp_options.map_path.replace_extension("map");
 
     // The .map extension gets removed right away anyways...
-    if (options.bsp_path.empty())
-        options.bsp_path = options.map_path;
+    if (qbsp_options.bsp_path.empty())
+        qbsp_options.bsp_path = qbsp_options.map_path;
 
     /* Start logging to <bspname>.log */
-    logging::init(fs::path(options.bsp_path).replace_extension("log"), options);
+    logging::init(fs::path(qbsp_options.bsp_path).replace_extension("log"), qbsp_options);
 
     // Remove already existing files
-    if (!options.onlyents.value() && options.convertmapformat.value() == conversion_t::none) {
-        options.bsp_path.replace_extension("bsp");
-        remove(options.bsp_path);
+    if (!qbsp_options.onlyents.value() && qbsp_options.convertmapformat.value() == conversion_t::none) {
+        qbsp_options.bsp_path.replace_extension("bsp");
+        remove(qbsp_options.bsp_path);
 
         // Probably not the best place to do this
-        logging::print("Input file: {}\n", options.map_path);
-        logging::print("Output file: {}\n\n", options.bsp_path);
+        logging::print("Input file: {}\n", qbsp_options.map_path);
+        logging::print("Output file: {}\n\n", qbsp_options.bsp_path);
 
-        fs::path prtfile = options.bsp_path;
+        fs::path prtfile = qbsp_options.bsp_path;
         prtfile.replace_extension("prt");
         remove(prtfile);
 
-        fs::path ptsfile = options.bsp_path;
+        fs::path ptsfile = qbsp_options.bsp_path;
         ptsfile.replace_extension("pts");
         remove(ptsfile);
 
-        fs::path porfile = options.bsp_path;
+        fs::path porfile = qbsp_options.bsp_path;
         porfile.replace_extension("por");
         remove(porfile);
     }
 
     // onlyents might not load this yet
-    if (options.target_game) {
-        options.target_game->init_filesystem(options.map_path, options);
+    if (qbsp_options.target_game) {
+        qbsp_options.target_game->init_filesystem(qbsp_options.map_path, qbsp_options);
     }
 
     // make skip texinfo, in case map needs it (it'll get culled out if not)

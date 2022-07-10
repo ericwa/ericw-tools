@@ -61,7 +61,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         WritePortals_r(node->children[1].get(), portalFile, clusters);
         return;
     }
-    if (node->contents.is_solid(options.target_game))
+    if (node->contents.is_solid(qbsp_options.target_game))
         return;
 
     for (p = node->portals; p; p = next) {
@@ -108,7 +108,7 @@ static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int visclust
         viscluster = WriteClusters_r(node->children[1].get(), portalFile, viscluster);
         return viscluster;
     }
-    if (node->contents.is_solid(options.target_game))
+    if (node->contents.is_solid(qbsp_options.target_game))
         return viscluster;
 
     /* If we're in the next cluster, start a new line */
@@ -175,7 +175,7 @@ static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
         return;
     }
 
-    if (node->contents.is_solid(options.target_game)) {
+    if (node->contents.is_solid(qbsp_options.target_game)) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;
@@ -207,7 +207,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     NumberLeafs_r(headnode, state, -1);
 
     // write the file
-    fs::path name = options.bsp_path;
+    fs::path name = qbsp_options.bsp_path;
     name.replace_extension("prt");
 
     std::ofstream portalFile(name, std::ios_base::binary | std::ios_base::out);
@@ -216,7 +216,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
 
     // q2 uses a PRT1 file, but with clusters.
     // (Since q2bsp natively supports clusters, we don't need PRT2.)
-    if (options.target_game->id == GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         fmt::print(portalFile, "PRT1\n");
         fmt::print(portalFile, "{}\n", state->num_visclusters);
         fmt::print(portalFile, "{}\n", state->num_visportals);
@@ -231,7 +231,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
         fmt::print(portalFile, "{}\n", state->num_visportals);
         WritePortals_r(headnode, portalFile, false);
     } else {
-        if (options.forceprt1.value()) {
+        if (qbsp_options.forceprt1.value()) {
             /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
             fmt::print(portalFile, "PRT1\n");
             fmt::print(portalFile, "{}\n", state->num_visclusters);

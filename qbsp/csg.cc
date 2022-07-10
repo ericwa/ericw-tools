@@ -102,7 +102,7 @@ std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(std::uniq
         return {nullptr, std::move(in)};
     }
 
-    auto [front_winding, back_winding] = in->w.clip(split, options.epsilon.value(), true);
+    auto [front_winding, back_winding] = in->w.clip(split, qbsp_options.epsilon.value(), true);
 
     if (front_winding && !back_winding) {
         // all in front

@@ -35,8 +35,8 @@ static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brus
 
 static mapentity_t LoadMap(const char *map)
 {
-    options.target_version = &bspver_q1;
-    options.target_game = options.target_version->game;
+    qbsp_options.target_version = &bspver_q1;
+    qbsp_options.target_game = qbsp_options.target_version->game;
 
     parser_t parser(map);
 
@@ -94,7 +94,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRe
     bspdata_t bspdata;
     LoadBSPFile(bsp_path, &bspdata);
 
-    bspdata.version->game->init_filesystem(bsp_path, options);
+    bspdata.version->game->init_filesystem(bsp_path, qbsp_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -146,7 +146,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRe
     bspdata_t bspdata;
     LoadBSPFile(bsp_path, &bspdata);
 
-    bspdata.version->game->init_filesystem(bsp_path, options);
+    bspdata.version->game->init_filesystem(bsp_path, qbsp_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -192,9 +192,9 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     const char *destdir = "";
 
     // read cmake variables TEST_QUAKE_MAP_EXPORT_DIR / TEST_QUAKE2_MAP_EXPORT_DIR
-    if (options.target_game->id == GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         destdir = test_quake2_maps_dir;
-    } else if (options.target_game->id == GAME_QUAKE) {
+    } else if (qbsp_options.target_game->id == GAME_QUAKE) {
         destdir = test_quake_maps_dir;
     }
 
@@ -202,21 +202,21 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     if (strlen(destdir) > 0) {
         auto dest = fs::path(destdir) / name.filename();
         dest.replace_extension(".bsp");
-        fs::copy(options.bsp_path, dest, fs::copy_options::overwrite_existing);
+        fs::copy(qbsp_options.bsp_path, dest, fs::copy_options::overwrite_existing);
     }
 
     // re-open the .bsp and return it
-    options.bsp_path.replace_extension("bsp");
+    qbsp_options.bsp_path.replace_extension("bsp");
     
     bspdata_t bspdata;
-    LoadBSPFile(options.bsp_path, &bspdata);
+    LoadBSPFile(qbsp_options.bsp_path, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.bsp_path, options);
+    bspdata.version->game->init_filesystem(qbsp_options.bsp_path, qbsp_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     // write to .json for inspection
-    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(options.bsp_path).replace_extension(".bsp.json"));
+    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
 
     std::optional<prtfile_t> prtfile;
     if (const auto prtpath = fs::path(bsp_path).replace_extension(".prt"); fs::exists(prtpath)) {
@@ -504,16 +504,16 @@ TEST_CASE("options_reset1", "[testmaps_q1]")
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-transsky"});
 
-    CHECK_FALSE(options.forcegoodtree.value());
-    CHECK(options.transsky.value());
+    CHECK_FALSE(qbsp_options.forcegoodtree.value());
+    CHECK(qbsp_options.transsky.value());
 }
 
 TEST_CASE("options_reset2", "[testmaps_q1]")
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-forcegoodtree"});
         
-    CHECK(options.forcegoodtree.value());
-    CHECK_FALSE(options.transsky.value());
+    CHECK(qbsp_options.forcegoodtree.value());
+    CHECK_FALSE(qbsp_options.transsky.value());
 }
 
 /**
@@ -1713,8 +1713,8 @@ TEST_CASE("winding", "[benchmark][.releaseonly]") {
 
 TEST_CASE("BrushFromBounds") {
     map.reset();
-    options.reset();
-    options.worldextent.setValue(1024);
+    qbsp_options.reset();
+    qbsp_options.worldextent.setValue(1024);
 
     auto brush = BrushFromBounds({{2,2,2}, {32, 32, 32}});
 

@@ -387,7 +387,7 @@ bool WindingIsHuge(const winding_t &w)
 {
     for (size_t i = 0; i < w.size(); i++) {
         for (size_t  j = 0; j < 3; j++)
-            if (fabs(w[i][j]) > options.worldextent.value())
+            if (fabs(w[i][j]) > qbsp_options.worldextent.value())
                 return true;
     }
     return false;
@@ -409,16 +409,16 @@ static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> 
     leafnode->facelist.clear();
     leafnode->planenum = PLANENUM_LEAF;
 
-    leafnode->contents = options.target_game->create_empty_contents();
+    leafnode->contents = qbsp_options.target_game->create_empty_contents();
     for (auto &brush : brushes) {
-        leafnode->contents = options.target_game->combine_contents(leafnode->contents, brush->contents);
+        leafnode->contents = qbsp_options.target_game->combine_contents(leafnode->contents, brush->contents);
     }
     for (auto &brush : brushes) {
         Q_assert(brush->original != nullptr);
         leafnode->original_brushes.push_back(brush->original);
     }
 
-    options.target_game->count_contents_in_stats(leafnode->contents, stats.leafstats);
+    qbsp_options.target_game->count_contents_in_stats(leafnode->contents, stats.leafstats);
 }
 
 //============================================================
@@ -463,9 +463,9 @@ side_t *SelectSplitSide(const std::vector<std::unique_ptr<bspbrush_t>>& brushes,
     constexpr int numpasses = 4;
     for (int pass = 0 ; pass < numpasses ; pass++) {
         for (auto &brush : brushes) {
-            if ( (pass & 1) && !brush->original->contents.is_any_detail(options.target_game) )
+            if ( (pass & 1) && !brush->original->contents.is_any_detail(qbsp_options.target_game) )
                 continue;
-            if ( !(pass & 1) && brush->original->contents.is_any_detail(options.target_game) )
+            if ( !(pass & 1) && brush->original->contents.is_any_detail(qbsp_options.target_game) )
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -897,7 +897,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
         c_brushes++;
 
         double volume = BrushVolume(*b);
-        if (volume < options.microvolume.value())
+        if (volume < qbsp_options.microvolume.value())
         {
             logging::print("WARNING: microbrush");
             // fixme-brushbsp: add entitynum, brushnum in mapbrush_t
@@ -933,11 +933,11 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
         headnode->bounds = entity->bounds;
         headnode->children[0] = std::unique_ptr<node_t>(new node_t{});
         headnode->children[0]->planenum = PLANENUM_LEAF;
-        headnode->children[0]->contents = options.target_game->create_empty_contents();
+        headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[0]->parent = headnode.get();
         headnode->children[1] = std::unique_ptr<node_t>(new node_t{});
         headnode->children[1]->planenum = PLANENUM_LEAF;
-        headnode->children[1]->contents = options.target_game->create_empty_contents();
+        headnode->children[1]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[1]->parent = headnode.get();
 
         tree->bounds = headnode->bounds;
@@ -958,7 +958,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     tree->headnode = std::move(node);
 
     bspstats_t stats{};
-    stats.leafstats = options.target_game->create_content_stats();
+    stats.leafstats = qbsp_options.target_game->create_content_stats();
     BuildTree_r(tree->headnode.get(), std::move(brushlist), stats);
 
     logging::print("{:5} visible nodes\n", stats.c_nodes - stats.c_nonvis);
