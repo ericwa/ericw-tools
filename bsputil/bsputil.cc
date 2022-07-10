@@ -458,7 +458,7 @@ static void FindFaces(const mbsp_t *bsp, const qvec3d &pos, const qvec3d &normal
 }
 
 // TODO
-settings::common_settings options;
+settings::common_settings bsputil_options;
 
 int main(int argc, char **argv)
 {
@@ -480,7 +480,7 @@ int main(int argc, char **argv)
 
     LoadBSPFile(source, &bspdata);
 
-    bspdata.version->game->init_filesystem(source, options);
+    bspdata.version->game->init_filesystem(source, bsputil_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
