@@ -527,6 +527,17 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     if (forcedscale) {
         bspdata->bspx.entries.erase("LMSHIFT");
+    } else if (options.lmshift.isChanged()) {
+        // if we forcefully specified an lmshift lump, we have to generate one.
+        bspdata->bspx.entries.erase("LMSHIFT");
+
+        std::vector<uint8_t> shifts(bsp.dfaces.size());
+
+        for (auto &shift : shifts) {
+            shift = options.lmshift.value();
+        }
+
+        bspdata->bspx.transfer("LMSHIFT", shifts);
     }
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");

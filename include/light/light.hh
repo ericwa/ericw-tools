@@ -443,6 +443,7 @@ public:
     setting_bool nolights{this, "nolights", false, &output_group, "ignore light entities (only sunlight/minlight)"};
     setting_int32 facestyles{this, "facestyles", 4, &output_group, "max amount of styles per face; requires BSPX lump if > 4"};
     setting_bool exportobj{this, "exportobj", false, &output_group, "export an .OBJ for inspection"};
+    setting_int32 lmshift{this, "lmshift", 4, &output_group, "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."};
 
     inline void CheckNoDebugModeSet()
     {
