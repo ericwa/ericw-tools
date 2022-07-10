@@ -968,7 +968,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     return tree;
 }
 
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, bool midsplit)
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity)
 {
     auto tree = BrushBSP(entity, MakeBspBrushList(entity));
 
