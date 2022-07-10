@@ -182,7 +182,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     for (const auto &lightmap : surf.lightmapsByStyle) {
         for (const auto &sample : lightmap.samples) {
-            sum[lightmap.style] += sample.color;
+            sum[lightmap.style] += sample.color / sample_divisor;
         }
     }
 
@@ -190,7 +190,6 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     for (auto &styleColor : sum) {
         styleColor.second /= area_divisor;
-        styleColor.second /= sample_divisor;
         styleColor.second *= cfg.bouncescale.value();
         total += styleColor.second;
     }
