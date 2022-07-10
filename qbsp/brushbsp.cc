@@ -970,15 +970,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
 
 std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, bool midsplit)
 {
-    // set the original pointers
-    std::vector<std::unique_ptr<bspbrush_t>> brushcopies;
-    for (const auto &original : entity->brushes) {
-        auto copy = original->copy_unique();
-        copy->original = original.get();
-        brushcopies.push_back(std::move(copy));
-    }
-
-    auto tree = BrushBSP(entity, std::move(brushcopies));
+    auto tree = BrushBSP(entity, MakeBspBrushList(entity));
 
     return tree;
 }
