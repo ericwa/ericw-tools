@@ -121,21 +121,21 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
 
         for (auto &v : p1)
-            if (fabs(v) > options.worldextent.value())
+            if (fabs(v) > qbsp_options.worldextent.value())
                 FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
 
         /* check the point is on the face plane */
         // fixme check: plane's normal is not inverted by planeside check above,
         // is this a bug? should `Face_Plane` be used instead?
         vec_t dist = plane.distance_to(p1);
-        if (dist < -options.epsilon.value() || dist > options.epsilon.value())
+        if (dist < -qbsp_options.epsilon.value() || dist > qbsp_options.epsilon.value())
             logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
                 p1[1], p1[2], dist);
 
         /* check the edge isn't degenerate */
         qvec3d edgevec = p2 - p1;
         vec_t length = qv::length(edgevec);
-        if (length < options.epsilon.value()) {
+        if (length < qbsp_options.epsilon.value()) {
             logging::print("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
                 length, p1[0], p1[1], p1[2]);
             for (size_t j = i + 1; j < face->w.size(); j++)
@@ -147,7 +147,7 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
 
         qvec3d edgenormal = qv::normalize(qv::cross(facenormal, edgevec));
         vec_t edgedist = qv::dot(p1, edgenormal);
-        edgedist += options.epsilon.value();
+        edgedist += qbsp_options.epsilon.value();
 
         /* all other points must be on front side */
         for (size_t j = 0; j < face->w.size(); j++) {
@@ -240,7 +240,7 @@ static int NewPlane(const qplane3d &plane, planeside_t *side)
 
     vec_t len = qv::length(plane.normal);
 
-    if (len < 1 - options.epsilon.value() || len > 1 + options.epsilon.value())
+    if (len < 1 - qbsp_options.epsilon.value() || len > 1 + qbsp_options.epsilon.value())
         FError("invalid normal (vector length {:.4})", len);
 
     size_t index = map.planes.size();
@@ -412,7 +412,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             /* Don't generate hintskip faces */
             const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
-            if (options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
+            if (qbsp_options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
                 continue;
         }
 
@@ -427,7 +427,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             // flip the plane, because we want to keep the back side
             plane = -mapface2.plane;
 
-            w = w->clip(plane, options.epsilon.value(), false)[SIDE_FRONT];
+            w = w->clip(plane, qbsp_options.epsilon.value(), false)[SIDE_FRONT];
         }
 
         if (!w) {
@@ -463,7 +463,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         }
 
         // account for texture offset, from txqbsp-xt
-        if (!options.oldrottex.value()) {
+        if (!qbsp_options.oldrottex.value()) {
             maptexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
             texInfoNew.outputnum = std::nullopt;
 
@@ -499,7 +499,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
     const bool shouldExpand = (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0) &&
                               rottype == rotation_t::hipnotic &&
                               (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-                              && options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
+                              && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t delta = std::max(fabs(max), fabs(min));
@@ -542,7 +542,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, const qplane3d &plane)
 
     for (auto &mapface : hullbrush->faces) {
         if (qv::epsilonEqual(mapface.plane.normal, plane.normal, EQUAL_EPSILON) &&
-            fabs(mapface.plane.dist - plane.dist) < options.epsilon.value())
+            fabs(mapface.plane.dist - plane.dist) < qbsp_options.epsilon.value())
             return;
     }
 
@@ -582,11 +582,11 @@ static void TestAddPlane(hullbrush_t *hullbrush, qplane3d &plane)
 
     for (auto &corner : hullbrush->corners) {
         d = plane.distance_to(corner);
-        if (d < -options.epsilon.value()) {
+        if (d < -qbsp_options.epsilon.value()) {
             if (points_front)
                 return;
             points_back = 1;
-        } else if (d > options.epsilon.value()) {
+        } else if (d > qbsp_options.epsilon.value()) {
             if (points_back)
                 return;
             points_front = 1;
@@ -748,7 +748,7 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
 static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
 {
     bool base_contents_set = false;
-    contentflags_t base_contents = options.target_game->create_empty_contents();
+    contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
 
     // validate that all of the sides have valid contents
     for (int i = 0; i < mapbrush->numfaces; i++) {
@@ -756,9 +756,9 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
         const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
         contentflags_t contents =
-            options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
+            qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
 
-        if (contents.is_empty(options.target_game)) {
+        if (contents.is_empty(qbsp_options.target_game)) {
             continue;
         }
 
@@ -768,15 +768,15 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
             base_contents = contents;
         }
 
-        if (!contents.types_equal(base_contents, options.target_game)) {
-            logging::print("mixed face contents ({} != {}) at line {}\n", base_contents.to_string(options.target_game),
-                contents.to_string(options.target_game), mapface.linenum);
+        if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
+            logging::print("mixed face contents ({} != {}) at line {}\n", base_contents.to_string(qbsp_options.target_game),
+                contents.to_string(qbsp_options.target_game), mapface.linenum);
             break;
         }
     }
 
     // make sure we found a valid type
-    Q_assert(base_contents.is_valid(options.target_game, false));
+    Q_assert(base_contents.is_valid(qbsp_options.target_game, false));
 
     return base_contents;
 }
@@ -822,7 +822,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
     }
 
     if (hullnum > 0) {
-        auto &hulls = options.target_game->get_hull_sizes();
+        auto &hulls = qbsp_options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
         ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);
         facelist = CreateBrushFaces(src, &hullbrush, hullnum, rottype, rotate_offset);
@@ -853,7 +853,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
         const contentflags_t contents = Brush_GetContents(mapbrush);
-        if (contents.is_origin(options.target_game)) {
+        if (contents.is_origin(qbsp_options.target_game)) {
             if (dst == map.world_entity()) {
                 logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
@@ -880,7 +880,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     }
 
     /* If the source entity is func_detail, set the content flag */
-    if (!options.nodetail.value()) {
+    if (!qbsp_options.nodetail.value()) {
         all_detail = false;
         if (!Q_strcasecmp(classname, "func_detail")) {
             all_detail = true;
@@ -944,25 +944,25 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         detail_fence |= all_detail_fence;
 
         /* "origin" brushes always discarded */
-        if (contents.is_origin(options.target_game))
+        if (contents.is_origin(qbsp_options.target_game))
             continue;
 
         /* -omitdetail option omits all types of detail */
-        if (options.omitdetail.value() && detail)
+        if (qbsp_options.omitdetail.value() && detail)
             continue;
-        if ((options.omitdetail.value() || options.omitdetailillusionary.value()) && detail_illusionary)
+        if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailillusionary.value()) && detail_illusionary)
             continue;
-        if ((options.omitdetail.value() || options.omitdetailfence.value()) && detail_fence)
+        if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailfence.value()) && detail_fence)
             continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
-        if (hullnum <= 0 && contents.is_solid(options.target_game)) {
+        if (hullnum <= 0 && contents.is_solid(qbsp_options.target_game)) {
             if (detail_illusionary) {
-                contents = options.target_game->create_detail_illusionary_contents(contents);
+                contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
             } else if (detail_fence) {
-                contents = options.target_game->create_detail_fence_contents(contents);
+                contents = qbsp_options.target_game->create_detail_fence_contents(contents);
             } else if (detail) {
-                contents = options.target_game->create_detail_solid_contents(contents);
+                contents = qbsp_options.target_game->create_detail_solid_contents(contents);
             }
         }
 
@@ -977,7 +977,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (hullnum != HULL_COLLISION && contents.is_clip(options.target_game)) {
+        if (hullnum != HULL_COLLISION && contents.is_clip(qbsp_options.target_game)) {
             if (hullnum == 0) {
                 std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
 
@@ -988,7 +988,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 continue;
                 // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             } else {
-                contents = options.target_game->create_solid_contents();
+                contents = qbsp_options.target_game->create_solid_contents();
             }
         }
 
@@ -996,12 +996,12 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         if (MapBrush_IsHint(*mapbrush)) {
             if (hullnum > 0)
                 continue;
-            contents = options.target_game->create_empty_contents();
+            contents = qbsp_options.target_game->create_empty_contents();
         }
 
         /* entities in some games never use water merging */
-        if (dst != map.world_entity() && !options.target_game->allow_contented_bmodels) {
-            contents = options.target_game->create_solid_contents();
+        if (dst != map.world_entity() && !qbsp_options.target_game->allow_contented_bmodels) {
+            contents = qbsp_options.target_game->create_solid_contents();
 
             /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
                 this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
@@ -1012,17 +1012,17 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 contents type.
                 */
             if (hullnum <= 0 && mirrorinside.value_or(false)) {
-                contents = options.target_game->create_detail_fence_contents(contents);
+                contents = qbsp_options.target_game->create_detail_fence_contents(contents);
             }
         }
 
         /* nonsolid brushes don't show up in clipping hulls */
-        if (hullnum > 0 && !contents.is_solid(options.target_game) && !contents.is_sky(options.target_game))
+        if (hullnum > 0 && !contents.is_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game))
             continue;
 
         /* sky brushes are solid in the collision hulls */
-        if (hullnum > 0 && contents.is_sky(options.target_game))
-            contents = options.target_game->create_solid_contents();
+        if (hullnum > 0 && contents.is_sky(qbsp_options.target_game))
+            contents = qbsp_options.target_game->create_solid_contents();
 
         // apply extended flags
         contents.set_mirrored(mirrorinside);
@@ -1042,7 +1042,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
         }
 
-        options.target_game->count_contents_in_stats(brush->contents, stats);
+        qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
         dst->brushes.push_back(std::make_unique<bspbrush_t>(brush.value()));
         dst->bounds += brush->bounds;
     }
@@ -1060,7 +1060,7 @@ hullnum 0 does not contain clip brushes.
 */
 void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 {
-    std::any stats = options.target_game->create_content_stats();
+    std::any stats = qbsp_options.target_game->create_content_stats();
 
     Brush_LoadEntity(entity, entity, hullnum, stats);
 
@@ -1087,7 +1087,7 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
         }
     }
 
-    options.target_game->print_content_stats(stats, "brushes");
+    qbsp_options.target_game->print_content_stats(stats, "brushes");
 }
 
 void bspbrush_t::update_bounds()

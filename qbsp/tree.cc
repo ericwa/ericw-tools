@@ -86,15 +86,15 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 void DetailToSolid(node_t *node)
 {
     if (node->planenum == PLANENUM_LEAF) {
-        if (options.target_game->id == GAME_QUAKE_II) {
+        if (qbsp_options.target_game->id == GAME_QUAKE_II) {
             return;
         }
 
         // We need to remap CONTENTS_DETAIL to a standard quake content type
-        if (node->contents.is_detail_solid(options.target_game)) {
-            node->contents = options.target_game->create_solid_contents();
-        } else if (node->contents.is_detail_illusionary(options.target_game)) {
-            node->contents = options.target_game->create_empty_contents();
+        if (node->contents.is_detail_solid(qbsp_options.target_game)) {
+            node->contents = qbsp_options.target_game->create_solid_contents();
+        } else if (node->contents.is_detail_illusionary(qbsp_options.target_game)) {
+            node->contents = qbsp_options.target_game->create_empty_contents();
         }
         /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
          * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
@@ -107,10 +107,10 @@ void DetailToSolid(node_t *node)
         // If both children are solid, we can merge the two leafs into one.
         // DarkPlaces has an assertion that fails if both children are
         // solid.
-        if (node->children[0]->contents.is_solid(options.target_game) &&
-            node->children[1]->contents.is_solid(options.target_game)) {
+        if (node->children[0]->contents.is_solid(qbsp_options.target_game) &&
+            node->children[1]->contents.is_solid(qbsp_options.target_game)) {
             // This discards any faces on-node. Should be safe (?)
-            ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
+            ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         }
         // fixme-brushbsp: merge with PruneNodes
     }
@@ -125,10 +125,10 @@ static void PruneNodes_R(node_t *node, int &count_pruned)
     PruneNodes_R(node->children[0].get(), count_pruned);
     PruneNodes_R(node->children[1].get(), count_pruned);
 
-    if (node->children[0]->planenum == PLANENUM_LEAF && node->children[0]->contents.is_any_solid(options.target_game) &&
-        node->children[1]->planenum == PLANENUM_LEAF && node->children[1]->contents.is_any_solid(options.target_game)) {
+    if (node->children[0]->planenum == PLANENUM_LEAF && node->children[0]->contents.is_any_solid(qbsp_options.target_game) &&
+        node->children[1]->planenum == PLANENUM_LEAF && node->children[1]->contents.is_any_solid(qbsp_options.target_game)) {
         // This discards any faces on-node. Should be safe (?)
-        ConvertNodeToLeaf(node, options.target_game->create_solid_contents());
+        ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         ++count_pruned;
     }
 

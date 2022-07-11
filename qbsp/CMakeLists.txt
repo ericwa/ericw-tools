@@ -41,20 +41,3 @@ install(TARGETS qbsp RUNTIME DESTINATION bin)
 # HACK: copy .dll dependencies
 add_custom_command(TARGET qbsp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:qbsp>")
-
-# test (see: https://google.github.io/googletest/quickstart-cmake.html)
-
-enable_testing()
-
-set(QBSP_TEST_SOURCE
-	test_qbsp.cc
-	${CMAKE_BINARY_DIR}/testmaps.hh)
-add_executable(testqbsp ${QBSP_TEST_SOURCE})
-target_link_libraries (testqbsp libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb Catch2::Catch2WithMain fmt::fmt nanobench::nanobench)
-
-# HACK: copy .dll dependencies
-add_custom_command(TARGET testqbsp POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:testqbsp>")
-
-include(Catch)
-catch_discover_tests(testqbsp)

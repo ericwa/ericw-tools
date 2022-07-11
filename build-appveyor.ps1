@@ -28,33 +28,15 @@ if ( $? -eq $false ) {
   throw "package failed"
 }
 
-.\common\Release\testcommon.exe
+.\tests\Release\tests.exe
 
 if ( $? -eq $false ) {
-  throw "testcommon failed"
-}
-
-.\light\Release\testlight.exe
-
-if ( $? -eq $false ) {
-  throw "testlight failed"
-}
-
-.\qbsp\Release\testqbsp.exe
-
-if ( $? -eq $false ) {
-  throw "testqbsp failed"
+  throw "tests failed"
 }
 
 # run hidden tests (releaseonly)
-.\qbsp\Release\testqbsp.exe [.]
+.\tests\Release\tests.exe [.]
 
 if ( $? -eq $false ) {
-  throw "testqbsp [.] failed"
-}
-
-.\vis\Release\testvis.exe --allow-running-no-tests
-
-if ( $? -eq $false ) {
-  throw "testvis failed"
+  throw "tests [.] failed"
 }

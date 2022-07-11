@@ -119,9 +119,9 @@ static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3d> &color
     l.surfnormal = surfnormal;
     l.area = area;
 
-    if (options.visapprox.value() == visapprox_t::VIS) {
+    if (light_options.visapprox.value() == visapprox_t::VIS) {
         l.leaf = Light_PointInLeaf(bsp, pos);
-    } else if (options.visapprox.value() == visapprox_t::RAYS) {
+    } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
         l.bounds = EstimateVisibleBoundsAtPoint(pos);
     }
 

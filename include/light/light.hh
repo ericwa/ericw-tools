@@ -519,7 +519,7 @@ public:
 };
 }; // namespace settings
 
-extern settings::light_settings options;
+extern settings::light_settings light_options;
 
 extern std::vector<uint8_t> filebase;
 extern std::vector<uint8_t> lit_filebase;

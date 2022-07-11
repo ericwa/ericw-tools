@@ -86,7 +86,7 @@ static void FindInfiniteChains(const mbsp_t &bsp)
 }
 
 // TODO
-settings::common_settings options;
+settings::common_settings bspinfo_options;
 
 int main(int argc, char **argv)
 {
@@ -104,7 +104,7 @@ int main(int argc, char **argv)
         bspdata_t bsp;
         LoadBSPFile(source, &bsp);
 
-        bsp.version->game->init_filesystem(source, options);
+        bsp.version->game->init_filesystem(source, bspinfo_options);
 
         PrintBSPFileSizes(&bsp);
 

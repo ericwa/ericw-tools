@@ -239,6 +239,8 @@ tjunc
 */
 void TJunc(node_t *headnode)
 {
+    // fixme-brushbsp: restore
+    return;
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
 	// break edges on tjunctions

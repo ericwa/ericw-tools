@@ -279,7 +279,7 @@ private:
 };
 }; // namespace settings
 
-extern settings::qbsp_settings options;
+extern settings::qbsp_settings qbsp_options;
 
 // planenum for a leaf
 constexpr int32_t PLANENUM_LEAF = -1;

@@ -54,11 +54,11 @@ const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::st
     }
 
     // try a meta-only texture first; this is all we really need anyways
-    if (auto [texture_meta, _0, _1] = img::load_texture_meta(name, options.target_game, options); texture_meta) {
+    if (auto [texture_meta, _0, _1] = img::load_texture_meta(name, qbsp_options.target_game, qbsp_options); texture_meta) {
         // slight special case: if the meta has no width/height defined,
         // pull it from the real texture.
         if (!texture_meta->width || !texture_meta->height) {
-            auto [texture, _0, _1] = img::load_texture(name, true, options.target_game, options);
+            auto [texture, _0, _1] = img::load_texture(name, true, qbsp_options.target_game, qbsp_options);
             
             if (texture) {
                 texture_meta->width = texture->meta.width;
@@ -74,7 +74,7 @@ const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::st
     }
 
     // couldn't find a meta texture, so pull it from the pixel image
-    if (auto [texture, _0, _1] = img::load_texture(name, true, options.target_game, options); texture) {
+    if (auto [texture, _0, _1] = img::load_texture(name, true, qbsp_options.target_game, qbsp_options); texture) {
         return meta_cache.emplace(name, texture->meta).first->second;
     }
 
@@ -85,11 +85,11 @@ const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::st
 
 static std::shared_ptr<fs::archive_like> LoadTexturePath(const fs::path &path)
 {
-    if (options.wadpaths.pathsValue().empty() || path.is_absolute()) {
+    if (qbsp_options.wadpaths.pathsValue().empty() || path.is_absolute()) {
         return fs::addArchive(path, false);
     }
 
-    for (auto &wadpath : options.wadpaths.pathsValue()) {
+    for (auto &wadpath : qbsp_options.wadpaths.pathsValue()) {
         return fs::addArchive(wadpath.path / path, wadpath.external);
     }
 
@@ -104,7 +104,7 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
     map.textures_loaded = true;
     
     // Q2 doesn't need this
-    if (options.target_game->id == GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         return;
     }
 
@@ -135,7 +135,7 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
         }
 
         /* Try the default wad name */
-        fs::path defaultwad = options.map_path;
+        fs::path defaultwad = qbsp_options.map_path;
         defaultwad.replace_extension("wad");
 
         if (fs::exists(defaultwad)) {
@@ -249,7 +249,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
     int i;
 
     // FIXME: figure out a way that we can move this to gamedef
-    if (options.target_game->id != GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
         /* Ignore leading path in texture names (Q2 map compatibility) */
         pathsep = strrchr(name, '/');
         if (pathsep)
@@ -331,7 +331,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
 
 static bool IsSkipName(const char *name)
 {
-    if (options.noskip.value())
+    if (qbsp_options.noskip.value())
         return false;
     if (!Q_strcasecmp(name, "skip"))
         return true;
@@ -357,9 +357,9 @@ static bool IsNoExpandName(const char *name)
 
 static bool IsSpecialName(const char *name)
 {
-    if (name[0] == '*' && !options.splitturb.value())
+    if (name[0] == '*' && !qbsp_options.splitturb.value())
         return true;
-    if (!Q_strncasecmp(name, "sky", 3) && !options.splitsky.value())
+    if (!Q_strncasecmp(name, "sky", 3) && !qbsp_options.splitsky.value())
         return true;
     return false;
 }
@@ -430,7 +430,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     // which we can just call instead of this block.
     // the only annoyance is we can't access the various options (noskip,
     // splitturb, etc) from there.
-    if (options.target_game->id != GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
         if (IsSkipName(texname))
             flags.is_skip = true;
         if (IsHintName(texname))
@@ -560,7 +560,7 @@ static void TextureAxisFromPlane(const qbsp_plane_t &plane, qvec3d &xv, qvec3d &
 
     for (i = 0; i < 6; i++) {
         dot = qv::dot(plane.normal, baseaxis[i * 3]);
-        if (dot > best || (dot == best && !options.oldaxis.value())) {
+        if (dot > best || (dot == best && !qbsp_options.oldaxis.value())) {
             best = dot;
             bestaxis = i;
         }
@@ -1442,7 +1442,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     }
 
     // if we have texture defs, see if we should remap this one
-    if (auto it = options.loaded_texture_defs.find(mapface.texname); it != options.loaded_texture_defs.end()) {
+    if (auto it = qbsp_options.loaded_texture_defs.find(mapface.texname); it != qbsp_options.loaded_texture_defs.end()) {
         mapface.texname = std::get<0>(it->second);
         
         if (std::get<1>(it->second).has_value()) {
@@ -1452,7 +1452,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
     // If we're not Q2 but we're loading a Q2 map, just remove the extra
     // info so it can at least compile.
-    if (options.target_game->id != GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
         extinfo.info = std::nullopt;
     } else {
         // assign animation to extinfo, so that we load the animated
@@ -1493,10 +1493,10 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
     contentflags_t contents { mapface.contents };
 
-    if (!contents.is_valid(options.target_game, false)) {
+    if (!contents.is_valid(qbsp_options.target_game, false)) {
         auto old_contents = contents;
-        options.target_game->contents_make_valid(contents);
-        logging::print("WARNING: line {}: face has invalid contents {}, remapped to {}\n", mapface.linenum, old_contents.to_string(options.target_game), contents.to_string(options.target_game));
+        qbsp_options.target_game->contents_make_valid(contents);
+        logging::print("WARNING: line {}: face has invalid contents {}, remapped to {}\n", mapface.linenum, old_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
     }
 
     switch (tx_type) {
@@ -1727,9 +1727,9 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
     } while (1);
 
     // replace aliases
-    auto alias_it = options.loaded_entity_defs.find(entity->epairs.get("classname"));
+    auto alias_it = qbsp_options.loaded_entity_defs.find(entity->epairs.get("classname"));
 
-    if (alias_it != options.loaded_entity_defs.end()) {
+    if (alias_it != qbsp_options.loaded_entity_defs.end()) {
         for (auto &pair : alias_it->second) {
             if (pair.first == "classname" || !entity->epairs.has(pair.first)) {
                 entity->epairs.set(pair.first, pair.second);
@@ -1879,7 +1879,7 @@ static mapentity_t LoadExternalMap(const std::string &filename)
 
 void ProcessExternalMapEntity(mapentity_t *entity)
 {
-    Q_assert(!options.onlyents.value());
+    Q_assert(!qbsp_options.onlyents.value());
 
     const std::string &classname = entity->epairs.get("classname");
     if (Q_strcasecmp(classname, "misc_external_map"))
@@ -1938,7 +1938,7 @@ void ProcessExternalMapEntity(mapentity_t *entity)
 
 void ProcessAreaPortal(mapentity_t *entity)
 {
-    Q_assert(!options.onlyents.value());
+    Q_assert(!qbsp_options.onlyents.value());
 
     const std::string &classname = entity->epairs.get("classname");
 
@@ -2012,10 +2012,10 @@ void LoadMapFile(void)
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     {
-        auto file = fs::load(options.map_path);
+        auto file = fs::load(qbsp_options.map_path);
 
         if (!file) {
-            FError("Couldn't load map file \"{}\".\n", options.map_path);
+            FError("Couldn't load map file \"{}\".\n", qbsp_options.map_path);
             return;
         }
 
@@ -2041,7 +2041,7 @@ void LoadMapFile(void)
     logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.mtexinfos.size());
     logging::print(logging::flag::STAT, "\n");
 
-    if (options.expand.value()) {
+    if (qbsp_options.expand.value()) {
         TestExpandBrushes(map.world_entity());
     }
 }
@@ -2213,7 +2213,7 @@ void ConvertMapFile(void)
 
     std::string append;
 
-    switch (options.convertmapformat.value()) {
+    switch (qbsp_options.convertmapformat.value()) {
         case conversion_t::quake: append = "-quake"; break;
         case conversion_t::quake2: append = "-quake2"; break;
         case conversion_t::valve: append = "-valve"; break;
@@ -2221,8 +2221,8 @@ void ConvertMapFile(void)
         default: FError("Internal error: unknown conversion_t\n");
     }
 
-    fs::path filename = options.bsp_path;
-    filename.replace_filename(options.bsp_path.stem().string() + append).replace_extension(".map");
+    fs::path filename = qbsp_options.bsp_path;
+    filename.replace_filename(qbsp_options.bsp_path.stem().string() + append).replace_extension(".map");
 
     std::ofstream f(filename);
 
@@ -2230,12 +2230,12 @@ void ConvertMapFile(void)
         FError("Couldn't open file\n");
 
     for (const mapentity_t &entity : map.entities) {
-        ConvertEntity(f, &entity, options.convertmapformat.value());
+        ConvertEntity(f, &entity, qbsp_options.convertmapformat.value());
     }
 
     logging::print("Conversion saved to {}\n", filename);
 
-    options.fVerbose = false;
+    qbsp_options.fVerbose = false;
 }
 
 void PrintEntity(const mapentity_t *entity)
@@ -2256,15 +2256,15 @@ void WriteEntitiesToString()
 
         for (auto &ep : entity.epairs) {
 
-            if (ep.first.size() >= options.target_game->max_entity_key - 1) {
+            if (ep.first.size() >= qbsp_options.target_game->max_entity_key - 1) {
                 logging::print("WARNING: {} at {} has long key {} (length {} >= {})\n", entity.epairs.get("classname"),
-                    entity.origin, ep.first, ep.first.size(), options.target_game->max_entity_key - 1);
+                    entity.origin, ep.first, ep.first.size(), qbsp_options.target_game->max_entity_key - 1);
             }
 
-            if (ep.second.size() >= options.target_game->max_entity_value - 1) {
+            if (ep.second.size() >= qbsp_options.target_game->max_entity_value - 1) {
                 logging::print("WARNING: {} at {} has long value for key {} (length {} >= {})\n",
                     entity.epairs.get("classname"), entity.origin, ep.first, ep.second.size(),
-                    options.target_game->max_entity_value - 1);
+                    qbsp_options.target_game->max_entity_value - 1);
             }
 
             fmt::format_to(std::back_inserter(map.bsp.dentdata), "\"{}\" \"{}\"\n", ep.first, ep.second);
@@ -2352,13 +2352,13 @@ void CalculateWorldExtent(void)
 
     vec_t hull_extents = 0;
 
-    for (auto &hull : options.target_game->get_hull_sizes()) {
+    for (auto &hull : qbsp_options.target_game->get_hull_sizes()) {
         for (auto &v : hull.size()) {
             hull_extents = max(hull_extents, fabs(v));
         }
     }
 
-    options.worldextent.setValueLocked((extents + hull_extents) * 2);
+    qbsp_options.worldextent.setValueLocked((extents + hull_extents) * 2);
 }
 
 /*
@@ -2421,7 +2421,8 @@ static void TestExpandBrushes(const mapentity_t *src)
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
         std::optional<bspbrush_t> hull1brush = LoadBrush(
-            src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none, options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
+            src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none,
+            qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
         if (hull1brush) {
             hull1brushes.emplace_back(

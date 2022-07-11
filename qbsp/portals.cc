@@ -39,7 +39,7 @@ contentflags_t ClusterContents(const node_t *node)
     if (node->planenum == PLANENUM_LEAF)
         return node->contents;
 
-    return options.target_game->cluster_contents(
+    return qbsp_options.target_game->cluster_contents(
         ClusterContents(node->children[0].get()), ClusterContents(node->children[1].get()));
 }
 
@@ -67,7 +67,7 @@ bool Portal_VisFlood(const portal_t *p)
         return false;
 
     // Check per-game visibility
-    return options.target_game->portal_can_see_through(contents0, contents1, options.transwater.value(), options.transsky.value());
+    return qbsp_options.target_game->portal_can_see_through(contents0, contents1, qbsp_options.transwater.value(), qbsp_options.transsky.value());
 }
 
 /*
@@ -87,8 +87,8 @@ bool Portal_EntityFlood(const portal_t *p, int32_t s)
     }
 
     // can never cross to a solid
-    if (p->nodes[0]->contents.is_any_solid(options.target_game)
-        || p->nodes[1]->contents.is_any_solid(options.target_game)) {
+    if (p->nodes[0]->contents.is_any_solid(qbsp_options.target_game)
+        || p->nodes[1]->contents.is_any_solid(qbsp_options.target_game)) {
         return false;
     }
 
@@ -169,7 +169,7 @@ void MakeHeadnodePortals(tree_t *tree)
     aabb3d bounds = tree->bounds.grow(SIDESPACE);
 
     tree->outside_node.planenum = PLANENUM_LEAF;
-    tree->outside_node.contents = options.target_game->create_solid_contents();
+    tree->outside_node.contents = qbsp_options.target_game->create_solid_contents();
     tree->outside_node.portals = NULL;
 
     // create 6 portals forming a cube around the bounds of the map.
@@ -204,7 +204,7 @@ void MakeHeadnodePortals(tree_t *tree)
         for (j = 0; j < 6; j++) {
             if (j == i)
                 continue;
-            portals[i]->winding = portals[i]->winding->clip(bplanes[j], options.epsilon.value(), true)[SIDE_FRONT];
+            portals[i]->winding = portals[i]->winding->clip(bplanes[j], qbsp_options.epsilon.value(), true)[SIDE_FRONT];
         }
     }
 }
@@ -428,7 +428,7 @@ void MakeTreePortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
 
     for (int i = 0; i < 3; i++)
     {
-        if (fabs(node->bounds.mins()[i]) > options.worldextent.value())
+        if (fabs(node->bounds.mins()[i]) > qbsp_options.worldextent.value())
         {
             printf ("WARNING: node with unbounded volume\n");
             break;
@@ -726,8 +726,9 @@ static void FindPortalSide(portal_t *p)
 
     // decide which content change is strongest
     // solid > lava > water, etc
-    contentflags_t viscontents = options.target_game->visible_contents(p->nodes[0]->contents, p->nodes[1]->contents);
-    if (viscontents.is_empty(options.target_game))
+    contentflags_t viscontents =
+        qbsp_options.target_game->visible_contents(p->nodes[0]->contents, p->nodes[1]->contents);
+    if (viscontents.is_empty(qbsp_options.target_game))
         return;
 
     int planenum = p->onnode->planenum;
@@ -744,7 +745,7 @@ static void FindPortalSide(portal_t *p)
         for (auto it = n->original_brushes.rbegin(); it != n->original_brushes.rend(); ++it)
         {
             auto *brush = *it;
-            if (!options.target_game->contents_contains(brush->contents, viscontents))
+            if (!qbsp_options.target_game->contents_contains(brush->contents, viscontents))
                 continue;
             for (auto &side : brush->sides)
             {
@@ -794,7 +795,7 @@ static void MarkVisibleSides_r(node_t *node)
     }
 
     // empty leafs are never boundary leafs
-    if (node->contents.is_empty(options.target_game))
+    if (node->contents.is_empty(qbsp_options.target_game))
         return;
 
     // see if there is a visible face

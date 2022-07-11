@@ -143,7 +143,7 @@ void SaveVisState(void)
     state.version = VIS_STATE_VERSION;
     state.numportals = numportals;
     state.numleafs = portalleafs;
-    state.testlevel = options.visdist.value();
+    state.testlevel = vis_options.visdist.value();
     state.time_elapsed = (uint32_t)(statetime - starttime).count();
 
     out <= state;
@@ -200,7 +200,7 @@ bool LoadVisState(void)
     dvisstate_t state;
     dportal_t pstate;
 
-    if (options.nostate.value()) {
+    if (vis_options.nostate.value()) {
         return false;
     }
 

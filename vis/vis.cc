@@ -74,7 +74,7 @@ void vis_settings::initialize(int argc, const char **argv)
 }
 } // namespace settings
 
-settings::vis_settings options;
+settings::vis_settings vis_options;
 
 fs::path portalfile, statefile, statetmpfile;
 
@@ -514,7 +514,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 void CalcPortalVis(const mbsp_t *bsp)
 {
     // fastvis just uses mightsee for a very loose bound
-    if (options.fast.value()) {
+    if (vis_options.fast.value()) {
         for (auto &p : portals) {
             p.visbits = p.mightsee;
             p.status = pstat_done;
@@ -700,23 +700,24 @@ int vis_main(int argc, const char **argv)
     bspdata_t bspdata;
     const bspversion_t *loadversion;
 
-    options.run(argc, argv);
+    vis_options.run(argc, argv);
 
-    logging::init(fs::path(options.sourceMap).replace_filename(options.sourceMap.stem().string() + "-vis").replace_extension("log"), options);
+    logging::init(fs::path(vis_options.sourceMap).replace_filename(vis_options.sourceMap.stem().string() + "-vis").replace_extension("log"),
+        vis_options);
 
     stateinterval = std::chrono::minutes(5); /* 5 minutes */
     starttime = statetime = I_FloatTime();
 
-    LoadBSPFile(options.sourceMap, &bspdata);
+    LoadBSPFile(vis_options.sourceMap, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.sourceMap, options);
+    bspdata.version->game->init_filesystem(vis_options.sourceMap, vis_options);
 
     loadversion = bspdata.version;
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
-    if (options.phsonly.value())
+    if (vis_options.phsonly.value())
     {
         if (bsp.loadversion->game->id != GAME_QUAKE_II) {
             FError("need a Q2-esque BSP for -phsonly");
@@ -732,11 +733,11 @@ int vis_main(int argc, const char **argv)
     }
     else
     {
-        portalfile = fs::path(options.sourceMap).replace_extension("prt");
+        portalfile = fs::path(vis_options.sourceMap).replace_extension("prt");
         LoadPortals(portalfile, &bsp);
 
-        statefile = fs::path(options.sourceMap).replace_extension("vis");
-        statetmpfile = fs::path(options.sourceMap).replace_extension("vi0");
+        statefile = fs::path(vis_options.sourceMap).replace_extension("vis");
+        statetmpfile = fs::path(vis_options.sourceMap).replace_extension("vi0");
 
         if (bsp.loadversion->game->id != GAME_QUAKE_II) {
             uncompressed.resize(portalleafs * leafbytes_real);
@@ -766,12 +767,12 @@ int vis_main(int argc, const char **argv)
     /* Convert data format back if necessary */
     ConvertBSPFormat(&bspdata, loadversion);
 
-    WriteBSPFile(options.sourceMap, &bspdata);
+    WriteBSPFile(vis_options.sourceMap, &bspdata);
 
     endtime = I_FloatTime();
     logging::print("{:.2} elapsed\n", (endtime - starttime));
 
-    if (options.autoclean.value()) {
+    if (vis_options.autoclean.value()) {
         CleanVisState();
     }
 

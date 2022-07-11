@@ -61,7 +61,7 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     if (src.outputnum.has_value())
         return src.outputnum.value();
-    else if (!options.includeskip.value() && src.flags.is_skip)
+    else if (!qbsp_options.includeskip.value() && src.flags.is_skip)
         return -1;
 
     // this will be the index of the exported texinfo in the BSP lump
@@ -71,7 +71,7 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     // make sure we don't write any non-native flags.
     // e.g. Quake only accepts 0 or TEX_SPECIAL.
-    if (!src.flags.is_valid(options.target_game)) {
+    if (!src.flags.is_valid(qbsp_options.target_game)) {
         FError("Internal error: Texinfo {} has invalid surface flags {}", texinfonum, src.flags.native);
     }
 
@@ -148,11 +148,11 @@ static void ExportLeaf(node_t *node)
 {
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
-    const contentflags_t remapped = options.target_game->contents_remap_for_export(node->contents);
+    const contentflags_t remapped = qbsp_options.target_game->contents_remap_for_export(node->contents);
 
-    if (!remapped.is_valid(options.target_game, false)) {
+    if (!remapped.is_valid(qbsp_options.target_game, false)) {
         FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1,
-            remapped.to_string(options.target_game));
+            remapped.to_string(qbsp_options.target_game));
     }
 
     dleaf.contents = remapped.native;
@@ -173,7 +173,7 @@ static void ExportLeaf(node_t *node)
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
     for (auto &face : node->markfaces) {
-        if (!options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
+        if (!qbsp_options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
             continue;
         // FIXME: this can happen when compiling some Q2 maps
         // as Q1.
@@ -217,7 +217,7 @@ static void ExportDrawNodes(node_t *node)
     for (size_t i = 0; i < 2; i++) {
         if (node->children[i]->planenum == PLANENUM_LEAF) {
             // In Q2, all leaves must have their own ID even if they share solidity.
-            if (options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(options.target_game)) {
+            if (qbsp_options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(qbsp_options.target_game)) {
                 dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
@@ -274,7 +274,7 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
     }
 
     // shrink the bounds in Q1 based games (Q1 engine compensates for this in Mod_LoadSubmodels)
-    if (options.target_game->id != GAME_QUAKE_II) {
+    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
         dmodel.mins += qvec3d(1,1,1);
         dmodel.maxs -= qvec3d(1,1,1);
     }
@@ -295,7 +295,7 @@ void BeginBSPFile(void)
 
     // Leave room for leaf 0 (must be solid)
     auto &solid_leaf = map.bsp.dleafs.emplace_back();
-    solid_leaf.contents = options.target_game->create_solid_contents().native;
+    solid_leaf.contents = qbsp_options.target_game->create_solid_contents().native;
     Q_assert(map.bsp.dleafs.size() == 1);
 }
 
@@ -305,7 +305,7 @@ void BeginBSPFile(void)
  */
 static void WriteExtendedTexinfoFlags(void)
 {
-    auto file = fs::path(options.bsp_path).replace_extension("texinfo.json");
+    auto file = fs::path(qbsp_options.bsp_path).replace_extension("texinfo.json");
     bool needwrite = false;
 
     if (fs::exists(file)) {
@@ -402,25 +402,25 @@ static void WriteBSPFile()
         bspdata.bspx.transfer("BRUSHLIST", map.exported_bspxbrushes);
     }
 
-    if (!ConvertBSPFormat(&bspdata, options.target_version)) {
-        const bspversion_t *extendedLimitsFormat = options.target_version->extended_limits;
+    if (!ConvertBSPFormat(&bspdata, qbsp_options.target_version)) {
+        const bspversion_t *extendedLimitsFormat = qbsp_options.target_version->extended_limits;
 
         if (!extendedLimitsFormat) {
-            FError("No extended limits version of {} available", options.target_version->name);
-        } else if (!options.allow_upgrade.value()) {
-            FError("Limits exceeded for {} and allow_upgrade was disabled", options.target_version->name);
+            FError("No extended limits version of {} available", qbsp_options.target_version->name);
+        } else if (!qbsp_options.allow_upgrade.value()) {
+            FError("Limits exceeded for {} and allow_upgrade was disabled", qbsp_options.target_version->name);
         }
 
-        logging::print("NOTE: limits exceeded for {} - switching to {}\n", options.target_version->name,
+        logging::print("NOTE: limits exceeded for {} - switching to {}\n", qbsp_options.target_version->name,
             extendedLimitsFormat->name);
 
         Q_assert(ConvertBSPFormat(&bspdata, extendedLimitsFormat));
     }
 
-    options.bsp_path.replace_extension("bsp");
+    qbsp_options.bsp_path.replace_extension("bsp");
 
-    WriteBSPFile(options.bsp_path, &bspdata);
-    logging::print("Wrote {}\n", options.bsp_path);
+    WriteBSPFile(qbsp_options.bsp_path, &bspdata);
+    logging::print("Wrote {}\n", qbsp_options.bsp_path);
 
     PrintBSPFileSizes(&bspdata);
 }
@@ -432,7 +432,7 @@ FinishBSPFile
 */
 void FinishBSPFile(void)
 {
-    options.fVerbose = true;
+    qbsp_options.fVerbose = true;
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     if (map.bsp.dvertexes.empty()) {
@@ -444,7 +444,7 @@ void FinishBSPFile(void)
     WriteExtendedTexinfoFlags();
     WriteBSPFile();
 
-    options.fVerbose = options.fAllverbose;
+    qbsp_options.fVerbose = qbsp_options.fAllverbose;
 }
 
 /*
@@ -456,12 +456,12 @@ void UpdateBSPFileEntitiesLump()
 {
     bspdata_t bspdata;
 
-    options.bsp_path.replace_extension("bsp");
+    qbsp_options.bsp_path.replace_extension("bsp");
 
     // load the .bsp
-    LoadBSPFile(options.bsp_path, &bspdata);
+    LoadBSPFile(qbsp_options.bsp_path, &bspdata);
 
-    bspdata.version->game->init_filesystem(options.bsp_path, options);
+    bspdata.version->game->init_filesystem(qbsp_options.bsp_path, qbsp_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
@@ -472,7 +472,7 @@ void UpdateBSPFileEntitiesLump()
 
     // write the .bsp back to disk
     ConvertBSPFormat(&bspdata, bspdata.loadversion);
-    WriteBSPFile(options.bsp_path, &bspdata);
+    WriteBSPFile(qbsp_options.bsp_path, &bspdata);
 
-    logging::print("Wrote {}\n", options.bsp_path);
+    logging::print("Wrote {}\n", qbsp_options.bsp_path);
 }

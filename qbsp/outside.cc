@@ -39,7 +39,7 @@ static bool LeafSealsMap(const node_t *node)
 {
     Q_assert(node->planenum == PLANENUM_LEAF);
 
-    return options.target_game->contents_seals_map(node->contents);
+    return qbsp_options.target_game->contents_seals_map(node->contents);
 }
 
 /*
@@ -247,10 +247,10 @@ static void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d 
     qvec3d vector = point2 - point1;
     vec_t dist = qv::normalizeInPlace(vector);
 
-    while (dist > options.leakdist.value()) {
+    while (dist > qbsp_options.leakdist.value()) {
         fmt::print(leakfile, "{}\n", point1);
-        point1 += vector * options.leakdist.value();
-        dist -= options.leakdist.value();
+        point1 += vector * qbsp_options.leakdist.value();
+        dist -= qbsp_options.leakdist.value();
     }
 }
 
@@ -263,7 +263,7 @@ leakline should be a sequence of portals leading from leakentity to the void
 */
 static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<portal_t *> &leakline)
 {
-    fs::path name = options.bsp_path;
+    fs::path name = qbsp_options.bsp_path;
     name.replace_extension("pts");
 
     std::ofstream ptsfile(name);
@@ -448,12 +448,12 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count, settings::fillt
     }
 
     // Don't fill sky, or count solids as outleafs
-    if (options.target_game->contents_seals_map(node->contents)) {
+    if (qbsp_options.target_game->contents_seals_map(node->contents)) {
         return;
     }
 
      // Finally, we can fill it in as void.
-    node->contents = options.target_game->create_solid_contents();
+    node->contents = qbsp_options.target_game->create_solid_contents();
     *outleafs_count += 1;
 }
 
@@ -622,7 +622,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
     mapentity_t *leakentity = nullptr;
     std::vector<portal_t *> leakline;
 
-    settings::filltype_t filltype = options.filltype.value();
+    settings::filltype_t filltype = qbsp_options.filltype.value();
     
     if (filltype == settings::filltype_t::AUTO) {
         filltype = hullnum > 0 ? settings::filltype_t::OUTSIDE : settings::filltype_t::INSIDE;
@@ -676,13 +676,13 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
-        if (!options.keepprt.value()) {
-            fs::path name = options.bsp_path;
+        if (!qbsp_options.keepprt.value()) {
+            fs::path name = qbsp_options.bsp_path;
             name.replace_extension("prt");
             remove(name);
         }
 
-        if (options.leaktest.value()) {
+        if (qbsp_options.leaktest.value()) {
             logging::print("Aborting because -leaktest was used.\n");
             exit(1);
         }
@@ -702,8 +702,8 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
 
     MarkVisibleBrushSides_R(node);
 
-    if (options.outsidedebug.value() && (options.target_game->get_hull_sizes().size() == 0 || hullnum == 0)) {
-        fs::path path = options.bsp_path;
+    if (qbsp_options.outsidedebug.value() && (qbsp_options.target_game->get_hull_sizes().size() == 0 || hullnum == 0)) {
+        fs::path path = qbsp_options.bsp_path;
         path.replace_extension(".outside.map");
 
         WriteBspBrushMap(path, map.entities[0].brushes);

@@ -37,11 +37,8 @@ make -j8 VERBOSE=1 || exit 1
 cpack || exit 1
 
 # run tests
-./common/testcommon || exit 1
-./light/testlight || exit 1
-./qbsp/testqbsp || exit 1
-./qbsp/testqbsp [.] || exit 1 # run hidden tests (releaseonly)
-./vis/testvis --allow-running-no-tests || exit 1
+./tests/tests || exit 1
+./tests/tests [.] || exit 1 # run hidden tests (releaseonly)
 
 # check rpath
 readelf -d ./light/light
