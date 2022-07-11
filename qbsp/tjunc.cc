@@ -137,7 +137,7 @@ inline void FaceFromSuperverts(node_t *node, face_t *f, size_t base, const std::
 	}
 
 	// copy the vertexes back to the face
-	f->w.resize(remaining);
+	f->output_vertices.resize(remaining);
 
 	for (size_t i = 0; i < remaining; i++) {
 		f->output_vertices[i] = superface[(i + base) % superface.size()];
@@ -160,12 +160,12 @@ static void FixFaceEdges (node_t *node, face_t *f)
 	//if (f->merged || f->split[0] || f->split[1])
 	//	return;
 
-	for (size_t i = 0; i < f->w.size(); i++) {
-		auto &p1 = f->w[i];
-		auto &p2 = f->w[(i + 1) % f->w.size()];
+	for (size_t i = 0; i < f->output_vertices.size(); i++) {
+		auto v1 = f->output_vertices[i];
+		auto v2 = f->output_vertices[(i + 1) % f->output_vertices.size()];
 
-		qvec3d edge_start = p1;
-		qvec3d e2 = p2;
+		qvec3d edge_start = map.bsp.dvertexes[v1];
+		qvec3d e2 = map.bsp.dvertexes[v2];
 
 		FindEdgeVerts (edge_start, e2, edge_verts);
 
@@ -173,14 +173,14 @@ static void FixFaceEdges (node_t *node, face_t *f)
 		qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
 
 		start.push_back(superface.size());
-		TestEdge(0, len, f->output_vertices[i], f->output_vertices[(i + 1) % f->w.size()], 0, edge_verts, edge_start, edge_dir, superface);
+		TestEdge(0, len, v1, v2, 0, edge_verts, edge_start, edge_dir, superface);
 
 		count.push_back(superface.size() - start[i]);
 	}
 
 	if (superface.size() < 3) {
 		// entire face collapsed
-		f->w.clear();
+		f->output_vertices.clear();
 		c_facecollapse++;
 		return;
 	}
@@ -190,15 +190,15 @@ static void FixFaceEdges (node_t *node, face_t *f)
 	// especially underwater
 	size_t i = 0;
 
-	for (; i < f->w.size(); i++) {
-		if (count[i] == 1 && count[(i + f->w.size() - 1) % f->w.size()] == 1) {
+	for (; i < f->output_vertices.size(); i++) {
+		if (count[i] == 1 && count[(i + f->output_vertices.size() - 1) % f->output_vertices.size()] == 1) {
 			break;
 		}
 	}
 
 	size_t base;
 
-	if (i == f->w.size()) {
+	if (i == f->output_vertices.size()) {
 		c_badstartverts++;
 		base = 0;
 	} else {
@@ -239,8 +239,6 @@ tjunc
 */
 void TJunc(node_t *headnode)
 {
-    // fixme-brushbsp: restore
-    return;
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
 	// break edges on tjunctions
