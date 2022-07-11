@@ -85,18 +85,61 @@ inline void TestEdge (vec_t start, vec_t end, size_t p1, size_t p2, size_t start
 
 /*
 ==========
-FindEdgeVerts
+FindEdgeVerts_BruteForce
 
-Forced a dumb check of everything
+Force a dumb check of everything
 ==========
 */
-static void FindEdgeVerts(const qvec3d &, const qvec3d &, std::vector<size_t> &verts)
+static void FindEdgeVerts_BruteForce(const node_t *, const node_t *, const qvec3d &, const qvec3d &, std::vector<size_t> &verts)
 {
 	verts.resize(map.bsp.dvertexes.size());
 
 	for (size_t i = 0; i < verts.size(); i++) {
 		verts[i] = i;
 	}
+}
+
+/*
+==========
+FindEdgeVerts_FaceBounds_R
+
+Recursive function for matching nodes that intersect the aabb
+for vertex checking.
+==========
+*/
+static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, std::vector<size_t> &verts)
+{
+	if (node->planenum == PLANENUM_LEAF) {
+		return;
+	} else if (node->bounds.disjoint(aabb, 0.0)) {
+		return;
+	}
+
+	for (auto &face : node->facelist) {
+		for (auto &v : face->output_vertices) {
+			if (aabb.containsPoint(map.bsp.dvertexes[v])) {
+				verts.push_back(v);
+			}
+		}
+	}
+	
+	FindEdgeVerts_FaceBounds_R(node->children[0].get(), aabb, verts);
+	FindEdgeVerts_FaceBounds_R(node->children[1].get(), aabb, verts);
+}
+
+/*
+==========
+FindEdgeVerts_FaceBounds
+
+Use a loose AABB around the line and only capture vertices that intersect it.
+==========
+*/
+static void FindEdgeVerts_FaceBounds(const node_t *headnode, const node_t *node, const qvec3d &p1, const qvec3d &p2, std::vector<size_t> &verts)
+{
+	// magic number, average of "usual" points per edge
+	verts.reserve(8);
+
+	FindEdgeVerts_FaceBounds_R(headnode, (aabb3d{} + p1 + p2).grow(qvec3d(1.0, 1.0, 1.0)), verts);
 }
 
 /*
@@ -147,7 +190,7 @@ inline void FaceFromSuperverts(node_t *node, face_t *f, size_t base, const std::
 FixFaceEdges
 ==================
 */
-static void FixFaceEdges (node_t *node, face_t *f)
+static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
 {
 #if 0
 	std::vector<size_t> count, start;
@@ -164,7 +207,7 @@ static void FixFaceEdges (node_t *node, face_t *f)
 		qvec3d edge_start = map.bsp.dvertexes[v1];
 		qvec3d e2 = map.bsp.dvertexes[v2];
 
-		FindEdgeVerts (edge_start, e2, edge_verts);
+		FindEdgeVerts_FaceBounds(headnode, node, edge_start, e2, edge_verts);
 
 		vec_t len;
 		qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
@@ -219,7 +262,8 @@ static void FixFaceEdges (node_t *node, face_t *f)
 	}
 
 	if (i == superface.size()) {
-		// can't simply rotate to eliminate zero-area
+		// can't simply rotate to eliminate zero-area triangles, so we have
+		// to do a bit of re-topology.
 		c_norotates++;
 	} else if (i != 0) {
 		// have to rotate the superface to get it to work properly.
@@ -276,7 +320,7 @@ static void FixFaceEdges (node_t *node, face_t *f)
 FixEdges_r
 ==================
 */
-static void FixEdges_r(node_t *node)
+static void FixEdges_r(node_t *headnode, node_t *node)
 {
 	if (node->planenum == PLANENUM_LEAF) {
 		return;
@@ -285,12 +329,12 @@ static void FixEdges_r(node_t *node)
 	for (auto &f : node->facelist) {
 		// might have been omitted earlier, so `output_vertices` will be empty
 		if (f->output_vertices.size()) {
-			FixFaceEdges(node, f.get());
+			FixFaceEdges(headnode, node, f.get());
 		}
 	}
 	
-	FixEdges_r(node->children[0].get());
-	FixEdges_r(node->children[1].get());
+	FixEdges_r(headnode, node->children[0].get());
+	FixEdges_r(headnode, node->children[1].get());
 }
 
 /*
@@ -313,7 +357,7 @@ void TJunc(node_t *headnode)
 	c_norotates = 0;
 	c_rotates = 0;
 
-	FixEdges_r (headnode);
+	FixEdges_r (headnode, headnode);
 
 	logging::print (logging::flag::STAT, "{:5} edges degenerated\n", c_degenerate);
 	logging::print (logging::flag::STAT, "{:5} faces degenerated\n", c_facecollapse);
