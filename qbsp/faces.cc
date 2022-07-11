@@ -57,7 +57,7 @@ EmitVertex
 NOTE: modifies input to be rounded!
 =============
 */
-inline void EmitVertex(qvec3d &vert)
+inline void EmitVertex(qvec3d &vert, size_t &vert_id)
 {
     // if we're extremely close to an integral point,
     // snap us to it.
@@ -70,11 +70,12 @@ inline void EmitVertex(qvec3d &vert)
 
     // already added
     if (auto v = map.find_emitted_hash_vector(vert)) {
+        vert_id = *v;
         return;
     }
 
     // add new vertex!
-    map.add_hash_vector(vert, map.bsp.dvertexes.size());
+    map.add_hash_vector(vert, vert_id = map.bsp.dvertexes.size());
 
     map.bsp.dvertexes.emplace_back(vert);
 }
@@ -86,14 +87,10 @@ static void EmitFaceVertices(face_t *f)
         return;
     }
 
-    for (auto &p : f->w) {
-        EmitVertex(p);
-    }
+    f->output_vertices.resize(f->w.size());
 
-    for (auto &frag : f->fragments) {
-        for (auto &p : frag.w) {
-            EmitVertex(p);
-        }
+    for (size_t i = 0; i < f->w.size(); i++) {
+        EmitVertex(f->w[i], f->output_vertices[i]);
     }
 }
 
@@ -125,20 +122,10 @@ GetEdge
 Returns a global edge number, possibly negative to indicate a backwards edge.
 ==================
 */
-inline int64_t GetEdge(const qvec3d &p1, const qvec3d &p2, const face_t *face)
+inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face)
 {
     if (!face->contents.is_valid(options.target_game, false))
         FError("Face with invalid contents");
-
-    auto v1o = map.find_emitted_hash_vector(p1);
-    auto v2o = map.find_emitted_hash_vector(p2);
-
-    if (!v1o || !v2o) {
-        FError("invalid output vertex");
-    }
-
-    size_t v1 = *v1o;
-    size_t v2 = *v2o;
 
     // search for existing edges
     if (auto it = map.hashedges.find(std::make_pair(v1, v2)); it != map.hashedges.end()) {
@@ -161,15 +148,15 @@ static void FindFaceFragmentEdges(face_t *face, face_fragment_t *fragment)
 {
     fragment->outputnumber = std::nullopt;
 
-    if (fragment->w.size() > MAXEDGES) {
+    if (fragment->output_vertices.size() > MAXEDGES) {
         FError("Internal error: face->numpoints > MAXEDGES");
     }
 
-    fragment->edges.resize(fragment->w.size());
+    fragment->edges.resize(fragment->output_vertices.size());
 
-    for (size_t i = 0; i < fragment->w.size(); i++) {
-        const qvec3d &p1 = fragment->w[i];
-        const qvec3d &p2 = fragment->w[(i + 1) % fragment->w.size()];
+    for (size_t i = 0; i < fragment->output_vertices.size(); i++) {
+        auto &p1 = fragment->output_vertices[i];
+        auto &p2 = fragment->output_vertices[(i + 1) % fragment->output_vertices.size()];
         fragment->edges[i] = GetEdge(p1, p2, face);
     }
 }
@@ -237,7 +224,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
 
     // emit surfedges
     out.firstedge = static_cast<int32_t>(map.bsp.dsurfedges.size());
-    std::copy(fragment->edges.cbegin(), fragment->edges.cbegin() + fragment->w.size(),
+    std::copy(fragment->edges.cbegin(), fragment->edges.cbegin() + fragment->output_vertices.size(),
         std::back_inserter(map.bsp.dsurfedges));
     fragment->edges.clear();
 

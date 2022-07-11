@@ -325,7 +325,7 @@ class mapentity_t;
 
 struct face_fragment_t
 {
-    winding_t w;
+    std::vector<size_t> output_vertices; // filled in by EmitVertices & TJunc
     std::vector<int64_t> edges; // only filled in MakeFaceEdges
     std::optional<size_t> outputnumber; // only valid for original faces after
                                         // write surfaces
@@ -340,11 +340,12 @@ struct face_t : face_fragment_t
     int texinfo;
     contentflags_t contents; // contents on the front of the face
     int16_t lmshift;
+    winding_t w;
 
     qvec3d origin;
     vec_t radius;
 
-    // filled by TJunc
+    // only valid after tjunction code
     std::vector<face_fragment_t> fragments;
 
     portal_t *portal;

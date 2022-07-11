@@ -278,7 +278,7 @@ constexpr int HULL_COLLISION = -1;
 void Brush_LoadEntity(mapentity_t *entity, const int hullnum);
 
 std::list<face_t *> CSGFace(face_t *srcface, const mapentity_t* srcentity, const bspbrush_t *srcbrush, const node_t *srcnode);
-void TJunc(const mapentity_t *entity, node_t *headnode);
+void TJunc(node_t *headnode);
 int MakeFaceEdges(node_t *headnode);
 void EmitVertices(node_t *headnode);
 void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);

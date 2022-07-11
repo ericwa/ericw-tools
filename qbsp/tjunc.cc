@@ -23,381 +23,213 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
 
-constexpr size_t MAXPOINTS = 60;
-
-struct wvert_t
-{
-    vec_t t; /* t-value for parametric equation of edge */
-    wvert_t *prev, *next; /* t-ordered list of vertices on same edge */
-};
-
-struct wedge_t
-{
-    wedge_t *next; /* pointer for hash bucket chain */
-    qvec3d dir; /* direction vector for the edge */
-    qvec3d origin; /* origin (t = 0) in parametric form */
-    wvert_t head; /* linked list of verticies on this edge */
-};
-
-static int numwedges, numwverts;
-static int tjuncs;
-static int tjuncfaces;
-
-static int cWVerts;
-static int cWEdges;
-
-static std::vector<wvert_t> pWVerts;
-static std::vector<wedge_t> pWEdges;
-
-//============================================================================
-
-constexpr size_t NUM_HASH = 1024;
-
-static wedge_t *wedge_hash[NUM_HASH];
-static qvec3d hash_min, hash_scale;
-
-static void InitHash(const qvec3d &mins, const qvec3d &maxs)
-{
-    vec_t volume;
-    vec_t scale;
-    int newsize[2];
-
-    hash_min = mins;
-    qvec3d size = maxs - mins;
-    memset(wedge_hash, 0, sizeof(wedge_hash));
-
-    volume = size[0] * size[1];
-
-    scale = sqrt(volume / NUM_HASH);
-
-    newsize[0] = (int)(size[0] / scale);
-    newsize[1] = (int)(size[1] / scale);
-
-    hash_scale[0] = newsize[0] / size[0];
-    hash_scale[1] = newsize[1] / size[1];
-    hash_scale[2] = (vec_t)newsize[1];
-}
-
-static unsigned HashVec(const qvec3d &vec)
-{
-    unsigned h;
-
-    h = (unsigned)(hash_scale[0] * (vec[0] - hash_min[0]) * hash_scale[2] + hash_scale[1] * (vec[1] - hash_min[1]));
-    if (h >= NUM_HASH)
-        return NUM_HASH - 1;
-    return h;
-}
-
-//============================================================================
-
-static void CanonicalVector(const qvec3d &p1, const qvec3d &p2, qvec3d &vec)
-{
-    vec = p2 - p1;
-    vec_t length = qv::normalizeInPlace(vec);
-
-    for (size_t i = 0; i < 3; i++) {
-        if (vec[i] > EQUAL_EPSILON)
-            return;
-        else if (vec[i] < -EQUAL_EPSILON) {
-            vec = -vec;
-            return;
-        } else {
-            vec[i] = 0;
-        }
-    }
-
-    // FIXME: Line {}: was here but no line number can be grabbed here?
-    logging::print("WARNING: Healing degenerate edge ({}) at ({:.3})\n", length, p1);
-}
-
-static wedge_t *FindEdge(const qvec3d &p1, const qvec3d &p2, vec_t &t1, vec_t &t2)
-{
-    qvec3d origin, edgevec;
-    wedge_t *edge;
-    int h;
-
-    CanonicalVector(p1, p2, edgevec);
-
-    t1 = qv::dot(p1, edgevec);
-    t2 = qv::dot(p2, edgevec);
-
-    origin = p1 + (edgevec * -t1);
-
-    if (t1 > t2) {
-        std::swap(t1, t2);
-    }
-
-    h = HashVec(origin);
-
-    for (edge = wedge_hash[h]; edge; edge = edge->next) {
-        vec_t temp = edge->origin[0] - origin[0];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->origin[1] - origin[1];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->origin[2] - origin[2];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-
-        temp = edge->dir[0] - edgevec[0];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->dir[1] - edgevec[1];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-        temp = edge->dir[2] - edgevec[2];
-        if (temp < -EQUAL_EPSILON || temp > EQUAL_EPSILON)
-            continue;
-
-        return edge;
-    }
-
-    if (numwedges >= cWEdges)
-        FError("Internal error: didn't allocate enough edges for tjuncs?");
-    edge = &pWEdges[numwedges];
-    numwedges++;
-
-    edge->next = wedge_hash[h];
-    wedge_hash[h] = edge;
-
-    edge->origin = origin;
-    edge->dir = edgevec;
-    edge->head.next = edge->head.prev = &edge->head;
-    edge->head.t = VECT_MAX;
-
-    return edge;
-}
+size_t c_degenerate;
+size_t c_tjunctions;
+size_t c_faceoverflows;
+size_t c_facecollapse;
+size_t c_badstartverts;
 
 /*
-===============
-AddVert
+==========
+TestEdge
 
-===============
+Can be recursively reentered
+==========
 */
-static void AddVert(wedge_t *edge, vec_t t)
+inline void TestEdge (vec_t start, vec_t end, size_t p1, size_t p2, size_t startvert, const std::vector<size_t> &edge_verts, const qvec3d &edge_start, const qvec3d &edge_dir, std::vector<size_t> &superface)
 {
-    wvert_t *v, *newv;
+	if (p1 == p2) {
+		// degenerate edge
+		c_degenerate++;
+		return;
+	}
 
-    v = edge->head.next;
-    do {
-        if (fabs(v->t - t) < T_EPSILON)
-            return;
-        if (v->t > t)
-            break;
-        v = v->next;
-    } while (1);
+	for (size_t k = startvert; k < edge_verts.size(); k++) {
+		size_t j = edge_verts[k];
 
-    // insert a new wvert before v
-    if (numwverts >= cWVerts)
-        FError("Internal error: didn't allocate enough vertices for tjuncs?");
+		if (j == p1 || j == p2) {
+			continue;
+		}
 
-    newv = &pWVerts[numwverts];
-    numwverts++;
+		const qvec3d &p = map.bsp.dvertexes[j];
+		qvec3d delta = p - edge_start;
+		vec_t dist = qv::dot(delta, edge_dir);
 
-    newv->t = t;
-    newv->next = v;
-    newv->prev = v->prev;
-    v->prev->next = newv;
-    v->prev = newv;
+		// check if off an end
+		if (dist <= start || dist >= end) {
+			continue;
+		}
+
+		qvec3d exact = edge_start + (edge_dir * dist);
+		qvec3d off = p - exact;
+		vec_t error = qv::length(off);
+
+		// brushbsp-fixme: this was 0.5 in Q2, check?
+		if (fabs(error) > DEFAULT_ON_EPSILON) {
+			continue;		// not on the edge
+		}
+
+		// break the edge
+		c_tjunctions++;
+		TestEdge (start, dist, p1, j, k + 1, edge_verts, edge_start, edge_dir, superface);
+		TestEdge (dist, end, j, p2, k + 1, edge_verts, edge_start, edge_dir, superface);
+		return;
+	}
+
+	// the edge p1 to p2 is now free of tjunctions
+	superface.push_back(p1);
 }
 
 /*
-===============
-AddEdge
+==========
+FindEdgeVerts
 
-===============
+Forced a dumb check of everything
+==========
 */
-static void AddEdge(const qvec3d &p1, const qvec3d &p2)
+static void FindEdgeVerts(const qvec3d &, const qvec3d &, std::vector<size_t> &verts)
 {
-    vec_t t1, t2;
-    wedge_t *edge = FindEdge(p1, p2, t1, t2);
-    AddVert(edge, t1);
-    AddVert(edge, t2);
+	verts.resize(map.bsp.dvertexes.size() - 1);
+
+	for (size_t i = 0; i < verts.size(); i++) {
+		verts[i] = i + 1;
+	}
 }
 
 /*
-===============
-AddFaceEdges
+==================
+FaceFromSuperverts
 
-===============
+The faces vertexes have been added to the superverts[] array,
+and there may be more there than can be held in a face (MAXEDGES).
+
+If less, the faces vertexnums[] will be filled in, otherwise
+face will reference a tree of split[] faces until all of the
+vertexnums can be added.
+
+superverts[base] will become face->vertexnums[0], and the others
+will be circularly filled in.
+==================
 */
-static void AddFaceEdges(face_t *f)
+inline void FaceFromSuperverts(node_t *node, face_t *f, size_t base, const std::vector<size_t> &superface)
 {
-    for (size_t i = 0; i < f->w.size(); i++) {
-        size_t j = (i + 1) % f->w.size();
-        AddEdge(f->w[i], f->w[j]);
-    }
-}
+	size_t remaining = superface.size();
 
-//============================================================================
+	// don't need to do any work
+	if (remaining <= MAXEDGES) {
+		return;
+	}
 
-// If we hit this amount of points, there's probably an issue
-// in the algorithm that is generating endless vertices.
-constexpr size_t MAX_TJUNC_POINTS = 8192;
+	// split into multiple fragments, because of vertex overload
+	while (remaining > MAXEDGES) {
+		c_faceoverflows++;
 
-static void SplitFaceForTjunc(face_t *face)
-{
-    winding_t &w = face->w;
-    qvec3d edgevec[2];
-    vec_t angle;
-    int i, firstcorner, lastcorner;
+		auto &newf = f->fragments.emplace_back();
 
-    do {
-        if (w.size() <= MAXPOINTS) {
-            // the face is now small enough without more cutting
-            return;
-        }
+		newf.output_vertices.resize(MAXEDGES);
 
-        tjuncfaces++;
+		for (size_t i = 0; i < MAXEDGES; i++) {
+			newf.output_vertices[i] = superface[(i + base) % superface.size()];
+		}
 
-restart:
-        /* find the last corner */
-        edgevec[0] = qv::normalize(w[w.size() - 1] - w[0]);
-        for (lastcorner = w.size() - 1; lastcorner > 0; lastcorner--) {
-            const qvec3d &p0 = w[lastcorner - 1];
-            const qvec3d &p1 = w[lastcorner];
-            edgevec[1] = qv::normalize(p0 - p1);
-            angle = qv::dot(edgevec[0], edgevec[1]);
-            if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
-                break;
-        }
+		remaining -= (MAXEDGES - 2);
+		base = (base + MAXEDGES - 1) % superface.size();
+	}
 
-        /* find the first corner */
-        edgevec[0] = qv::normalize(w[1] - w[0]);
-        for (firstcorner = 1; firstcorner < w.size() - 1; firstcorner++) {
-            const qvec3d &p0 = w[firstcorner + 1];
-            const qvec3d &p1 = w[firstcorner];
-            edgevec[1] = qv::normalize(p0 - p1);
-            angle = qv::dot(edgevec[0], edgevec[1]);
-            if (angle < 1 - ANGLEEPSILON || angle > 1 + ANGLEEPSILON)
-                break;
-        }
+	// copy the vertexes back to the face
+	f->w.resize(remaining);
 
-        if (firstcorner + 2 >= MAXPOINTS) {
-            /* rotate the point winding */
-            qvec3d point0 = w[0];
-            for (i = 1; i < w.size(); i++)
-                w[i - 1] = w[i];
-            w[w.size() - 1] = point0;
-            goto restart;
-        }
-
-        /*
-         * cut off as big a piece as possible, less than MAXPOINTS, and not
-         * past lastcorner
-         */
-        winding_t neww(face->w);
-
-        if (w.size() - firstcorner <= MAXPOINTS)
-            neww.resize(firstcorner + 2);
-        else if (lastcorner + 2 < MAXPOINTS && w.size() - lastcorner <= MAXPOINTS)
-            neww.resize(lastcorner + 2);
-        else
-            neww.resize(MAXPOINTS);
-
-        for (i = 0; i < neww.size(); i++)
-            Q_assert(qv::equalExact(neww[i], w[i]));
-        for (i = neww.size() - 1; i < w.size(); i++)
-            w[i - (neww.size() - 2)] = w[i];
-
-        w.resize(w.size() - (neww.size() - 2));
-
-        face->fragments.push_back(face_fragment_t{std::move(neww)});
-    } while (1);
+	for (size_t i = 0; i < remaining; i++) {
+		f->output_vertices[i] = superface[(i + base) % superface.size()];
+	}
 }
 
 /*
-===============
+==================
 FixFaceEdges
-
-===============
+==================
 */
-static void FixFaceEdges(face_t *face)
+static void FixFaceEdges (node_t *node, face_t *f)
 {
-    int i, j;
-    wedge_t *edge;
-    wvert_t *v;
-    vec_t t1, t2;
+	std::vector<size_t> count, start;
+	std::vector<size_t> superface;
+	superface.reserve(64);
+	std::vector<size_t> edge_verts;
 
-    for (i = 0; i < face->w.size();) {
-        j = (i + 1) % face->w.size();
+	// brushbsp-fixme
+	//if (f->merged || f->split[0] || f->split[1])
+	//	return;
 
-        edge = FindEdge(face->w[i], face->w[j], t1, t2);
+	for (size_t i = 0; i < f->w.size(); i++) {
+		auto &p1 = f->w[i];
+		auto &p2 = f->w[(i + 1) % f->w.size()];
 
-        v = edge->head.next;
-        while (v->t < t1 + T_EPSILON)
-            v = v->next;
+		qvec3d edge_start = p1;
+		qvec3d e2 = p2;
 
-        if (v->t < t2 - T_EPSILON) {
-            /* insert a new vertex here */
-            if (face->w.size() >= MAX_TJUNC_POINTS) {
-                FError("generated too many points (max {})", MAX_TJUNC_POINTS);
-            }
+		FindEdgeVerts (edge_start, e2, edge_verts);
 
-            tjuncs++;
+		vec_t len;
+		qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
 
-            face->w.resize(face->w.size() + 1);
+		start.push_back(superface.size());
+		TestEdge(0, len, f->output_vertices[i], f->output_vertices[(i + 1) % f->w.size()], 0, edge_verts, edge_start, edge_dir, superface);
 
-            std::copy_backward(face->w.begin() + j, face->w.end() - 1, face->w.end());
+		count.push_back(superface.size() - start[i]);
+	}
 
-            face->w[j] = edge->origin + (edge->dir * v->t);
+	if (superface.size() < 3) {
+		// entire face collapsed
+		f->w.clear();
+		c_facecollapse++;
+		return;
+	}
 
-            i = 0;
-            continue;
-        }
+	// we want to pick a vertex that doesn't have tjunctions
+	// on either side, which can cause artifacts on trifans,
+	// especially underwater
+	size_t i = 0;
 
-        i++;
-    }
+	for (; i < f->w.size(); i++) {
+		if (count[i] == 1 && count[(i + f->w.size() - 1) % f->w.size()] == 1) {
+			break;
+		}
+	}
 
-    // we're good to go!
-    if (face->w.size() <= MAXPOINTS) {
-        return;
-    }
+	size_t base;
 
-    /* Too many edges - needs to be split into multiple faces */
-    SplitFaceForTjunc(face);
+	if (i == f->w.size()) {
+		c_badstartverts++;
+		base = 0;
+	} else {
+		// rotate the vertex order
+		base = start[i];
+	}
+
+	// this may fragment the face if > MAXEDGES
+	FaceFromSuperverts(node, f, base, superface);
 }
 
-//============================================================================
-
-static void tjunc_count_r(node_t *node)
+/*
+==================
+FixEdges_r
+==================
+*/
+static void FixEdges_r(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF)
-        return;
+	if (node->planenum == PLANENUM_LEAF) {
+		return;
+	}
 
-    for (auto &f : node->facelist) {
-        cWVerts += f->w.size();
-    }
-
-    tjunc_count_r(node->children[0].get());
-    tjunc_count_r(node->children[1].get());
-}
-
-static void tjunc_find_r(node_t *node)
-{
-    if (node->planenum == PLANENUM_LEAF)
-        return;
-
-    for (auto &f : node->facelist) {
-        AddFaceEdges(f.get());
-    }
-
-    tjunc_find_r(node->children[0].get());
-    tjunc_find_r(node->children[1].get());
-}
-
-static void tjunc_fix_r(node_t *node)
-{
-    if (node->planenum == PLANENUM_LEAF)
-        return;
-
-    for (auto &face : node->facelist) {
-        FixFaceEdges(face.get());
-    }
-
-    tjunc_fix_r(node->children[0].get());
-    tjunc_fix_r(node->children[1].get());
+	for (auto &f : node->facelist) {
+		// might have been omitted earlier, so `output_vertices` will be empty
+		if (f->output_vertices.size()) {
+			FixFaceEdges(node, f.get());
+		}
+	}
+	
+	FixEdges_r(node->children[0].get());
+	FixEdges_r(node->children[1].get());
 }
 
 /*
@@ -405,51 +237,22 @@ static void tjunc_fix_r(node_t *node)
 tjunc
 ===========
 */
-void TJunc(const mapentity_t *entity, node_t *headnode)
+void TJunc(node_t *headnode)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
-    /*
-     * Guess edges = 1/2 verts
-     * Verts are arbitrarily multiplied by 2 because there appears to
-     * be a need for them to "grow" slightly.
-     */
-    cWVerts = 0;
-    tjunc_count_r(headnode);
-    cWEdges = cWVerts;
-    cWVerts *= 2;
-    
-    pWVerts.clear();
-    pWEdges.clear();
-    pWVerts.resize(cWVerts);
-    pWEdges.resize(cWEdges);
+	// break edges on tjunctions
+	c_degenerate = 0;
+	c_facecollapse = 0;
+	c_tjunctions = 0;
+	c_faceoverflows = 0;
+	c_badstartverts = 0;
 
-    qvec3d maxs;
-    /*
-     * identify all points on common edges
-     * origin points won't allways be inside the map, so extend the hash area
-     */
-    for (size_t i = 0; i < 3; i++) {
-        if (fabs(entity->bounds.maxs()[i]) > fabs(entity->bounds.mins()[i]))
-            maxs[i] = fabs(entity->bounds.maxs()[i]);
-        else
-            maxs[i] = fabs(entity->bounds.mins()[i]);
-    }
-    qvec3d mins = -maxs;
+	FixEdges_r (headnode);
 
-    InitHash(mins, maxs);
-
-    numwedges = numwverts = 0;
-
-    tjunc_find_r(headnode);
-
-    logging::print(logging::flag::STAT, "     {:8} world edges\n", numwedges);
-    logging::print(logging::flag::STAT, "     {:8} edge points\n", numwverts);
-
-    /* add extra vertexes on edges where needed */
-    tjuncs = tjuncfaces = 0;
-    tjunc_fix_r(headnode);
-
-    logging::print(logging::flag::STAT, "     {:8} edges added by tjunctions\n", tjuncs);
-    logging::print(logging::flag::STAT, "     {:8} faces added by tjunctions\n", tjuncfaces);
+	logging::print (logging::flag::STAT, "{:5} edges degenerated\n", c_degenerate);
+	logging::print (logging::flag::STAT, "{:5} faces degenerated\n", c_facecollapse);
+	logging::print (logging::flag::STAT, "{:5} edges added by tjunctions\n", c_tjunctions);
+	logging::print (logging::flag::STAT, "{:5} faces added by tjunctions\n", c_faceoverflows);
+	logging::print (logging::flag::STAT, "{:5} bad start verts\n", c_badstartverts);
 }

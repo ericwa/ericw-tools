@@ -647,7 +647,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         EmitVertices(tree->headnode.get());
 
         if (!options.notjunc.value()) {
-            TJunc(entity, tree->headnode.get());
+            TJunc(tree->headnode.get());
         }
 
         if (options.objexport.value() && entity == map.world_entity()) {
