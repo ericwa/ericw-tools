@@ -287,20 +287,19 @@ constexpr int32_t PLANENUM_LEAF = -1;
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:
- * - T-junction calculations are sensitive to errors and need the various
- *   epsilons to be such that EQUAL_EPSILON < T_EPSILON < CONTINUOUS_EPSILON.
+ * - some calculations are sensitive to errors and need the various
+ *   epsilons to be such that EQUAL_EPSILON < CONTINUOUS_EPSILON.
  *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
  */
 constexpr vec_t ANGLEEPSILON = 0.000001;
 constexpr vec_t ZERO_EPSILON = 0.0001;
-constexpr vec_t DISTEPSILON = 0.0001;
 constexpr vec_t EQUAL_EPSILON = 0.0001;
-constexpr vec_t T_EPSILON = 0.0002;
 constexpr vec_t CONTINUOUS_EPSILON = 0.0005;
 
 // the exact bounding box of the brushes is expanded some for the headnode
-// volume.  is this still needed?
-constexpr double SIDESPACE = 24.0;
+// volume. this is done to avoid a zero-bounded node/leaf, the particular
+// value doesn't matter.
+constexpr double SIDESPACE = 1.0;
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>

@@ -203,6 +203,13 @@ EmitFaceFragment
 */
 static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
 {
+    // this can't really happen, but just in case it ever does..
+    // (I use this in testing to find faces of interest)
+    if (!fragment->output_vertices.size()) {
+        logging::print("WARNING: zero-point triangle attempted to be emitted\n");
+        return;
+    }
+
     int i;
 
     // emit a region

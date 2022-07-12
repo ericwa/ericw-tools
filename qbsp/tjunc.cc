@@ -22,15 +22,36 @@
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
+#include <atomic>
 
-size_t c_degenerate;
-size_t c_tjunctions;
-size_t c_faceoverflows;
-size_t c_facecollapse;
-#if 0
-size_t c_badstartverts;
-#endif
-size_t c_norotates, c_rotates;
+std::atomic<size_t> c_degenerate;
+std::atomic<size_t> c_tjunctions;
+std::atomic<size_t> c_faceoverflows;
+std::atomic<size_t> c_facecollapse;
+std::atomic<size_t> c_norotates, c_rotates, c_retopology, c_faceretopology;
+
+inline std::optional<vec_t> PointOnEdge(const qvec3d &p, const qvec3d &edge_start, const qvec3d &edge_dir, float start = 0, float end = 1)
+{
+	qvec3d delta = p - edge_start;
+	vec_t dist = qv::dot(delta, edge_dir);
+
+	// check if off an end
+	if (dist <= start || dist >= end) {
+		return std::nullopt;
+	}
+
+	qvec3d exact = edge_start + (edge_dir * dist);
+	qvec3d off = p - exact;
+	vec_t error = qv::length(off);
+
+	// brushbsp-fixme: this was 0.5 in Q2, check?
+	if (fabs(error) > DEFAULT_ON_EPSILON) {
+		// not on the edge
+		return std::nullopt;
+	}
+
+	return dist;
+}
 
 /*
 ==========
@@ -54,28 +75,16 @@ inline void TestEdge (vec_t start, vec_t end, size_t p1, size_t p2, size_t start
 			continue;
 		}
 
-		const qvec3d &p = map.bsp.dvertexes[j];
-		qvec3d delta = p - edge_start;
-		vec_t dist = qv::dot(delta, edge_dir);
+		auto dist = PointOnEdge(map.bsp.dvertexes[j], edge_start, edge_dir, start, end);
 
-		// check if off an end
-		if (dist <= start || dist >= end) {
+		if (!dist.has_value()) {
 			continue;
-		}
-
-		qvec3d exact = edge_start + (edge_dir * dist);
-		qvec3d off = p - exact;
-		vec_t error = qv::length(off);
-
-		// brushbsp-fixme: this was 0.5 in Q2, check?
-		if (fabs(error) > DEFAULT_ON_EPSILON) {
-			continue;		// not on the edge
 		}
 
 		// break the edge
 		c_tjunctions++;
-		TestEdge (start, dist, p1, j, k + 1, edge_verts, edge_start, edge_dir, superface);
-		TestEdge (dist, end, j, p2, k + 1, edge_verts, edge_start, edge_dir, superface);
+		TestEdge (start, dist.value(), p1, j, k + 1, edge_verts, edge_start, edge_dir, superface);
+		TestEdge (dist.value(), end, j, p2, k + 1, edge_verts, edge_start, edge_dir, superface);
 		return;
 	}
 
@@ -144,62 +153,75 @@ static void FindEdgeVerts_FaceBounds(const node_t *headnode, const node_t *node,
 
 /*
 ==================
-FaceFromSuperverts
+SplitFaceIntoFragments
 
-The faces vertexes have been added to the superverts[] array,
-and there may be more there than can be held in a face (MAXEDGES).
+The face was created successfully, but may have way too many edges.
+Cut it down to the minimum amount of faces that are within the
+max edge count.
 
-If less, the faces vertexnums[] will be filled in, otherwise
-face will reference a tree of split[] faces until all of the
-vertexnums can be added.
-
-superverts[base] will become face->vertexnums[0], and the others
-will be circularly filled in.
+Modifies `superface`. Adds the results to the end of `output`.
 ==================
 */
-inline void FaceFromSuperverts(node_t *node, face_t *f, size_t base, const std::vector<size_t> &superface)
+inline void SplitFaceIntoFragments(std::vector<size_t> &superface, std::vector<std::vector<size_t>> &output)
 {
+	size_t base = 0;
 	size_t remaining = superface.size();
+
+	// no work to do here
+	if (remaining <= MAXEDGES) {
+		return;
+	}
 
 	// split into multiple fragments, because of vertex overload
 	while (remaining > MAXEDGES) {
 		c_faceoverflows++;
 
-		auto &newf = f->fragments.emplace_back();
-
-		newf.output_vertices.resize(MAXEDGES);
+		std::vector<size_t> &newf = output.emplace_back(MAXEDGES);
 
 		for (size_t i = 0; i < MAXEDGES; i++) {
-			newf.output_vertices[i] = superface[(i + base) % superface.size()];
+			newf[i] = superface[(i + base) % superface.size()];
 		}
 
 		remaining -= (MAXEDGES - 2);
 		base = (base + MAXEDGES - 1) % superface.size();
 	}
 
-	// copy the vertexes back to the face
-	f->output_vertices.resize(remaining);
+	// copy the remainder back to the input face
+	superface.resize(remaining);
 
 	for (size_t i = 0; i < remaining; i++) {
-		f->output_vertices[i] = superface[(i + base) % superface.size()];
+		superface[i] = superface[(i + base) % superface.size()];
 	}
+}
+
+inline bool IsZeroAreaTriangle(size_t v0, size_t v1, size_t v2)
+{
+    qvec3d d1 = map.bsp.dvertexes[v2] - map.bsp.dvertexes[v0];
+    qvec3d d2 = map.bsp.dvertexes[v1] - map.bsp.dvertexes[v0];
+    vec_t total = 0.5 * qv::length(qv::cross(d1, d2));
+	return total < ZERO_TRI_AREA_EPSILON;
 }
 
 /*
 ==================
-FixFaceEdges
+CreateSuperFace
+
+Generate a superface (the input face `f` but with all of the
+verts in the world added that lay on the line) and return it
 ==================
 */
-static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
+static std::vector<size_t> CreateSuperFace(node_t *headnode, node_t *node, face_t *f)
 {
-#if 0
-	std::vector<size_t> count, start;
-#endif
 	std::vector<size_t> superface;
-	superface.reserve(64);
 
+	superface.reserve(f->output_vertices.size() * 2);
+
+	// stores all of the verts in the world that are close to
+	// being on a given edge
 	std::vector<size_t> edge_verts;
 
+	// find all of the extra vertices that lay on edges,
+	// place them in superface
 	for (size_t i = 0; i < f->output_vertices.size(); i++) {
 		auto v1 = f->output_vertices[i];
 		auto v2 = f->output_vertices[(i + 1) % f->output_vertices.size()];
@@ -207,21 +229,186 @@ static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
 		qvec3d edge_start = map.bsp.dvertexes[v1];
 		qvec3d e2 = map.bsp.dvertexes[v2];
 
+		edge_verts.clear();
 		FindEdgeVerts_FaceBounds(headnode, node, edge_start, e2, edge_verts);
 
 		vec_t len;
 		qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
 
-#if 0
-		start.push_back(superface.size());
-#endif
-
 		TestEdge(0, len, v1, v2, 0, edge_verts, edge_start, edge_dir, superface);
-		
-#if 0
-		count.push_back(superface.size() - start[i]);
-#endif
 	}
+
+	return superface;
+}
+
+/*
+==================
+RetopologizeFace
+
+A face has T-junctions that can't be resolved from rotation.
+It's still a convex face with wound vertices, though, so we
+can split it into several triangle fans.
+==================
+*/
+static std::vector<std::vector<size_t>> RetopologizeFace(const std::vector<size_t> &vertices)
+{
+	std::vector<std::vector<size_t>> result;
+	// the copy we're working on
+	std::vector<size_t> input(vertices);
+
+	while (input.size()) {
+		// failure if we somehow degenerated a triangle
+		if (input.size() < 3) {
+			return {};
+		}
+
+		size_t seed = 0;
+		int64_t end = 0;
+
+		// find seed triangle (allowing a wrap around,
+		// because it's possible for only the last two triangles
+		// to be valid).
+		for (; seed < input.size(); seed++) {
+			auto v0 = input[seed];
+			auto v1 = input[(seed + 1) % input.size()];
+			end = (seed + 2) % input.size();
+			auto v2 = input[end];
+
+			if (IsZeroAreaTriangle(v0, v1, v2)) {
+				continue;
+			}
+
+			// if the next point lays on the edge of v0-v2, this next
+			// triangle won't be valid.
+			float len;
+			qvec3d dir = qv::normalize(map.bsp.dvertexes[v0] - map.bsp.dvertexes[v2], len);
+			auto dist = PointOnEdge(map.bsp.dvertexes[input[(end + 1) % input.size()]], map.bsp.dvertexes[v2], dir, 0, len);
+			
+			if (dist.has_value()) {
+				continue;
+			}
+
+			// good one!
+			break;
+		}
+
+		if (seed == input.size()) {
+			// can't find a non-zero area triangle; failure
+			return {};
+		}
+
+		// from the seed vertex, keep winding until we hit a zero-area triangle.
+		// we know that triangle (seed, end - 1, end) is valid, so we wind from
+		// end + 1 until we fully wrap around. We also can't include a triangle
+		// that has a point after it laying on the final edge.
+		size_t wrap = end;
+		end = (end + 1) % input.size();
+
+		for (; end != wrap; end = (end + 1) % input.size()) {
+			auto v0 = input[seed];
+			auto v1 = input[(end - 1) < 0 ? (input.size() - 1) : (end - 1)];
+			auto v2 = input[end];
+
+			// if the next point lays on the edge of v0-v2, this next
+			// triangle won't be valid.
+			float len;
+			qvec3d dir = qv::normalize(map.bsp.dvertexes[v0] - map.bsp.dvertexes[v2], len);
+			auto dist = PointOnEdge(map.bsp.dvertexes[input[(end + 1) % input.size()]], map.bsp.dvertexes[v2], dir, 0, len);
+
+			if (dist.has_value()) {
+				// the next point lays on this edge, so back up and stop
+				end = (end - 1) < 0 ? input.size() - 1 : (end - 1);
+				break;
+			}
+		}
+
+		// now we have a fan from seed to end that is valid.
+		// add it to the result, clip off all of the
+		// points between it and restart the algorithm
+		// using that edge.
+		auto &tri = result.emplace_back();
+
+		// the whole fan can just be moved; we're finished.
+		if (seed == end) {
+			tri = std::move(input);
+			break;
+		} else if (end == wrap) {
+			// we successfully wrapped around, but the
+			// seed vertex isn't at the start, so rotate it.
+			// copy base -> end
+			tri.resize(input.size());
+			auto out = std::copy(input.begin() + seed, input.end(), tri.begin());
+			// copy end -> base
+			std::copy(input.begin(), input.begin() + seed, out);
+			break;
+		}
+		
+		if (end < seed) {
+			// the end point is 'behind' the seed, so we're clipping
+			// off two sides of the input
+			size_t x = seed;
+			bool first = true;
+
+			while (true) {
+				if (x == end && !first) {
+					break;
+				}
+
+				tri.emplace_back(input[x]);
+				x = (x + 1) % input.size();
+				first = false;
+			}
+		} else {
+			// simple case where the end point is ahead of the seed;
+			// copy the range over to the output
+			std::copy(input.begin() + seed, input.begin() + end + 1, std::back_inserter(tri));
+		}
+
+		Q_assert(seed != end);
+
+		if (end < seed) {
+			// slightly more complex case: the end point is behind the seed point.
+			// 0 end 2 3 seed 5 6
+			// end 2 3 seed
+			// calculate new size
+			size_t new_size = (seed + 1) - end;
+
+			// move back the end to the start
+			std::copy(input.begin() + end, input.begin() + seed + 1, input.begin());
+			
+			// clip
+			input.resize(new_size);
+		} else {
+			// simple case: the end point is ahead of the seed point.
+			// collapse the range after it backwards over top of the seed
+			// and clip it off
+			// 0 1 2 seed 4 5 6 end 8 9
+			// 0 1 2 seed end 8 9
+			// calculate new size
+			size_t new_size = input.size() - (end - seed - 1);
+
+			// move range
+			std::copy(input.begin() + end, input.end(), input.begin() + seed + 1);
+			
+			// clip
+			input.resize(new_size);
+		}
+	}
+
+	// finished
+	return result;
+}
+
+/*
+==================
+FixFaceEdges
+
+If the face has any T-junctions, fix them here.
+==================
+*/
+static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
+{
+	std::vector<size_t> superface = CreateSuperFace(headnode, node, f);
 
 	if (superface.size() < 3) {
 		// entire face collapsed
@@ -246,72 +433,62 @@ static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
 			auto v1 = superface[(i + x + 1) % superface.size()];
 			auto v2 = superface[(i + x + 2) % superface.size()];
 
-            qvec3d d1 = map.bsp.dvertexes[v2] - map.bsp.dvertexes[v0];
-            qvec3d d2 = map.bsp.dvertexes[v1] - map.bsp.dvertexes[v0];
-            vec_t total = 0.5 * qv::length(qv::cross(d1, d2));
-
-			if (!total) {
+			if (IsZeroAreaTriangle(v0, v1, v2)) {
 				break;
 			}
 		}
 
-		// found one!
 		if (x == superface.size() - 2) {
+			// found one!
 			break;
 		}
 	}
+
+	// temporary storage for result faces
+	std::vector<std::vector<size_t>> faces;
 
 	if (i == superface.size()) {
 		// can't simply rotate to eliminate zero-area triangles, so we have
 		// to do a bit of re-topology.
-		c_norotates++;
+		if (auto retopology = RetopologizeFace(superface); retopology.size() > 1) {
+			c_retopology++;
+			c_faceretopology += retopology.size() - 1;
+			faces = std::move(retopology);
+		} else {
+			// unable to re-topologize, so just stick with the superface.
+			// it's got zero-area triangles that fill in the gaps.
+			c_norotates++;
+			faces.emplace_back(std::move(superface));
+		}
 	} else if (i != 0) {
-		// have to rotate the superface to get it to work properly.
-		// use the face's output vertices as scratch space.
-		// brushbsp-todo: we can avoid this if we work directly on
-		// f->output_vertices in FaceFromSuperverts.
+		// was able to rotate the superface to eliminate zero-area triangles.
 		c_rotates++;
 
-		f->output_vertices.resize(superface.size());
+		auto &output = faces.emplace_back(superface.size());
 		// copy base -> end
-		auto out = std::copy(superface.begin() + i, superface.end(), f->output_vertices.begin());
+		auto out = std::copy(superface.begin() + i, superface.end(), output.begin());
 		// copy end -> base
 		std::copy(superface.begin(), superface.begin() + i, out);
-		// copy back to superface
-		superface = f->output_vertices;
-	}
-
-#if 0
-	// we want to pick a vertex that doesn't have tjunctions
-	// on either side, which can cause artifacts on trifans,
-	// especially underwater
-	size_t i = 0;
-
-	for (; i < f->output_vertices.size(); i++) {
-		if (count[i] == 1 && count[(i + f->output_vertices.size() - 1) % f->output_vertices.size()] == 1) {
-			break;
-		}
-	}
-
-	size_t base;
-
-	if (i == f->output_vertices.size()) {
-		c_badstartverts++;
-		base = 0;
 	} else {
-		// rotate the vertex order
-		base = start[i];
+		// no need to change topology
+		faces.emplace_back(std::move(superface));
 	}
-#endif
 
-	if (superface.size() > MAXEDGES) {
-		// split face into multiple faces if we're too large
-		FaceFromSuperverts(node, f, 0, superface);
-	} else {
-		// we aren't too large, so just move the superface right in
-		// brushbsp-todo: we can avoid this if we work directly on
-		// f->output_vertices in FaceFromSuperverts.
-		f->output_vertices = std::move(superface);
+	Q_assert(faces.size());
+
+	// split giant superfaces into subfaces
+	size_t superface_count = faces.size();
+
+	for (size_t i = 0; i < superface_count; i++) {
+		SplitFaceIntoFragments(faces[i], faces);
+	}
+
+	// move the results into the face
+	f->output_vertices = std::move(faces[0]);
+	f->fragments.resize(faces.size() - 1);
+
+	for (size_t i = 1; i < faces.size(); i++) {
+		f->fragments[i - 1].output_vertices = std::move(faces[i]);
 	}
 }
 
@@ -351,21 +528,19 @@ void TJunc(node_t *headnode)
 	c_facecollapse = 0;
 	c_tjunctions = 0;
 	c_faceoverflows = 0;
-#if 0
-	c_badstartverts = 0;
-#endif
 	c_norotates = 0;
 	c_rotates = 0;
+	c_retopology = 0;
+	c_faceretopology = 0;
 
 	FixEdges_r (headnode, headnode);
 
 	logging::print (logging::flag::STAT, "{:5} edges degenerated\n", c_degenerate);
 	logging::print (logging::flag::STAT, "{:5} faces degenerated\n", c_facecollapse);
 	logging::print (logging::flag::STAT, "{:5} edges added by tjunctions\n", c_tjunctions);
-	logging::print (logging::flag::STAT, "{:5} faces added by tjunctions\n", c_faceoverflows);
-#if 0
-	logging::print (logging::flag::STAT, "{:5} bad start verts\n", c_badstartverts);
-#endif
-	logging::print (logging::flag::STAT, "{:5} faces unable to be rotated\n", c_norotates);
 	logging::print (logging::flag::STAT, "{:5} faces rotated\n", c_rotates);
+	logging::print (logging::flag::STAT, "{:5} faces re-topologized\n", c_retopology);
+	logging::print (logging::flag::STAT, "{:5} faces added by re-topology\n", c_faceretopology);
+	logging::print (logging::flag::STAT, "{:5} faces added by splitting large faces\n", c_faceoverflows);
+	logging::print (logging::flag::STAT, "{:5} faces unable to be rotated or re-topologized\n", c_norotates);
 }
