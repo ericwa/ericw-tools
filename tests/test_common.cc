@@ -13,9 +13,14 @@ TEST_CASE("StripFilename", "[common]")
     REQUIRE("" == fs::path("bar.txt").parent_path());
 }
 
-TEST_CASE("q1 contents", "[common]")
+TEST_CASE("q1 contents", "[common][!mayfail]")
 {
     auto* game_q1 = bspver_q1.game;
+
+    const auto solid = game_q1->create_solid_contents();
+    const auto detail_solid = game_q1->create_detail_solid_contents(solid);
+    const auto detail_fence = game_q1->create_detail_fence_contents(solid);
+    const auto detail_illusionary = game_q1->create_detail_illusionary_contents(solid);
 
     const std::array test_contents{
         contentflags_t{CONTENTS_EMPTY},
@@ -24,10 +29,13 @@ TEST_CASE("q1 contents", "[common]")
         contentflags_t{CONTENTS_SLIME},
         contentflags_t{CONTENTS_LAVA},
         contentflags_t{CONTENTS_SKY},
+
+        detail_solid,
+        detail_fence,
+        detail_illusionary
     };
 
-    SECTION("solid combined with others"){
-        auto solid = game_q1->create_solid_contents();
+    SECTION("solid combined with others") {
         CHECK(solid.native == CONTENTS_SOLID);
         CHECK(!solid.game_data.has_value());
 
@@ -36,7 +44,16 @@ TEST_CASE("q1 contents", "[common]")
 
             CHECK(combined.native == CONTENTS_SOLID);
             CHECK(combined.is_solid(game_q1));
+
+            CHECK(!combined.is_any_detail(game_q1));
         }
+    }
+
+    SECTION("detail_illusionary plus water") {
+        auto combined = game_q1->combine_contents(detail_illusionary, contentflags_t{CONTENTS_WATER});
+
+        CHECK(combined.native == CONTENTS_WATER);
+        CHECK(combined.is_detail_illusionary(game_q1));
     }
 }
 
