@@ -298,8 +298,8 @@ constexpr vec_t CONTINUOUS_EPSILON = 0.0005;
 
 // the exact bounding box of the brushes is expanded some for the headnode
 // volume. this is done to avoid a zero-bounded node/leaf, the particular
-// value doesn't matter.
-constexpr double SIDESPACE = 1.0;
+// value doesn't matter but it shows up in the .bsp output.
+constexpr double SIDESPACE = 24.0;
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
