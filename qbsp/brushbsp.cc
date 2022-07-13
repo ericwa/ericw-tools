@@ -355,12 +355,8 @@ Returns true if the winding would be crunched out of
 existance by the vertex snapping.
 ================
 */
-#define EDGE_LENGTH 0.2
 bool WindingIsTiny(const winding_t &w, double size)
 {
-#if 0
-    return w.area() < size;
-#else
     int edges = 0;
     for (size_t i = 0; i < w.size(); i++) {
         size_t j = (i + 1) % w.size();
@@ -372,7 +368,6 @@ bool WindingIsTiny(const winding_t &w, double size)
         }
     }
     return true;
-#endif
 }
 
 /*
@@ -386,9 +381,10 @@ from basewinding for plane
 bool WindingIsHuge(const winding_t &w)
 {
     for (size_t i = 0; i < w.size(); i++) {
-        for (size_t  j = 0; j < 3; j++)
+        for (size_t  j = 0; j < 3; j++) {
             if (fabs(w[i][j]) > qbsp_options.worldextent.value())
                 return true;
+        }
     }
     return false;
 }

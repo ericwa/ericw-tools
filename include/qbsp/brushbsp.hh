@@ -35,7 +35,9 @@ struct face_t;
 class mapentity_t;
 struct tree_t;
 
-bool WindingIsTiny(const winding_t &w, double size = 0.2);
+constexpr vec_t EDGE_LENGTH_EPSILON = 0.2;
+
+bool WindingIsTiny(const winding_t &w, double size = EDGE_LENGTH_EPSILON);
 std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds);
 std::unique_ptr<tree_t> BrushBSP(std::vector<std::unique_ptr<bspbrush_t>> brushlist);
 

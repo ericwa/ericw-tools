@@ -177,10 +177,10 @@ struct mapdata_t
     {
         // insert each vert at floor(pos[axis]) and floor(pos[axis]) + 1 (for each axis)
         // so e.g. a vert at (0.99, 0.99, 0.99) shows up if we search at (1.01, 1.01, 1.01)
-        // this is a bit wasteful, since it inserts 8 copies of each vert.
-        for (int32_t x = 0; x <= 1; x++) {
-            for (int32_t y = 0; y <= 1; y++) {
-                for (int32_t z = 0; z <= 1; z++) {
+        // this is a bit wasteful..
+        for (int32_t x = -1; x <= 1; x++) {
+            for (int32_t y = -1; y <= 1; y++) {
+                for (int32_t z = -1; z <= 1; z++) {
                     const qvec3i h{floor(point[0]) + x, floor(point[1]) + y, floor(point[2]) + z};
                     hashverts[h].push_front({ point, num });
                 }

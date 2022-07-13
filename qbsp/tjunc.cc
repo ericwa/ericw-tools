@@ -60,7 +60,7 @@ TestEdge
 Can be recursively reentered
 ==========
 */
-inline void TestEdge (vec_t start, vec_t end, size_t p1, size_t p2, size_t startvert, const std::vector<size_t> &edge_verts, const qvec3d &edge_start, const qvec3d &edge_dir, std::vector<size_t> &superface)
+inline void TestEdge(vec_t start, vec_t end, size_t p1, size_t p2, size_t startvert, const std::vector<size_t> &edge_verts, const qvec3d &edge_start, const qvec3d &edge_dir, std::vector<size_t> &superface)
 {
 	if (p1 == p2) {
 		// degenerate edge
@@ -194,12 +194,27 @@ inline void SplitFaceIntoFragments(std::vector<size_t> &superface, std::vector<s
 	}
 }
 
-inline bool IsZeroAreaTriangle(size_t v0, size_t v1, size_t v2)
+float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 {
-    qvec3d d1 = map.bsp.dvertexes[v2] - map.bsp.dvertexes[v0];
-    qvec3d d2 = map.bsp.dvertexes[v1] - map.bsp.dvertexes[v0];
-    vec_t total = 0.5 * qv::length(qv::cross(d1, d2));
-	return total < ZERO_TRI_AREA_EPSILON;
+    vec_t num = (b[0]-a[0])*(c[0]-a[0])+(b[1]-a[1])*(c[1]-a[1])+(b[2]-a[2])*(c[2]-a[2]);
+    vec_t den = sqrt(pow((b[0]-a[0]),2)+pow((b[1]-a[1]),2)+pow((b[2]-a[2]),2))*
+                sqrt(pow((c[0]-a[0]),2)+pow((c[1]-a[1]),2)+pow((c[2]-a[2]),2));
+ 
+    return acos(num / den) * (180.0 / 3.141592653589793238463);
+}
+
+// Check whether the given input triangle would be valid
+// on the given face and not have any other points
+// intersecting it.
+inline bool TriangleIsValid(size_t v0, size_t v1, size_t v2, const std::vector<size_t> &face, float angle_epsilon)
+{
+	if (AngleOfTriangle(map.bsp.dvertexes[v0], map.bsp.dvertexes[v1], map.bsp.dvertexes[v2]) < angle_epsilon ||
+		AngleOfTriangle(map.bsp.dvertexes[v1], map.bsp.dvertexes[v2], map.bsp.dvertexes[v0]) < angle_epsilon ||
+		AngleOfTriangle(map.bsp.dvertexes[v2], map.bsp.dvertexes[v0], map.bsp.dvertexes[v1]) < angle_epsilon) {
+		return false;
+	}
+
+	return true;
 }
 
 /*
@@ -274,7 +289,7 @@ static std::vector<std::vector<size_t>> RetopologizeFace(const std::vector<size_
 			end = (seed + 2) % input.size();
 			auto v2 = input[end];
 
-			if (IsZeroAreaTriangle(v0, v1, v2)) {
+			if (!TriangleIsValid(v0, v1, v2, input, 0.01)) {
 				continue;
 			}
 
@@ -421,7 +436,7 @@ static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
 	}
 
 	// brute force rotating the start point until we find a valid winding
-	// that doesn't have any zero-area triangles
+	// that doesn't have any T-junctions
 	size_t i = 0;
 
 	for (; i < superface.size(); i++) {
@@ -433,7 +448,7 @@ static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
 			auto v1 = superface[(i + x + 1) % superface.size()];
 			auto v2 = superface[(i + x + 2) % superface.size()];
 
-			if (IsZeroAreaTriangle(v0, v1, v2)) {
+			if (!TriangleIsValid(v0, v1, v2, superface, 0.01)) {
 				break;
 			}
 		}

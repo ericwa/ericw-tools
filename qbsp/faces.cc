@@ -54,20 +54,10 @@ static void MergeNodeFaces(node_t *node)
 /*
 =============
 EmitVertex
-NOTE: modifies input to be rounded!
 =============
 */
-inline void EmitVertex(qvec3d &vert, size_t &vert_id)
+inline void EmitVertex(const qvec3d &vert, size_t &vert_id)
 {
-    // if we're extremely close to an integral point,
-    // snap us to it.
-    for (auto &v : vert) {
-        double rounded = Q_rint(v);
-        if (fabs(v - rounded) < ZERO_EPSILON) {
-            v = rounded;
-        }
-    }
-
     // already added
     if (auto v = map.find_emitted_hash_vector(vert)) {
         vert_id = *v;
@@ -80,7 +70,7 @@ inline void EmitVertex(qvec3d &vert, size_t &vert_id)
     map.bsp.dvertexes.emplace_back(vert);
 }
 
-// snap windings & output final vertices
+// output final vertices
 static void EmitFaceVertices(face_t *f)
 {
     if (ShouldOmitFace(f)) {
