@@ -1395,15 +1395,13 @@ TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
 
 TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
 {
-    std::vector<std::string> quake_maps{"DM1.map"};
-    // fixme-brushbsp: enable the rest of these
-/*
-        "DM2.map", "DM3.map", "DM4.map", "DM5.map", "DM6.map", "DM7.map",
-        "E1M1.map", "E1M2.map", "E1M3.map", "E1M4.map", "E1M5.map", "E1M6.map", "E1M7.map", "E1M8.map", "E2M1.map",
-        "E2M2.map", "E2M3.map", "E2M4.map", "E2M5.map", "E2M6.map", "E2M7.map", "E3M1.map", "E3M2.map", "E3M3.map",
-        "E3M4.map", "E3M5.map", "E3M6.map", "E3M7.map", "E4M1.map", "E4M2.map", "E4M3.map", "E4M4.map", "E4M5.map",
-        "E4M6.map", "E4M7.map", "E4M8.map", "END.map"};
-*/
+    const std::vector<std::string> quake_maps{"DM1-test.map", "DM2-test.map", "DM3-test.map", "DM4-test.map",
+        "DM5-test.map", "DM6-test.map", "DM7-test.map", "E1M1-test.map", "E1M2-test.map", "E1M3-test.map",
+        "E1M4-test.map", "E1M5-test.map", "E1M6-test.map", "E1M7-test.map", "E1M8-test.map", "E2M1-test.map",
+        "E2M2-test.map", "E2M3-test.map", "E2M4-test.map", "E2M5-test.map", "E2M6-test.map", "E2M7-test.map",
+        "E3M1-test.map", "E3M2-test.map", "E3M3-test.map", "E3M4-test.map", "E3M5-test.map", "E3M6-test.map",
+        "E3M7-test.map", "E4M1-test.map", "E4M2-test.map", "E4M3-test.map", "E4M4-test.map", "E4M5-test.map",
+        "E4M6-test.map", "E4M7-test.map", "E4M8-test.map", "END-test.map"};
 
     for (const auto& map : quake_maps) {
         DYNAMIC_SECTION("testing " << map) {
