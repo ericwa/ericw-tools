@@ -314,6 +314,17 @@ static std::vector<std::string> TexNames(const mbsp_t &bsp, std::vector<const mf
     return result;
 }
 
+static std::vector<const mface_t *> FacesWithTextureName(const mbsp_t &bsp, const std::string &name)
+{
+    std::vector<const mface_t *> result;
+    for (auto &face : bsp.dfaces) {
+        if (Face_TextureName(&bsp, &face) == name) {
+            result.push_back(&face);
+        }
+    }
+    return result;
+}
+
 // https://github.com/ericwa/ericw-tools/issues/158
 TEST_CASE("testTextureIssue", "[qbsp]")
 {
@@ -913,6 +924,18 @@ TEST_CASE("tjunc_many_sided_face", "[testmaps_q1][!mayfail]")
     // the ceiling gets split into 2 faces because fixing T-Junctions with all of the
     // wall sections exceeds the max vertices per face limit
     CHECK(2 == (faces_by_normal.at({0, 0, -1}).size()));
+}
+
+TEST_CASE("tjunc_angled_face", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_tjunc_angled_face.map");
+    CheckFilled(bsp);
+
+    auto faces = FacesWithTextureName(bsp, "bolt6");
+    REQUIRE(faces.size() == 1);
+
+    auto *bolt6_face = faces.at(0);
+    CHECK(bolt6_face->numedges == 5);
 }
 
 /**
