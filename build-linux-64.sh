@@ -38,7 +38,9 @@ cpack || exit 1
 
 # run tests
 ./tests/tests || exit 1
-./tests/tests [.] || exit 1 # run hidden tests (releaseonly)
+if [ "$USE_ASAN" != "YES" ]; then
+  ./tests/tests [.] || exit 1 # run hidden tests (releaseonly)
+fi
 
 # check rpath
 readelf -d ./light/light
