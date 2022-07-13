@@ -797,9 +797,10 @@ TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
     REQUIRE(prt.has_value());
 
     // sides: 3*4 = 12
-    // top: 3
-    // bottom: 3
-    CHECK(bsp.dfaces.size() == 18);
+    // top: 3 (4 with new tjunc code that prefers more faces over 0-area tris)
+    // bottom: 3 (4 with new tjunc code that prefers more faces over 0-area tris)
+    CHECK(bsp.dfaces.size() >= 18);
+    CHECK(bsp.dfaces.size() <= 20);
 
     for (auto &face : bsp.dfaces) {
         CHECK(std::string("{trigger") == Face_TextureName(&bsp, &face));
