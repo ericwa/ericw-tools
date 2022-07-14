@@ -419,7 +419,7 @@ void MakeTreePortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
     CalcNodeBounds(node);
     if (node->bounds.mins()[0] >= node->bounds.maxs()[0])
     {
-        printf ("WARNING: node without a volume\n");
+        logging::print("WARNING: node without a volume\n");
 
         // fixme-brushbsp: added this to work around leafs with no portals showing up in "qbspfeatures.map" among other
         // test maps. Not sure if correct or there's another underlying problem.
@@ -430,7 +430,7 @@ void MakeTreePortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
     {
         if (fabs(node->bounds.mins()[i]) > qbsp_options.worldextent.value())
         {
-            printf ("WARNING: node with unbounded volume\n");
+            logging::print("WARNING: node with unbounded volume\n");
             break;
         }
     }
@@ -820,7 +820,7 @@ MarkVisibleSides
 */
 void MarkVisibleSides(tree_t *tree, mapentity_t* entity)
 {
-    logging::print("--- {} ---\n", __func__);
+    logging::print(logging::flag::PROGRESS, "--- {} ---\n", __func__);
 
     // clear all the visible flags
     for (auto &brush : entity->brushes) {

@@ -514,6 +514,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
         qbsp_options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
     if (!make_face) {
         // content type / game rules requested to skip generating a face on this side
+        // todo-brushbsp: remove when appropriate
         logging::print("skipped face for {} -> {} portal\n",
             p->nodes[pside]->contents.to_string(qbsp_options.target_game),
             p->nodes[!pside]->contents.to_string(qbsp_options.target_game));
@@ -608,7 +609,7 @@ MakeFaces
 */
 void MakeFaces(node_t *node)
 {
-    logging::print("--- {} ---\n", __func__);
+    logging::print(logging::flag::PROGRESS, "--- {} ---\n", __func__);
 
     makefaces_stats_t stats{};
 
