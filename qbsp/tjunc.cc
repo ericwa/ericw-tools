@@ -164,34 +164,24 @@ Modifies `superface`. Adds the results to the end of `output`.
 */
 inline void SplitFaceIntoFragments(std::vector<size_t> &superface, std::list<std::vector<size_t>> &output)
 {
-	size_t base = 0;
-	size_t remaining = superface.size();
-
-	// no work to do here
-	if (remaining <= MAXEDGES) {
-		return;
-	}
-
 	// split into multiple fragments, because of vertex overload
-	while (remaining > MAXEDGES) {
+	while (superface.size() > MAXEDGES) {
 		c_faceoverflows++;
 
+		// copy MAXEDGES from our current face
 		std::vector<size_t> &newf = output.emplace_back(MAXEDGES);
+		std::copy_n(superface.begin(), MAXEDGES, newf.begin());
 
-		for (size_t i = 0; i < MAXEDGES; i++) {
-			newf[i] = superface[(i + base) % superface.size()];
-		}
+		// remove everything in-between from the superface
+		// except for the last edge we just wrote (0 and MAXEDGES-1)
+		std::copy(superface.begin() + MAXEDGES - 1, superface.end(), superface.begin() + 1);
 
-		remaining -= (MAXEDGES - 2);
-		base = (base + MAXEDGES - 1) % superface.size();
+		// resize superface; we need enough room to store the two extra verts
+		superface.resize(superface.size() - MAXEDGES + 2);
 	}
 
-	// copy the remainder back to the input face
-	for (size_t i = 0; i < remaining; i++) {
-		superface[i] = superface[(i + base) % superface.size()];
-	}
-
-	superface.resize(remaining);
+	// move the first face to the end, since that's logically where it belongs now
+	output.splice(output.end(), output, output.begin());
 }
 
 float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
