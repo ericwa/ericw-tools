@@ -434,10 +434,6 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             continue; // overconstrained plane
         }
 
-        if (w->size() > MAXEDGES) {
-            FError("face->numpoints > MAXEDGES ({}), source face on line {}", MAXEDGES, mapface.linenum);
-        }
-
         // this face is a keeper
         side_t &f = facelist.emplace_back();
         f.planenum = PLANENUM_LEAF;

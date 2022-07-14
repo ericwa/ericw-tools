@@ -118,9 +118,6 @@ std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(std::uniq
     auto new_back = NewFaceFromFace(in.get());
     new_back->w = std::move(back_winding.value());
 
-    if (new_front->w.size() > MAXEDGES || new_back->w.size() > MAXEDGES)
-        FError("Internal error: numpoints > MAXEDGES");
-
     return {std::move(new_front), std::move(new_back)};
 }
 

@@ -23,8 +23,10 @@
 
 #include "common/polylib.hh"
 
-constexpr size_t MAXEDGES = 64;
+// now much a winding will use on the stack
+// before needing an overflow.
+constexpr size_t STACK_WINDING_SIZE = 64;
 
-using winding_t = polylib::winding_base_t<MAXEDGES>;
+using winding_t = polylib::winding_base_t<STACK_WINDING_SIZE>;
 
 winding_t BaseWindingForPlane(const qplane3d &p);

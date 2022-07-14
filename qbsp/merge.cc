@@ -127,11 +127,6 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
     keep2 = dot < -CONTINUOUS_EPSILON;
 
     // build the new polygon
-    if (f1->w.size() + f2->w.size() > MAXEDGES) {
-        logging::funcprint("WARNING: Too many edges\n");
-        return NULL;
-    }
-
     std::unique_ptr<face_t> newf = NewFaceFromFace(f1);
 
     // copy first polygon

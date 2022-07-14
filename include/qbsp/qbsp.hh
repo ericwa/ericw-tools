@@ -253,6 +253,7 @@ public:
     setting_enum<filltype_t> filltype{this, "filltype", filltype_t::AUTO, { { "auto", filltype_t::AUTO }, { "inside", filltype_t::INSIDE }, { "outside", filltype_t::OUTSIDE } }, &common_format_group,
         "whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used."};
     setting_invertible_bool allow_upgrade{this, "allowupgrade", true, &common_format_group, "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"};
+    setting_int32 maxedges{this, "maxedges", 64, &map_development_group, "the max number of edges/vertices on a single face before it is split into another face"};
 
     void setParameters(int argc, const char **argv) override
     {

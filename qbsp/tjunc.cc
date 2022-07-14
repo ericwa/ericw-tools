@@ -164,20 +164,22 @@ Modifies `superface`. Adds the results to the end of `output`.
 */
 inline void SplitFaceIntoFragments(std::vector<size_t> &superface, std::list<std::vector<size_t>> &output)
 {
+	const int32_t &maxedges = qbsp_options.maxedges.value();
+
 	// split into multiple fragments, because of vertex overload
-	while (superface.size() > MAXEDGES) {
+	while (superface.size() > maxedges) {
 		c_faceoverflows++;
 
 		// copy MAXEDGES from our current face
-		std::vector<size_t> &newf = output.emplace_back(MAXEDGES);
-		std::copy_n(superface.begin(), MAXEDGES, newf.begin());
+		std::vector<size_t> &newf = output.emplace_back(maxedges);
+		std::copy_n(superface.begin(), maxedges, newf.begin());
 
 		// remove everything in-between from the superface
 		// except for the last edge we just wrote (0 and MAXEDGES-1)
-		std::copy(superface.begin() + MAXEDGES - 1, superface.end(), superface.begin() + 1);
+		std::copy(superface.begin() + maxedges - 1, superface.end(), superface.begin() + 1);
 
 		// resize superface; we need enough room to store the two extra verts
-		superface.resize(superface.size() - MAXEDGES + 2);
+		superface.resize(superface.size() - maxedges + 2);
 	}
 
 	// move the first face to the end, since that's logically where it belongs now
@@ -482,8 +484,10 @@ static void FixFaceEdges(node_t *headnode, face_t *f)
 	Q_assert(faces.size());
 
 	// split giant superfaces into subfaces
-	for (auto &face : faces) {
-		SplitFaceIntoFragments(face, faces);
+	if (qbsp_options.maxedges.value()) {
+		for (auto &face : faces) {
+			SplitFaceIntoFragments(face, faces);
+		}
 	}
 
 	// move the results into the face

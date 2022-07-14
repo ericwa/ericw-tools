@@ -245,6 +245,13 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         }
     }
 
+    // side effects from Quake II
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
+        if (!maxedges.isChanged()) {
+            maxedges.setValueLocked(0);
+        }
+    }
+
     // load texture defs
     for (auto &def : texturedefs.values()) {
         load_texture_def(def);

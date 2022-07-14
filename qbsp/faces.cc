@@ -140,8 +140,8 @@ static void FindFaceFragmentEdges(face_t *face, face_fragment_t *fragment)
 {
     Q_assert(fragment->outputnumber == std::nullopt);
 
-    if (fragment->output_vertices.size() > MAXEDGES) {
-        FError("Internal error: face->numpoints > MAXEDGES");
+    if (qbsp_options.maxedges.value() && fragment->output_vertices.size() > qbsp_options.maxedges.value()) {
+        FError("Internal error: face->numpoints > max edges ({})", qbsp_options.maxedges.value());
     }
 
     fragment->edges.resize(fragment->output_vertices.size());
