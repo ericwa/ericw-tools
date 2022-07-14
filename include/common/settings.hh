@@ -57,9 +57,10 @@ struct quit_after_help_exception : public std::exception
 
 enum class source
 {
-    DEFAULT = 0,
-    MAP = 1,
-    COMMANDLINE = 2
+    DEFAULT,
+    GAME_TARGET,
+    MAP,
+    COMMANDLINE
 };
 
 class nameset : public std::vector<std::string>
@@ -121,15 +122,15 @@ public:
     inline const char *getDescription() const { return _description; }
 
     constexpr bool isChanged() const { return _source != source::DEFAULT; }
-    constexpr bool isLocked() const { return _source == source::COMMANDLINE; }
     constexpr source getSource() const { return _source; }
 
     constexpr const char *sourceString() const
     {
         switch (_source) {
             case source::DEFAULT: return "default";
+            case source::GAME_TARGET: return "game target";
             case source::MAP: return "map";
-            case source::COMMANDLINE: return "commandline";
+            case source::COMMANDLINE: return "command line";
             default: FError("Error: unknown setting source");
         }
     }
@@ -138,11 +139,11 @@ public:
     virtual bool copyFrom(const setting_base& other) = 0;
 
     // convenience form of parse() that constructs a temporary parser_t
-    bool parseString(const std::string &string, bool locked = false);
+    bool parseString(const std::string &string, source source);
 
     // resets value to default, and source to source::DEFAULT
     virtual void reset() = 0;
-    virtual bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) = 0;
+    virtual bool parse(const std::string &settingName, parser_base_t &parser, source source) = 0;
     virtual std::string stringValue() const = 0;
     virtual std::string format() const = 0;
 };
@@ -153,10 +154,10 @@ public:
 class setting_func : public setting_base
 {
 protected:
-    std::function<void()> _func;
+    std::function<void(source)> _func;
 
 public:
-    inline setting_func(setting_container *dictionary, const nameset &names, std::function<void()> func,
+    inline setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
         const setting_group *group = nullptr, const char *description = "")
         : setting_base(dictionary, names, group, description), _func(func)
     {
@@ -168,9 +169,9 @@ public:
 
     inline void reset() override {}
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
-        _func();
+        _func(source);
         return true;
     }
 
@@ -187,22 +188,6 @@ protected:
     T _default;
     T _value;
 
-    virtual void setValueInternal(const T &value, source newSource)
-    {
-        if (changeSource(newSource)) {
-            _value = value;
-        }
-    }
-
-    inline void setValueFromParse(const T &value, bool locked)
-    {
-        if (locked) {
-            setValueLocked(value);
-        } else {
-            setValue(value);
-        }
-    }
-
 public:
     inline setting_value(setting_container *dictionary, const nameset &names, T v, const setting_group *group = nullptr,
         const char *description = "")
@@ -212,9 +197,12 @@ public:
 
     const T &value() const { return _value; }
 
-    inline void setValueLocked(const T &f) { setValueInternal(f, source::COMMANDLINE); }
-
-    inline void setValue(const T &f) { setValueInternal(f, source::MAP); }
+    virtual void setValue(const T &value, source newSource)
+    {
+        if (changeSource(newSource)) {
+            _value = value;
+        }
+    }
 
     inline bool copyFrom(const setting_base& other) override {
         if (auto *casted = dynamic_cast<const setting_value<T> *>(&other)) {
@@ -234,7 +222,7 @@ public:
 class setting_bool : public setting_value<bool>
 {
 protected:
-    bool parseInternal(parser_base_t &parser, bool locked, bool truthValue)
+    bool parseInternal(parser_base_t &parser, source source, bool truthValue)
     {
         // boolean flags can be just flagged themselves
         if (parser.parse_token(PARSE_PEEK)) {
@@ -247,13 +235,13 @@ protected:
 
                 const bool f = (intval != 0 && intval != -1) ? truthValue : !truthValue; // treat 0 and -1 as false
 
-                setValueFromParse(f, locked);
+                setValue(f, source);
 
                 return true;
             }
         }
 
-        setValueFromParse(truthValue, locked);
+        setValue(truthValue, source);
 
         return true;
     }
@@ -265,9 +253,9 @@ public:
     {
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
-        return parseInternal(parser, locked, true);
+        return parseInternal(parser, source, true);
     }
 
     std::string stringValue() const override { return _value ? "1" : "0"; }
@@ -298,9 +286,9 @@ public:
     {
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
-        return parseInternal(parser, locked, settingName.compare(0, 2, "no") == 0 ? false : true);
+        return parseInternal(parser, source, settingName.compare(0, 2, "no") == 0 ? false : true);
     }
 };
 
@@ -323,7 +311,7 @@ public:
 
     inline void reset() override {}
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         // this is a bit ugly, but we run the parse function for
         // every setting that we redirect from. for every entry
@@ -333,7 +321,7 @@ public:
                 parser.push_state();
             }
 
-            if (!_settings[i]->parse(settingName, parser, locked)) {
+            if (!_settings[i]->parse(settingName, parser, source)) {
                 return false;
             }
 
@@ -357,18 +345,6 @@ class setting_numeric : public setting_value<T>
 protected:
     T _min, _max;
 
-    void setValueInternal(const T &f, source newsource) override
-    {
-        if (f < _min) {
-            logging::print("WARNING: '{}': {} is less than minimum value {}.\n", this->primaryName(), f, _min);
-        }
-        if (f > _max) {
-            logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", this->primaryName(), f, _max);
-        }
-
-        this->setting_value<T>::setValueInternal(std::clamp(f, _min, _max), newsource);
-    }
-
 public:
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
         const setting_group *group = nullptr, const char *description = "")
@@ -387,12 +363,24 @@ public:
     {
     }
 
+    void setValue(const T &f, source newsource) override
+    {
+        if (f < _min) {
+            logging::print("WARNING: '{}': {} is less than minimum value {}.\n", this->primaryName(), f, _min);
+        }
+        if (f > _max) {
+            logging::print("WARNING: '{}': {} is greater than maximum value {}.\n", this->primaryName(), f, _max);
+        }
+
+        this->setting_value<T>::setValue(std::clamp(f, _min, _max), newsource);
+    }
+
     inline bool boolValue() const
     {
         return this->_value > 0;
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         if (!parser.parse_token()) {
             return false;
@@ -407,7 +395,7 @@ public:
                 f = static_cast<T>(std::stoull(parser.token));
             }
 
-            this->setValueFromParse(f, locked);
+            this->setValue(f, source);
 
             return true;
         }
@@ -464,7 +452,7 @@ public:
         return f;
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         if (!parser.parse_token()) {
             return false;
@@ -472,7 +460,7 @@ public:
 
         // see if it's a string enum case label
         if (auto it = _values.find(parser.token); it != _values.end()) {
-            this->setValueFromParse(it->second, locked);
+            this->setValue(it->second, source);
             return true;
         }
 
@@ -480,7 +468,7 @@ public:
         try {
             const int i = std::stoi(parser.token);
 
-            this->setValueFromParse(static_cast<T>(i), locked);
+            this->setValue(static_cast<T>(i), source);
             return true;
         } catch (std::invalid_argument &) {
         } catch (std::out_of_range &) {
@@ -502,10 +490,10 @@ public:
     {
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         if (parser.parse_token()) {
-            setValueFromParse(parser.token, locked);
+            setValue(parser.token, source);
             return true;
         }
 
@@ -526,14 +514,14 @@ public:
     {
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         // make sure we can parse token out
         if (!parser.parse_token()) {
             return false;
         }
         
-        setValueFromParse(parser.token, locked);
+        setValue(parser.token, source);
         return true;
     }
     
@@ -548,22 +536,6 @@ private:
     std::unordered_set<std::string> _values;
     std::string _format;
 
-    virtual void addValueInternal(const std::string &value, source newSource)
-    {
-        if (changeSource(newSource)) {
-            _values.insert(value);
-        }
-    }
-
-    inline void addValueFromParse(const std::string &value, bool locked)
-    {
-        if (locked) {
-            setValueLocked(value);
-        } else {
-            setValue(value);
-        }
-    }
-
 public:
     inline setting_set(setting_container *dictionary, const nameset &names,
         const std::string_view &format = "\"str\" <multiple allowed>", const setting_group *group = nullptr, const char *description = "")
@@ -573,18 +545,21 @@ public:
     }
 
     const std::unordered_set<std::string> &values() const { return _values; }
+    
+    virtual void addValue(const std::string &value, source newSource)
+    {
+        if (changeSource(newSource)) {
+            _values.insert(value);
+        }
+    }
 
-    inline void setValueLocked(const std::string &f) { addValueInternal(f, source::COMMANDLINE); }
-
-    inline void setValue(const std::string &f) { addValueInternal(f, source::MAP); }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         if (!parser.parse_token(PARSE_PEEK))
             return false;
 
         parser.parse_token();
-        addValueFromParse(parser.token, locked);
+        addValue(parser.token, source);
         return true;
     }
 
@@ -625,11 +600,6 @@ class setting_vec3 : public setting_value<qvec3d>
 protected:
     virtual qvec3d transformVec3Value(const qvec3d &val) const { return val; }
 
-    void setValueInternal(const qvec3d &f, source newsource) override
-    {
-        setting_value::setValueInternal(transformVec3Value(f), newsource);
-    }
-
 public:
     inline setting_vec3(setting_container *dictionary, const nameset &names, vec_t a, vec_t b, vec_t c,
         const setting_group *group = nullptr, const char *description = "")
@@ -637,7 +607,12 @@ public:
     {
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    void setValue(const qvec3d &f, source newsource) override
+    {
+        setting_value::setValue(transformVec3Value(f), newsource);
+    }
+
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         qvec3d vec;
 
@@ -654,7 +629,7 @@ public:
             }
         }
 
-        setValueFromParse(vec, locked);
+        setValue(vec, source);
 
         return true;
     }
@@ -758,25 +733,25 @@ public:
         return nullptr;
     }
 
-    inline void setSetting(const std::string &name, const std::string &value, bool locked)
+    inline void setSetting(const std::string &name, const std::string &value, source source)
     {
         setting_base *setting = findSetting(name);
 
         if (setting == nullptr) {
-            if (locked) {
+            if (source == source::COMMANDLINE) {
                 throw parse_exception(fmt::format("Unrecognized command-line option '{}'\n", name));
             }
             return;
         }
 
         parser_t p{value};
-        setting->parse(name, p, locked);
+        setting->parse(name, p, source);
     }
 
-    inline void setSettings(const entdict_t &epairs, bool locked)
+    inline void setSettings(const entdict_t &epairs, source source)
     {
         for (const auto &epair : epairs) {
-            setSetting(epair.first, epair.second, locked);
+            setSetting(epair.first, epair.second, source);
         }
     }
 

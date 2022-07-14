@@ -341,7 +341,7 @@ public:
     public:
         using setting_int32::setting_int32;
 
-        bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+        bool parse(const std::string &settingName, parser_base_t &parser, source source) override
         {
             if (!parser.parse_token(PARSE_PEEK)) {
                 return false;
@@ -350,7 +350,7 @@ public:
             try {
                 int32_t f = static_cast<int32_t>(std::stoull(parser.token));
 
-                setValueFromParse(f, locked);
+                setValue(f, source);
 
                 parser.parse_token();
 
@@ -359,7 +359,7 @@ public:
             catch (std::exception &) {
                 // if we didn't provide a (valid) number, then
                 // assume it's meant to be the default of -1
-                setValueFromParse(-1, locked);
+                setValue(-1, source);
                 return true;
             }
         }
@@ -372,12 +372,12 @@ public:
     public:
         using setting_value::setting_value;
 
-        bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+        bool parse(const std::string &settingName, parser_base_t &parser, source source) override
         {
             if (settingName.back() == '4') {
-                setValueFromParse(4, locked);
+                setValue(4, source);
             } else {
-                setValueFromParse(2, locked);
+                setValue(2, source);
             }
 
             return true;
@@ -417,24 +417,24 @@ public:
         this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"};
     setting_enum<visapprox_t> visapprox{
         this, "visapprox", visapprox_t::AUTO, { { "auto", visapprox_t::AUTO }, { "none", visapprox_t::NONE }, { "vis", visapprox_t::VIS }, { "rays", visapprox_t::RAYS } }, &debug_group, "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"};
-    setting_func lit{this, "lit", [&]() { write_litfile |= lightfile::external; }, &output_group, "write .lit file"};
+    setting_func lit{this, "lit", [&](source) { write_litfile |= lightfile::external; }, &output_group, "write .lit file"};
     setting_func lit2{
-        this, "lit2", [&]() { write_litfile = lightfile::lit2; }, &experimental_group, "write .lit2 file"};
-    setting_func bspxlit{this, "bspxlit", [&]() { write_litfile |= lightfile::bspx; }, &experimental_group,
+        this, "lit2", [&](source) { write_litfile = lightfile::lit2; }, &experimental_group, "write .lit2 file"};
+    setting_func bspxlit{this, "bspxlit", [&](source) { write_litfile |= lightfile::bspx; }, &experimental_group,
         "writes rgb data into the bsp itself"};
     setting_func lux{
-        this, "lux", [&]() { write_luxfile |= lightfile::external; }, &experimental_group, "write .lux file"};
-    setting_func bspxlux{this, "bspxlux", [&]() { write_luxfile |= lightfile::bspx; }, &experimental_group,
+        this, "lux", [&](source) { write_luxfile |= lightfile::external; }, &experimental_group, "write .lux file"};
+    setting_func bspxlux{this, "bspxlux", [&](source) { write_luxfile |= lightfile::bspx; }, &experimental_group,
         "writes lux data into the bsp itself"};
     setting_func bspxonly{this, "bspxonly",
-        [&]() {
+        [&](source source) {
             write_litfile = lightfile::bspx;
             write_luxfile = lightfile::bspx;
-            novanilla.setValueLocked(true);
+            novanilla.setValue(true, source);
         },
         &experimental_group, "writes both rgb and directions data *only* into the bsp itself"};
     setting_func bspx{this, "bspx",
-        [&]() {
+        [&](source source) {
             write_litfile = lightfile::bspx;
             write_luxfile = lightfile::bspx;
         },
@@ -453,49 +453,49 @@ public:
     }
 
     setting_func dirtdebug{this, {"dirtdebug", "debugdirt"},
-        [&]() {
+        [&](source) {
             CheckNoDebugModeSet();
             debugmode = debugmodes::dirt;
         },
         &debug_group, "only save the AO values to the lightmap"};
 
     setting_func bouncedebug{this, "bouncedebug",
-        [&]() {
+        [&](source) {
             CheckNoDebugModeSet();
             debugmode = debugmodes::bounce;
         },
         &debug_group, "only save bounced lighting to the lightmap"};
 
     setting_func bouncelightsdebug{this, "bouncelightsdebug",
-        [&]() {
+        [&](source) {
             CheckNoDebugModeSet();
             debugmode = debugmodes::bouncelights;
         },
         &debug_group, "only save bounced emitters lighting to the lightmap"};
 
     setting_func phongdebug{this, "phongdebug",
-        [&]() {
+        [&](source) {
             CheckNoDebugModeSet();
             debugmode = debugmodes::phong;
         },
         &debug_group, "only save phong normals to the lightmap"};
 
     setting_func phongdebug_obj{this, "phongdebug_obj",
-        [&]() {
+        [&](source) {
             CheckNoDebugModeSet();
             debugmode = debugmodes::phong_obj;
         },
         &debug_group, "save map as .obj with phonged normals"};
 
     setting_func debugoccluded{this, "debugoccluded",
-        [&]() {
+        [&](source) {
             CheckNoDebugModeSet();
             debugmode = debugmodes::debugoccluded;
         },
         &debug_group, "save light occlusion data to lightmap"};
 
     setting_func debugneighbours{this, "debugneighbours",
-        [&]() {
+        [&](source) {
             CheckNoDebugModeSet();
             debugmode = debugmodes::debugneighbours;
         },
@@ -533,7 +533,6 @@ extern std::vector<surfflags_t> extended_texinfo_flags;
 
 // public functions
 
-void SetGlobalSetting(std::string name, std::string value, bool cmdline);
 void FixupGlobalSettings(void);
 void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size);
 void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs);

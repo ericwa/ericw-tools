@@ -933,14 +933,14 @@ TEST_CASE("delayDefault", "[settings]")
 TEST_CASE("delayParseInt", "[settings]")
 {
     light_t light;
-    CHECK(light.formula.parseString("2"));
+    CHECK(light.formula.parseString("2", settings::source::MAP));
     CHECK(LF_INVERSE2 == light.formula.value());
 }
 
 TEST_CASE("delayParseIntUnknown", "[settings]")
 {
     light_t light;
-    CHECK(light.formula.parseString("500"));
+    CHECK(light.formula.parseString("500", settings::source::MAP));
     // not sure if we should be strict and reject parsing this?
     CHECK(500 == light.formula.value());
 }
@@ -948,13 +948,13 @@ TEST_CASE("delayParseIntUnknown", "[settings]")
 TEST_CASE("delayParseFloat", "[settings]")
 {
     light_t light;
-    CHECK(light.formula.parseString("2.0"));
+    CHECK(light.formula.parseString("2.0", settings::source::MAP));
     CHECK(LF_INVERSE2 == light.formula.value());
 }
 
 TEST_CASE("delayParseString", "[settings]")
 {
     light_t light;
-    CHECK(light.formula.parseString("inverse2"));
+    CHECK(light.formula.parseString("inverse2", settings::source::MAP));
     CHECK(LF_INVERSE2 == light.formula.value());
 }

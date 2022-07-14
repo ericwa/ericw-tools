@@ -1977,7 +1977,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
 {
     // check if needed
 
-    if (!cfg.globalDirt.value() && cfg.globalDirt.isLocked()) {
+    if (!cfg.globalDirt.value() && cfg.globalDirt.getSource() == settings::source::COMMANDLINE) {
         // HACK: "-dirt 0" disables all dirtmapping even if we would otherwise use it.
         dirt_in_use = false;
         return;

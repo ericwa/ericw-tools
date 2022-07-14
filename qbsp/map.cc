@@ -2358,7 +2358,7 @@ void CalculateWorldExtent(void)
         }
     }
 
-    qbsp_options.worldextent.setValueLocked((extents + hull_extents) * 2);
+    qbsp_options.worldextent.setValue((extents + hull_extents) * 2, settings::source::GAME_TARGET);
 }
 
 /*

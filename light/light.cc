@@ -138,9 +138,9 @@ void light_settings::postinitialize(int argc, const char **argv)
 
     if (soft.value() == -1) {
         switch (extra.value()) {
-            case 2: soft.setValueLocked(1); break;
-            case 4: soft.setValueLocked(2); break;
-            default: soft.setValueLocked(0); break;
+            case 2: soft.setValue(1, settings::source::COMMANDLINE); break;
+            case 4: soft.setValue(2, settings::source::COMMANDLINE); break;
+            default: soft.setValue(0, settings::source::COMMANDLINE); break;
         }
     }
 
@@ -166,22 +166,22 @@ void light_settings::postinitialize(int argc, const char **argv)
     }
 
     if (debugmode == debugmodes::dirt) {
-        light_options.globalDirt.setValueLocked(true);
+        light_options.globalDirt.setValue(true, settings::source::COMMANDLINE);
     } else if (debugmode == debugmodes::bounce || debugmode == debugmodes::bouncelights) {
-        light_options.bounce.setValueLocked(true);
+        light_options.bounce.setValue(true, settings::source::COMMANDLINE);
     } else if (debugmode == debugmodes::debugneighbours && !debugface.isChanged()) {
         FError("-debugneighbours without -debugface specified\n");
     }
 
     if (light_options.q2rtx.value()) {
         if (!light_options.nolighting.isChanged()) {
-            light_options.nolighting.setValueLocked(true);
+            light_options.nolighting.setValue(true, settings::source::GAME_TARGET);
         }
     }
 
     // upgrade to uint16 if facestyles is specified 
     if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.isChanged()) {
-        light_options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE);
+        light_options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE, settings::source::COMMANDLINE);
     }
     
     common_settings::postinitialize(argc, argv);
@@ -190,17 +190,8 @@ void light_settings::postinitialize(int argc, const char **argv)
 
 settings::light_settings light_options;
 
-void SetGlobalSetting(std::string name, std::string value, bool cmdline)
-{
-    light_options.setSetting(name, value, cmdline);
-}
-
 void FixupGlobalSettings()
 {
-    static bool once = false;
-    Q_assert(!once);
-    once = true;
-
     // NOTE: This is confusing.. Setting "dirt" "1" implies "minlight_dirt" "1"
     // (and sunlight_dir/sunlight2_dirt as well), unless those variables were
     // set by the user to "0".
@@ -210,13 +201,13 @@ void FixupGlobalSettings()
 
     if (light_options.globalDirt.value()) {
         if (!light_options.minlightDirt.isChanged()) {
-            light_options.minlightDirt.setValue(true);
+            light_options.minlightDirt.setValue(true, settings::source::COMMANDLINE);
         }
         if (!light_options.sunlight_dirt.isChanged()) {
-            light_options.sunlight_dirt.setValue(1);
+            light_options.sunlight_dirt.setValue(1, settings::source::COMMANDLINE);
         }
         if (!light_options.sunlight2_dirt.isChanged()) {
-            light_options.sunlight2_dirt.setValue(1);
+            light_options.sunlight2_dirt.setValue(1, settings::source::COMMANDLINE);
         }
     }
 }
@@ -445,7 +436,7 @@ static void FindModelInfo(const mbsp_t *bsp)
 
     /* The world always casts shadows */
     modelinfo_t *world = new modelinfo_t{bsp, &bsp->dmodels[0], lightmapscale};
-    world->shadow.setValue(1.0f); /* world always casts shadows */
+    world->shadow.setValue(1.0f, settings::source::MAP); /* world always casts shadows */
     world->phong_angle.copyFrom(light_options.phongangle);
     modelinfo.push_back(world);
     tracelist.push_back(world);
@@ -462,7 +453,7 @@ static void FindModelInfo(const mbsp_t *bsp)
             FError("Couldn't find entity for model {}.\n", modelname);
 
         // apply settings
-        info->setSettings(*entdict, false);
+        info->setSettings(*entdict, settings::source::MAP);
 
         /* Check if this model will cast shadows (shadow => shadowself) */
         if (info->switchableshadow.boolValue()) {
@@ -1184,25 +1175,25 @@ int light_main(int argc, const char **argv)
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
     if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
         if (!light_options.rangescale.isChanged()) {
-            light_options.rangescale.setValue(1.0f);
+            light_options.rangescale.setValue(1.0, settings::source::GAME_TARGET);
         }
         if (!light_options.bouncecolorscale.isChanged()) {
-            light_options.bouncecolorscale.setValue(0.5f);
+            light_options.bouncecolorscale.setValue(0.5, settings::source::GAME_TARGET);
         }
         if (!light_options.surflightscale.isChanged()) {
-            light_options.surflightscale.setValue(0.65f);
+            light_options.surflightscale.setValue(0.65, settings::source::GAME_TARGET);
         }
         if (!light_options.bouncescale.isChanged()) {
-            light_options.bouncescale.setValue(1.25f);
+            light_options.bouncescale.setValue(1.25, settings::source::GAME_TARGET);
         }
         if (!light_options.bounce.isChanged()) {
-            light_options.bounce.setValue(true);
+            light_options.bounce.setValue(true, settings::source::GAME_TARGET);
         }
     }
 
     // check vis approx type
     if (light_options.visapprox.value() == visapprox_t::AUTO) {
-        light_options.visapprox.setValue(visapprox_t::RAYS);
+        light_options.visapprox.setValue(visapprox_t::RAYS, settings::source::DEFAULT);
     }
 
     load_textures(&bsp);

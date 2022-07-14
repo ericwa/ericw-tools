@@ -219,7 +219,7 @@ TEST_CASE("copy", "[settings]")
     CHECK(settings::source::DEFAULT == waitSetting.getSource());
     CHECK(1.5 == waitSetting.value());
 
-    scaleSetting.setValue(2.5);
+    scaleSetting.setValue(2.5, settings::source::MAP);
     CHECK(settings::source::MAP == scaleSetting.getSource());
 
     // source is also copied
@@ -234,7 +234,7 @@ TEST_CASE("copyMangle", "[settings]")
     settings::setting_mangle sunvec{&settings, {"sunlight_mangle"}, 0.0, 0.0, 0.0};
 
     parser_t p(std::string_view("0.0 -90.0 0.0"));
-    CHECK(sunvec.parse("", p));
+    CHECK(sunvec.parse("", p, settings::source::COMMANDLINE));
     CHECK(Catch::Approx(0).margin(1e-6) == sunvec.value()[0]);
     CHECK(Catch::Approx(0).margin(1e-6) == sunvec.value()[1]);
     CHECK(Catch::Approx(-1).margin(1e-6) == sunvec.value()[2]);
@@ -254,7 +254,7 @@ TEST_CASE("copyContainer", "[settings]")
     CHECK_FALSE(boolSetting1.value());
     CHECK(settings::source::DEFAULT == boolSetting1.getSource());
 
-    boolSetting1.setValue(true);
+    boolSetting1.setValue(true, settings::source::MAP);
     CHECK(boolSetting1.value());
     CHECK(settings::source::MAP == boolSetting1.getSource());
 
@@ -287,7 +287,7 @@ TEST_CASE("copyContainerSubclass", "[settings]")
     CHECK(&s1.stringSetting == s1.findSetting("stringSetting"));
     CHECK(1 == s1.grouped().size());
     CHECK((std::set<settings::setting_base *>{ &s1.boolSetting, &s1.stringSetting }) == s1.grouped().at(&test_group));
-    s1.boolSetting.setValue(true);
+    s1.boolSetting.setValue(true, settings::source::MAP);
     CHECK(settings::source::MAP == s1.boolSetting.getSource());
 
     my_settings s2;
@@ -308,7 +308,7 @@ TEST_CASE("resetBool", "[settings]")
     settings::setting_container settings;
     settings::setting_bool boolSetting1(&settings, "boolSetting", false);
 
-    boolSetting1.setValue(true);
+    boolSetting1.setValue(true, settings::source::MAP);
     CHECK(settings::source::MAP == boolSetting1.getSource());
     CHECK(boolSetting1.value());
 
@@ -322,7 +322,7 @@ TEST_CASE("resetScalar", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting1(&settings, "scalarSetting", 12.34);
 
-    scalarSetting1.setValue(-2);
+    scalarSetting1.setValue(-2, settings::source::MAP);
     CHECK(settings::source::MAP == scalarSetting1.getSource());
     CHECK(-2 == scalarSetting1.value());
 
@@ -337,8 +337,8 @@ TEST_CASE("resetContainer", "[settings]")
     settings::setting_vec3 vec3Setting1(&settings, "vec", 3, 4, 5);
     settings::setting_string stringSetting1(&settings, "name", "abc");
 
-    vec3Setting1.setValue(qvec3d(-1, -2, -3));
-    stringSetting1.setValue("test");
+    vec3Setting1.setValue(qvec3d(-1, -2, -3), settings::source::MAP);
+    stringSetting1.setValue("test", settings::source::MAP);
     settings.reset();
 
     CHECK(settings::source::DEFAULT == vec3Setting1.getSource());

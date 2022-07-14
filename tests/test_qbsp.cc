@@ -1736,7 +1736,7 @@ TEST_CASE("winding", "[benchmark][.releaseonly]") {
 TEST_CASE("BrushFromBounds") {
     map.reset();
     qbsp_options.reset();
-    qbsp_options.worldextent.setValue(1024);
+    qbsp_options.worldextent.setValue(1024, settings::source::COMMANDLINE);
 
     auto brush = BrushFromBounds({{2,2,2}, {32, 32, 32}});
 

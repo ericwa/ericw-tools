@@ -34,10 +34,10 @@ setting_base::setting_base(
     }
 }
 
-bool setting_base::parseString(const std::string &string, bool locked)
+bool setting_base::parseString(const std::string &string, source source)
 {
     parser_t p{string};
-    return parse("", p, locked);
+    return parse("", p, source);
 }
 
 setting_group performance_group{"Performance", 10};
@@ -144,7 +144,7 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
         // name for error message below
         std::string token = std::move(parser.token);
 
-        if (!setting->parse(token, parser, true)) {
+        if (!setting->parse(token, parser, source::COMMANDLINE)) {
             throw parse_exception(
                 fmt::format("invalid value for option \"{}\"; should be in format {}", token, setting->format()));
         }

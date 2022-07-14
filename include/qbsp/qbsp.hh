@@ -118,13 +118,13 @@ public:
         _source = source::DEFAULT;
     }
 
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         if (!parser.parse_token()) {
             return false;
         }
 
-        if (changeSource(locked ? source::COMMANDLINE : source::MAP)) {
+        if (changeSource(source)) {
             _paths.insert(wadpath{fs::path(parser.token), settingName[0] == 'x'});
         }
 
