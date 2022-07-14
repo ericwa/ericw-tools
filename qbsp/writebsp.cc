@@ -177,15 +177,16 @@ static void ExportLeaf(node_t *node)
             continue;
         // FIXME: this can happen when compiling some Q2 maps
         // as Q1.
-        if (!face->outputnumber.has_value())
-            continue;
-
-        /* emit a marksurface */
-        map.bsp.dleaffaces.push_back(face->outputnumber.value());
+        if (face->outputnumber.has_value()) {
+            /* emit a marksurface */
+            map.bsp.dleaffaces.push_back(face->outputnumber.value());
+        }
 
         /* grab tjunction split faces */
         for (auto &fragment : face->fragments) {
-            map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
+            if (fragment.outputnumber.has_value()) {
+                map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
+            }
         }
     }
     dleaf.nummarksurfaces = static_cast<int>(map.bsp.dleaffaces.size()) - dleaf.firstmarksurface;

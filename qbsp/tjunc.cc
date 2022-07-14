@@ -125,7 +125,7 @@ static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, s
 	}
 
 	for (auto &face : node->facelist) {
-		for (auto &v : face->output_vertices) {
+		for (auto &v : face->original_vertices) {
 			if (aabb.containsPoint(map.bsp.dvertexes[v])) {
 				verts.push_back(v);
 			}
@@ -143,7 +143,7 @@ FindEdgeVerts_FaceBounds
 Use a loose AABB around the line and only capture vertices that intersect it.
 ==========
 */
-static void FindEdgeVerts_FaceBounds(const node_t *headnode, const node_t *node, const qvec3d &p1, const qvec3d &p2, std::vector<size_t> &verts)
+static void FindEdgeVerts_FaceBounds(const node_t *headnode, const qvec3d &p1, const qvec3d &p2, std::vector<size_t> &verts)
 {
 	// magic number, average of "usual" points per edge
 	verts.reserve(8);
@@ -162,7 +162,7 @@ max edge count.
 Modifies `superface`. Adds the results to the end of `output`.
 ==================
 */
-inline void SplitFaceIntoFragments(std::vector<size_t> &superface, std::vector<std::vector<size_t>> &output)
+inline void SplitFaceIntoFragments(std::vector<size_t> &superface, std::list<std::vector<size_t>> &output)
 {
 	size_t base = 0;
 	size_t remaining = superface.size();
@@ -187,11 +187,11 @@ inline void SplitFaceIntoFragments(std::vector<size_t> &superface, std::vector<s
 	}
 
 	// copy the remainder back to the input face
-	superface.resize(remaining);
-
 	for (size_t i = 0; i < remaining; i++) {
 		superface[i] = superface[(i + base) % superface.size()];
 	}
+
+	superface.resize(remaining);
 }
 
 float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
@@ -225,7 +225,7 @@ Generate a superface (the input face `f` but with all of the
 verts in the world added that lay on the line) and return it
 ==================
 */
-static std::vector<size_t> CreateSuperFace(node_t *headnode, node_t *node, face_t *f)
+static std::vector<size_t> CreateSuperFace(node_t *headnode, face_t *f)
 {
 	std::vector<size_t> superface;
 
@@ -245,7 +245,7 @@ static std::vector<size_t> CreateSuperFace(node_t *headnode, node_t *node, face_
 		qvec3d e2 = map.bsp.dvertexes[v2];
 
 		edge_verts.clear();
-		FindEdgeVerts_FaceBounds(headnode, node, edge_start, e2, edge_verts);
+		FindEdgeVerts_FaceBounds(headnode, edge_start, e2, edge_verts);
 
 		vec_t len;
 		qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
@@ -265,9 +265,9 @@ It's still a convex face with wound vertices, though, so we
 can split it into several triangle fans.
 ==================
 */
-static std::vector<std::vector<size_t>> RetopologizeFace(const std::vector<size_t> &vertices)
+static std::list<std::vector<size_t>> RetopologizeFace(const std::vector<size_t> &vertices)
 {
-	std::vector<std::vector<size_t>> result;
+	std::list<std::vector<size_t>> result;
 	// the copy we're working on
 	std::vector<size_t> input(vertices);
 
@@ -421,9 +421,9 @@ FixFaceEdges
 If the face has any T-junctions, fix them here.
 ==================
 */
-static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
+static void FixFaceEdges(node_t *headnode, face_t *f)
 {
-	std::vector<size_t> superface = CreateSuperFace(headnode, node, f);
+	std::vector<size_t> superface = CreateSuperFace(headnode, f);
 
 	if (superface.size() < 3) {
 		// entire face collapsed
@@ -460,7 +460,7 @@ static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
 	}
 
 	// temporary storage for result faces
-	std::vector<std::vector<size_t>> faces;
+	std::list<std::vector<size_t>> faces;
 
 	if (i == superface.size()) {
 		// can't simply rotate to eliminate zero-area triangles, so we have
@@ -492,27 +492,28 @@ static void FixFaceEdges(node_t *headnode, node_t *node, face_t *f)
 	Q_assert(faces.size());
 
 	// split giant superfaces into subfaces
-	size_t superface_count = faces.size();
-
-	for (size_t i = 0; i < superface_count; i++) {
-		SplitFaceIntoFragments(faces[i], faces);
+	for (auto &face : faces) {
+		SplitFaceIntoFragments(face, faces);
 	}
 
 	// move the results into the face
-	f->output_vertices = std::move(faces[0]);
+	f->output_vertices = std::move(faces.front());
 	f->fragments.resize(faces.size() - 1);
 
-	for (size_t i = 1; i < faces.size(); i++) {
-		f->fragments[i - 1].output_vertices = std::move(faces[i]);
+	i = 0;
+	for (auto it = ++faces.begin(); it != faces.end(); it++, i++) {
+		f->fragments[i].output_vertices = std::move(*it);
 	}
 }
+
+#include <common/parallel.hh>
 
 /*
 ==================
 FixEdges_r
 ==================
 */
-static void FixEdges_r(node_t *headnode, node_t *node)
+static void FindFaces_r(node_t *node, std::unordered_set<face_t *> &faces)
 {
 	if (node->planenum == PLANENUM_LEAF) {
 		return;
@@ -521,12 +522,12 @@ static void FixEdges_r(node_t *headnode, node_t *node)
 	for (auto &f : node->facelist) {
 		// might have been omitted earlier, so `output_vertices` will be empty
 		if (f->output_vertices.size()) {
-			FixFaceEdges(headnode, node, f.get());
+			faces.insert(f.get());
 		}
 	}
 	
-	FixEdges_r(headnode, node->children[0].get());
-	FixEdges_r(headnode, node->children[1].get());
+    FindFaces_r(node->children[0].get(), faces);
+    FindFaces_r(node->children[1].get(), faces);
 }
 
 /*
@@ -548,7 +549,13 @@ void TJunc(node_t *headnode)
 	c_retopology = 0;
 	c_faceretopology = 0;
 
-	FixEdges_r (headnode, headnode);
+	std::unordered_set<face_t *> faces;
+
+	FindFaces_r(headnode, faces);
+	
+	logging::parallel_for_each(faces, [&](auto &face) {
+		FixFaceEdges(headnode, face);
+	});
 
 	logging::print (logging::flag::STAT, "{:5} edges degenerated\n", c_degenerate);
 	logging::print (logging::flag::STAT, "{:5} faces degenerated\n", c_facecollapse);

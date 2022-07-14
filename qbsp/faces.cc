@@ -82,6 +82,8 @@ static void EmitFaceVertices(face_t *f)
     for (size_t i = 0; i < f->w.size(); i++) {
         EmitVertex(f->w[i], f->output_vertices[i]);
     }
+
+    f->original_vertices = f->output_vertices;
 }
 
 static void EmitVertices_R(node_t *node)
@@ -136,7 +138,7 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face)
 
 static void FindFaceFragmentEdges(face_t *face, face_fragment_t *fragment)
 {
-    fragment->outputnumber = std::nullopt;
+    Q_assert(fragment->outputnumber == std::nullopt);
 
     if (fragment->output_vertices.size() > MAXEDGES) {
         FError("Internal error: face->numpoints > MAXEDGES");
