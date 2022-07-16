@@ -27,6 +27,7 @@
 #include <array>
 #include <ostream>
 #include <fmt/format.h>
+#include <tuple>
 #include "common/mathlib.hh"
 #include "common/cmdlib.hh"
 
@@ -497,6 +498,43 @@ template<size_t N, class T>
     }
 
     return largestIndex;
+}
+
+template<typename T>
+std::tuple<qvec<T, 3>, qvec<T, 3>> MakeTangentAndBitangentUnnormalized(const qvec<T, 3> &normal)
+{
+    // 0, 1, or 2
+    const int axis = qv::indexOfLargestMagnitudeComponent(normal);
+    const int otherAxisA = (axis + 1) % 3;
+    const int otherAxisB = (axis + 2) % 3;
+
+    // setup two other vectors that are perpendicular to each other
+    qvec<T, 3> otherVecA{};
+    otherVecA[otherAxisA] = 1.0;
+
+    qvec<T, 3> otherVecB{};
+    otherVecB[otherAxisB] = 1.0;
+
+    auto tangent = qv::cross(normal, otherVecA);
+    auto bitangent = qv::cross(normal, otherVecB);
+
+    // We want `test` to point in the same direction as normal.
+    // Swap the tangent bitangent if we got the direction wrong.
+    qvec<T, 3> test = qv::cross(tangent, bitangent);
+
+    if (qv::dot(test, normal) < 0) {
+        std::swap(tangent, bitangent);
+    }
+
+    // debug test
+    if (0) {
+        auto n = qv::normalize(qv::cross(tangent, bitangent));
+        double d = qv::distance(n, normal);
+
+        assert(d < 0.0001);
+    }
+
+    return {tangent, bitangent};
 }
 
 template<size_t N, typename T>

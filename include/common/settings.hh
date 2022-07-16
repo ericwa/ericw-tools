@@ -657,6 +657,35 @@ public:
     using setting_vec3::setting_vec3;
 };
 
+// a simple wrapper type that allows you to provide
+// extra validation to an existing type without needing
+// to create a whole new type for it.
+template<typename T>
+class setting_validator : public T
+{
+protected:
+    std::function<bool(T &)> _validator;
+
+public:
+    template<typename ...Args>
+    inline setting_validator(const decltype(_validator) &validator, Args&&... args) :
+        T(std::forward<Args>(args)...),
+        _validator(validator)
+    {
+    }
+
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
+    {
+        bool result = this->T::parse(settingName, parser, source);
+
+        if (result) {
+            return _validator(*this);
+        }
+
+        return result;
+    }
+};
+
 // settings dictionary
 
 class setting_container

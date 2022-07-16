@@ -173,16 +173,11 @@ static void ExportLeaf(node_t *node)
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
     for (auto &face : node->markfaces) {
-        if (!qbsp_options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip)
+        if (!qbsp_options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip) {
             continue;
-        // FIXME: this can happen when compiling some Q2 maps
-        // as Q1.
-        if (face->outputnumber.has_value()) {
-            /* emit a marksurface */
-            map.bsp.dleaffaces.push_back(face->outputnumber.value());
         }
 
-        /* grab tjunction split faces */
+        /* grab final output faces */
         for (auto &fragment : face->fragments) {
             if (fragment.outputnumber.has_value()) {
                 map.bsp.dleaffaces.push_back(fragment.outputnumber.value());

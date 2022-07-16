@@ -114,46 +114,9 @@ struct planepoints : std::array<qvec3d, 3>
 };
 
 template<typename T>
-std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec<T, 3> &normal)
-{
-    // 0, 1, or 2
-    const int axis = qv::indexOfLargestMagnitudeComponent(normal);
-    const int otherAxisA = (axis + 1) % 3;
-    const int otherAxisB = (axis + 2) % 3;
-
-    // setup two other vectors that are perpendicular to each other
-    qvec3d otherVecA{};
-    otherVecA[otherAxisA] = 1.0;
-
-    qvec3d otherVecB{};
-    otherVecB[otherAxisB] = 1.0;
-
-    qvec3d tangent = qv::cross(normal, otherVecA);
-    qvec3d bitangent = qv::cross(normal, otherVecB);
-
-    // We want `test` to point in the same direction as normal.
-    // Swap the tangent bitangent if we got the direction wrong.
-    qvec3d test = qv::cross(tangent, bitangent);
-
-    if (qv::dot(test, normal) < 0) {
-        std::swap(tangent, bitangent);
-    }
-
-    // debug test
-    if (0) {
-        auto n = qv::normalize(qv::cross(tangent, bitangent));
-        double d = qv::distance(n, normal);
-
-        assert(d < 0.0001);
-    }
-
-    return {tangent, bitangent};
-}
-
-template<typename T>
 static planepoints NormalDistanceToThreePoints(const qplane3<T> &plane)
 {
-    std::tuple<qvec3d, qvec3d> tanBitan = MakeTangentAndBitangentUnnormalized(plane.normal);
+    std::tuple<qvec3d, qvec3d> tanBitan = qv::MakeTangentAndBitangentUnnormalized(plane.normal);
 
     qvec3d point0 = plane.normal * plane.dist;
 

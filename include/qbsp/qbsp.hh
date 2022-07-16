@@ -165,6 +165,31 @@ enum class filltype_t
     INSIDE
 };
 
+enum class tjunclevel_t
+{
+    NONE, // don't attempt to adjust faces at all - pass them through unchanged
+    ROTATE, // allow faces' vertices to be rotated to prevent zero-area triangles
+    RETOPOLOGIZE, // if a face still has zero-area triangles, allow it to be re-topologized
+                  // by splitting it into multiple fans
+    DELAUNAY // attempt a delaunay triangulation first, only falling back to the prior two steps if it fails.
+};
+
+struct setting_tjunc : public setting_enum<tjunclevel_t>
+{
+public:
+    using setting_enum<tjunclevel_t>::setting_enum;
+
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
+    {
+        if (settingName == "notjunc") {
+            this->setValue(tjunclevel_t::NONE, source);
+            return true;
+        }
+
+        return this->setting_enum<tjunclevel_t>::parse(settingName, parser, source);
+    }
+};
+
 class qbsp_settings : public common_settings
 {
 public:
@@ -227,7 +252,9 @@ public:
     setting_int32 leakdist{this, "leakdist", 2, &debugging_group, "space between leakfile points"};
     setting_bool forceprt1{
         this, "forceprt1", false, &debugging_group, "force a PRT1 output file even if PRT2 is required for vis"};
-    setting_bool notjunc{this, "notjunc", false, &debugging_group, "don't fix T-junctions"};
+    setting_tjunc tjunc{this, { "tjunc", "notjunc" }, tjunclevel_t::DELAUNAY,
+        { { "none", tjunclevel_t::NONE }, { "rotate", tjunclevel_t::ROTATE }, { "retopologize", tjunclevel_t::RETOPOLOGIZE }, { "delaunay", tjunclevel_t::DELAUNAY } },
+        &debugging_group, "T-junction fix level"};
     setting_bool objexport{
         this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"};
     setting_bool wrbrushes{this, {"wrbrushes", "bspx"}, false, &common_format_group,
@@ -253,7 +280,10 @@ public:
     setting_enum<filltype_t> filltype{this, "filltype", filltype_t::AUTO, { { "auto", filltype_t::AUTO }, { "inside", filltype_t::INSIDE }, { "outside", filltype_t::OUTSIDE } }, &common_format_group,
         "whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used."};
     setting_invertible_bool allow_upgrade{this, "allowupgrade", true, &common_format_group, "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"};
-    setting_int32 maxedges{this, "maxedges", 64, &map_development_group, "the max number of edges/vertices on a single face before it is split into another face"};
+    setting_validator<setting_int32> maxedges{
+        [](setting_int32 &setting) {
+            return setting.value() == 0 || setting.value() >= 3;
+        }, this, "maxedges", 64, &map_development_group, "the max number of edges/vertices on a single face before it is split into another face"};
 
     void setParameters(int argc, const char **argv) override
     {
@@ -325,7 +355,7 @@ class mapentity_t;
 
 struct face_fragment_t
 {
-    std::vector<size_t> output_vertices, original_vertices; // filled in by EmitVertices & TJunc
+    std::vector<size_t> output_vertices; // filled in by TJunc
     std::vector<int64_t> edges; // only filled in MakeFaceEdges
     std::optional<size_t> outputnumber; // only valid for original faces after
                                         // write surfaces
@@ -333,7 +363,7 @@ struct face_fragment_t
 
 struct portal_t;
 
-struct face_t : face_fragment_t
+struct face_t
 {
     int planenum;
     planeside_t planeside; // which side is the front of the face
@@ -341,12 +371,11 @@ struct face_t : face_fragment_t
     contentflags_t contents; // contents on the front of the face
     int16_t lmshift;
     winding_t w;
+    std::vector<size_t> original_vertices; // the vertices of this face before fragmentation; filled in by EmitVertices
+    std::vector<face_fragment_t> fragments; // the vertices of this face post-fragmentation; filled in by TJunc
 
     qvec3d origin;
     vec_t radius;
-
-    // only valid after tjunction code
-    std::vector<face_fragment_t> fragments;
 
     portal_t *portal;
 };

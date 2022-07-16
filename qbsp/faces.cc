@@ -77,13 +77,11 @@ static void EmitFaceVertices(face_t *f)
         return;
     }
 
-    f->output_vertices.resize(f->w.size());
+    f->original_vertices.resize(f->w.size());
 
     for (size_t i = 0; i < f->w.size(); i++) {
-        EmitVertex(f->w[i], f->output_vertices[i]);
+        EmitVertex(f->w[i], f->original_vertices[i]);
     }
-
-    f->original_vertices = f->output_vertices;
 }
 
 static void EmitVertices_R(node_t *node)
@@ -160,11 +158,6 @@ FindFaceEdges
 */
 static void FindFaceEdges(face_t *face)
 {
-    if (ShouldOmitFace(face))
-        return;
-
-    FindFaceFragmentEdges(face, face);
-
     for (auto &fragment : face->fragments) {
         FindFaceFragmentEdges(face, &fragment);
     }
@@ -232,23 +225,6 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
 
 /*
 ==============
-EmitFace
-==============
-*/
-static void EmitFace(face_t *face)
-{
-    if (ShouldOmitFace(face))
-        return;
-
-    EmitFaceFragment(face, face);
-
-    for (auto &fragment : face->fragments) {
-        EmitFaceFragment(face, &fragment);
-    }
-}
-
-/*
-==============
 GrowNodeRegion
 ==============
 */
@@ -263,7 +239,9 @@ static void GrowNodeRegion(node_t *node)
         //Q_assert(face->planenum == node->planenum);
 
         // emit a region
-        EmitFace(face.get());
+        for (auto &fragment : face->fragments) {
+            EmitFaceFragment(face.get(), &fragment);
+        }
     }
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
