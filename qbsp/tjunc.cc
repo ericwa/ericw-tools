@@ -658,17 +658,15 @@ void TJunc(node_t *headnode)
 	if (stats.delaunay) {
 		logging::print (logging::flag::STAT, "{:5} faces delaunay triangulated\n", stats.delaunay);
 	}
+	if (stats.retopology) {
+		logging::print (logging::flag::STAT, "{:5} faces re-topologized\n", stats.retopology);
+		logging::print (logging::flag::STAT, "{:5} faces added by re-topology\n", stats.faceretopology);
+	}
 	if (stats.rotates) {
 		logging::print (logging::flag::STAT, "{:5} faces rotated\n", stats.rotates);
 	}
 	if (stats.norotates) {
 		logging::print (logging::flag::STAT, "{:5} faces unable to be rotated or re-topologized\n", stats.norotates);
-	}
-	if (stats.retopology) {
-		logging::print (logging::flag::STAT, "{:5} faces re-topologized\n", stats.retopology);
-	}
-	if (stats.faceretopology) {
-		logging::print (logging::flag::STAT, "{:5} faces added by re-topology\n", stats.faceretopology);
 	}
 	if (stats.faceoverflows) {
 		logging::print (logging::flag::STAT, "{:5} faces added by splitting large faces\n", stats.faceoverflows);
