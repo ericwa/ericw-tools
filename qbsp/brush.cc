@@ -104,12 +104,15 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
-            FError("line {}: too few points (2): ({}) ({})\n", sourceface.linenum, face->w[0], face->w[1]);
+            logging::print("WARNING: line {}: too few points (2): ({}) ({})\n", sourceface.linenum, face->w[0], face->w[1]);
         } else if (face->w.size() == 1) {
-            FError("line {}: too few points (1): ({})\n", sourceface.linenum, face->w[0]);
+            logging::print("WARNING: line {}: too few points (1): ({})\n", sourceface.linenum, face->w[0]);
         } else {
-            FError("line {}: too few points ({})", sourceface.linenum, face->w.size());
+            logging::print("WARNING: line {}: too few points ({})", sourceface.linenum, face->w.size());
         }
+
+        face->w.clear();
+        return;
     }
 
     qvec3d facenormal = plane.normal;
@@ -120,9 +123,12 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         const qvec3d &p1 = face->w[i];
         const qvec3d &p2 = face->w[(i + 1) % face->w.size()];
 
-        for (auto &v : p1)
-            if (fabs(v) > qbsp_options.worldextent.value())
+        for (auto &v : p1) {
+            if (fabs(v) > qbsp_options.worldextent.value()) {
+                // this is fatal because a point should never lay outside the world
                 FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
+            }
+        }
 
         /* check the point is on the face plane */
         // fixme check: plane's normal is not inverted by planeside check above,
@@ -154,9 +160,12 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
             if (j == i)
                 continue;
             dist = qv::dot(face->w[j], edgenormal);
-            if (dist > edgedist)
-                FError("line {}: Found a non-convex face (error size {}, point: {})\n", sourceface.linenum,
+            if (dist > edgedist) {
+                logging::print("WARNING: line {}: Found a non-convex face (error size {}, point: {})\n", sourceface.linenum,
                     dist - edgedist, face->w[j]);
+                face->w.clear();
+                return;
+            }
         }
     }
 }
