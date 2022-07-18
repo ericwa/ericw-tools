@@ -511,7 +511,6 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 	}
 
 	// faces with 4 or more vertices can be done better.
-	
 	// temporary storage for result faces; stored as a list
 	// since a resize may steal references out from underneath us
 	// as the functions do their work.
