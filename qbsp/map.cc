@@ -322,6 +322,9 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
                 if (wal->animation == name)
                     break;
             }
+
+            // link back to the start
+            map.miptex[last_i].animation_miptex = i;
         }
     }
 
