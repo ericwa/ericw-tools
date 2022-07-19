@@ -47,7 +47,7 @@ extern std::atomic<uint32_t> fully_transparent_lightmaps;
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
 vec_t GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, vec_t dist);
-std::map<int, qvec3f> GetDirectLighting(
+std::unordered_map<int, qvec3f> GetDirectLighting(
     const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const qvec3d &origin, const qvec3d &normal);
 void SetupDirt(settings::worldspawn_keys &cfg);
 float DirtAtPoint(const settings::worldspawn_keys &cfg, raystream_intersection_t *rs, const qvec3d &point,

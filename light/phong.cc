@@ -171,7 +171,7 @@ static float AngleBetweenPoints(const qvec3f &p1, const qvec3f &p2, const qvec3f
 }
 
 static bool s_builtPhongCaches;
-static std::map<const mface_t *, std::vector<face_normal_t>> vertex_normals;
+static std::unordered_map<const mface_t *, std::vector<face_normal_t>> vertex_normals;
 static map<const mface_t *, set<const mface_t *>> smoothFaces;
 static map<int, vector<const mface_t *>> vertsToFaces;
 static map<int, vector<const mface_t *>> planesToFaces;
@@ -554,7 +554,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         std::copy(neighboursToSmooth.begin(), neighboursToSmooth.end(), std::back_inserter(fPlusNeighbours));
 
         // global vertex index -> smoothed normal
-        std::map<int, face_normal_t> smoothedNormals;
+        std::unordered_map<int, face_normal_t> smoothedNormals;
 
         // walk fPlusNeighbours
         for (auto f2 : fPlusNeighbours) {

@@ -49,7 +49,7 @@ MergeFace.
 */
 std::unique_ptr<face_t> NewFaceFromFace(const face_t *in)
 {
-    auto newf = std::unique_ptr<face_t>(new face_t{});
+    auto newf = std::make_unique<face_t>();
 
     newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;

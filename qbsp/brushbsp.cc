@@ -101,7 +101,7 @@ Creates a new axial brush
 */
 std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds)
 {
-    auto b = std::unique_ptr<bspbrush_t>(new bspbrush_t{});
+    auto b = std::make_unique<bspbrush_t>();
 
     b->sides.resize(6);
     for (int i = 0; i < 3; i++)
@@ -858,9 +858,8 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     // allocate children before recursing
     for (int i = 0; i < 2; i++)
     {
-        auto* newnode = new node_t{};
+        auto &newnode = node->children[i] = std::make_unique<node_t>();
         newnode->parent = node;
-        node->children[i] = std::unique_ptr<node_t>(newnode);
     }
 
     auto children_volumes = SplitBrush(node->volume->copy_unique(), node->planenum);
@@ -881,7 +880,7 @@ BrushBSP
 */
 static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist)
 {
-    auto tree = std::unique_ptr<tree_t>(new tree_t{});
+    auto tree = std::make_unique<tree_t>();
 
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
@@ -895,7 +894,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
         double volume = BrushVolume(*b);
         if (volume < qbsp_options.microvolume.value())
         {
-            logging::print("WARNING: microbrush");
+            logging::print("WARNING: microbrush\n");
             // fixme-brushbsp: add entitynum, brushnum in mapbrush_t
 //            printf ("WARNING: entity %i, brush %i: microbrush\n",
 //                b->original->entitynum, b->original->brushnum);
@@ -925,13 +924,13 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        auto headnode = std::unique_ptr<node_t>(new node_t{});
+        auto headnode = std::make_unique<node_t>();
         headnode->bounds = entity->bounds;
-        headnode->children[0] = std::unique_ptr<node_t>(new node_t{});
+        headnode->children[0] = std::make_unique<node_t>();
         headnode->children[0]->planenum = PLANENUM_LEAF;
         headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[0]->parent = headnode.get();
-        headnode->children[1] = std::unique_ptr<node_t>(new node_t{});
+        headnode->children[1] = std::make_unique<node_t>();
         headnode->children[1]->planenum = PLANENUM_LEAF;
         headnode->children[1]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[1]->parent = headnode.get();
@@ -946,8 +945,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     logging::print(logging::flag::STAT, "{:5} visible faces\n", c_faces);
     logging::print(logging::flag::STAT, "{:5} nonvisible faces\n", c_nonvisfaces);
 
-
-    auto node = std::unique_ptr<node_t>(new node_t{});
+    auto node = std::make_unique<node_t>();
 
     node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
 

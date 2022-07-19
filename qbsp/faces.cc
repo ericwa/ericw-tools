@@ -482,7 +482,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
     if (!side)
         return nullptr;	// portal does not bridge different visible contents
 
-    auto f = std::unique_ptr<face_t>(new face_t{});
+    auto f = std::make_unique<face_t>();
 
     f->texinfo = side->texinfo;
     f->planenum = side->planenum;

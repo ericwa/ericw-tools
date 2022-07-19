@@ -35,9 +35,7 @@ const maptexinfo_t& side_t::get_texinfo() const
 
 std::unique_ptr<bspbrush_t> bspbrush_t::copy_unique() const
 {
-    bspbrush_t *copy = new bspbrush_t{*this};
-
-    return std::unique_ptr<bspbrush_t>(copy);
+    return std::make_unique<bspbrush_t>(*this);
 }
 
 /*
