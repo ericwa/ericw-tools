@@ -236,12 +236,12 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
     // side effects from q2rtx
     if (q2rtx.value()) {
-        if (!subdivide.isChanged()) {
-            subdivide.setValue(0, settings::source::GAME_TARGET);
-        }
-
         if (!includeskip.isChanged()) {
             includeskip.setValue(true, settings::source::GAME_TARGET);
+        }
+
+        if (!software.isChanged()) {
+            software.setValue(false, settings::source::GAME_TARGET);
         }
     }
 
@@ -249,6 +249,10 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         if (!maxedges.isChanged()) {
             maxedges.setValue(0, settings::source::GAME_TARGET);
+        }
+
+        if (!software.value() && !subdivide.isChanged()) {
+            subdivide.setValue(0, settings::source::GAME_TARGET);
         }
     }
 

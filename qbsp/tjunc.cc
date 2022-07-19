@@ -507,6 +507,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 		return;
 	} else if (superface.size() == 3) {
 		// no need to adjust this either
+		f->fragments.emplace_back(face_fragment_t { f->original_vertices });
 		return;
 	}
 
@@ -591,7 +592,9 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 	// split giant superfaces into subfaces if we have an edge limit.
 	if (qbsp_options.maxedges.value()) {
 		for (auto &face : faces) {
+			Q_assert(face.size() >= 3);
 			SplitFaceIntoFragments(face, faces, stats);
+			Q_assert(face.size() >= 3);
 		}
 	}
 
@@ -600,6 +603,10 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 
 	for (auto &face : faces) {
 		f->fragments.emplace_back(face_fragment_t { std::move(face) });
+	}
+
+	for (auto &frag : f->fragments) {
+		Q_assert(frag.output_vertices.size() >= 3);
 	}
 }
 

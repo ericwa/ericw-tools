@@ -200,6 +200,8 @@ public:
     setting_bool bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"};
     setting_bool bsp2rmq{
         this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"};
+    setting_func nosubdivide{this, "nosubdivide", [&](source src) { subdivide.setValue(0, src); }, &common_format_group, "disable subdivision"};
+    setting_invertible_bool software{this, "software", true, &common_format_group, "change settings to allow for (or make adjustments to optimize for the lack of) software support"};
     setting_int32 subdivide{this, "subdivide", 240, &common_format_group,
         "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"};
     setting_bool nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"};
