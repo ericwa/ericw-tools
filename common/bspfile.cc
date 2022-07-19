@@ -559,7 +559,7 @@ public:
     }
 
 private:
-    struct content_stats_t
+    struct content_stats_t : public content_stats_base_t
     {
         std::atomic<size_t> solid;
         std::atomic<size_t> empty;
@@ -569,20 +569,17 @@ private:
         std::atomic<size_t> detail_fence;
         std::atomic<size_t> sky;
         std::atomic<size_t> illusionary_visblocker;
-        
-        content_stats_t() = default;
-        inline content_stats_t(const content_stats_t &copy) { }
     };
 
 public:
-    std::any create_content_stats() const override
+    std::unique_ptr<content_stats_base_t> create_content_stats() const override
     {
-        return content_stats_t{};
+        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
     }
 
-    void count_contents_in_stats(const contentflags_t &contents, std::any &stats_any) const override
+    void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats_any) const override
     {
-        content_stats_t &stats = std::any_cast<content_stats_t &>(stats_any);
+        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
         
         if (contents_are_solid(contents)) {
             stats.solid++;
@@ -603,9 +600,9 @@ public:
         }
     }
 
-    void print_content_stats(const std::any &stats_any, const char *what) const override
+    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
     {
-        const content_stats_t &stats = std::any_cast<const content_stats_t &>(stats_any);
+        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
 
         if (stats.empty) {
             logging::print(logging::flag::STAT, "     {:8} empty {}\n", stats.empty, what);
@@ -1281,26 +1278,23 @@ public:
     }
 
 private:
-    struct content_stats_t
+    struct content_stats_t : public content_stats_base_t
     {
         //std::array<std::atomic<size_t>, 32> native_types;
         std::unordered_map<int32_t, size_t> native_types;
         std::atomic<size_t> total_brushes;
         std::atomic<size_t> visblocker_brushes;
-
-        content_stats_t() = default;
-        inline content_stats_t(const content_stats_t &copy) { }
     };
 
 public:
-    std::any create_content_stats() const override
+    std::unique_ptr<content_stats_base_t> create_content_stats() const override
     {
-        return content_stats_t{};
+        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
     }
 
-    void count_contents_in_stats(const contentflags_t &contents, std::any &stats_any) const override
+    void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats_any) const override
     {
-        content_stats_t &stats = std::any_cast<content_stats_t &>(stats_any);
+        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
 
         /*for (int32_t i = 0; i < 32; i++) {
             if (contents.native & nth_bit(i)) {
@@ -1320,9 +1314,9 @@ public:
         stats.total_brushes++;
     }
 
-    void print_content_stats(const std::any &stats_any, const char *what) const override
+    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
     {
-        const content_stats_t &stats = std::any_cast<const content_stats_t &>(stats_any);
+        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
 
         /*for (int32_t i = 0; i < 32; i++) {
             if (stats.native_types[i]) {

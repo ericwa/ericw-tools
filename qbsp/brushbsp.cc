@@ -48,7 +48,7 @@ constexpr int PSIDE_BOTH = (PSIDE_FRONT|PSIDE_BACK);
 constexpr int PSIDE_FACING = 4;
 
 struct bspstats_t {
-    std::any leafstats;
+    std::unique_ptr<content_stats_base_t> leafstats;
     // total number of nodes, includes c_nonvis
     std::atomic<int> c_nodes;
     // number of nodes created by splitting on a side_t which had !visible
@@ -414,7 +414,7 @@ static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> 
         leafnode->original_brushes.push_back(brush->original);
     }
 
-    qbsp_options.target_game->count_contents_in_stats(leafnode->contents, stats.leafstats);
+    qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
 }
 
 //============================================================

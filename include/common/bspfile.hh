@@ -233,6 +233,10 @@ enum gameid_t
     GAME_TOTAL
 };
 
+struct content_stats_base_t {
+    virtual ~content_stats_base_t() = default;
+};
+
 // Game definition, which contains data specific to
 // the game a BSP version is being compiled for.
 struct gamedef_t
@@ -304,9 +308,9 @@ struct gamedef_t
         const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
-    virtual std::any create_content_stats() const = 0;
-    virtual void count_contents_in_stats(const contentflags_t &contents, std::any &stats) const = 0;
-    virtual void print_content_stats(const std::any &stats, const char *what) const = 0;
+    virtual std::unique_ptr<content_stats_base_t> create_content_stats() const = 0;
+    virtual void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats) const = 0;
+    virtual void print_content_stats(const content_stats_base_t &stats, const char *what) const = 0;
 };
 
 // Lump specification; stores the name and size

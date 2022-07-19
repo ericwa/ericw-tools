@@ -841,7 +841,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, std::any &stats)
+static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, content_stats_base_t &stats)
 {
     const mapbrush_t *mapbrush;
     qvec3d rotate_offset{};
@@ -1063,9 +1063,9 @@ hullnum 0 does not contain clip brushes.
 */
 void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 {
-    std::any stats = qbsp_options.target_game->create_content_stats();
+    auto stats = qbsp_options.target_game->create_content_stats();
 
-    Brush_LoadEntity(entity, entity, hullnum, stats);
+    Brush_LoadEntity(entity, entity, hullnum, *stats);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -1085,12 +1085,12 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum, stats);
+                Brush_LoadEntity(entity, source, hullnum, *stats);
             }
         }
     }
 
-    qbsp_options.target_game->print_content_stats(stats, "brushes");
+    qbsp_options.target_game->print_content_stats(*stats, "brushes");
 }
 
 void bspbrush_t::update_bounds()
