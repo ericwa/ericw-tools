@@ -636,7 +636,7 @@ void TJunc(node_t *headnode)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
-	tjunc_stats_t stats;
+    tjunc_stats_t stats{};
 	std::unordered_set<face_t *> faces;
 
 	FindFaces_r(headnode, faces);
