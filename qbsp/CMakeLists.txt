@@ -31,7 +31,7 @@ set(QBSP_SOURCES
 	${QBSP_INCLUDES})
 
 add_library(libqbsp STATIC ${QBSP_SOURCES})
-target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json delabella::delabella)
+target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json)
 
 add_executable(qbsp main.cc)
 target_link_libraries(qbsp libqbsp)
