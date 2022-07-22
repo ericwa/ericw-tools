@@ -171,7 +171,7 @@ enum class tjunclevel_t
     ROTATE, // allow faces' vertices to be rotated to prevent zero-area triangles
     RETOPOLOGIZE, // if a face still has zero-area triangles, allow it to be re-topologized
                   // by splitting it into multiple fans
-    DELAUNAY // attempt a delaunay triangulation first, only falling back to the prior two steps if it fails.
+    MWT // attempt MWT first, only falling back to the prior two steps if it fails.
 };
 
 struct setting_tjunc : public setting_enum<tjunclevel_t>
@@ -254,8 +254,8 @@ public:
     setting_int32 leakdist{this, "leakdist", 2, &debugging_group, "space between leakfile points"};
     setting_bool forceprt1{
         this, "forceprt1", false, &debugging_group, "force a PRT1 output file even if PRT2 is required for vis"};
-    setting_tjunc tjunc{this, { "tjunc", "notjunc" }, tjunclevel_t::DELAUNAY,
-        { { "none", tjunclevel_t::NONE }, { "rotate", tjunclevel_t::ROTATE }, { "retopologize", tjunclevel_t::RETOPOLOGIZE }, { "delaunay", tjunclevel_t::DELAUNAY } },
+    setting_tjunc tjunc{this, { "tjunc", "notjunc" }, tjunclevel_t::MWT,
+        { { "none", tjunclevel_t::NONE }, { "rotate", tjunclevel_t::ROTATE }, { "retopologize", tjunclevel_t::RETOPOLOGIZE }, { "mwt", tjunclevel_t::MWT } },
         &debugging_group, "T-junction fix level"};
     setting_bool objexport{
         this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"};

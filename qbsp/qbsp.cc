@@ -732,7 +732,7 @@ static void UpdateEntLump(void)
 
     if (!qbsp_options.fAllverbose) {
         qbsp_options.fVerbose = false;
-        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
+        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
     }
 }
 
@@ -899,7 +899,7 @@ static void CreateSingleHull(const int hullnum)
         ProcessEntity(&entity, hullnum);
         if (!qbsp_options.fAllverbose) {
             qbsp_options.fVerbose = false; // don't print rest of entities
-            logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
+            logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
         }
     }
 }
@@ -914,7 +914,7 @@ static void CreateHulls(void)
     /* create the hulls sequentially */
     if (!qbsp_options.fNoverbose) {
         qbsp_options.fVerbose = true;
-        logging::mask |= (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
+        logging::mask |= (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
     }
 
     auto &hulls = qbsp_options.target_game->get_hull_sizes();
@@ -1050,7 +1050,7 @@ void ProcessFile()
 
     if (!qbsp_options.fAllverbose) {
         qbsp_options.fVerbose = false;
-        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS);
+        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
     }
 
     // calculate extents, if required
