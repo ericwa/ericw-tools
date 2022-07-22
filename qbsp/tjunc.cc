@@ -23,6 +23,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
 #include <atomic>
+#include <delabella.h>
 
 struct tjunc_stats_t
 {
@@ -46,6 +47,10 @@ struct tjunc_stats_t
 	std::atomic<size_t> faceretopology;
 	// # of faces that were successfully topologized by delaunay triangulation
 	std::atomic<size_t> delaunay;
+	// # of triangles computed by delaunay triangulation
+	std::atomic<size_t> tridelaunay;
+	// # of faces added by delaunay triangulation
+	std::atomic<size_t> facedelaunay;
 };
 
 inline std::optional<vec_t> PointOnEdge(const qvec3d &p, const qvec3d &edge_start, const qvec3d &edge_dir, float start = 0, float end = 1)
@@ -218,7 +223,7 @@ float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 // Check whether the given input triangle would be valid
 // on the given face and not have any other points
 // intersecting it.
-inline bool TriangleIsValid(size_t v0, size_t v1, size_t v2, const std::vector<size_t> &face, float angle_epsilon)
+inline bool TriangleIsValid(size_t v0, size_t v1, size_t v2, float angle_epsilon)
 {
 	if (AngleOfTriangle(map.bsp.dvertexes[v0], map.bsp.dvertexes[v1], map.bsp.dvertexes[v2]) < angle_epsilon ||
 		AngleOfTriangle(map.bsp.dvertexes[v1], map.bsp.dvertexes[v2], map.bsp.dvertexes[v0]) < angle_epsilon ||
@@ -269,11 +274,168 @@ static std::vector<size_t> CreateSuperFace(node_t *headnode, face_t *f, tjunc_st
 }
 
 #include <common/bsputils.hh>
+#include <fstream>
 
-static std::list<std::vector<size_t>> DelaunayFace(const face_t *f, const std::vector<size_t> &vertices)
+using qvectri = qvec<size_t, 3>;
+
+// check if the given triangle exists in the set of triangles
+// in any permutation
+std::optional<size_t> triangle_exists(const std::vector<qvectri> &triangles, size_t a, size_t b, size_t c)
 {
-	// commented until DelaBella updates to fix cocircular points
-#if 0
+	for (size_t i = 0; i < triangles.size(); i++) {
+		auto &tri = triangles[i];
+
+		for (size_t s = 0; s < 3; s++) {
+			if (tri[s] == a && tri[(s + 1) % 3] == b && tri[(s + 2) % 3] == c) {
+				return i;
+			}
+		}
+	}
+
+	return std::nullopt;
+}
+
+// find the triangles best suited to create a
+// fan out of in the given set of triangles.
+std::vector<size_t> find_best_fan(const std::vector<qvectri> &triangles, size_t num_vertices)
+{
+	// find the triangle with the most fannable vertices.
+	std::vector<size_t> best_triangles;
+
+	for (auto &tri : triangles) {
+		// try all three permutations
+		for (size_t perm = 0; perm < 3; perm++) {
+			size_t first = tri[perm];
+			size_t mid = tri[(perm + 1) % 3];
+			size_t last = tri[(perm + 2) % 3];
+
+			std::vector<size_t> my_tri;
+
+			// find any other that can be wound from this edge
+			// TODO: can optimize by only looping around the verts
+			// included in the triangle
+			for (; last != first; last = (last + 1) % num_vertices) {
+				auto ftri = triangle_exists(triangles, first, mid, last);
+
+				// no triangle found for A B C, so try again
+				// with A B D, etc.
+				if (ftri == std::nullopt) {
+					continue;
+				}
+
+				// found A B C, so go next (A C D)
+				my_tri.push_back(ftri.value());
+				mid = last;
+			}
+
+			if (best_triangles.empty() || my_tri.size() > best_triangles.size()) {
+				best_triangles = std::move(my_tri);
+			}
+		}
+	}
+
+	return best_triangles;
+}
+
+// find the seed vertex (vertex referenced by the most edges) of
+// the fan.
+size_t find_seed_vertex(const std::vector<qvectri> &triangles, const std::vector<size_t> &fan)
+{
+	std::unordered_set<size_t> verts{triangles[fan[0]].begin(), triangles[fan[0]].end()};
+
+	for (size_t i = 1; i < fan.size(); i++)
+	{
+		auto &tri = triangles[fan[i]];
+
+		// produce intersection
+		for (auto it = verts.begin(); it != verts.end(); ) {
+			if (std::find(tri.begin(), tri.end(), *it) == tri.end()) {
+				it = verts.erase(it);
+			} else {
+				it++;
+			}
+		}
+
+		// if there's only one vert left it has to be that one
+		if (verts.size() == 1) {
+			return *verts.begin();
+		}
+	}
+
+	// just pick whatever's left
+	return *verts.begin();
+}
+
+static std::list<std::vector<size_t>> compress_triangles_into_fans(std::vector<qvectri> &triangles, const std::vector<size_t> &vertices)
+{
+	std::list<std::vector<size_t>> tris_compiled;
+
+	while (triangles.size()) {
+		auto fan = find_best_fan(triangles, vertices.size());
+
+		Q_assert(fan.size());
+
+		// when we run into only 1 triangle fans left,
+		// just add the rest directly.
+		if (fan.size() == 1) {
+			for (auto &tri : triangles) {
+				tris_compiled.emplace_back(std::vector<size_t>{ vertices[tri[0]], vertices[tri[1]], vertices[tri[2]] });
+			}
+
+			triangles.clear();
+			break;
+		}
+
+		// a fan can be made! find the seed vertex
+		auto seed = find_seed_vertex(triangles, fan);
+
+		struct tri_verts_less_pred
+		{
+			size_t seed, vert_count;
+
+			bool operator()(const size_t &a, const size_t &b) const
+			{
+				size_t ka = a < seed ? vert_count + a : a;
+				size_t kb = b < seed ? vert_count + b : b;
+
+				return ka < kb;
+			}
+		};
+
+		// add all the verts and order them so they match
+		// the proper winding
+		std::set<size_t, tri_verts_less_pred> verts(tri_verts_less_pred { seed, vertices.size() });
+
+		for (auto tri_index : fan) {
+			auto &tri = triangles[tri_index];
+
+			for (auto &v : tri) {
+				verts.insert(v);
+			}
+		}
+
+		Q_assert(verts.size() >= 3);
+
+		// add the new winding
+		auto &out_tri = tris_compiled.emplace_back(verts.begin(), verts.end());
+
+		for (auto &v : out_tri) {
+			v = vertices[v];
+		}
+
+		// remove all of the fans from the triangle list
+		std::sort(fan.begin(), fan.end(), [](auto &l, auto &r) { return l > r; });
+
+		for (auto tri_index : fan) {
+			triangles.erase(triangles.begin() + tri_index);
+		}
+	}
+	
+	return tris_compiled;
+}
+
+static std::list<std::vector<size_t>> DelaunayFace(const face_t *f, const std::vector<size_t> &vertices, tjunc_stats_t &stats)
+{
 	auto p = map.planes[f->planenum];
 
 	if (f->planeside) {
@@ -290,40 +452,36 @@ static std::list<std::vector<size_t>> DelaunayFace(const face_t *f, const std::v
 		points_2d[i] = { qv::dot(map.bsp.dvertexes[vertices[i]], u), qv::dot(map.bsp.dvertexes[vertices[i]], v) };
 	}
 
-	IDelaBella* idb = IDelaBella::Create();
+	auto idb = IDelaBella2<double>::Create();
 
-	idb->SetErrLog([](auto stream, auto fmt, ...) {
-		logging::print("{}", fmt);
-		return 0;
-	}, nullptr);
-
+	std::vector<qvectri> triangles;
 	std::list<std::vector<size_t>> tris_compiled;
 
 	int verts = idb->Triangulate(points_2d.size(), &points_2d[0][0], &points_2d[0][1], sizeof(qvec2d));
 
-	// if positive, all ok 
-	if (verts > 0)
-	{
-		int tris = verts / 3;
-		const DelaBella_Triangle* dela = idb->GetFirstDelaunayTriangle();
-		for (int i = 0; i<tris; i++)
-		{
-			// do something with dela triangle 
-			// ...
-			tris_compiled.emplace_back(std::vector<size_t> { vertices[dela->v[0]->i], vertices[dela->v[1]->i], vertices[dela->v[2]->i] });
-			dela = dela->next;
+	if (verts > 0) {
+		bool bad_tri = false;
+		size_t tri_index = 0;
+
+		for (auto simplex = idb->GetFirstDelaunaySimplex(); tri_index < idb->GetNumPolygons() && simplex; tri_index++, simplex = simplex->next) {
+			bad_tri = bad_tri || !TriangleIsValid(vertices[simplex->v[0]->i], vertices[simplex->v[1]->i], vertices[simplex->v[2]->i], 0.01);
+
+			if (bad_tri) {
+				break;
+			}
+
+			triangles.emplace_back(simplex->v[0]->i, simplex->v[1]->i, simplex->v[2]->i);
 		}
 
-		c_delaunay++;
+		if (!bad_tri) {
+			stats.tridelaunay += triangles.size();
+			tris_compiled = compress_triangles_into_fans(triangles, vertices);
+		}
 	}
 
 	idb->Destroy();
 
-	// ...
-
 	return tris_compiled;
-#endif
-	return {};
 }
 
 /*
@@ -359,7 +517,7 @@ static std::list<std::vector<size_t>> RetopologizeFace(const face_t *f, const st
 			end = (seed + 2) % input.size();
 			auto v2 = input[end];
 
-			if (!TriangleIsValid(v0, v1, v2, input, 0.01)) {
+			if (!TriangleIsValid(v0, v1, v2, 0.01)) {
 				continue;
 			}
 
@@ -519,12 +677,11 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 	
 	// do delaunay first; it will generate optimal results for everything.
 	if (qbsp_options.tjunc.value() >= settings::tjunclevel_t::DELAUNAY) {
-		try
-		{
-			faces = DelaunayFace(f, superface);
-		}
-		catch (std::exception)
-		{
+		faces = DelaunayFace(f, superface, stats);
+
+		if (faces.size()) {
+			stats.delaunay++;
+			stats.facedelaunay += faces.size() - 1;
 		}
 	}
 	
@@ -542,7 +699,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 				auto v1 = superface[(i + x + 1) % superface.size()];
 				auto v2 = superface[(i + x + 2) % superface.size()];
 
-				if (!TriangleIsValid(v0, v1, v2, superface, 0.01)) {
+				if (!TriangleIsValid(v0, v1, v2, 0.01)) {
 					break;
 				}
 			}
@@ -663,10 +820,11 @@ void TJunc(node_t *headnode)
 	}
 	if (stats.delaunay) {
 		logging::print (logging::flag::STAT, "{:5} faces delaunay triangulated\n", stats.delaunay);
+		logging::print (logging::flag::STAT, "{:5} new faces added via delaunay triangulation (from {} triangles)\n", stats.facedelaunay, stats.tridelaunay);
 	}
 	if (stats.retopology) {
 		logging::print (logging::flag::STAT, "{:5} faces re-topologized\n", stats.retopology);
-		logging::print (logging::flag::STAT, "{:5} faces added by re-topology\n", stats.faceretopology);
+		logging::print (logging::flag::STAT, "{:5} new faces added by re-topology\n", stats.faceretopology);
 	}
 	if (stats.rotates) {
 		logging::print (logging::flag::STAT, "{:5} faces rotated\n", stats.rotates);

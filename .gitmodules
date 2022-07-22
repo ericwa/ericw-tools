@@ -13,3 +13,7 @@
 [submodule "3rdparty/Catch2"]
 	path = 3rdparty/Catch2
 	url = https://github.com/catchorg/Catch2
+[submodule "3rdparty/delabella"]
+	path = 3rdparty/delabella
+	url = https://github.com/msokalski/delabella.git
+	branch = hybrid
