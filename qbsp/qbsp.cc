@@ -251,6 +251,12 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
             maxedges.setValue(0, settings::source::GAME_TARGET);
         }
 
+        if (qbsp_options.target_version == &bspver_qbism) {
+            if (!software.isChanged()) {
+                software.setValue(false, settings::source::GAME_TARGET);
+            }
+        }
+
         if (!software.value() && !subdivide.isChanged()) {
             subdivide.setValue(0, settings::source::GAME_TARGET);
         }
