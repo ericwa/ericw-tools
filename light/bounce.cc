@@ -130,8 +130,6 @@ static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec
 
     const int lastBounceLightIndex = static_cast<int>(bouncelights.size()) - 1;
     bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
-
-    logging::print("bounce light added: {}\n", colorByStyle.at(0));
 }
 
 const std::vector<bouncelight_t> &BounceLights()
