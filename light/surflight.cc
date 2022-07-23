@@ -82,12 +82,13 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
             // FIXME: this only handles the "_sky_surface"  "red green blue" format.
             //        There are other more complex variants we could handle documented in the link above.
             // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-            texture_color = cfg.sky_surface.value();
+            texture_color = cfg.sky_surface.value() * 255.0;
         } else {
-            texture_color = qvec3f(Face_LookupTextureColor(bsp, face)) / 255.f;
+            texture_color = qvec3f(Face_LookupTextureColor(bsp, face));
         }
     }
 
+    texture_color.value() /= 255.0;
     texture_color.value() *= light_value; // Scale by light value
 
     // Calculate intensity...
