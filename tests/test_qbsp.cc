@@ -604,7 +604,7 @@ TEST_CASE("simple_sealed2", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map", {"-tjunc", "rotate"});
 
     // 1 solid leaf
     // 5 empty leafs around the button
@@ -643,7 +643,7 @@ TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
 
 TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map", {"-tjunc", "rotate"});
 
     REQUIRE(prt.has_value());
 
@@ -944,7 +944,7 @@ TEST_CASE("tjunc_angled_face", "[testmaps_q1]")
  */
 TEST_CASE("brush_clipping_order", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_brush_clipping_order.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_brush_clipping_order.map", {"-tjunc", "rotate"});
 
     REQUIRE(prt.has_value());
 
