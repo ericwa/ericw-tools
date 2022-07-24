@@ -37,7 +37,7 @@ using nlohmann::json;
  */
 size_t ExportMapPlane(size_t planenum)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
+    std::shared_lock lock(map_planes_lock);
     qbsp_plane_t &plane = map.planes.at(planenum);
 
     if (plane.outputplanenum.has_value())

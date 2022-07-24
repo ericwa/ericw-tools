@@ -315,8 +315,6 @@ against axial bounding boxes
 */
 static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspbrush_t &b)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-
     // add already-present planes
     std::vector<std::tuple<size_t, const side_t *>> planes;
 
@@ -324,7 +322,7 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
         int32_t planenum = f.planenum;
 
         if (f.planeside) {
-            planenum = FindPlane(-map.planes.at(f.planenum), nullptr);
+            planenum = FindPlane(-map.get_plane(f.planenum), nullptr);
         }
 
         int32_t outputplanenum = ExportMapPlane(planenum);
@@ -409,7 +407,7 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
                     // behind this plane, it is a proper edge bevel
                     for (; it != b.sides.end(); it++) {
                         auto &f = *it;
-                        const auto &plane = map.planes.at(f.planenum);
+                        const auto &plane = map.get_plane(f.planenum);
                         qplane3d temp = f.planeside ? -plane : plane;
 
                         // if this plane has allready been used, skip it
@@ -765,7 +763,7 @@ hull sizes
 static void BSPX_Brushes_AddModel(
     struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<bspbrush_t>> &brushes)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
+    std::shared_lock lock(map_planes_lock);
 
     bspxbrushes_permodel permodel{1, modelnum};
 

@@ -59,8 +59,7 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
         return node;
     }
 
-    const auto lock = std::lock_guard(map_planes_lock);
-    const auto &plane = map.planes.at(node->planenum);
+    const auto plane = map.get_plane(node->planenum);
     vec_t dist = plane.distance_to(point);
 
     if (dist > 0) {

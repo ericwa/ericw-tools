@@ -98,8 +98,7 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
-    const auto lock = std::lock_guard(map_planes_lock);
-    const auto &plane = map.planes.at(f1->planenum);
+    auto plane = map.get_plane(f1->planenum);
     planenormal = plane.normal;
     if (f1->planeside)
         planenormal = -planenormal;

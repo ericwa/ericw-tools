@@ -66,8 +66,7 @@ Face_Plane
 */
 qplane3d Face_Plane(const face_t *face)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-    const qplane3d &result = map.planes.at(face->planenum);
+    const qplane3d result = map.get_plane(face->planenum);
 
     if (face->planeside) {
         return -result;
@@ -78,8 +77,7 @@ qplane3d Face_Plane(const face_t *face)
 
 qplane3d Face_Plane(const side_t *face)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-    const qplane3d &result = map.planes.at(face->planenum);
+    const qplane3d result = map.get_plane(face->planenum);
 
     if (face->planeside) {
         return -result;
@@ -97,8 +95,7 @@ Note: this will not catch 0 area polygons
 */
 static void CheckFace(side_t *face, const mapface_t &sourceface)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-    const qbsp_plane_t &plane = map.planes.at(face->planenum);
+    const qbsp_plane_t plane = map.get_plane(face->planenum);
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
@@ -229,37 +226,34 @@ inline int plane_hash_fn(const qplane3d &p)
     return Q_rint(fabs(p.dist));
 }
 
-static void PlaneHash_Add(const qplane3d &p, int index)
-{
-    const auto lock = std::lock_guard(map_planes_lock);
-
-    const int hash = plane_hash_fn(p);
-    map.planehash[hash].push_back(index);
-}
-
 /*
  * NewPlane
  * - Returns a global plane number and the side that will be the front
  */
 static int NewPlane(const qplane3d &plane, planeside_t *side)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
+    size_t index;
 
-    vec_t len = qv::length(plane.normal);
+    {
+        std::unique_lock lock(map_planes_lock);
 
-    if (len < 1 - qbsp_options.epsilon.value() || len > 1 + qbsp_options.epsilon.value())
-        FError("invalid normal (vector length {:.4})", len);
+        vec_t len = qv::length(plane.normal);
 
-    size_t index = map.planes.size();
-    qbsp_plane_t &added_plane = map.planes.emplace_back(qbsp_plane_t{plane});
+        if (len < 1 - qbsp_options.epsilon.value() || len > 1 + qbsp_options.epsilon.value())
+            FError("invalid normal (vector length {:.4})", len);
 
-    bool out_flipped = NormalizePlane(added_plane, side != nullptr);
+        index = map.planes.size();
+        qbsp_plane_t &added_plane = map.planes.emplace_back(qbsp_plane_t{plane});
 
-    if (side) {
-        *side = out_flipped ? SIDE_BACK : SIDE_FRONT;
+        bool out_flipped = NormalizePlane(added_plane, side != nullptr);
+
+        if (side) {
+            *side = out_flipped ? SIDE_BACK : SIDE_FRONT;
+        }
+        
+        const int hash = plane_hash_fn(added_plane);
+        map.planehash[hash].push_back(index);
     }
-
-    PlaneHash_Add(added_plane, index);
 
     // add the back side, too
     FindPlane(-plane, nullptr);
@@ -274,20 +268,23 @@ static int NewPlane(const qplane3d &plane, planeside_t *side)
  */
 int FindPlane(const qplane3d &plane, planeside_t *side)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
+    {
+        std::shared_lock lock(map_planes_lock);
 
-    for (int i : map.planehash[plane_hash_fn(plane)]) {
-        const qbsp_plane_t &p = map.planes.at(i);
-        if (qv::epsilonEqual(p, plane)) {
-            if (side) {
-                *side = SIDE_FRONT;
+        for (int i : map.planehash[plane_hash_fn(plane)]) {
+            const qbsp_plane_t &p = map.planes.at(i);
+            if (qv::epsilonEqual(p, plane)) {
+                if (side) {
+                    *side = SIDE_FRONT;
+                }
+                return i;
+            } else if (side && qv::epsilonEqual(-p, plane)) {
+                *side = SIDE_BACK;
+                return i;
             }
-            return i;
-        } else if (side && qv::epsilonEqual(-p, plane)) {
-            *side = SIDE_BACK;
-            return i;
         }
     }
+
     return NewPlane(plane, side);
 }
 
@@ -297,7 +294,7 @@ int FindPlane(const qplane3d &plane, planeside_t *side)
  */
 int FindPositivePlane(int planenum)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
+    std::shared_lock lock(map_planes_lock);
 
     const auto &plane = map.planes[planenum];
 

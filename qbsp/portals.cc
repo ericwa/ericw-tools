@@ -218,20 +218,18 @@ BaseWindingForNode
 Creates a winding from the given node plane, clipped by all parent nodes.
 ================
 */
-#define	BASE_WINDING_EPSILON	0.001
-#define	SPLIT_WINDING_EPSILON	0.001
+constexpr vec_t	BASE_WINDING_EPSILON	= 0.001;
+constexpr vec_t SPLIT_WINDING_EPSILON	= 0.001;
 
 std::optional<winding_t> BaseWindingForNode(node_t *node)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-    auto plane = map.planes.at(node->planenum);
+    auto plane = map.get_plane(node->planenum);
 
     std::optional<winding_t> w = BaseWindingForPlane(plane);
 
     // clip by all the parents
-    for (node_t *np = node->parent; np && w; )
-    {
-        plane = map.planes.at(np->planenum);
+    for (node_t *np = node->parent; np && w; ) {
+        plane = map.get_plane(np->planenum);
 
         const planeside_t keep = (np->children[0].get() == node) ?
             SIDE_FRONT : SIDE_BACK;
@@ -256,8 +254,6 @@ portals in the node.
 */
 void MakeNodePortal(tree_t *tree, node_t *node, portalstats_t &stats)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-
     auto w = BaseWindingForNode(node);
 
     // clip the portal by all the other portals in the node
@@ -267,12 +263,12 @@ void MakeNodePortal(tree_t *tree, node_t *node, portalstats_t &stats)
         if (p->nodes[0] == node)
         {
             side = 0;
-            plane = map.planes.at(p->planenum);
+            plane = map.get_plane(p->planenum);
         }
         else if (p->nodes[1] == node)
         {
             side = 1;
-            plane = -map.planes.at(p->planenum);
+            plane = -map.get_plane(p->planenum);
         }
         else
             Error("CutNodePortals_r: mislinked portal");
@@ -722,8 +718,6 @@ Finds a brush side to use for texturing the given portal
 */
 static void FindPortalSide(portal_t *p)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-
     // decide which content change is strongest
     // solid > lava > water, etc
     contentflags_t viscontents =
@@ -734,11 +728,11 @@ static void FindPortalSide(portal_t *p)
     int planenum = p->onnode->planenum;
     side_t *bestside = nullptr;
     float bestdot = 0;
+    qbsp_plane_t p1 = map.get_plane(p->onnode->planenum);
 
     for (int j = 0; j < 2; j++)
     {
         node_t *n = p->nodes[j];
-        auto p1 = map.planes.at(p->onnode->planenum);
 
         // iterate the n->original_brushes vector in reverse order, so later brushes
         // in the map file order are prioritized

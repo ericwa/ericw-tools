@@ -290,8 +290,7 @@ static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, n
         return;
     }
 
-    const auto lock = std::lock_guard(map_planes_lock);
-    const qbsp_plane_t &splitplane = map.planes.at(node->planenum);
+    const qbsp_plane_t splitplane = map.get_plane(node->planenum);
 
     auto [frontFragment, backFragment] = SplitFace(std::move(face_copy), splitplane);
     if (frontFragment) {

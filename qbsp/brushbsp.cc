@@ -252,13 +252,11 @@ static int QuickTestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *
     }
 
     // box on plane side
-    const auto lock = std::lock_guard(map_planes_lock);
-    auto plane = map.planes[planenum];
+    auto plane = map.get_plane(planenum);
     int s = BoxOnPlaneSide(brush.bounds, plane);
 
     // if both sides, count the visible faces split
-    if (s == PSIDE_BOTH)
-    {
+    if (s == PSIDE_BOTH) {
         *numsplits += 3;
     }
 
@@ -289,11 +287,7 @@ static int TestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *numsp
     }
 
     // box on plane side
-    qbsp_plane_t plane;
-    {
-        const auto lock = std::lock_guard(map_planes_lock);
-        plane = map.planes[planenum];
-    }
+    qbsp_plane_t plane = map.get_plane(planenum);
 
     //int s = SphereOnPlaneSide(brush.sphere_origin, brush.sphere_radius, plane);
     int s = BoxOnPlaneSide(brush.bounds, plane);
@@ -607,11 +601,7 @@ https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L9
 */
 static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, int planenum)
 {
-    qplane3d split;
-    {
-        const auto lock = std::lock_guard(map_planes_lock);
-        split = map.planes.at(planenum);
-    }
+    qplane3d split = map.get_plane(planenum);
 
     twosided<std::unique_ptr<bspbrush_t>> result;
     
