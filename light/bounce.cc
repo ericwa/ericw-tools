@@ -91,6 +91,17 @@ qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
     return {127};
 }
 
+inline bouncelight_t &CreateBounceLight(const mface_t *face, const mbsp_t *bsp)
+{
+    unique_lock<mutex> lck{bouncelights_lock};
+    bouncelight_t &l = bouncelights.emplace_back();
+
+    const int lastBounceLightIndex = static_cast<int>(bouncelights.size()) - 1;
+    bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
+
+    return l;
+}
+
 static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3d> &colorByStyle, const qvec3d &surfnormal,
     vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
@@ -101,7 +112,7 @@ static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3d> &color
     }
     Q_assert(area > 0);
 
-    bouncelight_t l;
+    bouncelight_t &l = CreateBounceLight(face, bsp);
     l.poly = GLM_FacePoints(bsp, face);
     l.poly_edgeplanes = GLM_MakeInwardFacingEdgePlanes(l.poly);
     l.pos = pos;
@@ -124,12 +135,6 @@ static void AddBounceLight(const qvec3d &pos, const std::map<int, qvec3d> &color
     } else if (options.visapprox.value() == visapprox_t::RAYS) {
         l.bounds = EstimateVisibleBoundsAtPoint(pos);
     }
-
-    unique_lock<mutex> lck{bouncelights_lock};
-    bouncelights.push_back(l);
-
-    const int lastBounceLightIndex = static_cast<int>(bouncelights.size()) - 1;
-    bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
 }
 
 const std::vector<bouncelight_t> &BounceLights()
