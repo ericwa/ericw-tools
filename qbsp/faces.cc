@@ -477,7 +477,7 @@ see also FindPortalSide which populates p->side
 */
 static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
 {
-    side_t *side = p->side;
+    side_t *side = p->sides[pside];
     if (!side)
         return nullptr;	// portal does not bridge different visible contents
 
@@ -489,6 +489,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
     f->portal = p;
     f->lmshift = side->lmshift;
 
+#if 0
     bool make_face =
         qbsp_options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
     if (!make_face) {
@@ -505,7 +506,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
             }
         }
     }
-
+#endif
 
     if (pside)
     {
@@ -590,7 +591,7 @@ void MakeFaces(node_t *node)
 
     MakeFaces_r(node, stats);
 
-    logging::print(logging::flag::STAT, "{} makefaces\n", stats.c_nodefaces);
-    logging::print(logging::flag::STAT, "{} merged\n", stats.c_merge);
-    logging::print(logging::flag::STAT, "{} subdivided\n", stats.c_subdivide);
+    logging::print(logging::flag::STAT, "     {:8} makefaces\n", stats.c_nodefaces);
+    logging::print(logging::flag::STAT, "     {:8} merged\n", stats.c_merge);
+    logging::print(logging::flag::STAT, "     {:8} subdivided\n", stats.c_subdivide);
 }

@@ -931,9 +931,9 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
         return tree;
     }
 
-    logging::print(logging::flag::STAT, "{:5} brushes\n", c_brushes);
-    logging::print(logging::flag::STAT, "{:5} visible faces\n", c_faces);
-    logging::print(logging::flag::STAT, "{:5} nonvisible faces\n", c_nonvisfaces);
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", c_brushes);
+    logging::print(logging::flag::STAT, "     {:8} visible faces\n", c_faces);
+    logging::print(logging::flag::STAT, "     {:8} nonvisible faces\n", c_nonvisfaces);
 
     auto node = std::make_unique<node_t>();
 
@@ -945,9 +945,10 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     stats.leafstats = qbsp_options.target_game->create_content_stats();
     BuildTree_r(tree->headnode.get(), std::move(brushlist), stats);
 
-    logging::print(logging::flag::STAT, "{:5} visible nodes\n", stats.c_nodes - stats.c_nonvis);
-    logging::print(logging::flag::STAT, "{:5} nonvis nodes\n", stats.c_nonvis);
-    logging::print(logging::flag::STAT, "{:5} leafs\n", stats.c_leafs);
+    logging::print(logging::flag::STAT, "     {:8} visible nodes\n", stats.c_nodes - stats.c_nonvis);
+    logging::print(logging::flag::STAT, "     {:8} nonvis nodes\n", stats.c_nonvis);
+    logging::print(logging::flag::STAT, "     {:8} leafs\n", stats.c_leafs);
+    qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
 
     return tree;
 }

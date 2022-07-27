@@ -268,8 +268,6 @@ struct gamedef_t
     // FIXME: fix so that we don't have to pass a name here
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
-    virtual int32_t contents_priority(const contentflags_t &contents) const = 0;
-    virtual bool chops(const contentflags_t &) const = 0;
     virtual contentflags_t create_empty_contents() const = 0;
     virtual contentflags_t create_solid_contents() const = 0;
     virtual contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const = 0;
@@ -296,11 +294,13 @@ struct gamedef_t
     virtual bool contents_seals_map(const contentflags_t &contents) const = 0;
     virtual contentflags_t contents_remap_for_export(const contentflags_t &contents) const = 0;
     virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
-    virtual contentflags_t visible_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
-    // counterpart to visible_contents. for a portal with contents from `a` to `b`, returns whether a viewer in `a`
-    // should see a face
-    virtual bool directional_visible_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
-    virtual bool contents_contains(const contentflags_t &a, const contentflags_t &b) const = 0;
+    // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
+    virtual contentflags_t portal_visible_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
+    // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined by
+    // portal_visible_contents, should the `brushside_side` of the brushside generate a face?
+    // e.g. liquids generate front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in
+    // with _mirrorinside
+    virtual bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents, planeside_t brushside_side) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;

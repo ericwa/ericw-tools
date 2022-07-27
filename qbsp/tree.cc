@@ -79,39 +79,6 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     Q_assert(node->markfaces.empty());
 }
 
-void DetailToSolid(node_t *node)
-{
-    if (node->planenum == PLANENUM_LEAF) {
-        if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-            return;
-        }
-
-        // We need to remap CONTENTS_DETAIL to a standard quake content type
-        if (node->contents.is_detail_solid(qbsp_options.target_game)) {
-            node->contents = qbsp_options.target_game->create_solid_contents();
-        } else if (node->contents.is_detail_illusionary(qbsp_options.target_game)) {
-            node->contents = qbsp_options.target_game->create_empty_contents();
-        }
-        /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
-         * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
-         */
-        return;
-    } else {
-        DetailToSolid(node->children[0].get());
-        DetailToSolid(node->children[1].get());
-
-        // If both children are solid, we can merge the two leafs into one.
-        // DarkPlaces has an assertion that fails if both children are
-        // solid.
-        if (node->children[0]->contents.is_solid(qbsp_options.target_game) &&
-            node->children[1]->contents.is_solid(qbsp_options.target_game)) {
-            // This discards any faces on-node. Should be safe (?)
-            ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
-        }
-        // fixme-brushbsp: merge with PruneNodes
-    }
-}
-
 static void PruneNodes_R(node_t *node, int &count_pruned)
 {
     if (node->planenum == PLANENUM_LEAF) {
@@ -127,6 +94,13 @@ static void PruneNodes_R(node_t *node, int &count_pruned)
         ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         ++count_pruned;
     }
+
+    // DarkPlaces has an assertion that fails if both children are
+    // solid.
+
+    /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
+     * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
+     */
 
     // fixme-brushbsp: corner case where two solid leafs shouldn't merge is two noclipfaces fence brushes touching
     // fixme-brushbsp: also merge other content types

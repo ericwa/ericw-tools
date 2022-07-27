@@ -13,7 +13,7 @@ TEST_CASE("StripFilename", "[common]")
     REQUIRE("" == fs::path("bar.txt").parent_path());
 }
 
-TEST_CASE("q1 contents", "[common][!mayfail]")
+TEST_CASE("q1 contents", "[common]")
 {
     auto* game_q1 = bspver_q1.game;
 
@@ -54,6 +54,16 @@ TEST_CASE("q1 contents", "[common][!mayfail]")
 
         CHECK(combined.native == CONTENTS_WATER);
         CHECK(combined.is_detail_illusionary(game_q1));
+    }
+
+    SECTION("detail properties") {
+        CHECK(detail_solid.is_any_detail(game_q1));
+        CHECK(detail_fence.is_any_detail(game_q1));
+        CHECK(detail_illusionary.is_any_detail(game_q1));
+
+        CHECK(detail_solid.is_any_solid(game_q1));
+        CHECK(!detail_fence.is_any_solid(game_q1));
+        CHECK(!detail_illusionary.is_any_solid(game_q1));
     }
 }
 

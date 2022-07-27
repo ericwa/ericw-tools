@@ -720,16 +720,20 @@ static void FindPortalSide(portal_t *p)
 {
     // decide which content change is strongest
     // solid > lava > water, etc
+
+    // if either is "_noclipfaces" then we don't require a content change
     contentflags_t viscontents =
-        qbsp_options.target_game->visible_contents(p->nodes[0]->contents, p->nodes[1]->contents);
+        qbsp_options.target_game->portal_visible_contents(p->nodes[0]->contents, p->nodes[1]->contents);
     if (viscontents.is_empty(qbsp_options.target_game))
         return;
 
     int planenum = p->onnode->planenum;
-    side_t *bestside = nullptr;
+    // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
+    side_t *bestside[2] = {nullptr, nullptr};
     float bestdot = 0;
     qbsp_plane_t p1 = map.get_plane(p->onnode->planenum);
 
+    // check brushes on both sides of the portal
     for (int j = 0; j < 2; j++)
     {
         node_t *n = p->nodes[j];
@@ -739,38 +743,61 @@ static void FindPortalSide(portal_t *p)
         for (auto it = n->original_brushes.rbegin(); it != n->original_brushes.rend(); ++it)
         {
             auto *brush = *it;
-            if (!qbsp_options.target_game->contents_contains(brush->contents, viscontents))
+            const bool generate_outside_face = qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_FRONT);
+            const bool generate_inside_face = qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_BACK);
+
+            if (!(generate_outside_face || generate_inside_face)) {
                 continue;
+            }
             for (auto &side : brush->sides)
             {
-                // fixme-brushbsp: port these
-//                if (side.bevel)
-//                    continue;
-//                if (side.texinfo == TEXINFO_NODE)
+                if (side.bevel)
+                    continue;
+                // fixme-brushbsp: restore
+//                if (!side.visible)
 //                    continue;		// non-visible
-                if (side.planenum == planenum)
-                {	// exact match
-                    bestside = &side;
-                    goto gotit;
+                if (side.planenum == planenum) {
+                    // exact match (undirectional)
+
+                    // because the brush is on j of the positive plane, the brushside must be facing away from j
+                    Q_assert(side.planeside == !j);
+
+                    // see which way(s) we want to generate faces - we could be a brush on either side of
+                    // the portal, generating either a outward face (common case) or an inward face (liquids) or both.
+                    if (generate_outside_face) {
+                        if (!bestside[!j]) {
+                            bestside[!j] = &side;
+                        }
+                    }
+                    if (generate_inside_face) {
+                        if (!bestside[j]) {
+                            bestside[j] = &side;
+                        }
+                    }
+
+                    break;
                 }
                 // see how close the match is
-                auto p2 = map.planes.at(side.planenum);
-                float dot = qv::dot(p1.normal, p2.normal);
-                if (dot > bestdot)
-                {
-                    bestdot = dot;
-                    bestside = &side;
-                }
+                // fixme-brushbsp: verify that this actually works, restore it
+//                auto p2 = map.planes.at(side.planenum);
+//                double dot = qv::dot(p1.normal, p2.normal);
+//                if (dot > bestdot)
+//                {
+//                    bestdot = dot;
+//                    bestside[j] = &side;
+//                }
             }
         }
     }
 
-gotit:
-    if (!bestside)
+    if (!bestside[0] && !bestside[1])
         logging::print("WARNING: side not found for portal\n");
 
     p->sidefound = true;
-    p->side = bestside;
+
+    for (int i = 0; i < 2; ++i) {
+        p->sides[i] = bestside[i];
+    }
 }
 
 /*
@@ -801,8 +828,11 @@ static void MarkVisibleSides_r(node_t *node)
             continue;		// edge of world
         if (!p->sidefound)
             FindPortalSide(p);
-        if (p->side)
-            p->side->visible = true;
+        for (int i = 0; i < 2; ++i) {
+            if (p->sides[i]) {
+                p->sides[i]->visible = true;
+            }
+        }
     }
 }
 

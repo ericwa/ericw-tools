@@ -718,47 +718,50 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
     // FIXME: unsure what the expected number of visclusters is, does sky get one?
 }
 
-TEST_CASE("water_detail_illusionary", "[testmaps_q1][!mayfail]")
+TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
 {
     static const std::string basic_mapname = "qbsp_water_detail_illusionary.map";
     static const std::string mirrorinside_mapname = "qbsp_water_detail_illusionary_mirrorinside.map";
 
-    auto mapname = GENERATE_REF(basic_mapname, mirrorinside_mapname);
-    const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
+    for (const auto& mapname : {basic_mapname, mirrorinside_mapname}) {
+        DYNAMIC_SECTION("testing " << mapname) {
+            const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
-    REQUIRE(prt.has_value());
+            REQUIRE(prt.has_value());
 
-    const qvec3d inside_water_and_fence{-20, -52, 124};
-    const qvec3d inside_fence{-20, -52, 172};
+            const qvec3d inside_water_and_fence{-20, -52, 124};
+            const qvec3d inside_fence{-20, -52, 172};
 
-    CHECK(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_water_and_fence)->contents == CONTENTS_WATER);
-    CHECK(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_fence)->contents == CONTENTS_EMPTY);
+            CHECK(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_water_and_fence)->contents == CONTENTS_WATER);
+            CHECK(BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_fence)->contents == CONTENTS_EMPTY);
 
-    const qvec3d underwater_face_pos{-40, -52, 124};
-    const qvec3d above_face_pos{-40, -52, 172};
+            const qvec3d underwater_face_pos{-40, -52, 124};
+            const qvec3d above_face_pos{-40, -52, 172};
 
-    // make sure the detail_illusionary face underwater isn't clipped away
-    auto* underwater_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0});
-    auto* underwater_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {1, 0, 0});
+            // make sure the detail_illusionary face underwater isn't clipped away
+            auto *underwater_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {-1, 0, 0});
+            auto *underwater_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], underwater_face_pos, {1, 0, 0});
 
-    auto* above_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0});
-    auto* above_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {1, 0, 0});
+            auto *above_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {-1, 0, 0});
+            auto *above_face_inner = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], above_face_pos, {1, 0, 0});
 
-    REQUIRE(nullptr != underwater_face);
-    REQUIRE(nullptr != above_face);
+            REQUIRE(nullptr != underwater_face);
+            REQUIRE(nullptr != above_face);
 
-    CHECK(std::string("{trigger") == Face_TextureName(&bsp, underwater_face));
-    CHECK(std::string("{trigger") == Face_TextureName(&bsp, above_face));
+            CHECK(std::string("{trigger") == Face_TextureName(&bsp, underwater_face));
+            CHECK(std::string("{trigger") == Face_TextureName(&bsp, above_face));
 
-    if (mapname == mirrorinside_mapname) {
-        REQUIRE(underwater_face_inner != nullptr);
-        REQUIRE(above_face_inner != nullptr);
+            if (mapname == mirrorinside_mapname) {
+                REQUIRE(underwater_face_inner != nullptr);
+                REQUIRE(above_face_inner != nullptr);
 
-        CHECK(std::string("{trigger") == Face_TextureName(&bsp, underwater_face_inner));
-        CHECK(std::string("{trigger") == Face_TextureName(&bsp, above_face_inner));
-    } else {
-        CHECK(underwater_face_inner == nullptr);
-        CHECK(above_face_inner == nullptr);
+                CHECK(std::string("{trigger") == Face_TextureName(&bsp, underwater_face_inner));
+                CHECK(std::string("{trigger") == Face_TextureName(&bsp, above_face_inner));
+            } else {
+                CHECK(underwater_face_inner == nullptr);
+                CHECK(above_face_inner == nullptr);
+            }
+        }
     }
 }
 
@@ -778,6 +781,46 @@ TEST_CASE("noclipfaces", "[testmaps_q1]")
 
     CHECK(prt->portals.size() == 0);
     CHECK(prt->portalleafs == 1);
+}
+
+/**
+ * _noclipfaces 1 detail_wall meeting a _noclipfaces 0 one.
+ *
+ * Currently, to simplify the implementation, we're treating that the same as if both had _noclipfaces 1
+ */
+TEST_CASE("noclipfaces_junction")
+{
+    const std::vector<std::string> maps{
+        "qbsp_noclipfaces_junction.map",
+        "q2_noclipfaces_junction.map"
+    };
+
+    for (const auto& map : maps) {
+        const bool q2 = (map.find("q2") == 0);
+
+        DYNAMIC_SECTION(map) {
+            const auto [bsp, bspx, prt] =
+                q2 ? LoadTestmapQ2(map) : LoadTestmapQ1(map);
+
+            CHECK(bsp.dfaces.size() == 12);
+
+            const qvec3d portal_pos {96, 56, 32};
+
+            auto *pos_x = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], portal_pos, {1, 0, 0});
+            auto *neg_x = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], portal_pos, {-1, 0, 0});
+
+            REQUIRE(pos_x != nullptr);
+            REQUIRE(neg_x != nullptr);
+
+            if (q2) {
+                CHECK(std::string("e1u1/wndow1_2") == Face_TextureName(&bsp, pos_x));
+                CHECK(std::string("e1u1/window1") == Face_TextureName(&bsp, neg_x));
+            } else {
+                CHECK(std::string("{trigger") == Face_TextureName(&bsp, pos_x));
+                CHECK(std::string("blood1") == Face_TextureName(&bsp, neg_x));
+            }
+        }
+    }
 }
 
 /**
@@ -850,11 +893,14 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
     CHECK(prt->portalleafs == 1);
 }
 
-TEST_CASE("detail_doesnt_seal", "[testmaps_q1]")
+/**
+ * Since moving to a qbsp3 codebase, detail seals by default.
+ */
+TEST_CASE("detail_seals", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_seal.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_seals.map");
 
-    REQUIRE_FALSE(prt.has_value());
+    CHECK(prt.has_value());
 }
 
 TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
@@ -867,22 +913,29 @@ TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
         // check for a face under the start pos
         const qvec3d floor_under_start{-56, -72, 64};
         auto *floor_under_start_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_start, {0, 0, 1});
-        REQUIRE(nullptr != floor_under_start_face);
+        CHECK(nullptr != floor_under_start_face);
     }
 
     {
         // floor face should be clipped away by detail
         const qvec3d floor_inside_detail{64, -72, 64};
         auto *floor_inside_detail_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_inside_detail, {0, 0, 1});
-        REQUIRE(nullptr == floor_inside_detail_face);
+        CHECK(nullptr == floor_inside_detail_face);
     }
 
+    // make sure the detail face exists
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {32, -72, 136}, {-1, 0, 0}));
+
+#if 0
+// fixme-brushbsp: with qbsp3 code, the strucutral node is actually clippped away.
+// we could repurpose this test case to test func_detail_wall (q2 window) in which case it would not be clipped away.
     {
         // but the sturctural nodes/leafs should not be clipped away by detail
         const qvec3d covered_by_detail{48, -88, 128};
         auto *covered_by_detail_node = BSP_FindNodeAtPoint(&bsp, &bsp.dmodels[0], covered_by_detail, {-1, 0, 0});
-        REQUIRE(nullptr != covered_by_detail_node);
+        CHECK(nullptr != covered_by_detail_node);
     }
+#endif
 }
 
 TEST_CASE("merge", "[testmaps_q1]")
@@ -905,9 +958,9 @@ TEST_CASE("merge", "[testmaps_q1]")
     CHECK(top_winding.bounds().maxs() == exp_bounds.maxs());
 }
 
-TEST_CASE("tjunc_many_sided_face", "[testmaps_q1][!mayfail]")
+TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map", {"-tjunc", "rotate"});
 
     REQUIRE(prt.has_value());
 
@@ -1029,10 +1082,12 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
 
     // check the empty leafs
     for (int i = 1; i < 7; ++i) {
-        auto& leaf = bsp.dleafs[i];
-        CHECK(CONTENTS_EMPTY == leaf.contents);
+        DYNAMIC_SECTION("leaf " << i) {
+            auto &leaf = bsp.dleafs[i];
+            CHECK(CONTENTS_EMPTY == leaf.contents);
 
-        CHECK(1 == leaf.nummarksurfaces);
+            CHECK(1 == leaf.nummarksurfaces);
+        }
     }
 
     REQUIRE(6 == bsp.dfaces.size());

@@ -495,6 +495,25 @@ static bool IsTrigger(const mapentity_t *entity)
     return trigger_pos == (tex.size() - strlen("trigger"));
 }
 
+static void CountLeafs_r(node_t *node, content_stats_base_t& stats)
+{
+    if (node->planenum == PLANENUM_LEAF) {
+        qbsp_options.target_game->count_contents_in_stats(node->contents, stats);
+        return;
+    }
+    CountLeafs_r(node->children[0].get(), stats);
+    CountLeafs_r(node->children[1].get(), stats);
+}
+
+static void CountLeafs(node_t *headnode)
+{
+    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+
+    auto stats = qbsp_options.target_game->create_content_stats();
+    CountLeafs_r(headnode, *stats);
+    qbsp_options.target_game->print_content_stats(*stats, "leafs");
+}
+
 /*
 ===============
 ProcessEntity
@@ -596,7 +615,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 MakeTreePortals(tree.get());
                 FillOutside(entity, tree.get(), hullnum);
                 PruneNodes(tree->headnode.get());
-                DetailToSolid(tree->headnode.get());
             }
         }
         ExportClipNodes(entity, tree->headnode.get(), hullnum);
@@ -652,10 +670,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         // needs to come after any face creation
         MakeMarkFaces(tree->headnode.get());
 
-        // convert detail leafs to solid (in case we didn't make the call above)
-        DetailToSolid(tree->headnode.get());
-
-        // fixme-brushbsp: prune nodes
+        CountLeafs(tree->headnode.get());
 
         // output vertices first, since TJunc needs it
         EmitVertices(tree->headnode.get());

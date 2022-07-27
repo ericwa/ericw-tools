@@ -1,0 +1,42 @@
+// Game: Quake
+// Format: Valve
+// entity 0
+{
+"mapversion" "220"
+"classname" "worldspawn"
+"wad" "deprecated/free_wad.wad;deprecated/fence.wad;deprecated/origin.wad;deprecated/hintskip.wad"
+"_wateralpha" "0.5"
+"_tb_def" "builtin:Quake.fgd"
+}
+// entity 1
+{
+"classname" "func_detail_wall"
+"_noclipfaces" "1"
+// brush 0
+{
+( 16 16 48 ) ( 16 17 48 ) ( 16 16 49 ) {trigger [ 0 -1 0 56 ] [ 0 0 -1 0 ] 0 2 2
+( 16 16 48 ) ( 16 16 49 ) ( 17 16 48 ) {trigger [ 1 0 0 -40 ] [ 0 0 -1 0 ] 0 2 2
+( 16 16 0 ) ( 17 16 0 ) ( 16 17 0 ) {trigger [ -1 0 0 40 ] [ 0 -1 0 56 ] 0 2 2
+( 96 96 64 ) ( 96 97 64 ) ( 97 96 64 ) {trigger [ 1 0 0 -40 ] [ 0 -1 0 56 ] 0 2 2
+( 96 96 64 ) ( 97 96 64 ) ( 96 96 65 ) {trigger [ -1 0 0 40 ] [ 0 0 -1 0 ] 0 2 2
+( 96 96 64 ) ( 96 96 65 ) ( 96 97 64 ) {trigger [ 0 1 0 -56 ] [ 0 0 -1 0 ] 0 2 2
+}
+}
+// entity 2
+{
+"classname" "func_detail_wall"
+// brush 0
+{
+( 96 16 48 ) ( 96 17 48 ) ( 96 16 49 ) blood1 [ 0 -1 0 56 ] [ 0 0 -1 0 ] 0 2 2
+( 96 16 48 ) ( 96 16 49 ) ( 97 16 48 ) blood1 [ 1 0 0 -40 ] [ 0 0 -1 0 ] 0 2 2
+( 96 16 0 ) ( 97 16 0 ) ( 96 17 0 ) blood1 [ -1 0 0 40 ] [ 0 -1 0 56 ] 0 2 2
+( 176 96 64 ) ( 176 97 64 ) ( 177 96 64 ) blood1 [ 1 0 0 -40 ] [ 0 -1 0 56 ] 0 2 2
+( 176 96 64 ) ( 177 96 64 ) ( 176 96 65 ) blood1 [ -1 0 0 40 ] [ 0 0 -1 0 ] 0 2 2
+( 176 96 64 ) ( 176 96 65 ) ( 176 97 64 ) blood1 [ 0 1 0 -56 ] [ 0 0 -1 0 ] 0 2 2
+}
+}
+// entity 3
+{
+"classname" "info_player_start"
+"origin" "64 48 88"
+}
