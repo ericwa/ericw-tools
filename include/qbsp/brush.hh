@@ -23,6 +23,7 @@
 
 #include <qbsp/winding.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/map.hh>
 #include <common/aabb.hh>
 #include <optional>
 
@@ -32,8 +33,8 @@ struct maptexinfo_t;
 struct side_t
 {
     winding_t w;
-    int planenum;
-    planeside_t planeside; // which side is the front of the face
+    qbsp_plane_t plane;
+    bool plane_flipped; // whether `plane` is flipped or not
     int texinfo;
 
     int16_t lmshift;
@@ -89,7 +90,3 @@ enum class rotation_t
 std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
     const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum);
 void FreeBrushes(mapentity_t *ent);
-
-int FindPlane(const qplane3d &plane, planeside_t *side);
-int FindPositivePlane(int planenum);
-int FindPositivePlane(const qplane3d &plane, planeside_t *side);

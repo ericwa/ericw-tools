@@ -28,6 +28,8 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/outside.hh>
 #include <qbsp/tree.hh>
+// TEMP
+#include <qbsp/writebsp.hh>
 
 #include <atomic>
 
@@ -36,7 +38,7 @@
 contentflags_t ClusterContents(const node_t *node)
 {
     /* Pass the leaf contents up the stack */
-    if (node->planenum == PLANENUM_LEAF)
+    if (node->is_leaf)
         return node->contents;
 
     return qbsp_options.target_game->cluster_contents(
@@ -81,8 +83,7 @@ Flowing from side s to side !s
 */
 bool Portal_EntityFlood(const portal_t *p, int32_t s)
 {
-    if (p->nodes[0]->planenum != PLANENUM_LEAF
-        || p->nodes[1]->planenum != PLANENUM_LEAF) {
+    if (!p->nodes[0]->is_leaf || !p->nodes[1]->is_leaf) {
         FError("Portal_EntityFlood: not a leaf");
     }
 
@@ -163,12 +164,11 @@ void MakeHeadnodePortals(tree_t *tree)
     int i, j, n;
     portal_t *p, *portals[6];
     qbsp_plane_t bplanes[6];
-    planeside_t side;
 
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = tree->bounds.grow(SIDESPACE);
 
-    tree->outside_node.planenum = PLANENUM_LEAF;
+    tree->outside_node.is_leaf = true;
     tree->outside_node.contents = qbsp_options.target_game->create_solid_contents();
     tree->outside_node.portals = NULL;
 
@@ -190,13 +190,15 @@ void MakeHeadnodePortals(tree_t *tree)
                 pl.normal[i] = 1;
                 pl.dist = bounds[j][i];
             }
-            p->planenum = FindPlane(pl, &side);
+            bool side;
+            p->plane = qbsp_plane_t::from_plane(pl, true, side);
 
             p->winding = BaseWindingForPlane(pl);
-            if (side)
+            if (side) {
                 AddPortalToNodes(p, &tree->outside_node, tree->headnode.get());
-            else
+            } else {
                 AddPortalToNodes(p, tree->headnode.get(), &tree->outside_node);
+            }
         }
 
     // clip the basewindings by all the other planes
@@ -223,18 +225,14 @@ constexpr vec_t SPLIT_WINDING_EPSILON	= 0.001;
 
 std::optional<winding_t> BaseWindingForNode(node_t *node)
 {
-    auto plane = map.get_plane(node->planenum);
-
-    std::optional<winding_t> w = BaseWindingForPlane(plane);
+    std::optional<winding_t> w = BaseWindingForPlane(node->plane);
 
     // clip by all the parents
     for (node_t *np = node->parent; np && w; ) {
-        plane = map.get_plane(np->planenum);
-
         const planeside_t keep = (np->children[0].get() == node) ?
             SIDE_FRONT : SIDE_BACK;
 
-        w = w->clip(plane, BASE_WINDING_EPSILON, false)[keep];
+        w = w->clip(np->plane, BASE_WINDING_EPSILON, false)[keep];
 
         node = np;
         np = np->parent;
@@ -259,19 +257,17 @@ void MakeNodePortal(tree_t *tree, node_t *node, portalstats_t &stats)
     // clip the portal by all the other portals in the node
     int side = -1;
     for (auto *p = node->portals; p && w; p = p->next[side]) {
-        qbsp_plane_t plane;
-        if (p->nodes[0] == node)
-        {
+        qplane3d plane;
+
+        if (p->nodes[0] == node) {
             side = 0;
-            plane = map.get_plane(p->planenum);
-        }
-        else if (p->nodes[1] == node)
-        {
+            plane = p->plane;
+        } else if (p->nodes[1] == node) {
             side = 1;
-            plane = -map.get_plane(p->planenum);
-        }
-        else
+            plane = -p->plane;
+        } else {
             Error("CutNodePortals_r: mislinked portal");
+        }
 
         w = w->clip(plane, 0.1, false)[SIDE_FRONT];
     }
@@ -288,7 +284,7 @@ void MakeNodePortal(tree_t *tree, node_t *node, portalstats_t &stats)
     }
 
     portal_t *new_portal = tree->create_portal();
-    new_portal->planenum = node->planenum;
+    new_portal->plane = node->plane;
     new_portal->onnode = node;
     new_portal->winding = w;
     AddPortalToNodes(new_portal, node->children[0].get(), node->children[1].get());
@@ -304,9 +300,7 @@ children have portals instead of node.
 */
 void SplitNodePortals(tree_t *tree, node_t *node, portalstats_t &stats)
 {
-    const auto lock = std::lock_guard(map_planes_lock);
-
-    const auto plane = map.planes.at(node->planenum);
+    const auto &plane = node->plane;
     node_t *f = node->children[0].get();
     node_t *b = node->children[1].get();
 
@@ -430,8 +424,10 @@ void MakeTreePortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
             break;
         }
     }
-    if (node->planenum == PLANENUM_LEAF)
+
+    if (node->is_leaf) {
         return;
+    }
 
     MakeNodePortal(tree, node, stats);
     SplitNodePortals(tree, node, stats);
@@ -461,7 +457,7 @@ static void AssertNoPortals_r(node_t *node)
 {
     Q_assert(!node->portals);
 
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         AssertNoPortals_r(node->children[0].get());
         AssertNoPortals_r(node->children[1].get());
     }
@@ -486,7 +482,7 @@ static void ApplyArea_r(node_t *node)
 {
     node->area = map.c_areas;
 
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         ApplyArea_r(node->children[0].get());
         ApplyArea_r(node->children[1].get());
     }
@@ -495,7 +491,7 @@ static void ApplyArea_r(node_t *node)
 static mapentity_t *AreanodeEntityForLeaf(node_t *node)
 {
     // if detail cluster, search the children recursively
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         if (auto *child0result = AreanodeEntityForLeaf(node->children[0].get()); child0result) {
             return child0result;
         }
@@ -517,7 +513,7 @@ FloodAreas_r
 */
 static void FloodAreas_r(node_t *node)
 {
-    if ((node->planenum == PLANENUM_LEAF || node->detail_separator) && (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)) {
+    if ((node->is_leaf || node->detail_separator) && (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)) {
         // grab the func_areanode entity
         mapentity_t *entity = AreanodeEntityForLeaf(node);
 
@@ -557,7 +553,7 @@ static void FloodAreas_r(node_t *node)
     node->area = map.c_areas;
 
     // propagate area assignment to descendants if we're a cluster
-    if (!(node->planenum == PLANENUM_LEAF)) {
+    if (!node->is_leaf) {
         ApplyArea_r(node);
     }
 
@@ -611,7 +607,7 @@ area set, flood fill out from there
 */
 static void SetAreaPortalAreas_r(node_t *node)
 {
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         SetAreaPortalAreas_r(node->children[0].get());
         SetAreaPortalAreas_r(node->children[1].get());
         return;
@@ -727,11 +723,10 @@ static void FindPortalSide(portal_t *p)
     if (viscontents.is_empty(qbsp_options.target_game))
         return;
 
-    int planenum = p->onnode->planenum;
     // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
     side_t *bestside[2] = {nullptr, nullptr};
     float bestdot = 0;
-    qbsp_plane_t p1 = map.get_plane(p->onnode->planenum);
+    const qplane3d &p1 = p->onnode->plane;
 
     // check brushes on both sides of the portal
     for (int j = 0; j < 2; j++)
@@ -756,18 +751,18 @@ static void FindPortalSide(portal_t *p)
                 // fixme-brushbsp: restore
 //                if (!side.visible)
 //                    continue;		// non-visible
-                if (side.planenum == planenum) {
+                if (qv::epsilonEqual(side.plane, p1)) {
                     // exact match (undirectional)
 
                     // because the brush is on j of the positive plane, the brushside must be facing away from j
-                    Q_assert(side.planeside == !j);
+                    Q_assert(side.plane_flipped == !j);
 
                     // see which way(s) we want to generate faces - we could be a brush on either side of
                     // the portal, generating either a outward face (common case) or an inward face (liquids) or both.
                     if (generate_outside_face) {
                         if (!bestside[!j]) {
                             bestside[!j] = &side;
-                        }
+                	}
                     }
                     if (generate_inside_face) {
                         if (!bestside[j]) {
@@ -779,16 +774,15 @@ static void FindPortalSide(portal_t *p)
                 }
                 // see how close the match is
                 // fixme-brushbsp: verify that this actually works, restore it
-//                auto p2 = map.planes.at(side.planenum);
+//                const auto &p2 = side.plane;
 //                double dot = qv::dot(p1.normal, p2.normal);
-//                if (dot > bestdot)
-//                {
+//                if (dot > bestdot) {
 //                    bestdot = dot;
 //                    bestside[j] = &side;
 //                }
+                }
             }
         }
-    }
 
     if (!bestside[0] && !bestside[1])
         logging::print("WARNING: side not found for portal\n");
@@ -797,7 +791,7 @@ static void FindPortalSide(portal_t *p)
 
     for (int i = 0; i < 2; ++i) {
         p->sides[i] = bestside[i];
-    }
+}
 }
 
 /*
@@ -808,8 +802,7 @@ MarkVisibleSides_r
 */
 static void MarkVisibleSides_r(node_t *node)
 {
-    if (node->planenum != PLANENUM_LEAF)
-    {
+    if (!node->is_leaf) {
         MarkVisibleSides_r(node->children[0].get());
         MarkVisibleSides_r(node->children[1].get());
         return;
@@ -831,8 +824,8 @@ static void MarkVisibleSides_r(node_t *node)
         for (int i = 0; i < 2; ++i) {
             if (p->sides[i]) {
                 p->sides[i]->visible = true;
-            }
-        }
+    }
+}
     }
 }
 

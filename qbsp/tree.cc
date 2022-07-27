@@ -41,7 +41,7 @@ FreeTreePortals_r
 */
 static void ClearNodePortals_r(node_t *node)
 {
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         ClearNodePortals_r(node->children[0].get());
         ClearNodePortals_r(node->children[1].get());
     }
@@ -67,7 +67,7 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
         node->children[1]->original_brushes);
     sort_and_remove_duplicates(node->original_brushes);
 
-    node->planenum = PLANENUM_LEAF;
+    node->is_leaf = true;
 
     for (int i = 0; i < 2; ++i) {
         node->children[i] = nullptr;
@@ -81,15 +81,15 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 
 static void PruneNodes_R(node_t *node, int &count_pruned)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         return;
     }
 
     PruneNodes_R(node->children[0].get(), count_pruned);
     PruneNodes_R(node->children[1].get(), count_pruned);
 
-    if (node->children[0]->planenum == PLANENUM_LEAF && node->children[0]->contents.is_any_solid(qbsp_options.target_game) &&
-        node->children[1]->planenum == PLANENUM_LEAF && node->children[1]->contents.is_any_solid(qbsp_options.target_game)) {
+    if (node->children[0]->is_leaf && node->children[0]->contents.is_any_solid(qbsp_options.target_game) &&
+        node->children[1]->is_leaf && node->children[1]->contents.is_any_solid(qbsp_options.target_game)) {
         // This discards any faces on-node. Should be safe (?)
         ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         ++count_pruned;

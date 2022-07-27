@@ -67,7 +67,7 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
     vec_t dot;
     bool keep1, keep2;
 
-    if (!f1->w.size() || !f2->w.size() || f1->planeside != f2->planeside || f1->texinfo != f2->texinfo ||
+    if (!f1->w.size() || !f2->w.size() || f1->plane_flipped != f2->plane_flipped || f1->texinfo != f2->texinfo ||
         /*!f1->contents[0].equals(options.target_game, f2->contents[0]) || !f1->contents[1].equals(options.target_game, f2->contents[1]) || */
         f1->lmshift != f2->lmshift)
         return NULL;
@@ -98,9 +98,8 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
 
     // check slope of connected lines
     // if the slopes are colinear, the point can be removed
-    auto plane = map.get_plane(f1->planenum);
-    planenormal = plane.normal;
-    if (f1->planeside)
+    planenormal = f1->plane.normal;
+    if (f1->plane_flipped)
         planenormal = -planenormal;
 
     back = f1->w[(i + f1->w.size() - 1) % f1->w.size()];

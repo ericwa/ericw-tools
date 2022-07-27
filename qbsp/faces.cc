@@ -86,7 +86,7 @@ static void EmitFaceVertices(face_t *f)
 
 static void EmitVertices_R(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         return;
     }
 
@@ -170,7 +170,7 @@ MakeFaceEdges_r
 */
 static void MakeFaceEdges_r(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF)
+    if (node->is_leaf)
         return;
 
     for (auto &f : node->facelist) {
@@ -207,8 +207,8 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
     map.exported_lmshifts.push_back(face->lmshift);
     Q_assert(map.bsp.dfaces.size() == map.exported_lmshifts.size());
 
-    out.planenum = ExportMapPlane(face->planenum);
-    out.side = face->planeside;
+    out.planenum = ExportMapPlane(face->plane);
+    out.side = face->plane_flipped;
     out.texinfo = ExportMapTexinfo(face->texinfo);
     for (i = 0; i < MAXLIGHTMAPS; i++)
         out.styles[i] = 255;
@@ -230,7 +230,7 @@ GrowNodeRegion
 */
 static void GrowNodeRegion(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF)
+    if (node->is_leaf)
         return;
 
     node->firstface = static_cast<int>(map.bsp.dfaces.size());
@@ -285,12 +285,12 @@ fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
 */
 static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         node->markfaces.push_back(face);
         return;
     }
 
-    const qbsp_plane_t splitplane = map.get_plane(node->planenum);
+    const qplane3d &splitplane = node->plane;
 
     auto [frontFragment, backFragment] = SplitFace(std::move(face_copy), splitplane);
     if (frontFragment) {
@@ -310,7 +310,7 @@ Populates the `markfaces` vectors of all leafs
 */
 void MakeMarkFaces(node_t* node)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         return;
     }
 
@@ -319,13 +319,7 @@ void MakeMarkFaces(node_t* node)
         // add this face to all descendant leafs it touches
         
         // make a copy we can clip
-        auto face_copy = CopyFace(face.get());
-
-        if (face->planeside == 0) {
-            AddMarksurfaces_r(face.get(), std::move(face_copy), node->children[0].get());
-        } else {
-            AddMarksurfaces_r(face.get(), std::move(face_copy), node->children[1].get());
-        }
+        AddMarksurfaces_r(face.get(), CopyFace(face.get()), node->children[face->plane_flipped].get());
     }
 
     // process child nodes recursively
@@ -475,7 +469,7 @@ Typically, we're in an empty leaf and the other side of the portal is a solid wa
 see also FindPortalSide which populates p->side
 ============
 */
-static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
+static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
 {
     side_t *side = p->sides[pside];
     if (!side)
@@ -484,8 +478,8 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
     auto f = std::make_unique<face_t>();
 
     f->texinfo = side->texinfo;
-    f->planenum = side->planenum;
-    f->planeside = static_cast<planeside_t>(pside);
+    f->plane = side->plane;
+    f->plane_flipped = pside;
     f->portal = p;
     f->lmshift = side->lmshift;
 
@@ -500,24 +494,20 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, int pside)
     if (!p->nodes[pside]->contents.is_empty(qbsp_options.target_game)) {
         bool our_contents_mirrorinside = qbsp_options.target_game->contents_are_mirrored(p->nodes[pside]->contents);
         if (!our_contents_mirrorinside) {
-            if (side->planeside != pside) {
-
+            if (side->plane_flipped != pside) {
                 return nullptr;
             }
         }
     }
 #endif
 
-    if (pside)
-    {
+    if (pside) {
         f->w = p->winding->flip();
-        f->contents = p->nodes[1]->contents;
-    }
-    else
-    {
+    } else {
         f->w = *p->winding;
-        f->contents = p->nodes[0]->contents;
     }
+
+    f->contents = p->nodes[pside]->contents;
 
     UpdateFaceSphere(f.get());
 
@@ -540,7 +530,7 @@ mark the side that originally created it
 static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
 {
     // recurse down to leafs
-    if (node->planenum != PLANENUM_LEAF)
+    if (!node->is_leaf)
     {
         MakeFaces_r(node->children[0].get(), stats);
         MakeFaces_r(node->children[1].get(), stats);
@@ -562,15 +552,15 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
 
     // (Note, this is happening per leaf, so we can potentially generate faces
     // for the same portal once from one leaf, and once from the neighbouring one)
-    int s;
+    bool s;
     for (portal_t *p = node->portals; p; p = p->next[s])
     {
-        // 1 means node is on the back side of planenum
+        // true means node is on the back side of planenum
         s = (p->nodes[1] == node);
 
         std::unique_ptr<face_t> f = FaceFromPortal(p, s);
-        if (f)
-        {
+
+        if (f) {
             stats.c_nodefaces++;
             p->face[s] = f.get();
             p->onnode->facelist.push_back(std::move(f));

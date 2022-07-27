@@ -32,27 +32,76 @@
 #include <stdexcept>
 using nlohmann::json;
 
+/* Plane Hashing */
+inline int plane_hash_fn(const qplane3d &p)
+{
+    // FIXME: include normal..?
+    return Q_rint(fabs(p.dist));
+}
+
+/*
+ * NewPlane
+ * - Returns a global plane number and the side that will be the front
+ */
+static mapplane_t &NewPlane(const qplane3d &plane)
+{
+    size_t index;
+
+    vec_t len = qv::length(plane.normal);
+
+    if (len < 1 - qbsp_options.epsilon.value() || len > 1 + qbsp_options.epsilon.value()) {
+        FError("invalid normal (vector length {:.4})", len);
+    }
+
+    index = map.planes.size();
+
+    mapplane_t &added_plane = map.planes.emplace_back(qbsp_plane_t::from_plane(plane));
+
+    const int hash = plane_hash_fn(added_plane);
+
+    map.planehash[hash].push_back(index);
+
+    return added_plane;
+}
+
+static mapplane_t &FindPlane(const qplane3d &plane)
+{
+    for (int i : map.planehash[plane_hash_fn(plane)]) {
+        mapplane_t &p = map.planes.at(i);
+
+        if (qv::epsilonEqual(p, plane)) {
+            return p;
+        }
+    }
+
+    return NewPlane(plane);
+}
+
 /**
  * Returns the output plane number
  */
-size_t ExportMapPlane(size_t planenum)
+size_t ExportMapPlane(const qbsp_plane_t &in_plane)
 {
-    std::shared_lock lock(map_planes_lock);
-    qbsp_plane_t &plane = map.planes.at(planenum);
+    mapplane_t &plane = FindPlane(in_plane);
 
-    if (plane.outputplanenum.has_value())
-        return plane.outputplanenum.value(); // already output.
+    if (plane.outputnum.has_value()) {
+        return plane.outputnum.value(); // already output.
+    }
 
-    const size_t newIndex = map.bsp.dplanes.size();
+    plane.outputnum = map.bsp.dplanes.size();
     dplane_t &dplane = map.bsp.dplanes.emplace_back();
-    dplane.normal[0] = plane.normal[0];
-    dplane.normal[1] = plane.normal[1];
-    dplane.normal[2] = plane.normal[2];
+    dplane.normal = plane.normal;
     dplane.dist = plane.dist;
     dplane.type = static_cast<int32_t>(plane.type);
+    return plane.outputnum.value();
+}
 
-    plane.outputplanenum = newIndex;
-    return newIndex;
+/**
+ * Returns the output plane number
+ */
+size_t ExportMapPlane(const qplane3d &plane)
+{
+    return ExportMapPlane(qbsp_plane_t::from_plane(plane));
 }
 
 size_t ExportMapTexinfo(size_t texinfonum)
@@ -99,7 +148,7 @@ ExportClipNodes
 */
 static size_t ExportClipNodes(node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         return node->contents.native;
     }
 
@@ -112,7 +161,7 @@ static size_t ExportClipNodes(node_t *node)
 
     // Careful not to modify the vector while using this clipnode pointer
     bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
-    clipnode.planenum = ExportMapPlane(node->planenum);
+    clipnode.planenum = ExportMapPlane(node->plane);
     clipnode.children[0] = child0;
     clipnode.children[1] = child1;
 
@@ -192,6 +241,9 @@ static void ExportLeaf(node_t *node)
     dleaf.numleafbrushes = node->numleafbrushes;
 }
 
+// only used for Q1
+constexpr int32_t PLANENUM_LEAF = -1;
+
 /*
 ==================
 ExportDrawNodes
@@ -205,13 +257,13 @@ static void ExportDrawNodes(node_t *node)
     dnode->mins = qv::floor(node->bounds.mins());
     dnode->maxs = qv::ceil(node->bounds.maxs());
 
-    dnode->planenum = ExportMapPlane(node->planenum);
+    dnode->planenum = ExportMapPlane(node->plane);
     dnode->firstface = node->firstface;
     dnode->numfaces = node->numfaces;
 
     // recursively output the other nodes
     for (size_t i = 0; i < 2; i++) {
-        if (node->children[i]->planenum == PLANENUM_LEAF) {
+        if (node->children[i]->is_leaf) {
             // In Q2, all leaves must have their own ID even if they share solidity.
             if (qbsp_options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(qbsp_options.target_game)) {
                 dnode->children[i] = PLANENUM_LEAF;
@@ -255,10 +307,11 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     const size_t mapleafsAtStart = map.bsp.dleafs.size();
 
-    if (headnode->planenum == PLANENUM_LEAF)
+    if (headnode->is_leaf) {
         ExportLeaf(headnode);
-    else
+    } else {
         ExportDrawNodes(headnode);
+    }
 
     // count how many leafs were exported by the above calls
     dmodel.visleafs = static_cast<int32_t>(map.bsp.dleafs.size() - mapleafsAtStart);

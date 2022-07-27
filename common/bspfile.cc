@@ -178,6 +178,7 @@ private:
                 case 10: return detail;
                 case 11: return mirror_inside;
                 case 12: return suppress_clipping_same_type;
+                default: throw std::out_of_range("index");
             }
         }
 
@@ -196,6 +197,7 @@ private:
                 case 10: return detail;
                 case 11: return mirror_inside;
                 case 12: return suppress_clipping_same_type;
+                default: throw std::out_of_range("index");
             }
         }
 

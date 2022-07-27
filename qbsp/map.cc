@@ -2387,8 +2387,7 @@ void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<bs
         fmt::print(f, "{{\n");
         for (auto &face : brush->sides) {
             // FIXME: Factor out this mess
-            const qbsp_plane_t &plane = map.planes.at(face.planenum);
-            winding_t w = BaseWindingForPlane(face.planeside ? -plane : plane);
+            winding_t w = BaseWindingForPlane(face.plane_flipped ? -face.plane : face.plane);
 
             fmt::print(f, "( {} ) ", w[0]);
             fmt::print(f, "( {} ) ", w[1]);

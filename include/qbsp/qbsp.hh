@@ -314,9 +314,6 @@ private:
 
 extern settings::qbsp_settings qbsp_options;
 
-// planenum for a leaf
-constexpr int32_t PLANENUM_LEAF = -1;
-
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:
@@ -367,8 +364,8 @@ struct portal_t;
 
 struct face_t
 {
-    int planenum;
-    planeside_t planeside; // which side is the front of the face
+    qplane3d plane;
+    bool plane_flipped; // whether `plane` is flipped or not
     int texinfo;
     contentflags_t contents; // contents on the front of the face
     int16_t lmshift;
@@ -394,14 +391,15 @@ struct node_t
     node_t *parent;
     // this is also a bounding volume like `bounds`
     std::unique_ptr<bspbrush_t> volume; // one for each leaf/node
+    bool is_leaf = false;
 
     // information for decision nodes
-    int planenum; // -1 = leaf node
+    qplane3d plane; // decision node only
     int firstface; // decision node only
     int numfaces; // decision node only
     twosided<std::unique_ptr<node_t>> children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     std::list<std::unique_ptr<face_t>> facelist; // decision nodes only, list for both sides
-    side_t *side; // the side that created the node
+    side_t *side; // decision node only, the side that created the node
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)

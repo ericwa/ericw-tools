@@ -127,7 +127,7 @@ void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bs
 
 static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         return;
     }
 
@@ -148,7 +148,7 @@ void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes)
 
 static void ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<const face_t *> *dest)
 {
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         ExportObj_Marksurfaces_r(node->children[0].get(), dest);
         ExportObj_Marksurfaces_r(node->children[1].get(), dest);
         return;

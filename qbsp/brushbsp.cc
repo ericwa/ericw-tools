@@ -57,8 +57,6 @@ struct bspstats_t {
     std::atomic<int> c_leafs;
 };
 
-static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, int planenum);
-
 /*
 ==================
 CreateBrushWindings
@@ -112,7 +110,7 @@ std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds)
             plane.dist = bounds.maxs()[i];
 
             side_t &side = b->sides[i];
-            side.planenum = FindPlane(plane, &side.planeside);
+            side.plane = qbsp_plane_t::from_plane(plane, true, side.plane_flipped);
         }
 
         {
@@ -121,7 +119,7 @@ std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds)
             plane.dist = -bounds.mins()[i];
 
             side_t &side = b->sides[3 + i];
-            side.planenum = FindPlane(plane, &side.planeside);
+            side.plane = qbsp_plane_t::from_plane(plane, true, side.plane_flipped);
         }
     }
 
@@ -230,6 +228,7 @@ static int SphereOnPlaneSide(const qvec3d& sphere_origin, double sphere_radius, 
     return PSIDE_BOTH;
 }
 
+#if 0
 /*
 ============
 QuickTestBrushToPlanenum
@@ -244,11 +243,14 @@ static int QuickTestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *
     // if the brush actually uses the planenum,
     // we can tell the side for sure
     for (auto& side : brush.sides) {
-        int num = side.planenum;
-        if (num == planenum && side.planeside == SIDE_FRONT)
-            return PSIDE_BACK|PSIDE_FACING;
-        if (num == planenum && side.planeside == SIDE_BACK)
-            return PSIDE_FRONT|PSIDE_FACING;
+        int num = FindPlane(side.plane, nullptr);
+        if (num == planenum) {
+            if (side.plane_flipped == SIDE_FRONT) {
+                return PSIDE_BACK|PSIDE_FACING;
+            } else {
+                return PSIDE_FRONT|PSIDE_FACING;
+            }
+        }
     }
 
     // box on plane side
@@ -262,6 +264,7 @@ static int QuickTestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *
 
     return s;
 }
+#endif
 
 /*
 ============
@@ -269,7 +272,7 @@ TestBrushToPlanenum
 
 ============
 */
-static int TestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *numsplits, bool *hintsplit, int *epsilonbrush)
+static int TestBrushToPlanenum(const bspbrush_t &brush, const qbsp_plane_t &plane, int *numsplits, bool *hintsplit, int *epsilonbrush)
 {
     *numsplits = 0;
     *hintsplit = false;
@@ -277,18 +280,16 @@ static int TestBrushToPlanenum(const bspbrush_t &brush, int planenum, int *numsp
     // if the brush actually uses the planenum,
     // we can tell the side for sure
     for (auto &side : brush.sides) {
-        int num = side.planenum;
-        if (num == planenum && side.planeside == SIDE_FRONT) {
-            return PSIDE_BACK | PSIDE_FACING;
-        }
-        if (num == planenum && side.planeside == SIDE_BACK) {
-            return PSIDE_FRONT | PSIDE_FACING;
+        if (qv::epsilonEqual(side.plane, plane)) {
+            if (side.plane_flipped == SIDE_FRONT) {
+                return PSIDE_BACK | PSIDE_FACING;
+            } else {
+                return PSIDE_FRONT | PSIDE_FACING;
+            }
         }
     }
 
     // box on plane side
-    qbsp_plane_t plane = map.get_plane(planenum);
-
     //int s = SphereOnPlaneSide(brush.sphere_origin, brush.sphere_radius, plane);
     int s = BoxOnPlaneSide(brush.bounds, plane);
     if (s != PSIDE_BOTH)
@@ -397,7 +398,7 @@ Called in parallel.
 static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> brushes, bspstats_t &stats)
 {
     leafnode->facelist.clear();
-    leafnode->planenum = PLANENUM_LEAF;
+    leafnode->is_leaf = true;
 
     leafnode->contents = qbsp_options.target_game->create_empty_contents();
     for (auto &brush : brushes) {
@@ -413,155 +414,6 @@ static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> 
 
 //============================================================
 
-static void CheckPlaneAgainstParents(int pnum, node_t *node)
-{
-    for (node_t *p = node->parent; p; p = p->parent) {
-        if (p->planenum == pnum) {
-            Error("Tried parent");
-        }
-    }
-}
-
-static bool CheckPlaneAgainstVolume(int pnum, node_t *node)
-{
-    auto [front, back] = SplitBrush(node->volume->copy_unique(), pnum);
-
-    bool good = (front && back);
-
-    return good;
-}
-
-/*
-================
-SelectSplitSide
-
-Using a hueristic, choses one of the sides out of the brushlist
-to partition the brushes with.
-Returns NULL if there are no valid planes to split with..
-================
-*/
-side_t *SelectSplitSide(const std::vector<std::unique_ptr<bspbrush_t>>& brushes, node_t *node)
-{
-    side_t* bestside = nullptr;
-    int bestvalue = -99999;
-    int bestsplits = 0;
-
-    // the search order goes: visible-structural, visible-detail,
-    // nonvisible-structural, nonvisible-detail.
-    // If any valid plane is available in a pass, no further
-    // passes will be tried.
-    constexpr int numpasses = 4;
-    for (int pass = 0 ; pass < numpasses ; pass++) {
-        for (auto &brush : brushes) {
-            if ( (pass & 1) && !brush->original->contents.is_any_detail(qbsp_options.target_game) )
-                continue;
-            if ( !(pass & 1) && brush->original->contents.is_any_detail(qbsp_options.target_game) )
-                continue;
-            for (auto &side : brush->sides) {
-                if (side.bevel)
-                    continue;	// never use a bevel as a spliter
-                if (!side.w)
-                    continue;	// nothing visible, so it can't split
-                if (side.onnode)
-                    continue;	// allready a node splitter
-                if (side.tested)
-                    continue;	// we allready have metrics for this plane
-                if (side.get_texinfo().flags.is_hintskip)
-                    continue;	// skip surfaces are never chosen
-                if ( side.visible ^ (pass<2) )
-                    continue;	// only check visible faces on first pass
-
-                int pnum = FindPositivePlane(side.planenum); // always use positive facing plane
-
-                CheckPlaneAgainstParents (pnum, node);
-
-                if (!CheckPlaneAgainstVolume (pnum, node))
-                    continue;	// would produce a tiny volume
-
-                int front = 0;
-                int back = 0;
-                int both = 0;
-                int facing = 0;
-                int splits = 0;
-                int epsilonbrush = 0;
-                bool hintsplit = false;
-
-                for (auto &test : brushes)
-                {
-                    int bsplits;
-                    int s = TestBrushToPlanenum(*test, pnum, &bsplits, &hintsplit, &epsilonbrush);
-
-                    splits += bsplits;
-                    if (bsplits && (s&PSIDE_FACING) )
-                        Error ("PSIDE_FACING with splits");
-
-                    test->testside = s;
-                    // if the brush shares this face, don't bother
-                    // testing that facenum as a splitter again
-                    if (s & PSIDE_FACING)
-                    {
-                        facing++;
-                        for (auto &testside : test->sides) {
-                            if (testside.planenum == pnum) {
-                                testside.tested = true;
-                            }
-                        }
-                    }
-                    if (s & PSIDE_FRONT)
-                        front++;
-                    if (s & PSIDE_BACK)
-                        back++;
-                    if (s == PSIDE_BOTH)
-                        both++;
-                }
-
-                // give a value estimate for using this plane
-
-                int value =  5*facing - 5*splits - abs(front-back);
-                //					value =  -5*splits;
-                //					value =  5*facing - 5*splits;
-                if (static_cast<int>(map.get_plane(pnum).type) < 3)
-                    value+=5;		// axial is better
-                value -= epsilonbrush*1000;	// avoid!
-
-                // never split a hint side except with another hint
-                if (hintsplit && !(side.get_texinfo().flags.is_hint) )
-                    value = -9999999;
-
-                // save off the side test so we don't need
-                // to recalculate it when we actually seperate
-                // the brushes
-                if (value > bestvalue) {
-                    bestvalue = value;
-                    bestside = &side;
-                    bestsplits = splits;
-                    for (auto &test : brushes) {
-                        test->side = test->testside;
-                    }
-                }
-            }
-        }
-
-        // if we found a good plane, don't bother trying any
-        // other passes
-        if (bestside) {
-            if (pass > 0)
-                node->detail_separator = true;	// not needed for vis
-            break;
-        }
-    }
-
-    //
-    // clear all the tested flags we set
-    //
-    for (auto &brush : brushes) {
-        for (auto &side : brush->sides) {
-            side.tested = false;
-        }
-    }
-
-    return bestside;
-}
 
 /*
 ==================
@@ -599,10 +451,8 @@ input.
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, int planenum)
+static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, const qplane3d &split)
 {
-    qplane3d split = map.get_plane(planenum);
-
     twosided<std::unique_ptr<bspbrush_t>> result;
     
     // check all points
@@ -734,7 +584,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
         
         // for the brush on the front side of the plane, the `midwinding`
         // (the face that is touching the plane) should have a normal opposite the plane's normal
-        cs.planenum = FindPlane(brushOnFront ? -split : split, &cs.planeside);
+        cs.plane = qbsp_plane_t::from_plane(brushOnFront ? -split : split, true, cs.plane_flipped);
         cs.texinfo = map.skip_texinfo;
         cs.visible = false;
         cs.tested = false;
@@ -762,6 +612,156 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
     return result;
 }
 
+static void CheckPlaneAgainstParents(const qbsp_plane_t &plane, node_t *node)
+{
+    for (node_t *p = node->parent; p; p = p->parent) {
+        if (qv::epsilonEqual(p->plane, plane)) {
+            Error("Tried parent");
+        }
+    }
+}
+
+static bool CheckPlaneAgainstVolume(const qbsp_plane_t &plane, node_t *node)
+{
+    auto [front, back] = SplitBrush(node->volume->copy_unique(), plane);
+
+    bool good = (front && back);
+
+    return good;
+}
+
+/*
+================
+SelectSplitSide
+
+Using a hueristic, choses one of the sides out of the brushlist
+to partition the brushes with.
+Returns NULL if there are no valid planes to split with..
+================
+*/
+side_t *SelectSplitSide(const std::vector<std::unique_ptr<bspbrush_t>>& brushes, node_t *node)
+{
+    side_t* bestside = nullptr;
+    int bestvalue = -99999;
+    int bestsplits = 0;
+
+    // the search order goes: visible-structural, visible-detail,
+    // nonvisible-structural, nonvisible-detail.
+    // If any valid plane is available in a pass, no further
+    // passes will be tried.
+    constexpr int numpasses = 4;
+    for (int pass = 0 ; pass < numpasses ; pass++) {
+        for (auto &brush : brushes) {
+            if ( (pass & 1) && !brush->original->contents.is_any_detail(qbsp_options.target_game) )
+                continue;
+            if ( !(pass & 1) && brush->original->contents.is_any_detail(qbsp_options.target_game) )
+                continue;
+            for (auto &side : brush->sides) {
+                if (side.bevel)
+                    continue;	// never use a bevel as a spliter
+                if (!side.w)
+                    continue;	// nothing visible, so it can't split
+                if (side.onnode)
+                    continue;	// allready a node splitter
+                if (side.tested)
+                    continue;	// we allready have metrics for this plane
+                if (side.get_texinfo().flags.is_hintskip)
+                    continue;	// skip surfaces are never chosen
+                if ( side.visible ^ (pass<2) )
+                    continue;	// only check visible faces on first pass
+
+                qbsp_plane_t plane = qbsp_plane_t::from_plane(side.plane, true); // always use positive facing plane
+
+                CheckPlaneAgainstParents (plane, node);
+
+                if (!CheckPlaneAgainstVolume (plane, node))
+                    continue;	// would produce a tiny volume
+
+                int front = 0;
+                int back = 0;
+                int both = 0;
+                int facing = 0;
+                int splits = 0;
+                int epsilonbrush = 0;
+                bool hintsplit = false;
+
+                for (auto &test : brushes)
+                {
+                    int bsplits;
+                    int s = TestBrushToPlanenum(*test, plane, &bsplits, &hintsplit, &epsilonbrush);
+
+                    splits += bsplits;
+                    if (bsplits && (s&PSIDE_FACING) )
+                        Error ("PSIDE_FACING with splits");
+
+                    test->testside = s;
+                    // if the brush shares this face, don't bother
+                    // testing that facenum as a splitter again
+                    if (s & PSIDE_FACING)
+                    {
+                        facing++;
+                        for (auto &testside : test->sides) {
+                            if (qv::epsilonEqual(testside.plane, plane)) {
+                                testside.tested = true;
+                            }
+                        }
+                    }
+                    if (s & PSIDE_FRONT)
+                        front++;
+                    if (s & PSIDE_BACK)
+                        back++;
+                    if (s == PSIDE_BOTH)
+                        both++;
+                }
+
+                // give a value estimate for using this plane
+
+                int value =  5*facing - 5*splits - abs(front-back);
+                //					value =  -5*splits;
+                //					value =  5*facing - 5*splits;
+                if (plane.type < plane_type_t::PLANE_ANYX)
+                    value+=5;		// axial is better
+                value -= epsilonbrush*1000;	// avoid!
+
+                // never split a hint side except with another hint
+                if (hintsplit && !(side.get_texinfo().flags.is_hint) )
+                    value = -9999999;
+
+                // save off the side test so we don't need
+                // to recalculate it when we actually seperate
+                // the brushes
+                if (value > bestvalue) {
+                    bestvalue = value;
+                    bestside = &side;
+                    bestsplits = splits;
+                    for (auto &test : brushes) {
+                        test->side = test->testside;
+                    }
+                }
+            }
+        }
+
+        // if we found a good plane, don't bother trying any
+        // other passes
+        if (bestside) {
+            if (pass > 0)
+                node->detail_separator = true;	// not needed for vis
+            break;
+        }
+    }
+
+    //
+    // clear all the tested flags we set
+    //
+    for (auto &brush : brushes) {
+        for (auto &side : brush->sides) {
+            side.tested = false;
+        }
+    }
+
+    return bestside;
+}
+
 /*
 ================
 SplitBrushList
@@ -776,24 +776,24 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(st
 
         if (sides == PSIDE_BOTH) {
             // split into two brushes
-            auto [front, back] = SplitBrush(brush->copy_unique(), node->planenum);
-            if (front)
-            {
+            auto [front, back] = SplitBrush(brush->copy_unique(), node->plane);
+
+            if (front) {
                 result[0].push_back(std::move(front));
             }
-            if (back)
-            {
+
+            if (back) {
                 result[1].push_back(std::move(back));
             }
             continue;
         }
 
-        // if the planenum is actualy a part of the brush
+        // if the planenum is actually a part of the brush
         // find the plane and flag it as used so it won't be tried
         // as a splitter again
         if (sides & PSIDE_FACING) {
             for (auto &side : brush->sides) {
-                if (side.planenum == node->planenum) {
+                if (qv::epsilonEqual(side.plane, node->plane)) {
                     side.onnode = true;
                 }
             }
@@ -826,7 +826,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     if (!bestside) {
         // this is a leaf node
         node->side = nullptr;
-        node->planenum = PLANENUM_LEAF;
+        node->is_leaf = true;
 
         stats.c_leafs++;
         LeafNode(node, std::move(brushes), stats);
@@ -841,7 +841,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     }
 
     node->side = bestside;
-    node->planenum = FindPositivePlane(bestside->planenum);	// always use front facing
+    node->plane = qbsp_plane_t::from_plane(bestside->plane, true);	// always use front facing
 
     auto children = SplitBrushList(std::move(brushes), node);
 
@@ -852,7 +852,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
         newnode->parent = node;
     }
 
-    auto children_volumes = SplitBrush(node->volume->copy_unique(), node->planenum);
+    auto children_volumes = SplitBrush(node->volume->copy_unique(), node->plane);
     node->children[0]->volume = std::move(children_volumes[0]);
     node->children[1]->volume = std::move(children_volumes[1]);
 
@@ -917,11 +917,11 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
         auto headnode = std::make_unique<node_t>();
         headnode->bounds = entity->bounds;
         headnode->children[0] = std::make_unique<node_t>();
-        headnode->children[0]->planenum = PLANENUM_LEAF;
+        headnode->children[0]->is_leaf = true;
         headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[0]->parent = headnode.get();
         headnode->children[1] = std::make_unique<node_t>();
-        headnode->children[1]->planenum = PLANENUM_LEAF;
+        headnode->children[1]->is_leaf = true;
         headnode->children[1]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[1]->parent = headnode.get();
 

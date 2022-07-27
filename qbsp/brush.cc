@@ -66,24 +66,20 @@ Face_Plane
 */
 qplane3d Face_Plane(const face_t *face)
 {
-    const qplane3d result = map.get_plane(face->planenum);
-
-    if (face->planeside) {
-        return -result;
+    if (face->plane_flipped) {
+        return -face->plane;
     }
 
-    return result;
+    return face->plane;
 }
 
 qplane3d Face_Plane(const side_t *face)
 {
-    const qplane3d result = map.get_plane(face->planenum);
-
-    if (face->planeside) {
-        return -result;
+    if (face->plane_flipped) {
+        return -face->plane;
     }
 
-    return result;
+    return face->plane;
 }
 
 /*
@@ -95,7 +91,7 @@ Note: this will not catch 0 area polygons
 */
 static void CheckFace(side_t *face, const mapface_t &sourceface)
 {
-    const qbsp_plane_t plane = map.get_plane(face->planenum);
+    const qplane3d &plane = face->plane;
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
@@ -111,8 +107,10 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
     }
 
     qvec3d facenormal = plane.normal;
-    if (face->planeside)
+
+    if (face->plane_flipped) {
         facenormal = -facenormal;
+    }
 
     for (size_t i = 0; i < face->w.size(); i++) {
         const qvec3d &p1 = face->w[i];
@@ -129,9 +127,10 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         // fixme check: plane's normal is not inverted by planeside check above,
         // is this a bug? should `Face_Plane` be used instead?
         vec_t dist = plane.distance_to(p1);
-        if (dist < -qbsp_options.epsilon.value() || dist > qbsp_options.epsilon.value())
+        if (dist < -qbsp_options.epsilon.value() || dist > qbsp_options.epsilon.value()) {
             logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
                 p1[1], p1[2], dist);
+        }
 
         /* check the edge isn't degenerate */
         qvec3d edgevec = p2 - p1;
@@ -163,163 +162,6 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
             }
         }
     }
-}
-
-//===========================================================================
-
-static bool NormalizePlane(qbsp_plane_t &p, bool flip = true)
-{
-    for (size_t i = 0; i < 3; i++) {
-        if (p.normal[i] == 1.0) {
-            p.normal[(i + 1) % 3] = 0;
-            p.normal[(i + 2) % 3] = 0;
-            p.type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
-            return 0; /* no flip */
-        }
-        if (p.normal[i] == -1.0) {
-            if (flip) {
-                p.normal[i] = 1.0;
-                p.dist = -p.dist;
-            }
-            p.normal[(i + 1) % 3] = 0;
-            p.normal[(i + 2) % 3] = 0;
-            p.type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
-            return 1; /* plane flipped */
-        }
-    }
-
-    vec_t ax = fabs(p.normal[0]);
-    vec_t ay = fabs(p.normal[1]);
-    vec_t az = fabs(p.normal[2]);
-
-    size_t nearest;
-
-    if (ax >= ay && ax >= az)
-    {
-        nearest = 0;
-        p.type = plane_type_t::PLANE_ANYX;
-    }
-    else if (ay >= ax && ay >= az)
-    {
-        nearest = 1;
-        p.type = plane_type_t::PLANE_ANYY;
-    }
-    else
-    {
-        nearest = 2;
-        p.type = plane_type_t::PLANE_ANYZ;
-    }
-
-    if (flip && p.normal[nearest] < 0) {
-        p = -p;
-        return true; /* plane flipped */
-    }
-
-    return false; /* no flip */
-}
-
-/* Plane Hashing */
-
-inline int plane_hash_fn(const qplane3d &p)
-{
-    // FIXME: include normal..?
-    return Q_rint(fabs(p.dist));
-}
-
-/*
- * NewPlane
- * - Returns a global plane number and the side that will be the front
- */
-static int NewPlane(const qplane3d &plane, planeside_t *side)
-{
-    size_t index;
-
-    {
-        std::unique_lock lock(map_planes_lock);
-
-        vec_t len = qv::length(plane.normal);
-
-        if (len < 1 - qbsp_options.epsilon.value() || len > 1 + qbsp_options.epsilon.value())
-            FError("invalid normal (vector length {:.4})", len);
-
-        index = map.planes.size();
-        qbsp_plane_t &added_plane = map.planes.emplace_back(qbsp_plane_t{plane});
-
-        bool out_flipped = NormalizePlane(added_plane, side != nullptr);
-
-        if (side) {
-            *side = out_flipped ? SIDE_BACK : SIDE_FRONT;
-        }
-        
-        const int hash = plane_hash_fn(added_plane);
-        map.planehash[hash].push_back(index);
-    }
-
-    // add the back side, too
-    FindPlane(-plane, nullptr);
-
-    return index;
-}
-
-/*
- * FindPlane
- * - Returns a global plane number and the side that will be the front
- * - if `side` is null, only an exact match will be fetched.
- */
-int FindPlane(const qplane3d &plane, planeside_t *side)
-{
-    {
-        std::shared_lock lock(map_planes_lock);
-
-        for (int i : map.planehash[plane_hash_fn(plane)]) {
-            const qbsp_plane_t &p = map.planes.at(i);
-            if (qv::epsilonEqual(p, plane)) {
-                if (side) {
-                    *side = SIDE_FRONT;
-                }
-                return i;
-            } else if (side && qv::epsilonEqual(-p, plane)) {
-                *side = SIDE_BACK;
-                return i;
-            }
-        }
-    }
-
-    return NewPlane(plane, side);
-}
-
-/*
- * FindPositivePlane
- * - Only used for nodes; always finds a positive matching plane.
- */
-int FindPositivePlane(int planenum)
-{
-    std::shared_lock lock(map_planes_lock);
-
-    const auto &plane = map.planes[planenum];
-
-    // already positive, or it's PLANE_ANY_x which doesn't matter
-    if (plane.type >= plane_type_t::PLANE_ANYX || (plane.normal[0] + plane.normal[1] + plane.normal[2]) > 0) {
-        return planenum;
-    }
-
-    return FindPlane(-plane, nullptr);
-}
-
-int FindPositivePlane(const qplane3d &plane, planeside_t *side)
-{
-    int planenum = FindPlane(plane, side);
-    int positive_plane = FindPositivePlane(planenum);
-
-    if (planenum == positive_plane) {
-        return planenum;
-    }
-
-    // planenum itself isn't positive, so flip the planeside and return the positive version
-    if (side) {
-        *side = (*side == SIDE_FRONT) ? SIDE_BACK : SIDE_FRONT;
-    }
-    return positive_plane;
 }
 
 /*
@@ -440,7 +282,6 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 
         // this face is a keeper
         side_t &f = facelist.emplace_back();
-        f.planenum = PLANENUM_LEAF;
 
         f.w.resize(w->size());
 
@@ -479,7 +320,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         plane.dist = qv::dot(plane.normal, point);
 
         f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
-        f.planenum = FindPositivePlane(plane, &f.planeside);
+        f.plane = qbsp_plane_t::from_plane(plane, true, f.plane_flipped);
 
         CheckFace(&f, mapface);
     }

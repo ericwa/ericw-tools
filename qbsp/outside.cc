@@ -37,7 +37,7 @@
 
 static bool LeafSealsMap(const node_t *node)
 {
-    Q_assert(node->planenum == PLANENUM_LEAF);
+    Q_assert(node->is_leaf);
 
     return qbsp_options.target_game->contents_seals_map(node->contents);
 }
@@ -55,12 +55,11 @@ of the map (exactly on a brush faces) - happens in base1.map.
 */
 static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         return node;
     }
 
-    const auto plane = map.get_plane(node->planenum);
-    vec_t dist = plane.distance_to(point);
+    vec_t dist = node->plane.distance_to(point);
 
     if (dist > 0) {
         // point is on the front of the node plane
@@ -89,7 +88,7 @@ static void ClearOccupied_r(node_t *node)
     node->occupied = 0;
     node->occupant = nullptr;
 
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         ClearOccupied_r(node->children[0].get());
         ClearOccupied_r(node->children[1].get());
     }
@@ -117,7 +116,7 @@ static void MarkClusterOutsideDistance_R(node_t* node, int outside_distance)
 {
     node->outside_distance = outside_distance;
 
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         MarkClusterOutsideDistance_R(node->children[0].get(), outside_distance);
         MarkClusterOutsideDistance_R(node->children[1].get(), outside_distance);
     }    
@@ -328,7 +327,7 @@ static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *>& result)
         result.push_back(node);
     }
 
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         FindOccupiedClusters_R(node->children[0].get(), result);
         FindOccupiedClusters_R(node->children[1].get(), result);
     }
@@ -362,7 +361,7 @@ static void MarkBrushSidesInvisible(mapentity_t *entity)
 static void MarkAllBrushSidesVisible_R(node_t *node)
 {
     // descend to leafs
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         MarkAllBrushSidesVisible_R(node->children[0].get());
         MarkAllBrushSidesVisible_R(node->children[1].get());
         return;
@@ -385,7 +384,7 @@ Set f->touchesOccupiedLeaf=true on faces that are touching occupied leafs
 static void MarkVisibleBrushSides_R(node_t *node)
 {
     // descent to leafs
-    if (!(node->planenum == PLANENUM_LEAF)) {
+    if (!node->is_leaf) {
         MarkVisibleBrushSides_R(node->children[0].get());
         MarkVisibleBrushSides_R(node->children[1].get());
         return;
@@ -407,12 +406,12 @@ static void MarkVisibleBrushSides_R(node_t *node)
 
         node_t *neighbour_leaf = portal->nodes[side];
 
-        if (neighbour_leaf->planenum == PLANENUM_LEAF) {
+        if (neighbour_leaf->is_leaf) {
             // optimized case: just mark the brush sides in the neighbouring
             // leaf that are coplanar
             for (auto *brush : neighbour_leaf->original_brushes) {
                 for (auto &side : brush->sides) {
-                    if (side.planenum == portal->planenum) {
+                    if (qv::epsilonEqual(side.plane, portal->plane)) {
                         // we've found a brush side in an original brush in the neighbouring
                         // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
                         side.visible = true;
@@ -429,7 +428,7 @@ static void MarkVisibleBrushSides_R(node_t *node)
 
 static void OutLeafsToSolid_r(node_t *node, int *outleafs_count, settings::filltype_t filltype)
 {
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         OutLeafsToSolid_r(node->children[0].get(), outleafs_count, filltype);
         OutLeafsToSolid_r(node->children[1].get(), outleafs_count, filltype);
         return;
@@ -467,7 +466,7 @@ static int OutLeafsToSolid(node_t *node, settings::filltype_t filltype)
 
 static void SetOccupied_R(node_t *node, int dist)
 {
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         SetOccupied_R(node->children[0].get(), dist);
         SetOccupied_R(node->children[1].get(), dist);
     }

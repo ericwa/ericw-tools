@@ -21,8 +21,9 @@
 
 #pragma once
 
-size_t ExportMapPlane(size_t planenum);
 size_t ExportMapTexinfo(size_t texinfonum);
+size_t ExportMapPlane(const qbsp_plane_t &plane);
+size_t ExportMapPlane(const qplane3d &plane);
 
 void BeginBSPFile(void);
 void FinishBSPFile(void);

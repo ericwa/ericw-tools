@@ -286,7 +286,7 @@ static struct
 
 static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         if (node->contents.native) {
             if (node->original_brushes.size()) {
                 node->numleafbrushes = node->original_brushes.size();
@@ -319,13 +319,8 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
     std::vector<std::tuple<size_t, const side_t *>> planes;
 
     for (auto &f : b.sides) {
-        int32_t planenum = f.planenum;
-
-        if (f.planeside) {
-            planenum = FindPlane(-map.get_plane(f.planenum), nullptr);
-        }
-
-        int32_t outputplanenum = ExportMapPlane(planenum);
+        qplane3d plane = f.plane_flipped ? -f.plane : f.plane;
+        int32_t outputplanenum = ExportMapPlane(plane);
         planes.emplace_back(outputplanenum, &f);
     }
 
@@ -351,8 +346,7 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
                 else
                     new_plane.dist = -b.bounds.mins()[axis];
 
-                int32_t planenum = FindPlane(new_plane, nullptr);
-                int32_t outputplanenum = ExportMapPlane(planenum);
+                int32_t outputplanenum = ExportMapPlane(new_plane);
                 planes.emplace_back(outputplanenum, &b.sides.front());
             }
 
@@ -407,11 +401,10 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
                     // behind this plane, it is a proper edge bevel
                     for (; it != b.sides.end(); it++) {
                         auto &f = *it;
-                        const auto &plane = map.get_plane(f.planenum);
-                        qplane3d temp = f.planeside ? -plane : plane;
+                        qplane3d plane = f.plane_flipped ? -f.plane : f.plane;
 
                         // if this plane has allready been used, skip it
-                        if (qv::epsilonEqual(current, temp))
+                        if (qv::epsilonEqual(current, plane))
                             break;
 
                         auto &w2 = f.w;
@@ -431,8 +424,7 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
                         continue; // wasn't part of the outer hull
 
                     // add this plane
-                    int32_t planenum = FindPlane(current, nullptr);
-                    int32_t outputplanenum = ExportMapPlane(planenum);
+                    int32_t outputplanenum = ExportMapPlane(current);
                     planes.emplace_back(outputplanenum, &b.sides.front());
                 }
             }
@@ -497,7 +489,7 @@ static bool IsTrigger(const mapentity_t *entity)
 
 static void CountLeafs_r(node_t *node, content_stats_base_t& stats)
 {
-    if (node->planenum == PLANENUM_LEAF) {
+    if (node->is_leaf) {
         qbsp_options.target_game->count_contents_in_stats(node->contents, stats);
         return;
     }
@@ -786,7 +778,7 @@ static void BSPX_Brushes_AddModel(
         permodel.numbrushes++;
         for (auto &f : b->sides) {
             /*skip axial*/
-            const auto &plane = map.planes.at(f.planenum);
+            const auto &plane = f.plane;
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
                 fabs(plane.normal[2]) == 1)
                 continue;
@@ -805,7 +797,7 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->sides) {
             /*skip axial*/
-            const auto &plane = map.planes.at(f.planenum);
+            const auto &plane = f.plane;
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
                 fabs(plane.normal[2]) == 1)
                 continue;
@@ -847,14 +839,14 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->sides) {
             /*skip axial*/
-            const auto &plane = map.planes.at(f.planenum);
+            const auto &plane = f.plane;
             if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
                 fabs(plane.normal[2]) == 1)
                 continue;
 
             bspxbrushes_perface perface;
 
-            if (f.planeside) {
+            if (f.plane_flipped) {
                 perface = -plane;
             } else {
                 perface = plane;

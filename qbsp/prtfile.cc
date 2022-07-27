@@ -56,7 +56,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
     int i, front, back;
     qplane3d plane2;
 
-    if (node->planenum != PLANENUM_LEAF && !node->detail_separator) {
+    if (!node->is_leaf && !node->detail_separator) {
         WritePortals_r(node->children[0].get(), portalFile, clusters);
         WritePortals_r(node->children[1].get(), portalFile, clusters);
         return;
@@ -83,12 +83,12 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
          * changeover point between different axis.  interpret the plane the
          * same way vis will, and flip the side orders if needed
          */
-        const auto &pl = map.planes.at(p->planenum);
         plane2 = w->plane();
-        if (qv::dot(pl.normal, plane2.normal) < 1.0 - ANGLEEPSILON)
+        if (qv::dot(p->plane.normal, plane2.normal) < 1.0 - ANGLEEPSILON) {
             fmt::print(portalFile, "{} {} {} ", w->size(), back, front);
-        else
+        } else {
             fmt::print(portalFile, "{} {} {} ", w->size(), front, back);
+        }
 
         for (i = 0; i < w->size(); i++) {
             fmt::print(portalFile, "(");
@@ -103,7 +103,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
 
 static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int viscluster)
 {
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         viscluster = WriteClusters_r(node->children[0].get(), portalFile, viscluster);
         viscluster = WriteClusters_r(node->children[1].get(), portalFile, viscluster);
         return viscluster;
@@ -161,7 +161,7 @@ NumberLeafs_r
 static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
 {
     /* decision node */
-    if (node->planenum != PLANENUM_LEAF) {
+    if (!node->is_leaf) {
         node->visleafnum = -99;
         node->viscluster = -99;
         if (cluster < 0 && node->detail_separator) {
@@ -261,7 +261,7 @@ void CreateVisPortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
 {
     // stop as soon as we get to a detail_seperator, which
     // means that everything below is in a single cluster
-    if (node->planenum == PLANENUM_LEAF || node->detail_separator )
+    if (node->is_leaf || node->detail_separator)
         return;
 
     MakeNodePortal(tree, node, stats);

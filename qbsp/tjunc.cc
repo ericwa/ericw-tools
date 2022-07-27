@@ -142,7 +142,7 @@ for vertex checking.
 */
 static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, std::vector<size_t> &verts)
 {
-	if (node->planenum == PLANENUM_LEAF) {
+	if (node->is_leaf) {
 		return;
 	} else if (node->bounds.disjoint(aabb, 0.0)) {
 		return;
@@ -515,9 +515,9 @@ std::vector<qvectri> minimum_weight_triangulation(const std::vector<size_t> &ind
 
 static std::list<std::vector<size_t>> mwt_face(const face_t *f, const std::vector<size_t> &vertices, tjunc_stats_t &stats)
 {
-	auto p = map.planes[f->planenum];
+	auto p = f->plane;
 
-	if (f->planeside) {
+	if (f->plane_flipped) {
 		p = -p;
 	}
 
@@ -830,7 +830,7 @@ FixEdges_r
 */
 static void FindFaces_r(node_t *node, std::unordered_set<face_t *> &faces)
 {
-	if (node->planenum == PLANENUM_LEAF) {
+	if (node->is_leaf) {
 		return;
 	}
 
