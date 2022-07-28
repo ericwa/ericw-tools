@@ -31,6 +31,12 @@
 #include <map>
 #include <list>
 
+struct makefaces_stats_t {
+    int	c_nodefaces;
+    int c_merge;
+    int c_subdivide;
+};
+
 static bool ShouldOmitFace(face_t *f)
 {
     if (!qbsp_options.includeskip.value() && map.mtexinfos.at(f->texinfo).flags.is_skip)
@@ -46,9 +52,9 @@ static bool ShouldOmitFace(face_t *f)
     return false;
 }
 
-static void MergeNodeFaces(node_t *node)
+static void MergeNodeFaces(node_t *node, int &num_merged)
 {
-    node->facelist = MergeFaceList(std::move(node->facelist));
+    node->facelist = MergeFaceList(std::move(node->facelist), num_merged);
 }
 
 /*
@@ -272,8 +278,6 @@ int MakeFaceEdges(node_t *headnode)
 
 //===========================================================================
 
-static int c_nodefaces;
-
 /*
 ================
 AddMarksurfaces_r
@@ -327,12 +331,6 @@ void MakeMarkFaces(node_t* node)
     MakeMarkFaces(node->children[1].get());
 }
 
-struct makefaces_stats_t {
-    int	c_nodefaces;
-    int c_merge;
-    int c_subdivide;
-};
-
 /*
 ===============
 SubdivideFace
@@ -341,7 +339,7 @@ If the face is >256 in either texture direction, carve a valid sized
 piece off and insert the remainder in the next link
 ===============
 */
-static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f)
+static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f, makefaces_stats_t &stats)
 {
     vec_t mins, maxs;
     vec_t v;
@@ -444,16 +442,18 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
         surfaces = std::move(chopped);
     }
 
+    stats.c_subdivide += surfaces.size() - 1;
+
     return surfaces;
 }
 
-static void SubdivideNodeFaces(node_t *node)
+static void SubdivideNodeFaces(node_t *node, makefaces_stats_t &stats)
 {
     std::list<std::unique_ptr<face_t>> result;
 
     // subdivide each face and push the results onto subdivided
     for (auto &face : node->facelist) {
-        result.splice(result.end(), SubdivideFace(std::move(face)));
+        result.splice(result.end(), SubdivideFace(std::move(face), stats));
     }
 
     node->facelist = std::move(result);
@@ -537,9 +537,9 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
 
         // merge together all visible faces on the node
         if (!qbsp_options.nomerge.value())
-            MergeNodeFaces(node);
+            MergeNodeFaces(node, stats.c_merge);
         if (qbsp_options.subdivide.boolValue())
-            SubdivideNodeFaces(node);
+            SubdivideNodeFaces(node, stats);
 
         return;
     }
@@ -581,7 +581,7 @@ void MakeFaces(node_t *node)
 
     MakeFaces_r(node, stats);
 
-    logging::print(logging::flag::STAT, "     {:8} makefaces\n", stats.c_nodefaces);
+    logging::print(logging::flag::STAT, "     {:8} makefaces\n", stats.c_nodefaces); // FIXME: what is "makefaces" exactly
     logging::print(logging::flag::STAT, "     {:8} merged\n", stats.c_merge);
     logging::print(logging::flag::STAT, "     {:8} subdivided\n", stats.c_subdivide);
 }

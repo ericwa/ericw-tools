@@ -591,8 +591,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         return;
     }
 
-    logging::print(logging::flag::STAT, "     {:8} planes\n", map.planes.size());
-
     std::unique_ptr<tree_t> tree = nullptr;
     if (hullnum > 0) {
         tree = BrushBSP(entity);

@@ -28,4 +28,4 @@ struct face_t;
 struct node_t;
 
 void MergeFaceToList(face_t *face, std::list<face_t *> &list);
-std::list<std::unique_ptr<face_t>> MergeFaceList(std::list<std::unique_ptr<face_t>> input);
+std::list<std::unique_ptr<face_t>> MergeFaceList(std::list<std::unique_ptr<face_t>> input, int &num_merged);
