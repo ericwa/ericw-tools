@@ -916,6 +916,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
          */
         auto headnode = std::make_unique<node_t>();
         headnode->bounds = entity->bounds;
+        headnode->plane = { { 0, 0, 1 }, 0 };
         headnode->children[0] = std::make_unique<node_t>();
         headnode->children[0]->is_leaf = true;
         headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
