@@ -464,7 +464,7 @@ std::vector<qvectri> minimum_weight_triangulation(const std::vector<size_t> &ind
                 vec_t weight;
 				
 				if (!TriangleIsValid(indices[i], indices[j], indices[k], 0.01)) {
-					weight = std::numeric_limits<vec_t>::infinity();
+					weight = std::nexttoward(std::numeric_limits<vec_t>::max(), 0.0);
 				} else {
 					weight = (qv::distance(vertices[i], vertices[j]) +
                             qv::distance(vertices[j], vertices[k]) +
