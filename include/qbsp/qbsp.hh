@@ -286,6 +286,7 @@ public:
         [](setting_int32 &setting) {
             return setting.value() == 0 || setting.value() >= 3;
         }, this, "maxedges", 64, &map_development_group, "the max number of edges/vertices on a single face before it is split into another face"};
+    setting_invertible_bool snapvertices{this, "snapvertices", false, &common_format_group, "round vertice locations; this is mainly for compatibility with older Quake II tools."};
 
     void setParameters(int argc, const char **argv) override
     {

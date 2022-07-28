@@ -744,6 +744,7 @@ static void FindPortalSide(portal_t *p)
             if (!(generate_outside_face || generate_inside_face)) {
                 continue;
             }
+
             for (auto &side : brush->sides)
             {
                 if (side.bevel)
@@ -762,7 +763,7 @@ static void FindPortalSide(portal_t *p)
                     if (generate_outside_face) {
                         if (!bestside[!j]) {
                             bestside[!j] = &side;
-                	}
+                	    }
                     }
                     if (generate_inside_face) {
                         if (!bestside[j]) {
@@ -780,9 +781,9 @@ static void FindPortalSide(portal_t *p)
 //                    bestdot = dot;
 //                    bestside[j] = &side;
 //                }
-                }
             }
         }
+    }
 
     if (!bestside[0] && !bestside[1])
         logging::print("WARNING: side not found for portal\n");
@@ -824,8 +825,8 @@ static void MarkVisibleSides_r(node_t *node)
         for (int i = 0; i < 2; ++i) {
             if (p->sides[i]) {
                 p->sides[i]->visible = true;
-    }
-}
+            }
+        }
     }
 }
 
