@@ -491,9 +491,6 @@ namespace qv
 // which have a bit more info in them
 [[nodiscard]] inline bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, vec_t normalEpsilon = NORMAL_EPSILON, vec_t distEpsilon = DIST_EPSILON)
 {
-    Q_assert(p1.type != plane_type_t::PLANE_INVALID);
-    Q_assert(p2.type != plane_type_t::PLANE_INVALID);
-
     // axial planes will never match on normal, so we can skip that check entirely
     if (p1.type < plane_type_t::PLANE_ANYX && p2.type < plane_type_t::PLANE_ANYX) {
         // if we aren't the same type, we definitely aren't equal
