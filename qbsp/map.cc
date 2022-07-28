@@ -543,7 +543,7 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
     }
 }
 
-static void TextureAxisFromPlane(const qbsp_plane_t &plane, qvec3d &xv, qvec3d &yv, qvec3d &snapped_normal)
+static void TextureAxisFromPlane(const qplane3d &plane, qvec3d &xv, qvec3d &yv, qvec3d &snapped_normal)
 {
     constexpr qvec3d baseaxis[18] = {
         {0, 0, 1}, {1, 0, 0}, {0, -1, 0}, // floor
@@ -602,7 +602,7 @@ static quark_tx_info_t ParseExtendedTX(parser_t &parser)
     return result;
 }
 
-static qmat4x4f texVecsTo4x4Matrix(const qbsp_plane_t &faceplane, const texvecf &in_vecs)
+static qmat4x4f texVecsTo4x4Matrix(const qplane3d &faceplane, const texvecf &in_vecs)
 {
     //           [s]
     // T * vec = [t]
@@ -1276,7 +1276,7 @@ static void SetTexinfo_BrushPrimitives(
 
 // From FaceToBrushPrimitFace in GtkRadiant
 static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
-    const qbsp_plane_t plane, const int texSize[2], const texvecf &in_vecs)
+    const qplane3d &plane, const int texSize[2], const texvecf &in_vecs)
 {
     qvec3d texX, texY;
     ComputeAxisBase(plane.normal, texX, texY);
@@ -1385,7 +1385,7 @@ parse_error:
 }
 
 static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t *brush, maptexinfo_t *tx,
-    std::array<qvec3d, 3> &planepts, const qbsp_plane_t &plane)
+    std::array<qvec3d, 3> &planepts, const qplane3d &plane)
 {
     vec_t rotate;
     qmat<vec_t, 2, 3> texMat, axis;
@@ -1529,9 +1529,8 @@ bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
 
     vec_t length;
 
-    plane.normal = qv::normalize(qv::cross(ab, cb), length);
-    plane.dist = qv::dot(planepts[1], plane.normal);
-    plane.type = qbsp_plane_t::calculate_type(plane);
+    plane.set_normal(qv::normalize(qv::cross(ab, cb), length));
+    plane.get_dist() = qv::dot(planepts[1], plane.get_normal());
 
     return length >= NORMAL_EPSILON;
 }
@@ -1571,7 +1570,7 @@ bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, con
 
 inline bool IsValidTextureProjection(const mapface_t &mapface, const maptexinfo_t *tx)
 {
-    return IsValidTextureProjection(mapface.plane.normal, tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
+    return IsValidTextureProjection(mapface.plane.get_normal(), tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
 }
 
 static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
@@ -2280,7 +2279,7 @@ void WriteEntitiesToString()
 
 //====================================================================
 
-inline std::optional<qvec3d> GetIntersection(const qbsp_plane_t &p1, const qbsp_plane_t &p2, const qbsp_plane_t &p3)
+inline std::optional<qvec3d> GetIntersection(const qplane3d &p1, const qplane3d &p2, const qplane3d &p3)
 {
     const vec_t denom = qv::dot(p1.normal, qv::cross(p2.normal, p3.normal));
 

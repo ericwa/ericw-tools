@@ -243,7 +243,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 {
     vec_t r;
     std::optional<winding_t> w;
-    qbsp_plane_t plane;
+    qplane3d plane;
     std::vector<side_t> facelist;
     qvec3d point;
     vec_t max, min;
@@ -314,13 +314,13 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             mapface.texinfo = FindTexinfo(texInfoNew);
         }
 
-        plane.normal = mapface.plane.normal;
-        point = mapface.plane.normal * mapface.plane.dist;
+        plane.normal = mapface.plane.get_normal();
+        point = mapface.plane.get_normal() * mapface.plane.get_dist();
         point -= rotate_offset;
         plane.dist = qv::dot(plane.normal, point);
 
         f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
-        f.plane = qbsp_plane_t::from_plane(plane, true, f.plane_flipped);
+        f.plane_flipped = f.plane.set_plane(plane, true);
 
         CheckFace(&f, mapface);
     }
@@ -376,22 +376,24 @@ AddBrushPlane
 */
 static void AddBrushPlane(hullbrush_t *hullbrush, const qbsp_plane_t &plane)
 {
-    vec_t len = qv::length(plane.normal);
+    vec_t len = qv::length(plane.get_normal());
 
     if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
         FError("invalid normal (vector length {:.4})", len);
 
     for (auto &mapface : hullbrush->faces) {
-        if (qv::epsilonEqual(mapface.plane, plane, EQUAL_EPSILON, qbsp_options.epsilon.value()))
+        if (qv::epsilonEqual(mapface.plane, plane, EQUAL_EPSILON, qbsp_options.epsilon.value())) {
             return;
+        }
     }
 
-    if (hullbrush->faces.size() == MAX_FACES)
+    if (hullbrush->faces.size() == MAX_FACES) {
         FError(
             "brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
+    }
 
     mapface_t &mapface = hullbrush->faces.emplace_back();
-    mapface.plane = {plane};
+    mapface.plane = plane;
     mapface.texinfo = 0;
 }
 
@@ -505,24 +507,21 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
         b = (a + 1) % 3;
         c = (a + 2) % 3;
 
-        qvec3d planevec;
+        qvec3d planevec{};
         planevec[a] = 1;
-        planevec[b] = 0;
-        planevec[c] = 0;
-        plane.normal = qv::cross(planevec, edgevec);
-        length = qv::normalizeInPlace(plane.normal);
+        plane.set_normal(qv::normalize(qv::cross(planevec, edgevec), length));
 
         /* If this edge is almost parallel to the hull edge, skip it. */
-        if (length < ANGLEEPSILON)
+        if (length < ANGLEEPSILON) {
             continue;
+        }
 
         for (d = 0; d <= 1; d++) {
             for (e = 0; e <= 1; e++) {
                 qvec3d planeorg = p1;
                 planeorg[b] += hull_size[d][b];
                 planeorg[c] += hull_size[e][c];
-                plane.dist = qv::dot(planeorg, plane.normal);
-                plane.type = qbsp_plane_t::calculate_type(plane);
+                plane.get_dist() = qv::dot(planeorg, plane.get_normal());
                 TestAddPlane(hullbrush, plane);
             }
         }
@@ -557,25 +556,25 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
             continue;
         qvec3d corner{};
         for (x = 0; x < 3; x++) {
-            if (mapface.plane.normal[x] > 0)
+            if (mapface.plane.get_normal()[x] > 0)
                 corner[x] = hull_size[1][x];
-            else if (mapface.plane.normal[x] < 0)
+            else if (mapface.plane.get_normal()[x] < 0)
                 corner[x] = hull_size[0][x];
         }
-        mapface.plane.dist += qv::dot(corner, mapface.plane.normal);
+        mapface.plane.get_dist() += qv::dot(corner, mapface.plane.get_normal());
     }
 
     // add any axis planes not contained in the brush to bevel off corners
     for (x = 0; x < 3; x++)
         for (s = -1; s <= 1; s += 2) {
             // add the plane
-            plane.normal = {};
-            plane.normal[x] = (vec_t)s;
+            qvec3d normal = {};
+            normal[x] = (vec_t)s;
+            plane.set_normal(normal);
             if (s == -1)
-                plane.dist = -hullbrush->bounds.mins()[x] + -hull_size[0][x];
+                plane.get_dist() = -hullbrush->bounds.mins()[x] + -hull_size[0][x];
             else
-                plane.dist = hullbrush->bounds.maxs()[x] + hull_size[1][x];
-            plane.type = qbsp_plane_t::calculate_type(plane);
+                plane.get_dist() = hullbrush->bounds.maxs()[x] + hull_size[1][x];
             AddBrushPlane(hullbrush, plane);
         }
 

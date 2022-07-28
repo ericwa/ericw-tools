@@ -84,7 +84,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
          * same way vis will, and flip the side orders if needed
          */
         plane2 = w->plane();
-        if (qv::dot(p->plane.normal, plane2.normal) < 1.0 - ANGLEEPSILON) {
+        if (qv::dot(p->plane.get_normal(), plane2.normal) < 1.0 - ANGLEEPSILON) {
             fmt::print(portalFile, "{} {} {} ", w->size(), back, front);
         } else {
             fmt::print(portalFile, "{} {} {} ", w->size(), front, back);

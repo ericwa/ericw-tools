@@ -55,7 +55,7 @@ static mapplane_t &NewPlane(const qplane3d &plane)
 
     index = map.planes.size();
 
-    mapplane_t &added_plane = map.planes.emplace_back(qbsp_plane_t::from_plane(plane));
+    mapplane_t &added_plane = map.planes.emplace_back(plane);
 
     const int hash = plane_hash_fn(added_plane);
 
@@ -90,18 +90,10 @@ size_t ExportMapPlane(const qbsp_plane_t &in_plane)
 
     plane.outputnum = map.bsp.dplanes.size();
     dplane_t &dplane = map.bsp.dplanes.emplace_back();
-    dplane.normal = plane.normal;
-    dplane.dist = plane.dist;
-    dplane.type = static_cast<int32_t>(plane.type);
+    dplane.normal = plane.get_normal();
+    dplane.dist = plane.get_dist();
+    dplane.type = static_cast<int32_t>(plane.get_type());
     return plane.outputnum.value();
-}
-
-/**
- * Returns the output plane number
- */
-size_t ExportMapPlane(const qplane3d &plane)
-{
-    return ExportMapPlane(qbsp_plane_t::from_plane(plane));
 }
 
 size_t ExportMapTexinfo(size_t texinfonum)

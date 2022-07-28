@@ -344,7 +344,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
     vec_t mins, maxs;
     vec_t v;
     int axis;
-    qbsp_plane_t plane;
+    qplane3d plane;
     const maptexinfo_t *tex;
     vec_t subdiv;
     vec_t extent;

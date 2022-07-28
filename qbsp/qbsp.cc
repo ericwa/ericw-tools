@@ -777,8 +777,7 @@ static void BSPX_Brushes_AddModel(
         for (auto &f : b->sides) {
             /*skip axial*/
             const auto &plane = f.plane;
-            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
-                fabs(plane.normal[2]) == 1)
+            if (plane.get_type() < plane_type_t::PLANE_ANYX)
                 continue;
             permodel.numfaces++;
         }
@@ -796,8 +795,7 @@ static void BSPX_Brushes_AddModel(
         for (auto &f : b->sides) {
             /*skip axial*/
             const auto &plane = f.plane;
-            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
-                fabs(plane.normal[2]) == 1)
+            if (plane.get_type() < plane_type_t::PLANE_ANYX)
                 continue;
             perbrush.numfaces++;
         }
@@ -838,16 +836,15 @@ static void BSPX_Brushes_AddModel(
         for (auto &f : b->sides) {
             /*skip axial*/
             const auto &plane = f.plane;
-            if (fabs(plane.normal[0]) == 1 || fabs(plane.normal[1]) == 1 ||
-                fabs(plane.normal[2]) == 1)
+            if (plane.get_type() < plane_type_t::PLANE_ANYX)
                 continue;
 
             bspxbrushes_perface perface;
 
             if (f.plane_flipped) {
-                perface = -plane;
+                perface = -plane.get_plane();
             } else {
-                perface = plane;
+                perface = plane.get_plane();
             }
 
             str <= std::tie(perface.normal, perface.dist);

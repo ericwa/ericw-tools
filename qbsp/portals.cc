@@ -190,8 +190,7 @@ void MakeHeadnodePortals(tree_t *tree)
                 pl.normal[i] = 1;
                 pl.dist = bounds[j][i];
             }
-            bool side;
-            p->plane = qbsp_plane_t::from_plane(pl, true, side);
+            bool side = p->plane.set_plane(pl, true);
 
             p->winding = BaseWindingForPlane(pl);
             if (side) {
