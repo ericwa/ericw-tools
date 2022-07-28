@@ -791,7 +791,7 @@ static void FindPortalSide(portal_t *p)
 
     for (int i = 0; i < 2; ++i) {
         p->sides[i] = bestside[i];
-}
+    }
 }
 
 /*
