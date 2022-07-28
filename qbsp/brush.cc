@@ -374,7 +374,7 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 AddBrushPlane
 =============
 */
-static void AddBrushPlane(hullbrush_t *hullbrush, const qplane3d &plane)
+static void AddBrushPlane(hullbrush_t *hullbrush, const qbsp_plane_t &plane)
 {
     vec_t len = qv::length(plane.normal);
 
@@ -382,8 +382,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, const qplane3d &plane)
         FError("invalid normal (vector length {:.4})", len);
 
     for (auto &mapface : hullbrush->faces) {
-        if (qv::epsilonEqual(mapface.plane.normal, plane.normal, EQUAL_EPSILON) &&
-            fabs(mapface.plane.dist - plane.dist) < qbsp_options.epsilon.value())
+        if (qv::epsilonEqual(mapface.plane, plane, EQUAL_EPSILON, qbsp_options.epsilon.value()))
             return;
     }
 
@@ -404,7 +403,7 @@ Adds the given plane to the brush description if all of the original brush
 vertexes can be put on the front side
 =============
 */
-static void TestAddPlane(hullbrush_t *hullbrush, qplane3d &plane)
+static void TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t &plane)
 {
     vec_t d;
     int points_front, points_back;
@@ -483,7 +482,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
 {
     int pt1, pt2;
     int a, b, c, d, e;
-    qplane3d plane;
+    qbsp_plane_t plane;
     vec_t length;
 
     pt1 = AddHullPoint(hullbrush, p1, hull_size);
@@ -523,6 +522,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
                 planeorg[b] += hull_size[d][b];
                 planeorg[c] += hull_size[e][c];
                 plane.dist = qv::dot(planeorg, plane.normal);
+                plane.type = qbsp_plane_t::calculate_type(plane);
                 TestAddPlane(hullbrush, plane);
             }
         }
@@ -575,6 +575,7 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
                 plane.dist = -hullbrush->bounds.mins()[x] + -hull_size[0][x];
             else
                 plane.dist = hullbrush->bounds.maxs()[x] + hull_size[1][x];
+            plane.type = qbsp_plane_t::calculate_type(plane);
             AddBrushPlane(hullbrush, plane);
         }
 

@@ -163,7 +163,7 @@ void MakeHeadnodePortals(tree_t *tree)
 {
     int i, j, n;
     portal_t *p, *portals[6];
-    qbsp_plane_t bplanes[6];
+    qplane3d bplanes[6];
 
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = tree->bounds.grow(SIDESPACE);
@@ -726,7 +726,7 @@ static void FindPortalSide(portal_t *p)
     // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
     side_t *bestside[2] = {nullptr, nullptr};
     float bestdot = 0;
-    const qplane3d &p1 = p->onnode->plane;
+    const qbsp_plane_t &p1 = p->onnode->plane;
 
     // check brushes on both sides of the portal
     for (int j = 0; j < 2; j++)

@@ -64,7 +64,7 @@ static mapplane_t &NewPlane(const qplane3d &plane)
     return added_plane;
 }
 
-static mapplane_t &FindPlane(const qplane3d &plane)
+static mapplane_t &FindPlane(const qbsp_plane_t &plane)
 {
     for (int i : map.planehash[plane_hash_fn(plane)]) {
         mapplane_t &p = map.planes.at(i);

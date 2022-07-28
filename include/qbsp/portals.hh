@@ -33,7 +33,7 @@ struct tree_t;
 
 struct portal_t
 {
-    qplane3d plane;
+    qbsp_plane_t plane;
     node_t *onnode; // nullptr = portal to the outside of the world (one of six sides of a box)
     node_t *nodes[2]; // [0] = front side of planenum
     portal_t *next[2]; // [0] = next portal in nodes[0]'s list of portals

@@ -1531,6 +1531,7 @@ bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
 
     plane.normal = qv::normalize(qv::cross(ab, cb), length);
     plane.dist = qv::dot(planepts[1], plane.normal);
+    plane.type = qbsp_plane_t::calculate_type(plane);
 
     return length >= NORMAL_EPSILON;
 }

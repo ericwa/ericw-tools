@@ -379,6 +379,145 @@ struct face_t
     portal_t *portal;
 };
 
+
+
+struct qbsp_plane_t : qplane3d
+{
+    plane_type_t type = plane_type_t::PLANE_INVALID;
+
+    qbsp_plane_t() = default;
+    qbsp_plane_t(const qbsp_plane_t &) = default;
+    constexpr qbsp_plane_t(const qplane3d &plane, const plane_type_t &type) noexcept :
+        qplane3d(plane),
+        type(type)
+    {
+    }
+    inline qbsp_plane_t(const qplane3d &plane) noexcept :
+        qbsp_plane_t(plane, calculate_type(plane))
+    {
+    }
+
+    qbsp_plane_t &operator=(const qbsp_plane_t &) = default;
+    inline qbsp_plane_t &operator=(const qplane3d &plane) noexcept
+    {
+        return *this = from_plane(plane);
+    }
+
+    [[nodiscard]] constexpr qbsp_plane_t operator-() const { return {qplane3d::operator-(), type}; }
+
+    // create a qbsp_plane_t from a plane.
+    // if flip is true, the returned plane will only be positive.
+    static inline qbsp_plane_t from_plane(const qplane3d &plane, bool flip, bool &was_flipped) noexcept
+    {
+        was_flipped = false;
+        qbsp_plane_t p { plane };
+
+        for (size_t i = 0; i < 3; i++) {
+            if (p.normal[i] == 1.0) {
+                p.normal[(i + 1) % 3] = 0;
+                p.normal[(i + 2) % 3] = 0;
+                p.type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
+                return p;
+            }
+            if (p.normal[i] == -1.0) {
+                if (flip) {
+                    p.normal[i] = 1.0;
+                    p.dist = -p.dist;
+                    was_flipped = true;
+                }
+                p.normal[(i + 1) % 3] = 0;
+                p.normal[(i + 2) % 3] = 0;
+                p.type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
+                return p;
+            }
+        }
+
+        vec_t ax = fabs(p.normal[0]);
+        vec_t ay = fabs(p.normal[1]);
+        vec_t az = fabs(p.normal[2]);
+
+        size_t nearest;
+
+        if (ax >= ay && ax >= az) {
+            nearest = 0;
+            p.type = plane_type_t::PLANE_ANYX;
+        } else if (ay >= ax && ay >= az) {
+            nearest = 1;
+            p.type = plane_type_t::PLANE_ANYY;
+        } else {
+            nearest = 2;
+            p.type = plane_type_t::PLANE_ANYZ;
+        }
+
+        if (flip && p.normal[nearest] < 0) {
+            was_flipped = true;
+            return -p;
+        }
+
+        return p;
+    }
+
+    static inline qbsp_plane_t from_plane(const qplane3d &plane, bool flip = false)
+    {
+        bool unused;
+        return from_plane(plane, flip, unused);
+    }
+
+    static inline plane_type_t calculate_type(const qplane3d &p)
+    {
+        for (size_t i = 0; i < 3; i++) {
+            if (p.normal[i] == 1.0 || p.normal[i] == -1.0) {
+                return (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
+            }
+        }
+
+        vec_t ax = fabs(p.normal[0]);
+        vec_t ay = fabs(p.normal[1]);
+        vec_t az = fabs(p.normal[2]);
+
+        if (ax >= ay && ax >= az) {
+            return plane_type_t::PLANE_ANYX;
+        } else if (ay >= ax && ay >= az) {
+            return plane_type_t::PLANE_ANYY;
+        } else {
+            return plane_type_t::PLANE_ANYZ;
+        }
+    }
+};
+
+namespace qv
+{
+// faster version of epsilonEqual for BSP planes
+// which have a bit more info in them
+[[nodiscard]] inline bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, vec_t normalEpsilon = NORMAL_EPSILON, vec_t distEpsilon = DIST_EPSILON)
+{
+    Q_assert(p1.type != plane_type_t::PLANE_INVALID);
+    Q_assert(p2.type != plane_type_t::PLANE_INVALID);
+
+    // axial planes will never match on normal, so we can skip that check entirely
+    if (p1.type < plane_type_t::PLANE_ANYX && p2.type < plane_type_t::PLANE_ANYX) {
+        // if we aren't the same type, we definitely aren't equal
+        if (p1.type != p2.type) {
+            return false;
+        } else if (p1.normal[static_cast<int32_t>(p1.type)] != p2.normal[static_cast<int32_t>(p2.type)]) {
+            // axials will always be only 1 or -1
+            return false;
+        }
+
+        // check dist
+        return epsilonEqual(p1.dist, p2.dist, distEpsilon);
+    }
+
+    // check dist
+    if (!epsilonEqual(p1.dist, p2.dist, distEpsilon)) {
+        return false;
+    }
+
+    // check normal
+    return epsilonEqual(p1.normal, p2.normal, normalEpsilon);
+}
+}; // namespace qv
+
 // there is a node_t structure for every node and leaf in the bsp tree
 
 struct bspbrush_t;
@@ -394,7 +533,7 @@ struct node_t
     bool is_leaf = false;
 
     // information for decision nodes
-    qplane3d plane; // decision node only
+    qbsp_plane_t plane; // decision node only
     int firstface; // decision node only
     int numfaces; // decision node only
     twosided<std::unique_ptr<node_t>> children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
