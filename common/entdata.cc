@@ -52,8 +52,7 @@ vec_t entdict_t::get_float(const std::string_view &key) const
 
     try {
         return std::stod(s);
-    }
-    catch (std::exception &) {
+    } catch (std::exception &) {
         return 0.0;
     }
 }
@@ -68,8 +67,7 @@ int32_t entdict_t::get_int(const std::string_view &key) const
 
     try {
         return std::stoi(s);
-    }
-    catch (std::exception &) {
+    } catch (std::exception &) {
         return 0;
     }
 }
@@ -169,7 +167,6 @@ void entdict_t::parse(parser_base_t &parser)
         set(keystr, parser.token);
     }
 }
-
 
 void EntData_ParseInto(const std::string &entdata, std::vector<entdict_t> &vector)
 {

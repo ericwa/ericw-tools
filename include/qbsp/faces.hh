@@ -25,5 +25,5 @@
 
 struct node_t;
 
-void MakeMarkFaces(node_t* headnode);
+void MakeMarkFaces(node_t *headnode);
 void MakeFaces(node_t *node);

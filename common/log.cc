@@ -82,7 +82,7 @@ void print(flag logflag, const char *str)
     }
 
     print_mutex.lock();
- 
+
     if (logflag != flag::PERCENT) {
         // log file, if open
         if (logfile) {
@@ -130,4 +130,4 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
         }
     }
 }
-};
+}; // namespace logging

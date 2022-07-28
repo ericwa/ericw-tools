@@ -593,8 +593,7 @@ int main(int argc, char **argv)
                 const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
                 const qvec3d normal{std::stof(argv[i + 4]), std::stof(argv[i + 5]), std::stof(argv[i + 6])};
                 FindFaces(&bsp, pos, normal);
-            }
-            catch (const std::exception &) {
+            } catch (const std::exception &) {
                 Error("Error reading position/normal\n");
             }
             return 0;
@@ -618,7 +617,8 @@ int main(int argc, char **argv)
             WriteBSPFile(source, &bspdata);
 
             return 0;
-        } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly") || !strcmp(argv[i], "--decompile-ignore-brushes")) {
+        } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly") ||
+                   !strcmp(argv[i], "--decompile-ignore-brushes")) {
             const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
             const bool ignoreBrushes = !strcmp(argv[i], "--decompile-ignore-brushes");
 

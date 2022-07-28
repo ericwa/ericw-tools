@@ -140,7 +140,7 @@ struct wad_archive : archive_like
 
         auto stream_data() { return std::tie(identification, numlumps, infotableofs); }
     };
-    
+
     static constexpr std::array<char, 4> wad2_ident = {'W', 'A', 'D', '2'};
     static constexpr std::array<char, 4> wad3_ident = {'W', 'A', 'D', '3'};
 
@@ -169,8 +169,7 @@ struct wad_archive : archive_like
 
         wadstream >= header;
 
-        if (header.identification != wad2_ident &&
-            header.identification != wad3_ident) {
+        if (header.identification != wad2_ident && header.identification != wad3_ident) {
             throw std::runtime_error("Bad magic");
         }
 
@@ -260,8 +259,7 @@ std::shared_ptr<archive_like> addArchive(const path &p, bool external)
             } else {
                 logging::funcprint("WARNING: no idea what to do with archive '{}'\n", p);
             }
-        }
-        catch (std::exception e) {
+        } catch (std::exception e) {
             logging::funcprint("WARNING: unable to load archive '{}': {}\n", p, e.what());
         }
     }

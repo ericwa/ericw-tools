@@ -51,7 +51,8 @@ std::vector<surfacelight_t> &GetSurfaceLights()
     return surfacelights;
 }
 
-static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face, std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
+static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
+    std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
     // Create face points...
     auto poly = GLM_FacePoints(bsp, face);
@@ -71,7 +72,8 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Dice winding...
     vector<qvec3f> points;
-    winding.dice(cfg.surflightsubdivision.value(), [&points, &facenormal](winding_t &w) { points.push_back(w.center() + facenormal); });
+    winding.dice(cfg.surflightsubdivision.value(),
+        [&points, &facenormal](winding_t &w) { points.push_back(w.center() + facenormal); });
     total_surflight_points += points.size();
 
     // Calculate emit color and intensity...
@@ -169,15 +171,16 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
         // first, check if it's a Q2 surface
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
 
-        if (info != nullptr)
-        {
+        if (info != nullptr) {
             if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
                 if (info->flags.native & Q2_SURF_LIGHT) {
                     qvec3d wc = winding_t::from_face(bsp, face).center();
-                    logging::print("WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
+                    logging::print(
+                        "WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
                 }
             } else {
-                MakeSurfaceLight(bsp, cfg, face, std::nullopt, !(info->flags.native & Q2_SURF_SKY), (info->flags.native & Q2_SURF_SKY), 0, info->value);
+                MakeSurfaceLight(bsp, cfg, face, std::nullopt, !(info->flags.native & Q2_SURF_SKY),
+                    (info->flags.native & Q2_SURF_SKY), 0, info->value);
             }
         }
     }
@@ -191,8 +194,11 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
                 texture_color = surflight->color.value();
             }
 
-            MakeSurfaceLight(bsp, cfg, face, texture_color, !surflight->epairs->has("_surface_spotlight") ? true : !!surflight->epairs->get_int("_surface_spotlight"),
-                surflight->epairs->get_int("_surface_is_sky"), surflight->epairs->get_int("style"), surflight->light.value());
+            MakeSurfaceLight(bsp, cfg, face, texture_color,
+                !surflight->epairs->has("_surface_spotlight") ? true
+                                                              : !!surflight->epairs->get_int("_surface_spotlight"),
+                surflight->epairs->get_int("_surface_is_sky"), surflight->epairs->get_int("style"),
+                surflight->light.value());
         }
     }
 }
@@ -213,10 +219,10 @@ MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *b
 {
     logging::print("--- MakeRadiositySurfaceLights ---\n");
 
-    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
+    logging::parallel_for(
+        static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
 
     if (surfacelights.size()) {
-        logging::print("{} surface lights ({} light points) in use.\n",
-            surfacelights.size(), total_surflight_points);
+        logging::print("{} surface lights ({} light points) in use.\n", surfacelights.size(), total_surflight_points);
     }
 }

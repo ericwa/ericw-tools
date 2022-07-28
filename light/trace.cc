@@ -29,17 +29,17 @@
 /*
 ==============
 Light_PointInLeaf
- 
+
 from hmap2
 ==============
 */
-const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const qvec3d &point )
+const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3d &point)
 {
     int num = 0;
-    
-    while( num >= 0 )
+
+    while (num >= 0)
         num = bsp->dnodes[num].children[bsp->dplanes[bsp->dnodes[num].planenum].distance_to_fast(point) < 0];
-    
+
     return &bsp->dleafs[-1 - num];
 }
 
@@ -50,7 +50,7 @@ Light_PointContents
 from hmap2
 ==============
 */
-int Light_PointContents( const mbsp_t *bsp, const qvec3d &point )
+int Light_PointContents(const mbsp_t *bsp, const qvec3d &point)
 {
     return Light_PointInLeaf(bsp, point)->contents;
 }
@@ -76,7 +76,8 @@ uint32_t clamp_texcoord(vec_t in, uint32_t width)
     }
 }
 
-qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3d &point)
+qvec4b SampleTexture(
+    const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3d &point)
 {
     if (texture == nullptr || !texture->width) {
         return {};

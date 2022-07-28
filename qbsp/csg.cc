@@ -63,7 +63,7 @@ std::unique_ptr<face_t> NewFaceFromFace(const face_t *in)
     return newf;
 }
 
-std::unique_ptr<face_t> CopyFace(const face_t* in)
+std::unique_ptr<face_t> CopyFace(const face_t *in)
 {
     auto temp = NewFaceFromFace(in);
     temp->w = in->w;
@@ -87,7 +87,8 @@ SplitFace
 Frees in. Returns {front, back}
 ==================
 */
-std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(std::unique_ptr<face_t> in, const qplane3d &split)
+std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(
+    std::unique_ptr<face_t> in, const qplane3d &split)
 {
     if (in->w.size() < 0)
         Error("Attempting to split freed face");

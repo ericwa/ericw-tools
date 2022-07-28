@@ -43,16 +43,17 @@ struct side_t
     bool visible = true; // can any part of this side be seen from non-void parts of the level?
                          // non-visible means we can discard the brush side
                          // (avoiding generating a BSP spit, so expanding it outwards)
-    bool bevel;          // don't ever use for bsp splitting
+    bool bevel; // don't ever use for bsp splitting
 
     bool tested;
 
-    const maptexinfo_t& get_texinfo() const;
+    const maptexinfo_t &get_texinfo() const;
 };
 
 class mapbrush_t;
 
-struct bspbrush_t {
+struct bspbrush_t
+{
     /**
      * The brushes in the mapentity_t::brushes vector are considered originals. Brush fragments created during
      * the BrushBSP will have this pointing back to the original brush in mapentity_t::brushes.
@@ -62,7 +63,7 @@ struct bspbrush_t {
     bspbrush_t *original;
     uint32_t file_order;
     aabb3d bounds;
-    int	side, testside; // side of node during construction
+    int side, testside; // side of node during construction
     std::vector<side_t> sides;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */

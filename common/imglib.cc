@@ -92,7 +92,8 @@ void init_palette(const gamedef_t *game)
     std::copy(pal.begin(), pal.end(), std::back_inserter(palette));
 }
 
-static void convert_paletted_to_32_bit(const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::vector<qvec3b> &pal)
+static void convert_paletted_to_32_bit(
+    const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::vector<qvec3b> &pal)
 {
     output.resize(pixels.size());
 
@@ -120,7 +121,8 @@ struct q2_miptex_t
     auto stream_data() { return std::tie(name, width, height, offsets, animname, flags, contents, value); }
 };
 
-std::optional<texture> load_wal(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_wal(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -160,7 +162,8 @@ Quake/Half Life MIP
 ============================================================================
 */
 
-std::optional<texture> load_mip(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_mip(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size());
     stream >> endianness<std::endian::little>;
@@ -178,7 +181,7 @@ std::optional<texture> load_mip(const std::string_view &name, const fs::data &fi
     texture tex;
 
     tex.meta.extension = ext::MIP;
-    
+
     // note: this is a bit of a hack, but the name stored in
     // the mip is ignored. it's extraneous and well-formed mips
     // will all match up anyways.
@@ -191,7 +194,7 @@ std::optional<texture> load_mip(const std::string_view &name, const fs::data &fi
         if (header.offsets[0] <= 0) {
             return tex;
         }
-        
+
         // convert the data into RGBA.
         // sanity check
         if (header.offsets[0] + (header.width * header.height) > file->size()) {
@@ -273,7 +276,8 @@ struct targa_t
 LoadTGA
 =============
 */
-std::optional<texture> load_tga(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_tga(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -325,7 +329,8 @@ std::optional<texture> load_tga(const std::string_view &name, const fs::data &fi
                             *pixbuf++ = {red, green, blue, alphabyte};
                             break;
                         default:
-                            logging::funcprint("TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
+                            logging::funcprint(
+                                "TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
                             return std::nullopt;
                     }
                 }
@@ -347,7 +352,8 @@ std::optional<texture> load_tga(const std::string_view &name, const fs::data &fi
                                 break;
                             case 32: stream >= blue >= green >= red >= alphabyte; break;
                             default:
-                                logging::funcprint("TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
+                                logging::funcprint(
+                                    "TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
                                 return std::nullopt;
                         }
 
@@ -375,7 +381,8 @@ std::optional<texture> load_tga(const std::string_view &name, const fs::data &fi
                                     *pixbuf++ = {red, green, blue, alphabyte};
                                     break;
                                 default:
-                                    logging::funcprint("TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
+                                    logging::funcprint(
+                                        "TGA {}, unsupported pixel size: {}\n", name, targa_header.pixel_size); // mxd
                                     return std::nullopt;
                             }
                             column++;
@@ -428,7 +435,8 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
     return avg /= n;
 }
 
-std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options)
+std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(
+    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options)
 {
     fs::path prefix;
 
@@ -488,10 +496,10 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
         "height": 64
     }
 */
-std::optional<texture_meta> load_wal_json_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game)
+std::optional<texture_meta> load_wal_json_meta(
+    const std::string_view &name, const fs::data &file, const gamedef_t *game)
 {
-    try
-    {
+    try {
         auto json = json::parse(file->begin(), file->end());
 
         texture_meta meta{};
@@ -521,7 +529,7 @@ std::optional<texture_meta> load_wal_json_meta(const std::string_view &name, con
                         meta.contents.native |= content.get<int32_t>();
                     } else if (content.is_string()) {
                         meta.contents.native |= game->contents_from_string(content.get<std::string>());
-                    } 
+                    }
                 }
             }
         }
@@ -539,7 +547,7 @@ std::optional<texture_meta> load_wal_json_meta(const std::string_view &name, con
                         meta.flags.native |= flag.get<int32_t>();
                     } else if (flag.is_string()) {
                         meta.flags.native |= game->surfflags_from_string(flag.get<std::string>());
-                    } 
+                    }
                 }
             }
         }
@@ -549,15 +557,14 @@ std::optional<texture_meta> load_wal_json_meta(const std::string_view &name, con
         }
 
         return meta;
-    }
-    catch (json::exception e)
-    {
+    } catch (json::exception e) {
         logging::funcprint("{}, invalid JSON: {}\n", name, e.what());
         return std::nullopt;
     }
 }
 
-std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_texture_meta(const std::string_view &name, const gamedef_t *game, const settings::common_settings &options)
+std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_texture_meta(
+    const std::string_view &name, const gamedef_t *game, const settings::common_settings &options)
 {
     fs::path prefix;
 

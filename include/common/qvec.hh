@@ -127,15 +127,36 @@ public:
         v[N - 1] = value;
     }
 
-    [[nodiscard]] constexpr size_t size() const { return N; }
+    [[nodiscard]] constexpr size_t size() const
+    {
+        return N;
+    }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qvec &other) const { return v < other.v; }
-    [[nodiscard]] constexpr bool operator<=(const qvec &other) const { return v <= other.v; }
-    [[nodiscard]] constexpr bool operator>(const qvec &other) const { return v > other.v; }
-    [[nodiscard]] constexpr bool operator>=(const qvec &other) const { return v >= other.v; }
-    [[nodiscard]] constexpr bool operator==(const qvec &other) const { return v == other.v; }
-    [[nodiscard]] constexpr bool operator!=(const qvec &other) const { return v != other.v; }
+    [[nodiscard]] constexpr bool operator<(const qvec &other) const
+    {
+        return v < other.v;
+    }
+    [[nodiscard]] constexpr bool operator<=(const qvec &other) const
+    {
+        return v <= other.v;
+    }
+    [[nodiscard]] constexpr bool operator>(const qvec &other) const
+    {
+        return v > other.v;
+    }
+    [[nodiscard]] constexpr bool operator>=(const qvec &other) const
+    {
+        return v >= other.v;
+    }
+    [[nodiscard]] constexpr bool operator==(const qvec &other) const
+    {
+        return v == other.v;
+    }
+    [[nodiscard]] constexpr bool operator!=(const qvec &other) const
+    {
+        return v != other.v;
+    }
 
     [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
@@ -149,8 +170,14 @@ public:
         return v[idx];
     }
 
-    [[nodiscard]] constexpr const T &operator[](const size_t idx) const { return at(idx); }
-    [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
+    [[nodiscard]] constexpr const T &operator[](const size_t idx) const
+    {
+        return at(idx);
+    }
+    [[nodiscard]] constexpr T &operator[](const size_t idx)
+    {
+        return at(idx);
+    }
 
     template<typename F>
     [[nodiscard]] inline auto operator+(const qvec<F, N> &other) const
@@ -273,18 +300,42 @@ public:
     }
 
     // stream support
-    auto stream_data() { return std::tie(v); }
+    auto stream_data()
+    {
+        return std::tie(v);
+    }
 
     // iterator support
-    constexpr auto begin() { return v.begin(); }
-    constexpr auto end() { return v.end(); }
-    constexpr auto begin() const { return v.begin(); }
-    constexpr auto end() const { return v.end(); }
-    constexpr auto cbegin() const { return v.cbegin(); }
-    constexpr auto cend() const { return v.cend(); }
+    constexpr auto begin()
+    {
+        return v.begin();
+    }
+    constexpr auto end()
+    {
+        return v.end();
+    }
+    constexpr auto begin() const
+    {
+        return v.begin();
+    }
+    constexpr auto end() const
+    {
+        return v.end();
+    }
+    constexpr auto cbegin() const
+    {
+        return v.cbegin();
+    }
+    constexpr auto cend() const
+    {
+        return v.cend();
+    }
 
     // for Google Test
-    friend std::ostream &operator<<(std::ostream &os, const qvec &v) { return os << fmt::format("{}", v); }
+    friend std::ostream &operator<<(std::ostream &os, const qvec &v)
+    {
+        return os << fmt::format("{}", v);
+    }
 };
 
 // Fmt support
@@ -1172,7 +1223,8 @@ struct twosided
     constexpr void swap() { std::swap(front, back); }
 };
 
-namespace qv {
+namespace qv
+{
 
 template<typename T>
 inline qvec<T, 3> vec_from_mangle(const qvec<T, 3> &m)
@@ -1182,4 +1234,4 @@ inline qvec<T, 3> vec_from_mangle(const qvec<T, 3> &m)
     return {rotations * qvec3d(1, 0, 0)};
 }
 
-}
+} // namespace qv

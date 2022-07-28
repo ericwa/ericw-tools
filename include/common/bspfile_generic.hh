@@ -430,7 +430,7 @@ struct q2_dbrushside_qbism_t
 
 struct bspversion_t;
 
- // "generic" bsp - superset of all other supported types
+// "generic" bsp - superset of all other supported types
 struct mbsp_t
 {
     // the BSP version that we came from, if any

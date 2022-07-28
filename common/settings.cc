@@ -53,10 +53,10 @@ void setting_container::reset()
     }
 }
 
-void setting_container::copyFrom(const setting_container& other)
+void setting_container::copyFrom(const setting_container &other)
 {
     for (auto setting : _settings) {
-        const std::string& pri_name = setting->primaryName();
+        const std::string &pri_name = setting->primaryName();
         const auto *other_setting = other.findSetting(pri_name);
 
         if (other_setting) {

@@ -55,7 +55,7 @@ bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d
 bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
 
 std::vector<const mface_t *> BSP_FindFacesAtPoint(
-    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal = qvec3d(0,0,0));
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal = qvec3d(0, 0, 0));
 /**
  * Searches for a face touching a point and facing a certain way.
  * Sometimes (water, sky?) there will be 2 overlapping candidates facing opposite ways, the provided normal
@@ -64,7 +64,7 @@ std::vector<const mface_t *> BSP_FindFacesAtPoint(
 const mface_t *BSP_FindFaceAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
 /**
- * Searches for a decision node in hull0 that contains `point`, and has a plane normal of either 
+ * Searches for a decision node in hull0 that contains `point`, and has a plane normal of either
  * wanted_normal or -wanted_normal.
  */
 const bsp2_dnode_t *BSP_FindNodeAtPoint(
@@ -87,7 +87,6 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
 
 void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it);
 void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed);
-
 
 /* ======================================================================== */
 
@@ -171,8 +170,7 @@ public:
 
     faceextents_t() = default;
 
-    inline faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmshift) :
-        lightmapshift(lmshift)
+    inline faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmshift) : lightmapshift(lmshift)
     {
         worldToTexCoordMatrix = WorldToTexSpace(&bsp, &face);
         texCoordToWorldMatrix = TexSpaceToWorld(&bsp, &face);
@@ -208,10 +206,11 @@ public:
                 const char *texname = Face_TextureName(&bsp, &face);
 
                 logging::print("WARNING: Bad surface extents (may not load in vanilla Q1 engines):\n"
-                      "   surface {}, {} extents = {}, shift = {}\n"
-                      "   texture {} at ({})\n"
-                      "   surface normal ({})\n",
-                    Face_GetNum(&bsp, &face), i ? "t" : "s", texextents[i], lightmapshift, texname, point, plane.normal);
+                               "   surface {}, {} extents = {}, shift = {}\n"
+                               "   texture {} at ({})\n"
+                               "   surface normal ({})\n",
+                    Face_GetNum(&bsp, &face), i ? "t" : "s", texextents[i], lightmapshift, texname, point,
+                    plane.normal);
             }
         }
 
@@ -243,12 +242,12 @@ public:
 
     constexpr qvec2f lightmapCoordToTexCoord(const qvec2f &LMCoord) const
     {
-        return { lightmapshift * (texmins[0] + LMCoord[0]), lightmapshift * (texmins[1] + LMCoord[1]) };
+        return {lightmapshift * (texmins[0] + LMCoord[0]), lightmapshift * (texmins[1] + LMCoord[1])};
     }
 
     constexpr qvec2f texCoordToLightmapCoord(const qvec2f &tc) const
     {
-        return { (tc[0] / lightmapshift) - texmins[0], (tc[1] / lightmapshift) - texmins[1] };
+        return {(tc[0] / lightmapshift) - texmins[0], (tc[1] / lightmapshift) - texmins[1]};
     }
 
     inline qvec2f worldToTexCoord(qvec3f world) const

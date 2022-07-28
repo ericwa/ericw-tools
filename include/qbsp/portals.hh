@@ -40,11 +40,13 @@ struct portal_t
     std::optional<winding_t> winding;
 
     bool sidefound; // false if ->side hasn't been checked
-    side_t *sides[2]; // [0] = the brush side visible on nodes[0] - it could come from a brush in nodes[1]. NULL = non-visible
+    side_t *sides[2]; // [0] = the brush side visible on nodes[0] - it could come from a brush in nodes[1]. NULL =
+                      // non-visible
     face_t *face[2]; // output face in bsp file
 };
 
-struct portalstats_t {
+struct portalstats_t
+{
     std::atomic<int> c_tinyportals;
 };
 
@@ -58,4 +60,4 @@ void AssertNoPortals(tree_t *tree);
 void MakeHeadnodePortals(tree_t *tree);
 void EmitAreaPortals(node_t *headnode);
 void FloodAreas(mapentity_t *entity, node_t *headnode);
-void MarkVisibleSides(tree_t *tree, mapentity_t* entity);
+void MarkVisibleSides(tree_t *tree, mapentity_t *entity);

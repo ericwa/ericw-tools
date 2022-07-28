@@ -31,8 +31,9 @@
 #include <map>
 #include <list>
 
-struct makefaces_stats_t {
-    int	c_nodefaces;
+struct makefaces_stats_t
+{
+    int c_nodefaces;
     int c_merge;
     int c_subdivide;
 };
@@ -242,7 +243,7 @@ static void GrowNodeRegion(node_t *node)
     node->firstface = static_cast<int>(map.bsp.dfaces.size());
 
     for (auto &face : node->facelist) {
-        //Q_assert(face->planenum == node->planenum);
+        // Q_assert(face->planenum == node->planenum);
 
         // emit a region
         for (auto &fragment : face->fragments) {
@@ -312,7 +313,7 @@ MakeMarkFaces
 Populates the `markfaces` vectors of all leafs
 ================
 */
-void MakeMarkFaces(node_t* node)
+void MakeMarkFaces(node_t *node)
 {
     if (node->is_leaf) {
         return;
@@ -321,7 +322,7 @@ void MakeMarkFaces(node_t* node)
     // for the faces on this splitting node..
     for (auto &face : node->facelist) {
         // add this face to all descendant leafs it touches
-        
+
         // make a copy we can clip
         AddMarksurfaces_r(face.get(), CopyFace(face.get()), node->children[face->plane_flipped].get());
     }
@@ -424,8 +425,8 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
             std::unique_ptr<face_t> back;
             std::tie(front, back) = SplitFace(std::move(f), plane);
             if (!front || !back) {
-                //logging::print("didn't split\n");
-                // FError("Didn't split the polygon");
+                // logging::print("didn't split\n");
+                //  FError("Didn't split the polygon");
             }
 
             if (front) {
@@ -473,7 +474,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
 {
     side_t *side = p->sides[pside];
     if (!side)
-        return nullptr;	// portal does not bridge different visible contents
+        return nullptr; // portal does not bridge different visible contents
 
     auto f = std::make_unique<face_t>();
 
@@ -527,11 +528,10 @@ mark the side that originally created it
   water / water : none
 ===============
 */
-static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
+static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
 {
     // recurse down to leafs
-    if (!node->is_leaf)
-    {
+    if (!node->is_leaf) {
         MakeFaces_r(node->children[0].get(), stats);
         MakeFaces_r(node->children[1].get(), stats);
 
@@ -553,8 +553,7 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t& stats)
     // (Note, this is happening per leaf, so we can potentially generate faces
     // for the same portal once from one leaf, and once from the neighbouring one)
     bool s;
-    for (portal_t *p = node->portals; p; p = p->next[s])
-    {
+    for (portal_t *p = node->portals; p; p = p->next[s]) {
         // true means node is on the back side of planenum
         s = (p->nodes[1] == node);
 
@@ -581,7 +580,8 @@ void MakeFaces(node_t *node)
 
     MakeFaces_r(node, stats);
 
-    logging::print(logging::flag::STAT, "     {:8} makefaces\n", stats.c_nodefaces); // FIXME: what is "makefaces" exactly
+    logging::print(
+        logging::flag::STAT, "     {:8} makefaces\n", stats.c_nodefaces); // FIXME: what is "makefaces" exactly
     logging::print(logging::flag::STAT, "     {:8} merged\n", stats.c_merge);
     logging::print(logging::flag::STAT, "     {:8} subdivided\n", stats.c_subdivide);
 }

@@ -174,7 +174,11 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
 
     auto &texture = texture_opt.value();
     std::vector<uint8_t> buf;
-    stbi_write_png_to_func([](void *context, void *data, int size) { std::copy(reinterpret_cast<uint8_t *>(data), reinterpret_cast<uint8_t *>(data) + size, std::back_inserter(*reinterpret_cast<decltype(buf) *>(context))); },
+    stbi_write_png_to_func(
+        [](void *context, void *data, int size) {
+            std::copy(reinterpret_cast<uint8_t *>(data), reinterpret_cast<uint8_t *>(data) + size,
+                std::back_inserter(*reinterpret_cast<decltype(buf) *>(context)));
+        },
         &buf, texture.meta.width, texture.meta.height, 4, texture.pixels.data(), texture.width * 4);
 
     std::string str{"data:image/png;base64,"};
@@ -189,10 +193,11 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
 static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bspx, const mface_t &face, bool use_bspx)
 {
     if (!use_bspx) {
-        return { face, bsp, 16.0 };
+        return {face, bsp, 16.0};
     }
 
-    return { face, bsp, (float) nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()]) };
+    return {face, bsp,
+        (float)nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()])};
 }
 
 static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx)
@@ -240,9 +245,9 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
             bspx_lmoffset >= faceofs;
         }
 
-        rectangles.emplace_back(face_rect { &face, get_face_extents(bsp, bspx, face, use_bspx), faceofs });
+        rectangles.emplace_back(face_rect{&face, get_face_extents(bsp, bspx, face, use_bspx), faceofs});
     }
-    
+
     if (!rectangles.size()) {
         return nullptr;
     }
@@ -279,7 +284,7 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
                 continue;
             }
 
-            atl.tallest = max(atl.tallest, (size_t) rect.extents.height());
+            atl.tallest = max(atl.tallest, (size_t)rect.extents.height());
             rect.x = atl.current_x;
             rect.y = atl.current_y;
             rect.atlas = current_atlas;
@@ -342,7 +347,8 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
                 continue;
             }
 
-            auto in_pixel = bsp.dlightdata.begin() + rect.lightofs + (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
+            auto in_pixel =
+                bsp.dlightdata.begin() + rect.lightofs + (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
 
             for (size_t y = 0; y < rect.extents.height(); y++) {
                 for (size_t x = 0; x < rect.extents.width(); x++) {
@@ -373,8 +379,7 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
         memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
     }
 
-    auto ExportObjFace = [&full_atlas](std::iostream &f, const mbsp_t *bsp, const face_rect &face, int &vertcount)
-    {
+    auto ExportObjFace = [&full_atlas](std::iostream &f, const mbsp_t *bsp, const face_rect &face, int &vertcount) {
         // export the vertices and uvs
         for (int i = 0; i < face.face->numedges; i++) {
             const int vertnum = Face_VertexAtIndex(bsp, face.face, i);
@@ -386,7 +391,7 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
             auto tc = face.extents.worldToLMCoord(pos);
             tc[0] += face.x;
             tc[1] += face.y;
-            
+
             tc[0] /= full_atlas.width;
             tc[1] /= full_atlas.height;
 
@@ -407,8 +412,7 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
         vertcount += face.face->numedges;
     };
 
-    auto ExportObj = [&ExportObjFace, &rectangles](const mbsp_t *bsp)
-    {
+    auto ExportObj = [&ExportObjFace, &rectangles](const mbsp_t *bsp) {
         std::stringstream objfile;
         int vertcount = 0;
 
@@ -525,7 +529,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             node.push_back({"numfaces", src_node.numfaces});
 
             // human-readable plane
-            auto& plane = bsp.dplanes.at(src_node.planenum);
+            auto &plane = bsp.dplanes.at(src_node.planenum);
             node.push_back({"plane", json::array({plane.normal[0], plane.normal[1], plane.normal[2], plane.dist})});
         }
     }
@@ -656,8 +660,9 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             tex.push_back({"height", src_tex.height});
 
             if (src_tex.data.size() > sizeof(dmiptex_t)) {
-            	json &mips = tex["mips"] = json::array();
-            	mips.emplace_back(serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
+                json &mips = tex["mips"] = json::array();
+                mips.emplace_back(
+                    serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
             }
         }
     }
@@ -673,8 +678,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                 entry["models"] = serialize_bspxbrushlist(lump.second);
             } else {
                 // unhandled BSPX lump, just write the raw data
-                entry["lumpdata"] =
-                    hex_string(lump.second.data(), lump.second.size());
+                entry["lumpdata"] = hex_string(lump.second.data(), lump.second.size());
             }
         }
     }

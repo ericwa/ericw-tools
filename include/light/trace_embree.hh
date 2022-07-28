@@ -91,10 +91,7 @@ public:
         return _ray_dynamic_styles[j];
     }
 
-    inline void clearPushedRays()
-    {
-        _numrays = 0;
-    }
+    inline void clearPushedRays() { _numrays = 0; }
 };
 
 #include <embree3/rtcore.h>
@@ -190,10 +187,7 @@ private:
 public:
     inline raystream_intersection_t() = default;
 
-    inline raystream_intersection_t(size_t maxRays)
-    {
-        resize(maxRays);
-    }
+    inline raystream_intersection_t(size_t maxRays) { resize(maxRays); }
 
     void resize(size_t size) override
     {
@@ -280,10 +274,7 @@ private:
 public:
     inline raystream_occlusion_t() = default;
 
-    inline raystream_occlusion_t(size_t maxRays)
-    {
-        resize(maxRays);
-    }
+    inline raystream_occlusion_t(size_t maxRays) { resize(maxRays); }
 
     void resize(size_t size) override
     {

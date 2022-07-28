@@ -65,23 +65,13 @@ private:
 
         constexpr bool operator==(const q1_contentflags_data &other) const
         {
-            return is_origin == other.is_origin
-                   && is_clip == other.is_clip
-                   && is_fence == other.is_fence
-                   && is_mist == other.is_mist
-                   && is_detail == other.is_detail;
+            return is_origin == other.is_origin && is_clip == other.is_clip && is_fence == other.is_fence &&
+                   is_mist == other.is_mist && is_detail == other.is_detail;
         }
 
         constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
 
-        constexpr explicit operator bool() const
-        {
-            return is_origin
-                   || is_clip
-                   || is_fence
-                   || is_mist
-                   || is_detail;
-        }
+        constexpr explicit operator bool() const { return is_origin || is_clip || is_fence || is_mist || is_detail; }
     };
 
     // returns a blank entry if the given contents don't have
@@ -124,7 +114,8 @@ private:
 
         constexpr size_t size() const { return 11; }
         constexpr size_t last_visible_contents() const { return 6; }
-        constexpr bitset_t bitset() const {
+        constexpr bitset_t bitset() const
+        {
             bitset_t result;
             result[0] = solid;
             result[1] = sky;
@@ -143,27 +134,18 @@ private:
         }
 
         q1_contentflags_bits() = default;
-        explicit q1_contentflags_bits(const bitset_t& bitset) :
-        solid(bitset[0]),
-        sky(bitset[1]),
-        fence(bitset[2]),
-        lava(bitset[3]),
-        slime(bitset[4]),
-        water(bitset[5]),
-        mist(bitset[6]),
-        origin(bitset[7]),
-        clip(bitset[8]),
-        illusionary_visblocker(bitset[9]),
-        detail(bitset[10]),
-        mirror_inside(bitset[11]),
-        suppress_clipping_same_type(bitset[12]) {}
+        explicit q1_contentflags_bits(const bitset_t &bitset)
+            : solid(bitset[0]), sky(bitset[1]), fence(bitset[2]), lava(bitset[3]), slime(bitset[4]), water(bitset[5]),
+              mist(bitset[6]), origin(bitset[7]), clip(bitset[8]), illusionary_visblocker(bitset[9]),
+              detail(bitset[10]), mirror_inside(bitset[11]), suppress_clipping_same_type(bitset[12])
+        {
+        }
 
-        static constexpr const char *bitflag_names[] = {"SOLID", "SKY", "FENCE", "LAVA",
-            "SLIME", "WATER", "MIST", "ORIGIN", "CLIP", "ILLUSIONARY_VISBLOCKER", "DETAIL",
-            "MIRROR_INSIDE", "SUPPRESS_CLIPPING_SAME_TYPE"
-        };
+        static constexpr const char *bitflag_names[] = {"SOLID", "SKY", "FENCE", "LAVA", "SLIME", "WATER", "MIST",
+            "ORIGIN", "CLIP", "ILLUSIONARY_VISBLOCKER", "DETAIL", "MIRROR_INSIDE", "SUPPRESS_CLIPPING_SAME_TYPE"};
 
-        constexpr bool operator[](size_t index) const {
+        constexpr bool operator[](size_t index) const
+        {
             switch (index) {
                 case 0: return solid;
                 case 1: return sky;
@@ -182,7 +164,8 @@ private:
             }
         }
 
-        constexpr bool& operator[](size_t index) {
+        constexpr bool &operator[](size_t index)
+        {
             switch (index) {
                 case 0: return solid;
                 case 1: return sky;
@@ -201,22 +184,22 @@ private:
             }
         }
 
-        constexpr q1_contentflags_bits operator|(const q1_contentflags_bits &other) const {
+        constexpr q1_contentflags_bits operator|(const q1_contentflags_bits &other) const
+        {
             return q1_contentflags_bits(bitset() | other.bitset());
         }
 
-        constexpr q1_contentflags_bits operator^(const q1_contentflags_bits &other) const {
+        constexpr q1_contentflags_bits operator^(const q1_contentflags_bits &other) const
+        {
             return q1_contentflags_bits(bitset() ^ other.bitset());
         }
 
-        constexpr bool operator==(const q1_contentflags_bits &other) const
-        {
-            return bitset() == other.bitset();
-        }
+        constexpr bool operator==(const q1_contentflags_bits &other) const { return bitset() == other.bitset(); }
 
         constexpr bool operator!=(const q1_contentflags_bits &other) const { return !(*this == other); }
 
-        constexpr int32_t visible_contents_index() const {
+        constexpr int32_t visible_contents_index() const
+        {
             for (size_t i = 0; i <= last_visible_contents(); ++i) {
                 if ((*this)[i]) {
                     return static_cast<int32_t>(i);
@@ -226,7 +209,8 @@ private:
             return -1;
         }
 
-        constexpr q1_contentflags_bits visible_contents() const {
+        constexpr q1_contentflags_bits visible_contents() const
+        {
             q1_contentflags_bits result;
 
             int32_t index = visible_contents_index();
@@ -237,7 +221,8 @@ private:
             return result;
         }
 
-        constexpr bool empty() const {
+        constexpr bool empty() const
+        {
             // fixme-brushbsp: what should we do with empty, but the detail flag set?
             q1_contentflags_bits empty_test;
             return (*this) == empty_test;
@@ -250,21 +235,11 @@ private:
 
         // set bit for native contents
         switch (contents.native) {
-            case CONTENTS_SOLID:
-                result.solid = true;
-                break;
-            case CONTENTS_WATER:
-                result.water = true;
-                break;
-            case CONTENTS_SLIME:
-                result.slime = true;
-                break;
-            case CONTENTS_LAVA:
-                result.lava = true;
-                break;
-            case CONTENTS_SKY:
-                result.sky = true;
-                break;
+            case CONTENTS_SOLID: result.solid = true; break;
+            case CONTENTS_WATER: result.water = true; break;
+            case CONTENTS_SLIME: result.slime = true; break;
+            case CONTENTS_LAVA: result.lava = true; break;
+            case CONTENTS_SKY: result.sky = true; break;
         }
 
         // copy in extra flags
@@ -321,7 +296,6 @@ private:
     }
 
 public:
-
     explicit gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir) { this->id = ID; }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
@@ -451,11 +425,8 @@ public:
 
         const auto visible = bits.visible_contents();
 
-
         // If the brush is non-solid, mirror faces for the inside view
-        return visible.water
-               || visible.slime
-               || visible.lava;
+        return visible.water || visible.slime || visible.lava;
     }
 
     bool contents_are_origin(const contentflags_t &contents) const override
@@ -532,7 +503,9 @@ public:
         return 0;
     }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const override    {
+    bool portal_can_see_through(
+        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const override
+    {
         auto bits_a = contentflags_to_bits(contents0);
         auto bits_b = contentflags_to_bits(contents1);
 
@@ -548,10 +521,10 @@ public:
             bits_b = q1_contentflags_bits();
 
         if (bits_a.solid || bits_b.solid)
-            return false;		// can't see through solid
+            return false; // can't see through solid
 
         if ((bits_a ^ bits_b).empty())
-            return true;		// identical on both sides
+            return true; // identical on both sides
 
         if ((bits_a ^ bits_b).visible_contents().empty())
             return true;
@@ -598,8 +571,7 @@ public:
 
         q1_contentflags_bits result;
 
-        if (bits_a.suppress_clipping_same_type
-            || bits_b.suppress_clipping_same_type) {
+        if (bits_a.suppress_clipping_same_type || bits_b.suppress_clipping_same_type) {
             result = bits_a | bits_b;
         } else {
             result = bits_a ^ bits_b;
@@ -610,7 +582,8 @@ public:
         return contentflags_from_bits(strongest_contents_change);
     }
 
-    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents, planeside_t brushside_side) const override
+    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents,
+        planeside_t brushside_side) const override
     {
         auto bits_portal = contentflags_to_bits(portal_visible_contents);
         auto bits_brush = contentflags_to_bits(brushcontents);
@@ -627,10 +600,7 @@ public:
         }
 
         if (brushside_side == SIDE_BACK) {
-            return bits_brush.mirror_inside
-                || bits_brush.water
-                || bits_brush.slime
-                || bits_brush.lava;
+            return bits_brush.mirror_inside || bits_brush.water || bits_brush.slime || bits_brush.lava;
         }
         return true;
     }
@@ -668,7 +638,7 @@ public:
         // todo: anything smarter we can do here?
         // think this can't even happen in Q1 anyways
         if (!contents_are_valid(contents, false)) {
-            contents = { CONTENTS_SOLID };
+            contents = {CONTENTS_SOLID};
         }
     }
 
@@ -680,7 +650,8 @@ public:
         return hulls;
     }
 
-    contentflags_t face_get_contents(const std::string &texname, const surfflags_t &flags, const contentflags_t &) const override
+    contentflags_t face_get_contents(
+        const std::string &texname, const surfflags_t &flags, const contentflags_t &) const override
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
@@ -804,7 +775,8 @@ public:
         const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
 
         for (auto [bits, count] : stats.native_types) {
-            logging::print(logging::flag::STAT, "     {:8} {} {}\n", count, get_contents_display(q1_contentflags_bits(bits)), what);
+            logging::print(logging::flag::STAT, "     {:8} {} {}\n", count,
+                get_contents_display(q1_contentflags_bits(bits)), what);
         }
 
         logging::print(logging::flag::STAT, "     {:8} {} total\n", stats.total_brushes, what);
@@ -895,7 +867,10 @@ struct gamedef_q2_t : public gamedef_t
         max_entity_key = 256;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP)); }
+    bool surf_is_lightmapped(const surfflags_t &flags) const override
+    {
+        return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
+    }
 
     bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_SKY); }
 
@@ -905,8 +880,8 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    static constexpr const char *surf_bitflag_names[] = {"LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW",
-        "HINT" };
+    static constexpr const char *surf_bitflag_names[] = {
+        "LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW", "HINT"};
 
     int32_t surfflags_from_string(const std::string_view &str) const override
     {
@@ -919,7 +894,8 @@ struct gamedef_q2_t : public gamedef_t
         return 0;
     }
 
-    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override    {
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
+    {
         // any face in a hint brush that isn't HINT are treated as "hintskip", and discarded
         return !(flags.native & Q2_SURF_HINT);
     }
@@ -941,30 +917,33 @@ struct gamedef_q2_t : public gamedef_t
 
     inline int32_t get_content_type(const contentflags_t &contents) const
     {
-        return contents.native & (Q2_ALL_VISIBLE_CONTENTS |
-                                     (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
-                                         Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
+        return contents.native &
+               (Q2_ALL_VISIBLE_CONTENTS | (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
+                                              Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
     }
 
     contentflags_t create_empty_contents() const override { return {Q2_CONTENTS_EMPTY}; }
 
     contentflags_t create_solid_contents() const override { return {Q2_CONTENTS_SOLID}; }
 
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override {
+    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override
+    {
         contentflags_t result = original;
         result.native &= ~Q2_CONTENTS_SOLID;
         result.native |= Q2_CONTENTS_MIST | Q2_CONTENTS_DETAIL;
         return result;
     }
 
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override {
+    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override
+    {
         contentflags_t result = original;
         result.native &= ~Q2_CONTENTS_SOLID;
         result.native |= (Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_DETAIL);
         return result;
     }
 
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override {
+    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override
+    {
         contentflags_t result = original;
         result.native |= (Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL);
         return result;
@@ -978,8 +957,7 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override
     {
-        return self.illusionary_visblocker == other.illusionary_visblocker &&
-               self.native == other.native;
+        return self.illusionary_visblocker == other.illusionary_visblocker && self.native == other.native;
     }
 
     bool contents_are_any_detail(const contentflags_t &contents) const override
@@ -989,7 +967,7 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_detail_solid(const contentflags_t &contents) const override
     {
-        int32_t test = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_SOLID);
+        int32_t test = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID);
 
         return ((contents.native & test) == test);
     }
@@ -1000,7 +978,7 @@ struct gamedef_q2_t : public gamedef_t
             return false;
         }
 
-        int32_t test = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_WINDOW);
+        int32_t test = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW);
         return ((contents.native & test) == test);
     }
 
@@ -1010,11 +988,10 @@ struct gamedef_q2_t : public gamedef_t
             return false;
         }
 
-        int32_t mist1_type = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_MIST);
-        int32_t mist2_type = (Q2_CONTENTS_DETAIL|Q2_CONTENTS_AUX);
+        int32_t mist1_type = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST);
+        int32_t mist2_type = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX);
 
-        return ((contents.native & mist1_type) == mist1_type)
-            || ((contents.native & mist2_type) == mist2_type);
+        return ((contents.native & mist1_type) == mist1_type) || ((contents.native & mist2_type) == mist2_type);
     }
 
     bool contents_are_mirrored(const contentflags_t &contents) const override
@@ -1039,16 +1016,14 @@ struct gamedef_q2_t : public gamedef_t
     {
         return contents.native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP);
     }
-    
+
     bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const override
     {
-        return (self.native & Q2_ALL_VISIBLE_CONTENTS) == (other.native & Q2_ALL_VISIBLE_CONTENTS) && self.clips_same_type.value_or(true);
+        return (self.native & Q2_ALL_VISIBLE_CONTENTS) == (other.native & Q2_ALL_VISIBLE_CONTENTS) &&
+               self.clips_same_type.value_or(true);
     }
 
-    inline bool contents_has_extended(const contentflags_t &contents) const
-    {
-        return contents.illusionary_visblocker;
-    }
+    inline bool contents_has_extended(const contentflags_t &contents) const { return contents.illusionary_visblocker; }
 
     bool contents_are_empty(const contentflags_t &contents) const override
     {
@@ -1062,9 +1037,8 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_are_solid(const contentflags_t &contents) const override
     {
-        return !contents_has_extended(contents) && 
-               (contents.native & Q2_CONTENTS_SOLID) &&
-              !(contents.native & Q2_CONTENTS_DETAIL);
+        return !contents_has_extended(contents) && (contents.native & Q2_CONTENTS_SOLID) &&
+               !(contents.native & Q2_CONTENTS_DETAIL);
     }
 
     bool contents_are_sky(const contentflags_t &contents) const override { return false; }
@@ -1094,9 +1068,9 @@ struct gamedef_q2_t : public gamedef_t
     }
 
     static constexpr const char *bitflag_names[] = {"SOLID", "WINDOW", "AUX", "LAVA", "SLIME", "WATER", "MIST", "128",
-        "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP",
-        "CURRENT_0", "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER",
-        "DEADMONSTER", "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
+        "256", "512", "1024", "2048", "4096", "8192", "16384", "AREAPORTAL", "PLAYERCLIP", "MONSTERCLIP", "CURRENT_0",
+        "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER", "DEADMONSTER",
+        "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
 
     int32_t contents_from_string(const std::string_view &str) const
     {
@@ -1127,8 +1101,7 @@ struct gamedef_q2_t : public gamedef_t
     {
         contentflags_t result;
 
-        if (!a.clips_same_type.value_or(true)
-            || !b.clips_same_type.value_or(true)) {
+        if (!a.clips_same_type.value_or(true) || !b.clips_same_type.value_or(true)) {
             result.native = visible_contents(a.native | b.native);
         } else {
             result.native = visible_contents(a.native ^ b.native);
@@ -1136,7 +1109,8 @@ struct gamedef_q2_t : public gamedef_t
         return result;
     }
 
-    bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool, bool) const override
+    bool portal_can_see_through(
+        const contentflags_t &contents0, const contentflags_t &contents1, bool, bool) const override
     {
         int32_t c0 = contents0.native, c1 = contents1.native;
 
@@ -1163,15 +1137,12 @@ struct gamedef_q2_t : public gamedef_t
         return !visible_contents(c0 ^ c1);
     }
 
-    bool contents_seals_map(const contentflags_t& contents) const override
+    bool contents_seals_map(const contentflags_t &contents) const override
     {
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
-    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override
-    {
-        return contents;
-    }
+    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override { return contents; }
 
     contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
@@ -1187,7 +1158,8 @@ struct gamedef_q2_t : public gamedef_t
         return result;
     }
 
-    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents, planeside_t brushside_side) const override
+    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents,
+        planeside_t brushside_side) const override
     {
         if ((portal_visible_contents.native & brushcontents.native) == 0) {
             return false;
@@ -1216,7 +1188,7 @@ struct gamedef_q2_t : public gamedef_t
                 if (s.size()) {
                     s += " | ";
                 }
-                
+
                 s += bitflag_names[i];
             }
         }
@@ -1317,13 +1289,13 @@ public:
     void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
     {
         fs::clear();
-        
+
         if (options.defaultpaths.value()) {
             constexpr const char *MAPS_FOLDER = "maps";
 
             // detect gamedir (mod directory path)
             fs::path gamedir, basedir;
-        
+
             // pull in from settings
             if (options.gamedir.isChanged()) {
                 gamedir = options.gamedir.value();
@@ -1331,7 +1303,7 @@ public:
             if (options.basedir.isChanged()) {
                 basedir = options.basedir.value();
             }
-        
+
             // figure out the gamedir first
             if (!gamedir.is_absolute()) {
                 if (!gamedir.empty() && basedir.is_absolute()) {
@@ -1354,7 +1326,8 @@ public:
                         gamedir = fs::weakly_canonical(source).parent_path();
 
                         if (!string_iequals(gamedir.filename().generic_string(), MAPS_FOLDER)) {
-                            logging::print("WARNING: '{}' is not directly inside '{}'; gamedir can't be automatically determined.\n",
+                            logging::print(
+                                "WARNING: '{}' is not directly inside '{}'; gamedir can't be automatically determined.\n",
                                 source, MAPS_FOLDER);
                         }
 
@@ -1443,7 +1416,7 @@ private:
     struct content_stats_t : public content_stats_base_t
     {
         std::mutex stat_mutex;
-        //std::array<std::atomic<size_t>, 32> native_types;
+        // std::array<std::atomic<size_t>, 32> native_types;
         std::unordered_map<int32_t, size_t> native_types;
         std::atomic<size_t> total_brushes;
         std::atomic<size_t> visblocker_brushes;
@@ -1482,7 +1455,8 @@ public:
 
         /*for (int32_t i = 0; i < 32; i++) {
             if (stats.native_types[i]) {
-                logging::print(logging::flag::STAT, "     {:8} {} {}\n", stats.native_types[i], get_contents_display({nth_bit(i)}), what);
+                logging::print(logging::flag::STAT, "     {:8} {} {}\n", stats.native_types[i],
+        get_contents_display({nth_bit(i)}), what);
             }
         }*/
         for (auto &it : stats.native_types) {
@@ -1674,9 +1648,8 @@ bool surfflags_t::is_valid(const gamedef_t *game) const
 
 bool contentflags_t::equals(const gamedef_t *game, const contentflags_t &other) const
 {
-    return game->contents_are_equal(*this, other) &&
-        mirror_inside == other.mirror_inside &&
-        clips_same_type == other.clips_same_type;
+    return game->contents_are_equal(*this, other) && mirror_inside == other.mirror_inside &&
+           clips_same_type == other.clips_same_type;
 }
 
 bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
@@ -1764,11 +1737,13 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     std::string s = game->get_contents_display(*this);
 
     if (contentflags_t{native}.is_mirrored(game) != is_mirrored(game)) {
-        s += fmt::format(" | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
+        s += fmt::format(
+            " | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
     }
 
     if (contentflags_t{native}.will_clip_same_type(game) != will_clip_same_type(game)) {
-        s += fmt::format(" | CLIPS_SAME_TYPE[{}]", clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
+        s += fmt::format(" | CLIPS_SAME_TYPE[{}]",
+            clips_same_type.has_value() ? (clips_same_type.value() ? "true" : "false") : "nullopt");
     }
 
     if (illusionary_visblocker) {
@@ -2008,8 +1983,7 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             } else {
                 return false;
             }
-        }
-        catch (std::overflow_error e) {
+        } catch (std::overflow_error e) {
             logging::print("LIMITS EXCEEDED ON {}\n", e.what());
             return false;
         }
@@ -2074,7 +2048,7 @@ struct lump_reader
             s.read(reinterpret_cast<char *>(buffer.data()), length);
         }
 
-        Q_assert((bool) s);
+        Q_assert((bool)s);
     }
 
     // read string from stream
@@ -2104,7 +2078,7 @@ struct lump_reader
         }
         // TODO: warn about bad .bsp if missing \0?
 
-        Q_assert((bool) s);
+        Q_assert((bool)s);
     }
 
     // read structured lump data from stream into struct
@@ -2124,7 +2098,7 @@ struct lump_reader
 
         buffer.stream_read(s, lump);
 
-        Q_assert((bool) s);
+        Q_assert((bool)s);
     }
 };
 
@@ -2291,8 +2265,9 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
                 logging::print("WARNING: invalid BSPX lump at index {}\n", i);
                 return;
             }
-            
-            bspdata->bspx.transfer(xlump.lumpname.data(), std::vector<uint8_t>(file_data->begin() + xlump.fileofs, file_data->begin() + xlump.fileofs + xlump.filelen));
+
+            bspdata->bspx.transfer(xlump.lumpname.data(), std::vector<uint8_t>(file_data->begin() + xlump.fileofs,
+                                                              file_data->begin() + xlump.fileofs + xlump.filelen));
         }
     }
 }

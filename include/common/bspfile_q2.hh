@@ -94,7 +94,6 @@ struct q2_dmodel_t
     auto stream_data() { return std::tie(mins, maxs, origin, headnode, firstface, numfaces); }
 };
 
-
 // Q2 contents (from qfiles.h)
 
 // contents flags are seperate bits
@@ -279,7 +278,6 @@ struct q2_dface_qbism_t
     // serialize for streams
     auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
 };
-
 
 struct q2_dleaf_t
 {

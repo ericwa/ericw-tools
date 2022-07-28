@@ -53,7 +53,8 @@ public:
 // (previously, the `--help` code called exit(0); directly which caused
 // spurious test successes.)
 struct quit_after_help_exception : public std::exception
-{};
+{
+};
 
 enum class source
 {
@@ -111,10 +112,10 @@ public:
     // }
     //
     // is incompatible with the settings_container/setting_base types being copyable.
-    setting_base(const setting_base& other) = delete;
+    setting_base(const setting_base &other) = delete;
 
     // copy assignment
-    setting_base& operator=(const setting_base& other) = delete;
+    setting_base &operator=(const setting_base &other) = delete;
 
     inline const std::string &primaryName() const { return _names.at(0); }
     inline const nameset &names() const { return _names; }
@@ -136,7 +137,7 @@ public:
     }
 
     // copies value and source
-    virtual bool copyFrom(const setting_base& other) = 0;
+    virtual bool copyFrom(const setting_base &other) = 0;
 
     // convenience form of parse() that constructs a temporary parser_t
     bool parseString(const std::string &string, source source);
@@ -163,11 +164,9 @@ public:
     {
     }
 
-    inline bool copyFrom(const setting_base& other) override {
-        return true;
-    }
+    inline bool copyFrom(const setting_base &other) override { return true; }
 
-    inline void reset() override {}
+    inline void reset() override { }
 
     bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
@@ -204,7 +203,8 @@ public:
         }
     }
 
-    inline bool copyFrom(const setting_base& other) override {
+    inline bool copyFrom(const setting_base &other) override
+    {
         if (auto *casted = dynamic_cast<const setting_value<T> *>(&other)) {
             _value = casted->_value;
             _source = casted->_source;
@@ -213,7 +213,8 @@ public:
         return false;
     }
 
-    inline void reset() override {
+    inline void reset() override
+    {
         _value = _default;
         _source = source::DEFAULT;
     }
@@ -305,11 +306,9 @@ public:
     {
     }
 
-    inline bool copyFrom(const setting_base& other) override {
-        return true;
-    }
+    inline bool copyFrom(const setting_base &other) override { return true; }
 
-    inline void reset() override {}
+    inline void reset() override { }
 
     bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
@@ -342,6 +341,7 @@ template<typename T>
 class setting_numeric : public setting_value<T>
 {
     static_assert(!std::is_enum_v<T>, "use setting_enum for enums");
+
 protected:
     T _min, _max;
 
@@ -375,10 +375,7 @@ public:
         this->setting_value<T>::setValue(std::clamp(f, _min, _max), newsource);
     }
 
-    inline bool boolValue() const
-    {
-        return this->_value > 0;
-    }
+    inline bool boolValue() const { return this->_value > 0; }
 
     bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
@@ -398,8 +395,7 @@ public:
             this->setValue(f, source);
 
             return true;
-        }
-        catch (std::exception &) {
+        } catch (std::exception &) {
             return false;
         }
     }
@@ -520,11 +516,11 @@ public:
         if (!parser.parse_token()) {
             return false;
         }
-        
+
         setValue(parser.token, source);
         return true;
     }
-    
+
     std::string stringValue() const override { return _value.string(); }
 
     std::string format() const override { return "\"relative/path\" or \"C:/absolute/path\""; }
@@ -538,14 +534,14 @@ private:
 
 public:
     inline setting_set(setting_container *dictionary, const nameset &names,
-        const std::string_view &format = "\"str\" <multiple allowed>", const setting_group *group = nullptr, const char *description = "")
-        : setting_base(dictionary, names, group, description),
-        _format(format)
+        const std::string_view &format = "\"str\" <multiple allowed>", const setting_group *group = nullptr,
+        const char *description = "")
+        : setting_base(dictionary, names, group, description), _format(format)
     {
     }
 
     const std::unordered_set<std::string> &values() const { return _values; }
-    
+
     virtual void addValue(const std::string &value, source newSource)
     {
         if (changeSource(newSource)) {
@@ -563,7 +559,8 @@ public:
         return true;
     }
 
-    inline bool copyFrom(const setting_base& other) override {
+    inline bool copyFrom(const setting_base &other) override
+    {
         if (auto *casted = dynamic_cast<const setting_set *>(&other)) {
             _values = casted->_values;
             _source = casted->_source;
@@ -572,7 +569,8 @@ public:
         return false;
     }
 
-    inline void reset() override {
+    inline void reset() override
+    {
         _values.clear();
         _source = source::DEFAULT;
     }
@@ -623,8 +621,7 @@ public:
 
             try {
                 vec[i] = std::stod(parser.token);
-            }
-            catch (std::exception &) {
+            } catch (std::exception &) {
                 return false;
             }
         }
@@ -667,10 +664,9 @@ protected:
     std::function<bool(T &)> _validator;
 
 public:
-    template<typename ...Args>
-    inline setting_validator(const decltype(_validator) &validator, Args&&... args) :
-        T(std::forward<Args>(args)...),
-        _validator(validator)
+    template<typename... Args>
+    inline setting_validator(const decltype(_validator) &validator, Args &&...args)
+        : T(std::forward<Args>(args)...), _validator(validator)
     {
     }
 
@@ -710,19 +706,19 @@ public:
     std::string remainderName = "filename";
     std::string programDescription;
 
-    inline setting_container() {}
+    inline setting_container() { }
 
     ~setting_container();
 
     // copy constructor (can't be copyable, see setting_base)
-    setting_container(const setting_container& other) = delete;
+    setting_container(const setting_container &other) = delete;
 
     // copy assignment
-    setting_container& operator=(const setting_container& other) = delete;
+    setting_container &operator=(const setting_container &other) = delete;
 
     void reset();
 
-    void copyFrom(const setting_container& other);
+    void copyFrom(const setting_container &other);
 
     inline void registerSetting(setting_base *setting)
     {
@@ -820,28 +816,36 @@ public:
     // global settings
     setting_int32 threads{
         this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"};
-    setting_bool lowpriority{
-        this, "lowpriority", false, &performance_group, "run in a lower priority, to free up headroom for other processes"};
-    
+    setting_bool lowpriority{this, "lowpriority", false, &performance_group,
+        "run in a lower priority, to free up headroom for other processes"};
+
     setting_invertible_bool log{this, "log", true, &logging_group, "whether log files are written or not"};
     setting_bool verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"};
     setting_bool nopercent{this, "nopercent", false, &logging_group, "don't output percentage messages"};
     setting_bool nostat{this, "nostat", false, &logging_group, "don't output statistic messages"};
     setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
-    setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group, "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
-    setting_path gamedir{this, "gamedir", "", &game_group, "override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified."};
-    setting_path basedir{this, "basedir", "", &game_group, "override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified."};
-    setting_enum<search_priority_t> filepriority{this, "filepriority", search_priority_t::LOOSE, { { "loose", search_priority_t::LOOSE }, { "archive", search_priority_t::ARCHIVE } }, &game_group, "which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching" };
-    setting_set paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &game_group, "additional paths or archives to add to the search path, mostly for loose files"};
+    setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group,
+        "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
+    setting_path gamedir{this, "gamedir", "", &game_group,
+        "override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified."};
+    setting_path basedir{this, "basedir", "", &game_group,
+        "override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified."};
+    setting_enum<search_priority_t> filepriority{this, "filepriority", search_priority_t::LOOSE,
+        {{"loose", search_priority_t::LOOSE}, {"archive", search_priority_t::ARCHIVE}}, &game_group,
+        "which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching"};
+    setting_set paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &game_group,
+        "additional paths or archives to add to the search path, mostly for loose files"};
     setting_bool q2rtx{this, "q2rtx", false, &game_group, "adjust settings to best support Q2RTX"};
-    setting_invertible_bool defaultpaths{this, "defaultpaths", true, &game_group, "whether the compiler should attempt to automatically derive game/base paths for games that support it"};
+    setting_invertible_bool defaultpaths{this, "defaultpaths", true, &game_group,
+        "whether the compiler should attempt to automatically derive game/base paths for games that support it"};
 
     virtual void setParameters(int argc, const char **argv);
 
     // before the parsing routine; set up options, members, etc
     virtual void preinitialize(int argc, const char **argv) { setParameters(argc, argv); }
     // do the actual parsing
-    virtual void initialize(int argc, const char **argv) {
+    virtual void initialize(int argc, const char **argv)
+    {
         token_parser_t p(argc, argv);
         parse(p);
     }

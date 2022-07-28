@@ -30,8 +30,8 @@ static int c_leafskip;
   pointer, was measurably faster
   ==============
 */
-static void ClipToSeparators(const winding_t *source, const qplane3d src_pl,
-    const winding_t *pass, winding_t *&target, unsigned int test, pstack_t &stack)
+static void ClipToSeparators(const winding_t *source, const qplane3d src_pl, const winding_t *pass, winding_t *&target,
+    unsigned int test, pstack_t &stack)
 {
     int i, j, k, l;
     qplane3d sep;
@@ -144,7 +144,7 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 */
 static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevstack)
 {
-    pstack_t stack {};
+    pstack_t stack{};
     portal_t *p;
     qplane3d backplane;
     leaf_t *leaf;
@@ -397,7 +397,7 @@ static void BasePortalThread(size_t portalnum)
         if (i == portalnum) {
             continue;
         }
-        
+
         portal_t &tp = portals[i];
         winding_t &tw = tp.winding;
 

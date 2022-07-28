@@ -167,9 +167,9 @@ void SaveVisState(void)
         pstate.numcansee = p.numcansee;
 
         out <= pstate;
-        out.write((const char *) might.data(), might_len);
+        out.write((const char *)might.data(), might_len);
         if (vis_len) {
-            out.write((const char *) vis.data(), vis_len);
+            out.write((const char *)vis.data(), vis_len);
         }
     }
 
@@ -252,7 +252,7 @@ bool LoadVisState(void)
         p.nummightsee = pstate.nummightsee;
         p.numcansee = pstate.numcansee;
 
-        in.read((char *) compressed.data(), pstate.might);
+        in.read((char *)compressed.data(), pstate.might);
         p.mightsee.resize(portalleafs);
 
         if (pstate.might < numbytes) {
@@ -264,7 +264,7 @@ bool LoadVisState(void)
         p.visbits.resize(portalleafs);
 
         if (pstate.vis) {
-            in.read((char *) compressed.data(), pstate.vis);
+            in.read((char *)compressed.data(), pstate.vis);
             if (pstate.vis < numbytes) {
                 DecompressBits(p.visbits, compressed.data());
             } else {

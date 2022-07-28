@@ -111,13 +111,21 @@ struct contentflags_t
     bool is_detail_solid(const gamedef_t *game) const;
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
-    
+
     bool is_mirrored(const gamedef_t *game) const;
-    contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value) { mirror_inside = mirror_inside_value; return *this; }
-    
+    contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value)
+    {
+        mirror_inside = mirror_inside_value;
+        return *this;
+    }
+
     inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
     bool will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const;
-    contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value) { clips_same_type = clips_same_type_value; return *this; }
+    contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value)
+    {
+        clips_same_type = clips_same_type_value;
+        return *this;
+    }
 
     bool is_empty(const gamedef_t *game) const;
     bool is_any_solid(const gamedef_t *game) const;
@@ -131,9 +139,7 @@ struct contentflags_t
 
     void make_valid(const gamedef_t *game);
 
-    inline bool is_fence(const gamedef_t *game) const {
-        return is_detail_fence(game) || is_detail_illusionary(game);
-    }
+    inline bool is_fence(const gamedef_t *game) const { return is_detail_fence(game) || is_detail_illusionary(game); }
 
     // check if this content's `type` - which is distinct from various
     // flags that turn things on/off - match. Exactly what the native
@@ -208,8 +214,8 @@ struct surfflags_t
 private:
     constexpr auto as_tuple() const
     {
-        return std::tie(native, is_skip, is_hintskip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand, light_ignore,
-            phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha);
+        return std::tie(native, is_skip, is_hintskip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand,
+            light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha);
     }
 
 public:
@@ -233,7 +239,8 @@ enum gameid_t
     GAME_TOTAL
 };
 
-struct content_stats_base_t {
+struct content_stats_base_t
+{
     virtual ~content_stats_base_t() = default;
 };
 
@@ -290,17 +297,19 @@ struct gamedef_t
     virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(const std::string_view &str) const = 0;
-    virtual bool portal_can_see_through(const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const = 0;
+    virtual bool portal_can_see_through(
+        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const = 0;
     virtual bool contents_seals_map(const contentflags_t &contents) const = 0;
     virtual contentflags_t contents_remap_for_export(const contentflags_t &contents) const = 0;
     virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
     // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
     virtual contentflags_t portal_visible_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
-    // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined by
-    // portal_visible_contents, should the `brushside_side` of the brushside generate a face?
-    // e.g. liquids generate front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in
-    // with _mirrorinside
-    virtual bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents, planeside_t brushside_side) const = 0;
+    // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined
+    // by portal_visible_contents, should the `brushside_side` of the brushside generate a face? e.g. liquids generate
+    // front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in with
+    // _mirrorinside
+    virtual bool portal_generates_face(const contentflags_t &portal_visible_contents,
+        const contentflags_t &brushcontents, planeside_t brushside_side) const = 0;
     virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
@@ -356,7 +365,8 @@ struct fmt::formatter<bspversion_t>
 
         // Q2-esque BSPs are printed as, ex, IBSP:38
         if (v.version.has_value()) {
-            char ident[5] = { (char) (v.ident & 0xFF), (char) ((v.ident >> 8) & 0xFF), (char) ((v.ident >> 16) & 0xFF), (char) ((v.ident >> 24) & 0xFF), '\0' };
+            char ident[5] = {(char)(v.ident & 0xFF), (char)((v.ident >> 8) & 0xFF), (char)((v.ident >> 16) & 0xFF),
+                (char)((v.ident >> 24) & 0xFF), '\0'};
             return format_to(ctx.out(), "{}:{}", ident, v.version.value());
         }
 
@@ -429,13 +439,13 @@ struct bspdata_t
     struct
     {
         bspxentries_t entries;
-        
+
         // transfer ownership of the vector into a BSPX lump
         inline void transfer(const char *xname, std::vector<uint8_t> &xdata)
         {
             entries.insert_or_assign(xname, std::move(xdata));
         }
-        
+
         // transfer ownership of the vector into a BSPX lump
         inline void transfer(const char *xname, std::vector<uint8_t> &&xdata)
         {

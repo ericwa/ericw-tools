@@ -38,7 +38,7 @@
 #include <common/imglib.hh>
 #include <common/parallel.hh>
 
-#if defined(HAVE_EMBREE) && defined (__SSE2__)
+#if defined(HAVE_EMBREE) && defined(__SSE2__)
 #include <xmmintrin.h>
 //#include <pmmintrin.h>
 #endif
@@ -179,11 +179,11 @@ void light_settings::postinitialize(int argc, const char **argv)
         }
     }
 
-    // upgrade to uint16 if facestyles is specified 
+    // upgrade to uint16 if facestyles is specified
     if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.isChanged()) {
         light_options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE, settings::source::COMMANDLINE);
     }
-    
+
     common_settings::postinitialize(argc, argv);
 }
 } // namespace settings
@@ -270,7 +270,7 @@ void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata,
 void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs)
 {
     Q_assert(lightofs >= 0);
-    
+
     *lightdata = *colordata = *deluxdata = nullptr;
 
     if (!filebase.empty()) {
@@ -321,7 +321,7 @@ const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
 static void CacheTextures(const mbsp_t &bsp)
 {
     face_textures.resize(bsp.dfaces.size());
-    
+
     for (size_t i = 0; i < bsp.dfaces.size(); i++) {
         const char *name = Face_TextureName(&bsp, &bsp.dfaces[i]);
 
@@ -388,7 +388,8 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
             }
             SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
             for (int j = 0; j < MAXLIGHTMAPS; j++) {
-                f->styles[j] = faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
+                f->styles[j] =
+                    faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
             }
         } else {
             SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
@@ -556,7 +557,8 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     CreateLightmapSurfaces(&bsp);
 
     const bool bouncerequired =
-        light_options.bounce.value() && (light_options.debugmode == debugmodes::none || light_options.debugmode == debugmodes::bounce ||
+        light_options.bounce.value() &&
+        (light_options.debugmode == debugmodes::none || light_options.debugmode == debugmodes::bounce ||
             light_options.debugmode == debugmodes::bouncelights); // mxd
 
     MakeRadiositySurfaceLights(light_options, &bsp);
@@ -564,7 +566,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     logging::print("--- Direct Lighting ---\n"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
         if (light_surfaces[i]) {
-#if defined(HAVE_EMBREE) && defined (__SSE2__)
+#if defined(HAVE_EMBREE) && defined(__SSE2__)
             _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
 
@@ -583,9 +585,9 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         logging::print("--- Indirect Lighting ---\n"); // mxd
         logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
             if (light_surfaces[i]) {
-    #if defined(HAVE_EMBREE) && defined (__SSE2__)
+#if defined(HAVE_EMBREE) && defined(__SSE2__)
                 _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-    #endif
+#endif
 
                 IndirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
             }
@@ -637,16 +639,19 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             if (stylesperface < j)
                 stylesperface = j;
         }
-        
+
         if (stylesperface >= light_options.facestyles.value()) {
-            logging::print("WARNING: styles per face {} exceeds compiler-set max styles {}; use `-facestyles` if you need more.\n", stylesperface, light_options.facestyles.value());
+            logging::print(
+                "WARNING: styles per face {} exceeds compiler-set max styles {}; use `-facestyles` if you need more.\n",
+                stylesperface, light_options.facestyles.value());
             stylesperface = light_options.facestyles.value();
         }
 
-        needstyles |= (stylesperface>4);
+        needstyles |= (stylesperface > 4);
 
-        logging::print("max {} styles per face, {} used{}\n", light_options.facestyles.value(), stylesperface, maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
-        
+        logging::print("max {} styles per face, {} used{}\n", light_options.facestyles.value(), stylesperface,
+            maxstyle >= INVALID_LIGHTSTYLE_OLD ? ", 16bit lightstyles" : "");
+
         if (needstyles) {
             if (maxstyle >= INVALID_LIGHTSTYLE_OLD) {
                 /*needs bigger datatype*/
@@ -669,10 +674,11 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
                 for (size_t i = 0, k = 0; i < bsp.dfaces.size(); i++) {
                     for (size_t j = 0; j < stylesperface; j++, k++) {
-                        styles_mem[k] = faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
+                        styles_mem[k] = faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD
+                                                                                     : faces_sup[i].styles[j];
                     }
                 }
-                
+
                 logging::print("LMSTYLE BSPX lump written\n");
                 bspdata->bspx.transfer("LMSTYLE", styles_mem);
             }
@@ -687,7 +693,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             for (size_t i = 0; i < bsp.dfaces.size(); i++) {
                 offsets <= faces_sup[i].lightofs;
             }
-            
+
             logging::print("LMOFFSET BSPX lump written\n");
             bspdata->bspx.transfer("LMOFFSET", offsets_mem);
         }
@@ -888,11 +894,11 @@ static void SetLitNeeded()
         if (light_options.novanilla.value()) {
             light_options.write_litfile = lightfile::bspx;
             logging::print("Colored light entities/settings detected: "
-                     "bspxlit output enabled.\n");
+                           "bspxlit output enabled.\n");
         } else {
             light_options.write_litfile = lightfile::external;
             logging::print("Colored light entities/settings detected: "
-                     ".lit output enabled.\n");
+                           ".lit output enabled.\n");
         }
     }
 }
@@ -1036,7 +1042,7 @@ static void AddTextureName(const std::string_view &textureName, const mbsp_t *bs
     auto &tex = img::textures.emplace(textureName, img::texture{}).first->second;
 
     // find texture & meta
-    auto [ texture, _0, _1 ] = img::load_texture(textureName, false, bsp->loadversion->game, light_options);
+    auto [texture, _0, _1] = img::load_texture(textureName, false, bsp->loadversion->game, light_options);
 
     if (!texture) {
         logging::funcprint("WARNING: can't find pixel data for {}\n", textureName);
@@ -1044,8 +1050,8 @@ static void AddTextureName(const std::string_view &textureName, const mbsp_t *bs
         tex = std::move(texture.value());
     }
 
-    auto [ texture_meta, __0, __1 ] = img::load_texture_meta(textureName, bsp->loadversion->game, light_options);
-    
+    auto [texture_meta, __0, __1] = img::load_texture_meta(textureName, bsp->loadversion->game, light_options);
+
     if (!texture_meta) {
         logging::funcprint("WARNING: can't find meta data for {}\n", textureName);
     } else {
@@ -1053,8 +1059,8 @@ static void AddTextureName(const std::string_view &textureName, const mbsp_t *bs
     }
 
     tex.averageColor = img::calculate_average(tex.pixels);
-    tex.width_scale = (float) tex.width / (float) tex.meta.width;
-    tex.height_scale = (float) tex.height / (float) tex.meta.height;
+    tex.width_scale = (float)tex.width / (float)tex.meta.width;
+    tex.height_scale = (float)tex.height / (float)tex.meta.height;
 }
 
 // Load all of the referenced textures from the BSP texinfos into
@@ -1104,7 +1110,8 @@ static void ConvertTextures(const mbsp_t *bsp)
         }
 
         // find replacement texture
-        if (auto [ texture, _0, _1 ] = img::load_texture(miptex.name, false, bsp->loadversion->game, light_options); texture) {
+        if (auto [texture, _0, _1] = img::load_texture(miptex.name, false, bsp->loadversion->game, light_options);
+            texture) {
             tex.width = texture->width;
             tex.height = texture->height;
             tex.pixels = std::move(texture->pixels);
@@ -1116,8 +1123,8 @@ static void ConvertTextures(const mbsp_t *bsp)
         }
 
         tex.averageColor = img::calculate_average(tex.pixels);
-        tex.width_scale = (float) tex.width / (float) tex.meta.width;
-        tex.height_scale = (float) tex.height / (float) tex.meta.height;
+        tex.width_scale = (float)tex.width / (float)tex.meta.width;
+        tex.height_scale = (float)tex.height / (float)tex.meta.height;
     }
 }
 
@@ -1150,7 +1157,8 @@ int light_main(int argc, const char **argv)
     auto start = I_FloatTime();
     fs::path source = light_options.sourceMap;
 
-    logging::init(fs::path(source).replace_filename(source.stem().string() + "-light").replace_extension("log"), light_options);
+    logging::init(
+        fs::path(source).replace_filename(source.stem().string() + "-light").replace_extension("log"), light_options);
 
     // delete previous litfile
     if (!light_options.onlyents.value()) {

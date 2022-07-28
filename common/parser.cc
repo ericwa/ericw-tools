@@ -123,7 +123,9 @@ skipspace:
                             *token_p++ = *pos++;
                         }
                         break;
-                    default: logging::print("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]); break;
+                    default:
+                        logging::print("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]);
+                        break;
                 }
             }
             *token_p++ = *pos++;

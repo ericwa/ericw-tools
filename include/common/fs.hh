@@ -60,7 +60,7 @@ struct resolve_result
     std::shared_ptr<archive_like> archive;
     path filename;
 
-    inline explicit operator bool() const { return (bool) archive; }
+    inline explicit operator bool() const { return (bool)archive; }
 };
 
 // attempt to resolve the specified file.

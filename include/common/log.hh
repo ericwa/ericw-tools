@@ -35,20 +35,20 @@
 // forward declaration
 namespace settings
 {
-    class common_settings;
+class common_settings;
 }
 
 namespace logging
 {
 enum class flag : uint8_t
 {
-    NONE        = 0,      // none of the below (still prints though)
-    DEFAULT     = nth_bit(0), // prints everywhere
-    VERBOSE     = nth_bit(1), // prints everywhere, if enabled
-    PROGRESS    = nth_bit(2), // prints only to stdout
-    PERCENT     = nth_bit(3), // prints everywhere, if enabled
-    STAT        = nth_bit(4), // prints everywhere, if enabled
-    ALL         = 0xFF
+    NONE = 0, // none of the below (still prints though)
+    DEFAULT = nth_bit(0), // prints everywhere
+    VERBOSE = nth_bit(1), // prints everywhere, if enabled
+    PROGRESS = nth_bit(2), // prints only to stdout
+    PERCENT = nth_bit(3), // prints everywhere, if enabled
+    STAT = nth_bit(4), // prints everywhere, if enabled
+    ALL = 0xFF
 };
 
 extern bitflags<flag> mask;
@@ -110,4 +110,4 @@ inline void assert_(bool success, const char *expr, const char *file, int line)
 // Only use this by hand if you absolutely need to; otherwise,
 // use <common/parallel.h>'s parallel_for(_each)
 void percent(uint64_t count, uint64_t max, bool displayElapsed = true);
-};
+}; // namespace logging

@@ -150,13 +150,12 @@ static std::string EntDict_PrettyDescription(const mbsp_t *bsp, const entdict_t 
         const dmodelh2_t *info = BSP_DModelForModelString(bsp, submodel_str);
 
         if (info) {
-            return fmt::format("brush entity with mins [{}] maxs [{}] ({})", info->mins, info->maxs,
-                entity.get("classname"));
+            return fmt::format(
+                "brush entity with mins [{}] maxs [{}] ({})", info->mins, info->maxs, entity.get("classname"));
         }
     }
 
-    return fmt::format(
-        "entity at ({}) ({})", entity.get("origin"), entity.get("classname"));
+    return fmt::format("entity at ({}) ({})", entity.get("origin"), entity.get("classname"));
 }
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
@@ -215,7 +214,7 @@ static void CheckEntityFields(const settings::worldspawn_keys &cfg, light_t *ent
     // mxd. Warn about unsupported _falloff / delay combos...
     if (entity->falloff.value() > 0.0f && entity->getFormula() != LF_LINEAR) {
         logging::print("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
-                 "   {} at [{}]\n",
+                       "   {} at [{}]\n",
             entity->classname(), entity->origin.value());
         entity->falloff.setValue(0.0f, settings::source::MAP);
     }
@@ -489,8 +488,9 @@ static void SetupSkyDomes(const settings::worldspawn_keys &cfg)
                     entity->anglescale.value(), entity->style.value(), entity->suntexture.value(), 0, {}, 0, 0, 0, "");
             } else {
                 // Add the lower dome, like sunlight3 (pointing up)
-                SetupSkyDome(cfg, 0, {}, 0, 0, 0, "", entity->light.value(), entity->color.value(), entity->dirt.value(),
-                    entity->anglescale.value(), entity->style.value(), entity->suntexture.value());
+                SetupSkyDome(cfg, 0, {}, 0, 0, 0, "", entity->light.value(), entity->color.value(),
+                    entity->dirt.value(), entity->anglescale.value(), entity->style.value(),
+                    entity->suntexture.value());
             }
 
             // Disable the light itself...
@@ -535,7 +535,7 @@ static std::unique_ptr<light_t> DuplicateEntity(const light_t &src)
  * From q3map2
  * =============
  */
-static void JitterEntity(const light_t& entity)
+static void JitterEntity(const light_t &entity)
 {
 
     std::vector<std::unique_ptr<light_t>> new_lights;
@@ -554,7 +554,8 @@ static void JitterEntity(const light_t& entity)
     }
 
     // move the new lights into all_lights
-    // (don't modify the all_lights vector in the loop above, because it could invalidate the passed in `entity` reference)
+    // (don't modify the all_lights vector in the loop above, because it could invalidate the passed in `entity`
+    // reference)
     for (auto &new_light : new_lights) {
         all_lights.push_back(std::move(new_light));
     }
@@ -900,13 +901,13 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                 if (entity->projectedmip->meta.width > entity->projectedmip->meta.height)
                     Matrix4x4_CM_MakeModelViewProj(entity->projangle.value(), entity->origin.value(),
                         entity->projfov.value(),
-                        CalcFov(
-                            entity->projfov.value(), entity->projectedmip->meta.width, entity->projectedmip->meta.height),
+                        CalcFov(entity->projfov.value(), entity->projectedmip->meta.width,
+                            entity->projectedmip->meta.height),
                         entity->projectionmatrix);
                 else
                     Matrix4x4_CM_MakeModelViewProj(entity->projangle.value(), entity->origin.value(),
-                        CalcFov(
-                            entity->projfov.value(), entity->projectedmip->meta.height, entity->projectedmip->meta.width),
+                        CalcFov(entity->projfov.value(), entity->projectedmip->meta.height,
+                            entity->projectedmip->meta.width),
                         entity->projfov.value(), entity->projectionmatrix);
             }
 
@@ -1192,8 +1193,7 @@ bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, con
         radiosity_type = light_options.surflight_radiosity.value();
     }
 
-    return !Q_strcasecmp(texname, surflight.epairs->get("_surface")) &&
-        radiosity_type == surf_type;
+    return !Q_strcasecmp(texname, surflight.epairs->get("_surface")) && radiosity_type == surf_type;
 }
 
 /*
@@ -1409,8 +1409,9 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             face_visited.at(facenum) = true;
 
             /* Don't bother subdividing if it doesn't match any surface light templates */
-            if (!std::any_of(surfacelight_templates.begin(), surfacelight_templates.end(),
-                    [&](const auto &surflight) { return FaceMatchesSurfaceLightTemplate(bsp, surf, *surflight, SURFLIGHT_Q1); }))
+            if (!std::any_of(surfacelight_templates.begin(), surfacelight_templates.end(), [&](const auto &surflight) {
+                    return FaceMatchesSurfaceLightTemplate(bsp, surf, *surflight, SURFLIGHT_Q1);
+                }))
                 continue;
 
             /* Generate the lights */

@@ -70,7 +70,7 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
         fmt::print(f, "vt {:.9} {:.9}\n", uv[0], -uv[1]);
     }
-    
+
     // fixme-brushbsp
     fmt::print(f, "usemtl contents{}\n", face->contents.native);
     f << 'f';
@@ -110,10 +110,10 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
 
     WriteContentsMaterial(mtlfile, {CONTENTS_SKY}, 0.8, 0.8, 1.0);
     // fixme-brushbsp
-    //WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_CLIP}, 1, 0.8, 0.8);
-    //WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY, CFLAGS_HINT}, 1, 1, 1);
+    // WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_CLIP}, 1, 0.8, 0.8);
+    // WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY, CFLAGS_HINT}, 1, 1, 1);
 
-    //WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_DETAIL}, 0.5, 0.5, 0.5);
+    // WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_DETAIL}, 0.5, 0.5, 0.5);
 
     int vertcount = 0;
     for (const face_t *face : faces) {
@@ -121,9 +121,7 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
     }
 }
 
-void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bspbrush_t *> &brushes)
-{
-}
+void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bspbrush_t *> &brushes) { }
 
 static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)
 {

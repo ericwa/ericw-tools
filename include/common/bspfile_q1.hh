@@ -173,12 +173,12 @@ struct bsp2rmq_dnode_t
 };
 
 /*
-* Clipnodes need to be stored as a 16-bit offset. Originally, this was a
-* signed value and only the positive values up to 32767 were available. Since
-* the negative range was unused apart from a few values reserved for flags,
-* this has been extended to allow up to 65520 (0xfff0) clipnodes (with a
-* suitably modified engine).
-*/
+ * Clipnodes need to be stored as a 16-bit offset. Originally, this was a
+ * signed value and only the positive values up to 32767 were available. Since
+ * the negative range was unused apart from a few values reserved for flags,
+ * this has been extended to allow up to 65520 (0xfff0) clipnodes (with a
+ * suitably modified engine).
+ */
 struct bsp29_dclipnode_t
 {
     int32_t planenum;
@@ -407,7 +407,6 @@ struct bsp2_dleaf_t
         return std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
     }
 };
-
 
 // Q1-esque maps can use one of these two.
 using dmodelq1_vector = std::vector<dmodelq1_t>;

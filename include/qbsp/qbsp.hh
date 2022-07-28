@@ -104,7 +104,8 @@ public:
 
     constexpr const std::set<wadpath> &pathsValue() const { return _paths; }
 
-    inline bool copyFrom(const setting_base& other) override {
+    inline bool copyFrom(const setting_base &other) override
+    {
         if (auto *casted = dynamic_cast<const setting_wadpathset *>(&other)) {
             _paths = casted->_paths;
             _source = casted->_source;
@@ -113,7 +114,8 @@ public:
         return false;
     }
 
-    inline void reset() override {
+    inline void reset() override
+    {
         _paths = {};
         _source = source::DEFAULT;
     }
@@ -200,8 +202,10 @@ public:
     setting_bool bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"};
     setting_bool bsp2rmq{
         this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"};
-    setting_func nosubdivide{this, "nosubdivide", [&](source src) { subdivide.setValue(0, src); }, &common_format_group, "disable subdivision"};
-    setting_invertible_bool software{this, "software", true, &common_format_group, "change settings to allow for (or make adjustments to optimize for the lack of) software support"};
+    setting_func nosubdivide{this, "nosubdivide", [&](source src) { subdivide.setValue(0, src); }, &common_format_group,
+        "disable subdivision"};
+    setting_invertible_bool software{this, "software", true, &common_format_group,
+        "change settings to allow for (or make adjustments to optimize for the lack of) software support"};
     setting_int32 subdivide{this, "subdivide", 240, &common_format_group,
         "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"};
     setting_bool nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"};
@@ -211,8 +215,8 @@ public:
     setting_bool nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"};
     setting_bool onlyents{this, "onlyents", false, &map_development_group, "only updates .MAP entities"};
     setting_bool splitsky{this, "splitsky", false, &debugging_group, "doesn't combine sky faces into one large face"};
-    setting_bool splitturb{this, {"litwater", "splitturb"}, true, &common_format_group,
-        "doesn't combine water faces into one large face"};
+    setting_bool splitturb{
+        this, {"litwater", "splitturb"}, true, &common_format_group, "doesn't combine water faces into one large face"};
     setting_redirect splitspecial{this, "splitspecial", {&splitsky, &splitturb}, &debugging_group,
         "doesn't combine sky and water faces into one large face (splitturb + splitsky)"};
     setting_invertible_bool transwater{
@@ -237,16 +241,14 @@ public:
         this, "oldrottex", false, &debugging_group, "use old rotate_ brush texturing aligned at (0 0 0)"};
     setting_scalar epsilon{
         this, "epsilon", 0.0001, 0.0, 1.0, &debugging_group, "customize epsilon value for point-on-plane checks"};
-    setting_scalar microvolume{
-        this, "microvolume", 1.0, 0.0, 1000.0, &debugging_group, "microbrush volume"};
+    setting_scalar microvolume{this, "microvolume", 1.0, 0.0, 1000.0, &debugging_group, "microbrush volume"};
     setting_bool contenthack{this, "contenthack", false, &debugging_group,
         "hack to fix leaks through solids. causes missing faces in some cases so disabled by default"};
     setting_bool leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"};
-    setting_bool outsidedebug{this, "outsidedebug", false, &debugging_group, "write a .map after outside filling showing non-visible brush sides"};
-    setting_bool debugchop{this, "debugchop", false, &debugging_group,
-        "write a .map after ChopBrushes"};
-    setting_bool keepprt{this, "keepprt", false, &debugging_group,
-        "avoid deleting the .prt file on leaking maps"};
+    setting_bool outsidedebug{this, "outsidedebug", false, &debugging_group,
+        "write a .map after outside filling showing non-visible brush sides"};
+    setting_bool debugchop{this, "debugchop", false, &debugging_group, "write a .map after ChopBrushes"};
+    setting_bool keepprt{this, "keepprt", false, &debugging_group, "avoid deleting the .prt file on leaking maps"};
     setting_bool includeskip{this, "includeskip", false, &common_format_group,
         "don't cull skip faces from the list of renderable surfaces (Q2RTX)"};
     setting_scalar worldextent{
@@ -254,8 +256,9 @@ public:
     setting_int32 leakdist{this, "leakdist", 2, &debugging_group, "space between leakfile points"};
     setting_bool forceprt1{
         this, "forceprt1", false, &debugging_group, "force a PRT1 output file even if PRT2 is required for vis"};
-    setting_tjunc tjunc{this, { "tjunc", "notjunc" }, tjunclevel_t::MWT,
-        { { "none", tjunclevel_t::NONE }, { "rotate", tjunclevel_t::ROTATE }, { "retopologize", tjunclevel_t::RETOPOLOGIZE }, { "mwt", tjunclevel_t::MWT } },
+    setting_tjunc tjunc{this, {"tjunc", "notjunc"}, tjunclevel_t::MWT,
+        {{"none", tjunclevel_t::NONE}, {"rotate", tjunclevel_t::ROTATE}, {"retopologize", tjunclevel_t::RETOPOLOGIZE},
+            {"mwt", tjunclevel_t::MWT}},
         &debugging_group, "T-junction fix level"};
     setting_bool objexport{
         this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"};
@@ -275,23 +278,32 @@ public:
         this, "expand", false, &common_format_group, "write hull 1 expanded brushes to expanded.map for debugging"};
     setting_wadpathset wadpaths{this, {"wadpath", "xwadpath"}, &map_development_group,
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
-    setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group, "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
-    setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to an alias definition file, which can transform entities in the .map into other entities."};
-    setting_set texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to a texture definition file, which can transform textures in the .map into other textures."};
-    setting_numeric<vec_t> lmscale{this, "lmscale", 1.0, &common_format_group, "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump." };
-    setting_enum<filltype_t> filltype{this, "filltype", filltype_t::AUTO, { { "auto", filltype_t::AUTO }, { "inside", filltype_t::INSIDE }, { "outside", filltype_t::OUTSIDE } }, &common_format_group,
+    setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group,
+        "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."};
+    setting_set aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group,
+        "path to an alias definition file, which can transform entities in the .map into other entities."};
+    setting_set texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group,
+        "path to a texture definition file, which can transform textures in the .map into other textures."};
+    setting_numeric<vec_t> lmscale{this, "lmscale", 1.0, &common_format_group,
+        "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump."};
+    setting_enum<filltype_t> filltype{this, "filltype", filltype_t::AUTO,
+        {{"auto", filltype_t::AUTO}, {"inside", filltype_t::INSIDE}, {"outside", filltype_t::OUTSIDE}},
+        &common_format_group,
         "whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used."};
-    setting_invertible_bool allow_upgrade{this, "allowupgrade", true, &common_format_group, "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"};
+    setting_invertible_bool allow_upgrade{this, "allowupgrade", true, &common_format_group,
+        "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"};
     setting_validator<setting_int32> maxedges{
-        [](setting_int32 &setting) {
-            return setting.value() == 0 || setting.value() >= 3;
-        }, this, "maxedges", 64, &map_development_group, "the max number of edges/vertices on a single face before it is split into another face"};
-    setting_invertible_bool snapvertices{this, "snapvertices", false, &common_format_group, "round vertice locations; this is mainly for compatibility with older Quake II tools."};
+        [](setting_int32 &setting) { return setting.value() == 0 || setting.value() >= 3; }, this, "maxedges", 64,
+        &map_development_group,
+        "the max number of edges/vertices on a single face before it is split into another face"};
+    setting_invertible_bool snapvertices{this, "snapvertices", false, &common_format_group,
+        "round vertice locations; this is mainly for compatibility with older Quake II tools."};
 
     void setParameters(int argc, const char **argv) override
     {
         common_settings::setParameters(argc, argv);
-        programDescription = "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
+        programDescription =
+            "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
         remainderName = "sourcefile.map [destfile.bsp]";
     }
     void initialize(int argc, const char **argv) override;
@@ -412,16 +424,9 @@ protected:
 public:
     qbsp_plane_t() = default;
     qbsp_plane_t(const qbsp_plane_t &) = default;
-    inline qbsp_plane_t(const qplane3d &plane, bool flip) noexcept :
-        plane(plane)
-    {
-        normalize(flip);
-    }
+    inline qbsp_plane_t(const qplane3d &plane, bool flip) noexcept : plane(plane) { normalize(flip); }
 
-    inline qbsp_plane_t(const qplane3d &plane) noexcept :
-        qbsp_plane_t(plane, false)
-    {
-    }
+    inline qbsp_plane_t(const qplane3d &plane) noexcept : qbsp_plane_t(plane, false) { }
 
     qbsp_plane_t &operator=(const qbsp_plane_t &) = default;
     inline qbsp_plane_t &operator=(const qplane3d &plane) noexcept
@@ -458,7 +463,10 @@ public:
     [[nodiscard]] constexpr operator const qplane3d &() const { return plane; }
 
     template<typename T>
-    [[nodiscard]] inline T distance_to(const qvec<T, 3> &pt) const { return plane.distance_to(pt); }
+    [[nodiscard]] inline T distance_to(const qvec<T, 3> &pt) const
+    {
+        return plane.distance_to(pt);
+    }
 
     // normalize the given plane, optionally flipping it to face
     // the positive direction. returns whether the plane was flipped or not.
@@ -513,14 +521,16 @@ namespace qv
 {
 // faster version of epsilonEqual for BSP planes
 // which have a bit more info in them
-[[nodiscard]] inline bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, vec_t normalEpsilon = NORMAL_EPSILON, vec_t distEpsilon = DIST_EPSILON)
+[[nodiscard]] inline bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2,
+    vec_t normalEpsilon = NORMAL_EPSILON, vec_t distEpsilon = DIST_EPSILON)
 {
     // axial planes will never match on normal, so we can skip that check entirely
     if (p1.get_type() < plane_type_t::PLANE_ANYX && p2.get_type() < plane_type_t::PLANE_ANYX) {
         // if we aren't the same type, we definitely aren't equal
         if (p1.get_type() != p2.get_type()) {
             return false;
-        } else if (p1.get_normal()[static_cast<int32_t>(p1.get_type())] != p2.get_normal()[static_cast<int32_t>(p2.get_type())]) {
+        } else if (p1.get_normal()[static_cast<int32_t>(p1.get_type())] !=
+                   p2.get_normal()[static_cast<int32_t>(p2.get_type())]) {
             // axials will always be only 1 or -1
             return false;
         }
@@ -557,7 +567,8 @@ struct node_t
     qbsp_plane_t plane; // decision node only
     int firstface; // decision node only
     int numfaces; // decision node only
-    twosided<std::unique_ptr<node_t>> children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
+    twosided<std::unique_ptr<node_t>>
+        children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     std::list<std::unique_ptr<face_t>> facelist; // decision nodes only, list for both sides
     side_t *side; // decision node only, the side that created the node
 
@@ -580,7 +591,7 @@ struct node_t
 };
 
 void InitQBSP(int argc, const char **argv);
-void InitQBSP(const std::vector<std::string>& args);
+void InitQBSP(const std::vector<std::string> &args);
 void ProcessFile();
 
 int qbsp_main(int argc, const char **argv);

@@ -23,8 +23,8 @@
 #include <iterator>
 #include <vector>
 
-template <class T>
-void sort_and_remove_duplicates(T& v)
+template<class T>
+void sort_and_remove_duplicates(T &v)
 {
     std::sort(v.begin(), v.end());
 
@@ -32,7 +32,7 @@ void sort_and_remove_duplicates(T& v)
     v.erase(last, v.end());
 }
 
-template <class E>
+template<class E>
 std::vector<E> concat(const std::vector<E> &a, const std::vector<E> &b)
 {
     std::vector<E> result;

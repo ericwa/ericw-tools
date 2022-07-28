@@ -43,7 +43,7 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
         FError("unknown header/empty portal file {}\n", name);
     }
 
-    prtfile_t result {};
+    prtfile_t result{};
     int numportals;
 
     if (magic == PORTALFILE) {
@@ -87,7 +87,8 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
             FError("reading portal {}", i);
         if (numpoints > PRT_MAX_WINDING)
             FError("portal {} has too many points", i);
-        if ((unsigned)p.leafnums[0] > (unsigned)result.portalleafs || (unsigned)p.leafnums[1] > (unsigned)result.portalleafs)
+        if ((unsigned)p.leafnums[0] > (unsigned)result.portalleafs ||
+            (unsigned)p.leafnums[1] > (unsigned)result.portalleafs)
             FError("out of bounds leaf in portal {}", i);
 
         auto &w = p.winding;
@@ -158,7 +159,8 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
                 Error("Unexpected end of cluster map\n");
             }
             if (clusternum < 0 || clusternum >= result.portalleafs) {
-                FError("Invalid cluster number {} in cluster map, number of clusters: {}\n", clusternum, result.portalleafs);
+                FError("Invalid cluster number {} in cluster map, number of clusters: {}\n", clusternum,
+                    result.portalleafs);
             }
             result.dleafinfos[i + 1].cluster = clusternum;
         }

@@ -134,8 +134,9 @@ sceneinfo CreateGeometry(
             // mxd
             if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                 const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
-                info.is_fence = ((surf_flags & Q2_SURF_TRANSLUCENT) ==
-                           Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
+                info.is_fence =
+                    ((surf_flags & Q2_SURF_TRANSLUCENT) ==
+                        Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
                 info.is_glass = !info.is_fence && (surf_flags & Q2_SURF_TRANSLUCENT);
                 if (info.is_glass) {
                     info.alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
@@ -330,7 +331,8 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             qvec3f rayDir =
                 qv::normalize(qvec3f{RTCRayN_dir_x(ray, N, i), RTCRayN_dir_y(ray, N, i), RTCRayN_dir_z(ray, N, i)});
             qvec3f hitpoint = Embree_RayEndpoint(ray, rayDir, N, i);
-            const qvec4b sample = SampleTexture(hit_triinfo.face, hit_triinfo.texinfo, hit_triinfo.texture, bsp_static, hitpoint); // mxd. Palette index -> color_rgba
+            const qvec4b sample = SampleTexture(hit_triinfo.face, hit_triinfo.texinfo, hit_triinfo.texture, bsp_static,
+                hitpoint); // mxd. Palette index -> color_rgba
 
             if (hit_triinfo.is_glass) {
                 // hit glass...

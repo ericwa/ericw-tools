@@ -49,7 +49,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
     const char *texname = Face_TextureName(bsp, face);
 
     logging::print("face {}, texture {}, {} edges; vectors:\n"
-             "{: 3.3}\n",
+                   "{: 3.3}\n",
         Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
     for (int i = 0; i < face->numedges; i++) {
@@ -275,8 +275,8 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
         }
     }
 
-    logging::print("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face), surf->width,
-        surf->height);
+    logging::print("wrote face {}'s sample points ({}x{}) to calcpoints.map\n", Face_GetNum(bsp, surf->face),
+        surf->width, surf->height);
 
     PrintFaceInfo(surf->face, bsp);
 }
@@ -454,11 +454,10 @@ static void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uin
 {
     int c;
     uint8_t *outstart = out;
-    while (out < outend)
-    {
-        if (in == inend)
-        {
-            logging::print("Mod_Q1BSP_DecompressVis: input underrun (decompressed {} of {} output bytes)\n", (out - outstart), (outend - outstart));
+    while (out < outend) {
+        if (in == inend) {
+            logging::print("Mod_Q1BSP_DecompressVis: input underrun (decompressed {} of {} output bytes)\n",
+                (out - outstart), (outend - outstart));
             return;
         }
 
@@ -468,17 +467,17 @@ static void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uin
             continue;
         }
 
-        if (in == inend)
-        {
-            logging::print("Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n", (out - outstart), (outend - outstart));
+        if (in == inend) {
+            logging::print(
+                "Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n",
+                (out - outstart), (outend - outstart));
             return;
         }
 
-        for (c = *in++;c > 0;c--)
-        {
-            if (out == outend)
-            {
-                logging::print("Mod_Q1BSP_DecompressVis: output overrun (decompressed {} of {} output bytes)\n", (out - outstart), (outend - outstart));
+        for (c = *in++; c > 0; c--) {
+            if (out == outend) {
+                logging::print("Mod_Q1BSP_DecompressVis: output overrun (decompressed {} of {} output bytes)\n",
+                    (out - outstart), (outend - outstart));
                 return;
             }
             *out++ = 0;
@@ -489,10 +488,10 @@ static void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uin
 static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
 {
     const size_t num_pvsclusterbytes = DecompressedVisSize(bsp);
-    
+
     // init to all visible
     memset(out, 0xFF, num_pvsclusterbytes);
-    
+
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         if (leaf->cluster < 0) {
             return false;
@@ -505,9 +504,7 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
         }
 
         Mod_Q1BSP_DecompressVis(bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster),
-                                bsp->dvis.bits.data() + bsp->dvis.bits.size(),
-                                out,
-                                out + num_pvsclusterbytes);
+            bsp->dvis.bits.data() + bsp->dvis.bits.size(), out, out + num_pvsclusterbytes);
     } else {
         if (leaf->visofs < 0) {
             return false;
@@ -521,16 +518,14 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
         if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs) {
             return false;
         }
-    
+
         if (leaf->visofs >= bsp->dvis.bits.size()) {
             logging::print("Mod_LeafPvs: invalid visofs for leaf {}\n", leafnum);
             return false;
         }
-    
-        Mod_Q1BSP_DecompressVis(bsp->dvis.bits.data() + leaf->visofs,
-                                bsp->dvis.bits.data() + bsp->dvis.bits.size(),
-                                out,
-                                out + num_pvsclusterbytes);
+
+        Mod_Q1BSP_DecompressVis(bsp->dvis.bits.data() + leaf->visofs, bsp->dvis.bits.data() + bsp->dvis.bits.size(),
+            out, out + num_pvsclusterbytes);
     }
 
     return true;
@@ -549,8 +544,8 @@ static bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, 
             logging::print("Pvs_LeafVisible: invalid visofs for cluster {}\n", leaf->cluster);
             return false;
         }
-    
-        return !!(pvs[leaf->cluster>>3] & (1<<(leaf->cluster&7)));
+
+        return !!(pvs[leaf->cluster >> 3] & (1 << (leaf->cluster & 7)));
     } else {
         const int leafnum = (leaf - bsp->dleafs.data());
         const int visleaf = leafnum - 1;
@@ -559,8 +554,8 @@ static bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, 
             logging::print("WARNING: bad/empty vis data on leaf?");
             return false;
         }
-    
-        return !!(pvs[visleaf>>3] & (1<<(visleaf&7)));
+
+        return !!(pvs[visleaf >> 3] & (1 << (visleaf & 7)));
     }
 }
 
@@ -571,36 +566,36 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
 
     // set defaults
     lightsurf->pvs.clear();
-    
+
     if (!bsp->dvis.bits.size()) {
         return;
     }
-    
+
     // set lightsurf->pvs
-    uint8_t *pointpvs = (uint8_t *) alloca(pvssize);
+    uint8_t *pointpvs = (uint8_t *)alloca(pvssize);
     lightsurf->pvs.resize(pvssize);
-    
+
     for (int i = 0; i < lightsurf->points.size(); i++) {
-        const mleaf_t *leaf = Light_PointInLeaf (bsp, lightsurf->points[i]);
-	
-	    /* most/all of the surface points are probably in the same leaf */
-	    if (leaf == lastleaf)
-	        continue;
-	
-	    lastleaf = leaf;
-	
-	/* copy the pvs for this leaf into pointpvs */
+        const mleaf_t *leaf = Light_PointInLeaf(bsp, lightsurf->points[i]);
+
+        /* most/all of the surface points are probably in the same leaf */
+        if (leaf == lastleaf)
+            continue;
+
+        lastleaf = leaf;
+
+        /* copy the pvs for this leaf into pointpvs */
         Mod_LeafPvs(bsp, leaf, pointpvs);
-        
+
         /* merge the pvs for this sample point into lightsurf->pvs */
-        for (int j=0; j<pvssize; j++) {
+        for (int j = 0; j < pvssize; j++) {
             lightsurf->pvs[j] |= pointpvs[j];
         }
     }
 }
 
-static std::unique_ptr<lightsurf_t> Lightsurf_Init(
-    const modelinfo_t *modelinfo, const settings::worldspawn_keys &cfg, const mface_t *face, const mbsp_t *bsp, const facesup_t *facesup)
+static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo, const settings::worldspawn_keys &cfg,
+    const mface_t *face, const mbsp_t *bsp, const facesup_t *facesup)
 {
     auto spaceToWorld = TexSpaceToWorld(bsp, face);
 
@@ -616,7 +611,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     lightsurf->modelinfo = modelinfo;
     lightsurf->bsp = bsp;
     lightsurf->face = face;
-    
+
     /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
      * lit water in mind. In that case receive light from both top and bottom.
      * (lit will only be rendered in compatible engines, but degrades gracefully.)
@@ -624,7 +619,8 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     lightsurf->twosided = Face_IsTranslucent(bsp, face);
 
     // pick the larger of the two scales
-    lightsurf->lightmapscale = (facesup && facesup->lmscale < modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
+    lightsurf->lightmapscale =
+        (facesup && facesup->lmscale < modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
     lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
@@ -1128,7 +1124,8 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (light_options.visapprox.value() == visapprox_t::RAYS && entity->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+    if (light_options.visapprox.value() == visapprox_t::RAYS &&
+        entity->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
@@ -1154,15 +1151,14 @@ static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, co
     if (entleaf == nullptr) {
         return false;
     }
-    
-    if (bsp->loadversion->game->contents_are_solid({ entleaf->contents }) ||
-        bsp->loadversion->game->contents_are_sky({ entleaf->contents })) {
+
+    if (bsp->loadversion->game->contents_are_solid({entleaf->contents}) ||
+        bsp->loadversion->game->contents_are_sky({entleaf->contents})) {
         return false;
     }
 
     return !Pvs_LeafVisible(bsp, pvs, entleaf);
 }
-
 
 /*
  * ================
@@ -1481,8 +1477,8 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             vec_t value = entity->light.value();
             lightsample_t &sample = lightmap->samples[i];
 
-            value *=
-                Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], entity.get(), 0.0 /* TODO: pass distance */, lightsurf);
+            value *= Dirt_GetScaleFactor(
+                cfg, lightsurf->occlusion[i], entity.get(), 0.0 /* TODO: pass distance */, lightsurf);
             if (cfg.addminlight.value()) {
                 sample.color += entity->color.value() * (value / 255.0);
             } else {
@@ -1577,8 +1573,7 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
 }
 
 // returns color in [0,255]
-inline qvec3f BounceLight_ColorAtDist(
-    const settings::worldspawn_keys &cfg, float area, const qvec3f &color, float dist)
+inline qvec3f BounceLight_ColorAtDist(const settings::worldspawn_keys &cfg, float area, const qvec3f &color, float dist)
 {
     const float d = max(dist, 128.f); // Clamp away hotspots, also avoid division by 0..
     const float scale = (1.0f / (d * d));
@@ -1643,7 +1638,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
             return {0}; // sample point behind vpl
         if (dp2 < 0.0f)
             return {0}; // vpl behind sample face
-        
+
         // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
         dp1 = 0.5f + dp1 * 0.5f;
         dp2 = 0.5f + dp2 * 0.5f;
@@ -1668,7 +1663,8 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
-    if (light_options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+    if (light_options.visapprox.value() == visapprox_t::RAYS &&
+        vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
@@ -1684,7 +1680,8 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
 {
-    if (light_options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+    if (light_options.visapprox.value() == visapprox_t::RAYS &&
+        vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
     }
 
@@ -1725,8 +1722,7 @@ inline qvec3d CosineWeightedHemisphereSample(float u1, float u2)
 }
 #endif
 
-static void LightFace_Bounce(
-    const mbsp_t *bsp, const mface_t *face, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_Bounce(const mbsp_t *bsp, const mface_t *face, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     // const dmodelh2_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
@@ -1826,7 +1822,8 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
         raystream_occlusion_t &rs = lightsurf->occlusion_stream;
 
         for (int c = 0; c < vpl.points.size(); c++) {
-            if (light_options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
+            if (light_options.visapprox.value() == visapprox_t::VIS &&
+                VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
                 continue;
             }
 
@@ -2128,7 +2125,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
     // batch implementation:
 
     thread_local static std::vector<qvec3d> myUps, myRts;
-    
+
     myUps.resize(lightsurf->points.size());
     myRts.resize(lightsurf->points.size());
 
@@ -2209,8 +2206,7 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
     }
 }
 
-void FinishLightmapSurface(
-    const mbsp_t *bsp, lightsurf_t *lightsurf)
+void FinishLightmapSurface(const mbsp_t *bsp, lightsurf_t *lightsurf)
 {
     /* Apply gamma, rangescale, and clamp */
     LightFace_ScaleAndClamp(lightsurf);
@@ -2606,7 +2602,8 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
  * - Writes (actual_width * actual_height * 3) bytes to `lux`
  */
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux, const faceextents_t &output_extents)
+    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux,
+    const faceextents_t &output_extents)
 {
     const int oversampled_width = actual_width * light_options.extra.value();
     const int oversampled_height = actual_height * light_options.extra.value();
@@ -2632,8 +2629,8 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     std::optional<std::vector<qvec4f>> output_dir;
 
     if (lux) {
-        output_dir = IntegerDownsampleImage(
-            LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width, oversampled_height, light_options.extra.value());
+        output_dir = IntegerDownsampleImage(LightmapNormalsToGLMVector(lightsurf, lm), oversampled_width,
+            oversampled_height, light_options.extra.value());
     }
 
     // copy from the float buffers to byte buffers in .bsp / .lit / .lux
@@ -2642,8 +2639,8 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
 
     for (int t = 0; t < output_height; t++) {
         for (int s = 0; s < output_width; s++) {
-            const int input_sample_s = (s / (float) output_width) * actual_width;
-            const int input_sample_t = (t / (float) output_height) * actual_height;
+            const int input_sample_s = (s / (float)output_width) * actual_width;
+            const int input_sample_t = (t / (float)output_height) * actual_height;
             const int sampleindex = (input_sample_t * actual_width) + input_sample_s;
 
             if (lit || out) {
@@ -2693,8 +2690,8 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     }
 }
 
-void SaveLightmapSurface(
-    const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf, const faceextents_t &extents, const faceextents_t &output_extents)
+void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
+    const faceextents_t &extents, const faceextents_t &output_extents)
 {
     const lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
     const int actual_width = extents.width();
@@ -2726,7 +2723,8 @@ void SaveLightmapSurface(
             // see if we have computed lighting for this style
             for (const lightmap_t &lm : lightmaps) {
                 if (lm.style == style) {
-                    WriteSingleLightmap(bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux, output_extents);
+                    WriteSingleLightmap(
+                        bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux, output_extents);
                     break;
                 }
             }
@@ -2759,17 +2757,18 @@ void SaveLightmapSurface(
         if (lightmap.style > maxstyle || (facesup && lightmap.style > INVALID_LIGHTSTYLE_OLD)) {
             if (!warned_about_light_style_overflow) {
                 if (IsOutputtingSupplementaryData()) {
-                    logging::print("INFO: a face has exceeded max light style id ({});\n LMSTYLE16 will be output to hold the non-truncated data.\n Use -verbose to find which faces.\n",
+                    logging::print(
+                        "INFO: a face has exceeded max light style id ({});\n LMSTYLE16 will be output to hold the non-truncated data.\n Use -verbose to find which faces.\n",
                         maxstyle, lightsurf->points[0]);
                 } else {
-                    logging::print("WARNING: a face has exceeded max light style id ({}). Use -verbose to find which faces.\n",
+                    logging::print(
+                        "WARNING: a face has exceeded max light style id ({}). Use -verbose to find which faces.\n",
                         maxstyle, lightsurf->points[0]);
                 }
                 warned_about_light_style_overflow = true;
             }
-            logging::print(logging::flag::VERBOSE, "WARNING: Style {} too high on face near {}\n",
-                     lightmap.style,
-                     lightsurf->points[0]);
+            logging::print(logging::flag::VERBOSE, "WARNING: Style {} too high on face near {}\n", lightmap.style,
+                lightsurf->points[0]);
             continue;
         }
 
@@ -2794,16 +2793,19 @@ void SaveLightmapSurface(
         if (sorted.size() == maxfstyles) {
             if (!warned_about_light_map_overflow) {
                 if (IsOutputtingSupplementaryData()) {
-                    logging::print("INFO: a face has exceeded max light styles ({});\n LMSTYLE/LMSTYLE16 will be output to hold the non-truncated data.\n Use -verbose to find which faces.\n",
+                    logging::print(
+                        "INFO: a face has exceeded max light styles ({});\n LMSTYLE/LMSTYLE16 will be output to hold the non-truncated data.\n Use -verbose to find which faces.\n",
                         maxfstyles, lightsurf->points[0]);
                 } else {
-                    logging::print("WARNING: a face has exceeded max light styles ({}). Use -verbose to find which faces.\n",
+                    logging::print(
+                        "WARNING: a face has exceeded max light styles ({}). Use -verbose to find which faces.\n",
                         maxfstyles, lightsurf->points[0]);
                 }
                 warned_about_light_map_overflow = true;
             }
-            logging::print(logging::flag::VERBOSE, "WARNING: {} light styles (max {}) on face near {}; styles: ",
-                sortable.size(), maxfstyles, lightsurf->points[0]);
+            logging::print(logging::flag::VERBOSE,
+                "WARNING: {} light styles (max {}) on face near {}; styles: ", sortable.size(), maxfstyles,
+                lightsurf->points[0]);
             for (auto &p : sortable) {
                 logging::print(logging::flag::VERBOSE, "{} ", p.second->style);
             }
@@ -2886,7 +2888,8 @@ void SaveLightmapSurface(
     }
 }
 
-std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup, const settings::worldspawn_keys &cfg)
+std::unique_ptr<lightsurf_t> CreateLightmapSurface(
+    const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup, const settings::worldspawn_keys &cfg)
 {
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -2980,8 +2983,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
         }
 
         if (minlight) {
-            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf,
-                lightmaps);
+            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps);
         }
 
         /* negative lights */
@@ -3016,7 +3018,6 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
     if (light_options.debugmode == debugmodes::debugneighbours)
         LightFace_DebugNeighbours(&lightsurf, lightmaps);
 }
-
 
 /*
  * ============

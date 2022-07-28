@@ -68,7 +68,8 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
     bool keep1, keep2;
 
     if (!f1->w.size() || !f2->w.size() || f1->plane_flipped != f2->plane_flipped || f1->texinfo != f2->texinfo ||
-        /*!f1->contents[0].equals(options.target_game, f2->contents[0]) || !f1->contents[1].equals(options.target_game, f2->contents[1]) || */
+        /*!f1->contents[0].equals(options.target_game, f2->contents[0]) || !f1->contents[1].equals(options.target_game,
+           f2->contents[1]) || */
         f1->lmshift != f2->lmshift)
         return NULL;
 

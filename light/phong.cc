@@ -366,9 +366,7 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
 static vector<face_normal_t> Face_VertexNormals(const mbsp_t *bsp, const mface_t *face)
 {
     vector<face_normal_t> normals(face->numedges);
-    tbb::parallel_for(0, face->numedges, [&](size_t i) {
-        normals[i] = GetSurfaceVertexNormal(bsp, face, i);
-    });
+    tbb::parallel_for(0, face->numedges, [&](size_t i) { normals[i] = GetSurfaceVertexNormal(bsp, face, i); });
     return normals;
 }
 

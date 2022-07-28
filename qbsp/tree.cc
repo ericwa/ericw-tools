@@ -62,9 +62,7 @@ void FreeTreePortals(tree_t *tree)
 static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // merge the children's brush lists
-    node->original_brushes = concat(
-        node->children[0]->original_brushes,
-        node->children[1]->original_brushes);
+    node->original_brushes = concat(node->children[0]->original_brushes, node->children[1]->original_brushes);
     sort_and_remove_duplicates(node->original_brushes);
 
     node->is_leaf = true;

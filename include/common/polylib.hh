@@ -64,16 +64,13 @@ public:
         using iterator_category = std::random_access_iterator_tag;
         using value_type = typename std::conditional_t<is_const, const qvec3d, qvec3d>;
         using difference_type = ptrdiff_t;
-        using pointer = value_type*;
-        using reference = value_type&;
+        using pointer = value_type *;
+        using reference = value_type &;
 
         iterator_base(const iterator_base &) = default;
         iterator_base &operator=(const iterator_base &) noexcept = default;
 
-        [[nodiscard]] inline reference operator*() const noexcept
-        {
-            return (*w)[index];
-        }
+        [[nodiscard]] inline reference operator*() const noexcept { return (*w)[index]; }
 
         constexpr iterator_base &operator++() noexcept
         {
@@ -123,10 +120,7 @@ public:
             return w == _Off.w && index == _Off.index;
         }
 
-        [[nodiscard]] constexpr bool operator!=(const iterator_base &_Off) const noexcept
-        {
-            return !(*this == _Off);
-        }
+        [[nodiscard]] constexpr bool operator!=(const iterator_base &_Off) const noexcept { return !(*this == _Off); }
 
         [[nodiscard]] constexpr difference_type operator-(const iterator_base &_Off) const noexcept
         {
@@ -140,10 +134,7 @@ public:
             return _Tmp;
         }
 
-        [[nodiscard]] inline reference operator[](const difference_type _Off) const noexcept
-        {
-            return *(*this + _Off);
-        }
+        [[nodiscard]] inline reference operator[](const difference_type _Off) const noexcept { return *(*this + _Off); }
     };
 
     // default constructor does nothing
@@ -175,7 +166,7 @@ public:
     }
 
     // initializer list constructor
-    inline winding_base_t(std::initializer_list<qvec3d> l) : winding_base_t(l.begin(), l.end()) {}
+    inline winding_base_t(std::initializer_list<qvec3d> l) : winding_base_t(l.begin(), l.end()) { }
 
     // copy constructor; uses optimized method of copying
     // data over.
@@ -277,7 +268,8 @@ public:
     }
 
     // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index) { 
+    inline qvec3d &operator[](const size_t &index)
+    {
         if (index >= N) {
             return vector[index - N];
         }
@@ -286,7 +278,8 @@ public:
     }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const {
+    inline const qvec3d &operator[](const size_t &index) const
+    {
         if (index >= N) {
             return vector[index - N];
         }
@@ -330,9 +323,15 @@ public:
         return (array[count - 1] = qvec3d(std::forward<Args>(vec)...));
     }
 
-    void push_back(qvec3d &&vec) { emplace_back(std::move(vec)); }
+    void push_back(qvec3d &&vec)
+    {
+        emplace_back(std::move(vec));
+    }
 
-    void push_back(const qvec3d &vec) { emplace_back(vec); }
+    void push_back(const qvec3d &vec)
+    {
+        emplace_back(vec);
+    }
 
     void resize(const size_t &new_size)
     {
@@ -511,7 +510,10 @@ public:
         }
     }
 
-    std::vector<qvec3f> glm_winding_points() const { return {begin(), end()}; }
+    std::vector<qvec3f> glm_winding_points() const
+    {
+        return {begin(), end()};
+    }
 
     static inline winding_base_t from_winding_points(const std::vector<qvec3f> &points)
     {
@@ -720,18 +722,18 @@ public:
         return result;
     }
 
-    winding_base_t translate(const qvec3d& offset) const
+    winding_base_t translate(const qvec3d &offset) const
     {
         winding_base_t result(*this);
 
-        for (qvec3d& p : result) {
+        for (qvec3d &p : result) {
             p += offset;
         }
 
         return result;
     }
 
-    bool directional_equal(const winding_base_t& w,  const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool directional_equal(const winding_base_t &w, const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         if (this->size() != w.size()) {
             return false;
@@ -762,10 +764,9 @@ public:
         return false;
     }
 
-    bool undirectional_equal(const winding_base_t& w,  const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool undirectional_equal(const winding_base_t &w, const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
     {
-        return directional_equal(w, equal_epsilon)
-            || directional_equal(w.flip(), equal_epsilon);
+        return directional_equal(w, equal_epsilon) || directional_equal(w.flip(), equal_epsilon);
     }
 };
 

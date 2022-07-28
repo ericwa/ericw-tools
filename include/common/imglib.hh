@@ -70,7 +70,7 @@ struct texture
 
     // This member is only set before insertion into the table
     // and not calculated by individual load functions.
-    qvec3b averageColor { 0 };
+    qvec3b averageColor{0};
 };
 
 extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
@@ -80,24 +80,29 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels);
 const texture *find(const std::string_view &str);
 
 // Load wal
-std::optional<texture> load_wal(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
+std::optional<texture> load_wal(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // Load TGA
-std::optional<texture> load_tga(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
+std::optional<texture> load_tga(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // Load Quake/Half Life mip (raw data)
-std::optional<texture> load_mip(const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
+std::optional<texture> load_mip(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // list of supported extensions and their loaders
-constexpr struct { const char *suffix; ext id; decltype(load_wal) *loader; } extension_list[] = {
-    { ".tga", ext::TGA, load_tga },
-    { ".wal", ext::WAL, load_wal },
-    { ".mip", ext::MIP, load_mip },
-    { "", ext::MIP, load_mip }
-};
+constexpr struct
+{
+    const char *suffix;
+    ext id;
+    decltype(load_wal) *loader;
+} extension_list[] = {
+    {".tga", ext::TGA, load_tga}, {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
 
 // Attempt to load a texture from the specified name.
-std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options);
+std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(
+    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options);
 
 enum class meta_ext
 {
@@ -106,7 +111,8 @@ enum class meta_ext
 };
 
 // Load wal
-inline std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game)
+inline std::optional<texture_meta> load_wal_meta(
+    const std::string_view &name, const fs::data &file, const gamedef_t *game)
 {
     if (auto tex = load_wal(name, file, true, game)) {
         return tex->meta;
@@ -115,14 +121,19 @@ inline std::optional<texture_meta> load_wal_meta(const std::string_view &name, c
     return std::nullopt;
 }
 
-std::optional<texture_meta> load_wal_json_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game);
+std::optional<texture_meta> load_wal_json_meta(
+    const std::string_view &name, const fs::data &file, const gamedef_t *game);
 
 // list of supported meta extensions and their loaders
-constexpr struct { const char *suffix; meta_ext id; decltype(load_wal_meta) *loader; } meta_extension_list[] = {
-    { ".wal", meta_ext::WAL, load_wal_meta },
-    { ".wal_json", meta_ext::WAL_JSON, load_wal_json_meta }
-};
+constexpr struct
+{
+    const char *suffix;
+    meta_ext id;
+    decltype(load_wal_meta) *loader;
+} meta_extension_list[] = {
+    {".wal", meta_ext::WAL, load_wal_meta}, {".wal_json", meta_ext::WAL_JSON, load_wal_json_meta}};
 
 // Attempt to load a texture meta from the specified name.
-std::tuple<std::optional<texture_meta>, fs::resolve_result, fs::data> load_texture_meta(const std::string_view &name, const gamedef_t *game, const settings::common_settings &options);
+std::tuple<std::optional<texture_meta>, fs::resolve_result, fs::data> load_texture_meta(
+    const std::string_view &name, const gamedef_t *game, const settings::common_settings &options);
 }; // namespace img

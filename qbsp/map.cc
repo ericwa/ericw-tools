@@ -54,12 +54,13 @@ const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::st
     }
 
     // try a meta-only texture first; this is all we really need anyways
-    if (auto [texture_meta, _0, _1] = img::load_texture_meta(name, qbsp_options.target_game, qbsp_options); texture_meta) {
+    if (auto [texture_meta, _0, _1] = img::load_texture_meta(name, qbsp_options.target_game, qbsp_options);
+        texture_meta) {
         // slight special case: if the meta has no width/height defined,
         // pull it from the real texture.
         if (!texture_meta->width || !texture_meta->height) {
             auto [texture, _0, _1] = img::load_texture(name, true, qbsp_options.target_game, qbsp_options);
-            
+
             if (texture) {
                 texture_meta->width = texture->meta.width;
                 texture_meta->height = texture->meta.height;
@@ -102,7 +103,7 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
         return;
 
     map.textures_loaded = true;
-    
+
     // Q2 doesn't need this
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         return;
@@ -119,14 +120,14 @@ static void EnsureTexturesLoaded(const mapentity_t *entity)
     if (wadstring.empty()) {
         logging::print("WARNING: No wad or _wad key exists in the worldmodel\n");
     } else {
-	    imemstream stream(wadstring.data(), wadstring.size());
+        imemstream stream(wadstring.data(), wadstring.size());
         std::string wad;
 
-	    while (std::getline(stream, wad, ';')) {
-		    if (LoadTexturePath(wad)) {
+        while (std::getline(stream, wad, ';')) {
+            if (LoadTexturePath(wad)) {
                 loaded_any_archive = true;
             }
-	    }
+        }
     }
 
     if (!loaded_any_archive) {
@@ -305,8 +306,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             int last_i = i;
 
             // recursively load animated textures until we loop back to us
-            while (true)
-            {
+            while (true) {
                 // wal for next chain
                 wal = map.load_image_meta(wal->animation.c_str());
 
@@ -494,7 +494,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     }
 
     const vec_t phong_angle_concave = entity->epairs.get_float("_phong_angle_concave");
-        flags.phong_angle_concave = clamp(phong_angle_concave, 0.0, 360.0);
+    flags.phong_angle_concave = clamp(phong_angle_concave, 0.0, 360.0);
 
     // handle "_minlight"
     const vec_t minlight = entity->epairs.get_float("_minlight");
@@ -693,8 +693,8 @@ qvec2f normalizeShift(const std::optional<img::texture_meta> &texture, const qve
 }
 
 /// `texture` is optional. If given, the "shift" values can be normalized
-static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane, const std::optional<img::texture_meta> &texture,
-    const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
+static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane,
+    const std::optional<img::texture_meta> &texture, const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
     qvec3d snapped_normal;
@@ -1445,9 +1445,10 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     }
 
     // if we have texture defs, see if we should remap this one
-    if (auto it = qbsp_options.loaded_texture_defs.find(mapface.texname); it != qbsp_options.loaded_texture_defs.end()) {
+    if (auto it = qbsp_options.loaded_texture_defs.find(mapface.texname);
+        it != qbsp_options.loaded_texture_defs.end()) {
         mapface.texname = std::get<0>(it->second);
-        
+
         if (std::get<1>(it->second).has_value()) {
             mapface.raw_info = extinfo.info = std::get<1>(it->second).value();
         }
@@ -1494,12 +1495,13 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     tx->flags = mapface.flags = {extinfo.info->flags};
     tx->value = mapface.value = extinfo.info->value;
 
-    contentflags_t contents { mapface.contents };
+    contentflags_t contents{mapface.contents};
 
     if (!contents.is_valid(qbsp_options.target_game, false)) {
         auto old_contents = contents;
         qbsp_options.target_game->contents_make_valid(contents);
-        logging::print("WARNING: line {}: face has invalid contents {}, remapped to {}\n", mapface.linenum, old_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
+        logging::print("WARNING: line {}: face has invalid contents {}, remapped to {}\n", mapface.linenum,
+            old_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
     }
 
     switch (tx_type) {
@@ -1576,8 +1578,9 @@ inline bool IsValidTextureProjection(const mapface_t &mapface, const maptexinfo_
 static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
-        logging::print("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n", mapface.linenum,
-            mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
+        logging::print("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n",
+            mapface.linenum, mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1],
+            (int)mapface.planepts[0][2]);
 
         // Reset texturing to sensible defaults
         const std::array<vec_t, 2> shift{0, 0};
@@ -1875,7 +1878,8 @@ static mapentity_t LoadExternalMap(const std::string &filename)
         FError("Expected at least one brush for external map {}\n", filename);
     }
 
-    logging::print(logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
+    logging::print(
+        logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
 
     return dest;
 }
@@ -2120,7 +2124,8 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, quakeed.scale[1]);
 
             if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " " << mapface.raw_info->value;
+                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " "
+                  << mapface.raw_info->value;
             }
 
             break;
@@ -2143,7 +2148,8 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, valve.scale[1]);
 
             if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " " << mapface.raw_info->value;
+                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " "
+                  << mapface.raw_info->value;
             }
 
             break;
@@ -2167,7 +2173,8 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fmt::print(f, ") ) {} ", mapface.texname);
 
             if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " " << mapface.raw_info->value;
+                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " "
+                  << mapface.raw_info->value;
             } else {
                 f << "0 0 0";
             }
@@ -2422,13 +2429,11 @@ static void TestExpandBrushes(const mapentity_t *src)
 
     for (int i = 0; i < src->nummapbrushes; i++) {
         const mapbrush_t *mapbrush = &src->mapbrush(i);
-        std::optional<bspbrush_t> hull1brush = LoadBrush(
-            src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none,
+        std::optional<bspbrush_t> hull1brush = LoadBrush(src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none,
             qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
         if (hull1brush) {
-            hull1brushes.emplace_back(
-                std::make_unique<bspbrush_t>(std::move(*hull1brush)));
+            hull1brushes.emplace_back(std::make_unique<bspbrush_t>(std::move(*hull1brush)));
         }
     }
 

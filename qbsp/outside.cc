@@ -112,14 +112,14 @@ Given that the cluster is reachable from the void, sets outside_distance
 to the given value on this cluster and all desdcent leafs (if it's a detail cluster).
 ==================
 */
-static void MarkClusterOutsideDistance_R(node_t* node, int outside_distance)
+static void MarkClusterOutsideDistance_R(node_t *node, int outside_distance)
 {
     node->outside_distance = outside_distance;
 
     if (!node->is_leaf) {
         MarkClusterOutsideDistance_R(node->children[0].get(), outside_distance);
         MarkClusterOutsideDistance_R(node->children[1].get(), outside_distance);
-    }    
+    }
 }
 
 /*
@@ -321,7 +321,7 @@ static void MarkOccupiedClusters(node_t *headnode)
     }
 }
 
-static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *>& result)
+static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *> &result)
 {
     if (node->occupant) {
         result.push_back(node);
@@ -450,7 +450,7 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count, settings::fillt
         return;
     }
 
-     // Finally, we can fill it in as void.
+    // Finally, we can fill it in as void.
     node->contents = qbsp_options.target_game->create_solid_contents();
     *outleafs_count += 1;
 }
@@ -621,7 +621,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
     std::vector<portal_t *> leakline;
 
     settings::filltype_t filltype = qbsp_options.filltype.value();
-    
+
     if (filltype == settings::filltype_t::AUTO) {
         filltype = hullnum > 0 ? settings::filltype_t::OUTSIDE : settings::filltype_t::INSIDE;
     }
@@ -695,7 +695,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
     const int outleafs = OutLeafsToSolid(node, filltype);
 
     // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
-    
+
     MarkBrushSidesInvisible(entity);
 
     MarkVisibleBrushSides_R(node);
@@ -711,7 +711,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
     return true;
 }
 
-void FillBrushEntity(mapentity_t* entity, tree_t *tree, const int hullnum)
+void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum)
 {
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 

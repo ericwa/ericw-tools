@@ -102,8 +102,8 @@ inline bouncelight_t &CreateBounceLight(const mface_t *face, const mbsp_t *bsp)
     return l;
 }
 
-static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec3d> &colorByStyle, const qvec3d &surfnormal,
-    vec_t area, const mface_t *face, const mbsp_t *bsp)
+static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec3d> &colorByStyle,
+    const qvec3d &surfnormal, vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
         Q_assert(styleColor.second[0] >= 0);
@@ -198,7 +198,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         styleColor.second *= cfg.bouncescale.value();
         total += styleColor.second;
     }
-    
+
     // no bounced color, we can leave early
     if (qv::emptyExact(total)) {
         return;
@@ -222,9 +222,7 @@ void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
     logging::print("--- MakeBounceLights ---\n");
 
-    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) {
-        MakeBounceLightsThread(cfg, bsp, face);
-    });
+    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { MakeBounceLightsThread(cfg, bsp, face); });
 
     logging::print("{} bounce lights created\n", bouncelights.size());
 }

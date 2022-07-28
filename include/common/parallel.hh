@@ -25,45 +25,45 @@
 // parallel extensions to logging
 namespace logging
 {
-    template<typename TS, typename TE, typename Body>
-    void parallel_for(const TS &start, const TE &end, const Body &func)
-    {
-        auto length = end - start;
-        std::atomic_uint64_t progress = 0;
-        
-        tbb::parallel_for(start, end, [&](const auto &it) {
-            percent(progress++, length);
-            func(it);
-        });
+template<typename TS, typename TE, typename Body>
+void parallel_for(const TS &start, const TE &end, const Body &func)
+{
+    auto length = end - start;
+    std::atomic_uint64_t progress = 0;
 
-        percent(progress, length);
-    }
+    tbb::parallel_for(start, end, [&](const auto &it) {
+        percent(progress++, length);
+        func(it);
+    });
 
-    template<typename Container, typename Body>
-    void parallel_for_each(Container &container, const Body &func)
-    {
-        auto length = std::size(container);
-        std::atomic_uint64_t progress = 0;
-        
-        tbb::parallel_for_each(container, [&](auto &f) {
-            percent(progress++, length);
-            func(f);
-        });
-
-        percent(progress, length);
-    }
-
-    template<typename Container, typename Body>
-    void parallel_for_each(const Container &container, const Body &func)
-    {
-        auto length = std::size(container);
-        std::atomic_uint64_t progress = 0;
-        
-        tbb::parallel_for_each(container, [&](const auto &f) {
-            percent(progress++, length);
-            func(f);
-        });
-
-        percent(progress, length);
-    }
+    percent(progress, length);
 }
+
+template<typename Container, typename Body>
+void parallel_for_each(Container &container, const Body &func)
+{
+    auto length = std::size(container);
+    std::atomic_uint64_t progress = 0;
+
+    tbb::parallel_for_each(container, [&](auto &f) {
+        percent(progress++, length);
+        func(f);
+    });
+
+    percent(progress, length);
+}
+
+template<typename Container, typename Body>
+void parallel_for_each(const Container &container, const Body &func)
+{
+    auto length = std::size(container);
+    std::atomic_uint64_t progress = 0;
+
+    tbb::parallel_for_each(container, [&](const auto &f) {
+        percent(progress++, length);
+        func(f);
+    });
+
+    percent(progress, length);
+}
+} // namespace logging

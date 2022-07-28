@@ -28,16 +28,19 @@ constexpr size_t PRT_MAX_WINDING_FIXED = 24;
 
 using prtfile_winding_t = polylib::winding_base_t<PRT_MAX_WINDING_FIXED>;
 
-struct prtfile_portal_t {
+struct prtfile_portal_t
+{
     prtfile_winding_t winding;
     int leafnums[2];
 };
 
-struct prtfile_dleafinfo_t {
+struct prtfile_dleafinfo_t
+{
     int cluster;
 };
 
-struct prtfile_t {
+struct prtfile_t
+{
     int portalleafs; // leafs (PRT1) or clusters (PRT2)
     int portalleafs_real; // real no. of leafs after expanding PRT2 clusters. Not used for Q2.
 

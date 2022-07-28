@@ -394,8 +394,8 @@ void LeafThread(size_t)
 
     PortalCompleted(p);
 
-    logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals.data()), p->nummightsee,
-        p->numcansee);
+    logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals.data()),
+        p->nummightsee, p->numcansee);
 }
 
 /*
@@ -537,10 +537,10 @@ void CalcPortalVis(const mbsp_t *bsp)
 
     SaveVisState();
 
-    logging::print(
-        logging::flag::VERBOSE, "portalcheck: {}  portaltest: {}  portalpass: {}\n", c_portalcheck, c_portaltest, c_portalpass);
-    logging::print(
-        logging::flag::VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", c_vistest, c_mighttest, c_mightseeupdate);
+    logging::print(logging::flag::VERBOSE, "portalcheck: {}  portaltest: {}  portalpass: {}\n", c_portalcheck,
+        c_portaltest, c_portalpass);
+    logging::print(logging::flag::VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", c_vistest,
+        c_mighttest, c_mightseeupdate);
 }
 
 /*
@@ -643,7 +643,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     auto dest_portal_it = portals.begin();
 
-    for (auto source_portal_it = prtfile.portals.begin(); source_portal_it != prtfile.portals.end(); source_portal_it++) {
+    for (auto source_portal_it = prtfile.portals.begin(); source_portal_it != prtfile.portals.end();
+         source_portal_it++) {
         const auto &sourceportal = *source_portal_it;
         qplane3d plane;
 
@@ -665,7 +666,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
             p.leaf = sourceportal.leafnums[1];
             dest_portal_it++;
         }
-        
+
         {
             auto &p = *dest_portal_it;
             // create backwards portal
@@ -702,7 +703,9 @@ int vis_main(int argc, const char **argv)
 
     vis_options.run(argc, argv);
 
-    logging::init(fs::path(vis_options.sourceMap).replace_filename(vis_options.sourceMap.stem().string() + "-vis").replace_extension("log"),
+    logging::init(fs::path(vis_options.sourceMap)
+                      .replace_filename(vis_options.sourceMap.stem().string() + "-vis")
+                      .replace_extension("log"),
         vis_options);
 
     stateinterval = std::chrono::minutes(5); /* 5 minutes */
@@ -717,8 +720,7 @@ int vis_main(int argc, const char **argv)
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
-    if (vis_options.phsonly.value())
-    {
+    if (vis_options.phsonly.value()) {
         if (bsp.loadversion->game->id != GAME_QUAKE_II) {
             FError("need a Q2-esque BSP for -phsonly");
         }
@@ -730,9 +732,7 @@ int vis_main(int argc, const char **argv)
         if (bsp.loadversion->game->id == GAME_QUAKE_II) {
             originalvismapsize = portalleafs * ((portalleafs + 7) / 8);
         }
-    }
-    else
-    {
+    } else {
         portalfile = fs::path(vis_options.sourceMap).replace_extension("prt");
         LoadPortals(portalfile, &bsp);
 

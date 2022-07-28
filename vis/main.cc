@@ -24,7 +24,7 @@ int main(int argc, const char **argv)
 {
     try {
         return vis_main(argc, argv);
-    } catch (const settings::quit_after_help_exception&) {
+    } catch (const settings::quit_after_help_exception &) {
         return 0;
     }
 }

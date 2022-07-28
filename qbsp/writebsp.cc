@@ -257,7 +257,8 @@ static void ExportDrawNodes(node_t *node)
     for (size_t i = 0; i < 2; i++) {
         if (node->children[i]->is_leaf) {
             // In Q2, all leaves must have their own ID even if they share solidity.
-            if (qbsp_options.target_game->id != GAME_QUAKE_II && node->children[i]->contents.is_solid(qbsp_options.target_game)) {
+            if (qbsp_options.target_game->id != GAME_QUAKE_II &&
+                node->children[i]->contents.is_solid(qbsp_options.target_game)) {
                 dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
@@ -316,8 +317,8 @@ void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
 
     // shrink the bounds in Q1 based games (Q1 engine compensates for this in Mod_LoadSubmodels)
     if (qbsp_options.target_game->id != GAME_QUAKE_II) {
-        dmodel.mins += qvec3d(1,1,1);
-        dmodel.maxs -= qvec3d(1,1,1);
+        dmodel.mins += qvec3d(1, 1, 1);
+        dmodel.maxs -= qvec3d(1, 1, 1);
     }
 }
 

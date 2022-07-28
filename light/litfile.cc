@@ -54,13 +54,12 @@ void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, cons
             j = 0;
             while (nth_bit(j) < facesup[i].lmscale)
                 j++;
-            litfile <= (uint8_t) j;
+            litfile <= (uint8_t)j;
         }
-        litfile.write((const char *) lit_filebase.data(), bsp->dlightdata.size() * 3);
-        litfile.write((const char *) lux_filebase.data(), bsp->dlightdata.size() * 3);
-    }
-    else
-        litfile.write((const char *) lit_filebase.data(), bsp->dlightdata.size() * 3);
+        litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
+        litfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
+    } else
+        litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
 }
 
 #include <fstream>
@@ -76,5 +75,5 @@ void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version)
 
     std::ofstream luxfile(luxname, std::ios_base::out | std::ios_base::binary);
     luxfile <= header.v1;
-    luxfile.write((const char *) lux_filebase.data(), bsp->dlightdata.size() * 3);
+    luxfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
 }

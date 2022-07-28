@@ -83,10 +83,10 @@ struct bspxfacenormals_header
     // if the BSP has 4 faces with 4 vertices each, then what follows is
     // 4 * 4 * (3 uint32_t); normal/tangent/bitangent per vertex per face.
     // for each bsp face:
-        // for each face vertex:
-            uint32_t normal;
-            uint32_t tangent;
-            uint32_t bitangent;
+    // for each face vertex:
+    uint32_t normal;
+    uint32_t tangent;
+    uint32_t bitangent;
 };
 
 // BSPX data

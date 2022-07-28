@@ -71,9 +71,8 @@ void qbsp_settings::initialize(int argc, const char **argv)
         parser_t p(file->data(), file->size());
         parse(p);
     }
-    
-    try
-    {
+
+    try {
         token_parser_t p(argc - 1, argv + 1);
         auto remainder = parse(p);
 
@@ -86,9 +85,7 @@ void qbsp_settings::initialize(int argc, const char **argv)
         if (remainder.size() == 2) {
             qbsp_options.bsp_path = remainder[1];
         }
-    }
-    catch (parse_exception ex)
-    {
+    } catch (parse_exception ex) {
         logging::print(ex.what());
         printHelp();
     }
@@ -113,7 +110,7 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
         if (!parser.parse_token(PARSE_SAMELINE)) {
             break;
         }
-        
+
         std::string to = std::move(parser.token);
         std::optional<extended_texinfo_t> texinfo;
 
@@ -122,20 +119,20 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
         while (std::isspace(to[to.size() - 1])) {
             to.resize(to.size() - 1);
         }
-        
+
         if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
-            texinfo = extended_texinfo_t { std::stoi(parser.token) };
-        
+            texinfo = extended_texinfo_t{std::stoi(parser.token)};
+
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
                 texinfo->flags.native = std::stoi(parser.token);
             }
-        
+
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
                 texinfo->value = std::stoi(parser.token);
             }
         }
 
-        loaded_texture_defs[from] = { to, texinfo };
+        loaded_texture_defs[from] = {to, texinfo};
     }
 }
 
@@ -175,7 +172,8 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         qbsp_options.fAllverbose = true;
     }
 
-    if ((logging::mask & (bitflags<logging::flag>(logging::flag::PERCENT) | logging::flag::STAT | logging::flag::PROGRESS)) == logging::flag::NONE) {
+    if ((logging::mask & (bitflags<logging::flag>(logging::flag::PERCENT) | logging::flag::STAT |
+                             logging::flag::PROGRESS)) == logging::flag::NONE) {
         qbsp_options.fNoverbose = true;
     }
 
@@ -184,8 +182,7 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         set_target_version(&bspver_hl);
     }
 
-    if (q2bsp.value() || 
-        (q2rtx.value() && !q2bsp.isChanged() && !qbism.isChanged())) {
+    if (q2bsp.value() || (q2rtx.value() && !q2bsp.isChanged() && !qbism.isChanged())) {
         set_target_version(&bspver_q2);
     }
 
@@ -487,7 +484,7 @@ static bool IsTrigger(const mapentity_t *entity)
     return trigger_pos == (tex.size() - strlen("trigger"));
 }
 
-static void CountLeafs_r(node_t *node, content_stats_base_t& stats)
+static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
 {
     if (node->is_leaf) {
         qbsp_options.target_game->count_contents_in_stats(node->contents, stats);
@@ -526,8 +523,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         return;
 
     // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
-    bool discarded_trigger = entity != map.world_entity() && qbsp_options.notriggermodels.value() &&
-        IsTrigger(entity);
+    bool discarded_trigger = entity != map.world_entity() && qbsp_options.notriggermodels.value() && IsTrigger(entity);
 
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
     if (!discarded_trigger) {
@@ -572,16 +568,16 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         entity->brushes[i]->file_order = i;
     }
 
-    //entity->brushes = ChopBrushes(entity->brushes);
+    // entity->brushes = ChopBrushes(entity->brushes);
 
-//    if (entity == map.world_entity() && hullnum <= 0) {
-//        if (options.debugchop.value()) {
-//            fs::path path = options.bsp_path;
-//            path.replace_extension(".chop.map");
-//
-//            WriteBspBrushMap(path, entity->brushes);
-//        }
-//    }
+    //    if (entity == map.world_entity() && hullnum <= 0) {
+    //        if (options.debugchop.value()) {
+    //            fs::path path = options.bsp_path;
+    //            path.replace_extension(".chop.map");
+    //
+    //            WriteBspBrushMap(path, entity->brushes);
+    //        }
+    //    }
 
     // we're discarding the brush
     if (discarded_trigger) {
@@ -671,7 +667,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode.get());
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode.get());
         }
-        
+
         Q_assert(entity->firstoutputfacenumber == -1);
 
         entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode.get());
@@ -741,7 +737,8 @@ static void UpdateEntLump(void)
 
     if (!qbsp_options.fAllverbose) {
         qbsp_options.fVerbose = false;
-        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+        logging::mask &=
+            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
     }
 }
 
@@ -905,7 +902,8 @@ static void CreateSingleHull(const int hullnum)
         ProcessEntity(&entity, hullnum);
         if (!qbsp_options.fAllverbose) {
             qbsp_options.fVerbose = false; // don't print rest of entities
-            logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+            logging::mask &=
+                ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
         }
     }
 }
@@ -920,7 +918,8 @@ static void CreateHulls(void)
     /* create the hulls sequentially */
     if (!qbsp_options.fNoverbose) {
         qbsp_options.fVerbose = true;
-        logging::mask |= (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+        logging::mask |=
+            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
     }
 
     auto &hulls = qbsp_options.target_game->get_hull_sizes();
@@ -952,7 +951,8 @@ static void LoadTextureData()
 
             if (!tex) {
                 if (pos.archive) {
-                    logging::print("WARNING: unable to load texture {} in archive {}\n", map.miptex[i].name, pos.archive->pathname);
+                    logging::print("WARNING: unable to load texture {} in archive {}\n", map.miptex[i].name,
+                        pos.archive->pathname);
                 } else {
                     logging::print("WARNING: unable to find texture {}\n", map.miptex[i].name);
                 }
@@ -972,17 +972,17 @@ static void LoadTextureData()
         // construct fake data that solely contains the header.
         miptex.data.resize(sizeof(dmiptex_t));
 
-        dmiptex_t header {};
+        dmiptex_t header{};
         if (miptex.name.size() >= 16) {
             logging::print("WARNING: texture {} name too long for Quake miptex\n", miptex.name);
             std::copy_n(miptex.name.begin(), 15, header.name.begin());
         } else {
             std::copy(miptex.name.begin(), miptex.name.end(), header.name.begin());
         }
-            
+
         header.width = miptex.width;
         header.height = miptex.height;
-        header.offsets = { -1, -1, -1, -1 };
+        header.offsets = {-1, -1, -1, -1};
 
         omemstream stream(miptex.data.data(), miptex.data.size());
         stream <= header;
@@ -1020,7 +1020,7 @@ static void LoadSecondaryTextures()
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         return;
     }
-    
+
     AddAnimationFrames();
 
     /* Default texture data to store in worldmodel */
@@ -1041,7 +1041,7 @@ static void SnapVertices()
     if (!qbsp_options.snapvertices.value()) {
         return;
     }
-    
+
     logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
 
     for (auto &v : map.bsp.dvertexes) {
@@ -1078,7 +1078,8 @@ void ProcessFile()
 
     if (!qbsp_options.fAllverbose) {
         qbsp_options.fVerbose = false;
-        logging::mask &= ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+        logging::mask &=
+            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
     }
 
     // calculate extents, if required
@@ -1168,7 +1169,7 @@ void InitQBSP(int argc, const char **argv)
     map.skip_texinfo = MakeSkipTexinfo();
 }
 
-void InitQBSP(const std::vector<std::string>& args)
+void InitQBSP(const std::vector<std::string> &args)
 {
     std::vector<const char *> argPtrs;
     for (const std::string &arg : args) {

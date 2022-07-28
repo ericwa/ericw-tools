@@ -43,7 +43,8 @@ enum class hittype_t : uint8_t
 };
 
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
-qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3d &point); // mxd. Palette index -> RGBA
+qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp,
+    const qvec3d &point); // mxd. Palette index -> RGBA
 
 class modelinfo_t;
 
@@ -67,7 +68,7 @@ struct hitresult_t
 hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out);
 hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self);
 
-const mleaf_t *Light_PointInLeaf( const mbsp_t *bsp, const qvec3d &point );
-int Light_PointContents( const mbsp_t *bsp, const qvec3d &point );
+const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3d &point);
+int Light_PointContents(const mbsp_t *bsp, const qvec3d &point);
 
 #include "trace_embree.hh"

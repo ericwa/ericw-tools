@@ -26,7 +26,7 @@
 class leafbits_t
 {
     size_t _size = 0;
-    std::unique_ptr<uint32_t[]> bits {};
+    std::unique_ptr<uint32_t[]> bits{};
 
     constexpr size_t block_size() const { return (_size + mask) >> shift; }
     inline std::unique_ptr<uint32_t[]> allocate() { return std::make_unique<uint32_t[]>(block_size()); }
@@ -40,12 +40,12 @@ public:
 
     inline leafbits_t(size_t size) : _size(size), bits(allocate()) { }
 
-    inline leafbits_t(const leafbits_t &copy) : leafbits_t(copy._size) { memcpy(bits.get(), copy.bits.get(), byte_size()); }
-
-    inline leafbits_t(leafbits_t &&move) noexcept : _size(move._size), bits(std::move(move.bits))
+    inline leafbits_t(const leafbits_t &copy) : leafbits_t(copy._size)
     {
-        move._size = 0;
+        memcpy(bits.get(), copy.bits.get(), byte_size());
     }
+
+    inline leafbits_t(leafbits_t &&move) noexcept : _size(move._size), bits(std::move(move.bits)) { move._size = 0; }
 
     inline leafbits_t &operator=(leafbits_t &&move) noexcept
     {

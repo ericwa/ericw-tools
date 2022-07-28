@@ -322,8 +322,8 @@ static bool EdgePlanes_PointInside(const std::vector<qplane3d> &edgeplanes, cons
 /**
  * pass 0,0,0 for wantedNormal to disable the normal check
  */
-static void BSP_FindFaceAtPoint_r(
-    const mbsp_t *bsp, const int nodenum, const qvec3d &point, const qvec3d &wantedNormal, std::vector<const mface_t *> &result)
+static void BSP_FindFaceAtPoint_r(const mbsp_t *bsp, const int nodenum, const qvec3d &point, const qvec3d &wantedNormal,
+    std::vector<const mface_t *> &result)
 {
     if (nodenum < 0) {
         // we're only interested in nodes, since faces are owned by nodes.
@@ -384,8 +384,8 @@ const mface_t *BSP_FindFaceAtPoint(
     std::vector<const mface_t *> result;
     BSP_FindFaceAtPoint_r(bsp, model->headnode[0], point, wantedNormal, result);
 
-    if (result.empty()) {    
-        return nullptr; 
+    if (result.empty()) {
+        return nullptr;
     }
     return result[0];
 }
@@ -420,14 +420,13 @@ static const bsp2_dnode_t *BSP_FindNodeAtPoint_r(
     }
 }
 
-const bsp2_dnode_t* BSP_FindNodeAtPoint(
+const bsp2_dnode_t *BSP_FindNodeAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wanted_normal)
 {
     return BSP_FindNodeAtPoint_r(bsp, model->headnode[0], point, wanted_normal);
 }
 
-static const mleaf_t *BSP_FindLeafAtPoint_r(
-    const mbsp_t *bsp, const int nodenum, const qvec3d &point)
+static const mleaf_t *BSP_FindLeafAtPoint_r(const mbsp_t *bsp, const int nodenum, const qvec3d &point)
 {
     if (nodenum < 0) {
         return BSP_GetLeafFromNodeNum(bsp, nodenum);
@@ -443,13 +442,12 @@ static const mleaf_t *BSP_FindLeafAtPoint_r(
     }
 }
 
-const mleaf_t* BSP_FindLeafAtPoint(const mbsp_t* bsp, const dmodelh2_t* model, const qvec3d& point)
+const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point)
 {
     return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point);
 }
 
-static int BSP_FindClipnodeAtPoint_r(
-    const mbsp_t *bsp, const int clipnodenum, const qvec3d &point)
+static int BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int clipnodenum, const qvec3d &point)
 {
     if (clipnodenum < 0) {
         // actually contents
@@ -474,7 +472,7 @@ int BSP_FindContentsAtPoint(const mbsp_t *bsp, int hull, const dmodelh2_t *model
     return BSP_FindClipnodeAtPoint_r(bsp, model->headnode.at(hull), point);
 }
 
-std::vector<const mface_t*> Leaf_Markfaces(const mbsp_t* bsp, const mleaf_t* leaf)
+std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *leaf)
 {
     std::vector<const mface_t *> result;
     result.reserve(leaf->nummarksurfaces);
@@ -487,7 +485,7 @@ std::vector<const mface_t*> Leaf_Markfaces(const mbsp_t* bsp, const mleaf_t* lea
     return result;
 }
 
-std::vector<const dbrush_t*> Leaf_Brushes(const mbsp_t* bsp, const mleaf_t* leaf)
+std::vector<const dbrush_t *> Leaf_Brushes(const mbsp_t *bsp, const mleaf_t *leaf)
 {
     std::vector<const dbrush_t *> result;
     result.reserve(leaf->numleafbrushes);
@@ -537,7 +535,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
     const char *texname = Face_TextureName(bsp, face);
 
     logging::print("face {}, texture '{}', {} edges; vectors:\n"
-             "{: 3.3}\n",
+                   "{: 3.3}\n",
         Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
     for (int i = 0; i < face->numedges; i++) {

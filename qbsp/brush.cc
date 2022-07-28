@@ -28,7 +28,7 @@
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
-const maptexinfo_t& side_t::get_texinfo() const
+const maptexinfo_t &side_t::get_texinfo() const
 {
     return map.mtexinfos[this->texinfo];
 }
@@ -95,7 +95,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
 
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
-            logging::print("WARNING: line {}: too few points (2): ({}) ({})\n", sourceface.linenum, face->w[0], face->w[1]);
+            logging::print(
+                "WARNING: line {}: too few points (2): ({}) ({})\n", sourceface.linenum, face->w[0], face->w[1]);
         } else if (face->w.size() == 1) {
             logging::print("WARNING: line {}: too few points (1): ({})\n", sourceface.linenum, face->w[0]);
         } else {
@@ -128,16 +129,16 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         // is this a bug? should `Face_Plane` be used instead?
         vec_t dist = plane.distance_to(p1);
         if (dist < -qbsp_options.epsilon.value() || dist > qbsp_options.epsilon.value()) {
-            logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum, p1[0],
-                p1[1], p1[2], dist);
+            logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum,
+                p1[0], p1[1], p1[2], dist);
         }
 
         /* check the edge isn't degenerate */
         qvec3d edgevec = p2 - p1;
         vec_t length = qv::length(edgevec);
         if (length < qbsp_options.epsilon.value()) {
-            logging::print("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.linenum,
-                length, p1[0], p1[1], p1[2]);
+            logging::print("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n",
+                sourceface.linenum, length, p1[0], p1[1], p1[2]);
             for (size_t j = i + 1; j < face->w.size(); j++)
                 face->w[j - 1] = face->w[j];
             face->w.resize(face->w.size() - 1);
@@ -155,8 +156,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
                 continue;
             dist = qv::dot(face->w[j], edgenormal);
             if (dist > edgedist) {
-                logging::print("WARNING: line {}: Found a non-convex face (error size {}, point: {})\n", sourceface.linenum,
-                    dist - edgedist, face->w[j]);
+                logging::print("WARNING: line {}: Found a non-convex face (error size {}, point: {})\n",
+                    sourceface.linenum, dist - edgedist, face->w[j]);
                 face->w.clear();
                 return;
             }
@@ -610,8 +611,9 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
         }
 
         if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
-            logging::print("mixed face contents ({} != {}) at line {}\n", base_contents.to_string(qbsp_options.target_game),
-                contents.to_string(qbsp_options.target_game), mapface.linenum);
+            logging::print("mixed face contents ({} != {}) at line {}\n",
+                base_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game),
+                mapface.linenum);
             break;
         }
     }

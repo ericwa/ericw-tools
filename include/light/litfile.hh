@@ -27,7 +27,7 @@ struct litheader_t
 {
     struct
     {
-        std::array<char, 4> ident = { 'Q', 'L', 'I', 'T' };
+        std::array<char, 4> ident = {'Q', 'L', 'I', 'T'};
         int version;
 
         auto stream_data() { return std::tie(ident, version); }
