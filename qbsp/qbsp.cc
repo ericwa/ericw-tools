@@ -1031,28 +1031,6 @@ static void LoadSecondaryTextures()
 
 /*
 =================
-SnapVertices
-
-If specified, rounds all of the vertex locations to integers.
-=================
-*/
-static void SnapVertices()
-{
-    if (!qbsp_options.snapvertices.value()) {
-        return;
-    }
-
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
-
-    for (auto &v : map.bsp.dvertexes) {
-        for (auto &vv : v) {
-            vv = floor(vv);
-        }
-    }
-}
-
-/*
-=================
 ProcessFile
 =================
 */
@@ -1089,9 +1067,13 @@ void ProcessFile()
 
     // create hulls!
     CreateHulls();
-
-    // snap vertices
-    SnapVertices();
+    
+    // undo logging changes
+    if (!qbsp_options.fNoverbose) {
+        qbsp_options.fVerbose = true;
+        logging::mask |=
+            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+    }
 
     WriteEntitiesToString();
     BSPX_CreateBrushList();
