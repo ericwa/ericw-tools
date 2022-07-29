@@ -47,8 +47,9 @@ using namespace std;
 using namespace polylib;
 
 mutex bouncelights_lock;
-static std::vector<bouncelight_t> bouncelights;
-std::unordered_map<int, std::vector<int>> bouncelightsByFacenum;
+static std::forward_list<bouncelight_t> bouncelights;
+static size_t lastBounceLightIndex;
+static std::unordered_map<size_t, std::vector<std::reference_wrapper<bouncelight_t>>> bouncelightsByFacenum;
 
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
@@ -94,15 +95,14 @@ qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
 inline bouncelight_t &CreateBounceLight(const mface_t *face, const mbsp_t *bsp)
 {
     unique_lock<mutex> lck{bouncelights_lock};
-    bouncelight_t &l = bouncelights.emplace_back();
+    bouncelight_t &l = bouncelights.emplace_front();
 
-    const int lastBounceLightIndex = static_cast<int>(bouncelights.size()) - 1;
-    bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(lastBounceLightIndex);
+    bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(l);
 
     return l;
 }
 
-static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec3d> &colorByStyle,
+static void AddBounceLight(const qvec3d &pos, std::unordered_map<int, qvec3d> &&colorByStyle,
     const qvec3d &surfnormal, vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
@@ -118,15 +118,11 @@ static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec
     l.pos = pos;
     l.colorByStyle = colorByStyle;
 
-    qvec3f componentwiseMaxColor{};
-    for (const auto &styleColor : colorByStyle) {
+    for (const auto &styleColor : l.colorByStyle) {
         for (int i = 0; i < 3; i++) {
-            if (styleColor.second[i] > componentwiseMaxColor[i]) {
-                componentwiseMaxColor[i] = styleColor.second[i];
-            }
+            l.componentwiseMaxColor[i] = max(l.componentwiseMaxColor[i], styleColor.second[i]);
         }
     }
-    l.componentwiseMaxColor = componentwiseMaxColor;
     l.surfnormal = surfnormal;
     l.area = area;
 
@@ -137,19 +133,19 @@ static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec
     }
 }
 
-const std::vector<bouncelight_t> &BounceLights()
+const std::forward_list<bouncelight_t> &BounceLights()
 {
     return bouncelights;
 }
 
-const std::vector<int> &BounceLightsForFaceNum(int facenum)
+const std::vector<std::reference_wrapper<bouncelight_t>> &BounceLightsForFaceNum(int facenum)
 {
     const auto &vec = bouncelightsByFacenum.find(facenum);
     if (vec != bouncelightsByFacenum.end()) {
         return vec->second;
     }
 
-    static std::vector<int> empty;
+    static std::vector<std::reference_wrapper<bouncelight_t>> empty;
     return empty;
 }
 
@@ -215,7 +211,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         emitcolors[styleColor.first] = styleColor.second * blendedcolor;
     }
 
-    AddBounceLight(facemidpoint, emitcolors, faceplane.normal, area, &face, bsp);
+    AddBounceLight(facemidpoint, std::move(emitcolors), faceplane.normal, area, &face, bsp);
 }
 
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
@@ -224,5 +220,5 @@ void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
     logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { MakeBounceLightsThread(cfg, bsp, face); });
 
-    logging::print("{} bounce lights created\n", bouncelights.size());
+    logging::print("{} bounce lights created\n", lastBounceLightIndex);
 }

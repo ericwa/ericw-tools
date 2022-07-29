@@ -435,7 +435,10 @@ void MakeTreePortals(tree_t *tree)
     portalstats_t stats{};
 
     MakeHeadnodePortals(tree);
+
     MakeTreePortals_r(tree, tree->headnode.get(), stats);
+    
+    logging::print(logging::flag::STAT, "       {:8} tiny portals\n", stats.c_tinyportals);
 }
 
 static void AssertNoPortals_r(node_t *node)

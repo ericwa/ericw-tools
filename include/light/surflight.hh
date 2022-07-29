@@ -21,6 +21,7 @@ See file, 'COPYING', for details.
 #pragma once
 
 #include <vector>
+#include <tuple>
 
 struct surfacelight_t
 {
@@ -46,6 +47,6 @@ struct surfacelight_t
 };
 
 std::vector<surfacelight_t> &GetSurfaceLights();
-std::optional<int32_t> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
+std::optional<std::tuple<int32_t, int32_t>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
 void MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);

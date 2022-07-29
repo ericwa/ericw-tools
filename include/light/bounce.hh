@@ -27,6 +27,7 @@
 #include <map>
 
 #include <common/qvec.hh>
+#include <forward_list>
 
 struct bouncelight_t
 {
@@ -47,7 +48,7 @@ struct bouncelight_t
 
 // public functions
 
-const std::vector<bouncelight_t> &BounceLights();
-const std::vector<int> &BounceLightsForFaceNum(int facenum);
+const std::forward_list<bouncelight_t> &BounceLights();
+const std::vector<std::reference_wrapper<bouncelight_t>> &BounceLightsForFaceNum(int facenum);
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
 qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face); // mxd

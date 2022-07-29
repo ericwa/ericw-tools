@@ -1389,7 +1389,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
  * ============
  */
 static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &color, vec_t light,
-    lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+    lightsurf_t *lightsurf, lightmapdict_t *lightmaps, int32_t style)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1399,8 +1399,8 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         return; /* this face is excluded from minlight */
     }
 
-    /* Find a style 0 lightmap */
-    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+    /* Find the lightmap */
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
 
     bool hit = false;
     for (int i = 0; i < lightsurf->points.size(); i++) {
@@ -1423,7 +1423,19 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
     }
 
     if (hit) {
-        Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+        Lightmap_Save(lightmaps, lightsurf, lightmap, style);
+    }
+}
+
+static void LightFace_LocalMin(const mbsp_t *bsp, const mface_t *face,
+    lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
+
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+    if (extended_flags.no_minlight) {
+        return; /* this face is excluded from minlight */
     }
 
     // FIXME: Refactor this?
@@ -1446,9 +1458,9 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         raystream_occlusion_t &rs = lightsurf->occlusion_stream;
         rs.clearPushedRays();
 
-        lightmap = Lightmap_ForStyle(lightmaps, entity->style.value(), lightsurf);
+        lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, entity->style.value(), lightsurf);
 
-        hit = false;
+        bool hit = false;
         for (int i = 0; i < lightsurf->points.size(); i++) {
             if (lightsurf->occluded[i])
                 continue;
@@ -1547,16 +1559,15 @@ static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdi
     // reset all lightmaps to black (lazily)
     Lightmap_ClearAll(lightmaps);
 
-    const std::vector<int> &vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
-    const std::vector<bouncelight_t> &all_vpls = BounceLights();
+    const std::vector<std::reference_wrapper<bouncelight_t>> &vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
 
     /* Overwrite each point with the emitted color... */
     for (int i = 0; i < lightsurf->points.size(); i++) {
         if (lightsurf->occluded[i])
             continue;
 
-        for (const auto &vplnum : vpls) {
-            const bouncelight_t &vpl = all_vpls[vplnum];
+        for (const auto &vpl_ref : vpls) {
+            auto &vpl = vpl_ref.get();
 
             // check for point in polygon (note: could be on the edge of more than one)
             if (!GLM_EdgePlanes_PointInside(vpl.poly_edgeplanes, lightsurf->points[i]))
@@ -2966,7 +2977,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
         float minlight = 0;
         qvec3d minlight_color;
 
-        /* minlight - use the greater of global or model minlight, or Q2 surface emission */
+        // first, check for global minlight; this only affects style 0
         if (lightsurf.minlight > cfg.minlight.value()) {
             minlight = lightsurf.minlight;
             minlight_color = lightsurf.minlight_color;
@@ -2975,16 +2986,17 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
             minlight_color = cfg.minlight_color.value();
         }
 
-        if (!minlight) {
-            if (auto value = IsSurfaceLitFace(bsp, face)) {
-                minlight = *value * 64.0f;
-                minlight_color = Face_LookupTextureColor(bsp, face);
-            }
+        if (minlight) {
+            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, 0);
         }
 
-        if (minlight) {
-            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps);
+        if (auto value = IsSurfaceLitFace(bsp, face)) {
+            minlight = std::get<0>(value.value()) * 64.0f;
+            minlight_color = Face_LookupTextureColor(bsp, face);
+            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()));
         }
+
+        LightFace_LocalMin(bsp, face, &lightsurf, lightmaps);
 
         /* negative lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
