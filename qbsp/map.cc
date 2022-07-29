@@ -533,6 +533,14 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
 {
     std::string key = parser.token;
 
+    // trim whitespace from start/end
+    while (std::isspace(key.front())) {
+        key.erase(key.begin());
+    }
+    while (std::isspace(key.back())) {
+        key.erase(key.end() - 1);
+    }
+
     parser.parse_token(PARSE_SAMELINE);
 
     entity->epairs.set(key, parser.token);
