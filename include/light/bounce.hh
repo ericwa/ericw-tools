@@ -24,7 +24,7 @@
 #include <common/mathlib.hh>
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 
 #include <common/qvec.hh>
 #include <forward_list>
@@ -34,7 +34,7 @@ struct bouncelight_t
     std::vector<qvec3f> poly;
     std::vector<qvec4f> poly_edgeplanes;
     qvec3f pos;
-    std::map<int, qvec3d> colorByStyle;
+    std::unordered_map<int, qvec3d> colorByStyle;
     qvec3d componentwiseMaxColor; // cached maximum color in the colorByStyle, used for culling so we don't need to loop
                                   // through colorByStyle
     qvec3f surfnormal;
