@@ -255,7 +255,7 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         }
 
         if (!software.value() && !subdivide.isChanged()) {
-            subdivide.setValue(0, settings::source::GAME_TARGET);
+            subdivide.setValue(496, settings::source::GAME_TARGET);
         }
     }
 
