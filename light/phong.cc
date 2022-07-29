@@ -539,7 +539,13 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             return;
         }
 
-        const auto &neighboursToSmooth = smoothFaces[&f];
+        auto neighboursIt = smoothFaces.find(&f);
+
+        if (neighboursIt == smoothFaces.end()) {
+            return;
+        }
+
+        const auto &neighboursToSmooth = neighboursIt->second;
         const qvec3f f_norm = Face_Normal(bsp, &f); // get the face normal
 
         // face tangent
