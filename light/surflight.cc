@@ -139,20 +139,20 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     surfacelightsByFacenum[Face_GetNum(bsp, face)].push_back(index);
 }
 
-std::optional<int32_t> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
+std::optional<std::tuple<int32_t, int32_t>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         // first, check if it's a Q2 surface
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
 
         if (info != nullptr && (info->flags.native & Q2_SURF_LIGHT) && info->value > 0) {
-            return info->value;
+            return std::make_tuple(info->value, 0);
         }
     }
 
     for (const auto &surflight : GetSurfaceLightTemplates()) {
         if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight, SURFLIGHT_RAD)) {
-            return surflight->light.value();
+            return std::make_tuple(surflight->light.value(), surflight->style.value());
         }
     }
 
