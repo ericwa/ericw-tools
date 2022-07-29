@@ -48,7 +48,7 @@ using namespace polylib;
 
 mutex bouncelights_lock;
 static std::forward_list<bouncelight_t> bouncelights;
-static size_t lastBounceLightIndex;
+static size_t bounceLightCount;
 static std::unordered_map<size_t, std::vector<std::reference_wrapper<bouncelight_t>>> bouncelightsByFacenum;
 
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
@@ -98,6 +98,7 @@ inline bouncelight_t &CreateBounceLight(const mface_t *face, const mbsp_t *bsp)
     bouncelight_t &l = bouncelights.emplace_front();
 
     bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(l);
+    bounceLightCount++;
 
     return l;
 }
@@ -222,5 +223,5 @@ void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
         MakeBounceLightsThread(cfg, bsp, face);
     });
 
-    logging::print("{} bounce lights created\n", lastBounceLightIndex);
+    logging::print("{} bounce lights created\n", bounceLightCount);
 }
