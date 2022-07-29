@@ -164,6 +164,14 @@ void entdict_t::parse(parser_base_t &parser)
         if (parser.token == "}")
             FError("closing brace without data");
 
+        // trim whitespace from start/end
+        while (std::isspace(keystr.front())) {
+            keystr.erase(keystr.begin());
+        }
+        while (std::isspace(keystr.back())) {
+            keystr.erase(keystr.cbegin());
+        }
+
         set(keystr, parser.token);
     }
 }
