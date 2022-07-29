@@ -541,7 +541,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
 
         bool bogus = false;
         for (int j = 0; j < 3; j++) {
-            if (result[i]->bounds.mins()[j] < -4096 || result[i]->bounds.maxs()[j] > 4096) {
+            if (result[i]->bounds.mins()[j] < -qbsp_options.worldextent.value() || result[i]->bounds.maxs()[j] > qbsp_options.worldextent.value()) {
                 logging::print("bogus brush after clip\n");
                 bogus = true;
                 break;
