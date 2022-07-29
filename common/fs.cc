@@ -215,18 +215,8 @@ void clear()
     directories.clear();
 }
 
-std::shared_ptr<archive_like> addArchive(const path &p, bool external)
+inline std::shared_ptr<archive_like> addArchiveInternal(const path &p, bool external)
 {
-    if (p.empty()) {
-        logging::funcprint("WARNING: can't add empty archive path\n");
-        return nullptr;
-    }
-
-    if (!exists(p)) {
-        logging::funcprint("WARNING: archive '{}' not found\n", p);
-        return nullptr;
-    }
-
     if (is_directory(p)) {
         for (auto &dir : directories) {
             if (equivalent(dir->pathname, p)) {
@@ -267,6 +257,28 @@ std::shared_ptr<archive_like> addArchive(const path &p, bool external)
     }
 
     return nullptr;
+}
+
+std::shared_ptr<archive_like> addArchive(const path &p, bool external)
+{
+    if (p.empty()) {
+        logging::funcprint("WARNING: can't add empty archive path\n");
+        return nullptr;
+    }
+
+    if (!exists(p)) {
+        // check relative
+        path filename = p.filename();
+
+        if (!exists(filename)) {
+            logging::funcprint("WARNING: archive '{}' not found\n", p);
+            return nullptr;
+        }
+
+        return addArchiveInternal(filename, external);
+    }
+
+    return addArchiveInternal(p, external);
 }
 
 resolve_result where(const path &p, bool prefer_loose)
