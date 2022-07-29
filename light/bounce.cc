@@ -49,7 +49,7 @@ using namespace polylib;
 mutex bouncelights_lock;
 static std::forward_list<bouncelight_t> bouncelights;
 static size_t lastBounceLightIndex;
-static std::map<size_t, std::vector<std::reference_wrapper<bouncelight_t>>> bouncelightsByFacenum;
+static std::unordered_map<size_t, std::vector<std::reference_wrapper<bouncelight_t>>> bouncelightsByFacenum;
 
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
@@ -102,7 +102,7 @@ inline bouncelight_t &CreateBounceLight(const mface_t *face, const mbsp_t *bsp)
     return l;
 }
 
-static void AddBounceLight(const qvec3d &pos, std::map<int, qvec3d> &&colorByStyle,
+static void AddBounceLight(const qvec3d &pos, std::unordered_map<int, qvec3d> &&colorByStyle,
     const qvec3d &surfnormal, vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
@@ -179,7 +179,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     facemidpoint += faceplane.normal; // lift 1 unit
 
     // average them, area weighted
-    map<int, qvec3d> sum;
+    std::unordered_map<int, qvec3d> sum;
 
     for (const auto &lightmap : surf.lightmapsByStyle) {
         for (const auto &sample : lightmap.samples) {
@@ -205,7 +205,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     qvec3d blendedcolor = mix(qvec3d{127. / 255.}, texturecolor, cfg.bouncecolorscale.value());
 
     // final colors to emit
-    map<int, qvec3d> emitcolors;
+    std::unordered_map<int, qvec3d> emitcolors;
 
     for (const auto &styleColor : sum) {
         emitcolors[styleColor.first] = styleColor.second * blendedcolor;
