@@ -2701,10 +2701,10 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     }
 }
 
-void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, const lightsurf_t *lightsurf,
+void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, lightsurf_t *lightsurf,
     const faceextents_t &extents, const faceextents_t &output_extents)
 {
-    const lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
+    lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
     const int actual_width = extents.width();
     const int actual_height = extents.height();
     const int output_width = output_extents.width();
@@ -2795,6 +2795,17 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, c
         sortable.emplace_back(avgb, &lightmap);
     }
 
+    // HACK: in Q2, if lightofs is -1, then it's drawn fullbright,
+    // so we can't optimize away unused portions of the lightmap.
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        if (!sortable.size()) {
+            lightmap_t *lm = Lightmap_ForStyle(&lightmaps, 0, lightsurf);
+            lm->style = 0;
+            std::fill(lightsurf->occluded.begin(), lightsurf->occluded.end(), false);
+            sortable.emplace_back(0, lm);
+        }
+    }
+
     // sort in descending order of average brightness
     std::sort(sortable.begin(), sortable.end());
     std::reverse(sortable.begin(), sortable.end());
@@ -2830,6 +2841,10 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, c
     /* final number of lightmaps */
     const int numstyles = static_cast<int>(sorted.size());
     Q_assert(numstyles <= MAXLIGHTMAPSSUP);
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        Q_assert(numstyles > 0);
+    }
 
     /* update face info (either core data or supplementary stuff) */
     if (facesup) {
