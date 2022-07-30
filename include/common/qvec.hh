@@ -469,6 +469,23 @@ template<size_t N, class T>
     return epsilonEqual({}, v1, epsilon);
 }
 
+template<typename T>
+[[nodiscard]] inline bool gate(const T &v1, T epsilon)
+{
+    return v1 <= epsilon;
+}
+
+template<size_t N, class T>
+[[nodiscard]] inline bool gate(const qvec<T, N> &v, T epsilon)
+{
+    for (size_t i = 0; i < N; i++) {
+        if (gate(v[i], epsilon)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 template<size_t N, class T>
 [[nodiscard]] constexpr bool equalExact(const qvec<T, N> &v1, const qvec<T, N> &v2)
 {

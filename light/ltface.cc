@@ -1689,7 +1689,7 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
     // get light contribution
     const qvec3f color = BounceLight_ColorAtDist(cfg, vpl->area, vpl->componentwiseMaxColor, dist);
 
-    return LightSample_Brightness(color) < 0.25f;
+    return qv::gate(color, 0.01f);
 }
 
 static bool // mxd
@@ -1706,7 +1706,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
     // Get light contribution
     const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vpl->color, dist);
 
-    return LightSample_Brightness(color) < 0.01f;
+    return qv::gate(color, 0.01f);
 }
 
 #if 0
@@ -1779,10 +1779,9 @@ static void LightFace_Bounce(
                 const qvec3d indirect =
                     GetIndirectLighting(cfg, &vpl, color, dir, dist, lightsurf->points[i], lightsurf->normals[i]);
 
-                if (LightSample_Brightness(indirect) < 0.25)
-                    continue;
-
-                rs.pushRay(i, vpl.pos, dir, dist, &indirect);
+                if (!qv::gate(indirect, 0.01)) {
+                    rs.pushRay(i, vpl.pos, dir, dist, &indirect);
+                }
             }
 
             if (!rs.numPushedRays())
@@ -1860,10 +1859,9 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                     dir /= dist;
 
                 const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
-                if (LightSample_Brightness(indirect) < 0.01f) // Each point contributes very little to the final result
-                    continue;
-
-                rs.pushRay(i, pos, dir, dist, &indirect);
+                if (!qv::gate(indirect, 0.01)) { // Each point contributes very little to the final result
+                    rs.pushRay(i, pos, dir, dist, &indirect);
+                }
             }
 
             if (!rs.numPushedRays())
