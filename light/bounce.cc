@@ -103,7 +103,7 @@ inline bouncelight_t &CreateBounceLight(const mface_t *face, const mbsp_t *bsp)
     return l;
 }
 
-static void AddBounceLight(const qvec3d &pos, std::unordered_map<int, qvec3d> &&colorByStyle,
+static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec3d> &colorByStyle,
     const qvec3d &surfnormal, vec_t area, const mface_t *face, const mbsp_t *bsp)
 {
     for (const auto &styleColor : colorByStyle) {
@@ -116,7 +116,7 @@ static void AddBounceLight(const qvec3d &pos, std::unordered_map<int, qvec3d> &&
     bouncelight_t &l = CreateBounceLight(face, bsp);
     l.poly = GLM_FacePoints(bsp, face);
     l.poly_edgeplanes = GLM_MakeInwardFacingEdgePlanes(l.poly);
-    l.pos = pos;
+    l.pos = pos + surfnormal;
     l.colorByStyle = colorByStyle;
 
     for (const auto &styleColor : l.colorByStyle) {
@@ -128,9 +128,9 @@ static void AddBounceLight(const qvec3d &pos, std::unordered_map<int, qvec3d> &&
     l.area = area;
 
     if (light_options.visapprox.value() == visapprox_t::VIS) {
-        l.leaf = Light_PointInLeaf(bsp, pos);
+        l.leaf = Light_PointInLeaf(bsp, l.pos);
     } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
-        l.bounds = EstimateVisibleBoundsAtPoint(pos);
+        l.bounds = EstimateVisibleBoundsAtPoint(l.pos);
     }
 }
 
@@ -165,7 +165,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     auto &surf = *surf_ptr.get();
 
     winding_t winding = winding_t::from_face(bsp, &face);
-    const vec_t area = winding.area();
+    vec_t area = winding.area();
 
     if (!area) {
         return;
@@ -173,11 +173,6 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     const vec_t area_divisor = sqrt(area);
     const vec_t sample_divisor = surf.points.size() / (surf.vanilla_extents.width() * surf.vanilla_extents.height());
-
-    qplane3d faceplane = winding.plane();
-
-    qvec3d facemidpoint = winding.center();
-    facemidpoint += faceplane.normal; // lift 1 unit
 
     // average them, area weighted
     std::unordered_map<int, qvec3d> sum;
@@ -212,7 +207,13 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         emitcolors[styleColor.first] = styleColor.second * blendedcolor;
     }
 
-    AddBounceLight(facemidpoint, std::move(emitcolors), faceplane.normal, area, &face, bsp);
+    qplane3d faceplane = winding.plane();
+
+    area /= surf.points.size();
+
+    for (auto &pt : surf.points) {
+        AddBounceLight(pt, emitcolors, faceplane.normal, area, &face, bsp);
+    }
 }
 
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
