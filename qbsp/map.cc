@@ -98,7 +98,7 @@ static std::shared_ptr<fs::archive_like> LoadTexturePath(const fs::path &path)
 static void EnsureTexturesLoaded()
 {
     // Q2 doesn't need this
-    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
+    if (options.target_game->id == GAME_QUAKE_II) {
         return;
     }
 
