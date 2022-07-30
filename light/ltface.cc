@@ -1703,7 +1703,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
     // Get light contribution
     const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vpl->color, dist);
 
-    return LightSample_Brightness(color) < 0.25f;
+    return LightSample_Brightness(color) < 0.01f;
 }
 
 #if 0
