@@ -589,13 +589,13 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     std::unique_ptr<tree_t> tree = nullptr;
     if (hullnum > 0) {
-        tree = BrushBSP(entity);
+        tree = BrushBSP(entity, true);
         if (entity == map.world_entity() && !qbsp_options.nofill.value()) {
             // assume non-world bmodels are simple
             MakeTreePortals(tree.get());
             if (FillOutside(entity, tree.get(), hullnum)) {
                 // make a really good tree
-                tree = BrushBSP(entity);
+                tree = BrushBSP(entity, false);
 
                 // fill again so PruneNodes works
                 MakeTreePortals(tree.get());
@@ -607,7 +607,11 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // fixme-brushbsp: return here?
     } else {
-        tree = BrushBSP(entity);
+        if (qbsp_options.forcegoodtree.value()) {
+            tree = BrushBSP(entity, false);
+        } else {
+            tree = BrushBSP(entity, entity == map.world_entity());
+        }
 
         // build all the portals in the bsp tree
         // some portals are solid polygons, and some are paths to other leafs
@@ -620,7 +624,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             // (effectively expanding those brush sides outwards).
             if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum)) {
                 // make a really good tree
-                tree = BrushBSP(entity);
+                tree = BrushBSP(entity, false);
 
                 // make the real portals for vis tracing
                 MakeTreePortals(tree.get());
@@ -638,7 +642,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             FillBrushEntity(entity, tree.get(), hullnum);
 
             // rebuild BSP now that we've marked invisible brush sides
-            tree = BrushBSP(entity);
+            tree = BrushBSP(entity, false);
         }
 
         MakeTreePortals(tree.get());

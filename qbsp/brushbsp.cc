@@ -54,6 +54,8 @@ struct bspstats_t
     std::atomic<int> c_nodes;
     // number of nodes created by splitting on a side_t which had !visible
     std::atomic<int> c_nonvis;
+    // total number of nodes created by block splitting
+    std::atomic<int> c_blocksplit;
     // total number of leafs
     std::atomic<int> c_leafs;
 };
@@ -270,8 +272,12 @@ TestBrushToPlanenum
 static int TestBrushToPlanenum(
     const bspbrush_t &brush, const qbsp_plane_t &plane, int *numsplits, bool *hintsplit, int *epsilonbrush)
 {
-    *numsplits = 0;
-    *hintsplit = false;
+    if (numsplits) {
+        *numsplits = 0;
+    }
+    if (hintsplit) {
+        *hintsplit = false;
+    }
 
     // if the brush actually uses the planenum,
     // we can tell the side for sure
@@ -291,44 +297,47 @@ static int TestBrushToPlanenum(
     if (s != PSIDE_BOTH)
         return s;
 
-    // if both sides, count the visible faces split
-    vec_t d_front = 0;
-    vec_t d_back = 0;
+    if (numsplits && hintsplit && epsilonbrush) {
+        // if both sides, count the visible faces split
+        vec_t d_front = 0;
+        vec_t d_back = 0;
 
-    for (const side_t &side : brush.sides) {
-        if (side.onnode)
-            continue; // on node, don't worry about splits
-        if (!side.visible)
-            continue; // we don't care about non-visible
-        auto &w = side.w;
-        if (!w)
-            continue;
-        int front = 0;
-        int back = 0;
-        for (auto &point : w) {
-            const double d = qv::dot(point, plane.get_normal()) - plane.get_dist();
-            if (d > d_front)
-                d_front = d;
-            if (d < d_back)
-                d_back = d;
+        for (const side_t &side : brush.sides) {
+            if (side.onnode)
+                continue; // on node, don't worry about splits
+            if (!side.visible)
+                continue; // we don't care about non-visible
+            auto &w = side.w;
+            if (!w)
+                continue;
+            int front = 0;
+            int back = 0;
+            for (auto &point : w) {
+                const double d = qv::dot(point, plane.get_normal()) - plane.get_dist();
+                if (d > d_front)
+                    d_front = d;
+                if (d < d_back)
+                    d_back = d;
 
-            if (d > 0.1) // PLANESIDE_EPSILON)
-                front = 1;
-            if (d < -0.1) // PLANESIDE_EPSILON)
-                back = 1;
-        }
-        if (front && back) {
-            if (!(side.get_texinfo().flags.is_hintskip)) {
-                (*numsplits)++;
-                if (side.get_texinfo().flags.is_hint) {
-                    *hintsplit = true;
+                if (d > 0.1) // PLANESIDE_EPSILON)
+                    front = 1;
+                if (d < -0.1) // PLANESIDE_EPSILON)
+                    back = 1;
+            }
+            if (front && back) {
+                if (!(side.get_texinfo().flags.is_hintskip)) {
+                    (*numsplits)++;
+                    if (side.get_texinfo().flags.is_hint) {
+                        *hintsplit = true;
+                    }
                 }
             }
         }
-    }
 
-    if ((d_front > 0.0 && d_front < 1.0) || (d_back < 0.0 && d_back > -1.0))
-        (*epsilonbrush)++;
+        if ((d_front > 0.0 && d_front < 1.0) || (d_back < 0.0 && d_back > -1.0)) {
+            (*epsilonbrush)++;
+        }
+    }
 
     return s;
 }
@@ -622,17 +631,270 @@ static bool CheckPlaneAgainstVolume(const qbsp_plane_t &plane, node_t *node)
     return good;
 }
 
+
+/*
+ * Calculate the split plane metric for axial planes
+ */
+inline vec_t SplitPlaneMetric_Axial(const qbsp_plane_t &p, const aabb3d &bounds)
+{
+    vec_t value = 0;
+    for (int i = 0; i < 3; i++) {
+        if (static_cast<plane_type_t>(i) == p.get_type()) {
+            const vec_t dist = p.get_dist() * p.get_normal()[i];
+            value += (bounds.maxs()[i] - dist) * (bounds.maxs()[i] - dist);
+            value += (dist - bounds.mins()[i]) * (dist - bounds.mins()[i]);
+        } else {
+            value += 2 * (bounds.maxs()[i] - bounds.mins()[i]) * (bounds.maxs()[i] - bounds.mins()[i]);
+        }
+    }
+
+    return value;
+}
+
+/*
+ * Split a bounding box by a plane; The front and back bounds returned
+ * are such that they completely contain the portion of the input box
+ * on that side of the plane. Therefore, if the split plane is
+ * non-axial, then the returned bounds will overlap.
+ */
+inline void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aabb3d &front_bounds, aabb3d &back_bounds)
+{
+    int a, b, c, i, j;
+    vec_t dist1, dist2, mid, split_mins, split_maxs;
+    qvec3d corner;
+
+    front_bounds = back_bounds = in_bounds;
+
+    if (split.get_type() < plane_type_t::PLANE_ANYX) {
+        front_bounds[0][static_cast<size_t>(split.get_type())] = back_bounds[1][static_cast<size_t>(split.get_type())] = split.get_dist();
+        return;
+    }
+
+    /* Make proper sloping cuts... */
+    for (a = 0; a < 3; ++a) {
+        /* Check for parallel case... no intersection */
+        if (fabs(split.get_normal()[a]) < NORMAL_EPSILON)
+            continue;
+
+        b = (a + 1) % 3;
+        c = (a + 2) % 3;
+
+        split_mins = in_bounds.maxs()[a];
+        split_maxs = in_bounds.mins()[a];
+        for (i = 0; i < 2; ++i) {
+            corner[b] = in_bounds[i][b];
+            for (j = 0; j < 2; ++j) {
+                corner[c] = in_bounds[j][c];
+
+                corner[a] = in_bounds[0][a];
+                dist1 = split.distance_to(corner);
+
+                corner[a] = in_bounds[1][a];
+                dist2 = split.distance_to(corner);
+
+                mid = in_bounds[1][a] - in_bounds[0][a];
+                mid *= (dist1 / (dist1 - dist2));
+                mid += in_bounds[0][a];
+
+                split_mins = max(min(mid, split_mins), in_bounds.mins()[a]);
+                split_maxs = min(max(mid, split_maxs), in_bounds.maxs()[a]);
+            }
+        }
+        if (split.get_normal()[a] > 0) {
+            front_bounds[0][a] = split_mins;
+            back_bounds[1][a] = split_maxs;
+        } else {
+            back_bounds[0][a] = split_mins;
+            front_bounds[1][a] = split_maxs;
+        }
+    }
+}
+
+/*
+ * Calculate the split plane metric for non-axial planes
+ */
+inline vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t &p, const aabb3d &bounds)
+{
+    aabb3d f, b;
+    vec_t value = 0.0;
+
+    DivideBounds(bounds, p, f, b);
+
+    for (int i = 0; i < 3; i++) {
+        value += (f.maxs()[i] - f.mins()[i]) * (f.maxs()[i] - f.mins()[i]);
+        value += (b.maxs()[i] - b.mins()[i]) * (b.maxs()[i] - b.mins()[i]);
+    }
+
+    return value;
+}
+
+inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
+{
+    if (p.get_type() < plane_type_t::PLANE_ANYX) {
+        return SplitPlaneMetric_Axial(p, bounds);
+    } else {
+        return SplitPlaneMetric_NonAxial(p, bounds);
+    }
+}
+
+/*
+==================
+ChooseMidPlaneFromList
+
+The clipping hull BSP doesn't worry about avoiding splits
+==================
+*/
+static std::optional<qbsp_plane_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const aabb3d &bounds, bool forced)
+{
+    /* pick the plane that splits the least */
+    vec_t bestaxialmetric = VECT_MAX;
+    std::optional<qbsp_plane_t> bestaxialplane;
+    vec_t bestanymetric = VECT_MAX;
+    std::optional<qbsp_plane_t> bestanyplane;
+
+    for (int pass = 0; pass < 2; pass++) {
+        for (auto &brush : brushes) {
+            if ((pass & 1) && !brush->original->contents.is_any_detail(qbsp_options.target_game)) {
+                continue;
+            }
+            if (!(pass & 1) && brush->original->contents.is_any_detail(qbsp_options.target_game)) {
+                continue;
+            }
+
+            for (auto &side : brush->sides) {
+                if (side.bevel) {
+                    continue; // never use a bevel as a spliter
+                }
+                if (!side.w) {
+                    continue; // nothing visible, so it can't split
+                }
+                if (side.onnode) {
+                    continue; // allready a node splitter
+                }
+                if (side.get_texinfo().flags.is_hintskip) {
+                    continue; // skip surfaces are never chosen
+                }
+
+                const qbsp_plane_t &plane = side.plane;
+                /* calculate the split metric, smaller values are better */
+                const vec_t metric = SplitPlaneMetric(plane, bounds);
+
+                if (metric < bestanymetric) {
+                    bestanymetric = metric;
+                    bestanyplane = plane;
+                }
+                
+                /* check for axis aligned surfaces */
+                if (plane.get_type() < plane_type_t::PLANE_ANYX) {
+                    if (metric < bestaxialmetric) {
+                        bestaxialmetric = metric;
+                        bestaxialplane = plane;
+                    }
+                }
+            }
+        }
+
+        if (bestanyplane || bestaxialplane) {
+            break;
+        }
+    }
+
+    // prefer the axial split
+    auto bestsurface = !bestaxialplane ? bestanyplane : bestaxialplane;
+
+    if (!bestsurface) {
+        FError("No valid planes in surface list");
+    }
+
+    // ericw -- (!forced) is true on the final SolidBSP phase for the world.
+    // !bestsurface->has_struct means all surfaces in this node are detail, so
+    // mark the surface as a detail separator.
+    // fixme-brushbsp: what to do here?
+#if 0
+    if (!forced && !bestsurface->has_struct) {
+        bestsurface->detail_separator = true;
+    }
+#endif
+
+    return bestsurface;
+}
+
+
 /*
 ================
-SelectSplitSide
+SelectSplitPlane
 
-Using a hueristic, choses one of the sides out of the brushlist
-to partition the brushes with.
-Returns NULL if there are no valid planes to split with..
+Using heuristics, chooses a plane to partition the brushes with.
+Returns nullopt if there are no valid planes to split with.
 ================
 */
-side_t *SelectSplitSide(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, node_t *node)
+static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, node_t *node, bool use_mid_split, bspstats_t &stats)
 {
+    // no brushes left to split, so we can't use any plane.
+    if (!brushes.size()) {
+        return std::nullopt;
+    }
+
+	// if it is crossing a block boundary, force a split;
+    // this is optional q3map2 mode
+	for (size_t i = 0; i < 3; i++) {
+		if (qbsp_options.blocksize.value()[i] <= 0) {
+			continue;
+		}
+
+        vec_t dist = qbsp_options.blocksize.value()[i] * (floor(node->bounds.mins()[i] / qbsp_options.blocksize.value()[i]) + 1);
+
+        if (node->bounds.maxs()[i] > dist) {
+            qplane3d plane{};
+            plane.normal[i] = 1.0;
+            plane.dist = dist;
+            qbsp_plane_t bsp_plane = plane;
+            stats.c_blocksplit++;
+
+            for (auto &b : brushes) {
+                b->side = TestBrushToPlanenum(*b, bsp_plane, nullptr, nullptr, nullptr);
+            }
+
+			return bsp_plane;
+		}
+	}
+
+    // fixme-brushbsp: re-introduce
+#if 0
+    // how much of the map are we partitioning?
+    double fractionOfMap = brushes.size() / (double) map.brushes.size();
+    bool largenode = false;
+
+    if (!use_mid_split) {
+        // decide if we should switch to the midsplit method
+        if (qbsp_options.midsplitsurffraction.value() != 0.0) {
+            // new way (opt-in)
+            largenode = (fractionOfMap > qbsp_options.midsplitsurffraction.value());
+        } else {
+            // old way (ericw-tools 0.15.2+)
+            if (qbsp_options.maxnodesize.value() >= 64) {
+                const vec_t maxnodesize = qbsp_options.maxnodesize.value() - qbsp_options.epsilon.value();
+
+                largenode = (node->bounds.maxs()[0] - node->bounds.mins()[0]) > maxnodesize ||
+                            (node->bounds.maxs()[1] - node->bounds.mins()[1]) > maxnodesize ||
+                            (node->bounds.maxs()[2] - node->bounds.mins()[2]) > maxnodesize;
+            }
+        }
+    }
+
+    // do fast way for clipping hull
+    if (use_mid_split || largenode) {
+        if (auto mid_plane = ChooseMidPlaneFromList(brushes, node->bounds, use_mid_split)) {
+
+            for (auto &b : brushes) {
+                b->side = TestBrushToPlanenum(*b, mid_plane.value(), nullptr, nullptr, nullptr);
+            }
+
+            return mid_plane;
+        }
+    }
+#endif
+
     side_t *bestside = nullptr;
     int bestvalue = -99999;
     int bestsplits = 0;
@@ -749,7 +1011,15 @@ side_t *SelectSplitSide(const std::vector<std::unique_ptr<bspbrush_t>> &brushes,
         }
     }
 
-    return bestside;
+    if (!bestside) {
+        return std::nullopt;
+    }
+
+    if (!bestside->visible) {
+        stats.c_nonvis++;
+    }
+
+    return bestside->plane;
 }
 
 /*
@@ -758,7 +1028,7 @@ SplitBrushList
 ================
 */
 static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
-    std::vector<std::unique_ptr<bspbrush_t>> brushes, const node_t *node)
+    std::vector<std::unique_ptr<bspbrush_t>> brushes, const qbsp_plane_t &plane)
 {
     std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> result;
 
@@ -767,7 +1037,7 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
 
         if (sides == PSIDE_BOTH) {
             // split into two brushes
-            auto [front, back] = SplitBrush(brush->copy_unique(), node->plane);
+            auto [front, back] = SplitBrush(brush->copy_unique(), plane);
 
             if (front) {
                 result[0].push_back(std::move(front));
@@ -784,7 +1054,7 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
         // as a splitter again
         if (sides & PSIDE_FACING) {
             for (auto &side : brush->sides) {
-                if (qv::epsilonEqual(side.plane, node->plane)) {
+                if (qv::epsilonEqual(side.plane, plane)) {
                     side.onnode = true;
                 }
             }
@@ -810,13 +1080,13 @@ BuildTree_r
 Called in parallel.
 ==================
 */
-static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> brushes, bspstats_t &stats)
+static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> brushes, bool use_mid_split, bspstats_t &stats)
 {
     // find the best plane to use as a splitter
-    auto *bestside = const_cast<side_t *>(SelectSplitSide(brushes, node));
-    if (!bestside) {
+    auto bestplane = SelectSplitPlane(brushes, node, use_mid_split, stats);
+
+    if (!bestplane) {
         // this is a leaf node
-        node->side = nullptr;
         node->is_leaf = true;
 
         stats.c_leafs++;
@@ -827,20 +1097,25 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 
     // this is a splitplane node
     stats.c_nodes++;
-    if (!bestside->visible) {
-        stats.c_nonvis++;
-    }
 
-    node->side = bestside;
-    node->plane.set_plane(bestside->plane, true); // always use front facing
+    node->plane.set_plane(bestplane.value(), true); // always use front facing
 
-    auto children = SplitBrushList(std::move(brushes), node);
+    auto children = SplitBrushList(std::move(brushes), node->plane);
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
         auto &newnode = node->children[i] = std::make_unique<node_t>();
         newnode->parent = node;
+        newnode->bounds = node->bounds;
     }
+
+	for (int i = 0; i < 3; i++) {
+		if (bestplane->get_normal()[i] == 1.0) {
+            node->children[0]->bounds[0][i] = bestplane->get_dist();
+			node->children[1]->bounds[1][i] = bestplane->get_dist();
+			break;
+		}
+	}
 
     auto children_volumes = SplitBrush(node->volume->copy_unique(), node->plane);
     node->children[0]->volume = std::move(children_volumes[0]);
@@ -848,8 +1123,8 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(node->children[0].get(), std::move(children[0]), stats); });
-    g.run([&]() { BuildTree_r(node->children[1].get(), std::move(children[1]), stats); });
+    g.run([&]() { BuildTree_r(node->children[0].get(), std::move(children[0]), use_mid_split, stats); });
+    g.run([&]() { BuildTree_r(node->children[1].get(), std::move(children[1]), use_mid_split, stats); });
     g.wait();
 }
 
@@ -858,7 +1133,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 BrushBSP
 ==================
 */
-static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist)
+static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist, bool use_mid_split)
 {
     auto tree = std::make_unique<tree_t>();
 
@@ -926,24 +1201,24 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     auto node = std::make_unique<node_t>();
 
     node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
+    node->bounds = tree->bounds.grow(SIDESPACE);
 
     tree->headnode = std::move(node);
 
     bspstats_t stats{};
     stats.leafstats = qbsp_options.target_game->create_content_stats();
-    BuildTree_r(tree->headnode.get(), std::move(brushlist), stats);
+    BuildTree_r(tree->headnode.get(), std::move(brushlist), use_mid_split, stats);
 
     logging::print(logging::flag::STAT, "     {:8} visible nodes\n", stats.c_nodes - stats.c_nonvis);
     logging::print(logging::flag::STAT, "     {:8} nonvis nodes\n", stats.c_nonvis);
+    logging::print(logging::flag::STAT, "     {:8} block split nodes\n", stats.c_blocksplit);
     logging::print(logging::flag::STAT, "     {:8} leafs\n", stats.c_leafs);
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
 
     return tree;
 }
 
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity)
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, bool use_mid_split)
 {
-    auto tree = BrushBSP(entity, MakeBspBrushList(entity));
-
-    return tree;
+    return BrushBSP(entity, MakeBspBrushList(entity), use_mid_split);
 }

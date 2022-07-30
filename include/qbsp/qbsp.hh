@@ -192,6 +192,58 @@ public:
     }
 };
 
+// like qvec3f, but integer and allows up to three values (xyz, x y, or x y z)
+// defaults to 1024 if assigned, otherwise zero.
+class setting_blocksize : public setting_value<qvec3i>
+{
+public:
+    inline setting_blocksize(setting_container *dictionary, const nameset &names, qvec3i val,
+        const setting_group *group = nullptr, const char *description = "")
+        : setting_value(dictionary, names, val, group, description)
+    {
+    }
+
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
+    {
+        qvec3d vec = { 1024, 1024, 1024 };
+
+        for (int i = 0; i < 3; i++) {
+            if (!parser.parse_token(PARSE_PEEK)) {
+                return false;
+            }
+
+            // don't allow negatives
+            if (parser.token[0] != '-') {
+                try {
+                    vec[i] = std::stol(parser.token);
+                    parser.parse_token();
+                    continue;
+                } catch (std::exception &) {
+                    // intentional fall-through
+                }
+            }
+
+            // if we didn't parse a valid number, fail
+            if (i == 0) {
+                return false;
+            } else if (i == 1) {
+                // we parsed one valid number; use it all the way through
+                vec[1] = vec[2] = vec[0];
+            }  
+
+            // for [x, y] z will be left default
+        }
+
+        setValue(vec, source);
+
+        return true;
+    }
+
+    std::string stringValue() const override { return qv::to_string(_value); }
+
+    std::string format() const override { return "[x [y [z]]]"; }
+};
+
 class qbsp_settings : public common_settings
 {
 public:
@@ -296,6 +348,10 @@ public:
         [](setting_int32 &setting) { return setting.value() == 0 || setting.value() >= 3; }, this, "maxedges", 64,
         &map_development_group,
         "the max number of edges/vertices on a single face before it is split into another face"};
+    // FIXME: this block size default is from Q3, and is basically derived from having 128x128x128 chunks of the world
+    // since the max world size in Q3 is {-65536, -65536, -65536, 65536, 65536, 65536}. should we dynamically change this?
+    // should we automatically turn this on if the world gets too big but leave it off for smaller worlds?
+    setting_blocksize blocksize{this, "blocksize", { 0, 0, 0 }, &common_format_group, "from q3map2; split the world by x/y/z sized chunks, speeding up split decisions"};
 
     void setParameters(int argc, const char **argv) override
     {
@@ -568,7 +624,6 @@ struct node_t
     twosided<std::unique_ptr<node_t>>
         children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     std::list<std::unique_ptr<face_t>> facelist; // decision nodes only, list for both sides
-    side_t *side; // decision node only, the side that created the node
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
