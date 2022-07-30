@@ -37,9 +37,14 @@ static mapentity_t LoadMap(const char *map)
     options.target_version = &bspver_q1;
     options.target_game = options.target_version->game;
 
+    ::map.entities.clear();
+
     parser_t parser(map);
 
     mapentity_t worldspawn;
+
+    ::map.entities.emplace_back(worldspawn);
+
     // FIXME: adds the brush to the global map...
     Q_assert(ParseEntity(parser, &worldspawn));
 
