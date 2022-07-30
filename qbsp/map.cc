@@ -97,17 +97,19 @@ static std::shared_ptr<fs::archive_like> LoadTexturePath(const fs::path &path)
     return nullptr;
 }
 
-static void EnsureTexturesLoaded(const mapentity_t *entity)
+static void EnsureTexturesLoaded()
 {
+    // Q2 doesn't need this
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
+        return;
+    }
+
     if (map.textures_loaded)
         return;
 
     map.textures_loaded = true;
 
-    // Q2 doesn't need this
-    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-        return;
-    }
+    const mapentity_t *entity = map.world_entity();
 
     std::string wadstring = entity->epairs.get("_wad");
 
@@ -1727,7 +1729,7 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
             break;
         else if (parser.token == "{") {
             // once we run into the first brush, set up textures state.
-            EnsureTexturesLoaded(entity);
+            EnsureTexturesLoaded();
 
             mapbrush_t brush = ParseBrush(parser, entity);
 
