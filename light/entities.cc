@@ -537,6 +537,10 @@ static std::unique_ptr<light_t> DuplicateEntity(const light_t &src)
  */
 static void JitterEntity(const light_t &entity)
 {
+    // don't jitter suns
+    if (entity.sun.value()) {
+        return;
+    }
 
     std::vector<std::unique_ptr<light_t>> new_lights;
 
