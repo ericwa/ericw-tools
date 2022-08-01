@@ -476,7 +476,7 @@ std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t
     // sequential part: push the nodeportal down each side of the bsp so it connects leafs
 
     std::list<std::unique_ptr<buildportal_t>> result_portals_onnode;
-    {
+    if (nodeportal) {
         // to start with, `nodeportal` is a portal between node->children[0] and node->children[1]
 
         // these portal fragments have node->children[1] on one side, and the leaf nodes from
