@@ -392,11 +392,12 @@ static void CalcTreeBounds_r(tree_t *tree, node_t *node)
         return;
     }
 
-    CalcTreeBounds_r(tree, node->children[0].get());
-    CalcTreeBounds_r(tree, node->children[1].get());
+    tbb::task_group g;
+    g.run([&]() { CalcTreeBounds_r(tree, node->children[0].get()); });
+    g.run([&]() { CalcTreeBounds_r(tree, node->children[1].get()); });
+    g.wait();
 
-    node->bounds = node->children[0]->bounds;
-    node->bounds += node->children[1]->bounds;
+    node->bounds = node->children[0]->bounds + node->children[1]->bounds;
 
     if (node->bounds.mins()[0] >= node->bounds.maxs()[0]) {
         logging::print("WARNING: node without a volume\n");
@@ -406,8 +407,8 @@ static void CalcTreeBounds_r(tree_t *tree, node_t *node)
         node->bounds = {node->parent->bounds.mins(), node->parent->bounds.mins()};
     }
 
-    for (int i = 0; i < 3; i++) {
-        if (fabs(node->bounds.mins()[i]) > qbsp_options.worldextent.value()) {
+    for (auto &v : node->bounds.mins()) {
+        if (fabs(v) > qbsp_options.worldextent.value()) {
             logging::print("WARNING: node with unbounded volume\n");
             break;
         }
@@ -516,6 +517,8 @@ void MakeTreePortals(tree_t *tree)
     auto buildportals = MakeTreePortals_r(tree, tree->headnode.get(), portaltype_t::TREE, std::move(headnodeportals), stats);
 
     MakePortalsFromBuildportals(tree, std::move(buildportals));
+
+    logging::header("CalcTreeBounds");
 
     CalcTreeBounds_r(tree, tree->headnode.get());
 

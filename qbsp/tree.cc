@@ -25,6 +25,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/portals.hh>
+#include <tbb/task_group.h>
 
 //============================================================================
 
@@ -62,14 +63,15 @@ void FreeTreePortals(tree_t *tree)
 static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // merge the children's brush lists
-    node->original_brushes = concat(node->children[0]->original_brushes, node->children[1]->original_brushes);
-    sort_and_remove_duplicates(node->original_brushes);
+    node->original_brushes = node->children[0]->original_brushes;
+    node->original_brushes.insert(node->children[1]->original_brushes.begin(), node->children[1]->original_brushes.end());
 
     node->is_leaf = true;
 
-    for (int i = 0; i < 2; ++i) {
-        node->children[i] = nullptr;
+    for (auto &child : node->children) {
+        child = nullptr;
     }
+
     node->facelist.clear();
 
     node->contents = contents;
@@ -77,14 +79,16 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     Q_assert(node->markfaces.empty());
 }
 
-static void PruneNodes_R(node_t *node, int &count_pruned)
+static void PruneNodes_R(node_t *node, std::atomic_int32_t &count_pruned)
 {
     if (node->is_leaf) {
         return;
     }
 
-    PruneNodes_R(node->children[0].get(), count_pruned);
-    PruneNodes_R(node->children[1].get(), count_pruned);
+    tbb::task_group g;
+    g.run([&]() { PruneNodes_R(node->children[0].get(), count_pruned); });
+    g.run([&]() { PruneNodes_R(node->children[1].get(), count_pruned); });
+    g.wait();
 
     if (node->children[0]->is_leaf && node->children[0]->contents.is_any_solid(qbsp_options.target_game) &&
         node->children[1]->is_leaf && node->children[1]->contents.is_any_solid(qbsp_options.target_game)) {
@@ -109,7 +113,8 @@ void PruneNodes(node_t *node)
 {
     logging::funcheader();
 
-    int count_pruned = 0;
+    std::atomic_int32_t count_pruned = 0;
+
     PruneNodes_R(node, count_pruned);
 
     logging::print(logging::flag::STAT, "     {:8} pruned nodes\n", count_pruned);

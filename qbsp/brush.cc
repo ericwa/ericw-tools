@@ -28,6 +28,11 @@
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
+bool bspbrush_t_less::operator()(const bspbrush_t *a, const bspbrush_t *b) const
+{
+    return a->file_order < b->file_order;
+}
+
 const maptexinfo_t &side_t::get_texinfo() const
 {
     return map.mtexinfos[this->texinfo];

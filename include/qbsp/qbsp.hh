@@ -605,8 +605,15 @@ namespace qv
 
 // there is a node_t structure for every node and leaf in the bsp tree
 
+#include <set>
+
 struct bspbrush_t;
 struct side_t;
+
+struct bspbrush_t_less
+{
+    bool operator()(const bspbrush_t *a, const bspbrush_t *b) const;
+};
 
 struct node_t
 {
@@ -627,7 +634,7 @@ struct node_t
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
-    std::vector<bspbrush_t *> original_brushes;
+    std::set<bspbrush_t *, bspbrush_t_less> original_brushes;
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     portal_t *portals;
     int visleafnum; // -1 = solid

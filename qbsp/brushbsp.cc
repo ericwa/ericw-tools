@@ -408,7 +408,7 @@ static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> 
     }
     for (auto &brush : brushes) {
         Q_assert(brush->original != nullptr);
-        leafnode->original_brushes.push_back(brush->original);
+        leafnode->original_brushes.insert(brush->original);
     }
 
     qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
