@@ -433,7 +433,7 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
 
 static void ExportBrushList(mapentity_t *entity, node_t *node)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     brush_state = {};
 
@@ -496,7 +496,7 @@ static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
 
 static void CountLeafs(node_t *headnode)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     auto stats = qbsp_options.target_game->create_content_stats();
     CountLeafs_r(headnode, *stats);
@@ -534,7 +534,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         if (entity != map.world_entity()) {
             if (entity == map.world_entity() + 1)
-                logging::print(logging::flag::PROGRESS, "---- Internal Entities ----\n");
+                logging::header("Internal Entities");
 
             std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
 
@@ -560,7 +560,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
-    logging::print(logging::flag::PROGRESS, "---- Brush_LoadEntity ----\n");
     Brush_LoadEntity(entity, hullnum);
 
     // assign brush file order

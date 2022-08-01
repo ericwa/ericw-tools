@@ -218,7 +218,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    logging::print("--- MakeBounceLights ---\n");
+    logging::funcheader();
 
     logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { MakeBounceLightsThread(cfg, bsp, face); });
 

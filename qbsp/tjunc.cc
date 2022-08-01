@@ -860,7 +860,7 @@ TJunc fixing entry point
 */
 void TJunc(node_t *headnode)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     tjunc_stats_t stats{};
     std::unordered_set<face_t *> faces;

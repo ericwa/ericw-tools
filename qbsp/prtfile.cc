@@ -259,16 +259,18 @@ WritePortalFile
 */
 void WritePortalFile(tree_t *tree)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     portal_state_t state{};
 
     FreeTreePortals(tree);
 
     AssertNoPortals(tree);
+
     MakeHeadnodePortals(tree);
 
     portalstats_t stats{};
+
     // vis portal generation doesn't use headnode portals
     auto buildportals = MakeTreePortals_r(tree, tree->headnode.get(), portaltype_t::VIS, {}, stats);
 

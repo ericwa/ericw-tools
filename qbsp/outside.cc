@@ -598,7 +598,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
 {
     node_t *node = tree->headnode.get();
 
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     /* Clear the outside filling state on all nodes */
     ClearOccupied_r(node);
@@ -713,7 +713,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
 
 void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     // Clear the outside filling state on all nodes
     ClearOccupied_r(tree->headnode.get());

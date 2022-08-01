@@ -217,7 +217,7 @@ const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
 void // Quake 2 surface lights
 MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    logging::print("--- MakeRadiositySurfaceLights ---\n");
+    logging::funcheader();
 
     logging::parallel_for(
         static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });

@@ -336,7 +336,7 @@ static void CacheTextures(const mbsp_t &bsp)
 static void CreateLightmapSurfaces(mbsp_t *bsp)
 {
     light_surfaces.resize(bsp->dfaces.size());
-    logging::print("--- CreateLightmapSurfaces ---\n");
+    logging::funcheader();
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
         auto face = &bsp->dfaces[i];
@@ -365,7 +365,7 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
 
 static void SaveLightmapSurfaces(mbsp_t *bsp)
 {
-    logging::print("--- SaveLightmapSurfaces ---\n");
+    logging::funcheader();
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto &surf = light_surfaces[i];
 
@@ -487,7 +487,7 @@ static constexpr size_t MAX_MAP_LIGHTING = 0x8000000;
  */
 static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 {
-    logging::print("--- LightWorld ---\n");
+    logging::funcheader();
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
@@ -563,7 +563,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     MakeRadiositySurfaceLights(light_options, &bsp);
 
-    logging::print("--- Direct Lighting ---\n"); // mxd
+    logging::header("Direct Lighting"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
         if (light_surfaces[i]) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
@@ -582,7 +582,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
         MakeBounceLights(light_options, &bsp);
 
-        logging::print("--- Indirect Lighting ---\n"); // mxd
+        logging::header("Indirect Lighting"); // mxd
         logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
             if (light_surfaces[i]) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
@@ -1130,7 +1130,7 @@ static void ConvertTextures(const mbsp_t *bsp)
 
 void load_textures(const mbsp_t *bsp)
 {
-    logging::print("--- {} ---\n", __func__);
+    logging::funcheader();
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         LoadTextures(bsp);

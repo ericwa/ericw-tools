@@ -374,7 +374,7 @@ static vector<face_normal_t> Face_VertexNormals(const mbsp_t *bsp, const mface_t
 
 static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
 {
-    logging::print("--- {} ---\n", __func__);
+    logging::funcheader();
     vector<face_cache_t> result(bsp->dfaces.size());
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) {
         auto &face = bsp->dfaces[i];
@@ -413,7 +413,7 @@ inline bool isDegenerate(const qvec3f &a, const qvec3f &b, const qvec3f &c)
 
 void CalculateVertexNormals(const mbsp_t *bsp)
 {
-    logging::print("--- {} ---\n", __func__);
+    logging::funcheader();
 
     Q_assert(!s_builtPhongCaches);
     s_builtPhongCaches = true;

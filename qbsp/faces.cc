@@ -266,12 +266,12 @@ int MakeFaceEdges(node_t *headnode)
 {
     int firstface;
 
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     firstface = static_cast<int>(map.bsp.dfaces.size());
     MakeFaceEdges_r(headnode);
 
-    logging::print(logging::flag::PROGRESS, "---- GrowRegions ----\n");
+    logging::header("GrowRegions");
     GrowNodeRegion(headnode);
 
     return firstface;
@@ -574,7 +574,7 @@ MakeFaces
 */
 void MakeFaces(node_t *node)
 {
-    logging::print(logging::flag::PROGRESS, "--- {} ---\n", __func__);
+    logging::funcheader();
 
     makefaces_stats_t stats{};
 

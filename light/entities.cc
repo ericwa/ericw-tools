@@ -770,7 +770,7 @@ static std::string ParseEscapeSequences(const std::string &input)
  */
 void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
-    logging::print("--- LoadEntities ---\n");
+    logging::funcheader();
 
     entdicts = EntData_Parse(bsp->dentdata);
 
@@ -1041,7 +1041,7 @@ inline void EstimateLightAABB(const std::unique_ptr<light_t> &light)
 
 void EstimateLightVisibility(void)
 {
-    logging::print("--- EstimateLightVisibility ---\n");
+    logging::funcheader();
 
     logging::parallel_for_each(all_lights, EstimateLightAABB);
 }
@@ -1351,7 +1351,7 @@ bool ParseLightsFile(const fs::path &fname)
 
 static void MakeSurfaceLights(const mbsp_t *bsp)
 {
-    logging::print("--- MakeSurfaceLights ---\n");
+    logging::funcheader();
 
     Q_assert(surfacelight_templates.empty());
 

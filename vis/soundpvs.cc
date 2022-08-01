@@ -59,6 +59,8 @@ static aabb3d SurfaceBBox(const mbsp_t *bsp, const mface_t *surf)
 */
 void CalcAmbientSounds(mbsp_t *bsp)
 {
+    logging::funcheader();
+
     const mface_t *surf;
     const mtexinfo_t *info;
     int i, j, k, l;
@@ -154,6 +156,8 @@ by ORing together all the PVS visible from a leaf
 */
 void CalcPHS(mbsp_t *bsp)
 {
+    logging::funcheader();
+
     const int32_t leafbytes = (portalleafs + 7) >> 3;
     const int32_t leaflongs = leafbytes / sizeof(long);
 

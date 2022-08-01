@@ -903,6 +903,8 @@ hullnum 0 does not contain clip brushes.
 */
 void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
 {
+    logging::funcheader();
+
     auto stats = qbsp_options.target_game->create_content_stats();
 
     Brush_LoadEntity(entity, entity, hullnum, *stats);

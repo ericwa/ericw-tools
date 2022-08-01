@@ -503,6 +503,8 @@ MakeTreePortals
 */
 void MakeTreePortals(tree_t *tree)
 {
+    logging::funcheader();
+
     FreeTreePortals(tree);
 
     AssertNoPortals(tree);
@@ -708,7 +710,7 @@ EmitAreaPortals
 */
 void EmitAreaPortals(node_t *headnode)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     map.bsp.dareaportals.emplace_back();
     map.bsp.dareas.emplace_back();
@@ -758,7 +760,7 @@ Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
 */
 void FloodAreas(mapentity_t *entity, node_t *headnode)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
     FindAreas(headnode);
     SetAreaPortalAreas_r(headnode);
     logging::print(logging::flag::STAT, "{:5} areas\n", map.c_areas);
@@ -897,7 +899,7 @@ MarkVisibleSides
 */
 void MarkVisibleSides(tree_t *tree, mapentity_t *entity)
 {
-    logging::print(logging::flag::PROGRESS, "--- {} ---\n", __func__);
+    logging::funcheader();
 
     // clear all the visible flags
     for (auto &brush : entity->brushes) {

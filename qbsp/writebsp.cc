@@ -475,7 +475,7 @@ FinishBSPFile
 void FinishBSPFile(void)
 {
     qbsp_options.fVerbose = true;
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     if (map.bsp.dvertexes.empty()) {
         // First vertex must remain unused because edge references it

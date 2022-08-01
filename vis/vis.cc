@@ -757,10 +757,8 @@ int vis_main(int argc, const char **argv)
 
     // no ambient sounds for Q2
     if (bsp.loadversion->game->id != GAME_QUAKE_II) {
-        logging::print("---- CalcAmbientSounds ----\n");
         CalcAmbientSounds(&bsp);
     } else {
-        logging::print("---- CalcPHS ----\n");
         CalcPHS(&bsp);
     }
 

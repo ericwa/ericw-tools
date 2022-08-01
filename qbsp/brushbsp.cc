@@ -1137,7 +1137,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
 {
     auto tree = std::make_unique<tree_t>();
 
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     size_t c_faces = 0;
     size_t c_nonvisfaces = 0;

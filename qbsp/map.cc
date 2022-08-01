@@ -2026,7 +2026,7 @@ bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity)
 
 void LoadMapFile(void)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     {
         auto file = fs::load(qbsp_options.map_path);
@@ -2229,7 +2229,7 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t *entity, const con
 
 void ConvertMapFile(void)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     std::string append;
 

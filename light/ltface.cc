@@ -2010,7 +2010,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
     }
 
     /* note it */
-    logging::print("--- SetupDirt ---\n");
+    logging::funcheader();
 
     /* calculate angular steps */
     constexpr float angleStep = (float)DEG2RAD(360.0f / DIRT_NUM_ANGLE_STEPS);

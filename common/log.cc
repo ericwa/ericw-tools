@@ -130,4 +130,10 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
         }
     }
 }
+
+percent_clock::~percent_clock()
+{
+    increase();
+    Q_assert(count == max);
+}
 }; // namespace logging

@@ -84,11 +84,18 @@ inline void print(const char *fmt, const Args &...args)
     print(flag::DEFAULT, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
 }
 
+inline void header(const char *name)
+{
+    print(flag::PROGRESS, "---- {} ----\n", name);
+}
+
 // TODO: C++20 source_location
 #ifdef _MSC_VER
 #define funcprint(fmt, ...) print("{}: " fmt, __FUNCTION__, ##__VA_ARGS__)
+#define funcheader() header(__FUNCTION__)
 #else
 #define funcprint(fmt, ...) print("{}: " fmt, __func__, ##__VA_ARGS__)
+#define funcheader() header(__func__)
 #endif
 
 inline void assert_(bool success, const char *expr, const char *file, int line)
@@ -110,4 +117,21 @@ inline void assert_(bool success, const char *expr, const char *file, int line)
 // Only use this by hand if you absolutely need to; otherwise,
 // use <common/parallel.h>'s parallel_for(_each)
 void percent(uint64_t count, uint64_t max, bool displayElapsed = true);
+
+#include <atomic>
+
+// simple wrapper to percent() to use it in an object-oriented manner.
+struct percent_clock
+{
+    std::atomic_uint64_t max = 0;
+    bool displayElapsed = true;
+    std::atomic_uint64_t count = 0;
+
+    inline void increase()
+    {
+        percent(count++, max, displayElapsed);
+    }
+
+    ~percent_clock();
+};
 }; // namespace logging

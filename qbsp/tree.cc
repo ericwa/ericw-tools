@@ -107,7 +107,7 @@ static void PruneNodes_R(node_t *node, int &count_pruned)
 
 void PruneNodes(node_t *node)
 {
-    logging::print(logging::flag::PROGRESS, "---- {} ----\n", __func__);
+    logging::funcheader();
 
     int count_pruned = 0;
     PruneNodes_R(node, count_pruned);
