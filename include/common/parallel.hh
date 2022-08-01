@@ -22,6 +22,8 @@
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_for_each.h>
 
+#include <atomic>
+
 // parallel extensions to logging
 namespace logging
 {
@@ -29,7 +31,7 @@ template<typename TS, typename TE, typename Body>
 void parallel_for(const TS &start, const TE &end, const Body &func)
 {
     auto length = end - start;
-    std::atomic_uint64_t progress = 0;
+    std::atomic<uint64_t> progress = 0;
 
     tbb::parallel_for(start, end, [&](const auto &it) {
         percent(progress++, length);
@@ -43,7 +45,7 @@ template<typename Container, typename Body>
 void parallel_for_each(Container &container, const Body &func)
 {
     auto length = std::size(container);
-    std::atomic_uint64_t progress = 0;
+    std::atomic<uint64_t> progress = 0;
 
     tbb::parallel_for_each(container, [&](auto &f) {
         percent(progress++, length);
@@ -57,7 +59,7 @@ template<typename Container, typename Body>
 void parallel_for_each(const Container &container, const Body &func)
 {
     auto length = std::size(container);
-    std::atomic_uint64_t progress = 0;
+    std::atomic<uint64_t> progress = 0;
 
     tbb::parallel_for_each(container, [&](const auto &f) {
         percent(progress++, length);

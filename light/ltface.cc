@@ -28,6 +28,7 @@
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
 
+#include <atomic>
 #include <cassert>
 #include <cmath>
 #include <algorithm>
