@@ -631,26 +631,6 @@ static bool CheckPlaneAgainstVolume(const qbsp_plane_t &plane, node_t *node)
     return good;
 }
 
-
-/*
- * Calculate the split plane metric for axial planes
- */
-inline vec_t SplitPlaneMetric_Axial(const qbsp_plane_t &p, const aabb3d &bounds)
-{
-    vec_t value = 0;
-    for (int i = 0; i < 3; i++) {
-        if (static_cast<plane_type_t>(i) == p.get_type()) {
-            const vec_t dist = p.get_dist() * p.get_normal()[i];
-            value += (bounds.maxs()[i] - dist) * (bounds.maxs()[i] - dist);
-            value += (dist - bounds.mins()[i]) * (dist - bounds.mins()[i]);
-        } else {
-            value += 2 * (bounds.maxs()[i] - bounds.mins()[i]) * (bounds.maxs()[i] - bounds.mins()[i]);
-        }
-    }
-
-    return value;
-}
-
 /*
  * Split a bounding box by a plane; The front and back bounds returned
  * are such that they completely contain the portion of the input box
@@ -710,31 +690,15 @@ inline void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
     }
 }
 
-/*
- * Calculate the split plane metric for non-axial planes
- */
-inline vec_t SplitPlaneMetric_NonAxial(const qbsp_plane_t &p, const aabb3d &bounds)
+inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
 {
     aabb3d f, b;
-    vec_t value = 0.0;
 
     DivideBounds(bounds, p, f, b);
 
-    for (int i = 0; i < 3; i++) {
-        value += (f.maxs()[i] - f.mins()[i]) * (f.maxs()[i] - f.mins()[i]);
-        value += (b.maxs()[i] - b.mins()[i]) * (b.maxs()[i] - b.mins()[i]);
-    }
-
-    return value;
-}
-
-inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
-{
-    if (p.get_type() < plane_type_t::PLANE_ANYX) {
-        return SplitPlaneMetric_Axial(p, bounds);
-    } else {
-        return SplitPlaneMetric_NonAxial(p, bounds);
-    }
+    // i.e. a good split will have equal volumes on front and back.
+    // a bad split will have all of the volume on one side.
+    return fabs(f.volume() - b.volume());
 }
 
 /*
@@ -744,77 +708,48 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static std::optional<qbsp_plane_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const aabb3d &bounds, bool forced)
+static std::optional<qbsp_plane_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const aabb3d &bounds)
 {
-    /* pick the plane that splits the least */
     vec_t bestaxialmetric = VECT_MAX;
     std::optional<qbsp_plane_t> bestaxialplane;
+
     vec_t bestanymetric = VECT_MAX;
     std::optional<qbsp_plane_t> bestanyplane;
 
-    for (int pass = 0; pass < 2; pass++) {
-        for (auto &brush : brushes) {
-            if ((pass & 1) && !brush->original->contents.is_any_detail(qbsp_options.target_game)) {
-                continue;
+    for (auto &brush : brushes) {
+        for (auto &side : brush->sides) {
+            if (side.bevel) {
+                continue; // never use a bevel as a spliter
             }
-            if (!(pass & 1) && brush->original->contents.is_any_detail(qbsp_options.target_game)) {
-                continue;
+            if (side.onnode) {
+                continue; // allready a node splitter
             }
 
-            for (auto &side : brush->sides) {
-                if (side.bevel) {
-                    continue; // never use a bevel as a spliter
-                }
-                if (!side.w) {
-                    continue; // nothing visible, so it can't split
-                }
-                if (side.onnode) {
-                    continue; // allready a node splitter
-                }
-                if (side.get_texinfo().flags.is_hintskip) {
-                    continue; // skip surfaces are never chosen
-                }
+            const qbsp_plane_t &plane = side.plane;
+            /* calculate the split metric, smaller values are better */
+            const vec_t metric = SplitPlaneMetric(plane, bounds);
 
-                const qbsp_plane_t &plane = side.plane;
-                /* calculate the split metric, smaller values are better */
-                const vec_t metric = SplitPlaneMetric(plane, bounds);
+            if (metric < bestanymetric) {
+                bestanymetric = metric;
+                bestanyplane = plane;
+            }
 
-                if (metric < bestanymetric) {
-                    bestanymetric = metric;
-                    bestanyplane = plane;
-                }
-                
-                /* check for axis aligned surfaces */
-                if (plane.get_type() < plane_type_t::PLANE_ANYX) {
-                    if (metric < bestaxialmetric) {
-                        bestaxialmetric = metric;
-                        bestaxialplane = plane;
-                    }
+            /* check for axis aligned surfaces */
+            if (plane.get_type() < plane_type_t::PLANE_ANYX) {
+                if (metric < bestaxialmetric) {
+                    bestaxialmetric = metric;
+                    bestaxialplane = plane;
                 }
             }
-        }
-
-        if (bestanyplane || bestaxialplane) {
-            break;
         }
     }
 
     // prefer the axial split
-    auto bestsurface = !bestaxialplane ? bestanyplane : bestaxialplane;
+    auto bestsurface = bestaxialplane ? bestaxialplane : bestanyplane;
 
     if (!bestsurface) {
         FError("No valid planes in surface list");
     }
-
-    // ericw -- (!forced) is true on the final SolidBSP phase for the world.
-    // !bestsurface->has_struct means all surfaces in this node are detail, so
-    // mark the surface as a detail separator.
-    // fixme-brushbsp: what to do here?
-#if 0
-    if (!forced && !bestsurface->has_struct) {
-        bestsurface->detail_separator = true;
-    }
-#endif
 
     return bestsurface;
 }
@@ -859,32 +794,8 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
 		}
 	}
 
-    // fixme-brushbsp: re-introduce
-#if 0
-    // how much of the map are we partitioning?
-    double fractionOfMap = brushes.size() / (double) map.brushes.size();
-    bool largenode = false;
-
-    if (!use_mid_split) {
-        // decide if we should switch to the midsplit method
-        if (qbsp_options.midsplitsurffraction.value() != 0.0) {
-            // new way (opt-in)
-            largenode = (fractionOfMap > qbsp_options.midsplitsurffraction.value());
-        } else {
-            // old way (ericw-tools 0.15.2+)
-            if (qbsp_options.maxnodesize.value() >= 64) {
-                const vec_t maxnodesize = qbsp_options.maxnodesize.value() - qbsp_options.epsilon.value();
-
-                largenode = (node->bounds.maxs()[0] - node->bounds.mins()[0]) > maxnodesize ||
-                            (node->bounds.maxs()[1] - node->bounds.mins()[1]) > maxnodesize ||
-                            (node->bounds.maxs()[2] - node->bounds.mins()[2]) > maxnodesize;
-            }
-        }
-    }
-
-    // do fast way for clipping hull
-    if (use_mid_split || largenode) {
-        if (auto mid_plane = ChooseMidPlaneFromList(brushes, node->bounds, use_mid_split)) {
+    if (brushes.size() >= qbsp_options.midsplitbrushes.value()) {
+        if (auto mid_plane = ChooseMidPlaneFromList(brushes, node->bounds)) {
 
             for (auto &b : brushes) {
                 b->side = TestBrushToPlanenum(*b, mid_plane.value(), nullptr, nullptr, nullptr);
@@ -893,7 +804,6 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
             return mid_plane;
         }
     }
-#endif
 
     side_t *bestside = nullptr;
     int bestvalue = -99999;

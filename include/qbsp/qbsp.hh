@@ -352,6 +352,7 @@ public:
     // since the max world size in Q3 is {-65536, -65536, -65536, 65536, 65536, 65536}. should we dynamically change this?
     // should we automatically turn this on if the world gets too big but leave it off for smaller worlds?
     setting_blocksize blocksize{this, "blocksize", { 0, 0, 0 }, &common_format_group, "from q3map2; split the world by x/y/z sized chunks, speeding up split decisions"};
+    setting_int32 midsplitbrushes{this, "midsplitbrushes", 128, &debugging_group, "switch to cheaper partitioning if a node contains this many brushes"};
 
     void setParameters(int argc, const char **argv) override
     {
