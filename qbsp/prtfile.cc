@@ -52,7 +52,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
     std::shared_lock lock(map_planes_lock);
 
     const portal_t *p, *next;
-    std::optional<winding_t> w;
+    const winding_t* w;
     int i, front, back;
     qplane3d plane2;
 
@@ -71,7 +71,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         if (!Portal_VisFlood(p))
             continue;
 
-        w = p->winding;
+        w = p->winding.get();
         front = clusters ? p->nodes[0]->viscluster : p->nodes[0]->visleafnum;
         back = clusters ? p->nodes[1]->viscluster : p->nodes[1]->visleafnum;
 
@@ -253,25 +253,6 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
 }
 
 /*
-================
-CreateVisPortals_r
-================
-*/
-void CreateVisPortals_r(tree_t *tree, node_t *node, portalstats_t &stats)
-{
-    // stop as soon as we get to a detail_seperator, which
-    // means that everything below is in a single cluster
-    if (node->is_leaf || node->detail_separator)
-        return;
-
-    MakeNodePortal(tree, node, stats);
-    SplitNodePortals(tree, node, stats);
-
-    CreateVisPortals_r(tree, node->children[0].get(), stats);
-    CreateVisPortals_r(tree, node->children[1].get(), stats);
-}
-
-/*
 ==================
 WritePortalFile
 ==================
@@ -288,7 +269,10 @@ void WritePortalFile(tree_t *tree)
     MakeHeadnodePortals(tree);
 
     portalstats_t stats{};
-    CreateVisPortals_r(tree, tree->headnode.get(), stats);
+    // vis portal generation doesn't use headnode portals
+    auto buildportals = MakeTreePortals_r(tree, tree->headnode.get(), portaltype_t::VIS, {}, stats);
+
+    MakePortalsFromBuildportals(tree, std::move(buildportals));
 
     /* save portal file for vis tracing */
     WritePortalfile(tree->headnode.get(), &state);

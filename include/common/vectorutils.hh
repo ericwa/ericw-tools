@@ -22,6 +22,7 @@
 #include <algorithm>
 #include <iterator>
 #include <vector>
+#include <list>
 
 template<class T>
 void sort_and_remove_duplicates(T &v)
@@ -40,5 +41,21 @@ std::vector<E> concat(const std::vector<E> &a, const std::vector<E> &b)
 
     std::copy(a.begin(), a.end(), std::back_inserter(result));
     std::copy(b.begin(), b.end(), std::back_inserter(result));
+    return result;
+}
+
+template<class E>
+std::vector<E> make_vector(E e)
+{
+    std::vector<E> result;
+    result.push_back(std::move(e));
+    return result;
+}
+
+template<class E>
+std::list<E> make_list(E e)
+{
+    std::list<E> result;
+    result.push_back(std::move(e));
     return result;
 }

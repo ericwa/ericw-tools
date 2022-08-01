@@ -1178,7 +1178,9 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
          */
         auto headnode = std::make_unique<node_t>();
         headnode->bounds = entity->bounds;
-        headnode->plane = {{0, 0, 1}, 0};
+        // The choice of plane is mostly unimportant, but having it at (0, 0, 0) was affecting
+        // the node bounds calculation. So to be safe, put the plane on the top of the entity bounding box.
+        headnode->plane = {{0, 0, 1}, headnode->bounds.maxs()[2]};
         headnode->children[0] = std::make_unique<node_t>();
         headnode->children[0]->is_leaf = true;
         headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
