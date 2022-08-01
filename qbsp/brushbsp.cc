@@ -54,8 +54,12 @@ struct bspstats_t
     std::atomic<int> c_nodes;
     // number of nodes created by splitting on a side_t which had !visible
     std::atomic<int> c_nonvis;
+    // total number of nodes created by qbsp3 method
+    std::atomic<int> c_qbsp3;
     // total number of nodes created by block splitting
     std::atomic<int> c_blocksplit;
+    // total number of nodes created by midsplit
+    std::atomic<int> c_midsplit;
     // total number of leafs
     std::atomic<int> c_leafs;
 };
@@ -745,13 +749,7 @@ static std::optional<qbsp_plane_t> ChooseMidPlaneFromList(const std::vector<std:
     }
 
     // prefer the axial split
-    auto bestsurface = bestaxialplane ? bestaxialplane : bestanyplane;
-
-    if (!bestsurface) {
-        FError("No valid planes in surface list");
-    }
-
-    return bestsurface;
+    return bestaxialplane ? bestaxialplane : bestanyplane;
 }
 
 
@@ -794,8 +792,9 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
 		}
 	}
 
-    if (brushes.size() >= qbsp_options.midsplitbrushes.value()) {
+    if (brushes.size() >= qbsp_options.midsplitbrushes.value() || use_mid_split) {
         if (auto mid_plane = ChooseMidPlaneFromList(brushes, node->bounds)) {
+            stats.c_midsplit++;
 
             for (auto &b : brushes) {
                 b->side = TestBrushToPlanenum(*b, mid_plane.value(), nullptr, nullptr, nullptr);
@@ -928,6 +927,8 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
     if (!bestside->visible) {
         stats.c_nonvis++;
     }
+
+    stats.c_qbsp3++;
 
     return bestside->plane;
 }
@@ -1124,6 +1125,8 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     logging::print(logging::flag::STAT, "     {:8} visible nodes\n", stats.c_nodes - stats.c_nonvis);
     logging::print(logging::flag::STAT, "     {:8} nonvis nodes\n", stats.c_nonvis);
     logging::print(logging::flag::STAT, "     {:8} block split nodes\n", stats.c_blocksplit);
+    logging::print(logging::flag::STAT, "     {:8} expensive split nodes\n", stats.c_qbsp3);
+    logging::print(logging::flag::STAT, "     {:8} midsplit nodes\n", stats.c_midsplit);
     logging::print(logging::flag::STAT, "     {:8} leafs\n", stats.c_leafs);
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
 
