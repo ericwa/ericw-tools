@@ -1444,7 +1444,7 @@ TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
 
 TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("base1.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("base1-test.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
     CHECK(prt);
