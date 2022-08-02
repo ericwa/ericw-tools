@@ -411,7 +411,8 @@ static void MarkVisibleBrushSides_R(node_t *node)
             // leaf that are coplanar
             for (auto *brush : neighbour_leaf->original_brushes) {
                 for (auto &side : brush->sides) {
-                    if (qv::epsilonEqual(side.plane, portal->plane)) {
+                    //if (qv::epsilonEqual(side.plane, portal->plane)) {
+                    if (qv::epsilonEqual(side.get_positive_plane(), portal->plane)) {
                         // we've found a brush side in an original brush in the neighbouring
                         // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
                         side.visible = true;

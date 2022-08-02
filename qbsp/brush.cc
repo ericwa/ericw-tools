@@ -38,6 +38,16 @@ const maptexinfo_t &side_t::get_texinfo() const
     return map.mtexinfos[this->texinfo];
 }
 
+const qbsp_plane_t &side_t::get_plane() const
+{
+    return map.get_plane(planenum);
+}
+
+const qbsp_plane_t &side_t::get_positive_plane() const
+{
+    return map.get_plane(planenum & ~1);
+}
+
 std::unique_ptr<bspbrush_t> bspbrush_t::copy_unique() const
 {
     return std::make_unique<bspbrush_t>(*this);
@@ -80,11 +90,7 @@ qplane3d Face_Plane(const face_t *face)
 
 qplane3d Face_Plane(const side_t *face)
 {
-    if (face->plane_flipped) {
-        return -face->plane;
-    }
-
-    return face->plane;
+    return face->get_plane();
 }
 
 /*
@@ -96,8 +102,6 @@ Note: this will not catch 0 area polygons
 */
 static void CheckFace(side_t *face, const mapface_t &sourceface)
 {
-    const qplane3d &plane = face->plane;
-
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
             logging::print(
@@ -112,11 +116,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         return;
     }
 
-    qvec3d facenormal = plane.normal;
-
-    if (face->plane_flipped) {
-        facenormal = -facenormal;
-    }
+    const qbsp_plane_t &plane = face->get_plane();
+    qvec3d facenormal = plane.get_normal();
 
     for (size_t i = 0; i < face->w.size(); i++) {
         const qvec3d &p1 = face->w[i];
@@ -326,7 +327,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
         plane.dist = qv::dot(plane.normal, point);
 
         f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
-        f.plane_flipped = f.plane.set_plane(plane, true);
+        f.planenum = map.add_or_find_plane(plane);
 
         CheckFace(&f, mapface);
     }

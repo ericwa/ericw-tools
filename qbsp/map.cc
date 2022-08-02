@@ -2095,6 +2095,7 @@ void LoadMapFile(void)
     logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());
     logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.miptex.size());
     logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.mtexinfos.size());
+    logging::print(logging::flag::STAT, "     {:8} unique planes\n", map.planes.size());
     logging::print(logging::flag::STAT, "\n");
 
     if (qbsp_options.expand.value()) {
@@ -2443,7 +2444,7 @@ void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<bs
         fmt::print(f, "{{\n");
         for (auto &face : brush->sides) {
             // FIXME: Factor out this mess
-            winding_t w = BaseWindingForPlane(face.plane_flipped ? -face.plane : face.plane);
+            winding_t w = BaseWindingForPlane(face.get_plane());
 
             fmt::print(f, "( {} ) ", w[0]);
             fmt::print(f, "( {} ) ", w[1]);

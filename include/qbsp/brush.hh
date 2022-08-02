@@ -33,8 +33,7 @@ struct maptexinfo_t;
 struct side_t
 {
     winding_t w;
-    qbsp_plane_t plane;
-    bool plane_flipped; // whether `plane` is flipped or not
+    size_t planenum;
     int texinfo;
 
     int16_t lmshift;
@@ -48,6 +47,8 @@ struct side_t
     bool tested;
 
     const maptexinfo_t &get_texinfo() const;
+    const qbsp_plane_t &get_plane() const;
+    const qbsp_plane_t &get_positive_plane() const;
 };
 
 class mapbrush_t;

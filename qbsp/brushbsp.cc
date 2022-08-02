@@ -116,7 +116,7 @@ std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds)
             plane.dist = bounds.maxs()[i];
 
             side_t &side = b->sides[i];
-            side.plane_flipped = side.plane.set_plane(plane, true);
+            side.planenum = map.add_or_find_plane(plane);
         }
 
         {
@@ -125,7 +125,7 @@ std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds)
             plane.dist = -bounds.mins()[i];
 
             side_t &side = b->sides[3 + i];
-            side.plane_flipped = side.plane.set_plane(plane, true);
+            side.planenum = map.add_or_find_plane(plane);
         }
     }
 
@@ -274,7 +274,7 @@ TestBrushToPlanenum
 ============
 */
 static int TestBrushToPlanenum(
-    const bspbrush_t &brush, const qbsp_plane_t &plane, int *numsplits, bool *hintsplit, int *epsilonbrush)
+    const bspbrush_t &brush, size_t planenum, int *numsplits, bool *hintsplit, int *epsilonbrush)
 {
     if (numsplits) {
         *numsplits = 0;
@@ -286,17 +286,16 @@ static int TestBrushToPlanenum(
     // if the brush actually uses the planenum,
     // we can tell the side for sure
     for (auto &side : brush.sides) {
-        if (qv::epsilonEqual(side.plane, plane)) {
-            if (side.plane_flipped == SIDE_FRONT) {
-                return PSIDE_BACK | PSIDE_FACING;
-            } else {
-                return PSIDE_FRONT | PSIDE_FACING;
-            }
+		if (side.planenum == planenum) {
+			return PSIDE_BACK | PSIDE_FACING;
+        } else if (side.planenum == (planenum ^ 1)) {
+			return PSIDE_FRONT|PSIDE_FACING;
         }
     }
 
     // box on plane side
     // int s = SphereOnPlaneSide(brush.sphere_origin, brush.sphere_radius, plane);
+    const qbsp_plane_t &plane = map.get_plane(planenum);
     int s = BoxOnPlaneSide(brush.bounds, plane);
     if (s != PSIDE_BOTH)
         return s;
@@ -589,7 +588,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
 
         // for the brush on the front side of the plane, the `midwinding`
         // (the face that is touching the plane) should have a normal opposite the plane's normal
-        cs.plane_flipped = cs.plane.set_plane(brushOnFront ? -split : split, true);
+        cs.planenum = map.find_plane(split) ^ i ^ 1;
         cs.texinfo = map.skip_texinfo;
         cs.visible = false;
         cs.tested = false;
@@ -712,13 +711,13 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static std::optional<qbsp_plane_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const node_t *node)
+static std::optional<size_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const node_t *node)
 {
     vec_t bestaxialmetric = VECT_MAX;
-    std::optional<qbsp_plane_t> bestaxialplane;
+    std::optional<size_t> bestaxialplane;
 
     vec_t bestanymetric = VECT_MAX;
-    std::optional<qbsp_plane_t> bestanyplane;
+    std::optional<size_t> bestanyplane;
 
     for (auto &brush : brushes) {
         for (auto &side : brush->sides) {
@@ -729,7 +728,7 @@ static std::optional<qbsp_plane_t> ChooseMidPlaneFromList(const std::vector<std:
                 continue; // allready a node splitter
             }
 
-            const qbsp_plane_t &plane = side.plane;
+            const qbsp_plane_t &plane = side.get_positive_plane();
 
             if (!CheckPlaneAgainstVolume(plane, node)) {
                 continue; // would produce a tiny volume
@@ -740,14 +739,14 @@ static std::optional<qbsp_plane_t> ChooseMidPlaneFromList(const std::vector<std:
 
             if (metric < bestanymetric) {
                 bestanymetric = metric;
-                bestanyplane = plane;
+                bestanyplane = side.planenum & ~1;
             }
 
             /* check for axis aligned surfaces */
             if (plane.get_type() < plane_type_t::PLANE_ANYX) {
                 if (metric < bestaxialmetric) {
                     bestaxialmetric = metric;
-                    bestaxialplane = plane;
+                    bestaxialplane = side.planenum & ~1;
                 }
             }
         }
@@ -766,7 +765,7 @@ Using heuristics, chooses a plane to partition the brushes with.
 Returns nullopt if there are no valid planes to split with.
 ================
 */
-static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, node_t *node, std::optional<bool> forced_quick_tree, bspstats_t &stats)
+static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, node_t *node, std::optional<bool> forced_quick_tree, bspstats_t &stats)
 {
     // no brushes left to split, so we can't use any plane.
     if (!brushes.size()) {
@@ -776,6 +775,7 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
     // if forced_quick_tree is nullopt, we will choose fast/slow based on
     // certain parameters.
     if (!forced_quick_tree.has_value() || forced_quick_tree.value() == true) {
+#if 0
 	    // if it is crossing a block boundary, force a split;
         // this is optional q3map2 mode that is disabled by default.
         if (qbsp_options.blocksize.isChanged()) {
@@ -806,6 +806,7 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
 		        }
 	        }
         }
+#endif
 
         if (!forced_quick_tree.has_value()) {
 
@@ -869,7 +870,7 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
                 if (side.visible ^ (pass < 2))
                     continue; // only check visible faces on first pass
 
-                qbsp_plane_t plane(side.plane, true); // always use positive facing plane
+                const qbsp_plane_t &plane = side.get_positive_plane(); // always use positive facing plane
 
                 CheckPlaneAgainstParents(plane, node);
 
@@ -886,7 +887,7 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
 
                 for (auto &test : brushes) {
                     int bsplits;
-                    int s = TestBrushToPlanenum(*test, plane, &bsplits, &hintsplit, &epsilonbrush);
+                    int s = TestBrushToPlanenum(*test, side.planenum & ~1, &bsplits, &hintsplit, &epsilonbrush);
 
                     splits += bsplits;
                     if (bsplits && (s & PSIDE_FACING))
@@ -898,7 +899,7 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
                     if (s & PSIDE_FACING) {
                         facing++;
                         for (auto &testside : test->sides) {
-                            if (qv::epsilonEqual(testside.plane, plane)) {
+                            if ((testside.planenum & ~1) == (side.planenum & ~1)) {
                                 testside.tested = true;
                             }
                         }
@@ -966,7 +967,7 @@ static std::optional<qbsp_plane_t> SelectSplitPlane(const std::vector<std::uniqu
 
     stats.c_qbsp3++;
 
-    return bestside->plane;
+    return bestside->planenum & ~1;
 }
 
 /*
@@ -1001,7 +1002,7 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
         // as a splitter again
         if (sides & PSIDE_FACING) {
             for (auto &side : brush->sides) {
-                if (qv::epsilonEqual(side.plane, plane)) {
+                if (qv::epsilonEqual(side.get_positive_plane(), plane)) {
                     side.onnode = true;
                 }
             }
@@ -1045,7 +1046,11 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     // this is a splitplane node
     stats.c_nodes++;
 
-    node->plane.set_plane(bestplane.value(), true); // always use front facing
+    // make sure this was a positive-facing split
+    Q_assert(!(bestplane.value() & 1));
+
+    auto &plane = map.get_plane(bestplane.value());
+    node->plane.set_plane(plane);
 
     auto children = SplitBrushList(std::move(brushes), node->plane);
 
@@ -1057,9 +1062,9 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     }
 
 	for (int i = 0; i < 3; i++) {
-		if (bestplane->get_normal()[i] == 1.0) {
-            node->children[0]->bounds[0][i] = bestplane->get_dist();
-			node->children[1]->bounds[1][i] = bestplane->get_dist();
+		if (plane.get_normal()[i] == 1.0) {
+            node->children[0]->bounds[0][i] = plane.get_dist();
+			node->children[1]->bounds[1][i] = plane.get_dist();
 			break;
 		}
 	}

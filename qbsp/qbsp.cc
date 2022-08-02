@@ -316,7 +316,7 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
     std::vector<std::tuple<size_t, const side_t *>> planes;
 
     for (auto &f : b.sides) {
-        qplane3d plane = f.plane_flipped ? -f.plane : f.plane;
+        const qplane3d &plane = f.get_plane();
         int32_t outputplanenum = ExportMapPlane(plane);
         planes.emplace_back(outputplanenum, &f);
     }
@@ -398,7 +398,7 @@ static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspb
                     // behind this plane, it is a proper edge bevel
                     for (; it != b.sides.end(); it++) {
                         auto &f = *it;
-                        qplane3d plane = f.plane_flipped ? -f.plane : f.plane;
+                        const qplane3d &plane = f.get_plane();
 
                         // if this plane has allready been used, skip it
                         if (qv::epsilonEqual(current, plane))
@@ -776,7 +776,7 @@ static void BSPX_Brushes_AddModel(
         permodel.numbrushes++;
         for (auto &f : b->sides) {
             /*skip axial*/
-            const auto &plane = f.plane;
+            const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
                 continue;
             permodel.numfaces++;
@@ -794,7 +794,7 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->sides) {
             /*skip axial*/
-            const auto &plane = f.plane;
+            const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
                 continue;
             perbrush.numfaces++;
@@ -835,18 +835,11 @@ static void BSPX_Brushes_AddModel(
 
         for (auto &f : b->sides) {
             /*skip axial*/
-            const auto &plane = f.plane;
+            const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
                 continue;
 
-            bspxbrushes_perface perface;
-
-            if (f.plane_flipped) {
-                perface = -plane.get_plane();
-            } else {
-                perface = plane.get_plane();
-            }
-
+            bspxbrushes_perface perface = qplane3f(plane.get_normal(), plane.get_dist());
             str <= std::tie(perface.normal, perface.dist);
         }
     }

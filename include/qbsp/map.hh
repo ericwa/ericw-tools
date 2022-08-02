@@ -163,6 +163,19 @@ struct mapdata_t
 
         return planes.size() - 2;
     }
+    
+    // find the specified plane in the list if it exists. throws
+    // if not.
+    inline size_t find_plane(const qplane3d &plane)
+    {
+        for (size_t i = 0; i < planes.size(); i++) {
+            if (qv::epsilonEqual(planes[i], plane)) {
+                return i;
+            }
+        }
+
+        throw std::bad_function_call();
+    }
 
     // find the specified plane in the list if it exists, or
     // return a new one

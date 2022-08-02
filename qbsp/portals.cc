@@ -816,11 +816,11 @@ static void FindPortalSide(portal_t *p)
                 // fixme-brushbsp: restore
                 //                if (!side.visible)
                 //                    continue;		// non-visible
-                if (qv::epsilonEqual(side.plane, p1)) {
+                if (qv::epsilonEqual(side.get_positive_plane(), p1)) {
                     // exact match (undirectional)
 
                     // because the brush is on j of the positive plane, the brushside must be facing away from j
-                    Q_assert(side.plane_flipped == !j);
+                    Q_assert((side.planenum & 1) == !j);
 
                     // see which way(s) we want to generate faces - we could be a brush on either side of
                     // the portal, generating either a outward face (common case) or an inward face (liquids) or both.

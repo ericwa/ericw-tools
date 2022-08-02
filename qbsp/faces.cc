@@ -479,8 +479,8 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
     auto f = std::make_unique<face_t>();
 
     f->texinfo = side->texinfo;
-    f->plane = side->plane;
-    f->plane_flipped = pside;
+    f->plane = side->get_positive_plane();
+    f->plane_flipped = side->planenum & 1;
     f->portal = p;
     f->lmshift = side->lmshift;
 
