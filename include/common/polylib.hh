@@ -35,68 +35,6 @@ inline bool PointInWindingEdges(const winding_edges_t &wi, const qvec3d &point)
     return true;
 }
 
-#if 0
-
-// Hybrid storage; uses stack allocation for the first N
-// points, and uses a dynamic vector for storage after that.
-template<size_t N>
-struct winding_storage_hybrid_t
-{
-    // default constructor does nothing
-    inline winding_storage_hybrid_t();
-
-    // construct winding with initial size; may allocate
-    // memory, and sets size, but does not initialize any
-    // of them.
-    inline winding_storage_hybrid_t(const size_t &initial_size) : count(initial_size);
-
-    // construct winding from range.
-    // iterators must have operator+ and operator-.
-    template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_storage_hybrid_t(Iter begin, Iter end) : winding_storage_hybrid_t(end - begin);
-
-    // initializer list constructor
-    inline winding_storage_hybrid_t(std::initializer_list<qvec3d> l) : winding_storage_hybrid_t(l.begin(), l.end());
-
-    // copy constructor; uses optimized method of copying
-    // data over.
-    inline winding_storage_hybrid_t(const winding_storage_hybrid_t &copy) : winding_storage_hybrid_t(copy.size());
-
-    // move constructor
-    inline winding_storage_hybrid_t(winding_storage_hybrid_t &&move) noexcept : count(move.count);
-
-    // assignment copy
-    inline winding_storage_hybrid_t &operator=(const winding_storage_hybrid_t &copy);
-
-    // assignment move
-    inline winding_storage_hybrid_t &operator=(winding_storage_hybrid_t &&move) noexcept;
-
-    inline bool empty() const;
-
-    inline explicit operator bool() const;
-
-    inline const size_t &size() const;
-
-    inline qvec3d &at(const size_t &index);
-    inline const qvec3d &at(const size_t &index) const;
-
-    // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index);
-    inline const qvec3d &operator[](const size_t &index) const;
-
-    const const_iterator begin() const;
-    const const_iterator end() const;
- 
-    iterator begin();
-    iterator end();
-
-    template<typename... Args>
-    qvec3d &emplace_back(Args &&...vec);
-    void resize(const size_t &new_size);
-    void clear();
-};
-#endif
-
 // Stack storage; uses stack allocation. Throws if it can't insert
 // a new member.
 template<size_t N>
@@ -249,6 +187,10 @@ public:
         count = new_size;
     }
 
+    inline void reserve(size_t size)
+    {
+    }
+
     inline void clear()
     {
         count = 0;
@@ -262,6 +204,7 @@ struct winding_storage_heap_t
 {
 protected:
     qvec3d *heap = nullptr;
+    size_t allocated = 0;
 
 public:
     size_t count = 0;
@@ -270,12 +213,12 @@ public:
     inline winding_storage_heap_t() { }
 
     // destructor
-    ~winding_storage_heap_t() { free(heap); heap = nullptr; }
+    ~winding_storage_heap_t() { resize(0); }
 
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_heap_t(const size_t &initial_size) : count(initial_size)
+    inline winding_storage_heap_t(const size_t &initial_size) : count(initial_size), allocated(initial_size)
     {
         if (initial_size) {
             heap = reinterpret_cast<qvec3d *>(malloc(sizeof(qvec3d) * initial_size));
@@ -303,9 +246,11 @@ public:
         // take ownership of heap pointer
         heap = move.heap;
         count = move.count;
+        allocated = move.allocated;
 
         move.heap = nullptr;
         move.count = 0;
+        move.allocated = 0;
     }
 
     // assignment copy
@@ -325,9 +270,11 @@ public:
         // take ownership of heap pointer
         heap = move.heap;
         count = move.count;
+        allocated = move.allocated;
 
         move.heap = nullptr;
         move.count = 0;
+        move.allocated = 0;
 
         return *this;
     }
@@ -399,8 +346,18 @@ public:
         if (new_size == 0) {
             free(heap);
             heap = nullptr;
-        } else {
+            allocated = 0;
+        } else if (new_size > allocated) {
             heap = reinterpret_cast<qvec3d *>(realloc(heap, new_size * sizeof(qvec3d)));
+            allocated = new_size;
+        }
+    }
+
+    inline void reserve(size_t size)
+    {
+        if (allocated < size) {
+            heap = reinterpret_cast<qvec3d *>(realloc(heap, size * sizeof(qvec3d)));
+            allocated = size;
         }
     }
 
@@ -783,43 +740,48 @@ public:
         return storage[index];
     }
 
-    const auto begin() const
+    inline const auto begin() const
     {
         return storage.begin();
     }
 
-    const auto end() const
+    inline const auto end() const
     {
         return storage.end();
     }
 
-    auto begin()
+    inline auto begin()
     {
         return storage.begin();
     }
 
-    auto end()
+    inline auto end()
     {
         return storage.end();
     }
 
     template<typename... Args>
-    qvec3d &emplace_back(Args &&...vec)
+    inline qvec3d &emplace_back(Args &&...vec)
     {
         return storage.emplace_back(qvec3d(std::forward<Args>(vec)...));
     }
 
-    void push_back(const qvec3d &vec)
+    inline void push_back(const qvec3d &vec)
     {
         storage.emplace_back(vec);
     }
 
-    void resize(const size_t &new_size)
+    inline void resize(const size_t &new_size)
     {
         storage.resize(new_size);
     }
 
-    void clear()
+    inline void reserve(size_t size)
+    {
+        storage.reserve(size);
+    }
+
+    inline void clear()
     {
         storage.clear();
     }
@@ -1067,7 +1029,7 @@ public:
     it will be clipped away.
     ==================
     */
-    std::array<std::optional<winding_base_t>, 2> clip(
+    twosided<std::optional<winding_base_t>> clip(
         const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
@@ -1083,7 +1045,11 @@ public:
         else if (!counts[SIDE_BACK])
             return {*this, std::nullopt};
 
-        std::array<winding_base_t, 2> results{};
+        twosided<winding_base_t> results{};
+
+        for (auto &w : results) {
+            w.reserve(size() + 4);
+        }
 
         for (size_t i = 0; i < size(); i++) {
             const qvec3d &p1 = at(i);
