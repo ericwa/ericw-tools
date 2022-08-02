@@ -214,8 +214,8 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
     map.exported_lmshifts.push_back(face->lmshift);
     Q_assert(map.bsp.dfaces.size() == map.exported_lmshifts.size());
 
-    out.planenum = ExportMapPlane(face->plane);
-    out.side = face->plane_flipped;
+    out.planenum = ExportMapPlane(face->get_positive_plane());
+    out.side = face->planenum & 1;
     out.texinfo = ExportMapTexinfo(face->texinfo);
     for (i = 0; i < MAXLIGHTMAPS; i++)
         out.styles[i] = 255;
@@ -324,7 +324,7 @@ void MakeMarkFaces(node_t *node)
         // add this face to all descendant leafs it touches
 
         // make a copy we can clip
-        AddMarksurfaces_r(face.get(), CopyFace(face.get()), node->children[face->plane_flipped].get());
+        AddMarksurfaces_r(face.get(), CopyFace(face.get()), node->children[face->planenum & 1].get());
     }
 
     // process child nodes recursively
@@ -479,8 +479,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
     auto f = std::make_unique<face_t>();
 
     f->texinfo = side->texinfo;
-    f->plane = side->get_positive_plane();
-    f->plane_flipped = side->planenum & 1;
+    f->planenum = (side->planenum & ~1) | pside;
     f->portal = p;
     f->lmshift = side->lmshift;
 

@@ -81,11 +81,7 @@ Face_Plane
 */
 qplane3d Face_Plane(const face_t *face)
 {
-    if (face->plane_flipped) {
-        return -face->plane;
-    }
-
-    return face->plane;
+    return face->get_plane();
 }
 
 qplane3d Face_Plane(const side_t *face)

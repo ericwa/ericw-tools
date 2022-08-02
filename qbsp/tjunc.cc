@@ -521,13 +521,8 @@ std::vector<qvectri> minimum_weight_triangulation(
 static std::list<std::vector<size_t>> mwt_face(
     const face_t *f, const std::vector<size_t> &vertices, tjunc_stats_t &stats)
 {
-    auto p = f->plane;
-
-    if (f->plane_flipped) {
-        p = -p;
-    }
-
-    auto [u, v] = qv::MakeTangentAndBitangentUnnormalized(p.normal);
+    const auto &p = f->get_plane();
+    auto [u, v] = qv::MakeTangentAndBitangentUnnormalized(p.get_normal());
     qv::normalizeInPlace(u);
     qv::normalizeInPlace(v);
 

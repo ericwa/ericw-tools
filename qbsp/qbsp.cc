@@ -46,6 +46,16 @@
 
 #include "tbb/global_control.h"
 
+const qbsp_plane_t &face_t::get_plane() const
+{
+    return map.get_plane(planenum);
+}
+
+const qbsp_plane_t &face_t::get_positive_plane() const
+{
+    return map.get_plane(planenum & ~1);
+}
+
 // command line flags
 namespace settings
 {

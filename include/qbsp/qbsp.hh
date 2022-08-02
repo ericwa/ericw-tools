@@ -430,11 +430,11 @@ struct face_fragment_t
 };
 
 struct portal_t;
+struct qbsp_plane_t;
 
 struct face_t
 {
-    qplane3d plane;
-    bool plane_flipped; // whether `plane` is flipped or not
+    size_t planenum;
     int texinfo;
     contentflags_t contents; // contents on the front of the face
     int16_t lmshift;
@@ -446,6 +446,9 @@ struct face_t
     vec_t radius;
 
     portal_t *portal;
+
+    const qbsp_plane_t &get_plane() const;
+    const qbsp_plane_t &get_positive_plane() const;
 };
 
 // a semi-mutable version of plane that automatically manages the "type"

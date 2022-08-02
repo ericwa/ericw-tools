@@ -51,8 +51,7 @@ std::unique_ptr<face_t> NewFaceFromFace(const face_t *in)
 {
     auto newf = std::make_unique<face_t>();
 
-    newf->plane = in->plane;
-    newf->plane_flipped = in->plane_flipped;
+    newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;
     newf->contents = in->contents;
     newf->lmshift = in->lmshift;
