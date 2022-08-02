@@ -27,6 +27,8 @@
 #include <qbsp/portals.hh>
 #include <tbb/task_group.h>
 
+#include <atomic>
+
 //============================================================================
 
 portal_t *tree_t::create_portal()
@@ -79,7 +81,7 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     Q_assert(node->markfaces.empty());
 }
 
-static void PruneNodes_R(node_t *node, std::atomic_int32_t &count_pruned)
+static void PruneNodes_R(node_t *node, std::atomic<int32_t> &count_pruned)
 {
     if (node->is_leaf) {
         return;
@@ -113,7 +115,7 @@ void PruneNodes(node_t *node)
 {
     logging::funcheader();
 
-    std::atomic_int32_t count_pruned = 0;
+    std::atomic<int32_t> count_pruned = 0;
 
     PruneNodes_R(node, count_pruned);
 

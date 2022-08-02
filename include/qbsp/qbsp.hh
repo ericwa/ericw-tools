@@ -353,6 +353,7 @@ public:
     // should we automatically turn this on if the world gets too big but leave it off for smaller worlds?
     setting_blocksize blocksize{this, "blocksize", { 0, 0, 0 }, &common_format_group, "from q3map2; split the world by x/y/z sized chunks, speeding up split decisions"};
     setting_numeric<vec_t> midsplitbrushfraction{this, "midsplitbrushfraction", 0.0, &common_format_group, "switch to cheaper partitioning if a node contains this % of brushes in the map"};
+    setting_string add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"};
 
     void setParameters(int argc, const char **argv) override
     {

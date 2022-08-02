@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstdarg>
 #include <filesystem>
 #include <fmt/format.h>
@@ -123,9 +124,9 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed = true);
 // simple wrapper to percent() to use it in an object-oriented manner.
 struct percent_clock
 {
-    std::atomic_uint64_t max = 0;
+    std::atomic<uint64_t> max {0};
     bool displayElapsed = true;
-    std::atomic_uint64_t count = 0;
+    std::atomic<uint64_t> count {0};
 
     inline void increase()
     {

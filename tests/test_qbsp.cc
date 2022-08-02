@@ -1766,6 +1766,33 @@ TEST_CASE("q1_wad_external", "[testmaps_q1]") {
     CHECK(bsp.dtex.textures[3].data.size() == sizeof(dmiptex_t));
 }
 
+TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_merge_maps_base.map", { "-add", "q1_merge_maps_addition.map" });
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    // check brushwork from the two maps is merged
+    REQUIRE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {5,0,16}, {0, 0, 1}));
+    REQUIRE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-5,0,16}, {0, 0, 1}));
+
+    // check that the worldspawn keys from the base map are used
+    auto ents = EntData_Parse(bsp.dentdata);
+    REQUIRE(ents.size() == 3); // worldspawn, info_player_start, func_wall
+
+    REQUIRE(ents[0].get("classname") == "worldspawn");
+    CHECK(ents[0].get("message") == "merge maps base");
+
+    // check info_player_start
+    auto it = std::find_if(ents.begin(), ents.end(),
+        [](const entdict_t &dict) -> bool { return dict.get("classname") == "info_player_start"; });
+    REQUIRE(it != ents.end());
+
+    // check func_wall entity from addition map is included
+    it = std::find_if(ents.begin(), ents.end(),
+        [](const entdict_t &dict) -> bool { return dict.get("classname") == "func_wall"; });
+    REQUIRE(it != ents.end());
+}
+
 TEST_CASE("winding", "[benchmark][.releaseonly]") {
     ankerl::nanobench::Bench bench;
 
