@@ -432,7 +432,7 @@ TEST_CASE("InvalidTextureProjection", "[qbsp]")
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     REQUIRE("skip" == face->texname);
     const auto texvecs = face->get_texvecs();
-    CHECK(IsValidTextureProjection(face->plane.get_normal(), texvecs.row(0), texvecs.row(1)));
+    CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
 }
 
 /**
@@ -462,7 +462,7 @@ TEST_CASE("InvalidTextureProjection2", "[qbsp]")
     const mapface_t *face = &worldspawn.mapbrush(0).face(5);
     REQUIRE("skip" == face->texname);
     const auto texvecs = face->get_texvecs();
-    CHECK(IsValidTextureProjection(face->plane.get_normal(), texvecs.row(0), texvecs.row(1)));
+    CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
 }
 
 /**
@@ -493,7 +493,7 @@ TEST_CASE("InvalidTextureProjection3", "[qbsp]")
     const mapface_t *face = &worldspawn.mapbrush(0).face(3);
     REQUIRE("*lava1" == face->texname);
     const auto texvecs = face->get_texvecs();
-    CHECK(IsValidTextureProjection(face->plane.get_normal(), texvecs.row(0), texvecs.row(1)));
+    CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
 }
 
 TEST_CASE("WindingArea", "[mathlib]")

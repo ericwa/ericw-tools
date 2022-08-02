@@ -268,7 +268,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
                 continue;
         }
 
-        w = BaseWindingForPlane(mapface.plane);
+        w = BaseWindingForPlane(mapface.get_plane());
 
         for (auto &mapface2 : hullbrush->faces) {
             if (&mapface == &mapface2)
@@ -277,7 +277,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
                 break;
 
             // flip the plane, because we want to keep the back side
-            plane = -mapface2.plane;
+            plane = -mapface2.get_plane();
 
             w = w->clip(plane, qbsp_options.epsilon.value(), false)[SIDE_FRONT];
         }
@@ -320,8 +320,8 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             mapface.texinfo = FindTexinfo(texInfoNew);
         }
 
-        plane.normal = mapface.plane.get_normal();
-        point = mapface.plane.get_normal() * mapface.plane.get_dist();
+        plane.normal = mapface.get_plane().get_normal();
+        point = mapface.get_plane().get_normal() * mapface.get_plane().get_dist();
         point -= rotate_offset;
         plane.dist = qv::dot(plane.normal, point);
 
@@ -388,7 +388,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, const qbsp_plane_t &plane)
         FError("invalid normal (vector length {:.4})", len);
 
     for (auto &mapface : hullbrush->faces) {
-        if (qv::epsilonEqual(mapface.plane, plane, EQUAL_EPSILON, qbsp_options.epsilon.value())) {
+        if (qv::epsilonEqual(mapface.get_plane(), plane, EQUAL_EPSILON, qbsp_options.epsilon.value())) {
             return;
         }
     }
@@ -399,7 +399,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, const qbsp_plane_t &plane)
     }
 
     mapface_t &mapface = hullbrush->faces.emplace_back();
-    mapface.plane = plane;
+    mapface.planenum = map.add_or_find_plane(plane);
     mapface.texinfo = 0;
 }
 
@@ -418,9 +418,9 @@ static void TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t &plane)
 
     /* see if the plane has already been added */
     for (auto &mapface : hullbrush->faces) {
-        if (qv::epsilonEqual(plane, mapface.plane))
+        if (qv::epsilonEqual(plane, mapface.get_plane()))
             return;
-        if (qv::epsilonEqual(-plane, mapface.plane))
+        if (qv::epsilonEqual(-plane, mapface.get_plane()))
             return;
     }
 
@@ -562,12 +562,14 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
             continue;
         qvec3d corner{};
         for (x = 0; x < 3; x++) {
-            if (mapface.plane.get_normal()[x] > 0)
+            if (mapface.get_plane().get_normal()[x] > 0)
                 corner[x] = hull_size[1][x];
-            else if (mapface.plane.get_normal()[x] < 0)
+            else if (mapface.get_plane().get_normal()[x] < 0)
                 corner[x] = hull_size[0][x];
         }
-        mapface.plane.get_dist() += qv::dot(corner, mapface.plane.get_normal());
+        qplane3d plane = mapface.get_plane();
+        plane.dist += qv::dot(corner, plane.normal);
+        mapface.planenum = map.add_or_find_plane(plane);
     }
 
     // add any axis planes not contained in the brush to bevel off corners

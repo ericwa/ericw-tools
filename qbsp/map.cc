@@ -1540,9 +1540,10 @@ bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
     qvec3d cb = planepts[2] - planepts[1];
 
     vec_t length;
-
-    plane.set_normal(qv::normalize(qv::cross(ab, cb), length));
-    plane.get_dist() = qv::dot(planepts[1], plane.get_normal());
+    qvec3d normal = qv::normalize(qv::cross(ab, cb), length);
+    vec_t dist = qv::dot(planepts[1], normal);
+    
+    planenum = map.add_or_find_plane({ normal, dist });
 
     return length >= NORMAL_EPSILON;
 }
@@ -1559,6 +1560,11 @@ void mapface_t::set_texvecs(const texvecf &vecs)
     texInfoNew.outputnum = std::nullopt;
     texInfoNew.vecs = vecs;
     this->texinfo = FindTexinfo(texInfoNew);
+}
+
+const qbsp_plane_t &mapface_t::get_plane() const
+{
+    return map.get_plane(planenum);
 }
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
@@ -1582,7 +1588,7 @@ bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, con
 
 inline bool IsValidTextureProjection(const mapface_t &mapface, const maptexinfo_t *tx)
 {
-    return IsValidTextureProjection(mapface.plane.get_normal(), tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
+    return IsValidTextureProjection(mapface.get_plane().get_normal(), tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
 }
 
 static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
@@ -1596,7 +1602,7 @@ static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
         const std::array<vec_t, 2> shift{0, 0};
         const vec_t rotate = 0;
         const std::array<vec_t, 2> scale = {1, 1};
-        SetTexinfo_QuakeEd(mapface.plane, mapface.planepts, shift, rotate, scale, tx);
+        SetTexinfo_QuakeEd(mapface.get_plane(), mapface.planepts, shift, rotate, scale, tx);
 
         Q_assert(IsValidTextureProjection(mapface, tx));
     }
@@ -1615,7 +1621,7 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrus
 
     normal_ok = face->set_planepts(planepts);
 
-    ParseTextureDef(parser, *face, brush, &tx, face->planepts, face->plane);
+    ParseTextureDef(parser, *face, brush, &tx, face->planepts, face->get_plane());
 
     if (!normal_ok) {
         logging::print("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
@@ -1679,24 +1685,27 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         bool discardFace = false;
         for (int i = 0; i < brush.numfaces; i++) {
             const mapface_t &check = brush.face(i);
-            if (qv::epsilonEqual(check.plane, face->plane)) {
+            if (qv::epsilonEqual(check.get_plane(), face->get_plane())) {
                 logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
                 discardFace = true;
                 continue;
             }
-            if (qv::epsilonEqual(-check.plane, face->plane)) {
+            if (qv::epsilonEqual(-check.get_plane(), face->get_plane())) {
                 /* FIXME - this is actually an invalid brush */
                 logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
                 continue;
             }
         }
-        if (discardFace)
+
+        if (discardFace) {
             continue;
+        }
 
         /* Save the face, update progress */
-
-        if (0 == brush.numfaces)
+        if (!brush.numfaces) {
             brush.firstface = map.faces.size();
+        }
+
         brush.numfaces++;
         map.faces.push_back(*face);
     }
@@ -2154,7 +2163,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
         case conversion_t::quake:
         case conversion_t::quake2: {
             const texdef_quake_ed_t quakeed =
-                TexDef_BSPToQuakeEd(mapface.plane, texture, texinfo.vecs, mapface.planepts);
+                TexDef_BSPToQuakeEd(mapface.get_plane(), texture, texinfo.vecs, mapface.planepts);
 
             fmt::print(f, "{} ", mapface.texname);
             fprintDoubleAndSpc(f, quakeed.shift[0]);
@@ -2199,7 +2208,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             texSize[0] = texture ? texture->width : 64;
             texSize[1] = texture ? texture->height : 64;
 
-            const texdef_brush_primitives_t bp = TexDef_BSPToBrushPrimitives(mapface.plane, texSize, texinfo.vecs);
+            const texdef_brush_primitives_t bp = TexDef_BSPToBrushPrimitives(mapface.get_plane(), texSize, texinfo.vecs);
             f << "( ( ";
             fprintDoubleAndSpc(f, bp.at(0, 0));
             fprintDoubleAndSpc(f, bp.at(0, 1));
@@ -2360,14 +2369,14 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
                 auto &fk = hullbrush.face(k);
 
                 bool legal = true;
-                auto vertex = GetIntersection(fi.plane, fj.plane, fk.plane);
+                auto vertex = GetIntersection(fi.get_plane(), fj.get_plane(), fk.get_plane());
 
                 if (!vertex) {
                     continue;
                 }
 
                 for (int32_t m = 0; m < hullbrush.numfaces; m++) {
-                    if (hullbrush.face(m).plane.distance_to(*vertex) > NORMAL_EPSILON) {
+                    if (hullbrush.face(m).get_plane().distance_to(*vertex) > NORMAL_EPSILON) {
                         legal = false;
                         break;
                     }

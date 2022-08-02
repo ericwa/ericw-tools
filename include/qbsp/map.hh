@@ -39,7 +39,8 @@ struct bspbrush_t;
 
 struct mapface_t
 {
-    qbsp_plane_t plane{};
+    //qbsp_plane_t plane{};
+    size_t planenum;
     std::array<qvec3d, 3> planepts{};
     std::string texname{};
     int texinfo = 0;
@@ -58,6 +59,8 @@ struct mapface_t
 
     const texvecf &get_texvecs() const;
     void set_texvecs(const texvecf &vecs);
+
+    const qbsp_plane_t &get_plane() const;
 };
 
 enum class brushformat_t
@@ -139,7 +142,46 @@ struct mapdata_t
     std::vector<mapface_t> faces;
     std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
+
+    // this vector stores all of the planes that can potentially be
+    // output in the BSP, from the map's own sides. The positive planes
+    // come first (are even-numbered, with 0 being even) and the negative
+    // planes are odd-numbered.
     std::vector<mapplane_t> planes;
+
+    // add the specified plane to the list
+    inline size_t add_plane(const qplane3d &plane)
+    {
+        planes.reserve(planes.size() + 2);
+        auto &positive = planes.emplace_back(plane);
+        auto &negative = planes.emplace_back(-plane);
+
+        if (positive.get_normal()[static_cast<int32_t>(positive.get_type()) % 3] < 0.0) {
+            std::swap(positive, negative);
+            return planes.size() - 1;
+        }
+
+        return planes.size() - 2;
+    }
+
+    // find the specified plane in the list if it exists, or
+    // return a new one
+    inline size_t add_or_find_plane(const qplane3d &plane)
+    {
+        for (size_t i = 0; i < planes.size(); i++) {
+            if (qv::epsilonEqual(planes[i], plane)) {
+                return i;
+            }
+        }
+
+        return add_plane(plane);
+    }
+
+    inline const qbsp_plane_t &get_plane(size_t pnum)
+    {
+        return planes[pnum];
+    }
+
     std::vector<maptexdata_t> miptex;
     std::vector<maptexinfo_t> mtexinfos;
 
@@ -220,12 +262,6 @@ struct mapdata_t
     const std::string &miptexTextureName(int mt) const { return miptex.at(mt).name; }
 
     const std::string &texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
-
-    inline qbsp_plane_t get_plane(int pnum)
-    {
-        std::shared_lock lock(map_planes_lock);
-        return planes.at(pnum);
-    }
 
     int skip_texinfo;
 
