@@ -56,6 +56,11 @@ const qbsp_plane_t &face_t::get_positive_plane() const
     return map.get_plane(planenum & ~1);
 }
 
+const qbsp_plane_t &node_t::get_plane() const
+{
+    return map.get_plane(planenum);
+}
+
 // command line flags
 namespace settings
 {

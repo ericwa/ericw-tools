@@ -630,7 +630,10 @@ struct node_t
     bool is_leaf = false;
 
     // information for decision nodes
-    qbsp_plane_t plane; // decision node only
+    size_t planenum; // decision node only
+
+    const qbsp_plane_t &get_plane() const;
+
     int firstface; // decision node only
     int numfaces; // decision node only
     twosided<std::unique_ptr<node_t>>

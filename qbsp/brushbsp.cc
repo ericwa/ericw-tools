@@ -621,10 +621,10 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
     return result;
 }
 
-static void CheckPlaneAgainstParents(const qbsp_plane_t &plane, node_t *node)
+inline void CheckPlaneAgainstParents(size_t planenum, node_t *node)
 {
     for (node_t *p = node->parent; p; p = p->parent) {
-        if (qv::epsilonEqual(p->plane, plane)) {
+        if (p->planenum == planenum) {
             Error("Tried parent");
         }
     }
@@ -875,9 +875,10 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
                 if (side.visible ^ (pass < 2))
                     continue; // only check visible faces on first pass
 
+                size_t positive_planenum = side.planenum & ~1;
                 const qbsp_plane_t &plane = side.get_positive_plane(); // always use positive facing plane
 
-                CheckPlaneAgainstParents(plane, node);
+                CheckPlaneAgainstParents(positive_planenum, node);
 
                 if (!CheckPlaneAgainstVolume(plane, node, stats))
                     continue; // would produce a tiny volume
@@ -892,7 +893,7 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
 
                 for (auto &test : brushes) {
                     int bsplits;
-                    int s = TestBrushToPlanenum(*test, side.planenum & ~1, &bsplits, &hintsplit, &epsilonbrush);
+                    int s = TestBrushToPlanenum(*test, positive_planenum, &bsplits, &hintsplit, &epsilonbrush);
 
                     splits += bsplits;
                     if (bsplits && (s & PSIDE_FACING))
@@ -1054,10 +1055,10 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     // make sure this was a positive-facing split
     Q_assert(!(bestplane.value() & 1));
 
+    node->planenum = bestplane.value();
+    
     auto &plane = map.get_plane(bestplane.value());
-    node->plane.set_plane(plane);
-
-    auto children = SplitBrushList(std::move(brushes), node->plane, stats);
+    auto children = SplitBrushList(std::move(brushes), plane, stats);
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
@@ -1074,7 +1075,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 		}
 	}
 
-    auto children_volumes = SplitBrush(node->volume->copy_unique(), node->plane, stats);
+    auto children_volumes = SplitBrush(node->volume->copy_unique(), plane, stats);
     node->children[0]->volume = std::move(children_volumes[0]);
     node->children[1]->volume = std::move(children_volumes[1]);
 
@@ -1135,9 +1136,9 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
          */
         auto headnode = std::make_unique<node_t>();
         headnode->bounds = entity->bounds;
-        // The choice of plane is mostly unimportant, but having it at (0, 0, 0) was affecting
-        // the node bounds calculation. So to be safe, put the plane on the top of the entity bounding box.
-        headnode->plane = {{0, 0, 1}, headnode->bounds.maxs()[2]};
+        // The choice of plane is mostly unimportant, but having it at (0, 0, 0) affects
+        // the node bounds calculation.
+        headnode->planenum = 0;
         headnode->children[0] = std::make_unique<node_t>();
         headnode->children[0]->is_leaf = true;
         headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();

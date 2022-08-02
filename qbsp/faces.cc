@@ -295,7 +295,7 @@ static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, n
         return;
     }
 
-    const qplane3d &splitplane = node->plane;
+    const qplane3d &splitplane = node->get_plane();
 
     auto [frontFragment, backFragment] = SplitFace(std::move(face_copy), splitplane);
     if (frontFragment) {
@@ -479,7 +479,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
     auto f = std::make_unique<face_t>();
 
     f->texinfo = side->texinfo;
-    f->planenum = (side->planenum & ~1) | pside;
+    f->planenum = (side->planenum & ~1) | (pside ? 1 : 0);
     f->portal = p;
     f->lmshift = side->lmshift;
 

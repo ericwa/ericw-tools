@@ -197,13 +197,13 @@ constexpr vec_t SPLIT_WINDING_EPSILON = 0.001;
 
 static std::optional<winding_t> BaseWindingForNode(const node_t *node)
 {
-    std::optional<winding_t> w = BaseWindingForPlane(node->plane);
+    std::optional<winding_t> w = BaseWindingForPlane(node->get_plane());
 
     // clip by all the parents
     for (auto *np = node->parent; np && w;) {
         const planeside_t keep = (np->children[0].get() == node) ? SIDE_FRONT : SIDE_BACK;
 
-        w = w->clip(np->plane, BASE_WINDING_EPSILON, false)[keep];
+        w = w->clip(np->get_plane(), BASE_WINDING_EPSILON, false)[keep];
 
         node = np;
         np = np->parent;
@@ -250,7 +250,7 @@ std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std:
     }
 
     auto new_portal = std::make_unique<buildportal_t>();
-    new_portal->plane = node->plane;
+    new_portal->plane = node->get_plane();
     new_portal->onnode = node;
     new_portal->winding = std::make_unique<winding_t>(*w);
     new_portal->set_nodes(node->children[0].get(), node->children[1].get());
@@ -268,7 +268,7 @@ children have portals instead of node.
 */
 twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_t *node, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats)
 {
-    const auto &plane = node->plane;
+    const auto &plane = node->get_plane();
     node_t *f = node->children[0].get();
     node_t *b = node->children[1].get();
 
@@ -791,7 +791,7 @@ static void FindPortalSide(portal_t *p)
     // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
     side_t *bestside[2] = {nullptr, nullptr};
     float bestdot = 0;
-    const qbsp_plane_t &p1 = p->onnode->plane;
+    const qbsp_plane_t &p1 = p->onnode->get_plane();
 
     // check brushes on both sides of the portal
     for (int j = 0; j < 2; j++) {
@@ -816,7 +816,7 @@ static void FindPortalSide(portal_t *p)
                 // fixme-brushbsp: restore
                 //                if (!side.visible)
                 //                    continue;		// non-visible
-                if (qv::epsilonEqual(side.get_positive_plane(), p1)) {
+                if ((side.planenum & ~1) == p->onnode->planenum) {
                     // exact match (undirectional)
 
                     // because the brush is on j of the positive plane, the brushside must be facing away from j

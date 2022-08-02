@@ -153,7 +153,7 @@ static size_t ExportClipNodes(node_t *node)
 
     // Careful not to modify the vector while using this clipnode pointer
     bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
-    clipnode.planenum = ExportMapPlane(node->plane);
+    clipnode.planenum = ExportMapPlane(node->get_plane());
     clipnode.children[0] = child0;
     clipnode.children[1] = child1;
 
@@ -249,7 +249,7 @@ static void ExportDrawNodes(node_t *node)
     dnode->mins = qv::floor(node->bounds.mins());
     dnode->maxs = qv::ceil(node->bounds.maxs());
 
-    dnode->planenum = ExportMapPlane(node->plane);
+    dnode->planenum = ExportMapPlane(node->get_plane());
     dnode->firstface = node->firstface;
     dnode->numfaces = node->numfaces;
 
