@@ -41,4 +41,4 @@ bool WindingIsTiny(const winding_t &w, double size = EDGE_LENGTH_EPSILON);
 std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds);
 
 // compatibility version
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, bool use_mid_split);
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::optional<bool> forced_quick_tree);

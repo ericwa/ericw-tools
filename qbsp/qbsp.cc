@@ -609,7 +609,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         if (qbsp_options.forcegoodtree.value()) {
             tree = BrushBSP(entity, false);
         } else {
-            tree = BrushBSP(entity, entity == map.world_entity());
+            tree = BrushBSP(entity, entity == map.world_entity() ? std::nullopt : std::optional<bool>(false));
         }
 
         // build all the portals in the bsp tree
