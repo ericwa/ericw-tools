@@ -235,7 +235,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
 GrowNodeRegion
 ==============
 */
-static void GrowNodeRegion(node_t *node)
+static void EmitFaceFragments_R(node_t *node)
 {
     if (node->is_leaf)
         return;
@@ -253,8 +253,8 @@ static void GrowNodeRegion(node_t *node)
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
 
-    GrowNodeRegion(node->children[0].get());
-    GrowNodeRegion(node->children[1].get());
+    EmitFaceFragments_R(node->children[0].get());
+    EmitFaceFragments_R(node->children[1].get());
 }
 
 /*
@@ -271,8 +271,8 @@ int MakeFaceEdges(node_t *headnode)
     firstface = static_cast<int>(map.bsp.dfaces.size());
     MakeFaceEdges_r(headnode);
 
-    logging::header("GrowRegions");
-    GrowNodeRegion(headnode);
+    logging::header("EmitFaceFragments");
+    EmitFaceFragments_R(headnode);
 
     return firstface;
 }

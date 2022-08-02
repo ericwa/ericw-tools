@@ -687,6 +687,12 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
 
 static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, content_stats_base_t &stats)
 {
+    // _omitbrushes 1 just discards all brushes in the entity.
+    // could be useful for geometry guides, selective compilation, etc.
+    if (src->epairs.get_int("_omitbrushes")) {
+        return;
+    }
+
     const mapbrush_t *mapbrush;
     qvec3d rotate_offset{};
     int i;
@@ -694,6 +700,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
     const std::string &classname = src->epairs.get("classname");
+
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
 
@@ -769,11 +776,6 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     }
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
-
-    // _omitbrushes 1 just discards all brushes in the entity.
-    // could be useful for geometry guides, selective compilation, etc.
-    if (src->epairs.get_int("_omitbrushes"))
-        return;
 
     for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
         logging::percent(i, src->nummapbrushes);

@@ -39,12 +39,12 @@ struct bspbrush_t;
 
 struct mapface_t
 {
-    //qbsp_plane_t plane{};
     size_t planenum;
     std::array<qvec3d, 3> planepts{};
     std::string texname{};
     int texinfo = 0;
     int linenum = 0;
+    bool bevel = false;
 
     surfflags_t flags{};
 
@@ -54,6 +54,8 @@ struct mapface_t
 
     // for convert
     std::optional<extended_texinfo_t> raw_info;
+
+    winding_t winding;
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);
 
@@ -76,6 +78,7 @@ public:
     int numfaces = 0;
     brushformat_t format = brushformat_t::NORMAL;
     int contents = 0;
+    aabb3d bounds {};
 
     const mapface_t &face(int i) const;
 };
@@ -94,6 +97,8 @@ public:
 
     int firstmapbrush = 0;
     int nummapbrushes = 0;
+    size_t numboxbevels = 0;
+    size_t numedgebevels = 0;
 
     // key/value pairs in the order they were parsed
     entdict_t epairs;

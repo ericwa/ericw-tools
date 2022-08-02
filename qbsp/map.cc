@@ -421,11 +421,12 @@ int FindTexinfo(const maptexinfo_t &texinfo)
     return num_texinfo;
 }
 
-static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapentity_t *entity)
+static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapentity_t &entity)
 {
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
-    const int shadow = entity->epairs.get_int("_shadow");
+    const int shadow = entity.epairs.get_int("_shadow");
+
     // These flags are pulled from surf flags in Q2.
     // TODO: the Q1 version of this block can now be moved into texinfo
     // loading by shoving them inside of texinfo.flags like
@@ -452,13 +453,13 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     }
     if (IsNoExpandName(texname))
         flags.no_expand = true;
-    if (entity->epairs.get_int("_dirt") == -1)
+    if (entity.epairs.get_int("_dirt") == -1)
         flags.no_dirt = true;
-    if (entity->epairs.get_int("_bounce") == -1)
+    if (entity.epairs.get_int("_bounce") == -1)
         flags.no_bounce = true;
-    if (entity->epairs.get_int("_minlight") == -1)
+    if (entity.epairs.get_int("_minlight") == -1)
         flags.no_minlight = true;
-    if (entity->epairs.get_int("_lightignore") == 1)
+    if (entity.epairs.get_int("_lightignore") == 1)
         flags.light_ignore = true;
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
@@ -468,7 +469,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
             key += std::to_string(i);
         }
 
-        const std::string &excludeTex = entity->epairs.get(key.c_str());
+        const std::string &excludeTex = entity.epairs.get(key.c_str());
         if (!excludeTex.empty() && !Q_strcasecmp(texname, excludeTex)) {
             flags.no_minlight = true;
         }
@@ -476,7 +477,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
 
     if (shadow == -1)
         flags.no_shadow = true;
-    if (!Q_strcasecmp("func_detail_illusionary", entity->epairs.get("classname"))) {
+    if (!Q_strcasecmp("func_detail_illusionary", entity.epairs.get("classname"))) {
         /* Mark these entities as TEX_NOSHADOW unless the mapper set "_shadow" "1" */
         if (shadow != 1) {
             flags.no_shadow = true;
@@ -484,8 +485,8 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     }
 
     // handle "_phong" and "_phong_angle" and "_phong_angle_concave"
-    vec_t phongangle = entity->epairs.get_float("_phong_angle");
-    const int phong = entity->epairs.get_int("_phong");
+    vec_t phongangle = entity.epairs.get_float("_phong_angle");
+    const int phong = entity.epairs.get_int("_phong");
 
     if (phong && (phongangle == 0.0)) {
         phongangle = 89.0; // default _phong_angle
@@ -495,11 +496,11 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         flags.phong_angle = clamp(phongangle, 0.0, 360.0);
     }
 
-    const vec_t phong_angle_concave = entity->epairs.get_float("_phong_angle_concave");
+    const vec_t phong_angle_concave = entity.epairs.get_float("_phong_angle_concave");
     flags.phong_angle_concave = clamp(phong_angle_concave, 0.0, 360.0);
 
     // handle "_minlight"
-    const vec_t minlight = entity->epairs.get_float("_minlight");
+    const vec_t minlight = entity.epairs.get_float("_minlight");
     if (minlight > 0) {
         // CHECK: allow > 510 now that we're float? or is it not worth it since it will
         // be beyond max?
@@ -510,9 +511,9 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     {
         qvec3d mincolor{};
 
-        entity->epairs.get_vector("_mincolor", mincolor);
+        entity.epairs.get_vector("_mincolor", mincolor);
         if (qv::epsilonEmpty(mincolor, EQUAL_EPSILON)) {
-            entity->epairs.get_vector("_minlight_color", mincolor);
+            entity.epairs.get_vector("_minlight_color", mincolor);
         }
 
         mincolor = qv::normalize_color_format(mincolor);
@@ -524,7 +525,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     }
 
     // handle "_light_alpha"
-    const vec_t lightalpha = entity->epairs.get_float("_light_alpha");
+    const vec_t lightalpha = entity.epairs.get_float("_light_alpha");
     if (lightalpha != 0.0) {
         flags.light_alpha = clamp(lightalpha, 0.0, 1.0);
     }
@@ -1394,7 +1395,7 @@ parse_error:
     FError("line {}: couldn't parse Brush Primitives texture info", parser.linenum);
 }
 
-static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t *brush, maptexinfo_t *tx,
+static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t &brush, maptexinfo_t *tx,
     std::array<qvec3d, 3> &planepts, const qplane3d &plane)
 {
     vec_t rotate;
@@ -1404,7 +1405,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
     quark_tx_info_t extinfo;
 
-    if (brush->format == brushformat_t::BRUSH_PRIMITIVES) {
+    if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
         ParseBrushPrimTX(parser, texMat);
         tx_type = TX_BRUSHPRIM;
 
@@ -1415,7 +1416,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         extinfo = ParseExtendedTX(parser);
 
         mapface.raw_info = extinfo.info;
-    } else if (brush->format == brushformat_t::NORMAL) {
+    } else if (brush.format == brushformat_t::NORMAL) {
         parser.parse_token(PARSE_SAMELINE);
         mapface.texname = parser.token;
 
@@ -1608,24 +1609,24 @@ static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
     }
 }
 
-static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_t *brush, const mapentity_t *entity)
+static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_t &brush, const mapentity_t &entity)
 {
     std::array<qvec3d, 3> planepts;
     bool normal_ok;
     maptexinfo_t tx;
     int i, j;
-    std::unique_ptr<mapface_t> face = std::make_unique<mapface_t>();
+    mapface_t face;
 
-    face->linenum = parser.linenum;
+    face.linenum = parser.linenum;
     ParsePlaneDef(parser, planepts);
 
-    normal_ok = face->set_planepts(planepts);
+    normal_ok = face.set_planepts(planepts);
 
-    ParseTextureDef(parser, *face, brush, &tx, face->planepts, face->get_plane());
+    ParseTextureDef(parser, face, brush, &tx, face.planepts, face.get_plane());
 
     if (!normal_ok) {
         logging::print("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
-        return nullptr;
+        return std::nullopt;
     }
 
     // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
@@ -1639,15 +1640,218 @@ static std::unique_ptr<mapface_t> ParseBrushFace(parser_t &parser, const mapbrus
         }
     }
 
-    ValidateTextureProjection(*face, &tx);
+    ValidateTextureProjection(face, &tx);
 
     tx.flags = SurfFlagsForEntity(tx, entity);
-    face->texinfo = FindTexinfo(tx);
+    face.texinfo = FindTexinfo(tx);
 
     return face;
 }
 
-mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
+
+/*
+================
+CalculateBrushBounds
+================
+*/
+inline void CalculateBrushBounds(mapbrush_t &ob)
+{
+    ob.bounds = {};
+
+	for (size_t i = 0; i < ob.numfaces; i++) {
+		const auto &plane = ob.face(i).get_plane();
+		std::optional<winding_t> w = BaseWindingForPlane(plane);
+		
+        for (size_t j = 0; j < ob.numfaces && w; j++) {
+			if (i == j) {
+				continue;
+            }
+			if (ob.face(j).bevel) {
+				continue;
+            }
+			const auto &plane = map.get_plane(ob.face(j).planenum ^ 1);
+            w = w->clip(plane, 0)[SIDE_FRONT]; //CLIP_EPSILON);
+		}
+
+		if (w) {
+            const_cast<mapface_t &>(ob.face(i)).winding = w.value();
+			//side->visible = true;
+			for (auto &p : w.value()) {
+                ob.bounds += p;
+            }
+		}
+	}
+
+	for (size_t i = 0; i < 3; i++) {
+		if (ob.bounds.mins()[0] < -qbsp_options.worldextent.value() || ob.bounds.maxs()[0] > qbsp_options.worldextent.value()) {
+			logging::print("WARNING: entity xxx, brush yyy: bounds out of range\n");
+        }
+		if (ob.bounds.mins()[0] > qbsp_options.worldextent.value() || ob.bounds.maxs()[0] < -qbsp_options.worldextent.value()) {
+			logging::print("WARNING: entity xxx, brush yyy: no visible sides on brush\n");
+        }
+	}
+}
+
+
+/*
+=================
+AddBrushBevels
+
+Adds any additional planes necessary to allow the brush to be expanded
+against axial bounding boxes
+=================
+*/
+inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
+{
+	//
+	// add the axial planes
+	//
+	int32_t order = 0;
+	for (int32_t axis = 0; axis < 3; axis++) {
+		for (int32_t dir = -1; dir <= 1; dir += 2, order++) {
+			// see if the plane is already present
+            int32_t i;
+
+			for (i = 0; i < b.numfaces; i++) {
+                auto &s = b.face(i);
+
+				if (map.get_plane(s.planenum).get_normal()[axis] == dir) {
+					break;
+                }
+			}
+
+			if (i == b.numfaces) {
+                // add a new side
+                b.numfaces++;
+                mapface_t &s = map.faces.emplace_back();
+                qplane3d plane{};
+				plane.normal[axis] = dir;
+				if (dir == 1) {
+					plane.dist = b.bounds.maxs()[axis];
+                } else {
+					plane.dist = -b.bounds.mins()[axis];
+                }
+				s.planenum = map.add_or_find_plane(plane);
+				s.texinfo = b.face(0).texinfo;
+				s.contents = b.face(0).contents;
+                // fixme: why did we need to store all this stuff again, isn't
+                // it in texinfo?
+                s.raw_info = b.face(0).raw_info;
+                s.flags = b.face(0).flags;
+                s.texname = b.face(0).texname;
+                s.value = b.face(0).value;
+
+				s.bevel = true;
+				e.numboxbevels++;
+			}
+
+			// if the plane is not in it canonical order, swap it
+			if (i != order) {
+                std::swap(const_cast<mapface_t &>(b.face(order)), const_cast<mapface_t &>(b.face(i)));
+			}
+		}
+	}
+
+	//
+	// add the edge bevels
+	//
+	if (b.numfaces == 6) {
+		return;		// pure axial
+    }
+
+	// test the non-axial plane edges
+	for (size_t i = 6; i < b.numfaces; i++) {
+		auto &s = b.face(i);
+		auto &w = s.winding;
+
+        if (!w) {
+			continue;
+        }
+
+		for (size_t j = 0; j < w.size(); j++) {
+			size_t k = (j + 1) % w.size();
+			qvec3d vec = w[j] - w[k];
+
+            if (qv::normalizeInPlace(vec) < 0.5) {
+				continue;
+            }
+
+			vec = qv::Snap(vec);
+
+			for (k = 0 ; k < 3; k++) {
+				if (vec[k] == -1 || vec[k] == 1) {
+					break;	// axial
+                }
+            }
+
+			if (k != 3) {
+				continue;	// only test non-axial edges
+            }
+
+			// try the six possible slanted axials from this edge
+			for (size_t axis = 0; axis < 3; axis++) {
+				for (size_t dir = -1; dir <= 1; dir += 2) {
+					// construct a plane
+                    qplane3d plane {};
+                    plane.normal[axis] = dir;
+					plane.normal = qv::cross(vec, plane.normal);
+					if (qv::normalizeInPlace(plane.normal) < 0.5) {
+						continue;
+                    }
+					plane.dist = qv::dot(w[j], plane.normal);
+
+					// if all the points on all the sides are
+					// behind this plane, it is a proper edge bevel
+					for (k = 0; k < b.numfaces; k++) {
+						// if this plane has allready been used, skip it
+						if (qv::epsilonEqual(b.face(k).get_plane(), plane)) {
+							break;
+                        }
+
+						auto &w2 = b.face(k).winding;
+
+                        if (!w2) {
+							continue;
+                        }
+
+                        size_t l = 0;
+						for (; l < w2.size(); l++) {
+							vec_t d = qv::dot(w2[l], plane.normal) - plane.dist;
+							if (d > 0.1) {
+								break;	// point in front
+                            }
+						}
+
+						if (l != w2.size()) {
+							break;
+                        }
+					}
+
+					if (k != b.numfaces) {
+						continue;	// wasn't part of the outer hull
+                    }
+
+					// add this plane
+                    b.numfaces++;
+                    mapface_t &s = map.faces.emplace_back();
+				    s.planenum = map.add_or_find_plane(plane);
+				    s.texinfo = b.face(0).texinfo;
+				    s.contents = b.face(0).contents;
+                    // fixme: why did we need to store all this stuff again, isn't
+                    // it in texinfo?
+                    s.raw_info = b.face(0).raw_info;
+                    s.flags = b.face(0).flags;
+                    s.texname = b.face(0).texname;
+                    s.value = b.face(0).value;
+					s.bevel = true;
+					e.numedgebevels++;
+				}
+			}
+		}
+	}
+}
+
+mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
 {
     mapbrush_t brush;
 
@@ -1677,9 +1881,11 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         if (parser.token == "}")
             break;
 
-        std::unique_ptr<mapface_t> face = ParseBrushFace(parser, &brush, entity);
-        if (face.get() == nullptr)
+        std::optional<mapface_t> face = ParseBrushFace(parser, brush, entity);
+
+        if (!face) {
             continue;
+        }
 
         /* Check for duplicate planes */
         bool discardFace = false;
@@ -1707,7 +1913,7 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
         }
 
         brush.numfaces++;
-        map.faces.push_back(*face);
+        map.faces.emplace_back(std::move(face.value()));
     }
 
     // ericw -- brush primitives - there should be another closing }
@@ -1718,6 +1924,12 @@ mapbrush_t ParseBrush(parser_t &parser, const mapentity_t *entity)
             FError("Brush primitives: Expected }, got: {}", parser.token);
     }
     // ericw -- end brush primitives
+
+    // calculate brush bounds
+    CalculateBrushBounds(brush);
+
+    // add the brush bevels
+    AddBrushBevels(entity, brush);
 
     return brush;
 }
@@ -1740,7 +1952,7 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
             // once we run into the first brush, set up textures state.
             EnsureTexturesLoaded();
 
-            mapbrush_t brush = ParseBrush(parser, entity);
+            mapbrush_t brush = ParseBrush(parser, *entity);
 
             if (!entity->nummapbrushes)
                 entity->firstmapbrush = map.brushes.size();

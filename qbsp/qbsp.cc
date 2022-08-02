@@ -317,135 +317,6 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
     ExportBrushList_r(entity, node->children[1].get());
 }
 
-/*
-=================
-AddBrushBevels
-
-Adds any additional planes necessary to allow the brush to be expanded
-against axial bounding boxes
-=================
-*/
-static std::vector<std::tuple<size_t, const side_t *>> AddBrushBevels(const bspbrush_t &b)
-{
-    // add already-present planes
-    std::vector<std::tuple<size_t, const side_t *>> planes;
-
-    for (auto &f : b.sides) {
-        const qplane3d &plane = f.get_plane();
-        int32_t outputplanenum = ExportMapPlane(plane);
-        planes.emplace_back(outputplanenum, &f);
-    }
-
-    //
-    // add the axial planes
-    //
-    int32_t order = 0;
-    for (int32_t axis = 0; axis < 3; axis++) {
-        for (int32_t dir = -1; dir <= 1; dir += 2, order++) {
-            size_t i;
-            // see if the plane is allready present
-            for (i = 0; i < planes.size(); i++) {
-                if (map.bsp.dplanes[std::get<0>(planes[i])].normal[axis] == dir)
-                    break;
-            }
-
-            if (i == planes.size()) {
-                // add a new side
-                qplane3d new_plane{};
-                new_plane.normal[axis] = dir;
-                if (dir == 1)
-                    new_plane.dist = b.bounds.maxs()[axis];
-                else
-                    new_plane.dist = -b.bounds.mins()[axis];
-
-                int32_t outputplanenum = ExportMapPlane(new_plane);
-                planes.emplace_back(outputplanenum, &b.sides.front());
-            }
-
-            // if the plane is not in it canonical order, swap it
-            if (i != order)
-                std::swap(planes[i], planes[order]);
-        }
-    }
-
-    //
-    // add the edge bevels
-    //
-    if (planes.size() == 6)
-        return planes; // pure axial
-
-    // test the non-axial plane edges
-    size_t edges_to_test = planes.size();
-    for (size_t i = 6; i < edges_to_test; i++) {
-        auto &s = std::get<1>(planes[i]);
-        if (!s)
-            continue;
-        auto &w = s->w;
-        if (!w.size())
-            continue;
-        for (size_t j = 0; j < w.size(); j++) {
-            size_t k = (j + 1) % w.size();
-            qvec3d vec = w[j] - w[k];
-            if (qv::normalizeInPlace(vec) < 0.5)
-                continue;
-            vec = qv::Snap(vec);
-            for (k = 0; k < 3; k++)
-                if (vec[k] == -1 || vec[k] == 1)
-                    break; // axial
-            if (k != 3)
-                continue; // only test non-axial edges
-
-            // try the six possible slanted axials from this edge
-            for (int32_t axis = 0; axis < 3; axis++) {
-                for (int32_t dir = -1; dir <= 1; dir += 2) {
-                    qvec3d vec2{};
-                    // construct a plane
-                    vec2[axis] = dir;
-                    qplane3d current;
-                    current.normal = qv::cross(vec, vec2);
-                    if (qv::normalizeInPlace(current.normal) < 0.5)
-                        continue;
-                    current.dist = qv::dot(w[j], current.normal);
-
-                    auto it = b.sides.begin();
-
-                    // if all the points on all the sides are
-                    // behind this plane, it is a proper edge bevel
-                    for (; it != b.sides.end(); it++) {
-                        auto &f = *it;
-                        const qplane3d &plane = f.get_plane();
-
-                        // if this plane has allready been used, skip it
-                        if (qv::epsilonEqual(current, plane))
-                            break;
-
-                        auto &w2 = f.w;
-                        if (!w2.size())
-                            continue;
-                        size_t l;
-                        for (l = 0; l < w2.size(); l++) {
-                            vec_t d = current.distance_to(w2[l]);
-                            if (d > 0.1)
-                                break; // point in front
-                        }
-                        if (l != w2.size())
-                            break;
-                    }
-
-                    if (it != b.sides.end())
-                        continue; // wasn't part of the outer hull
-
-                    // add this plane
-                    int32_t outputplanenum = ExportMapPlane(current);
-                    planes.emplace_back(outputplanenum, &b.sides.front());
-                }
-            }
-        }
-    }
-
-    return planes;
-}
-
 static void ExportBrushList(mapentity_t *entity, node_t *node)
 {
     logging::funcheader();
@@ -458,11 +329,9 @@ static void ExportBrushList(mapentity_t *entity, node_t *node)
         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
             dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
 
-        auto bevels = AddBrushBevels(*b);
-
-        for (auto &plane : bevels) {
+        for (auto &side : b->sides) {
             map.bsp.dbrushsides.push_back(
-                {(uint32_t)std::get<0>(plane), (int32_t)ExportMapTexinfo(std::get<1>(plane)->texinfo)});
+                {(uint32_t) side.planenum, (int32_t)ExportMapTexinfo(side.texinfo)});
             brush.numsides++;
             brush_state.total_brush_sides++;
         }
