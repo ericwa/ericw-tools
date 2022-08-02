@@ -688,7 +688,7 @@ public:
         return create_solid_contents();
     }
 
-    void init_filesystem(const fs::path &, const settings::common_settings &options) const override
+    void init_filesystem(const fs::path &map_or_bsp, const settings::common_settings &options) const override
     {
         // Q1-like games don't care about the local
         // filesystem.
@@ -697,6 +697,13 @@ public:
 
         for (auto &path : options.paths.values()) {
             fs::addArchive(path, true);
+        }
+
+        // certain features like '-add additional.map' search relative to the map we're compiling
+        // so add the map directory to the search path
+        auto map_or_bsp_dir = map_or_bsp.parent_path();
+        if (!map_or_bsp_dir.empty()) {
+            fs::addArchive(map_or_bsp_dir);
         }
 
         img::init_palette(this);

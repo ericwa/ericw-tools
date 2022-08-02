@@ -2051,6 +2051,36 @@ void LoadMapFile(void)
         map.entities.pop_back();
     }
 
+    // -add function
+    if (!qbsp_options.add.value().empty()) {
+        auto file = fs::load(qbsp_options.add.value());
+
+        if (!file) {
+            FError("Couldn't load map file \"{}\".\n", qbsp_options.add.value());
+            return;
+        }
+
+        parser_t parser(file->data(), file->size());
+
+        for (int i = 0;; i++) {
+            mapentity_t &entity = map.entities.emplace_back();
+
+            if (!ParseEntity(parser, &entity)) {
+                break;
+            }
+
+            if (entity.epairs.get("classname") == "worldspawn") {
+                // The easiest way to get the additional map's worldspawn brushes
+                // into the base map's is to rename the additional map's worldspawn classname to func_group
+                entity.epairs.set("classname", "func_group");
+            }
+        }
+        // Remove dummy entity inserted above
+        assert(!map.entities.back().epairs.size());
+        assert(map.entities.back().brushes.empty());
+        map.entities.pop_back();
+    }
+
     logging::print(logging::flag::STAT, "     {:8} faces\n", map.faces.size());
     logging::print(logging::flag::STAT, "     {:8} brushes\n", map.brushes.size());
     logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());
