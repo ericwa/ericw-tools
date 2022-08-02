@@ -62,6 +62,12 @@ struct bspstats_t
     std::atomic<int> c_midsplit;
     // total number of leafs
     std::atomic<int> c_leafs;
+    // number of bogus brushes (beyond world extents)
+    std::atomic<int> c_bogus;
+    // number of brushes entirely removed from a split
+    std::atomic<int> c_brushesremoved;
+    // number of brushes half-removed from a split
+    std::atomic<int> c_brushesonesided;
 };
 
 /*
@@ -455,7 +461,7 @@ input.
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, const qplane3d &split)
+static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, const qplane3d &split, bspstats_t &stats)
 {
     twosided<std::unique_ptr<bspbrush_t>> result;
 
@@ -554,7 +560,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
         bool bogus = false;
         for (int j = 0; j < 3; j++) {
             if (result[i]->bounds.mins()[j] < -qbsp_options.worldextent.value() || result[i]->bounds.maxs()[j] > qbsp_options.worldextent.value()) {
-                logging::print("bogus brush after clip\n");
+                stats.c_bogus++;
                 bogus = true;
                 break;
             }
@@ -565,18 +571,17 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
         }
     }
 
-    if (!(result[0] && result[1])) {
-        if (!result[0] && !result[1])
-            logging::print("split removed brush\n");
-        else
-            logging::print("split not on both sides\n");
+    if (!result[0] && !result[1]) {
+        stats.c_brushesremoved++;
+    } else if (!result[0] || !result[1]) {
+        stats.c_brushesonesided++;
+
         if (result[0]) {
             result.front = std::move(brush);
-        }
-        // fixme: use of move here, might move twice. should it be `else`?
-        if (result[1]) {
+        } else {
             result.back = std::move(brush);
         }
+
         return result;
     }
 
@@ -625,9 +630,9 @@ static void CheckPlaneAgainstParents(const qbsp_plane_t &plane, node_t *node)
     }
 }
 
-static bool CheckPlaneAgainstVolume(const qbsp_plane_t &plane, const node_t *node)
+static bool CheckPlaneAgainstVolume(const qbsp_plane_t &plane, const node_t *node, bspstats_t &stats)
 {
-    auto [front, back] = SplitBrush(node->volume->copy_unique(), plane);
+    auto [front, back] = SplitBrush(node->volume->copy_unique(), plane, stats);
 
     bool good = (front && back);
 
@@ -711,7 +716,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static std::optional<size_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const node_t *node)
+static std::optional<size_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const node_t *node, bspstats_t &stats)
 {
     vec_t bestaxialmetric = VECT_MAX;
     std::optional<size_t> bestaxialplane;
@@ -730,7 +735,7 @@ static std::optional<size_t> ChooseMidPlaneFromList(const std::vector<std::uniqu
 
             const qbsp_plane_t &plane = side.get_positive_plane();
 
-            if (!CheckPlaneAgainstVolume(plane, node)) {
+            if (!CheckPlaneAgainstVolume(plane, node, stats)) {
                 continue; // would produce a tiny volume
             }
 
@@ -829,7 +834,7 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
         }
 
         if (forced_quick_tree.value()) {
-            if (auto mid_plane = ChooseMidPlaneFromList(brushes, node)) {
+            if (auto mid_plane = ChooseMidPlaneFromList(brushes, node, stats)) {
                 stats.c_midsplit++;
 
                 for (auto &b : brushes) {
@@ -874,7 +879,7 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
 
                 CheckPlaneAgainstParents(plane, node);
 
-                if (!CheckPlaneAgainstVolume(plane, node))
+                if (!CheckPlaneAgainstVolume(plane, node, stats))
                     continue; // would produce a tiny volume
 
                 int front = 0;
@@ -976,7 +981,7 @@ SplitBrushList
 ================
 */
 static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
-    std::vector<std::unique_ptr<bspbrush_t>> brushes, const qbsp_plane_t &plane)
+    std::vector<std::unique_ptr<bspbrush_t>> brushes, const qbsp_plane_t &plane, bspstats_t &stats)
 {
     std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> result;
 
@@ -985,7 +990,7 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
 
         if (sides == PSIDE_BOTH) {
             // split into two brushes
-            auto [front, back] = SplitBrush(brush->copy_unique(), plane);
+            auto [front, back] = SplitBrush(brush->copy_unique(), plane, stats);
 
             if (front) {
                 result[0].push_back(std::move(front));
@@ -1052,7 +1057,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     auto &plane = map.get_plane(bestplane.value());
     node->plane.set_plane(plane);
 
-    auto children = SplitBrushList(std::move(brushes), node->plane);
+    auto children = SplitBrushList(std::move(brushes), node->plane, stats);
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
@@ -1069,7 +1074,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 		}
 	}
 
-    auto children_volumes = SplitBrush(node->volume->copy_unique(), node->plane);
+    auto children_volumes = SplitBrush(node->volume->copy_unique(), node->plane, stats);
     node->children[0]->volume = std::move(children_volumes[0]);
     node->children[1]->volume = std::move(children_volumes[1]);
 
@@ -1169,6 +1174,9 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     logging::print(logging::flag::STAT, "     {:8} expensive split nodes\n", stats.c_qbsp3);
     logging::print(logging::flag::STAT, "     {:8} midsplit nodes\n", stats.c_midsplit);
     logging::print(logging::flag::STAT, "     {:8} leafs\n", stats.c_leafs);
+    logging::print(logging::flag::STAT, "     {:8} bogus brushes\n", stats.c_bogus);
+    logging::print(logging::flag::STAT, "     {:8} brushes removed from a split\n", stats.c_brushesremoved);
+    logging::print(logging::flag::STAT, "     {:8} brushes split only on one side\n", stats.c_brushesonesided);
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
 
     return tree;

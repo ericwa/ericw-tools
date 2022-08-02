@@ -838,13 +838,12 @@ static void FindPortalSide(portal_t *p)
                     break;
                 }
                 // see how close the match is
-                // fixme-brushbsp: verify that this actually works, restore it
-                //                const auto &p2 = side.plane;
-                //                double dot = qv::dot(p1.normal, p2.normal);
-                //                if (dot > bestdot) {
-                //                    bestdot = dot;
-                //                    bestside[j] = &side;
-                //                }
+                const auto &p2 = side.get_positive_plane();
+                double dot = qv::dot(p1.get_normal(), p2.get_normal());
+                if (dot > bestdot) {
+                    bestdot = dot;
+                    bestside[j] = &side;
+                }
             }
         }
     }
