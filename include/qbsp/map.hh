@@ -136,6 +136,30 @@ struct mapplane_t : qbsp_plane_t
     inline mapplane_t(const qbsp_plane_t &copy) : qbsp_plane_t(copy) { }
 };
 
+constexpr size_t hash_combine(size_t lhs, size_t rhs)
+{
+    return lhs ^ rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
+}
+
+struct qbsp_plane_hash
+{
+    size_t operator()(const qbsp_plane_t &plane) const
+    {
+        return hash_combine(
+            std::hash<vec_t>()((int32_t) (fabs(plane.get_dist()) / 2.0)),
+            std::hash<plane_type_t>()(plane.get_type())
+        );
+    }
+};
+
+struct qbsp_plane_eq
+{
+    bool operator()(const qbsp_plane_t &a, const qbsp_plane_t &b) const
+    {
+        return qv::epsilonEqual(a, b);
+    }
+};
+
 struct mapdata_t
 {
     /* Arrays of actual items */
@@ -148,29 +172,41 @@ struct mapdata_t
     // come first (are even-numbered, with 0 being even) and the negative
     // planes are odd-numbered.
     std::vector<mapplane_t> planes;
+    // planes hashed by dist
+    std::unordered_multimap<qbsp_plane_t, size_t, qbsp_plane_hash, qbsp_plane_eq> plane_hash;
 
     // add the specified plane to the list
     inline size_t add_plane(const qplane3d &plane)
     {
-        planes.reserve(planes.size() + 2);
-        auto &positive = planes.emplace_back(plane);
-        auto &negative = planes.emplace_back(-plane);
+        planes.emplace_back(plane);
+        planes.emplace_back(-plane);
+
+        auto &positive = planes[planes.size() - 2];
+        auto &negative = planes[planes.size() - 1];
+
+        size_t result;
 
         if (positive.get_normal()[static_cast<int32_t>(positive.get_type()) % 3] < 0.0) {
             std::swap(positive, negative);
-            return planes.size() - 1;
+            result = planes.size() - 1;
+        } else {
+            result = planes.size() - 2;
         }
+        
+        plane_hash.emplace(positive, planes.size() - 2);
+        plane_hash.emplace(negative, planes.size() - 1);
 
-        return planes.size() - 2;
+        return result;
     }
     
     // find the specified plane in the list if it exists. throws
     // if not.
     inline size_t find_plane(const qplane3d &plane)
     {
-        for (size_t i = 0; i < planes.size(); i++) {
-            if (qv::epsilonEqual(planes[i], plane)) {
-                return i;
+        auto range = plane_hash.equal_range(plane);
+        for (auto it = range.first; it != range.second; ++it) {
+            if (qv::epsilonEqual(it->first, plane)) {
+                return it->second;
             }
         }
 
@@ -181,9 +217,10 @@ struct mapdata_t
     // return a new one
     inline size_t add_or_find_plane(const qplane3d &plane)
     {
-        for (size_t i = 0; i < planes.size(); i++) {
-            if (qv::epsilonEqual(planes[i], plane)) {
-                return i;
+        auto range = plane_hash.equal_range(plane);
+        for (auto it = range.first; it != range.second; ++it) {
+            if (qv::epsilonEqual(it->first, plane)) {
+                return it->second;
             }
         }
 
