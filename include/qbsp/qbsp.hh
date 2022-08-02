@@ -237,6 +237,7 @@ public:
     setting_set texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group, "path to a texture definition file, which can transform textures in the .map into other textures."};
     setting_numeric<vec_t> lmscale{this, "lmscale", 1.0, &common_format_group, "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump." };
     setting_invertible_bool allow_upgrade{this, "allowupgrade", true, &common_format_group, "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"};
+    setting_string add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"};
 
     void setParameters(int argc, const char **argv) override
     {
