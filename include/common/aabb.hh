@@ -193,6 +193,11 @@ public:
 
     constexpr value_type centroid() const { return (m_mins + m_maxs) * 0.5; }
 
+    constexpr V volume() const { 
+        auto s = size();
+        return s[0] * s[1] * s[2];
+    }
+
     // stream support
     auto stream_data() { return std::tie(m_mins, m_maxs); }
 };

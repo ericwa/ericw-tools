@@ -284,7 +284,7 @@ public:
     setting_invertible_bool oldaxis{this, "oldaxis", true, &debugging_group,
         "uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older"};
     setting_bool forcegoodtree{
-        this, "forcegoodtree", false, &debugging_group, "force use of expensive processing for SolidBSP stage"};
+        this, "forcegoodtree", false, &debugging_group, "force use of expensive processing for BrushBSP stage"};
     setting_scalar midsplitsurffraction{this, "midsplitsurffraction", 0.f, 0.f, 1.f, &debugging_group,
         "if 0 (default), use `maxnodesize` for deciding when to switch to midsplit bsp heuristic.\nif 0 < midsplitSurfFraction <= 1, switch to midsplit if the node contains more than this fraction of the model's\ntotal surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)"};
     setting_int32 maxnodesize{this, "maxnodesize", 1024, &debugging_group,
@@ -352,6 +352,7 @@ public:
     // since the max world size in Q3 is {-65536, -65536, -65536, 65536, 65536, 65536}. should we dynamically change this?
     // should we automatically turn this on if the world gets too big but leave it off for smaller worlds?
     setting_blocksize blocksize{this, "blocksize", { 0, 0, 0 }, &common_format_group, "from q3map2; split the world by x/y/z sized chunks, speeding up split decisions"};
+    setting_numeric<vec_t> midsplitbrushfraction{this, "midsplitbrushfraction", 0.0, &common_format_group, "switch to cheaper partitioning if a node contains this % of brushes in the map"};
 
     void setParameters(int argc, const char **argv) override
     {

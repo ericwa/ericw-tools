@@ -389,18 +389,17 @@ static void CalcTreeBounds_r(tree_t *tree, node_t *node)
 {
     if (node->is_leaf) {
         CalcNodeBounds(node);
-        return;
+    } else {
+        tbb::task_group g;
+        g.run([&]() { CalcTreeBounds_r(tree, node->children[0].get()); });
+        g.run([&]() { CalcTreeBounds_r(tree, node->children[1].get()); });
+        g.wait();
+
+        node->bounds = node->children[0]->bounds + node->children[1]->bounds;
     }
 
-    tbb::task_group g;
-    g.run([&]() { CalcTreeBounds_r(tree, node->children[0].get()); });
-    g.run([&]() { CalcTreeBounds_r(tree, node->children[1].get()); });
-    g.wait();
-
-    node->bounds = node->children[0]->bounds + node->children[1]->bounds;
-
     if (node->bounds.mins()[0] >= node->bounds.maxs()[0]) {
-        logging::print("WARNING: node without a volume\n");
+        logging::print("WARNING: {} without a volume\n", node->is_leaf ? "leaf" : "node");
 
         // fixme-brushbsp: added this to work around leafs with no portals showing up in "qbspfeatures.map" among other
         // test maps. Not sure if correct or there's another underlying problem.
@@ -409,7 +408,7 @@ static void CalcTreeBounds_r(tree_t *tree, node_t *node)
 
     for (auto &v : node->bounds.mins()) {
         if (fabs(v) > qbsp_options.worldextent.value()) {
-            logging::print("WARNING: node with unbounded volume\n");
+            logging::print("WARNING: {} with unbounded volume\n", node->is_leaf ? "leaf" : "node");
             break;
         }
     }
