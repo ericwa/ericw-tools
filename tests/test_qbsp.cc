@@ -1788,7 +1788,7 @@ TEST_CASE("winding", "[benchmark][.releaseonly]") {
         ankerl::nanobench::doNotOptimizeAway(temp);
     });
     bench.run("polylib::winding_base_t<6> construct", [&] {
-        polylib::winding_base_t<6> temp;
+        polylib::winding_base_t<polylib::winding_storage_hybrid_t<6>> temp;
         ankerl::nanobench::doNotOptimizeAway(temp);
     });
 }

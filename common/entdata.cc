@@ -74,7 +74,13 @@ int32_t entdict_t::get_int(const std::string_view &key) const
 
 int32_t entdict_t::get_vector(const std::string_view &key, qvec3d &vec) const
 {
-    const std::string &value = get(key);
+    std::string value = get(key);
+
+    // FIXME: this fixes ASan triggering on some entities...
+    if (*(value.data() + value.size()) != 0) {
+        *(value.data() + value.size()) = 0;
+    }
+
     vec = {};
     return sscanf(value.data(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
 }

@@ -39,23 +39,23 @@ enum pstatus_t
     pstat_done
 };
 
-struct winding_t : polylib::winding_base_t<MAX_WINDING_FIXED>
+struct winding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>
 {
     qvec3d origin; // Bounding sphere for fast clipping tests
     vec_t radius; // Not updated, so won't shrink when clipping
 
-    inline winding_t() : polylib::winding_base_t<MAX_WINDING_FIXED>() { }
+    inline winding_t() : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>() { }
 
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_t(Iter begin, Iter end) : polylib::winding_base_t<MAX_WINDING_FIXED>(begin, end)
+    inline winding_t(Iter begin, Iter end) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(begin, end)
     {
         set_winding_sphere();
     }
 
     // initializer list constructor
-    inline winding_t(std::initializer_list<qvec3d> l) : polylib::winding_base_t<MAX_WINDING_FIXED>(l)
+    inline winding_t(std::initializer_list<qvec3d> l) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(l)
     {
         set_winding_sphere();
     }

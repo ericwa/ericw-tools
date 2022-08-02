@@ -23,10 +23,6 @@
 
 #include "common/polylib.hh"
 
-// now much a winding will use on the stack
-// before needing an overflow.
-constexpr size_t STACK_WINDING_SIZE = 64;
-
-using winding_t = polylib::winding_base_t<STACK_WINDING_SIZE>;
+using winding_t = polylib::winding_t;
 
 winding_t BaseWindingForPlane(const qplane3d &p);

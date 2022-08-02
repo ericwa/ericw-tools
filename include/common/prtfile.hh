@@ -26,7 +26,7 @@
 
 constexpr size_t PRT_MAX_WINDING_FIXED = 24;
 
-using prtfile_winding_t = polylib::winding_base_t<PRT_MAX_WINDING_FIXED>;
+using prtfile_winding_t = polylib::winding_base_t<polylib::winding_storage_hybrid_t<PRT_MAX_WINDING_FIXED>>;
 
 struct prtfile_portal_t
 {
