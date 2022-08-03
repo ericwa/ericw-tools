@@ -268,20 +268,6 @@ const face_normal_t &GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f,
     return face_normals_vec.at(vertindex);
 }
 
-static bool FacesOnSamePlane(const std::vector<const mface_t *> &faces)
-{
-    if (faces.empty()) {
-        return false;
-    }
-    const int32_t planenum = faces.at(0)->planenum;
-    for (auto face : faces) {
-        if (face->planenum != planenum) {
-            return false;
-        }
-    }
-    return true;
-}
-
 const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const int edgeindex)
 {
     Q_assert(s_builtPhongCaches);

@@ -1079,7 +1079,7 @@ struct gamedef_q2_t : public gamedef_t
         "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER", "DEADMONSTER",
         "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
 
-    int32_t contents_from_string(const std::string_view &str) const
+    int32_t contents_from_string(const std::string_view &str) const override
     {
         for (size_t i = 0; i < std::size(bitflag_names); i++) {
             if (string_iequals(str, bitflag_names[i])) {
@@ -1161,7 +1161,7 @@ struct gamedef_q2_t : public gamedef_t
         result.native = a.native | b.native;
         result.clips_same_type = (a.clips_same_type.value_or(true) && b.clips_same_type.value_or(true));
         result.mirror_inside = (a.mirror_inside.value_or(true) && b.mirror_inside.value_or(true));
-        result.illusionary_visblocker == a.illusionary_visblocker || b.illusionary_visblocker;
+        result.illusionary_visblocker = a.illusionary_visblocker || b.illusionary_visblocker;
         return result;
     }
 

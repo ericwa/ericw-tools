@@ -286,7 +286,6 @@ poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &p
 {
     Q_assert(points.size() >= 3);
 
-    float poly_area = 0;
     std::vector<float> triareas;
     triareas.reserve(points.size() - 2);
 
@@ -299,7 +298,6 @@ poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &p
         Q_assert(triarea >= 0.0f);
 
         triareas.push_back(triarea);
-        poly_area += triarea;
     }
     const std::vector<float> cdf = MakeCDF(triareas);
 

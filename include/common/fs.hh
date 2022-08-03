@@ -38,6 +38,7 @@ struct archive_like
     bool external;
 
     inline archive_like(const path &pathname, bool external) : pathname(pathname), external(external) { }
+    virtual ~archive_like() { }
 
     virtual bool contains(const path &filename) = 0;
 

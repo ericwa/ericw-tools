@@ -169,12 +169,11 @@ static void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const
         numverts += winding.size();
     }
 
-    unsigned int geomID;
     RTCGeometry geom_1 = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
     rtcSetGeometryBuildQuality(geom_1, RTC_BUILD_QUALITY_MEDIUM);
     rtcSetGeometryMask(geom_1, 1);
     rtcSetGeometryTimeStepCount(geom_1, 1);
-    geomID = rtcAttachGeometry(scene, geom_1);
+    rtcAttachGeometry(scene, geom_1);
     rtcReleaseGeometry(geom_1);
 
     struct Vertex

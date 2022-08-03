@@ -92,7 +92,7 @@ class mapentity_t
 public:
     qvec3d origin{};
 
-    std::vector<mapbrush_t> mapbrushes;
+    std::list<mapbrush_t> mapbrushes;
 
     size_t numboxbevels = 0;
     size_t numedgebevels = 0;

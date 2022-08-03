@@ -1393,7 +1393,6 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
     lightsurf_t *lightsurf, lightmapdict_t *lightmaps, int32_t style)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
     if (extended_flags.no_minlight) {

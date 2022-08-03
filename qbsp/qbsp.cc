@@ -136,7 +136,7 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
         }
 
         if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
-            texinfo = extended_texinfo_t{std::stoi(parser.token)};
+            texinfo = extended_texinfo_t{{std::stoi(parser.token)}};
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
                 texinfo->flags.native = std::stoi(parser.token);
@@ -353,7 +353,7 @@ winding_t BaseWindingForPlane(const qplane3d &p)
 
 static bool IsTrigger(const mapentity_t *entity)
 {
-    auto &tex = entity->mapbrushes[0].faces[0].texname;
+    auto &tex = entity->mapbrushes.front().faces[0].texname;
 
     if (tex.length() < 6) {
         return false;

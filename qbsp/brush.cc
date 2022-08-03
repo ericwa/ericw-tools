@@ -242,8 +242,7 @@ static bool MapBrush_IsHint(const mapbrush_t &brush)
 CreateBrushFaces
 =================
 */
-static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum,
-    const rotation_t rottype = rotation_t::none, const qvec3d &rotate_offset = {})
+static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum)
 {
     vec_t r;
     std::optional<winding_t> w;
@@ -291,7 +290,7 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
 
         for (size_t j = 0; j < w->size(); j++) {
             for (size_t k = 0; k < 3; k++) {
-                point[k] = w->at(j)[k] - rotate_offset[k];
+                point[k] = w->at(j)[k];
                 r = Q_rint(point[k]);
                 if (fabs(point[k] - r) < ZERO_EPSILON)
                     f.w[j][k] = r;
@@ -307,48 +306,10 @@ static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t 
             hullbrush->bounds += f.w[j];
         }
 
-        // account for texture offset, from txqbsp-xt
-        if (!qbsp_options.oldrottex.value()) {
-            maptexinfo_t texInfoNew = map.mtexinfos.at(mapface.texinfo);
-            texInfoNew.outputnum = std::nullopt;
-
-            texInfoNew.vecs.at(0, 3) += qv::dot(rotate_offset, texInfoNew.vecs.row(0).xyz());
-            texInfoNew.vecs.at(1, 3) += qv::dot(rotate_offset, texInfoNew.vecs.row(1).xyz());
-
-            mapface.texinfo = FindTexinfo(texInfoNew);
-        }
-
-        plane.normal = mapface.get_plane().get_normal();
-        point = mapface.get_plane().get_normal() * mapface.get_plane().get_dist();
-        point -= rotate_offset;
-        plane.dist = qv::dot(plane.normal, point);
-
         f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
-        f.planenum = map.add_or_find_plane(plane);
+        f.planenum = mapface.planenum;
 
         CheckFace(&f, mapface);
-    }
-
-    // Rotatable objects must have a bounding box big enough to
-    // account for all its rotations
-
-    // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
-    // the actual non-hacked bbox (it doesn't write axial planes).
-
-    // Hexen2 also doesn't want the bbox expansion, it's handled in engine (see: SV_LinkEdict)
-
-    // Only do this for hipnotic rotation. For origin brushes in Quake, it breaks some of their
-    // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
-    // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
-    // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
-    const bool shouldExpand = (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0) &&
-                              rottype == rotation_t::hipnotic &&
-                              (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-                              && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
-
-    if (shouldExpand) {
-        vec_t delta = std::max(fabs(max), fabs(min));
-        hullbrush->bounds = {-delta, delta};
     }
 
     return facelist;
@@ -592,7 +553,7 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
 
 //============================================================================
 
-static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
+contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
 {
     bool base_contents_set = false;
     contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
@@ -654,14 +615,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
         hullbrush.faces.emplace_back(face);
     }
 
-    if (hullnum <= 0) {
-        // for hull 0 or BSPX -wrbrushes collision, apply the rotation offset now
-        facelist = CreateBrushFaces(src, &hullbrush, hullnum, rottype, rotate_offset);
-    } else {
-        // for Quake-style clipping hulls, don't apply rotation offset yet..
-        // it will be applied below
-        facelist = CreateBrushFaces(src, &hullbrush, hullnum);
-    }
+    facelist = CreateBrushFaces(src, &hullbrush, hullnum);
 
     if (facelist.empty()) {
         logging::print("WARNING: Couldn't create brush faces\n");
@@ -673,7 +627,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
         auto &hulls = qbsp_options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
         ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);
-        facelist = CreateBrushFaces(src, &hullbrush, hullnum, rottype, rotate_offset);
+        facelist = CreateBrushFaces(src, &hullbrush, hullnum);
     }
 
     // create the brush
@@ -694,44 +648,11 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         return;
     }
 
-    qvec3d rotate_offset{};
     int i;
     int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
     const std::string &classname = src->epairs.get("classname");
-
-    /* Origin brush support */
-    rotation_t rottype = rotation_t::none;
-
-    for (auto &mapbrush : src->mapbrushes) {
-        const contentflags_t contents = Brush_GetContents(&mapbrush);
-
-        if (contents.is_origin(qbsp_options.target_game)) {
-            if (dst == map.world_entity()) {
-                logging::print("WARNING: Ignoring origin brush in worldspawn\n");
-                continue;
-            }
-
-            std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, {}, rotation_t::none, 0);
-
-            if (brush) {
-                rotate_offset = brush->bounds.centroid();
-
-                dst->epairs.set("origin", qv::to_string(rotate_offset));
-
-                rottype = rotation_t::origin_brush;
-            }
-        }
-    }
-
-    /* Hipnotic rotation */
-    if (rottype == rotation_t::none) {
-        if (!Q_strncasecmp(classname, "rotate_", 7)) {
-            rotate_offset = FixRotateOrigin(dst);
-            rottype = rotation_t::hipnotic;
-        }
-    }
 
     /* If the source entity is func_detail, set the content flag */
     if (!qbsp_options.nodetail.value()) {
@@ -777,9 +698,10 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
-    for (i = 0; i < src->mapbrushes.size(); i++) {
+    auto it = src->mapbrushes.begin();
+    for (i = 0; i < src->mapbrushes.size(); i++, it++) {
         logging::percent(i, src->mapbrushes.size());
-        auto &mapbrush = src->mapbrushes[i];
+        auto &mapbrush = *it;
         contentflags_t contents = Brush_GetContents(&mapbrush);
 
         // per-brush settings
@@ -828,7 +750,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          */
         if (hullnum != HULL_COLLISION && contents.is_clip(qbsp_options.target_game)) {
             if (hullnum == 0) {
-                std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, rotate_offset, rottype, hullnum);
+                std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, hullnum);
 
                 if (brush) {
                     dst->bounds += brush->bounds;
@@ -878,7 +800,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, rotate_offset, rottype, hullnum);
+        std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, hullnum);
         if (!brush)
             continue;
 

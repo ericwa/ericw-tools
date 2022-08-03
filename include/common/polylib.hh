@@ -218,7 +218,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_heap_t(const size_t &initial_size) : count(initial_size), allocated(initial_size)
+    inline winding_storage_heap_t(const size_t &initial_size) : allocated(initial_size), count(initial_size)
     {
         if (initial_size) {
             heap = reinterpret_cast<qvec3d *>(malloc(sizeof(qvec3d) * initial_size));

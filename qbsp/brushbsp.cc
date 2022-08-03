@@ -223,6 +223,7 @@ static int BoxOnPlaneSide(const aabb3d &bounds, const qbsp_plane_t &plane)
     return side;
 }
 
+#if 0
 static int SphereOnPlaneSide(const qvec3d &sphere_origin, double sphere_radius, const qplane3d &plane)
 {
     const double sphere_dist = plane.dist_above(sphere_origin);
@@ -234,6 +235,7 @@ static int SphereOnPlaneSide(const qvec3d &sphere_origin, double sphere_radius, 
     }
     return PSIDE_BOTH;
 }
+#endif
 
 #if 0
 /*
@@ -848,7 +850,6 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
 
     side_t *bestside = nullptr;
     int bestvalue = -99999;
-    int bestsplits = 0;
 
     // the search order goes: visible-structural, visible-detail,
     // nonvisible-structural, nonvisible-detail.
@@ -937,7 +938,6 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
                 if (value > bestvalue) {
                     bestvalue = value;
                     bestside = &side;
-                    bestsplits = splits;
                     for (auto &test : brushes) {
                         test->side = test->testside;
                     }

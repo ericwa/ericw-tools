@@ -118,6 +118,7 @@ inline void TestEdge(vec_t start, vec_t end, size_t p1, size_t p2, size_t startv
     superface.push_back(p1);
 }
 
+#if 0
 /*
 ==========
 FindEdgeVerts_BruteForce
@@ -134,6 +135,7 @@ static void FindEdgeVerts_BruteForce(
         verts[i] = i;
     }
 }
+#endif
 
 /*
 ==========

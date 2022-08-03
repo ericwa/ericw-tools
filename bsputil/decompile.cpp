@@ -831,7 +831,7 @@ static compiled_brush_t DecompileLeafTask(
                 DefaultSkipSide(side, bsp);
             } else {
                 const char *name = nullptr;
-                const mtexinfo_t *ti;
+                const mtexinfo_t *ti = nullptr;
 
                 auto faces = finalSide.faces;
 
@@ -1048,7 +1048,7 @@ static void DecompileEntity(
                 }
             };
 
-            std::function<void(const bsp2_dnode_t *)> handle_node = [&brushes, bsp, &handle_leaf, &handle_node](
+            std::function<void(const bsp2_dnode_t *)> handle_node = [bsp, &handle_leaf, &handle_node](
                                                                         const bsp2_dnode_t *node) {
                 for (auto &c : node->children) {
                     if (c < 0) {

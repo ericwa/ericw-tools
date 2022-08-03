@@ -585,7 +585,7 @@ static quark_tx_info_t ParseExtendedTX(parser_t &parser)
     } else {
         // Parse extra Quake 2 surface info
         if (parser.parse_token(PARSE_OPTIONAL)) {
-            result.info = extended_texinfo_t{std::stoi(parser.token)};
+            result.info = extended_texinfo_t{{std::stoi(parser.token)}};
 
             if (parser.parse_token(PARSE_OPTIONAL)) {
                 result.info->flags.native = std::stoi(parser.token);
@@ -1678,7 +1678,6 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 	}
 }
 
-
 /*
 =================
 AddBrushBevels
@@ -1835,7 +1834,7 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 	}
 }
 
-mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
+static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
 {
     mapbrush_t brush;
 
@@ -1926,8 +1925,9 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
             EnsureTexturesLoaded();
 
             entity->mapbrushes.emplace_back(ParseBrush(parser, *entity));
-        } else
+        } else {
             ParseEpair(parser, entity);
+        }
     } while (1);
 
     // replace aliases
@@ -2271,20 +2271,101 @@ void LoadMapFile(void)
 
     // calculate brush extents and brush bevels
     for (auto &entity : map.entities) {
-        map.total_brushes += entity.mapbrushes.size();
 
-        for (auto &brush : entity.mapbrushes) {
-            size_t old_num_faces = brush.faces.size();
-            num_faces += old_num_faces;
+        for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end(); ) {
+            auto &brush = *it;
 
             // calculate brush bounds
             CalculateBrushBounds(brush);
+
+            const contentflags_t contents = Brush_GetContents(&brush);
+
+            // origin brushes are removed, and the origin of the entity is overwritten
+            // with its centroid.
+            if (contents.is_origin(qbsp_options.target_game)) {
+                if (&entity == map.world_entity()) {
+                    logging::print("WARNING: Ignoring origin brush in worldspawn\n");
+                } else if (entity.epairs.has("origin")) {
+                    logging::print("WARNING: Entity at line {} has multiple origin brushes\n", entity.mapbrushes.front().faces[0].linenum);
+                } else {
+                    entity.origin = brush.bounds.centroid();
+                    entity.epairs.set("origin", qv::to_string(entity.origin));
+                }
+
+                it = entity.mapbrushes.erase(it);
+                continue;
+            }
+
+            size_t old_num_faces = brush.faces.size();
+            num_faces += old_num_faces;
 
             // add the brush bevels
             AddBrushBevels(entity, brush);
 
             num_bevels += brush.faces.size() - old_num_faces;
+            it++;
         }
+
+        map.total_brushes += entity.mapbrushes.size();
+
+#if 0
+    qvec3d rotate_offset{};
+
+    /* Origin brush support */
+    rotation_t rottype = rotation_t::none;
+
+    for (auto &mapbrush : src->mapbrushes) {
+        const contentflags_t contents = Brush_GetContents(&mapbrush);
+
+        if (contents.is_origin(qbsp_options.target_game)) {
+            if (dst == map.world_entity()) {
+                logging::print("WARNING: Ignoring origin brush in worldspawn\n");
+                continue;
+            }
+
+            std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, {}, rotation_t::none, 0);
+
+            if (brush) {
+                rotate_offset = brush->bounds.centroid();
+
+                dst->epairs.set("origin", qv::to_string(rotate_offset));
+
+                rottype = rotation_t::origin_brush;
+            }
+        }
+    }
+
+    /* Hipnotic rotation */
+    if (rottype == rotation_t::none) {
+        if (!Q_strncasecmp(classname, "rotate_", 7)) {
+            rotate_offset = FixRotateOrigin(dst);
+            rottype = rotation_t::hipnotic;
+        }
+    }
+
+
+    // Rotatable objects must have a bounding box big enough to
+    // account for all its rotations
+
+    // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
+    // the actual non-hacked bbox (it doesn't write axial planes).
+
+    // Hexen2 also doesn't want the bbox expansion, it's handled in engine (see: SV_LinkEdict)
+
+    // Only do this for hipnotic rotation. For origin brushes in Quake, it breaks some of their
+    // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
+    // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
+    // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
+    const bool shouldExpand = (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0) &&
+                              rottype == rotation_t::hipnotic &&
+                              (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
+                              && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
+
+    if (shouldExpand) {
+        vec_t delta = std::max(fabs(max), fabs(min));
+        hullbrush->bounds = {-delta, delta};
+    }
+#endif
     }
     
     logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);
@@ -2679,7 +2760,7 @@ static void TestExpandBrushes(const mapentity_t *src)
     std::vector<std::unique_ptr<bspbrush_t>> hull1brushes;
 
     for (auto &mapbrush : src->mapbrushes) {
-        std::optional<bspbrush_t> hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none,
+        std::optional<bspbrush_t> hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
             qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
         if (hull1brush) {

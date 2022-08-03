@@ -358,6 +358,7 @@ static void MarkBrushSidesInvisible(mapentity_t *entity)
     }
 }
 
+#if 0
 static void MarkAllBrushSidesVisible_R(node_t *node)
 {
     // descend to leafs
@@ -373,6 +374,7 @@ static void MarkAllBrushSidesVisible_R(node_t *node)
         }
     }
 }
+#endif
 
 /*
 ==================
@@ -465,6 +467,7 @@ static int OutLeafsToSolid(node_t *node, settings::filltype_t filltype)
 
 //=============================================================================
 
+#if 0
 static void SetOccupied_R(node_t *node, int dist)
 {
     if (!node->is_leaf) {
@@ -474,6 +477,7 @@ static void SetOccupied_R(node_t *node, int dist)
 
     node->occupied = dist;
 }
+#endif
 
 /*
 ==================
