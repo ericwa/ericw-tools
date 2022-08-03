@@ -54,27 +54,6 @@ std::unique_ptr<bspbrush_t> bspbrush_t::copy_unique() const
 }
 
 /*
- * Beveled clipping hull can generate many extra faces
- */
-constexpr size_t MAX_FACES = 128;
-constexpr size_t MAX_HULL_POINTS = 512;
-constexpr size_t MAX_HULL_EDGES = 1024;
-
-struct hullbrush_t
-{
-    const mapbrush_t *srcbrush;
-    contentflags_t contents;
-    aabb3d bounds;
-
-    std::vector<mapface_t> faces;
-    std::vector<qvec3d> points;
-    std::vector<qvec3d> corners;
-    std::vector<std::tuple<int, int>> edges;
-
-    int linenum;
-};
-
-/*
 =================
 Face_Plane
 =================
@@ -105,7 +84,7 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         } else if (face->w.size() == 1) {
             logging::print("WARNING: line {}: too few points (1): ({})\n", sourceface.linenum, face->w[0]);
         } else {
-            logging::print("WARNING: line {}: too few points ({})", sourceface.linenum, face->w.size());
+            logging::print("WARNING: line {}: too few points ({})\n", sourceface.linenum, face->w.size());
         }
 
         face->w.clear();
@@ -122,7 +101,7 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         for (auto &v : p1) {
             if (fabs(v) > qbsp_options.worldextent.value()) {
                 // this is fatal because a point should never lay outside the world
-                FError("line {}: coordinate out of range ({})", sourceface.linenum, v);
+                FError("line {}: coordinate out of range ({})\n", sourceface.linenum, v);
             }
         }
 
@@ -218,15 +197,6 @@ qvec3d FixRotateOrigin(mapentity_t *entity)
     return offset;
 }
 
-static bool Brush_IsHint(const hullbrush_t &brush)
-{
-    for (auto &f : brush.faces)
-        if (f.flags.is_hint)
-            return true;
-
-    return false;
-}
-
 static bool MapBrush_IsHint(const mapbrush_t &brush)
 {
     for (auto &f : brush.faces) {
@@ -235,84 +205,6 @@ static bool MapBrush_IsHint(const mapbrush_t &brush)
     }
 
     return false;
-}
-
-/*
-=================
-CreateBrushFaces
-=================
-*/
-static std::vector<side_t> CreateBrushFaces(const mapentity_t *src, hullbrush_t *hullbrush, const int hullnum)
-{
-    vec_t r;
-    std::optional<winding_t> w;
-    qplane3d plane;
-    std::vector<side_t> facelist;
-    qvec3d point;
-    vec_t max, min;
-
-    min = VECT_MAX;
-    max = -VECT_MAX;
-
-    hullbrush->bounds = {};
-
-    for (auto &mapface : hullbrush->faces) {
-        if (hullnum <= 0 && Brush_IsHint(*hullbrush)) {
-            /* Don't generate hintskip faces */
-            const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-
-            if (qbsp_options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
-                continue;
-        }
-
-        w = BaseWindingForPlane(mapface.get_plane());
-
-        for (auto &mapface2 : hullbrush->faces) {
-            if (&mapface == &mapface2)
-                continue;
-            if (!w)
-                break;
-
-            // flip the plane, because we want to keep the back side
-            plane = -mapface2.get_plane();
-
-            w = w->clip(plane, qbsp_options.epsilon.value(), false)[SIDE_FRONT];
-        }
-
-        if (!w) {
-            continue; // overconstrained plane
-        }
-
-        // this face is a keeper
-        side_t &f = facelist.emplace_back();
-
-        f.w.resize(w->size());
-
-        for (size_t j = 0; j < w->size(); j++) {
-            for (size_t k = 0; k < 3; k++) {
-                point[k] = w->at(j)[k];
-                r = Q_rint(point[k]);
-                if (fabs(point[k] - r) < ZERO_EPSILON)
-                    f.w[j][k] = r;
-                else
-                    f.w[j][k] = point[k];
-
-                if (f.w[j][k] < min)
-                    min = f.w[j][k];
-                if (f.w[j][k] > max)
-                    max = f.w[j][k];
-            }
-
-            hullbrush->bounds += f.w[j];
-        }
-
-        f.texinfo = hullnum > 0 ? 0 : mapface.texinfo;
-        f.planenum = mapface.planenum;
-
-        CheckFace(&f, mapface);
-    }
-
-    return facelist;
 }
 
 /*
@@ -325,188 +217,27 @@ void FreeBrushes(mapentity_t *ent)
     ent->brushes.clear();
 }
 
-/*
-==============================================================================
+#if 0
+        if (hullnum <= 0 && Brush_IsHint(*hullbrush)) {
+            /* Don't generate hintskip faces */
+            const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
-BEVELED CLIPPING HULL GENERATION
-
-This is done by brute force, and could easily get a lot faster if anyone cares.
-==============================================================================
-*/
-
-/*
-============
-AddBrushPlane
-=============
-*/
-static void AddBrushPlane(hullbrush_t *hullbrush, const qbsp_plane_t &plane)
-{
-    vec_t len = qv::length(plane.get_normal());
-
-    if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
-        FError("invalid normal (vector length {:.4})", len);
-
-    for (auto &mapface : hullbrush->faces) {
-        if (qv::epsilonEqual(mapface.get_plane(), plane, EQUAL_EPSILON, qbsp_options.epsilon.value())) {
-            return;
+            if (qbsp_options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
+                continue;
         }
-    }
+#endif
 
-    if (hullbrush->faces.size() == MAX_FACES) {
-        FError(
-            "brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->faces[0].linenum);
-    }
-
-    mapface_t &mapface = hullbrush->faces.emplace_back();
-    mapface.planenum = map.add_or_find_plane(plane);
-    mapface.texinfo = 0;
-}
-
-/*
-============
-TestAddPlane
-
-Adds the given plane to the brush description if all of the original brush
-vertexes can be put on the front side
-=============
-*/
-static void TestAddPlane(hullbrush_t *hullbrush, qbsp_plane_t &plane)
-{
-    vec_t d;
-    int points_front, points_back;
-
-    /* see if the plane has already been added */
-    for (auto &mapface : hullbrush->faces) {
-        if (qv::epsilonEqual(plane, mapface.get_plane()))
-            return;
-        if (qv::epsilonEqual(-plane, mapface.get_plane()))
-            return;
-    }
-
-    /* check all the corner points */
-    points_front = 0;
-    points_back = 0;
-
-    for (auto &corner : hullbrush->corners) {
-        d = plane.distance_to(corner);
-        if (d < -qbsp_options.epsilon.value()) {
-            if (points_front)
-                return;
-            points_back = 1;
-        } else if (d > qbsp_options.epsilon.value()) {
-            if (points_back)
-                return;
-            points_front = 1;
-        }
-    }
-
-    // the plane is a seperator
-    if (points_front) {
-        plane = -plane;
-    }
-
-    AddBrushPlane(hullbrush, plane);
-}
-
-/*
-============
-AddHullPoint
-
-Doesn't add if duplicated
-=============
-*/
-static int AddHullPoint(hullbrush_t *hullbrush, const qvec3d &p, const aabb3d &hull_size)
-{
-    for (auto &pt : hullbrush->points)
-        if (qv::epsilonEqual(p, pt, EQUAL_EPSILON))
-            return &pt - hullbrush->points.data();
-
-    if (hullbrush->points.size() == MAX_HULL_POINTS)
-        FError("hullbrush->numpoints == MAX_HULL_POINTS ({}), "
-               "source brush on line {}",
-            MAX_HULL_POINTS, hullbrush->srcbrush->faces[0].linenum);
-
-    int i = hullbrush->points.size();
-    hullbrush->points.emplace_back(p);
-
-    for (size_t x = 0; x < 2; x++)
-        for (size_t y = 0; y < 2; y++)
-            for (size_t z = 0; z < 2; z++) {
-                hullbrush->corners.emplace_back(p[0] + hull_size[x][0], p[1] + hull_size[y][1], p[2] + hull_size[z][2]);
-            }
-
-    return i;
-}
-
-/*
-============
-AddHullEdge
-
-Creates all of the hull planes around the given edge, if not done allready
-=============
-*/
-static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &p2, const aabb3d &hull_size)
-{
-    int pt1, pt2;
-    int a, b, c, d, e;
-    qbsp_plane_t plane;
-    vec_t length;
-
-    pt1 = AddHullPoint(hullbrush, p1, hull_size);
-    pt2 = AddHullPoint(hullbrush, p2, hull_size);
-
-    for (auto &edge : hullbrush->edges)
-        if ((edge == std::make_tuple(pt1, pt2)) || (edge == std::make_tuple(pt2, pt1)))
-            return;
-
-    if (hullbrush->edges.size() == MAX_HULL_EDGES)
-        FError("hullbrush->numedges == MAX_HULL_EDGES ({}), "
-               "source brush on line {}",
-            MAX_HULL_EDGES, hullbrush->srcbrush->faces[0].linenum);
-
-    hullbrush->edges.emplace_back(pt1, pt2);
-
-    qvec3d edgevec = qv::normalize(p1 - p2);
-
-    for (a = 0; a < 3; a++) {
-        b = (a + 1) % 3;
-        c = (a + 2) % 3;
-
-        qvec3d planevec{};
-        planevec[a] = 1;
-        plane.set_normal(qv::normalize(qv::cross(planevec, edgevec), length));
-
-        /* If this edge is almost parallel to the hull edge, skip it. */
-        if (length < ANGLEEPSILON) {
-            continue;
-        }
-
-        for (d = 0; d <= 1; d++) {
-            for (e = 0; e <= 1; e++) {
-                qvec3d planeorg = p1;
-                planeorg[b] += hull_size[d][b];
-                planeorg[c] += hull_size[e][c];
-                plane.get_dist() = qv::dot(planeorg, plane.get_normal());
-                TestAddPlane(hullbrush, plane);
-            }
-        }
-    }
-}
-
+#if 0
 /*
 ============
 ExpandBrush
 =============
 */
-static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::vector<side_t> &facelist)
+static void ExpandBrush(bspbrush_t &hullbrush, const aabb3d &hull_size)
 {
     int x, s;
     qbsp_plane_t plane;
     int cBevEdge = 0;
-
-    hullbrush->points.clear();
-    hullbrush->corners.clear();
-    hullbrush->edges.clear();
 
     // create all the hull points
     for (auto &f : facelist)
@@ -550,6 +281,7 @@ static void ExpandBrush(hullbrush_t *hullbrush, const aabb3d &hull_size, std::ve
         for (size_t i = 0; i < f.w.size(); i++)
             AddHullEdge(hullbrush, f.w[i], f.w[(i + 1) % f.w.size()], hull_size);
 }
+#endif
 
 //============================================================================
 
@@ -597,44 +329,45 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
-    const qvec3d &rotate_offset, const rotation_t rottype, const int hullnum)
+    const int hullnum)
 {
-    hullbrush_t hullbrush;
-    std::vector<side_t> facelist;
+    // create the brush
+    bspbrush_t brush{};
+    brush.contents = contents;
+    brush.sides.reserve(mapbrush->faces.size());
 
-    // create the faces
+    for (size_t i = 0; i < mapbrush->faces.size(); i++) {
+        auto &src = mapbrush->faces[i];
 
-    hullbrush.linenum = mapbrush->faces[0].linenum;
-    if (mapbrush->faces.size() > MAX_FACES)
-        FError("brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush.linenum);
+        if (src.bevel) {
+            continue;
+        }
 
-    hullbrush.contents = contents;
-    hullbrush.srcbrush = mapbrush;
-    hullbrush.faces.reserve(mapbrush->faces.size());
-    for (auto &face : mapbrush->faces) {
-        hullbrush.faces.emplace_back(face);
+        auto &dst = brush.sides.emplace_back();
+
+        dst.texinfo = hullnum > 0 ? 0 : src.texinfo;
+        dst.planenum = src.planenum;
+        dst.bevel = src.bevel;
+
+        // TEMP
+        dst.w = src.winding;
+
+        CheckFace(&dst, src);
     }
 
-    facelist = CreateBrushFaces(src, &hullbrush, hullnum);
+    // todo: expand planes, recalculate bounds & windings
+    brush.bounds = mapbrush->bounds;
 
-    if (facelist.empty()) {
-        logging::print("WARNING: Couldn't create brush faces\n");
-        logging::print("^ brush at line {} of .map file\n", hullbrush.linenum);
-        return std::nullopt;
-    }
-
+#if 0
     if (hullnum > 0) {
         auto &hulls = qbsp_options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
         ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);
         facelist = CreateBrushFaces(src, &hullbrush, hullnum);
     }
+#endif
 
-    // create the brush
-    bspbrush_t brush{};
-    brush.contents = contents;
-    brush.sides = std::move(facelist);
-    brush.bounds = hullbrush.bounds;
+    brush.mapbrush = mapbrush;
     return brush;
 }
 

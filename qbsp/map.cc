@@ -1634,50 +1634,6 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
     return face;
 }
 
-
-/*
-================
-CalculateBrushBounds
-================
-*/
-inline void CalculateBrushBounds(mapbrush_t &ob)
-{
-    ob.bounds = {};
-
-	for (size_t i = 0; i < ob.faces.size(); i++) {
-		const auto &plane = ob.faces[i].get_plane();
-		std::optional<winding_t> w = BaseWindingForPlane(plane);
-		
-        for (size_t j = 0; j < ob.faces.size() && w; j++) {
-			if (i == j) {
-				continue;
-            }
-			if (ob.faces[j].bevel) {
-				continue;
-            }
-			const auto &plane = map.get_plane(ob.faces[j].planenum ^ 1);
-            w = w->clip(plane, 0)[SIDE_FRONT]; //CLIP_EPSILON);
-		}
-
-		if (w) {
-            ob.faces[i].winding = w.value();
-			//side->visible = true;
-			for (auto &p : w.value()) {
-                ob.bounds += p;
-            }
-		}
-	}
-
-	for (size_t i = 0; i < 3; i++) {
-		if (ob.bounds.mins()[0] < -qbsp_options.worldextent.value() || ob.bounds.maxs()[0] > qbsp_options.worldextent.value()) {
-			logging::print("WARNING: entity xxx, brush yyy: bounds out of range\n");
-        }
-		if (ob.bounds.mins()[0] > qbsp_options.worldextent.value() || ob.bounds.maxs()[0] < -qbsp_options.worldextent.value()) {
-			logging::print("WARNING: entity xxx, brush yyy: no visible sides on brush\n");
-        }
-	}
-}
-
 /*
 =================
 AddBrushBevels
@@ -2202,6 +2158,179 @@ bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity)
     return false;
 }
 
+/*
+================
+CalculateBrushBounds
+================
+*/
+inline void CalculateBrushBounds(mapbrush_t &ob)
+{
+    ob.bounds = {};
+
+	for (size_t i = 0; i < ob.faces.size(); i++) {
+		const auto &plane = ob.faces[i].get_plane();
+		std::optional<winding_t> w = BaseWindingForPlane(plane);
+		
+        for (size_t j = 0; j < ob.faces.size() && w; j++) {
+			if (i == j) {
+				continue;
+            }
+			if (ob.faces[j].bevel) {
+				continue;
+            }
+			const auto &plane = map.get_plane(ob.faces[j].planenum ^ 1);
+            w = w->clip(plane, 0)[SIDE_FRONT]; //CLIP_EPSILON);
+		}
+
+		if (w) {
+            ob.faces[i].winding = w.value();
+			//side->visible = true;
+			for (auto &p : w.value()) {
+                ob.bounds += p;
+            }
+		}
+	}
+
+	for (size_t i = 0; i < 3; i++) {
+		if (ob.bounds.mins()[0] < -qbsp_options.worldextent.value() || ob.bounds.maxs()[0] > qbsp_options.worldextent.value()) {
+			logging::print("WARNING: entity xxx, brush yyy: bounds out of range\n");
+        }
+		if (ob.bounds.mins()[0] > qbsp_options.worldextent.value() || ob.bounds.maxs()[0] < -qbsp_options.worldextent.value()) {
+			logging::print("WARNING: entity xxx, brush yyy: no visible sides on brush\n");
+        }
+	}
+}
+
+void ProcessMapBrushes()
+{
+    logging::funcheader();
+
+    // calculate extents, if required
+    if (!qbsp_options.worldextent.value()) {
+        CalculateWorldExtent();
+    }
+
+    map.total_brushes = 0;
+
+    size_t num_faces = 0, num_bevels = 0, num_removed = 0, num_offset = 0;
+
+    // calculate brush extents and brush bevels
+    for (auto &entity : map.entities) {
+
+        /* Origin brush support */
+        rotation_t rottype = rotation_t::none;
+
+        for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end(); ) {
+            auto &brush = *it;
+
+            // calculate brush bounds
+            CalculateBrushBounds(brush);
+
+            const contentflags_t contents = Brush_GetContents(&brush);
+
+            // origin brushes are removed, and the origin of the entity is overwritten
+            // with its centroid.
+            if (contents.is_origin(qbsp_options.target_game)) {
+                if (&entity == map.world_entity()) {
+                    logging::print("WARNING: Ignoring origin brush in worldspawn\n");
+                } else if (entity.epairs.has("origin")) {
+                    logging::print("WARNING: Entity at line {} has multiple origin brushes\n", entity.mapbrushes.front().faces[0].linenum);
+                } else {
+                    entity.origin = brush.bounds.centroid();
+                    entity.epairs.set("origin", qv::to_string(entity.origin));
+                }
+
+                num_removed++;
+                it = entity.mapbrushes.erase(it);
+                rottype = rotation_t::origin_brush;
+                continue;
+            }
+
+            size_t old_num_faces = brush.faces.size();
+            num_faces += old_num_faces;
+
+            // add the brush bevels
+            AddBrushBevels(entity, brush);
+
+            num_bevels += brush.faces.size() - old_num_faces;
+            it++;
+        }
+
+        map.total_brushes += entity.mapbrushes.size();
+
+        /* Hipnotic rotation */
+        if (rottype == rotation_t::none) {
+            if (!Q_strncasecmp(entity.epairs.get("classname"), "rotate_", 7)) {
+                entity.origin = FixRotateOrigin(&entity);
+                rottype = rotation_t::hipnotic;
+            }
+        }
+        
+        // offset brush bounds
+        if (rottype != rotation_t::none) {
+            for (auto &brush : entity.mapbrushes) {
+                brush.bounds = brush.bounds.translate(-entity.origin);
+
+                for (auto &f : brush.faces) {
+                    // account for texture offset, from txqbsp-xt
+                    if (!qbsp_options.oldrottex.value()) {
+                        maptexinfo_t texInfoNew = map.mtexinfos.at(f.texinfo);
+                        texInfoNew.outputnum = std::nullopt;
+
+                        texInfoNew.vecs.at(0, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(0).xyz());
+                        texInfoNew.vecs.at(1, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(1).xyz());
+
+                        f.texinfo = FindTexinfo(texInfoNew);
+                    }
+
+                    qplane3d plane = f.get_plane();
+                    plane.dist -= qv::dot(plane.normal, entity.origin);
+                    f.planenum = map.add_or_find_plane(plane);
+                }
+
+                // re-calculate brush bounds
+                CalculateBrushBounds(brush);
+
+                num_offset++;
+            }
+        }
+#if 0
+        // Rotatable objects must have a bounding box big enough to
+        // account for all its rotations
+
+        // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
+        // the actual non-hacked bbox (it doesn't write axial planes).
+
+        // Hexen2 also doesn't want the bbox expansion, it's handled in engine (see: SV_LinkEdict)
+
+        // Only do this for hipnotic rotation. For origin brushes in Quake, it breaks some of their
+        // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
+        // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
+        // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
+        const bool shouldExpand = (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0) &&
+                                  rottype == rotation_t::hipnotic &&
+                                  (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
+                                  && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
+
+        if (shouldExpand) {
+            vec_t delta = std::max(fabs(max), fabs(min));
+            hullbrush->bounds = {-delta, delta};
+        }
+#endif
+    }
+    
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);
+    logging::print(logging::flag::STAT, "     {:8} faces\n", num_faces);
+    logging::print(logging::flag::STAT, "     {:8} bevel faces\n", num_bevels);
+    if (num_removed) {
+        logging::print(logging::flag::STAT, "     {:8} utility brushes removed\n", num_removed);
+    }
+    if (num_offset) {
+        logging::print(logging::flag::STAT, "     {:8} brushes translated from origins\n", num_offset);
+    }
+    logging::print(logging::flag::STAT, "\n");
+}
+
 void LoadMapFile(void)
 {
     logging::funcheader();
@@ -2259,118 +2388,6 @@ void LoadMapFile(void)
         assert(map.entities.back().brushes.empty());
         map.entities.pop_back();
     }
-
-    // calculate extents, if required
-    if (!qbsp_options.worldextent.value()) {
-        CalculateWorldExtent();
-    }
-
-    map.total_brushes = 0;
-
-    size_t num_faces = 0, num_bevels = 0;
-
-    // calculate brush extents and brush bevels
-    for (auto &entity : map.entities) {
-
-        for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end(); ) {
-            auto &brush = *it;
-
-            // calculate brush bounds
-            CalculateBrushBounds(brush);
-
-            const contentflags_t contents = Brush_GetContents(&brush);
-
-            // origin brushes are removed, and the origin of the entity is overwritten
-            // with its centroid.
-            if (contents.is_origin(qbsp_options.target_game)) {
-                if (&entity == map.world_entity()) {
-                    logging::print("WARNING: Ignoring origin brush in worldspawn\n");
-                } else if (entity.epairs.has("origin")) {
-                    logging::print("WARNING: Entity at line {} has multiple origin brushes\n", entity.mapbrushes.front().faces[0].linenum);
-                } else {
-                    entity.origin = brush.bounds.centroid();
-                    entity.epairs.set("origin", qv::to_string(entity.origin));
-                }
-
-                it = entity.mapbrushes.erase(it);
-                continue;
-            }
-
-            size_t old_num_faces = brush.faces.size();
-            num_faces += old_num_faces;
-
-            // add the brush bevels
-            AddBrushBevels(entity, brush);
-
-            num_bevels += brush.faces.size() - old_num_faces;
-            it++;
-        }
-
-        map.total_brushes += entity.mapbrushes.size();
-
-#if 0
-    qvec3d rotate_offset{};
-
-    /* Origin brush support */
-    rotation_t rottype = rotation_t::none;
-
-    for (auto &mapbrush : src->mapbrushes) {
-        const contentflags_t contents = Brush_GetContents(&mapbrush);
-
-        if (contents.is_origin(qbsp_options.target_game)) {
-            if (dst == map.world_entity()) {
-                logging::print("WARNING: Ignoring origin brush in worldspawn\n");
-                continue;
-            }
-
-            std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, {}, rotation_t::none, 0);
-
-            if (brush) {
-                rotate_offset = brush->bounds.centroid();
-
-                dst->epairs.set("origin", qv::to_string(rotate_offset));
-
-                rottype = rotation_t::origin_brush;
-            }
-        }
-    }
-
-    /* Hipnotic rotation */
-    if (rottype == rotation_t::none) {
-        if (!Q_strncasecmp(classname, "rotate_", 7)) {
-            rotate_offset = FixRotateOrigin(dst);
-            rottype = rotation_t::hipnotic;
-        }
-    }
-
-
-    // Rotatable objects must have a bounding box big enough to
-    // account for all its rotations
-
-    // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
-    // the actual non-hacked bbox (it doesn't write axial planes).
-
-    // Hexen2 also doesn't want the bbox expansion, it's handled in engine (see: SV_LinkEdict)
-
-    // Only do this for hipnotic rotation. For origin brushes in Quake, it breaks some of their
-    // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
-    // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
-    // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
-    const bool shouldExpand = (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0) &&
-                              rottype == rotation_t::hipnotic &&
-                              (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-                              && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
-
-    if (shouldExpand) {
-        vec_t delta = std::max(fabs(max), fabs(min));
-        hullbrush->bounds = {-delta, delta};
-    }
-#endif
-    }
-    
-    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);
-    logging::print(logging::flag::STAT, "     {:8} faces\n", num_faces);
-    logging::print(logging::flag::STAT, "     {:8} bevel faces\n", num_bevels);
 
     logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());
     logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.miptex.size());

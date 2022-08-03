@@ -43,8 +43,6 @@ static mapentity_t LoadMap(const char *map)
 
     mapentity_t worldspawn;
 
-    mapentity_t &entity = ::map.entities.emplace_back();
-
     // FIXME: adds the brush to the global map...
     Q_assert(ParseEntity(parser, &worldspawn));
 
@@ -55,6 +53,7 @@ static mapentity_t LoadMap(const char *map)
 
 #include <common/bspinfo.hh>
 
+#if 0
 static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRef(const std::filesystem::path &name)
 {
     const char *destdir = test_quake2_maps_dir;
@@ -166,7 +165,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRe
         std::move(bspdata.bspx.entries),
         std::move(prtfile));
 }
-
+#endif
 
 static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args = {})
 {
@@ -275,6 +274,7 @@ static void CheckFilled(const mbsp_t &bsp)
     }
 }
 
+#if 0
 static mbsp_t LoadBsp(const std::filesystem::path &path_in)
 {
     std::filesystem::path path = path_in;
@@ -286,6 +286,7 @@ static mbsp_t LoadBsp(const std::filesystem::path &path_in)
 
     return std::get<mbsp_t>(bspdata.bsp);
 }
+#endif
 
 static std::map<std::string, std::vector<const mface_t *>> MakeTextureToFaceMap(const mbsp_t &bsp)
 { 
@@ -1175,7 +1176,7 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
     const qvec3d in_func_detail_illusionary{56, -216, 120};
     const qvec3d in_func_detail_illusionary_mirrorinside{56, -296, 120};
 
-    const double floor_z = 96;
+    //const double floor_z = 96;
 
     // detail clips away world faces, others don't
     CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail - qvec3d(0,0,24), {0, 0, 1}));

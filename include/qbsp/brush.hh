@@ -62,13 +62,13 @@ struct bspbrush_t
      * fixme-brushbsp: this is supposed to be a mapbrush_t
      */
     bspbrush_t *original;
+    const mapbrush_t *mapbrush;
     uint32_t file_order;
     aabb3d bounds;
     int side, testside; // side of node during construction
     std::vector<side_t> sides;
     contentflags_t contents; /* BSP contents */
     short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
-    std::optional<uint32_t> outputnumber; /* only set for original brushes */
     mapentity_t *func_areaportal;
 
     qvec3d sphere_origin;

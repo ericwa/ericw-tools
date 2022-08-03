@@ -607,7 +607,6 @@ static std::list<std::vector<size_t>> RetopologizeFace(const face_t *f, const st
 
         for (; end != wrap; end = (end + 1) % input.size()) {
             auto v0 = input[seed];
-            auto v1 = input[(end - 1) < 0 ? (input.size() - 1) : (end - 1)];
             auto v2 = input[end];
 
             // if the next point lays on the edge of v0-v2, this next

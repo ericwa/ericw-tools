@@ -78,6 +78,7 @@ public:
     brushformat_t format = brushformat_t::NORMAL;
     int contents = 0;
     aabb3d bounds {};
+    std::optional<uint32_t> outputnumber; /* only set for original brushes */
 };
 
 struct lumpdata
@@ -90,6 +91,15 @@ struct lumpdata
 class mapentity_t
 {
 public:
+#ifdef _MSC_VER
+    // FIXME: this is to allow MSVC to compile
+    mapentity_t() = default;
+    mapentity_t(mapentity_t &&) noexcept = default;
+    mapentity_t(const mapentity_t &) = delete;
+    mapentity_t &operator=(const mapentity_t &) = delete;
+    mapentity_t &operator=(mapentity_t &&) noexcept = default;
+#endif
+
     qvec3d origin{};
 
     std::list<mapbrush_t> mapbrushes;
@@ -333,6 +343,7 @@ bool IsWorldBrushEntity(const mapentity_t *entity);
 bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity);
 void LoadMapFile(void);
 void ConvertMapFile(void);
+void ProcessMapBrushes();
 
 struct quark_tx_info_t
 {
