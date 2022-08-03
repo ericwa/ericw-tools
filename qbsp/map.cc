@@ -2215,7 +2215,7 @@ void ProcessMapBrushes()
     for (auto &entity : map.entities) {
 
         /* Origin brush support */
-        rotation_t rottype = rotation_t::none;
+        entity.rotation = rotation_t::none;
 
         for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end(); ) {
             auto &brush = *it;
@@ -2239,7 +2239,7 @@ void ProcessMapBrushes()
 
                 num_removed++;
                 it = entity.mapbrushes.erase(it);
-                rottype = rotation_t::origin_brush;
+                entity.rotation = rotation_t::origin_brush;
                 continue;
             }
 
@@ -2256,17 +2256,16 @@ void ProcessMapBrushes()
         map.total_brushes += entity.mapbrushes.size();
 
         /* Hipnotic rotation */
-        if (rottype == rotation_t::none) {
+        if (entity.rotation == rotation_t::none) {
             if (!Q_strncasecmp(entity.epairs.get("classname"), "rotate_", 7)) {
                 entity.origin = FixRotateOrigin(&entity);
-                rottype = rotation_t::hipnotic;
+                entity.rotation = rotation_t::hipnotic;
             }
         }
         
         // offset brush bounds
-        if (rottype != rotation_t::none) {
+        if (entity.rotation != rotation_t::none) {
             for (auto &brush : entity.mapbrushes) {
-                brush.bounds = brush.bounds.translate(-entity.origin);
 
                 for (auto &f : brush.faces) {
                     // account for texture offset, from txqbsp-xt
@@ -2285,35 +2284,12 @@ void ProcessMapBrushes()
                     f.planenum = map.add_or_find_plane(plane);
                 }
 
-                // re-calculate brush bounds
+                // re-calculate brush bounds/windings
                 CalculateBrushBounds(brush);
 
                 num_offset++;
             }
         }
-#if 0
-        // Rotatable objects must have a bounding box big enough to
-        // account for all its rotations
-
-        // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
-        // the actual non-hacked bbox (it doesn't write axial planes).
-
-        // Hexen2 also doesn't want the bbox expansion, it's handled in engine (see: SV_LinkEdict)
-
-        // Only do this for hipnotic rotation. For origin brushes in Quake, it breaks some of their
-        // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
-        // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
-        // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
-        const bool shouldExpand = (rotate_offset[0] != 0.0 || rotate_offset[1] != 0.0 || rotate_offset[2] != 0.0) &&
-                                  rottype == rotation_t::hipnotic &&
-                                  (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-                                  && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
-
-        if (shouldExpand) {
-            vec_t delta = std::max(fabs(max), fabs(min));
-            hullbrush->bounds = {-delta, delta};
-        }
-#endif
     }
     
     logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);
@@ -2715,6 +2691,8 @@ void CalculateWorldExtent(void)
     }
 
     qbsp_options.worldextent.setValue((extents + hull_extents) * 2, settings::source::GAME_TARGET);
+
+    logging::print("INFO: world extents calculated to {} units\n", qbsp_options.worldextent.value());
 }
 
 /*
@@ -2774,12 +2752,10 @@ static void TestExpandBrushes(const mapentity_t *src)
     std::vector<std::unique_ptr<bspbrush_t>> hull1brushes;
 
     for (auto &mapbrush : src->mapbrushes) {
-        std::optional<bspbrush_t> hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
+        bspbrush_t hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
             qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
-        if (hull1brush) {
-            hull1brushes.emplace_back(std::make_unique<bspbrush_t>(std::move(*hull1brush)));
-        }
+        hull1brushes.emplace_back(std::make_unique<bspbrush_t>(std::move(hull1brush)));
     }
 
     WriteBspBrushMap("expanded.map", hull1brushes);

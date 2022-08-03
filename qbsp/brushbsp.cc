@@ -72,39 +72,6 @@ struct bspstats_t
 
 /*
 ==================
-CreateBrushWindings
-
-Currently only used in BrushFromBounds
-==================
-*/
-static void CreateBrushWindings(bspbrush_t *brush)
-{
-    std::optional<winding_t> w;
-
-    for (int i = 0; i < brush->sides.size(); i++) {
-        side_t *side = &brush->sides[i];
-        w = BaseWindingForPlane(Face_Plane(side));
-        for (int j = 0; j < brush->sides.size() && w; j++) {
-            if (i == j)
-                continue;
-            if (brush->sides[j].bevel)
-                continue;
-            qplane3d plane = -Face_Plane(&brush->sides[j]);
-            w = w->clip(plane, 0, false)[SIDE_FRONT]; // CLIP_EPSILON);
-        }
-
-        if (w) {
-            side->w = *w;
-        } else {
-            side->w.clear();
-        }
-    }
-
-    brush->update_bounds();
-}
-
-/*
-==================
 BrushFromBounds
 
 Creates a new axial brush
@@ -575,6 +542,8 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
 
     if (!result[0] && !result[1]) {
         stats.c_brushesremoved++;
+
+        return result;
     } else if (!result[0] || !result[1]) {
         stats.c_brushesonesided++;
 

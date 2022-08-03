@@ -29,6 +29,7 @@
 
 class mapentity_t;
 struct maptexinfo_t;
+struct mapface_t;
 
 struct side_t
 {
@@ -43,6 +44,7 @@ struct side_t
                          // non-visible means we can discard the brush side
                          // (avoiding generating a BSP spit, so expanding it outwards)
     bool bevel; // don't ever use for bsp splitting
+    const mapface_t *source; // the mapface we were generated from
 
     bool tested;
 
@@ -82,14 +84,7 @@ struct bspbrush_t
 qplane3d Face_Plane(const face_t *face);
 qplane3d Face_Plane(const side_t *face);
 
-enum class rotation_t
-{
-    none,
-    hipnotic,
-    origin_brush
-};
-
-std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
-    const int hullnum);
+bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
 contentflags_t Brush_GetContents(const mapbrush_t *mapbrush);
+void CreateBrushWindings(bspbrush_t *brush);
 void FreeBrushes(mapentity_t *ent);

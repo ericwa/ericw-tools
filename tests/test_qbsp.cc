@@ -41,6 +41,9 @@ static mapentity_t LoadMap(const char *map)
 
     parser_t parser(map);
 
+    // FIXME: ???
+    mapentity_t &entity = ::map.entities.emplace_back();
+
     mapentity_t worldspawn;
 
     // FIXME: adds the brush to the global map...
@@ -399,10 +402,8 @@ TEST_CASE("duplicatePlanes", "[qbsp]")
     CHECK(0 == worldspawn.brushes.size());
     CHECK(6 == worldspawn.mapbrushes.front().faces.size());
 
-    std::optional<bspbrush_t> brush =
-        LoadBrush(&worldspawn, &worldspawn.mapbrushes.front(), {CONTENTS_SOLID}, 0);
-    REQUIRE(std::nullopt != brush);
-    CHECK(6 == brush->sides.size());
+    bspbrush_t brush = LoadBrush(&worldspawn, &worldspawn.mapbrushes.front(), {CONTENTS_SOLID}, 0);
+    CHECK(6 == brush.sides.size());
 }
 
 /**

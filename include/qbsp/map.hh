@@ -45,6 +45,7 @@ struct mapface_t
     int texinfo = 0;
     int linenum = 0;
     bool bevel = false;
+    winding_t winding; // winding used to calculate bevels
 
     surfflags_t flags{};
 
@@ -54,8 +55,6 @@ struct mapface_t
 
     // for convert
     std::optional<extended_texinfo_t> raw_info;
-
-    winding_t winding;
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);
 
@@ -87,6 +86,13 @@ struct lumpdata
     void *data;
 };
 
+enum class rotation_t
+{
+    none,
+    hipnotic,
+    origin_brush
+};
+
 class mapentity_t
 {
 public:
@@ -100,6 +106,7 @@ public:
 #endif
 
     qvec3d origin{};
+    rotation_t rotation;
 
     std::list<mapbrush_t> mapbrushes;
 

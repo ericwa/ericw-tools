@@ -322,24 +322,60 @@ contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
 }
 
 /*
+==================
+CreateBrushWindings
+
+Create all of the windings for the specified brush, and
+calculate its bounds.
+==================
+*/
+void CreateBrushWindings(bspbrush_t *brush)
+{
+    std::optional<winding_t> w;
+
+    for (int i = 0; i < brush->sides.size(); i++) {
+        side_t *side = &brush->sides[i];
+        w = BaseWindingForPlane(Face_Plane(side));
+        for (int j = 0; j < brush->sides.size() && w; j++) {
+            if (i == j)
+                continue;
+            if (brush->sides[j].bevel)
+                continue;
+            qplane3d plane = -Face_Plane(&brush->sides[j]);
+            w = w->clip(plane, 0, false)[SIDE_FRONT]; // CLIP_EPSILON);
+        }
+
+        if (w) {
+            side->w = *w;
+        } else {
+            side->w.clear();
+        }
+    }
+
+    brush->update_bounds();
+}
+
+/*
 ===============
 LoadBrush
 
 Converts a mapbrush to a bsp brush
 ===============
 */
-std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
     const int hullnum)
 {
     // create the brush
     bspbrush_t brush{};
     brush.contents = contents;
     brush.sides.reserve(mapbrush->faces.size());
+    brush.mapbrush = mapbrush;
 
     for (size_t i = 0; i < mapbrush->faces.size(); i++) {
         auto &src = mapbrush->faces[i];
 
-        if (src.bevel) {
+        // don't add bevels for the point hull
+        if (hullnum <= 0 && src.bevel) {
             continue;
         }
 
@@ -348,26 +384,73 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
         dst.texinfo = hullnum > 0 ? 0 : src.texinfo;
         dst.planenum = src.planenum;
         dst.bevel = src.bevel;
-
-        // TEMP
-        dst.w = src.winding;
-
-        CheckFace(&dst, src);
+        dst.source = &src;
     }
 
-    // todo: expand planes, recalculate bounds & windings
-    brush.bounds = mapbrush->bounds;
-
-#if 0
+    // expand the brushes for the hull
     if (hullnum > 0) {
         auto &hulls = qbsp_options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
-        ExpandBrush(&hullbrush, *(hulls.begin() + hullnum), facelist);
-        facelist = CreateBrushFaces(src, &hullbrush, hullnum);
-    }
-#endif
+        auto &hull = *(hulls.begin() + hullnum);
 
-    brush.mapbrush = mapbrush;
+        for (auto &mapface : brush.sides) {
+            if (mapface.get_texinfo().flags.no_expand) {
+                continue;
+            }
+            qvec3d corner{};
+            for (int32_t x = 0; x < 3; x++) {
+                if (mapface.get_plane().get_normal()[x] > 0) {
+                    corner[x] = hull[1][x];
+                } else if (mapface.get_plane().get_normal()[x] < 0) {
+                    corner[x] = hull[0][x];
+                }
+            }
+            qplane3d plane = mapface.get_plane();
+            plane.dist += qv::dot(corner, plane.normal);
+            mapface.planenum = map.add_or_find_plane(plane);
+            mapface.bevel = false;
+        }
+    }
+
+    CreateBrushWindings(&brush);
+
+    for (auto &face : brush.sides) {
+        CheckFace(&face, *face.source);
+    }
+
+    // Rotatable objects must have a bounding box big enough to
+    // account for all its rotations
+
+    // if -wrbrushes is in use, don't do this for the clipping hulls because it depends on having
+    // the actual non-hacked bbox (it doesn't write axial planes).
+
+    // Hexen2 also doesn't want the bbox expansion, it's handled in engine (see: SV_LinkEdict)
+
+    // Only do this for hipnotic rotation. For origin brushes in Quake, it breaks some of their
+    // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
+    // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
+    // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
+    const bool shouldExpand = (src->origin[0] != 0.0 || src->origin[1] != 0.0 || src->origin[2] != 0.0) &&
+                                src->rotation == rotation_t::hipnotic &&
+                                (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
+                                && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
+
+    if (shouldExpand) {
+        vec_t max = -std::numeric_limits<vec_t>::infinity(), min = std::numeric_limits<vec_t>::infinity();
+            
+        for (auto &v : brush.bounds.mins()) {
+            min = ::min(min, v);
+            max = ::max(max, v);
+        }
+        for (auto &v : brush.bounds.maxs()) {
+            min = ::min(min, v);
+            max = ::max(max, v);
+        }
+
+        vec_t delta = std::max(fabs(max), fabs(min));
+        brush.bounds = {-delta, delta};
+    }
+
     return brush;
 }
 
@@ -483,12 +566,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          */
         if (hullnum != HULL_COLLISION && contents.is_clip(qbsp_options.target_game)) {
             if (hullnum == 0) {
-                std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, hullnum);
-
-                if (brush) {
-                    dst->bounds += brush->bounds;
-                }
-
+                bspbrush_t brush = LoadBrush(src, &mapbrush, contents, hullnum);
+                dst->bounds += brush.bounds;
                 continue;
                 // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             } else {
@@ -533,22 +612,21 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, hullnum);
-        if (!brush)
-            continue;
+        bspbrush_t brush = LoadBrush(src, &mapbrush, contents, hullnum);
 
-        brush->lmshift = lmshift;
+        brush.lmshift = lmshift;
 
-        for (auto &face : brush->sides)
+        for (auto &face : brush.sides) {
             face.lmshift = lmshift;
-
-        if (classname == std::string_view("func_areaportal")) {
-            brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
         }
 
-        qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
-        dst->brushes.push_back(std::make_unique<bspbrush_t>(brush.value()));
-        dst->bounds += brush->bounds;
+        if (classname == std::string_view("func_areaportal")) {
+            brush.func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
+        }
+
+        qbsp_options.target_game->count_contents_in_stats(brush.contents, stats);
+        dst->brushes.push_back(std::make_unique<bspbrush_t>(std::move(brush)));
+        dst->bounds += brush.bounds;
     }
 
     logging::percent(src->mapbrushes.size(), src->mapbrushes.size(), src == map.world_entity());
