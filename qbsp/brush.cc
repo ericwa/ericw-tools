@@ -227,62 +227,6 @@ void FreeBrushes(mapentity_t *ent)
         }
 #endif
 
-#if 0
-/*
-============
-ExpandBrush
-=============
-*/
-static void ExpandBrush(bspbrush_t &hullbrush, const aabb3d &hull_size)
-{
-    int x, s;
-    qbsp_plane_t plane;
-    int cBevEdge = 0;
-
-    // create all the hull points
-    for (auto &f : facelist)
-        for (size_t i = 0; i < f.w.size(); i++) {
-            AddHullPoint(hullbrush, f.w[i], hull_size);
-            cBevEdge++;
-        }
-
-    // expand all of the planes
-    for (auto &mapface : hullbrush->faces) {
-        if (mapface.flags.no_expand)
-            continue;
-        qvec3d corner{};
-        for (x = 0; x < 3; x++) {
-            if (mapface.get_plane().get_normal()[x] > 0)
-                corner[x] = hull_size[1][x];
-            else if (mapface.get_plane().get_normal()[x] < 0)
-                corner[x] = hull_size[0][x];
-        }
-        qplane3d plane = mapface.get_plane();
-        plane.dist += qv::dot(corner, plane.normal);
-        mapface.planenum = map.add_or_find_plane(plane);
-    }
-
-    // add any axis planes not contained in the brush to bevel off corners
-    for (x = 0; x < 3; x++)
-        for (s = -1; s <= 1; s += 2) {
-            // add the plane
-            qvec3d normal = {};
-            normal[x] = (vec_t)s;
-            plane.set_normal(normal);
-            if (s == -1)
-                plane.get_dist() = -hullbrush->bounds.mins()[x] + -hull_size[0][x];
-            else
-                plane.get_dist() = hullbrush->bounds.maxs()[x] + hull_size[1][x];
-            AddBrushPlane(hullbrush, plane);
-        }
-
-    // add all of the edge bevels
-    for (auto &f : facelist)
-        for (size_t i = 0; i < f.w.size(); i++)
-            AddHullEdge(hullbrush, f.w[i], f.w[(i + 1) % f.w.size()], hull_size);
-}
-#endif
-
 //============================================================================
 
 contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
@@ -625,8 +569,9 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         }
 
         qbsp_options.target_game->count_contents_in_stats(brush.contents, stats);
-        dst->brushes.push_back(std::make_unique<bspbrush_t>(std::move(brush)));
+
         dst->bounds += brush.bounds;
+        dst->brushes.push_back(std::make_unique<bspbrush_t>(std::move(brush)));
     }
 
     logging::percent(src->mapbrushes.size(), src->mapbrushes.size(), src == map.world_entity());

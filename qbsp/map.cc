@@ -2165,6 +2165,8 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
     ob.bounds = {};
 
 	for (size_t i = 0; i < ob.faces.size(); i++) {
+        ob.faces[i].visible = false;
+
 		const auto &plane = ob.faces[i].get_plane();
 		std::optional<winding_t> w = BaseWindingForPlane(plane);
 		
@@ -2181,7 +2183,7 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 
 		if (w) {
             ob.faces[i].winding = w.value();
-			//side->visible = true;
+			ob.faces[i].visible = true;
 			for (auto &p : w.value()) {
                 ob.bounds += p;
             }
@@ -2290,6 +2292,31 @@ void ProcessMapBrushes()
                 num_offset++;
             }
         }
+
+#if 0
+        // test expansion
+        for (auto &brush : entity.mapbrushes) {
+            for (auto &face : brush.faces) {
+                qvec3d corner{};
+                const qvec3d hull[] = {{ -16, -16, -24 }, { 16, 16, 32 }};
+                for (int32_t x = 0; x < 3; x++) {
+                    if (face.get_plane().get_normal()[x] > 0) {
+                        corner[x] = hull[1][x];
+                    } else if (face.get_plane().get_normal()[x] < 0) {
+                        corner[x] = hull[0][x];
+                    }
+                }
+                qplane3d plane = face.get_plane();
+                plane.dist += qv::dot(corner, plane.normal);
+                face.planenum = map.add_or_find_plane(plane);
+                // ???
+                //face.bevel = false;
+            }
+
+            // re-calculate brush bounds/windings
+            CalculateBrushBounds(brush);
+        }
+#endif
     }
     
     logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);

@@ -45,6 +45,7 @@ struct mapface_t
     int texinfo = 0;
     int linenum = 0;
     bool bevel = false;
+    bool visible = false;
     winding_t winding; // winding used to calculate bevels
 
     surfflags_t flags{};
