@@ -305,6 +305,23 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
                 brush_state.total_leaf_brushes += node->numleafbrushes;
                 node->firstleafbrush = map.bsp.dleafbrushes.size();
                 for (auto &b : node->original_brushes) {
+
+                    if (!b->mapbrush->outputnumber.has_value()) {
+                        const_cast<mapbrush_t *>(b->mapbrush)->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
+
+                        dbrush_t &brush = map.bsp.dbrushes.emplace_back(
+                            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
+
+                        for (auto &side : b->mapbrush->faces) {
+                            map.bsp.dbrushsides.push_back(
+                                {(uint32_t) ExportMapPlane(side.get_plane()), (int32_t)ExportMapTexinfo(side.texinfo)});
+                            brush.numsides++;
+                            brush_state.total_brush_sides++;
+                        }
+
+                        brush_state.total_brushes++;
+                    }
+
                     map.bsp.dleafbrushes.push_back(b->mapbrush->outputnumber.value());
                 }
             }
@@ -322,22 +339,6 @@ static void ExportBrushList(mapentity_t *entity, node_t *node)
     logging::funcheader();
 
     brush_state = {};
-
-    for (auto &b : entity->brushes) {
-        const_cast<mapbrush_t *>(b->mapbrush)->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
-
-        dbrush_t &brush = map.bsp.dbrushes.emplace_back(
-            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
-
-        for (auto &side : b->sides) {
-            map.bsp.dbrushsides.push_back(
-                {(uint32_t) ExportMapPlane(side.get_plane()), (int32_t)ExportMapTexinfo(side.texinfo)});
-            brush.numsides++;
-            brush_state.total_brush_sides++;
-        }
-
-        brush_state.total_brushes++;
-    }
 
     ExportBrushList_r(entity, node);
 

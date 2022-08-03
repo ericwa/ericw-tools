@@ -76,7 +76,6 @@ class mapbrush_t
 public:
     std::vector<mapface_t> faces;
     brushformat_t format = brushformat_t::NORMAL;
-    int contents = 0;
     aabb3d bounds {};
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
 };

@@ -2103,8 +2103,6 @@ void ProcessAreaPortal(mapentity_t *entity)
     }
 
     for (auto &brush : entity->mapbrushes) {
-        brush.contents = Q2_CONTENTS_AREAPORTAL;
-
         for (auto &face : brush.faces) {
             face.contents.native = Q2_CONTENTS_AREAPORTAL;
             face.texinfo = map.skip_texinfo;
