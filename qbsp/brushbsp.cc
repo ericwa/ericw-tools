@@ -819,7 +819,7 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
             if (qbsp_options.midsplitbrushfraction.value() != 0.0) {
                 // new way (opt-in)
                 // how much of the map are we partitioning?
-                double fractionOfMap = brushes.size() / (double) map.brushes.size();
+                double fractionOfMap = brushes.size() / (double) map.total_brushes;
                 forced_quick_tree = (fractionOfMap > qbsp_options.midsplitbrushfraction.value());
             } else {
                 // old way (ericw-tools 0.15.2+)

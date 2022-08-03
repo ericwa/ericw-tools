@@ -229,9 +229,10 @@ static bool Brush_IsHint(const hullbrush_t &brush)
 
 static bool MapBrush_IsHint(const mapbrush_t &brush)
 {
-    for (size_t i = 0; i < brush.numfaces; i++)
-        if (brush.face(i).flags.is_hint)
+    for (auto &f : brush.faces) {
+        if (f.flags.is_hint)
             return true;
+    }
 
     return false;
 }
@@ -392,7 +393,7 @@ static void AddBrushPlane(hullbrush_t *hullbrush, const qbsp_plane_t &plane)
 
     if (hullbrush->faces.size() == MAX_FACES) {
         FError(
-            "brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->face(0).linenum);
+            "brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush->srcbrush->faces[0].linenum);
     }
 
     mapface_t &mapface = hullbrush->faces.emplace_back();
@@ -462,7 +463,7 @@ static int AddHullPoint(hullbrush_t *hullbrush, const qvec3d &p, const aabb3d &h
     if (hullbrush->points.size() == MAX_HULL_POINTS)
         FError("hullbrush->numpoints == MAX_HULL_POINTS ({}), "
                "source brush on line {}",
-            MAX_HULL_POINTS, hullbrush->srcbrush->face(0).linenum);
+            MAX_HULL_POINTS, hullbrush->srcbrush->faces[0].linenum);
 
     int i = hullbrush->points.size();
     hullbrush->points.emplace_back(p);
@@ -500,7 +501,7 @@ static void AddHullEdge(hullbrush_t *hullbrush, const qvec3d &p1, const qvec3d &
     if (hullbrush->edges.size() == MAX_HULL_EDGES)
         FError("hullbrush->numedges == MAX_HULL_EDGES ({}), "
                "source brush on line {}",
-            MAX_HULL_EDGES, hullbrush->srcbrush->face(0).linenum);
+            MAX_HULL_EDGES, hullbrush->srcbrush->faces[0].linenum);
 
     hullbrush->edges.emplace_back(pt1, pt2);
 
@@ -597,8 +598,7 @@ static contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
     contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
 
     // validate that all of the sides have valid contents
-    for (int i = 0; i < mapbrush->numfaces; i++) {
-        const mapface_t &mapface = mapbrush->face(i);
+    for (auto &mapface : mapbrush->faces) {
         const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
 
         contentflags_t contents =
@@ -643,15 +643,16 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
 
     // create the faces
 
-    hullbrush.linenum = mapbrush->face(0).linenum;
-    if (mapbrush->numfaces > MAX_FACES)
+    hullbrush.linenum = mapbrush->faces[0].linenum;
+    if (mapbrush->faces.size() > MAX_FACES)
         FError("brush->faces >= MAX_FACES ({}), source brush on line {}", MAX_FACES, hullbrush.linenum);
 
     hullbrush.contents = contents;
     hullbrush.srcbrush = mapbrush;
-    hullbrush.faces.reserve(mapbrush->numfaces);
-    for (int i = 0; i < mapbrush->numfaces; i++)
-        hullbrush.faces.emplace_back(mapbrush->face(i));
+    hullbrush.faces.reserve(mapbrush->faces.size());
+    for (auto &face : mapbrush->faces) {
+        hullbrush.faces.emplace_back(face);
+    }
 
     if (hullnum <= 0) {
         // for hull 0 or BSPX -wrbrushes collision, apply the rotation offset now
@@ -693,7 +694,6 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         return;
     }
 
-    const mapbrush_t *mapbrush;
     qvec3d rotate_offset{};
     int i;
     int lmshift;
@@ -704,16 +704,16 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     /* Origin brush support */
     rotation_t rottype = rotation_t::none;
 
-    for (int i = 0; i < src->nummapbrushes; i++) {
-        const mapbrush_t *mapbrush = &src->mapbrush(i);
-        const contentflags_t contents = Brush_GetContents(mapbrush);
+    for (auto &mapbrush : src->mapbrushes) {
+        const contentflags_t contents = Brush_GetContents(&mapbrush);
+
         if (contents.is_origin(qbsp_options.target_game)) {
             if (dst == map.world_entity()) {
                 logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 continue;
             }
 
-            std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, {}, rotation_t::none, 0);
+            std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, {}, rotation_t::none, 0);
 
             if (brush) {
                 rotate_offset = brush->bounds.centroid();
@@ -777,10 +777,10 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
-    for (i = 0; i < src->nummapbrushes; i++, mapbrush++) {
-        logging::percent(i, src->nummapbrushes);
-        mapbrush = &src->mapbrush(i);
-        contentflags_t contents = Brush_GetContents(mapbrush);
+    for (i = 0; i < src->mapbrushes.size(); i++) {
+        logging::percent(i, src->mapbrushes.size());
+        auto &mapbrush = src->mapbrushes[i];
+        contentflags_t contents = Brush_GetContents(&mapbrush);
 
         // per-brush settings
         bool detail = false;
@@ -828,7 +828,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          */
         if (hullnum != HULL_COLLISION && contents.is_clip(qbsp_options.target_game)) {
             if (hullnum == 0) {
-                std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+                std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, rotate_offset, rottype, hullnum);
 
                 if (brush) {
                     dst->bounds += brush->bounds;
@@ -842,7 +842,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         }
 
         /* "hint" brushes don't affect the collision hulls */
-        if (MapBrush_IsHint(*mapbrush)) {
+        if (MapBrush_IsHint(mapbrush)) {
             if (hullnum > 0)
                 continue;
             contents = qbsp_options.target_game->create_empty_contents();
@@ -878,7 +878,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        std::optional<bspbrush_t> brush = LoadBrush(src, mapbrush, contents, rotate_offset, rottype, hullnum);
+        std::optional<bspbrush_t> brush = LoadBrush(src, &mapbrush, contents, rotate_offset, rottype, hullnum);
         if (!brush)
             continue;
 
@@ -896,7 +896,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         dst->bounds += brush->bounds;
     }
 
-    logging::percent(src->nummapbrushes, src->nummapbrushes, src == map.world_entity());
+    logging::percent(src->mapbrushes.size(), src->mapbrushes.size(), src == map.world_entity());
 }
 
 /*

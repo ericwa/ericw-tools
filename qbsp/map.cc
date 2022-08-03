@@ -194,20 +194,6 @@ static void SetTexinfo_QuakeEd_New(
     const qbsp_plane_t &plane, const qvec2d &shift, vec_t rotate, const qvec2d &scale, texvecf &out_vecs);
 static void TestExpandBrushes(const mapentity_t *src);
 
-const mapface_t &mapbrush_t::face(int i) const
-{
-    if (i < 0 || i >= this->numfaces)
-        FError("{} out of bounds (numfaces {})", i, this->numfaces);
-    return map.faces.at(this->firstface + i);
-}
-
-const mapbrush_t &mapentity_t::mapbrush(int i) const
-{
-    if (i < 0 || i >= this->nummapbrushes)
-        FError("{} out of bounds (nummapbrushes {})", i, this->nummapbrushes);
-    return map.brushes.at(this->firstmapbrush + i);
-}
-
 static void AddAnimTex(const char *name)
 {
     int i, j, frame;
@@ -1658,23 +1644,23 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 {
     ob.bounds = {};
 
-	for (size_t i = 0; i < ob.numfaces; i++) {
-		const auto &plane = ob.face(i).get_plane();
+	for (size_t i = 0; i < ob.faces.size(); i++) {
+		const auto &plane = ob.faces[i].get_plane();
 		std::optional<winding_t> w = BaseWindingForPlane(plane);
 		
-        for (size_t j = 0; j < ob.numfaces && w; j++) {
+        for (size_t j = 0; j < ob.faces.size() && w; j++) {
 			if (i == j) {
 				continue;
             }
-			if (ob.face(j).bevel) {
+			if (ob.faces[j].bevel) {
 				continue;
             }
-			const auto &plane = map.get_plane(ob.face(j).planenum ^ 1);
+			const auto &plane = map.get_plane(ob.faces[j].planenum ^ 1);
             w = w->clip(plane, 0)[SIDE_FRONT]; //CLIP_EPSILON);
 		}
 
 		if (w) {
-            const_cast<mapface_t &>(ob.face(i)).winding = w.value();
+            ob.faces[i].winding = w.value();
 			//side->visible = true;
 			for (auto &p : w.value()) {
                 ob.bounds += p;
@@ -1712,18 +1698,17 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 			// see if the plane is already present
             int32_t i;
 
-			for (i = 0; i < b.numfaces; i++) {
-                auto &s = b.face(i);
+			for (i = 0; i < b.faces.size(); i++) {
+                auto &s = b.faces[i];
 
 				if (map.get_plane(s.planenum).get_normal()[axis] == dir) {
 					break;
                 }
 			}
 
-			if (i == b.numfaces) {
+			if (i == b.faces.size()) {
                 // add a new side
-                b.numfaces++;
-                mapface_t &s = map.faces.emplace_back();
+                mapface_t &s = b.faces.emplace_back();
                 qplane3d plane{};
 				plane.normal[axis] = dir;
 				if (dir == 1) {
@@ -1732,14 +1717,14 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 					plane.dist = -b.bounds.mins()[axis];
                 }
 				s.planenum = map.add_or_find_plane(plane);
-				s.texinfo = b.face(0).texinfo;
-				s.contents = b.face(0).contents;
+				s.texinfo = b.faces[0].texinfo;
+				s.contents = b.faces[0].contents;
                 // fixme: why did we need to store all this stuff again, isn't
                 // it in texinfo?
-                s.raw_info = b.face(0).raw_info;
-                s.flags = b.face(0).flags;
-                s.texname = b.face(0).texname;
-                s.value = b.face(0).value;
+                s.raw_info = b.faces[0].raw_info;
+                s.flags = b.faces[0].flags;
+                s.texname = b.faces[0].texname;
+                s.value = b.faces[0].value;
 
 				s.bevel = true;
 				e.numboxbevels++;
@@ -1747,7 +1732,7 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 
 			// if the plane is not in it canonical order, swap it
 			if (i != order) {
-                std::swap(const_cast<mapface_t &>(b.face(order)), const_cast<mapface_t &>(b.face(i)));
+                std::swap(b.faces[order], b.faces[i]);
 			}
 		}
 	}
@@ -1755,13 +1740,13 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 	//
 	// add the edge bevels
 	//
-	if (b.numfaces == 6) {
+	if (b.faces.size() == 6) {
 		return;		// pure axial
     }
 
 	// test the non-axial plane edges
-	for (size_t i = 6; i < b.numfaces; i++) {
-		auto &s = b.face(i);
+	for (size_t i = 6; i < b.faces.size(); i++) {
+		auto &s = b.faces[i];
 		auto &w = s.winding;
 
         if (!w) {
@@ -1802,13 +1787,13 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 
 					// if all the points on all the sides are
 					// behind this plane, it is a proper edge bevel
-					for (k = 0; k < b.numfaces; k++) {
+					for (k = 0; k < b.faces.size(); k++) {
 						// if this plane has allready been used, skip it
-						if (qv::epsilonEqual(b.face(k).get_plane(), plane)) {
+						if (qv::epsilonEqual(b.faces[k].get_plane(), plane)) {
 							break;
                         }
 
-						auto &w2 = b.face(k).winding;
+						auto &w2 = b.faces[k].winding;
 
                         if (!w2) {
 							continue;
@@ -1827,22 +1812,21 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
                         }
 					}
 
-					if (k != b.numfaces) {
+					if (k != b.faces.size()) {
 						continue;	// wasn't part of the outer hull
                     }
 
 					// add this plane
-                    b.numfaces++;
-                    mapface_t &s = map.faces.emplace_back();
+                    mapface_t &s = b.faces.emplace_back();
 				    s.planenum = map.add_or_find_plane(plane);
-				    s.texinfo = b.face(0).texinfo;
-				    s.contents = b.face(0).contents;
+				    s.texinfo = b.faces[0].texinfo;
+				    s.contents = b.faces[0].contents;
                     // fixme: why did we need to store all this stuff again, isn't
                     // it in texinfo?
-                    s.raw_info = b.face(0).raw_info;
-                    s.flags = b.face(0).flags;
-                    s.texname = b.face(0).texname;
-                    s.value = b.face(0).value;
+                    s.raw_info = b.faces[0].raw_info;
+                    s.flags = b.faces[0].flags;
+                    s.texname = b.faces[0].texname;
+                    s.value = b.faces[0].value;
 					s.bevel = true;
 					e.numedgebevels++;
 				}
@@ -1889,8 +1873,7 @@ mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
 
         /* Check for duplicate planes */
         bool discardFace = false;
-        for (int i = 0; i < brush.numfaces; i++) {
-            const mapface_t &check = brush.face(i);
+        for (auto &check : brush.faces) {
             if (qv::epsilonEqual(check.get_plane(), face->get_plane())) {
                 logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
                 discardFace = true;
@@ -1908,12 +1891,7 @@ mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
         }
 
         /* Save the face, update progress */
-        if (!brush.numfaces) {
-            brush.firstface = map.faces.size();
-        }
-
-        brush.numfaces++;
-        map.faces.emplace_back(std::move(face.value()));
+        brush.faces.emplace_back(std::move(face.value()));
     }
 
     // ericw -- brush primitives - there should be another closing }
@@ -1924,12 +1902,6 @@ mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
             FError("Brush primitives: Expected }, got: {}", parser.token);
     }
     // ericw -- end brush primitives
-
-    // calculate brush bounds
-    CalculateBrushBounds(brush);
-
-    // add the brush bevels
-    AddBrushBevels(entity, brush);
 
     return brush;
 }
@@ -1942,7 +1914,8 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
     if (parser.token != "{")
         FError("line {}: Invalid entity format, { not found", parser.linenum);
 
-    entity->nummapbrushes = 0;
+    entity->mapbrushes.clear();
+
     do {
         if (!parser.parse_token())
             FError("Unexpected EOF (no closing brace)");
@@ -1952,13 +1925,7 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
             // once we run into the first brush, set up textures state.
             EnsureTexturesLoaded();
 
-            mapbrush_t brush = ParseBrush(parser, *entity);
-
-            if (!entity->nummapbrushes)
-                entity->firstmapbrush = map.brushes.size();
-            entity->nummapbrushes++;
-
-            map.brushes.push_back(brush);
+            entity->mapbrushes.emplace_back(ParseBrush(parser, *entity));
         } else
             ParseEpair(parser, entity);
     } while (1);
@@ -2092,25 +2059,19 @@ static mapentity_t LoadExternalMap(const std::string &filename)
     // parse any subsequent entities, move any brushes to worldspawn
     mapentity_t dummy{};
     while (ParseEntity(parser, &dummy)) {
-        // this is kind of fragile, but move the brushes to the worldspawn.
-        if (dummy.nummapbrushes) {
-            // special case for when the external map's worldspawn has no brushes
-            if (!dest.firstmapbrush) {
-                dest.firstmapbrush = dummy.firstmapbrush;
-            }
-            dest.nummapbrushes += dummy.nummapbrushes;
-        }
+        // move the brushes to the worldspawn
+        dest.mapbrushes.insert(dest.mapbrushes.end(), std::make_move_iterator(dummy.mapbrushes.begin()), std::make_move_iterator(dummy.mapbrushes.end()));
 
         // clear for the next loop iteration
         dummy = mapentity_t();
     }
 
-    if (!dest.nummapbrushes) {
+    if (!dest.mapbrushes.size()) {
         FError("Expected at least one brush for external map {}\n", filename);
     }
 
     logging::print(
-        logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.nummapbrushes);
+        logging::flag::STAT, "     {}: '{}': Loaded {} mapbrushes.\n", __func__, filename, dest.mapbrushes.size());
 
     return dest;
 }
@@ -2130,13 +2091,12 @@ void ProcessExternalMapEntity(mapentity_t *entity)
     Q_assert(!file.empty());
     Q_assert(!new_classname.empty());
 
-    Q_assert(0 == entity->nummapbrushes); // misc_external_map must be a point entity
+    Q_assert(0 == entity->mapbrushes.size()); // misc_external_map must be a point entity
 
     const mapentity_t external_worldspawn = LoadExternalMap(file);
 
     // copy the brushes into the target
-    entity->firstmapbrush = external_worldspawn.firstmapbrush;
-    entity->nummapbrushes = external_worldspawn.nummapbrushes;
+    entity->mapbrushes = std::move(external_worldspawn.mapbrushes);
 
     qvec3d origin;
     entity->epairs.get_vector("origin", origin);
@@ -2157,15 +2117,11 @@ void ProcessExternalMapEntity(mapentity_t *entity)
         }
     }
 
-    for (int i = 0; i < entity->nummapbrushes; i++) {
-        mapbrush_t *brush = const_cast<mapbrush_t *>(&entity->mapbrush(i));
-
-        for (int j = 0; j < brush->numfaces; j++) {
-            mapface_t *face = const_cast<mapface_t *>(&brush->face(j));
-
-            ScaleMapFace(face, scale);
-            RotateMapFace(face, angles);
-            TranslateMapFace(face, origin);
+    for (auto &brush : entity->mapbrushes) {
+        for (auto &face : brush.faces) {
+            ScaleMapFace(&face, scale);
+            RotateMapFace(&face, angles);
+            TranslateMapFace(&face, origin);
         }
     }
 
@@ -2186,15 +2142,16 @@ void ProcessAreaPortal(mapentity_t *entity)
     // areaportal entities move their brushes, but don't eliminate
     // the entity
     // FIXME: print entity ID/line number
-    if (entity->nummapbrushes != 1)
+    if (entity->mapbrushes.size() != 1) {
         FError("func_areaportal can only be a single brush");
+    }
 
-    for (size_t i = entity->firstmapbrush; i < entity->firstmapbrush + entity->nummapbrushes; i++) {
-        map.brushes[i].contents = Q2_CONTENTS_AREAPORTAL;
+    for (auto &brush : entity->mapbrushes) {
+        brush.contents = Q2_CONTENTS_AREAPORTAL;
 
-        for (size_t f = map.brushes[i].firstface; f < map.brushes[i].firstface + map.brushes[i].numfaces; f++) {
-            map.faces[f].contents.native = Q2_CONTENTS_AREAPORTAL;
-            map.faces[f].texinfo = map.skip_texinfo;
+        for (auto &face : brush.faces) {
+            face.contents.native = Q2_CONTENTS_AREAPORTAL;
+            face.texinfo = map.skip_texinfo;
         }
     }
     entity->areaportalnum = ++map.numareaportals;
@@ -2266,6 +2223,7 @@ void LoadMapFile(void)
                 break;
             }
         }
+
         // Remove dummy entity inserted above
         assert(!map.entities.back().epairs.size());
         assert(map.entities.back().brushes.empty());
@@ -2302,8 +2260,37 @@ void LoadMapFile(void)
         map.entities.pop_back();
     }
 
-    logging::print(logging::flag::STAT, "     {:8} faces\n", map.faces.size());
-    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.brushes.size());
+    // calculate extents, if required
+    if (!qbsp_options.worldextent.value()) {
+        CalculateWorldExtent();
+    }
+
+    map.total_brushes = 0;
+
+    size_t num_faces = 0, num_bevels = 0;
+
+    // calculate brush extents and brush bevels
+    for (auto &entity : map.entities) {
+        map.total_brushes += entity.mapbrushes.size();
+
+        for (auto &brush : entity.mapbrushes) {
+            size_t old_num_faces = brush.faces.size();
+            num_faces += old_num_faces;
+
+            // calculate brush bounds
+            CalculateBrushBounds(brush);
+
+            // add the brush bevels
+            AddBrushBevels(entity, brush);
+
+            num_bevels += brush.faces.size() - old_num_faces;
+        }
+    }
+    
+    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);
+    logging::print(logging::flag::STAT, "     {:8} faces\n", num_faces);
+    logging::print(logging::flag::STAT, "     {:8} bevel faces\n", num_bevels);
+
     logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());
     logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.miptex.size());
     logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.mtexinfos.size());
@@ -2456,8 +2443,8 @@ static void ConvertMapBrush(std::ofstream &f, const mapbrush_t &mapbrush, const 
         f << "brushDef\n";
         f << "{\n";
     }
-    for (int i = 0; i < mapbrush.numfaces; i++) {
-        ConvertMapFace(f, mapbrush.face(i), format);
+    for (int i = 0; i < mapbrush.faces.size(); i++) {
+        ConvertMapFace(f, mapbrush.faces[i], format);
     }
     if (format == conversion_t::bp) {
         f << "}\n";
@@ -2473,8 +2460,8 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t *entity, const con
         fmt::print(f, "\"{}\" \"{}\"\n", key, value);
     }
 
-    for (int i = 0; i < entity->nummapbrushes; i++) {
-        ConvertMapBrush(f, entity->mapbrush(i), format);
+    for (auto &mapbrush : entity->mapbrushes) {
+        ConvertMapBrush(f, mapbrush, format);
     }
     f << "}\n";
 }
@@ -2570,16 +2557,16 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
 {
     vec_t extents = -std::numeric_limits<vec_t>::infinity();
 
-    for (int32_t i = 0; i < hullbrush.numfaces - 2; i++) {
-        for (int32_t j = i; j < hullbrush.numfaces - 1; j++) {
-            for (int32_t k = j; k < hullbrush.numfaces; k++) {
+    for (int32_t i = 0; i < hullbrush.faces.size() - 2; i++) {
+        for (int32_t j = i; j < hullbrush.faces.size() - 1; j++) {
+            for (int32_t k = j; k < hullbrush.faces.size(); k++) {
                 if (i == j || j == k || k == i) {
                     continue;
                 }
 
-                auto &fi = hullbrush.face(i);
-                auto &fj = hullbrush.face(j);
-                auto &fk = hullbrush.face(k);
+                auto &fi = hullbrush.faces[i];
+                auto &fj = hullbrush.faces[j];
+                auto &fk = hullbrush.faces[k];
 
                 bool legal = true;
                 auto vertex = GetIntersection(fi.get_plane(), fj.get_plane(), fk.get_plane());
@@ -2588,8 +2575,8 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
                     continue;
                 }
 
-                for (int32_t m = 0; m < hullbrush.numfaces; m++) {
-                    if (hullbrush.face(m).get_plane().distance_to(*vertex) > NORMAL_EPSILON) {
+                for (int32_t m = 0; m < hullbrush.faces.size(); m++) {
+                    if (hullbrush.faces[m].get_plane().distance_to(*vertex) > NORMAL_EPSILON) {
                         legal = false;
                         break;
                     }
@@ -2615,11 +2602,13 @@ void CalculateWorldExtent(void)
 {
     std::atomic<vec_t> extents = -std::numeric_limits<vec_t>::infinity();
 
-    tbb::parallel_for_each(map.brushes, [&](const mapbrush_t &brush) {
-        const vec_t brushExtents = max(extents.load(), GetBrushExtents(brush));
-        vec_t currentExtents = extents;
-        while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents))
-            ;
+    tbb::parallel_for_each(map.entities, [&](const mapentity_t &entity) {
+        tbb::parallel_for_each(entity.mapbrushes, [&](const mapbrush_t &mapbrush) {
+            const vec_t brushExtents = max(extents.load(), GetBrushExtents(mapbrush));
+            vec_t currentExtents = extents;
+            while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents))
+                ;
+        });
     });
 
     vec_t hull_extents = 0;
@@ -2689,9 +2678,8 @@ static void TestExpandBrushes(const mapentity_t *src)
 {
     std::vector<std::unique_ptr<bspbrush_t>> hull1brushes;
 
-    for (int i = 0; i < src->nummapbrushes; i++) {
-        const mapbrush_t *mapbrush = &src->mapbrush(i);
-        std::optional<bspbrush_t> hull1brush = LoadBrush(src, mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none,
+    for (auto &mapbrush : src->mapbrushes) {
+        std::optional<bspbrush_t> hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID}, {}, rotation_t::none,
             qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
         if (hull1brush) {

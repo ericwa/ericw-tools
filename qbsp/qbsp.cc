@@ -353,7 +353,7 @@ winding_t BaseWindingForPlane(const qplane3d &p)
 
 static bool IsTrigger(const mapentity_t *entity)
 {
-    auto &tex = entity->mapbrush(0).face(0).texname;
+    auto &tex = entity->mapbrushes[0].faces[0].texname;
 
     if (tex.length() < 6) {
         return false;
@@ -396,7 +396,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 {
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
-    if (!entity->nummapbrushes && entity != map.world_entity())
+    if (!entity->mapbrushes.size() && entity != map.world_entity())
         return;
 
     /*
@@ -602,7 +602,7 @@ static void UpdateEntLump(void)
             is_misc_external_map = true;
         }
 
-        bool isBrushEnt = (entity->nummapbrushes > 0) || is_misc_external_map;
+        bool isBrushEnt = (entity->mapbrushes.size() > 0) || is_misc_external_map;
         if (!isBrushEnt)
             continue;
 
@@ -938,11 +938,6 @@ void ProcessFile()
         qbsp_options.fVerbose = false;
         logging::mask &=
             ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
-    }
-
-    // calculate extents, if required
-    if (!qbsp_options.worldextent.value()) {
-        CalculateWorldExtent();
     }
 
     // create hulls!

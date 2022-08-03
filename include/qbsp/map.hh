@@ -74,13 +74,10 @@ enum class brushformat_t
 class mapbrush_t
 {
 public:
-    int firstface = 0;
-    int numfaces = 0;
+    std::vector<mapface_t> faces;
     brushformat_t format = brushformat_t::NORMAL;
     int contents = 0;
     aabb3d bounds {};
-
-    const mapface_t &face(int i) const;
 };
 
 struct lumpdata
@@ -95,8 +92,8 @@ class mapentity_t
 public:
     qvec3d origin{};
 
-    int firstmapbrush = 0;
-    int nummapbrushes = 0;
+    std::vector<mapbrush_t> mapbrushes;
+
     size_t numboxbevels = 0;
     size_t numedgebevels = 0;
 
@@ -111,8 +108,6 @@ public:
 
     int32_t areaportalnum = 0;
     std::array<int32_t, 2> portalareas = {};
-
-    const mapbrush_t &mapbrush(int i) const;
 };
 
 struct maptexdata_t
@@ -168,9 +163,10 @@ struct qbsp_plane_eq
 struct mapdata_t
 {
     /* Arrays of actual items */
-    std::vector<mapface_t> faces;
-    std::vector<mapbrush_t> brushes;
     std::vector<mapentity_t> entities;
+
+    // total number of brushes in the map
+    size_t total_brushes;
 
     // this vector stores all of the planes that can potentially be
     // output in the BSP, from the map's own sides. The positive planes

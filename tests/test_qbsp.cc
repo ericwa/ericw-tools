@@ -24,10 +24,9 @@
 
 static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brush, const std::string &texname)
 {
-    for (int i = 0; i < brush->numfaces; i++) {
-        const mapface_t *face = &brush->face(i);
-        if (face->texname == texname) {
-            return face;
+    for (auto &face : brush->faces) {
+        if (face.texname == texname) {
+            return &face;
         }
     }
     return nullptr;
@@ -303,7 +302,7 @@ static const texvecf &GetTexvecs(const char *map, const char *texname)
 {
     mapentity_t worldspawn = LoadMap(map);
 
-    const mapbrush_t *mapbrush = &worldspawn.mapbrush(0);
+    const mapbrush_t *mapbrush = &worldspawn.mapbrushes[0];
     const mapface_t *mapface = Mapbrush_FirstFaceWithTextureName(mapbrush, "tech02_1");
     Q_assert(nullptr != mapface);
 
@@ -395,12 +394,12 @@ TEST_CASE("duplicatePlanes", "[qbsp]")
     )";
 
     mapentity_t worldspawn = LoadMap(mapWithDuplicatePlanes);
-    REQUIRE(1 == worldspawn.nummapbrushes);
+    REQUIRE(1 == worldspawn.mapbrushes.size());
     CHECK(0 == worldspawn.brushes.size());
-    CHECK(6 == worldspawn.mapbrush(0).numfaces);
+    CHECK(6 == worldspawn.mapbrushes[0].faces.size());
 
     std::optional<bspbrush_t> brush =
-        LoadBrush(&worldspawn, &worldspawn.mapbrush(0), {CONTENTS_SOLID}, {}, rotation_t::none, 0);
+        LoadBrush(&worldspawn, &worldspawn.mapbrushes[0], {CONTENTS_SOLID}, {}, rotation_t::none, 0);
     REQUIRE(std::nullopt != brush);
     CHECK(6 == brush->sides.size());
 }
@@ -427,9 +426,9 @@ TEST_CASE("InvalidTextureProjection", "[qbsp]")
     )";
 
     mapentity_t worldspawn = LoadMap(map);
-    Q_assert(1 == worldspawn.nummapbrushes);
+    Q_assert(1 == worldspawn.mapbrushes.size());
 
-    const mapface_t *face = &worldspawn.mapbrush(0).face(5);
+    const mapface_t *face = &worldspawn.mapbrushes[0].faces[5];
     REQUIRE("skip" == face->texname);
     const auto texvecs = face->get_texvecs();
     CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
@@ -457,9 +456,9 @@ TEST_CASE("InvalidTextureProjection2", "[qbsp]")
     )";
 
     mapentity_t worldspawn = LoadMap(map);
-    Q_assert(1 == worldspawn.nummapbrushes);
+    Q_assert(1 == worldspawn.mapbrushes.size());
 
-    const mapface_t *face = &worldspawn.mapbrush(0).face(5);
+    const mapface_t *face = &worldspawn.mapbrushes[0].faces[5];
     REQUIRE("skip" == face->texname);
     const auto texvecs = face->get_texvecs();
     CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
@@ -488,9 +487,9 @@ TEST_CASE("InvalidTextureProjection3", "[qbsp]")
     )";
 
     mapentity_t worldspawn = LoadMap(map);
-    Q_assert(1 == worldspawn.nummapbrushes);
+    Q_assert(1 == worldspawn.mapbrushes.size());
 
-    const mapface_t *face = &worldspawn.mapbrush(0).face(3);
+    const mapface_t *face = &worldspawn.mapbrushes[0].faces[3];
     REQUIRE("*lava1" == face->texname);
     const auto texvecs = face->get_texvecs();
     CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
