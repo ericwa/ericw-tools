@@ -1700,17 +1700,16 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
     }
 
 	// test the non-axial plane edges
+    // note: no references to b.faces[...] stored since this modifies
+    // the vector.
 	for (size_t i = 6; i < b.faces.size(); i++) {
-		auto &s = b.faces[i];
-		auto &w = s.winding;
-
-        if (!w) {
+        if (!b.faces[i].winding) {
 			continue;
         }
 
-		for (size_t j = 0; j < w.size(); j++) {
-			size_t k = (j + 1) % w.size();
-			qvec3d vec = w[j] - w[k];
+		for (size_t j = 0; j < b.faces[i].winding.size(); j++) {
+			size_t k = (j + 1) % b.faces[i].winding.size();
+			qvec3d vec = b.faces[i].winding[j] - b.faces[i].winding[k];
 
             if (qv::normalizeInPlace(vec) < 0.5) {
 				continue;
@@ -1730,7 +1729,7 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 
 			// try the six possible slanted axials from this edge
 			for (size_t axis = 0; axis < 3; axis++) {
-				for (size_t dir = -1; dir <= 1; dir += 2) {
+				for (int32_t dir = -1; dir <= 1; dir += 2) {
 					// construct a plane
                     qplane3d plane {};
                     plane.normal[axis] = dir;
@@ -1738,7 +1737,7 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 					if (qv::normalizeInPlace(plane.normal) < 0.5) {
 						continue;
                     }
-					plane.dist = qv::dot(w[j], plane.normal);
+					plane.dist = qv::dot(b.faces[i].winding[j], plane.normal);
 
 					// if all the points on all the sides are
 					// behind this plane, it is a proper edge bevel
