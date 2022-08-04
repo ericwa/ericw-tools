@@ -286,7 +286,7 @@ void CreateBrushWindings(bspbrush_t *brush)
             if (brush->sides[j].bevel)
                 continue;
             qplane3d plane = -Face_Plane(&brush->sides[j]);
-            w = w->clip(plane, 0, false)[SIDE_FRONT]; // CLIP_EPSILON);
+            w = w->clip(plane, qbsp_options.epsilon.value(), false)[SIDE_FRONT]; // CLIP_EPSILON);
         }
 
         if (w) {
