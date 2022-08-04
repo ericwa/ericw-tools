@@ -106,12 +106,12 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         }
 
         /* check the point is on the face plane */
-        // fixme check: plane's normal is not inverted by planeside check above,
-        // is this a bug? should `Face_Plane` be used instead?
-        vec_t dist = plane.distance_to(p1);
-        if (dist < -qbsp_options.epsilon.value() || dist > qbsp_options.epsilon.value()) {
-            logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum,
-                p1[0], p1[1], p1[2], dist);
+        {
+            vec_t dist = face->get_plane().distance_to(p1);
+            if (fabs(dist) > qbsp_options.epsilon.value()) {
+                logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum,
+                    p1[0], p1[1], p1[2], dist);
+            }
         }
 
         /* check the edge isn't degenerate */
@@ -135,7 +135,7 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         for (size_t j = 0; j < face->w.size(); j++) {
             if (j == i)
                 continue;
-            dist = qv::dot(face->w[j], edgenormal);
+            vec_t dist = qv::dot(face->w[j], edgenormal);
             if (dist > edgedist) {
                 logging::print("WARNING: line {}: Found a non-convex face (error size {}, point: {})\n",
                     sourceface.linenum, dist - edgedist, face->w[j]);
