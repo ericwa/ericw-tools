@@ -2059,7 +2059,7 @@ void ProcessExternalMapEntity(mapentity_t *entity)
 
     Q_assert(0 == entity->mapbrushes.size()); // misc_external_map must be a point entity
 
-    const mapentity_t external_worldspawn = LoadExternalMap(file);
+    mapentity_t external_worldspawn = LoadExternalMap(file);
 
     // copy the brushes into the target
     entity->mapbrushes = std::move(external_worldspawn.mapbrushes);
