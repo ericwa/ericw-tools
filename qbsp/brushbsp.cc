@@ -1074,10 +1074,8 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
 
         double volume = BrushVolume(*b);
         if (volume < qbsp_options.microvolume.value()) {
-            logging::print("WARNING: microbrush\n");
-            // fixme-brushbsp: add entitynum, brushnum in mapbrush_t
-            //            printf ("WARNING: entity %i, brush %i: microbrush\n",
-            //                b->original->entitynum, b->original->brushnum);
+            logging::print("WARNING: line {}: microbrush\n",
+                b->original->mapbrush->linenum);
         }
 
         for (side_t &side : b->sides) {

@@ -1816,6 +1816,12 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
     // ericw -- end brush primitives
 
     while (parser.parse_token()) {
+
+        // set linenum after first parsed token
+        if (!brush.linenum) {
+            brush.linenum = parser.linenum;
+        }
+
         if (parser.token == "}")
             break;
 
@@ -2191,11 +2197,11 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 	}
 
 	for (size_t i = 0; i < 3; i++) {
-		if (ob.bounds.mins()[0] < -qbsp_options.worldextent.value() || ob.bounds.maxs()[0] > qbsp_options.worldextent.value()) {
-			logging::print("WARNING: entity xxx, brush yyy: bounds out of range\n");
+		if (ob.bounds.mins()[0] <= -qbsp_options.worldextent.value() || ob.bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+			logging::print("WARNING: line {}: brush bounds out of range\n", ob.linenum);
         }
-		if (ob.bounds.mins()[0] > qbsp_options.worldextent.value() || ob.bounds.maxs()[0] < -qbsp_options.worldextent.value()) {
-			logging::print("WARNING: entity xxx, brush yyy: no visible sides on brush\n");
+		if (ob.bounds.mins()[0] >= qbsp_options.worldextent.value() || ob.bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+			logging::print("WARNING: line {}: no visible sides on brush\n", ob.linenum);
         }
 	}
 }
@@ -2717,7 +2723,7 @@ void CalculateWorldExtent(void)
         }
     }
 
-    qbsp_options.worldextent.setValue((extents + hull_extents) * 2, settings::source::GAME_TARGET);
+    qbsp_options.worldextent.setValue(((extents + hull_extents) * 2) + SIDESPACE, settings::source::GAME_TARGET);
 
     logging::print("INFO: world extents calculated to {} units\n", qbsp_options.worldextent.value());
 }

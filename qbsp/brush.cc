@@ -80,11 +80,11 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
             logging::print(
-                "WARNING: line {}: too few points (2): ({}) ({})\n", sourceface.linenum, face->w[0], face->w[1]);
+                "WARNING: line {}: partially clipped into degenerate polygon @ ({}) - ({})\n", sourceface.linenum, face->w[0], face->w[1]);
         } else if (face->w.size() == 1) {
-            logging::print("WARNING: line {}: too few points (1): ({})\n", sourceface.linenum, face->w[0]);
+            logging::print("WARNING: line {}: partially clipped into degenerate polygon @ ({})\n", sourceface.linenum, face->w[0]);
         } else {
-            logging::print("WARNING: line {}: too few points ({})\n", sourceface.linenum, face->w.size());
+            logging::print("WARNING: line {}: completely clipped away\n", sourceface.linenum);
         }
 
         face->w.clear();
@@ -623,8 +623,19 @@ void bspbrush_t::update_bounds()
 {
     this->bounds = {};
     for (const auto &face : sides) {
-        this->bounds = this->bounds.unionWith(face.w.bounds());
+        if (face.w) {
+            this->bounds = this->bounds.unionWith(face.w.bounds());
+        }
     }
+
+	for (size_t i = 0; i < 3; i++) {
+		if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() || this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+			logging::print("WARNING: line {}: brush bounds out of range\n", mapbrush->linenum);
+        }
+		if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() || this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+			logging::print("WARNING: line {}: no visible sides on brush\n", mapbrush->linenum);
+        }
+	}
 
     this->sphere_origin = (bounds.mins() + bounds.maxs()) / 2.0;
     this->sphere_radius = qv::length((bounds.maxs() - bounds.mins()) / 2.0);

@@ -34,8 +34,35 @@
 #include <list>
 #include <mutex>
 #include <shared_mutex>
+#include <string_view>
 
 struct bspbrush_t;
+
+// kind of a parallel to std::source_location in C++20
+// but this represents a location in a .map file where
+// something happens.
+struct map_source_location
+{
+    // the source name of this location; may be a .map file path,
+    // or some other string that describes where this location came
+    // to be. note that because the locations only live for the lifetime
+    // of the object it is belonging to, whatever this string
+    // points to must out-live the object.
+    std::string_view source_name;
+
+    // the line number that this location is associated to, if any. Synthetic
+    // locations may not necessarily have an associated line number.
+    std::optional<size_t> line_number;
+
+    // reference to a location of the object that derived us. this is mainly
+    // for synthetic locations; ie a bspbrush_t's sides aren't themselves generated
+    // by a source or line, but they are derived from a mapbrush_t which does have
+    // a location. The object it points to must outlive this object.
+    const std::optional<std::reference_wrapper<map_source_location>> derivative;
+
+    // if we update to C++20 we could use this to track where location objects come from:
+    // std::source_location created_location;
+};
 
 struct mapface_t
 {
@@ -78,6 +105,7 @@ public:
     brushformat_t format = brushformat_t::NORMAL;
     aabb3d bounds {};
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
+    size_t entitynum = 0, linenum = 0;
 };
 
 struct lumpdata

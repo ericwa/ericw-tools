@@ -20,8 +20,9 @@
 #pragma once
 
 #include <common/qvec.hh>
+#include <array>
 
-/**
+/**!
  * touching a side/edge/corner is considered touching
  */
 template<class V, size_t N>
@@ -52,28 +53,26 @@ private:
     template<typename V2, size_t N2>
     friend class aabb;
 
-    value_type m_mins, m_maxs;
+    std::array<value_type, 2> m_corners;
 
     constexpr void fix()
     {
         for (size_t i = 0; i < N; i++) {
-            if (m_maxs[i] < m_mins[i]) {
-                m_maxs[i] = m_mins[i];
+            if (m_corners[1][i] < m_corners[0][i]) {
+                m_corners[1][i] = m_corners[0][i];
             }
         }
     }
 
 public:
-    constexpr aabb() : m_mins(std::numeric_limits<V>::max()), m_maxs(std::numeric_limits<V>::lowest()) { }
+    constexpr aabb() : m_corners({value_type{ std::numeric_limits<V>::max() }, value_type{ std::numeric_limits<V>::lowest() }}) { }
 
-    constexpr aabb(const value_type &mins, const value_type &maxs) : m_mins(mins), m_maxs(maxs) { fix(); }
+    constexpr aabb(const value_type &mins, const value_type &maxs) : m_corners({ mins, maxs }) { fix(); }
 
     constexpr aabb(const value_type &points) : aabb(points, points) { }
 
     template<typename V2>
-    constexpr aabb(const aabb<V2, N> &other) : aabb(other.m_mins, other.m_maxs)
-    {
-    }
+    constexpr aabb(const aabb<V2, N> &other) : aabb(other.m_corners[0], other.m_corners[1]) { }
 
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
     constexpr aabb(Iter start, Iter end) : aabb()
@@ -83,22 +82,22 @@ public:
         }
     }
 
-    constexpr bool operator==(const aabb &other) const { return m_mins == other.m_mins && m_maxs == other.m_maxs; }
+    constexpr bool operator==(const aabb &other) const { return m_corners == other.m_corners; }
 
-    constexpr const value_type &mins() const { return m_mins; }
+    constexpr const value_type &mins() const { return m_corners[0]; }
 
-    constexpr const value_type &maxs() const { return m_maxs; }
+    constexpr const value_type &maxs() const { return m_corners[1]; }
 
-    constexpr aabb translate(const value_type &vec) const { return {m_mins + vec, m_maxs + vec}; }
+    constexpr aabb translate(const value_type &vec) const { return {mins() + vec, maxs() + vec}; }
 
     template<typename F>
     constexpr bool disjoint(const aabb<F, N> &other, const F &epsilon = 0) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (m_maxs[i] < (other.m_mins[i] - epsilon))
+            if (maxs()[i] < (other.mins()[i] - epsilon) ||
+                mins()[i] > (other.maxs()[i] + epsilon)) {
                 return true;
-            if (m_mins[i] > (other.m_maxs[i] + epsilon))
-                return true;
+            }
         }
         return false;
     }
@@ -107,10 +106,10 @@ public:
     constexpr bool disjoint_or_touching(const aabb<F, N> &other, const F &epsilon = 0) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (m_maxs[i] <= (other.m_mins[i] - epsilon))
+            if (maxs()[i] <= (other.mins()[i] - epsilon) ||
+                mins()[i] >= (other.maxs()[i] + epsilon)) {
                 return true;
-            if (m_mins[i] >= (other.m_maxs[i] + epsilon))
-                return true;
+            }
         }
         return false;
     }
@@ -118,10 +117,10 @@ public:
     constexpr bool contains(const aabb &other) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (other.m_mins[i] < m_mins[i])
+            if (other.maxs()[i] < mins()[i] ||
+                other.mins()[i] > maxs()[i]) {
                 return false;
-            if (other.m_maxs[i] > m_maxs[i])
-                return false;
+            }
         }
         return true;
     }
@@ -129,20 +128,21 @@ public:
     constexpr bool containsPoint(const value_type &p) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (!(p[i] >= m_mins[i] && p[i] <= m_maxs[i]))
+            if (!(p[i] >= mins()[i] && p[i] <= maxs()[i])) {
                 return false;
+            }
         }
         return true;
     }
 
     constexpr aabb expand(const value_type &pt) const
     {
-        value_type mins = m_mins, maxs = m_maxs;
+        auto corners = m_corners;
         for (size_t i = 0; i < N; i++) {
-            mins[i] = min(mins[i], pt[i]);
-            maxs[i] = max(maxs[i], pt[i]);
+            corners[0][i] = min(corners[0][i], pt[i]);
+            corners[1][i] = max(corners[1][i], pt[i]);
         }
-        return {mins, maxs};
+        return {corners[0], corners[1]};
     }
 
     constexpr aabb operator+(const value_type &pt) const { return expand(pt); }
@@ -153,53 +153,45 @@ public:
 
     constexpr aabb &operator+=(const aabb &other) { return (*this = unionWith(other)); }
 
-    constexpr aabb unionWith(const aabb &other) const { return expand(other.m_mins).expand(other.m_maxs); }
+    constexpr aabb unionWith(const aabb &other) const { return expand(other.mins()).expand(other.maxs()); }
 
     constexpr intersection_t intersectWith(const aabb &other) const
     {
-        value_type mins = m_mins, maxs = m_maxs;
+        auto corners = m_corners;
         for (size_t i = 0; i < N; i++) {
-            mins[i] = max(mins[i], other.m_mins[i]);
-            maxs[i] = min(maxs[i], other.m_maxs[i]);
-            if (mins[i] > maxs[i]) {
+            corners[0][i] = max(corners[0][i], other.mins()[i]);
+            corners[1][i] = min(corners[1][i], other.maxs()[i]);
+            if (corners[0][i] > corners[1][i]) {
                 // empty intersection
                 return {};
             }
         }
-        return {aabb(mins, maxs)};
+        return {{corners[0], corners[1]}};
     }
 
-    constexpr value_type size() const { return m_maxs - m_mins; }
+    constexpr value_type size() const { return maxs() - mins(); }
 
-    constexpr aabb grow(const value_type &size) const { return {m_mins - size, m_maxs + size}; }
+    constexpr aabb grow(const value_type &size) const { return {mins() - size, maxs() + size}; }
 
-    constexpr value_type &operator[](const size_t &index)
-    {
-        switch (index) {
-            case 0: return m_mins;
-            case 1: return m_maxs;
-            default: throw std::exception();
-        }
-    }
+    constexpr value_type &operator[](const size_t &index) { return m_corners[index]; }
 
-    constexpr const value_type &operator[](const size_t &index) const
-    {
-        switch (index) {
-            case 0: return m_mins;
-            case 1: return m_maxs;
-            default: throw std::exception();
-        }
-    }
+    constexpr const value_type &operator[](const size_t &index) const { return m_corners[index]; }
 
-    constexpr value_type centroid() const { return (m_mins + m_maxs) * 0.5; }
+    constexpr value_type centroid() const { return (mins() + maxs()) * 0.5; }
 
     constexpr V volume() const { 
         auto s = size();
         return s[0] * s[1] * s[2];
     }
 
+    constexpr auto begin() { return m_corners.begin(); }
+    constexpr auto end() { return m_corners.end(); }
+
+    constexpr auto begin() const { return m_corners.begin(); }
+    constexpr auto end() const { return m_corners.end(); }
+
     // stream support
-    auto stream_data() { return std::tie(m_mins, m_maxs); }
+    auto stream_data() { return std::tie(m_corners); }
 };
 
 using aabb3d = aabb<vec_t, 3>;

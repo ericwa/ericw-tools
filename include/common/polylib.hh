@@ -871,8 +871,9 @@ public:
             }
         }
 
-        if (x == -1)
+        if (x == -1 || max == -VECT_MAX) {
             FError("no axis found");
+        }
 
         qvec3d vup{};
 
