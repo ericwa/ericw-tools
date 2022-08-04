@@ -1072,10 +1072,12 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     for (const auto &b : brushlist) {
         c_brushes++;
 
+        // fixme-brushbsp: why does this just print and do nothing? should
+        // the brush be removed?
         double volume = BrushVolume(*b);
         if (volume < qbsp_options.microvolume.value()) {
-            logging::print("WARNING: line {}: microbrush\n",
-                b->original->mapbrush->linenum);
+            logging::print("WARNING: {}: microbrush\n",
+                b->original->mapbrush->line);
         }
 
         for (side_t &side : b->sides) {

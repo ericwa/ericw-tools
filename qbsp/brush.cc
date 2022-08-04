@@ -80,11 +80,11 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
     if (face->w.size() < 3) {
         if (face->w.size() == 2) {
             logging::print(
-                "WARNING: line {}: partially clipped into degenerate polygon @ ({}) - ({})\n", sourceface.linenum, face->w[0], face->w[1]);
+                "WARNING: {}: partially clipped into degenerate polygon @ ({}) - ({})\n", sourceface.line, face->w[0], face->w[1]);
         } else if (face->w.size() == 1) {
-            logging::print("WARNING: line {}: partially clipped into degenerate polygon @ ({})\n", sourceface.linenum, face->w[0]);
+            logging::print("WARNING: {}: partially clipped into degenerate polygon @ ({})\n", sourceface.line, face->w[0]);
         } else {
-            logging::print("WARNING: line {}: completely clipped away\n", sourceface.linenum);
+            logging::print("WARNING: {}: completely clipped away\n", sourceface.line);
         }
 
         face->w.clear();
@@ -101,7 +101,7 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         for (auto &v : p1) {
             if (fabs(v) > qbsp_options.worldextent.value()) {
                 // this is fatal because a point should never lay outside the world
-                FError("line {}: coordinate out of range ({})\n", sourceface.linenum, v);
+                FError("{}: coordinate out of range ({})\n", sourceface.line, v);
             }
         }
 
@@ -109,7 +109,7 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         {
             vec_t dist = face->get_plane().distance_to(p1);
             if (fabs(dist) > qbsp_options.epsilon.value()) {
-                logging::print("WARNING: Line {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.linenum,
+                logging::print("WARNING: {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.line,
                     p1[0], p1[1], p1[2], dist);
             }
         }
@@ -118,8 +118,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
         qvec3d edgevec = p2 - p1;
         vec_t length = qv::length(edgevec);
         if (length < qbsp_options.epsilon.value()) {
-            logging::print("WARNING: Line {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n",
-                sourceface.linenum, length, p1[0], p1[1], p1[2]);
+            logging::print("WARNING: {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n",
+                sourceface.line, length, p1[0], p1[1], p1[2]);
             for (size_t j = i + 1; j < face->w.size(); j++)
                 face->w[j - 1] = face->w[j];
             face->w.resize(face->w.size() - 1);
@@ -137,8 +137,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
                 continue;
             vec_t dist = qv::dot(face->w[j], edgenormal);
             if (dist > edgedist) {
-                logging::print("WARNING: line {}: Found a non-convex face (error size {}, point: {})\n",
-                    sourceface.linenum, dist - edgedist, face->w[j]);
+                logging::print("WARNING: {}: Found a non-convex face (error size {}, point: {})\n",
+                    sourceface.line, dist - edgedist, face->w[j]);
                 face->w.clear();
                 return;
             }
@@ -252,9 +252,8 @@ contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
         }
 
         if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
-            logging::print("mixed face contents ({} != {}) at line {}\n",
-                base_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game),
-                mapface.linenum);
+            logging::print("WARNING: {}: mixed face contents ({} != {})\n",
+                mapface.line, base_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
             break;
         }
     }
@@ -629,11 +628,12 @@ void bspbrush_t::update_bounds()
     }
 
 	for (size_t i = 0; i < 3; i++) {
+        // todo: map_source_location in bspbrush_t
 		if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() || this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
-			logging::print("WARNING: line {}: brush bounds out of range\n", mapbrush->linenum);
+			logging::print("WARNING: {}: brush bounds out of range\n", mapbrush ? mapbrush->line : map_source_location());
         }
 		if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() || this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
-			logging::print("WARNING: line {}: no visible sides on brush\n", mapbrush->linenum);
+			logging::print("WARNING: {}: no visible sides on brush\n", mapbrush ? mapbrush->line : map_source_location());
         }
 	}
 

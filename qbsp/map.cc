@@ -1475,14 +1475,14 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             if (!(extinfo.info->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
                 extinfo.info->contents.native |= Q2_CONTENTS_DETAIL;
 
-                logging::print("WARNING: face at line {}: swapped TRANSLUCENT for DETAIL\n", mapface.linenum);
+                logging::print("WARNING: {}: swapped TRANSLUCENT for DETAIL\n", mapface.line);
             }
         }
 
         // This fixes a bug in some old maps.
         if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
-            logging::print("WARNING: face at line {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.linenum);
+            logging::print("WARNING: {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.line);
         }
     }
 
@@ -1497,7 +1497,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     if (!contents.is_valid(qbsp_options.target_game, false)) {
         auto old_contents = contents;
         qbsp_options.target_game->contents_make_valid(contents);
-        logging::print("WARNING: line {}: face has invalid contents {}, remapped to {}\n", mapface.linenum,
+        logging::print("WARNING: {}: face has invalid contents {}, remapped to {}\n", mapface.line,
             old_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
     }
 
@@ -1581,8 +1581,8 @@ inline bool IsValidTextureProjection(const mapface_t &mapface, const maptexinfo_
 static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
-        logging::print("WARNING: repairing invalid texture projection on line {} (\"{}\" near {} {} {})\n",
-            mapface.linenum, mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1],
+        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n",
+            mapface.line, mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1],
             (int)mapface.planepts[0][2]);
 
         // Reset texturing to sensible defaults
@@ -1603,7 +1603,8 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
     int i, j;
     mapface_t face;
 
-    face.linenum = parser.linenum;
+    face.line = brush.line.on_line(parser.linenum);
+
     ParsePlaneDef(parser, planepts);
 
     normal_ok = face.set_planepts(planepts);
@@ -1789,13 +1790,13 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 	}
 }
 
-static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
+static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, const map_source_location &entity_source)
 {
     mapbrush_t brush;
 
     // ericw -- brush primitives
     if (!parser.parse_token(PARSE_PEEK))
-        FError("Unexpected EOF after { beginning brush");
+        FError("{}: unexpected EOF after { beginning brush", entity_source);
 
     if (parser.token == "(") {
         brush.format = brushformat_t::NORMAL;
@@ -1818,8 +1819,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
     while (parser.parse_token()) {
 
         // set linenum after first parsed token
-        if (!brush.linenum) {
-            brush.linenum = parser.linenum;
+        if (!brush.line) {
+            brush.line = entity_source.on_line(parser.linenum);
         }
 
         if (parser.token == "}")
@@ -1866,13 +1867,16 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
     return brush;
 }
 
-bool ParseEntity(parser_t &parser, mapentity_t *entity)
+bool ParseEntity(parser_t &parser, mapentity_t *entity, const map_source_location &map_source)
 {
     if (!parser.parse_token())
         return false;
 
-    if (parser.token != "{")
-        FError("line {}: Invalid entity format, { not found", parser.linenum);
+    map_source_location entity_source = map_source.on_line(parser.linenum);
+
+    if (parser.token != "{") {
+        FError("{}: Invalid entity format, { not found", entity_source);
+    }
 
     entity->mapbrushes.clear();
 
@@ -1885,7 +1889,7 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
             // once we run into the first brush, set up textures state.
             EnsureTexturesLoaded();
 
-            entity->mapbrushes.emplace_back(ParseBrush(parser, *entity));
+            entity->mapbrushes.emplace_back(ParseBrush(parser, *entity, entity_source));
         } else {
             ParseEpair(parser, entity);
         }
@@ -2007,9 +2011,10 @@ static mapentity_t LoadExternalMap(const std::string &filename)
     }
 
     parser_t parser(file->data(), file->size());
+    map_source_location entity_source { std::make_shared<std::string>(filename), parser.linenum };
 
     // parse the worldspawn
-    if (!ParseEntity(parser, &dest)) {
+    if (!ParseEntity(parser, &dest, entity_source)) {
         FError("'{}': Couldn't parse worldspawn entity\n", filename);
     }
     const std::string &classname = dest.epairs.get("classname");
@@ -2019,7 +2024,7 @@ static mapentity_t LoadExternalMap(const std::string &filename)
 
     // parse any subsequent entities, move any brushes to worldspawn
     mapentity_t dummy{};
-    while (ParseEntity(parser, &dummy)) {
+    while (ParseEntity(parser, &dummy, entity_source = entity_source.on_line(parser.linenum))) {
         // move the brushes to the worldspawn
         dest.mapbrushes.insert(dest.mapbrushes.end(), std::make_move_iterator(dummy.mapbrushes.begin()), std::make_move_iterator(dummy.mapbrushes.end()));
 
@@ -2198,10 +2203,10 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 
 	for (size_t i = 0; i < 3; i++) {
 		if (ob.bounds.mins()[0] <= -qbsp_options.worldextent.value() || ob.bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
-			logging::print("WARNING: line {}: brush bounds out of range\n", ob.linenum);
+			logging::print("WARNING: {}: brush bounds out of range\n", ob.line);
         }
 		if (ob.bounds.mins()[0] >= qbsp_options.worldextent.value() || ob.bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
-			logging::print("WARNING: line {}: no visible sides on brush\n", ob.linenum);
+			logging::print("WARNING: {}: no visible sides on brush\n", ob.line);
         }
 	}
 }
@@ -2239,7 +2244,8 @@ void ProcessMapBrushes()
                 if (&entity == map.world_entity()) {
                     logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 } else if (entity.epairs.has("origin")) {
-                    logging::print("WARNING: Entity at line {} has multiple origin brushes\n", entity.mapbrushes.front().faces[0].linenum);
+                    // fixme-brushbsp: entity.line
+                    logging::print("WARNING: Entity at {} has multiple origin brushes\n", entity.mapbrushes.front().faces[0].line);
                 } else {
                     entity.origin = brush.bounds.centroid();
                     entity.epairs.set("origin", qv::to_string(entity.origin));
@@ -2350,11 +2356,12 @@ void LoadMapFile(void)
         }
 
         parser_t parser(file->data(), file->size());
+        map_source_location entity_source { std::make_shared<std::string>(qbsp_options.map_path.string()) };
 
         for (int i = 0;; i++) {
             mapentity_t &entity = map.entities.emplace_back();
 
-            if (!ParseEntity(parser, &entity)) {
+            if (!ParseEntity(parser, &entity, entity_source.on_line(parser.linenum))) {
                 break;
             }
         }
@@ -2375,11 +2382,12 @@ void LoadMapFile(void)
         }
 
         parser_t parser(file->data(), file->size());
+        map_source_location entity_source { std::make_shared<std::string>(qbsp_options.add.value()) };
 
         for (int i = 0;; i++) {
             mapentity_t &entity = map.entities.emplace_back();
 
-            if (!ParseEntity(parser, &entity)) {
+            if (!ParseEntity(parser, &entity, entity_source.on_line(parser.linenum))) {
                 break;
             }
 

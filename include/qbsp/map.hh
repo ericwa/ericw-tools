@@ -48,20 +48,52 @@ struct map_source_location
     // to be. note that because the locations only live for the lifetime
     // of the object it is belonging to, whatever this string
     // points to must out-live the object.
-    std::string_view source_name;
+    std::shared_ptr<std::string> source_name = nullptr;
 
     // the line number that this location is associated to, if any. Synthetic
     // locations may not necessarily have an associated line number.
-    std::optional<size_t> line_number;
+    std::optional<size_t> line_number = std::nullopt;
 
     // reference to a location of the object that derived us. this is mainly
     // for synthetic locations; ie a bspbrush_t's sides aren't themselves generated
     // by a source or line, but they are derived from a mapbrush_t which does have
-    // a location. The object it points to must outlive this object.
-    const std::optional<std::reference_wrapper<map_source_location>> derivative;
+    // a location. The object it points to must outlive this object. this is mainly
+    // for debugging.
+    std::optional<std::reference_wrapper<const map_source_location>> derivative = std::nullopt;
+
+    explicit operator bool() const { return source_name != nullptr; }
+
+    // return a modified source location with only the line changeed
+    inline map_source_location on_line(size_t new_line) const
+    {
+        return { source_name, new_line, derivative };
+    }
 
     // if we update to C++20 we could use this to track where location objects come from:
     // std::source_location created_location;
+};
+
+// FMT support
+template<>
+struct fmt::formatter<map_source_location>
+{
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
+
+    template<typename FormatContext>
+    auto format(const map_source_location &v, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        if (v.source_name) {
+            format_to(ctx.out(), "{}", *v.source_name.get());
+        } else {
+            format_to(ctx.out(), "unknown/unset location");
+        }
+
+        if (v.line_number.has_value()) {
+            format_to(ctx.out(), "[line {}]", v.line_number.value());
+        }
+
+        return ctx.out();
+    }
 };
 
 struct mapface_t
@@ -70,7 +102,7 @@ struct mapface_t
     std::array<qvec3d, 3> planepts{};
     std::string texname{};
     int texinfo = 0;
-    int linenum = 0;
+    map_source_location line;
     bool bevel = false;
     bool visible = false;
     winding_t winding; // winding used to calculate bevels
@@ -105,7 +137,7 @@ public:
     brushformat_t format = brushformat_t::NORMAL;
     aabb3d bounds {};
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
-    size_t entitynum = 0, linenum = 0;
+    map_source_location line;
 };
 
 struct lumpdata
@@ -370,7 +402,7 @@ extern mapdata_t map;
 
 void CalculateWorldExtent(void);
 
-bool ParseEntity(parser_t &parser, mapentity_t *entity);
+bool ParseEntity(parser_t &parser, mapentity_t *entity, const map_source_location &map_source);
 
 void ProcessExternalMapEntity(mapentity_t *entity);
 void ProcessAreaPortal(mapentity_t *entity);

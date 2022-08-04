@@ -44,10 +44,12 @@ static mapentity_t LoadMap(const char *map)
     // FIXME: ???
     mapentity_t &entity = ::map.entities.emplace_back();
 
+    map_source_location entity_source { std::make_shared<std::string>(Catch::getResultCapture().getCurrentTestName()), 0 };
+
     mapentity_t worldspawn;
 
     // FIXME: adds the brush to the global map...
-    Q_assert(ParseEntity(parser, &worldspawn));
+    Q_assert(ParseEntity(parser, &worldspawn, entity_source));
 
     CalculateWorldExtent();
 
