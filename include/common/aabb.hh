@@ -117,8 +117,8 @@ public:
     constexpr bool contains(const aabb &other) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (other.maxs()[i] < mins()[i] ||
-                other.mins()[i] > maxs()[i]) {
+            if (other.mins()[i] < mins()[i] ||
+                other.maxs()[i] > maxs()[i]) {
                 return false;
             }
         }
