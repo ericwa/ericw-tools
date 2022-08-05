@@ -790,6 +790,7 @@ static void FindPortalSide(portal_t *p)
 
     // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
     side_t *bestside[2] = {nullptr, nullptr};
+    side_t *exactside[2] = {nullptr, nullptr};
     float bestdot = 0;
     const qbsp_plane_t &p1 = p->onnode->get_plane();
 
@@ -825,13 +826,14 @@ static void FindPortalSide(portal_t *p)
                     // see which way(s) we want to generate faces - we could be a brush on either side of
                     // the portal, generating either a outward face (common case) or an inward face (liquids) or both.
                     if (generate_outside_face) {
-                        if (!bestside[!j]) {
-                            bestside[!j] = &side;
+                        // since we are iterating the brushes from highest priority (last) to lowest, take the first exactside we find
+                        if (!exactside[!j]) {
+                            exactside[!j] = &side;
                         }
                     }
                     if (generate_inside_face) {
-                        if (!bestside[j]) {
-                            bestside[j] = &side;
+                        if (!exactside[j]) {
+                            exactside[j] = &side;
                         }
                     }
 
@@ -842,9 +844,21 @@ static void FindPortalSide(portal_t *p)
                 double dot = qv::dot(p1.get_normal(), p2.get_normal());
                 if (dot > bestdot) {
                     bestdot = dot;
-                    bestside[j] = &side;
+                    if (generate_outside_face) {
+                        bestside[!j] = &side;
+                    }
+                    if (generate_inside_face) {
+                        bestside[j] = &side;
+                    }
                 }
             }
+        }
+    }
+
+    // take exact sides over best sides
+    for (int i = 0; i < 2; ++i) {
+        if (exactside[i]) {
+            bestside[i] = exactside[i];
         }
     }
 
