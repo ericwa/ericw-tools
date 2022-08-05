@@ -615,6 +615,8 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
         }
     }
 
+    logging::header("CountBrushes");
+
     qbsp_options.target_game->print_content_stats(*stats, "brushes");
 }
 

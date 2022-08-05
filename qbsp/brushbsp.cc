@@ -1139,14 +1139,30 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     BuildTree_r(tree->headnode.get(), std::move(brushlist), forced_quick_tree, stats);
 
     logging::print(logging::flag::STAT, "     {:8} visible nodes\n", stats.c_nodes - stats.c_nonvis);
-    logging::print(logging::flag::STAT, "     {:8} nonvis nodes\n", stats.c_nonvis);
-    logging::print(logging::flag::STAT, "     {:8} block split nodes\n", stats.c_blocksplit);
-    logging::print(logging::flag::STAT, "     {:8} expensive split nodes\n", stats.c_qbsp3);
-    logging::print(logging::flag::STAT, "     {:8} midsplit nodes\n", stats.c_midsplit);
+    if (stats.c_nonvis) {
+        logging::print(logging::flag::STAT, "     {:8} nonvis nodes\n", stats.c_nonvis);
+    }
+    if (stats.c_blocksplit) {
+        logging::print(logging::flag::STAT, "     {:8} block split nodes\n", stats.c_blocksplit);
+    }
+    if (stats.c_qbsp3) {
+        logging::print(logging::flag::STAT, "     {:8} expensive split nodes\n", stats.c_qbsp3);
+    }
+    if (stats.c_midsplit) {
+        logging::print(logging::flag::STAT, "     {:8} midsplit nodes\n", stats.c_midsplit);
+    }
     logging::print(logging::flag::STAT, "     {:8} leafs\n", stats.c_leafs);
-    logging::print(logging::flag::STAT, "     {:8} bogus brushes\n", stats.c_bogus);
-    logging::print(logging::flag::STAT, "     {:8} brushes removed from a split\n", stats.c_brushesremoved);
-    logging::print(logging::flag::STAT, "     {:8} brushes split only on one side\n", stats.c_brushesonesided);
+    if (stats.c_bogus) {
+        logging::print(logging::flag::STAT, "     {:8} bogus brushes\n", stats.c_bogus);
+    }
+    if (stats.c_brushesremoved) {
+        logging::print(logging::flag::STAT, "     {:8} brushes removed from a split\n", stats.c_brushesremoved);
+    }
+    if (stats.c_brushesonesided) {
+        logging::print(logging::flag::STAT, "     {:8} brushes split only on one side\n", stats.c_brushesonesided);
+    }
+
+    logging::header("CountLeafs");
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
 
     return tree;
