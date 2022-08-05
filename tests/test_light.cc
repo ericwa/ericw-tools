@@ -794,11 +794,11 @@ TEST_CASE("aabb_contains", "[mathlib]")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
-    const aabb3f yes1(qvec3f(4, 4, 4), qvec3f(15, 15, 15));
-    const aabb3f yes2(qvec3f(10, 10, 10), qvec3f(15, 15, 15)); /// just touching at one point (10, 10, 10)
+    const aabb3f yes1(qvec3f(1, 1, 1), qvec3f(2, 2, 2));
+    const aabb3f yes2(qvec3f(9, 9, 9), qvec3f(10, 10, 10));
 
-    const aabb3f no1(qvec3f(-1, 1, 1), qvec3f(0.5, 10, 10));
-    const aabb3f no2(qvec3f(10.5, 1, 1), qvec3f(20, 10, 10));
+    const aabb3f no1(qvec3f(-1, 1, 1), qvec3f(2, 2, 2));
+    const aabb3f no2(qvec3f(9, 9, 9), qvec3f(10.5, 10, 10));
 
     CHECK(b1.contains(yes1));
     CHECK(b1.contains(yes2));
