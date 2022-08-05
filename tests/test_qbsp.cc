@@ -854,7 +854,7 @@ TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
 
 TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map", {"-tjunc", "rotate"});
 
     REQUIRE(prt.has_value());
 
@@ -880,7 +880,7 @@ TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
 
 TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map", {"-tjunc", "rotate"});
 
     REQUIRE(prt.has_value());
 
