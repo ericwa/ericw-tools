@@ -83,12 +83,12 @@ void qbsp_settings::initialize(int argc, const char **argv)
 {
     if (auto file = fs::load("qbsp.ini")) {
         logging::print("Loading options from qbsp.ini\n");
-        parser_t p(file->data(), file->size());
+        parser_t p(file, { "qbsp.ini" });
         parse(p);
     }
 
     try {
-        token_parser_t p(argc - 1, argv + 1);
+        token_parser_t p(argc - 1, argv + 1, { "command line" });
         auto remainder = parse(p);
 
         if (remainder.size() <= 0 || remainder.size() > 2) {
@@ -113,7 +113,7 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
     }
 
     fs::data data = fs::load(pathname);
-    parser_t parser(data);
+    parser_t parser(data, { pathname });
 
     while (true) {
         if (!parser.parse_token() || parser.at_end()) {
@@ -158,7 +158,7 @@ void qbsp_settings::load_entity_def(const std::string &pathname)
     }
 
     fs::data data = fs::load(pathname);
-    parser_t parser(data);
+    parser_t parser(data, { pathname });
 
     while (true) {
         if (!parser.parse_token() || parser.at_end()) {

@@ -1953,6 +1953,8 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
         // Conversions to bspver_generic
         mbsp_t mbsp{};
 
+        mbsp.file = bspdata->file;
+
         if (std::holds_alternative<bsp29_t>(bspdata->bsp)) {
             ConvertQ1BSPToGeneric(std::get<bsp29_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
@@ -2166,6 +2168,8 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
     int i;
 
     logging::funcprint("'{}'\n", filename);
+
+    bspdata->file = filename;
 
     /* load the file header */
     fs::data file_data = fs::load(filename);

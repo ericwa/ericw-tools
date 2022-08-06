@@ -39,17 +39,15 @@ static mapentity_t LoadMap(const char *map)
 
     ::map.entities.clear();
 
-    parser_t parser(map);
+    parser_t parser(map, { Catch::getResultCapture().getCurrentTestName() });
 
     // FIXME: ???
     mapentity_t &entity = ::map.entities.emplace_back();
 
-    map_source_location entity_source { std::make_shared<std::string>(Catch::getResultCapture().getCurrentTestName()), 0 };
-
     mapentity_t worldspawn;
 
     // FIXME: adds the brush to the global map...
-    Q_assert(ParseEntity(parser, &worldspawn, entity_source));
+    Q_assert(ParseEntity(parser, &worldspawn));
 
     CalculateWorldExtent();
 
@@ -1048,7 +1046,8 @@ TEST_CASE("origin", "[testmaps_q1]")
     REQUIRE(qvec3f(0, 0, 0) == bsp.dmodels[1].origin);
 
     // check that the origin brush updated the entity lump
-    auto ents = EntData_Parse(bsp.dentdata);
+    parser_t parser(bsp.dentdata, { "qbsp_origin.bsp" });
+    auto ents = EntData_Parse(parser);
     auto it = std::find_if(ents.begin(), ents.end(), 
         [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
 
@@ -1392,7 +1391,8 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     CHECK(0 == void_leaf->area); // a solid leaf gets the invalid area
 
     // check the func_areaportal entity had its "style" set
-    auto ents = EntData_Parse(bsp.dentdata);
+    parser_t parser(bsp.dentdata, { "qbsp_q2_areaportal.bsp" });
+    auto ents = EntData_Parse(parser);
     auto it = std::find_if(ents.begin(), ents.end(),
         [](const entdict_t &dict) { return dict.get("classname") == "func_areaportal"; });
 
@@ -1779,7 +1779,8 @@ TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
     REQUIRE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-5,0,16}, {0, 0, 1}));
 
     // check that the worldspawn keys from the base map are used
-    auto ents = EntData_Parse(bsp.dentdata);
+    parser_t parser(bsp.dentdata, { "q1_merge_maps_base.bsp" });
+    auto ents = EntData_Parse(parser);
     REQUIRE(ents.size() == 3); // worldspawn, info_player_start, func_wall
 
     REQUIRE(ents[0].get("classname") == "worldspawn");

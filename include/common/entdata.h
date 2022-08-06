@@ -26,11 +26,10 @@
 #include <vector>
 #include <string_view>
 #include "qvec.hh"
+#include "parser.hh"
 
 using keyvalue_t = std::pair<std::string, std::string>;
 using keyvalues_t = std::vector<keyvalue_t>;
-
-struct parser_base_t;
 
 class entdict_t
 {
@@ -69,6 +68,20 @@ public:
     void parse(parser_base_t &parser);
 };
 
-void EntData_ParseInto(const std::string &entdata, std::vector<entdict_t> &vector);
-std::vector<entdict_t> EntData_Parse(const std::string &entdata);
+void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector);
+
+/*
+ * ==================
+ * EntData_Parse
+ * ==================
+ */
+inline std::vector<entdict_t> EntData_Parse(parser_t &parser)
+{
+    std::vector<entdict_t> result;
+
+    EntData_ParseInto(parser, result);
+
+    return result;
+}
+
 std::string EntData_Write(const std::vector<entdict_t> &ents);

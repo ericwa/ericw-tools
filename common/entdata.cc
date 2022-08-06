@@ -182,10 +182,8 @@ void entdict_t::parse(parser_base_t &parser)
     }
 }
 
-void EntData_ParseInto(const std::string &entdata, std::vector<entdict_t> &vector)
+void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector)
 {
-    parser_t parser(entdata);
-
     /* go through all the entities */
     while (1) {
         /* parse the opening brace */
@@ -195,20 +193,6 @@ void EntData_ParseInto(const std::string &entdata, std::vector<entdict_t> &vecto
         // emplace a new entdict_t out of the parser
         vector.emplace_back(parser);
     }
-}
-
-/*
- * ==================
- * EntData_Parse
- * ==================
- */
-std::vector<entdict_t> EntData_Parse(const std::string &entdata)
-{
-    std::vector<entdict_t> result;
-
-    EntData_ParseInto(entdata, result);
-
-    return result;
 }
 
 /*

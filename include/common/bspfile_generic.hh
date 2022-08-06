@@ -436,6 +436,9 @@ struct mbsp_t
     // the BSP version that we came from, if any
     const bspversion_t *loadversion;
 
+    // the BSP we were converted from, if any
+    fs::path file;
+
     std::vector<dmodelh2_t> dmodels;
     mvis_t dvis;
     std::vector<uint8_t> dlightdata;

@@ -36,6 +36,81 @@ enum : int32_t
 
 using parseflags = int32_t;
 
+// kind of a parallel to std::source_location in C++20
+// but this represents a location in a parser.
+struct parser_source_location
+{
+    // the source name of this location; may be a .map file path,
+    // or some other string that describes where this location came
+    // to be. note that because the locations only live for the lifetime
+    // of the object it is belonging to, whatever this string
+    // points to must out-live the object.
+    std::shared_ptr<std::string> source_name = nullptr;
+
+    // the line number that this location is associated to, if any. Synthetic
+    // locations may not necessarily have an associated line number.
+    std::optional<size_t> line_number = std::nullopt;
+
+    // reference to a location of the object that derived us. this is mainly
+    // for synthetic locations; ie a bspbrush_t's sides aren't themselves generated
+    // by a source or line, but they are derived from a mapbrush_t which does have
+    // a location. The object it points to must outlive this object. this is mainly
+    // for debugging.
+    std::optional<std::reference_wrapper<const parser_source_location>> derivative = std::nullopt;
+
+    parser_source_location() = default;
+    inline parser_source_location(const std::string &source) : source_name(std::make_unique<std::string>(source)) { }
+    inline parser_source_location(const char *source) : source_name(std::make_unique<std::string>(source)) { }
+    inline parser_source_location(const std::string &source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
+    inline parser_source_location(const char *source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
+
+    // check if this source location is valid
+    explicit operator bool() const { return source_name != nullptr; }
+
+    // return a modified source location with only the line changed
+    inline parser_source_location on_line(size_t new_line) const
+    {
+        parser_source_location loc(*this);
+        loc.line_number = new_line;
+        return loc;
+    }
+
+    // return a new, constructed source location derived from this one
+    template<typename ... Args>
+    inline parser_source_location derive(Args&&... args)
+    {
+        parser_source_location loc(std::forward<Args>(args)...);
+        loc.derivative = *this;
+        return loc;
+    }
+
+    // if we update to C++20 we could use this to track where location objects come from:
+    // std::source_location created_location;
+};
+
+// FMT support
+template<>
+struct fmt::formatter<parser_source_location>
+{
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
+
+    template<typename FormatContext>
+    auto format(const parser_source_location &v, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        if (v.source_name) {
+            format_to(ctx.out(), "{}", *v.source_name.get());
+        } else {
+            format_to(ctx.out(), "unknown/unset location");
+        }
+
+        if (v.line_number.has_value()) {
+            format_to(ctx.out(), "[line {}]", v.line_number.value());
+        }
+
+        return ctx.out();
+    }
+};
+
 template<typename... T>
 constexpr auto untie(const std::tuple<T...> &tuple)
 {
@@ -47,8 +122,14 @@ using untied_t = decltype(untie(std::declval<T>()));
 
 struct parser_base_t
 {
-    std::string token;
+    std::string token; // the last token parsed by parse_token
     bool was_quoted = false; // whether the current token was from a quoted string or not
+    parser_source_location location; // parse location, if any
+
+    inline parser_base_t(parser_source_location base_location) :
+        location(base_location)
+    {
+    }
 
     virtual bool parse_token(parseflags flags = PARSE_NORMAL) = 0;
 
@@ -66,30 +147,30 @@ struct parser_t : parser_base_t
 {
     const char *pos;
     const char *end;
-    uint32_t linenum = 1;
 
     // base constructor; accept raw start & length
-    inline parser_t(const void *start, size_t length)
-        : pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length)
+    inline parser_t(const void *start, size_t length, parser_source_location base_location)
+        : parser_base_t(base_location.on_line(1)),
+        pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length)
     {
     }
 
     // pull from string_view; note that the string view must live for the entire
     // duration of the parser's life time
-    inline parser_t(const std::string_view &view) : parser_t(&view.front(), view.size()) { }
+    inline parser_t(const std::string_view &view, parser_source_location base_location) : parser_t(&view.front(), view.size(), base_location) { }
 
     // pull from fs::data; note that the data must live for the entire
     // duration of the parser's life time, and must has_value()
-    inline parser_t(const fs::data &data) : parser_t(data.value().data(), data.value().size()) { }
+    inline parser_t(const fs::data &data, parser_source_location base_location) : parser_t(data.value().data(), data.value().size(), base_location) { }
 
     // pull from C string; made explicit because this is error-prone
-    explicit parser_t(const char *str) : parser_t(str, strlen(str)) { }
+    explicit parser_t(const char *str, parser_source_location base_location) : parser_t(str, strlen(str), base_location) { }
 
     bool parse_token(parseflags flags = PARSE_NORMAL) override;
 
-    using state_type = decltype(std::tie(pos, linenum));
+    using state_type = decltype(std::tie(pos, location));
 
-    constexpr state_type state() { return state_type(pos, linenum); }
+    constexpr state_type state() { return state_type(pos, location); }
 
     bool at_end() const override { return pos >= end; }
 
@@ -112,7 +193,7 @@ struct token_parser_t : parser_base_t
     std::vector<std::string_view> tokens;
     size_t cur = 0;
 
-    inline token_parser_t(int argc, const char **args) : tokens(args, args + argc) { }
+    inline token_parser_t(int argc, const char **args, parser_source_location base_location) : parser_base_t(base_location), tokens(args, args + argc) { }
 
     using state_type = decltype(std::tie(cur));
 

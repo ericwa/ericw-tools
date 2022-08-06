@@ -139,9 +139,6 @@ public:
     // copies value and source
     virtual bool copyFrom(const setting_base &other) = 0;
 
-    // convenience form of parse() that constructs a temporary parser_t
-    bool parseString(const std::string &string, source source);
-
     // resets value to default, and source to source::DEFAULT
     virtual void reset() = 0;
     virtual bool parse(const std::string &settingName, parser_base_t &parser, source source) = 0;
@@ -769,7 +766,7 @@ public:
             return;
         }
 
-        parser_t p{value};
+        parser_t p{value, { }};
         setting->parse(name, p, source);
     }
 
@@ -846,7 +843,7 @@ public:
     // do the actual parsing
     virtual void initialize(int argc, const char **argv)
     {
-        token_parser_t p(argc, argv);
+        token_parser_t p(argc, argv, { "command line" });
         parse(p);
     }
     // after parsing has concluded, handle the side effects

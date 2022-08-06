@@ -43,15 +43,15 @@ skipspace:
             if (flags & PARSE_OPTIONAL)
                 return false;
             if (flags & PARSE_SAMELINE)
-                FError("line {}: Line is incomplete", linenum);
+                FError("{}: Line is incomplete", location);
             return false;
         }
         if (*pos == '\n') {
             if (flags & PARSE_OPTIONAL)
                 return false;
             if (flags & PARSE_SAMELINE)
-                FError("line {}: Line is incomplete", linenum);
-            linenum++;
+                FError("{}: Line is incomplete", location);
+            location.line_number.value()++;
         }
         pos++;
     }
@@ -67,15 +67,15 @@ skipspace:
         if (flags & PARSE_OPTIONAL)
             return false;
         if (flags & PARSE_SAMELINE)
-            FError("line {}: Line is incomplete", linenum);
+            FError("{}: Line is incomplete", location);
         while (*pos++ != '\n') {
             if (!*pos) {
                 if (flags & PARSE_SAMELINE)
-                    FError("line {}: Line is incomplete", linenum);
+                    FError("{}: Line is incomplete", location);
                 return false;
             }
         }
-        linenum++; // count the \n the preceding while() loop just consumed
+        location.line_number.value()++; // count the \n the preceding while() loop just consumed
         goto skipspace;
     }
     if (flags & PARSE_COMMENT)
@@ -88,7 +88,7 @@ skipspace:
         pos++;
         while (*pos != '"') {
             if (!*pos)
-                FError("line {}: EOF inside quoted token", linenum);
+                FError("{}: EOF inside quoted token", location);
             if (*pos == '\\') {
                 // small note. the vanilla quake engine just parses the "foo" stuff then goes and looks for \n
                 // explicitly within strings. this means ONLY \n works, and double-quotes cannot be used either in maps
@@ -118,13 +118,13 @@ skipspace:
                         break;
                     case '\"':
                         if (pos[2] == '\r' || pos[2] == '\n') {
-                            logging::print("WARNING: line {}: escaped double-quote at end of string\n", linenum);
+                            logging::print("WARNING: {}: escaped double-quote at end of string\n", location);
                         } else {
                             *token_p++ = *pos++;
                         }
                         break;
                     default:
-                        logging::print("WARNING: line {}: Unrecognised string escape - \\{}\n", linenum, pos[1]);
+                        logging::print("WARNING: {}: Unrecognised string escape - \\{}\n", location, pos[1]);
                         break;
                 }
             }

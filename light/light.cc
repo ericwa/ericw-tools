@@ -114,7 +114,7 @@ setting_group experimental_group{"Experimental options", 60};
 
 void light_settings::initialize(int argc, const char **argv)
 {
-    token_parser_t p(argc - 1, argv + 1);
+    token_parser_t p(argc - 1, argv + 1, { "command line" });
     auto remainder = parse(p);
 
     if (remainder.size() <= 0 || remainder.size() > 1) {
@@ -1074,7 +1074,8 @@ static void LoadTextures(const mbsp_t *bsp)
 
     // gather textures used by _project_texture.
     // FIXME: I'm sure we can resolve this so we don't parse entdata twice.
-    auto entdicts = EntData_Parse(bsp->dentdata);
+    parser_t parser{bsp->dentdata, { bsp->file.string() }};
+    auto entdicts = EntData_Parse(parser);
     for (auto &entdict : entdicts) {
         if (entdict.get("classname").find("light") == 0) {
             const auto &tex = entdict.get("_project_texture");

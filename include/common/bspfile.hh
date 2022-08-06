@@ -432,6 +432,9 @@ struct bspdata_t
 {
     const bspversion_t *version, *loadversion;
 
+    // the file path that this BSP was loaded from
+    fs::path file;
+
     // Stay in monostate until a BSP type is requested.
     std::variant<std::monostate, mbsp_t, bsp29_t, bsp2rmq_t, bsp2_t, q2bsp_t, q2bsp_qbism_t> bsp;
 

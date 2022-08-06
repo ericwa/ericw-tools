@@ -1000,7 +1000,7 @@ static void DecompileEntity(
             continue;
         } else if (modelNum > 0 && keyValue.first == "origin") {
             auto &value = keyValue.second;
-            parser_t parser(value);
+            parser_t parser(value, { });
             qvec3d vec;
             parser.parse_token();
             vec[0] = stof(parser.token);
@@ -1182,7 +1182,8 @@ static void DecompileEntity(
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file)
 {
-    auto entdicts = EntData_Parse(bsp->dentdata);
+    parser_t parser{bsp->dentdata, { bsp->file.string() }};
+    auto entdicts = EntData_Parse(parser);
 
     for (size_t i = 0; i < entdicts.size(); ++i) {
         // entity 0 is implicitly worldspawn (model 0)

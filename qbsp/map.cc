@@ -1158,7 +1158,7 @@ static void SetTexinfo_QuArK(
      */
     determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
-        logging::print("WARNING: line {}: Face with degenerate QuArK-style texture axes\n", parser.linenum);
+        logging::print("WARNING: {}: Face with degenerate QuArK-style texture axes\n", parser.location);
         for (i = 0; i < 3; i++)
             out->vecs.at(0, i) = out->vecs.at(1, i) = 0;
     } else {
@@ -1317,7 +1317,7 @@ static void ParsePlaneDef(parser_t &parser, std::array<qvec3d, 3> &planepts)
     return;
 
 parse_error:
-    FError("line {}: Invalid brush plane format", parser.linenum);
+    FError("{}: Invalid brush plane format", parser.location);
 }
 
 static void ParseValve220TX(parser_t &parser, qmat<vec_t, 2, 3> &axis, qvec2d &shift, vec_t &rotate, qvec2d &scale)
@@ -1347,7 +1347,7 @@ static void ParseValve220TX(parser_t &parser, qmat<vec_t, 2, 3> &axis, qvec2d &s
     return;
 
 parse_error:
-    FError("line {}: couldn't parse Valve220 texture info", parser.linenum);
+    FError("{}: couldn't parse Valve220 texture info", parser.location);
 }
 
 static void ParseBrushPrimTX(parser_t &parser, qmat<vec_t, 2, 3> &texMat)
@@ -1378,7 +1378,7 @@ static void ParseBrushPrimTX(parser_t &parser, qmat<vec_t, 2, 3> &texMat)
     return;
 
 parse_error:
-    FError("line {}: couldn't parse Brush Primitives texture info", parser.linenum);
+    FError("{}: couldn't parse Brush Primitives texture info", parser.location);
 }
 
 static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t &brush, maptexinfo_t *tx,
@@ -1603,7 +1603,7 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
     int i, j;
     mapface_t face;
 
-    face.line = brush.line.on_line(parser.linenum);
+    face.line = parser.location;
 
     ParsePlaneDef(parser, planepts);
 
@@ -1612,7 +1612,7 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
     ParseTextureDef(parser, face, brush, &tx, face.planepts, face.get_plane());
 
     if (!normal_ok) {
-        logging::print("WARNING: line {}: Brush plane with no normal\n", parser.linenum);
+        logging::print("WARNING: {}: Brush plane with no normal\n", parser.location);
         return std::nullopt;
     }
 
@@ -1790,13 +1790,13 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 	}
 }
 
-static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, const map_source_location &entity_source)
+static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
 {
     mapbrush_t brush;
 
     // ericw -- brush primitives
     if (!parser.parse_token(PARSE_PEEK))
-        FError("{}: unexpected EOF after { beginning brush", entity_source);
+        FError("{}: unexpected EOF after { beginning brush", parser.location);
 
     if (parser.token == "(") {
         brush.format = brushformat_t::NORMAL;
@@ -1820,7 +1820,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, const map_so
 
         // set linenum after first parsed token
         if (!brush.line) {
-            brush.line = entity_source.on_line(parser.linenum);
+            brush.line = parser.location;
         }
 
         if (parser.token == "}")
@@ -1836,13 +1836,13 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, const map_so
         bool discardFace = false;
         for (auto &check : brush.faces) {
             if (qv::epsilonEqual(check.get_plane(), face->get_plane())) {
-                logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
+                logging::print("line {}: Brush with duplicate plane\n", parser.location);
                 discardFace = true;
                 continue;
             }
             if (qv::epsilonEqual(-check.get_plane(), face->get_plane())) {
                 /* FIXME - this is actually an invalid brush */
-                logging::print("line {}: Brush with duplicate plane\n", parser.linenum);
+                logging::print("line {}: Brush with duplicate plane\n", parser.location);
                 continue;
             }
         }
@@ -1867,15 +1867,15 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, const map_so
     return brush;
 }
 
-bool ParseEntity(parser_t &parser, mapentity_t *entity, const map_source_location &map_source)
+bool ParseEntity(parser_t &parser, mapentity_t *entity)
 {
+    entity->location = parser.location;
+
     if (!parser.parse_token())
         return false;
 
-    map_source_location entity_source = map_source.on_line(parser.linenum);
-
     if (parser.token != "{") {
-        FError("{}: Invalid entity format, { not found", entity_source);
+        FError("{}: Invalid entity format, { not found", parser.location);
     }
 
     entity->mapbrushes.clear();
@@ -1889,7 +1889,7 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity, const map_source_locatio
             // once we run into the first brush, set up textures state.
             EnsureTexturesLoaded();
 
-            entity->mapbrushes.emplace_back(ParseBrush(parser, *entity, entity_source));
+            entity->mapbrushes.emplace_back(ParseBrush(parser, *entity));
         } else {
             ParseEpair(parser, entity);
         }
@@ -2010,11 +2010,10 @@ static mapentity_t LoadExternalMap(const std::string &filename)
         FError("Couldn't load external map file \"{}\".\n", filename);
     }
 
-    parser_t parser(file->data(), file->size());
-    map_source_location entity_source { std::make_shared<std::string>(filename), parser.linenum };
+    parser_t parser(file, { filename });
 
     // parse the worldspawn
-    if (!ParseEntity(parser, &dest, entity_source)) {
+    if (!ParseEntity(parser, &dest)) {
         FError("'{}': Couldn't parse worldspawn entity\n", filename);
     }
     const std::string &classname = dest.epairs.get("classname");
@@ -2024,7 +2023,7 @@ static mapentity_t LoadExternalMap(const std::string &filename)
 
     // parse any subsequent entities, move any brushes to worldspawn
     mapentity_t dummy{};
-    while (ParseEntity(parser, &dummy, entity_source = entity_source.on_line(parser.linenum))) {
+    while (ParseEntity(parser, &dummy)) {
         // move the brushes to the worldspawn
         dest.mapbrushes.insert(dest.mapbrushes.end(), std::make_move_iterator(dummy.mapbrushes.begin()), std::make_move_iterator(dummy.mapbrushes.end()));
 
@@ -2355,13 +2354,12 @@ void LoadMapFile(void)
             return;
         }
 
-        parser_t parser(file->data(), file->size());
-        map_source_location entity_source { std::make_shared<std::string>(qbsp_options.map_path.string()) };
+        parser_t parser(file, { qbsp_options.map_path.string() });
 
         for (int i = 0;; i++) {
             mapentity_t &entity = map.entities.emplace_back();
 
-            if (!ParseEntity(parser, &entity, entity_source.on_line(parser.linenum))) {
+            if (!ParseEntity(parser, &entity)) {
                 break;
             }
         }
@@ -2381,13 +2379,12 @@ void LoadMapFile(void)
             return;
         }
 
-        parser_t parser(file->data(), file->size());
-        map_source_location entity_source { std::make_shared<std::string>(qbsp_options.add.value()) };
+        parser_t parser(file, { qbsp_options.add.value() });
 
         for (int i = 0;; i++) {
             mapentity_t &entity = map.entities.emplace_back();
 
-            if (!ParseEntity(parser, &entity, entity_source.on_line(parser.linenum))) {
+            if (!ParseEntity(parser, &entity)) {
                 break;
             }
 

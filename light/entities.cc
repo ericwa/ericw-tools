@@ -772,7 +772,10 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
     logging::funcheader();
 
-    entdicts = EntData_Parse(bsp->dentdata);
+    {
+        parser_t parser{bsp->dentdata, { bsp->file.string() }};
+        entdicts = EntData_Parse(parser);
+    }
 
     // Make warnings
     for (auto &entdict : entdicts) {
@@ -1302,12 +1305,11 @@ static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_mod
     SubdividePolygon(face, face_modelinfo, bsp, face->numedges, verts, light_options.surflight_subdivide.value());
 }
 
-static bool ParseEntityLights(std::ifstream &f)
+static bool ParseEntityLights(std::ifstream &f, const fs::path &fname)
 {
     std::string str{std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
-    parser_t p(str);
-
-    EntData_ParseInto(str, radlights);
+    parser_t p(str, { fname.string() });
+    EntData_ParseInto(p, radlights);
     return true;
 }
 
@@ -1320,14 +1322,14 @@ bool ParseLightsFile(const fs::path &fname)
 
     // use entity-style format
     if (fname.extension() == ".ent") {
-        return ParseEntityLights(f);
+        return ParseEntityLights(f, fname);
     }
 
     while (!f.eof()) {
         std::string buf;
         std::getline(f, buf);
 
-        parser_t parser(buf);
+        parser_t parser(buf, { fname.string() });
 
         if (!parser.parse_token())
             continue;

@@ -10,7 +10,7 @@ TEST_CASE("booleanFlagImplicit", "[settings]")
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(boolSetting.value() == true);
 }
@@ -20,7 +20,7 @@ TEST_CASE("booleanFlagExplicit", "[settings]")
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked", "1"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(boolSetting.value() == true);
 }
@@ -30,7 +30,7 @@ TEST_CASE("booleanFlagStray", "[settings]")
     settings::setting_container settings;
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked", "stray"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(boolSetting.value() == true);
 }
@@ -41,7 +41,7 @@ TEST_CASE("scalarSimple", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "1.25"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(scalarSetting.value() == 1.25);
 }
@@ -51,7 +51,7 @@ TEST_CASE("scalarNegative", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "-0.25"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(scalarSetting.value() == -0.25);
 }
@@ -61,7 +61,7 @@ TEST_CASE("scalarInfinity", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0, 0.0, std::numeric_limits<vec_t>::infinity());
     const char *arguments[] = {"qbsp.exe", "-scale", "INFINITY"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(scalarSetting.value() == std::numeric_limits<vec_t>::infinity());
 }
@@ -71,7 +71,7 @@ TEST_CASE("scalarNAN", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "NAN"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(std::isnan(scalarSetting.value()));
 }
@@ -81,7 +81,7 @@ TEST_CASE("scalarScientific", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "1.54334E-34"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(scalarSetting.value() == 1.54334E-34);
 }
@@ -91,7 +91,7 @@ TEST_CASE("scalarEOF", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
@@ -100,7 +100,7 @@ TEST_CASE("scalarStray", "[settings]")
     settings::setting_container settings;
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "stray"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
@@ -110,7 +110,7 @@ TEST_CASE("vec3Simple", "[settings]")
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "1", "2", "3"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(scalarSetting.value() == (qvec3d{1, 2, 3}));
 }
@@ -120,7 +120,7 @@ TEST_CASE("vec3Complex", "[settings]")
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "-12.5", "-INFINITY", "NAN"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(scalarSetting.value()[0] == -12.5);
     REQUIRE(scalarSetting.value()[1] == -std::numeric_limits<vec_t>::infinity());
@@ -132,7 +132,7 @@ TEST_CASE("vec3Incomplete", "[settings]")
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "1", "2"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
@@ -141,7 +141,7 @@ TEST_CASE("vec3Stray", "[settings]")
     settings::setting_container settings;
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "1", "2", "abc"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
 }
 
@@ -151,7 +151,7 @@ TEST_CASE("stringSimple", "[settings]")
     settings::setting_container settings;
     settings::setting_string stringSetting(&settings, "name", "");
     const char *arguments[] = {"qbsp.exe", "-name", "i am a string with spaces in it"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(stringSetting.value() == arguments[2]);
 }
@@ -164,7 +164,7 @@ TEST_CASE("remainder", "[settings]")
     settings::setting_bool flagSetting(&settings, "flag", false);
     const char *arguments[] = {
         "qbsp.exe", "-name", "string", "-flag", "remainder one", "remainder two"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     auto remainder = settings.parse(p);
     REQUIRE(remainder[0] == "remainder one");
     REQUIRE(remainder[1] == "remainder two");
@@ -177,7 +177,7 @@ TEST_CASE("doubleHyphen", "[settings]")
     settings::setting_bool boolSetting(&settings, "locked", false);
     settings::setting_string stringSetting(&settings, "name", "");
     const char *arguments[] = {"qbsp.exe", "--locked", "--name", "my name!"};
-    token_parser_t p{std::size(arguments) - 1, arguments + 1};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, { }};
     settings.parse(p);
     REQUIRE(boolSetting.value() == true);
     REQUIRE(stringSetting.value() == "my name!");
@@ -233,7 +233,7 @@ TEST_CASE("copyMangle", "[settings]")
     settings::setting_container settings;
     settings::setting_mangle sunvec{&settings, {"sunlight_mangle"}, 0.0, 0.0, 0.0};
 
-    parser_t p(std::string_view("0.0 -90.0 0.0"));
+    parser_t p(std::string_view("0.0 -90.0 0.0"), { });
     CHECK(sunvec.parse("", p, settings::source::COMMANDLINE));
     CHECK(Catch::Approx(0).margin(1e-6) == sunvec.value()[0]);
     CHECK(Catch::Approx(0).margin(1e-6) == sunvec.value()[1]);
