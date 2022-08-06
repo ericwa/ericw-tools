@@ -776,7 +776,9 @@ CreateSingleHull
 */
 static void CreateSingleHull(const int hullnum)
 {
-    logging::print("Processing hull {}...\n", hullnum);
+    if (hullnum >= 0) {
+        logging::print("Processing hull {}...\n", hullnum);
+    }
 
     // for each entity in the map file that has geometry
     for (auto &entity : map.entities) {
