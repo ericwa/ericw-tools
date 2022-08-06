@@ -23,6 +23,7 @@
 
 #include <qbsp/winding.hh>
 #include <common/qvec.hh>
+#include <qbsp/brush.hh>
 
 #include <atomic>
 #include <list>
@@ -39,6 +40,4 @@ constexpr vec_t EDGE_LENGTH_EPSILON = 0.2;
 
 bool WindingIsTiny(const winding_t &w, double size = EDGE_LENGTH_EPSILON);
 std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds);
-
-// compatibility version
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::optional<bool> forced_quick_tree);
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_vector_t &brushes, std::optional<bool> forced_quick_tree);

@@ -912,12 +912,12 @@ MarkVisibleSides
 
 =============
 */
-void MarkVisibleSides(tree_t *tree, mapentity_t *entity)
+void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_vector_t &brushes)
 {
     logging::funcheader();
 
     // clear all the visible flags
-    for (auto &brush : entity->brushes) {
+    for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
             face.visible = false;
         }

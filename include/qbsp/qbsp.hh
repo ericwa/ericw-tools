@@ -614,6 +614,7 @@ namespace qv
 
 struct bspbrush_t;
 struct side_t;
+class mapbrush_t;
 
 struct bspbrush_t_less
 {
@@ -642,7 +643,6 @@ struct node_t
 
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
-    std::set<bspbrush_t *, bspbrush_t_less> original_brushes;
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     portal_t *portals;
     int visleafnum; // -1 = solid
@@ -656,6 +656,8 @@ struct node_t
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
     int32_t area;
+    std::set<bspbrush_t *, bspbrush_t_less> original_brushes; // FIXME: only valid during construction
+    std::unordered_set<const mapbrush_t *> original_mapbrushes;
 };
 
 void InitQBSP(int argc, const char **argv);

@@ -399,7 +399,6 @@ TEST_CASE("duplicatePlanes", "[qbsp]")
 
     mapentity_t worldspawn = LoadMap(mapWithDuplicatePlanes);
     REQUIRE(1 == worldspawn.mapbrushes.size());
-    CHECK(0 == worldspawn.brushes.size());
     CHECK(6 == worldspawn.mapbrushes.front().faces.size());
 
     bspbrush_t brush = LoadBrush(&worldspawn, &worldspawn.mapbrushes.front(), {CONTENTS_SOLID}, 0);

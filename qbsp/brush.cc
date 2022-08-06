@@ -207,16 +207,6 @@ static bool MapBrush_IsHint(const mapbrush_t &brush)
     return false;
 }
 
-/*
-=====================
-FreeBrushes
-=====================
-*/
-void FreeBrushes(mapentity_t *ent)
-{
-    ent->brushes.clear();
-}
-
 #if 0
         if (hullnum <= 0 && Brush_IsHint(*hullbrush)) {
             /* Don't generate hintskip faces */
@@ -228,41 +218,6 @@ void FreeBrushes(mapentity_t *ent)
 #endif
 
 //============================================================================
-
-contentflags_t Brush_GetContents(const mapbrush_t *mapbrush)
-{
-    bool base_contents_set = false;
-    contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
-
-    // validate that all of the sides have valid contents
-    for (auto &mapface : mapbrush->faces) {
-        const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-
-        contentflags_t contents =
-            qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
-
-        if (contents.is_empty(qbsp_options.target_game)) {
-            continue;
-        }
-
-        // use the first non-empty as the base contents value
-        if (!base_contents_set) {
-            base_contents_set = true;
-            base_contents = contents;
-        }
-
-        if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
-            logging::print("WARNING: {}: mixed face contents ({} != {})\n",
-                mapface.line, base_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
-            break;
-        }
-    }
-
-    // make sure we found a valid type
-    Q_assert(base_contents.is_valid(qbsp_options.target_game, false));
-
-    return base_contents;
-}
 
 /*
 ==================
@@ -399,7 +354,7 @@ bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const c
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, content_stats_base_t &stats)
+static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_vector_t &brushes)
 {
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
@@ -461,7 +416,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     for (i = 0; i < src->mapbrushes.size(); i++, it++) {
         logging::percent(i, src->mapbrushes.size());
         auto &mapbrush = *it;
-        contentflags_t contents = Brush_GetContents(&mapbrush);
+        contentflags_t contents = mapbrush.contents;
 
         // per-brush settings
         bool detail = false;
@@ -570,7 +525,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         qbsp_options.target_game->count_contents_in_stats(brush.contents, stats);
 
         dst->bounds += brush.bounds;
-        dst->brushes.push_back(std::make_unique<bspbrush_t>(std::move(brush)));
+        brushes.push_back(std::make_unique<bspbrush_t>(std::move(brush)));
     }
 
     logging::percent(src->mapbrushes.size(), src->mapbrushes.size(), src == map.world_entity());
@@ -584,13 +539,13 @@ hullnum HULL_COLLISION should contain ALL brushes. (used by BSPX_CreateBrushList
 hullnum 0 does not contain clip brushes.
 ============
 */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_vector_t &brushes)
 {
     logging::funcheader();
 
     auto stats = qbsp_options.target_game->create_content_stats();
 
-    Brush_LoadEntity(entity, entity, hullnum, *stats);
+    Brush_LoadEntity(entity, entity, hullnum, *stats, brushes);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -610,7 +565,7 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum)
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum, *stats);
+                Brush_LoadEntity(entity, source, hullnum, *stats, brushes);
             }
         }
     }

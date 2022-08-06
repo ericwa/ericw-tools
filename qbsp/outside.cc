@@ -349,9 +349,9 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 
 //=============================================================================
 
-static void MarkBrushSidesInvisible(mapentity_t *entity)
+static void MarkBrushSidesInvisible(mapentity_t *entity, bspbrush_vector_t &brushes)
 {
-    for (auto &brush : entity->brushes) {
+    for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
             face.visible = false;
         }
@@ -599,7 +599,7 @@ get incorrectly marked as "invisible").
 Special cases: structural fully covered by detail still needs to be marked "visible".
 ===========
 */
-bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
+bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_vector_t &brushes)
 {
     node_t *node = tree->headnode.get();
 
@@ -701,29 +701,32 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum)
 
     // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
 
-    MarkBrushSidesInvisible(entity);
+    MarkBrushSidesInvisible(entity, brushes);
 
     MarkVisibleBrushSides_R(node);
 
+#if 0
+    // FIXME: move somewhere else
     if (qbsp_options.outsidedebug.value() && (qbsp_options.target_game->get_hull_sizes().size() == 0 || hullnum == 0)) {
         fs::path path = qbsp_options.bsp_path;
         path.replace_extension(".outside.map");
 
         WriteBspBrushMap(path, map.entities[0].brushes);
     }
+#endif
 
     logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;
 }
 
-void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum)
+void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_vector_t &brushes)
 {
     logging::funcheader();
 
     // Clear the outside filling state on all nodes
     ClearOccupied_r(tree->headnode.get());
 
-    MarkBrushSidesInvisible(entity);
+    MarkBrushSidesInvisible(entity, brushes);
 
     MarkVisibleBrushSides_R(tree->headnode.get());
 }

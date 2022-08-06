@@ -300,19 +300,20 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
 {
     if (node->is_leaf) {
         if (node->contents.native) {
-            if (node->original_brushes.size()) {
-                node->numleafbrushes = node->original_brushes.size();
+            if (node->original_mapbrushes.size()) {
+                node->numleafbrushes = node->original_mapbrushes.size();
                 brush_state.total_leaf_brushes += node->numleafbrushes;
                 node->firstleafbrush = map.bsp.dleafbrushes.size();
-                for (auto &b : node->original_brushes) {
+                for (auto &b : node->original_mapbrushes) {
 
-                    if (!b->mapbrush->outputnumber.has_value()) {
-                        const_cast<mapbrush_t *>(b->mapbrush)->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
+                    if (!b->outputnumber.has_value()) {
+                        // FIXME
+                        const_cast<mapbrush_t *>(b)->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
 
                         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
                             dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
 
-                        for (auto &side : b->mapbrush->faces) {
+                        for (auto &side : b->faces) {
                             map.bsp.dbrushsides.push_back(
                                 {(uint32_t) ExportMapPlane(side.get_plane()), (int32_t)ExportMapTexinfo(side.texinfo)});
                             brush.numsides++;
@@ -322,7 +323,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
                         brush_state.total_brushes++;
                     }
 
-                    map.bsp.dleafbrushes.push_back(b->mapbrush->outputnumber.value());
+                    map.bsp.dleafbrushes.push_back(b->outputnumber.value());
                 }
             }
         }
@@ -436,20 +437,22 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         entity->epairs.set("_lmscale", std::to_string(qbsp_options.lmscale.value()));
     }
 
-    /*
-     * Init the entity
-     */
-    entity->brushes.clear();
+    // Init the entity
     entity->bounds = {};
+
+    // reserve enough brushes; we would only make less,
+    // never more
+    bspbrush_vector_t brushes;
+    brushes.reserve(entity->mapbrushes.size());
 
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
-    Brush_LoadEntity(entity, hullnum);
+    Brush_LoadEntity(entity, hullnum, brushes);
 
     // assign brush file order
-    for (size_t i = 0; i < entity->brushes.size(); ++i) {
-        entity->brushes[i]->file_order = i;
+    for (size_t i = 0; i < brushes.size(); ++i) {
+        brushes[i]->file_order = i;
     }
 
     // entity->brushes = ChopBrushes(entity->brushes);
@@ -465,7 +468,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     // we're discarding the brush
     if (discarded_trigger) {
-        entity->brushes.clear();
         entity->epairs.set("mins", fmt::to_string(entity->bounds.mins()));
         entity->epairs.set("maxs", fmt::to_string(entity->bounds.maxs()));
         return;
@@ -473,17 +475,17 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     std::unique_ptr<tree_t> tree = nullptr;
     if (hullnum > 0) {
-        tree = BrushBSP(entity, true);
+        tree = BrushBSP(entity, brushes, true);
         if (entity == map.world_entity() && !qbsp_options.nofill.value()) {
             // assume non-world bmodels are simple
             MakeTreePortals(tree.get());
-            if (FillOutside(entity, tree.get(), hullnum)) {
+            if (FillOutside(entity, tree.get(), hullnum, brushes)) {
                 // make a really good tree
-                tree = BrushBSP(entity, false);
+                tree = BrushBSP(entity, brushes, false);
 
                 // fill again so PruneNodes works
                 MakeTreePortals(tree.get());
-                FillOutside(entity, tree.get(), hullnum);
+                FillOutside(entity, tree.get(), hullnum, brushes);
                 PruneNodes(tree->headnode.get());
             }
         }
@@ -492,9 +494,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         // fixme-brushbsp: return here?
     } else {
         if (qbsp_options.forcegoodtree.value()) {
-            tree = BrushBSP(entity, false);
+            tree = BrushBSP(entity, brushes, false);
         } else {
-            tree = BrushBSP(entity, entity == map.world_entity() ? std::nullopt : std::optional<bool>(false));
+            tree = BrushBSP(entity, brushes, entity == map.world_entity() ? std::nullopt : std::optional<bool>(false));
         }
 
         // build all the portals in the bsp tree
@@ -506,15 +508,15 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             // marks brush sides which are *only* touching void;
             // we can skip using them as BSP splitters on the "really good tree"
             // (effectively expanding those brush sides outwards).
-            if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum)) {
+            if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum, brushes)) {
                 // make a really good tree
-                tree = BrushBSP(entity, false);
+                tree = BrushBSP(entity, brushes, false);
 
                 // make the real portals for vis tracing
                 MakeTreePortals(tree.get());
 
                 // fill again so PruneNodes works
-                FillOutside(entity, tree.get(), hullnum);
+                FillOutside(entity, tree.get(), hullnum, brushes);
             }
 
             // Area portals
@@ -523,15 +525,15 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 EmitAreaPortals(tree->headnode.get());
             }
         } else {
-            FillBrushEntity(entity, tree.get(), hullnum);
+            FillBrushEntity(entity, tree.get(), hullnum, brushes);
 
             // rebuild BSP now that we've marked invisible brush sides
-            tree = BrushBSP(entity, false);
+            tree = BrushBSP(entity, brushes, false);
         }
 
         MakeTreePortals(tree.get());
 
-        MarkVisibleSides(tree.get(), entity);
+        MarkVisibleSides(tree.get(), entity, brushes);
         MakeFaces(tree->headnode.get());
 
         FreeTreePortals(tree.get());
@@ -566,8 +568,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         ExportDrawNodes(entity, tree->headnode.get(), entity->firstoutputfacenumber);
     }
-
-    FreeBrushes(entity);
 }
 
 /*
@@ -651,7 +651,7 @@ hull sizes
 */
 
 static void BSPX_Brushes_AddModel(
-    struct bspxbrushes_s *ctx, int modelnum, std::vector<std::unique_ptr<bspbrush_t>> &brushes)
+    struct bspxbrushes_s *ctx, int modelnum, const std::list<mapbrush_t> &brushes)
 {
     std::shared_lock lock(map_planes_lock);
 
@@ -659,7 +659,7 @@ static void BSPX_Brushes_AddModel(
 
     for (auto &b : brushes) {
         permodel.numbrushes++;
-        for (auto &f : b->sides) {
+        for (auto &f : b.faces) {
             /*skip axial*/
             const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
@@ -677,7 +677,7 @@ static void BSPX_Brushes_AddModel(
     for (auto &b : brushes) {
         bspxbrushes_perbrush perbrush{};
 
-        for (auto &f : b->sides) {
+        for (auto &f : b.faces) {
             /*skip axial*/
             const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
@@ -685,9 +685,11 @@ static void BSPX_Brushes_AddModel(
             perbrush.numfaces++;
         }
 
-        perbrush.bounds = b->bounds;
+        perbrush.bounds = b.bounds;
 
-        switch (b->contents.native) {
+        const auto &contents = b.contents;
+
+        switch (contents.native) {
             // contents should match the engine.
             case CONTENTS_EMPTY: // really an error, but whatever
             case CONTENTS_SOLID: // these are okay
@@ -695,21 +697,21 @@ static void BSPX_Brushes_AddModel(
             case CONTENTS_SLIME:
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
-                if (b->contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip(qbsp_options.target_game)) {
                     perbrush.contents = -8;
                 } else {
-                    perbrush.contents = b->contents.native;
+                    perbrush.contents = contents.native;
                 }
                 break;
             //              case CONTENTS_LADDER:
             //                      perbrush.contents = -16;
             //                      break;
             default: {
-                if (b->contents.is_clip(qbsp_options.target_game)) {
+                if (contents.is_clip(qbsp_options.target_game)) {
                     perbrush.contents = -8;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
-                        b->contents.to_string(qbsp_options.target_game));
+                        contents.to_string(qbsp_options.target_game));
                     perbrush.contents = CONTENTS_SOLID;
                 }
                 break;
@@ -718,7 +720,7 @@ static void BSPX_Brushes_AddModel(
 
         str <= perbrush;
 
-        for (auto &f : b->sides) {
+        for (auto &f : b.faces) {
             /*skip axial*/
             const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
@@ -755,15 +757,10 @@ static void BSPX_CreateBrushList(void)
             modelnum = std::stoi(mod.substr(1));
         }
 
-        ent->brushes.clear();
-
-        Brush_LoadEntity(ent, HULL_COLLISION);
-
-        if (ent->brushes.empty())
+        if (ent->mapbrushes.empty())
             continue; // non-bmodel entity
 
-        BSPX_Brushes_AddModel(&ctx, modelnum, ent->brushes);
-        FreeBrushes(ent);
+        BSPX_Brushes_AddModel(&ctx, modelnum, ent->mapbrushes);
     }
 
     BSPX_Brushes_Finalize(&ctx);

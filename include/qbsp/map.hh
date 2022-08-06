@@ -22,6 +22,7 @@
 #pragma once
 
 #include <qbsp/qbsp.hh>
+#include <qbsp/brush.hh>
 
 #include <common/bspfile.hh>
 #include <common/parser.hh>
@@ -80,6 +81,7 @@ public:
     aabb3d bounds {};
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
     parser_source_location line;
+    contentflags_t contents {};
 };
 
 struct lumpdata
@@ -99,15 +101,6 @@ enum class rotation_t
 class mapentity_t
 {
 public:
-#ifdef _MSC_VER
-    // FIXME: this is to allow MSVC to compile
-    mapentity_t() = default;
-    mapentity_t(mapentity_t &&) noexcept = default;
-    mapentity_t(const mapentity_t &) = delete;
-    mapentity_t &operator=(const mapentity_t &) = delete;
-    mapentity_t &operator=(mapentity_t &&) noexcept = default;
-#endif
-
     qvec3d origin{};
     rotation_t rotation;
 
@@ -120,7 +113,6 @@ public:
     entdict_t epairs;
 
     aabb3d bounds;
-    std::vector<std::unique_ptr<bspbrush_t>> brushes;
 
     int firstoutputfacenumber = -1;
     std::optional<size_t> outputmodelnumber = std::nullopt;
@@ -383,7 +375,7 @@ qvec3d FixRotateOrigin(mapentity_t *entity);
 constexpr int HULL_COLLISION = -1;
 
 /* Create BSP brushes from map brushes */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum);
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_vector_t &brushes);
 
 std::list<face_t *> CSGFace(
     face_t *srcface, const mapentity_t *srcentity, const bspbrush_t *srcbrush, const node_t *srcnode);

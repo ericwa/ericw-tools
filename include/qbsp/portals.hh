@@ -79,4 +79,4 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree);
 void MakePortalsFromBuildportals(tree_t *tree, std::list<std::unique_ptr<buildportal_t>> buildportals);
 void EmitAreaPortals(node_t *headnode);
 void FloodAreas(mapentity_t *entity, node_t *headnode);
-void MarkVisibleSides(tree_t *tree, mapentity_t *entity);
+void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_vector_t &brushes);

@@ -65,8 +65,10 @@ void FreeTreePortals(tree_t *tree)
 static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // merge the children's brush lists
-    node->original_brushes = node->children[0]->original_brushes;
-    node->original_brushes.insert(node->children[1]->original_brushes.begin(), node->children[1]->original_brushes.end());
+    node->original_mapbrushes = node->children[0]->original_mapbrushes;
+    node->original_mapbrushes.insert(node->children[1]->original_mapbrushes.begin(), node->children[1]->original_mapbrushes.end());
+
+    node->original_brushes.clear();
 
     node->is_leaf = true;
 
@@ -84,6 +86,7 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 static void PruneNodes_R(node_t *node, std::atomic<int32_t> &count_pruned)
 {
     if (node->is_leaf) {
+        node->original_brushes.clear();
         return;
     }
 
@@ -97,6 +100,8 @@ static void PruneNodes_R(node_t *node, std::atomic<int32_t> &count_pruned)
         // This discards any faces on-node. Should be safe (?)
         ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         ++count_pruned;
+    } else {
+        node->original_brushes.clear();
     }
 
     // DarkPlaces has an assertion that fails if both children are

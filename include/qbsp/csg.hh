@@ -22,13 +22,13 @@
 #pragma once
 
 #include <common/qvec.hh>
+#include <qbsp/brush.hh>
 
 #include <list>
 #include <memory>
 #include <tuple>
 #include <vector>
 
-struct bspbrush_t;
 struct face_t;
 struct side_t;
 
@@ -37,4 +37,4 @@ std::unique_ptr<face_t> CopyFace(const face_t *in);
 std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(
     std::unique_ptr<face_t> in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);
-std::vector<std::unique_ptr<bspbrush_t>> MakeBspBrushList(mapentity_t *entity);
+bspbrush_vector_t MakeBspBrushList(const bspbrush_vector_t &brushes);

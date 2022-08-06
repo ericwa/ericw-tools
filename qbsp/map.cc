@@ -1790,6 +1790,41 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 	}
 }
 
+static contentflags_t Brush_GetContents(const mapbrush_t &mapbrush)
+{
+    bool base_contents_set = false;
+    contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
+
+    // validate that all of the sides have valid contents
+    for (auto &mapface : mapbrush.faces) {
+        const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+
+        contentflags_t contents =
+            qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
+
+        if (contents.is_empty(qbsp_options.target_game)) {
+            continue;
+        }
+
+        // use the first non-empty as the base contents value
+        if (!base_contents_set) {
+            base_contents_set = true;
+            base_contents = contents;
+        }
+
+        if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
+            logging::print("WARNING: {}: mixed face contents ({} != {})\n",
+                mapface.line, base_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
+            break;
+        }
+    }
+
+    // make sure we found a valid type
+    Q_assert(base_contents.is_valid(qbsp_options.target_game, false));
+
+    return base_contents;
+}
+
 static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
 {
     mapbrush_t brush;
@@ -1863,6 +1898,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
             FError("Brush primitives: Expected }, got: {}", parser.token);
     }
     // ericw -- end brush primitives
+
+    brush.contents = Brush_GetContents(brush);
 
     return brush;
 }
@@ -2112,11 +2149,14 @@ void ProcessAreaPortal(mapentity_t *entity)
     }
 
     for (auto &brush : entity->mapbrushes) {
+        brush.contents.native = Q2_CONTENTS_AREAPORTAL;
+
         for (auto &face : brush.faces) {
-            face.contents.native = Q2_CONTENTS_AREAPORTAL;
+            face.contents.native = brush.contents.native;
             face.texinfo = map.skip_texinfo;
         }
     }
+
     entity->areaportalnum = ++map.numareaportals;
     // set the portal number as "style"
     entity->epairs.set("style", std::to_string(map.numareaportals));
@@ -2235,16 +2275,14 @@ void ProcessMapBrushes()
             // calculate brush bounds
             CalculateBrushBounds(brush);
 
-            const contentflags_t contents = Brush_GetContents(&brush);
-
             // origin brushes are removed, and the origin of the entity is overwritten
             // with its centroid.
-            if (contents.is_origin(qbsp_options.target_game)) {
+            if (brush.contents.is_origin(qbsp_options.target_game)) {
                 if (&entity == map.world_entity()) {
                     logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 } else if (entity.epairs.has("origin")) {
                     // fixme-brushbsp: entity.line
-                    logging::print("WARNING: Entity at {} has multiple origin brushes\n", entity.mapbrushes.front().faces[0].line);
+                    logging::print("WARNING: Entity at {} has multiple origin brushes\n", entity.mapbrushes.front().line);
                 } else {
                     entity.origin = brush.bounds.centroid();
                     entity.epairs.set("origin", qv::to_string(entity.origin));
@@ -2366,7 +2404,6 @@ void LoadMapFile(void)
 
         // Remove dummy entity inserted above
         assert(!map.entities.back().epairs.size());
-        assert(map.entities.back().brushes.empty());
         map.entities.pop_back();
     }
 
@@ -2396,7 +2433,6 @@ void LoadMapFile(void)
         }
         // Remove dummy entity inserted above
         assert(!map.entities.back().epairs.size());
-        assert(map.entities.back().brushes.empty());
         map.entities.pop_back();
     }
 

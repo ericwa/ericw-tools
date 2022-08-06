@@ -23,7 +23,6 @@
 
 #include <qbsp/winding.hh>
 #include <qbsp/qbsp.hh>
-#include <qbsp/map.hh>
 #include <common/aabb.hh>
 #include <optional>
 
@@ -58,10 +57,8 @@ class mapbrush_t;
 struct bspbrush_t
 {
     /**
-     * The brushes in the mapentity_t::brushes vector are considered originals. Brush fragments created during
-     * the BrushBSP will have this pointing back to the original brush in mapentity_t::brushes.
-     *
-     * fixme-brushbsp: this is supposed to be a mapbrush_t
+     * The brushes in main brush vectors are considered originals. Brush fragments created during
+     * the BrushBSP will have this pointing back to the original brush in the list.
      */
     bspbrush_t *original;
     const mapbrush_t *mapbrush;
@@ -81,10 +78,10 @@ struct bspbrush_t
     std::unique_ptr<bspbrush_t> copy_unique() const;
 };
 
+using bspbrush_vector_t = std::vector<std::unique_ptr<bspbrush_t>>;
+
 qplane3d Face_Plane(const face_t *face);
 qplane3d Face_Plane(const side_t *face);
 
 bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
-contentflags_t Brush_GetContents(const mapbrush_t *mapbrush);
 void CreateBrushWindings(bspbrush_t *brush);
-void FreeBrushes(mapentity_t *ent);

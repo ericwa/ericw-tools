@@ -387,6 +387,7 @@ static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> 
     for (auto &brush : brushes) {
         Q_assert(brush->original != nullptr);
         leafnode->original_brushes.insert(brush->original);
+        leafnode->original_mapbrushes.insert(brush->original->mapbrush);
     }
 
     qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
@@ -1060,7 +1061,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 BrushBSP
 ==================
 */
-static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist, std::optional<bool> forced_quick_tree)
+static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist, std::optional<bool> forced_quick_tree)
 {
     auto tree = std::make_unique<tree_t>();
 
@@ -1168,7 +1169,7 @@ static std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::vector<std::un
     return tree;
 }
 
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, std::optional<bool> forced_quick_tree)
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const std::vector<std::unique_ptr<bspbrush_t>> &brushlist, std::optional<bool> forced_quick_tree)
 {
-    return BrushBSP(entity, MakeBspBrushList(entity), forced_quick_tree);
+    return BrushBSP_internal(entity, MakeBspBrushList(brushlist), forced_quick_tree);
 }
