@@ -32,57 +32,12 @@
 #include <stdexcept>
 using nlohmann::json;
 
-/* Plane Hashing */
-inline int plane_hash_fn(const qplane3d &p)
-{
-    // FIXME: include normal..?
-    return Q_rint(fabs(p.dist));
-}
-
-/*
- * NewPlane
- * - Returns a global plane number and the side that will be the front
- */
-static mapplane_t &NewPlane(const qplane3d &plane)
-{
-    size_t index;
-
-    vec_t len = qv::length(plane.normal);
-
-    if (len < 1 - qbsp_options.epsilon.value() || len > 1 + qbsp_options.epsilon.value()) {
-        FError("invalid normal (vector length {:.4})", len);
-    }
-
-    index = map.planes.size();
-
-    mapplane_t &added_plane = map.planes.emplace_back(plane);
-
-    const int hash = plane_hash_fn(added_plane);
-
-    map.planehash[hash].push_back(index);
-
-    return added_plane;
-}
-
-static mapplane_t &FindPlane(const qbsp_plane_t &plane)
-{
-    for (int i : map.planehash[plane_hash_fn(plane)]) {
-        mapplane_t &p = map.planes.at(i);
-
-        if (qv::epsilonEqual(p, plane)) {
-            return p;
-        }
-    }
-
-    return NewPlane(plane);
-}
-
 /**
  * Returns the output plane number
  */
 size_t ExportMapPlane(const qbsp_plane_t &in_plane)
 {
-    mapplane_t &plane = FindPlane(in_plane);
+    mapplane_t &plane = map.planes[map.find_plane(in_plane)];
 
     if (plane.outputnum.has_value()) {
         return plane.outputnum.value(); // already output.
