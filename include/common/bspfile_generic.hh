@@ -19,10 +19,13 @@
 
 #pragma once
 
+#include <fmt/format.h>
+
 #include <cinttypes>
 #include <array>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <memory>
 #include "qvec.hh"
 
@@ -258,6 +261,24 @@ enum class plane_type_t
     PLANE_ANYX = 3,
     PLANE_ANYY = 4,
     PLANE_ANYZ = 5,
+};
+
+// Fmt support
+template <> struct fmt::formatter<plane_type_t> : formatter<string_view> {
+    template <typename FormatContext>
+    auto format(plane_type_t t, FormatContext& ctx) {
+        string_view name = "unknown";
+        switch (t) {
+            case plane_type_t::PLANE_INVALID: name = "PLANE_INVALID"; break;
+            case plane_type_t::PLANE_X: name = "PLANE_X"; break;
+            case plane_type_t::PLANE_Y: name = "PLANE_Y"; break;
+            case plane_type_t::PLANE_Z: name = "PLANE_Z"; break;
+            case plane_type_t::PLANE_ANYX: name = "PLANE_ANYX"; break;
+            case plane_type_t::PLANE_ANYY: name = "PLANE_ANYY"; break;
+            case plane_type_t::PLANE_ANYZ: name = "PLANE_ANYZ"; break;
+        }
+        return formatter<string_view>::format(name, ctx);
+    }
 };
 
 struct dplane_t : qplane3f

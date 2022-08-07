@@ -819,6 +819,20 @@ public:
     auto stream_data() { return std::tie(normal, dist); }
 };
 
+// Fmt support
+template <class T>
+struct fmt::formatter<qplane3<T>> : formatter<qvec<T, 3>>
+{
+    template<typename FormatContext>
+    auto format(const qplane3<T> &p, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        format_to(ctx.out(), "{{normal: ");
+        formatter<qvec<T, 3>>::format(p.normal, ctx);
+        format_to(ctx.out(), ", dist: {}}}", p.dist);
+        return ctx.out();
+    }
+};
+
 using qplane3f = qplane3<float>;
 using qplane3d = qplane3<double>;
 
