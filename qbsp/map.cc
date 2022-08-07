@@ -1136,7 +1136,7 @@ static void SetTexinfo_QuArK(
             vecs[0] = planepts[1] - planepts[0];
             vecs[1] = planepts[2] - planepts[0];
             break;
-        default: FError("Internal error: bad texture coordinate style");
+        default: FError("{}: bad texture coordinate style", parser.location);
     }
 
     vecs[0] *= 1.0 / 128.0;
@@ -1438,7 +1438,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
 
         mapface.raw_info = extinfo.info;
     } else {
-        FError("Bad brush format");
+        FError("{}: Bad brush format", parser.location);
     }
 
     // if we have texture defs, see if we should remap this one
@@ -1871,13 +1871,13 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
         bool discardFace = false;
         for (auto &check : brush.faces) {
             if (qv::epsilonEqual(check.get_plane(), face->get_plane())) {
-                logging::print("line {}: Brush with duplicate plane\n", parser.location);
+                logging::print("{}: Brush with duplicate plane\n", parser.location);
                 discardFace = true;
                 continue;
             }
             if (qv::epsilonEqual(-check.get_plane(), face->get_plane())) {
                 /* FIXME - this is actually an invalid brush */
-                logging::print("line {}: Brush with duplicate plane\n", parser.location);
+                logging::print("{}: Brush with duplicate plane\n", parser.location);
                 continue;
             }
         }
@@ -2143,9 +2143,8 @@ void ProcessAreaPortal(mapentity_t *entity)
 
     // areaportal entities move their brushes, but don't eliminate
     // the entity
-    // FIXME: print entity ID/line number
     if (entity->mapbrushes.size() != 1) {
-        FError("func_areaportal can only be a single brush");
+        FError("func_areaportal ({}) can only be a single brush", entity->location);
     }
 
     for (auto &brush : entity->mapbrushes) {
@@ -2358,8 +2357,7 @@ void ProcessMapBrushes()
                 qplane3d plane = face.get_plane();
                 plane.dist += qv::dot(corner, plane.normal);
                 face.planenum = map.add_or_find_plane(plane);
-                // ???
-                //face.bevel = false;
+                face.bevel = false;
             }
 
             // re-calculate brush bounds/windings

@@ -45,7 +45,9 @@ const qbsp_plane_t &side_t::get_plane() const
 
 const qbsp_plane_t &side_t::get_positive_plane() const
 {
-    return map.get_plane(planenum & ~1);
+    auto &p = map.get_plane(planenum & ~1);
+    Q_assert(p.get_normal()[(int) p.get_type() % 3] > 0);
+    return p;
 }
 
 std::unique_ptr<bspbrush_t> bspbrush_t::copy_unique() const
