@@ -960,8 +960,8 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
         int sides = brush->side;
 
         if (sides == PSIDE_BOTH) {
-            // split into two brushes
-            auto [front, back] = SplitBrush(brush->copy_unique(), plane, stats);
+            // split into two brushes (destructively)
+            auto [front, back] = SplitBrush(std::move(brush), plane, stats);
 
             if (front) {
                 result[0].push_back(std::move(front));

@@ -194,6 +194,22 @@ public:
     auto stream_data() { return std::tie(m_corners); }
 };
 
+// Fmt support
+template<class T, size_t Dim>
+struct fmt::formatter<aabb<T, Dim>> : formatter<qvec<T, Dim>>
+{
+    template<typename FormatContext>
+    auto format(const aabb<T, Dim> &b, FormatContext &ctx) -> decltype(ctx.out())
+    {
+        format_to(ctx.out(), "{{mins: ");
+        formatter<qvec<T, Dim>>::format(b.mins(), ctx);
+        format_to(ctx.out(), ", maxs: ");
+        formatter<qvec<T, Dim>>::format(b.maxs(), ctx);
+        format_to(ctx.out(), "}}");
+        return ctx.out();
+    }
+};
+
 using aabb3d = aabb<vec_t, 3>;
 using aabb2d = aabb<vec_t, 2>;
 
