@@ -227,6 +227,9 @@ std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std:
 
     // clip the portal by all the other portals in the node
     for (auto &p : boundary_portals) {
+        if (!w) {
+            break;
+        }
         qplane3d plane;
 
         if (p->nodes[0] == node) {
