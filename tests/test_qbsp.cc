@@ -1842,16 +1842,16 @@ TEST_CASE("BrushFromBounds") {
 
         if (side.w.directional_equal(top_winding)) {
             found++;
-            auto plane = Face_Plane(&side);
-            CHECK(plane.normal == qvec3d{0,0,1});
-            CHECK(plane.dist == 32);
+            auto &plane = side.get_plane();
+            CHECK(plane.get_normal() == qvec3d{0,0,1});
+            CHECK(plane.get_dist() == 32);
         }
 
         if (side.w.directional_equal(bottom_winding)) {
             found++;
-            auto plane = Face_Plane(&side);
-            CHECK(plane.normal == qvec3d{0,0,-1});
-            CHECK(plane.dist == -2);
+            auto plane = side.get_plane();
+            CHECK(plane.get_normal() == qvec3d{0,0,-1});
+            CHECK(plane.get_dist() == -2);
         }
     }
     CHECK(found == 2);

@@ -57,21 +57,6 @@ std::unique_ptr<bspbrush_t> bspbrush_t::copy_unique() const
 
 /*
 =================
-Face_Plane
-=================
-*/
-qplane3d Face_Plane(const face_t *face)
-{
-    return face->get_plane();
-}
-
-qplane3d Face_Plane(const side_t *face)
-{
-    return face->get_plane();
-}
-
-/*
-=================
 CheckFace
 
 Note: this will not catch 0 area polygons
@@ -235,13 +220,13 @@ void CreateBrushWindings(bspbrush_t *brush)
 
     for (int i = 0; i < brush->sides.size(); i++) {
         side_t *side = &brush->sides[i];
-        w = BaseWindingForPlane(Face_Plane(side));
+        w = BaseWindingForPlane(side->get_plane());
         for (int j = 0; j < brush->sides.size() && w; j++) {
             if (i == j)
                 continue;
             if (brush->sides[j].bevel)
                 continue;
-            qplane3d plane = -Face_Plane(&brush->sides[j]);
+            const qplane3d &plane = map.planes[brush->sides[j].planenum ^ 1];
             w = w->clip(plane, qbsp_options.epsilon.value(), false)[SIDE_FRONT]; // CLIP_EPSILON);
         }
 

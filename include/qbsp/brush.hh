@@ -80,8 +80,5 @@ struct bspbrush_t
 
 using bspbrush_vector_t = std::vector<std::unique_ptr<bspbrush_t>>;
 
-qplane3d Face_Plane(const face_t *face);
-qplane3d Face_Plane(const side_t *face);
-
 bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
 void CreateBrushWindings(bspbrush_t *brush);

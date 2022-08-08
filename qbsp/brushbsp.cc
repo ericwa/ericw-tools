@@ -136,8 +136,8 @@ static vec_t BrushVolume(const bspbrush_t &brush)
         if (!side.w.size()) {
             continue;
         }
-        auto plane = Face_Plane(&side);
-        vec_t d = -(qv::dot(corner, plane.normal) - plane.dist);
+        auto &plane = side.get_plane();
+        vec_t d = -(qv::dot(corner, plane.get_normal()) - plane.get_dist());
         vec_t area = side.w.area();
         volume += d * area;
     }
@@ -465,7 +465,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
         if (!w) {
             break;
         }
-        auto [frontOpt, backOpt] = w->clip(Face_Plane(&face));
+        auto [frontOpt, backOpt] = w->clip(face.get_plane());
         w = backOpt;
     }
 
