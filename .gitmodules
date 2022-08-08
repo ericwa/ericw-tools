@@ -13,3 +13,6 @@
 [submodule "3rdparty/Catch2"]
 	path = 3rdparty/Catch2
 	url = https://github.com/catchorg/Catch2
+[submodule "3rdparty/pareto"]
+	path = 3rdparty/pareto
+	url = https://github.com/alandefreitas/pareto.git
