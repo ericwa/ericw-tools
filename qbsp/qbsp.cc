@@ -315,7 +315,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
 
                         for (auto &side : b->faces) {
                             map.bsp.dbrushsides.push_back(
-                                {(uint32_t) ExportMapPlane(side.get_plane()), (int32_t)ExportMapTexinfo(side.texinfo)});
+                                {(uint32_t) ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(side.texinfo)});
                             brush.numsides++;
                             brush_state.total_brush_sides++;
                         }

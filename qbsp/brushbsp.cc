@@ -752,39 +752,6 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
     // if forced_quick_tree is nullopt, we will choose fast/slow based on
     // certain parameters.
     if (!forced_quick_tree.has_value() || forced_quick_tree.value() == true) {
-#if 0
-	    // if it is crossing a block boundary, force a split;
-        // this is optional q3map2 mode that is disabled by default.
-        if (qbsp_options.blocksize.isChanged()) {
-	        for (size_t i = 0; i < 3; i++) {
-		        if (qbsp_options.blocksize.value()[i] <= 0) {
-			        continue;
-		        }
-
-                vec_t dist = qbsp_options.blocksize.value()[i] * (floor(node->bounds.mins()[i] / qbsp_options.blocksize.value()[i]) + 1);
-
-                if (node->bounds.maxs()[i] > dist) {
-                    qplane3d plane{};
-                    plane.normal[i] = 1.0;
-                    plane.dist = dist;
-                    qbsp_plane_t bsp_plane = plane;
-
-                    if (!CheckPlaneAgainstVolume(bsp_plane, node)) {
-                        continue; // would produce a tiny volume
-                    }
-
-                    stats.c_blocksplit++;
-
-                    for (auto &b : brushes) {
-                        b->side = TestBrushToPlanenum(*b, bsp_plane, nullptr, nullptr, nullptr);
-                    }
-
-			        return bsp_plane;
-		        }
-	        }
-        }
-#endif
-
         if (!forced_quick_tree.has_value()) {
 
             // decide if we should switch to the midsplit method

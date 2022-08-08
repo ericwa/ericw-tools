@@ -348,10 +348,6 @@ public:
         [](setting_int32 &setting) { return setting.value() == 0 || setting.value() >= 3; }, this, "maxedges", 64,
         &map_development_group,
         "the max number of edges/vertices on a single face before it is split into another face"};
-    // FIXME: this block size default is from Q3, and is basically derived from having 128x128x128 chunks of the world
-    // since the max world size in Q3 is {-65536, -65536, -65536, 65536, 65536, 65536}. should we dynamically change this?
-    // should we automatically turn this on if the world gets too big but leave it off for smaller worlds?
-    setting_blocksize blocksize{this, "blocksize", { 0, 0, 0 }, &common_format_group, "from q3map2; split the world by x/y/z sized chunks, speeding up split decisions"};
     setting_numeric<vec_t> midsplitbrushfraction{this, "midsplitbrushfraction", 0.0, &common_format_group, "switch to cheaper partitioning if a node contains this % of brushes in the map"};
     setting_string add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"};
 

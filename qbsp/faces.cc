@@ -214,7 +214,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
     map.exported_lmshifts.push_back(face->lmshift);
     Q_assert(map.bsp.dfaces.size() == map.exported_lmshifts.size());
 
-    out.planenum = ExportMapPlane(face->get_positive_plane());
+    out.planenum = ExportMapPlane(face->planenum & ~1);
     out.side = face->planenum & 1;
     out.texinfo = ExportMapTexinfo(face->texinfo);
     for (i = 0; i < MAXLIGHTMAPS; i++)

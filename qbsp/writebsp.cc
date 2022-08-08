@@ -35,9 +35,9 @@ using nlohmann::json;
 /**
  * Returns the output plane number
  */
-size_t ExportMapPlane(const qbsp_plane_t &in_plane)
+size_t ExportMapPlane(size_t planenum)
 {
-    mapplane_t &plane = map.planes[map.find_plane(in_plane)];
+    mapplane_t &plane = map.planes[planenum];
 
     if (plane.outputnum.has_value()) {
         return plane.outputnum.value(); // already output.
@@ -108,7 +108,7 @@ static size_t ExportClipNodes(node_t *node)
 
     // Careful not to modify the vector while using this clipnode pointer
     bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
-    clipnode.planenum = ExportMapPlane(node->get_plane());
+    clipnode.planenum = ExportMapPlane(node->planenum);
     clipnode.children[0] = child0;
     clipnode.children[1] = child1;
 
@@ -204,7 +204,7 @@ static void ExportDrawNodes(node_t *node)
     dnode->mins = qv::floor(node->bounds.mins());
     dnode->maxs = qv::ceil(node->bounds.maxs());
 
-    dnode->planenum = ExportMapPlane(node->get_plane());
+    dnode->planenum = ExportMapPlane(node->planenum);
     dnode->firstface = node->firstface;
     dnode->numfaces = node->numfaces;
 
