@@ -527,14 +527,18 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
     // see if we have valid polygons on both sides
 
     for (int i = 0; i < 2; i++) {
-        result[i]->update_bounds();
-
         bool bogus = false;
-        for (int j = 0; j < 3; j++) {
-            if (result[i]->bounds.mins()[j] < -qbsp_options.worldextent.value() || result[i]->bounds.maxs()[j] > qbsp_options.worldextent.value()) {
-                stats.c_bogus++;
-                bogus = true;
-                break;
+
+        if (!result[i]->update_bounds(false)) {
+            stats.c_bogus++;
+            bogus = true;
+        } else {
+            for (int j = 0; j < 3; j++) {
+                if (result[i]->bounds.mins()[j] < -qbsp_options.worldextent.value() || result[i]->bounds.maxs()[j] > qbsp_options.worldextent.value()) {
+                    stats.c_bogus++;
+                    bogus = true;
+                    break;
+                }
             }
         }
 
@@ -1035,8 +1039,6 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
 {
     auto tree = std::make_unique<tree_t>();
 
-    logging::funcheader();
-
     size_t c_faces = 0;
     size_t c_nonvisfaces = 0;
     size_t c_brushes = 0;
@@ -1142,5 +1144,6 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
 
 std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const std::vector<std::unique_ptr<bspbrush_t>> &brushlist, std::optional<bool> forced_quick_tree)
 {
+    logging::funcheader();
     return BrushBSP_internal(entity, MakeBspBrushList(brushlist), forced_quick_tree);
 }

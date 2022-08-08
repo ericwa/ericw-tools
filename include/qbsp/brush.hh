@@ -73,7 +73,7 @@ struct bspbrush_t
     qvec3d sphere_origin;
     double sphere_radius;
 
-    bool update_bounds();
+    bool update_bounds(bool warn_on_failures);
 
     std::unique_ptr<bspbrush_t> copy_unique() const;
 };
