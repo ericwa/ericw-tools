@@ -73,12 +73,12 @@ struct bspbrush_t
     qvec3d sphere_origin;
     double sphere_radius;
 
-    void update_bounds();
+    bool update_bounds();
 
     std::unique_ptr<bspbrush_t> copy_unique() const;
 };
 
 using bspbrush_vector_t = std::vector<std::unique_ptr<bspbrush_t>>;
 
-bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
-void CreateBrushWindings(bspbrush_t *brush);
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
+bool CreateBrushWindings(bspbrush_t *brush);

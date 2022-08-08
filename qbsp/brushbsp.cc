@@ -1040,6 +1040,7 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
     size_t c_faces = 0;
     size_t c_nonvisfaces = 0;
     size_t c_brushes = 0;
+
     for (const auto &b : brushlist) {
         c_brushes++;
 

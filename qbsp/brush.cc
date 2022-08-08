@@ -214,7 +214,7 @@ Create all of the windings for the specified brush, and
 calculate its bounds.
 ==================
 */
-void CreateBrushWindings(bspbrush_t *brush)
+bool CreateBrushWindings(bspbrush_t *brush)
 {
     std::optional<winding_t> w;
 
@@ -231,13 +231,22 @@ void CreateBrushWindings(bspbrush_t *brush)
         }
 
         if (w) {
+            for (auto &p : *w) {
+                for (auto &v : p) {
+                    if (fabs(v) > qbsp_options.worldextent.value()) {
+                        logging::print("WARNING: {}: invalid winding point\n", brush->mapbrush ? brush->mapbrush->line : parser_source_location{});
+                        w = std::nullopt;
+                    }
+                }
+            }
+
             side->w = *w;
         } else {
             side->w.clear();
         }
     }
 
-    brush->update_bounds();
+    return brush->update_bounds();
 }
 
 /*
@@ -247,7 +256,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
     const int hullnum)
 {
     // create the brush
@@ -297,7 +306,9 @@ bspbrush_t LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const c
         }
     }
 
-    CreateBrushWindings(&brush);
+    if (!CreateBrushWindings(&brush)) {
+        return std::nullopt;
+    }
 
     for (auto &face : brush.sides) {
         CheckFace(&face, *face.source);
@@ -451,8 +462,9 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
          */
         if (hullnum != HULL_COLLISION && contents.is_clip(qbsp_options.target_game)) {
             if (hullnum == 0) {
-                bspbrush_t brush = LoadBrush(src, &mapbrush, contents, hullnum);
-                dst->bounds += brush.bounds;
+                if (auto brush = LoadBrush(src, &mapbrush, contents, hullnum)) {
+                    dst->bounds += brush->bounds;
+                }
                 continue;
                 // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             } else {
@@ -497,22 +509,26 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        bspbrush_t brush = LoadBrush(src, &mapbrush, contents, hullnum);
+        auto brush = LoadBrush(src, &mapbrush, contents, hullnum);
 
-        brush.lmshift = lmshift;
+        if (!brush) {
+            continue;
+        }
 
-        for (auto &face : brush.sides) {
+        brush->lmshift = lmshift;
+
+        for (auto &face : brush->sides) {
             face.lmshift = lmshift;
         }
 
         if (classname == std::string_view("func_areaportal")) {
-            brush.func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
+            brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
         }
 
-        qbsp_options.target_game->count_contents_in_stats(brush.contents, stats);
+        qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
 
-        dst->bounds += brush.bounds;
-        brushes.push_back(std::make_unique<bspbrush_t>(std::move(brush)));
+        dst->bounds += brush->bounds;
+        brushes.push_back(std::make_unique<bspbrush_t>(std::move(*brush)));
     }
 
     logging::percent(src->mapbrushes.size(), src->mapbrushes.size(), src == map.world_entity());
@@ -562,9 +578,10 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_vector_t 
     qbsp_options.target_game->print_content_stats(*stats, "brushes");
 }
 
-void bspbrush_t::update_bounds()
+bool bspbrush_t::update_bounds()
 {
     this->bounds = {};
+
     for (const auto &face : sides) {
         if (face.w) {
             this->bounds = this->bounds.unionWith(face.w.bounds());
@@ -575,12 +592,16 @@ void bspbrush_t::update_bounds()
         // todo: map_source_location in bspbrush_t
 		if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() || this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
 			logging::print("WARNING: {}: brush bounds out of range\n", mapbrush ? mapbrush->line : parser_source_location());
+            return false;
         }
 		if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() || this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
 			logging::print("WARNING: {}: no visible sides on brush\n", mapbrush ? mapbrush->line : parser_source_location());
+            return false;
         }
 	}
 
     this->sphere_origin = (bounds.mins() + bounds.maxs()) / 2.0;
     this->sphere_radius = qv::length((bounds.maxs() - bounds.mins()) / 2.0);
+
+    return true;
 }

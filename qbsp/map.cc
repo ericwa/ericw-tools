@@ -2824,10 +2824,12 @@ static void TestExpandBrushes(const mapentity_t *src)
     std::vector<std::unique_ptr<bspbrush_t>> hull1brushes;
 
     for (auto &mapbrush : src->mapbrushes) {
-        bspbrush_t hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
+        auto hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
             qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
-        hull1brushes.emplace_back(std::make_unique<bspbrush_t>(std::move(hull1brush)));
+        if (hull1brush) {
+            hull1brushes.emplace_back(std::make_unique<bspbrush_t>(std::move(*hull1brush)));
+        }
     }
 
     WriteBspBrushMap("expanded.map", hull1brushes);
