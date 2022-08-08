@@ -148,25 +148,6 @@ constexpr size_t hash_combine(size_t lhs, size_t rhs)
     return lhs ^ rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
 }
 
-struct qbsp_plane_hash
-{
-    size_t operator()(const qbsp_plane_t &plane) const
-    {
-        return hash_combine(
-            std::hash<vec_t>()((int32_t) (fabs(plane.get_dist()) / 2.0)),
-            std::hash<plane_type_t>()(plane.get_type())
-        );
-    }
-};
-
-struct qbsp_plane_eq
-{
-    bool operator()(const qbsp_plane_t &a, const qbsp_plane_t &b) const
-    {
-        return qv::epsilonEqual(a, b);
-    }
-};
-
 #include <pareto/spatial_map.h>
 
 struct mapdata_t
@@ -182,8 +163,8 @@ struct mapdata_t
     // come first (are even-numbered, with 0 being even) and the negative
     // planes are odd-numbered.
     std::vector<mapplane_t> planes;
-    // planes hashed by dist
-    std::unordered_multimap<qbsp_plane_t, size_t, qbsp_plane_hash, qbsp_plane_eq> plane_hash;
+    // planes indices (into the `planes` vector) hashed by floor(dist) and ceil(dist)
+    std::unordered_multimap<int, size_t> plane_hash;
 
     // add the specified plane to the list
     inline size_t add_plane(const qplane3d &plane)
@@ -203,22 +184,48 @@ struct mapdata_t
             result = planes.size() - 2;
         }
         
-        plane_hash.emplace(positive, planes.size() - 2);
-        plane_hash.emplace(negative, planes.size() - 1);
+        // insert each plane twice, once under floor(dist) and once under ceil(dist).
+        // this ensure e.g. an inserted 0.99 can be found with a 1.01 lookup
+        plane_hash.emplace(static_cast<int>(floor(positive.get_dist())), planes.size() - 2);
+        plane_hash.emplace(static_cast<int>(ceil(positive.get_dist())), planes.size() - 2);
+        plane_hash.emplace(static_cast<int>(floor(negative.get_dist())), planes.size() - 1);
+        plane_hash.emplace(static_cast<int>(ceil(negative.get_dist())), planes.size() - 1);
 
         return result;
     }
     
+    inline std::optional<size_t> find_plane_nonfatal(const qplane3d &plane)
+    {
+        int floor_hash = static_cast<int>(floor(plane.dist));
+        int ceil_hash = static_cast<int>(ceil(plane.dist));
+
+        auto range = plane_hash.equal_range(floor_hash);
+        for (auto it = range.first; it != range.second; ++it) {
+            const auto &candidate = planes[it->second];
+            if (qv::epsilonEqual(candidate, plane)) {
+                return {it->second};
+            }
+        }
+
+        range = plane_hash.equal_range(ceil_hash);
+        for (auto it = range.first; it != range.second; ++it) {
+            const auto &candidate = planes[it->second];
+            if (qv::epsilonEqual(candidate, plane)) {
+                return {it->second};
+            }
+        }
+
+        return {};
+    }
+
     // find the specified plane in the list if it exists. throws
     // if not.
     inline size_t find_plane(const qplane3d &plane)
     {
-        auto range = plane_hash.equal_range(plane);
-        for (auto it = range.first; it != range.second; ++it) {
-            if (qv::epsilonEqual(it->first, plane)) {
-                return it->second;
+        auto index = find_plane_nonfatal(plane);
+        if (index) {
+            return *index;
             }
-        }
 
         throw std::bad_function_call();
     }
@@ -227,12 +234,10 @@ struct mapdata_t
     // return a new one
     inline size_t add_or_find_plane(const qplane3d &plane)
     {
-        auto range = plane_hash.equal_range(plane);
-        for (auto it = range.first; it != range.second; ++it) {
-            if (qv::epsilonEqual(it->first, plane)) {
-                return it->second;
+        auto index = find_plane_nonfatal(plane);
+        if (index) {
+            return *index;
             }
-        }
 
         return add_plane(plane);
     }
