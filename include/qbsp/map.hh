@@ -134,19 +134,12 @@ struct maptexdata_t
 
 #include <common/imglib.hh>
 
-extern std::shared_mutex map_planes_lock;
-
 struct mapplane_t : qbsp_plane_t
 {
     std::optional<size_t> outputnum;
 
     inline mapplane_t(const qbsp_plane_t &copy) : qbsp_plane_t(copy) { }
 };
-
-constexpr size_t hash_combine(size_t lhs, size_t rhs)
-{
-    return lhs ^ rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2);
-}
 
 #include <pareto/spatial_map.h>
 
@@ -163,69 +156,57 @@ struct mapdata_t
     // come first (are even-numbered, with 0 being even) and the negative
     // planes are odd-numbered.
     std::vector<mapplane_t> planes;
-    // planes indices (into the `planes` vector) hashed by floor(dist) and ceil(dist)
-    std::unordered_multimap<int, size_t> plane_hash;
+
+    // planes indices (into the `planes` vector)
+    pareto::spatial_map<vec_t, 4, size_t> plane_hash {};
 
     // add the specified plane to the list
     inline size_t add_plane(const qplane3d &plane)
     {
         planes.emplace_back(plane);
         planes.emplace_back(-plane);
+        
+        size_t positive_index = planes.size() - 2;
+        size_t negative_index = planes.size() - 1;
 
-        auto &positive = planes[planes.size() - 2];
-        auto &negative = planes[planes.size() - 1];
+        auto &positive = planes[positive_index];
+        auto &negative = planes[negative_index];
 
         size_t result;
 
         if (positive.get_normal()[static_cast<int32_t>(positive.get_type()) % 3] < 0.0) {
             std::swap(positive, negative);
-            result = planes.size() - 1;
+            result = negative_index;
         } else {
-            result = planes.size() - 2;
+            result = positive_index;
         }
         
-        // insert each plane twice, once under floor(dist) and once under ceil(dist).
-        // this ensure e.g. an inserted 0.99 can be found with a 1.01 lookup
-        plane_hash.emplace(static_cast<int>(floor(positive.get_dist())), planes.size() - 2);
-        plane_hash.emplace(static_cast<int>(ceil(positive.get_dist())), planes.size() - 2);
-        plane_hash.emplace(static_cast<int>(floor(negative.get_dist())), planes.size() - 1);
-        plane_hash.emplace(static_cast<int>(ceil(negative.get_dist())), planes.size() - 1);
+        plane_hash.emplace(pareto::point<vec_t, 4> { positive.get_normal()[0], positive.get_normal()[1], positive.get_normal()[2], positive.get_dist() }, positive_index);
+        plane_hash.emplace(pareto::point<vec_t, 4> { negative.get_normal()[0], negative.get_normal()[1], negative.get_normal()[2], negative.get_dist() }, negative_index);
 
         return result;
     }
     
     inline std::optional<size_t> find_plane_nonfatal(const qplane3d &plane)
     {
-        int floor_hash = static_cast<int>(floor(plane.dist));
-        int ceil_hash = static_cast<int>(ceil(plane.dist));
+        constexpr vec_t HALF_NORMAL_EPSILON = NORMAL_EPSILON * 0.5;
+        constexpr vec_t HALF_DIST_EPSILON = DIST_EPSILON * 0.5;
 
-        auto range = plane_hash.equal_range(floor_hash);
-        for (auto it = range.first; it != range.second; ++it) {
-            const auto &candidate = planes[it->second];
-            if (qv::epsilonEqual(candidate, plane)) {
-                return {it->second};
-            }
+        if (auto it = plane_hash.find_intersection({ plane.normal[0] - HALF_NORMAL_EPSILON, plane.normal[1] - HALF_NORMAL_EPSILON, plane.normal[2] - HALF_NORMAL_EPSILON, plane.dist - HALF_DIST_EPSILON },
+            { plane.normal[0] + HALF_NORMAL_EPSILON, plane.normal[1] + HALF_NORMAL_EPSILON, plane.normal[2] + HALF_NORMAL_EPSILON, plane.dist + HALF_DIST_EPSILON }); it != plane_hash.end()) {
+            return it->second;
         }
 
-        range = plane_hash.equal_range(ceil_hash);
-        for (auto it = range.first; it != range.second; ++it) {
-            const auto &candidate = planes[it->second];
-            if (qv::epsilonEqual(candidate, plane)) {
-                return {it->second};
-            }
-        }
-
-        return {};
+        return std::nullopt;
     }
 
     // find the specified plane in the list if it exists. throws
     // if not.
     inline size_t find_plane(const qplane3d &plane)
     {
-        auto index = find_plane_nonfatal(plane);
-        if (index) {
+        if (auto index = find_plane_nonfatal(plane)) {
             return *index;
-            }
+        }
 
         throw std::bad_function_call();
     }
@@ -234,10 +215,9 @@ struct mapdata_t
     // return a new one
     inline size_t add_or_find_plane(const qplane3d &plane)
     {
-        auto index = find_plane_nonfatal(plane);
-        if (index) {
+        if (auto index = find_plane_nonfatal(plane)) {
             return *index;
-            }
+        }
 
         return add_plane(plane);
     }
@@ -253,25 +233,16 @@ struct mapdata_t
     /* quick lookup for texinfo */
     std::map<maptexinfo_t, int> mtexinfo_lookup;
 
-    /* map from plane hash code to list of indicies in `planes` vector */
-    std::unordered_map<int, std::vector<int>> planehash;
-
     // hashed vertices; generated by EmitVertices
     pareto::spatial_map<vec_t, 3, size_t> hashverts {};
-
-    // find vector of points in hash closest to vec
-    inline auto find_hash_vector(const qvec3d &vec)
-    {
-        return hashverts.find({floor(vec[0]), floor(vec[1]), floor(vec[2])});
-    }
 
     // find output index for specified already-output vector.
     inline std::optional<size_t> find_emitted_hash_vector(const qvec3d &vert)
     {
-        static const vec_t point_epsilon_with_border = std::nextafter(POINT_EQUAL_EPSILON, 1.0);
+        constexpr vec_t HALF_EPSILON = POINT_EQUAL_EPSILON * 0.5;
 
-        if (auto it = hashverts.find_intersection({{ vert[0] - (POINT_EQUAL_EPSILON * 0.5), vert[1] - (POINT_EQUAL_EPSILON * 0.5), vert[2] - (POINT_EQUAL_EPSILON * 0.5) }},
-            {{ vert[0] + (POINT_EQUAL_EPSILON * 0.5) }, { vert[1] + (POINT_EQUAL_EPSILON * 0.5) }, { vert[2] + (POINT_EQUAL_EPSILON * 0.5) }}); it != hashverts.end()) {
+        if (auto it = hashverts.find_intersection({ vert[0] - HALF_EPSILON, vert[1] - HALF_EPSILON, vert[2] - HALF_EPSILON },
+            { vert[0] + HALF_EPSILON, vert[1] + HALF_EPSILON, vert[2] + HALF_EPSILON }); it != hashverts.end()) {
             return it->second;
         }
 

@@ -653,8 +653,6 @@ hull sizes
 static void BSPX_Brushes_AddModel(
     struct bspxbrushes_s *ctx, int modelnum, const std::list<mapbrush_t> &brushes)
 {
-    std::shared_lock lock(map_planes_lock);
-
     bspxbrushes_permodel permodel{1, modelnum};
 
     for (auto &b : brushes) {

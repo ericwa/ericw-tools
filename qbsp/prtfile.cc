@@ -49,8 +49,6 @@ static void WriteFloat(std::ofstream &portalFile, vec_t v)
 
 static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool clusters)
 {
-    std::shared_lock lock(map_planes_lock);
-
     const portal_t *p, *next;
     const winding_t* w;
     int i, front, back;
