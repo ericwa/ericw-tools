@@ -1477,6 +1477,20 @@ TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
 
     CHECK(3 == bsp.dareaportals.size());
     CHECK(3 == bsp.dareas.size());
+
+    // check for a sliver face which we had issues with being missing
+    {
+        const qvec3d face_point {-315.975, -208.036, -84.5};
+        const qvec3d normal_point {-315.851, -208.051, -84.5072}; // obtained in TB
+
+        const qvec3d normal = qv::normalize(normal_point - face_point);
+
+        auto *sliver_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_point, normal);
+        REQUIRE(nullptr != sliver_face);
+
+        CHECK(std::string_view("e1u1/metal3_5") == Face_TextureName(&bsp, sliver_face));
+        CHECK(Face_Winding(&bsp, sliver_face).area() < 5.0);
+    }
 }
 
 TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
