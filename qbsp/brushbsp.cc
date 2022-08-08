@@ -431,8 +431,9 @@ input.
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, const qplane3d &split, bspstats_t &stats)
+static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, size_t planenum, bspstats_t &stats)
 {
+    const qplane3d &split = map.planes[planenum];
     twosided<std::unique_ptr<bspbrush_t>> result;
 
     // check all points
@@ -565,7 +566,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
 
         // for the brush on the front side of the plane, the `midwinding`
         // (the face that is touching the plane) should have a normal opposite the plane's normal
-        cs.planenum = map.find_plane(split) ^ i ^ 1;
+        cs.planenum = planenum ^ i ^ 1;
         cs.texinfo = map.skip_texinfo;
         cs.visible = false;
         cs.tested = false;
@@ -602,9 +603,9 @@ inline void CheckPlaneAgainstParents(size_t planenum, node_t *node)
     }
 }
 
-static bool CheckPlaneAgainstVolume(const qbsp_plane_t &plane, const node_t *node, bspstats_t &stats)
+static bool CheckPlaneAgainstVolume(size_t planenum, const node_t *node, bspstats_t &stats)
 {
-    auto [front, back] = SplitBrush(node->volume->copy_unique(), plane, stats);
+    auto [front, back] = SplitBrush(node->volume->copy_unique(), planenum, stats);
 
     bool good = (front && back);
 
@@ -705,9 +706,10 @@ static std::optional<size_t> ChooseMidPlaneFromList(const std::vector<std::uniqu
                 continue; // allready a node splitter
             }
 
+            size_t positive_planenum = side.planenum & ~1;
             const qbsp_plane_t &plane = side.get_positive_plane();
 
-            if (!CheckPlaneAgainstVolume(plane, node, stats)) {
+            if (!CheckPlaneAgainstVolume(positive_planenum, node, stats)) {
                 continue; // would produce a tiny volume
             }
 
@@ -818,7 +820,7 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
 
                 CheckPlaneAgainstParents(positive_planenum, node);
 
-                if (!CheckPlaneAgainstVolume(plane, node, stats))
+                if (!CheckPlaneAgainstVolume(positive_planenum, node, stats))
                     continue; // would produce a tiny volume
 
                 int front = 0;
@@ -919,7 +921,7 @@ SplitBrushList
 ================
 */
 static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
-    std::vector<std::unique_ptr<bspbrush_t>> brushes, const qbsp_plane_t &plane, bspstats_t &stats)
+    std::vector<std::unique_ptr<bspbrush_t>> brushes, size_t planenum, bspstats_t &stats)
 {
     std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> result;
 
@@ -928,7 +930,7 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
 
         if (sides == PSIDE_BOTH) {
             // split into two brushes (destructively)
-            auto [front, back] = SplitBrush(std::move(brush), plane, stats);
+            auto [front, back] = SplitBrush(std::move(brush), planenum, stats);
 
             if (front) {
                 result[0].push_back(std::move(front));
@@ -945,7 +947,7 @@ static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
         // as a splitter again
         if (sides & PSIDE_FACING) {
             for (auto &side : brush->sides) {
-                if (qv::epsilonEqual(side.get_positive_plane(), plane)) {
+                if ((side.planenum & ~1) == planenum) {
                     side.onnode = true;
                 }
             }
@@ -995,7 +997,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
     node->planenum = bestplane.value();
     
     auto &plane = map.get_plane(bestplane.value());
-    auto children = SplitBrushList(std::move(brushes), plane, stats);
+    auto children = SplitBrushList(std::move(brushes), bestplane.value(), stats);
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
@@ -1012,7 +1014,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 		}
 	}
 
-    auto children_volumes = SplitBrush(node->volume->copy_unique(), plane, stats);
+    auto children_volumes = SplitBrush(node->volume->copy_unique(), bestplane.value(), stats);
     node->children[0]->volume = std::move(children_volumes[0]);
     node->children[1]->volume = std::move(children_volumes[1]);
 
