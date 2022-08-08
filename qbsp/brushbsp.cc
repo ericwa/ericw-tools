@@ -495,6 +495,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
         result[i]->contents = brush->contents;
         result[i]->lmshift = brush->lmshift;
         result[i]->func_areaportal = brush->func_areaportal;
+        result[i]->sides.reserve(brush->sides.size() + 1);
     }
 
     // split all the current windings
