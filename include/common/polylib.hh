@@ -109,7 +109,7 @@ public:
         return *this;
     }
 
-    inline const size_t &size() const { return count; }
+    inline size_t size() const { return count; }
 
     inline qvec3d &at(const size_t &index)
     {
@@ -198,31 +198,21 @@ public:
 };
 
 
-// Stack storage; uses a solid heap allocation. Throws if it can't insert
-// a new member.
+// Heap storage; uses a vector.
 struct winding_storage_heap_t
 {
 protected:
-    qvec3d *heap = nullptr;
-    size_t allocated = 0;
+    std::vector<qvec3d> values {};
 
 public:
-    size_t count = 0;
-
     // default constructor does nothing
     inline winding_storage_heap_t() { }
-
-    // destructor
-    ~winding_storage_heap_t() { resize(0); }
 
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_heap_t(const size_t &initial_size) : allocated(initial_size), count(initial_size)
+    inline winding_storage_heap_t(const size_t &initial_size) : values(initial_size)
     {
-        if (initial_size) {
-            heap = reinterpret_cast<qvec3d *>(malloc(sizeof(qvec3d) * initial_size));
-        }
     }
 
     // construct winding from range.
@@ -230,36 +220,28 @@ public:
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
     inline winding_storage_heap_t(Iter begin, Iter end) : winding_storage_heap_t(end - begin)
     {
-        std::copy_n(begin, count, heap);
+        std::copy_n(begin, size(), values.data());
     }
 
     // copy constructor; uses optimized method of copying
     // data over.
     inline winding_storage_heap_t(const winding_storage_heap_t &copy) : winding_storage_heap_t(copy.size())
     {
-        std::copy_n(copy.heap, copy.count, heap);
+        std::copy_n(copy.values.data(), copy.size(), values.data());
     }
 
     // move constructor
-    inline winding_storage_heap_t(winding_storage_heap_t &&move) noexcept : count(move.count)
+    inline winding_storage_heap_t(winding_storage_heap_t &&move) noexcept : values(std::move(move.values))
     {
-        // take ownership of heap pointer
-        heap = move.heap;
-        count = move.count;
-        allocated = move.allocated;
-
-        move.heap = nullptr;
-        move.count = 0;
-        move.allocated = 0;
     }
 
     // assignment copy
     inline winding_storage_heap_t &operator=(const winding_storage_heap_t &copy)
     {
-        resize(copy.count);
+        resize(copy.size());
 
         // copy array range
-        std::copy_n(copy.heap, copy.count, heap);
+        std::copy_n(copy.values.data(), copy.size(), values.data());
 
         return *this;
     }
@@ -268,18 +250,12 @@ public:
     inline winding_storage_heap_t &operator=(winding_storage_heap_t &&move) noexcept
     {
         // take ownership of heap pointer
-        heap = move.heap;
-        count = move.count;
-        allocated = move.allocated;
-
-        move.heap = nullptr;
-        move.count = 0;
-        move.allocated = 0;
+        values = std::move(move.values);
 
         return *this;
     }
 
-    inline const size_t &size() const { return count; }
+    inline size_t size() const { return values.size(); }
 
     inline qvec3d &at(const size_t &index)
     {
@@ -288,7 +264,7 @@ public:
             throw std::invalid_argument("index");
 #endif
 
-        return heap[index];
+        return values[index];
     }
 
     inline const qvec3d &at(const size_t &index) const
@@ -298,72 +274,59 @@ public:
             throw std::invalid_argument("index");
 #endif
 
-        return heap[index];
+        return values[index];
     }
 
     // un-bounds-checked
     inline qvec3d &operator[](const size_t &index)
     {
-        return heap[index];
+        return values[index];
     }
 
     // un-bounds-checked
     inline const qvec3d &operator[](const size_t &index) const
     {
-        return heap[index];
+        return values[index];
     }
 
     inline const auto begin() const
     {
-        return heap;
+        return values.begin();
     }
 
     inline const auto end() const
     {
-        return heap + count;
+        return values.end();
     }
 
     inline auto begin()
     {
-        return heap;
+        return values.begin();
     }
 
     inline auto end()
     {
-        return heap + count;
+        return values.end();
     }
 
     inline qvec3d &emplace_back(const qvec3d &vec)
     {
-        resize(count + 1);
-        return (heap[count - 1] = vec);
+        return values.emplace_back(vec);
     }
 
     inline void resize(const size_t &new_size)
     {
-        count = new_size;
-
-        if (new_size == 0) {
-            free(heap);
-            heap = nullptr;
-            allocated = 0;
-        } else if (new_size > allocated) {
-            heap = reinterpret_cast<qvec3d *>(realloc(heap, new_size * sizeof(qvec3d)));
-            allocated = new_size;
-        }
+        values.resize(new_size);
     }
 
     inline void reserve(size_t size)
     {
-        if (allocated < size) {
-            heap = reinterpret_cast<qvec3d *>(realloc(heap, size * sizeof(qvec3d)));
-            allocated = size;
-        }
+        values.reserve(size);
     }
 
     inline void clear()
     {
-        count = 0;
+        values.clear();
     }
 };
 
@@ -563,7 +526,7 @@ public:
         return *this;
     }
 
-    inline const size_t &size() const { return count; }
+    inline size_t size() const { return count; }
 
     inline size_t vector_size() const { return vector.size(); }
 
@@ -716,7 +679,7 @@ public:
 
     inline explicit operator bool() const { return !empty(); }
 
-    inline const size_t &size() const { return storage.size(); }
+    inline size_t size() const { return storage.size(); }
 
     inline qvec3d &at(const size_t &index)
     {
