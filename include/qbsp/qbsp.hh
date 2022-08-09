@@ -647,7 +647,7 @@ struct node_t
 
     int firstface; // decision node only
     int numfaces; // decision node only
-    twosided<std::unique_ptr<node_t>>
+    twosided<node_t *>
         children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     std::list<std::unique_ptr<face_t>> facelist; // decision nodes only, list for both sides
 

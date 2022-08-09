@@ -101,8 +101,8 @@ static void EmitVertices_R(node_t *node)
         EmitFaceVertices(f.get());
     }
 
-    EmitVertices_R(node->children[0].get());
-    EmitVertices_R(node->children[1].get());
+    EmitVertices_R(node->children[0]);
+    EmitVertices_R(node->children[1]);
 }
 
 void EmitVertices(node_t *headnode)
@@ -184,8 +184,8 @@ static void MakeFaceEdges_r(node_t *node)
         FindFaceEdges(f.get());
     }
 
-    MakeFaceEdges_r(node->children[0].get());
-    MakeFaceEdges_r(node->children[1].get());
+    MakeFaceEdges_r(node->children[0]);
+    MakeFaceEdges_r(node->children[1]);
 }
 
 /*
@@ -253,8 +253,8 @@ static void EmitFaceFragments_R(node_t *node)
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
 
-    EmitFaceFragments_R(node->children[0].get());
-    EmitFaceFragments_R(node->children[1].get());
+    EmitFaceFragments_R(node->children[0]);
+    EmitFaceFragments_R(node->children[1]);
 }
 
 /*
@@ -299,10 +299,10 @@ static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, n
 
     auto [frontFragment, backFragment] = SplitFace(std::move(face_copy), splitplane);
     if (frontFragment) {
-        AddMarksurfaces_r(face, std::move(frontFragment), node->children[0].get());
+        AddMarksurfaces_r(face, std::move(frontFragment), node->children[0]);
     }
     if (backFragment) {
-        AddMarksurfaces_r(face, std::move(backFragment), node->children[1].get());
+        AddMarksurfaces_r(face, std::move(backFragment), node->children[1]);
     }
 }
 
@@ -324,12 +324,12 @@ void MakeMarkFaces(node_t *node)
         // add this face to all descendant leafs it touches
 
         // make a copy we can clip
-        AddMarksurfaces_r(face.get(), CopyFace(face.get()), node->children[face->planenum & 1].get());
+        AddMarksurfaces_r(face.get(), CopyFace(face.get()), node->children[face->planenum & 1]);
     }
 
     // process child nodes recursively
-    MakeMarkFaces(node->children[0].get());
-    MakeMarkFaces(node->children[1].get());
+    MakeMarkFaces(node->children[0]);
+    MakeMarkFaces(node->children[1]);
 }
 
 /*
@@ -531,8 +531,8 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
 {
     // recurse down to leafs
     if (!node->is_leaf) {
-        MakeFaces_r(node->children[0].get(), stats);
-        MakeFaces_r(node->children[1].get(), stats);
+        MakeFaces_r(node->children[0], stats);
+        MakeFaces_r(node->children[1], stats);
 
         // merge together all visible faces on the node
         if (!qbsp_options.nomerge.value())

@@ -36,6 +36,13 @@ portal_t *tree_t::create_portal()
     return portals.emplace_back(std::make_unique<portal_t>()).get();
 }
 
+node_t *tree_t::create_node()
+{
+    auto it = nodes.grow_by(1);
+
+    return &(*it);
+}
+
 /*
 ==================
 FreeTreePortals_r
@@ -45,8 +52,8 @@ FreeTreePortals_r
 static void ClearNodePortals_r(node_t *node)
 {
     if (!node->is_leaf) {
-        ClearNodePortals_r(node->children[0].get());
-        ClearNodePortals_r(node->children[1].get());
+        ClearNodePortals_r(node->children[0]);
+        ClearNodePortals_r(node->children[1]);
     }
 
     node->portals = nullptr;
@@ -54,7 +61,7 @@ static void ClearNodePortals_r(node_t *node)
 
 void FreeTreePortals(tree_t *tree)
 {
-    ClearNodePortals_r(tree->headnode.get());
+    ClearNodePortals_r(tree->headnode);
     tree->outside_node.portals = nullptr;
 
     tree->portals.clear();
@@ -91,8 +98,8 @@ static void PruneNodes_R(node_t *node, std::atomic<int32_t> &count_pruned)
     }
 
     tbb::task_group g;
-    g.run([&]() { PruneNodes_R(node->children[0].get(), count_pruned); });
-    g.run([&]() { PruneNodes_R(node->children[1].get(), count_pruned); });
+    g.run([&]() { PruneNodes_R(node->children[0], count_pruned); });
+    g.run([&]() { PruneNodes_R(node->children[1], count_pruned); });
     g.wait();
 
     if (node->children[0]->is_leaf && node->children[0]->contents.is_any_solid(qbsp_options.target_game) &&

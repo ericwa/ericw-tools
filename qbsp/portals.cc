@@ -43,7 +43,7 @@ contentflags_t ClusterContents(const node_t *node)
         return node->contents;
 
     return qbsp_options.target_game->cluster_contents(
-        ClusterContents(node->children[0].get()), ClusterContents(node->children[1].get()));
+        ClusterContents(node->children[0]), ClusterContents(node->children[1]));
 }
 
 /*
@@ -160,9 +160,9 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
 
             p->winding = std::make_unique<winding_t>(BaseWindingForPlane(pl));
             if (side) {
-                p->set_nodes(&tree->outside_node, tree->headnode.get());
+                p->set_nodes(&tree->outside_node, tree->headnode);
             } else {
-                p->set_nodes(tree->headnode.get(), &tree->outside_node);
+                p->set_nodes(tree->headnode, &tree->outside_node);
             }
         }
 
@@ -209,7 +209,7 @@ static std::optional<winding_t> BaseWindingForNode(const node_t *node)
     // clip by all the parents
     for (auto *np = node->parent; np && w;) {
 
-        if (np->children[0].get() == node) {
+        if (np->children[0] == node) {
             w = w->clip_front(np->get_plane(), BASE_WINDING_EPSILON, false);
         } else {
             w = w->clip_back(np->get_plane(), BASE_WINDING_EPSILON, false);
@@ -267,7 +267,7 @@ std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std:
     new_portal->plane = node->get_plane();
     new_portal->onnode = node;
     new_portal->winding = std::make_unique<winding_t>(*w);
-    new_portal->set_nodes(node->children[0].get(), node->children[1].get());
+    new_portal->set_nodes(node->children[0], node->children[1]);
 
     return new_portal;
 }
@@ -283,8 +283,8 @@ children have portals instead of node.
 twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_t *node, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats)
 {
     const auto &plane = node->get_plane();
-    node_t *f = node->children[0].get();
-    node_t *b = node->children[1].get();
+    node_t *f = node->children[0];
+    node_t *b = node->children[1];
 
     twosided<std::list<std::unique_ptr<buildportal_t>>> result;
 
@@ -405,8 +405,8 @@ static void CalcTreeBounds_r(tree_t *tree, node_t *node)
         CalcNodeBounds(node);
     } else {
         tbb::task_group g;
-        g.run([&]() { CalcTreeBounds_r(tree, node->children[0].get()); });
-        g.run([&]() { CalcTreeBounds_r(tree, node->children[1].get()); });
+        g.run([&]() { CalcTreeBounds_r(tree, node->children[0]); });
+        g.run([&]() { CalcTreeBounds_r(tree, node->children[1]); });
         g.wait();
 
         node->bounds = node->children[0]->bounds + node->children[1]->bounds;
@@ -449,8 +449,8 @@ static std::list<std::unique_ptr<buildportal_t>> ClipNodePortalsToTree_r(node_t 
 
     auto boundary_portals_split = SplitNodePortals(node, std::move(portals), stats);
 
-    auto front_fragments = ClipNodePortalsToTree_r(node->children[0].get(), type, std::move(boundary_portals_split.front), stats);
-    auto back_fragments = ClipNodePortalsToTree_r(node->children[1].get(), type, std::move(boundary_portals_split.back), stats);
+    auto front_fragments = ClipNodePortalsToTree_r(node->children[0], type, std::move(boundary_portals_split.front), stats);
+    auto back_fragments = ClipNodePortalsToTree_r(node->children[1], type, std::move(boundary_portals_split.back), stats);
 
     std::list<std::unique_ptr<buildportal_t>> merged_result;
     merged_result.splice(merged_result.end(), front_fragments);
@@ -482,8 +482,8 @@ std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t
     std::list<std::unique_ptr<buildportal_t>> result_portals_front, result_portals_back;
 
     tbb::task_group g;
-    g.run([&]() { result_portals_front = MakeTreePortals_r(tree, node->children[0].get(), type, std::move(boundary_portals_split.front), stats); });
-    g.run([&]() { result_portals_back = MakeTreePortals_r(tree, node->children[1].get(), type, std::move(boundary_portals_split.back), stats); });
+    g.run([&]() { result_portals_front = MakeTreePortals_r(tree, node->children[0], type, std::move(boundary_portals_split.front), stats); });
+    g.run([&]() { result_portals_back = MakeTreePortals_r(tree, node->children[1], type, std::move(boundary_portals_split.back), stats); });
     g.wait();
 
     // sequential part: push the nodeportal down each side of the bsp so it connects leafs
@@ -495,9 +495,9 @@ std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t
         // these portal fragments have node->children[1] on one side, and the leaf nodes from
         // node->children[0] on the other side
         std::list<std::unique_ptr<buildportal_t>> half_clipped =
-            ClipNodePortalsToTree_r(node->children[0].get(), type, make_list(std::move(nodeportal)), stats);
+            ClipNodePortalsToTree_r(node->children[0], type, make_list(std::move(nodeportal)), stats);
 
-        for (auto &clipped_p : ClipNodePortalsToTree_r(node->children[1].get(), type, std::move(half_clipped), stats)) {
+        for (auto &clipped_p : ClipNodePortalsToTree_r(node->children[1], type, std::move(half_clipped), stats)) {
             result_portals_onnode.push_back(std::move(clipped_p));
         }
     }
@@ -527,13 +527,13 @@ void MakeTreePortals(tree_t *tree)
 
     auto headnodeportals = MakeHeadnodePortals(tree);
 
-    auto buildportals = MakeTreePortals_r(tree, tree->headnode.get(), portaltype_t::TREE, std::move(headnodeportals), stats);
+    auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::TREE, std::move(headnodeportals), stats);
 
     MakePortalsFromBuildportals(tree, std::move(buildportals));
 
     logging::header("CalcTreeBounds");
 
-    CalcTreeBounds_r(tree, tree->headnode.get());
+    CalcTreeBounds_r(tree, tree->headnode);
 
     logging::print(logging::flag::STAT, "       {:8} tiny portals\n", stats.c_tinyportals);
     logging::print(logging::flag::STAT, "       {:8} tree portals\n", tree->portals.size());
@@ -544,14 +544,14 @@ static void AssertNoPortals_r(node_t *node)
     Q_assert(!node->portals);
 
     if (!node->is_leaf) {
-        AssertNoPortals_r(node->children[0].get());
-        AssertNoPortals_r(node->children[1].get());
+        AssertNoPortals_r(node->children[0]);
+        AssertNoPortals_r(node->children[1]);
     }
 }
 
 void AssertNoPortals(tree_t *tree)
 {
-    AssertNoPortals_r(tree->headnode.get());
+    AssertNoPortals_r(tree->headnode);
     Q_assert(!tree->outside_node.portals);
     Q_assert(tree->portals.empty());
 }
@@ -569,8 +569,8 @@ static void ApplyArea_r(node_t *node)
     node->area = map.c_areas;
 
     if (!node->is_leaf) {
-        ApplyArea_r(node->children[0].get());
-        ApplyArea_r(node->children[1].get());
+        ApplyArea_r(node->children[0]);
+        ApplyArea_r(node->children[1]);
     }
 }
 
@@ -578,10 +578,10 @@ static mapentity_t *AreanodeEntityForLeaf(node_t *node)
 {
     // if detail cluster, search the children recursively
     if (!node->is_leaf) {
-        if (auto *child0result = AreanodeEntityForLeaf(node->children[0].get()); child0result) {
+        if (auto *child0result = AreanodeEntityForLeaf(node->children[0]); child0result) {
             return child0result;
         }
-        return AreanodeEntityForLeaf(node->children[1].get());
+        return AreanodeEntityForLeaf(node->children[1]);
     }
 
     for (auto &brush : node->original_brushes) {
@@ -691,8 +691,8 @@ area set, flood fill out from there
 static void SetAreaPortalAreas_r(node_t *node)
 {
     if (!node->is_leaf) {
-        SetAreaPortalAreas_r(node->children[0].get());
-        SetAreaPortalAreas_r(node->children[1].get());
+        SetAreaPortalAreas_r(node->children[0]);
+        SetAreaPortalAreas_r(node->children[1]);
         return;
     }
 
@@ -895,8 +895,8 @@ MarkVisibleSides_r
 static void MarkVisibleSides_r(node_t *node)
 {
     if (!node->is_leaf) {
-        MarkVisibleSides_r(node->children[0].get());
-        MarkVisibleSides_r(node->children[1].get());
+        MarkVisibleSides_r(node->children[0]);
+        MarkVisibleSides_r(node->children[1]);
         return;
     }
 
@@ -938,5 +938,5 @@ void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_vector_t &brus
     }
 
     // set visible flags on the sides that are used by portals
-    MarkVisibleSides_r(tree->headnode.get());
+    MarkVisibleSides_r(tree->headnode);
 }

@@ -63,15 +63,15 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 
     if (dist > 0) {
         // point is on the front of the node plane
-        return PointInLeaf(node->children[0].get(), point);
+        return PointInLeaf(node->children[0], point);
     } else if (dist < 0) {
         // point is on the back of the node plane
-        return PointInLeaf(node->children[1].get(), point);
+        return PointInLeaf(node->children[1], point);
     } else {
         // point is exactly on the node plane
 
-        node_t *front = PointInLeaf(node->children[0].get(), point);
-        node_t *back = PointInLeaf(node->children[1].get(), point);
+        node_t *front = PointInLeaf(node->children[0], point);
+        node_t *back = PointInLeaf(node->children[1], point);
 
         // prefer the opaque one
         if (LeafSealsMap(front)) {
@@ -89,8 +89,8 @@ static void ClearOccupied_r(node_t *node)
     node->occupant = nullptr;
 
     if (!node->is_leaf) {
-        ClearOccupied_r(node->children[0].get());
-        ClearOccupied_r(node->children[1].get());
+        ClearOccupied_r(node->children[0]);
+        ClearOccupied_r(node->children[1]);
     }
 }
 
@@ -117,8 +117,8 @@ static void MarkClusterOutsideDistance_R(node_t *node, int outside_distance)
     node->outside_distance = outside_distance;
 
     if (!node->is_leaf) {
-        MarkClusterOutsideDistance_R(node->children[0].get(), outside_distance);
-        MarkClusterOutsideDistance_R(node->children[1].get(), outside_distance);
+        MarkClusterOutsideDistance_R(node->children[0], outside_distance);
+        MarkClusterOutsideDistance_R(node->children[1], outside_distance);
     }
 }
 
@@ -328,8 +328,8 @@ static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *> &result)
     }
 
     if (!node->is_leaf) {
-        FindOccupiedClusters_R(node->children[0].get(), result);
-        FindOccupiedClusters_R(node->children[1].get(), result);
+        FindOccupiedClusters_R(node->children[0], result);
+        FindOccupiedClusters_R(node->children[1], result);
     }
 }
 
@@ -363,8 +363,8 @@ static void MarkAllBrushSidesVisible_R(node_t *node)
 {
     // descend to leafs
     if (!node->is_leaf) {
-        MarkAllBrushSidesVisible_R(node->children[0].get());
-        MarkAllBrushSidesVisible_R(node->children[1].get());
+        MarkAllBrushSidesVisible_R(node->children[0]);
+        MarkAllBrushSidesVisible_R(node->children[1]);
         return;
     }
 
@@ -387,8 +387,8 @@ static void MarkVisibleBrushSides_R(node_t *node)
 {
     // descent to leafs
     if (!node->is_leaf) {
-        MarkVisibleBrushSides_R(node->children[0].get());
-        MarkVisibleBrushSides_R(node->children[1].get());
+        MarkVisibleBrushSides_R(node->children[0]);
+        MarkVisibleBrushSides_R(node->children[1]);
         return;
     }
 
@@ -432,8 +432,8 @@ static void MarkVisibleBrushSides_R(node_t *node)
 static void OutLeafsToSolid_r(node_t *node, int *outleafs_count, settings::filltype_t filltype)
 {
     if (!node->is_leaf) {
-        OutLeafsToSolid_r(node->children[0].get(), outleafs_count, filltype);
-        OutLeafsToSolid_r(node->children[1].get(), outleafs_count, filltype);
+        OutLeafsToSolid_r(node->children[0], outleafs_count, filltype);
+        OutLeafsToSolid_r(node->children[1], outleafs_count, filltype);
         return;
     }
 
@@ -471,8 +471,8 @@ static int OutLeafsToSolid(node_t *node, settings::filltype_t filltype)
 static void SetOccupied_R(node_t *node, int dist)
 {
     if (!node->is_leaf) {
-        SetOccupied_R(node->children[0].get(), dist);
-        SetOccupied_R(node->children[1].get(), dist);
+        SetOccupied_R(node->children[0], dist);
+        SetOccupied_R(node->children[1], dist);
     }
 
     node->occupied = dist;
@@ -601,7 +601,7 @@ Special cases: structural fully covered by detail still needs to be marked "visi
 */
 bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_vector_t &brushes)
 {
-    node_t *node = tree->headnode.get();
+    node_t *node = tree->headnode;
 
     logging::funcheader();
 
@@ -724,9 +724,9 @@ void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum, bspbr
     logging::funcheader();
 
     // Clear the outside filling state on all nodes
-    ClearOccupied_r(tree->headnode.get());
+    ClearOccupied_r(tree->headnode);
 
     MarkBrushSidesInvisible(entity, brushes);
 
-    MarkVisibleBrushSides_R(tree->headnode.get());
+    MarkVisibleBrushSides_R(tree->headnode);
 }

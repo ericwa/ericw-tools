@@ -103,8 +103,8 @@ static size_t ExportClipNodes(node_t *node)
     const size_t nodenum = map.bsp.dclipnodes.size();
     map.bsp.dclipnodes.emplace_back();
 
-    const int child0 = ExportClipNodes(node->children[0].get());
-    const int child1 = ExportClipNodes(node->children[1].get());
+    const int child0 = ExportClipNodes(node->children[0]);
+    const int child1 = ExportClipNodes(node->children[1]);
 
     // Careful not to modify the vector while using this clipnode pointer
     bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
@@ -219,12 +219,12 @@ static void ExportDrawNodes(node_t *node)
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
                 const int32_t childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
-                ExportLeaf(node->children[i].get());
+                ExportLeaf(node->children[i]);
             }
         } else {
             const int32_t childnum = static_cast<int32_t>(map.bsp.dnodes.size());
             dnode->children[i] = childnum;
-            ExportDrawNodes(node->children[i].get());
+            ExportDrawNodes(node->children[i]);
 
             // Important: our dnode pointer may be invalid after the recursive call, if the vector got resized.
             // So re-set the pointer.

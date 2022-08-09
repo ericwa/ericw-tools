@@ -133,8 +133,8 @@ static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *d
         dest->push_back(face.get());
     }
 
-    ExportObj_Nodes_r(node->children[0].get(), dest);
-    ExportObj_Nodes_r(node->children[1].get(), dest);
+    ExportObj_Nodes_r(node->children[0], dest);
+    ExportObj_Nodes_r(node->children[1], dest);
 }
 
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes)
@@ -147,8 +147,8 @@ void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes)
 static void ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<const face_t *> *dest)
 {
     if (!node->is_leaf) {
-        ExportObj_Marksurfaces_r(node->children[0].get(), dest);
-        ExportObj_Marksurfaces_r(node->children[1].get(), dest);
+        ExportObj_Marksurfaces_r(node->children[0], dest);
+        ExportObj_Marksurfaces_r(node->children[1], dest);
         return;
     }
 

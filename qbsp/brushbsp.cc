@@ -980,7 +980,7 @@ BuildTree_r
 Called in parallel.
 ==================
 */
-static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> brushes, std::optional<bool> forced_quick_tree, bspstats_t &stats)
+static void BuildTree_r(tree_t *tree, node_t *node, std::vector<std::unique_ptr<bspbrush_t>> brushes, std::optional<bool> forced_quick_tree, bspstats_t &stats)
 {
     // find the best plane to use as a splitter
     auto bestplane = SelectSplitPlane(brushes, node, forced_quick_tree, stats);
@@ -1008,7 +1008,7 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
-        auto &newnode = node->children[i] = std::make_unique<node_t>();
+        auto &newnode = node->children[i] = tree->create_node();
         newnode->parent = node;
         newnode->bounds = node->bounds;
     }
@@ -1027,8 +1027,8 @@ static void BuildTree_r(node_t *node, std::vector<std::unique_ptr<bspbrush_t>> b
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(node->children[0].get(), std::move(children[0]), forced_quick_tree, stats); });
-    g.run([&]() { BuildTree_r(node->children[1].get(), std::move(children[1]), forced_quick_tree, stats); });
+    g.run([&]() { BuildTree_r(tree, node->children[0], std::move(children[0]), forced_quick_tree, stats); });
+    g.run([&]() { BuildTree_r(tree, node->children[1], std::move(children[1]), forced_quick_tree, stats); });
     g.wait();
 }
 
@@ -1079,22 +1079,22 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        auto headnode = std::make_unique<node_t>();
+        auto headnode = tree->create_node();
         headnode->bounds = entity->bounds;
         // The choice of plane is mostly unimportant, but having it at (0, 0, 0) affects
         // the node bounds calculation.
         headnode->planenum = 0;
-        headnode->children[0] = std::make_unique<node_t>();
+        headnode->children[0] = tree->create_node();
         headnode->children[0]->is_leaf = true;
         headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
-        headnode->children[0]->parent = headnode.get();
-        headnode->children[1] = std::make_unique<node_t>();
+        headnode->children[0]->parent = headnode;
+        headnode->children[1] = tree->create_node();
         headnode->children[1]->is_leaf = true;
         headnode->children[1]->contents = qbsp_options.target_game->create_empty_contents();
-        headnode->children[1]->parent = headnode.get();
+        headnode->children[1]->parent = headnode;
 
         tree->bounds = headnode->bounds;
-        tree->headnode = std::move(headnode);
+        tree->headnode = headnode;
 
         return tree;
     }
@@ -1103,16 +1103,16 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
     logging::print(logging::flag::STAT, "     {:8} visible faces\n", c_faces);
     logging::print(logging::flag::STAT, "     {:8} nonvisible faces\n", c_nonvisfaces);
 
-    auto node = std::make_unique<node_t>();
+    auto node = tree->create_node();
 
     node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
     node->bounds = tree->bounds.grow(SIDESPACE);
 
-    tree->headnode = std::move(node);
+    tree->headnode = node;
 
     bspstats_t stats{};
     stats.leafstats = qbsp_options.target_game->create_content_stats();
-    BuildTree_r(tree->headnode.get(), std::move(brushlist), forced_quick_tree, stats);
+    BuildTree_r(tree.get(), tree->headnode, std::move(brushlist), forced_quick_tree, stats);
 
     logging::print(logging::flag::STAT, "     {:8} visible nodes\n", stats.c_nodes - stats.c_nonvis);
     if (stats.c_nonvis) {
