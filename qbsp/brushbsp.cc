@@ -1021,7 +1021,9 @@ static void BuildTree_r(tree_t *tree, node_t *node, std::vector<std::unique_ptr<
 		}
 	}
 
-    auto children_volumes = SplitBrush(node->volume->copy_unique(), bestplane.value(), stats);
+    // to save time/memory we can destroy node's volume at this point
+    auto children_volumes = SplitBrush(std::move(node->volume), bestplane.value(), stats);
+    node->volume = nullptr;
     node->children[0]->volume = std::move(children_volumes[0]);
     node->children[1]->volume = std::move(children_volumes[1]);
 
