@@ -227,7 +227,7 @@ bool CreateBrushWindings(bspbrush_t *brush)
             if (brush->sides[j].bevel)
                 continue;
             const qplane3d &plane = map.planes[brush->sides[j].planenum ^ 1];
-            w = w->clip(plane, qbsp_options.epsilon.value(), false)[SIDE_FRONT]; // CLIP_EPSILON);
+            w = w->clip_front(plane, qbsp_options.epsilon.value(), false); // CLIP_EPSILON);
         }
 
         if (w) {

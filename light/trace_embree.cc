@@ -399,11 +399,9 @@ static void Leaf_MakeFaces(
         for (const qplane3d &plane2 : planes) {
             if (&plane2 == &plane)
                 continue;
-
-            auto clipped = winding->clip(plane2);
-
+            
             // discard the back, continue clipping the front part
-            winding = clipped[0];
+            winding = winding->clip_front(plane2);
 
             // check if everything was clipped away
             if (!winding)

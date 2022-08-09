@@ -244,10 +244,8 @@ void RemoveRedundantPlanes(std::vector<T> &planes)
 
             // get flipped plane
             // frees winding.
-            auto clipped = winding->clip(-plane2);
-
             // discard the back, continue clipping the front part
-            winding = clipped[0];
+            winding = winding->clip_front(-plane2);
 
             // check if everything was clipped away
             if (!winding)
@@ -607,9 +605,7 @@ static decomp_brush_t BuildInitialBrush_Q2(
                 break;
 
             // FIXME: epsilon is a lot larger than what qbsp uses
-            auto [front, back] = winding->clip(plane2, DEFAULT_ON_EPSILON, true);
-
-            winding = back;
+            winding = winding->clip_back(plane2, DEFAULT_ON_EPSILON, true);
         }
 
         if (!winding)

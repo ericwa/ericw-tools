@@ -104,7 +104,7 @@ public:
     qvec3d origin{};
     rotation_t rotation;
 
-    std::list<mapbrush_t> mapbrushes;
+    std::vector<mapbrush_t> mapbrushes;
 
     size_t numboxbevels = 0;
     size_t numedgebevels = 0;

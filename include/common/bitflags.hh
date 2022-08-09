@@ -39,10 +39,10 @@ public:
     constexpr bitflags(const Enum &enumValue) : _bits(static_cast<type>(enumValue)) { }
 
     constexpr bitflags(const bitflags &copy) = default;
-    constexpr bitflags(bitflags &&move) = default;
+    constexpr bitflags(bitflags &&move) noexcept = default;
 
     constexpr bitflags &operator=(const bitflags &copy) = default;
-    constexpr bitflags &operator=(bitflags &&move) = default;
+    constexpr bitflags &operator=(bitflags &&move) noexcept = default;
 
     inline explicit operator bool() const { return _bits.any(); }
 

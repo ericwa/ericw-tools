@@ -2227,7 +2227,7 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 				continue;
             }
 			const auto &plane = map.get_plane(ob.faces[j].planenum ^ 1);
-            w = w->clip(plane, 0)[SIDE_FRONT]; //CLIP_EPSILON);
+            w = w->clip_front(plane, 0); //CLIP_EPSILON);
 		}
 
 		if (w) {
@@ -2288,6 +2288,8 @@ void ProcessMapBrushes()
                 }
 
                 num_removed++;
+                // this is kinda slow but since most origin brushes are in
+                // small brush models this won't matter much in practice
                 it = entity.mapbrushes.erase(it);
                 entity.rotation = rotation_t::origin_brush;
                 continue;

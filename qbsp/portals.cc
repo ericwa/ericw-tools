@@ -168,10 +168,17 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
 
     // clip the basewindings by all the other planes
     for (i = 0; i < 6; i++) {
+        winding_t &w = *portals[i]->winding.get();
+
         for (j = 0; j < 6; j++) {
             if (j == i)
                 continue;
-            portals[i]->winding = std::make_unique<winding_t>(*portals[i]->winding->clip(bplanes[j], qbsp_options.epsilon.value(), true)[SIDE_FRONT]);
+
+            if (auto w2 = w.clip_front(bplanes[j], qbsp_options.epsilon.value(), true)) {
+                w = std::move(*w2);
+            } else {
+                FError("portal winding clipped away");
+            }
         }
     }
 
@@ -201,9 +208,12 @@ static std::optional<winding_t> BaseWindingForNode(const node_t *node)
 
     // clip by all the parents
     for (auto *np = node->parent; np && w;) {
-        const planeside_t keep = (np->children[0].get() == node) ? SIDE_FRONT : SIDE_BACK;
 
-        w = w->clip(np->get_plane(), BASE_WINDING_EPSILON, false)[keep];
+        if (np->children[0].get() == node) {
+            w = w->clip_front(np->get_plane(), BASE_WINDING_EPSILON, false);
+        } else {
+            w = w->clip_back(np->get_plane(), BASE_WINDING_EPSILON, false);
+        }
 
         node = np;
         np = np->parent;
@@ -240,7 +250,8 @@ std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std:
             Error("CutNodePortals_r: mislinked portal");
         }
 
-        w = w->clip(plane, 0.1, false)[SIDE_FRONT];
+        // fixme-brushbsp: magic number
+        w = w->clip_front(plane, 0.1, false);
     }
 
     if (!w) {

@@ -218,16 +218,14 @@ public:
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_storage_heap_t(Iter begin, Iter end) : winding_storage_heap_t(end - begin)
+    inline winding_storage_heap_t(Iter begin, Iter end) : values(begin, end)
     {
-        std::copy_n(begin, size(), values.data());
     }
 
     // copy constructor; uses optimized method of copying
     // data over.
-    inline winding_storage_heap_t(const winding_storage_heap_t &copy) : winding_storage_heap_t(copy.size())
+    inline winding_storage_heap_t(const winding_storage_heap_t &copy) : values(copy.values)
     {
-        std::copy_n(copy.values.data(), copy.size(), values.data());
     }
 
     // move constructor
@@ -259,21 +257,11 @@ public:
 
     inline qvec3d &at(const size_t &index)
     {
-#ifdef _DEBUG
-        if (index >= count)
-            throw std::invalid_argument("index");
-#endif
-
         return values[index];
     }
 
     inline const qvec3d &at(const size_t &index) const
     {
-#ifdef _DEBUG
-        if (index >= count)
-            throw std::invalid_argument("index");
-#endif
-
         return values[index];
     }
 
@@ -1050,10 +1038,136 @@ public:
             results[SIDE_BACK].push_back(mid);
         }
 
-        if (results[SIDE_FRONT].size() > MAX_POINTS_ON_WINDING || results[SIDE_BACK].size() > MAX_POINTS_ON_WINDING)
-            FError("MAX_POINTS_ON_WINDING");
-
         return {std::move(results[SIDE_FRONT]), std::move(results[SIDE_BACK])};
+    }
+
+    /*
+    ==================
+    clip_front
+
+    The same as the above, except it will avoid allocating the front
+    if it doesn't need to be modified; destroys *this if it does end up
+    allocating a new winding.
+
+    Cheaper than clip(...)[SIDE_FRONT]
+    ==================
+    */
+    std::optional<winding_base_t> clip_front(
+        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+    {
+        vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
+        planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
+
+        std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
+
+        if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
+            return std::move(*this);
+
+        if (!counts[SIDE_FRONT])
+            return std::nullopt;
+        else if (!counts[SIDE_BACK])
+            return std::move(*this);
+
+        winding_base_t result;
+        result.reserve(size() + 4);
+
+        for (size_t i = 0; i < size(); i++) {
+            const qvec3d &p1 = at(i);
+
+            if (sides[i] == SIDE_ON) {
+                result.push_back(p1);
+                continue;
+            } else if (sides[i] == SIDE_FRONT) {
+                result.push_back(p1);
+            }
+
+            if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
+                continue;
+
+            /* generate a split point */
+            const qvec3d &p2 = at((i + 1) % size());
+
+            vec_t dot = dists[i] / (dists[i] - dists[i + 1]);
+            qvec3d mid;
+
+            for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
+                if (plane.normal[j] == 1)
+                    mid[j] = plane.dist;
+                else if (plane.normal[j] == -1)
+                    mid[j] = -plane.dist;
+                else
+                    mid[j] = p1[j] + dot * (p2[j] - p1[j]);
+            }
+
+            result.push_back(mid);
+        }
+
+        return std::move(result);
+    }
+
+
+    /*
+    ==================
+    clip_back
+
+    The same as the above, except it will avoid allocating the front
+    if it doesn't need to be modified; destroys *this if it does end up
+    allocating a new winding.
+
+    Cheaper than clip(...)[SIDE_BACK]
+    ==================
+    */
+    std::optional<winding_base_t> clip_back(
+        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+    {
+        vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
+        planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
+
+        std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
+
+        if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
+            return std::nullopt;
+
+        if (!counts[SIDE_FRONT])
+            return std::move(*this);
+        else if (!counts[SIDE_BACK])
+            return std::nullopt;
+
+        winding_base_t result;
+        result.reserve(size() + 4);
+
+        for (size_t i = 0; i < size(); i++) {
+            const qvec3d &p1 = at(i);
+
+            if (sides[i] == SIDE_ON) {
+                result.push_back(p1);
+                continue;
+            } else if (sides[i] == SIDE_BACK) {
+                result.push_back(p1);
+            }
+
+            if (sides[i + 1] == SIDE_ON || sides[i + 1] == sides[i])
+                continue;
+
+            /* generate a split point */
+            const qvec3d &p2 = at((i + 1) % size());
+
+            vec_t dot = dists[i] / (dists[i] - dists[i + 1]);
+            qvec3d mid;
+
+            for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
+                if (plane.normal[j] == 1)
+                    mid[j] = plane.dist;
+                else if (plane.normal[j] == -1)
+                    mid[j] = -plane.dist;
+                else
+                    mid[j] = p1[j] + dot * (p2[j] - p1[j]);
+            }
+
+            result.push_back(mid);
+        }
+
+        return std::move(result);
     }
 
     void dice(vec_t subdiv, std::function<void(winding_base_t &)> save_fn)
