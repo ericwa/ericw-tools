@@ -52,10 +52,16 @@ static void ClearNodePortals_r(node_t *node)
     node->portals = nullptr;
 }
 
+#include <tbb/parallel_for_each.h>
+
 void FreeTreePortals(tree_t *tree)
 {
     ClearNodePortals_r(tree->headnode.get());
     tree->outside_node.portals = nullptr;
+
+    tbb::parallel_for_each(tree->portals, [](std::unique_ptr<portal_t> &portal) {
+        portal.reset();
+    });
 
     tree->portals.clear();
 }
