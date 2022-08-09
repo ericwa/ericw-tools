@@ -35,4 +35,4 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/prtfile.hh
     ${CMAKE_SOURCE_DIR}/include/common/vectorutils.hh)
 
-target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json)
+target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json)

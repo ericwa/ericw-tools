@@ -23,12 +23,14 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 	message(STATUS "Found embree EMBREE_TBB_DLL: ${EMBREE_TBB_DLL}")
 endif()
 
-target_link_libraries(tests libqbsp liblight libvis common TBB::tbb Catch2::Catch2WithMain fmt::fmt nanobench::nanobench)
+target_link_libraries(tests libqbsp liblight libvis common TBB::tbb TBB::tbbmalloc Catch2::Catch2WithMain fmt::fmt nanobench::nanobench)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET tests POST_BUILD
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:tests>"
-					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:tests>")
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:tests>"
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:tests>"
+					)
 if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 	add_custom_command(TARGET tests POST_BUILD
 					   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:tests>")
