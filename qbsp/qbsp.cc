@@ -481,6 +481,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             MakeTreePortals(tree.get());
             if (FillOutside(entity, tree.get(), hullnum, brushes)) {
                 // make a really good tree
+                tree.reset();
                 tree = BrushBSP(entity, brushes, false);
 
                 // fill again so PruneNodes works
@@ -510,6 +511,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             // (effectively expanding those brush sides outwards).
             if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum, brushes)) {
                 // make a really good tree
+                tree.reset();
                 tree = BrushBSP(entity, brushes, false);
 
                 // make the real portals for vis tracing
@@ -528,6 +530,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             FillBrushEntity(entity, tree.get(), hullnum, brushes);
 
             // rebuild BSP now that we've marked invisible brush sides
+            tree.reset();
             tree = BrushBSP(entity, brushes, false);
         }
 
