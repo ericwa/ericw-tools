@@ -666,8 +666,8 @@ struct node_t
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
     int32_t area;
-    std::set<bspbrush_t *, bspbrush_t_less> original_brushes; // FIXME: only valid during construction
-    std::unordered_set<const mapbrush_t *> original_mapbrushes;
+    std::vector<bspbrush_t *> original_brushes; // FIXME: only valid during construction
+    std::vector<const mapbrush_t *> original_mapbrushes;
 };
 
 void InitQBSP(int argc, const char **argv);

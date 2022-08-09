@@ -78,10 +78,24 @@ void FreeTreePortals(tree_t *tree)
 static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // merge the children's brush lists
-    node->original_mapbrushes = node->children[0]->original_mapbrushes;
-    node->original_mapbrushes.insert(node->children[1]->original_mapbrushes.begin(), node->children[1]->original_mapbrushes.end());
+    node->original_brushes = std::move(node->children[0]->original_brushes);
+    node->original_brushes.insert(node->original_brushes.end(), node->children[1]->original_brushes.begin(), node->children[1]->original_brushes.end());
 
-    node->original_brushes.clear();
+    if (node->original_brushes.size()) {
+        std::sort(node->original_brushes.begin(), node->original_brushes.end(), bspbrush_t_less());
+        auto unique_begin = std::unique(node->original_brushes.begin(), node->original_brushes.end());
+        node->original_brushes.erase(unique_begin, node->original_brushes.end());
+
+        // migrate it over to mapbrushes
+        node->original_mapbrushes.reserve(node->original_brushes.size());
+
+        for (auto &b : node->original_brushes) {
+            node->original_mapbrushes.push_back(b->mapbrush);
+        }
+
+        // clear original_brushes since we no longer need it
+        node->original_brushes.clear();
+    }
 
     node->is_leaf = true;
 
@@ -99,7 +113,6 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 static void PruneNodes_R(node_t *node, std::atomic<int32_t> &count_pruned)
 {
     if (node->is_leaf) {
-        node->original_brushes.clear();
         return;
     }
 
