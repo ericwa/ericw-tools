@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <optional>
 
+#include <tbb/scalable_allocator.h>
+
 namespace polylib
 {
 
@@ -202,7 +204,7 @@ public:
 struct winding_storage_heap_t
 {
 protected:
-    std::vector<qvec3d> values {};
+    std::vector<qvec3d, tbb::scalable_allocator<qvec3d>> values{};
 
 public:
     // default constructor does nothing
