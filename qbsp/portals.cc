@@ -521,8 +521,6 @@ void MakeTreePortals(tree_t *tree)
 
     FreeTreePortals(tree);
 
-    AssertNoPortals(tree);
-
     portalstats_t stats{};
 
     auto headnodeportals = MakeHeadnodePortals(tree);
@@ -537,23 +535,6 @@ void MakeTreePortals(tree_t *tree)
 
     logging::print(logging::flag::STAT, "       {:8} tiny portals\n", stats.c_tinyportals);
     logging::print(logging::flag::STAT, "       {:8} tree portals\n", tree->portals.size());
-}
-
-static void AssertNoPortals_r(node_t *node)
-{
-    Q_assert(!node->portals);
-
-    if (!node->is_leaf) {
-        AssertNoPortals_r(node->children[0]);
-        AssertNoPortals_r(node->children[1]);
-    }
-}
-
-void AssertNoPortals(tree_t *tree)
-{
-    AssertNoPortals_r(tree->headnode);
-    Q_assert(!tree->outside_node.portals);
-    Q_assert(tree->portals.empty());
 }
 
 /*

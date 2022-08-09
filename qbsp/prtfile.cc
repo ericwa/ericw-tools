@@ -263,8 +263,6 @@ void WritePortalFile(tree_t *tree)
 
     FreeTreePortals(tree);
 
-    AssertNoPortals(tree);
-
     MakeHeadnodePortals(tree);
 
     portalstats_t stats{};

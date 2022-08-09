@@ -74,7 +74,6 @@ enum class portaltype_t {
 };
 std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats);
 void MakeTreePortals(tree_t *tree);
-void AssertNoPortals(tree_t *tree);
 std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree);
 void MakePortalsFromBuildportals(tree_t *tree, std::list<std::unique_ptr<buildportal_t>> buildportals);
 void EmitAreaPortals(node_t *headnode);
