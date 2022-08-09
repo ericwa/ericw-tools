@@ -584,7 +584,7 @@ bool bspbrush_t::update_bounds(bool warn_on_failures)
 
     for (const auto &face : sides) {
         if (face.w) {
-            this->bounds = this->bounds.unionWith(face.w.bounds());
+            this->bounds.unionWith_in_place(face.w.bounds());
         }
     }
 

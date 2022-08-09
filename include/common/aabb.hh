@@ -149,11 +149,33 @@ public:
 
     constexpr aabb operator+(const aabb &other) const { return unionWith(other); }
 
-    constexpr aabb &operator+=(const value_type &pt) { return (*this = expand(pt)); }
-
-    constexpr aabb &operator+=(const aabb &other) { return (*this = unionWith(other)); }
-
     constexpr aabb unionWith(const aabb &other) const { return expand(other.mins()).expand(other.maxs()); }
+
+    // in-place expansions
+
+    constexpr aabb &expand_in_place(const value_type &pt)
+    {
+        for (size_t i = 0; i < N; i++) {
+            m_corners[0][i] = min(m_corners[0][i], pt[i]);
+            m_corners[1][i] = max(m_corners[1][i], pt[i]);
+        }
+
+        return *this;
+    }
+
+    constexpr aabb &operator+=(const value_type &pt) { return expand_in_place(pt); }
+
+    constexpr aabb &operator+=(const aabb &other) { return unionWith_in_place(other); }
+
+    constexpr aabb &unionWith_in_place(const aabb &other)
+    {
+        for (size_t i = 0; i < N; i++) {
+            m_corners[0][i] = min({ m_corners[0][i], other.mins()[i], other.maxs()[i] });
+            m_corners[1][i] = max({ m_corners[1][i], other.mins()[i], other.maxs()[i] });
+        }
+
+        return *this;
+    }
 
     constexpr intersection_t intersectWith(const aabb &other) const
     {

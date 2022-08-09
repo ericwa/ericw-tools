@@ -68,6 +68,8 @@ struct bspstats_t
     std::atomic<int> c_brushesremoved;
     // number of brushes half-removed from a split
     std::atomic<int> c_brushesonesided;
+    // tiny volumes after clipping
+    std::atomic<int> c_tinyvolumes;
 };
 
 /*
@@ -591,7 +593,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
             v1 = BrushVolume(*result[i]);
             if (v1 < 1.0) {
                 result[i] = nullptr;
-                //			qprintf ("tiny volume after clip\n");
+                stats.c_tinyvolumes++;
             }
         }
     }
@@ -1134,6 +1136,9 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
     }
     if (stats.c_brushesonesided) {
         logging::print(logging::flag::STAT, "     {:8} brushes split only on one side\n", stats.c_brushesonesided);
+    }
+    if (stats.c_tinyvolumes) {
+        logging::print(logging::flag::STAT, "     {:8} tiny volumes removed after splits\n", stats.c_tinyvolumes);
     }
 
     logging::header("CountLeafs");
