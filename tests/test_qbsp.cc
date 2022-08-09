@@ -32,7 +32,7 @@ static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brus
     return nullptr;
 }
 
-static mapentity_t LoadMap(const char *map)
+static mapentity_t &LoadMap(const char *map)
 {
     qbsp_options.target_version = &bspver_q1;
     qbsp_options.target_game = qbsp_options.target_version->game;
@@ -41,17 +41,14 @@ static mapentity_t LoadMap(const char *map)
 
     parser_t parser(map, { Catch::getResultCapture().getCurrentTestName() });
 
-    // FIXME: ???
     mapentity_t &entity = ::map.entities.emplace_back();
 
-    mapentity_t worldspawn;
-
     // FIXME: adds the brush to the global map...
-    Q_assert(ParseEntity(parser, &worldspawn));
+    Q_assert(ParseEntity(parser, &entity));
 
     CalculateWorldExtent();
 
-    return worldspawn;
+    return entity;
 }
 
 #include <common/bspinfo.hh>
@@ -304,7 +301,7 @@ static std::map<std::string, std::vector<const mface_t *>> MakeTextureToFaceMap(
 
 static const texvecf &GetTexvecs(const char *map, const char *texname)
 {
-    mapentity_t worldspawn = LoadMap(map);
+    mapentity_t &worldspawn = LoadMap(map);
 
     const mapbrush_t *mapbrush = &worldspawn.mapbrushes.front();
     const mapface_t *mapface = Mapbrush_FirstFaceWithTextureName(mapbrush, "tech02_1");
@@ -397,7 +394,7 @@ TEST_CASE("duplicatePlanes", "[qbsp]")
     }
     )";
 
-    mapentity_t worldspawn = LoadMap(mapWithDuplicatePlanes);
+    mapentity_t &worldspawn = LoadMap(mapWithDuplicatePlanes);
     REQUIRE(1 == worldspawn.mapbrushes.size());
     CHECK(6 == worldspawn.mapbrushes.front().faces.size());
 
@@ -426,7 +423,7 @@ TEST_CASE("InvalidTextureProjection", "[qbsp]")
     }
     )";
 
-    mapentity_t worldspawn = LoadMap(map);
+    mapentity_t &worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.mapbrushes.size());
 
     const mapface_t *face = &worldspawn.mapbrushes.front().faces[5];
@@ -456,7 +453,7 @@ TEST_CASE("InvalidTextureProjection2", "[qbsp]")
     }
     )";
 
-    mapentity_t worldspawn = LoadMap(map);
+    mapentity_t &worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.mapbrushes.size());
 
     const mapface_t *face = &worldspawn.mapbrushes.front().faces[5];
@@ -487,7 +484,7 @@ TEST_CASE("InvalidTextureProjection3", "[qbsp]")
     }
     )";
 
-    mapentity_t worldspawn = LoadMap(map);
+    mapentity_t &worldspawn = LoadMap(map);
     Q_assert(1 == worldspawn.mapbrushes.size());
 
     const mapface_t *face = &worldspawn.mapbrushes.front().faces[3];

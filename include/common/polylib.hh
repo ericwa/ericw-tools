@@ -1132,7 +1132,7 @@ public:
             return std::move(*this);
         else if (!counts[SIDE_BACK])
             return std::nullopt;
-
+       
         winding_base_t result;
         result.reserve(size() + 4);
 
