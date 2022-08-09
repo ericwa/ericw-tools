@@ -331,8 +331,8 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
         return;
     }
 
-    ExportBrushList_r(entity, node->children[0].get());
-    ExportBrushList_r(entity, node->children[1].get());
+    ExportBrushList_r(entity, node->children[0]);
+    ExportBrushList_r(entity, node->children[1]);
 }
 
 static void ExportBrushList(mapentity_t *entity, node_t *node)
@@ -376,8 +376,8 @@ static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
         qbsp_options.target_game->count_contents_in_stats(node->contents, stats);
         return;
     }
-    CountLeafs_r(node->children[0].get(), stats);
-    CountLeafs_r(node->children[1].get(), stats);
+    CountLeafs_r(node->children[0], stats);
+    CountLeafs_r(node->children[1], stats);
 }
 
 static void CountLeafs(node_t *headnode)
@@ -486,10 +486,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 // fill again so PruneNodes works
                 MakeTreePortals(tree.get());
                 FillOutside(entity, tree.get(), hullnum, brushes);
-                PruneNodes(tree->headnode.get());
+                PruneNodes(tree->headnode);
             }
         }
-        ExportClipNodes(entity, tree->headnode.get(), hullnum);
+        ExportClipNodes(entity, tree->headnode, hullnum);
 
         // fixme-brushbsp: return here?
     } else {
@@ -521,8 +521,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
             // Area portals
             if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-                FloodAreas(entity, tree->headnode.get());
-                EmitAreaPortals(tree->headnode.get());
+                FloodAreas(entity, tree->headnode);
+                EmitAreaPortals(tree->headnode);
             }
         } else {
             FillBrushEntity(entity, tree.get(), hullnum, brushes);
@@ -534,39 +534,39 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
         MakeTreePortals(tree.get());
 
         MarkVisibleSides(tree.get(), entity, brushes);
-        MakeFaces(tree->headnode.get());
+        MakeFaces(tree->headnode);
 
         FreeTreePortals(tree.get());
-        PruneNodes(tree->headnode.get());
+        PruneNodes(tree->headnode);
 
         if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || qbsp_options.keepprt.value())) {
             WritePortalFile(tree.get());
         }
 
         // needs to come after any face creation
-        MakeMarkFaces(tree->headnode.get());
+        MakeMarkFaces(tree->headnode);
 
-        CountLeafs(tree->headnode.get());
+        CountLeafs(tree->headnode);
 
         // output vertices first, since TJunc needs it
-        EmitVertices(tree->headnode.get());
+        EmitVertices(tree->headnode);
 
-        TJunc(tree->headnode.get());
+        TJunc(tree->headnode);
 
         if (qbsp_options.objexport.value() && entity == map.world_entity()) {
-            ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode.get());
-            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode.get());
+            ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode);
+            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
         }
 
         Q_assert(entity->firstoutputfacenumber == -1);
 
-        entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode.get());
+        entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode);
 
         if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-            ExportBrushList(entity, tree->headnode.get());
+            ExportBrushList(entity, tree->headnode);
         }
 
-        ExportDrawNodes(entity, tree->headnode.get(), entity->firstoutputfacenumber);
+        ExportDrawNodes(entity, tree->headnode, entity->firstoutputfacenumber);
     }
 }
 

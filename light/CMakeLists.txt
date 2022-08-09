@@ -75,7 +75,9 @@ if (embree_FOUND)
 
 	add_custom_command(TARGET light POST_BUILD
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:light>"
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:light>")
+                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:light>"
+					   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:light>"
+					   )
 
 	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
 		add_custom_command(TARGET light POST_BUILD
@@ -103,9 +105,18 @@ if (embree_FOUND)
 		message(STATUS "TBB .so file: ${TBB_SO_FILE}")
 
 		install(FILES ${TBB_SO_FILE} DESTINATION bin)
+
+		# tbbmalloc
+		get_target_property(TBBMALLOC_SO_FILE_SYMLINK TBB::tbbmalloc IMPORTED_LOCATION_RELEASE)
+		get_filename_component(TBBMALLOC_SO_FILE "${TBBMALLOC_SO_FILE_SYMLINK}" REALPATH)
+
+		message(STATUS "TBBMALLOC .so file: ${TBBMALLOC_SO_FILE}")
+
+		install(FILES ${TBBMALLOC_SO_FILE} DESTINATION bin)
 	else()
 		# preferred method
 		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION bin)
+		install(FILES $<TARGET_FILE:TBB::tbbmalloc> DESTINATION bin)
 	endif()
 
 	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)

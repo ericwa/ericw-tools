@@ -29,21 +29,32 @@
 #include <memory>
 #include <vector>
 
-struct node_t;
+#include <tbb/concurrent_vector.h>
+
 struct portal_t;
 
 struct tree_t
 {
-    std::unique_ptr<node_t> headnode;
+    node_t *headnode;
     node_t outside_node = {}; // portals outside the world face this
     aabb3d bounds;
 
     // here for ownership/memory management - not intended to be iterated directly
     std::vector<std::unique_ptr<portal_t>> portals;
 
+    // here for ownership/memory management - not intended to be iterated directly
+    //
+    // concurrent_vector allows BrushBSP to insert nodes in parallel, and also
+    // promises not to move elements so we can omit the std::unique_ptr wrapper.
+    tbb::concurrent_vector<node_t> nodes;
+
     // creates a new portal owned by `this` (stored in the `portals` vector) and
     // returns a raw pointer to it
     portal_t *create_portal();
+
+    // creates a new node owned by `this` (stored in the `nodes` vector) and
+    // returns a raw pointer to it
+    node_t *create_node();
 };
 
 void FreeTreePortals(tree_t *tree);

@@ -55,8 +55,8 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
     qplane3d plane2;
 
     if (!node->is_leaf && !node->detail_separator) {
-        WritePortals_r(node->children[0].get(), portalFile, clusters);
-        WritePortals_r(node->children[1].get(), portalFile, clusters);
+        WritePortals_r(node->children[0], portalFile, clusters);
+        WritePortals_r(node->children[1], portalFile, clusters);
         return;
     }
     if (node->contents.is_solid(qbsp_options.target_game))
@@ -102,8 +102,8 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
 static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int viscluster)
 {
     if (!node->is_leaf) {
-        viscluster = WriteClusters_r(node->children[0].get(), portalFile, viscluster);
-        viscluster = WriteClusters_r(node->children[1].get(), portalFile, viscluster);
+        viscluster = WriteClusters_r(node->children[0], portalFile, viscluster);
+        viscluster = WriteClusters_r(node->children[1], portalFile, viscluster);
         return viscluster;
     }
     if (node->contents.is_solid(qbsp_options.target_game))
@@ -168,8 +168,8 @@ static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
             node->viscluster = cluster;
             CountPortals(node, state);
         }
-        NumberLeafs_r(node->children[0].get(), state, cluster);
-        NumberLeafs_r(node->children[1].get(), state, cluster);
+        NumberLeafs_r(node->children[0], state, cluster);
+        NumberLeafs_r(node->children[1], state, cluster);
         return;
     }
 
@@ -270,12 +270,12 @@ void WritePortalFile(tree_t *tree)
     portalstats_t stats{};
 
     // vis portal generation doesn't use headnode portals
-    auto buildportals = MakeTreePortals_r(tree, tree->headnode.get(), portaltype_t::VIS, {}, stats);
+    auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::VIS, {}, stats);
 
     MakePortalsFromBuildportals(tree, std::move(buildportals));
 
     /* save portal file for vis tracing */
-    WritePortalfile(tree->headnode.get(), &state);
+    WritePortalfile(tree->headnode, &state);
 
     logging::print(logging::flag::STAT, "     {:8} vis leafs\n", state.num_visleafs);
     logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);

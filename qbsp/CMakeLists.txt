@@ -31,7 +31,7 @@ set(QBSP_SOURCES
 	${QBSP_INCLUDES})
 
 add_library(libqbsp STATIC ${QBSP_SOURCES})
-target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb fmt::fmt nlohmann_json::nlohmann_json pareto)
+target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json pareto)
 
 add_executable(qbsp main.cc)
 target_link_libraries(qbsp libqbsp)
@@ -40,4 +40,5 @@ install(TARGETS qbsp RUNTIME DESTINATION bin)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET qbsp POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:qbsp>")
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:qbsp>"
+				   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:qbsp>")

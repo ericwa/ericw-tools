@@ -161,8 +161,8 @@ static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, s
         }
     }
 
-    FindEdgeVerts_FaceBounds_R(node->children[0].get(), aabb, verts);
-    FindEdgeVerts_FaceBounds_R(node->children[1].get(), aabb, verts);
+    FindEdgeVerts_FaceBounds_R(node->children[0], aabb, verts);
+    FindEdgeVerts_FaceBounds_R(node->children[1], aabb, verts);
 }
 
 /*
@@ -845,8 +845,8 @@ static void FindFaces_r(node_t *node, std::unordered_set<face_t *> &faces)
         }
     }
 
-    FindFaces_r(node->children[0].get(), faces);
-    FindFaces_r(node->children[1].get(), faces);
+    FindFaces_r(node->children[0], faces);
+    FindFaces_r(node->children[1], faces);
 }
 
 /*
