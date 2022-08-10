@@ -57,7 +57,6 @@ struct bspbrush_t
      */
     bspbrush_t *original;
     mapbrush_t *mapbrush;
-    uint32_t file_order;
     aabb3d bounds;
     int side, testside; // side of node during construction
     std::vector<side_t> sides;

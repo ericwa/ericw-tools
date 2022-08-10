@@ -450,10 +450,12 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
      */
     Brush_LoadEntity(entity, hullnum, brushes);
 
-    // assign brush file order
+    size_t num_sides = 0;
     for (size_t i = 0; i < brushes.size(); ++i) {
-        brushes[i]->file_order = i;
+        num_sides += brushes[i]->sides.size();
     }
+
+    logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
     // entity->brushes = ChopBrushes(entity->brushes);
 

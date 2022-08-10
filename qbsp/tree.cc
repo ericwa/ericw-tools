@@ -83,7 +83,7 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     node->original_brushes.insert(node->original_brushes.end(), node->children[base ^ 1]->original_brushes.begin(), node->children[base ^ 1]->original_brushes.end());
 
     std::sort(node->original_brushes.begin(), node->original_brushes.end(), [](const bspbrush_t *a, const bspbrush_t *b) {
-        return a->file_order < b->file_order;
+        return a->mapbrush < b->mapbrush;
     });
     auto unique = std::unique(node->original_brushes.begin(), node->original_brushes.end());
     node->original_brushes.erase(unique, node->original_brushes.end());

@@ -590,7 +590,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
 
         for (i = 0; i < 2; i++) {
             v1 = BrushVolume(*result[i]);
-            if (v1 < 1.0) {
+            if (v1 < qbsp_options.microvolume.value()) {
                 result[i] = nullptr;
                 stats.c_tinyvolumes++;
             }
@@ -1021,10 +1021,10 @@ static void BuildTree_r(tree_t *tree, node_t *node, std::vector<std::unique_ptr<
 	}
 
     // to save time/memory we can destroy node's volume at this point
-    auto children_volumes = SplitBrush(std::move(node->volume), bestplane.value(), stats);
-    node->volume = nullptr;
-    node->children[0]->volume = std::move(children_volumes[0]);
-    node->children[1]->volume = std::move(children_volumes[1]);
+        auto children_volumes = SplitBrush(std::move(node->volume), bestplane.value(), stats);
+        node->volume = nullptr;
+        node->children[0]->volume = std::move(children_volumes[0]);
+        node->children[1]->volume = std::move(children_volumes[1]);
 
     // recursively process children
     tbb::task_group g;
@@ -1049,6 +1049,7 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
     for (const auto &b : brushlist) {
         c_brushes++;
 
+#if 0
         // fixme-brushbsp: why does this just print and do nothing? should
         // the brush be removed?
         double volume = BrushVolume(*b);
@@ -1056,6 +1057,7 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
             logging::print("WARNING: {}: microbrush\n",
                 b->original->mapbrush->line);
         }
+#endif
 
         for (side_t &side : b->sides) {
             if (side.bevel)
@@ -1106,7 +1108,7 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
 
     auto node = tree->create_node();
 
-    node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
+        node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
     node->bounds = tree->bounds.grow(SIDESPACE);
 
     tree->headnode = node;
