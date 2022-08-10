@@ -54,7 +54,7 @@ std::unique_ptr<face_t> NewFaceFromFace(const face_t *in)
     newf->planenum = in->planenum;
     newf->texinfo = in->texinfo;
     newf->contents = in->contents;
-    newf->lmshift = in->lmshift;
+    newf->original_side = in->original_side;
 
     newf->origin = in->origin;
     newf->radius = in->radius;

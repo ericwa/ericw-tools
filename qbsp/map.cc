@@ -2268,7 +2268,6 @@ void ProcessMapBrushes()
         /* Origin brush support */
         entity.rotation = rotation_t::none;
 
-
         /* entities with custom lmscales are important for the qbsp to know about */
         int i = 16 * entity.epairs.get_float("_lmscale");
         if (!i) {
@@ -2322,6 +2321,10 @@ void ProcessMapBrushes()
 
             // add the brush bevels
             AddBrushBevels(entity, brush);
+
+            for (auto &f : brush.faces) {
+                f.lmshift = brush.lmshift;
+            }
 
             num_bevels += brush.faces.size() - old_num_faces;
             it++;

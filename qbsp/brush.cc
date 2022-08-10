@@ -498,10 +498,6 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
             continue;
         }
 
-        for (auto &face : brush->sides) {
-            face.lmshift = mapbrush.lmshift;
-        }
-
         qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
 
         dst->bounds += brush->bounds;

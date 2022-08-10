@@ -49,6 +49,7 @@ struct mapface_t
     bool bevel = false;
     bool visible = false;
     winding_t winding; // winding used to calculate bevels
+    int16_t lmshift;
 
     surfflags_t flags{};
 
@@ -84,7 +85,7 @@ public:
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
     parser_source_location line;
     contentflags_t contents {};
-    short lmshift = 0; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
+    int16_t lmshift = 0; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
     mapentity_t *func_areaportal = nullptr;
 };
 

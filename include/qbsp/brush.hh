@@ -36,14 +36,12 @@ struct side_t
     size_t planenum;
     int texinfo;
 
-    int16_t lmshift;
-
     bool onnode; // has this face been used as a BSP node plane yet?
     bool visible = true; // can any part of this side be seen from non-void parts of the level?
                          // non-visible means we can discard the brush side
                          // (avoiding generating a BSP spit, so expanding it outwards)
     bool bevel; // don't ever use for bsp splitting
-    const mapface_t *source; // the mapface we were generated from
+    mapface_t *source; // the mapface we were generated from
 
     bool tested;
 

@@ -427,13 +427,13 @@ struct face_fragment_t
 
 struct portal_t;
 struct qbsp_plane_t;
+struct mapface_t;
 
 struct face_t
 {
     size_t planenum;
     int texinfo;
     contentflags_t contents; // contents on the front of the face
-    int16_t lmshift;
     winding_t w;
     std::vector<size_t> original_vertices; // the vertices of this face before fragmentation; filled in by EmitVertices
     std::vector<face_fragment_t> fragments; // the vertices of this face post-fragmentation; filled in by TJunc
@@ -442,6 +442,7 @@ struct face_t
     vec_t radius;
 
     portal_t *portal;
+    mapface_t *original_side;
 
     const qbsp_plane_t &get_plane() const;
     const qbsp_plane_t &get_positive_plane() const;

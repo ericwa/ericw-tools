@@ -211,7 +211,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
     mface_t &out = map.bsp.dfaces.emplace_back();
 
     // emit lmshift
-    map.exported_lmshifts.push_back(face->lmshift);
+    map.exported_lmshifts.push_back(face->original_side->lmshift);
     Q_assert(map.bsp.dfaces.size() == map.exported_lmshifts.size());
 
     out.planenum = ExportMapPlane(face->planenum & ~1);
@@ -363,7 +363,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
     // one lightmap block will always be added at the end, for smooth interpolation
 
     // engines that do support scaling will support 256*256 blocks (at whatever scale).
-    lmshift = f->lmshift;
+    lmshift = f->original_side->lmshift;
     if (lmshift > 4)
         lmshift = 4; // no bugging out with legacy lighting
 
@@ -481,7 +481,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
     f->texinfo = side->texinfo;
     f->planenum = (side->planenum & ~1) | (pside ? 1 : 0);
     f->portal = p;
-    f->lmshift = side->lmshift;
+    f->original_side = side->source;
 
 #if 0
     bool make_face =
