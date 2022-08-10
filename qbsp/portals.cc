@@ -573,8 +573,8 @@ static mapentity_t *AreanodeEntityForLeaf(node_t *node)
     }
 
     for (auto &brush : node->original_brushes) {
-        if (brush->func_areaportal) {
-            return brush->func_areaportal;
+        if (brush->mapbrush->func_areaportal) {
+            return brush->mapbrush->func_areaportal;
         }
     }
     return nullptr;

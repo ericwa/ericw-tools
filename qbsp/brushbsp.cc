@@ -494,8 +494,6 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
         result[i]->original = brush->original;
         // fixme-brushbsp: add a bspbrush_t copy constructor to make sure we get all fields
         result[i]->contents = brush->contents;
-        result[i]->lmshift = brush->lmshift;
-        result[i]->func_areaportal = brush->func_areaportal;
         result[i]->sides.reserve(brush->sides.size() + 1);
     }
 

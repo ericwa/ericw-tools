@@ -2268,8 +2268,30 @@ void ProcessMapBrushes()
         /* Origin brush support */
         entity.rotation = rotation_t::none;
 
+
+        /* entities with custom lmscales are important for the qbsp to know about */
+        int i = 16 * entity.epairs.get_float("_lmscale");
+        if (!i) {
+            i = 16; // if 0, pick a suitable default
+        }
+        int lmshift = 0;
+        while (i > 1) {
+            lmshift++; // only allow power-of-two scales
+            i /= 2;
+        }
+
+        mapentity_t *areaportal = nullptr;
+
+        if (entity.epairs.get("classname") == "func_areaportal") {
+            areaportal = &entity;
+        }
+
         for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end(); ) {
             auto &brush = *it;
+
+            // set properties calculated above
+            brush.lmshift = lmshift;
+            brush.func_areaportal = areaportal;
 
             // calculate brush bounds
             CalculateBrushBounds(brush);

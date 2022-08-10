@@ -355,8 +355,6 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
         return;
     }
 
-    int i;
-    int lmshift;
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
     const std::string &classname = src->epairs.get("classname");
@@ -379,16 +377,6 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
         }
     }
 
-    /* entities with custom lmscales are important for the qbsp to know about */
-    i = 16 * src->epairs.get_float("_lmscale");
-    if (!i)
-        i = 16; // if 0, pick a suitable default
-    lmshift = 0;
-    while (i > 1) {
-        lmshift++; // only allow power-of-two scales
-        i /= 2;
-    }
-
     /* _mirrorinside key (for func_water etc.) */
     std::optional<bool> mirrorinside;
 
@@ -406,7 +394,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
     auto it = src->mapbrushes.begin();
-    for (i = 0; i < src->mapbrushes.size(); i++, it++) {
+    for (size_t i = 0; i < src->mapbrushes.size(); i++, it++) {
         logging::percent(i, src->mapbrushes.size());
         auto &mapbrush = *it;
         contentflags_t contents = mapbrush.contents;
@@ -510,14 +498,8 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
             continue;
         }
 
-        brush->lmshift = lmshift;
-
         for (auto &face : brush->sides) {
-            face.lmshift = lmshift;
-        }
-
-        if (classname == std::string_view("func_areaportal")) {
-            brush->func_areaportal = const_cast<mapentity_t *>(src); // FIXME: get rid of consts on src in the callers?
+            face.lmshift = mapbrush.lmshift;
         }
 
         qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);

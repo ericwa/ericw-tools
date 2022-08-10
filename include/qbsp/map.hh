@@ -73,6 +73,8 @@ enum class brushformat_t
     BRUSH_PRIMITIVES
 };
 
+class mapentity_t;
+
 class mapbrush_t
 {
 public:
@@ -82,6 +84,8 @@ public:
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
     parser_source_location line;
     contentflags_t contents {};
+    short lmshift = 0; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
+    mapentity_t *func_areaportal = nullptr;
 };
 
 struct lumpdata

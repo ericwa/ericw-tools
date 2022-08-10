@@ -67,8 +67,6 @@ struct bspbrush_t
     int side, testside; // side of node during construction
     std::vector<side_t> sides;
     contentflags_t contents; /* BSP contents */
-    short lmshift; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
-    mapentity_t *func_areaportal;
 
     qvec3d sphere_origin;
     double sphere_radius;
