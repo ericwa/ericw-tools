@@ -353,7 +353,7 @@ static void MarkBrushSidesInvisible(mapentity_t *entity, bspbrush_vector_t &brus
 {
     for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
-            face.visible = false;
+            face.source->visible = false;
         }
     }
 }
@@ -418,7 +418,7 @@ static void MarkVisibleBrushSides_R(node_t *node)
                     if (qv::epsilonEqual(side.get_positive_plane(), portal->plane)) {
                         // we've found a brush side in an original brush in the neighbouring
                         // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
-                        side.visible = true;
+                        side.source->visible = true;
                     }
                 }
             }

@@ -2820,7 +2820,7 @@ void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<bs
             fmt::print(f, "( {} ) ", w[1]);
             fmt::print(f, "( {} ) ", w[2]);
 
-            if (face.visible) {
+            if (face.source->visible) {
                 fmt::print(f, "skip 0 0 0 1 1\n");
             } else {
                 fmt::print(f, "nonvisible 0 0 0 1 1\n");

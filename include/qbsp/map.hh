@@ -59,6 +59,10 @@ struct mapface_t
     // for convert
     std::optional<extended_texinfo_t> raw_info;
 
+    bool visible = false; // can any part of this side be seen from non-void parts of the level?
+                          // non-visible means we can discard the brush side
+                          // (avoiding generating a BSP spit, so expanding it outwards)
+
     bool set_planepts(const std::array<qvec3d, 3> &pts);
 
     const texvecf &get_texvecs() const;

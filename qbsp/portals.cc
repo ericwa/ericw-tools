@@ -816,9 +816,6 @@ static void FindPortalSide(portal_t *p)
             for (auto &side : brush->sides) {
                 if (side.bevel)
                     continue;
-                // fixme-brushbsp: restore
-                //                if (!side.visible)
-                //                    continue;		// non-visible
                 if ((side.planenum & ~1) == p->onnode->planenum) {
                     // exact match (undirectional)
 
@@ -902,7 +899,7 @@ static void MarkVisibleSides_r(node_t *node)
             FindPortalSide(p);
         for (int i = 0; i < 2; ++i) {
             if (p->sides[i]) {
-                p->sides[i]->visible = true;
+                p->sides[i]->source->visible = true;
             }
         }
     }
@@ -921,7 +918,7 @@ void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_vector_t &brus
     // clear all the visible flags
     for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
-            face.visible = false;
+            face.source->visible = false;
         }
     }
 
