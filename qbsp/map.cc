@@ -2214,8 +2214,6 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
     ob.bounds = {};
 
 	for (size_t i = 0; i < ob.faces.size(); i++) {
-        ob.faces[i].visible = false;
-
 		const auto &plane = ob.faces[i].get_plane();
 		std::optional<winding_t> w = BaseWindingForPlane(plane);
 		
@@ -2232,7 +2230,6 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 
 		if (w) {
             ob.faces[i].winding = w.value();
-			ob.faces[i].visible = true;
 			for (auto &p : w.value()) {
                 ob.bounds += p;
             }

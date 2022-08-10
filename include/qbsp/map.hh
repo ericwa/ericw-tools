@@ -47,7 +47,6 @@ struct mapface_t
     int texinfo = 0;
     parser_source_location line;
     bool bevel = false;
-    bool visible = false;
     winding_t winding; // winding used to calculate bevels
     int16_t lmshift;
 
