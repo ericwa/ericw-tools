@@ -392,6 +392,8 @@ static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> 
     }
 
     qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
+
+    leafnode->volume.reset();
 }
 
 //============================================================
