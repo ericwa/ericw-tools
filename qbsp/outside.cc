@@ -414,6 +414,7 @@ static void MarkVisibleBrushSides_R(node_t *node)
             for (auto *brush : neighbour_leaf->original_brushes) {
                 for (auto &side : brush->sides) {
                     // fixme-brushbsp: should this be get_plane() ?
+                    // fixme-brushbsp: planenum 
                     if (qv::epsilonEqual(side.get_positive_plane(), portal->plane)) {
                         // we've found a brush side in an original brush in the neighbouring
                         // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.

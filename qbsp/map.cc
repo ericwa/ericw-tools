@@ -192,7 +192,7 @@ static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &poi
 static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
 static void SetTexinfo_QuakeEd_New(
     const qbsp_plane_t &plane, const qvec2d &shift, vec_t rotate, const qvec2d &scale, texvecf &out_vecs);
-static void TestExpandBrushes(const mapentity_t *src);
+static void TestExpandBrushes(mapentity_t *src);
 
 static void AddAnimTex(const char *name)
 {
@@ -2821,7 +2821,7 @@ allow visual inspection of the clipping bevels
 from q3map
 ================
 */
-static void TestExpandBrushes(const mapentity_t *src)
+static void TestExpandBrushes(mapentity_t *src)
 {
     std::vector<std::unique_ptr<bspbrush_t>> hull1brushes;
 

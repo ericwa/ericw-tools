@@ -78,24 +78,15 @@ void FreeTreePortals(tree_t *tree)
 static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
     // merge the children's brush lists
-    node->original_brushes = std::move(node->children[0]->original_brushes);
-    node->original_brushes.insert(node->original_brushes.end(), node->children[1]->original_brushes.begin(), node->children[1]->original_brushes.end());
+    size_t base = node->children[0]->original_brushes.size() > node->children[1]->original_brushes.size() ? 0 : 1;
+    node->original_brushes = std::move(node->children[base]->original_brushes);
+    node->original_brushes.insert(node->original_brushes.end(), node->children[base ^ 1]->original_brushes.begin(), node->children[base ^ 1]->original_brushes.end());
 
-    if (node->original_brushes.size()) {
-        std::sort(node->original_brushes.begin(), node->original_brushes.end(), bspbrush_t_less());
-        auto unique_begin = std::unique(node->original_brushes.begin(), node->original_brushes.end());
-        node->original_brushes.erase(unique_begin, node->original_brushes.end());
-
-        // migrate it over to mapbrushes
-        node->original_mapbrushes.reserve(node->original_brushes.size());
-
-        for (auto &b : node->original_brushes) {
-            node->original_mapbrushes.push_back(b->mapbrush);
-        }
-
-        // clear original_brushes since we no longer need it
-        node->original_brushes.clear();
-    }
+    std::sort(node->original_brushes.begin(), node->original_brushes.end(), [](const bspbrush_t *a, const bspbrush_t *b) {
+        return a->file_order < b->file_order;
+    });
+    auto unique = std::unique(node->original_brushes.begin(), node->original_brushes.end());
+    node->original_brushes.erase(unique, node->original_brushes.end());
 
     node->is_leaf = true;
 
@@ -127,8 +118,6 @@ static void PruneNodes_R(node_t *node, std::atomic<int32_t> &count_pruned)
         // This discards any faces on-node. Should be safe (?)
         ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         ++count_pruned;
-    } else {
-        node->original_brushes.clear();
     }
 
     // DarkPlaces has an assertion that fails if both children are

@@ -300,20 +300,20 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
 {
     if (node->is_leaf) {
         if (node->contents.native) {
-            if (node->original_mapbrushes.size()) {
-                node->numleafbrushes = node->original_mapbrushes.size();
+            if (node->original_brushes.size()) {
+                node->numleafbrushes = node->original_brushes.size();
                 brush_state.total_leaf_brushes += node->numleafbrushes;
                 node->firstleafbrush = map.bsp.dleafbrushes.size();
-                for (auto &b : node->original_mapbrushes) {
+                for (auto &b : node->original_brushes) {
 
-                    if (!b->outputnumber.has_value()) {
+                    if (!b->mapbrush->outputnumber.has_value()) {
                         // FIXME
-                        const_cast<mapbrush_t *>(b)->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
+                        b->mapbrush->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
 
                         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
                             dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
 
-                        for (auto &side : b->faces) {
+                        for (auto &side : b->mapbrush->faces) {
                             map.bsp.dbrushsides.push_back(
                                 {(uint32_t) ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(side.texinfo)});
                             brush.numsides++;
@@ -323,7 +323,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
                         brush_state.total_brushes++;
                     }
 
-                    map.bsp.dleafbrushes.push_back(b->outputnumber.value());
+                    map.bsp.dleafbrushes.push_back(b->mapbrush->outputnumber.value());
                 }
             }
         }

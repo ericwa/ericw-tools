@@ -61,7 +61,7 @@ struct bspbrush_t
      * the BrushBSP will have this pointing back to the original brush in the list.
      */
     bspbrush_t *original;
-    const mapbrush_t *mapbrush;
+    mapbrush_t *mapbrush;
     uint32_t file_order;
     aabb3d bounds;
     int side, testside; // side of node during construction
@@ -80,5 +80,5 @@ struct bspbrush_t
 
 using bspbrush_vector_t = std::vector<std::unique_ptr<bspbrush_t>>;
 
-std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
 bool CreateBrushWindings(bspbrush_t *brush);

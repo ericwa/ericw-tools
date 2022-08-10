@@ -626,11 +626,6 @@ struct bspbrush_t;
 struct side_t;
 class mapbrush_t;
 
-struct bspbrush_t_less
-{
-    bool operator()(const bspbrush_t *a, const bspbrush_t *b) const;
-};
-
 struct node_t
 {
     // both leafs and nodes
@@ -666,8 +661,7 @@ struct node_t
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
     int32_t area;
-    std::vector<bspbrush_t *> original_brushes; // FIXME: only valid during construction
-    std::vector<const mapbrush_t *> original_mapbrushes;
+    std::vector<bspbrush_t *> original_brushes;
 };
 
 void InitQBSP(int argc, const char **argv);

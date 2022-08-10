@@ -28,11 +28,6 @@
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
-bool bspbrush_t_less::operator()(const bspbrush_t *a, const bspbrush_t *b) const
-{
-    return a->file_order < b->file_order;
-}
-
 const maptexinfo_t &side_t::get_texinfo() const
 {
     return map.mtexinfos[this->texinfo];
@@ -256,7 +251,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents,
     const int hullnum)
 {
     // create the brush
@@ -352,7 +347,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *ma
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_vector_t &brushes)
+static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_vector_t &brushes)
 {
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
