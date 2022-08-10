@@ -72,7 +72,7 @@ twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_
 enum class portaltype_t {
     TREE, VIS
 };
-std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats);
+std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats, logging::percent_clock &clock);
 void MakeTreePortals(tree_t *tree);
 std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree);
 void MakePortalsFromBuildportals(tree_t *tree, std::list<std::unique_ptr<buildportal_t>> buildportals);

@@ -133,7 +133,12 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
 
 percent_clock::~percent_clock()
 {
+    if (count != max - 1) {
+        print("ERROR TO FIX LATER: clock counter ended too early\n");
+    }
+
+    count = max - 1;
     increase();
-    Q_assert(count == max);
+    //Q_assert(count == max);
 }
 }; // namespace logging

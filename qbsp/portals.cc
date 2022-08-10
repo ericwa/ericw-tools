@@ -465,8 +465,10 @@ MakeTreePortals_r
 Given the list of portals bounding `node`, returns the portal list for a fully-portalized `node`.
 ==================
 */
-std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats)
+std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats, logging::percent_clock &clock)
 {
+    clock.increase();
+
     if (node->is_leaf || (type == portaltype_t::VIS && node->detail_separator)) {
         return boundary_portals;
     }
@@ -482,8 +484,8 @@ std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t
     std::list<std::unique_ptr<buildportal_t>> result_portals_front, result_portals_back;
 
     tbb::task_group g;
-    g.run([&]() { result_portals_front = MakeTreePortals_r(tree, node->children[0], type, std::move(boundary_portals_split.front), stats); });
-    g.run([&]() { result_portals_back = MakeTreePortals_r(tree, node->children[1], type, std::move(boundary_portals_split.back), stats); });
+    g.run([&]() { result_portals_front = MakeTreePortals_r(tree, node->children[0], type, std::move(boundary_portals_split.front), stats, clock); });
+    g.run([&]() { result_portals_back = MakeTreePortals_r(tree, node->children[1], type, std::move(boundary_portals_split.back), stats, clock); });
     g.wait();
 
     // sequential part: push the nodeportal down each side of the bsp so it connects leafs
@@ -525,9 +527,14 @@ void MakeTreePortals(tree_t *tree)
 
     auto headnodeportals = MakeHeadnodePortals(tree);
 
-    auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::TREE, std::move(headnodeportals), stats);
+    {
+        logging::percent_clock clock;
+        clock.max = tree->nodes.size() + 1;
 
-    MakePortalsFromBuildportals(tree, std::move(buildportals));
+        auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::TREE, std::move(headnodeportals), stats, clock);
+
+        MakePortalsFromBuildportals(tree, std::move(buildportals));
+    }
 
     logging::header("CalcTreeBounds");
 

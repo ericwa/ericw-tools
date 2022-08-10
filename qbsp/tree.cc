@@ -100,6 +100,7 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     node->is_leaf = true;
 
     for (auto &child : node->children) {
+        *child = {}; // clear everything in the node
         child = nullptr;
     }
 
