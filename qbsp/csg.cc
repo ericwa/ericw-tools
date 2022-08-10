@@ -120,16 +120,3 @@ std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(
 
     return {std::move(new_front), std::move(new_back)};
 }
-
-std::vector<std::unique_ptr<bspbrush_t>> MakeBspBrushList(const bspbrush_vector_t &brushes)
-{
-    // set the original pointers
-    std::vector<std::unique_ptr<bspbrush_t>> brushcopies;
-    for (const auto &original : brushes) {
-        auto copy = original->copy_unique();
-        copy->original = original.get();
-        brushcopies.push_back(std::move(copy));
-    }
-
-    return brushcopies;
-}

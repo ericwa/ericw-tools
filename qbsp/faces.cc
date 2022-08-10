@@ -472,7 +472,7 @@ see also FindPortalSide which populates p->side
 */
 static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
 {
-    side_t *side = p->sides[pside];
+    mapface_t *side = p->sides[pside];
     if (!side)
         return nullptr; // portal does not bridge different visible contents
 
@@ -481,7 +481,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
     f->texinfo = side->texinfo;
     f->planenum = (side->planenum & ~1) | (pside ? 1 : 0);
     f->portal = p;
-    f->original_side = side->source;
+    f->original_side = side;
 
 #if 0
     bool make_face =

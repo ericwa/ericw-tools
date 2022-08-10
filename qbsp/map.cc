@@ -1554,6 +1554,11 @@ const qbsp_plane_t &mapface_t::get_plane() const
     return map.get_plane(planenum);
 }
 
+const qbsp_plane_t &mapface_t::get_positive_plane() const
+{
+    return map.get_plane(planenum & ~1);
+}
+
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
 {
     // TODO: This doesn't match how light does it (TexSpaceToWorld)
@@ -2798,7 +2803,7 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<bspbrush_t>> &list)
+void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list)
 {
     std::shared_lock lock(map_planes_lock);
 
@@ -2845,7 +2850,7 @@ from q3map
 */
 static void TestExpandBrushes(mapentity_t *src)
 {
-    std::vector<std::unique_ptr<bspbrush_t>> hull1brushes;
+    bspbrush_t::container hull1brushes;
 
     for (auto &mapbrush : src->mapbrushes) {
         auto hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},

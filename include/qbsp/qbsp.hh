@@ -48,6 +48,7 @@
 #include <common/aabb.hh>
 #include <common/settings.hh>
 #include <common/fs.hh>
+#include <qbsp/brush.hh>
 
 enum texcoord_style_t
 {
@@ -633,7 +634,7 @@ struct node_t
     aabb3d bounds; // bounding volume, not just points inside
     node_t *parent;
     // this is also a bounding volume like `bounds`
-    std::unique_ptr<bspbrush_t> volume; // one for each leaf/node
+    bspbrush_t::ptr volume; // one for each leaf/node
     bool is_leaf = false;
 
     // information for decision nodes
@@ -662,7 +663,7 @@ struct node_t
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
     int32_t area;
-    std::vector<bspbrush_t *> original_brushes;
+    std::vector<mapbrush_t *> original_brushes;
 };
 
 void InitQBSP(int argc, const char **argv);

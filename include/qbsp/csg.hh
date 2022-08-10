@@ -37,4 +37,3 @@ std::unique_ptr<face_t> CopyFace(const face_t *in);
 std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(
     std::unique_ptr<face_t> in, const qplane3d &split);
 void UpdateFaceSphere(face_t *in);
-bspbrush_vector_t MakeBspBrushList(const bspbrush_vector_t &brushes);

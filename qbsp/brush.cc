@@ -40,14 +40,12 @@ const qbsp_plane_t &side_t::get_plane() const
 
 const qbsp_plane_t &side_t::get_positive_plane() const
 {
-    auto &p = map.get_plane(planenum & ~1);
-    Q_assert(p.get_normal()[(int) p.get_type() % 3] > 0);
-    return p;
+    return map.get_plane(planenum & ~1);
 }
 
-std::unique_ptr<bspbrush_t> bspbrush_t::copy_unique() const
+bspbrush_t::ptr bspbrush_t::copy_unique() const
 {
-    return std::make_unique<bspbrush_t>(*this);
+    return bspbrush_t::make_ptr(*this);
 }
 
 /*
@@ -347,7 +345,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_vector_t &brushes)
+static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes)
 {
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
@@ -515,7 +513,7 @@ hullnum HULL_COLLISION should contain ALL brushes. (used by BSPX_CreateBrushList
 hullnum 0 does not contain clip brushes.
 ============
 */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_vector_t &brushes)
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 

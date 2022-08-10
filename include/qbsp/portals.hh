@@ -40,8 +40,8 @@ struct portal_t
     std::unique_ptr<winding_t> winding;
 
     bool sidefound; // false if ->side hasn't been checked
-    side_t *sides[2]; // [0] = the brush side visible on nodes[0] - it could come from a brush in nodes[1]. NULL =
-                      // non-visible
+    mapface_t *sides[2]; // [0] = the brush side visible on nodes[0] - it could come from a brush in nodes[1]. NULL =
+                         // non-visible
     face_t *face[2]; // output face in bsp file
 };
 
@@ -78,4 +78,4 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree);
 void MakePortalsFromBuildportals(tree_t *tree, std::list<std::unique_ptr<buildportal_t>> buildportals);
 void EmitAreaPortals(node_t *headnode);
 void FloodAreas(mapentity_t *entity, node_t *headnode);
-void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_vector_t &brushes);
+void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_t::container &brushes);

@@ -573,8 +573,8 @@ static mapentity_t *AreanodeEntityForLeaf(node_t *node)
     }
 
     for (auto &brush : node->original_brushes) {
-        if (brush->mapbrush->func_areaportal) {
-            return brush->mapbrush->func_areaportal;
+        if (brush->func_areaportal) {
+            return brush->func_areaportal;
         }
     }
     return nullptr;
@@ -791,8 +791,8 @@ static void FindPortalSide(portal_t *p)
         return;
 
     // bestside[0] is the brushside visible on portal side[0] which is the positive side of the plane, always
-    side_t *bestside[2] = {nullptr, nullptr};
-    side_t *exactside[2] = {nullptr, nullptr};
+    mapface_t *bestside[2] = {nullptr, nullptr};
+    mapface_t *exactside[2] = {nullptr, nullptr};
     float bestdot = 0;
     const qbsp_plane_t &p1 = p->onnode->get_plane();
 
@@ -813,7 +813,7 @@ static void FindPortalSide(portal_t *p)
                 continue;
             }
 
-            for (auto &side : brush->sides) {
+            for (auto &side : brush->faces) {
                 if (side.bevel)
                     continue;
                 if ((side.planenum & ~1) == p->onnode->planenum) {
@@ -899,7 +899,7 @@ static void MarkVisibleSides_r(node_t *node)
             FindPortalSide(p);
         for (int i = 0; i < 2; ++i) {
             if (p->sides[i]) {
-                p->sides[i]->source->visible = true;
+                p->sides[i]->visible = true;
             }
         }
     }
@@ -911,7 +911,7 @@ MarkVisibleSides
 
 =============
 */
-void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_vector_t &brushes)
+void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 

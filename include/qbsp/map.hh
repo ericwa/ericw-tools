@@ -67,8 +67,9 @@ struct mapface_t
 
     const texvecf &get_texvecs() const;
     void set_texvecs(const texvecf &vecs);
-
+    
     const qbsp_plane_t &get_plane() const;
+    const qbsp_plane_t &get_positive_plane() const;
 };
 
 enum class brushformat_t
@@ -344,7 +345,7 @@ qvec3d FixRotateOrigin(mapentity_t *entity);
 constexpr int HULL_COLLISION = -1;
 
 /* Create BSP brushes from map brushes */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_vector_t &brushes);
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes);
 
 std::list<face_t *> CSGFace(
     face_t *srcface, const mapentity_t *srcentity, const bspbrush_t *srcbrush, const node_t *srcnode);
@@ -366,6 +367,6 @@ void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bs
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 
-void WriteBspBrushMap(const fs::path &name, const std::vector<std::unique_ptr<bspbrush_t>> &list);
+void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list);
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);

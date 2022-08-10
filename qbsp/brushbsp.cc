@@ -79,9 +79,9 @@ BrushFromBounds
 Creates a new axial brush
 ==================
 */
-std::unique_ptr<bspbrush_t> BrushFromBounds(const aabb3d &bounds)
+bspbrush_t::ptr BrushFromBounds(const aabb3d &bounds)
 {
-    auto b = std::make_unique<bspbrush_t>();
+    auto b = bspbrush_t::make_ptr();
 
     b->sides.resize(6);
     for (int i = 0; i < 3; i++) {
@@ -377,7 +377,7 @@ Creates a leaf node.
 Called in parallel.
 ==================
 */
-static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> brushes, bspstats_t &stats)
+static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t &stats)
 {
     leafnode->facelist.clear();
     leafnode->is_leaf = true;
@@ -387,8 +387,8 @@ static void LeafNode(node_t *leafnode, std::vector<std::unique_ptr<bspbrush_t>> 
         leafnode->contents = qbsp_options.target_game->combine_contents(leafnode->contents, brush->contents);
     }
     for (auto &brush : brushes) {
-        Q_assert(brush->original != nullptr);
-        leafnode->original_brushes.push_back(brush->original);
+        Q_assert(brush->mapbrush != nullptr);
+        leafnode->original_brushes.push_back(brush->mapbrush);
     }
 
     qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
@@ -434,10 +434,10 @@ input.
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush_t> brush, size_t planenum, bspstats_t &stats)
+static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planenum, bspstats_t &stats)
 {
     const qplane3d &split = map.planes[planenum];
-    twosided<std::unique_ptr<bspbrush_t>> result;
+    twosided<bspbrush_t::ptr> result;
 
     // check all points
     vec_t d_front = 0;
@@ -493,7 +493,7 @@ static twosided<std::unique_ptr<bspbrush_t>> SplitBrush(std::unique_ptr<bspbrush
 
     for (int i = 0; i < 2; i++) {
         result[i] = std::make_unique<bspbrush_t>();
-        result[i]->original = brush->original;
+        result[i]->mapbrush = brush->mapbrush;
         // fixme-brushbsp: add a bspbrush_t copy constructor to make sure we get all fields
         result[i]->contents = brush->contents;
         result[i]->sides.reserve(brush->sides.size() + 1);
@@ -695,7 +695,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static std::optional<size_t> ChooseMidPlaneFromList(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, const node_t *node, bspstats_t &stats)
+static std::optional<size_t> ChooseMidPlaneFromList(const bspbrush_t::container &brushes, const node_t *node, bspstats_t &stats)
 {
     vec_t bestaxialmetric = VECT_MAX;
     std::optional<size_t> bestaxialplane;
@@ -750,7 +750,7 @@ Using heuristics, chooses a plane to partition the brushes with.
 Returns nullopt if there are no valid planes to split with.
 ================
 */
-static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<bspbrush_t>> &brushes, node_t *node, std::optional<bool> forced_quick_tree, bspstats_t &stats)
+static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brushes, node_t *node, std::optional<bool> forced_quick_tree, bspstats_t &stats)
 {
     // no brushes left to split, so we can't use any plane.
     if (!brushes.size()) {
@@ -803,9 +803,9 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
     constexpr int numpasses = 4;
     for (int pass = 0; pass < numpasses; pass++) {
         for (auto &brush : brushes) {
-            if ((pass & 1) && !brush->original->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass & 1) && !brush->mapbrush->contents.is_any_detail(qbsp_options.target_game))
                 continue;
-            if (!(pass & 1) && brush->original->contents.is_any_detail(qbsp_options.target_game))
+            if (!(pass & 1) && brush->mapbrush->contents.is_any_detail(qbsp_options.target_game))
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -926,10 +926,10 @@ static std::optional<size_t> SelectSplitPlane(const std::vector<std::unique_ptr<
 SplitBrushList
 ================
 */
-static std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> SplitBrushList(
-    std::vector<std::unique_ptr<bspbrush_t>> brushes, size_t planenum, bspstats_t &stats)
+static std::array<bspbrush_t::container, 2> SplitBrushList(
+    bspbrush_t::container brushes, size_t planenum, bspstats_t &stats)
 {
-    std::array<std::vector<std::unique_ptr<bspbrush_t>>, 2> result;
+    std::array<bspbrush_t::container, 2> result;
 
     for (auto &brush : brushes) {
         int sides = brush->side;
@@ -979,7 +979,7 @@ BuildTree_r
 Called in parallel.
 ==================
 */
-static void BuildTree_r(tree_t *tree, node_t *node, std::vector<std::unique_ptr<bspbrush_t>> brushes, std::optional<bool> forced_quick_tree, bspstats_t &stats)
+static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushes, std::optional<bool> forced_quick_tree, bspstats_t &stats)
 {
     // find the best plane to use as a splitter
     auto bestplane = SelectSplitPlane(brushes, node, forced_quick_tree, stats);
@@ -1021,10 +1021,10 @@ static void BuildTree_r(tree_t *tree, node_t *node, std::vector<std::unique_ptr<
 	}
 
     // to save time/memory we can destroy node's volume at this point
-        auto children_volumes = SplitBrush(std::move(node->volume), bestplane.value(), stats);
-        node->volume = nullptr;
-        node->children[0]->volume = std::move(children_volumes[0]);
-        node->children[1]->volume = std::move(children_volumes[1]);
+    auto children_volumes = SplitBrush(std::move(node->volume), bestplane.value(), stats);
+    node->volume = nullptr;
+    node->children[0]->volume = std::move(children_volumes[0]);
+    node->children[1]->volume = std::move(children_volumes[1]);
 
     // recursively process children
     tbb::task_group g;
@@ -1038,42 +1038,9 @@ static void BuildTree_r(tree_t *tree, node_t *node, std::vector<std::unique_ptr<
 BrushBSP
 ==================
 */
-static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vector<std::unique_ptr<bspbrush_t>> brushlist, std::optional<bool> forced_quick_tree)
+std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::container &brushlist, std::optional<bool> forced_quick_tree)
 {
     auto tree = std::make_unique<tree_t>();
-
-    size_t c_faces = 0;
-    size_t c_nonvisfaces = 0;
-    size_t c_brushes = 0;
-
-    for (const auto &b : brushlist) {
-        c_brushes++;
-
-#if 0
-        // fixme-brushbsp: why does this just print and do nothing? should
-        // the brush be removed?
-        double volume = BrushVolume(*b);
-        if (volume < qbsp_options.microvolume.value()) {
-            logging::print("WARNING: {}: microbrush\n",
-                b->original->mapbrush->line);
-        }
-#endif
-
-        for (side_t &side : b->sides) {
-            if (side.bevel)
-                continue;
-            if (!side.w)
-                continue;
-            if (side.onnode)
-                continue;
-            if (side.source->visible)
-                c_faces++;
-            else
-                c_nonvisfaces++;
-        }
-
-        tree->bounds += b->bounds;
-    }
 
     if (brushlist.empty()) {
         /*
@@ -1102,20 +1069,52 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
         return tree;
     }
 
+    size_t c_faces = 0;
+    size_t c_nonvisfaces = 0;
+    size_t c_brushes = 0;
+
+    for (const auto &b : brushlist) {
+        c_brushes++;
+
+#if 0
+        // fixme-brushbsp: why does this just print and do nothing? should
+        // the brush be removed?
+        double volume = BrushVolume(*b);
+        if (volume < qbsp_options.microvolume.value()) {
+            logging::print("WARNING: {}: microbrush\n",
+                b->mapbrush->line);
+        }
+#endif
+
+        for (side_t &side : b->sides) {
+            if (side.bevel)
+                continue;
+            if (!side.w)
+                continue;
+            if (side.onnode)
+                continue;
+            if (side.source->visible)
+                c_faces++;
+            else
+                c_nonvisfaces++;
+        }
+
+        tree->bounds += b->bounds;
+    }
+
     logging::print(logging::flag::STAT, "     {:8} brushes\n", c_brushes);
     logging::print(logging::flag::STAT, "     {:8} visible faces\n", c_faces);
     logging::print(logging::flag::STAT, "     {:8} nonvisible faces\n", c_nonvisfaces);
 
     auto node = tree->create_node();
-
-        node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
+    node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
     node->bounds = tree->bounds.grow(SIDESPACE);
 
     tree->headnode = node;
 
     bspstats_t stats{};
     stats.leafstats = qbsp_options.target_game->create_content_stats();
-    BuildTree_r(tree.get(), tree->headnode, std::move(brushlist), forced_quick_tree, stats);
+    BuildTree_r(tree.get(), tree->headnode, brushlist, forced_quick_tree, stats);
 
     logging::print(logging::flag::STAT, "     {:8} visible nodes\n", stats.c_nodes - stats.c_nonvis);
     if (stats.c_nonvis) {
@@ -1148,10 +1147,4 @@ static std::unique_ptr<tree_t> BrushBSP_internal(mapentity_t *entity, std::vecto
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
 
     return tree;
-}
-
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const std::vector<std::unique_ptr<bspbrush_t>> &brushlist, std::optional<bool> forced_quick_tree)
-{
-    logging::funcheader();
-    return BrushBSP_internal(entity, MakeBspBrushList(brushlist), forced_quick_tree);
 }

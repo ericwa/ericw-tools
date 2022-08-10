@@ -349,7 +349,7 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 
 //=============================================================================
 
-static void MarkBrushSidesInvisible(mapentity_t *entity, bspbrush_vector_t &brushes)
+static void MarkBrushSidesInvisible(mapentity_t *entity, bspbrush_t::container &brushes)
 {
     for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
@@ -412,13 +412,13 @@ static void MarkVisibleBrushSides_R(node_t *node)
             // optimized case: just mark the brush sides in the neighbouring
             // leaf that are coplanar
             for (auto *brush : neighbour_leaf->original_brushes) {
-                for (auto &side : brush->sides) {
+                for (auto &side : brush->faces) {
                     // fixme-brushbsp: should this be get_plane() ?
                     // fixme-brushbsp: planenum 
                     if (qv::epsilonEqual(side.get_positive_plane(), portal->plane)) {
                         // we've found a brush side in an original brush in the neighbouring
                         // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
-                        side.source->visible = true;
+                        side.visible = true;
                     }
                 }
             }
@@ -600,7 +600,7 @@ get incorrectly marked as "invisible").
 Special cases: structural fully covered by detail still needs to be marked "visible".
 ===========
 */
-bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_vector_t &brushes)
+bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_t::container &brushes)
 {
     node_t *node = tree->headnode;
 
@@ -720,7 +720,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_
     return true;
 }
 
-void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_vector_t &brushes)
+void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 

@@ -22,13 +22,13 @@
 #pragma once
 
 #include <qbsp/winding.hh>
-#include <qbsp/qbsp.hh>
 #include <common/aabb.hh>
 #include <optional>
 
 class mapentity_t;
 struct maptexinfo_t;
 struct mapface_t;
+struct qbsp_plane_t;
 
 struct side_t
 {
@@ -51,11 +51,19 @@ class mapbrush_t;
 
 struct bspbrush_t
 {
+    using ptr = std::shared_ptr<bspbrush_t>;
+    using container = std::vector<ptr>;
+
+    template<typename... Args>
+    static inline ptr make_ptr(Args&& ...args)
+    {
+        return std::make_shared<bspbrush_t>(std::forward<Args>(args)...);
+    }
+
     /**
      * The brushes in main brush vectors are considered originals. Brush fragments created during
      * the BrushBSP will have this pointing back to the original brush in the list.
      */
-    bspbrush_t *original;
     mapbrush_t *mapbrush;
     aabb3d bounds;
     int side, testside; // side of node during construction
@@ -67,10 +75,8 @@ struct bspbrush_t
 
     bool update_bounds(bool warn_on_failures);
 
-    std::unique_ptr<bspbrush_t> copy_unique() const;
+    ptr copy_unique() const;
 };
-
-using bspbrush_vector_t = std::vector<std::unique_ptr<bspbrush_t>>;
 
 std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);
 bool CreateBrushWindings(bspbrush_t *brush);
