@@ -1038,6 +1038,8 @@ BrushBSP
 */
 std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::container &brushlist, std::optional<bool> forced_quick_tree)
 {
+    logging::header(__func__ );
+
     auto tree = std::make_unique<tree_t>();
 
     if (brushlist.empty()) {
