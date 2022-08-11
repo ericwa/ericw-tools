@@ -609,7 +609,7 @@ inline void CheckPlaneAgainstParents(size_t planenum, node_t *node)
 
 static bool CheckPlaneAgainstVolume(size_t planenum, const node_t *node, bspstats_t &stats)
 {
-    auto [front, back] = SplitBrush(node->volume->copy_unique(), planenum, stats);
+    auto [front, back] = SplitBrush(node->volume, planenum, stats);
 
     bool good = (front && back);
 
