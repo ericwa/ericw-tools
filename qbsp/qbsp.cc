@@ -456,6 +456,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
+    ChopBrushes(brushes);
     // entity->brushes = ChopBrushes(entity->brushes);
 
     //    if (entity == map.world_entity() && hullnum <= 0) {

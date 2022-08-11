@@ -41,3 +41,4 @@ constexpr vec_t EDGE_LENGTH_EPSILON = 0.2;
 bool WindingIsTiny(const winding_t &w, double size = EDGE_LENGTH_EPSILON);
 bspbrush_t::ptr BrushFromBounds(const aabb3d &bounds);
 std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::container &brushes, std::optional<bool> forced_quick_tree);
+void ChopBrushes(bspbrush_t::container &brushes);

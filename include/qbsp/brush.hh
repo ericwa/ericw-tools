@@ -53,6 +53,7 @@ struct bspbrush_t
 {
     using ptr = std::shared_ptr<bspbrush_t>;
     using container = std::vector<ptr>;
+    using list = std::list<ptr>;
 
     template<typename... Args>
     static inline ptr make_ptr(Args&& ...args)

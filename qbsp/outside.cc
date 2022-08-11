@@ -358,24 +358,6 @@ static void MarkBrushSidesInvisible(mapentity_t *entity, bspbrush_t::container &
     }
 }
 
-#if 0
-static void MarkAllBrushSidesVisible_R(node_t *node)
-{
-    // descend to leafs
-    if (!node->is_leaf) {
-        MarkAllBrushSidesVisible_R(node->children[0]);
-        MarkAllBrushSidesVisible_R(node->children[1]);
-        return;
-    }
-
-    for (auto *brush : node->original_brushes) {
-        for (auto &side : brush->sides) {
-            side.visible = true;
-        }
-    }
-}
-#endif
-
 /*
 ==================
 MarkVisibleBrushSides

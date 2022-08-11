@@ -2818,18 +2818,21 @@ void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list)
     for (auto &brush : list) {
         fmt::print(f, "{{\n");
         for (auto &face : brush->sides) {
-            // FIXME: Factor out this mess
             winding_t w = BaseWindingForPlane(face.get_plane());
 
             fmt::print(f, "( {} ) ", w[0]);
             fmt::print(f, "( {} ) ", w[1]);
             fmt::print(f, "( {} ) ", w[2]);
 
-            if (face.source->visible) {
+#if 0
+            if (face.visible) {
                 fmt::print(f, "skip 0 0 0 1 1\n");
             } else {
                 fmt::print(f, "nonvisible 0 0 0 1 1\n");
             }
+#endif
+
+            fmt::print(f, "{} 0 0 0 1 1\n", map.miptex[face.get_texinfo().miptex].name);
         }
 
         fmt::print(f, "}}\n");
