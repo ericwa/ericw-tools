@@ -66,7 +66,11 @@ struct bspbrush_t
      * The brushes in main brush vectors are considered originals. Brush fragments created during
      * the BrushBSP will have this pointing back to the original brush in the list.
      */
+    ptr original_ptr;
     mapbrush_t *mapbrush;
+
+    bspbrush_t *original_brush() { return original_ptr ? original_ptr.get() : this; }
+    const bspbrush_t *original_brush() const { return original_ptr ? original_ptr.get() : this; }
 
     aabb3d bounds;
     int side, testside; // side of node during construction

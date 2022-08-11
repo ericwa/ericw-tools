@@ -504,7 +504,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
         qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
 
         dst->bounds += brush->bounds;
-        brushes.push_back(std::make_unique<bspbrush_t>(std::move(*brush)));
+        brushes.push_back(bspbrush_t::make_ptr(std::move(*brush)));
     }
 
     logging::percent(src->mapbrushes.size(), src->mapbrushes.size(), src == map.world_entity());

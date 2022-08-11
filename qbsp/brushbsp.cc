@@ -491,7 +491,8 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
     // start with 2 empty brushes
 
     for (int i = 0; i < 2; i++) {
-        result[i] = std::make_unique<bspbrush_t>();
+        result[i] = bspbrush_t::make_ptr();
+        result[i]->original_ptr = brush->original_ptr;
         result[i]->mapbrush = brush->mapbrush;
         // fixme-brushbsp: add a bspbrush_t copy constructor to make sure we get all fields
         result[i]->contents = brush->contents;
@@ -1105,6 +1106,7 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::containe
     logging::print(logging::flag::STAT, "     {:8} nonvisible faces\n", c_nonvisfaces);
 
     auto node = tree->create_node();
+
     node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
     node->bounds = tree->bounds.grow(SIDESPACE);
 

@@ -2860,7 +2860,7 @@ static void TestExpandBrushes(mapentity_t *src)
             qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
 
         if (hull1brush) {
-            hull1brushes.emplace_back(std::make_unique<bspbrush_t>(std::move(*hull1brush)));
+            hull1brushes.emplace_back(bspbrush_t::make_ptr(std::move(*hull1brush)));
         }
     }
 

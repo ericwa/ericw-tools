@@ -82,7 +82,6 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     node->original_brushes = std::move(node->children[base]->original_brushes);
     node->original_brushes.insert(node->original_brushes.end(), node->children[base ^ 1]->original_brushes.begin(), node->children[base ^ 1]->original_brushes.end());
 
-    // sort by pointer (since mapbrush_t is in a flat vector)
     std::sort(node->original_brushes.begin(), node->original_brushes.end());
     auto unique = std::unique(node->original_brushes.begin(), node->original_brushes.end());
     node->original_brushes.erase(unique, node->original_brushes.end());
