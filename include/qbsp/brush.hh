@@ -24,6 +24,9 @@
 #include <qbsp/winding.hh>
 #include <common/aabb.hh>
 #include <optional>
+#include <list>
+#include <vector>
+#include <memory>
 
 class mapentity_t;
 struct maptexinfo_t;
