@@ -353,7 +353,9 @@ static void MarkBrushSidesInvisible(mapentity_t *entity, bspbrush_t::container &
 {
     for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
-            face.source->visible = false;
+            if (face.source) {
+                face.source->visible = false;
+            }
         }
     }
 }

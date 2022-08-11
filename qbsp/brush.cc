@@ -28,6 +28,11 @@
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
+bool side_t::is_visible() const
+{
+    return source && source->visible;
+}
+
 const maptexinfo_t &side_t::get_texinfo() const
 {
     return map.mtexinfos[this->texinfo];

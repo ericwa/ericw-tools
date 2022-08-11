@@ -918,7 +918,9 @@ void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_t::container &
     // clear all the visible flags
     for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
-            face.source->visible = false;
+            if (face.source) {
+                face.source->visible = false;
+            }
         }
     }
 

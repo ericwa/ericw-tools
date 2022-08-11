@@ -456,17 +456,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
-    ChopBrushes(brushes);
-    // entity->brushes = ChopBrushes(entity->brushes);
-
-    //    if (entity == map.world_entity() && hullnum <= 0) {
-    //        if (options.debugchop.value()) {
-    //            fs::path path = options.bsp_path;
-    //            path.replace_extension(".chop.map");
-    //
-    //            WriteBspBrushMap(path, entity->brushes);
-    //        }
-    //    }
+    //ChopBrushes(brushes);
 
     // we're discarding the brush
     if (discarded_trigger) {

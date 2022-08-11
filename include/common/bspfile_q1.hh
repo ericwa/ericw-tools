@@ -202,8 +202,9 @@ struct bsp29_dclipnode_t
 private:
     static constexpr int16_t downcast(const int32_t &v)
     {
-        if (v < -15 || v > 0xFFF0)
-            throw std::overflow_error("dclipmode_t::children");
+        if (v < -15 || v > 0xFFF0) {
+            throw std::overflow_error("dclipnode_t::children");
+        }
 
         return static_cast<int16_t>(v < 0 ? v + 0x10000 : v);
     }

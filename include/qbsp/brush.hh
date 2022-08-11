@@ -42,6 +42,7 @@ struct side_t
 
     bool tested;
 
+    bool is_visible() const;
     const maptexinfo_t &get_texinfo() const;
     const qbsp_plane_t &get_plane() const;
     const qbsp_plane_t &get_positive_plane() const;
@@ -66,6 +67,7 @@ struct bspbrush_t
      * the BrushBSP will have this pointing back to the original brush in the list.
      */
     mapbrush_t *mapbrush;
+
     aabb3d bounds;
     int side, testside; // side of node during construction
     std::vector<side_t> sides;

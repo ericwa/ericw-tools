@@ -285,7 +285,7 @@ static int TestBrushToPlanenum(
         for (const side_t &side : brush.sides) {
             if (side.onnode)
                 continue; // on node, don't worry about splits
-            if (!side.source->visible)
+            if (!side.is_visible())
                 continue; // we don't care about non-visible
             auto &w = side.w;
             if (!w)
@@ -573,7 +573,6 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
         // (the face that is touching the plane) should have a normal opposite the plane's normal
         cs.planenum = planenum ^ i ^ 1;
         cs.texinfo = map.skip_texinfo;
-        //cs.source->visible = false;
         cs.tested = false;
         cs.onnode = true;
         // fixme-brushbsp: configure any other settings on the face?
@@ -817,7 +816,7 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
                     continue; // we allready have metrics for this plane
                 if (side.get_texinfo().flags.is_hintskip)
                     continue; // skip surfaces are never chosen
-                if (side.source->visible ^ (pass < 2))
+                if (side.is_visible() ^ (pass < 2))
                     continue; // only check visible faces on first pass
 
                 size_t positive_planenum = side.planenum & ~1;
@@ -911,7 +910,7 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
         return std::nullopt;
     }
 
-    if (!bestside->source->visible) {
+    if (!bestside->is_visible()) {
         stats.c_nonvis++;
     }
 
@@ -1092,7 +1091,7 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::containe
                 continue;
             if (side.onnode)
                 continue;
-            if (side.source->visible)
+            if (side.is_visible())
                 c_faces++;
             else
                 c_nonvisfaces++;
