@@ -306,13 +306,13 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
                 node->firstleafbrush = map.bsp.dleafbrushes.size();
                 for (auto &b : node->original_brushes) {
 
-                    if (!b->outputnumber.has_value()) {
-                        b->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
+                    if (!b->mapbrush->outputnumber.has_value()) {
+                        b->mapbrush->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
 
                         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
                             dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
 
-                        for (auto &side : b->faces) {
+                        for (auto &side : b->mapbrush->faces) {
                             map.bsp.dbrushsides.push_back(
                                 {(uint32_t) ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(side.texinfo)});
                             brush.numsides++;
@@ -322,7 +322,7 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
                         brush_state.total_brushes++;
                     }
 
-                    map.bsp.dleafbrushes.push_back(b->outputnumber.value());
+                    map.bsp.dleafbrushes.push_back(b->mapbrush->outputnumber.value());
                 }
             }
         }
@@ -486,6 +486,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // fixme-brushbsp: return here?
     } else {
+
+    if (entity->outputmodelnumber.value() == 34)
+        __debugbreak();
+
         if (qbsp_options.forcegoodtree.value()) {
             tree = BrushBSP(entity, brushes, false);
         } else {

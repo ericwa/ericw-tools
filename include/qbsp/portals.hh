@@ -40,8 +40,8 @@ struct portal_t
     std::unique_ptr<winding_t> winding;
 
     bool sidefound; // false if ->side hasn't been checked
-    mapface_t *sides[2]; // [0] = the brush side visible on nodes[0] - it could come from a brush in nodes[1]. NULL =
-                         // non-visible
+    side_t *sides[2]; // [0] = the brush side visible on nodes[0] - it could come from a brush in nodes[1]. NULL =
+                      // non-visible
     face_t *face[2]; // output face in bsp file
 };
 

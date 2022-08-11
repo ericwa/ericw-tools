@@ -663,7 +663,7 @@ struct node_t
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
     int32_t area;
-    std::vector<mapbrush_t *> original_brushes;
+    std::vector<bspbrush_t *> original_brushes;
 };
 
 void InitQBSP(int argc, const char **argv);

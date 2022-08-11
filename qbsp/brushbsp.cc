@@ -387,8 +387,7 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
         leafnode->contents = qbsp_options.target_game->combine_contents(leafnode->contents, brush->contents);
     }
     for (auto &brush : brushes) {
-        Q_assert(brush->mapbrush != nullptr);
-        leafnode->original_brushes.push_back(brush->mapbrush);
+        leafnode->original_brushes.push_back(brush->original_brush());
     }
 
     qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
@@ -492,7 +491,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
 
     for (int i = 0; i < 2; i++) {
         result[i] = bspbrush_t::make_ptr();
-        result[i]->original_ptr = brush->original_ptr;
+        result[i]->original_ptr = brush->original_ptr ? brush->original_ptr : brush;
         result[i]->mapbrush = brush->mapbrush;
         // fixme-brushbsp: add a bspbrush_t copy constructor to make sure we get all fields
         result[i]->contents = brush->contents;
