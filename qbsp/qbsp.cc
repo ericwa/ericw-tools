@@ -272,6 +272,10 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         if (!software.value() && !subdivide.isChanged()) {
             subdivide.setValue(496, settings::source::GAME_TARGET);
         }
+
+        if (!qbsp_options.chop.isChanged()) {
+            qbsp_options.chop.setValue(true, settings::source::GAME_TARGET);
+        }
     }
 
     // load texture defs
@@ -456,7 +460,10 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
-    ChopBrushes(brushes);
+    // always chop the other hulls
+    if (qbsp_options.chop.value() || hullnum != 0) {
+        ChopBrushes(brushes);
+    }
 
     // we're discarding the brush
     if (discarded_trigger) {

@@ -42,7 +42,6 @@
 #include <common/qvec.hh>
 
 mapdata_t map;
-std::shared_mutex map_planes_lock;
 
 const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
 {
@@ -2805,8 +2804,6 @@ from q3map
 */
 void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list)
 {
-    std::shared_lock lock(map_planes_lock);
-
     logging::print("writing {}\n", name);
     std::ofstream f(name);
 
@@ -2839,6 +2836,8 @@ void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list)
     }
 
     fmt::print(f, "}}\n");
+
+    f.close();
 }
 
 /*

@@ -801,9 +801,9 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
     constexpr int numpasses = 4;
     for (int pass = 0; pass < numpasses; pass++) {
         for (auto &brush : brushes) {
-            if ((pass & 1) && !brush->mapbrush->contents.is_any_detail(qbsp_options.target_game))
+            if ((pass & 1) && !brush->contents.is_any_detail(qbsp_options.target_game))
                 continue;
-            if (!(pass & 1) && brush->mapbrush->contents.is_any_detail(qbsp_options.target_game))
+            if (!(pass & 1) && brush->contents.is_any_detail(qbsp_options.target_game))
                 continue;
             for (auto &side : brush->sides) {
                 if (side.bevel)
@@ -1165,11 +1165,11 @@ Returns true if b1 is allowed to bite b2
 inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
 {
 	// detail brushes never bite structural brushes
-	if ((b1.mapbrush->contents.is_any_detail(qbsp_options.target_game))
-		&& !(b2.mapbrush->contents.is_any_detail(qbsp_options.target_game))) {
+	if ((b1.contents.is_any_detail(qbsp_options.target_game))
+		&& !(b2.contents.is_any_detail(qbsp_options.target_game))) {
 		return false;
     }
-	if (b1.mapbrush->contents.is_solid(qbsp_options.target_game)) {
+	if (b1.contents.is_any_solid(qbsp_options.target_game)) {
 		return true;
     }
 	return false;
@@ -1370,5 +1370,5 @@ newlist:
     brushes.insert(brushes.begin(), std::make_move_iterator(list.begin()), std::make_move_iterator(list.end()));
     logging::print(logging::flag::STAT, "chopped {} brushes into {}\n", original_count, brushes.size());
 
-    //WriteBspBrushMap("test.map", brushes);
+    //WriteBspBrushMap("chopped.map", brushes);
 }
