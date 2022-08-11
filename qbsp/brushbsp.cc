@@ -1145,6 +1145,13 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::containe
     logging::header("CountLeafs");
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
 
+    // reset onnnode values
+    for (auto &b : brushlist) {
+        for (auto &s : b->sides) {
+            s.onnode = false;
+        }
+    }
+
     return tree;
 }
 

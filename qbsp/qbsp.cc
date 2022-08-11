@@ -456,7 +456,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
-    //ChopBrushes(brushes);
+    ChopBrushes(brushes);
 
     // we're discarding the brush
     if (discarded_trigger) {
@@ -486,9 +486,6 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
         // fixme-brushbsp: return here?
     } else {
-
-    if (entity->outputmodelnumber.value() == 34)
-        __debugbreak();
 
         if (qbsp_options.forcegoodtree.value()) {
             tree = BrushBSP(entity, brushes, false);
