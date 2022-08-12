@@ -992,7 +992,7 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
 
     if (!bestplane) {
         // this is a leaf node
-        clock.increase();
+        clock();
 
         node->is_leaf = true;
 
@@ -1002,7 +1002,7 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
         return;
     }
 
-    clock.increase();
+    clock();
 
     // this is a splitplane node
     stats.c_nodes++;
@@ -1266,99 +1266,97 @@ void ChopBrushes(bspbrush_t::container &brushes)
     // clear original list
     brushes.clear();
 
-    {
-        logging::percent_clock clock;
+    logging::percent_clock clock(list.size());
+    chopstats_t stats;
 
-        chopstats_t stats;
+    decltype(list)::iterator b1_it = list.begin();
 
-        decltype(list)::iterator b1_it = list.begin();
+newlist:
 
-    newlist:
-
-	    if (!list.size()) {
-            // clear output since this is kind of an error...
-            brushes.clear();
-		    return;
-        }
-
-        decltype(list)::iterator next;
-
-	    for (; b1_it != list.end(); b1_it = next)
-	    {
-            clock.max = list.size();
-		    next = std::next(b1_it);
-
-            auto &b1 = *b1_it;
-
-		    for (auto b2_it = next; b2_it != list.end(); b2_it++)
-		    {
-                auto &b2 = *b2_it;
-
-			    if (BrushesDisjoint(*b1, *b2)) {
-				    continue;
-                }
-
-			    bspbrush_t::list sub, sub2;
-			    size_t c1 = std::numeric_limits<size_t>::max(), c2 = c1;
-
-			    if (BrushGE(*b2, *b1)) {
-				    sub = SubtractBrush(b1, b2);
-				    if (sub.size() == 1 && sub.front() == b1) {
-					    continue;		// didn't really intersect
-                    }
-
-				    if (sub.empty()) { // b1 is swallowed by b2
-                        b1_it = list.erase(b1_it); // continue after b1_it
-                        stats.c_swallowed++;
-					    goto newlist;
-				    }
-				    c1 = sub.size();
-			    }
-
-			    if (BrushGE (*b1, *b2)) {
-				    sub2 = SubtractBrush (b2, b1);
-				    if (sub2.size() == 1 && sub2.front() == b2) {
-					    continue;		// didn't really intersect
-                    }
-				    if (sub2.empty()) {	// b2 is swallowed by b1
-                        list.erase(b2_it);
-                        // continue where b1_it was
-                        stats.c_swallowed++;
-					    goto newlist;
-				    }
-				    c2 = sub2.size();
-			    }
-
-			    if (sub.empty() && sub2.empty()) {
-				    continue;		// neither one can bite
-                }
-
-			    // only accept if it didn't fragment
-			    // (commenting this out allows full fragmentation)
-			    if (c1 > 1 && c2 > 1) {
-				    continue;
-			    }
-
-			    if (c1 < c2) {
-                    stats.c_from_split += sub.size();
-                    list.splice(list.end(), sub);
-                    b1_it = list.erase(b1_it); // start from after b1_it
-				    goto newlist;
-			    } else {
-                    stats.c_from_split += sub2.size();
-                    list.splice(list.end(), sub2);
-                    list.erase(b2_it);
-                    // start from where b1_it left off
-				    goto newlist;
-			    }
-		    }
-
-            clock.increase();
-	    }
-
-        // since chopbrushes can remove stuff, exact counts are hard...
-        clock.count = clock.max - 1;
+	if (!list.size()) {
+        // clear output since this is kind of an error...
+        brushes.clear();
+		return;
     }
+
+    decltype(list)::iterator next;
+
+	for (; b1_it != list.end(); b1_it = next)
+	{
+        clock.max = list.size();
+		next = std::next(b1_it);
+
+        auto &b1 = *b1_it;
+
+		for (auto b2_it = next; b2_it != list.end(); b2_it++)
+		{
+            auto &b2 = *b2_it;
+
+			if (BrushesDisjoint(*b1, *b2)) {
+				continue;
+            }
+
+			bspbrush_t::list sub, sub2;
+			size_t c1 = std::numeric_limits<size_t>::max(), c2 = c1;
+
+			if (BrushGE(*b2, *b1)) {
+				sub = SubtractBrush(b1, b2);
+				if (sub.size() == 1 && sub.front() == b1) {
+					continue;		// didn't really intersect
+                }
+
+				if (sub.empty()) { // b1 is swallowed by b2
+                    b1_it = list.erase(b1_it); // continue after b1_it
+                    stats.c_swallowed++;
+					goto newlist;
+				}
+				c1 = sub.size();
+			}
+
+			if (BrushGE (*b1, *b2)) {
+				sub2 = SubtractBrush (b2, b1);
+				if (sub2.size() == 1 && sub2.front() == b2) {
+					continue;		// didn't really intersect
+                }
+				if (sub2.empty()) {	// b2 is swallowed by b1
+                    list.erase(b2_it);
+                    // continue where b1_it was
+                    stats.c_swallowed++;
+					goto newlist;
+				}
+				c2 = sub2.size();
+			}
+
+			if (sub.empty() && sub2.empty()) {
+				continue;		// neither one can bite
+            }
+
+			// only accept if it didn't fragment
+			// (commenting this out allows full fragmentation)
+			if (c1 > 1 && c2 > 1) {
+				continue;
+			}
+
+			if (c1 < c2) {
+                stats.c_from_split += sub.size();
+                list.splice(list.end(), sub);
+                b1_it = list.erase(b1_it); // start from after b1_it
+				goto newlist;
+			} else {
+                stats.c_from_split += sub2.size();
+                list.splice(list.end(), sub2);
+                list.erase(b2_it);
+                // start from where b1_it left off
+				goto newlist;
+			}
+		}
+
+        clock();
+	}
+
+    // since chopbrushes can remove stuff, exact counts are hard...
+    clock.max = list.size();
+    clock.print();
 
     brushes.insert(brushes.begin(), std::make_move_iterator(list.begin()), std::make_move_iterator(list.end()));
     logging::print(logging::flag::STAT, "chopped {} brushes into {}\n", original_count, brushes.size());

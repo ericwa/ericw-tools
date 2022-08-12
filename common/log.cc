@@ -113,6 +113,10 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {
     bool expected = false;
 
+    if (!(logging::mask & flag::CLOCK_ELAPSED)) {
+        displayElapsed = false;
+    }
+
     if (count == max) {
         while (!locked.compare_exchange_weak(expected, true)) ; // wait until everybody else is done
     } else {
@@ -158,7 +162,7 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
                     "  . ",
                     "   ."
                 };
-                last_count = (last_count + 1) > 3 ? 0 : (last_count + 1);
+                last_count = (last_count + 1) >= std::size(spinners) ? 0 : (last_count + 1);
                 print(flag::PERCENT, "[{}]\r", spinners[last_count]);
                 last_indeterminate_time = t;
             }
@@ -169,11 +173,17 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
     locked = false;
 }
 
-percent_clock::~percent_clock()
+void percent_clock::print()
 {
+    if (!ready) {
+        return;
+    }
+
+    ready = false;
+
     if (max != indeterminate) {
-        if (count != max - 1) {
-            print("ERROR TO FIX LATER: clock counter ended too early\n");
+        if (count != max) {
+            logging::print("ERROR TO FIX LATER: clock counter ended too early\n");
         }
     }
 

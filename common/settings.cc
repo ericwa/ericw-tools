@@ -175,7 +175,7 @@ void common_settings::postinitialize(int argc, const char **argv)
     }
 
     if (nopercent.value()) {
-        logging::mask &= ~bitflags<logging::flag>(logging::flag::PERCENT);
+        logging::mask &= ~(bitflags<logging::flag>(logging::flag::PERCENT) | logging::flag::CLOCK_ELAPSED);
     }
 
     if (nostat.value()) {

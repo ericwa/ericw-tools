@@ -589,6 +589,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_
     node_t *node = tree->headnode;
 
     logging::funcheader();
+    logging::percent_clock clock;
 
     /* Clear the outside filling state on all nodes */
     ClearOccupied_r(node);

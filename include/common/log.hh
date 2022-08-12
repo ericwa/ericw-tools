@@ -49,6 +49,7 @@ enum class flag : uint8_t
     PROGRESS = nth_bit(2), // prints only to stdout
     PERCENT = nth_bit(3), // prints everywhere, if enabled
     STAT = nth_bit(4), // prints everywhere, if enabled
+    CLOCK_ELAPSED = nth_bit(5), // overrides displayElapsed if disabled
     ALL = 0xFF
 };
 
@@ -125,19 +126,52 @@ constexpr uint64_t indeterminate = std::numeric_limits<uint64_t>::max();
 
 #include <atomic>
 
-// simple wrapper to percent() to use it in an object-oriented manner.
+// simple wrapper to percent() to use it in an object-oriented manner. you can
+// call print() to explicitly end the clock, or allow it to run out of scope.
 struct percent_clock
 {
-    std::atomic<uint64_t> max = indeterminate;
+    std::atomic<uint64_t> max;
     bool displayElapsed = true;
     std::atomic<uint64_t> count = 0;
+    bool ready = true;
 
-    inline void increase()
+    // runs a tick immediately to show up on stdout
+    // unless max is zero
+    inline percent_clock(uint64_t max = indeterminate) :
+        max(max)
     {
-        percent(count++, max, displayElapsed);
+        if (max != 0) {
+            percent(0, max, displayElapsed);
+        }
     }
 
-    ~percent_clock();
+    // increase count by 1
+    inline void increase()
+    {
+        if (count == max) {
+            logging::print("ERROR TO FIX LATER: clock counter increased to end, but not finished yet\n");
+        }
+
+        percent(count++, max, displayElapsed);
+    }
+    
+    // increase count by 1
+    inline void operator()()
+    {
+        increase();
+    }
+    
+    // increase count by 1
+    inline void operator++(int)
+    {
+        increase();
+    }
+
+    // prints & ends the clock; class is invalid after this call.
+    void print();
+
+    // implicitly calls print()
+    inline ~percent_clock() { print(); }
 };
 
 #include <list>

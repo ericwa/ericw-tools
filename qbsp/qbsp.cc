@@ -629,7 +629,7 @@ static void UpdateEntLump(void)
     if (!qbsp_options.fAllverbose) {
         qbsp_options.fVerbose = false;
         logging::mask &=
-            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
     }
 }
 
@@ -784,7 +784,7 @@ static void CreateSingleHull(const int hullnum)
         if (!qbsp_options.fAllverbose) {
             qbsp_options.fVerbose = false; // don't print rest of entities
             logging::mask &=
-                ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+                ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
         }
     }
 }
@@ -800,7 +800,7 @@ static void CreateHulls(void)
     if (!qbsp_options.fNoverbose) {
         qbsp_options.fVerbose = true;
         logging::mask |=
-            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
     }
 
     auto &hulls = qbsp_options.target_game->get_hull_sizes();
@@ -941,7 +941,7 @@ void ProcessFile()
     if (!qbsp_options.fAllverbose) {
         qbsp_options.fVerbose = false;
         logging::mask &=
-            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
     }
 
     // create hulls!
@@ -951,7 +951,7 @@ void ProcessFile()
     if (!qbsp_options.fNoverbose) {
         qbsp_options.fVerbose = true;
         logging::mask |=
-            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::PERCENT);
+            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
     }
 
     WriteEntitiesToString();

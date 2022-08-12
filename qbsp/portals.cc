@@ -399,14 +399,15 @@ void CalcNodeBounds(node_t *node)
     }
 }
 
-static void CalcTreeBounds_r(tree_t *tree, node_t *node)
+static void CalcTreeBounds_r(tree_t *tree, node_t *node, logging::percent_clock &clock)
 {
     if (node->is_leaf) {
+        clock();
         CalcNodeBounds(node);
     } else {
         tbb::task_group g;
-        g.run([&]() { CalcTreeBounds_r(tree, node->children[0]); });
-        g.run([&]() { CalcTreeBounds_r(tree, node->children[1]); });
+        g.run([&]() { CalcTreeBounds_r(tree, node->children[0], clock); });
+        g.run([&]() { CalcTreeBounds_r(tree, node->children[1], clock); });
         g.wait();
 
         node->bounds = node->children[0]->bounds + node->children[1]->bounds;
@@ -467,7 +468,7 @@ Given the list of portals bounding `node`, returns the portal list for a fully-p
 */
 std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats, logging::percent_clock &clock)
 {
-    clock.increase();
+    clock();
 
     if (node->is_leaf || (type == portaltype_t::VIS && node->detail_separator)) {
         return boundary_portals;
@@ -526,8 +527,7 @@ void MakeTreePortals(tree_t *tree)
     auto headnodeportals = MakeHeadnodePortals(tree);
 
     {
-        logging::percent_clock clock;
-        clock.max = tree->nodes.size() + 1;
+        logging::percent_clock clock(tree->nodes.size());
 
         portalstats_t stats{};
 
@@ -538,7 +538,9 @@ void MakeTreePortals(tree_t *tree)
 
     logging::header("CalcTreeBounds");
 
-    CalcTreeBounds_r(tree, tree->headnode);
+    logging::percent_clock clock;
+    CalcTreeBounds_r(tree, tree->headnode, clock);
+    clock.print();
 
     logging::print(logging::flag::STAT, "       {:8} tree portals\n", tree->portals.size());
 }
@@ -778,7 +780,7 @@ FindPortalSide
 Finds a brush side to use for texturing the given portal
 ============
 */
-static void FindPortalSide(portal_t *p)
+static void FindPortalSide(portal_t *p, size_t &num_sides_not_found)
 {
     // decide which content change is strongest
     // solid > lava > water, etc
@@ -860,8 +862,9 @@ static void FindPortalSide(portal_t *p)
         }
     }
 
-    if (!bestside[0] && !bestside[1])
-        logging::print("WARNING: side not found for portal\n");
+    if (!bestside[0] && !bestside[1]) {
+        num_sides_not_found++;
+    }
 
     p->sidefound = true;
 
@@ -876,11 +879,11 @@ MarkVisibleSides_r
 
 ===============
 */
-static void MarkVisibleSides_r(node_t *node)
+static void MarkVisibleSides_r(node_t *node, size_t &num_sides_not_found)
 {
     if (!node->is_leaf) {
-        MarkVisibleSides_r(node->children[0]);
-        MarkVisibleSides_r(node->children[1]);
+        MarkVisibleSides_r(node->children[0], num_sides_not_found);
+        MarkVisibleSides_r(node->children[1], num_sides_not_found);
         return;
     }
 
@@ -894,8 +897,9 @@ static void MarkVisibleSides_r(node_t *node)
         s = (p->nodes[0] == node);
         if (!p->onnode)
             continue; // edge of world
-        if (!p->sidefound)
-            FindPortalSide(p);
+        if (!p->sidefound) {
+            FindPortalSide(p, num_sides_not_found);
+        }
         for (int i = 0; i < 2; ++i) {
             if (p->sides[i] && p->sides[i]->source) {
                 p->sides[i]->source->visible = true;
@@ -923,6 +927,12 @@ void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_t::container &
         }
     }
 
+    size_t num_sides_not_found = 0;
+
     // set visible flags on the sides that are used by portals
-    MarkVisibleSides_r(tree->headnode);
+    MarkVisibleSides_r(tree->headnode, num_sides_not_found);
+
+    if (num_sides_not_found) {
+        logging::print("WARNING: sides not found for {} portals\n", num_sides_not_found);
+    }
 }

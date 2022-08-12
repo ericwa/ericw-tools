@@ -350,13 +350,15 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes)
+static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock)
 {
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
     if (src->epairs.get_int("_omitbrushes")) {
         return;
     }
+    
+    clock.max += src->mapbrushes.size();
 
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
@@ -398,7 +400,8 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
 
     auto it = src->mapbrushes.begin();
     for (size_t i = 0; i < src->mapbrushes.size(); i++, it++) {
-        logging::percent(i, src->mapbrushes.size());
+        clock();
+
         auto &mapbrush = *it;
         contentflags_t contents = mapbrush.contents;
 
@@ -506,8 +509,6 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
         dst->bounds += brush->bounds;
         brushes.push_back(bspbrush_t::make_ptr(std::move(*brush)));
     }
-
-    logging::percent(src->mapbrushes.size(), src->mapbrushes.size(), src == map.world_entity());
 }
 
 /*
@@ -523,8 +524,10 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::contai
     logging::funcheader();
 
     auto stats = qbsp_options.target_game->create_content_stats();
+    logging::percent_clock clock(0);
+    clock.displayElapsed = (entity == map.world_entity());
 
-    Brush_LoadEntity(entity, entity, hullnum, *stats, brushes);
+    Brush_LoadEntity(entity, entity, hullnum, *stats, brushes, clock);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -544,10 +547,12 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::contai
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum, *stats, brushes);
+                Brush_LoadEntity(entity, source, hullnum, *stats, brushes, clock);
             }
         }
     }
+
+    clock.print();
 
     logging::header("CountBrushes");
 

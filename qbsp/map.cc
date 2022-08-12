@@ -2262,9 +2262,11 @@ void ProcessMapBrushes()
     map.total_brushes = 0;
 
     size_t num_faces = 0, num_bevels = 0, num_removed = 0, num_offset = 0;
+    logging::percent_clock clock(map.entities.size());
 
     // calculate brush extents and brush bevels
     for (auto &entity : map.entities) {
+        clock();
 
         /* Origin brush support */
         entity.rotation = rotation_t::none;
@@ -2393,6 +2395,7 @@ void ProcessMapBrushes()
         }
 #endif
     }
+    clock.print();
     
     logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);
     logging::print(logging::flag::STAT, "     {:8} faces\n", num_faces);
