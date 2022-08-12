@@ -2233,10 +2233,11 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 		}
 
 		if (w) {
-            ob.faces[i].winding = w.value();
+            // calc bounds before moving from w
 			for (auto &p : w.value()) {
                 ob.bounds += p;
             }
+            ob.faces[i].winding = std::move(w.value());
 		}
 	}
 

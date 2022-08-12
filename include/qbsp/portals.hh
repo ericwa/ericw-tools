@@ -37,7 +37,7 @@ struct portal_t
     node_t *onnode; // nullptr = portal to the outside of the world (one of six sides of a box)
     node_t *nodes[2]; // [0] = front side of planenum
     portal_t *next[2]; // [0] = next portal in nodes[0]'s list of portals
-    std::unique_ptr<winding_t> winding;
+    winding_t winding;
 
     bool sidefound; // false if ->side hasn't been checked
     side_t *sides[2]; // [0] = the brush side visible on nodes[0] - it could come from a brush in nodes[1]. NULL =
@@ -51,7 +51,7 @@ struct buildportal_t
     qbsp_plane_t plane;
     node_t *onnode = nullptr; // nullptr = portal to the outside of the world (one of six sides of a box)
     node_t *nodes[2] = {nullptr, nullptr}; // [0] = front side of planenum
-    std::unique_ptr<winding_t> winding;
+    winding_t winding;
 
     inline void set_nodes(node_t *front, node_t *back) {
         nodes[0] = front;

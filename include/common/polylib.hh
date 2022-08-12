@@ -648,19 +648,14 @@ public:
     // initializer list constructor
     inline winding_base_t(std::initializer_list<qvec3d> l) : storage(l.begin(), l.end()) { }
 
-    // copy constructor; uses optimized method of copying
-    // data over.
-    inline winding_base_t(const winding_base_t &copy) : storage(copy.storage) { }
+    // copy constructor; we require copying to be done with clone() to avoid performance bugs
+    inline winding_base_t(const winding_base_t &copy) = delete;
 
     // move constructor
     inline winding_base_t(winding_base_t &&move) noexcept : storage(std::move(move.storage)) { }
 
     // assignment copy
-    inline winding_base_t &operator=(const winding_base_t &copy)
-    {
-        storage = copy.storage;
-        return *this;
-    }
+    inline winding_base_t &operator=(const winding_base_t &copy) = delete;
 
     // assignment move
     inline winding_base_t &operator=(winding_base_t &&move) noexcept
@@ -744,6 +739,14 @@ public:
     }
 
     // non-storage functions
+
+    // explicit copying function
+    winding_base_t clone() const
+    {
+        winding_base_t result;
+        result.storage = storage;
+        return result;
+    }
 
     vec_t area() const
     {
@@ -996,12 +999,12 @@ public:
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
 
         if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
-            return {*this, std::nullopt};
+            return {this->clone(), std::nullopt};
 
         if (!counts[SIDE_FRONT])
-            return {std::nullopt, *this};
+            return {std::nullopt, this->clone()};
         else if (!counts[SIDE_BACK])
-            return {*this, std::nullopt};
+            return {this->clone(), std::nullopt};
 
         twosided<winding_base_t> results{};
 
@@ -1108,7 +1111,7 @@ public:
             result.push_back(mid);
         }
 
-        return std::move(result);
+        return result;
     }
 
 
@@ -1250,7 +1253,7 @@ public:
 
     winding_base_t translate(const qvec3d &offset) const
     {
-        winding_base_t result(*this);
+        winding_base_t result = this->clone();
 
         for (qvec3d &p : result) {
             p += offset;

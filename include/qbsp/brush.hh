@@ -45,6 +45,9 @@ struct side_t
 
     bool tested;
 
+    side_t clone_non_winding_data() const;
+    side_t clone() const;
+
     bool is_visible() const;
     const maptexinfo_t &get_texinfo() const;
     const qbsp_plane_t &get_plane() const;
@@ -86,6 +89,8 @@ struct bspbrush_t
     bool update_bounds(bool warn_on_failures);
 
     ptr copy_unique() const;
+
+    bspbrush_t clone() const;
 };
 
 std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum);

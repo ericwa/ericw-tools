@@ -158,7 +158,7 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
             }
             bool side = p->plane.set_plane(pl, true);
 
-            p->winding = std::make_unique<winding_t>(BaseWindingForPlane(pl));
+            p->winding = BaseWindingForPlane(pl);
             if (side) {
                 p->set_nodes(&tree->outside_node, tree->headnode);
             } else {
@@ -168,7 +168,7 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
 
     // clip the basewindings by all the other planes
     for (i = 0; i < 6; i++) {
-        winding_t &w = *portals[i]->winding.get();
+        winding_t &w = portals[i]->winding;
 
         for (j = 0; j < 6; j++) {
             if (j == i)
@@ -266,7 +266,7 @@ std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std:
     auto new_portal = std::make_unique<buildportal_t>();
     new_portal->plane = node->get_plane();
     new_portal->onnode = node;
-    new_portal->winding = std::make_unique<winding_t>(*w);
+    new_portal->winding = std::move(*w);
     new_portal->set_nodes(node->children[0], node->children[1]);
 
     return new_portal;
@@ -304,7 +304,7 @@ twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_
         //
         // cut the portal into two portals, one on each side of the cut plane
         //
-        auto [frontwinding, backwinding] = p->winding->clip(plane, SPLIT_WINDING_EPSILON, true);
+        auto [frontwinding, backwinding] = p->winding.clip(plane, SPLIT_WINDING_EPSILON, true);
 
         if (frontwinding && WindingIsTiny(*frontwinding)) {
             frontwinding = {};
@@ -345,8 +345,8 @@ twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_
         new_portal->onnode = p->onnode;
         new_portal->nodes[0] = p->nodes[0];
         new_portal->nodes[1] = p->nodes[1];
-        new_portal->winding = std::make_unique<winding_t>(*backwinding);
-        p->winding = std::make_unique<winding_t>(*frontwinding);
+        new_portal->winding = std::move(*backwinding);
+        p->winding = std::move(*frontwinding);
 
         if (side == SIDE_FRONT) {
             p->set_nodes(f, other_node);
@@ -392,7 +392,7 @@ void CalcNodeBounds(node_t *node)
 
     for (portal_t *p = node->portals; p;) {
         int s = (p->nodes[1] == node);
-        for (auto &point : *p->winding) {
+        for (auto &point : p->winding) {
             node->bounds += point;
         }
         p = p->next[s];

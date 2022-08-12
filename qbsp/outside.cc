@@ -272,7 +272,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
     qvec3d prevpt = leakentity->origin;
 
     for (portal_t *portal : leakline) {
-        qvec3d currpt = portal->winding->center();
+        qvec3d currpt = portal->winding.center();
 
         // draw dots from prevpt to currpt
         WriteLeakTrail(ptsfile, prevpt, currpt);

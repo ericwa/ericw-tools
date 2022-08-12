@@ -65,7 +65,7 @@ std::unique_ptr<face_t> NewFaceFromFace(const face_t *in)
 std::unique_ptr<face_t> CopyFace(const face_t *in)
 {
     auto temp = NewFaceFromFace(in);
-    temp->w = in->w;
+    temp->w = in->w.clone();
     return temp;
 }
 

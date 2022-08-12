@@ -410,7 +410,7 @@ TEST_CASE("winding iterators", "[winding_base_t]")
 
     // check that constructors work
     {
-        polylib::winding_base_t<polylib::winding_storage_hybrid_t<4>> winding_other(winding);
+        polylib::winding_base_t<polylib::winding_storage_hybrid_t<4>> winding_other(winding.begin(), winding.end());
 
         {
             auto it = winding_other.begin();

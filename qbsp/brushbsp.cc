@@ -481,7 +481,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
         logging::print("WARNING: huge winding\n");
     }
 
-    winding_t midwinding = *w;
+    winding_t &midwinding = *w;
 
     // split it for real
 
@@ -512,7 +512,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
 #endif
 
             // add the clipped face to result[j]
-            side_t faceCopy = face;
+            side_t faceCopy = face.clone_non_winding_data();
             faceCopy.w = std::move(*cw[j]);
 
             // fixme-brushbsp: configure any settings on the faceCopy?
@@ -583,7 +583,11 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
         cs.onnode = true;
         // fixme-brushbsp: configure any other settings on the face?
 
-        cs.w = brushOnFront ? midwinding.flip() : midwinding;
+        if (brushOnFront) {
+            cs.w = midwinding.flip();
+        } else {
+            cs.w = std::move(midwinding);
+        }
 
         result[i]->sides.push_back(std::move(cs));
     }

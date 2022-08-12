@@ -28,6 +28,25 @@
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
+side_t side_t::clone_non_winding_data() const
+{ 
+    side_t result;
+    result.planenum = this->planenum;
+    result.texinfo = this->texinfo;
+    result.onnode = this->onnode;
+    result.bevel = this->bevel;
+    result.source = this->source;
+    result.tested = this->tested;
+    return result;
+}
+
+side_t side_t::clone() const
+{
+    side_t result = clone_non_winding_data();
+    result.w = this->w.clone();
+    return result;
+}
+
 bool side_t::is_visible() const
 {
     return source && source->visible;
@@ -50,7 +69,31 @@ const qbsp_plane_t &side_t::get_positive_plane() const
 
 bspbrush_t::ptr bspbrush_t::copy_unique() const
 {
-    return bspbrush_t::make_ptr(*this);
+    return bspbrush_t::make_ptr(this->clone());
+}
+
+bspbrush_t bspbrush_t::clone() const
+{
+    bspbrush_t result;
+
+    result.original_ptr = this->original_ptr;
+    result.mapbrush = this->mapbrush;
+
+    result.bounds = this->bounds;
+    result.side = this->side;
+    result.testside = this->testside;
+
+    result.sides.reserve(this->sides.size());
+    for (auto &side : this->sides) {
+        result.sides.push_back(side.clone());
+    }
+
+    result.contents = this->contents;
+
+    result.sphere_origin = this->sphere_origin;
+    result.sphere_radius = this->sphere_radius;
+
+    return result;
 }
 
 /*
@@ -238,7 +281,7 @@ bool CreateBrushWindings(bspbrush_t *brush)
                 }
             }
 
-            side->w = *w;
+            side->w = std::move(*w);
         } else {
             side->w.clear();
         }

@@ -504,9 +504,9 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
 #endif
 
     if (pside) {
-        f->w = p->winding->flip();
+        f->w = p->winding.flip();
     } else {
-        f->w = *p->winding;
+        f->w = p->winding.clone();
     }
 
     f->contents = p->nodes[pside]->contents;

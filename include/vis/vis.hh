@@ -61,10 +61,10 @@ struct winding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX
     }
 
     // copy constructor
-    inline winding_t(const winding_t &copy) : winding_base_t(copy), origin(copy.origin), radius(copy.radius) { }
+    inline winding_t(const winding_t &copy) = delete;
 
     // move constructor
-    inline winding_t(winding_t &&move) noexcept : winding_base_t(move), origin(move.origin), radius(move.radius) { }
+    inline winding_t(winding_t &&move) noexcept : winding_base_t(std::move(move)), origin(move.origin), radius(move.radius) { }
 
     // sets origin & radius
     inline void set_winding_sphere()
@@ -84,15 +84,7 @@ struct winding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX
     }
 
     // assignment copy
-    inline winding_t &operator=(const winding_t &copy)
-    {
-        origin = copy.origin;
-        radius = copy.radius;
-
-        winding_base_t::operator=(copy);
-
-        return *this;
-    }
+    inline winding_t &operator=(const winding_t &copy)  = delete;
 
     // assignment move
     inline winding_t &operator=(winding_t &&move) noexcept
@@ -100,7 +92,7 @@ struct winding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX
         origin = move.origin;
         radius = move.radius;
 
-        winding_base_t::operator=(move);
+        winding_base_t::operator=(std::move(move));
 
         return *this;
     }

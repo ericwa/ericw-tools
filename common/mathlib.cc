@@ -413,8 +413,14 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vect
 
     auto clipped = w.clip({plane.xyz(), plane[3]});
 
-    return make_pair(
-        clipped[0].value_or(winding_t{}).glm_winding_points(), clipped[1].value_or(winding_t{}).glm_winding_points());
+    std::pair<std::vector<qvec3f>, std::vector<qvec3f>> result;
+    if (clipped[0]) {
+        result.first = clipped[0]->glm_winding_points();
+    }
+    if (clipped[1]) {
+        result.second = clipped[1]->glm_winding_points();
+    }
+    return result;
 }
 
 std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount)

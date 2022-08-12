@@ -69,7 +69,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         if (!Portal_VisFlood(p))
             continue;
 
-        w = p->winding.get();
+        w = &p->winding;
         front = clusters ? p->nodes[0]->viscluster : p->nodes[0]->visleafnum;
         back = clusters ? p->nodes[1]->viscluster : p->nodes[1]->visleafnum;
 
