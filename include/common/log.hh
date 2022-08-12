@@ -175,6 +175,7 @@ struct percent_clock
 };
 
 #include <list>
+#include <atomic>
 
 // base class intended to be inherited for stat trackers;
 // they will automatically print the results at the end,

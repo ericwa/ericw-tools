@@ -28,6 +28,7 @@
 #include <mutex>
 #include <fmt/ostream.h>
 #include <fmt/chrono.h>
+#include <string>
 
 #include <common/log.hh>
 #include <common/threads.hh>
