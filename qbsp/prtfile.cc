@@ -264,15 +264,12 @@ void WritePortalFile(tree_t *tree)
     FreeTreePortals(tree);
 
     MakeHeadnodePortals(tree);
-
-    portalstats_t stats{};
     
     {
-        // FIXME: iteration count isn't tree->nodes.size() here
         logging::percent_clock clock;
-        clock.max = tree->nodes.size() + 1;
 
         // vis portal generation doesn't use headnode portals
+        portalstats_t stats{};
         auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::VIS, {}, stats, clock);
 
         MakePortalsFromBuildportals(tree, std::move(buildportals));

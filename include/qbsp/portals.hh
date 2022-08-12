@@ -59,9 +59,9 @@ struct buildportal_t
     }
 };
 
-struct portalstats_t
+struct portalstats_t : logging::stat_tracker_t
 {
-    std::atomic<int> c_tinyportals;
+    stat &c_tinyportals = register_stat("tiny portals");
 };
 
 contentflags_t ClusterContents(const node_t *node);

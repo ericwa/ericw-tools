@@ -31,11 +31,11 @@
 #include <map>
 #include <list>
 
-struct makefaces_stats_t
+struct makefaces_stats_t : logging::stat_tracker_t
 {
-    int c_nodefaces;
-    int c_merge;
-    int c_subdivide;
+    stat &c_nodefaces = register_stat("makefaces"); // FIXME: what is "makefaces" exactly
+    stat &c_merge = register_stat("merged");
+    stat &c_subdivide = register_stat("subdivided");
 };
 
 static bool ShouldOmitFace(face_t *f)
@@ -53,9 +53,9 @@ static bool ShouldOmitFace(face_t *f)
     return false;
 }
 
-static void MergeNodeFaces(node_t *node, int &num_merged)
+static void MergeNodeFaces(node_t *node, makefaces_stats_t &stats)
 {
-    node->facelist = MergeFaceList(std::move(node->facelist), num_merged);
+    node->facelist = MergeFaceList(std::move(node->facelist), stats.c_merge);
 }
 
 /*
@@ -538,7 +538,7 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
 
         // merge together all visible faces on the node
         if (!qbsp_options.nomerge.value())
-            MergeNodeFaces(node, stats.c_merge);
+            MergeNodeFaces(node, stats);
         if (qbsp_options.subdivide.boolValue())
             SubdivideNodeFaces(node, stats);
 
@@ -580,9 +580,4 @@ void MakeFaces(node_t *node)
     makefaces_stats_t stats{};
 
     MakeFaces_r(node, stats);
-
-    logging::print(
-        logging::flag::STAT, "     {:8} makefaces\n", stats.c_nodefaces); // FIXME: what is "makefaces" exactly
-    logging::print(logging::flag::STAT, "     {:8} merged\n", stats.c_merge);
-    logging::print(logging::flag::STAT, "     {:8} subdivided\n", stats.c_subdivide);
 }

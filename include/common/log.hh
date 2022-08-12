@@ -119,14 +119,18 @@ inline void assert_(bool success, const char *expr, const char *file, int line)
 // use <common/parallel.h>'s parallel_for(_each)
 void percent(uint64_t count, uint64_t max, bool displayElapsed = true);
 
+// use this as "max" (and on the final run, "count") to indicate that
+// the counter does not have a determinating maximum factor.
+constexpr uint64_t indeterminate = std::numeric_limits<uint64_t>::max();
+
 #include <atomic>
 
 // simple wrapper to percent() to use it in an object-oriented manner.
 struct percent_clock
 {
-    std::atomic<uint64_t> max {0};
+    std::atomic<uint64_t> max = indeterminate;
     bool displayElapsed = true;
-    std::atomic<uint64_t> count {0};
+    std::atomic<uint64_t> count = 0;
 
     inline void increase()
     {
@@ -134,5 +138,49 @@ struct percent_clock
     }
 
     ~percent_clock();
+};
+
+#include <list>
+
+// base class intended to be inherited for stat trackers;
+// they will automatically print the results at the end,
+// in the order of registration.
+struct stat_tracker_t
+{
+    struct stat
+    {
+        const char *name;
+        bool show_even_if_zero;
+        std::atomic_size_t count = 0;
+
+        inline stat(const char *name, bool show_even_if_zero) :
+            name(name),
+            show_even_if_zero(show_even_if_zero)
+        {
+        }
+        
+        inline std::atomic_size_t::value_type operator++(int) noexcept { return count++; }
+        inline std::atomic_size_t::value_type operator++() noexcept { return ++count; }
+        inline std::atomic_size_t::value_type operator+=(std::atomic_size_t::value_type v) noexcept { return count += v; }
+        inline std::atomic_size_t::value_type operator++(int) volatile noexcept { return count++; }
+        inline std::atomic_size_t::value_type operator++() volatile noexcept { return ++count; }
+        inline std::atomic_size_t::value_type operator+=(std::atomic_size_t::value_type v) volatile noexcept { return count += v; }
+    };
+
+    std::list<stat> stats;
+
+    inline stat &register_stat(const char *name, bool show_even_if_zero = false)
+    {
+        return stats.emplace_back(name, show_even_if_zero);
+    }
+
+    ~stat_tracker_t()
+    {
+        for (auto &stat : stats) {
+            if (stat.show_even_if_zero || stat.count) {
+                print(flag::STAT, "     {:8} {}\n", stat.count, stat.name);
+            }
+        }
+    }
 };
 }; // namespace logging

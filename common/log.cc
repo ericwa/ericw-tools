@@ -106,39 +106,77 @@ void print(flag logflag, const char *str)
 static time_point start_time;
 static bool is_timing = false;
 static uint64_t last_count = -1;
+static time_point last_indeterminate_time;
+static std::atomic_bool locked = false;
 
 void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {
+    bool expected = false;
+
+    if (count == max) {
+        while (!locked.compare_exchange_weak(expected, true)) ; // wait until everybody else is done
+    } else {
+        if (!locked.compare_exchange_weak(expected, true)) {
+            return; // somebody else is doing this already
+        }
+    }
+
+    // we got the lock
+
     if (!is_timing) {
         start_time = I_FloatTime();
         is_timing = true;
         last_count = -1;
+        last_indeterminate_time = {};
     }
 
     if (count == max) {
         auto elapsed = I_FloatTime() - start_time;
         is_timing = false;
         if (displayElapsed) {
-            print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+            if (max == indeterminate) {
+                print(flag::PERCENT, "[done] time elapsed: {:.3}\n", elapsed);
+            } else {
+                print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+            }
         }
         last_count = -1;
     } else {
-        uint32_t pct = static_cast<uint32_t>((static_cast<float>(count) / max) * 100);
-        if (last_count != pct) {
-            print(flag::PERCENT, "[{:>3}%]\r", pct);
-            last_count = pct;
+        if (max != indeterminate) {
+            uint32_t pct = static_cast<uint32_t>((static_cast<float>(count) / max) * 100);
+            if (last_count != pct) {
+                print(flag::PERCENT, "[{:>3}%]\r", pct);
+                last_count = pct;
+            }
+        } else {
+            auto t = I_FloatTime();
+
+            if (t - last_indeterminate_time > std::chrono::milliseconds(100)) {
+                constexpr const char *spinners[] = {
+                    ".   ",
+                    " .  ",
+                    "  . ",
+                    "   ."
+                };
+                last_count = (last_count + 1) > 3 ? 0 : (last_count + 1);
+                print(flag::PERCENT, "[{}]\r", spinners[last_count]);
+                last_indeterminate_time = t;
+            }
         }
     }
+
+    // unlock for next call
+    locked = false;
 }
 
 percent_clock::~percent_clock()
 {
-    if (count != max - 1) {
-        print("ERROR TO FIX LATER: clock counter ended too early\n");
+    if (max != indeterminate) {
+        if (count != max - 1) {
+            print("ERROR TO FIX LATER: clock counter ended too early\n");
+        }
     }
 
-    count = max - 1;
-    increase();
-    //Q_assert(count == max);
+    percent(max, max, displayElapsed);
 }
 }; // namespace logging

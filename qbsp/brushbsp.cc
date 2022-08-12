@@ -47,29 +47,27 @@ constexpr int PSIDE_BOTH = (PSIDE_FRONT | PSIDE_BACK);
 // this gets OR'ed in in the return value of QuickTestBrushToPlanenum if one of the brush sides is on the input plane
 constexpr int PSIDE_FACING = 4;
 
-struct bspstats_t
+struct bspstats_t : logging::stat_tracker_t
 {
     std::unique_ptr<content_stats_base_t> leafstats;
     // total number of nodes, includes c_nonvis
-    std::atomic<int> c_nodes;
+    stat &c_nodes = register_stat("nodes");
     // number of nodes created by splitting on a side_t which had !visible
-    std::atomic<int> c_nonvis;
+    stat &c_nonvis =register_stat("non-visible nodes");
     // total number of nodes created by qbsp3 method
-    std::atomic<int> c_qbsp3;
-    // total number of nodes created by block splitting
-    std::atomic<int> c_blocksplit;
+    stat &c_qbsp3 = register_stat("expensive split nodes");
     // total number of nodes created by midsplit
-    std::atomic<int> c_midsplit;
+    stat &c_midsplit = register_stat("mid-split nodes");
     // total number of leafs
-    std::atomic<int> c_leafs;
+    stat &c_leafs = register_stat("leaves");
     // number of bogus brushes (beyond world extents)
-    std::atomic<int> c_bogus;
+    stat &c_bogus = register_stat("bogus brushes");
     // number of brushes entirely removed from a split
-    std::atomic<int> c_brushesremoved;
+    stat &c_brushesremoved = register_stat("brushes removed from a split");
     // number of brushes half-removed from a split
-    std::atomic<int> c_brushesonesided;
+    stat &c_brushesonesided = register_stat("brushes split only on one side");
     // tiny volumes after clipping
-    std::atomic<int> c_tinyvolumes;
+    stat &c_tinyvolumes = register_stat("tiny volumes removed after splits");
 };
 
 /*
@@ -266,7 +264,7 @@ static int TestBrushToPlanenum(
 		if (side.planenum == planenum) {
 			return PSIDE_BACK | PSIDE_FACING;
         } else if (side.planenum == (planenum ^ 1)) {
-			return PSIDE_FRONT|PSIDE_FACING;
+			return PSIDE_FRONT | PSIDE_FACING;
         }
     }
 
@@ -433,7 +431,7 @@ input.
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planenum, bspstats_t &stats)
+static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planenum, std::optional<std::reference_wrapper<bspstats_t>> stats)
 {
     const qplane3d &split = map.planes[planenum];
     twosided<bspbrush_t::ptr> result;
@@ -530,12 +528,16 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
         bool bogus = false;
 
         if (!result[i]->update_bounds(false)) {
-            stats.c_bogus++;
+            if (stats) {
+                stats->get().c_bogus++;
+            }
             bogus = true;
         } else {
             for (int j = 0; j < 3; j++) {
                 if (result[i]->bounds.mins()[j] < -qbsp_options.worldextent.value() || result[i]->bounds.maxs()[j] > qbsp_options.worldextent.value()) {
-                    stats.c_bogus++;
+                    if (stats) {
+                        stats->get().c_bogus++;
+                    }
                     bogus = true;
                     break;
                 }
@@ -548,11 +550,15 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
     }
 
     if (!result[0] && !result[1]) {
-        stats.c_brushesremoved++;
+        if (stats) {
+            stats->get().c_brushesremoved++;
+        }
 
         return result;
     } else if (!result[0] || !result[1]) {
-        stats.c_brushesonesided++;
+        if (stats) {
+            stats->get().c_brushesonesided++;
+        }
 
         if (result[0]) {
             result.front = std::move(brush);
@@ -590,7 +596,9 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
             v1 = BrushVolume(*result[i]);
             if (v1 < qbsp_options.microvolume.value()) {
                 result[i] = nullptr;
-                stats.c_tinyvolumes++;
+                if (stats) {
+                    stats->get().c_tinyvolumes++;
+                }
             }
         }
     }
@@ -977,13 +985,15 @@ BuildTree_r
 Called in parallel.
 ==================
 */
-static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushes, std::optional<bool> forced_quick_tree, bspstats_t &stats)
+static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushes, std::optional<bool> forced_quick_tree, bspstats_t &stats, logging::percent_clock &clock)
 {
     // find the best plane to use as a splitter
     auto bestplane = SelectSplitPlane(brushes, node, forced_quick_tree, stats);
 
     if (!bestplane) {
         // this is a leaf node
+        clock.increase();
+
         node->is_leaf = true;
 
         stats.c_leafs++;
@@ -991,6 +1001,8 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
 
         return;
     }
+
+    clock.increase();
 
     // this is a splitplane node
     stats.c_nodes++;
@@ -1026,8 +1038,8 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(tree, node->children[0], std::move(children[0]), forced_quick_tree, stats); });
-    g.run([&]() { BuildTree_r(tree, node->children[1], std::move(children[1]), forced_quick_tree, stats); });
+    g.run([&]() { BuildTree_r(tree, node->children[0], std::move(children[0]), forced_quick_tree, stats, clock); });
+    g.run([&]() { BuildTree_r(tree, node->children[1], std::move(children[1]), forced_quick_tree, stats, clock); });
     g.wait();
 }
 
@@ -1115,33 +1127,10 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::containe
 
     bspstats_t stats{};
     stats.leafstats = qbsp_options.target_game->create_content_stats();
-    BuildTree_r(tree.get(), tree->headnode, brushlist, forced_quick_tree, stats);
 
-    logging::print(logging::flag::STAT, "     {:8} visible nodes\n", stats.c_nodes - stats.c_nonvis);
-    if (stats.c_nonvis) {
-        logging::print(logging::flag::STAT, "     {:8} nonvis nodes\n", stats.c_nonvis);
-    }
-    if (stats.c_blocksplit) {
-        logging::print(logging::flag::STAT, "     {:8} block split nodes\n", stats.c_blocksplit);
-    }
-    if (stats.c_qbsp3) {
-        logging::print(logging::flag::STAT, "     {:8} expensive split nodes\n", stats.c_qbsp3);
-    }
-    if (stats.c_midsplit) {
-        logging::print(logging::flag::STAT, "     {:8} midsplit nodes\n", stats.c_midsplit);
-    }
-    logging::print(logging::flag::STAT, "     {:8} leafs\n", stats.c_leafs);
-    if (stats.c_bogus) {
-        logging::print(logging::flag::STAT, "     {:8} bogus brushes\n", stats.c_bogus);
-    }
-    if (stats.c_brushesremoved) {
-        logging::print(logging::flag::STAT, "     {:8} brushes removed from a split\n", stats.c_brushesremoved);
-    }
-    if (stats.c_brushesonesided) {
-        logging::print(logging::flag::STAT, "     {:8} brushes split only on one side\n", stats.c_brushesonesided);
-    }
-    if (stats.c_tinyvolumes) {
-        logging::print(logging::flag::STAT, "     {:8} tiny volumes removed after splits\n", stats.c_tinyvolumes);
+    {
+        logging::percent_clock clock;
+        BuildTree_r(tree.get(), tree->headnode, brushlist, forced_quick_tree, stats, clock);
     }
 
     logging::header("CountLeafs");
@@ -1219,10 +1208,9 @@ inline bspbrush_t::list SubtractBrush(const bspbrush_t::ptr &a, const bspbrush_t
 {
     bspbrush_t::list out;
     bspbrush_t::ptr in = a;
-    bspstats_t stats; // fixme
 
 	for (auto &side : b->sides) {
-		auto [ front, back ] = SplitBrush(in, side.planenum, stats);
+		auto [ front, back ] = SplitBrush(in, side.planenum, std::nullopt);
 
         if (front) {
             // add to list
@@ -1273,101 +1261,104 @@ void ChopBrushes(bspbrush_t::container &brushes)
 
     // convert brush container to list, so we don't lose
     // track of the original ptrs and so we can re-organize things
-    bspbrush_t::list list { brushes.begin(), brushes.end() };
-    chopstats_t stats;
-
-    // clear original list so that we can allow brush pointers to naturally
-    // decay as they get destroyed
+    bspbrush_t::list list { std::make_move_iterator(brushes.begin()), std::make_move_iterator(brushes.end()) };
+    
+    // clear original list
     brushes.clear();
 
-    decltype(list)::iterator b1_it = list.begin();
+    {
+        logging::percent_clock clock;
 
-newlist:
-	if (!list.size()) {
-        // clear output since this is kind of an error...
-        brushes.clear();
-		return;
-    }
+        chopstats_t stats;
 
-    decltype(list)::iterator next;
+        decltype(list)::iterator b1_it = list.begin();
 
-	for (; b1_it != list.end(); b1_it = next)
-	{
-		next = std::next(b1_it);
+    newlist:
 
-        auto &b1 = *b1_it;
+	    if (!list.size()) {
+            // clear output since this is kind of an error...
+            brushes.clear();
+		    return;
+        }
 
-		for (auto b2_it = next; b2_it != list.end(); b2_it++)
-		{
-            auto &b2 = *b2_it;
+        decltype(list)::iterator next;
 
-			if (BrushesDisjoint(*b1, *b2)) {
-				continue;
-            }
+	    for (; b1_it != list.end(); b1_it = next)
+	    {
+            clock.max = list.size();
+		    next = std::next(b1_it);
 
-			bspbrush_t::list sub, sub2;
-			size_t c1 = std::numeric_limits<size_t>::max(), c2 = c1;
+            auto &b1 = *b1_it;
 
-			if (BrushGE(*b2, *b1)) {
-				sub = SubtractBrush(b1, b2);
-				if (sub.size() == 1 && sub.front() == b1) {
-					continue;		// didn't really intersect
+		    for (auto b2_it = next; b2_it != list.end(); b2_it++)
+		    {
+                auto &b2 = *b2_it;
+
+			    if (BrushesDisjoint(*b1, *b2)) {
+				    continue;
                 }
 
-				if (sub.empty()) { // b1 is swallowed by b2
-                    b1_it = list.erase(b1_it); // continue after b1_it
-                    stats.c_swallowed++;
-					goto newlist;
-				}
-				c1 = sub.size();
-			}
+			    bspbrush_t::list sub, sub2;
+			    size_t c1 = std::numeric_limits<size_t>::max(), c2 = c1;
 
-			if (BrushGE (*b1, *b2)) {
-				sub2 = SubtractBrush (b2, b1);
-				if (sub2.size() == 1 && sub2.front() == b2) {
-					continue;		// didn't really intersect
+			    if (BrushGE(*b2, *b1)) {
+				    sub = SubtractBrush(b1, b2);
+				    if (sub.size() == 1 && sub.front() == b1) {
+					    continue;		// didn't really intersect
+                    }
+
+				    if (sub.empty()) { // b1 is swallowed by b2
+                        b1_it = list.erase(b1_it); // continue after b1_it
+                        stats.c_swallowed++;
+					    goto newlist;
+				    }
+				    c1 = sub.size();
+			    }
+
+			    if (BrushGE (*b1, *b2)) {
+				    sub2 = SubtractBrush (b2, b1);
+				    if (sub2.size() == 1 && sub2.front() == b2) {
+					    continue;		// didn't really intersect
+                    }
+				    if (sub2.empty()) {	// b2 is swallowed by b1
+                        list.erase(b2_it);
+                        // continue where b1_it was
+                        stats.c_swallowed++;
+					    goto newlist;
+				    }
+				    c2 = sub2.size();
+			    }
+
+			    if (sub.empty() && sub2.empty()) {
+				    continue;		// neither one can bite
                 }
-				if (sub2.empty()) {	// b2 is swallowed by b1
+
+			    // only accept if it didn't fragment
+			    // (commenting this out allows full fragmentation)
+			    if (c1 > 1 && c2 > 1) {
+				    continue;
+			    }
+
+			    if (c1 < c2) {
+                    stats.c_from_split += sub.size();
+                    list.splice(list.end(), sub);
+                    b1_it = list.erase(b1_it); // start from after b1_it
+				    goto newlist;
+			    } else {
+                    stats.c_from_split += sub2.size();
+                    list.splice(list.end(), sub2);
                     list.erase(b2_it);
-                    // continue where b1_it was
-                    stats.c_swallowed++;
-					goto newlist;
-				}
-				c2 = sub2.size();
-			}
+                    // start from where b1_it left off
+				    goto newlist;
+			    }
+		    }
 
-			if (sub.empty() && sub2.empty()) {
-				continue;		// neither one can bite
-            }
+            clock.increase();
+	    }
 
-			// only accept if it didn't fragment
-			// (commenting this out allows full fragmentation)
-			if (c1 > 1 && c2 > 1) {
-				continue;
-			}
-
-			if (c1 < c2) {
-                stats.c_from_split += sub.size();
-                list.splice(list.end(), sub);
-                b1_it = list.erase(b1_it); // start from after b1_it
-				goto newlist;
-			} else {
-                stats.c_from_split += sub2.size();
-                list.splice(list.end(), sub2);
-                list.erase(b2_it);
-                // start from where b1_it left off
-				goto newlist;
-			}
-		}
-
-#if 0
-		if (!b2)
-		{	// b1 is no longer intersecting anything, so keep it
-			b1->next = keep;
-			keep = b1;
-		}
-#endif
-	}
+        // since chopbrushes can remove stuff, exact counts are hard...
+        clock.count = clock.max - 1;
+    }
 
     brushes.insert(brushes.begin(), std::make_move_iterator(list.begin()), std::make_move_iterator(list.end()));
     logging::print(logging::flag::STAT, "chopped {} brushes into {}\n", original_count, brushes.size());

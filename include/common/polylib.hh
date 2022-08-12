@@ -613,6 +613,10 @@ public:
         count = new_size;
     }
 
+    inline void reserve(size_t size)
+    {
+    }
+
     inline void clear()
     {
         count = 0;

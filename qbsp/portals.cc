@@ -523,13 +523,13 @@ void MakeTreePortals(tree_t *tree)
 
     FreeTreePortals(tree);
 
-    portalstats_t stats{};
-
     auto headnodeportals = MakeHeadnodePortals(tree);
 
     {
         logging::percent_clock clock;
         clock.max = tree->nodes.size() + 1;
+
+        portalstats_t stats{};
 
         auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::TREE, std::move(headnodeportals), stats, clock);
 
@@ -540,7 +540,6 @@ void MakeTreePortals(tree_t *tree)
 
     CalcTreeBounds_r(tree, tree->headnode);
 
-    logging::print(logging::flag::STAT, "       {:8} tiny portals\n", stats.c_tinyportals);
     logging::print(logging::flag::STAT, "       {:8} tree portals\n", tree->portals.size());
 }
 
