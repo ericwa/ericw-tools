@@ -1124,7 +1124,7 @@ public:
     ==================
     */
     std::optional<winding_base_t> clip_back(
-        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
