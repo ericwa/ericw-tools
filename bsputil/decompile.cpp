@@ -292,9 +292,25 @@ public:
     }
 
     decomp_brush_face_t(std::optional<winding_t> &&windingToTakeOwnership, const mface_t *face)
-        : winding(windingToTakeOwnership), original_face(face)
+        : winding(std::move(windingToTakeOwnership)), original_face(face)
     {
         buildInwardFacingEdgePlanes();
+    }
+
+    // FIXME
+    decomp_brush_face_t(const decomp_brush_face_t &face) :
+        winding(face.winding ? decltype(winding)(face.winding->clone()) : std::nullopt),
+        original_face(face.original_face),
+        inwardFacingEdgePlanes(face.inwardFacingEdgePlanes)
+    {
+    }
+
+    decomp_brush_face_t &operator=(const decomp_brush_face_t &copy)
+    {
+        winding = copy.winding ? decltype(winding)(copy.winding->clone()) : std::nullopt;
+        original_face = copy.original_face;
+        inwardFacingEdgePlanes = copy.inwardFacingEdgePlanes;
+        return *this;
     }
 
 public:
@@ -374,6 +390,22 @@ struct decomp_brush_side_t
     decomp_brush_side_t(const std::vector<decomp_brush_face_t> &facesIn, const decomp_plane_t &planeIn)
         : faces(facesIn), plane(planeIn)
     {
+    }
+
+    // FIXME
+    decomp_brush_side_t(const decomp_brush_side_t &copy) :
+        faces(copy.faces),
+        plane(copy.plane),
+        winding(copy.winding.clone())
+    {
+    }
+
+    decomp_brush_side_t &operator=(const decomp_brush_side_t &copy)
+    {
+        faces = copy.faces;
+        plane = copy.plane;
+        winding = copy.winding.clone();
+        return *this;
     }
 
     /**
@@ -617,7 +649,7 @@ static decomp_brush_t BuildInitialBrush_Q2(
             continue;
 
         auto side = decomp_brush_side_t(bsp, task, plane);
-        side.winding = *winding;
+        side.winding = std::move(*winding);
 
         sides.emplace_back(side);
     }
@@ -801,11 +833,11 @@ static compiled_brush_t DecompileLeafTask(
         }
     }
 
-    for (const decomp_brush_t &finalBrush : finalBrushes) {
-        for (const auto &finalSide : finalBrush.sides) {
+    for (decomp_brush_t &finalBrush : finalBrushes) {
+        for (auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
             side.plane = finalSide.plane;
-            side.winding = finalSide.winding;
+            side.winding = std::move(finalSide.winding);
             side.source = finalSide.plane.source;
 
             if (brush.contents.native == 0) {
