@@ -125,10 +125,10 @@ MakeHeadnodePortals
 The created portals will face the global outside_node
 ================
 */
-std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
+std::list<buildportal_t> MakeHeadnodePortals(tree_t *tree)
 {
     int i, j, n;
-    std::array<std::unique_ptr<buildportal_t>, 6> portals;
+    std::array<buildportal_t, 6> portals {};
     qplane3d bplanes[6];
 
     // pad with some space so there will never be null volume leafs
@@ -144,8 +144,7 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
         for (j = 0; j < 2; j++) {
             n = j * 3 + i;
 
-            portals[n] = std::make_unique<buildportal_t>();
-            auto *p = portals[n].get();
+            auto &p = portals[n];
 
             qplane3d &pl = bplanes[n] = {};
 
@@ -156,19 +155,19 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
                 pl.normal[i] = 1;
                 pl.dist = bounds[j][i];
             }
-            bool side = p->plane.set_plane(pl, true);
+            bool side = p.plane.set_plane(pl, true);
 
-            p->winding = BaseWindingForPlane<winding_t>(pl);
+            p.winding = BaseWindingForPlane<winding_t>(pl);
             if (side) {
-                p->set_nodes(&tree->outside_node, tree->headnode);
+                p.set_nodes(&tree->outside_node, tree->headnode);
             } else {
-                p->set_nodes(tree->headnode, &tree->outside_node);
+                p.set_nodes(tree->headnode, &tree->outside_node);
             }
         }
 
     // clip the basewindings by all the other planes
     for (i = 0; i < 6; i++) {
-        winding_t &w = portals[i]->winding;
+        winding_t &w = portals[i].winding;
 
         for (j = 0; j < 6; j++) {
             if (j == i)
@@ -183,11 +182,7 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
     }
 
     // move into std::list
-    std::list<std::unique_ptr<buildportal_t>> result;
-    for (auto &p : portals) {
-        result.push_back(std::move(p));
-    }
-    return result;
+    return { std::make_move_iterator(portals.begin()), std::make_move_iterator(portals.end()) };
 }
 
 //============================================================================
@@ -231,7 +226,7 @@ and clipping it by all of parents of this node, as well as all the other
 portals in the node.
 ==================
 */
-std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std::unique_ptr<buildportal_t>> &boundary_portals, portalstats_t &stats)
+static std::optional<buildportal_t> MakeNodePortal(node_t *node, const std::list<buildportal_t> &boundary_portals, portalstats_t &stats)
 {
     auto w = BaseWindingForNode(node);
 
@@ -242,10 +237,10 @@ std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std:
         }
         qplane3d plane;
 
-        if (p->nodes[0] == node) {
-            plane = p->plane;
-        } else if (p->nodes[1] == node) {
-            plane = -p->plane;
+        if (p.nodes[0] == node) {
+            plane = p.plane;
+        } else if (p.nodes[1] == node) {
+            plane = -p.plane;
         } else {
             Error("CutNodePortals_r: mislinked portal");
         }
@@ -255,21 +250,20 @@ std::unique_ptr<buildportal_t> MakeNodePortal(node_t *node, const std::list<std:
     }
 
     if (!w) {
-        return {};
+        return std::nullopt;
     }
 
     if (WindingIsTiny(*w)) {
         stats.c_tinyportals++;
-        return {};
+        return std::nullopt;
     }
 
-    auto new_portal = std::make_unique<buildportal_t>();
-    new_portal->plane = node->get_plane();
-    new_portal->onnode = node;
-    new_portal->winding = std::move(*w);
-    new_portal->set_nodes(node->children[0], node->children[1]);
-
-    return new_portal;
+    buildportal_t new_portal {};
+    new_portal.plane = node->get_plane();
+    new_portal.onnode = node;
+    new_portal.winding = std::move(*w);
+    new_portal.set_nodes(node->children[0], node->children[1]);
+    return std::move(new_portal);
 }
 
 /*
@@ -280,31 +274,31 @@ Move or split the portals that bound node so that the node's
 children have portals instead of node.
 ==============
 */
-twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_t *node, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats)
+static twosided<std::list<buildportal_t>> SplitNodePortals(const node_t *node, std::list<buildportal_t> boundary_portals, portalstats_t &stats)
 {
     const auto &plane = node->get_plane();
     node_t *f = node->children[0];
     node_t *b = node->children[1];
 
-    twosided<std::list<std::unique_ptr<buildportal_t>>> result;
+    twosided<std::list<buildportal_t>> result;
 
-    for (auto&& p : boundary_portals) {
+    for (auto &p : boundary_portals) {
         // which side of p `node` is on
         planeside_t side;
-        if (p->nodes[SIDE_FRONT] == node)
+        if (p.nodes[SIDE_FRONT] == node)
             side = SIDE_FRONT;
-        else if (p->nodes[SIDE_BACK] == node)
+        else if (p.nodes[SIDE_BACK] == node)
             side = SIDE_BACK;
         else
             FError("CutNodePortals_r: mislinked portal");
 
-        node_t *other_node = p->nodes[!side];
-        p->set_nodes(nullptr, nullptr);
+        node_t *other_node = p.nodes[!side];
+        p.set_nodes(nullptr, nullptr);
 
         //
         // cut the portal into two portals, one on each side of the cut plane
         //
-        auto [frontwinding, backwinding] = p->winding.clip(plane, SPLIT_WINDING_EPSILON, true);
+        auto [frontwinding, backwinding] = p.winding.clip(plane, SPLIT_WINDING_EPSILON, true);
 
         if (frontwinding && WindingIsTiny(*frontwinding)) {
             frontwinding = {};
@@ -322,38 +316,38 @@ twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_
 
         if (!frontwinding) {
             if (side == SIDE_FRONT)
-                p->set_nodes(b, other_node);
+                p.set_nodes(b, other_node);
             else
-                p->set_nodes(other_node, b);
+                p.set_nodes(other_node, b);
 
             result.back.push_back(std::move(p));
             continue;
         }
         if (!backwinding) {
             if (side == SIDE_FRONT)
-                p->set_nodes(f, other_node);
+                p.set_nodes(f, other_node);
             else
-                p->set_nodes(other_node, f);
+                p.set_nodes(other_node, f);
 
             result.front.push_back(std::move(p));
             continue;
         }
 
         // the winding is split
-        auto new_portal = std::make_unique<buildportal_t>();
-        new_portal->plane = p->plane;
-        new_portal->onnode = p->onnode;
-        new_portal->nodes[0] = p->nodes[0];
-        new_portal->nodes[1] = p->nodes[1];
-        new_portal->winding = std::move(*backwinding);
-        p->winding = std::move(*frontwinding);
+        buildportal_t new_portal {};
+        new_portal.plane = p.plane;
+        new_portal.onnode = p.onnode;
+        new_portal.nodes[0] = p.nodes[0];
+        new_portal.nodes[1] = p.nodes[1];
+        new_portal.winding = std::move(*backwinding);
+        p.winding = std::move(*frontwinding);
 
         if (side == SIDE_FRONT) {
-            p->set_nodes(f, other_node);
-            new_portal->set_nodes(b, other_node);
+            p.set_nodes(f, other_node);
+            new_portal.set_nodes(b, other_node);
         } else {
-            p->set_nodes(other_node, f);
-            new_portal->set_nodes(other_node, b);
+            p.set_nodes(other_node, f);
+            new_portal.set_nodes(other_node, b);
         }
 
         result.front.push_back(std::move(p));
@@ -368,15 +362,16 @@ twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_
 MakePortalsFromBuildportals
 ================
 */
-void MakePortalsFromBuildportals(tree_t *tree, std::list<std::unique_ptr<buildportal_t>> buildportals)
+void MakePortalsFromBuildportals(tree_t *tree, std::list<buildportal_t> &buildportals)
 {
     tree->portals.reserve(buildportals.size());
-    for (const auto& buildportal : buildportals) {
+
+    for (auto &buildportal : buildportals) {
         portal_t *new_portal = tree->create_portal();
-        new_portal->plane = buildportal->plane;
-        new_portal->onnode = buildportal->onnode;
-        new_portal->winding = std::move(buildportal->winding);
-        AddPortalToNodes(new_portal, buildportal->nodes[0], buildportal->nodes[1]);
+        new_portal->plane = buildportal.plane;
+        new_portal->onnode = buildportal.onnode;
+        new_portal->winding = std::move(buildportal.winding);
+        AddPortalToNodes(new_portal, buildportal.nodes[0], buildportal.nodes[1]);
     }
 }
 
@@ -385,7 +380,7 @@ void MakePortalsFromBuildportals(tree_t *tree, std::list<std::unique_ptr<buildpo
 CalcNodeBounds
 ================
 */
-void CalcNodeBounds(node_t *node)
+inline void CalcNodeBounds(node_t *node)
 {
     // calc mins/maxs for both leafs and nodes
     node->bounds = aabb3d{};
@@ -439,7 +434,7 @@ descends the tree, splitting the portals as needed until they are connected to l
 The other side of the portals will remain untouched.
 ==================
 */
-static std::list<std::unique_ptr<buildportal_t>> ClipNodePortalsToTree_r(node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> portals, portalstats_t &stats)
+static std::list<buildportal_t> ClipNodePortalsToTree_r(node_t *node, portaltype_t type, std::list<buildportal_t> portals, portalstats_t &stats)
 {
     if (portals.empty()) {
         return portals;
@@ -453,7 +448,7 @@ static std::list<std::unique_ptr<buildportal_t>> ClipNodePortalsToTree_r(node_t 
     auto front_fragments = ClipNodePortalsToTree_r(node->children[0], type, std::move(boundary_portals_split.front), stats);
     auto back_fragments = ClipNodePortalsToTree_r(node->children[1], type, std::move(boundary_portals_split.back), stats);
 
-    std::list<std::unique_ptr<buildportal_t>> merged_result;
+    std::list<buildportal_t> merged_result;
     merged_result.splice(merged_result.end(), front_fragments);
     merged_result.splice(merged_result.end(), back_fragments);
     return merged_result;
@@ -466,7 +461,7 @@ MakeTreePortals_r
 Given the list of portals bounding `node`, returns the portal list for a fully-portalized `node`.
 ==================
 */
-std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats, logging::percent_clock &clock)
+std::list<buildportal_t> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<buildportal_t> boundary_portals, portalstats_t &stats, logging::percent_clock &clock)
 {
     clock();
 
@@ -475,14 +470,14 @@ std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t
     }
 
     // make the node portal before we move out the boundary_portals
-    std::unique_ptr<buildportal_t> nodeportal = MakeNodePortal(node, boundary_portals, stats);
+    std::optional<buildportal_t> nodeportal = MakeNodePortal(node, boundary_portals, stats);
 
     // parallel part: split boundary_portals between the front and back, and obtain the fully
     // portalized front/back sides in parallel
 
     auto boundary_portals_split = SplitNodePortals(node, std::move(boundary_portals), stats);
 
-    std::list<std::unique_ptr<buildportal_t>> result_portals_front, result_portals_back;
+    std::list<buildportal_t> result_portals_front, result_portals_back;
 
     tbb::task_group g;
     g.run([&]() { result_portals_front = MakeTreePortals_r(tree, node->children[0], type, std::move(boundary_portals_split.front), stats, clock); });
@@ -491,14 +486,15 @@ std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t
 
     // sequential part: push the nodeportal down each side of the bsp so it connects leafs
 
-    std::list<std::unique_ptr<buildportal_t>> result_portals_onnode;
+    std::list<buildportal_t> result_portals_onnode;
+
     if (nodeportal) {
         // to start with, `nodeportal` is a portal between node->children[0] and node->children[1]
 
         // these portal fragments have node->children[1] on one side, and the leaf nodes from
         // node->children[0] on the other side
-        std::list<std::unique_ptr<buildportal_t>> half_clipped =
-            ClipNodePortalsToTree_r(node->children[0], type, make_list(std::move(nodeportal)), stats);
+        std::list<buildportal_t> half_clipped =
+            ClipNodePortalsToTree_r(node->children[0], type, make_list(std::move(*nodeportal)), stats);
 
         for (auto &clipped_p : ClipNodePortalsToTree_r(node->children[1], type, std::move(half_clipped), stats)) {
             result_portals_onnode.push_back(std::move(clipped_p));
@@ -506,7 +502,7 @@ std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t
     }
 
     // all done, merge together the lists and return
-    std::list<std::unique_ptr<buildportal_t>> merged_result;
+    std::list<buildportal_t> merged_result;
     merged_result.splice(merged_result.end(), result_portals_front);
     merged_result.splice(merged_result.end(), result_portals_back);
     merged_result.splice(merged_result.end(), result_portals_onnode);
@@ -533,7 +529,7 @@ void MakeTreePortals(tree_t *tree)
 
         auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::TREE, std::move(headnodeportals), stats, clock);
 
-        MakePortalsFromBuildportals(tree, std::move(buildportals));
+        MakePortalsFromBuildportals(tree, buildportals);
     }
 
     logging::header("CalcTreeBounds");

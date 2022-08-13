@@ -272,7 +272,7 @@ void WritePortalFile(tree_t *tree)
         portalstats_t stats{};
         auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::VIS, {}, stats, clock);
 
-        MakePortalsFromBuildportals(tree, std::move(buildportals));
+        MakePortalsFromBuildportals(tree, buildportals);
     }
 
     /* save portal file for vis tracing */

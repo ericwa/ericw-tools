@@ -67,15 +67,13 @@ struct portalstats_t : logging::stat_tracker_t
 contentflags_t ClusterContents(const node_t *node);
 bool Portal_VisFlood(const portal_t *p);
 bool Portal_EntityFlood(const portal_t *p, int32_t s);
-std::list<std::unique_ptr<buildportal_t>> MakeNodePortal(tree_t *tree, node_t *node, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats);
-twosided<std::list<std::unique_ptr<buildportal_t>>> SplitNodePortals(const node_t *node, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats);
 enum class portaltype_t {
     TREE, VIS
 };
-std::list<std::unique_ptr<buildportal_t>> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<std::unique_ptr<buildportal_t>> boundary_portals, portalstats_t &stats, logging::percent_clock &clock);
+std::list<buildportal_t> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<buildportal_t> boundary_portals, portalstats_t &stats, logging::percent_clock &clock);
 void MakeTreePortals(tree_t *tree);
-std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree);
-void MakePortalsFromBuildportals(tree_t *tree, std::list<std::unique_ptr<buildportal_t>> buildportals);
+std::list<buildportal_t> MakeHeadnodePortals(tree_t *tree);
+void MakePortalsFromBuildportals(tree_t *tree, std::list<buildportal_t> &buildportals);
 void EmitAreaPortals(node_t *headnode);
 void FloodAreas(mapentity_t *entity, node_t *headnode);
 void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_t::container &brushes);
