@@ -113,7 +113,8 @@ BrushVolume
 
 ==================
 */
-static vec_t BrushVolume(const bspbrush_t &brush)
+template<typename T>
+static vec_t BrushVolume(const T &brush)
 {
     // grab the first valid point as the corner
 
@@ -322,48 +323,6 @@ static int TestBrushToPlanenum(
 
 //========================================================
 
-/*
-================
-WindingIsTiny
-
-Returns true if the winding would be crunched out of
-existance by the vertex snapping.
-================
-*/
-bool WindingIsTiny(const winding_t &w, double size)
-{
-    int edges = 0;
-    for (size_t i = 0; i < w.size(); i++) {
-        size_t j = (i + 1) % w.size();
-        const qvec3d delta = w[j] - w[i];
-        const double len = qv::length(delta);
-        if (len > size) {
-            if (++edges == 3)
-                return false;
-        }
-    }
-    return true;
-}
-
-/*
-================
-WindingIsHuge
-
-Returns true if the winding still has one of the points
-from basewinding for plane
-================
-*/
-bool WindingIsHuge(const winding_t &w)
-{
-    for (size_t i = 0; i < w.size(); i++) {
-        for (size_t j = 0; j < 3; j++) {
-            if (fabs(w[i][j]) > qbsp_options.worldextent.value())
-                return true;
-        }
-    }
-    return false;
-}
-
 //============================================================================
 
 /*
@@ -460,7 +419,8 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
     }
 
     // create a new winding from the split plane
-    auto w = std::optional<winding_t>{BaseWindingForPlane(split)};
+    std::optional<winding_t> w = BaseWindingForPlane<winding_t>(split);
+
     for (auto &face : brush->sides) {
         if (!w) {
             break;
@@ -501,24 +461,16 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
     for (const auto &face : brush->sides) {
         auto cw = face.w.clip(split, 0 /*PLANESIDE_EPSILON*/);
         for (size_t j = 0; j < 2; j++) {
-            if (!cw[j])
+            if (!cw[j]) {
                 continue;
-#if 0
-			if (WindingIsTiny (cw[j]))
-			{
-				FreeWinding (cw[j]);
-				continue;
-			}
-#endif
+            }
 
             // add the clipped face to result[j]
-            side_t faceCopy = face.clone_non_winding_data();
+            side_t &faceCopy = result[j]->sides.emplace_back(face.clone_non_winding_data());
             faceCopy.w = std::move(*cw[j]);
 
             // fixme-brushbsp: configure any settings on the faceCopy?
             // Q2 does `cs->tested = false;`, why?
-
-            result[j]->sides.push_back(std::move(faceCopy));
         }
     }
 
@@ -526,8 +478,10 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
 
     for (int i = 0; i < 2; i++) {
         bool bogus = false;
-
-        if (!result[i]->update_bounds(false)) {
+        
+        if (result[i]->sides.size() < 3) {
+            bogus = true;
+        } else if (!result[i]->update_bounds(false)) {
             if (stats) {
                 stats->get().c_bogus++;
             }
@@ -544,7 +498,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
             }
         }
 
-        if (result[i]->sides.size() < 3 || bogus) {
+        if (bogus) {
             result[i] = nullptr;
         }
     }
@@ -571,7 +525,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
 
     // add the midwinding to both sides
     for (int i = 0; i < 2; i++) {
-        side_t cs{};
+        side_t &cs = result[i]->sides.emplace_back();
 
         const bool brushOnFront = (i == 0);
 
@@ -588,21 +542,14 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
         } else {
             cs.w = std::move(midwinding);
         }
-
-        result[i]->sides.push_back(std::move(cs));
     }
 
-    {
-        vec_t v1;
-        int i;
-
-        for (i = 0; i < 2; i++) {
-            v1 = BrushVolume(*result[i]);
-            if (v1 < qbsp_options.microvolume.value()) {
-                result[i] = nullptr;
-                if (stats) {
-                    stats->get().c_tinyvolumes++;
-                }
+    for (int i = 0; i < 2; i++) {
+        vec_t v1 = BrushVolume(*result[i]);
+        if (v1 < qbsp_options.microvolume.value()) {
+            result[i] = nullptr;
+            if (stats) {
+                stats->get().c_tinyvolumes++;
             }
         }
     }
@@ -619,13 +566,177 @@ inline void CheckPlaneAgainstParents(size_t planenum, node_t *node)
     }
 }
 
-static bool CheckPlaneAgainstVolume(size_t planenum, const node_t *node, bspstats_t &stats)
+using stack_winding_storage_t = polylib::winding_storage_hybrid_t<polylib::STACK_POINTS_ON_WINDING>;
+using stack_winding_t = polylib::winding_base_t<stack_winding_storage_t>;
+
+struct stack_side_t
 {
-    auto [front, back] = SplitBrush(node->volume, planenum, stats);
+    stack_winding_t w;
+    size_t planenum;
 
-    bool good = (front && back);
+    inline const qbsp_plane_t &get_plane() const { return map.planes[planenum]; }
+};
 
-    return good;
+struct stack_brush_t
+{
+    std::vector<stack_side_t> sides;
+    aabb3d bounds;
+
+    inline bool update_bounds()
+    {
+        this->bounds = {};
+
+        for (const auto &face : sides) {
+            if (face.w) {
+                this->bounds.unionWith_in_place(face.w.bounds());
+            }
+        }
+
+	    for (size_t i = 0; i < 3; i++) {
+            // todo: map_source_location in bspbrush_t
+		    if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() || this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+                return false;
+            }
+		    if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() || this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+                return false;
+            }
+	    }
+
+        return true;
+    }
+};
+
+/*
+================
+CheckSplitBrush
+
+A special, low-allocation version of SplitBrush. Checks if a brush split
+by the specified plane would result in two valid brushes.
+================
+*/
+static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
+{
+    const qplane3d &split = map.planes[planenum];
+
+    // check all points
+    vec_t d_front = 0;
+    vec_t d_back = 0;
+
+    for (auto &face : brush->sides) {
+        for (int j = 0; j < face.w.size(); j++) {
+            vec_t d = qv::dot(face.w[j], split.normal) - split.dist;
+            if (d > 0 && d > d_front)
+                d_front = d;
+            if (d < 0 && d < d_back)
+                d_back = d;
+        }
+    }
+
+    if (d_front < 0.1) // PLANESIDE_EPSILON)
+    {
+        return false;
+    }
+    if (d_back > -0.1) // PLANESIDE_EPSILON)
+    { // only on front
+        return false;
+    }
+
+    // create a new winding from the split plane
+    std::optional<stack_winding_t> w = BaseWindingForPlane<stack_winding_t>(split);
+
+    for (auto &face : brush->sides) {
+        if (!w) {
+            return false;
+        }
+        w = w->clip_back(face.get_plane());
+    }
+
+    if (!w || WindingIsTiny(*w)) { // the brush isn't really split
+        return false;
+    }
+
+    stack_winding_t &midwinding = *w;
+
+    // split it for real
+
+    // start with 2 empty brushes
+    thread_local static twosided<stack_brush_t> temporary_brushes;
+
+    for (int i = 0; i < 2; i++) {
+        temporary_brushes[i].sides.clear();
+        temporary_brushes[i].sides.reserve(brush->sides.size() + 1);
+    }
+
+    // split all the current windings
+
+    for (const auto &face : brush->sides) {
+        auto cw = face.w.clip<stack_winding_storage_t>(split, 0 /*PLANESIDE_EPSILON*/);
+
+        for (size_t j = 0; j < 2; j++) {
+            if (!cw[j]) {
+                continue;
+            }
+
+            // add the clipped face to result[j]
+            stack_side_t &faceCopy = temporary_brushes[j].sides.emplace_back();
+            faceCopy.planenum = face.planenum;
+            faceCopy.w = std::move(*cw[j]);
+        }
+    }
+
+    // see if we have valid polygons on both sides
+
+    for (int i = 0; i < 2; i++) {
+        if (temporary_brushes[i].sides.size() < 3) {
+            return false;
+        }
+
+        if (!temporary_brushes[i].update_bounds()) {
+            return false;
+        } else {
+            for (int j = 0; j < 3; j++) {
+                if (temporary_brushes[i].bounds.mins()[j] < -qbsp_options.worldextent.value() || temporary_brushes[i].bounds.maxs()[j] > qbsp_options.worldextent.value()) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    // add the midwinding to both sides
+    // FIXME: check if we can remove this/if BrushVolume below
+    // will have the same result either way
+    for (int i = 0; i < 2; i++) {
+        stack_side_t &cs = temporary_brushes[i].sides.emplace_back();
+
+        const bool brushOnFront = (i == 0);
+
+        cs.planenum = planenum ^ i ^ 1;
+
+        if (brushOnFront) {
+            cs.w = midwinding.flip();
+        } else {
+            cs.w = std::move(midwinding);
+        }
+    }
+
+    for (int i = 0; i < 2; i++) {
+        vec_t v1 = BrushVolume(temporary_brushes[i]);
+        if (v1 < qbsp_options.microvolume.value()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+inline bool CheckPlaneAgainstVolume(size_t planenum, const node_t *node)
+{
+    bool valid = CheckSplitBrush(node->volume, planenum);
+#ifdef PARANOID
+    auto [ front, back ] = SplitBrush(node->volume, planenum, std::nullopt);
+    Q_assert(valid == (front && back));
+#endif
+    return valid;
 }
 
 /*
@@ -705,7 +816,7 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static std::optional<size_t> ChooseMidPlaneFromList(const bspbrush_t::container &brushes, const node_t *node, bspstats_t &stats)
+static std::optional<size_t> ChooseMidPlaneFromList(const bspbrush_t::container &brushes, const node_t *node)
 {
     vec_t bestaxialmetric = VECT_MAX;
     std::optional<size_t> bestaxialplane;
@@ -725,7 +836,7 @@ static std::optional<size_t> ChooseMidPlaneFromList(const bspbrush_t::container 
             size_t positive_planenum = side.planenum & ~1;
             const qbsp_plane_t &plane = side.get_positive_plane();
 
-            if (!CheckPlaneAgainstVolume(positive_planenum, node, stats)) {
+            if (!CheckPlaneAgainstVolume(positive_planenum, node)) {
                 continue; // would produce a tiny volume
             }
 
@@ -791,7 +902,7 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
         }
 
         if (forced_quick_tree.value()) {
-            if (auto mid_plane = ChooseMidPlaneFromList(brushes, node, stats)) {
+            if (auto mid_plane = ChooseMidPlaneFromList(brushes, node)) {
                 stats.c_midsplit++;
 
                 for (auto &b : brushes) {
@@ -836,7 +947,7 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
 
                 CheckPlaneAgainstParents(positive_planenum, node);
 
-                if (!CheckPlaneAgainstVolume(positive_planenum, node, stats))
+                if (!CheckPlaneAgainstVolume(positive_planenum, node))
                     continue; // would produce a tiny volume
 
                 int front = 0;

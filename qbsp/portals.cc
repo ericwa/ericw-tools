@@ -158,7 +158,7 @@ std::list<std::unique_ptr<buildportal_t>> MakeHeadnodePortals(tree_t *tree)
             }
             bool side = p->plane.set_plane(pl, true);
 
-            p->winding = BaseWindingForPlane(pl);
+            p->winding = BaseWindingForPlane<winding_t>(pl);
             if (side) {
                 p->set_nodes(&tree->outside_node, tree->headnode);
             } else {
@@ -204,7 +204,7 @@ constexpr vec_t SPLIT_WINDING_EPSILON = 0.001;
 
 static std::optional<winding_t> BaseWindingForNode(const node_t *node)
 {
-    std::optional<winding_t> w = BaseWindingForPlane(node->get_plane());
+    std::optional<winding_t> w = BaseWindingForPlane<winding_t>(node->get_plane());
 
     // clip by all the parents
     for (auto *np = node->parent; np && w;) {

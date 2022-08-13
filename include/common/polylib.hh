@@ -738,15 +738,23 @@ public:
         storage.clear();
     }
 
-    // non-storage functions
+    template<typename TStor>
+    friend struct winding_base_t;
 
     // explicit copying function
-    winding_base_t clone() const
+    template<typename TStor = TStorage>
+    winding_base_t<TStor> clone() const
     {
-        winding_base_t result;
-        result.storage = storage;
+        winding_base_t<TStor> result;
+        if constexpr(std::is_same_v<TStor, TStorage>) {
+            result.storage = storage;
+        } else {
+            result.storage = TStor{begin(), end()};
+        }
         return result;
     }
+
+    // non-storage functions
 
     vec_t area() const
     {
@@ -990,7 +998,8 @@ public:
     it will be clipped away.
     ==================
     */
-    twosided<std::optional<winding_base_t>> clip(
+    template<typename TStor = TStorage>
+    twosided<std::optional<winding_base_t<TStor>>> clip(
         const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
@@ -999,14 +1008,14 @@ public:
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
 
         if (keepon && !counts[SIDE_FRONT] && !counts[SIDE_BACK])
-            return {this->clone(), std::nullopt};
+            return {this->clone<TStor>(), std::nullopt};
 
         if (!counts[SIDE_FRONT])
-            return {std::nullopt, this->clone()};
+            return {std::nullopt, this->clone<TStor>()};
         else if (!counts[SIDE_BACK])
-            return {this->clone(), std::nullopt};
+            return {this->clone<TStor>(), std::nullopt};
 
-        twosided<winding_base_t> results{};
+        twosided<winding_base_t<TStor>> results{};
 
         for (auto &w : results) {
             w.reserve(size() + 4);

@@ -267,7 +267,7 @@ bool CreateBrushWindings(bspbrush_t *brush)
 
     for (int i = 0; i < brush->sides.size(); i++) {
         side_t *side = &brush->sides[i];
-        w = BaseWindingForPlane(side->get_plane());
+        w = BaseWindingForPlane<winding_t>(side->get_plane());
         for (int j = 0; j < brush->sides.size() && w; j++) {
             if (i == j)
                 continue;

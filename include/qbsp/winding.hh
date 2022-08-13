@@ -24,5 +24,3 @@
 #include "common/polylib.hh"
 
 using winding_t = polylib::winding_t;
-
-winding_t BaseWindingForPlane(const qplane3d &p);

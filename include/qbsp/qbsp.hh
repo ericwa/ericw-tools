@@ -621,6 +621,12 @@ namespace qv
 }
 }; // namespace qv
 
+template<typename T>
+T BaseWindingForPlane(const qplane3d &p)
+{
+    return T::from_plane(p, qbsp_options.worldextent.value());
+}
+
 // there is a node_t structure for every node and leaf in the bsp tree
 
 #include <set>

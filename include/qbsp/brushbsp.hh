@@ -38,7 +38,53 @@ struct tree_t;
 
 constexpr vec_t EDGE_LENGTH_EPSILON = 0.2;
 
-bool WindingIsTiny(const winding_t &w, double size = EDGE_LENGTH_EPSILON);
+
+/*
+================
+WindingIsTiny
+
+Returns true if the winding would be crunched out of
+existance by the vertex snapping.
+================
+*/
+template<typename T>
+bool WindingIsTiny(const T &w, double size = EDGE_LENGTH_EPSILON)
+{
+    size_t edges = 0;
+    for (size_t i = 0; i < w.size(); i++) {
+        size_t j = (i + 1) % w.size();
+        const qvec3d delta = w[j] - w[i];
+        const double len = qv::length(delta);
+        if (len > size) {
+            if (++edges == 3) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/*
+================
+WindingIsHuge
+
+Returns true if the winding still has one of the points
+from basewinding for plane
+================
+*/
+template<typename T>
+bool WindingIsHuge(const T &w)
+{
+    for (size_t i = 0; i < w.size(); i++) {
+        for (size_t j = 0; j < 3; j++) {
+            if (fabs(w[i][j]) > qbsp_options.worldextent.value()) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 bspbrush_t::ptr BrushFromBounds(const aabb3d &bounds);
 std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::container &brushes, std::optional<bool> forced_quick_tree);
 void ChopBrushes(bspbrush_t::container &brushes);

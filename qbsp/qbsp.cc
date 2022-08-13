@@ -351,11 +351,6 @@ static void ExportBrushList(mapentity_t *entity, node_t *node)
     logging::print(logging::flag::STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
 }
 
-winding_t BaseWindingForPlane(const qplane3d &p)
-{
-    return winding_t::from_plane(p, qbsp_options.worldextent.value());
-}
-
 static bool IsTrigger(const mapentity_t *entity)
 {
     auto &tex = entity->mapbrushes.front().faces[0].texname;

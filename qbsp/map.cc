@@ -2219,7 +2219,7 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 
 	for (size_t i = 0; i < ob.faces.size(); i++) {
 		const auto &plane = ob.faces[i].get_plane();
-		std::optional<winding_t> w = BaseWindingForPlane(plane);
+		std::optional<winding_t> w = BaseWindingForPlane<winding_t>(plane);
 		
         for (size_t j = 0; j < ob.faces.size() && w; j++) {
 			if (i == j) {
@@ -2819,7 +2819,7 @@ void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list)
     for (auto &brush : list) {
         fmt::print(f, "{{\n");
         for (auto &face : brush->sides) {
-            winding_t w = BaseWindingForPlane(face.get_plane());
+            winding_t w = BaseWindingForPlane<winding_t>(face.get_plane());
 
             fmt::print(f, "( {} ) ", w[0]);
             fmt::print(f, "( {} ) ", w[1]);
