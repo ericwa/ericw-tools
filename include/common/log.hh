@@ -190,12 +190,12 @@ struct stat_tracker_t
         {
         }
         
-        inline std::atomic_size_t::value_type operator++(int) noexcept { return count++; }
-        inline std::atomic_size_t::value_type operator++() noexcept { return ++count; }
-        inline std::atomic_size_t::value_type operator+=(std::atomic_size_t::value_type v) noexcept { return count += v; }
-        inline std::atomic_size_t::value_type operator++(int) volatile noexcept { return count++; }
-        inline std::atomic_size_t::value_type operator++() volatile noexcept { return ++count; }
-        inline std::atomic_size_t::value_type operator+=(std::atomic_size_t::value_type v) volatile noexcept { return count += v; }
+        inline size_t operator++(int) noexcept { return count++; }
+        inline size_t operator++() noexcept { return ++count; }
+        inline size_t operator+=(size_t v) noexcept { return count += v; }
+        inline size_t operator++(int) volatile noexcept { return count++; }
+        inline size_t operator++() volatile noexcept { return ++count; }
+        inline size_t operator+=(size_t v) volatile noexcept { return count += v; }
     };
 
     std::list<stat> stats;
