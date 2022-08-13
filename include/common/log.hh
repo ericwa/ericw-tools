@@ -29,6 +29,7 @@
 #include <atomic>
 #include <cstdarg>
 #include <filesystem>
+#include <list>
 #include <fmt/format.h>
 #include <common/bitflags.hh>
 #include <common/fs.hh>
@@ -124,8 +125,6 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed = true);
 // the counter does not have a determinating maximum factor.
 constexpr uint64_t indeterminate = std::numeric_limits<uint64_t>::max();
 
-#include <atomic>
-
 // simple wrapper to percent() to use it in an object-oriented manner. you can
 // call print() to explicitly end the clock, or allow it to run out of scope.
 struct percent_clock
@@ -173,9 +172,6 @@ struct percent_clock
     // implicitly calls print()
     inline ~percent_clock() { print(); }
 };
-
-#include <list>
-#include <atomic>
 
 // base class intended to be inherited for stat trackers;
 // they will automatically print the results at the end,
