@@ -451,7 +451,12 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
      */
-    Brush_LoadEntity(entity, hullnum, brushes);
+    size_t num_clipped = 0;
+    Brush_LoadEntity(entity, hullnum, brushes, num_clipped);
+
+    if (num_clipped && !qbsp_options.verbose.value()) {
+        logging::print("WARNING: {} faces were clipped away. This is normal for expanded hulls; use -verbose if you need more info.\n", num_clipped);
+    }
 
     size_t num_sides = 0;
     for (size_t i = 0; i < brushes.size(); ++i) {
@@ -481,7 +486,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             if (FillOutside(entity, tree.get(), hullnum, brushes)) {
                 // make a really good tree
                 tree.reset();
-                tree = BrushBSP(entity, brushes, false);
+                tree = BrushBSP(entity, brushes, std::nullopt);
 
                 // fill again so PruneNodes works
                 MakeTreePortals(tree.get());

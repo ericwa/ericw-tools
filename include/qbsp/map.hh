@@ -345,7 +345,7 @@ qvec3d FixRotateOrigin(mapentity_t *entity);
 constexpr int HULL_COLLISION = -1;
 
 /* Create BSP brushes from map brushes */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes);
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes, size_t &num_clipped);
 
 std::list<face_t *> CSGFace(
     face_t *srcface, const mapentity_t *srcentity, const bspbrush_t *srcbrush, const node_t *srcnode);

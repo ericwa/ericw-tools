@@ -2860,7 +2860,7 @@ static void TestExpandBrushes(mapentity_t *src)
 
     for (auto &mapbrush : src->mapbrushes) {
         auto hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
-            qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1);
+            qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1, std::nullopt);
 
         if (hull1brush) {
             hull1brushes.emplace_back(bspbrush_t::make_ptr(std::move(*hull1brush)));

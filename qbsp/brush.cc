@@ -103,16 +103,22 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-static void CheckFace(side_t *face, const mapface_t &sourceface)
+static void CheckFace(side_t *face, const mapface_t &sourceface, std::optional<std::reference_wrapper<size_t>> num_clipped)
 {
     if (face->w.size() < 3) {
-        if (face->w.size() == 2) {
-            logging::print(
-                "WARNING: {}: partially clipped into degenerate polygon @ ({}) - ({})\n", sourceface.line, face->w[0], face->w[1]);
-        } else if (face->w.size() == 1) {
-            logging::print("WARNING: {}: partially clipped into degenerate polygon @ ({})\n", sourceface.line, face->w[0]);
-        } else {
-            logging::print("WARNING: {}: completely clipped away\n", sourceface.line);
+        if (qbsp_options.verbose.value()) {
+            if (face->w.size() == 2) {
+                logging::print(
+                    "WARNING: {}: partially clipped into degenerate polygon @ ({}) - ({})\n", sourceface.line, face->w[0], face->w[1]);
+            } else if (face->w.size() == 1) {
+                logging::print("WARNING: {}: partially clipped into degenerate polygon @ ({})\n", sourceface.line, face->w[0]);
+            } else {
+                logging::print("WARNING: {}: completely clipped away\n", sourceface.line);
+            }
+        }
+
+        if (num_clipped) {
+            (*num_clipped)++;
         }
 
         face->w.clear();
@@ -151,7 +157,7 @@ static void CheckFace(side_t *face, const mapface_t &sourceface)
             for (size_t j = i + 1; j < face->w.size(); j++)
                 face->w[j - 1] = face->w[j];
             face->w.resize(face->w.size() - 1);
-            CheckFace(face, sourceface);
+            CheckFace(face, sourceface, num_clipped);
             break;
         }
 
@@ -298,7 +304,7 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents,
-    const int hullnum)
+    const int hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped)
 {
     // create the brush
     bspbrush_t brush{};
@@ -352,7 +358,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
     }
 
     for (auto &face : brush.sides) {
-        CheckFace(&face, *face.source);
+        CheckFace(&face, *face.source, num_clipped);
     }
 
     // Rotatable objects must have a bounding box big enough to
@@ -393,7 +399,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock)
+static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
 {
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
@@ -494,7 +500,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
          */
         if (hullnum != HULL_COLLISION && contents.is_clip(qbsp_options.target_game)) {
             if (hullnum == 0) {
-                if (auto brush = LoadBrush(src, &mapbrush, contents, hullnum)) {
+                if (auto brush = LoadBrush(src, &mapbrush, contents, hullnum, num_clipped)) {
                     dst->bounds += brush->bounds;
                 }
                 continue;
@@ -541,7 +547,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        auto brush = LoadBrush(src, &mapbrush, contents, hullnum);
+        auto brush = LoadBrush(src, &mapbrush, contents, hullnum, num_clipped);
 
         if (!brush) {
             continue;
@@ -562,7 +568,7 @@ hullnum HULL_COLLISION should contain ALL brushes. (used by BSPX_CreateBrushList
 hullnum 0 does not contain clip brushes.
 ============
 */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes)
+void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes, size_t &num_clipped)
 {
     logging::funcheader();
 
@@ -570,7 +576,7 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::contai
     logging::percent_clock clock(0);
     clock.displayElapsed = (entity == map.world_entity());
 
-    Brush_LoadEntity(entity, entity, hullnum, *stats, brushes, clock);
+    Brush_LoadEntity(entity, entity, hullnum, *stats, brushes, clock, num_clipped);
 
     /*
      * If this is the world entity, find all func_group and func_detail
@@ -590,7 +596,7 @@ void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::contai
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {
-                Brush_LoadEntity(entity, source, hullnum, *stats, brushes, clock);
+                Brush_LoadEntity(entity, source, hullnum, *stats, brushes, clock, num_clipped);
             }
         }
     }
