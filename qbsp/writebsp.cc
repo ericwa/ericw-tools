@@ -429,7 +429,6 @@ FinishBSPFile
 */
 void FinishBSPFile(void)
 {
-    qbsp_options.fVerbose = true;
     logging::funcheader();
 
     if (map.bsp.dvertexes.empty()) {
@@ -440,8 +439,6 @@ void FinishBSPFile(void)
 
     WriteExtendedTexinfoFlags();
     WriteBSPFile();
-
-    qbsp_options.fVerbose = qbsp_options.fAllverbose;
 }
 
 /*

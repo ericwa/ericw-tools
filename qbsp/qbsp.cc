@@ -182,16 +182,6 @@ void qbsp_settings::load_entity_def(const std::string &pathname)
 
 void qbsp_settings::postinitialize(int argc, const char **argv)
 {
-    // side effects from common
-    if (logging::mask & logging::flag::VERBOSE) {
-        qbsp_options.fAllverbose = true;
-    }
-
-    if ((logging::mask & (bitflags<logging::flag>(logging::flag::PERCENT) | logging::flag::STAT |
-                             logging::flag::PROGRESS)) == logging::flag::NONE) {
-        qbsp_options.fNoverbose = true;
-    }
-
     // set target BSP type
     if (hlbsp.value()) {
         set_target_version(&bspver_hl);
@@ -293,9 +283,6 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 void qbsp_settings::reset() {
     common_settings::reset();
 
-    fVerbose = false;
-    fAllverbose = false;
-    fNoverbose = false;
     target_version = nullptr;
     target_game = nullptr;
     map_path = fs::path();
@@ -436,7 +423,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
             std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
 
-            if (qbsp_options.fVerbose)
+            if (qbsp_options.verbose.value())
                 PrintEntity(entity);
 
             if (hullnum <= 0)
@@ -639,12 +626,6 @@ static void UpdateEntLump(void)
 
     WriteEntitiesToString();
     UpdateBSPFileEntitiesLump();
-
-    if (!qbsp_options.fAllverbose) {
-        qbsp_options.fVerbose = false;
-        logging::mask &=
-            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
-    }
 }
 
 /*
@@ -794,12 +775,27 @@ static void CreateSingleHull(const int hullnum)
 
     // for each entity in the map file that has geometry
     for (auto &entity : map.entities) {
-        ProcessEntity(&entity, hullnum);
-        if (!qbsp_options.fAllverbose) {
-            qbsp_options.fVerbose = false; // don't print rest of entities
-            logging::mask &=
-                ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
+        bool wants_logging = true;
+
+        // decide if we want to log this entity / hull combination
+        if (&entity != map.world_entity()) {
+            wants_logging = wants_logging && qbsp_options.logbmodels.value();
         }
+        if (hullnum > 0) {
+            wants_logging = wants_logging && qbsp_options.loghulls.value();
+        }
+
+        // update logging mask if requested
+        const auto prev_logging_mask = logging::mask;
+        if (!wants_logging) {
+            logging::mask &= ~(
+                bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
+        }
+
+        ProcessEntity(&entity, hullnum);
+
+        // restore logging
+        logging::mask = prev_logging_mask;
     }
 }
 
@@ -811,12 +807,6 @@ CreateHulls
 static void CreateHulls(void)
 {
     /* create the hulls sequentially */
-    if (!qbsp_options.fNoverbose) {
-        qbsp_options.fVerbose = true;
-        logging::mask |=
-            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
-    }
-
     auto &hulls = qbsp_options.target_game->get_hull_sizes();
 
     // game has no hulls, so we have to export brush lists and stuff.
@@ -952,22 +942,9 @@ void ProcessFile()
     // init the tables to be shared by all models
     BeginBSPFile();
 
-    if (!qbsp_options.fAllverbose) {
-        qbsp_options.fVerbose = false;
-        logging::mask &=
-            ~(bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
-    }
-
     // create hulls!
     CreateHulls();
     
-    // undo logging changes
-    if (!qbsp_options.fNoverbose) {
-        qbsp_options.fVerbose = true;
-        logging::mask |=
-            (bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
-    }
-
     WriteEntitiesToString();
     BSPX_CreateBrushList();
     FinishBSPFile();

@@ -352,6 +352,8 @@ public:
         "the max number of edges/vertices on a single face before it is split into another face"};
     setting_numeric<vec_t> midsplitbrushfraction{this, "midsplitbrushfraction", 0.0, &common_format_group, "switch to cheaper partitioning if a node contains this % of brushes in the map"};
     setting_string add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"};
+    setting_bool loghulls{this, {"loghulls"}, false, &logging_group, "print log output for collision hulls"};
+    setting_bool logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"};
 
     void setParameters(int argc, const char **argv) override
     {
@@ -364,9 +366,6 @@ public:
     void postinitialize(int argc, const char **argv) override;
     void reset() override;
 
-    bool fVerbose = true;
-    bool fAllverbose = false;
-    bool fNoverbose = false;
     const bspversion_t *target_version = nullptr;
     const gamedef_t *target_game = nullptr;
     fs::path map_path;

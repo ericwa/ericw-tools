@@ -2679,8 +2679,6 @@ void ConvertMapFile(void)
     }
 
     logging::print("Conversion saved to {}\n", filename);
-
-    qbsp_options.fVerbose = false;
 }
 
 void PrintEntity(const mapentity_t *entity)
