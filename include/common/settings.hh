@@ -713,7 +713,7 @@ public:
     // copy assignment
     setting_container &operator=(const setting_container &other) = delete;
 
-    void reset();
+    virtual void reset();
 
     void copyFrom(const setting_container &other);
 
