@@ -362,6 +362,7 @@ public:
     }
     void initialize(int argc, const char **argv) override;
     void postinitialize(int argc, const char **argv) override;
+    void reset() override;
 
     bool fVerbose = true;
     bool fAllverbose = false;

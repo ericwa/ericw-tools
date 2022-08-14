@@ -289,6 +289,20 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
     common_settings::postinitialize(argc, argv);
 }
+
+void qbsp_settings::reset() {
+    common_settings::reset();
+
+    fVerbose = false;
+    fAllverbose = false;
+    fNoverbose = false;
+    target_version = nullptr;
+    target_game = nullptr;
+    map_path = fs::path();
+    bsp_path = fs::path();
+    loaded_texture_defs.clear();
+    loaded_entity_defs.clear();
+}
 }; // namespace settings
 
 settings::qbsp_settings qbsp_options;
