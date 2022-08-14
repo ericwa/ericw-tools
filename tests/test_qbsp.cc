@@ -652,6 +652,13 @@ TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
     // 5 faces for the "button"
     // 9 faces for the room
     REQUIRE(bsp.dfaces.size() == 14);
+
+    // 6 for the box room
+    // 5 for the "button"
+    CHECK(bsp.dnodes.size() == 11);
+
+    // this is how many we get with ericw-tools-v0.18.1-32-g6660c5f-win64
+    CHECK(bsp.dclipnodes.size() <= 22);
 }
 
 TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
@@ -1105,6 +1112,10 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
     // model bounds are shrunk by 1 unit on each side for some reason
     CHECK(cube_bounds.grow(-1).mins() == bsp.dmodels[0].mins);
     CHECK(cube_bounds.grow(-1).maxs() == bsp.dmodels[0].maxs);
+
+    CHECK(6 == bsp.dnodes.size());
+
+    CHECK(12 == bsp.dclipnodes.size());
 }
 
 /**
