@@ -528,7 +528,7 @@ public:
 #endif
 
         if (index >= N) {
-            return vector[index];
+            return vector[index - N];
         }
 
         return array[index];
@@ -542,7 +542,7 @@ public:
 #endif
 
         if (index >= N) {
-            return vector[index];
+            return vector[index - N];
         }
 
         return array[index];
