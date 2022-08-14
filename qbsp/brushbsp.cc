@@ -114,13 +114,15 @@ BrushVolume
 ==================
 */
 template<typename T>
-static vec_t BrushVolume(const T &brush)
+static vec_t BrushVolume(T begin, T end)
 {
     // grab the first valid point as the corner
 
     bool found = false;
     qvec3d corner;
-    for (auto &face : brush.sides) {
+    for (auto it = begin; it != end; it++) {
+        auto &face = *it;
+
         if (face.w.size() > 0) {
             corner = face.w[0];
             found = true;
@@ -133,13 +135,16 @@ static vec_t BrushVolume(const T &brush)
     // make tetrahedrons to all other faces
 
     vec_t volume = 0;
-    for (auto &side : brush.sides) {
-        if (!side.w.size()) {
+    for (auto it = begin; it != end; it++) {
+        auto &face = *it;
+
+        if (!face.w.size()) {
             continue;
         }
-        auto &plane = side.get_plane();
+
+        auto &plane = face.get_plane();
         vec_t d = -(qv::dot(corner, plane.get_normal()) - plane.get_dist());
-        vec_t area = side.w.area();
+        vec_t area = face.w.area();
         volume += d * area;
     }
 
@@ -545,7 +550,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
     }
 
     for (int i = 0; i < 2; i++) {
-        vec_t v1 = BrushVolume(*result[i]);
+        vec_t v1 = BrushVolume(result[i]->sides.begin(), result[i]->sides.end());
         if (v1 < qbsp_options.microvolume.value()) {
             result[i] = nullptr;
             if (stats) {
@@ -579,16 +584,26 @@ struct stack_side_t
 
 struct stack_brush_t
 {
-    std::vector<stack_side_t> sides;
     aabb3d bounds;
+    size_t num_sides;
+
+    // stack allocated
+    stack_side_t *sides;
+
+    ~stack_brush_t()
+    {
+        for (size_t i = 0; i < num_sides; i++) {
+            sides[i].~stack_side_t();
+        }
+    }
 
     inline bool update_bounds()
     {
         this->bounds = {};
 
-        for (const auto &face : sides) {
-            if (face.w) {
-                this->bounds.unionWith_in_place(face.w.bounds());
+        for (size_t i = 0; i < num_sides; i++) {
+            if (sides[i].w) {
+                this->bounds.unionWith_in_place(sides[i].w.bounds());
             }
         }
 
@@ -660,11 +675,11 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     // split it for real
 
     // start with 2 empty brushes
-    thread_local static twosided<stack_brush_t> temporary_brushes;
+    twosided<stack_brush_t> temporary_brushes;
 
     for (int i = 0; i < 2; i++) {
-        temporary_brushes[i].sides.clear();
-        temporary_brushes[i].sides.reserve(brush->sides.size() + 1);
+        temporary_brushes[i].sides = (stack_side_t *) alloca(sizeof(stack_side_t) * (brush->sides.size() + 1));
+        temporary_brushes[i].num_sides = 0;
     }
 
     // split all the current windings
@@ -678,7 +693,8 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
             }
 
             // add the clipped face to result[j]
-            stack_side_t &faceCopy = temporary_brushes[j].sides.emplace_back();
+            stack_side_t &faceCopy = temporary_brushes[j].sides[temporary_brushes[j].num_sides++];
+            new(&faceCopy) stack_side_t; 
             faceCopy.planenum = face.planenum;
             faceCopy.w = std::move(*cw[j]);
         }
@@ -687,17 +703,17 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     // see if we have valid polygons on both sides
 
     for (int i = 0; i < 2; i++) {
-        if (temporary_brushes[i].sides.size() < 3) {
+        if (temporary_brushes[i].num_sides < 3) {
             return false;
         }
 
         if (!temporary_brushes[i].update_bounds()) {
             return false;
-        } else {
-            for (int j = 0; j < 3; j++) {
-                if (temporary_brushes[i].bounds.mins()[j] < -qbsp_options.worldextent.value() || temporary_brushes[i].bounds.maxs()[j] > qbsp_options.worldextent.value()) {
-                    return false;
-                }
+        }
+
+        for (int j = 0; j < 3; j++) {
+            if (temporary_brushes[i].bounds.mins()[j] < -qbsp_options.worldextent.value() || temporary_brushes[i].bounds.maxs()[j] > qbsp_options.worldextent.value()) {
+                return false;
             }
         }
     }
@@ -706,7 +722,8 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     // FIXME: check if we can remove this/if BrushVolume below
     // will have the same result either way
     for (int i = 0; i < 2; i++) {
-        stack_side_t &cs = temporary_brushes[i].sides.emplace_back();
+        stack_side_t &cs = temporary_brushes[i].sides[temporary_brushes[i].num_sides++];
+        new(&cs) stack_side_t; 
 
         const bool brushOnFront = (i == 0);
 
@@ -720,7 +737,7 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     }
 
     for (int i = 0; i < 2; i++) {
-        vec_t v1 = BrushVolume(temporary_brushes[i]);
+        vec_t v1 = BrushVolume(temporary_brushes[i].sides, temporary_brushes[i].sides + temporary_brushes[i].num_sides);
         if (v1 < qbsp_options.microvolume.value()) {
             return false;
         }
