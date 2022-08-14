@@ -1790,6 +1790,23 @@ TEST_CASE("q1_wad_external", "[testmaps_q1]") {
     CHECK(bsp.dtex.textures[3].data.size() == sizeof(dmiptex_t));
 }
 
+/**
+ * Test that we automatically try to load X.wad when compiling X.map
+ **/
+TEST_CASE("q1_wad_mapname", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_wad_mapname.map");
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    CHECK(bsp.dtex.textures.size() == 2);
+    CHECK(bsp.dtex.textures[0].name == "skip");
+    CHECK(bsp.dtex.textures[0].data.size() == sizeof(dmiptex_t)); // no texture data
+
+    CHECK(bsp.dtex.textures[1].name == "{trigger");
+    CHECK(bsp.dtex.textures[1].data.size() > sizeof(dmiptex_t));
+}
+
 TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_merge_maps_base.map", { "-add", "q1_merge_maps_addition.map" });
 
