@@ -24,6 +24,7 @@
 #include <qbsp/winding.hh>
 #include <common/qvec.hh>
 #include <qbsp/brush.hh>
+#include <qbsp/qbsp.hh>
 
 #include <atomic>
 #include <list>

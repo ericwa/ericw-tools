@@ -29,6 +29,7 @@
 #include <atomic>
 #include <cstdarg>
 #include <filesystem>
+#include <list>
 #include <fmt/format.h>
 #include <common/bitflags.hh>
 #include <common/fs.hh>
@@ -124,8 +125,6 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed = true);
 // the counter does not have a determinating maximum factor.
 constexpr uint64_t indeterminate = std::numeric_limits<uint64_t>::max();
 
-#include <atomic>
-
 // simple wrapper to percent() to use it in an object-oriented manner. you can
 // call print() to explicitly end the clock, or allow it to run out of scope.
 struct percent_clock
@@ -174,9 +173,6 @@ struct percent_clock
     inline ~percent_clock() { print(); }
 };
 
-#include <list>
-#include <atomic>
-
 // base class intended to be inherited for stat trackers;
 // they will automatically print the results at the end,
 // in the order of registration.
@@ -194,12 +190,12 @@ struct stat_tracker_t
         {
         }
         
-        inline std::atomic_size_t::value_type operator++(int) noexcept { return count++; }
-        inline std::atomic_size_t::value_type operator++() noexcept { return ++count; }
-        inline std::atomic_size_t::value_type operator+=(std::atomic_size_t::value_type v) noexcept { return count += v; }
-        inline std::atomic_size_t::value_type operator++(int) volatile noexcept { return count++; }
-        inline std::atomic_size_t::value_type operator++() volatile noexcept { return ++count; }
-        inline std::atomic_size_t::value_type operator+=(std::atomic_size_t::value_type v) volatile noexcept { return count += v; }
+        inline size_t operator++(int) noexcept { return count++; }
+        inline size_t operator++() noexcept { return ++count; }
+        inline size_t operator+=(size_t v) noexcept { return count += v; }
+        inline size_t operator++(int) volatile noexcept { return count++; }
+        inline size_t operator++() volatile noexcept { return ++count; }
+        inline size_t operator+=(size_t v) volatile noexcept { return count += v; }
     };
 
     std::list<stat> stats;
