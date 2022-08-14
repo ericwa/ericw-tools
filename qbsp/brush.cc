@@ -231,26 +231,6 @@ qvec3d FixRotateOrigin(mapentity_t *entity)
     return offset;
 }
 
-static bool MapBrush_IsHint(const mapbrush_t &brush)
-{
-    for (auto &f : brush.faces) {
-        if (f.flags.is_hint)
-            return true;
-    }
-
-    return false;
-}
-
-#if 0
-        if (hullnum <= 0 && Brush_IsHint(*hullbrush)) {
-            /* Don't generate hintskip faces */
-            const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
-
-            if (qbsp_options.target_game->texinfo_is_hintskip(texinfo.flags, map.miptexTextureName(texinfo.miptex)))
-                continue;
-        }
-#endif
-
 //============================================================================
 
 /*
@@ -314,6 +294,16 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 
     for (size_t i = 0; i < mapbrush->faces.size(); i++) {
         auto &src = mapbrush->faces[i];
+
+        if (hullnum <= 0 && mapbrush->is_hint) {
+            /* Don't generate hintskip faces */
+            const maptexinfo_t &texinfo = map.mtexinfos.at(src.texinfo);
+
+            // any face that isn't a hint is assumed to be hintskip
+            if (!texinfo.flags.is_hint) {
+                continue;
+            }
+        }
 
         // don't add bevels for the point hull
         if (hullnum <= 0 && src.bevel) {
@@ -511,7 +501,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
         }
 
         /* "hint" brushes don't affect the collision hulls */
-        if (MapBrush_IsHint(mapbrush)) {
+        if (mapbrush.is_hint) {
             if (hullnum > 0)
                 continue;
             contents = qbsp_options.target_game->create_empty_contents();

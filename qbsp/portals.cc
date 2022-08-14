@@ -448,8 +448,7 @@ static std::list<buildportal_t> ClipNodePortalsToTree_r(node_t *node, portaltype
     auto front_fragments = ClipNodePortalsToTree_r(node->children[0], type, std::move(boundary_portals_split.front), stats);
     auto back_fragments = ClipNodePortalsToTree_r(node->children[1], type, std::move(boundary_portals_split.back), stats);
 
-    std::list<buildportal_t> merged_result;
-    merged_result.splice(merged_result.end(), front_fragments);
+    std::list<buildportal_t> merged_result = std::move(front_fragments);
     merged_result.splice(merged_result.end(), back_fragments);
     return merged_result;
 }
@@ -496,14 +495,11 @@ std::list<buildportal_t> MakeTreePortals_r(tree_t *tree, node_t *node, portaltyp
         std::list<buildportal_t> half_clipped =
             ClipNodePortalsToTree_r(node->children[0], type, make_list(std::move(*nodeportal)), stats);
 
-        for (auto &clipped_p : ClipNodePortalsToTree_r(node->children[1], type, std::move(half_clipped), stats)) {
-            result_portals_onnode.push_back(std::move(clipped_p));
-        }
+        result_portals_onnode = ClipNodePortalsToTree_r(node->children[1], type, std::move(half_clipped), stats);
     }
 
     // all done, merge together the lists and return
-    std::list<buildportal_t> merged_result;
-    merged_result.splice(merged_result.end(), result_portals_front);
+    std::list<buildportal_t> merged_result = std::move(result_portals_front);
     merged_result.splice(merged_result.end(), result_portals_back);
     merged_result.splice(merged_result.end(), result_portals_onnode);
     return merged_result;

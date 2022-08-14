@@ -2251,6 +2251,16 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 	}
 }
 
+inline bool MapBrush_IsHint(const mapbrush_t &brush)
+{
+    for (auto &f : brush.faces) {
+        if (f.flags.is_hint)
+            return true;
+    }
+
+    return false;
+}
+
 void ProcessMapBrushes()
 {
     logging::funcheader();
@@ -2295,6 +2305,7 @@ void ProcessMapBrushes()
             // set properties calculated above
             brush.lmshift = lmshift;
             brush.func_areaportal = areaportal;
+            brush.is_hint = MapBrush_IsHint(brush);
 
             // calculate brush bounds
             CalculateBrushBounds(brush);
