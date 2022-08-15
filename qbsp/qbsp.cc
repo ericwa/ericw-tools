@@ -490,6 +490,7 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
                 // fill again so PruneNodes works
                 MakeTreePortals(tree.get());
                 FillOutside(entity, tree.get(), hullnum, brushes);
+                FreeTreePortals(tree.get());
                 PruneNodes(tree->headnode);
             }
         }

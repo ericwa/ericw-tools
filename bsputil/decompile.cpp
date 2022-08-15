@@ -224,6 +224,7 @@ struct decomp_plane_t : qplane3d
 {
     const bsp2_dnode_t *node = nullptr; // can be nullptr
     const q2_dbrushside_qbism_t *source = nullptr;
+    const bsp2_dclipnode_t *clipnode = nullptr; // can be nullptr
 };
 
 // brush creation
@@ -336,6 +337,7 @@ struct leaf_decompile_task
     const mleaf_t *leaf = nullptr;
     const dbrush_t *brush = nullptr;
     const dmodelh2_t *model = nullptr;
+    std::optional<int32_t> contents = std::nullopt; // for clipnodes
 };
 
 /**
@@ -775,7 +777,7 @@ static compiled_brush_t DecompileLeafTaskGeometryOnly(
     compiled_brush_t brush;
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
-    brush.contents = {task.brush ? task.brush->contents : task.leaf->contents};
+    brush.contents = {task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()};
 
     brush.sides.reserve(task.allPlanes.size());
 
@@ -796,7 +798,7 @@ static compiled_brush_t DecompileLeafTask(
     compiled_brush_t brush;
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
-    brush.contents = {task.brush ? task.brush->contents : task.leaf->contents};
+    brush.contents = {task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()};
 
     std::vector<decomp_brush_t> finalBrushes;
     if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
@@ -908,6 +910,14 @@ decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, cons
         front ? -dplane : dplane, node};
 }
 
+decomp_plane_t MakeClipDecompPlane(const mbsp_t *bsp, const bsp2_dclipnode_t *clipnode, const bool front)
+{
+    const dplane_t &dplane = *BSP_GetPlane(bsp, clipnode->planenum);
+
+    return {// flip the plane if we went down the front side, since we want the outward-facing plane
+        front ? -dplane : dplane, nullptr, nullptr, clipnode};
+}
+
 /**
  * Preconditions:
  *  - The existing path of plane side choices have been pushed onto `planestack` (but not `node`)
@@ -927,6 +937,41 @@ static void DecompileNode(std::vector<decomp_plane_t> &planestack, const mbsp_t 
         } else {
             // it's another node - process it recursively
             DecompileNode(planestack, bsp, BSP_GetNode(bsp, child), result);
+        }
+
+        planestack.pop_back();
+    };
+
+    // handle the front and back
+    handleSide(true);
+    handleSide(false);
+}
+
+static void DecompileClipLeaf(const std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const int32_t contents,
+    std::vector<leaf_decompile_task> &result)
+{
+    if (contents == CONTENTS_EMPTY) {
+        return;
+    }
+
+    // NOTE: copies the whole plane stack
+    result.push_back({planestack, nullptr, nullptr, nullptr, contents});
+}
+
+static void DecompileClipNode(std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const bsp2_dclipnode_t *node,
+    std::vector<leaf_decompile_task> &result)
+{
+    auto handleSide = [&](const bool front) {
+        planestack.push_back(MakeClipDecompPlane(bsp, node, front));
+
+        const int32_t child = node->children[front ? 0 : 1];
+
+        if (child < 0) {
+            // it's a leaf on this side
+            DecompileClipLeaf(planestack, bsp, child, result);
+        } else {
+            // it's another node - process it recursively
+            DecompileClipNode(planestack, bsp, &bsp->dclipnodes[child], result);
         }
 
         planestack.pop_back();
@@ -995,17 +1040,20 @@ static void DecompileEntity(
     // the model. We're also assuming that the areaportal brushes are
     // emitted in the same order as the func_areaportal entities.
     if (dict.find("classname")->second == "func_areaportal") {
-        size_t brush_offset = std::stoull(dict.find("style")->second);
 
-        for (auto &brush : bsp->dbrushes) {
-            if (brush.contents & Q2_CONTENTS_AREAPORTAL) {
-                if (brush_offset == 1) {
-                    // we'll use this one
-                    areaportal_brush = &brush;
-                    break;
+        if (dict.has("style")) {
+            size_t brush_offset = std::stoull(dict.find("style")->second);
+
+            for (auto &brush : bsp->dbrushes) {
+                if (brush.contents & Q2_CONTENTS_AREAPORTAL) {
+                    if (brush_offset == 1) {
+                        // we'll use this one
+                        areaportal_brush = &brush;
+                        break;
+                    }
+
+                    brush_offset--;
                 }
-
-                brush_offset--;
             }
         }
     } else if (dict.find("classname")->second == "func_group") {
@@ -1112,7 +1160,9 @@ static void DecompileEntity(
             std::vector<decomp_plane_t> stack;
             std::vector<leaf_decompile_task> tasks;
             AddMapBoundsToStack(stack, bsp, headnode);
+            
             DecompileNode(stack, bsp, headnode, tasks);
+            //DecompileClipNode(stack, bsp, &bsp->dclipnodes[model->headnode[1]], tasks);
 
             // decompile the leafs in parallel
             compiledBrushes.resize(tasks.size());
