@@ -282,3 +282,86 @@ void WritePortalFile(tree_t *tree)
     logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);
     logging::print(logging::flag::STAT, "     {:8} vis portals\n", state.num_visportals);
 }
+
+
+/*
+==============================================================================
+
+DEBUG PORTAL FILE GENERATION
+
+==============================================================================
+*/
+
+static void WriteTreePortals_r(node_t *node, std::ofstream &portalFile)
+{
+    if (!node->is_leaf) {
+        WriteTreePortals_r(node->children[0], portalFile);
+        WriteTreePortals_r(node->children[1], portalFile);
+        return;
+    }
+
+    const portal_t *p, *next;
+    for (p = node->portals; p; p = next) {
+        next = (p->nodes[0] == node) ? p->next[0] : p->next[1];
+        if (!p->winding || p->nodes[0] != node)
+            continue;
+
+        const winding_t *w = &p->winding;
+
+        fmt::print(portalFile, "{} {} {} ", w->size(), 0, 0);
+
+        for (int i = 0; i < w->size(); i++) {
+            fmt::print(portalFile, "({} {} {}) ",
+                w->at(i)[0],
+                w->at(i)[1],
+                w->at(i)[2]);
+        }
+        fmt::print(portalFile, "\n");
+    }
+}
+
+static void CountTreePortals_r(node_t *node, size_t &count)
+{
+    if (!node->is_leaf) {
+        CountTreePortals_r(node->children[0], count);
+        CountTreePortals_r(node->children[1], count);
+        return;
+    }
+
+    const portal_t *p, *next;
+    for (p = node->portals; p; p = next) {
+        next = (p->nodes[0] == node) ? p->next[0] : p->next[1];
+        if (!p->winding || p->nodes[0] != node)
+            continue;
+
+        ++count;
+    }
+}
+
+/*
+==================
+WritePortalFile
+==================
+*/
+void WriteDebugTreePortalFile(tree_t *tree, std::string_view filename_suffix)
+{
+    logging::funcheader();
+
+    size_t portal_count = 0;
+    CountTreePortals_r(tree->headnode, portal_count);
+
+    // write the file
+    fs::path name = qbsp_options.bsp_path;
+    name.replace_extension(std::string(filename_suffix) + ".prt");
+
+    std::ofstream portalFile(name, std::ios_base::binary | std::ios_base::out);
+    if (!portalFile)
+        FError("Failed to open {}: {}", name, strerror(errno));
+
+    fmt::print(portalFile, "PRT1\n");
+    fmt::print(portalFile, "{}\n", 0);
+    fmt::print(portalFile, "{}\n", portal_count);
+    WriteTreePortals_r(tree->headnode, portalFile);
+
+    logging::print(logging::flag::STAT, "     {:8} tree portals written to {}\n", portal_count, name);
+}

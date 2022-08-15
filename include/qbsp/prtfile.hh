@@ -21,5 +21,9 @@
 
 #pragma once
 
+#include <string_view>
+
 struct tree_t;
 void WritePortalFile(tree_t *tree);
+
+void WriteDebugTreePortalFile(tree_t *tree, std::string_view filename_suffix);
