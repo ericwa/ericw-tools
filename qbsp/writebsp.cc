@@ -79,8 +79,8 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     src.outputnum = i;
 
-    if (src.next != -1) {
-        map.bsp.texinfo[i].nexttexinfo = ExportMapTexinfo(src.next);
+    if (src.next.has_value()) {
+        map.bsp.texinfo[i].nexttexinfo = ExportMapTexinfo(src.next.value());
     }
 
     return i;
@@ -127,7 +127,7 @@ First time just store away data, second time fix up reference points to
 accomodate new data interleaved with old.
 ==================
 */
-void ExportClipNodes(mapentity_t *entity, node_t *nodes, const int hullnum)
+void ExportClipNodes(mapentity_t *entity, node_t *nodes, hull_index_t::value_type hullnum)
 {
     auto &model = map.bsp.dmodels.at(entity->outputmodelnumber.value());
     model.headnode[hullnum] = ExportClipNodes(nodes);

@@ -395,10 +395,10 @@ int FindTexinfo(const maptexinfo_t &texinfo)
     assert(map.mtexinfo_lookup.find(texinfo) != map.mtexinfo_lookup.end());
 
     // create a copy of the miptex for animation chains
-    if (map.miptex[texinfo.miptex].animation_miptex != -1) {
+    if (map.miptex[texinfo.miptex].animation_miptex.has_value()) {
         maptexinfo_t anim_next = texinfo;
 
-        anim_next.miptex = map.miptex[texinfo.miptex].animation_miptex;
+        anim_next.miptex = map.miptex[texinfo.miptex].animation_miptex.value();
 
         map.mtexinfos[num_texinfo].next = FindTexinfo(anim_next);
     }
@@ -2869,7 +2869,7 @@ static void TestExpandBrushes(mapentity_t *src)
 
     for (auto &mapbrush : src->mapbrushes) {
         auto hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
-            qbsp_options.target_game->id == GAME_QUAKE_II ? HULL_COLLISION : 1, std::nullopt);
+            qbsp_options.target_game->id == GAME_QUAKE_II ? std::nullopt : std::optional<int32_t>(1), std::nullopt);
 
         if (hull1brush) {
             hull1brushes.emplace_back(bspbrush_t::make_ptr(std::move(*hull1brush)));

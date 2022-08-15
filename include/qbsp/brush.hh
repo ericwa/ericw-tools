@@ -93,5 +93,5 @@ struct bspbrush_t
     bspbrush_t clone() const;
 };
 
-std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents, const int hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped);
+std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents, hull_index_t hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped);
 bool CreateBrushWindings(bspbrush_t *brush);

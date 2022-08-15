@@ -584,7 +584,7 @@ get incorrectly marked as "invisible").
 Special cases: structural fully covered by detail still needs to be marked "visible".
 ===========
 */
-bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_t::container &brushes)
+bool FillOutside(mapentity_t *entity, tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
     node_t *node = tree->headnode;
 
@@ -604,7 +604,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_
     }
 
     if (occupied_clusters.empty()) {
-        logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum);
+        logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum.value_or(0));
         return false;
     }
 
@@ -705,7 +705,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_
     return true;
 }
 
-void FillBrushEntity(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_t::container &brushes)
+void FillBrushEntity(mapentity_t *entity, tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 

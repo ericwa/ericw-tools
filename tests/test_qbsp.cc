@@ -250,7 +250,7 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapQ1
 #endif
 }
 
-static void CheckFilled(const mbsp_t &bsp, int hullnum)
+static void CheckFilled(const mbsp_t &bsp, hull_index_t hullnum)
 {
     int32_t contents = BSP_FindContentsAtPoint(&bsp, hullnum, &bsp.dmodels[0], qvec3d{8192, 8192, 8192});
 

@@ -421,6 +421,9 @@ struct fmt::formatter<texvec<T>> : formatter<qmat<T, 2, 4>>
 
 using texvecf = texvec<float>;
 
+// type to store a hull index; max 256 hulls, zero is valid.
+using hull_index_t = std::optional<uint8_t>;
+
 #include "bspfile_generic.hh"
 #include "bspfile_q1.hh"
 #include "bspfile_q2.hh"

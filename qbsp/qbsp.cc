@@ -393,7 +393,7 @@ static void CountLeafs(node_t *headnode)
 ProcessEntity
 ===============
 */
-static void ProcessEntity(mapentity_t *entity, const int hullnum)
+static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
 {
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
@@ -426,8 +426,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             if (qbsp_options.verbose.value())
                 PrintEntity(entity);
 
-            if (hullnum <= 0)
+            if (!hullnum.value_or(0) || qbsp_options.loghulls.value()) {
                 logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
+            }
             entity->epairs.set("model", mod);
         }
     }
@@ -461,8 +462,8 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
 
     logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
-    // always chop the other hulls
-    if (qbsp_options.chop.value() || hullnum != 0) {
+    // always chop the other hulls to reduce brush tests
+    if (qbsp_options.chop.value() || hullnum.value_or(0)) {
         ChopBrushes(brushes);
     }
 
@@ -474,7 +475,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     }
 
     std::unique_ptr<tree_t> tree = nullptr;
-    if (hullnum > 0) {
+
+    // simpler operation for hulls
+    if (hullnum.value_or(0)) {
         tree = BrushBSP(entity, brushes, true);
         if (entity == map.world_entity() && !qbsp_options.nofill.value()) {
             // assume non-world bmodels are simple
@@ -490,88 +493,89 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
                 PruneNodes(tree->headnode);
             }
         }
-        ExportClipNodes(entity, tree->headnode, hullnum);
+        ExportClipNodes(entity, tree->headnode, hullnum.value());
+        return;
+    }
 
-        // fixme-brushbsp: return here?
+    // full operation for collision (or main hull)
+
+    if (qbsp_options.forcegoodtree.value()) {
+        tree = BrushBSP(entity, brushes, false);
     } else {
+        tree = BrushBSP(entity, brushes, entity == map.world_entity() ? std::nullopt : std::optional<bool>(false));
+    }
 
-        if (qbsp_options.forcegoodtree.value()) {
-            tree = BrushBSP(entity, brushes, false);
-        } else {
-            tree = BrushBSP(entity, brushes, entity == map.world_entity() ? std::nullopt : std::optional<bool>(false));
-        }
+    // build all the portals in the bsp tree
+    // some portals are solid polygons, and some are paths to other leafs
+    MakeTreePortals(tree.get());
 
-        // build all the portals in the bsp tree
-        // some portals are solid polygons, and some are paths to other leafs
-        MakeTreePortals(tree.get());
-
-        if (entity == map.world_entity()) {
-            // flood fills from the void.
-            // marks brush sides which are *only* touching void;
-            // we can skip using them as BSP splitters on the "really good tree"
-            // (effectively expanding those brush sides outwards).
-            if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum, brushes)) {
-                // make a really good tree
-                tree.reset();
-                tree = BrushBSP(entity, brushes, false);
-
-                // make the real portals for vis tracing
-                MakeTreePortals(tree.get());
-
-                // fill again so PruneNodes works
-                FillOutside(entity, tree.get(), hullnum, brushes);
-            }
-
-            // Area portals
-            if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-                FloodAreas(entity, tree->headnode);
-                EmitAreaPortals(tree->headnode);
-            }
-        } else {
-            FillBrushEntity(entity, tree.get(), hullnum, brushes);
-
-            // rebuild BSP now that we've marked invisible brush sides
+    if (entity == map.world_entity()) {
+        // flood fills from the void.
+        // marks brush sides which are *only* touching void;
+        // we can skip using them as BSP splitters on the "really good tree"
+        // (effectively expanding those brush sides outwards).
+        if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum, brushes)) {
+            // make a really good tree
             tree.reset();
             tree = BrushBSP(entity, brushes, false);
+
+            // make the real portals for vis tracing
+            MakeTreePortals(tree.get());
+
+            // fill again so PruneNodes works
+            FillOutside(entity, tree.get(), hullnum, brushes);
         }
 
-        MakeTreePortals(tree.get());
-
-        MarkVisibleSides(tree.get(), entity, brushes);
-        MakeFaces(tree->headnode);
-
-        FreeTreePortals(tree.get());
-        PruneNodes(tree->headnode);
-
-        if (hullnum <= 0 && entity == map.world_entity() && (!map.leakfile || qbsp_options.keepprt.value())) {
-            WritePortalFile(tree.get());
-        }
-
-        // needs to come after any face creation
-        MakeMarkFaces(tree->headnode);
-
-        CountLeafs(tree->headnode);
-
-        // output vertices first, since TJunc needs it
-        EmitVertices(tree->headnode);
-
-        TJunc(tree->headnode);
-
-        if (qbsp_options.objexport.value() && entity == map.world_entity()) {
-            ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode);
-            ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
-        }
-
-        Q_assert(!entity->firstoutputfacenumber.has_value());
-
-        entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode);
-
+        // Area portals
         if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-            ExportBrushList(entity, tree->headnode);
+            FloodAreas(entity, tree->headnode);
+            EmitAreaPortals(tree->headnode);
         }
+    } else {
+        FillBrushEntity(entity, tree.get(), hullnum, brushes);
 
-        ExportDrawNodes(entity, tree->headnode, entity->firstoutputfacenumber.value());
+        // rebuild BSP now that we've marked invisible brush sides
+        tree.reset();
+        tree = BrushBSP(entity, brushes, false);
     }
+
+    MakeTreePortals(tree.get());
+
+    MarkVisibleSides(tree.get(), entity, brushes);
+    MakeFaces(tree->headnode);
+
+    FreeTreePortals(tree.get());
+    PruneNodes(tree->headnode);
+
+    // write out .prt for main hull
+    if (!hullnum.value_or(0) && entity == map.world_entity() && (!map.leakfile || qbsp_options.keepprt.value())) {
+        WritePortalFile(tree.get());
+    }
+
+    // needs to come after any face creation
+    MakeMarkFaces(tree->headnode);
+
+    CountLeafs(tree->headnode);
+
+    // output vertices first, since TJunc needs it
+    EmitVertices(tree->headnode);
+
+    TJunc(tree->headnode);
+
+    if (qbsp_options.objexport.value() && entity == map.world_entity()) {
+        ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode);
+        ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
+    }
+
+    Q_assert(!entity->firstoutputfacenumber.has_value());
+
+    entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode);
+
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
+        ExportBrushList(entity, tree->headnode);
+    }
+
+    ExportDrawNodes(entity, tree->headnode, entity->firstoutputfacenumber.value());
 }
 
 /*
@@ -767,10 +771,12 @@ static void BSPX_CreateBrushList(void)
 CreateSingleHull
 =================
 */
-static void CreateSingleHull(const int hullnum)
+static void CreateSingleHull(hull_index_t hullnum)
 {
-    if (hullnum >= 0) {
-        logging::print("Processing hull {}...\n", hullnum);
+    if (hullnum.has_value()) {
+        logging::print("Processing hull {}...\n", hullnum.value());
+    } else {
+        logging::print("Processing map...\n");
     }
 
     // for each entity in the map file that has geometry
@@ -781,7 +787,7 @@ static void CreateSingleHull(const int hullnum)
         if (&entity != map.world_entity()) {
             wants_logging = wants_logging && qbsp_options.logbmodels.value();
         }
-        if (hullnum > 0) {
+        if (hullnum.value_or(0)) {
             wants_logging = wants_logging && qbsp_options.loghulls.value();
         }
 
@@ -818,14 +824,17 @@ static void CreateHulls(void)
 
     // game has no hulls, so we have to export brush lists and stuff.
     if (!hulls.size()) {
-        CreateSingleHull(HULL_COLLISION);
+        CreateSingleHull(std::nullopt);
+        return;
+    }
+
+    // all the hulls
+    for (size_t i = 0; i < hulls.size(); i++) {
+        CreateSingleHull(i);
+
         // only create hull 0 if fNoclip is set
-    } else if (qbsp_options.noclip.value()) {
-        CreateSingleHull(0);
-        // do all the hulls
-    } else {
-        for (size_t i = 0; i < hulls.size(); i++) {
-            CreateSingleHull(i);
+        if (qbsp_options.noclip.value()) {
+            break;
         }
     }
 }

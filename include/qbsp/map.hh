@@ -139,7 +139,7 @@ struct maptexdata_t
     surfflags_t flags;
     int32_t value;
     std::string animation;
-    int32_t animation_miptex = -1;
+    std::optional<int32_t> animation_miptex = std::nullopt;
 };
 
 #include <common/imglib.hh>
@@ -342,18 +342,15 @@ void WriteEntitiesToString();
 
 qvec3d FixRotateOrigin(mapentity_t *entity);
 
-/** Special ID for the collision-only hull; used for wrbrushes/Q2 */
-constexpr int HULL_COLLISION = -1;
-
 /* Create BSP brushes from map brushes */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes, size_t &num_clipped);
+void Brush_LoadEntity(mapentity_t *entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped);
 
 std::list<face_t *> CSGFace(
     face_t *srcface, const mapentity_t *srcentity, const bspbrush_t *srcbrush, const node_t *srcnode);
 void TJunc(node_t *headnode);
 int MakeFaceEdges(node_t *headnode);
 void EmitVertices(node_t *headnode);
-void ExportClipNodes(mapentity_t *entity, node_t *headnode, const int hullnum);
+void ExportClipNodes(mapentity_t *entity, node_t *headnode, hull_index_t::value_type hullnum);
 void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
 
 struct bspxbrushes_s

@@ -284,7 +284,7 @@ Converts a mapbrush to a bsp brush
 ===============
 */
 std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents,
-    const int hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped)
+    hull_index_t hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped)
 {
     // create the brush
     bspbrush_t brush{};
@@ -295,7 +295,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
     for (size_t i = 0; i < mapbrush->faces.size(); i++) {
         auto &src = mapbrush->faces[i];
 
-        if (hullnum <= 0 && mapbrush->is_hint) {
+        if (!hullnum.value_or(0) && mapbrush->is_hint) {
             /* Don't generate hintskip faces */
             const maptexinfo_t &texinfo = map.mtexinfos.at(src.texinfo);
 
@@ -306,23 +306,22 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
         }
 
         // don't add bevels for the point hull
-        if (hullnum <= 0 && src.bevel) {
+        if (!hullnum.value_or(0) && src.bevel) {
             continue;
         }
 
         auto &dst = brush.sides.emplace_back();
-
-        dst.texinfo = hullnum > 0 ? 0 : src.texinfo;
+        dst.texinfo = hullnum.value_or(0) ? 0 : src.texinfo;
         dst.planenum = src.planenum;
         dst.bevel = src.bevel;
         dst.source = &src;
     }
 
     // expand the brushes for the hull
-    if (hullnum > 0) {
+    if (hullnum.value_or(0)) {
         auto &hulls = qbsp_options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
-        auto &hull = *(hulls.begin() + hullnum);
+        auto &hull = *(hulls.begin() + hullnum.value());
 
         for (auto &mapface : brush.sides) {
             if (mapface.get_texinfo().flags.no_expand) {
@@ -365,8 +364,8 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
     // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
     const bool shouldExpand = (src->origin[0] != 0.0 || src->origin[1] != 0.0 || src->origin[2] != 0.0) &&
                                 src->rotation == rotation_t::hipnotic &&
-                                (hullnum >= 0) // hullnum < 0 corresponds to -wrbrushes clipping hulls
-                                && qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
+                                hullnum.has_value() &&
+                                qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t max = -std::numeric_limits<vec_t>::infinity(), min = std::numeric_limits<vec_t>::infinity();
@@ -389,7 +388,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
+static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
 {
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
@@ -477,7 +476,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
 
         /* func_detail_illusionary don't exist in the collision hull
          * (or bspx export) except for Q2, who needs them in there */
-        if (hullnum > 0 && detail_illusionary) {
+        if (hullnum.value_or(0) && detail_illusionary) {
             continue;
         }
 
@@ -486,8 +485,8 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
          * include them in the model bounds so collision detection works
          * correctly.
          */
-        if (hullnum != HULL_COLLISION && contents.is_clip(qbsp_options.target_game)) {
-            if (hullnum == 0) {
+        if (hullnum.has_value() && contents.is_clip(qbsp_options.target_game)) {
+            if (hullnum.value() == 0) {
                 if (auto brush = LoadBrush(src, &mapbrush, contents, hullnum, num_clipped)) {
                     dst->bounds += brush->bounds;
                 }
@@ -500,8 +499,9 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
 
         /* "hint" brushes don't affect the collision hulls */
         if (mapbrush.is_hint) {
-            if (hullnum > 0)
+            if (hullnum.value_or(0)) {
                 continue;
+            }
             contents = qbsp_options.target_game->create_empty_contents();
         }
 
@@ -517,18 +517,20 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
                 before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
                 contents type.
                 */
-            if (hullnum <= 0 && mirrorinside.value_or(false)) {
+            if (!hullnum.value_or(0) && mirrorinside.value_or(false)) {
                 contents = qbsp_options.target_game->create_detail_fence_contents(contents);
             }
         }
 
-        /* nonsolid brushes don't show up in clipping hulls */
-        if (hullnum > 0 && !contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game))
-            continue;
+        if (hullnum.value_or(0)) {
+            /* nonsolid brushes don't show up in clipping hulls */
+            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game))
+                continue;
 
-        /* sky brushes are solid in the collision hulls */
-        if (hullnum > 0 && contents.is_sky(qbsp_options.target_game))
-            contents = qbsp_options.target_game->create_solid_contents();
+            /* sky brushes are solid in the collision hulls */
+            if (contents.is_sky(qbsp_options.target_game))
+                contents = qbsp_options.target_game->create_solid_contents();
+        }
 
         // apply extended flags
         contents.set_mirrored(mirrorinside);
@@ -552,11 +554,11 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
 ============
 Brush_LoadEntity
 
-hullnum HULL_COLLISION should contain ALL brushes. (used by BSPX_CreateBrushList())
+hullnum nullopt should contain ALL brushes; BSPX and Quake II, etc.
 hullnum 0 does not contain clip brushes.
 ============
 */
-void Brush_LoadEntity(mapentity_t *entity, const int hullnum, bspbrush_t::container &brushes, size_t &num_clipped)
+void Brush_LoadEntity(mapentity_t *entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped)
 {
     logging::funcheader();
 

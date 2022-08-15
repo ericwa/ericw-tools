@@ -595,12 +595,14 @@ std::tuple<qvec<T, 3>, qvec<T, 3>> MakeTangentAndBitangentUnnormalized(const qve
     }
 
     // debug test
+#ifdef PARANOID
     if (0) {
         auto n = qv::normalize(qv::cross(tangent, bitangent));
         double d = qv::distance(n, normal);
 
         assert(d < 0.0001);
     }
+#endif
 
     return {tangent, bitangent};
 }
