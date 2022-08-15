@@ -1835,6 +1835,39 @@ TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
     REQUIRE(it != ents.end());
 }
 
+TEST_CASE("q1_hull1_content_types", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull1_content_types.map");
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    struct expected_types_t
+    {
+        int hull0_contenttype;
+        int hull1_contenttype;
+    };
+
+    const std::vector<std::tuple<qvec3d, expected_types_t>> expected{
+        {{0, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}},
+        {{64, 0, 0}, {CONTENTS_WATER, CONTENTS_EMPTY}}, // liquids are absent in hull1
+        {{128, 0, 0}, {CONTENTS_SLIME, CONTENTS_EMPTY}},
+        {{192, 0, 0}, {CONTENTS_LAVA, CONTENTS_EMPTY}},
+        {{256, 0, 0}, {CONTENTS_SKY, CONTENTS_SOLID}}, // sky is solid in hull1
+        {{320, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail is solid in hull1
+        {{384, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail_fence is solid in hull1
+        {{384, -64, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail_fence + _mirrorinside is solid in hull1
+        {{448, 0, 0}, {CONTENTS_EMPTY, CONTENTS_EMPTY}},    // func_detail_illusionary is empty in hull1
+        {{448, -64, 0}, {CONTENTS_EMPTY, CONTENTS_EMPTY}} // func_detail_illusionary + _mirrorinside is empty in hull1
+    };
+
+    for (const auto [point, expected_types] : expected) {
+        INFO("Testing point " << point);
+
+        CHECK(expected_types.hull0_contenttype == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
+        CHECK(expected_types.hull1_contenttype == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
+    }
+}
+
 TEST_CASE("winding", "[benchmark][.releaseonly]") {
     ankerl::nanobench::Bench bench;
 
