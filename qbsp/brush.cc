@@ -525,7 +525,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, const int hulln
         }
 
         /* nonsolid brushes don't show up in clipping hulls */
-        if (hullnum > 0 && !contents.is_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game))
+        if (hullnum > 0 && !contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game))
             continue;
 
         /* sky brushes are solid in the collision hulls */

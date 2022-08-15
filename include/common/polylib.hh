@@ -199,7 +199,6 @@ public:
     }
 };
 
-
 // Heap storage; uses a vector.
 struct winding_storage_heap_t
 {

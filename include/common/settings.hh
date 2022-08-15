@@ -705,7 +705,7 @@ public:
 
     inline setting_container() { }
 
-    ~setting_container();
+    virtual ~setting_container();
 
     // copy constructor (can't be copyable, see setting_base)
     setting_container(const setting_container &other) = delete;

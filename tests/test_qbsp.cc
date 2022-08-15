@@ -1860,7 +1860,7 @@ TEST_CASE("q1_hull1_content_types", "[testmaps_q1]")
         {{448, -64, 0}, {CONTENTS_EMPTY, CONTENTS_EMPTY}} // func_detail_illusionary + _mirrorinside is empty in hull1
     };
 
-    for (const auto [point, expected_types] : expected) {
+    for (const auto &[point, expected_types] : expected) {
         INFO("Testing point " << point);
 
         CHECK(expected_types.hull0_contenttype == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
