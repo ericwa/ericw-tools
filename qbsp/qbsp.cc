@@ -562,7 +562,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
         }
 
-        Q_assert(entity->firstoutputfacenumber == -1);
+        Q_assert(!entity->firstoutputfacenumber.has_value());
 
         entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode);
 
@@ -570,7 +570,7 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
             ExportBrushList(entity, tree->headnode);
         }
 
-        ExportDrawNodes(entity, tree->headnode, entity->firstoutputfacenumber);
+        ExportDrawNodes(entity, tree->headnode, entity->firstoutputfacenumber.value());
     }
 }
 

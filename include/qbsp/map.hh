@@ -124,7 +124,7 @@ public:
 
     aabb3d bounds;
 
-    int firstoutputfacenumber = -1;
+    std::optional<size_t> firstoutputfacenumber = std::nullopt;
     std::optional<size_t> outputmodelnumber = std::nullopt;
 
     int32_t areaportalnum = 0;

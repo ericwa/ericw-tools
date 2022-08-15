@@ -614,7 +614,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, const int hullnum, bspbrush_
     settings::filltype_t filltype = qbsp_options.filltype.value();
 
     if (filltype == settings::filltype_t::AUTO) {
-        filltype = hullnum > 0 ? settings::filltype_t::OUTSIDE : settings::filltype_t::INSIDE;
+        filltype = settings::filltype_t::INSIDE;
     }
 
     if (filltype == settings::filltype_t::INSIDE) {
