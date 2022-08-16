@@ -465,13 +465,15 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hu
         if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailfence.value()) && detail_fence)
             continue;
 
-        /* turn solid brushes into detail */
-        if (detail_illusionary) {
-            contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
-        } else if (detail_fence) {
-            contents = qbsp_options.target_game->create_detail_fence_contents(contents);
-        } else if (detail) {
-            contents = qbsp_options.target_game->create_detail_solid_contents(contents);
+        /* turn solid brushes into detail, if we're in hull0 */
+        if (hullnum <= 0 && contents.is_solid(qbsp_options.target_game)) {
+            if (detail_illusionary) {
+                contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
+            } else if (detail_fence) {
+                contents = qbsp_options.target_game->create_detail_fence_contents(contents);
+            } else if (detail) {
+                contents = qbsp_options.target_game->create_detail_solid_contents(contents);
+            }
         }
 
         /* func_detail_illusionary don't exist in the collision hull
