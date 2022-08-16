@@ -19,6 +19,8 @@ struct decomp_options
      * Intended for visualizing leafs.
      */
     bool ignoreBrushes = false;
+
+    int hullnum = 0;
 };
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file);

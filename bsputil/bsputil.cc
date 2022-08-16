@@ -471,7 +471,7 @@ int main(int argc, char **argv)
         printf(
             "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
             "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
-            "[--decompile] [--decompile-geomonly] bspfile\n");
+            "[--decompile] [--decompile-geomonly] [--decompile-hull n] bspfile\n");
         exit(1);
     }
 
@@ -618,10 +618,18 @@ int main(int argc, char **argv)
             WriteBSPFile(source, &bspdata);
 
             return 0;
-        } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly") ||
-                   !strcmp(argv[i], "--decompile-ignore-brushes")) {
+        } else if (!strcmp(argv[i], "--decompile")
+                   || !strcmp(argv[i], "--decompile-geomonly")
+                   || !strcmp(argv[i], "--decompile-ignore-brushes")
+                   || !strcmp(argv[i], "--decompile-hull")) {
             const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
             const bool ignoreBrushes = !strcmp(argv[i], "--decompile-ignore-brushes");
+            const bool hull = !strcmp(argv[i], "--decompile-hull");
+
+            int hullnum = 0;
+            if (hull) {
+                hullnum = std::stoi(argv[i + 1]);
+            }
 
             source.replace_extension("");
             source.replace_filename(source.stem().string() + "-decompile");
@@ -636,6 +644,7 @@ int main(int argc, char **argv)
             decomp_options options;
             options.geometryOnly = geomOnly;
             options.ignoreBrushes = ignoreBrushes;
+            options.hullnum = hullnum;
 
             DecompileBSP(&bsp, options, f);
 

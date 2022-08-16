@@ -983,7 +983,7 @@ static void DecompileClipNode(std::vector<decomp_plane_t> &planestack, const mbs
 }
 
 static void AddMapBoundsToStack(
-    std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const bsp2_dnode_t *headnode)
+    std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const aabb3d &bounds)
 {
     for (int i = 0; i < 3; ++i) {
         for (int sign = 0; sign < 2; ++sign) {
@@ -994,9 +994,9 @@ static void AddMapBoundsToStack(
             double dist;
             if (sign == 0) {
                 // positive
-                dist = headnode->maxs[i];
+                dist = bounds.maxs()[i];
             } else {
-                dist = -headnode->mins[i];
+                dist = -bounds.mins()[i];
             }
 
             // we want outward-facing planes
@@ -1101,7 +1101,21 @@ static void DecompileEntity(
 
         // If we have brush info, we'll use that directly
         // TODO: support BSPX brushes too
-        if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
+        if (options.hullnum > 0) {
+            // recursively visit the clipnodes to gather up a list of clipnode leafs to decompile
+
+            std::vector<decomp_plane_t> stack;
+            std::vector<leaf_decompile_task> tasks;
+            AddMapBoundsToStack(stack, bsp, aabb3d(qvec3d(model->mins), qvec3d(model->maxs)));
+
+            DecompileClipNode(stack, bsp, &bsp->dclipnodes[model->headnode[options.hullnum]], tasks);
+
+            // decompile the leafs in parallel
+            compiledBrushes.resize(tasks.size());
+            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
+                compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
+            });
+        } else if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
             std::unordered_map<const dbrush_t *, leaf_decompile_task> brushes;
 
             auto handle_leaf = [&brushes, bsp, model](const mleaf_t *leaf) {
@@ -1159,10 +1173,9 @@ static void DecompileEntity(
 
             std::vector<decomp_plane_t> stack;
             std::vector<leaf_decompile_task> tasks;
-            AddMapBoundsToStack(stack, bsp, headnode);
+            AddMapBoundsToStack(stack, bsp, aabb3d(qvec3d(headnode->mins), qvec3d(headnode->maxs)));
             
             DecompileNode(stack, bsp, headnode, tasks);
-            //DecompileClipNode(stack, bsp, &bsp->dclipnodes[model->headnode[1]], tasks);
 
             // decompile the leafs in parallel
             compiledBrushes.resize(tasks.size());
