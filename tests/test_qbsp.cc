@@ -1853,6 +1853,19 @@ TEST_CASE("q1_rocks", "[testmaps_q1]")
     CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
 }
 
+/**
+ * Tests a bad hull expansion
+ */
+TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1][!mayfail]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull_expansion_lip.map");
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    const qvec3d point {174, 308, 42};
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
+}
+
 TEST_CASE("q1_hull1_content_types", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull1_content_types.map");
