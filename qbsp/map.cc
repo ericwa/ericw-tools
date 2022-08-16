@@ -191,7 +191,6 @@ static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &poi
 static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
 static void SetTexinfo_QuakeEd_New(
     const qbsp_plane_t &plane, const qvec2d &shift, vec_t rotate, const qvec2d &scale, texvecf &out_vecs);
-static void TestExpandBrushes(mapentity_t *src);
 
 static void AddAnimTex(const char *name)
 {
@@ -2482,10 +2481,6 @@ void LoadMapFile(void)
     logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.mtexinfos.size());
     logging::print(logging::flag::STAT, "     {:8} unique planes\n", map.planes.size());
     logging::print(logging::flag::STAT, "\n");
-
-    if (qbsp_options.expand.value()) {
-        TestExpandBrushes(map.world_entity());
-    }
 }
 
 static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
