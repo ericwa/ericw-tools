@@ -1837,6 +1837,22 @@ TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
     REQUIRE(it != ents.end());
 }
 
+/**
+ * Tests that hollow obj2map style geometry (tetrahedrons) get filled in, in all hulls.
+ */
+TEST_CASE("q1_rocks", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_rocks.map");
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    const qvec3d point {48, 320, 88};
+
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
+}
+
 TEST_CASE("q1_hull1_content_types", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull1_content_types.map");
