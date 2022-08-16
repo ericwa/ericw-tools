@@ -447,21 +447,31 @@ const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, c
     return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point);
 }
 
-static int BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int clipnodenum, const qvec3d &point)
+static clipnode_info_t BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int parent_clipnodenum, const planeside_t parent_side, const int clipnodenum, const qvec3d &point)
 {
     if (clipnodenum < 0) {
         // actually contents
-        return clipnodenum;
+        clipnode_info_t info;
+        info.parent_clipnode = parent_clipnodenum;
+        info.contents = clipnodenum;
+        info.side = parent_side;
+        return info;
     }
 
     const auto *node = &bsp->dclipnodes.at(clipnodenum);
     const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist >= 0) {
-        return BSP_FindClipnodeAtPoint_r(bsp, node->children[0], point);
+        return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_FRONT, node->children[SIDE_FRONT],  point);
     } else {
-        return BSP_FindClipnodeAtPoint_r(bsp, node->children[1], point);
+        return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_BACK, node->children[SIDE_BACK], point);
     }
+}
+
+clipnode_info_t BSP_FindClipnodeAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point)
+{
+    Q_assert(hullnum.value() > 0);
+    return BSP_FindClipnodeAtPoint_r(bsp, 0, static_cast<planeside_t>(-1), model->headnode.at(hullnum.value()), point);
 }
 
 int BSP_FindContentsAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point)
@@ -469,7 +479,8 @@ int BSP_FindContentsAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmode
     if (!hullnum.value_or(0)) {
         return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point)->contents;
     }
-    return BSP_FindClipnodeAtPoint_r(bsp, model->headnode.at(hullnum.value()), point);
+    auto info = BSP_FindClipnodeAtPoint_r(bsp, 0, static_cast<planeside_t>(-1), model->headnode.at(hullnum.value()), point);
+    return info.contents;
 }
 
 std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *leaf)

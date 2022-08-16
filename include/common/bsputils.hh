@@ -71,6 +71,29 @@ const bsp2_dnode_t *BSP_FindNodeAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wanted_normal);
 
 const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
+
+/**
+ * Leaf nodes in the clipnode tree don't have an identity like hull0 leaf nodes,
+ * so this struct helps tests determine if two clipnodes are the same.
+ */
+struct clipnode_info_t {
+    /**
+     * Index into bsp->dclipnodes
+     */
+    int parent_clipnode;
+    /**
+     * Which side of `parent_clipnode` are we on
+     */
+    planeside_t side;
+    int contents;
+
+    bool operator==(const clipnode_info_t& other) const {
+        return this->parent_clipnode == other.parent_clipnode
+            && this->side == other.side
+            && this->contents == other.contents;
+    }
+};
+clipnode_info_t BSP_FindClipnodeAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);
 int BSP_FindContentsAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);
 
 std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *leaf);
