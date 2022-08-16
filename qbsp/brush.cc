@@ -276,15 +276,9 @@ bool CreateBrushWindings(bspbrush_t *brush)
     return brush->update_bounds(true);
 }
 
+#define QBSP3
+
 #ifndef QBSP3
-struct hullbrush_t {
-    bspbrush_t &brush;
-
-    std::vector<qvec3d> points;
-    std::vector<qvec3d> corners;
-    std::vector<std::array<size_t, 2>> edges;
-};
-
 /*
 ==============================================================================
 
@@ -294,29 +288,34 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 ==============================================================================
 */
 
+struct hullbrush_t {
+    bspbrush_t &brush;
+
+    std::vector<qvec3d> points;
+    std::vector<qvec3d> corners;
+    std::vector<std::array<size_t, 2>> edges;
+};
+
 /*
 ============
 AddBrushPlane
 =============
 */
-static void
-AddBrushPlane(hullbrush_t &hullbrush, const qbsp_plane_t &plane)
+static bool AddBrushPlane(hullbrush_t &hullbrush, const qbsp_plane_t &plane)
 {
     vec_t len = qv::length(plane.get_normal());
-    if (len < 1.0 - NORMAL_EPSILON || len > 1.0 + NORMAL_EPSILON)
-        Error("%s: invalid normal (vector length %.4f)", __func__, len);
 
     for (auto &s : hullbrush.brush.sides) {
         if (qv::epsilonEqual(s.get_plane(), plane)) {
-            return;
+            return false;
         }
     }
 
     auto &s = hullbrush.brush.sides.emplace_back();
     s.planenum = map.add_or_find_plane(plane);
     s.texinfo = 0;
+    return true;
 }
-
 
 /*
 ============
@@ -326,48 +325,41 @@ Adds the given plane to the brush description if all of the original brush
 vertexes can be put on the front side
 =============
 */
-static void
-TestAddPlane(hullbrush_t &hullbrush, qbsp_plane_t plane)
+static bool TestAddPlane(hullbrush_t &hullbrush, const qbsp_plane_t &plane)
 {
-    int i, c;
-    vec_t d;
-    qvec3d *corner;
-    qbsp_plane_t flip;
-    bool points_front, points_back;
-
     /* see if the plane has already been added */
     for (auto &s : hullbrush.brush.sides) {
-        if (qv::epsilonEqual(plane, s.get_plane()))
-            return;
-        if (qv::epsilonEqual(-plane, s.get_plane()))
-            return;
+        if (qv::epsilonEqual(plane, s.get_plane()) ||
+            qv::epsilonEqual(plane, s.get_positive_plane())) {
+            return false;
+        }
     }
 
     /* check all the corner points */
-    points_front = false;
-    points_back = false;
+    bool points_front = false;
+    bool points_back = false;
 
-    corner = &hullbrush.corners.front();
-    c = hullbrush.points.size() * 8;
+    for (size_t i = 0; i < hullbrush.corners.size(); i++) {
+        vec_t d = qv::dot(hullbrush.corners[i], plane.get_normal()) - plane.get_dist();
 
-    for (i = 0; i < c; i++, corner++) {
-        d = qv::dot(*corner, plane.get_normal()) - plane.get_dist();
         if (d < -qbsp_options.epsilon.value()) {
-            if (points_front)
-                return;
+            if (points_front) {
+                return false;
+            }
             points_back = true;
         } else if (d > qbsp_options.epsilon.value()) {
-            if (points_back)
-                return;
+            if (points_back) {
+                return false;
+            }
             points_front = true;
         }
     }
 
     // the plane is a seperator
     if (points_front) {
-        AddBrushPlane(hullbrush, -plane);
+        return AddBrushPlane(hullbrush, -plane);
     } else {
-        AddBrushPlane(hullbrush, plane);
+        return AddBrushPlane(hullbrush, plane);
     }
 }
 
@@ -378,29 +370,25 @@ AddHullPoint
 Doesn't add if duplicated
 =============
 */
-static size_t
-AddHullPoint(hullbrush_t &hullbrush, const qvec3d &p, const aabb3d &hull_size)
+static size_t AddHullPoint(hullbrush_t &hullbrush, const qvec3d &p, const aabb3d &hull_size)
 {
-    size_t i;
-    int x, y, z;
-
-    for (i = 0; i < hullbrush.points.size(); i++)
-        if (qv::epsilonEqual(p, hullbrush.points[i], EQUAL_EPSILON))
-            return i;
+    for (auto &pt : hullbrush.points) {
+        if (qv::epsilonEqual(p, pt, EQUAL_EPSILON)) {
+            return &pt - hullbrush.points.data();
+        }
+    }
 
     hullbrush.points.emplace_back(p);
 
-    for (x = 0; x < 2; x++)
-        for (y = 0; y < 2; y++)
-            for (z = 0; z < 2; z++) {
-                qvec3d c;
-                c[0] = p[0] + hull_size[x][0];
-                c[1] = p[1] + hull_size[y][1];
-                c[2] = p[2] + hull_size[z][2];
-                hullbrush.corners.emplace_back(c);
+    for (size_t x = 0; x < 2; x++) {
+        for (size_t y = 0; y < 2; y++) {
+            for (size_t z = 0; z < 2; z++) {
+                hullbrush.corners.emplace_back(p + qvec3d { hull_size[x][0], hull_size[y][1], hull_size[z][2] });
             }
+        }
+    }
 
-    return i;
+    return hullbrush.points.size() - 1;
 }
 
 
@@ -408,121 +396,120 @@ AddHullPoint(hullbrush_t &hullbrush, const qvec3d &p, const aabb3d &hull_size)
 ============
 AddHullEdge
 
-Creates all of the hull planes around the given edge, if not done allready
+Creates all of the hull planes around the given edge, if not done already
 =============
 */
-static void
-AddHullEdge(hullbrush_t &hullbrush, const qvec3d &p1, const qvec3d &p2, const aabb3d &hull_size)
+static bool AddHullEdge(hullbrush_t &hullbrush, const qvec3d &p1, const qvec3d &p2, const aabb3d &hull_size)
 {
-    size_t pt1, pt2;
-    int i;
-    int a, b, c, d, e;
-    qvec3d edgevec, planeorg, planevec;
-    qplane3d plane;
-    vec_t length;
+    std::array<size_t, 2> edge = {
+        AddHullPoint(hullbrush, p1, hull_size),
+        AddHullPoint(hullbrush, p2, hull_size)
+    };
 
-    pt1 = AddHullPoint(hullbrush, p1, hull_size);
-    pt2 = AddHullPoint(hullbrush, p2, hull_size);
+    for (auto &e : hullbrush.edges) {
+        if (e == edge || e == decltype(edge) { edge[1], edge[0] }) {
+            return false;
+        }
+    }
 
-    for (i = 0; i < hullbrush.edges.size(); i++)
-        if ((hullbrush.edges[i][0] == pt1 && hullbrush.edges[i][1] == pt2)
-            || (hullbrush.edges[i][0] == pt2 && hullbrush.edges[i][1] == pt1))
-            return;
+    hullbrush.edges.emplace_back(edge);
 
-    hullbrush.edges.push_back({ pt1, pt2 });
+    qvec3d edgevec = qv::normalize(p1 - p2);
+    bool added = false;
 
-    edgevec = p1 - p2;
-    qv::normalizeInPlace(edgevec);
-
-    for (a = 0; a < 3; a++) {
-        b = (a + 1) % 3;
-        c = (a + 2) % 3;
-
+    for (size_t a = 0; a < 3; a++) {
+        qvec3d planevec{};
         planevec[a] = 1;
-        planevec[b] = 0;
-        planevec[c] = 0;
+
+        qplane3d plane;
         plane.normal = qv::cross(planevec, edgevec);
-        length = qv::normalizeInPlace(plane.normal);
+
+        vec_t length = qv::normalizeInPlace(plane.normal);
 
         /* If this edge is almost parallel to the hull edge, skip it. */
-        if (length < ANGLEEPSILON)
+        if (length < ANGLEEPSILON) {
             continue;
+        }
 
-        for (d = 0; d <= 1; d++) {
-            for (e = 0; e <= 1; e++) {
-                planeorg = p1;
+        size_t b = (a + 1) % 3;
+        size_t c = (a + 2) % 3;
+
+        for (size_t d = 0; d < 2; d++) {
+            for (size_t e = 0; e < 2; e++) {
+                qvec3d planeorg = p1;
                 planeorg[b] += hull_size[d][b];
                 planeorg[c] += hull_size[e][c];
                 plane.dist = qv::dot(planeorg, plane.normal);
-                TestAddPlane(hullbrush, plane);
+                added = TestAddPlane(hullbrush, plane) || added;
             }
         }
     }
-}
 
+    return added;
+}
 
 /*
 ============
 ExpandBrush
 =============
 */
-static void
-ExpandBrush(hullbrush_t &hullbrush, const aabb3d &hull_size)
+static void ExpandBrush(hullbrush_t &hullbrush, const aabb3d &hull_size)
 {
-    int i, x, s;
-    qvec3d corner;
-    qplane3d plane;
-    int cBevEdge = 0;
-
     size_t total_original_sides = hullbrush.brush.sides.size();
 
     // create all the hull points
     for (auto &f : hullbrush.brush.sides) {
-        if (!f.w) {
-            FError("bad input winding");
-        }
-        for (i = 0; i < f.w.size(); i++) {
-            AddHullPoint(hullbrush, f.w[i], hull_size);
-            cBevEdge++;
+        for (auto &pt : f.w) {
+            AddHullPoint(hullbrush, pt, hull_size);
         }
     }
 
     // expand all of the planes
     for (auto &f : hullbrush.brush.sides) {
-        if (f.get_texinfo().flags.no_expand)
+        if (f.get_texinfo().flags.no_expand) {
             continue;
-        corner = {};
-        plane = f.get_plane();
-        for (x = 0; x < 3; x++) {
-            if (plane.normal[x] > 0)
+        }
+        qvec3d corner = {};
+        qplane3d plane = f.get_plane();
+        for (size_t x = 0; x < 3; x++) {
+            if (plane.normal[x] > 0) {
                 corner[x] = hull_size[1][x];
-            else if (plane.normal[x] < 0)
+            } else if (plane.normal[x] < 0) {
                 corner[x] = hull_size[0][x];
+            }
         }
         plane.dist += qv::dot(corner, plane.normal);
         f.planenum = map.add_or_find_plane(plane);
     }
 
     // add any axis planes not contained in the brush to bevel off corners
-    for (x = 0; x < 3; x++)
-        for (s = -1; s <= 1; s += 2) {
+    for (size_t x = 0; x < 3; x++) {
+        for (int32_t s = -1; s <= 1; s += 2) {
             // add the plane
+            qplane3d plane;
             plane.normal = {};
-            plane.normal[x] = (vec_t)s;
-            if (s == -1)
+            plane.normal[x] = (vec_t) s;
+            if (s == -1) {
                 plane.dist = -hullbrush.brush.bounds.mins()[x] + -hull_size[0][x];
-            else
+            } else {
                 plane.dist = hullbrush.brush.bounds.maxs()[x] + hull_size[1][x];
+            }
             AddBrushPlane(hullbrush, plane);
         }
+    }
 
     // add all of the edge bevels
-    for (size_t f = 0; f < total_original_sides; f++) {
-        auto &side = hullbrush.brush.sides[f];
+    for (size_t f = 0; f < hullbrush.brush.sides.size(); f++) {
+        auto *side = &hullbrush.brush.sides[f];
+        auto *w = &side->w;
 
-        for (i = 0; i < side.w.size(); i++)
-            AddHullEdge(hullbrush, side.w[i],
-                        side.w[(i + 1) % side.w.size()], hull_size);
+        for (size_t i = 0; i < w->size(); i++) {
+            if (AddHullEdge(hullbrush, (*w)[i], (*w)[(i + 1) % w->size()], hull_size)) {
+                // re-fetch ptrs
+                side = &hullbrush.brush.sides[f];
+                w = &side->w;
+            }
+        }
     }
 }
 #endif

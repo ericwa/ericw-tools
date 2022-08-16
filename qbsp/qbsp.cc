@@ -953,10 +953,6 @@ void ProcessFile()
     // handle load time operation on the .map
     ProcessMapBrushes();
 
-    if (qbsp_options.expand.value()) {
-        TestExpandBrushes(map.world_entity());
-    }
-
     // initialize secondary textures
     LoadSecondaryTextures();
 

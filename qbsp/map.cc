@@ -1638,6 +1638,9 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
     return face;
 }
 
+#define QBSP3
+
+#ifdef QBSP3
 /*
 =================
 AddBrushBevels
@@ -1738,10 +1741,21 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
                     qplane3d plane {};
                     plane.normal[axis] = dir;
 					plane.normal = qv::cross(vec, plane.normal);
-					if (qv::normalizeInPlace(plane.normal) < 0.5) {
+                    
+                    // If this edge is almost parallel to the hull edge, skip it
+					if (qv::normalizeInPlace(plane.normal) < ANGLEEPSILON) {
 						continue;
                     }
 					plane.dist = qv::dot(b.faces[i].winding[j], plane.normal);
+
+                    auto w = BaseWindingForPlane<winding_t>(plane);
+
+                    if (fabs(trunc(w[0][0])) == 693 ||
+                        fabs(trunc(w[1][0])) == 693 ||
+                        fabs(trunc(w[2][0])) == 693) {
+                        __debugbreak();
+                    }
+
 
 					// if all the points on all the sides are
 					// behind this plane, it is a proper edge bevel
@@ -1792,6 +1806,267 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 		}
 	}
 }
+#else
+/*
+==============================================================================
+
+BEVELED CLIPPING HULL GENERATION
+
+This is done by brute force, and could easily get a lot faster if anyone cares.
+==============================================================================
+*/
+
+struct map_hullbrush_t {
+    mapentity_t &entity;
+    mapbrush_t &brush;
+
+    std::vector<qvec3d> points;
+    std::vector<qvec3d> corners;
+    std::vector<std::array<size_t, 2>> edges;
+};
+
+/*
+============
+AddBrushPlane
+=============
+*/
+static bool AddBrushPlane(map_hullbrush_t &hullbrush, const qbsp_plane_t &plane, size_t &index)
+{
+    for (auto &s : hullbrush.brush.faces) {
+        if (qv::epsilonEqual(s.get_plane(), plane)) {
+            index = &s - hullbrush.brush.faces.data();
+            return false;
+        }
+    }
+
+    index = hullbrush.brush.faces.size();
+    auto &s = hullbrush.brush.faces.emplace_back();
+    s.planenum = map.add_or_find_plane(plane);
+    // add this plane
+	s.texinfo = hullbrush.brush.faces[0].texinfo;
+	s.contents = hullbrush.brush.faces[0].contents;
+    // fixme: why did we need to store all this stuff again, isn't
+    // it in texinfo?
+    s.raw_info = hullbrush.brush.faces[0].raw_info;
+    s.flags = hullbrush.brush.faces[0].flags;
+    s.texname = hullbrush.brush.faces[0].texname;
+    s.value = hullbrush.brush.faces[0].value;
+	s.bevel = true;
+    return true;
+}
+
+/*
+============
+TestAddPlane
+
+Adds the given plane to the brush description if all of the original brush
+vertexes can be put on the front side
+=============
+*/
+static bool TestAddPlane(map_hullbrush_t &hullbrush, const qbsp_plane_t &plane)
+{
+    /* see if the plane has already been added */
+    for (auto &s : hullbrush.brush.faces) {
+        if (qv::epsilonEqual(plane, s.get_plane()) ||
+            qv::epsilonEqual(plane, s.get_positive_plane())) {
+            return false;
+        }
+    }
+
+    /* check all the corner points */
+    bool points_front = false;
+    bool points_back = false;
+
+    for (size_t i = 0; i < hullbrush.corners.size(); i++) {
+        vec_t d = qv::dot(hullbrush.corners[i], plane.get_normal()) - plane.get_dist();
+
+        if (d < -qbsp_options.epsilon.value()) {
+            if (points_front) {
+                return false;
+            }
+            points_back = true;
+        } else if (d > qbsp_options.epsilon.value()) {
+            if (points_back) {
+                return false;
+            }
+            points_front = true;
+        }
+    }
+
+    bool added;
+    size_t index;
+
+    // the plane is a seperator
+    if (points_front) {
+        added = AddBrushPlane(hullbrush, -plane, index);
+    } else {
+        added = AddBrushPlane(hullbrush, plane, index);
+    }
+
+    if (added) {
+        hullbrush.entity.numedgebevels++;
+    }
+
+    return added;
+}
+
+/*
+============
+AddHullPoint
+
+Doesn't add if duplicated
+=============
+*/
+static size_t AddHullPoint(map_hullbrush_t &hullbrush, const qvec3d &p, const aabb3d &hull_size)
+{
+    for (auto &pt : hullbrush.points) {
+        if (qv::epsilonEqual(p, pt, EQUAL_EPSILON)) {
+            return &pt - hullbrush.points.data();
+        }
+    }
+
+    hullbrush.points.emplace_back(p);
+
+    for (size_t x = 0; x < 2; x++) {
+        for (size_t y = 0; y < 2; y++) {
+            for (size_t z = 0; z < 2; z++) {
+                hullbrush.corners.emplace_back(p + qvec3d { hull_size[x][0], hull_size[y][1], hull_size[z][2] });
+            }
+        }
+    }
+
+    return hullbrush.points.size() - 1;
+}
+
+
+/*
+============
+AddHullEdge
+
+Creates all of the hull planes around the given edge, if not done already
+=============
+*/
+static bool AddHullEdge(map_hullbrush_t &hullbrush, const qvec3d &p1, const qvec3d &p2, const aabb3d &hull_size)
+{
+    std::array<size_t, 2> edge = {
+        AddHullPoint(hullbrush, p1, hull_size),
+        AddHullPoint(hullbrush, p2, hull_size)
+    };
+
+    for (auto &e : hullbrush.edges) {
+        if (e == edge || e == decltype(edge) { edge[1], edge[0] }) {
+            return false;
+        }
+    }
+
+    hullbrush.edges.emplace_back(edge);
+
+    qvec3d edgevec = qv::normalize(p1 - p2);
+    bool added = false;
+
+    for (size_t a = 0; a < 3; a++) {
+        qvec3d planevec{};
+        planevec[a] = 1;
+
+        qplane3d plane;
+        plane.normal = qv::cross(planevec, edgevec);
+
+        vec_t length = qv::normalizeInPlace(plane.normal);
+
+        /* If this edge is almost parallel to the hull edge, skip it. */
+        if (length < ANGLEEPSILON) {
+            continue;
+        }
+
+        size_t b = (a + 1) % 3;
+        size_t c = (a + 2) % 3;
+
+        for (size_t d = 0; d < 2; d++) {
+            for (size_t e = 0; e < 2; e++) {
+                qvec3d planeorg = p1;
+                planeorg[b] += hull_size[d][b];
+                planeorg[c] += hull_size[e][c];
+                plane.dist = qv::dot(planeorg, plane.normal);
+                added = TestAddPlane(hullbrush, plane) || added;
+            }
+        }
+    }
+
+    return added;
+}
+
+/*
+============
+ExpandBrush
+=============
+*/
+static void ExpandBrush(map_hullbrush_t &hullbrush, const aabb3d &hull_size)
+{
+    size_t total_original_sides = hullbrush.brush.faces.size();
+
+    // create all the hull points
+    for (auto &f : hullbrush.brush.faces) {
+        for (auto &pt : f.winding) {
+            AddHullPoint(hullbrush, pt, hull_size);
+        }
+    }
+
+    // expand all of the planes
+    for (auto &f : hullbrush.brush.faces) {
+        /*if (f.get_texinfo().flags.no_expand) {
+            continue;
+        }*/
+        qvec3d corner = {};
+        qplane3d plane = f.get_plane();
+        for (size_t x = 0; x < 3; x++) {
+            if (plane.normal[x] > 0) {
+                corner[x] = hull_size[1][x];
+            } else if (plane.normal[x] < 0) {
+                corner[x] = hull_size[0][x];
+            }
+        }
+        plane.dist += qv::dot(corner, plane.normal);
+        f.planenum = map.add_or_find_plane(plane);
+    }
+
+    // add any axis planes not contained in the brush to bevel off corners
+    for (size_t x = 0, o = 0; x < 3; x++) {
+        for (int32_t s = -1; s <= 1; s += 2, o++) {
+            // add the plane
+            qplane3d plane;
+            plane.normal = {};
+            plane.normal[x] = (vec_t) s;
+            if (s == -1) {
+                plane.dist = -hullbrush.brush.bounds.mins()[x] + -hull_size[0][x];
+            } else {
+                plane.dist = hullbrush.brush.bounds.maxs()[x] + hull_size[1][x];
+            }
+
+            size_t index;
+            AddBrushPlane(hullbrush, plane, index);
+
+			// if the plane is not in it canonical order, swap it
+			if (index != o) {
+                std::swap(hullbrush.brush.faces[o], hullbrush.brush.faces[index]);
+			}
+        }
+    }
+
+    // add all of the edge bevels
+    for (size_t f = 0; f < hullbrush.brush.faces.size(); f++) {
+        auto *side = &hullbrush.brush.faces[f];
+        auto *w = &side->winding;
+
+        for (size_t i = 0; i < w->size(); i++) {
+            if (AddHullEdge(hullbrush, (*w)[i], (*w)[(i + 1) % w->size()], hull_size)) {
+                // re-fetch ptrs
+                side = &hullbrush.brush.faces[f];
+                w = &side->winding;
+            }
+        }
+    }
+}
+#endif
 
 static contentflags_t Brush_GetContents(const mapbrush_t &mapbrush)
 {
@@ -2260,6 +2535,63 @@ inline bool MapBrush_IsHint(const mapbrush_t &brush)
     return false;
 }
 
+/*
+==================
+WriteBspBrushMap
+
+from q3map
+==================
+*/
+inline void WriteMapBrushMap(const fs::path &name, const std::vector<mapbrush_t> &list, const aabb3d &hull)
+{
+    logging::print("writing {}\n", name);
+    std::ofstream f(name);
+
+    if (!f)
+        FError("Can't write {}", name);
+
+    fmt::print(f, "{{\n\"classname\" \"worldspawn\"\n");
+
+    for (auto &brush : list) {
+        fmt::print(f, "{{\n");
+        for (auto &face : brush.faces) {
+            
+            qvec3d corner = {};
+            qplane3d plane = face.get_plane();
+            for (size_t x = 0; x < 3; x++) {
+                if (plane.normal[x] > 0) {
+                    corner[x] = hull[1][x];
+                } else if (plane.normal[x] < 0) {
+                    corner[x] = hull[0][x];
+                }
+            }
+            plane.dist += qv::dot(corner, plane.normal);
+
+            winding_t w = BaseWindingForPlane<winding_t>(plane);
+
+            fmt::print(f, "( {} ) ", w[0]);
+            fmt::print(f, "( {} ) ", w[1]);
+            fmt::print(f, "( {} ) ", w[2]);
+
+#if 0
+            if (face.visible) {
+                fmt::print(f, "skip 0 0 0 1 1\n");
+            } else {
+                fmt::print(f, "nonvisible 0 0 0 1 1\n");
+            }
+#endif
+
+            fmt::print(f, "{} 0 0 0 1 1\n", face.texname);
+        }
+
+        fmt::print(f, "}}\n");
+    }
+
+    fmt::print(f, "}}\n");
+
+    f.close();
+}
+
 void ProcessMapBrushes()
 {
     logging::funcheader();
@@ -2334,7 +2666,14 @@ void ProcessMapBrushes()
             num_faces += old_num_faces;
 
             // add the brush bevels
+#ifdef QBSP3
             AddBrushBevels(entity, brush);
+#else
+            {
+                map_hullbrush_t hullbrush { entity, brush };
+                ExpandBrush(hullbrush, { { 0, 0, 0 }, { 0, 0, 0 } });
+            }
+#endif
 
             for (auto &f : brush.faces) {
                 f.lmshift = brush.lmshift;
@@ -2418,6 +2757,24 @@ void ProcessMapBrushes()
         logging::print(logging::flag::STAT, "     {:8} brushes translated from origins\n", num_offset);
     }
     logging::print(logging::flag::STAT, "\n");
+
+    if (qbsp_options.debugexpand.isChanged()) {
+        aabb3d hull;
+
+        if (qbsp_options.debugexpand.is_hull()) {
+            const auto &hulls = qbsp_options.target_game->get_hull_sizes();
+
+            if (hulls.size() <= qbsp_options.debugexpand.hull_index_value()) {
+                FError("invalid hull index passed to debugexpand\n");
+            }
+
+            hull = *(hulls.begin() + qbsp_options.debugexpand.hull_index_value());
+        } else {
+            hull = qbsp_options.debugexpand.hull_bounds_value();
+        }
+
+        WriteMapBrushMap("expanded.map", map.world_entity()->mapbrushes, hull);
+    }
 }
 
 void LoadMapFile(void)
@@ -2846,30 +3203,4 @@ void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list)
     fmt::print(f, "}}\n");
 
     f.close();
-}
-
-/*
-================
-TestExpandBrushes
-
-Expands all the brush planes and saves a new map out to
-allow visual inspection of the clipping bevels
-
-from q3map
-================
-*/
-static void TestExpandBrushes(mapentity_t *src)
-{
-    bspbrush_t::container hull1brushes;
-
-    for (auto &mapbrush : src->mapbrushes) {
-        auto hull1brush = LoadBrush(src, &mapbrush, {CONTENTS_SOLID},
-            qbsp_options.target_game->id == GAME_QUAKE_II ? std::nullopt : std::optional<int32_t>(1), std::nullopt);
-
-        if (hull1brush) {
-            hull1brushes.emplace_back(bspbrush_t::make_ptr(std::move(*hull1brush)));
-        }
-    }
-
-    WriteBspBrushMap("expanded.map", hull1brushes);
 }

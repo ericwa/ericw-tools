@@ -30,6 +30,7 @@
 #include <array>
 #include <optional>
 #include <string>
+#include <variant>
 
 #include <cassert>
 #include <cctype>
@@ -245,6 +246,65 @@ public:
     std::string format() const override { return "[x [y [z]]]"; }
 };
 
+class setting_debugexpand : public setting_value<std::variant<uint8_t, aabb3d>>
+{
+public:
+    inline setting_debugexpand(setting_container *dictionary, const nameset &names,
+        const setting_group *group = nullptr, const char *description = "")
+        : setting_value(dictionary, names, {}, group, description)
+    {
+    }
+
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
+    {
+        std::array<vec_t, 6> values;
+        size_t i = 0;
+
+        try {
+            for (; i < 6; i++) {
+                if (!parser.parse_token(PARSE_PEEK)) {
+                    throw std::exception();
+                }
+
+                values[i] = std::stod(parser.token);
+
+                parser.parse_token();
+            }
+
+            this->setValue(aabb3d { { values[0], values[1], values[2] }, { values[3], values[4], values[5] } }, source);
+
+            return true;
+        } catch (std::exception &) {
+            // single hull value
+            if (i == 1) {
+                setValue(static_cast<uint8_t>(values[0]), source);
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    std::string stringValue() const override { return is_hull() ? std::to_string(hull_index_value()) : fmt::format("{}", hull_bounds_value()); }
+
+    std::string format() const override { return "[single hull index] or [mins_x mins_y mins_z maxs_x maxs_y maxs_z]"; }
+
+    inline bool is_hull() const
+    {
+        return std::holds_alternative<uint8_t>(_value);
+    }
+
+    inline const uint8_t &hull_index_value() const
+    {
+        return std::get<uint8_t>(_value);
+    }
+
+    inline const aabb3d &hull_bounds_value() const
+    {
+        return std::get<aabb3d>(_value);
+    }
+};
+
 class qbsp_settings : public common_settings
 {
 public:
@@ -302,6 +362,7 @@ public:
     setting_bool outsidedebug{this, "outsidedebug", false, &debugging_group,
         "write a .map after outside filling showing non-visible brush sides"};
     setting_bool debugchop{this, "debugchop", false, &debugging_group, "write a .map after ChopBrushes"};
+    setting_debugexpand debugexpand{this, "debugexpand", &debugging_group, "write expanded hull .map for debugging/inspecting hulls/brush bevelling"};
     setting_bool keepprt{this, "keepprt", false, &debugging_group, "avoid deleting the .prt file on leaking maps"};
     setting_bool includeskip{this, "includeskip", false, &common_format_group,
         "don't cull skip faces from the list of renderable surfaces (Q2RTX)"};
@@ -328,8 +389,6 @@ public:
         "func_detail_illusionary brushes are omitted from the compile"};
     setting_bool omitdetailfence{this, "omitdetailfence", false, &map_development_group,
         "func_detail_fence brushes are omitted from the compile"};
-    setting_bool expand{
-        this, "expand", false, &common_format_group, "write hull 1 expanded brushes to expanded.map for debugging"};
     setting_wadpathset wadpaths{this, {"wadpath", "xwadpath"}, &map_development_group,
         "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"};
     setting_bool notriggermodels{this, "notriggermodels", false, &common_format_group,
