@@ -276,6 +276,8 @@ bool CreateBrushWindings(bspbrush_t *brush)
     return brush->update_bounds(true);
 }
 
+#define QBSP3
+
 #ifndef QBSP3
 struct hullbrush_t {
     bspbrush_t &brush;
