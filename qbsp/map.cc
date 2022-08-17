@@ -1740,8 +1740,8 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 					plane.normal = qv::cross(vec, plane.normal);
                     
                     // If this edge is almost parallel to the hull edge, skip it
-                    vec_t radians = qv::normalizeInPlace(plane.normal);
-					if (radians < ANGLEEPSILON) {
+                    vec_t sin_of_angle = qv::normalizeInPlace(plane.normal);
+					if (sin_of_angle < ANGLEEPSILON) {
 						continue;
                     }
 					plane.dist = qv::dot(b.faces[i].winding[j], plane.normal);
