@@ -1856,7 +1856,7 @@ TEST_CASE("q1_rocks", "[testmaps_q1]")
 /**
  * Tests a bad hull expansion
  */
-TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1][!mayfail]")
+TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull_expansion_lip.map");
 
