@@ -53,7 +53,7 @@ static std::ofstream InitMtlFile(const std::string &filesuffix)
 
 static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
 {
-    const maptexinfo_t &texinfo = map.mtexinfos.at(face->texinfo);
+    const maptexinfo_t &texinfo = face->get_texinfo();
     const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
 
     const auto &texture = map.load_image_meta(texname);
@@ -153,11 +153,9 @@ static void ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<cons
     }
 
     for (auto &face : node->markfaces) {
-        if (map.mtexinfos.at(face->texinfo).flags.is_skip)
-            continue;
-
-        // FIXME: what is the face->original list about
-        dest->insert(face);
+        if (!face->get_texinfo().flags.is_skip) {
+            dest->insert(face);
+        }
     }
 }
 

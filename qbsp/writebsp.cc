@@ -169,7 +169,7 @@ static void ExportLeaf(node_t *node)
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
     for (auto &face : node->markfaces) {
-        if (!qbsp_options.includeskip.value() && map.mtexinfos.at(face->texinfo).flags.is_skip) {
+        if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_skip) {
             continue;
         }
 

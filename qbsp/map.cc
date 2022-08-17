@@ -1485,18 +1485,15 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
-
     mapface.contents = {extinfo.info->contents};
-    tx->flags = mapface.flags = {extinfo.info->flags};
-    tx->value = mapface.value = extinfo.info->value;
+    tx->flags = {extinfo.info->flags};
+    tx->value = extinfo.info->value;
 
-    contentflags_t contents{mapface.contents};
-
-    if (!contents.is_valid(qbsp_options.target_game, false)) {
-        auto old_contents = contents;
-        qbsp_options.target_game->contents_make_valid(contents);
+    if (!mapface.contents.is_valid(qbsp_options.target_game, false)) {
+        auto old_contents = mapface.contents;
+        qbsp_options.target_game->contents_make_valid(mapface.contents);
         logging::print("WARNING: {}: face has invalid contents {}, remapped to {}\n", mapface.line,
-            old_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
+            old_contents.to_string(qbsp_options.target_game), mapface.contents.to_string(qbsp_options.target_game));
     }
 
     switch (tx_type) {
@@ -1533,15 +1530,20 @@ bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
     return length >= NORMAL_EPSILON;
 }
 
+const maptexinfo_t &mapface_t::get_texinfo() const
+{
+    return map.mtexinfos.at(this->texinfo);
+}
+
 const texvecf &mapface_t::get_texvecs() const
 {
-    return map.mtexinfos.at(this->texinfo).vecs;
+    return get_texinfo().vecs;
 }
 
 void mapface_t::set_texvecs(const texvecf &vecs)
 {
     // start with a copy of the current texinfo structure
-    maptexinfo_t texInfoNew = map.mtexinfos.at(this->texinfo);
+    maptexinfo_t texInfoNew = get_texinfo();
     texInfoNew.outputnum = std::nullopt;
     texInfoNew.vecs = vecs;
     this->texinfo = FindTexinfo(texInfoNew);
@@ -1676,15 +1678,11 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 					plane.dist = -b.bounds.mins()[axis];
                 }
 				s.planenum = map.add_or_find_plane(plane);
+                // FIXME: use the face closest to the new bevel for picking
+                // its surface info to copy from.
 				s.texinfo = b.faces[0].texinfo;
 				s.contents = b.faces[0].contents;
-                // fixme: why did we need to store all this stuff again, isn't
-                // it in texinfo?
-                s.raw_info = b.faces[0].raw_info;
-                s.flags = b.faces[0].flags;
                 s.texname = b.faces[0].texname;
-                s.value = b.faces[0].value;
-
 				s.bevel = true;
 				e.numboxbevels++;
 			}
@@ -1780,14 +1778,9 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 					// add this plane
                     mapface_t &s = b.faces.emplace_back();
 				    s.planenum = map.add_or_find_plane(plane);
-				    s.texinfo = b.faces[0].texinfo;
-				    s.contents = b.faces[0].contents;
-                    // fixme: why did we need to store all this stuff again, isn't
-                    // it in texinfo?
-                    s.raw_info = b.faces[0].raw_info;
-                    s.flags = b.faces[0].flags;
-                    s.texname = b.faces[0].texname;
-                    s.value = b.faces[0].value;
+				    s.texinfo = b.faces[i].texinfo;
+				    s.contents = b.faces[i].contents;
+                    s.texname = b.faces[i].texname;
 					s.bevel = true;
 					e.numedgebevels++;
 				}
@@ -1796,6 +1789,13 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
 	}
 }
 
+/*
+=================
+Brush_GetContents
+
+Fetch the final contents flag of the given mapbrush. 
+=================
+*/
 static contentflags_t Brush_GetContents(const mapbrush_t &mapbrush)
 {
     bool base_contents_set = false;
@@ -1803,7 +1803,7 @@ static contentflags_t Brush_GetContents(const mapbrush_t &mapbrush)
 
     // validate that all of the sides have valid contents
     for (auto &mapface : mapbrush.faces) {
-        const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+        const maptexinfo_t &texinfo = mapface.get_texinfo();
 
         contentflags_t contents =
             qbsp_options.target_game->face_get_contents(mapface.texname.data(), texinfo.flags, mapface.contents);
@@ -2256,7 +2256,7 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 inline bool MapBrush_IsHint(const mapbrush_t &brush)
 {
     for (auto &f : brush.faces) {
-        if (f.flags.is_hint)
+        if (f.get_texinfo().flags.is_hint)
             return true;
     }
 
@@ -2421,7 +2421,7 @@ void ProcessMapBrushes()
                 for (auto &f : brush.faces) {
                     // account for texture offset, from txqbsp-xt
                     if (!qbsp_options.oldrottex.value()) {
-                        maptexinfo_t texInfoNew = map.mtexinfos.at(f.texinfo);
+                        maptexinfo_t texInfoNew = f.get_texinfo();
                         texInfoNew.outputnum = std::nullopt;
 
                         texInfoNew.vecs.at(0, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(0).xyz());
@@ -2442,29 +2442,12 @@ void ProcessMapBrushes()
             }
         }
 
-#if 0
-        // test expansion
+        // remove windings, we no longer need them
         for (auto &brush : entity.mapbrushes) {
-            for (auto &face : brush.faces) {
-                qvec3d corner{};
-                const qvec3d hull[] = {{ -16, -16, -24 }, { 16, 16, 32 }};
-                for (int32_t x = 0; x < 3; x++) {
-                    if (face.get_plane().get_normal()[x] > 0) {
-                        corner[x] = hull[1][x];
-                    } else if (face.get_plane().get_normal()[x] < 0) {
-                        corner[x] = hull[0][x];
-                    }
-                }
-                qplane3d plane = face.get_plane();
-                plane.dist += qv::dot(corner, plane.normal);
-                face.planenum = map.add_or_find_plane(plane);
-                face.bevel = false;
+            for (auto &f : brush.faces) {
+                f.winding = {};
             }
-
-            // re-calculate brush bounds/windings
-            CalculateBrushBounds(brush);
         }
-#endif
     }
     clock.print();
     
@@ -2607,7 +2590,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
 {
     const auto &texture = map.load_image_meta(mapface.texname.c_str());
 
-    const maptexinfo_t &texinfo = map.mtexinfos.at(mapface.texinfo);
+    const maptexinfo_t &texinfo = mapface.get_texinfo();
 
     // Write plane points
     for (int i = 0; i < 3; i++) {

@@ -297,7 +297,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 
         if (!hullnum.value_or(0) && mapbrush->is_hint) {
             /* Don't generate hintskip faces */
-            const maptexinfo_t &texinfo = map.mtexinfos.at(src.texinfo);
+            const maptexinfo_t &texinfo = src.get_texinfo();
 
             // any face that isn't a hint is assumed to be hintskip
             if (!texinfo.flags.is_hint) {

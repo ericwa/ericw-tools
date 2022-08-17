@@ -505,6 +505,8 @@ struct face_t
     portal_t *portal;
     mapface_t *original_side;
 
+    const maptexinfo_t &get_texinfo() const;
+
     const qbsp_plane_t &get_plane() const;
     const qbsp_plane_t &get_positive_plane() const;
 };

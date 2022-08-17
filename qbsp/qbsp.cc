@@ -46,6 +46,11 @@
 
 #include "tbb/global_control.h"
 
+const maptexinfo_t &face_t::get_texinfo() const
+{
+    return map.mtexinfos[texinfo];
+}
+
 const qbsp_plane_t &face_t::get_plane() const
 {
     return map.get_plane(planenum);

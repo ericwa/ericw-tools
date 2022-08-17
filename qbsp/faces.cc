@@ -40,7 +40,7 @@ struct makefaces_stats_t : logging::stat_tracker_t
 
 static bool ShouldOmitFace(face_t *f)
 {
-    if (!qbsp_options.includeskip.value() && map.mtexinfos.at(f->texinfo).flags.is_skip)
+    if (!qbsp_options.includeskip.value() && f->get_texinfo().flags.is_skip)
         return true;
     if (map.mtexinfos.at(f->texinfo).flags.is_hint)
         return true;
@@ -346,15 +346,14 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
     vec_t v;
     int axis;
     qplane3d plane;
-    const maptexinfo_t *tex;
     vec_t subdiv;
     vec_t extent;
     int lmshift;
 
     /* special (non-surface cached) faces don't need subdivision */
-    tex = &map.mtexinfos.at(f->texinfo);
+    const maptexinfo_t &tex = f->get_texinfo();
 
-    if (tex->flags.is_skip || tex->flags.is_hint || !qbsp_options.target_game->surf_is_subdivided(tex->flags)) {
+    if (tex.flags.is_skip || tex.flags.is_hint || !qbsp_options.target_game->surf_is_subdivided(tex.flags)) {
         std::list<std::unique_ptr<face_t>> result;
         result.push_back(std::move(f));
         return result;
@@ -391,7 +390,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
             mins = VECT_MAX;
             maxs = -VECT_MAX;
 
-            qvec3d tmp = tex->vecs.row(axis).xyz();
+            qvec3d tmp = tex.vecs.row(axis).xyz();
 
             for (int32_t i = 0; i < f->w.size(); i++) {
                 v = qv::dot(f->w[i], tmp);

@@ -37,26 +37,36 @@
 #include <shared_mutex>
 #include <string_view>
 
-struct bspbrush_t;
-
 struct mapface_t
 {
     size_t planenum;
     std::array<qvec3d, 3> planepts{};
-    std::string texname{};
     int texinfo = 0;
     parser_source_location line;
     bool bevel = false;
-    winding_t winding; // winding used to calculate bevels
-    int16_t lmshift;
+    // the lmshift value of the brush. stored here because
+    // mapfaces don't link back to the mapbrush_t
+    int16_t lmshift = 0;
+    // the raw texture name of this face. this is technically
+    // duplicated information, as the miptex stores the name too,
+    // but it is also here for quicker lookups.
+    std::string texname{};
 
-    surfflags_t flags{};
-
-    // Q2 stuff
+    // faces can technically have different contents on each side;
+    // in Q1's case, consider `*waterskip` on one and `skip` on another.
+    // in Q2's case, contents are per-face (probably since brushes didn't have
+    // any data on them other than faces), but only the first valid contents
+    // end up being used. This stores the per-side contents, but be careful
+    // about using this since it is often merged into a single contents
+    // value on mapbrush_t.
     contentflags_t contents{};
-    int value = 0;
 
-    // for convert
+    // winding used to calculate bevels; this is not valid after
+    // brush processing.
+    winding_t winding;
+
+    // the raw info that we pulled from the .map file
+    // with no transformations; this is for conversions only.
     std::optional<extended_texinfo_t> raw_info;
 
     bool visible = false; // can any part of this side be seen from non-void parts of the level?
@@ -64,6 +74,8 @@ struct mapface_t
                           // (avoiding generating a BSP spit, so expanding it outwards)
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);
+
+    const maptexinfo_t &get_texinfo() const;
 
     const texvecf &get_texvecs() const;
     void set_texvecs(const texvecf &vecs);
