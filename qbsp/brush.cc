@@ -276,7 +276,8 @@ bool CreateBrushWindings(bspbrush_t *brush)
     return brush->update_bounds(true);
 }
 
-#define QBSP3
+// fixme-brushbsp: restore this define (switch to the q2 code) once we fix the remaining regressions in q1_rocks.map
+//#define QBSP3
 
 #ifndef QBSP3
 struct hullbrush_t {
