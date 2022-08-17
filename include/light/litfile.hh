@@ -50,7 +50,7 @@ struct facesup_t
     float lmscale;
     uint16_t styles[MAXLIGHTMAPSSUP]; /* scaled styles */
     int32_t lightofs; /* scaled lighting */
-    uint16_t extent[2];
+    twosided<uint16_t> extent;
 };
 
 void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version);

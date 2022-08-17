@@ -143,7 +143,7 @@ static void CheckBSPFacesPlanar(const mbsp_t *bsp)
 static int Node_Height(const mbsp_t *bsp, const bsp2_dnode_t *node, std::map<const bsp2_dnode_t *, int> *cache)
 {
     // leafs have a height of 0
-    int child_heights[2] = {0, 0};
+    twosided<int32_t> child_heights = {0, 0};
 
     for (int i = 0; i < 2; i++) {
         const int child = node->children[i];

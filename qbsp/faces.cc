@@ -552,16 +552,15 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
 
     // (Note, this is happening per leaf, so we can potentially generate faces
     // for the same portal once from one leaf, and once from the neighbouring one)
-    bool s;
-    for (portal_t *p = node->portals; p; p = p->next[s]) {
-        // true means node is on the back side of planenum
-        s = (p->nodes[1] == node);
+    bool is_on_back;
 
-        std::unique_ptr<face_t> f = FaceFromPortal(p, s);
+    for (portal_t *p = node->portals; p; p = p->next[is_on_back]) {
+        is_on_back = (p->nodes.back == node);
+
+        std::unique_ptr<face_t> f = FaceFromPortal(p, is_on_back);
 
         if (f) {
             stats.c_nodefaces++;
-            p->face[s] = f.get();
             p->onnode->facelist.push_back(std::move(f));
         }
     }

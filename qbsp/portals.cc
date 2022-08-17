@@ -159,9 +159,9 @@ std::list<buildportal_t> MakeHeadnodePortals(tree_t *tree)
 
             p.winding = BaseWindingForPlane<winding_t>(pl);
             if (side) {
-                p.set_nodes(&tree->outside_node, tree->headnode);
+                p.nodes = { &tree->outside_node, tree->headnode };
             } else {
-                p.set_nodes(tree->headnode, &tree->outside_node);
+                p.nodes = { tree->headnode, &tree->outside_node };
             }
         }
 
@@ -262,7 +262,7 @@ static std::optional<buildportal_t> MakeNodePortal(node_t *node, const std::list
     new_portal.plane = node->get_plane();
     new_portal.onnode = node;
     new_portal.winding = std::move(*w);
-    new_portal.set_nodes(node->children[0], node->children[1]);
+    new_portal.nodes = node->children;
     return std::move(new_portal);
 }
 
@@ -293,7 +293,7 @@ static twosided<std::list<buildportal_t>> SplitNodePortals(const node_t *node, s
             FError("CutNodePortals_r: mislinked portal");
 
         node_t *other_node = p.nodes[!side];
-        p.set_nodes(nullptr, nullptr);
+        p.nodes = { nullptr, nullptr };
 
         //
         // cut the portal into two portals, one on each side of the cut plane
@@ -316,18 +316,18 @@ static twosided<std::list<buildportal_t>> SplitNodePortals(const node_t *node, s
 
         if (!frontwinding) {
             if (side == SIDE_FRONT)
-                p.set_nodes(b, other_node);
+                p.nodes = { b, other_node };
             else
-                p.set_nodes(other_node, b);
+                p.nodes = { other_node, b };
 
             result.back.push_back(std::move(p));
             continue;
         }
         if (!backwinding) {
             if (side == SIDE_FRONT)
-                p.set_nodes(f, other_node);
+                p.nodes = { f, other_node };
             else
-                p.set_nodes(other_node, f);
+                p.nodes = { other_node, f };
 
             result.front.push_back(std::move(p));
             continue;
@@ -343,11 +343,11 @@ static twosided<std::list<buildportal_t>> SplitNodePortals(const node_t *node, s
         p.winding = std::move(*frontwinding);
 
         if (side == SIDE_FRONT) {
-            p.set_nodes(f, other_node);
-            new_portal.set_nodes(b, other_node);
+            p.nodes = { f, other_node };
+            new_portal.nodes = { b, other_node };
         } else {
-            p.set_nodes(other_node, f);
-            new_portal.set_nodes(other_node, b);
+            p.nodes = { other_node, f };
+            new_portal.nodes = { other_node, b };
         }
 
         result.front.push_back(std::move(p));
