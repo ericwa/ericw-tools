@@ -2859,7 +2859,7 @@ allow visual inspection of the clipping bevels
 from q3map
 ================
 */
-static void TestExpandBrushes(mapentity_t *src)
+void TestExpandBrushes(mapentity_t *src)
 {
     bspbrush_t::container hull1brushes;
 
