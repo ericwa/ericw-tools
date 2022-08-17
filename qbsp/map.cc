@@ -1738,7 +1738,8 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
                     qplane3d plane {};
                     plane.normal[axis] = dir;
 					plane.normal = qv::cross(vec, plane.normal);
-					if (qv::normalizeInPlace(plane.normal) < 0.5) {
+                    const double sin_of_angle = qv::normalizeInPlace(plane.normal);
+					if (sin_of_angle < 0.01) {
 						continue;
                     }
 					plane.dist = qv::dot(b.faces[i].winding[j], plane.normal);
