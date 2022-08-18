@@ -88,4 +88,3 @@ bool WindingIsHuge(const T &w)
 
 bspbrush_t::ptr BrushFromBounds(const aabb3d &bounds);
 std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::container &brushes, std::optional<bool> forced_quick_tree);
-void ChopBrushes(bspbrush_t::container &brushes);

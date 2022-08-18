@@ -529,16 +529,6 @@ TEST_CASE("options_reset2", "[testmaps_q1]")
     CHECK_FALSE(qbsp_options.transsky.value());
 }
 
-/**
- * The brushes are touching but not intersecting, so ChopBrushes shouldn't change anything.
- */
-TEST_CASE("chop_no_change", "[testmaps_q1]")
-{
-    LoadTestmapQ1("qbsp_chop_no_change.map");
-
-    // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
-}
-
 TEST_CASE("simple_sealed", "[testmaps_q1]")
 {
     auto mapname = GENERATE("qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map");

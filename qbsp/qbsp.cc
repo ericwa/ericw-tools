@@ -467,11 +467,6 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
 
     logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
-    // always chop the other hulls to reduce brush tests
-    if (qbsp_options.chop.value() || hullnum.value_or(0)) {
-        ChopBrushes(brushes);
-    }
-
     // we're discarding the brush
     if (discarded_trigger) {
         entity->epairs.set("mins", fmt::to_string(entity->bounds.mins()));
