@@ -415,6 +415,8 @@ public:
         this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"};
     setting_extra extra{
         this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"};
+    setting_extra bounceextra{
+        this, {"bounceextra", "bounceextra4"}, 1, &performance_group, "bounce light supersampling; 2x2 (bounceextra) or 4x4 (bounceextra4) respectively"};
     setting_enum<visapprox_t> visapprox{this, "visapprox", visapprox_t::AUTO,
         {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
             {"rays", visapprox_t::RAYS}},
