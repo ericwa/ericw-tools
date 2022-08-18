@@ -139,6 +139,7 @@ std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec<T, 3> 
         std::swap(tangent, bitangent);
     }
 
+#if PARANOID
     // debug test
     if (0) {
         auto n = qv::normalize(qv::cross(tangent, bitangent));
@@ -146,6 +147,7 @@ std::tuple<qvec3d, qvec3d> MakeTangentAndBitangentUnnormalized(const qvec<T, 3> 
 
         assert(d < 0.0001);
     }
+#endif
 
     return {tangent, bitangent};
 }
@@ -868,7 +870,7 @@ static compiled_brush_t DecompileLeafTask(
                 DefaultSkipSide(side, bsp);
             } else {
                 const char *name = nullptr;
-                const mtexinfo_t *ti;
+                const mtexinfo_t *ti = nullptr;
 
                 auto faces = finalSide.faces;
 
@@ -1085,7 +1087,7 @@ static void DecompileEntity(
                 }
             };
 
-            std::function<void(const bsp2_dnode_t *)> handle_node = [&brushes, bsp, &handle_leaf, &handle_node](
+            std::function<void(const bsp2_dnode_t *)> handle_node = [bsp, &handle_leaf, &handle_node](
                                                                         const bsp2_dnode_t *node) {
                 for (auto &c : node->children) {
                     if (c < 0) {

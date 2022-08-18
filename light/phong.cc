@@ -268,20 +268,6 @@ const face_normal_t &GetSurfaceVertexNormal(const mbsp_t *bsp, const mface_t *f,
     return face_normals_vec.at(vertindex);
 }
 
-static bool FacesOnSamePlane(const std::vector<const mface_t *> &faces)
-{
-    if (faces.empty()) {
-        return false;
-    }
-    const int32_t planenum = faces.at(0)->planenum;
-    for (auto face : faces) {
-        if (face->planenum != planenum) {
-            return false;
-        }
-    }
-    return true;
-}
-
 const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const int edgeindex)
 {
     Q_assert(s_builtPhongCaches);
@@ -308,30 +294,6 @@ const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const
         }
     }
     return nullptr;
-
-#if 0
-    if (smoothFaces.find(f) == smoothFaces.end()) {
-        return nullptr;
-    }
-    
-    int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
-    int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
-    
-    const auto &v0_faces = vertsToFaces.at(v0);
-    const auto &v1_faces = vertsToFaces.at(v1);
-    
-    // find a face f2 that has both verts v0 and v1
-    for (auto f2 : v0_faces) {
-        if (f2 == f)
-            continue;
-        if (find(v1_faces.begin(), v1_faces.end(), f2) != v1_faces.end()) {
-            const auto &f_smoothfaces = smoothFaces.at(f);
-            bool smoothed = (f_smoothfaces.find(f2) != f_smoothfaces.end());
-            return smoothed ? f2 : nullptr;
-        }
-    }
-    return nullptr;
-#endif
 }
 
 static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)

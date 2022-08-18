@@ -597,7 +597,7 @@ static quark_tx_info_t ParseExtendedTX(parser_t &parser)
     } else {
         // Parse extra Quake 2 surface info
         if (parser.parse_token(PARSE_OPTIONAL)) {
-            result.info = extended_texinfo_t{std::stoi(parser.token)};
+            result.info = extended_texinfo_t{{std::stoi(parser.token)}};
 
             if (parser.parse_token(PARSE_OPTIONAL)) {
                 result.info->flags.native = std::stoi(parser.token);

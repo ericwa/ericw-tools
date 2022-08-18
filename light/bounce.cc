@@ -176,7 +176,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     // extra2 + bounceextra4 = 0.5 (for every point, we get two bounce lights)
     // extra4 + bounceextra = 2 (for every two points, we get one bounce light)
     // extra4 + (no bounce extra) = 4 (for every 4 points, we get one bounce light)
-    const vec_t bounce_step = light_options.extra.value() / light_options.bounceextra.value();
+    const vec_t bounce_step = options.extra.value() / options.bounceextra.value();
     // color divisor;
     // extra4 + (no bounce extra) = 16, since surf.points is 16x larger than vanilla
     const vec_t bounce_divisor = bounce_step * bounce_step;

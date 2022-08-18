@@ -445,7 +445,7 @@ struct gamedef_q2_t : public gamedef_t
         return c;
     }
 
-    int32_t get_content_type(const contentflags_t &contents) const
+    int32_t get_content_type(const contentflags_t &contents) const override
     {
         return contents.native & (Q2_ALL_VISIBLE_CONTENTS |
                                      (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
@@ -548,7 +548,7 @@ struct gamedef_q2_t : public gamedef_t
         "CURRENT_0", "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER",
         "DEADMONSTER", "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
 
-    int32_t contents_from_string(const std::string_view &str) const
+    int32_t contents_from_string(const std::string_view &str) const override
     {
         for (size_t i = 0; i < std::size(bitflag_names); i++) {
             if (string_iequals(str, bitflag_names[i])) {

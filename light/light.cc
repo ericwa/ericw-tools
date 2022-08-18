@@ -368,7 +368,7 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
             }
         }
 
-        light_surfaces[i] = std::move(CreateLightmapSurface(bsp, face, facesup, options));
+        light_surfaces[i] = CreateLightmapSurface(bsp, face, facesup, options);
     });
 }
 
