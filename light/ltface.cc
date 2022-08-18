@@ -1693,7 +1693,7 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
 }
 
 static bool // mxd
-SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
+SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf, const vec_t &bouncelight_gate)
 {
     if (options.visapprox.value() == visapprox_t::RAYS && vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
@@ -1706,7 +1706,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf)
     // Get light contribution
     const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vpl->color, dist);
 
-    return qv::gate(color, 0.01f);
+    return qv::gate(color, (float) bouncelight_gate);
 }
 
 #if 0
@@ -1828,9 +1828,10 @@ static void // mxd
 LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
+    const vec_t bouncelight_gate = 0.01 / light_options.bounceextra.value();
 
     for (const surfacelight_t &vpl : GetSurfaceLights()) {
-        if (SurfaceLight_SphereCull(&vpl, lightsurf))
+        if (SurfaceLight_SphereCull(&vpl, lightsurf, bouncelight_gate))
             continue;
 
         raystream_occlusion_t &rs = lightsurf->occlusion_stream;
@@ -1859,7 +1860,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                     dir /= dist;
 
                 const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
-                if (!qv::gate(indirect, 0.01)) { // Each point contributes very little to the final result
+                if (!qv::gate(indirect, bouncelight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(i, pos, dir, dist, &indirect);
                 }
             }

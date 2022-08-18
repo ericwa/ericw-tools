@@ -171,16 +171,28 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return;
     }
 
+    // point divisor on one axis;
+    // extra4 + bounceextra4 = 1
+    // extra2 + bounceextra4 = 0.5 (for every point, we get two bounce lights)
+    // extra4 + bounceextra = 2 (for every two points, we get one bounce light)
+    // extra4 + (no bounce extra) = 4 (for every 4 points, we get one bounce light)
+    const vec_t bounce_step = light_options.extra.value() / light_options.bounceextra.value();
+    // color divisor;
+    // extra4 + (no bounce extra) = 16, since surf.points is 16x larger than vanilla
+    const vec_t bounce_divisor = bounce_step * bounce_step;
+
     const vec_t area_divisor = sqrt(area);
-    const vec_t sample_divisor = surf.points.size() / (surf.vanilla_extents.width() * surf.vanilla_extents.height());
+    const vec_t sample_divisor = (surf.points.size() / bounce_divisor) / (surf.vanilla_extents.width() * surf.vanilla_extents.height());
 
     // average them, area weighted
     std::unordered_map<int, qvec3d> sum;
 
     for (const auto &lightmap : surf.lightmapsByStyle) {
-        for (const auto &sample : lightmap.samples) {
-            sum[lightmap.style] += sample.color / sample_divisor;
-        }
+        for (vec_t x = 0; x < surf.width; x += bounce_step) {
+            for (vec_t y = 0; y < surf.height; y += bounce_step) {
+                sum[lightmap.style] += lightmap.samples[(y * surf.width) + x].color / sample_divisor;
+        	}
+    	}
     }
 
     qvec3d total = {};
@@ -209,11 +221,14 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     qplane3d faceplane = winding.plane();
 
-    area /= surf.points.size();
+    area /= surf.points.size() / bounce_divisor;
 
-    for (auto &pt : surf.points) {
-        AddBounceLight(pt, emitcolors, faceplane.normal, area, &face, bsp);
-}
+    for (vec_t x = 0; x < surf.width; x += bounce_step) {
+        for (vec_t y = 0; y < surf.height; y += bounce_step) {
+            auto &pt = surf.points[(y * surf.width) + x];
+        	AddBounceLight(pt, emitcolors, faceplane.normal, area, &face, bsp);
+        }
+	}
 }
 
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)

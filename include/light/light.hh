@@ -415,9 +415,15 @@ public:
         this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"};
     setting_extra extra{
         this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"};
-    setting_enum<visapprox_t> visapprox{
-        this, "visapprox", visapprox_t::AUTO, { { "auto", visapprox_t::AUTO }, { "none", visapprox_t::NONE }, { "vis", visapprox_t::VIS }, { "rays", visapprox_t::RAYS } }, &debug_group, "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"};
-    setting_func lit{this, "lit", [&]() { write_litfile |= lightfile::external; }, &output_group, "write .lit file"};
+    setting_extra bounceextra{
+        this, {"bounceextra", "bounceextra4"}, 1, &performance_group, "bounce light supersampling; 2x2 (bounceextra) or 4x4 (bounceextra4) respectively"};
+    setting_enum<visapprox_t> visapprox{this, "visapprox", visapprox_t::AUTO,
+        {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
+            {"rays", visapprox_t::RAYS}},
+        &debug_group,
+        "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"};
+    setting_func lit{
+        this, "lit", [&]() { write_litfile |= lightfile::external; }, &output_group, "write .lit file"};
     setting_func lit2{
         this, "lit2", [&]() { write_litfile = lightfile::lit2; }, &experimental_group, "write .lit2 file"};
     setting_func bspxlit{this, "bspxlit", [&]() { write_litfile |= lightfile::bspx; }, &experimental_group,
