@@ -543,6 +543,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
         // fixme-brushbsp: this causes a hint side to expand
         // to the world extents (winding & bounds) which throws
         // a lot of warnings. is this how this should be working?
+#if 0
         if (!hullnum.value_or(0) && mapbrush.is_hint) {
             /* Don't generate hintskip faces */
             const maptexinfo_t &texinfo = src.get_texinfo();
@@ -552,6 +553,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
                 continue;
             }
         }
+#endif
 
 #ifdef QBSP3
         // don't add bevels for the point hull
