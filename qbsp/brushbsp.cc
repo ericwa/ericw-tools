@@ -1231,11 +1231,15 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::containe
 #endif
 
         for (side_t &side : b->sides) {
+            // since we're reusing bspbrush_t's across passes, we need to clear any data from the previous pass
+
+            // behaviour break from qbsp3 - they would sometimes set `onnode` as a way to indicate "don't split on this side".
+            // we can't do this since we're reusing brushes, and need to add a separate flag for that.
+            side.onnode = false;
+
             if (side.bevel)
                 continue;
             if (!side.w)
-                continue;
-            if (side.onnode)
                 continue;
             if (side.is_visible())
                 c_faces++;
@@ -1267,13 +1271,6 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::containe
 
     logging::header("CountLeafs");
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
-
-    // reset onnnode values
-    for (auto &b : brushlist) {
-        for (auto &s : b->sides) {
-            s.onnode = false;
-        }
-    }
 
     return tree;
 }
