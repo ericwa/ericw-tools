@@ -209,9 +209,9 @@ static const mapentity_t *FindTargetEntity(const std::string &target)
 FixRotateOrigin
 =================
 */
-qvec3d FixRotateOrigin(mapentity_t *entity)
+qvec3d FixRotateOrigin(mapentity_t &entity)
 {
-    const std::string &search = entity->epairs.get("target");
+    const std::string &search = entity.epairs.get("target");
     const mapentity_t *target = nullptr;
 
     if (!search.empty()) {
@@ -223,11 +223,11 @@ qvec3d FixRotateOrigin(mapentity_t *entity)
     if (target) {
         target->epairs.get_vector("origin", offset);
     } else {
-        logging::print("WARNING: No target for rotation entity \"{}\"", entity->epairs.get("classname"));
+        logging::print("WARNING: No target for rotation entity \"{}\"", entity.epairs.get("classname"));
         offset = {};
     }
 
-    entity->epairs.set("origin", qv::to_string(offset));
+    entity.epairs.set("origin", qv::to_string(offset));
     return offset;
 }
 
@@ -241,39 +241,40 @@ Create all of the windings for the specified brush, and
 calculate its bounds.
 ==================
 */
-bool CreateBrushWindings(bspbrush_t *brush)
+bool CreateBrushWindings(bspbrush_t &brush)
 {
-    std::optional<winding_t> w;
+    for (int i = 0; i < brush.sides.size(); i++) {
+        side_t &side = brush.sides[i];
+        std::optional<winding_t> w = BaseWindingForPlane<winding_t>(side.get_plane());
 
-    for (int i = 0; i < brush->sides.size(); i++) {
-        side_t *side = &brush->sides[i];
-        w = BaseWindingForPlane<winding_t>(side->get_plane());
-        for (int j = 0; j < brush->sides.size() && w; j++) {
-            if (i == j)
+        for (int j = 0; j < brush.sides.size() && w; j++) {
+            if (i == j) {
                 continue;
-            if (brush->sides[j].bevel)
+            }
+            if (brush.sides[j].bevel) {
                 continue;
-            const qplane3d &plane = map.planes[brush->sides[j].planenum ^ 1];
-            w = w->clip_front(plane, qbsp_options.epsilon.value(), false); // CLIP_EPSILON);
+            }
+            const qplane3d &plane = map.planes[brush.sides[j].planenum ^ 1];
+            w = w->clip_front(plane, qbsp_options.epsilon.value(), false);
         }
 
         if (w) {
             for (auto &p : *w) {
                 for (auto &v : p) {
                     if (fabs(v) > qbsp_options.worldextent.value()) {
-                        logging::print("WARNING: {}: invalid winding point\n", brush->mapbrush ? brush->mapbrush->line : parser_source_location{});
+                        logging::print("WARNING: {}: invalid winding point\n", brush.mapbrush ? brush.mapbrush->line : parser_source_location{});
                         w = std::nullopt;
                     }
                 }
             }
 
-            side->w = std::move(*w);
+            side.w = std::move(*w);
         } else {
-            side->w.clear();
+            side.w.clear();
         }
     }
 
-    return brush->update_bounds(true);
+    return brush.update_bounds(true);
 }
 
 #define QBSP3
@@ -521,19 +522,19 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, const contentflags_t &contents,
     hull_index_t hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped)
 {
     // create the brush
     bspbrush_t brush{};
     brush.contents = contents;
-    brush.sides.reserve(mapbrush->faces.size());
-    brush.mapbrush = mapbrush;
+    brush.sides.reserve(mapbrush.faces.size());
+    brush.mapbrush = &mapbrush;
 
-    for (size_t i = 0; i < mapbrush->faces.size(); i++) {
-        auto &src = mapbrush->faces[i];
+    for (size_t i = 0; i < mapbrush.faces.size(); i++) {
+        auto &src = mapbrush.faces[i];
 
-        if (!hullnum.value_or(0) && mapbrush->is_hint) {
+        if (!hullnum.value_or(0) && mapbrush.is_hint) {
             /* Don't generate hintskip faces */
             const maptexinfo_t &texinfo = src.get_texinfo();
 
@@ -588,7 +589,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
         }
 #else
 
-        if (!CreateBrushWindings(&brush)) {
+        if (!CreateBrushWindings(brush)) {
             return std::nullopt;
         }
 
@@ -597,7 +598,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 #endif
     }
 
-    if (!CreateBrushWindings(&brush)) {
+    if (!CreateBrushWindings(brush)) {
         return std::nullopt;
     }
 
@@ -617,10 +618,10 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
     // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
     // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
     // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
-    const bool shouldExpand = (src->origin[0] != 0.0 || src->origin[1] != 0.0 || src->origin[2] != 0.0) &&
-                                src->rotation == rotation_t::hipnotic &&
-                                hullnum.has_value() &&
-                                qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
+    const bool shouldExpand = !qv::emptyExact(src.origin) &&
+                              src.rotation == rotation_t::hipnotic &&
+                              hullnum.has_value() &&
+                              qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t max = -std::numeric_limits<vec_t>::infinity(), min = std::numeric_limits<vec_t>::infinity();
@@ -643,19 +644,19 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t *src, mapbrush_t *mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
+static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
 {
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
-    if (src->epairs.get_int("_omitbrushes")) {
+    if (src.epairs.get_int("_omitbrushes")) {
         return;
     }
     
-    clock.max += src->mapbrushes.size();
+    clock.max += src.mapbrushes.size();
 
     bool all_detail, all_detail_fence, all_detail_illusionary;
 
-    const std::string &classname = src->epairs.get("classname");
+    const std::string &classname = src.epairs.get("classname");
 
     /* If the source entity is func_detail, set the content flag */
     if (!qbsp_options.nodetail.value()) {
@@ -678,21 +679,22 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hu
     /* _mirrorinside key (for func_water etc.) */
     std::optional<bool> mirrorinside;
 
-    if (src->epairs.has("_mirrorinside")) {
-        mirrorinside = src->epairs.get_int("_mirrorinside") ? true : false;
+    if (src.epairs.has("_mirrorinside")) {
+        mirrorinside = src.epairs.get_int("_mirrorinside") ? true : false;
     }
 
     /* _noclipfaces */
     std::optional<bool> clipsametype;
 
-    if (src->epairs.has("_noclipfaces")) {
-        clipsametype = src->epairs.get_int("_noclipfaces") ? false : true;
+    if (src.epairs.has("_noclipfaces")) {
+        clipsametype = src.epairs.get_int("_noclipfaces") ? false : true;
     }
 
     const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
 
-    auto it = src->mapbrushes.begin();
-    for (size_t i = 0; i < src->mapbrushes.size(); i++, it++) {
+    auto it = src.mapbrushes.begin();
+
+    for (size_t i = 0; i < src.mapbrushes.size(); i++, it++) {
         clock();
 
         auto &mapbrush = *it;
@@ -744,8 +746,8 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hu
          */
         if (hullnum.has_value() && contents.is_clip(qbsp_options.target_game)) {
             if (hullnum.value() == 0) {
-                if (auto brush = LoadBrush(src, &mapbrush, contents, hullnum, num_clipped)) {
-                    dst->bounds += brush->bounds;
+                if (auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped)) {
+                    dst.bounds += brush->bounds;
                 }
                 continue;
                 // for hull1, 2, etc., convert clip to CONTENTS_SOLID
@@ -763,7 +765,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hu
         }
 
         /* entities in some games never use water merging */
-        if (dst != map.world_entity() && !qbsp_options.target_game->allow_contented_bmodels) {
+        if (!map.is_world_entity(dst) && !qbsp_options.target_game->allow_contented_bmodels) {
             contents = qbsp_options.target_game->create_solid_contents();
 
             /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
@@ -794,7 +796,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hu
         contents.set_clips_same_type(clipsametype);
         contents.illusionary_visblocker = func_illusionary_visblocker;
 
-        auto brush = LoadBrush(src, &mapbrush, contents, hullnum, num_clipped);
+        auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped);
 
         if (!brush) {
             continue;
@@ -802,7 +804,7 @@ static void Brush_LoadEntity(mapentity_t *dst, mapentity_t *src, hull_index_t hu
 
         qbsp_options.target_game->count_contents_in_stats(brush->contents, stats);
 
-        dst->bounds += brush->bounds;
+        dst.bounds += brush->bounds;
         brushes.push_back(bspbrush_t::make_ptr(std::move(*brush)));
     }
 }
@@ -815,13 +817,15 @@ hullnum nullopt should contain ALL brushes; BSPX and Quake II, etc.
 hullnum 0 does not contain clip brushes.
 ============
 */
-void Brush_LoadEntity(mapentity_t *entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped)
+void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped)
 {
     logging::funcheader();
 
+    bool is_world_entity = map.is_world_entity(entity);
+
     auto stats = qbsp_options.target_game->create_content_stats();
     logging::percent_clock clock(0);
-    clock.displayElapsed = (entity == map.world_entity());
+    clock.displayElapsed = is_world_entity;
 
     Brush_LoadEntity(entity, entity, hullnum, *stats, brushes, clock, num_clipped);
 
@@ -829,13 +833,13 @@ void Brush_LoadEntity(mapentity_t *entity, hull_index_t hullnum, bspbrush_t::con
      * If this is the world entity, find all func_group and func_detail
      * entities and add their brushes with the appropriate contents flag set.
      */
-    if (entity == map.world_entity()) {
+    if (is_world_entity) {
         /*
          * We no longer care about the order of adding func_detail and func_group,
          * Entity_SortBrushes will sort the brushes
          */
         for (int i = 1; i < map.entities.size(); i++) {
-            mapentity_t *source = &map.entities.at(i);
+            mapentity_t &source = map.entities.at(i);
 
             /* Load external .map and change the classname, if needed */
             ProcessExternalMapEntity(source);

@@ -22,9 +22,9 @@
 
 // FIXME: Clear global data (planes, etc) between each test
 
-static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t *brush, const std::string &texname)
+static const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, const std::string &texname)
 {
-    for (auto &face : brush->faces) {
+    for (auto &face : brush.faces) {
         if (face.texname == texname) {
             return &face;
         }
@@ -44,7 +44,7 @@ static mapentity_t &LoadMap(const char *map)
     mapentity_t &entity = ::map.entities.emplace_back();
 
     // FIXME: adds the brush to the global map...
-    Q_assert(ParseEntity(parser, &entity));
+    Q_assert(ParseEntity(parser, entity));
 
     CalculateWorldExtent();
 
@@ -303,7 +303,7 @@ static const texvecf &GetTexvecs(const char *map, const char *texname)
 {
     mapentity_t &worldspawn = LoadMap(map);
 
-    const mapbrush_t *mapbrush = &worldspawn.mapbrushes.front();
+    const mapbrush_t &mapbrush = worldspawn.mapbrushes.front();
     const mapface_t *mapface = Mapbrush_FirstFaceWithTextureName(mapbrush, "tech02_1");
     Q_assert(nullptr != mapface);
 
@@ -398,7 +398,7 @@ TEST_CASE("duplicatePlanes", "[qbsp]")
     REQUIRE(1 == worldspawn.mapbrushes.size());
     CHECK(6 == worldspawn.mapbrushes.front().faces.size());
 
-    auto brush = LoadBrush(&worldspawn, &worldspawn.mapbrushes.front(), {CONTENTS_SOLID}, 0, std::nullopt);
+    auto brush = LoadBrush(worldspawn, worldspawn.mapbrushes.front(), {CONTENTS_SOLID}, 0, std::nullopt);
     CHECK(6 == brush->sides.size());
 }
 

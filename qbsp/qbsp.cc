@@ -299,20 +299,20 @@ void qbsp_settings::reset() {
 
 settings::qbsp_settings qbsp_options;
 
-// per-entity
-static struct
+struct brush_list_stats_t : logging::stat_tracker_t
 {
-    uint32_t total_brushes, total_brush_sides;
-    uint32_t total_leaf_brushes;
-} brush_state;
+    stat &total_brushes = register_stat("total brushes");
+    stat &total_brush_sides = register_stat("total brush sides");
+    stat &total_leaf_brushes = register_stat("total leaf brushes");
+};
 
-static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
+static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_list_stats_t &stats)
 {
     if (node->is_leaf) {
         if (node->contents.native) {
             if (node->original_brushes.size()) {
                 node->numleafbrushes = node->original_brushes.size();
-                brush_state.total_leaf_brushes += node->numleafbrushes;
+                stats.total_leaf_brushes += node->numleafbrushes;
                 node->firstleafbrush = map.bsp.dleafbrushes.size();
                 for (auto &b : node->original_brushes) {
 
@@ -326,10 +326,10 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
                             map.bsp.dbrushsides.push_back(
                                 {(uint32_t) ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(side.texinfo)});
                             brush.numsides++;
-                            brush_state.total_brush_sides++;
+                            stats.total_brush_sides++;
                         }
 
-                        brush_state.total_brushes++;
+                        stats.total_brushes++;
                     }
 
                     map.bsp.dleafbrushes.push_back(b->mapbrush->outputnumber.value());
@@ -340,26 +340,22 @@ static void ExportBrushList_r(const mapentity_t *entity, node_t *node)
         return;
     }
 
-    ExportBrushList_r(entity, node->children[0]);
-    ExportBrushList_r(entity, node->children[1]);
+    ExportBrushList_r(entity, node->children[0], stats);
+    ExportBrushList_r(entity, node->children[1], stats);
 }
 
-static void ExportBrushList(mapentity_t *entity, node_t *node)
+static void ExportBrushList(mapentity_t &entity, node_t *node)
 {
     logging::funcheader();
 
-    brush_state = {};
+    brush_list_stats_t stats;
 
-    ExportBrushList_r(entity, node);
-
-    logging::print(logging::flag::STAT, "     {:8} total brushes\n", brush_state.total_brushes);
-    logging::print(logging::flag::STAT, "     {:8} total brush sides\n", brush_state.total_brush_sides);
-    logging::print(logging::flag::STAT, "     {:8} total leaf brushes\n", brush_state.total_leaf_brushes);
+    ExportBrushList_r(entity, node, stats);
 }
 
-static bool IsTrigger(const mapentity_t *entity)
+static bool IsTrigger(const mapentity_t &entity)
 {
-    auto &tex = entity->mapbrushes.front().faces[0].texname;
+    auto &tex = entity.mapbrushes.front().faces[0].texname;
 
     if (tex.length() < 6) {
         return false;
@@ -398,12 +394,13 @@ static void CountLeafs(node_t *headnode)
 ProcessEntity
 ===============
 */
-static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
+static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 {
     /* No map brushes means non-bmodel entity.
        We need to handle worldspawn containing no brushes, though. */
-    if (!entity->mapbrushes.size() && entity != map.world_entity())
+    if (!entity.mapbrushes.size() && !map.is_world_entity(entity)) {
         return;
+    }
 
     /*
      * func_group and func_detail entities get their brushes added to the
@@ -413,42 +410,45 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
         return;
 
     // for notriggermodels: if we have at least one trigger-like texture, do special trigger stuff
-    bool discarded_trigger = entity != map.world_entity() && qbsp_options.notriggermodels.value() && IsTrigger(entity);
+    bool discarded_trigger = !map.is_world_entity(entity) && qbsp_options.notriggermodels.value() && IsTrigger(entity);
 
     // Export a blank model struct, and reserve the index (only do this once, for all hulls)
     if (!discarded_trigger) {
-        if (!entity->outputmodelnumber.has_value()) {
-            entity->outputmodelnumber = map.bsp.dmodels.size();
+        if (!entity.outputmodelnumber.has_value()) {
+            entity.outputmodelnumber = map.bsp.dmodels.size();
             map.bsp.dmodels.emplace_back();
         }
 
-        if (entity != map.world_entity()) {
-            if (entity == map.world_entity() + 1)
+        if (!map.is_world_entity(entity)) {
+            if (&entity == &map.entities[1]) {
                 logging::header("Internal Entities");
+            }
 
-            std::string mod = fmt::format("*{}", entity->outputmodelnumber.value());
+            std::string mod = fmt::format("*{}", entity.outputmodelnumber.value());
 
-            if (qbsp_options.verbose.value())
+            if (qbsp_options.verbose.value()) {
                 PrintEntity(entity);
+            }
 
             if (!hullnum.value_or(0) || qbsp_options.loghulls.value()) {
                 logging::print(logging::flag::STAT, "     MODEL: {}\n", mod);
             }
-            entity->epairs.set("model", mod);
+
+            entity.epairs.set("model", mod);
         }
     }
 
-    if (qbsp_options.lmscale.isChanged() && !entity->epairs.has("_lmscale")) {
-        entity->epairs.set("_lmscale", std::to_string(qbsp_options.lmscale.value()));
+    if (qbsp_options.lmscale.isChanged() && !entity.epairs.has("_lmscale")) {
+        entity.epairs.set("_lmscale", std::to_string(qbsp_options.lmscale.value()));
     }
 
     // Init the entity
-    entity->bounds = {};
+    entity.bounds = {};
 
     // reserve enough brushes; we would only make less,
     // never more
     bspbrush_t::container brushes;
-    brushes.reserve(entity->mapbrushes.size());
+    brushes.reserve(entity.mapbrushes.size());
 
     /*
      * Convert the map brushes (planes) into BSP brushes (polygons)
@@ -469,8 +469,8 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
 
     // we're discarding the brush
     if (discarded_trigger) {
-        entity->epairs.set("mins", fmt::to_string(entity->bounds.mins()));
-        entity->epairs.set("maxs", fmt::to_string(entity->bounds.maxs()));
+        entity.epairs.set("mins", fmt::to_string(entity.bounds.mins()));
+        entity.epairs.set("maxs", fmt::to_string(entity.bounds.maxs()));
         return;
     }
 
@@ -479,17 +479,17 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
     // simpler operation for hulls
     if (hullnum.value_or(0)) {
         tree = BrushBSP(entity, brushes, true);
-        if (entity == map.world_entity() && !qbsp_options.nofill.value()) {
+        if (map.is_world_entity(entity) && !qbsp_options.nofill.value()) {
             // assume non-world bmodels are simple
             MakeTreePortals(tree.get());
-            if (FillOutside(entity, tree.get(), hullnum, brushes)) {
+            if (FillOutside(tree.get(), hullnum, brushes)) {
                 // make a really good tree
                 tree.reset();
                 tree = BrushBSP(entity, brushes, std::nullopt);
 
                 // fill again so PruneNodes works
                 MakeTreePortals(tree.get());
-                FillOutside(entity, tree.get(), hullnum, brushes);
+                FillOutside(tree.get(), hullnum, brushes);
                 FreeTreePortals(tree.get());
                 PruneNodes(tree->headnode);
             }
@@ -503,19 +503,19 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
     if (qbsp_options.forcegoodtree.value()) {
         tree = BrushBSP(entity, brushes, false);
     } else {
-        tree = BrushBSP(entity, brushes, entity == map.world_entity() ? std::nullopt : std::optional<bool>(false));
+        tree = BrushBSP(entity, brushes, map.is_world_entity(entity) ? std::nullopt : std::optional<bool>(false));
     }
 
     // build all the portals in the bsp tree
     // some portals are solid polygons, and some are paths to other leafs
     MakeTreePortals(tree.get());
 
-    if (entity == map.world_entity()) {
+    if (map.is_world_entity(entity)) {
         // flood fills from the void.
         // marks brush sides which are *only* touching void;
         // we can skip using them as BSP splitters on the "really good tree"
         // (effectively expanding those brush sides outwards).
-        if (!qbsp_options.nofill.value() && FillOutside(entity, tree.get(), hullnum, brushes)) {
+        if (!qbsp_options.nofill.value() && FillOutside(tree.get(), hullnum, brushes)) {
             // make a really good tree
             tree.reset();
             tree = BrushBSP(entity, brushes, false);
@@ -524,16 +524,16 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
             MakeTreePortals(tree.get());
 
             // fill again so PruneNodes works
-            FillOutside(entity, tree.get(), hullnum, brushes);
+            FillOutside(tree.get(), hullnum, brushes);
         }
 
         // Area portals
         if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-            FloodAreas(entity, tree->headnode);
+            FloodAreas(tree->headnode);
             EmitAreaPortals(tree->headnode);
         }
     } else {
-        FillBrushEntity(entity, tree.get(), hullnum, brushes);
+        FillBrushEntity(tree.get(), hullnum, brushes);
 
         // rebuild BSP now that we've marked invisible brush sides
         tree.reset();
@@ -542,14 +542,14 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
 
     MakeTreePortals(tree.get());
 
-    MarkVisibleSides(tree.get(), entity, brushes);
+    MarkVisibleSides(tree.get(), brushes);
     MakeFaces(tree->headnode);
 
     FreeTreePortals(tree.get());
     PruneNodes(tree->headnode);
 
     // write out .prt for main hull
-    if (!hullnum.value_or(0) && entity == map.world_entity() && (!map.leakfile || qbsp_options.keepprt.value())) {
+    if (!hullnum.value_or(0) && map.is_world_entity(entity) && (!map.leakfile || qbsp_options.keepprt.value())) {
         WritePortalFile(tree.get());
     }
 
@@ -563,20 +563,20 @@ static void ProcessEntity(mapentity_t *entity, hull_index_t hullnum)
 
     TJunc(tree->headnode);
 
-    if (qbsp_options.objexport.value() && entity == map.world_entity()) {
+    if (qbsp_options.objexport.value() && map.is_world_entity(entity)) {
         ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode);
         ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
     }
 
-    Q_assert(!entity->firstoutputfacenumber.has_value());
+    Q_assert(!entity.firstoutputfacenumber.has_value());
 
-    entity->firstoutputfacenumber = MakeFaceEdges(tree->headnode);
+    entity.firstoutputfacenumber = MakeFaceEdges(tree->headnode);
 
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         ExportBrushList(entity, tree->headnode);
     }
 
-    ExportDrawNodes(entity, tree->headnode, entity->firstoutputfacenumber.value());
+    ExportDrawNodes(entity, tree->headnode, entity.firstoutputfacenumber.value());
 }
 
 /*
@@ -587,23 +587,22 @@ UpdateEntLump
 */
 static void UpdateEntLump(void)
 {
-    int modnum;
-    mapentity_t *entity;
-
     logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
-    modnum = 1;
-    for (int i = 1; i < map.entities.size(); i++) {
-        entity = &map.entities.at(i);
+    size_t modnum = 1;
+
+    for (size_t i = 1; i < map.entities.size(); i++) {
+        mapentity_t &entity = map.entities.at(i);
 
         /* Special handling for misc_external_map.
            Duplicates some logic from ProcessExternalMapEntity. */
         bool is_misc_external_map = false;
-        if (!Q_strcasecmp(entity->epairs.get("classname"), "misc_external_map")) {
-            const std::string &new_classname = entity->epairs.get("_external_map_classname");
 
-            entity->epairs.set("classname", new_classname);
-            entity->epairs.set("origin", "0 0 0");
+        if (!Q_strcasecmp(entity.epairs.get("classname"), "misc_external_map")) {
+            const std::string &new_classname = entity.epairs.get("_external_map_classname");
+
+            entity.epairs.set("classname", new_classname);
+            entity.epairs.set("origin", "0 0 0");
 
             /* Note: the classname could have switched to
              * a IsWorldBrushEntity entity (func_group, func_detail),
@@ -612,18 +611,21 @@ static void UpdateEntLump(void)
             is_misc_external_map = true;
         }
 
-        bool isBrushEnt = (entity->mapbrushes.size() > 0) || is_misc_external_map;
-        if (!isBrushEnt)
+        bool isBrushEnt = (entity.mapbrushes.size() > 0) || is_misc_external_map;
+        if (!isBrushEnt) {
             continue;
+        }
 
-        if (IsWorldBrushEntity(entity) || IsNonRemoveWorldBrushEntity(entity))
+        if (IsWorldBrushEntity(entity) || IsNonRemoveWorldBrushEntity(entity)) {
             continue;
+        }
 
-        entity->epairs.set("model", fmt::format("*{}", modnum));
+        entity.epairs.set("model", fmt::format("*{}", modnum));
         modnum++;
 
         /* Do extra work for rotating entities if necessary */
-        const std::string &classname = entity->epairs.get("classname");
+        const std::string &classname = entity.epairs.get("classname");
+
         if (!classname.compare(0, 7, "rotate_")) {
             FixRotateOrigin(entity);
         }
@@ -746,22 +748,25 @@ static void BSPX_CreateBrushList(void)
 
     BSPX_Brushes_Init(&ctx);
 
-    for (int entnum = 0; entnum < map.entities.size(); ++entnum) {
-        mapentity_t *ent = &map.entities.at(entnum);
-        int modelnum;
-        if (ent == map.world_entity()) {
+    for (size_t entnum = 0; entnum < map.entities.size(); ++entnum) {
+        mapentity_t &ent = map.entities.at(entnum);
+        size_t modelnum;
+
+        if (map.is_world_entity(ent)) {
             modelnum = 0;
         } else {
-            const std::string &mod = ent->epairs.get("model");
-            if (mod[0] != '*')
+            const std::string &mod = ent.epairs.get("model");
+            if (mod[0] != '*') {
                 continue;
+            }
             modelnum = std::stoi(mod.substr(1));
         }
 
-        if (ent->mapbrushes.empty())
+        if (ent.mapbrushes.empty()) {
             continue; // non-bmodel entity
+        }
 
-        BSPX_Brushes_AddModel(&ctx, modelnum, ent->mapbrushes);
+        BSPX_Brushes_AddModel(&ctx, modelnum, ent.mapbrushes);
     }
 
     BSPX_Brushes_Finalize(&ctx);
@@ -785,7 +790,7 @@ static void CreateSingleHull(hull_index_t hullnum)
         bool wants_logging = true;
 
         // decide if we want to log this entity / hull combination
-        if (&entity != map.world_entity()) {
+        if (!map.is_world_entity(entity)) {
             wants_logging = wants_logging && qbsp_options.logbmodels.value();
         }
         if (hullnum.value_or(0)) {
@@ -799,7 +804,7 @@ static void CreateSingleHull(hull_index_t hullnum)
                 bitflags<logging::flag>(logging::flag::STAT) | logging::flag::PROGRESS | logging::flag::CLOCK_ELAPSED);
         }
 
-        ProcessEntity(&entity, hullnum);
+        ProcessEntity(entity, hullnum);
 
         // reset any global brush stuff
         for (auto &brush : entity.mapbrushes) {

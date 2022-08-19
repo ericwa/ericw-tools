@@ -127,9 +127,9 @@ First time just store away data, second time fix up reference points to
 accomodate new data interleaved with old.
 ==================
 */
-void ExportClipNodes(mapentity_t *entity, node_t *nodes, hull_index_t::value_type hullnum)
+void ExportClipNodes(mapentity_t &entity, node_t *nodes, hull_index_t::value_type hullnum)
 {
-    auto &model = map.bsp.dmodels.at(entity->outputmodelnumber.value());
+    auto &model = map.bsp.dmodels.at(entity.outputmodelnumber.value());
     model.headnode[hullnum] = ExportClipNodes(nodes);
 }
 
@@ -245,10 +245,10 @@ static void ExportDrawNodes(node_t *node)
 ExportDrawNodes
 ==================
 */
-void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface)
+void ExportDrawNodes(mapentity_t &entity, node_t *headnode, int firstface)
 {
     // populate model struct (which was emitted previously)
-    dmodelh2_t &dmodel = map.bsp.dmodels.at(entity->outputmodelnumber.value());
+    dmodelh2_t &dmodel = map.bsp.dmodels.at(entity.outputmodelnumber.value());
     dmodel.headnode[0] = static_cast<int32_t>(map.bsp.dnodes.size());
     dmodel.firstface = firstface;
     dmodel.numfaces = static_cast<int32_t>(map.bsp.dfaces.size()) - firstface;

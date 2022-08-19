@@ -312,7 +312,12 @@ struct mapdata_t
 
     int skip_texinfo;
 
-    mapentity_t *world_entity();
+    mapentity_t &world_entity();
+
+    inline bool is_world_entity(const mapentity_t &entity)
+    {
+        return &entity == &world_entity();
+    }
 
     void reset();
 };
@@ -321,12 +326,12 @@ extern mapdata_t map;
 
 void CalculateWorldExtent(void);
 
-bool ParseEntity(parser_t &parser, mapentity_t *entity);
+bool ParseEntity(parser_t &parser, mapentity_t &entity);
 
-void ProcessExternalMapEntity(mapentity_t *entity);
-void ProcessAreaPortal(mapentity_t *entity);
-bool IsWorldBrushEntity(const mapentity_t *entity);
-bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity);
+void ProcessExternalMapEntity(mapentity_t &entity);
+void ProcessAreaPortal(mapentity_t &entity);
+bool IsWorldBrushEntity(const mapentity_t &entity);
+bool IsNonRemoveWorldBrushEntity(const mapentity_t &entity);
 void LoadMapFile(void);
 void ConvertMapFile(void);
 void ProcessMapBrushes();
@@ -348,22 +353,20 @@ inline int FindMiptex(const char *name, bool internal = false, bool recursive = 
 }
 int FindTexinfo(const maptexinfo_t &texinfo);
 
-void PrintEntity(const mapentity_t *entity);
+void PrintEntity(const mapentity_t &entity);
 
 void WriteEntitiesToString();
 
-qvec3d FixRotateOrigin(mapentity_t *entity);
+qvec3d FixRotateOrigin(mapentity_t &entity);
 
 /* Create BSP brushes from map brushes */
-void Brush_LoadEntity(mapentity_t *entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped);
+void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped);
 
-std::list<face_t *> CSGFace(
-    face_t *srcface, const mapentity_t *srcentity, const bspbrush_t *srcbrush, const node_t *srcnode);
 void TJunc(node_t *headnode);
 int MakeFaceEdges(node_t *headnode);
 void EmitVertices(node_t *headnode);
-void ExportClipNodes(mapentity_t *entity, node_t *headnode, hull_index_t::value_type hullnum);
-void ExportDrawNodes(mapentity_t *entity, node_t *headnode, int firstface);
+void ExportClipNodes(mapentity_t &entity, node_t *headnode, hull_index_t::value_type hullnum);
+void ExportDrawNodes(mapentity_t &entity, node_t *headnode, int firstface);
 
 struct bspxbrushes_s
 {

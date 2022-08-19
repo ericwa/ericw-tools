@@ -102,7 +102,7 @@ bspbrush_t::ptr BrushFromBounds(const aabb3d &bounds)
         }
     }
 
-    CreateBrushWindings(b.get());
+    CreateBrushWindings(*b.get());
 
     return b;
 }
@@ -1180,7 +1180,7 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
 BrushBSP
 ==================
 */
-std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::container &brushlist, std::optional<bool> forced_quick_tree)
+std::unique_ptr<tree_t> BrushBSP(mapentity_t &entity, const bspbrush_t::container &brushlist, std::optional<bool> forced_quick_tree)
 {
     logging::header(__func__ );
 
@@ -1194,7 +1194,7 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t *entity, const bspbrush_t::containe
          * smarter, but this works.
          */
         auto headnode = tree->create_node();
-        headnode->bounds = entity->bounds;
+        headnode->bounds = entity.bounds;
         // The choice of plane is mostly unimportant, but having it at (0, 0, 0) affects
         // the node bounds calculation.
         headnode->planenum = 0;

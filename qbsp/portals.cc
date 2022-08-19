@@ -755,7 +755,7 @@ FloodAreas
 Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
 =============
 */
-void FloodAreas(mapentity_t *entity, node_t *headnode)
+void FloodAreas(node_t *headnode)
 {
     logging::funcheader();
     FindAreas(headnode);
@@ -906,7 +906,7 @@ MarkVisibleSides
 
 =============
 */
-void MarkVisibleSides(tree_t *tree, mapentity_t *entity, bspbrush_t::container &brushes)
+void MarkVisibleSides(tree_t *tree, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 

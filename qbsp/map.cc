@@ -108,12 +108,12 @@ static void EnsureTexturesLoaded()
 
     map.textures_loaded = true;
 
-    const mapentity_t *entity = map.world_entity();
+    const mapentity_t &entity = map.world_entity();
 
-    std::string wadstring = entity->epairs.get("_wad");
+    std::string wadstring = entity.epairs.get("_wad");
 
     if (wadstring.empty()) {
-        wadstring = entity->epairs.get("wad");
+        wadstring = entity.epairs.get("wad");
     }
 
     bool loaded_any_archive = false;
@@ -148,9 +148,13 @@ static void EnsureTexturesLoaded()
 }
 
 // Useful shortcuts
-mapentity_t *mapdata_t::world_entity()
+mapentity_t &mapdata_t::world_entity()
 {
-    return &entities.at(0);
+    if (entities.empty()) {
+        FError("no world entity");
+    }
+
+    return entities.at(0);
 }
 
 void mapdata_t::reset()
@@ -517,7 +521,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     return flags;
 }
 
-static void ParseEpair(parser_t &parser, mapentity_t *entity)
+static void ParseEpair(parser_t &parser, mapentity_t &entity)
 {
     std::string key = parser.token;
 
@@ -531,10 +535,10 @@ static void ParseEpair(parser_t &parser, mapentity_t *entity)
 
     parser.parse_token(PARSE_SAMELINE);
 
-    entity->epairs.set(key, parser.token);
+    entity.epairs.set(key, parser.token);
 
     if (string_iequals(key, "origin")) {
-        entity->epairs.get_vector(key, entity->origin);
+        entity.epairs.get_vector(key, entity.origin);
     }
 }
 
@@ -2174,18 +2178,19 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
     return brush;
 }
 
-bool ParseEntity(parser_t &parser, mapentity_t *entity)
+bool ParseEntity(parser_t &parser, mapentity_t &entity)
 {
-    entity->location = parser.location;
+    entity.location = parser.location;
 
-    if (!parser.parse_token())
+    if (!parser.parse_token()) {
         return false;
+    }
 
     if (parser.token != "{") {
         FError("{}: Invalid entity format, { not found", parser.location);
     }
 
-    entity->mapbrushes.clear();
+    entity.mapbrushes.clear();
 
     do {
         if (!parser.parse_token())
@@ -2196,19 +2201,19 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
             // once we run into the first brush, set up textures state.
             EnsureTexturesLoaded();
 
-            entity->mapbrushes.emplace_back(ParseBrush(parser, *entity));
+            entity.mapbrushes.emplace_back(ParseBrush(parser, entity));
         } else {
             ParseEpair(parser, entity);
         }
     } while (1);
 
     // replace aliases
-    auto alias_it = qbsp_options.loaded_entity_defs.find(entity->epairs.get("classname"));
+    auto alias_it = qbsp_options.loaded_entity_defs.find(entity.epairs.get("classname"));
 
     if (alias_it != qbsp_options.loaded_entity_defs.end()) {
         for (auto &pair : alias_it->second) {
-            if (pair.first == "classname" || !entity->epairs.has(pair.first)) {
-                entity->epairs.set(pair.first, pair.second);
+            if (pair.first == "classname" || !entity.epairs.has(pair.first)) {
+                entity.epairs.set(pair.first, pair.second);
             }
         }
     }
@@ -2216,24 +2221,24 @@ bool ParseEntity(parser_t &parser, mapentity_t *entity)
     return true;
 }
 
-static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
+static void ScaleMapFace(mapface_t &face, const qvec3d &scale)
 {
     const qmat3x3d scaleM{// column-major...
         scale[0], 0.0, 0.0, 0.0, scale[1], 0.0, 0.0, 0.0, scale[2]};
 
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
-        new_planepts[i] = scaleM * face->planepts[i];
+        new_planepts[i] = scaleM * face.planepts[i];
     }
 
-    face->set_planepts(new_planepts);
+    face.set_planepts(new_planepts);
 
     // update texinfo
 
     const qmat3x3d inversescaleM{// column-major...
         1 / scale[0], 0.0, 0.0, 0.0, 1 / scale[1], 0.0, 0.0, 0.0, 1 / scale[2]};
 
-    const auto &texvecs = face->get_texvecs();
+    const auto &texvecs = face.get_texvecs();
     texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
@@ -2244,10 +2249,10 @@ static void ScaleMapFace(mapface_t *face, const qvec3d &scale)
         newtexvecs.set_row(i, {out_first3[0], out_first3[1], out_first3[2], in[3]});
     }
 
-    face->set_texvecs(newtexvecs);
+    face.set_texvecs(newtexvecs);
 }
 
-static void RotateMapFace(mapface_t *face, const qvec3d &angles)
+static void RotateMapFace(mapface_t &face, const qvec3d &angles)
 {
     const double pitch = DEG2RAD(angles[0]);
     const double yaw = DEG2RAD(angles[1]);
@@ -2257,14 +2262,14 @@ static void RotateMapFace(mapface_t *face, const qvec3d &angles)
 
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
-        new_planepts[i] = rotation * face->planepts[i];
+        new_planepts[i] = rotation * face.planepts[i];
     }
 
-    face->set_planepts(new_planepts);
+    face.set_planepts(new_planepts);
 
     // update texinfo
 
-    const auto &texvecs = face->get_texvecs();
+    const auto &texvecs = face.get_texvecs();
     texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
@@ -2275,21 +2280,21 @@ static void RotateMapFace(mapface_t *face, const qvec3d &angles)
         newtexvecs.set_row(i, {out_first3[0], out_first3[1], out_first3[2], in[3]});
     }
 
-    face->set_texvecs(newtexvecs);
+    face.set_texvecs(newtexvecs);
 }
 
-static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
+static void TranslateMapFace(mapface_t &face, const qvec3d &offset)
 {
     std::array<qvec3d, 3> new_planepts;
     for (int i = 0; i < 3; i++) {
-        new_planepts[i] = face->planepts[i] + offset;
+        new_planepts[i] = face.planepts[i] + offset;
     }
 
-    face->set_planepts(new_planepts);
+    face.set_planepts(new_planepts);
 
     // update texinfo
 
-    const auto &texvecs = face->get_texvecs();
+    const auto &texvecs = face.get_texvecs();
     texvecf newtexvecs;
 
     for (int i = 0; i < 2; i++) {
@@ -2299,7 +2304,7 @@ static void TranslateMapFace(mapface_t *face, const qvec3d &offset)
         newtexvecs.set_row(i, {out[0], out[1], out[2], out[3]});
     }
 
-    face->set_texvecs(newtexvecs);
+    face.set_texvecs(newtexvecs);
 }
 
 /**
@@ -2320,7 +2325,7 @@ static mapentity_t LoadExternalMap(const std::string &filename)
     parser_t parser(file, { filename });
 
     // parse the worldspawn
-    if (!ParseEntity(parser, &dest)) {
+    if (!ParseEntity(parser, dest)) {
         FError("'{}': Couldn't parse worldspawn entity\n", filename);
     }
     const std::string &classname = dest.epairs.get("classname");
@@ -2330,7 +2335,7 @@ static mapentity_t LoadExternalMap(const std::string &filename)
 
     // parse any subsequent entities, move any brushes to worldspawn
     mapentity_t dummy{};
-    while (ParseEntity(parser, &dummy)) {
+    while (ParseEntity(parser, dummy)) {
         // move the brushes to the worldspawn
         dest.mapbrushes.insert(dest.mapbrushes.end(), std::make_move_iterator(dummy.mapbrushes.begin()), std::make_move_iterator(dummy.mapbrushes.end()));
 
@@ -2348,39 +2353,43 @@ static mapentity_t LoadExternalMap(const std::string &filename)
     return dest;
 }
 
-void ProcessExternalMapEntity(mapentity_t *entity)
+void ProcessExternalMapEntity(mapentity_t &entity)
 {
     Q_assert(!qbsp_options.onlyents.value());
 
-    const std::string &classname = entity->epairs.get("classname");
-    if (Q_strcasecmp(classname, "misc_external_map"))
-        return;
+    const std::string &classname = entity.epairs.get("classname");
 
-    const std::string &file = entity->epairs.get("_external_map");
-    const std::string &new_classname = entity->epairs.get("_external_map_classname");
+    if (Q_strcasecmp(classname, "misc_external_map")) {
+        return;
+    }
+
+    const std::string &file = entity.epairs.get("_external_map");
+    const std::string &new_classname = entity.epairs.get("_external_map_classname");
 
     // FIXME: throw specific error message instead? this might be confusing for mappers
     Q_assert(!file.empty());
     Q_assert(!new_classname.empty());
 
-    Q_assert(0 == entity->mapbrushes.size()); // misc_external_map must be a point entity
+    Q_assert(entity.mapbrushes.empty()); // misc_external_map must be a point entity
 
     mapentity_t external_worldspawn = LoadExternalMap(file);
 
     // copy the brushes into the target
-    entity->mapbrushes = std::move(external_worldspawn.mapbrushes);
+    entity.mapbrushes = std::move(external_worldspawn.mapbrushes);
 
     qvec3d origin;
-    entity->epairs.get_vector("origin", origin);
+    entity.epairs.get_vector("origin", origin);
 
     qvec3d angles;
-    entity->epairs.get_vector("_external_map_angles", angles);
+    entity.epairs.get_vector("_external_map_angles", angles);
+
     if (qv::epsilonEmpty(angles, EQUAL_EPSILON)) {
-        angles[1] = entity->epairs.get_float("_external_map_angle");
+        angles[1] = entity.epairs.get_float("_external_map_angle");
     }
 
     qvec3d scale;
-    int ncomps = entity->epairs.get_vector("_external_map_scale", scale);
+    int ncomps = entity.epairs.get_vector("_external_map_scale", scale);
+
     if (ncomps < 3) {
         if (scale[0] == 0.0) {
             scale = 1;
@@ -2389,35 +2398,36 @@ void ProcessExternalMapEntity(mapentity_t *entity)
         }
     }
 
-    for (auto &brush : entity->mapbrushes) {
+    for (auto &brush : entity.mapbrushes) {
         for (auto &face : brush.faces) {
-            ScaleMapFace(&face, scale);
-            RotateMapFace(&face, angles);
-            TranslateMapFace(&face, origin);
+            ScaleMapFace(face, scale);
+            RotateMapFace(face, angles);
+            TranslateMapFace(face, origin);
         }
     }
 
-    entity->epairs.set("classname", new_classname);
+    entity.epairs.set("classname", new_classname);
     // FIXME: Should really just delete the origin key?
-    entity->epairs.set("origin", "0 0 0");
+    entity.epairs.set("origin", "0 0 0");
 }
 
-void ProcessAreaPortal(mapentity_t *entity)
+void ProcessAreaPortal(mapentity_t &entity)
 {
     Q_assert(!qbsp_options.onlyents.value());
 
-    const std::string &classname = entity->epairs.get("classname");
+    const std::string &classname = entity.epairs.get("classname");
 
-    if (Q_strcasecmp(classname, "func_areaportal"))
+    if (Q_strcasecmp(classname, "func_areaportal")) {
         return;
+    }
 
     // areaportal entities move their brushes, but don't eliminate
     // the entity
-    if (entity->mapbrushes.size() != 1) {
-        FError("func_areaportal ({}) can only be a single brush", entity->location);
+    if (entity.mapbrushes.size() != 1) {
+        FError("func_areaportal ({}) can only be a single brush", entity.location);
     }
 
-    for (auto &brush : entity->mapbrushes) {
+    for (auto &brush : entity.mapbrushes) {
         brush.contents.native = Q2_CONTENTS_AREAPORTAL;
 
         for (auto &face : brush.faces) {
@@ -2426,18 +2436,18 @@ void ProcessAreaPortal(mapentity_t *entity)
         }
     }
 
-    entity->areaportalnum = ++map.numareaportals;
+    entity.areaportalnum = ++map.numareaportals;
     // set the portal number as "style"
-    entity->epairs.set("style", std::to_string(map.numareaportals));
+    entity.epairs.set("style", std::to_string(map.numareaportals));
 }
 
 /*
  * Special world entities are entities which have their brushes added to the
  * world before being removed from the map.
  */
-bool IsWorldBrushEntity(const mapentity_t *entity)
+bool IsWorldBrushEntity(const mapentity_t &entity)
 {
-    const std::string &classname = entity->epairs.get("classname");
+    const std::string &classname = entity.epairs.get("classname");
 
     /*
      These entities should have their classname remapped to the value of
@@ -2464,9 +2474,9 @@ bool IsWorldBrushEntity(const mapentity_t *entity)
  * Some games need special entities that are merged into the world, but not
  * removed from the map entirely.
  */
-bool IsNonRemoveWorldBrushEntity(const mapentity_t *entity)
+bool IsNonRemoveWorldBrushEntity(const mapentity_t &entity)
 {
-    const std::string &classname = entity->epairs.get("classname");
+    const std::string &classname = entity.epairs.get("classname");
 
     if (!Q_strcasecmp(classname, "func_areaportal"))
         return true;
@@ -2636,7 +2646,7 @@ void ProcessMapBrushes()
             // origin brushes are removed, and the origin of the entity is overwritten
             // with its centroid.
             if (brush.contents.is_origin(qbsp_options.target_game)) {
-                if (&entity == map.world_entity()) {
+                if (map.is_world_entity(entity)) {
                     logging::print("WARNING: Ignoring origin brush in worldspawn\n");
                 } else if (entity.epairs.has("origin")) {
                     // fixme-brushbsp: entity.line
@@ -2680,7 +2690,7 @@ void ProcessMapBrushes()
         /* Hipnotic rotation */
         if (entity.rotation == rotation_t::none) {
             if (!Q_strncasecmp(entity.epairs.get("classname"), "rotate_", 7)) {
-                entity.origin = FixRotateOrigin(&entity);
+                entity.origin = FixRotateOrigin(entity);
                 entity.rotation = rotation_t::hipnotic;
             }
         }
@@ -2748,7 +2758,7 @@ void ProcessMapBrushes()
             hull = qbsp_options.debugexpand.hull_bounds_value();
         }
 
-        WriteMapBrushMap("expanded.map", map.world_entity()->mapbrushes, hull);
+        WriteMapBrushMap("expanded.map", map.world_entity().mapbrushes, hull);
     }
 }
 
@@ -2769,7 +2779,7 @@ void LoadMapFile(void)
         for (int i = 0;; i++) {
             mapentity_t &entity = map.entities.emplace_back();
 
-            if (!ParseEntity(parser, &entity)) {
+            if (!ParseEntity(parser, entity)) {
                 break;
             }
         }
@@ -2793,7 +2803,7 @@ void LoadMapFile(void)
         for (int i = 0;; i++) {
             mapentity_t &entity = map.entities.emplace_back();
 
-            if (!ParseEntity(parser, &entity)) {
+            if (!ParseEntity(parser, entity)) {
                 break;
             }
 
@@ -2965,15 +2975,15 @@ static void ConvertMapBrush(std::ofstream &f, const mapbrush_t &mapbrush, const 
     f << "}\n";
 }
 
-static void ConvertEntity(std::ofstream &f, const mapentity_t *entity, const conversion_t format)
+static void ConvertEntity(std::ofstream &f, const mapentity_t &entity, const conversion_t format)
 {
     f << "{\n";
 
-    for (const auto &[key, value] : entity->epairs) {
+    for (const auto &[key, value] : entity.epairs) {
         fmt::print(f, "\"{}\" \"{}\"\n", key, value);
     }
 
-    for (auto &mapbrush : entity->mapbrushes) {
+    for (auto &mapbrush : entity.mapbrushes) {
         ConvertMapBrush(f, mapbrush, format);
     }
     f << "}\n";
@@ -3002,23 +3012,24 @@ void ConvertMapFile(void)
         FError("Couldn't open file\n");
 
     for (const mapentity_t &entity : map.entities) {
-        ConvertEntity(f, &entity, qbsp_options.convertmapformat.value());
+        ConvertEntity(f, entity, qbsp_options.convertmapformat.value());
     }
 
     logging::print("Conversion saved to {}\n", filename);
 }
 
-void PrintEntity(const mapentity_t *entity)
+void PrintEntity(const mapentity_t &entity)
 {
-    for (auto &epair : entity->epairs)
+    for (auto &epair : entity.epairs) {
         logging::print(logging::flag::STAT, "     {:20} : {}\n", epair.first, epair.second);
+    }
 }
 
 void WriteEntitiesToString()
 {
     for (auto &entity : map.entities) {
         /* Check if entity needs to be removed */
-        if (!entity.epairs.size() || IsWorldBrushEntity(&entity)) {
+        if (!entity.epairs.size() || IsWorldBrushEntity(entity)) {
             continue;
         }
 

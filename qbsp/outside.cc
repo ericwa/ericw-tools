@@ -259,7 +259,7 @@ WriteLeakLine
 leakline should be a sequence of portals leading from leakentity to the void
 ===============
 */
-static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<portal_t *> &leakline)
+static void WriteLeakLine(const mapentity_t &leakentity, const std::vector<portal_t *> &leakline)
 {
     fs::path name = qbsp_options.bsp_path;
     name.replace_extension("pts");
@@ -269,7 +269,7 @@ static void WriteLeakLine(const mapentity_t *leakentity, const std::vector<porta
     if (!ptsfile)
         FError("Failed to open {}: {}", name, strerror(errno));
 
-    qvec3d prevpt = leakentity->origin;
+    qvec3d prevpt = leakentity.origin;
 
     for (portal_t *portal : leakline) {
         qvec3d currpt = portal->winding.center();
@@ -293,10 +293,10 @@ sets node->occupant
 static void MarkOccupiedClusters(node_t *headnode)
 {
     for (int i = 1; i < map.entities.size(); i++) {
-        mapentity_t *entity = &map.entities.at(i);
+        mapentity_t &entity = map.entities.at(i);
 
         /* skip entities at (0 0 0) (bmodels) */
-        if (qv::epsilonEmpty(entity->origin, EQUAL_EPSILON))
+        if (qv::epsilonEmpty(entity.origin, EQUAL_EPSILON))
             continue;
 
 #if 0
@@ -306,7 +306,7 @@ static void MarkOccupiedClusters(node_t *headnode)
 #endif
 
         /* find the leaf it's in. Skip opqaue leafs */
-        node_t *cluster = PointInLeaf(headnode, entity->origin);
+        node_t *cluster = PointInLeaf(headnode, entity.origin);
 
         if (LeafSealsMap(cluster)) {
             continue;
@@ -317,7 +317,7 @@ static void MarkOccupiedClusters(node_t *headnode)
             continue;
         }
 
-        cluster->occupant = entity;
+        cluster->occupant = &entity;
     }
 }
 
@@ -349,7 +349,7 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 
 //=============================================================================
 
-static void MarkBrushSidesInvisible(mapentity_t *entity, bspbrush_t::container &brushes)
+static void MarkBrushSidesInvisible(bspbrush_t::container &brushes)
 {
     for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
@@ -584,7 +584,7 @@ get incorrectly marked as "invisible").
 Special cases: structural fully covered by detail still needs to be marked "visible".
 ===========
 */
-bool FillOutside(mapentity_t *entity, tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
+bool FillOutside(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
     node_t *node = tree->headnode;
 
@@ -661,7 +661,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, hull_index_t hullnum, bspbru
         if (map.leakfile)
             return false;
 
-        WriteLeakLine(leakentity, leakline);
+        WriteLeakLine(*leakentity, leakline);
         map.leakfile = true;
 
         /* Get rid of the .prt file since the map has a leak */
@@ -687,7 +687,7 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, hull_index_t hullnum, bspbru
 
     // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
 
-    MarkBrushSidesInvisible(entity, brushes);
+    MarkBrushSidesInvisible(brushes);
 
     MarkVisibleBrushSides_R(node);
 
@@ -705,14 +705,14 @@ bool FillOutside(mapentity_t *entity, tree_t *tree, hull_index_t hullnum, bspbru
     return true;
 }
 
-void FillBrushEntity(mapentity_t *entity, tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
+void FillBrushEntity(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 
     // Clear the outside filling state on all nodes
     ClearOccupied_r(tree->headnode);
 
-    MarkBrushSidesInvisible(entity, brushes);
+    MarkBrushSidesInvisible(brushes);
 
     MarkVisibleBrushSides_R(tree->headnode);
 }
