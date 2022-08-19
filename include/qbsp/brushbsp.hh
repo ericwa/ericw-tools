@@ -86,5 +86,17 @@ bool WindingIsHuge(const T &w)
     return false;
 }
 
+enum tree_split_t
+{
+    // change the split type depending on node size,
+    // brush count, etc
+    AUTO,
+    // always use the precise/expensive split method
+    // to make a good BSP tree
+    PRECISE,
+    // always use faster methods to create the tree
+    FAST
+};
+
 bspbrush_t::ptr BrushFromBounds(const aabb3d &bounds);
-std::unique_ptr<tree_t> BrushBSP(mapentity_t &entity, const bspbrush_t::container &brushes, std::optional<bool> forced_quick_tree);
+void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &brushes, tree_split_t split_type);

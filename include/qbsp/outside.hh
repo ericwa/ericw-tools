@@ -27,7 +27,7 @@
 struct node_t;
 struct tree_t;
 
-bool FillOutside(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes);
+bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes);
 std::vector<node_t *> FindOccupiedClusters(node_t *headnode);
 
-void FillBrushEntity(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes);
+void FillBrushEntity(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes);

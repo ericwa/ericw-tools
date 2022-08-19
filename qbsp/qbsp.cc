@@ -474,109 +474,109 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         return;
     }
 
-    std::unique_ptr<tree_t> tree = nullptr;
-
     // simpler operation for hulls
     if (hullnum.value_or(0)) {
-        tree = BrushBSP(entity, brushes, true);
+        tree_t tree;
+        BrushBSP(tree, entity, brushes, tree_split_t::FAST);
         if (map.is_world_entity(entity) && !qbsp_options.nofill.value()) {
             // assume non-world bmodels are simple
-            MakeTreePortals(tree.get());
-            if (FillOutside(tree.get(), hullnum, brushes)) {
+            MakeTreePortals(tree);
+            if (FillOutside(tree, hullnum, brushes)) {
                 // make a really good tree
-                tree.reset();
-                tree = BrushBSP(entity, brushes, std::nullopt);
+                tree.clear();
+                BrushBSP(tree, entity, brushes, tree_split_t::AUTO);
 
                 // fill again so PruneNodes works
-                MakeTreePortals(tree.get());
-                FillOutside(tree.get(), hullnum, brushes);
-                FreeTreePortals(tree.get());
-                PruneNodes(tree->headnode);
+                MakeTreePortals(tree);
+                FillOutside(tree, hullnum, brushes);
+                FreeTreePortals(tree);
+                PruneNodes(tree.headnode);
             }
         }
-        ExportClipNodes(entity, tree->headnode, hullnum.value());
+        ExportClipNodes(entity, tree.headnode, hullnum.value());
         return;
     }
 
     // full operation for collision (or main hull)
+    tree_t tree;
 
-    if (qbsp_options.forcegoodtree.value()) {
-        tree = BrushBSP(entity, brushes, false);
-    } else {
-        tree = BrushBSP(entity, brushes, map.is_world_entity(entity) ? std::nullopt : std::optional<bool>(false));
-    }
+    BrushBSP(tree, entity, brushes,
+        qbsp_options.forcegoodtree.value() ? tree_split_t::PRECISE : // we asked for the slow method
+        !map.is_world_entity(entity) ? tree_split_t::FAST : // brush models are assumed to be simple
+        tree_split_t::AUTO);
 
     // build all the portals in the bsp tree
     // some portals are solid polygons, and some are paths to other leafs
-    MakeTreePortals(tree.get());
+    MakeTreePortals(tree);
 
     if (map.is_world_entity(entity)) {
         // flood fills from the void.
         // marks brush sides which are *only* touching void;
         // we can skip using them as BSP splitters on the "really good tree"
         // (effectively expanding those brush sides outwards).
-        if (!qbsp_options.nofill.value() && FillOutside(tree.get(), hullnum, brushes)) {
+        if (!qbsp_options.nofill.value() && FillOutside(tree, hullnum, brushes)) {
             // make a really good tree
-            tree.reset();
-            tree = BrushBSP(entity, brushes, false);
+            tree.clear();
+            BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
 
             // make the real portals for vis tracing
-            MakeTreePortals(tree.get());
+            MakeTreePortals(tree);
 
             // fill again so PruneNodes works
-            FillOutside(tree.get(), hullnum, brushes);
+            FillOutside(tree, hullnum, brushes);
         }
 
         // Area portals
         if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-            FloodAreas(tree->headnode);
-            EmitAreaPortals(tree->headnode);
+            FloodAreas(tree.headnode);
+            EmitAreaPortals(tree.headnode);
         }
     } else {
-        FillBrushEntity(tree.get(), hullnum, brushes);
+        FillBrushEntity(tree, hullnum, brushes);
 
         // rebuild BSP now that we've marked invisible brush sides
-        tree.reset();
-        tree = BrushBSP(entity, brushes, false);
+        tree.clear();
+        BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
     }
 
-    MakeTreePortals(tree.get());
+    MakeTreePortals(tree);
 
-    MarkVisibleSides(tree.get(), brushes);
-    MakeFaces(tree->headnode);
+    MarkVisibleSides(tree, brushes);
+    MakeFaces(tree.headnode);
 
-    FreeTreePortals(tree.get());
-    PruneNodes(tree->headnode);
+    FreeTreePortals(tree);
+    PruneNodes(tree.headnode);
 
     // write out .prt for main hull
     if (!hullnum.value_or(0) && map.is_world_entity(entity) && (!map.leakfile || qbsp_options.keepprt.value())) {
-        WritePortalFile(tree.get());
+        WritePortalFile(tree);
     }
 
     // needs to come after any face creation
-    MakeMarkFaces(tree->headnode);
+    MakeMarkFaces(tree.headnode);
 
-    CountLeafs(tree->headnode);
+    CountLeafs(tree.headnode);
 
     // output vertices first, since TJunc needs it
-    EmitVertices(tree->headnode);
+    EmitVertices(tree.headnode);
 
-    TJunc(tree->headnode);
+    TJunc(tree.headnode);
 
     if (qbsp_options.objexport.value() && map.is_world_entity(entity)) {
-        ExportObj_Nodes("pre_makefaceedges_plane_faces", tree->headnode);
-        ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree->headnode);
+        ExportObj_Nodes("pre_makefaceedges_plane_faces", tree.headnode);
+        ExportObj_Marksurfaces("pre_makefaceedges_marksurfaces", tree.headnode);
     }
 
     Q_assert(!entity.firstoutputfacenumber.has_value());
 
-    entity.firstoutputfacenumber = MakeFaceEdges(tree->headnode);
+    entity.firstoutputfacenumber = MakeFaceEdges(tree.headnode);
 
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-        ExportBrushList(entity, tree->headnode);
+        ExportBrushList(entity, tree.headnode);
     }
 
-    ExportDrawNodes(entity, tree->headnode, entity.firstoutputfacenumber.value());
+    ExportDrawNodes(entity, tree.headnode, entity.firstoutputfacenumber.value());
+    FreeTreePortals(tree);
 }
 
 /*

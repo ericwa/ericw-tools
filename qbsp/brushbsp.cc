@@ -888,37 +888,39 @@ Using heuristics, chooses a plane to partition the brushes with.
 Returns nullopt if there are no valid planes to split with.
 ================
 */
-static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brushes, node_t *node, std::optional<bool> forced_quick_tree, bspstats_t &stats)
+static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brushes, node_t *node, tree_split_t split_type, bspstats_t &stats)
 {
     // no brushes left to split, so we can't use any plane.
     if (!brushes.size()) {
         return std::nullopt;
     }
 
-    // if forced_quick_tree is nullopt, we will choose fast/slow based on
-    // certain parameters.
-    if (!forced_quick_tree.has_value() || forced_quick_tree.value() == true) {
-        if (!forced_quick_tree.has_value()) {
+    if (split_type != tree_split_t::PRECISE) {
+        if (split_type == tree_split_t::AUTO) {
 
             // decide if we should switch to the midsplit method
             if (qbsp_options.midsplitbrushfraction.value() != 0.0) {
                 // new way (opt-in)
                 // how much of the map are we partitioning?
                 double fractionOfMap = brushes.size() / (double) map.total_brushes;
-                forced_quick_tree = (fractionOfMap > qbsp_options.midsplitbrushfraction.value());
+                if (fractionOfMap > qbsp_options.midsplitbrushfraction.value()) {
+                    split_type = tree_split_t::FAST;
+                }
             } else {
                 // old way (ericw-tools 0.15.2+)
                 if (qbsp_options.maxnodesize.value() >= 64) {
                     const vec_t maxnodesize = qbsp_options.maxnodesize.value() - qbsp_options.epsilon.value();
 
-                    forced_quick_tree = (node->bounds.maxs()[0] - node->bounds.mins()[0]) > maxnodesize
-                                || (node->bounds.maxs()[1] - node->bounds.mins()[1]) > maxnodesize
-                                || (node->bounds.maxs()[2] - node->bounds.mins()[2]) > maxnodesize;
+                    if    ((node->bounds.maxs()[0] - node->bounds.mins()[0]) > maxnodesize
+                        || (node->bounds.maxs()[1] - node->bounds.mins()[1]) > maxnodesize
+                        || (node->bounds.maxs()[2] - node->bounds.mins()[2]) > maxnodesize) {
+                        split_type = tree_split_t::FAST;
+                    }
                 }
             }
         }
 
-        if (forced_quick_tree.value()) {
+        if (split_type == tree_split_t::FAST) {
             if (auto mid_plane = ChooseMidPlaneFromList(brushes, node)) {
                 stats.c_midsplit++;
 
@@ -1117,10 +1119,10 @@ BuildTree_r
 Called in parallel.
 ==================
 */
-static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushes, std::optional<bool> forced_quick_tree, bspstats_t &stats, logging::percent_clock &clock)
+static void BuildTree_r(tree_t &tree, node_t *node, bspbrush_t::container brushes, tree_split_t split_type, bspstats_t &stats, logging::percent_clock &clock)
 {
     // find the best plane to use as a splitter
-    auto bestplane = SelectSplitPlane(brushes, node, forced_quick_tree, stats);
+    auto bestplane = SelectSplitPlane(brushes, node, split_type, stats);
 
     if (!bestplane) {
         // this is a leaf node
@@ -1149,7 +1151,7 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
-        auto &newnode = node->children[i] = tree->create_node();
+        auto &newnode = node->children[i] = tree.create_node();
         newnode->parent = node;
         newnode->bounds = node->bounds;
     }
@@ -1170,8 +1172,8 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(tree, node->children[0], std::move(children[0]), forced_quick_tree, stats, clock); });
-    g.run([&]() { BuildTree_r(tree, node->children[1], std::move(children[1]), forced_quick_tree, stats, clock); });
+    g.run([&]() { BuildTree_r(tree, node->children[0], std::move(children[0]), split_type, stats, clock); });
+    g.run([&]() { BuildTree_r(tree, node->children[1], std::move(children[1]), split_type, stats, clock); });
     g.wait();
 }
 
@@ -1180,11 +1182,9 @@ static void BuildTree_r(tree_t *tree, node_t *node, bspbrush_t::container brushe
 BrushBSP
 ==================
 */
-std::unique_ptr<tree_t> BrushBSP(mapentity_t &entity, const bspbrush_t::container &brushlist, std::optional<bool> forced_quick_tree)
+void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &brushlist, tree_split_t split_type)
 {
     logging::header(__func__ );
-
-    auto tree = std::make_unique<tree_t>();
 
     if (brushlist.empty()) {
         /*
@@ -1193,24 +1193,24 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t &entity, const bspbrush_t::containe
          * collision hull for the engine. Probably could be done a little
          * smarter, but this works.
          */
-        auto headnode = tree->create_node();
+        auto headnode = tree.create_node();
         headnode->bounds = entity.bounds;
         // The choice of plane is mostly unimportant, but having it at (0, 0, 0) affects
         // the node bounds calculation.
         headnode->planenum = 0;
-        headnode->children[0] = tree->create_node();
+        headnode->children[0] = tree.create_node();
         headnode->children[0]->is_leaf = true;
         headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[0]->parent = headnode;
-        headnode->children[1] = tree->create_node();
+        headnode->children[1] = tree.create_node();
         headnode->children[1]->is_leaf = true;
         headnode->children[1]->contents = qbsp_options.target_game->create_empty_contents();
         headnode->children[1]->parent = headnode;
 
-        tree->bounds = headnode->bounds;
-        tree->headnode = headnode;
+        tree.bounds = headnode->bounds;
+        tree.headnode = headnode;
 
-        return tree;
+        return;
     }
 
     size_t c_faces = 0;
@@ -1247,30 +1247,28 @@ std::unique_ptr<tree_t> BrushBSP(mapentity_t &entity, const bspbrush_t::containe
                 c_nonvisfaces++;
         }
 
-        tree->bounds += b->bounds;
+        tree.bounds += b->bounds;
     }
 
     logging::print(logging::flag::STAT, "     {:8} brushes\n", c_brushes);
     logging::print(logging::flag::STAT, "     {:8} visible faces\n", c_faces);
     logging::print(logging::flag::STAT, "     {:8} nonvisible faces\n", c_nonvisfaces);
 
-    auto node = tree->create_node();
+    auto node = tree.create_node();
+    
+    node->bounds = tree.bounds.grow(SIDESPACE);
+    node->volume = BrushFromBounds(node->bounds);
 
-    node->volume = BrushFromBounds(tree->bounds.grow(SIDESPACE));
-    node->bounds = tree->bounds.grow(SIDESPACE);
-
-    tree->headnode = node;
+    tree.headnode = node;
 
     bspstats_t stats{};
     stats.leafstats = qbsp_options.target_game->create_content_stats();
 
     {
         logging::percent_clock clock;
-        BuildTree_r(tree.get(), tree->headnode, brushlist, forced_quick_tree, stats, clock);
+        BuildTree_r(tree, tree.headnode, brushlist, split_type, stats, clock);
     }
 
     logging::header("CountLeafs");
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
-
-    return tree;
 }

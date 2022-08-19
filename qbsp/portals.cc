@@ -125,18 +125,18 @@ MakeHeadnodePortals
 The created portals will face the global outside_node
 ================
 */
-std::list<buildportal_t> MakeHeadnodePortals(tree_t *tree)
+std::list<buildportal_t> MakeHeadnodePortals(tree_t &tree)
 {
     int i, j, n;
     std::array<buildportal_t, 6> portals {};
     qplane3d bplanes[6];
 
     // pad with some space so there will never be null volume leafs
-    aabb3d bounds = tree->bounds.grow(SIDESPACE);
+    aabb3d bounds = tree.bounds.grow(SIDESPACE);
 
-    tree->outside_node.is_leaf = true;
-    tree->outside_node.contents = qbsp_options.target_game->create_solid_contents();
-    tree->outside_node.portals = NULL;
+    tree.outside_node.is_leaf = true;
+    tree.outside_node.contents = qbsp_options.target_game->create_solid_contents();
+    tree.outside_node.portals = NULL;
 
     // create 6 portals forming a cube around the bounds of the map.
     // these portals will have `outside_node` on one side, and headnode on the other.
@@ -159,9 +159,9 @@ std::list<buildportal_t> MakeHeadnodePortals(tree_t *tree)
 
             p.winding = BaseWindingForPlane<winding_t>(pl);
             if (side) {
-                p.nodes = { &tree->outside_node, tree->headnode };
+                p.nodes = { &tree.outside_node, tree.headnode };
             } else {
-                p.nodes = { tree->headnode, &tree->outside_node };
+                p.nodes = { tree.headnode, &tree.outside_node };
             }
         }
 
@@ -362,12 +362,12 @@ static twosided<std::list<buildportal_t>> SplitNodePortals(const node_t *node, s
 MakePortalsFromBuildportals
 ================
 */
-void MakePortalsFromBuildportals(tree_t *tree, std::list<buildportal_t> &buildportals)
+void MakePortalsFromBuildportals(tree_t &tree, std::list<buildportal_t> &buildportals)
 {
-    tree->portals.reserve(buildportals.size());
+    tree.portals.reserve(buildportals.size());
 
     for (auto &buildportal : buildportals) {
-        portal_t *new_portal = tree->create_portal();
+        portal_t *new_portal = tree.create_portal();
         new_portal->plane = buildportal.plane;
         new_portal->onnode = buildportal.onnode;
         new_portal->winding = std::move(buildportal.winding);
@@ -394,15 +394,15 @@ inline void CalcNodeBounds(node_t *node)
     }
 }
 
-static void CalcTreeBounds_r(tree_t *tree, node_t *node, logging::percent_clock &clock)
+static void CalcTreeBounds_r(node_t *node, logging::percent_clock &clock)
 {
     if (node->is_leaf) {
         clock();
         CalcNodeBounds(node);
     } else {
         tbb::task_group g;
-        g.run([&]() { CalcTreeBounds_r(tree, node->children[0], clock); });
-        g.run([&]() { CalcTreeBounds_r(tree, node->children[1], clock); });
+        g.run([&]() { CalcTreeBounds_r(node->children[0], clock); });
+        g.run([&]() { CalcTreeBounds_r(node->children[1], clock); });
         g.wait();
 
         node->bounds = node->children[0]->bounds + node->children[1]->bounds;
@@ -460,7 +460,7 @@ MakeTreePortals_r
 Given the list of portals bounding `node`, returns the portal list for a fully-portalized `node`.
 ==================
 */
-std::list<buildportal_t> MakeTreePortals_r(tree_t *tree, node_t *node, portaltype_t type, std::list<buildportal_t> boundary_portals, portalstats_t &stats, logging::percent_clock &clock)
+std::list<buildportal_t> MakeTreePortals_r(node_t *node, portaltype_t type, std::list<buildportal_t> boundary_portals, portalstats_t &stats, logging::percent_clock &clock)
 {
     clock();
 
@@ -479,8 +479,8 @@ std::list<buildportal_t> MakeTreePortals_r(tree_t *tree, node_t *node, portaltyp
     std::list<buildportal_t> result_portals_front, result_portals_back;
 
     tbb::task_group g;
-    g.run([&]() { result_portals_front = MakeTreePortals_r(tree, node->children[0], type, std::move(boundary_portals_split.front), stats, clock); });
-    g.run([&]() { result_portals_back = MakeTreePortals_r(tree, node->children[1], type, std::move(boundary_portals_split.back), stats, clock); });
+    g.run([&]() { result_portals_front = MakeTreePortals_r(node->children[0], type, std::move(boundary_portals_split.front), stats, clock); });
+    g.run([&]() { result_portals_back = MakeTreePortals_r(node->children[1], type, std::move(boundary_portals_split.back), stats, clock); });
     g.wait();
 
     // sequential part: push the nodeportal down each side of the bsp so it connects leafs
@@ -510,7 +510,7 @@ std::list<buildportal_t> MakeTreePortals_r(tree_t *tree, node_t *node, portaltyp
 MakeTreePortals
 ==================
 */
-void MakeTreePortals(tree_t *tree)
+void MakeTreePortals(tree_t &tree)
 {
     logging::funcheader();
 
@@ -519,11 +519,11 @@ void MakeTreePortals(tree_t *tree)
     auto headnodeportals = MakeHeadnodePortals(tree);
 
     {
-        logging::percent_clock clock(tree->nodes.size());
+        logging::percent_clock clock(tree.nodes.size());
 
         portalstats_t stats{};
 
-        auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::TREE, std::move(headnodeportals), stats, clock);
+        auto buildportals = MakeTreePortals_r(tree.headnode, portaltype_t::TREE, std::move(headnodeportals), stats, clock);
 
         MakePortalsFromBuildportals(tree, buildportals);
     }
@@ -531,10 +531,10 @@ void MakeTreePortals(tree_t *tree)
     logging::header("CalcTreeBounds");
 
     logging::percent_clock clock;
-    CalcTreeBounds_r(tree, tree->headnode, clock);
+    CalcTreeBounds_r(tree.headnode, clock);
     clock.print();
 
-    logging::print(logging::flag::STAT, "       {:8} tree portals\n", tree->portals.size());
+    logging::print(logging::flag::STAT, "       {:8} tree portals\n", tree.portals.size());
 }
 
 /*
@@ -906,7 +906,7 @@ MarkVisibleSides
 
 =============
 */
-void MarkVisibleSides(tree_t *tree, bspbrush_t::container &brushes)
+void MarkVisibleSides(tree_t &tree, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 
@@ -922,7 +922,7 @@ void MarkVisibleSides(tree_t *tree, bspbrush_t::container &brushes)
     size_t num_sides_not_found = 0;
 
     // set visible flags on the sides that are used by portals
-    MarkVisibleSides_r(tree->headnode, num_sides_not_found);
+    MarkVisibleSides_r(tree.headnode, num_sides_not_found);
 
     if (num_sides_not_found) {
         logging::print("WARNING: sides not found for {} portals\n", num_sides_not_found);

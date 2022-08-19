@@ -32,10 +32,13 @@
 #include <tbb/concurrent_vector.h>
 
 struct portal_t;
+struct tree_t;
+
+void FreeTreePortals(tree_t &tree);
 
 struct tree_t
 {
-    node_t *headnode;
+    node_t *headnode = nullptr;
     node_t outside_node = {}; // portals outside the world face this
     aabb3d bounds;
 
@@ -55,8 +58,18 @@ struct tree_t
     // creates a new node owned by `this` (stored in the `nodes` vector) and
     // returns a raw pointer to it
     node_t *create_node();
+
+    // reset the tree without clearing allocated vector space
+    void clear()
+    {
+        headnode = nullptr;
+        outside_node = {};
+        bounds = {};
+
+        FreeTreePortals(*this);
+        nodes.clear();
+    }
 };
 
-void FreeTreePortals(tree_t *tree);
 void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);

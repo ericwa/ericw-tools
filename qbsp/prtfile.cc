@@ -255,7 +255,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
 WritePortalFile
 ==================
 */
-void WritePortalFile(tree_t *tree)
+void WritePortalFile(tree_t &tree)
 {
     logging::funcheader();
 
@@ -270,13 +270,13 @@ void WritePortalFile(tree_t *tree)
 
         // vis portal generation doesn't use headnode portals
         portalstats_t stats{};
-        auto buildportals = MakeTreePortals_r(tree, tree->headnode, portaltype_t::VIS, {}, stats, clock);
+        auto buildportals = MakeTreePortals_r(tree.headnode, portaltype_t::VIS, {}, stats, clock);
 
         MakePortalsFromBuildportals(tree, buildportals);
     }
 
     /* save portal file for vis tracing */
-    WritePortalfile(tree->headnode, &state);
+    WritePortalfile(tree.headnode, &state);
 
     logging::print(logging::flag::STAT, "     {:8} vis leafs\n", state.num_visleafs);
     logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);
@@ -343,12 +343,12 @@ static void CountTreePortals_r(node_t *node, size_t &count)
 WritePortalFile
 ==================
 */
-void WriteDebugTreePortalFile(tree_t *tree, std::string_view filename_suffix)
+void WriteDebugTreePortalFile(tree_t &tree, std::string_view filename_suffix)
 {
     logging::funcheader();
 
     size_t portal_count = 0;
-    CountTreePortals_r(tree->headnode, portal_count);
+    CountTreePortals_r(tree.headnode, portal_count);
 
     // write the file
     fs::path name = qbsp_options.bsp_path;
@@ -361,7 +361,7 @@ void WriteDebugTreePortalFile(tree_t *tree, std::string_view filename_suffix)
     fmt::print(portalFile, "PRT1\n");
     fmt::print(portalFile, "{}\n", 0);
     fmt::print(portalFile, "{}\n", portal_count);
-    WriteTreePortals_r(tree->headnode, portalFile);
+    WriteTreePortals_r(tree.headnode, portalFile);
 
     logging::print(logging::flag::STAT, "     {:8} tree portals written to {}\n", portal_count, name);
 }

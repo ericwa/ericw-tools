@@ -132,7 +132,7 @@ preconditions:
 - all leafs have outside_distance set to -1
 ==================
 */
-static void FloodFillClustersFromVoid(tree_t *tree)
+static void FloodFillClustersFromVoid(tree_t &tree)
 {
     // breadth-first search
     std::list<std::pair<node_t *, int>> queue;
@@ -141,10 +141,10 @@ static void FloodFillClustersFromVoid(tree_t *tree)
     // push a node onto the queue which is in the void, but has a portal to outside_node
     // NOTE: remember, the headnode has no relationship to the outside of the map.
     {
-        const int side = (tree->outside_node.portals->nodes[0] == &tree->outside_node);
-        node_t *fillnode = tree->outside_node.portals->nodes[side];
+        const int side = (tree.outside_node.portals->nodes[0] == &tree.outside_node);
+        node_t *fillnode = tree.outside_node.portals->nodes[side];
 
-        Q_assert(fillnode != &tree->outside_node);
+        Q_assert(fillnode != &tree.outside_node);
 
         // this must be true because the map is made from closed brushes, beyond which is void
         Q_assert(!LeafSealsMap(fillnode));
@@ -584,9 +584,9 @@ get incorrectly marked as "invisible").
 Special cases: structural fully covered by detail still needs to be marked "visible".
 ===========
 */
-bool FillOutside(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
+bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
-    node_t *node = tree->headnode;
+    node_t *node = tree.headnode;
 
     logging::funcheader();
     logging::percent_clock clock;
@@ -621,8 +621,8 @@ bool FillOutside(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brus
         BFSFloodFillFromOccupiedLeafs(occupied_clusters);
 
         /* first check to see if an occupied leaf is hit */
-        const int side = (tree->outside_node.portals->nodes[0] == &tree->outside_node);
-        node_t *fillnode = tree->outside_node.portals->nodes[side];
+        const int side = (tree.outside_node.portals->nodes[0] == &tree.outside_node);
+        node_t *fillnode = tree.outside_node.portals->nodes[side];
 
         if (fillnode->occupied > 0) {
             leakline = MakeLeakLine(fillnode, leakentity);
@@ -705,14 +705,14 @@ bool FillOutside(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brus
     return true;
 }
 
-void FillBrushEntity(tree_t *tree, hull_index_t hullnum, bspbrush_t::container &brushes)
+void FillBrushEntity(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
     logging::funcheader();
 
     // Clear the outside filling state on all nodes
-    ClearOccupied_r(tree->headnode);
+    ClearOccupied_r(tree.headnode);
 
     MarkBrushSidesInvisible(brushes);
 
-    MarkVisibleBrushSides_R(tree->headnode);
+    MarkVisibleBrushSides_R(tree.headnode);
 }
