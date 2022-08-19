@@ -1764,7 +1764,7 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
                         size_t l = 0;
 						for (; l < w2.size(); l++) {
 							vec_t d = qv::dot(w2[l], plane.normal) - plane.dist;
-							if (d > 0.1) {
+							if (d > qbsp_options.epsilon.value()) {
 								break;	// point in front
                             }
 						}
