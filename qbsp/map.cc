@@ -1747,15 +1747,6 @@ inline void AddBrushBevels(mapentity_t &e, mapbrush_t &b)
                     }
 					plane.dist = qv::dot(b.faces[i].winding[j], plane.normal);
 
-                    auto w = BaseWindingForPlane<winding_t>(plane);
-
-                    if (fabs(trunc(w[0][0])) == 693 ||
-                        fabs(trunc(w[1][0])) == 693 ||
-                        fabs(trunc(w[2][0])) == 693) {
-                        __debugbreak();
-                    }
-
-
 					// if all the points on all the sides are
 					// behind this plane, it is a proper edge bevel
 					for (k = 0; k < b.faces.size(); k++) {
