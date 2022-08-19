@@ -264,7 +264,12 @@ bool CreateBrushWindings(bspbrush_t &brush)
                     if (fabs(v) > qbsp_options.worldextent.value()) {
                         logging::print("WARNING: {}: invalid winding point\n", brush.mapbrush ? brush.mapbrush->line : parser_source_location{});
                         w = std::nullopt;
+                        break;
                     }
+                }
+
+                if (!w) {
+                    break;
                 }
             }
 
@@ -534,6 +539,10 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
     for (size_t i = 0; i < mapbrush.faces.size(); i++) {
         auto &src = mapbrush.faces[i];
 
+        // fixme-brushbsp: should this happen for all hulls?
+        // fixme-brushbsp: this causes a hint side to expand
+        // to the world extents (winding & bounds) which throws
+        // a lot of warnings. is this how this should be working?
         if (!hullnum.value_or(0) && mapbrush.is_hint) {
             /* Don't generate hintskip faces */
             const maptexinfo_t &texinfo = src.get_texinfo();
@@ -589,7 +598,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
         }
 #else
 
-        if (!CreateBrushWindings(brush)) {
+        if (!CreateBrushWindings(brush, mapbrush.is_hint)) {
             return std::nullopt;
         }
 

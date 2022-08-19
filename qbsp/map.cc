@@ -3141,7 +3141,7 @@ void CalculateWorldExtent(void)
         }
     }
 
-    qbsp_options.worldextent.setValue(((extents + hull_extents) * 2) + SIDESPACE, settings::source::GAME_TARGET);
+    qbsp_options.worldextent.setValue(ceil((extents + hull_extents) * 2) + SIDESPACE, settings::source::GAME_TARGET);
 
     logging::print("INFO: world extents calculated to {} units\n", qbsp_options.worldextent.value());
 }

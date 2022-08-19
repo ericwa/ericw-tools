@@ -43,7 +43,6 @@ struct mapface_t
     std::array<qvec3d, 3> planepts{};
     int texinfo = 0;
     parser_source_location line;
-    bool bevel = false;
     // the lmshift value of the brush. stored here because
     // mapfaces don't link back to the mapbrush_t
     int16_t lmshift = 0;
@@ -72,6 +71,10 @@ struct mapface_t
     bool visible = false; // can any part of this side be seen from non-void parts of the level?
                           // non-visible means we can discard the brush side
                           // (avoiding generating a BSP spit, so expanding it outwards)
+
+    // this face is a bevel added by AddBrushBevels, and shouldn't be used as a splitter
+    // for the main hull.
+    bool bevel = false;
 
     bool set_planepts(const std::array<qvec3d, 3> &pts);
 
