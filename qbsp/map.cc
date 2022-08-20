@@ -2209,7 +2209,9 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity)
 
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
-    bool omit = entity.epairs.get_int("_omitbrushes");
+    bool omit = false;
+
+    bool first_brush = false;
 
     do {
         if (!parser.parse_token())
@@ -2217,8 +2219,13 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity)
         if (parser.token == "}")
             break;
         else if (parser.token == "{") {
-            // once we run into the first brush, set up textures state.
-            EnsureTexturesLoaded();
+            if (!first_brush) {
+                // once we run into the first brush, set up textures state.
+                EnsureTexturesLoaded();
+                first_brush = true;
+
+                omit = entity.epairs.get_int("_omitbrushes");
+            }
 
             if (omit) {
                 // skip until a } since we don't care to load brushes on this entity
