@@ -1119,7 +1119,7 @@ BuildTree_r
 Called in parallel.
 ==================
 */
-static void BuildTree_r(tree_t &tree, node_t *node, bspbrush_t::container brushes, tree_split_t split_type, bspstats_t &stats, logging::percent_clock &clock)
+static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::container brushes, tree_split_t split_type, bspstats_t &stats, logging::percent_clock &clock)
 {
     // find the best plane to use as a splitter
     auto *bestside = SelectSplitPlane(brushes, node, split_type, stats);
@@ -1173,8 +1173,8 @@ static void BuildTree_r(tree_t &tree, node_t *node, bspbrush_t::container brushe
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(tree, node->children[0], std::move(children[0]), split_type, stats, clock); });
-    g.run([&]() { BuildTree_r(tree, node->children[1], std::move(children[1]), split_type, stats, clock); });
+    g.run([&]() { BuildTree_r(tree, level + 1, node->children[0], std::move(children[0]), split_type, stats, clock); });
+    g.run([&]() { BuildTree_r(tree, level + 1, node->children[1], std::move(children[1]), split_type, stats, clock); });
     g.wait();
 }
 
@@ -1267,7 +1267,7 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
 
     {
         logging::percent_clock clock;
-        BuildTree_r(tree, tree.headnode, brushlist, split_type, stats, clock);
+        BuildTree_r(tree, 0, tree.headnode, brushlist, split_type, stats, clock);
     }
 
     logging::header("CountLeafs");
