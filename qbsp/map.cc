@@ -2207,6 +2207,10 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity)
 
     entity.mapbrushes.clear();
 
+    // _omitbrushes 1 just discards all brushes in the entity.
+    // could be useful for geometry guides, selective compilation, etc.
+    bool omit = entity.epairs.get_int("_omitbrushes");
+
     do {
         if (!parser.parse_token())
             FError("Unexpected EOF (no closing brace)");
@@ -2216,7 +2220,16 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity)
             // once we run into the first brush, set up textures state.
             EnsureTexturesLoaded();
 
-            entity.mapbrushes.emplace_back(ParseBrush(parser, entity));
+            if (omit) {
+                // skip until a } since we don't care to load brushes on this entity
+                do {
+                    if (!parser.parse_token()) {
+                        FError("Unexpected EOF (no closing brace)");
+                    }
+                } while (parser.token != "}");
+            } else {
+                entity.mapbrushes.emplace_back(ParseBrush(parser, entity));
+            }
         } else {
             ParseEpair(parser, entity);
         }

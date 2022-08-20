@@ -653,12 +653,6 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
 
 static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
 {
-    // _omitbrushes 1 just discards all brushes in the entity.
-    // could be useful for geometry guides, selective compilation, etc.
-    if (src.epairs.get_int("_omitbrushes")) {
-        return;
-    }
-    
     clock.max += src.mapbrushes.size();
 
     bool all_detail, all_detail_fence, all_detail_illusionary;
