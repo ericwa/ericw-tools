@@ -3,6 +3,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/common/bspfile.cc
     ${CMAKE_SOURCE_DIR}/common/bsputils.cc
     ${CMAKE_SOURCE_DIR}/common/cmdlib.cc
+    ${CMAKE_SOURCE_DIR}/common/decompile.cc
     ${CMAKE_SOURCE_DIR}/common/entdata.cc
     ${CMAKE_SOURCE_DIR}/common/log.cc
     ${CMAKE_SOURCE_DIR}/common/mathlib.cc
@@ -20,6 +21,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
     ${CMAKE_SOURCE_DIR}/include/common/bsputils.hh
     ${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh
+    ${CMAKE_SOURCE_DIR}/include/common/decompile.hh
     ${CMAKE_SOURCE_DIR}/include/common/entdata.h
     ${CMAKE_SOURCE_DIR}/include/common/log.hh
     ${CMAKE_SOURCE_DIR}/include/common/mathlib.hh
@@ -33,6 +35,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/imglib.hh
     ${CMAKE_SOURCE_DIR}/include/common/settings.hh
     ${CMAKE_SOURCE_DIR}/include/common/prtfile.hh
-    ${CMAKE_SOURCE_DIR}/include/common/vectorutils.hh)
+    ${CMAKE_SOURCE_DIR}/include/common/vectorutils.hh
+)
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json)

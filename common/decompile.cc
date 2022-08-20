@@ -18,7 +18,7 @@
     See file, 'COPYING', for details.
 */
 
-#include "decompile.h"
+#include <common/decompile.hh>
 
 #include <common/entdata.h>
 #include <common/cmdlib.hh>

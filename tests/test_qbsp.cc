@@ -6,6 +6,7 @@
 #include <qbsp/map.hh>
 #include <common/fs.hh>
 #include <common/bsputils.hh>
+#include <common/decompile.hh>
 #include <common/prtfile.hh>
 #include <common/qvec.hh>
 #include <testmaps.hh>
@@ -226,6 +227,24 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
         prtfile = {LoadPrtFile(prtpath, bspdata.loadversion)};
     }
 
+    // decompile .bsp hulls
+    if (qbsp_options.target_game->id == GAME_QUAKE) {
+        fs::path decompiled_map_path = qbsp_options.bsp_path;
+        decompiled_map_path.replace_extension("");
+        decompiled_map_path.replace_filename(decompiled_map_path.stem().string() + "-decompiled-hull1");
+        decompiled_map_path.replace_extension(".map");
+
+        std::ofstream f(decompiled_map_path);
+
+        if (!f)
+            Error("couldn't open {} for writing\n", decompiled_map_path);
+
+        decomp_options options;
+        options.hullnum = 1;
+
+        DecompileBSP(&std::get<mbsp_t>(bspdata.bsp), options, f);
+    }
+
     return std::make_tuple(std::move(std::get<mbsp_t>(bspdata.bsp)),
         std::move(bspdata.bspx.entries),
         std::move(prtfile));
@@ -329,6 +348,9 @@ static std::vector<const mface_t *> FacesWithTextureName(const mbsp_t &bsp, cons
     }
     return result;
 }
+
+static std::map<int, int> CountClipnodeLeafsByContentType(const mbsp_t& bsp, int hullnum);
+static int CountClipnodeNodes(const mbsp_t& bsp, int hullnum);
 
 // https://github.com/ericwa/ericw-tools/issues/158
 TEST_CASE("testTextureIssue", "[qbsp]")
@@ -1830,23 +1852,106 @@ TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
 /**
  * Tests that hollow obj2map style geometry (tetrahedrons) get filled in, in all hulls.
  */
-TEST_CASE("q1_rocks", "[testmaps_q1]")
+TEST_CASE("q1_rocks", "[testmaps_q1][!mayfail]")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_rocks.map");
+    constexpr auto* q1_rocks_structural_cube = "q1_rocks_structural_cube.map";
 
-    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+    const auto mapnames = {
+        "q1_rocks.map", // box room with a func_detail "mountain" of tetrahedrons with a hollow inside
+        "q1_rocks_merged.map", // same as above but the mountain has been merged in the .map file into 1 brush
+        "q1_rocks_structural.map", // same as q1_rocks.map but without the use of func_detail
+        "q1_rocks_structural_merged.map",
+        q1_rocks_structural_cube // simpler version where the mountain is just a cube
+    };
+    for (auto *mapname : mapnames) {
+        DYNAMIC_SECTION(mapname) {
+            INFO(mapname);
+            const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
-    const qvec3d point {48, 320, 88};
+            CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
-    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
-    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
-    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
+            const qvec3d point{48, 320, 88};
+
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
+
+            for (int i = 1; i <= 2; ++i) {
+                INFO("hull " << i);
+
+                const auto clipnodes = CountClipnodeLeafsByContentType(bsp, i);
+
+                REQUIRE(clipnodes.size() == 2);
+                REQUIRE(clipnodes.find(CONTENTS_SOLID) != clipnodes.end());
+                REQUIRE(clipnodes.find(CONTENTS_EMPTY) != clipnodes.end());
+
+                // 6 for the walls of the box, and 1 for the rock structure, which is convex
+                CHECK(clipnodes.at(CONTENTS_SOLID) == 7);
+
+                if (std::string(q1_rocks_structural_cube) == mapname) {
+                    CHECK((5 + 6) == CountClipnodeNodes(bsp, i));
+                }
+            }
+
+            // for completion's sake, check the nodes
+            if (std::string(q1_rocks_structural_cube) == mapname) {
+                CHECK((5 + 6) == bsp.dnodes.size());
+            }
+        }
+    }
+}
+
+static void CountClipnodeLeafsByContentType_r(const mbsp_t& bsp, int clipnode, std::map<int, int> &result)
+{
+    if (clipnode < 0) {
+        // we're in a leaf node and `clipnode` is actually the content type
+        ++result[clipnode];
+        return;
+    }
+
+    auto &node = bsp.dclipnodes.at(clipnode);
+    CountClipnodeLeafsByContentType_r(bsp, node.children[0], result);
+    CountClipnodeLeafsByContentType_r(bsp, node.children[1], result);
+}
+
+static std::map<int, int> CountClipnodeLeafsByContentType(const mbsp_t& bsp, int hullnum)
+{
+    Q_assert(hullnum > 0);
+
+    int headnode = bsp.dmodels.at(0).headnode.at(hullnum);
+    std::map<int, int> result;
+    CountClipnodeLeafsByContentType_r(bsp, headnode, result);
+
+    return result;
+}
+
+static int CountClipnodeNodes_r(const mbsp_t& bsp, int clipnode)
+{
+    if (clipnode < 0) {
+        // we're in a leaf node and `clipnode` is actually the content type
+        return 0;
+    }
+
+    auto &node = bsp.dclipnodes.at(clipnode);
+    return 1 + CountClipnodeNodes_r(bsp, node.children[0])
+           + CountClipnodeNodes_r(bsp, node.children[1]);
+}
+
+/**
+ * Count the non-leaf clipnodes of the worldmodel for the given hull's decision tree.
+ */
+static int CountClipnodeNodes(const mbsp_t& bsp, int hullnum)
+{
+    Q_assert(hullnum > 0);
+
+    int headnode = bsp.dmodels.at(0).headnode.at(hullnum);
+    return CountClipnodeNodes_r(bsp, headnode);
 }
 
 /**
  * Tests a bad hull expansion
  */
-TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1]")
+TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1][!mayfail]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull_expansion_lip.map");
 
@@ -1854,6 +1959,29 @@ TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1]")
 
     const qvec3d point {174, 308, 42};
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
+
+    for (int i = 1; i <= 2; ++i) {
+        INFO("hull " << i);
+
+        const auto clipnodes = CountClipnodeLeafsByContentType(bsp, i);
+
+        REQUIRE(clipnodes.size() == 2);
+        REQUIRE(clipnodes.find(CONTENTS_SOLID) != clipnodes.end());
+        REQUIRE(clipnodes.find(CONTENTS_EMPTY) != clipnodes.end());
+
+        // room shaped like:
+        //
+        // |\    /|
+        // | \__/ |
+        // |______|
+        //
+        // 6 solid leafs for the walls/floor, 3 for the empty regions inside
+        CHECK(clipnodes.at(CONTENTS_SOLID) == 6);
+        CHECK(clipnodes.at(CONTENTS_EMPTY) == 3);
+
+        // 6 walls + 2 floors
+        CHECK(CountClipnodeNodes(bsp, i) == 8);
+    }
 }
 
 TEST_CASE("q1_hull1_content_types", "[testmaps_q1]")

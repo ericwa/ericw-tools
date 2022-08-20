@@ -26,10 +26,9 @@
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
+#include <common/decompile.hh>
 #include <common/mathlib.hh>
 #include <common/fs.hh>
-
-#include "decompile.h"
 
 #include <map>
 #include <set>
