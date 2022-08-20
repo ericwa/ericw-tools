@@ -1854,35 +1854,50 @@ TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
  */
 TEST_CASE("q1_rocks", "[testmaps_q1][!mayfail]")
 {
-    const auto mapname = GENERATE(
+    constexpr auto* q1_rocks_structural_cube = "q1_rocks_structural_cube.map";
+
+    const auto mapnames = {
         "q1_rocks.map", // box room with a func_detail "mountain" of tetrahedrons with a hollow inside
         "q1_rocks_merged.map", // same as above but the mountain has been merged in the .map file into 1 brush
         "q1_rocks_structural.map", // same as q1_rocks.map but without the use of func_detail
-        "q1_rocks_structural_merged.map"
-        );
-    INFO(mapname);
+        "q1_rocks_structural_merged.map",
+        q1_rocks_structural_cube // simpler version where the mountain is just a cube
+    };
+    for (auto *mapname : mapnames) {
+        DYNAMIC_SECTION(mapname) {
+            INFO(mapname);
+            const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
-    const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
+            CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
-    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+            const qvec3d point{48, 320, 88};
 
-    const qvec3d point {48, 320, 88};
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
 
-    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
-    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
-    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
+            for (int i = 1; i < 2; ++i) {
+                INFO("hull " << i);
 
-    for (int i = 1; i < 2; ++i) {
-        INFO("hull " << i);
+                const auto clipnodes = CountClipnodeLeafsByContentType(bsp, i);
 
-        const auto clipnodes = CountClipnodeLeafsByContentType(bsp, i);
+                REQUIRE(clipnodes.size() == 2);
+                REQUIRE(clipnodes.find(CONTENTS_SOLID) != clipnodes.end());
+                REQUIRE(clipnodes.find(CONTENTS_EMPTY) != clipnodes.end());
 
-        REQUIRE(clipnodes.size() == 2);
-        REQUIRE(clipnodes.find(CONTENTS_SOLID) != clipnodes.end());
-        REQUIRE(clipnodes.find(CONTENTS_EMPTY) != clipnodes.end());
+                // 6 for the walls of the box, and 1 for the rock structure, which is convex
+                CHECK(clipnodes.at(CONTENTS_SOLID) == 7);
 
-        // 6 for the walls of the box, and 1 for the rock structure, which is convex
-        CHECK(clipnodes.at(CONTENTS_SOLID) == 7);
+                if (std::string(q1_rocks_structural_cube) == mapname) {
+                    CHECK((5 + 6) == CountClipnodeNodes(bsp, i));
+                }
+            }
+
+            // for completion's sake, check the nodes
+            if (std::string(q1_rocks_structural_cube) == mapname) {
+                CHECK((5 + 6) == bsp.dnodes.size());
+            }
+        }
     }
 }
 
