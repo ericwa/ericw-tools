@@ -1876,7 +1876,7 @@ TEST_CASE("q1_rocks", "[testmaps_q1][!mayfail]")
             CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
             CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
 
-            for (int i = 1; i < 2; ++i) {
+            for (int i = 1; i <= 2; ++i) {
                 INFO("hull " << i);
 
                 const auto clipnodes = CountClipnodeLeafsByContentType(bsp, i);
@@ -1960,7 +1960,7 @@ TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1][!mayfail]")
     const qvec3d point {174, 308, 42};
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
 
-    for (int i = 1; i < 2; ++i) {
+    for (int i = 1; i <= 2; ++i) {
         INFO("hull " << i);
 
         const auto clipnodes = CountClipnodeLeafsByContentType(bsp, i);
