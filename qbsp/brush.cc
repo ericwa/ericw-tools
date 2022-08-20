@@ -309,8 +309,6 @@ AddBrushPlane
 */
 static bool AddBrushPlane(hullbrush_t &hullbrush, const qbsp_plane_t &plane)
 {
-    vec_t len = qv::length(plane.get_normal());
-
     for (auto &s : hullbrush.brush.sides) {
         if (qv::epsilonEqual(s.get_plane(), plane)) {
             return false;
@@ -461,8 +459,6 @@ ExpandBrush
 */
 static void ExpandBrush(hullbrush_t &hullbrush, const aabb3d &hull_size)
 {
-    size_t total_original_sides = hullbrush.brush.sides.size();
-
     // create all the hull points
     for (auto &f : hullbrush.brush.sides) {
         for (auto &pt : f.w) {
@@ -600,7 +596,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
         }
 #else
 
-        if (!CreateBrushWindings(brush, mapbrush.is_hint)) {
+        if (!CreateBrushWindings(brush)) {
             return std::nullopt;
         }
 

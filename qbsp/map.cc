@@ -1837,9 +1837,7 @@ static bool AddBrushPlane(map_hullbrush_t &hullbrush, const qbsp_plane_t &plane,
     // fixme: why did we need to store all this stuff again, isn't
     // it in texinfo?
     s.raw_info = hullbrush.brush.faces[0].raw_info;
-    s.flags = hullbrush.brush.faces[0].flags;
     s.texname = hullbrush.brush.faces[0].texname;
-    s.value = hullbrush.brush.faces[0].value;
 	s.bevel = true;
     return true;
 }
@@ -1991,8 +1989,6 @@ ExpandBrush
 */
 static void ExpandBrush(map_hullbrush_t &hullbrush, const aabb3d &hull_size)
 {
-    size_t total_original_sides = hullbrush.brush.faces.size();
-
     // create all the hull points
     for (auto &f : hullbrush.brush.faces) {
         for (auto &pt : f.winding) {
