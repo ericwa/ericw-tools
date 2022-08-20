@@ -833,13 +833,13 @@ ChooseMidPlaneFromList
 The clipping hull BSP doesn't worry about avoiding splits
 ==================
 */
-static std::optional<size_t> ChooseMidPlaneFromList(const bspbrush_t::container &brushes, const node_t *node)
+static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, const node_t *node)
 {
     vec_t bestaxialmetric = VECT_MAX;
-    std::optional<size_t> bestaxialplane;
+    side_t *bestaxialplane = nullptr;
 
     vec_t bestanymetric = VECT_MAX;
-    std::optional<size_t> bestanyplane;
+    side_t *bestanyplane = nullptr;
 
     for (auto &brush : brushes) {
         for (auto &side : brush->sides) {
@@ -862,14 +862,14 @@ static std::optional<size_t> ChooseMidPlaneFromList(const bspbrush_t::container 
 
             if (metric < bestanymetric) {
                 bestanymetric = metric;
-                bestanyplane = side.planenum & ~1;
+                bestanyplane = &side;
             }
 
             /* check for axis aligned surfaces */
             if (plane.get_type() < plane_type_t::PLANE_ANYX) {
                 if (metric < bestaxialmetric) {
                     bestaxialmetric = metric;
-                    bestaxialplane = side.planenum & ~1;
+                    bestaxialplane = &side;
                 }
             }
         }
@@ -888,11 +888,11 @@ Using heuristics, chooses a plane to partition the brushes with.
 Returns nullopt if there are no valid planes to split with.
 ================
 */
-static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brushes, node_t *node, tree_split_t split_type, bspstats_t &stats)
+static side_t *SelectSplitPlane(const bspbrush_t::container &brushes, node_t *node, tree_split_t split_type, bspstats_t &stats)
 {
     // no brushes left to split, so we can't use any plane.
     if (!brushes.size()) {
-        return std::nullopt;
+        return nullptr;
     }
 
     if (split_type != tree_split_t::PRECISE) {
@@ -925,7 +925,7 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
                 stats.c_midsplit++;
 
                 for (auto &b : brushes) {
-                    b->side = TestBrushToPlanenum(*b, mid_plane.value(), nullptr, nullptr, nullptr);
+                    b->side = TestBrushToPlanenum(*b, mid_plane->planenum & ~1, nullptr, nullptr, nullptr);
                 }
 
                 return mid_plane;
@@ -1049,7 +1049,7 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
     }
 
     if (!bestside) {
-        return std::nullopt;
+        return nullptr;
     }
 
     if (!bestside->is_visible()) {
@@ -1058,7 +1058,7 @@ static std::optional<size_t> SelectSplitPlane(const bspbrush_t::container &brush
 
     stats.c_qbsp3++;
 
-    return bestside->planenum & ~1;
+    return bestside;
 }
 
 /*
@@ -1122,9 +1122,9 @@ Called in parallel.
 static void BuildTree_r(tree_t &tree, node_t *node, bspbrush_t::container brushes, tree_split_t split_type, bspstats_t &stats, logging::percent_clock &clock)
 {
     // find the best plane to use as a splitter
-    auto bestplane = SelectSplitPlane(brushes, node, split_type, stats);
+    auto *bestside = SelectSplitPlane(brushes, node, split_type, stats);
 
-    if (!bestplane) {
+    if (!bestside) {
         // this is a leaf node
         clock();
 
@@ -1142,12 +1142,13 @@ static void BuildTree_r(tree_t &tree, node_t *node, bspbrush_t::container brushe
     stats.c_nodes++;
 
     // make sure this was a positive-facing split
-    Q_assert(!(bestplane.value() & 1));
+    size_t bestplane = bestside->planenum & ~1;
+    Q_assert(!(bestplane & 1));
 
-    node->planenum = bestplane.value();
+    node->planenum = bestplane;
     
-    auto &plane = map.get_plane(bestplane.value());
-    auto children = SplitBrushList(std::move(brushes), bestplane.value(), stats);
+    auto &plane = map.get_plane(bestplane);
+    auto children = SplitBrushList(std::move(brushes), bestplane, stats);
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
@@ -1165,7 +1166,7 @@ static void BuildTree_r(tree_t &tree, node_t *node, bspbrush_t::container brushe
 	}
 
     // to save time/memory we can destroy node's volume at this point
-    auto children_volumes = SplitBrush(std::move(node->volume), bestplane.value(), stats);
+    auto children_volumes = SplitBrush(std::move(node->volume), bestplane, stats);
     node->volume = nullptr;
     node->children[0]->volume = std::move(children_volumes[0]);
     node->children[1]->volume = std::move(children_volumes[1]);
