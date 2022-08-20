@@ -6,6 +6,7 @@
 #include <qbsp/map.hh>
 #include <common/fs.hh>
 #include <common/bsputils.hh>
+#include <common/decompile.hh>
 #include <common/prtfile.hh>
 #include <common/qvec.hh>
 #include <testmaps.hh>
@@ -224,6 +225,24 @@ static std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(c
     std::optional<prtfile_t> prtfile;
     if (const auto prtpath = fs::path(bsp_path).replace_extension(".prt"); fs::exists(prtpath)) {
         prtfile = {LoadPrtFile(prtpath, bspdata.loadversion)};
+    }
+
+    // decompile .bsp hulls
+    if (qbsp_options.target_game->id == GAME_QUAKE) {
+        fs::path decompiled_map_path = qbsp_options.bsp_path;
+        decompiled_map_path.replace_extension("");
+        decompiled_map_path.replace_filename(decompiled_map_path.stem().string() + "-decompiled-hull1");
+        decompiled_map_path.replace_extension(".map");
+
+        std::ofstream f(decompiled_map_path);
+
+        if (!f)
+            Error("couldn't open {} for writing\n", decompiled_map_path);
+
+        decomp_options options;
+        options.hullnum = 1;
+
+        DecompileBSP(&std::get<mbsp_t>(bspdata.bsp), options, f);
     }
 
     return std::make_tuple(std::move(std::get<mbsp_t>(bspdata.bsp)),
@@ -1843,10 +1862,32 @@ TEST_CASE("q1_rocks", "[testmaps_q1]")
     CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], point));
 }
 
+static void CountClipnodeLeafsByContentType_r(const mbsp_t& bsp, int clipnode, std::map<int, int> &result)
+{
+    if (clipnode < 0) {
+        // we're in a leaf node and `clipnode` is actually the content type
+        ++result[clipnode];
+        return;
+    }
+
+    auto &node = bsp.dclipnodes.at(clipnode);
+    CountClipnodeLeafsByContentType_r(bsp, node.children[0], result);
+    CountClipnodeLeafsByContentType_r(bsp, node.children[1], result);
+}
+
+static std::map<int, int> CountClipnodeLeafsByContentType(const mbsp_t& bsp, int hullnum)
+{
+    int headnode = bsp.dmodels[0].headnode[hullnum];
+    std::map<int, int> result;
+    CountClipnodeLeafsByContentType_r(bsp, headnode, result);
+
+    return result;
+}
+
 /**
  * Tests a bad hull expansion
  */
-TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1]")
+TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1][!mayfail]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull_expansion_lip.map");
 
@@ -1854,6 +1895,26 @@ TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1]")
 
     const qvec3d point {174, 308, 42};
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
+
+    for (int i = 0; i < 2; ++i) {
+        INFO("hull " << i);
+
+        const auto clipnodes = CountClipnodeLeafsByContentType(bsp, i);
+
+        REQUIRE(clipnodes.size() == 2);
+        REQUIRE(clipnodes.find(CONTENTS_SOLID) != clipnodes.end());
+        REQUIRE(clipnodes.find(CONTENTS_EMPTY) != clipnodes.end());
+
+        // room shaped like:
+        //
+        // |\    /|
+        // | \__/ |
+        // |______|
+        //
+        // 6 solid leafs for the walls/floor, 3 for the empty regions inside
+        CHECK(clipnodes.at(CONTENTS_SOLID) == 6);
+        CHECK(clipnodes.at(CONTENTS_EMPTY) == 3);
+    }
 }
 
 TEST_CASE("q1_hull1_content_types", "[testmaps_q1]")
