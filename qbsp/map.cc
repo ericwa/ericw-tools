@@ -2064,7 +2064,7 @@ Brush_GetContents
 Fetch the final contents flag of the given mapbrush. 
 =================
 */
-static contentflags_t Brush_GetContents(const mapbrush_t &mapbrush)
+static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrush_t &mapbrush)
 {
     bool base_contents_set = false;
     contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
@@ -2095,6 +2095,25 @@ static contentflags_t Brush_GetContents(const mapbrush_t &mapbrush)
 
     // make sure we found a valid type
     Q_assert(base_contents.is_valid(qbsp_options.target_game, false));
+
+    // extended flags
+    if (entity.epairs.has("_mirrorinside")) {
+        base_contents.set_mirrored(entity.epairs.get_int("_mirrorinside") ? true : false);
+    } else {
+        // fixme-brushbsp: this shouldn't be necessary, but Q1's game contents
+        // store these as booleans and not trinaries
+        base_contents.set_mirrored(std::nullopt);
+    }
+
+    if (entity.epairs.has("_noclipfaces")) {
+        base_contents.set_clips_same_type(entity.epairs.get_int("_noclipfaces") ? false : true);
+    } else {
+        // fixme-brushbsp: this shouldn't be necessary, but Q1's game contents
+        // store these as booleans and not trinaries
+        base_contents.set_clips_same_type(std::nullopt);
+    }
+
+    base_contents.illusionary_visblocker = string_iequals(entity.epairs.get("classname"), "func_illusionary_visblocker");
 
     return base_contents;
 }
@@ -2173,7 +2192,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
     }
     // ericw -- end brush primitives
 
-    brush.contents = Brush_GetContents(brush);
+    brush.contents = Brush_GetContents(entity, brush);
 
     return brush;
 }

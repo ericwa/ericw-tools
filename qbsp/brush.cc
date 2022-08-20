@@ -687,29 +687,13 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         }
     }
 
-    /* _mirrorinside key (for func_water etc.) */
-    std::optional<bool> mirrorinside;
-
-    if (src.epairs.has("_mirrorinside")) {
-        mirrorinside = src.epairs.get_int("_mirrorinside") ? true : false;
-    }
-
-    /* _noclipfaces */
-    std::optional<bool> clipsametype;
-
-    if (src.epairs.has("_noclipfaces")) {
-        clipsametype = src.epairs.get_int("_noclipfaces") ? false : true;
-    }
-
-    const bool func_illusionary_visblocker = (0 == Q_strcasecmp(classname, "func_illusionary_visblocker"));
-
-    auto it = src.mapbrushes.begin();
-
-    for (size_t i = 0; i < src.mapbrushes.size(); i++, it++) {
+    for (auto &mapbrush : src.mapbrushes) {
         clock();
 
-        auto &mapbrush = *it;
         contentflags_t contents = mapbrush.contents;
+
+        /* "origin" brushes always discarded beforehand */
+        Q_assert(!contents.is_origin(qbsp_options.target_game));
 
         // per-brush settings
         bool detail = false;
@@ -720,10 +704,6 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
-
-        /* "origin" brushes always discarded */
-        if (contents.is_origin(qbsp_options.target_game))
-            continue;
 
         /* -omitdetail option omits all types of detail */
         if (qbsp_options.omitdetail.value() && detail)
@@ -787,25 +767,27 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
                 before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
                 contents type.
                 */
-            if (!hullnum.value_or(0) && mirrorinside.value_or(false)) {
+            if (!hullnum.value_or(0) && contents.is_mirrored(qbsp_options.target_game)) {
                 contents = qbsp_options.target_game->create_detail_fence_contents(contents);
             }
         }
 
         if (hullnum.value_or(0)) {
             /* nonsolid brushes don't show up in clipping hulls */
-            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game))
+            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game)) {
                 continue;
+            }
 
             /* sky brushes are solid in the collision hulls */
-            if (contents.is_sky(qbsp_options.target_game))
+            if (contents.is_sky(qbsp_options.target_game)) {
                 contents = qbsp_options.target_game->create_solid_contents();
+            }
         }
 
-        // apply extended flags
-        contents.set_mirrored(mirrorinside);
-        contents.set_clips_same_type(clipsametype);
-        contents.illusionary_visblocker = func_illusionary_visblocker;
+        // fixme-brushbsp: function calls above can override the values below
+        // so we have to re-set them to be sure they stay what the mapper intended..
+        contents.set_mirrored(mapbrush.contents.mirror_inside);
+        contents.set_clips_same_type(mapbrush.contents.clips_same_type);
 
         auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped);
 
