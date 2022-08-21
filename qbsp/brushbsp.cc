@@ -1183,6 +1183,7 @@ struct brushbsp_input_stats_t : logging::stat_tracker_t
     stat &brushes = register_stat("brushes");
     stat &faces = register_stat("visible faces");
     stat &nonvis_faces = register_stat("non-visible faces");
+    stat &clip_faces = register_stat("clip faces");
 };
 
 /*
@@ -1252,6 +1253,19 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
                     stats.faces++;
                 } else {
                     stats.nonvis_faces++;
+                }
+            }
+
+	        // brushes that will not be visible at all will never be
+	        // used as bsp splitters
+            // FIXME: should this be expanded to different things? should
+            // it figure out whether the side is skip as well?
+            if (b->contents.is_clip(qbsp_options.target_game)) {
+                for (side_t &side : b->sides) {
+                    if (side.is_visible()) {
+                        side.onnode = true;
+                        stats.clip_faces++;
+                    }
                 }
             }
 
@@ -1359,20 +1373,10 @@ inline bspbrush_t::list SubtractBrush(const bspbrush_t::ptr &a, const bspbrush_t
     return out;
 }
 
-struct chopstats_t
+struct chopstats_t : logging::stat_tracker_t
 {
-    size_t c_swallowed = 0; // number of brushes completely swallowed
-    size_t c_from_split = 0; // number of new brushes created from being consumed
-
-    ~chopstats_t()
-    {
-        if (c_swallowed) {
-            logging::print(logging::flag::STAT, "     {:8} brushes swallowed\n", c_swallowed);
-        }
-        if (c_from_split) {
-            logging::print(logging::flag::STAT, "     {:8} brushes created from the chompening\n", c_from_split);
-        }
-    }
+    stat &c_swallowed = register_stat("brushes swallowed");
+    stat &c_from_split = register_stat("brushes created from the chompening");
 };
 
 /*
