@@ -329,7 +329,23 @@ extern mapdata_t map;
 
 void CalculateWorldExtent(void);
 
-bool ParseEntity(parser_t &parser, mapentity_t &entity);
+struct texture_def_issues_t : logging::stat_tracker_t
+{
+    // number of faces that have SKY | NODRAW mixed. this is a Q2-specific issue
+    // that is a bit weird, because NODRAW indicates that the face should not be
+    // emitted at all in Q1 compilers, whereas in qbsp3 it only left out a texinfo
+    // reference (in theory...); this meant that sky brushes would disappear. It
+    // doesn't really make sense to have these two mixed, because sky is drawn in-game
+    // and the texture is still referenced on them.
+    stat &num_sky_nodraw = register_stat("faces have SKY | NODRAW flags mixed; NODRAW removed as this combo makes no sense. Use -verbose to display affected faces.", false, true);
+
+    // Q2 specific: TRANSLUCENT is an internal compiler flag and should never
+    // be set directly. In older tools, the only side effect this has is to
+    // turn it into DETAIL effectively.
+    stat &num_translucent = register_stat("faces have TRANSLUCENT flag swapped to DETAIL; TRANSLUCENT is an internal flag. Use -verbose to display affected faces.", false, true);
+};
+
+bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issues_stats);
 
 void ProcessExternalMapEntity(mapentity_t &entity);
 void ProcessAreaPortal(mapentity_t &entity);

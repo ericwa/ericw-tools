@@ -1384,7 +1384,7 @@ parse_error:
 }
 
 static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t &brush, maptexinfo_t *tx,
-    std::array<qvec3d, 3> &planepts, const qplane3d &plane)
+    std::array<qvec3d, 3> &planepts, const qplane3d &plane, texture_def_issues_t &issue_stats)
 {
     vec_t rotate;
     qmat<vec_t, 2, 3> texMat, axis;
@@ -1477,14 +1477,23 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             if (!(extinfo.info->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
                 extinfo.info->contents.native |= Q2_CONTENTS_DETAIL;
 
-                logging::print("WARNING: {}: swapped TRANSLUCENT for DETAIL\n", mapface.line);
+                if (qbsp_options.verbose.value()) {
+                    logging::print("WARNING: {}: swapped TRANSLUCENT for DETAIL\n", mapface.line);
+                } else {
+                    issue_stats.num_translucent++;
+                }
             }
         }
 
         // This fixes a bug in some old maps.
         if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
-            logging::print("WARNING: {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.line);
+
+            if (qbsp_options.verbose.value()) {
+                logging::print("WARNING: {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.line);
+            } else {
+                issue_stats.num_sky_nodraw++;
+            }
         }
     }
 
@@ -1604,7 +1613,7 @@ static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
     }
 }
 
-static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_t &brush, const mapentity_t &entity)
+static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_t &brush, const mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
     std::array<qvec3d, 3> planepts;
     bool normal_ok;
@@ -1618,7 +1627,7 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
 
     normal_ok = face.set_planepts(planepts);
 
-    ParseTextureDef(parser, face, brush, &tx, face.planepts, face.get_plane());
+    ParseTextureDef(parser, face, brush, &tx, face.planepts, face.get_plane(), issue_stats);
 
     if (!normal_ok) {
         logging::print("WARNING: {}: Brush plane with no normal\n", parser.location);
@@ -2083,7 +2092,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         }
 
         if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
-            logging::print("WARNING: {}: mixed face contents ({} != {})\n",
+            logging::print("WARNING: {}: brush has multiple face contents ({} vs {}), the former will be used.\n",
                 mapface.line, base_contents.to_string(qbsp_options.target_game), contents.to_string(qbsp_options.target_game));
             break;
         }
@@ -2114,7 +2123,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     return base_contents;
 }
 
-static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
+static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
     mapbrush_t brush;
 
@@ -2150,7 +2159,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
         if (parser.token == "}")
             break;
 
-        std::optional<mapface_t> face = ParseBrushFace(parser, brush, entity);
+        std::optional<mapface_t> face = ParseBrushFace(parser, brush, entity, issue_stats);
 
         if (!face) {
             continue;
@@ -2193,7 +2202,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity)
     return brush;
 }
 
-bool ParseEntity(parser_t &parser, mapentity_t &entity)
+bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
     entity.location = parser.location;
 
@@ -2235,7 +2244,7 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity)
                     }
                 } while (parser.token != "}");
             } else {
-                entity.mapbrushes.emplace_back(ParseBrush(parser, entity));
+                entity.mapbrushes.emplace_back(ParseBrush(parser, entity, issue_stats));
             }
         } else {
             ParseEpair(parser, entity);
@@ -2358,9 +2367,10 @@ static mapentity_t LoadExternalMap(const std::string &filename)
     }
 
     parser_t parser(file, { filename });
+    texture_def_issues_t issue_stats;
 
     // parse the worldspawn
-    if (!ParseEntity(parser, dest)) {
+    if (!ParseEntity(parser, dest, issue_stats)) {
         FError("'{}': Couldn't parse worldspawn entity\n", filename);
     }
     const std::string &classname = dest.epairs.get("classname");
@@ -2370,7 +2380,7 @@ static mapentity_t LoadExternalMap(const std::string &filename)
 
     // parse any subsequent entities, move any brushes to worldspawn
     mapentity_t dummy{};
-    while (ParseEntity(parser, dummy)) {
+    while (ParseEntity(parser, dummy, issue_stats)) {
         // move the brushes to the worldspawn
         dest.mapbrushes.insert(dest.mapbrushes.end(), std::make_move_iterator(dummy.mapbrushes.begin()), std::make_move_iterator(dummy.mapbrushes.end()));
 
@@ -2802,55 +2812,59 @@ void LoadMapFile(void)
     logging::funcheader();
 
     {
-        auto file = fs::load(qbsp_options.map_path);
+        texture_def_issues_t issue_stats;
 
-        if (!file) {
-            FError("Couldn't load map file \"{}\".\n", qbsp_options.map_path);
-            return;
-        }
+        {
+            auto file = fs::load(qbsp_options.map_path);
 
-        parser_t parser(file, { qbsp_options.map_path.string() });
-
-        for (int i = 0;; i++) {
-            mapentity_t &entity = map.entities.emplace_back();
-
-            if (!ParseEntity(parser, entity)) {
-                break;
-            }
-        }
-
-        // Remove dummy entity inserted above
-        assert(!map.entities.back().epairs.size());
-        map.entities.pop_back();
-    }
-
-    // -add function
-    if (!qbsp_options.add.value().empty()) {
-        auto file = fs::load(qbsp_options.add.value());
-
-        if (!file) {
-            FError("Couldn't load map file \"{}\".\n", qbsp_options.add.value());
-            return;
-        }
-
-        parser_t parser(file, { qbsp_options.add.value() });
-
-        for (int i = 0;; i++) {
-            mapentity_t &entity = map.entities.emplace_back();
-
-            if (!ParseEntity(parser, entity)) {
-                break;
+            if (!file) {
+                FError("Couldn't load map file \"{}\".\n", qbsp_options.map_path);
+                return;
             }
 
-            if (entity.epairs.get("classname") == "worldspawn") {
-                // The easiest way to get the additional map's worldspawn brushes
-                // into the base map's is to rename the additional map's worldspawn classname to func_group
-                entity.epairs.set("classname", "func_group");
+            parser_t parser(file, { qbsp_options.map_path.string() });
+
+            for (int i = 0;; i++) {
+                mapentity_t &entity = map.entities.emplace_back();
+
+                if (!ParseEntity(parser, entity, issue_stats)) {
+                    break;
+                }
             }
+
+            // Remove dummy entity inserted above
+            assert(!map.entities.back().epairs.size());
+            map.entities.pop_back();
         }
-        // Remove dummy entity inserted above
-        assert(!map.entities.back().epairs.size());
-        map.entities.pop_back();
+
+        // -add function
+        if (!qbsp_options.add.value().empty()) {
+            auto file = fs::load(qbsp_options.add.value());
+
+            if (!file) {
+                FError("Couldn't load map file \"{}\".\n", qbsp_options.add.value());
+                return;
+            }
+
+            parser_t parser(file, { qbsp_options.add.value() });
+
+            for (int i = 0;; i++) {
+                mapentity_t &entity = map.entities.emplace_back();
+
+                if (!ParseEntity(parser, entity, issue_stats)) {
+                    break;
+                }
+
+                if (entity.epairs.get("classname") == "worldspawn") {
+                    // The easiest way to get the additional map's worldspawn brushes
+                    // into the base map's is to rename the additional map's worldspawn classname to func_group
+                    entity.epairs.set("classname", "func_group");
+                }
+            }
+            // Remove dummy entity inserted above
+            assert(!map.entities.back().epairs.size());
+            map.entities.pop_back();
+        }
     }
 
     logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());

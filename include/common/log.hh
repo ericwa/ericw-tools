@@ -182,11 +182,13 @@ struct stat_tracker_t
     {
         const char *name;
         bool show_even_if_zero;
+        bool is_warning;
         std::atomic_size_t count = 0;
 
-        inline stat(const char *name, bool show_even_if_zero) :
+        inline stat(const char *name, bool show_even_if_zero, bool is_warning) :
             name(name),
-            show_even_if_zero(show_even_if_zero)
+            show_even_if_zero(show_even_if_zero),
+            is_warning(is_warning)
         {
         }
         
@@ -200,16 +202,16 @@ struct stat_tracker_t
 
     std::list<stat> stats;
 
-    inline stat &register_stat(const char *name, bool show_even_if_zero = false)
+    inline stat &register_stat(const char *name, bool show_even_if_zero = false, bool is_warning = false)
     {
-        return stats.emplace_back(name, show_even_if_zero);
+        return stats.emplace_back(name, show_even_if_zero, is_warning);
     }
 
     ~stat_tracker_t()
     {
         for (auto &stat : stats) {
             if (stat.show_even_if_zero || stat.count) {
-                print(flag::STAT, "     {:8} {}\n", stat.count, stat.name);
+                print(flag::STAT, "{}{:{}} {}\n", stat.is_warning ? "WARNING: " : "", stat.count, stat.is_warning ? 0 : 13, stat.name);
             }
         }
     }

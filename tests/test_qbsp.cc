@@ -43,9 +43,10 @@ static mapentity_t &LoadMap(const char *map)
     parser_t parser(map, { Catch::getResultCapture().getCurrentTestName() });
 
     mapentity_t &entity = ::map.entities.emplace_back();
+    texture_def_issues_t issue_stats;
 
     // FIXME: adds the brush to the global map...
-    Q_assert(ParseEntity(parser, entity));
+    Q_assert(ParseEntity(parser, entity, issue_stats));
 
     CalculateWorldExtent();
 

@@ -457,7 +457,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
     Brush_LoadEntity(entity, hullnum, brushes, num_clipped);
 
     if (num_clipped && !qbsp_options.verbose.value()) {
-        logging::print("WARNING: {} faces were clipped away. This is normal for expanded hulls; use -verbose if you need more info.\n", num_clipped);
+        logging::print(logging::flag::STAT, "WARNING: {} faces were crunched away by being too small. {}Use -verbose to see which faces were affected.\n", num_clipped, hullnum.value_or(0) ? "This is normal for the hulls. " : "");
     }
 
     size_t num_sides = 0;
