@@ -534,7 +534,12 @@ void MakeTreePortals(tree_t &tree)
     CalcTreeBounds_r(tree.headnode, clock);
     clock.print();
 
-    logging::print(logging::flag::STAT, "       {:8} tree portals\n", tree.portals.size());
+    struct tree_portal_stats_t : logging::stat_tracker_t
+    {
+        stat &portals = register_stat("tree portals");
+    } stats;
+
+    stats.portals.count = tree.portals.size();
 }
 
 /*
@@ -744,8 +749,9 @@ void EmitAreaPortals(node_t *headnode)
         area.numareaportals = map.bsp.dareaportals.size() - area.firstareaportal;
     }
 
-    logging::print(logging::flag::STAT, "{:5} numareas\n", map.bsp.dareas.size());
-    logging::print(logging::flag::STAT, "{:5} numareaportals\n", map.bsp.dareaportals.size());
+    logging::stat_tracker_t area_stats;
+    area_stats.register_stat("areas").count += map.c_areas;
+    area_stats.register_stat("area portals").count += map.bsp.dareaportals.size();
 }
 
 /*
@@ -760,7 +766,6 @@ void FloodAreas(node_t *headnode)
     logging::funcheader();
     FindAreas(headnode);
     SetAreaPortalAreas_r(headnode);
-    logging::print(logging::flag::STAT, "{:5} areas\n", map.c_areas);
 }
 
 //==============================================================
@@ -925,6 +930,6 @@ void MarkVisibleSides(tree_t &tree, bspbrush_t::container &brushes)
     MarkVisibleSides_r(tree.headnode, num_sides_not_found);
 
     if (num_sides_not_found) {
-        logging::print("WARNING: sides not found for {} portals\n", num_sides_not_found);
+        logging::print(logging::flag::STAT, "WARNING: sides not found for {} portals\n", num_sides_not_found);
     }
 }

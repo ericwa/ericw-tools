@@ -2650,142 +2650,144 @@ void ProcessMapBrushes()
 
     map.total_brushes = 0;
 
-    size_t num_faces = 0, num_bevels = 0, num_removed = 0, num_offset = 0;
-    logging::percent_clock clock(map.entities.size());
+    {
+        logging::percent_clock clock(map.entities.size());
 
-    // calculate brush extents and brush bevels
-    for (auto &entity : map.entities) {
-        clock();
+        struct map_brushes_stats_t : logging::stat_tracker_t
+        {
+            stat &brushes = register_stat("brushes");
+            stat &utility_brushes = register_stat("utility brushes removed");
+            stat &offset_brushes = register_stat("brushes offset by origins");
+            stat &sides = register_stat("sides");
+            stat &bevels = register_stat("side bevels");
+        } stats;
 
-        /* Origin brush support */
-        entity.rotation = rotation_t::none;
+        // calculate brush extents and brush bevels
+        for (auto &entity : map.entities) {
+            clock();
 
-        /* entities with custom lmscales are important for the qbsp to know about */
-        int i = 16 * entity.epairs.get_float("_lmscale");
-        if (!i) {
-            i = 16; // if 0, pick a suitable default
-        }
-        int lmshift = 0;
-        while (i > 1) {
-            lmshift++; // only allow power-of-two scales
-            i /= 2;
-        }
+            /* Origin brush support */
+            entity.rotation = rotation_t::none;
 
-        mapentity_t *areaportal = nullptr;
-
-        if (entity.epairs.get("classname") == "func_areaportal") {
-            areaportal = &entity;
-        }
-
-        for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end(); ) {
-            auto &brush = *it;
-
-            // set properties calculated above
-            brush.lmshift = lmshift;
-            brush.func_areaportal = areaportal;
-            brush.is_hint = MapBrush_IsHint(brush);
-
-            // calculate brush bounds
-            CalculateBrushBounds(brush);
-
-            // origin brushes are removed, and the origin of the entity is overwritten
-            // with its centroid.
-            if (brush.contents.is_origin(qbsp_options.target_game)) {
-                if (map.is_world_entity(entity)) {
-                    logging::print("WARNING: Ignoring origin brush in worldspawn\n");
-                } else if (entity.epairs.has("origin")) {
-                    // fixme-brushbsp: entity.line
-                    logging::print("WARNING: Entity at {} has multiple origin brushes\n", entity.mapbrushes.front().line);
-                } else {
-                    entity.origin = brush.bounds.centroid();
-                    entity.epairs.set("origin", qv::to_string(entity.origin));
-                }
-
-                num_removed++;
-                // this is kinda slow but since most origin brushes are in
-                // small brush models this won't matter much in practice
-                it = entity.mapbrushes.erase(it);
-                entity.rotation = rotation_t::origin_brush;
-                continue;
+            /* entities with custom lmscales are important for the qbsp to know about */
+            int i = 16 * entity.epairs.get_float("_lmscale");
+            if (!i) {
+                i = 16; // if 0, pick a suitable default
+            }
+            int lmshift = 0;
+            while (i > 1) {
+                lmshift++; // only allow power-of-two scales
+                i /= 2;
             }
 
-            size_t old_num_faces = brush.faces.size();
-            num_faces += old_num_faces;
+            mapentity_t *areaportal = nullptr;
 
-            // add the brush bevels
-#ifdef QBSP3
-            AddBrushBevels(entity, brush);
-#else
-            {
-                map_hullbrush_t hullbrush { entity, brush };
-                ExpandBrush(hullbrush, { { 0, 0, 0 }, { 0, 0, 0 } });
-            }
-#endif
-
-            for (auto &f : brush.faces) {
-                f.lmshift = brush.lmshift;
+            if (entity.epairs.get("classname") == "func_areaportal") {
+                areaportal = &entity;
             }
 
-            num_bevels += brush.faces.size() - old_num_faces;
-            it++;
-        }
+            for (auto it = entity.mapbrushes.begin(); it != entity.mapbrushes.end(); ) {
+                auto &brush = *it;
 
-        map.total_brushes += entity.mapbrushes.size();
+                // set properties calculated above
+                brush.lmshift = lmshift;
+                brush.func_areaportal = areaportal;
+                brush.is_hint = MapBrush_IsHint(brush);
 
-        /* Hipnotic rotation */
-        if (entity.rotation == rotation_t::none) {
-            if (!Q_strncasecmp(entity.epairs.get("classname"), "rotate_", 7)) {
-                entity.origin = FixRotateOrigin(entity);
-                entity.rotation = rotation_t::hipnotic;
-            }
-        }
-        
-        // offset brush bounds
-        if (entity.rotation != rotation_t::none) {
-            for (auto &brush : entity.mapbrushes) {
-
-                for (auto &f : brush.faces) {
-                    // account for texture offset, from txqbsp-xt
-                    if (!qbsp_options.oldrottex.value()) {
-                        maptexinfo_t texInfoNew = f.get_texinfo();
-                        texInfoNew.outputnum = std::nullopt;
-
-                        texInfoNew.vecs.at(0, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(0).xyz());
-                        texInfoNew.vecs.at(1, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(1).xyz());
-
-                        f.texinfo = FindTexinfo(texInfoNew);
-                    }
-
-                    qplane3d plane = f.get_plane();
-                    plane.dist -= qv::dot(plane.normal, entity.origin);
-                    f.planenum = map.add_or_find_plane(plane);
-                }
-
-                // re-calculate brush bounds/windings
+                // calculate brush bounds
                 CalculateBrushBounds(brush);
 
-                num_offset++;
-            }
-        }
+                // origin brushes are removed, and the origin of the entity is overwritten
+                // with its centroid.
+                if (brush.contents.is_origin(qbsp_options.target_game)) {
+                    if (map.is_world_entity(entity)) {
+                        logging::print("WARNING: Ignoring origin brush in worldspawn\n");
+                    } else if (entity.epairs.has("origin")) {
+                        // fixme-brushbsp: entity.line
+                        logging::print("WARNING: Entity at {} has multiple origin brushes\n", entity.mapbrushes.front().line);
+                    } else {
+                        entity.origin = brush.bounds.centroid();
+                        entity.epairs.set("origin", qv::to_string(entity.origin));
+                    }
 
-        // remove windings, we no longer need them
-        for (auto &brush : entity.mapbrushes) {
-            for (auto &f : brush.faces) {
-                f.winding = {};
+                    stats.utility_brushes++;
+                    // this is kinda slow but since most origin brushes are in
+                    // small brush models this won't matter much in practice
+                    it = entity.mapbrushes.erase(it);
+                    entity.rotation = rotation_t::origin_brush;
+                    continue;
+                }
+
+                size_t old_num_faces = brush.faces.size();
+                stats.sides += old_num_faces;
+
+                // add the brush bevels
+    #ifdef QBSP3
+                AddBrushBevels(entity, brush);
+    #else
+                {
+                    map_hullbrush_t hullbrush { entity, brush };
+                    ExpandBrush(hullbrush, { { 0, 0, 0 }, { 0, 0, 0 } });
+                }
+    #endif
+
+                for (auto &f : brush.faces) {
+                    f.lmshift = brush.lmshift;
+                }
+
+                stats.bevels += brush.faces.size() - old_num_faces;
+                it++;
+            }
+
+            map.total_brushes += entity.mapbrushes.size();
+            stats.brushes += entity.mapbrushes.size();
+
+            /* Hipnotic rotation */
+            if (entity.rotation == rotation_t::none) {
+                if (!Q_strncasecmp(entity.epairs.get("classname"), "rotate_", 7)) {
+                    entity.origin = FixRotateOrigin(entity);
+                    entity.rotation = rotation_t::hipnotic;
+                }
+            }
+        
+            // offset brush bounds
+            if (entity.rotation != rotation_t::none) {
+                for (auto &brush : entity.mapbrushes) {
+
+                    for (auto &f : brush.faces) {
+                        // account for texture offset, from txqbsp-xt
+                        if (!qbsp_options.oldrottex.value()) {
+                            maptexinfo_t texInfoNew = f.get_texinfo();
+                            texInfoNew.outputnum = std::nullopt;
+
+                            texInfoNew.vecs.at(0, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(0).xyz());
+                            texInfoNew.vecs.at(1, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(1).xyz());
+
+                            f.texinfo = FindTexinfo(texInfoNew);
+                        }
+
+                        qplane3d plane = f.get_plane();
+                        plane.dist -= qv::dot(plane.normal, entity.origin);
+                        f.planenum = map.add_or_find_plane(plane);
+                    }
+
+                    // re-calculate brush bounds/windings
+                    CalculateBrushBounds(brush);
+
+                    stats.offset_brushes++;
+                }
+            }
+
+            // remove windings, we no longer need them
+            for (auto &brush : entity.mapbrushes) {
+                for (auto &f : brush.faces) {
+                    f.winding = {};
+                }
             }
         }
+        clock.print();
     }
-    clock.print();
-    
-    logging::print(logging::flag::STAT, "     {:8} brushes\n", map.total_brushes);
-    logging::print(logging::flag::STAT, "     {:8} faces\n", num_faces);
-    logging::print(logging::flag::STAT, "     {:8} bevel faces\n", num_bevels);
-    if (num_removed) {
-        logging::print(logging::flag::STAT, "     {:8} utility brushes removed\n", num_removed);
-    }
-    if (num_offset) {
-        logging::print(logging::flag::STAT, "     {:8} brushes translated from origins\n", num_offset);
-    }
+
     logging::print(logging::flag::STAT, "\n");
 
     if (qbsp_options.debugexpand.isChanged()) {
@@ -2867,10 +2869,21 @@ void LoadMapFile(void)
         }
     }
 
-    logging::print(logging::flag::STAT, "     {:8} entities\n", map.entities.size());
-    logging::print(logging::flag::STAT, "     {:8} unique texnames\n", map.miptex.size());
-    logging::print(logging::flag::STAT, "     {:8} texinfo\n", map.mtexinfos.size());
-    logging::print(logging::flag::STAT, "     {:8} unique planes\n", map.planes.size());
+    {
+        struct map_file_stats_t : logging::stat_tracker_t
+        {
+            stat &num_entity = register_stat("entities");
+            stat &num_miptex = register_stat("unique textures");
+            stat &num_texinfo = register_stat("texinfos");
+            stat &num_plane = register_stat("unique planes");
+        } stats;
+    
+        stats.num_entity += map.entities.size();
+        stats.num_miptex += map.miptex.size();
+        stats.num_texinfo += map.mtexinfos.size();
+        stats.num_plane += map.planes.size();
+    }
+
     logging::print(logging::flag::STAT, "\n");
 }
 

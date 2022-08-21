@@ -180,12 +180,12 @@ struct stat_tracker_t
 {
     struct stat
     {
-        const char *name;
+        std::string name;
         bool show_even_if_zero;
         bool is_warning;
         std::atomic_size_t count = 0;
 
-        inline stat(const char *name, bool show_even_if_zero, bool is_warning) :
+        inline stat(const std::string &name, bool show_even_if_zero, bool is_warning) :
             name(name),
             show_even_if_zero(show_even_if_zero),
             is_warning(is_warning)
@@ -202,18 +202,46 @@ struct stat_tracker_t
 
     std::list<stat> stats;
 
-    inline stat &register_stat(const char *name, bool show_even_if_zero = false, bool is_warning = false)
+    inline stat &register_stat(const std::string &name, bool show_even_if_zero = false, bool is_warning = false)
     {
         return stats.emplace_back(name, show_even_if_zero, is_warning);
     }
 
-    ~stat_tracker_t()
+    static inline size_t number_of_digits(size_t n)
     {
+        return n ? ((size_t) log10(n) + 1) : 1;
+    }
+
+    inline size_t number_of_digit_padding()
+    {
+        size_t number_padding = 0;
+
+        // calculate padding for number
         for (auto &stat : stats) {
-            if (stat.show_even_if_zero || stat.count) {
-                print(flag::STAT, "{}{:{}} {}\n", stat.is_warning ? "WARNING: " : "", stat.count, stat.is_warning ? 0 : 13, stat.name);
+            if (!stat.is_warning && (stat.show_even_if_zero || stat.count)) {
+                number_padding = std::max(number_of_digits(stat.count.load()), number_padding);
             }
         }
+
+        if (!number_padding) {
+            return number_padding;
+        }
+
+        return number_padding + ((number_padding - 1) / 3);
+    }
+
+    ~stat_tracker_t()
+    {
+        auto old = std::locale::global(std::locale("en_US.UTF-8"));
+        // add 8 char padding just to keep it away from the left side
+        size_t number_padding = number_of_digit_padding() + 4;
+
+        for (auto &stat : stats) {
+            if (stat.show_even_if_zero || stat.count) {
+                print(flag::STAT, "{}{:{}L} {}\n", stat.is_warning ? "WARNING: " : "", stat.count, stat.is_warning ? 0 : number_padding, stat.name);
+            }
+        }
+        std::locale::global(old);
     }
 };
 }; // namespace logging

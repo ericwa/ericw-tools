@@ -1178,6 +1178,13 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
     g.wait();
 }
 
+struct brushbsp_input_stats_t : logging::stat_tracker_t
+{
+    stat &brushes = register_stat("brushes");
+    stat &faces = register_stat("visible faces");
+    stat &nonvis_faces = register_stat("non-visible faces");
+};
+
 /*
 ==================
 BrushBSP
@@ -1214,46 +1221,44 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
         return;
     }
 
-    size_t c_faces = 0;
-    size_t c_nonvisfaces = 0;
-    size_t c_brushes = 0;
+    {
+        brushbsp_input_stats_t stats;
+        stats.brushes += brushlist.size();
 
-    for (const auto &b : brushlist) {
-        c_brushes++;
+        for (const auto &b : brushlist) {
 
 #if 0
-        // fixme-brushbsp: why does this just print and do nothing? should
-        // the brush be removed?
-        double volume = BrushVolume(*b);
-        if (volume < qbsp_options.microvolume.value()) {
-            logging::print("WARNING: {}: microbrush\n",
-                b->mapbrush->line);
-        }
+            // fixme-brushbsp: why does this just print and do nothing? should
+            // the brush be removed?
+            double volume = BrushVolume(*b);
+            if (volume < qbsp_options.microvolume.value()) {
+                logging::print("WARNING: {}: microbrush\n",
+                    b->mapbrush->line);
+            }
 #endif
 
-        for (side_t &side : b->sides) {
-            // since we're reusing bspbrush_t's across passes, we need to clear any data from the previous pass
+            for (side_t &side : b->sides) {
+                // since we're reusing bspbrush_t's across passes, we need to clear any data from the previous pass
 
-            // behaviour break from qbsp3 - they would sometimes set `onnode` as a way to indicate "don't split on this side".
-            // we can't do this since we're reusing brushes, and need to add a separate flag for that.
-            side.onnode = false;
+                // behaviour break from qbsp3 - they would sometimes set `onnode` as a way to indicate "don't split on this side".
+                // we can't do this since we're reusing brushes, and need to add a separate flag for that.
+                side.onnode = false;
 
-            if (side.bevel)
-                continue;
-            if (!side.w)
-                continue;
-            if (side.is_visible())
-                c_faces++;
-            else
-                c_nonvisfaces++;
+                if (side.bevel)
+                    continue;
+                if (!side.w)
+                    continue;
+                if (side.is_visible()) {
+                    stats.faces++;
+                } else {
+                    stats.nonvis_faces++;
+                }
+            }
+
+            tree.bounds += b->bounds;
         }
 
-        tree.bounds += b->bounds;
     }
-
-    logging::print(logging::flag::STAT, "     {:8} brushes\n", c_brushes);
-    logging::print(logging::flag::STAT, "     {:8} visible faces\n", c_faces);
-    logging::print(logging::flag::STAT, "     {:8} nonvisible faces\n", c_nonvisfaces);
 
     auto node = tree.create_node();
     

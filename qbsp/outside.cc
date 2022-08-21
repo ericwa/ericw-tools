@@ -414,11 +414,16 @@ static void MarkVisibleBrushSides_R(node_t *node)
 
 //=============================================================================
 
-static void OutLeafsToSolid_r(node_t *node, int *outleafs_count, settings::filltype_t filltype)
+struct outleafs_stats_t : logging::stat_tracker_t
+{
+    stat &outleafs = register_stat("outside leaves");
+};
+
+static void OutLeafsToSolid_R(node_t *node, settings::filltype_t filltype, outleafs_stats_t &stats)
 {
     if (!node->is_leaf) {
-        OutLeafsToSolid_r(node->children[0], outleafs_count, filltype);
-        OutLeafsToSolid_r(node->children[1], outleafs_count, filltype);
+        OutLeafsToSolid_R(node->children[0], filltype, stats);
+        OutLeafsToSolid_R(node->children[1], filltype, stats);
         return;
     }
 
@@ -440,14 +445,7 @@ static void OutLeafsToSolid_r(node_t *node, int *outleafs_count, settings::fillt
 
     // Finally, we can fill it in as void.
     node->contents = qbsp_options.target_game->create_solid_contents();
-    *outleafs_count += 1;
-}
-
-static int OutLeafsToSolid(node_t *node, settings::filltype_t filltype)
-{
-    int count = 0;
-    OutLeafsToSolid_r(node, &count, filltype);
-    return count;
+    stats.outleafs++;
 }
 
 //=============================================================================
@@ -683,7 +681,8 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     }
 
     // change the leaf contents
-    const int outleafs = OutLeafsToSolid(node, filltype);
+    outleafs_stats_t stats;
+    OutLeafsToSolid_R(node, filltype, stats);
 
     // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
 
@@ -701,7 +700,6 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     }
 #endif
 
-    logging::print(logging::flag::STAT, "     {:8} outleafs\n", outleafs);
     return true;
 }
 

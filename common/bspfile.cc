@@ -780,13 +780,13 @@ public:
     void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
     {
         const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
+        logging::stat_tracker_t stat_print;
 
         for (auto [bits, count] : stats.native_types) {
-            logging::print(logging::flag::STAT, "     {:8} {} {}\n", count,
-                get_contents_display(q1_contentflags_bits(bits)), what);
+            stat_print.register_stat(fmt::format("{} {}", get_contents_display(q1_contentflags_bits(bits)), what)).count += count;
         }
 
-        logging::print(logging::flag::STAT, "     {:8} {} total\n", stats.total_brushes, what);
+        stat_print.register_stat(fmt::format("{} total"), what).count += stats.total_brushes;
     }
 };
 
@@ -1423,7 +1423,6 @@ private:
     struct content_stats_t : public content_stats_base_t
     {
         std::mutex stat_mutex;
-        // std::array<std::atomic<size_t>, 32> native_types;
         std::unordered_map<int32_t, size_t> native_types;
         std::atomic<size_t> total_brushes;
         std::atomic<size_t> visblocker_brushes;
@@ -1439,11 +1438,6 @@ public:
     {
         content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
 
-        /*for (int32_t i = 0; i < 32; i++) {
-            if (contents.native & nth_bit(i)) {
-                stats.native_types[i]++;
-            }
-        }*/
         {
             std::unique_lock lock(stats.stat_mutex);
             stats.native_types[contents.native]++;
@@ -1459,22 +1453,17 @@ public:
     void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
     {
         const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
+        logging::stat_tracker_t stat_print;
 
-        /*for (int32_t i = 0; i < 32; i++) {
-            if (stats.native_types[i]) {
-                logging::print(logging::flag::STAT, "     {:8} {} {}\n", stats.native_types[i],
-        get_contents_display({nth_bit(i)}), what);
-            }
-        }*/
         for (auto &it : stats.native_types) {
-            logging::print(logging::flag::STAT, "     {:8} {} {}\n", it.second, get_contents_display({it.first}), what);
+            stat_print.register_stat(fmt::format("{} {}", get_contents_display({it.first}), what)).count += it.second;
         }
 
         if (stats.visblocker_brushes) {
-            logging::print(logging::flag::STAT, "     {:8} VISBLOCKER {}\n", stats.visblocker_brushes, what);
+            stat_print.register_stat(fmt::format("VISBLOCKER {}", what)).count += stats.visblocker_brushes;
         }
-
-        logging::print(logging::flag::STAT, "     {:8} {} total\n", stats.total_brushes, what);
+        
+        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
     }
 };
 

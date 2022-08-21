@@ -104,22 +104,27 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     Q_assert(node->markfaces.empty());
 }
 
-static void PruneNodes_R(node_t *node, std::atomic<int32_t> &count_pruned)
+struct prune_stats_t : logging::stat_tracker_t
+{
+    stat &nodes_pruned = register_stat("nodes pruned");
+};
+
+static void PruneNodes_R(node_t *node, prune_stats_t &stats)
 {
     if (node->is_leaf) {
         return;
     }
 
     tbb::task_group g;
-    g.run([&]() { PruneNodes_R(node->children[0], count_pruned); });
-    g.run([&]() { PruneNodes_R(node->children[1], count_pruned); });
+    g.run([&]() { PruneNodes_R(node->children[0], stats); });
+    g.run([&]() { PruneNodes_R(node->children[1], stats); });
     g.wait();
 
     if (node->children[0]->is_leaf && node->children[0]->contents.is_any_solid(qbsp_options.target_game) &&
         node->children[1]->is_leaf && node->children[1]->contents.is_any_solid(qbsp_options.target_game)) {
         // This discards any faces on-node. Should be safe (?)
         ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
-        ++count_pruned;
+        stats.nodes_pruned++;
     }
 
     // DarkPlaces has an assertion that fails if both children are
@@ -138,9 +143,7 @@ void PruneNodes(node_t *node)
 {
     logging::funcheader();
 
-    std::atomic<int32_t> count_pruned = 0;
+    prune_stats_t stats;
 
-    PruneNodes_R(node, count_pruned);
-
-    logging::print(logging::flag::STAT, "     {:8} pruned nodes\n", count_pruned);
+    PruneNodes_R(node, stats);
 }

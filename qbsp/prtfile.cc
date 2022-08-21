@@ -124,23 +124,24 @@ static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int visclust
     return viscluster;
 }
 
-struct portal_state_t
+struct portal_state_t : logging::stat_tracker_t
 {
-    int num_visportals;
-    int num_visleafs; // leafs the player can be in
-    int num_visclusters; // clusters of leafs
+    stat &num_visleafs = register_stat("player-occupiable leaves");
+    stat &num_visclusters = register_stat("clusters of leaves");
+    stat &num_visportals = register_stat("vis portals");
     bool uses_detail;
 };
 
-static void CountPortals(const node_t *node, portal_state_t *state)
+static void CountPortals(const node_t *node, portal_state_t &state)
 {
     const portal_t *portal;
 
     for (portal = node->portals; portal;) {
         /* only write out from first leaf */
         if (portal->nodes[0] == node) {
-            if (Portal_VisFlood(portal))
-                state->num_visportals++;
+            if (Portal_VisFlood(portal)) {
+                state.num_visportals++;
+            }
             portal = portal->next[0];
         } else {
             portal = portal->next[1];
@@ -156,15 +157,15 @@ NumberLeafs_r
 - Otherwise, assign the given cluster number because parent splitter is detail
 ================
 */
-static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
+static void NumberLeafs_r(node_t *node, portal_state_t &state, int cluster)
 {
     /* decision node */
     if (!node->is_leaf) {
         node->visleafnum = -99;
         node->viscluster = -99;
         if (cluster < 0 && node->detail_separator) {
-            state->uses_detail = true;
-            cluster = state->num_visclusters++;
+            state.uses_detail = true;
+            cluster = state.num_visclusters++;
             node->viscluster = cluster;
             CountPortals(node, state);
         }
@@ -180,8 +181,8 @@ static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
         return;
     }
 
-    node->visleafnum = state->num_visleafs++;
-    node->viscluster = (cluster < 0) ? state->num_visclusters++ : cluster;
+    node->visleafnum = state.num_visleafs++;
+    node->viscluster = (cluster < 0) ? state.num_visclusters++ : cluster;
     CountPortals(node, state);
 }
 
@@ -190,7 +191,7 @@ static void NumberLeafs_r(node_t *node, portal_state_t *state, int cluster)
 WritePortalfile
 ================
 */
-static void WritePortalfile(node_t *headnode, portal_state_t *state)
+static void WritePortalfile(node_t *headnode, portal_state_t &state)
 {
     int check;
 
@@ -198,10 +199,6 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
      * Set the visleafnum and viscluster field in every leaf and count the
      * total number of portals.
      */
-    state->num_visleafs = 0;
-    state->num_visclusters = 0;
-    state->num_visportals = 0;
-    state->uses_detail = false;
     NumberLeafs_r(headnode, state, -1);
 
     // write the file
@@ -216,37 +213,36 @@ static void WritePortalfile(node_t *headnode, portal_state_t *state)
     // (Since q2bsp natively supports clusters, we don't need PRT2.)
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         fmt::print(portalFile, "PRT1\n");
-        fmt::print(portalFile, "{}\n", state->num_visclusters);
-        fmt::print(portalFile, "{}\n", state->num_visportals);
+        fmt::print(portalFile, "{}\n", state.num_visclusters.count.load());
+        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
         WritePortals_r(headnode, portalFile, true);
         return;
     }
 
     /* If no detail clusters, just use a normal PRT1 format */
-    if (!state->uses_detail) {
+    if (!state.uses_detail) {
         fmt::print(portalFile, "PRT1\n");
-        fmt::print(portalFile, "{}\n", state->num_visleafs);
-        fmt::print(portalFile, "{}\n", state->num_visportals);
+        fmt::print(portalFile, "{}\n", state.num_visleafs.count.load());
+        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
         WritePortals_r(headnode, portalFile, false);
+    } else if (qbsp_options.forceprt1.value()) {
+        /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
+        fmt::print(portalFile, "PRT1\n");
+        fmt::print(portalFile, "{}\n", state.num_visclusters.count.load());
+        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
+        WritePortals_r(headnode, portalFile, true);
     } else {
-        if (qbsp_options.forceprt1.value()) {
-            /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
-            fmt::print(portalFile, "PRT1\n");
-            fmt::print(portalFile, "{}\n", state->num_visclusters);
-            fmt::print(portalFile, "{}\n", state->num_visportals);
-            WritePortals_r(headnode, portalFile, true);
-        } else {
-            /* Write a PRT2 */
-            fmt::print(portalFile, "PRT2\n");
-            fmt::print(portalFile, "{}\n", state->num_visleafs);
-            fmt::print(portalFile, "{}\n", state->num_visclusters);
-            fmt::print(portalFile, "{}\n", state->num_visportals);
-            WritePortals_r(headnode, portalFile, true);
-            check = WriteClusters_r(headnode, portalFile, 0);
-            if (check != state->num_visclusters - 1)
-                FError("Internal error: Detail cluster mismatch");
-            fmt::print(portalFile, "-1\n");
+        /* Write a PRT2 */
+        fmt::print(portalFile, "PRT2\n");
+        fmt::print(portalFile, "{}\n", state.num_visleafs.count.load());
+        fmt::print(portalFile, "{}\n", state.num_visclusters.count.load());
+        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
+        WritePortals_r(headnode, portalFile, true);
+        check = WriteClusters_r(headnode, portalFile, 0);
+        if (check != state.num_visclusters.count.load() - 1) {
+            FError("Internal error: Detail cluster mismatch");
         }
+        fmt::print(portalFile, "-1\n");
     }
 }
 
@@ -258,8 +254,6 @@ WritePortalFile
 void WritePortalFile(tree_t &tree)
 {
     logging::funcheader();
-
-    portal_state_t state{};
 
     FreeTreePortals(tree);
 
@@ -275,12 +269,10 @@ void WritePortalFile(tree_t &tree)
         MakePortalsFromBuildportals(tree, buildportals);
     }
 
-    /* save portal file for vis tracing */
-    WritePortalfile(tree.headnode, &state);
+    portal_state_t state{};
 
-    logging::print(logging::flag::STAT, "     {:8} vis leafs\n", state.num_visleafs);
-    logging::print(logging::flag::STAT, "     {:8} vis clusters\n", state.num_visclusters);
-    logging::print(logging::flag::STAT, "     {:8} vis portals\n", state.num_visportals);
+    /* save portal file for vis tracing */
+    WritePortalfile(tree.headnode, state);
 }
 
 
