@@ -469,7 +469,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     // always chop the other hulls to reduce brush tests
     if (qbsp_options.chop.value() || hullnum.value_or(0)) {
-        ChopBrushes(brushes);
+        ChopBrushes(brushes, qbsp_options.chopfragment.value());
     }
 
     // we're discarding the brush

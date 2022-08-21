@@ -786,7 +786,7 @@ public:
             stat_print.register_stat(fmt::format("{} {}", get_contents_display(q1_contentflags_bits(bits)), what)).count += count;
         }
 
-        stat_print.register_stat(fmt::format("{} total"), what).count += stats.total_brushes;
+        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
     }
 };
 

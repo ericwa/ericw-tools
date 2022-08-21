@@ -1293,10 +1293,8 @@ inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
 		&& !(b2.contents.is_any_detail(qbsp_options.target_game))) {
 		return false;
     }
-	if (b1.contents.is_any_solid(qbsp_options.target_game)) {
-		return true;
-    }
-	return false;
+	return b1.contents.is_any_solid(qbsp_options.target_game) &&
+           b2.contents.is_any_solid(qbsp_options.target_game);
 }
 
 /*
@@ -1387,7 +1385,7 @@ of non-intersecting brushes.
 Modifies the input list and may free destroyed brushes.
 =================
 */
-void ChopBrushes(bspbrush_t::container &brushes)
+void ChopBrushes(bspbrush_t::container &brushes, bool allow_fragmentation)
 {
     size_t original_count = brushes.size();
     logging::funcheader();
@@ -1465,21 +1463,21 @@ newlist:
             }
 
 			// only accept if it didn't fragment
-			// (commenting this out allows full fragmentation)
-			if (c1 > 1 && c2 > 1) {
+			if (!allow_fragmentation && c1 > 1 && c2 > 1) {
 				continue;
 			}
 
 			if (c1 < c2) {
                 stats.c_from_split += sub.size();
-                list.splice(list.end(), sub);
-                b1_it = list.erase(b1_it); // start from after b1_it
+                auto before = std::prev(list.erase(b1_it)); // remove the current brush, go back one
+                list.splice(std::next(before), sub); // splice new list in place of where the brush was
+                b1_it = std::next(before); // restart list with the new brushes
 				goto newlist;
 			} else {
                 stats.c_from_split += sub2.size();
-                list.splice(list.end(), sub2);
-                list.erase(b2_it);
-                // start from where b1_it left off
+                list.splice(b2_it, sub2); // splice new brushes before b2_it
+                list.erase(b2_it); // remove b2_it
+                // continue where b1_it left off
 				goto newlist;
 			}
 		}
@@ -1494,5 +1492,7 @@ newlist:
     brushes.insert(brushes.begin(), std::make_move_iterator(list.begin()), std::make_move_iterator(list.end()));
     logging::print(logging::flag::STAT, "chopped {} brushes into {}\n", original_count, brushes.size());
 
-    //WriteBspBrushMap("chopped.map", brushes);
+    if (qbsp_options.debugchop.value()) {
+        WriteBspBrushMap("chopped.map", brushes);
+    }
 }

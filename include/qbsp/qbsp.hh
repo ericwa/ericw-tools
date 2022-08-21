@@ -327,6 +327,7 @@ public:
     setting_bool noskip{this, "noskip", false, &debugging_group, "don't remove faces with the 'skip' texture"};
     setting_bool nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"};
     setting_invertible_bool chop{this, "chop", false, &debugging_group, "adjust brushes to remove intersections if possible"};
+    setting_bool chopfragment{this, "chopfragment", false, &debugging_group, "always do full fragmentation for chop"};
     setting_bool onlyents{this, "onlyents", false, &map_development_group, "only updates .MAP entities"};
     setting_bool splitsky{this, "splitsky", false, &debugging_group, "doesn't combine sky faces into one large face"};
     setting_bool splitturb{
