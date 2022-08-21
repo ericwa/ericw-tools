@@ -100,3 +100,4 @@ enum tree_split_t
 
 bspbrush_t::ptr BrushFromBounds(const aabb3d &bounds);
 void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &brushes, tree_split_t split_type);
+void ChopBrushes(bspbrush_t::container &brushes);
