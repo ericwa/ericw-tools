@@ -201,6 +201,7 @@ struct stat_tracker_t
     };
 
     std::list<stat> stats;
+    bool stats_printed = false;
 
     inline stat &register_stat(const std::string &name, bool show_even_if_zero = false, bool is_warning = false)
     {
@@ -230,8 +231,14 @@ struct stat_tracker_t
         return number_padding + ((number_padding - 1) / 3);
     }
 
-    ~stat_tracker_t()
+    void print_stats()
     {
+        if (stats_printed) {
+            return;
+        }
+
+        stats_printed = true;
+
         auto old = std::locale::global(std::locale("en_US.UTF-8"));
         // add 8 char padding just to keep it away from the left side
         size_t number_padding = number_of_digit_padding() + 4;
@@ -242,6 +249,11 @@ struct stat_tracker_t
             }
         }
         std::locale::global(old);
+    }
+
+    virtual ~stat_tracker_t()
+    {
+        print_stats();
     }
 };
 }; // namespace logging

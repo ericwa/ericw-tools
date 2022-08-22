@@ -53,7 +53,7 @@ struct bspstats_t : logging::stat_tracker_t
     // total number of nodes, includes c_nonvis
     stat &c_nodes = register_stat("nodes");
     // number of nodes created by splitting on a side_t which had !visible
-    stat &c_nonvis =register_stat("non-visible nodes");
+    stat &c_nonvis = register_stat("non-visible nodes");
     // total number of nodes created by qbsp3 method
     stat &c_qbsp3 = register_stat("expensive split nodes");
     // total number of nodes created by midsplit
@@ -1288,6 +1288,8 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
         logging::percent_clock clock;
         BuildTree_r(tree, 0, tree.headnode, brushlist, split_type, stats, clock);
     }
+
+    stats.print_stats();
 
     logging::header("CountLeafs");
     qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
