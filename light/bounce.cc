@@ -179,10 +179,10 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     const vec_t bounce_step = options.extra.value() / options.bounceextra.value();
     // color divisor;
     // extra4 + (no bounce extra) = 16, since surf.points is 16x larger than vanilla
-    const vec_t bounce_divisor = bounce_step * bounce_step;
+    const vec_t bounce_divisor = options.fastbounce.value() ? 1 : (bounce_step * bounce_step);
 
     const vec_t area_divisor = sqrt(area);
-    const vec_t sample_divisor = (surf.points.size() / bounce_divisor) / (surf.vanilla_extents.width() * surf.vanilla_extents.height());
+    const vec_t sample_divisor = (options.fastbounce.value() ? 1 : (surf.points.size() / bounce_divisor)) / (surf.vanilla_extents.width() * surf.vanilla_extents.height());
 
     // average them, area weighted
     std::unordered_map<int, qvec3d> sum;
@@ -221,13 +221,19 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     qplane3d faceplane = winding.plane();
 
-    area /= surf.points.size() / bounce_divisor;
+    if (!options.fastbounce.value()) {
+    	area /= surf.points.size() / bounce_divisor;
 
-    for (vec_t x = 0; x < surf.width; x += bounce_step) {
-        for (vec_t y = 0; y < surf.height; y += bounce_step) {
-            auto &pt = surf.points[(y * surf.width) + x];
-        	AddBounceLight(pt, emitcolors, faceplane.normal, area, &face, bsp);
-        }
+    	for (vec_t x = 0; x < surf.width; x += bounce_step) {
+        	for (vec_t y = 0; y < surf.height; y += bounce_step) {
+            	auto &pt = surf.points[(y * surf.width) + x];
+        		AddBounceLight(pt, emitcolors, faceplane.normal, area, &face, bsp);
+        	}
+		}
+    } else {
+        area /= surf.points.size();
+
+        AddBounceLight(surf.extents.origin, emitcolors, faceplane.normal, area, &face, bsp);
 	}
 }
 
