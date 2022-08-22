@@ -2532,9 +2532,9 @@ template<typename T>
 inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
 {
     if (std::holds_alternative<dmodelh2_vector>(bsp.dmodels))
-        logging::print("{:7} {:<12}\n", std::get<dmodelh2_vector>(bsp.dmodels).size(), "models");
+        PrintLumpSize(lumpspec.begin()[LUMP_MODELS], std::get<dmodelh2_vector>(bsp.dmodels).size());
     else
-        logging::print("{:7} {:<12}\n", std::get<dmodelq1_vector>(bsp.dmodels).size(), "models");
+        PrintLumpSize(lumpspec.begin()[LUMP_MODELS], std::get<dmodelq1_vector>(bsp.dmodels).size());
 
     PrintLumpSize(lumpspec.begin()[LUMP_PLANES], bsp.dplanes.size());
     PrintLumpSize(lumpspec.begin()[LUMP_VERTEXES], bsp.dvertexes.size());
@@ -2547,7 +2547,7 @@ inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
     PrintLumpSize(lumpspec.begin()[LUMP_EDGES], bsp.dedges.size());
     PrintLumpSize(lumpspec.begin()[LUMP_SURFEDGES], bsp.dsurfedges.size());
 
-    logging::print("{:7} {:<12} {:10}\n", "", "textures", bsp.dtex.textures.size());
+    logging::print("{:7} {:<12} {:10}\n", bsp.dtex.textures.size(), "textures", bsp.dtex.stream_size());
     logging::print("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
     logging::print("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvisdata.size());
     logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
@@ -2556,8 +2556,7 @@ inline void PrintQ1BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
 template<typename T>
 inline void PrintQ2BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
 {
-    logging::print("{:7} {:<12}\n", bsp.dmodels.size(), "models");
-
+    PrintLumpSize(lumpspec.begin()[Q2_LUMP_MODELS], bsp.dmodels.size());
     PrintLumpSize(lumpspec.begin()[Q2_LUMP_PLANES], bsp.dplanes.size());
     PrintLumpSize(lumpspec.begin()[Q2_LUMP_VERTEXES], bsp.dvertexes.size());
     PrintLumpSize(lumpspec.begin()[Q2_LUMP_NODES], bsp.dnodes.size());
@@ -2588,6 +2587,8 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
 {
     const auto &lumpspec = bspdata->version->lumps;
 
+    logging::print("\n{:7} {:<12} {:10}\n", "count", "lump name", "byte size");
+
     if (std::holds_alternative<q2bsp_t>(bspdata->bsp)) {
         PrintQ2BSPLumps(lumpspec, std::get<q2bsp_t>(bspdata->bsp));
     } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
@@ -2602,7 +2603,11 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         Error("Unsupported BSP version: {}", *bspdata->version);
     }
 
-    for (auto &x : bspdata->bspx.entries) {
-        logging::print("{:7} {:<12} {:10}\n", "BSPX", x.first, x.second.size());
+    if (bspdata->bspx.entries.size()) {
+        logging::print("\n{:<16 {:10}\n", "BSPX lump name", "byte size");
+
+        for (auto &x : bspdata->bspx.entries) {
+            logging::print("{:<16} {:10}\n", x.first, x.second.size());
+        }
     }
 }

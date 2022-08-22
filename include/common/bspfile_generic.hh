@@ -248,6 +248,13 @@ struct dmiptexlump_t
             }
         }
     }
+
+    inline size_t stream_size() const
+    {
+        omemsizestream stream;
+        stream_write(stream);
+        return stream.tellp();
+    }
 };
 
 // 0-2 are axial planes

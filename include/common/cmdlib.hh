@@ -823,6 +823,80 @@ struct imemstream : virtual membuf, std::istream
     }
 };
 
+// A very strange stream buffer that just stores the written size.
+// It can only write, not read.
+struct omemsizebuf : std::streambuf
+{
+public:
+    // construct membuf for writing
+    inline omemsizebuf(std::ios_base::openmode which = std::ios_base::out)
+    {
+        if (which & std::ios_base::in) {
+            throw std::invalid_argument("which");
+        }
+
+        this->setp(nullptr, nullptr);
+    }
+
+protected:
+    inline void setpptrs(char *first, char *next, char *end)
+    {
+        setp(first, end);
+        pbump(next - first);
+    }
+
+    // seek operations
+    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
+    {
+        setpptrs(pbase(), pbase() + off, epptr());
+
+        return pptr() - pbase();
+    }
+
+    pos_type seekoff(off_type off, std::ios_base::seekdir dir,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
+    {
+        if (dir == std::ios_base::cur)
+            pbump(off);
+        else if (dir == std::ios_base::end)
+            setpptrs(pbase(), epptr() + off, epptr());
+        else if (dir == std::ios_base::beg)
+            setpptrs(pbase(), pbase() + off, epptr());
+
+        return pptr() - pbase();
+    }
+
+    // put stuff
+    std::streamsize xsputn(const char_type *s, std::streamsize n) override
+    {
+        if (pptr() == epptr()) {
+            setpptrs(pbase(), epptr(), epptr() + n);
+        }
+
+        std::streamsize free_space = epptr() - pptr();
+        std::streamsize num_write = std::min(free_space, n);
+
+        setpptrs(pbase(), pptr() + n, epptr());
+
+        return num_write;
+    };
+
+    int_type overflow(int_type ch) override
+    {
+        setpptrs(pbase(), epptr(), epptr() + 1);
+        return ch;
+    }
+};
+
+struct omemsizestream : virtual omemsizebuf, std::ostream
+{
+    inline omemsizestream(
+        std::ios_base::openmode which = std::ios_base::out | std::ios_base::binary)
+        : omemsizebuf(which), std::ostream(static_cast<std::streambuf *>(this))
+    {
+    }
+};
+
 template<class T, class = void>
 struct is_iterator : std::false_type
 {
