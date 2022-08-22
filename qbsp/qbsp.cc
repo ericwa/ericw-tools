@@ -574,7 +574,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     Q_assert(!entity.firstoutputfacenumber.has_value());
 
-    entity.firstoutputfacenumber = MakeFaceEdges(tree.headnode);
+    entity.firstoutputfacenumber = EmitFaces(tree.headnode);
 
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         ExportBrushList(entity, tree.headnode);

@@ -141,7 +141,7 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face)
     return i;
 }
 
-static void FindFaceFragmentEdges(face_t *face, face_fragment_t *fragment)
+static void EmitEdges(face_t *face, face_fragment_t *fragment)
 {
     Q_assert(fragment->outputnumber == std::nullopt);
 
@@ -156,36 +156,6 @@ static void FindFaceFragmentEdges(face_t *face, face_fragment_t *fragment)
         auto &p2 = fragment->output_vertices[(i + 1) % fragment->output_vertices.size()];
         fragment->edges[i] = GetEdge(p1, p2, face);
     }
-}
-
-/*
-==================
-FindFaceEdges
-==================
-*/
-static void FindFaceEdges(face_t *face)
-{
-    for (auto &fragment : face->fragments) {
-        FindFaceFragmentEdges(face, &fragment);
-    }
-}
-
-/*
-================
-MakeFaceEdges_r
-================
-*/
-static void MakeFaceEdges_r(node_t *node)
-{
-    if (node->is_leaf)
-        return;
-
-    for (auto &f : node->facelist) {
-        FindFaceEdges(f.get());
-    }
-
-    MakeFaceEdges_r(node->children[0]);
-    MakeFaceEdges_r(node->children[1]);
 }
 
 /*
@@ -231,30 +201,30 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
 }
 
 /*
-==============
-GrowNodeRegion
-==============
+================
+MakeFaceEdges_r
+================
 */
-static void EmitFaceFragments_R(node_t *node)
+static void EmitFaces_R(node_t *node)
 {
-    if (node->is_leaf)
+    if (node->is_leaf) {
         return;
+    }
 
     node->firstface = static_cast<int>(map.bsp.dfaces.size());
 
     for (auto &face : node->facelist) {
-        // Q_assert(face->planenum == node->planenum);
-
         // emit a region
         for (auto &fragment : face->fragments) {
+            EmitEdges(face.get(), &fragment);
             EmitFaceFragment(face.get(), &fragment);
         }
     }
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
 
-    EmitFaceFragments_R(node->children[0]);
-    EmitFaceFragments_R(node->children[1]);
+    EmitFaces_R(node->children[0]);
+    EmitFaces_R(node->children[1]);
 }
 
 /*
@@ -262,17 +232,13 @@ static void EmitFaceFragments_R(node_t *node)
 MakeFaceEdges
 ================
 */
-int MakeFaceEdges(node_t *headnode)
+size_t EmitFaces(node_t *headnode)
 {
-    int firstface;
-
     logging::funcheader();
 
-    firstface = static_cast<int>(map.bsp.dfaces.size());
-    MakeFaceEdges_r(headnode);
+    size_t firstface = map.bsp.dfaces.size();
 
-    logging::header("EmitFaceFragments");
-    EmitFaceFragments_R(headnode);
+    EmitFaces_R(headnode);
 
     return firstface;
 }

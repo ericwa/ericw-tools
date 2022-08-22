@@ -382,7 +382,7 @@ qvec3d FixRotateOrigin(mapentity_t &entity);
 void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped);
 
 void TJunc(node_t *headnode);
-int MakeFaceEdges(node_t *headnode);
+size_t EmitFaces(node_t *headnode);
 void EmitVertices(node_t *headnode);
 void ExportClipNodes(mapentity_t &entity, node_t *headnode, hull_index_t::value_type hullnum);
 void ExportDrawNodes(mapentity_t &entity, node_t *headnode, int firstface);
