@@ -417,6 +417,7 @@ public:
         this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"};
     setting_extra bounceextra{
         this, {"bounceextra", "bounceextra4"}, 1, &performance_group, "bounce light supersampling; 2x2 (bounceextra) or 4x4 (bounceextra4) respectively"};
+    setting_bool fastbounce{this, "fastbounce", false, &performance_group, "use one bounce point in the middle of each face. for fast compilation."};
     setting_enum<visapprox_t> visapprox{this, "visapprox", visapprox_t::AUTO,
         {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
             {"rays", visapprox_t::RAYS}},
