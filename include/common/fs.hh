@@ -39,6 +39,8 @@ struct archive_like
 
     inline archive_like(const path &pathname, bool external) : pathname(pathname), external(external) { }
 
+    virtual ~archive_like() { }
+
     virtual bool contains(const path &filename) = 0;
 
     virtual data load(const path &filename) = 0;
