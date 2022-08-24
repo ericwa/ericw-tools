@@ -77,5 +77,4 @@ void MakeTreePortals(tree_t &tree);
 std::list<buildportal_t> MakeHeadnodePortals(tree_t &tree);
 void MakePortalsFromBuildportals(tree_t &tree, std::list<buildportal_t> &buildportals);
 void EmitAreaPortals(node_t *headnode);
-void FloodAreas(node_t *headnode);
 void MarkVisibleSides(tree_t &tree, bspbrush_t::container &brushes);

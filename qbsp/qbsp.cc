@@ -533,7 +533,6 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
         // Area portals
         if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-            FloodAreas(tree.headnode);
             EmitAreaPortals(tree.headnode);
         }
     } else {

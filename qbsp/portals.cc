@@ -708,11 +708,16 @@ static void SetAreaPortalAreas_r(node_t *node)
 =============
 EmitAreaPortals
 
+Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL and
+emit them.
 =============
 */
 void EmitAreaPortals(node_t *headnode)
 {
     logging::funcheader();
+    
+    FindAreas(headnode);
+    SetAreaPortalAreas_r(headnode);
 
     map.bsp.dareaportals.emplace_back();
     map.bsp.dareas.emplace_back();
@@ -754,21 +759,13 @@ void EmitAreaPortals(node_t *headnode)
     area_stats.register_stat("area portals").count += map.bsp.dareaportals.size();
 }
 
-/*
-=============
-FloodAreas
-
-Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL
-=============
-*/
-void FloodAreas(node_t *headnode)
-{
-    logging::funcheader();
-    FindAreas(headnode);
-    SetAreaPortalAreas_r(headnode);
-}
-
 //==============================================================
+
+struct visible_faces_stats_t : logging::stat_tracker_t
+{
+    stat &sides_not_found = register_stat("sides not found", false, true);
+    stat &sides_visible = register_stat("sides visible");
+};
 
 /*
 ============
@@ -777,7 +774,7 @@ FindPortalSide
 Finds a brush side to use for texturing the given portal
 ============
 */
-static void FindPortalSide(portal_t *p, size_t &num_sides_not_found)
+static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
 {
     // decide which content change is strongest
     // solid > lava > water, etc
@@ -860,7 +857,7 @@ static void FindPortalSide(portal_t *p, size_t &num_sides_not_found)
     }
 
     if (!bestside[0] && !bestside[1]) {
-        num_sides_not_found++;
+        stats.sides_not_found++;
     }
 
     p->sidefound = true;
@@ -876,11 +873,11 @@ MarkVisibleSides_r
 
 ===============
 */
-static void MarkVisibleSides_r(node_t *node, size_t &num_sides_not_found)
+static void MarkVisibleSides_r(node_t *node, visible_faces_stats_t &stats)
 {
     if (!node->is_leaf) {
-        MarkVisibleSides_r(node->children[0], num_sides_not_found);
-        MarkVisibleSides_r(node->children[1], num_sides_not_found);
+        MarkVisibleSides_r(node->children[0], stats);
+        MarkVisibleSides_r(node->children[1], stats);
         return;
     }
 
@@ -895,11 +892,12 @@ static void MarkVisibleSides_r(node_t *node, size_t &num_sides_not_found)
         if (!p->onnode)
             continue; // edge of world
         if (!p->sidefound) {
-            FindPortalSide(p, num_sides_not_found);
+            FindPortalSide(p, stats);
         }
         for (int i = 0; i < 2; ++i) {
             if (p->sides[i] && p->sides[i]->source) {
                 p->sides[i]->source->visible = true;
+                stats.sides_visible++;
             }
         }
     }
@@ -924,12 +922,7 @@ void MarkVisibleSides(tree_t &tree, bspbrush_t::container &brushes)
         }
     }
 
-    size_t num_sides_not_found = 0;
-
+    visible_faces_stats_t stats;
     // set visible flags on the sides that are used by portals
-    MarkVisibleSides_r(tree.headnode, num_sides_not_found);
-
-    if (num_sides_not_found) {
-        logging::print(logging::flag::STAT, "WARNING: sides not found for {} portals\n", num_sides_not_found);
-    }
+    MarkVisibleSides_r(tree.headnode, stats);
 }

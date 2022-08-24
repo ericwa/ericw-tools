@@ -112,6 +112,12 @@ void EmitVertices(node_t *headnode)
 
 //===========================================================================
 
+struct emit_faces_stats_t : logging::stat_tracker_t
+{
+    stat &unique_edges = register_stat("edges");
+    stat &unique_faces = register_stat("faces");
+};
+
 /*
 ==================
 GetEdge
@@ -119,7 +125,7 @@ GetEdge
 Returns a global edge number, possibly negative to indicate a backwards edge.
 ==================
 */
-inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face)
+inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, emit_faces_stats_t &stats)
 {
     if (!face->contents.is_valid(qbsp_options.target_game, false))
         FError("Face with invalid contents");
@@ -138,10 +144,12 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face)
 
     map.add_hash_edge(v1, v2, i);
 
+    stats.unique_edges++;
+
     return i;
 }
 
-static void EmitEdges(face_t *face, face_fragment_t *fragment)
+static void EmitEdges(face_t *face, face_fragment_t *fragment, emit_faces_stats_t &stats)
 {
     Q_assert(fragment->outputnumber == std::nullopt);
 
@@ -154,7 +162,7 @@ static void EmitEdges(face_t *face, face_fragment_t *fragment)
     for (size_t i = 0; i < fragment->output_vertices.size(); i++) {
         auto &p1 = fragment->output_vertices[i];
         auto &p2 = fragment->output_vertices[(i + 1) % fragment->output_vertices.size()];
-        fragment->edges[i] = GetEdge(p1, p2, face);
+        fragment->edges[i] = GetEdge(p1, p2, face, stats);
     }
 }
 
@@ -163,7 +171,7 @@ static void EmitEdges(face_t *face, face_fragment_t *fragment)
 EmitFaceFragment
 ==============
 */
-static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
+static void EmitFaceFragment(face_t *face, face_fragment_t *fragment, emit_faces_stats_t &stats)
 {
     // this can't really happen, but just in case it ever does..
     // (I use this in testing to find faces of interest)
@@ -198,6 +206,8 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
     fragment->edges.clear();
 
     out.numedges = static_cast<int32_t>(map.bsp.dsurfedges.size()) - out.firstedge;
+
+    stats.unique_faces++;
 }
 
 /*
@@ -205,7 +215,7 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment)
 MakeFaceEdges_r
 ================
 */
-static void EmitFaces_R(node_t *node)
+static void EmitFaces_R(node_t *node, emit_faces_stats_t &stats)
 {
     if (node->is_leaf) {
         return;
@@ -216,15 +226,15 @@ static void EmitFaces_R(node_t *node)
     for (auto &face : node->facelist) {
         // emit a region
         for (auto &fragment : face->fragments) {
-            EmitEdges(face.get(), &fragment);
-            EmitFaceFragment(face.get(), &fragment);
+            EmitEdges(face.get(), &fragment, stats);
+            EmitFaceFragment(face.get(), &fragment, stats);
         }
     }
 
     node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
 
-    EmitFaces_R(node->children[0]);
-    EmitFaces_R(node->children[1]);
+    EmitFaces_R(node->children[0], stats);
+    EmitFaces_R(node->children[1], stats);
 }
 
 /*
@@ -236,9 +246,11 @@ size_t EmitFaces(node_t *headnode)
 {
     logging::funcheader();
 
+    emit_faces_stats_t stats;
+
     size_t firstface = map.bsp.dfaces.size();
 
-    EmitFaces_R(headnode);
+    EmitFaces_R(headnode, stats);
 
     return firstface;
 }
@@ -250,8 +262,6 @@ size_t EmitFaces(node_t *headnode)
 AddMarksurfaces_r
 
 Adds the given face to the markfaces lists of all descendant leafs of `node`.
-
-fixme-brushbsp: all leafs in a cluster can share the same marksurfaces, right?
 ================
 */
 static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, node_t *node)
