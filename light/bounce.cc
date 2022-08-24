@@ -112,6 +112,10 @@ static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec
         Q_assert(styleColor.second[2] >= 0);
     }
     Q_assert(area > 0);
+    
+    Q_assert(!isnan(pos[0]));
+    Q_assert(!isnan(pos[1]));
+    Q_assert(!isnan(pos[2]));
 
     bouncelight_t &l = CreateBounceLight(face, bsp);
     l.poly = GLM_FacePoints(bsp, face);
@@ -176,7 +180,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     // extra2 + bounceextra4 = 0.5 (for every point, we get two bounce lights)
     // extra4 + bounceextra = 2 (for every two points, we get one bounce light)
     // extra4 + (no bounce extra) = 4 (for every 4 points, we get one bounce light)
-    const vec_t bounce_step = light_options.extra.value() / light_options.bounceextra.value();
+    const vec_t bounce_step = (vec_t) light_options.extra.value() / light_options.bounceextra.value();
     // color divisor;
     // extra4 + (no bounce extra) = 16, since surf.points is 16x larger than vanilla
     const vec_t bounce_divisor = light_options.fastbounce.value() ? 1 : (bounce_step * bounce_step);
@@ -190,7 +194,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     for (const auto &lightmap : surf.lightmapsByStyle) {
         for (vec_t x = 0; x < surf.width; x += bounce_step) {
             for (vec_t y = 0; y < surf.height; y += bounce_step) {
-                sum[lightmap.style] += lightmap.samples[(y * surf.width) + x].color / sample_divisor;
+                sum[lightmap.style] += lightmap.samples[(trunc(y) * surf.width) + trunc(x)].color / sample_divisor;
             }
         }
     }
@@ -226,7 +230,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     
         for (vec_t x = 0; x < surf.width; x += bounce_step) {
             for (vec_t y = 0; y < surf.height; y += bounce_step) {
-                auto &pt = surf.points[(y * surf.width) + x];
+                auto &pt = surf.points[(trunc(y) * surf.width) + trunc(x)];
                 AddBounceLight(pt, emitcolors, faceplane.normal, area, &face, bsp);
             }
         }
