@@ -326,7 +326,7 @@ public:
         &worldspawn_group}; /* defaults to straight down */
     setting_mangle sun2vec{this, "sun2_mangle", 0.0, -90.0, 0.0, &worldspawn_group}; /* defaults to straight down */
     setting_scalar sun_deviance{this, "sunlight_penumbra", 0.0, 0.0, 180.0, &worldspawn_group};
-    setting_vec3 sky_surface{
+    setting_color sky_surface{
         this, {"sky_surface", "sun_surface"}, 0, 0, 0, &worldspawn_group} /* arghrad surface lights on sky faces */;
     setting_int32 surflight_radiosity{this, "surflight_radiosity", SURFLIGHT_Q1, &worldspawn_group,
         "whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity"};
