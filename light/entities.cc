@@ -777,6 +777,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     /* handle worldspawn */
     for (const auto &epair : WorldEnt()) {
         SetGlobalSetting(epair.first, epair.second, false);
+
     }
 
     /* apply side effects of settings (in particular "dirt") */

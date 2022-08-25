@@ -1194,6 +1194,9 @@ int light_main(int argc, const char **argv)
         if (!options.surflightscale.isChanged()) {
             options.surflightscale.setValue(0.65f);
         }
+        if (!options.surflightskyscale.isChanged()) {
+            options.surflightskyscale.setValue(0.65);
+        }
         if (!options.bouncescale.isChanged()) {
             options.bouncescale.setValue(1.25f);
         }

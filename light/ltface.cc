@@ -1611,11 +1611,11 @@ inline qvec3f BounceLight_ColorAtDist(
 
 // mxd. Surface light falloff. Returns color in [0,255]
 inline qvec3f SurfaceLight_ColorAtDist(
-    const settings::worldspawn_keys &cfg, const float &intensity, const qvec3d &color, const float &dist)
+    const settings::worldspawn_keys &cfg, const float &surf_scale, const float &intensity, const qvec3d &color, const float &dist)
 {
     // Exponential falloff
     const float d = max(dist, 16.0f); // Clamp away hotspots, also avoid division by 0...
-    const float scaledintensity = intensity * cfg.surflightscale.value();
+    const float scaledintensity = intensity * surf_scale;
     const float scale = (1.0f / (d * d));
 
     return color * scaledintensity * scale;
@@ -1677,7 +1677,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     }
 
     // Get light contribution
-    result = SurfaceLight_ColorAtDist(cfg, vpl->intensity, vpl->color, dist);
+    result = SurfaceLight_ColorAtDist(cfg, vpl->omnidirectional ? cfg.surflightskyscale.value() : cfg.surflightscale.value(), vpl->intensity, vpl->color, dist);
 
     // Apply angle scale
     const qvec3f resultscaled = result * dotProductFactor;
@@ -1715,7 +1715,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
     const float dist = qv::length(dir) + lightsurf->extents.radius;
 
     // Get light contribution
-    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->totalintensity, vpl->color, dist);
+    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->omnidirectional ? cfg.surflightskyscale.value() : cfg.surflightscale.value(), vpl->totalintensity, vpl->color, dist);
 
     return qv::gate(color, (float) bouncelight_gate);
 }
