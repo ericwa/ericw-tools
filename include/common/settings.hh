@@ -642,7 +642,7 @@ public:
     using setting_vec3::setting_vec3;
 
     // allow mangle to only specify pitch, or pitch yaw
-    bool parse(const std::string &settingName, parser_base_t &parser, bool locked = false) override
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
     {
         qvec3d vec {};
 
@@ -660,7 +660,7 @@ public:
             parser.parse_token();
         }
         
-        setValueFromParse(vec, locked);
+        setValue(vec, source);
 
         return true;
     }
