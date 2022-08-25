@@ -205,17 +205,20 @@ struct surfflags_t
     // custom opacity
     vec_t light_alpha;
 
+    // maxlight value for this face
+    vec_t maxlight;
+
     constexpr bool needs_write() const
     {
         return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle ||
-               phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha;
+               phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight;
     }
 
 private:
     constexpr auto as_tuple() const
     {
         return std::tie(native, is_skip, is_hintskip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand,
-            light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha);
+            light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha, maxlight);
     }
 
 public:

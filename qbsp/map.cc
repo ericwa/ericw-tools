@@ -495,6 +495,14 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         flags.minlight = clamp(minlight, 0.0, 510.0);
     }
 
+    // handle "_maxlight"
+    const vec_t maxlight = entity->epairs.get_float("_maxlight");
+    if (maxlight > 0) {
+        // CHECK: allow > 510 now that we're float? or is it not worth it since it will
+        // be beyond max?
+        flags.maxlight = clamp(maxlight, 0.0, 510.0);
+    }
+
     // handle "_mincolor"
     {
         qvec3d mincolor{};
