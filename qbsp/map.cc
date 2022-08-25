@@ -496,7 +496,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     }
 
     // handle "_maxlight"
-    const vec_t maxlight = entity->epairs.get_float("_maxlight");
+    const vec_t maxlight = entity.epairs.get_float("_maxlight");
     if (maxlight > 0) {
         // CHECK: allow > 510 now that we're float? or is it not worth it since it will
         // be beyond max?
