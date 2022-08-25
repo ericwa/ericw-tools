@@ -766,6 +766,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("minlight")) {
             flags.minlight = val.at("minlight").get<vec_t>();
         }
+        if (val.contains("maxlight")) {
+            flags.maxlight = val.at("maxlight").get<vec_t>();
+        }
         if (val.contains("minlight_color")) {
             flags.minlight_color = val.at("minlight_color").get<qvec3b>();
         }

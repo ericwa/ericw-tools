@@ -107,7 +107,7 @@ struct lightsurf_t
     const mbsp_t *bsp;
     const mface_t *face;
     /* these take precedence the values in modelinfo */
-    vec_t minlight;
+    vec_t minlight, maxlight;
     qvec3d minlight_color;
     bool nodirt, minlightMottle;
 
@@ -208,8 +208,11 @@ public:
     const dmodelh2_t *model;
     float lightmapscale;
     qvec3d offset{};
-
+    
     settings::setting_scalar minlight{this, "minlight", 0};
+    // zero will apply no clamping; use lightignore instead to do that.
+    // above zero, this controls the clamp value on the light, default 255
+    settings::setting_scalar maxlight{this, "maxlight", 0};
     settings::setting_bool minlightMottle{this, "minlightMottle", false};
     settings::setting_scalar shadow{this, "shadow", 0};
     settings::setting_scalar shadowself{this, {"shadowself", "selfshadow"}, 0};
@@ -272,6 +275,7 @@ public:
     setting_scalar lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group};
     setting_bool addminlight{this, "addmin", false, &worldspawn_group};
     setting_scalar minlight{this, {"light", "minlight"}, 0, &worldspawn_group};
+    setting_scalar maxlight{this, "maxlight", 0, &worldspawn_group};
     setting_color minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group};
     setting_bool spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group}; // mxd
     setting_int32 compilerstyle_start{

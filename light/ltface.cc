@@ -637,21 +637,33 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(
     }
 
     lightsurf->minlightMottle = modelinfo->minlightMottle.value();
-
+    
     // minlight
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.value();
-
-        // Q2 uses a 0-1 range for minlight
-        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            lightsurf->minlight *= 128.f;
-
-            if (!modelinfo->minlightMottle.isChanged()) {
-                lightsurf->minlightMottle = true;
-            }
-        }
     } else {
         lightsurf->minlight = extended_flags.minlight;
+    }
+
+    // Q2 uses a 0-1 range for minlight
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        lightsurf->minlight *= 128.f;
+
+        if (!modelinfo->minlightMottle.isChanged()) {
+            lightsurf->minlightMottle = true;
+        }
+    }
+
+    // maxlight
+    if (modelinfo->maxlight.isChanged()) {
+        lightsurf->maxlight = modelinfo->maxlight.value();
+    } else {
+        lightsurf->maxlight = extended_flags.maxlight;
+    }
+
+    // Q2 uses a 0-1 range for minlight
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        lightsurf->maxlight *= 128.f;
     }
 
     // minlight_color
@@ -1334,7 +1346,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
             continue;
         }
 
-        qvec3d normalcontrib = sun->sunvec * value;
+        qvec3d normalcontrib = incoming * value;
 
         rs.pushRay(i, surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
     }
@@ -2202,17 +2214,32 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
             /* Fix any negative values */
             color = qv::max(color, {0});
 
-            /* Scale and clamp any out-of-range samples */
-            color *= cfg.rangescale.value();
+            // before any other scaling, apply maxlight
+            if (lightsurf->maxlight || cfg.maxlight.value()) {
+                vec_t maxcolor = qv::max(color);
+                // FIXME: for colored lighting, this doesn't seem to generate the right values...
+                vec_t maxval = (lightsurf->maxlight ? lightsurf->maxlight : cfg.maxlight.value()) * 2.0;
 
-            for (auto &c : color) {
-                c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+                if (maxcolor > maxval) {
+                    color *= (maxval / maxcolor);
+                }
             }
 
+            /* Scale and handle gamma adjustment */
+            color *= cfg.rangescale.value();
+
+            if (cfg.lightmapgamma.value() != 1.0) {
+                for (auto &c : color) {
+                    c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+                }
+            }
+
+            // clamp
+            // FIXME: should this be a brightness clamp?
             vec_t maxcolor = qv::max(color);
 
-            if (maxcolor > 255) {
-                color *= (255.0f / maxcolor);
+            if (maxcolor > 255.0) {
+                color *= (255.0 / maxcolor);
             }
         }
     }

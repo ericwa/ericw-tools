@@ -387,6 +387,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.minlight) {
             t["minlight"] = tx.flags.minlight;
         }
+        if (tx.flags.maxlight) {
+            t["maxlight"] = tx.flags.maxlight;
+        }
         if (!qv::emptyExact(tx.flags.minlight_color)) {
             t["minlight_color"] = tx.flags.minlight_color;
         }
