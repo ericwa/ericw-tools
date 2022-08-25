@@ -640,6 +640,30 @@ protected:
 
 public:
     using setting_vec3::setting_vec3;
+
+    // allow mangle to only specify pitch, or pitch yaw
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
+    {
+        qvec3d vec {};
+
+        for (int i = 0; i < 3; i++) {
+            if (!parser.parse_token(PARSE_PEEK)) {
+                break;
+            }
+
+            try {
+                vec[i] = std::stod(parser.token);
+            } catch (std::exception &) {
+                break;
+            }
+
+            parser.parse_token();
+        }
+
+        setValue(vec, source);
+
+        return true;
+    }
 };
 
 class setting_color : public setting_vec3
@@ -680,6 +704,12 @@ public:
 };
 
 // settings dictionary
+enum class setting_error
+{
+    NONE,
+    MISSING,
+    INVALID
+};
 
 class setting_container
 {
@@ -755,7 +785,7 @@ public:
         return nullptr;
     }
 
-    inline void setSetting(const std::string &name, const std::string &value, source source)
+    inline setting_error setSetting(const std::string &name, const std::string &value, source source)
     {
         setting_base *setting = findSetting(name);
 
@@ -763,11 +793,11 @@ public:
             if (source == source::COMMANDLINE) {
                 throw parse_exception(fmt::format("Unrecognized command-line option '{}'\n", name));
             }
-            return;
+            return setting_error::MISSING;
         }
 
         parser_t p{value, { }};
-        setting->parse(name, p, source);
+        return setting->parse(name, p, source) ? setting_error::NONE : setting_error::INVALID;
     }
 
     inline void setSettings(const entdict_t &epairs, source source)

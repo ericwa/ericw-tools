@@ -784,7 +784,9 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
     /* handle worldspawn */
     for (const auto &epair : WorldEnt()) {
-        light_options.setSetting(epair.first, epair.second, settings::source::MAP);
+        if (light_options.setSetting(epair.first, epair.second, settings::source::MAP) == settings::setting_error::INVALID) {
+            logging::print("WARNING: worldspawn key {} has invalid value of \"{}\"\n", epair.first, epair.second);
+        }
     }
 
     /* apply side effects of settings (in particular "dirt") */

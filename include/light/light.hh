@@ -306,6 +306,7 @@ public:
 
     /* Q2 surface lights (mxd) */
     setting_scalar surflightscale{this, "surflightscale", 1.0, &worldspawn_group};
+    setting_scalar surflightskyscale{this, "surflightskyscale", 1.0, &worldspawn_group};
     setting_scalar surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0,
         &worldspawn_group}; // "choplight" - arghrad3 name
 
