@@ -914,13 +914,7 @@ void MarkVisibleSides(tree_t &tree, bspbrush_t::container &brushes)
     logging::funcheader();
 
     // clear all the visible flags
-    for (auto &brush : brushes) {
-        for (auto &face : brush->sides) {
-            if (face.source) {
-                face.source->visible = false;
-            }
-        }
-    }
+    MarkBrushSidesInvisible(brushes);
 
     visible_faces_stats_t stats;
     // set visible flags on the sides that are used by portals

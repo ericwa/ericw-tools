@@ -349,12 +349,16 @@ std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
 
 //=============================================================================
 
-static void MarkBrushSidesInvisible(bspbrush_t::container &brushes)
+void MarkBrushSidesInvisible(bspbrush_t::container &brushes)
 {
     for (auto &brush : brushes) {
         for (auto &face : brush->sides) {
             if (face.source) {
                 face.source->visible = false;
+                
+			    if (face.source->get_texinfo().flags.is_hint) {
+				    face.source->visible = true;	// hints are always visible
+                }
             }
         }
     }
