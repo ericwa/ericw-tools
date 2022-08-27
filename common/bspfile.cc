@@ -1352,7 +1352,7 @@ public:
 
             // now find base dir, if we haven't set it yet
             if (!basedir.is_absolute()) {
-                if (!gamedir.empty() && gamedir.is_absolute()) {
+                if (!basedir.empty() && gamedir.is_absolute()) {
                     // we passed in a relative basedir. probably meant to
                     // be derived from gamedir.
                     basedir = gamedir.parent_path() / basedir;
