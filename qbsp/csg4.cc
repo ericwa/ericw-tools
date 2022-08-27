@@ -587,7 +587,8 @@ std::vector<surface_t> CSGFaces(const mapentity_t *entity)
                 || (brush.contents.is_liquid(options.target_game) &&
                        clipbrush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY))
 
-                || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))) {
+                || (brush.contents.is_fence() && clipbrush.contents.is_liquid(options.target_game))
+                || (brush.contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY) && clipbrush.contents.is_clip())) {
                 SaveInsideFaces(inside, clipbrush, &outside);
             } else {
                 FreeFaces(inside);
