@@ -1346,6 +1346,8 @@ public:
 
             if (!exists(gamedir)) {
                 logging::print("WARNING: failed to find gamedir '{}'\n", gamedir);
+            } else {
+                logging::print("using gamedir: '{}'\n", gamedir);
             }
 
             // now find base dir, if we haven't set it yet
@@ -1366,6 +1368,7 @@ public:
                 logging::print("WARNING: failed to find basedir '{}'\n", basedir);
             } else if (!equivalent(gamedir, basedir)) {
                 addArchive(basedir);
+                logging::print("using basedir: '{}'\n", basedir);
             }
 
             if (exists(gamedir)) {
