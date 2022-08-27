@@ -1545,6 +1545,15 @@ TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
     }
 }
 
+TEST_CASE("chop", "[testmaps_q1]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("quake_map_source/DM1-test.map", {"-chop", "-debugchop"});
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+    CHECK(prt);
+    CheckFilled(bsp);
+}
+
 TEST_CASE("base1leak", "[testmaps_q2]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1leak.map");

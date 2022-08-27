@@ -1475,9 +1475,9 @@ newlist:
 
 			if (c1 < c2) {
                 stats.c_from_split += sub.size();
-                auto before = std::prev(list.erase(b1_it)); // remove the current brush, go back one
-                list.splice(std::next(before), sub); // splice new list in place of where the brush was
-                b1_it = std::next(before); // restart list with the new brushes
+                auto before = list.erase(b1_it); // remove the current brush, go back one
+                list.splice(before, sub); // splice new list in place of where the brush was
+                b1_it = before; // restart list with the new brushes
 				goto newlist;
 			} else {
                 stats.c_from_split += sub2.size();
