@@ -628,6 +628,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
 
         if (fillnode->occupied > 0) {
             leakline = MakeLeakLine(fillnode, leakentity);
+            std::reverse(leakline.begin(), leakline.end());
         }
     } else {
         // Flood fill from outside -> in.
