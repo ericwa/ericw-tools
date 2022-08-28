@@ -68,7 +68,7 @@ struct mapface_t
     // with no transformations; this is for conversions only.
     std::optional<extended_texinfo_t> raw_info;
 
-    bool visible = false; // can any part of this side be seen from non-void parts of the level?
+    bool visible = true;  // can any part of this side be seen from non-void parts of the level?
                           // non-visible means we can discard the brush side
                           // (avoiding generating a BSP spit, so expanding it outwards)
 

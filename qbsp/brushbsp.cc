@@ -1256,19 +1256,6 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
                 }
             }
 
-	        // brushes that will not be visible at all will never be
-	        // used as bsp splitters
-            // FIXME: should this be expanded to different things? should
-            // it figure out whether the side is skip as well?
-            if (b->contents.is_clip(qbsp_options.target_game)) {
-                for (side_t &side : b->sides) {
-                    if (side.is_visible()) {
-                        side.onnode = true;
-                        stats.clip_faces++;
-                    }
-                }
-            }
-
             tree.bounds += b->bounds;
         }
 
