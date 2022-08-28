@@ -77,6 +77,11 @@ if (ERICWTOOLS_ASAN)
 	add_link_options(-fsanitize=address)
 endif()
 
+if (ERICWTOOLS_TIMETRACE)
+	message(STATUS "Enabling -ftime-trace")
+	add_compile_options(-ftime-trace)
+endif()
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
 	add_compile_options(/EHsc)
 endif()
