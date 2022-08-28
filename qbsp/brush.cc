@@ -49,6 +49,12 @@ side_t side_t::clone() const
 
 bool side_t::is_visible() const
 {
+    // workaround for qbsp_q2_mist_clip.map - we want to treat nodraw faces as "!visible"
+    // so they're used as splitters after mist
+    if (get_texinfo().flags.is_skip) {
+        return false;
+    }
+
     return source && source->visible;
 }
 
