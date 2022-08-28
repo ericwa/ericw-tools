@@ -235,9 +235,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
             }
         }
     } else {
-        area /= surf.points.size();
-
-        AddBounceLight(surf.extents.origin, emitcolors, faceplane.normal, area, &face, bsp);
+        AddBounceLight(surf.extents.origin, emitcolors, faceplane.normal, area_divisor, &face, bsp);
     }
 }
 
