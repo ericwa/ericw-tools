@@ -1686,7 +1686,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     return resultscaled;
 }
 
-inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf)
+inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf, const vec_t &bouncelight_gate)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
@@ -1698,9 +1698,9 @@ inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, 
     const float dist = qv::length(dir) + lightsurf->extents.radius;
 
     // get light contribution
-    const qvec3f color = BounceLight_ColorAtDist(cfg, vpl->area, vpl->componentwiseMaxColor, dist);
+    const qvec3d color = BounceLight_ColorAtDist(cfg, vpl->area, vpl->componentwiseMaxColor, dist);
 
-    return qv::gate(color, 0.01f);
+    return qv::gate(color, bouncelight_gate);
 }
 
 static bool // mxd
@@ -1764,7 +1764,10 @@ static void LightFace_Bounce(
             continue;
         }
 
-        if (BounceLight_SphereCull(bsp, &vpl, lightsurf))
+        const vec_t bouncelight_gate = options.fastbounce.value() ? 0.25 :
+            1.0 / vpl.area;
+
+        if (BounceLight_SphereCull(bsp, &vpl, lightsurf, bouncelight_gate))
             continue;
 
         // FIXME: This will trace the same ray multiple times, once per style,
@@ -1790,7 +1793,7 @@ static void LightFace_Bounce(
                 const qvec3d indirect =
                     GetIndirectLighting(cfg, &vpl, color, dir, dist, lightsurf->points[i], lightsurf->normals[i]);
 
-                if (!qv::gate(indirect, 0.01)) {
+                if (!qv::gate(indirect, bouncelight_gate)) {
                     rs.pushRay(i, vpl.pos, dir, dist, &indirect);
                 }
             }
@@ -1839,10 +1842,10 @@ static void // mxd
 LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    const vec_t bouncelight_gate = 0.01 / options.bounceextra.value();
+    const vec_t surflight_gate = 0.01;
 
     for (const surfacelight_t &vpl : GetSurfaceLights()) {
-        if (SurfaceLight_SphereCull(&vpl, lightsurf, bouncelight_gate))
+        if (SurfaceLight_SphereCull(&vpl, lightsurf, surflight_gate))
             continue;
 
         raystream_occlusion_t &rs = lightsurf->occlusion_stream;
@@ -1871,7 +1874,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                     dir /= dist;
 
                 const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
-                if (!qv::gate(indirect, bouncelight_gate)) { // Each point contributes very little to the final result
+                if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(i, pos, dir, dist, &indirect);
                 }
             }
