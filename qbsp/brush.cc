@@ -280,8 +280,14 @@ bool CreateBrushWindings(bspbrush_t &brush)
             }
 
             side.w = std::move(*w);
+            if (side.source) {
+                side.source->visible = true;
+            }
         } else {
             side.w.clear();
+            if (side.source) {
+                side.source->visible = false;
+            }
         }
     }
 
