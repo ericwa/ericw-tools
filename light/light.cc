@@ -311,11 +311,28 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
     return modelinfo.at(i);
 }
 
-static std::vector<const img::texture *> face_textures;
+struct face_texture_cache
+{
+    const img::texture *image;
+    qvec3b averageColor;
+    qvec3d bounceColor;
+};
+
+static std::vector<face_texture_cache> face_textures;
 
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
 {
-    return face_textures[face - bsp->dfaces.data()];
+    return face_textures[face - bsp->dfaces.data()].image;
+}
+
+const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
+{
+    return face_textures[face - bsp->dfaces.data()].averageColor;
+}
+
+const qvec3d &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face)
+{
+    return face_textures[face - bsp->dfaces.data()].bounceColor;
 }
 
 static void CacheTextures(const mbsp_t &bsp)
@@ -326,9 +343,19 @@ static void CacheTextures(const mbsp_t &bsp)
         const char *name = Face_TextureName(&bsp, &bsp.dfaces[i]);
 
         if (!name || !*name) {
-            face_textures[i] = nullptr;
+            face_textures[i] = {
+                nullptr,
+                { 127 },
+                { 0.5 }
+            };
         } else {
-            face_textures[i] = img::find(name);
+            auto tex = img::find(name);
+            face_textures[i] = {
+                tex,
+                tex->averageColor,
+                // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
+                mix(qvec3d{127}, qvec3d(tex->averageColor), light_options.bouncecolorscale.value()) / 255.0
+            };
         }
     }
 }

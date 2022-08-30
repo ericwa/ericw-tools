@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <cassert>
 //#include <cstdio>
+#include <atomic>
 #include <iostream>
 
 #include <light/light.hh>
@@ -47,9 +48,8 @@ using namespace std;
 using namespace polylib;
 
 mutex bouncelights_lock;
-static std::forward_list<bouncelight_t> bouncelights;
-static size_t bounceLightCount;
-static std::unordered_map<size_t, std::vector<std::reference_wrapper<bouncelight_t>>> bouncelightsByFacenum;
+static std::vector<surfacelight_t> bouncelights;
+static std::atomic_size_t bouncelightpoints;
 
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
@@ -81,77 +81,64 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
     return true;
 }
 
-qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
+static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
+    qvec3d texture_color, int32_t style, const std::vector<qvec3f> &points, const winding_t &winding, const vec_t &area,
+    const qvec3d &facenormal, const qvec3d &facemidpoint)
 {
-    auto it = img::find(Face_TextureName(bsp, face));
+    bouncelightpoints += points.size();
 
-    if (it) {
-        return it->averageColor;
+    // Calculate emit color and intensity...
+
+    // Calculate intensity...
+    vec_t intensity = qv::max(texture_color);
+
+    if (intensity == 0.0) {
+        return;
     }
 
-    return {127};
-}
-
-inline bouncelight_t &CreateBounceLight(const mface_t *face, const mbsp_t *bsp)
-{
-    unique_lock<mutex> lck{bouncelights_lock};
-    bouncelight_t &l = bouncelights.emplace_front();
-
-    bouncelightsByFacenum[Face_GetNum(bsp, face)].push_back(l);
-    bounceLightCount++;
-
-    return l;
-}
-
-static void AddBounceLight(const qvec3d &pos, const std::unordered_map<int, qvec3d> &colorByStyle,
-    const qvec3d &surfnormal, vec_t area, const mface_t *face, const mbsp_t *bsp)
-{
-    for (const auto &styleColor : colorByStyle) {
-        Q_assert(styleColor.second[0] >= 0);
-        Q_assert(styleColor.second[1] >= 0);
-        Q_assert(styleColor.second[2] >= 0);
+    // Normalize color...
+    if (intensity > 1.0) {
+        texture_color *= 1.0 / intensity;
     }
-    Q_assert(area > 0);
-    
-    Q_assert(!isnan(pos[0]));
-    Q_assert(!isnan(pos[1]));
-    Q_assert(!isnan(pos[2]));
 
-    bouncelight_t &l = CreateBounceLight(face, bsp);
-    l.poly = GLM_FacePoints(bsp, face);
-    l.poly_edgeplanes = GLM_MakeInwardFacingEdgePlanes(l.poly);
-    l.pos = pos + surfnormal;
-    l.colorByStyle = colorByStyle;
+    // Sanity checks...
+    Q_assert(!points.empty());
 
-    for (const auto &styleColor : l.colorByStyle) {
-        for (int i = 0; i < 3; i++) {
-            l.componentwiseMaxColor[i] = max(l.componentwiseMaxColor[i], styleColor.second[i]);
+    // Add surfacelight...
+    surfacelight_t l;
+    l.surfnormal = facenormal;
+    l.omnidirectional = false;
+    l.points = points;
+    l.style = style;
+
+    // Init bbox...
+    if (light_options.visapprox.value() == visapprox_t::RAYS) {
+        l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
+    }
+
+    for (auto &pt : l.points) {
+        if (light_options.visapprox.value() == visapprox_t::VIS) {
+            l.leaves.push_back(Light_PointInLeaf(bsp, pt));
+        } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
+            l.bounds += EstimateVisibleBoundsAtPoint(pt);
         }
     }
-    l.surfnormal = surfnormal;
-    l.area = area;
 
-    if (light_options.visapprox.value() == visapprox_t::VIS) {
-        l.leaf = Light_PointInLeaf(bsp, l.pos);
-    } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
-        l.bounds = EstimateVisibleBoundsAtPoint(l.pos);
-    }
+    l.pos = facemidpoint;
+
+    // Store surfacelight settings...
+    l.totalintensity = intensity * area;
+    l.intensity = l.totalintensity / l.points.size();
+    l.color = texture_color;
+
+    // Store light...
+    unique_lock<mutex> lck{bouncelights_lock};
+    bouncelights.push_back(l);
 }
 
-const std::forward_list<bouncelight_t> &BounceLights()
+const std::vector<surfacelight_t> &BounceLights()
 {
     return bouncelights;
-}
-
-const std::vector<std::reference_wrapper<bouncelight_t>> &BounceLightsForFaceNum(int facenum)
-{
-    const auto &vec = bouncelightsByFacenum.find(facenum);
-    if (vec != bouncelightsByFacenum.end()) {
-        return vec->second;
-    }
-
-    static std::vector<std::reference_wrapper<bouncelight_t>> empty;
-    return empty;
 }
 
 static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face)
@@ -168,53 +155,48 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     auto &surf = *surf_ptr.get();
 
-    winding_t winding = winding_t::from_face(bsp, &face);
-    vec_t area = winding.area();
-
-    if (!area) {
+    // no lights
+    if (!surf.lightmapsByStyle.size()) {
         return;
     }
 
-    // point divisor on one axis;
-    // extra4 + bounceextra4 = 1
-    // extra2 + bounceextra4 = 0.5 (for every point, we get two bounce lights)
-    // extra4 + bounceextra = 2 (for every two points, we get one bounce light)
-    // extra4 + (no bounce extra) = 4 (for every 4 points, we get one bounce light)
-    const vec_t bounce_step = (vec_t) light_options.extra.value() / light_options.bounceextra.value();
-    // color divisor;
-    // extra4 + (no bounce extra) = 16, since surf.points is 16x larger than vanilla
-    const vec_t bounce_divisor = light_options.fastbounce.value() ? 1 : (bounce_step * bounce_step);
+    winding_t winding = winding_t::from_face(bsp, &face);
+    vec_t area = winding.area();
 
-    const vec_t area_divisor = sqrt(area);
-    const vec_t sample_divisor = (light_options.fastbounce.value() ? 1 : (surf.points.size() / bounce_divisor)) / (surf.vanilla_extents.width() * surf.vanilla_extents.height());
+    if (area < 1.f) {
+        return;
+    }
 
-    // average them, area weighted
+    // Create winding...
+    winding.remove_colinear();
+
+    // grab the average color across the whole set of lightmaps for this face.
+    // this doesn't change regardless of the above settings.
     std::unordered_map<int, qvec3d> sum;
+    vec_t sample_divisor = surf.lightmapsByStyle.front().samples.size();
+
+    bool has_any_color = false;
 
     for (const auto &lightmap : surf.lightmapsByStyle) {
-        for (vec_t x = 0; x < surf.width; x += bounce_step) {
-            for (vec_t y = 0; y < surf.height; y += bounce_step) {
-                sum[lightmap.style] += lightmap.samples[(trunc(y) * surf.width) + trunc(x)].color / sample_divisor;
-            }
+        for (auto &sample : lightmap.samples) {
+            sum[lightmap.style] += sample.color;
         }
     }
 
-    qvec3d total = {};
-
-    for (auto &styleColor : sum) {
-        styleColor.second /= area_divisor;
-        styleColor.second *= cfg.bouncescale.value();
-        total += styleColor.second;
+    for (auto &sample : sum) {
+        if (!qv::emptyExact(sample.second)) {
+            sample.second /= sample_divisor;
+            has_any_color = true;
+        }
     }
 
     // no bounced color, we can leave early
-    if (qv::emptyExact(total)) {
+    if (!has_any_color) {
         return;
     }
 
     // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
-    qvec3d texturecolor = qvec3d(Face_LookupTextureColor(bsp, &face)) / 255.0f;
-    qvec3d blendedcolor = mix(qvec3d{127. / 255.}, texturecolor, cfg.bouncecolorscale.value());
+    const qvec3d &blendedcolor = Face_LookupTextureBounceColor(bsp, &face);
 
     // final colors to emit
     std::unordered_map<int, qvec3d> emitcolors;
@@ -222,20 +204,27 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     for (const auto &styleColor : sum) {
         emitcolors[styleColor.first] = styleColor.second * blendedcolor;
     }
-
+    
     qplane3d faceplane = winding.plane();
 
-    if (!light_options.fastbounce.value()) {
-        area /= surf.points.size() / bounce_divisor;
-    
-        for (vec_t x = 0; x < surf.width; x += bounce_step) {
-            for (vec_t y = 0; y < surf.height; y += bounce_step) {
-                auto &pt = surf.points[(trunc(y) * surf.width) + trunc(x)];
-                AddBounceLight(pt, emitcolors, faceplane.normal, area, &face, bsp);
-            }
+    // Get face normal and midpoint...
+    qvec3d facenormal = faceplane.normal;
+    qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
+
+    if (light_options.fastbounce.value()) {
+        vector<qvec3f> points { facemidpoint };
+
+        for (auto &style : emitcolors) {
+            MakeBounceLight(bsp, cfg, &face, style.second, style.first, points, winding, area, facenormal, facemidpoint);
         }
     } else {
-        AddBounceLight(surf.extents.origin, emitcolors, faceplane.normal, area_divisor, &face, bsp);
+        vector<qvec3f> points;
+        winding.dice(cfg.bouncelightsubdivision.value(),
+            [&points, &faceplane](winding_t &w) { points.push_back(w.center() + faceplane.normal); });
+
+        for (auto &style : emitcolors) {
+            MakeBounceLight(bsp, cfg, &face, style.second, style.first, points, winding, area, facenormal, facemidpoint);
+        }
     }
 }
 
@@ -245,5 +234,5 @@ void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
     logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { MakeBounceLightsThread(cfg, bsp, face); });
 
-    logging::print("{} bounce lights created\n", bounceLightCount);
+    logging::print("{} bounce lights created, with {} points\n", bouncelights.size(), bouncelightpoints);
 }

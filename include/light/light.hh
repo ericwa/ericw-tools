@@ -303,6 +303,8 @@ public:
     setting_bool bouncestyled{this, "bouncestyled", false, &worldspawn_group};
     setting_scalar bouncescale{this, "bouncescale", 1.0, 0.0, 100.0, &worldspawn_group};
     setting_scalar bouncecolorscale{this, "bouncecolorscale", 0.0, 0.0, 1.0, &worldspawn_group};
+    setting_scalar bouncelightsubdivision{this, "bouncelightsubdivision", 64.0, 1.0, 8192.0,
+        &worldspawn_group};
 
     /* Q2 surface lights (mxd) */
     setting_scalar surflightscale{this, "surflightscale", 1.0, &worldspawn_group};
@@ -420,8 +422,6 @@ public:
         this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"};
     setting_extra extra{
         this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"};
-    setting_extra bounceextra{
-        this, {"bounceextra", "bounceextra4"}, 1, &performance_group, "bounce light supersampling; 2x2 (bounceextra) or 4x4 (bounceextra4) respectively"};
     setting_bool fastbounce{this, "fastbounce", false, &performance_group, "use one bounce point in the middle of each face. for fast compilation."};
     setting_enum<visapprox_t> visapprox{this, "visapprox", visapprox_t::AUTO,
         {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
@@ -556,4 +556,6 @@ const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
  */
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
+const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
+const qvec3d &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
 int light_main(int argc, const char **argv);

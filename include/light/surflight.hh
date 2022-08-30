@@ -44,6 +44,9 @@ struct surfacelight_t
     aabb3d bounds;
 
     int32_t style;
+
+    // rescale faces to account for perpendicular lights
+    bool rescale;
 };
 
 std::vector<surfacelight_t> &GetSurfaceLights();

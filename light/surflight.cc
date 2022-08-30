@@ -112,6 +112,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     l.omnidirectional = !is_directional;
     l.points = std::move(points);
     l.style = style;
+    l.rescale = true;
 
     // Init bbox...
     if (light_options.visapprox.value() == visapprox_t::RAYS) {

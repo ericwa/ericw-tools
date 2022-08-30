@@ -1564,53 +1564,12 @@ static void LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *l
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
 }
 
-static void LightFace_BounceLightsDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
-{
-    Q_assert(light_options.debugmode == debugmodes::bouncelights);
-
-    // reset all lightmaps to black (lazily)
-    Lightmap_ClearAll(lightmaps);
-
-    const std::vector<std::reference_wrapper<bouncelight_t>> &vpls = BounceLightsForFaceNum(Face_GetNum(lightsurf->bsp, lightsurf->face));
-
-    /* Overwrite each point with the emitted color... */
-    for (int i = 0; i < lightsurf->points.size(); i++) {
-        if (lightsurf->occluded[i])
-            continue;
-
-        for (const auto &vpl_ref : vpls) {
-            auto &vpl = vpl_ref.get();
-
-            // check for point in polygon (note: could be on the edge of more than one)
-            if (!GLM_EdgePlanes_PointInside(vpl.poly_edgeplanes, lightsurf->points[i]))
-                continue;
-
-            for (const auto &styleColor : vpl.colorByStyle) {
-                lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, styleColor.first, lightsurf);
-                lightsample_t &sample = lightmap->samples[i];
-                sample.color = styleColor.second * 255.0f;
-                Lightmap_Save(lightmaps, lightsurf, lightmap, styleColor.first);
-            }
-        }
-    }
-}
-
-// returns color in [0,255]
-inline qvec3f BounceLight_ColorAtDist(const settings::worldspawn_keys &cfg, float area, const qvec3f &color, float dist)
-{
-    const float d = max(dist, 128.f); // Clamp away hotspots, also avoid division by 0..
-    const float scale = (1.0f / (d * d));
-
-    // get light contribution
-    return color * area * scale;
-}
-
 // mxd. Surface light falloff. Returns color in [0,255]
 inline qvec3f SurfaceLight_ColorAtDist(
-    const settings::worldspawn_keys &cfg, const float &surf_scale, const float &intensity, const qvec3d &color, const float &dist)
+    const settings::worldspawn_keys &cfg, const float &surf_scale, const float &intensity, const qvec3d &color, const float &dist, const float &hotspot_clamp)
 {
     // Exponential falloff
-    const float d = max(dist, 16.0f); // Clamp away hotspots, also avoid division by 0...
+    const float d = max(dist, hotspot_clamp); // Clamp away hotspots, also avoid division by 0...
     const float scaledintensity = intensity * surf_scale;
     const float scale = (1.0f / (d * d));
 
@@ -1618,36 +1577,9 @@ inline qvec3f SurfaceLight_ColorAtDist(
 }
 
 // dir: vpl -> sample point direction
-// returns color in [0,255]
-inline qvec3f GetIndirectLighting(const settings::worldspawn_keys &cfg, const bouncelight_t *vpl,
-    const qvec3f &bounceLightColor, const qvec3f &dir, const float dist, const qvec3f &origin, const qvec3f &normal)
-{
-    const float dp1 = qv::dot(vpl->surfnormal, dir);
-    if (dp1 < 0.0f)
-        return {}; // sample point behind vpl
-
-    const qvec3f sp_vpl = dir * -1.0f;
-    const float dp2 = qv::dot(sp_vpl, normal);
-    if (dp2 < 0.0f)
-        return {}; // vpl behind sample face
-
-    // get light contribution
-    const qvec3f result = BounceLight_ColorAtDist(cfg, vpl->area, bounceLightColor, dist);
-
-    // apply angle scale
-    const qvec3f resultscaled = result * dp1 * dp2;
-
-    Q_assert(!std::isnan(resultscaled[0]));
-    Q_assert(!std::isnan(resultscaled[1]));
-    Q_assert(!std::isnan(resultscaled[2]));
-
-    return resultscaled;
-}
-
-// dir: vpl -> sample point direction
 // mxd. returns color in [0,255]
 inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t *vpl, const qvec3f &dir,
-    const float dist, const qvec3f &normal)
+    const float dist, const qvec3f &normal, const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp)
 {
     qvec3f result;
     float dotProductFactor = 1.0f;
@@ -1663,8 +1595,10 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
             return {0}; // vpl behind sample face
 
         // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
-        dp1 = 0.5f + dp1 * 0.5f;
-        dp2 = 0.5f + dp2 * 0.5f;
+        if (vpl->rescale) {
+            dp1 = 0.5f + dp1 * 0.5f;
+            dp2 = 0.5f + dp2 * 0.5f;
+        }
 
         dotProductFactor = dp1 * dp2;
     } else {
@@ -1673,7 +1607,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     }
 
     // Get light contribution
-    result = SurfaceLight_ColorAtDist(cfg, vpl->omnidirectional ? cfg.surflightskyscale.value() : cfg.surflightscale.value(), vpl->intensity, vpl->color, dist);
+    result = SurfaceLight_ColorAtDist(cfg, vpl->omnidirectional ? sky_scale : standard_scale, vpl->intensity, vpl->color, dist, hotspot_clamp);
 
     // Apply angle scale
     const qvec3f resultscaled = result * dotProductFactor;
@@ -1682,26 +1616,8 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     return resultscaled;
 }
 
-inline bool BounceLight_SphereCull(const mbsp_t *bsp, const bouncelight_t *vpl, const lightsurf_t *lightsurf, const vec_t &bouncelight_gate)
-{
-    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-
-    if (light_options.visapprox.value() == visapprox_t::RAYS &&
-        vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
-        return true;
-    }
-
-    const qvec3f dir = qvec3f(lightsurf->extents.origin) - vpl->pos; // vpl -> sample point
-    const float dist = qv::length(dir) + lightsurf->extents.radius;
-
-    // get light contribution
-    const qvec3d color = BounceLight_ColorAtDist(cfg, vpl->area, vpl->componentwiseMaxColor, dist);
-
-    return qv::gate(color, bouncelight_gate);
-}
-
 static bool // mxd
-SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf, const vec_t &bouncelight_gate)
+SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf, const vec_t &bouncelight_gate, const float &hotspot_clamp)
 {
     if (light_options.visapprox.value() == visapprox_t::RAYS &&
         vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
@@ -1713,136 +1629,19 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
     const float dist = qv::length(dir) + lightsurf->extents.radius;
 
     // Get light contribution
-    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->omnidirectional ? cfg.surflightskyscale.value() : cfg.surflightscale.value(), vpl->totalintensity, vpl->color, dist);
+    const qvec3f color = SurfaceLight_ColorAtDist(cfg, vpl->omnidirectional ? cfg.surflightskyscale.value() : cfg.surflightscale.value(), vpl->totalintensity, vpl->color, dist, hotspot_clamp);
 
     return qv::gate(color, (float) bouncelight_gate);
 }
 
-#if 0
-inline qvec3d CosineWeightedHemisphereSample(float u1, float u2)
-{
-    Q_assert(u1 >= 0.0 && u1 <= 1.0);
-    Q_assert(u2 >= 0.0 && u2 <= 1.0);
-
-    // Generate a uniform sample on the unit disk
-    // http://mathworld.wolfram.com/DiskPointPicking.html
-    const vec_t sqrt_u1 = sqrt(u1);
-    const vec_t theta = 2.0 * Q_PI * u2;
-
-    const vec_t x = sqrt_u1 * cos(theta);
-    const vec_t y = sqrt_u1 * sin(theta);
-
-    // Project it up onto the sphere (calculate z)
-    //
-    // We know sqrt(x^2 + y^2 + z^2) = 1
-    // so      x^2 + y^2 + z^2 = 1
-    //         z = sqrt(1 - x^2 - y^2)
-
-    const vec_t temp = 1.0 - x * x - y * y;
-    const vec_t z = sqrt(max(0.0, temp));
-
-    return { x, y, z };
-}
-#endif
-
-static void LightFace_Bounce(const mbsp_t *bsp, const mface_t *face, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
-{
-    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    // const dmodelh2_t *shadowself = lightsurf->modelinfo->shadowself.boolValue() ? lightsurf->modelinfo->model : NULL;
-
-    if (!cfg.bounce.value())
-        return;
-
-    if (!(light_options.debugmode == debugmodes::bounce || light_options.debugmode == debugmodes::none))
-        return;
-
-    for (const bouncelight_t &vpl : BounceLights()) {
-        if (light_options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, vpl.leaf)) {
-            continue;
-        }
-
-        const vec_t bouncelight_gate = light_options.fastbounce.value() ? 0.25 :
-            1.0 / vpl.area;
-
-        if (BounceLight_SphereCull(bsp, &vpl, lightsurf, bouncelight_gate))
-            continue;
-
-        // FIXME: This will trace the same ray multiple times, once per style,
-        // if the bouncelight is hitting a face with multiple styles.
-        for (const auto &styleColor : vpl.colorByStyle) {
-            bool hit = false;
-            const int style = styleColor.first;
-            const qvec3f &color = styleColor.second;
-
-            raystream_occlusion_t &rs = lightsurf->occlusion_stream;
-            rs.clearPushedRays();
-
-            for (int i = 0; i < lightsurf->points.size(); i++) {
-                if (lightsurf->occluded[i])
-                    continue;
-
-                qvec3f dir = lightsurf->points[i] - vpl.pos; // vpl -> sample point
-                const float dist = qv::length(dir);
-                if (dist == 0.0f)
-                    continue; // FIXME: nudge or something
-                dir /= dist;
-
-                const qvec3d indirect =
-                    GetIndirectLighting(cfg, &vpl, color, dir, dist, lightsurf->points[i], lightsurf->normals[i]);
-
-                if (!qv::gate(indirect, bouncelight_gate)) {
-                    rs.pushRay(i, vpl.pos, dir, dist, &indirect);
-                }
-            }
-
-            if (!rs.numPushedRays())
-                continue;
-
-            total_bounce_rays += rs.numPushedRays();
-            rs.tracePushedRaysOcclusion(lightsurf->modelinfo);
-
-            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
-
-            const int N = rs.numPushedRays();
-            for (int j = 0; j < N; j++) {
-                if (rs.getPushedRayOccluded(j))
-                    continue;
-
-                const int i = rs.getPushedRayPointIndex(j);
-                qvec3d indirect = rs.getPushedRayColor(j);
-
-                Q_assert(!std::isnan(indirect[0]));
-
-                /* Use dirt scaling on the indirect lighting.
-                 * Except, not in bouncedebug mode.
-                 */
-                if (light_options.debugmode != debugmodes::bounce) {
-                    const vec_t dirtscale = Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
-                    indirect *= dirtscale;
-                }
-
-                lightsample_t &sample = lightmap->samples[i];
-                sample.color += indirect;
-
-                hit = true;
-                ++total_bounce_ray_hits;
-            }
-
-            // If this style of this bounce light contributed anything, save.
-            if (hit)
-                Lightmap_Save(lightmaps, lightsurf, lightmap, style);
-        }
-    }
-}
-
 static void // mxd
-LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, const std::vector<surfacelight_t> &surface_lights, const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const vec_t surflight_gate = 0.01;
 
-    for (const surfacelight_t &vpl : GetSurfaceLights()) {
-        if (SurfaceLight_SphereCull(&vpl, lightsurf, surflight_gate))
+    for (const surfacelight_t &vpl : surface_lights) {
+        if (SurfaceLight_SphereCull(&vpl, lightsurf, surflight_gate, hotspot_clamp))
             continue;
 
         raystream_occlusion_t &rs = lightsurf->occlusion_stream;
@@ -1871,7 +1670,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 else
                     dir /= dist;
 
-                const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal);
+                const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal, standard_scale, sky_scale, hotspot_clamp);
                 if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(i, pos, dir, dist, &indirect);
                 }
@@ -3015,7 +2814,8 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
                     LightFace_Sky(&sun, &lightsurf, lightmaps);
 
             // mxd. Add surface lights...
-            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps);
+            // FIXME: negative surface lights
+            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, GetSurfaceLights(), cfg.surflightscale.value(), cfg.surflightskyscale.value(), 16.0f);
         }
 
         float minlight = 0;
@@ -3065,9 +2865,6 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
     if (light_options.debugmode == debugmodes::phong)
         LightFace_PhongDebug(&lightsurf, lightmaps);
 
-    if (light_options.debugmode == debugmodes::bouncelights)
-        LightFace_BounceLightsDebug(&lightsurf, lightmaps);
-
     if (light_options.debugmode == debugmodes::debugoccluded)
         LightFace_OccludedDebug(&lightsurf, lightmaps);
 
@@ -3084,14 +2881,7 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
 {
     auto face = lightsurf.face;
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
-
     lightmapdict_t *lightmaps = &lightsurf.lightmapsByStyle;
-
-    /*
-     * The lighting procedure is: cast all positive lights, fix
-     * minlight levels, then cast all negative lights. Finally, we
-     * clamp any values that may have gone negative.
-     */
 
     if (light_options.debugmode == debugmodes::none) {
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
@@ -3099,13 +2889,9 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
         /* positive lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
 
-            /* add indirect lighting */
-            LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
+            /* add bounce lighting */
+            // note: scale here is just to keep it close-ish to the old code
+            LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f);
         }
     }
-
-    /* bounce debug */
-    // TODO: add a BounceDebug function that clear the lightmap to make the code more clear
-    if (light_options.debugmode == debugmodes::bounce)
-        LightFace_Bounce(bsp, face, &lightsurf, lightmaps);
 }

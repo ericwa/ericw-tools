@@ -28,27 +28,9 @@
 
 #include <common/qvec.hh>
 #include <forward_list>
-
-struct bouncelight_t
-{
-    std::vector<qvec3f> poly;
-    std::vector<qvec4f> poly_edgeplanes;
-    qvec3f pos;
-    std::unordered_map<int, qvec3d> colorByStyle;
-    qvec3d componentwiseMaxColor; // cached maximum color in the colorByStyle, used for culling so we don't need to loop
-                                  // through colorByStyle
-    qvec3f surfnormal;
-    float area;
-
-    const mleaf_t *leaf;
-
-    /* estimated visible AABB culling */
-    aabb3d bounds;
-};
+#include "surflight.hh"
 
 // public functions
 
-const std::forward_list<bouncelight_t> &BounceLights();
-const std::vector<std::reference_wrapper<bouncelight_t>> &BounceLightsForFaceNum(int facenum);
+const std::vector<surfacelight_t> &BounceLights();
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
-qvec3b Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face); // mxd
