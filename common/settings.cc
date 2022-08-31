@@ -185,5 +185,9 @@ void common_settings::postinitialize(int argc, const char **argv)
     if (noprogress.value()) {
         logging::mask &= ~bitflags<logging::flag>(logging::flag::PROGRESS);
     }
+    
+    if (nocolor.value()) {
+        logging::enable_color_codes = false;
+    }
 }
 } // namespace settings

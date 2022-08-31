@@ -851,6 +851,7 @@ public:
     setting_bool nopercent{this, "nopercent", false, &logging_group, "don't output percentage messages"};
     setting_bool nostat{this, "nostat", false, &logging_group, "don't output statistic messages"};
     setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
+    setting_bool nocolor{this, "nocolor", false, &logging_group, "don't output color codes (for TB, etc)"};
     setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group,
         "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
     setting_path gamedir{this, "gamedir", "", &game_group,

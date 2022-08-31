@@ -46,6 +46,7 @@ static std::ofstream logfile;
 namespace logging
 {
 bitflags<flag> mask = bitflags<flag>(flag::ALL) & ~bitflags<flag>(flag::VERBOSE);
+bool enable_color_codes = true;
 
 void init(const fs::path &filename, const settings::common_settings &settings)
 {
@@ -71,14 +72,17 @@ void print(flag logflag, const char *str)
     }
 
     fmt::text_style style;
-    if (string_icontains(str, "error")) {
-        style = fmt::fg(fmt::color::red);
-    } else if (string_icontains(str, "warning")) {
-        style = fmt::fg(fmt::terminal_color::yellow);
-    } else if (bitflags<flag>(logflag) & flag::PERCENT) {
-        style = fmt::fg(fmt::terminal_color::blue);
-    } else if (bitflags<flag>(logflag) & flag::STAT) {
-        style = fmt::fg(fmt::terminal_color::cyan);
+
+    if (enable_color_codes) {
+        if (string_icontains(str, "error")) {
+            style = fmt::fg(fmt::color::red);
+        } else if (string_icontains(str, "warning")) {
+            style = fmt::fg(fmt::terminal_color::yellow);
+        } else if (bitflags<flag>(logflag) & flag::PERCENT) {
+            style = fmt::fg(fmt::terminal_color::blue);
+        } else if (bitflags<flag>(logflag) & flag::STAT) {
+            style = fmt::fg(fmt::terminal_color::cyan);
+        }
     }
 
     print_mutex.lock();
@@ -97,8 +101,15 @@ void print(flag logflag, const char *str)
 #endif
     }
 
-    // stdout (assume the terminal can render ANSI colors)
-    fmt::print(style, "{}", str);
+    if (enable_color_codes) {
+        // stdout (assume the terminal can render ANSI colors)
+        fmt::print(style, "{}", str);
+    } else {
+        std::cout << str;
+    }
+
+    // for TB, etc...
+    fflush(stdout);
 
     print_mutex.unlock();
 }

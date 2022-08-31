@@ -63,14 +63,19 @@ setting_group advanced_group{"Advanced", 300};
 
 void vis_settings::initialize(int argc, const char **argv)
 {
-    token_parser_t p(argc - 1, argv + 1, { "command line" });
-    auto remainder = parse(p);
+    try {
+        token_parser_t p(argc - 1, argv + 1, { "command line" });
+        auto remainder = parse(p);
 
-    if (remainder.size() <= 0 || remainder.size() > 1) {
+        if (remainder.size() <= 0 || remainder.size() > 1) {
+            printHelp();
+        }
+
+        sourceMap = DefaultExtension(remainder[0], "bsp");
+    } catch (parse_exception &ex) {
+        logging::print(ex.what());
         printHelp();
     }
-
-    sourceMap = DefaultExtension(remainder[0], "bsp");
 }
 } // namespace settings
 

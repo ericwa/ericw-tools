@@ -105,7 +105,7 @@ void qbsp_settings::initialize(int argc, const char **argv)
         if (remainder.size() == 2) {
             qbsp_options.bsp_path = remainder[1];
         }
-    } catch (parse_exception ex) {
+    } catch (parse_exception &ex) {
         logging::print(ex.what());
         printHelp();
     }

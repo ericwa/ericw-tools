@@ -114,14 +114,19 @@ setting_group experimental_group{"Experimental options", 60};
 
 void light_settings::initialize(int argc, const char **argv)
 {
-    token_parser_t p(argc - 1, argv + 1, { "command line" });
-    auto remainder = parse(p);
+    try {
+        token_parser_t p(argc - 1, argv + 1, { "command line" });
+        auto remainder = parse(p);
 
-    if (remainder.size() <= 0 || remainder.size() > 1) {
+        if (remainder.size() <= 0 || remainder.size() > 1) {
+            printHelp();
+        }
+
+        sourceMap = remainder[0];
+    } catch (parse_exception &ex) {
+        logging::print(ex.what());
         printHelp();
     }
-
-    sourceMap = remainder[0];
 }
 
 void light_settings::postinitialize(int argc, const char **argv)

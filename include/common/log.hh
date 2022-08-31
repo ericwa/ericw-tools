@@ -55,6 +55,7 @@ enum class flag : uint8_t
 };
 
 extern bitflags<flag> mask;
+extern bool enable_color_codes;
 
 // initialize logging subsystem
 void init(const fs::path &filename, const settings::common_settings &settings);
