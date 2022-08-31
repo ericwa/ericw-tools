@@ -540,7 +540,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
         cs.texinfo = map.skip_texinfo;
         cs.tested = false;
         cs.onnode = true;
-        // fixme-brushbsp: configure any other settings on the face?
+        Q_assert(!cs.is_visible());
 
         if (brushOnFront) {
             cs.w = midwinding.flip();

@@ -666,7 +666,7 @@ TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
     REQUIRE(bsp.dfaces.size() == 11);
 }
 
-TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
+TEST_CASE("simple_worldspawn_detail", "[testmaps_q1][!mayfail]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map", {"-tjunc", "rotate"});
 
@@ -1608,6 +1608,19 @@ TEST_CASE("lavaclip", "[testmaps_q2]") {
     auto *texinfo = Face_Texinfo(&bsp, topface);
     CHECK(std::string(texinfo->texture.data()) == "e1u1/brlava");
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_WARP));
+}
+
+/**
+ * check that e1u1/clip intersecting mist doesn't split up the mist faces
+ **/
+TEST_CASE("mist_clip", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_mist_clip.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // mist is two sided, so 12 faces for a cube
+    CHECK(12 == bsp.dfaces.size());
 }
 
 /**
