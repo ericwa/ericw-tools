@@ -1225,13 +1225,13 @@ int light_main(int argc, const char **argv)
             light_options.bouncecolorscale.setValue(0.5, settings::source::GAME_TARGET);
         }
         if (!light_options.surflightscale.isChanged()) {
-            light_options.surflightscale.setValue(0.65, settings::source::GAME_TARGET);
+            light_options.surflightscale.setValue(0.65f, settings::source::GAME_TARGET);
         }
         if (!light_options.surflightskyscale.isChanged()) {
-            light_options.surflightskyscale.setValue(0.65, settings::source::GAME_TARGET);
+            light_options.surflightskyscale.setValue(0.65f, settings::source::GAME_TARGET);
         }
         if (!light_options.bouncescale.isChanged()) {
-            light_options.bouncescale.setValue(1.25, settings::source::GAME_TARGET);
+            light_options.bouncescale.setValue(0.85f, settings::source::GAME_TARGET);
         }
         if (!light_options.bounce.isChanged()) {
             light_options.bounce.setValue(true, settings::source::GAME_TARGET);
