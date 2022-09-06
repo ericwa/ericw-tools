@@ -641,6 +641,32 @@ static void FloodAreas_r(node_t *node)
     }
 }
 
+static void FloodNode(node_t *node)
+{
+    if (node->area)
+        return;
+
+    // area portals are always only flooded into, never
+    // out of
+    if (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)
+        return;
+
+    map.c_areas++;
+    FloodAreas_r(node);
+}
+
+static void FloodNodes_R(node_t *node)
+{
+    if (!node) {
+        return;
+    }
+
+    FloodNode(node);
+    
+    FloodNodes_R(node->children[0]);
+    FloodNodes_R(node->children[1]);
+}
+
 /*
 =============
 FindAreas_r
@@ -651,18 +677,16 @@ area set, flood fill out from there
 */
 static void FindAreas(node_t *node)
 {
-    auto leafs = FindOccupiedClusters(node);
-    for (auto *leaf : leafs) {
-        if (leaf->area)
-            continue;
+    auto leaves = FindOccupiedClusters(node);
+    
+    if (leaves.empty()) {
+        // map leaked, just flood entire map
+        FloodNodes_R(node);
+        return;
+    }
 
-        // area portals are always only flooded into, never
-        // out of
-        if (ClusterContents(leaf).native & Q2_CONTENTS_AREAPORTAL)
-            continue;
-
-        map.c_areas++;
-        FloodAreas_r(leaf);
+    for (auto *leaf : leaves) {
+        FloodNode(leaf);
     }
 }
 
