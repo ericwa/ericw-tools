@@ -1258,6 +1258,14 @@ TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
     REQUIRE(prt.has_value());
 }
 
+TEST_CASE("qbsp_q1_0125unit_faces", "[testmaps_q1][!mayfail]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_0125unit_faces.map");
+
+    CHECK(bsp.loadversion == &bspver_q1);
+    CHECK(2 == bsp.dfaces.size());
+}
+
 // q2 testmaps
 
 TEST_CASE("detail", "[testmaps_q2]") {
@@ -1545,7 +1553,7 @@ TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
     }
 }
 
-TEST_CASE("chop", "[testmaps_q1]")
+TEST_CASE("chop", "[testmaps_q1][.releaseonly]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("quake_map_source/DM1-test.map", {"-chop", "-debugchop"});
 
