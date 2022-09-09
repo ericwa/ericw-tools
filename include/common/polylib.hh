@@ -988,6 +988,18 @@ public:
         return counts;
     }
 
+    vec_t max_dist_off_plane(const qplane3d& plane)
+    {
+        vec_t max_dist = 0.0;
+        for (size_t i = 0; i < size(); i++) {
+            vec_t dist = abs(plane.distance_to(at(i)));
+            if (dist > max_dist) {
+                max_dist = dist;
+            }
+        }
+        return max_dist;
+    }
+
     /*
     ==================
     ClipWinding

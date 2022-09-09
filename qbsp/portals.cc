@@ -835,6 +835,11 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
             for (auto &side : brush->sides) {
                 if (side.bevel)
                     continue;
+
+                if (p->winding.max_dist_off_plane(side.get_plane()) > 0.1) {
+                    continue;
+                }
+
                 if ((side.planenum & ~1) == p->onnode->planenum) {
                     // exact match (undirectional)
 
