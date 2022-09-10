@@ -1741,6 +1741,34 @@ TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2]") {
 }
 
 /**
+ * Two areaportals with a small gap in between creating another area.
+ * 
+ * Also, the faces on the ceiling/floor cross the areaportal
+ * (due to our aggressive face merging).
+ */
+TEST_CASE("q2_double_areaportal", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_double_areaportal.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    CheckFilled(bsp);
+
+    CHECK(4 == bsp.dareas.size()); 
+    CHECK(5 == bsp.dareaportals.size());
+}
+
+TEST_CASE("q2_areaportal_split", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_split.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    CheckFilled(bsp);
+
+    CHECK(3 == bsp.dareas.size()); // 1 invalid index zero reserved + 2 areas
+    CHECK(2 == bsp.dareaportals.size()); // 1 invalid index zero reserved + 1 portal
+}
+
+/**
  * Q1 sealing test:
  * - hull0 can use Q2 method (fill inside)
  * - hull1+ can't, because it would cause areas containing no entities but connected by a thin gap to the
