@@ -888,7 +888,9 @@ struct gamedef_q2_t : public gamedef_t
     }
 
     static constexpr const char *surf_bitflag_names[] = {
-        "LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW", "HINT"};
+        "LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW",
+        "HINT", "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536",
+        "131072", "262144", "524288", "1048576", "2097152", "4194304", "8388608", "16777216", "ALPHATEST" };
 
     int32_t surfflags_from_string(const std::string_view &str) const override
     {

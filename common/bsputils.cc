@@ -207,9 +207,7 @@ bool // mxd
 ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, const int contents_or_surf_flags)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II)
-        return (contents_or_surf_flags & Q2_SURF_TRANSLUCENT) &&
-               ((contents_or_surf_flags & Q2_SURF_TRANSLUCENT) !=
-                   Q2_SURF_TRANSLUCENT); // Don't count KMQ2 fence flags combo as translucent
+        return (contents_or_surf_flags & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66));
     else
         return contents_or_surf_flags == CONTENTS_WATER || contents_or_surf_flags == CONTENTS_LAVA ||
                contents_or_surf_flags == CONTENTS_SLIME;

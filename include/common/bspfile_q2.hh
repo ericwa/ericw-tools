@@ -192,7 +192,7 @@ enum q2_surf_flags_t : int32_t
     Q2_SURF_HINT = nth_bit(8), // make a primary bsp splitter
     Q2_SURF_SKIP = nth_bit(9), // ONLY FOR HINT! "nodraw" = Q1 "skip"
 
-    Q2_SURF_TRANSLUCENT = (Q2_SURF_TRANS33 | Q2_SURF_TRANS66), // mxd
+    Q2_SURF_ALPHATEST = nth_bit(25), // Paril, KMQ2 flag
 };
 
 struct q2_texinfo_t

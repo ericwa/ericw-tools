@@ -134,10 +134,8 @@ sceneinfo CreateGeometry(
             // mxd
             if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                 const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
-                info.is_fence =
-                    ((surf_flags & Q2_SURF_TRANSLUCENT) ==
-                        Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
-                info.is_glass = !info.is_fence && (surf_flags & Q2_SURF_TRANSLUCENT);
+                info.is_fence = surf_flags & Q2_SURF_ALPHATEST;
+                info.is_glass = !info.is_fence && (surf_flags & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66));
                 if (info.is_glass) {
                     info.alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
                 }
@@ -494,8 +492,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
             // handle glass / water
             const float alpha = Face_Alpha(model, face);
             if (alpha < 1.0f ||
-                (is_q2 && (contents_or_surf_flags & Q2_SURF_TRANSLUCENT))) { // mxd. Both fence and transparent textures
-                                                                             // are done using SURF_TRANS flags in Q2
+                (is_q2 && (contents_or_surf_flags & (Q2_SURF_ALPHATEST | Q2_SURF_TRANS33 | Q2_SURF_TRANS66)))) {
                 filterfaces.push_back(face);
                 continue;
             }
