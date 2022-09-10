@@ -658,6 +658,13 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         lightsurf->maxlight = extended_flags.maxlight;
     }
 
+    // lightcolorscale
+    if (modelinfo->lightcolorscale.isChanged()) {
+        lightsurf->lightcolorscale = modelinfo->lightcolorscale.value();
+    } else {
+        lightsurf->lightcolorscale = extended_flags.lightcolorscale;
+    }
+
     // Q2 uses a 0-1 range for minlight
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         lightsurf->maxlight *= 128.f;
@@ -2023,6 +2030,12 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
                 if (maxcolor > maxval) {
                     color *= (maxval / maxcolor);
                 }
+            }
+
+            // color scaling
+            if (lightsurf->lightcolorscale != 1.0) {
+                qvec3d grayscale { qv::max(color) };
+                color = mix(grayscale, color, lightsurf->lightcolorscale);
             }
 
             /* Scale and handle gamma adjustment */

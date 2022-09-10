@@ -375,6 +375,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.light_alpha) {
             t["light_alpha"] = tx.flags.light_alpha;
         }
+        if (tx.flags.lightcolorscale != 1.0) {
+            t["lightcolorscale"] = tx.flags.lightcolorscale;
+        }
 
         texinfofile[std::to_string(*tx.outputnum)].swap(t);
     }

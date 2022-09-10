@@ -208,17 +208,20 @@ struct surfflags_t
     // maxlight value for this face
     vec_t maxlight;
 
+    // light color scale
+    vec_t lightcolorscale = 1.0;
+
     constexpr bool needs_write() const
     {
         return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle ||
-               phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight;
+               phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0;
     }
 
 private:
     constexpr auto as_tuple() const
     {
         return std::tie(native, is_skip, is_hintskip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand,
-            light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha, maxlight);
+            light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha, maxlight, lightcolorscale);
     }
 
 public:

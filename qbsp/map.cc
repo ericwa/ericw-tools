@@ -605,6 +605,15 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         flags.maxlight = clamp(maxlight, 0.0, 510.0);
     }
 
+    // handle "_lightcolorscale"
+    if (entity.epairs.has("_lightcolorscale"))
+    {
+        const vec_t lightcolorscale = entity.epairs.get_float("_lightcolorscale");
+        if (lightcolorscale != 1.0) {
+            flags.lightcolorscale = clamp(lightcolorscale, 0.0, 1.0);
+        }
+    }
+
     // handle "_mincolor"
     {
         qvec3d mincolor{};

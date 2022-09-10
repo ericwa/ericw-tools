@@ -107,7 +107,7 @@ struct lightsurf_t
     const mbsp_t *bsp;
     const mface_t *face;
     /* these take precedence the values in modelinfo */
-    vec_t minlight, maxlight;
+    vec_t minlight, maxlight, lightcolorscale = 1.0;
     qvec3d minlight_color;
     bool nodirt, minlightMottle;
 
@@ -225,6 +225,7 @@ public:
     settings::setting_scalar alpha{this, "alpha", 1.0};
     settings::setting_color minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0};
     settings::setting_bool lightignore{this, "lightignore", false};
+    settings::setting_scalar lightcolorscale{this, "lightcolorscale", 1};
 
     float getResolvedPhongAngle() const
     {
