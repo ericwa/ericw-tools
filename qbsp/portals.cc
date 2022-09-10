@@ -641,32 +641,6 @@ static void FloodAreas_r(node_t *node)
     }
 }
 
-static void FloodNode(node_t *node)
-{
-    if (node->area)
-        return;
-
-    // area portals are always only flooded into, never
-    // out of
-    if (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)
-        return;
-
-    map.c_areas++;
-    FloodAreas_r(node);
-}
-
-static void FloodNodes_R(node_t *node)
-{
-    if (!node) {
-        return;
-    }
-
-    FloodNode(node);
-    
-    FloodNodes_R(node->children[0]);
-    FloodNodes_R(node->children[1]);
-}
-
 /*
 =============
 FindAreas_r
@@ -675,19 +649,30 @@ Just decend the tree, and for each node that hasn't had an
 area set, flood fill out from there
 =============
 */
-static void FindAreas(node_t *node)
+static void FindAreas_r(node_t *node)
 {
-    auto leaves = FindOccupiedClusters(node);
-    
-    if (leaves.empty()) {
-        // map leaked, just flood entire map
-        FloodNodes_R(node);
+    if (!node->is_leaf) {
+        FindAreas_r(node->children[0]);
+        FindAreas_r(node->children[1]);
         return;
     }
+    
+    if (node->area)
+        return; // already got it
 
-    for (auto *leaf : leaves) {
-        FloodNode(leaf);
-    }
+    if (node->contents.is_any_solid(qbsp_options.target_game))
+        return;
+    
+    if (!node->occupied)
+        return; // not reachable from an entity
+
+    // area portals are always only flooded into, never
+    // out of
+    if (node->contents.native & Q2_CONTENTS_AREAPORTAL)
+        return;
+
+    map.c_areas++;
+    FloodAreas_r(node);
 }
 
 /*
@@ -740,7 +725,7 @@ void EmitAreaPortals(node_t *headnode)
 {
     logging::funcheader();
     
-    FindAreas(headnode);
+    FindAreas_r(headnode);
     SetAreaPortalAreas_r(headnode);
 
     map.bsp.dareaportals.emplace_back();
