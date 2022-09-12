@@ -442,7 +442,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
         w = w->clip_back(face.get_plane());
     }
 
-    if (!w || WindingIsTiny(*w)) { // the brush isn't really split
+    if (!w || WindingIsTiny(*w, 0.02)) { // the brush isn't really split
         planeside_t side = BrushMostlyOnSide(*brush, split);
         if (side == SIDE_FRONT)
             result.front = std::move(brush);
@@ -674,7 +674,7 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
         w = w->clip_back(face.get_plane());
     }
 
-    if (!w || WindingIsTiny(*w)) { // the brush isn't really split
+    if (!w || WindingIsTiny(*w, 0.02)) { // the brush isn't really split
         return false;
     }
 

@@ -356,7 +356,7 @@ public:
         this, "oldrottex", false, &debugging_group, "use old rotate_ brush texturing aligned at (0 0 0)"};
     setting_scalar epsilon{
         this, "epsilon", 0.0001, 0.0, 1.0, &debugging_group, "customize epsilon value for point-on-plane checks"};
-    setting_scalar microvolume{this, "microvolume", 1.0, 0.0, 1000.0, &debugging_group, "microbrush volume"};
+    setting_scalar microvolume{this, "microvolume", 0.0, 0.0, 1000.0, &debugging_group, "microbrush volume"};
     setting_bool contenthack{this, "contenthack", false, &debugging_group,
         "hack to fix leaks through solids. causes missing faces in some cases so disabled by default"};
     setting_bool leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"};
