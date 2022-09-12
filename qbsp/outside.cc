@@ -23,6 +23,7 @@
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>
 #include <qbsp/portals.hh>
+#include <qbsp/prtfile.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/tree.hh>
 
@@ -666,6 +667,9 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
 
         WriteLeakLine(*leakentity, leakline);
         map.leakfile = true;
+
+        // also write the leak portals to `<bsp_path>.leak.prt`
+        WriteDebugPortals(leakline, "leak");
 
         /* Get rid of the .prt file since the map has a leak */
         if (!qbsp_options.keepprt.value()) {

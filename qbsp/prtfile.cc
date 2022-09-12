@@ -284,6 +284,18 @@ DEBUG PORTAL FILE GENERATION
 ==============================================================================
 */
 
+static void WriteDebugPortal(const portal_t *p, std::ofstream &portalFile)
+{
+    const winding_t *w = &p->winding;
+
+    fmt::print(portalFile, "{} {} {} ", w->size(), 0, 0);
+
+    for (int i = 0; i < w->size(); i++) {
+        fmt::print(portalFile, "({} {} {}) ", w->at(i)[0], w->at(i)[1], w->at(i)[2]);
+    }
+    fmt::print(portalFile, "\n");
+}
+
 static void WriteTreePortals_r(node_t *node, std::ofstream &portalFile)
 {
     if (!node->is_leaf) {
@@ -298,17 +310,7 @@ static void WriteTreePortals_r(node_t *node, std::ofstream &portalFile)
         if (!p->winding || p->nodes[0] != node)
             continue;
 
-        const winding_t *w = &p->winding;
-
-        fmt::print(portalFile, "{} {} {} ", w->size(), 0, 0);
-
-        for (int i = 0; i < w->size(); i++) {
-            fmt::print(portalFile, "({} {} {}) ",
-                w->at(i)[0],
-                w->at(i)[1],
-                w->at(i)[2]);
-        }
-        fmt::print(portalFile, "\n");
+        WriteDebugPortal(p, portalFile);
     }
 }
 
@@ -356,4 +358,36 @@ void WriteDebugTreePortalFile(tree_t &tree, std::string_view filename_suffix)
     WriteTreePortals_r(tree.headnode, portalFile);
 
     logging::print(logging::flag::STAT, "     {:8} tree portals written to {}\n", portal_count, name);
+}
+
+void WriteDebugPortals(std::vector<portal_t*> portals, std::string_view filename_suffix)
+{
+    logging::funcheader();
+
+    // count how many are nonemtpy
+    size_t portal_count = 0;
+    for (auto &p : portals) {
+        if (p->winding) {
+            ++portal_count;
+        }
+    }
+
+    // write the file
+    fs::path name = qbsp_options.bsp_path;
+    name.replace_extension(std::string(filename_suffix) + ".prt");
+
+    std::ofstream portal_file(name, std::ios_base::binary | std::ios_base::out);
+    if (!portal_file)
+        FError("Failed to open {}: {}", name, strerror(errno));
+
+    fmt::print(portal_file, "PRT1\n");
+    fmt::print(portal_file, "{}\n", 0);
+    fmt::print(portal_file, "{}\n", portal_count);
+    for (auto &p : portals) {
+        if (p->winding) {
+            WriteDebugPortal(p, portal_file);
+        }
+    }    
+
+    logging::print(logging::flag::STAT, "     {:8} portals written to {}\n", portal_count, name);
 }

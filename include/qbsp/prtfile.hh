@@ -22,8 +22,11 @@
 #pragma once
 
 #include <string_view>
+#include <vector>
 
+struct portal_t;
 struct tree_t;
 
 void WritePortalFile(tree_t &tree);
 void WriteDebugTreePortalFile(tree_t &tree, std::string_view filename_suffix);
+void WriteDebugPortals(std::vector<portal_t *> portals, std::string_view filename_suffix);
