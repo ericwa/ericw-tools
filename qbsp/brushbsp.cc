@@ -482,9 +482,8 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
             // add the clipped face to result[j]
             side_t &faceCopy = result[j]->sides.emplace_back(face.clone_non_winding_data());
             faceCopy.w = std::move(*cw[j]);
-
+            faceCopy.tested = false;
             // fixme-brushbsp: configure any settings on the faceCopy?
-            // Q2 does `cs->tested = false;`, why?
         }
     }
 
