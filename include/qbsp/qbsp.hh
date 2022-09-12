@@ -363,6 +363,7 @@ public:
     setting_bool outsidedebug{this, "outsidedebug", false, &debugging_group,
         "write a .map after outside filling showing non-visible brush sides"};
     setting_bool debugchop{this, "debugchop", false, &debugging_group, "write a .map after ChopBrushes"};
+    setting_bool debugleak{this, "debugleak", false, &debugging_group, "write more diagnostic files for debugging leaks"};
     setting_debugexpand debugexpand{this, "debugexpand", &debugging_group, "write expanded hull .map for debugging/inspecting hulls/brush bevelling"};
     setting_bool keepprt{this, "keepprt", false, &debugging_group, "avoid deleting the .prt file on leaking maps"};
     setting_bool includeskip{this, "includeskip", false, &common_format_group,
@@ -733,6 +734,7 @@ struct node_t
     uint32_t numleafbrushes;
     int32_t area;
     std::vector<bspbrush_t *> original_brushes;
+    bspbrush_t::container bsp_brushes;
 };
 
 void InitQBSP(int argc, const char **argv);

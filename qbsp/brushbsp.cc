@@ -354,7 +354,11 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
 
     qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
 
-    leafnode->volume.reset();
+    if (qbsp_options.debugleak.value()) {
+        leafnode->bsp_brushes = brushes;
+    } else {
+        leafnode->volume.reset();
+    }
 }
 
 //============================================================
@@ -1486,6 +1490,6 @@ newlist:
     logging::print(logging::flag::STAT, "chopped {} brushes into {}\n", original_count, brushes.size());
 
     if (qbsp_options.debugchop.value()) {
-        WriteBspBrushMap("chopped.map", brushes);
+        WriteBspBrushMap("chopped", brushes);
     }
 }

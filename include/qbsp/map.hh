@@ -337,6 +337,6 @@ void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bs
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
 
-void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list);
+void WriteBspBrushMap(std::string_view filename_suffix, const bspbrush_t::container &list);
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);

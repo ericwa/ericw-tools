@@ -284,6 +284,27 @@ static void WriteLeakLine(const mapentity_t &leakentity, const std::vector<porta
     logging::print("Leak file written to {}\n", name);
 }
 
+static void WriteLeafVolumes(const std::vector<portal_t *> &leakline, std::string_view filename_suffix)
+{ 
+    std::set<node_t *> used_leafs;
+    std::vector<bspbrush_t::ptr> volumes_to_write;
+
+    for (portal_t *portal : leakline) {
+        for (node_t *node : portal->nodes) {
+            // make sure we only visit each leaf once
+            if (used_leafs.find(node) != used_leafs.end())
+                continue;
+
+            used_leafs.insert(node);
+
+            // now output the leaf's volume as a brush
+            volumes_to_write.push_back(node->volume);
+        }
+    }
+
+    WriteBspBrushMap(filename_suffix, volumes_to_write);
+}
+
 /*
 ==================
 FindOccupiedLeafs
@@ -670,6 +691,11 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
 
         // also write the leak portals to `<bsp_path>.leak.prt`
         WriteDebugPortals(leakline, "leak");
+
+        // also write the leafs used in the leak line to <bsp_path>.leak-leaf-volumes.map`
+        if (qbsp_options.debugleak.value()) {
+            WriteLeafVolumes(leakline, "leak-leaf-volumes");
+        }
 
         /* Get rid of the .prt file since the map has a leak */
         if (!qbsp_options.keepprt.value()) {

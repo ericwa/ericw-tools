@@ -3334,8 +3334,11 @@ WriteBspBrushMap
 from q3map
 ==================
 */
-void WriteBspBrushMap(const fs::path &name, const bspbrush_t::container &list)
+void WriteBspBrushMap(std::string_view filename_suffix, const bspbrush_t::container &list)
 {
+    fs::path name = qbsp_options.bsp_path;
+    name.replace_extension(std::string(filename_suffix) + ".map");
+
     logging::print("writing {}\n", name);
     std::ofstream f(name);
 
