@@ -389,6 +389,19 @@ static void CountLeafs(node_t *headnode)
     qbsp_options.target_game->print_content_stats(*stats, "leafs");
 }
 
+static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
+{ 
+    if (node->is_leaf) {
+        for (auto &brush : node->bsp_brushes) {
+            container.push_back(brush);
+        }
+        return;
+    }
+
+    GatherBspbrushes_r(node->children[0], container);
+    GatherBspbrushes_r(node->children[1], container);
+}
+
 /*
 ===============
 ProcessEntity
@@ -515,6 +528,13 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
     MakeTreePortals(tree);
 
     if (map.is_world_entity(entity)) {
+        // debug output of bspbrushes
+        if (qbsp_options.debugbspbrushes.value() && (!hullnum.has_value() || hullnum.value() == 0)) {
+            bspbrush_t::container all_bspbrushes;
+            GatherBspbrushes_r(tree.headnode, all_bspbrushes);
+            WriteBspBrushMap("first-brushbsp", all_bspbrushes);
+        }
+
         // flood fills from the void.
         // marks brush sides which are *only* touching void;
         // we can skip using them as BSP splitters on the "really good tree"
@@ -523,6 +543,13 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
             // make a really good tree
             tree.clear();
             BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
+
+            // debug output of bspbrushes
+            if (qbsp_options.debugbspbrushes.value() && (!hullnum.has_value() || hullnum.value() == 0)) {
+                bspbrush_t::container all_bspbrushes;
+                GatherBspbrushes_r(tree.headnode, all_bspbrushes);
+                WriteBspBrushMap("second-brushbsp", all_bspbrushes);
+            }
 
             // make the real portals for vis tracing
             MakeTreePortals(tree);
