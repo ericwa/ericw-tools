@@ -152,6 +152,11 @@ static vec_t BrushVolume(T begin, T end)
     return volume;
 }
 
+vec_t BrushVolume(const bspbrush_t &brush)
+{
+    return BrushVolume(brush.sides.begin(), brush.sides.end());
+}
+
 //========================================================
 
 /*
@@ -554,7 +559,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
     }
 
     for (int i = 0; i < 2; i++) {
-        vec_t v1 = BrushVolume(result[i]->sides.begin(), result[i]->sides.end());
+        vec_t v1 = BrushVolume(*result[i]);
         if (v1 < qbsp_options.microvolume.value()) {
             result[i] = nullptr;
             if (stats) {

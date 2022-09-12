@@ -402,6 +402,17 @@ static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
     GatherBspbrushes_r(node->children[1], container);
 }
 
+static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
+{
+    if (node->is_leaf) {
+        container.push_back(node->volume);
+        return;
+    }
+
+    GatherLeafVolumes_r(node->children[0], container);
+    GatherLeafVolumes_r(node->children[1], container);
+}
+
 /*
 ===============
 ProcessEntity
@@ -529,10 +540,17 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     if (map.is_world_entity(entity)) {
         // debug output of bspbrushes
-        if (qbsp_options.debugbspbrushes.value() && (!hullnum.has_value() || hullnum.value() == 0)) {
-            bspbrush_t::container all_bspbrushes;
-            GatherBspbrushes_r(tree.headnode, all_bspbrushes);
-            WriteBspBrushMap("first-brushbsp", all_bspbrushes);
+        if (!hullnum.has_value() || hullnum.value() == 0) {
+            if (qbsp_options.debugbspbrushes.value()) {
+                bspbrush_t::container all_bspbrushes;
+                GatherBspbrushes_r(tree.headnode, all_bspbrushes);
+                WriteBspBrushMap("first-brushbsp", all_bspbrushes);
+            }
+            if (qbsp_options.debugleafvolumes.value()) {
+                bspbrush_t::container all_bspbrushes;
+                GatherLeafVolumes_r(tree.headnode, all_bspbrushes);
+                WriteBspBrushMap("first-brushbsp-volumes", all_bspbrushes);
+            }
         }
 
         // flood fills from the void.
@@ -545,10 +563,17 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
             BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
 
             // debug output of bspbrushes
-            if (qbsp_options.debugbspbrushes.value() && (!hullnum.has_value() || hullnum.value() == 0)) {
-                bspbrush_t::container all_bspbrushes;
-                GatherBspbrushes_r(tree.headnode, all_bspbrushes);
-                WriteBspBrushMap("second-brushbsp", all_bspbrushes);
+            if (!hullnum.has_value() || hullnum.value() == 0) {
+                if (qbsp_options.debugbspbrushes.value()) {
+                    bspbrush_t::container all_bspbrushes;
+                    GatherBspbrushes_r(tree.headnode, all_bspbrushes);
+                    WriteBspBrushMap("second-brushbsp", all_bspbrushes);
+                }
+                if (qbsp_options.debugleafvolumes.value()) {
+                    bspbrush_t::container all_bspbrushes;
+                    GatherLeafVolumes_r(tree.headnode, all_bspbrushes);
+                    WriteBspBrushMap("second-brushbsp-volumes", all_bspbrushes);
+                }
             }
 
             // make the real portals for vis tracing
