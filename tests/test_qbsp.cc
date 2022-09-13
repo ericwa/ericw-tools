@@ -1765,7 +1765,7 @@ TEST_CASE("q2_areaportal_split", "[testmaps_q2]")
     CheckFilled(bsp);
 
     CHECK(3 == bsp.dareas.size()); // 1 invalid index zero reserved + 2 areas
-    CHECK(2 == bsp.dareaportals.size()); // 1 invalid index zero reserved + 1 portal
+    CHECK(3 == bsp.dareaportals.size()); // 1 invalid index zero reserved + 2 dareaportals to store the two directions of the portal
 }
 
 /**
