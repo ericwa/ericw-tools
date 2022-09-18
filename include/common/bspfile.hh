@@ -164,7 +164,7 @@ struct surfflags_t
     int32_t native;
 
     // an invisible surface (Q1 "skip" texture, Q2 SURF_NODRAW)
-    bool is_skip;
+    bool is_nodraw;
 
     // completely ignore, allowing non-closed brushes (Q2 SURF_SKIP)
     bool is_hintskip;
@@ -220,7 +220,7 @@ struct surfflags_t
 private:
     constexpr auto as_tuple() const
     {
-        return std::tie(native, is_skip, is_hintskip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand,
+        return std::tie(native, is_nodraw, is_hintskip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand,
             light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha, maxlight, lightcolorscale);
     }
 

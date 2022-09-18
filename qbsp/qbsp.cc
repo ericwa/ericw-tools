@@ -1064,7 +1064,7 @@ static int MakeSkipTexinfo()
     maptexinfo_t mt{};
 
     mt.miptex = FindMiptex("skip", true);
-    mt.flags.is_skip = true;
+    mt.flags.is_nodraw = true;
 
     return FindTexinfo(mt);
 }

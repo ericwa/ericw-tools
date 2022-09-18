@@ -153,7 +153,7 @@ static void ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<cons
     }
 
     for (auto &face : node->markfaces) {
-        if (!face->get_texinfo().flags.is_skip) {
+        if (!face->get_texinfo().flags.is_nodraw) {
             dest->insert(face);
         }
     }
