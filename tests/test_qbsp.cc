@@ -666,7 +666,7 @@ TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
     REQUIRE(bsp.dfaces.size() == 11);
 }
 
-TEST_CASE("simple_worldspawn_detail", "[testmaps_q1][!mayfail]")
+TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map", {"-tjunc", "rotate"});
 
