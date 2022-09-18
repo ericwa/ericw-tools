@@ -895,13 +895,6 @@ static void CreateSingleHull(hull_index_t hullnum)
 
         ProcessEntity(entity, hullnum);
 
-        // reset any global brush stuff
-        for (auto &brush : entity.mapbrushes) {
-            for (auto &side : brush.faces) {
-                side.visible = false;
-            }
-        }
-
         // restore logging
         logging::mask = prev_logging_mask;
     }
