@@ -852,6 +852,22 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
     logging::header("CountBrushes");
 
     qbsp_options.target_game->print_content_stats(*stats, "brushes");
+
+    logging::stat_tracker_t stat_print;
+    auto &visible_sides_stat = stat_print.register_stat("visible sides");
+    auto &invisible_sides_stat = stat_print.register_stat("invisible sides");
+    auto &sourceless_sides_stat = stat_print.register_stat("sourceless sides");
+    for (auto &brush : brushes) {
+        for (auto &side : brush->sides) {
+            if (!side.source) {
+                sourceless_sides_stat.count++;
+            } else if (side.source->visible) {
+                visible_sides_stat.count++;
+            } else {
+                invisible_sides_stat.count++;
+            }
+        }
+    }
 }
 
 bool bspbrush_t::update_bounds(bool warn_on_failures)
