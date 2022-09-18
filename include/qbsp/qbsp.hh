@@ -743,6 +743,7 @@ struct node_t
 
 void InitQBSP(int argc, const char **argv);
 void InitQBSP(const std::vector<std::string> &args);
+void CountLeafs(node_t *headnode);
 void ProcessFile();
 
 int qbsp_main(int argc, const char **argv);

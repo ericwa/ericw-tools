@@ -1286,8 +1286,7 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
 
     stats.print_stats();
 
-    logging::header("CountLeafs");
-    qbsp_options.target_game->print_content_stats(*stats.leafstats, "leafs");
+    CountLeafs(tree.headnode);
 }
 
 /*

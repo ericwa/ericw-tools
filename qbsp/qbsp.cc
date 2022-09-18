@@ -380,13 +380,46 @@ static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
     CountLeafs_r(node->children[1], stats);
 }
 
-static void CountLeafs(node_t *headnode)
+static int NodeHeight(node_t* node)
+{
+    if (node->parent) {
+        return 1 + NodeHeight(node->parent);
+    }
+    return 1;
+}
+
+static void CountLeafHeights_r(node_t *node, std::vector<int> &heights)
+{
+    if (node->is_leaf) {
+        heights.push_back(NodeHeight(node));
+        return;
+    }
+    CountLeafHeights_r(node->children[0], heights);
+    CountLeafHeights_r(node->children[1], heights);
+}
+
+void CountLeafs(node_t *headnode)
 {
     logging::funcheader();
 
     auto stats = qbsp_options.target_game->create_content_stats();
     CountLeafs_r(headnode, *stats);
     qbsp_options.target_game->print_content_stats(*stats, "leafs");
+
+    // count the heights of the tree at each leaf
+    logging::stat_tracker_t stat_print;
+
+    std::vector<int> leaf_heights;
+    CountLeafHeights_r(headnode, leaf_heights);
+
+    const int max_height = *std::max_element(leaf_heights.begin(), leaf_heights.end());
+    stat_print.register_stat("max tree height").count += max_height;
+
+    double avg_height = 0;
+    for (int height : leaf_heights) {
+        avg_height += (height / static_cast<double>(leaf_heights.size()));
+    }
+    stat_print.register_stat("avg tree height").count += static_cast<int>(avg_height);
 }
 
 static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
