@@ -576,7 +576,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
 #endif
 
         auto &dst = brush.sides.emplace_back();
-        dst.texinfo = hullnum.value_or(0) ? 0 : src.texinfo;
+        dst.texinfo = src.texinfo;
         dst.planenum = src.planenum;
         dst.bevel = src.bevel;
         dst.source = &src;
