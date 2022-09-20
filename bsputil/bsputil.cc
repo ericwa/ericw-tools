@@ -630,9 +630,13 @@ int main(int argc, char **argv)
                 hullnum = std::stoi(argv[i + 1]);
             }
 
-            source.replace_extension("");
-            source.replace_filename(source.stem().string() + "-decompile");
-            source.replace_extension(".map");
+            // generate output filename
+            if (hull) {
+                source.replace_extension(fmt::format(".decompile.hull{}.map", hullnum));
+            } else {
+                source.replace_extension(".decompile.map");
+            }
+
             fmt::print("-> writing {}...\n", source);
 
             std::ofstream f(source);
