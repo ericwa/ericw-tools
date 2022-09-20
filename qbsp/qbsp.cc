@@ -554,6 +554,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
                 FreeTreePortals(tree);
                 PruneNodes(tree.headnode);
             }
+            CountLeafs(tree.headnode);
         }
         ExportClipNodes(entity, tree.headnode, hullnum.value());
         return;
