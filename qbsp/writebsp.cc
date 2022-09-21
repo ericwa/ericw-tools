@@ -57,7 +57,7 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     if (src.outputnum.has_value())
         return src.outputnum.value();
-    else if (!qbsp_options.includeskip.value() && src.flags.is_skip)
+    else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw)
         return -1;
 
     // this will be the index of the exported texinfo in the BSP lump
@@ -169,7 +169,7 @@ static void ExportLeaf(node_t *node)
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
     for (auto &face : node->markfaces) {
-        if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_skip) {
+        if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw) {
             continue;
         }
 
@@ -333,8 +333,8 @@ static void WriteExtendedTexinfoFlags(void)
 
         json t = json::object();
 
-        if (tx.flags.is_skip) {
-            t["is_skip"] = tx.flags.is_skip;
+        if (tx.flags.is_nodraw) {
+            t["is_nodraw"] = tx.flags.is_nodraw;
         }
         if (tx.flags.is_hint) {
             t["is_hint"] = tx.flags.is_hint;

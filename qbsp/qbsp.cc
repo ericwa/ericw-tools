@@ -546,7 +546,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
             if (FillOutside(tree, hullnum, brushes)) {
                 // make a really good tree
                 tree.clear();
-                BrushBSP(tree, entity, brushes, tree_split_t::AUTO);
+                BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
 
                 // fill again so PruneNodes works
                 MakeTreePortals(tree);
@@ -554,6 +554,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
                 FreeTreePortals(tree);
                 PruneNodes(tree.headnode);
             }
+            CountLeafs(tree.headnode);
         }
         ExportClipNodes(entity, tree.headnode, hullnum.value());
         return;
@@ -1064,7 +1065,7 @@ static int MakeSkipTexinfo()
     maptexinfo_t mt{};
 
     mt.miptex = FindMiptex("skip", true);
-    mt.flags.is_skip = true;
+    mt.flags.is_nodraw = true;
 
     return FindTexinfo(mt);
 }

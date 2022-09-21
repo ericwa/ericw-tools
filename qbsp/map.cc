@@ -528,7 +528,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     // splitturb, etc) from there.
     if (qbsp_options.target_game->id != GAME_QUAKE_II) {
         if (IsSkipName(texname))
-            flags.is_skip = true;
+            flags.is_nodraw = true;
         if (IsHintName(texname))
             flags.is_hint = true;
         if (IsSpecialName(texname))
@@ -537,7 +537,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         flags.native = texinfo.flags.native;
 
         if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
-            flags.is_skip = true;
+            flags.is_nodraw = true;
         if ((flags.native & Q2_SURF_HINT) || IsHintName(texname))
             flags.is_hint = true;
     }
