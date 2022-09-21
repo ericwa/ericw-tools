@@ -200,7 +200,7 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
         (float)nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()])};
 }
 
-static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx)
+static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, fs::path obj_path, fs::path lightmaps_path)
 {
     struct face_rect
     {
@@ -249,7 +249,7 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
     }
 
     if (!rectangles.size()) {
-        return nullptr;
+        return;
     }
 
     // sort faces
@@ -326,8 +326,6 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
     full_atlas.height = full_atlas.meta.height = trimmed_height;
     full_atlas.pixels.resize(full_atlas.width * full_atlas.height);
 
-    json obj = json::object();
-
     // compile all of the styles that are available
     // TODO: LMSTYLE16
     for (size_t i = 0; i < INVALID_LIGHTSTYLE_OLD - 1; i++) {
@@ -375,11 +373,16 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
             continue;
         }
 
-        obj.emplace(std::to_string(i), serialize_image(full_atlas));
+        lightmaps_path.replace_filename(lightmaps_path.stem().string() + "_" + std::to_string(i) + ".png");
+        std::ofstream strm(lightmaps_path, std::ofstream::out | std::ofstream::binary);
+        stbi_write_png_to_func([](void *context, void *data, int size) {
+            std::ofstream &strm = *((std::ofstream *) context);
+            strm.write((const char *) data, size);
+        }, &strm, full_atlas.width, full_atlas.height, 4, full_atlas.pixels.data(), full_atlas.width * 4);
         memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
     }
 
-    auto ExportObjFace = [&full_atlas](std::iostream &f, const mbsp_t *bsp, const face_rect &face, int &vertcount) {
+    auto ExportObjFace = [&full_atlas](std::ostream &f, const mbsp_t *bsp, const face_rect &face, int &vertcount) {
         // export the vertices and uvs
         for (int i = 0; i < face.face->numedges; i++) {
             const int vertnum = Face_VertexAtIndex(bsp, face.face, i);
@@ -412,20 +415,16 @@ static json generate_lightmap_atlases(const mbsp_t &bsp, const bspxentries_t &bs
         vertcount += face.face->numedges;
     };
 
-    auto ExportObj = [&ExportObjFace, &rectangles](const mbsp_t *bsp) {
-        std::stringstream objfile;
+    auto ExportObj = [&ExportObjFace, &rectangles, &obj_path](const mbsp_t *bsp) {
+        std::ofstream objstream(obj_path, std::ofstream::out);
         int vertcount = 0;
 
         for (auto &rect : rectangles) {
-            ExportObjFace(objfile, bsp, rect, vertcount);
+            ExportObjFace(objstream, bsp, rect, vertcount);
         }
-
-        return objfile.str();
     };
 
-    obj.emplace("obj", ExportObj(&bsp));
-
-    return obj;
+    ExportObj(&bsp);
 }
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
@@ -684,6 +683,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
     }
 
     // lightmap atlas
+#if 0
     for (int32_t i = 0; i < MAXLIGHTMAPS; i++) {
         if (auto lm = generate_lightmap_atlases(bsp, bspdata.bspx.entries, false); !lm.empty()) {
             j.emplace("lightmaps", std::move(lm));
@@ -695,6 +695,8 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             }
         }
     }
+#endif
+    export_obj_and_lightmaps(bsp, bspdata.bspx.entries, false, fs::path(name).replace_extension(".geometry.obj"), fs::path(name).replace_extension(".lm.png"));
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
 }

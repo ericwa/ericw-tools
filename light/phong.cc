@@ -525,13 +525,6 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             return;
         }
 
-        auto neighboursIt = smoothFaces.find(&f);
-
-        if (neighboursIt == smoothFaces.end()) {
-            return;
-        }
-
-        const auto &neighboursToSmooth = neighboursIt->second;
         const qvec3f f_norm = Face_Normal(bsp, &f); // get the face normal
 
         // face tangent
@@ -541,7 +534,12 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         // gather up f and neighboursToSmooth
         std::vector<const mface_t *> fPlusNeighbours;
         fPlusNeighbours.push_back(&f);
-        std::copy(neighboursToSmooth.begin(), neighboursToSmooth.end(), std::back_inserter(fPlusNeighbours));
+        auto neighboursIt = smoothFaces.find(&f);
+
+        if (neighboursIt != smoothFaces.end()) {
+            const auto &neighboursToSmooth = neighboursIt->second;
+            std::copy(neighboursToSmooth.begin(), neighboursToSmooth.end(), std::back_inserter(fPlusNeighbours));
+        }
 
         // global vertex index -> smoothed normal
         std::unordered_map<int, face_normal_t> smoothedNormals;
@@ -618,9 +616,12 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         }
 
         // sanity check
-        if (!neighboursToSmooth.size()) {
-            for (auto &vertIndexNormalPair : smoothedNormals) {
-                Q_assert(qv::epsilonEqual(vertIndexNormalPair.second.normal, f_norm, (float)EQUAL_EPSILON));
+        if (neighboursIt != smoothFaces.end()) {
+            const auto &neighboursToSmooth = neighboursIt->second;
+            if (!neighboursToSmooth.size()) {
+                for (auto &vertIndexNormalPair : smoothedNormals) {
+                    Q_assert(qv::epsilonEqual(vertIndexNormalPair.second.normal, f_norm, (float)EQUAL_EPSILON));
+                }
             }
         }
 
