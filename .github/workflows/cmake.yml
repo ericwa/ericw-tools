@@ -53,6 +53,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: ${{ runner.os == 'Windows' && matrix.use-asan == 'NO' }}
       with:
+        name: ericw-tools-${{ github.sha }}-win64
         path: |
           build-windows/ericw-tools-*.zip
 
@@ -60,6 +61,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: ${{ runner.os == 'Linux' && matrix.use-asan == 'NO' }}
       with:
+        name: ericw-tools-${{ github.sha }}-Linux
         path: |
           build-linux/ericw-tools-*.zip
 
@@ -67,6 +69,7 @@ jobs:
       uses: actions/upload-artifact@v3
       if: ${{ runner.os == 'macOS' && matrix.use-asan == 'NO' }}
       with:
+        name: ericw-tools-${{ github.sha }}-macOS
         path: |
           build-osx/ericw-tools-*.zip
 
