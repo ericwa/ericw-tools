@@ -10,7 +10,7 @@ git submodule update --init --recursive
 py -m venv ericwtools-env
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ericwtools-env\Scripts\Activate.ps1
-python.exe -m pip install sphinx_rtd_theme
+python.exe -m pip install -r docs/requirements.txt --force-reinstall
 
 # Confirm Sphinx is installed
 get-command sphinx-build

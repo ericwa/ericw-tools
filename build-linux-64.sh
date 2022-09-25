@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python3 -m pip install sphinx_rtd_theme
+python3 -m pip install -r docs/requirements.txt --force-reinstall
 export PATH="~/.local/bin/:$PATH"
 
 BUILD_DIR=build-linux
