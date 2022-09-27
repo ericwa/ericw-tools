@@ -359,7 +359,7 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
 
     qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
 
-    if (qbsp_options.debugleak.value()) {
+    if (qbsp_options.debugleak.value() || qbsp_options.debugbspbrushes.value()) {
         leafnode->bsp_brushes = brushes;
     } else {
         leafnode->volume.reset();

@@ -3348,6 +3348,9 @@ void WriteBspBrushMap(std::string_view filename_suffix, const bspbrush_t::contai
     fmt::print(f, "{{\n\"classname\" \"worldspawn\"\n");
 
     for (auto &brush : list) {
+        if (!brush) {
+            continue;
+        }
         fmt::print(f, "{{\n");
         for (auto &face : brush->sides) {
             winding_t w = BaseWindingForPlane<winding_t>(face.get_plane());
