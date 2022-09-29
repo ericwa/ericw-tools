@@ -1,4 +1,6 @@
-#include <catch2/catch_all.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_vector.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <qbsp/brush.hh>
 #include <qbsp/brushbsp.hh>
@@ -564,28 +566,33 @@ TEST_CASE("chop_no_change", "[testmaps_q1]")
 
 TEST_CASE("simple_sealed", "[testmaps_q1]")
 {
-    auto mapname = GENERATE("qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map");
+    const std::vector<std::string> quake_maps{"qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map"};
 
-    const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
+    for (const auto& mapname : quake_maps) {
+        DYNAMIC_SECTION("testing " << mapname) {
 
-    REQUIRE(bsp.dleafs.size() == 2);
+            const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
-    REQUIRE(bsp.dleafs[0].contents == CONTENTS_SOLID);
-    REQUIRE(bsp.dleafs[1].contents == CONTENTS_EMPTY);
-    
-    // just a hollow box
-    REQUIRE(bsp.dfaces.size() == 6);
+            REQUIRE(bsp.dleafs.size() == 2);
 
-    // no bspx lumps
-    CHECK(bspx.empty());
+            REQUIRE(bsp.dleafs[0].contents == CONTENTS_SOLID);
+            REQUIRE(bsp.dleafs[1].contents == CONTENTS_EMPTY);
 
-    // check markfaces
-    CHECK(bsp.dleafs[0].nummarksurfaces == 0);
-    CHECK(bsp.dleafs[0].firstmarksurface == 0);
+            // just a hollow box
+            REQUIRE(bsp.dfaces.size() == 6);
 
-    CHECK(bsp.dleafs[1].nummarksurfaces == 6);
-    CHECK(bsp.dleafs[1].firstmarksurface == 0);
-    CHECK_THAT(bsp.dleaffaces, Catch::Matchers::UnorderedEquals(std::vector<uint32_t>{0,1,2,3,4,5}));
+            // no bspx lumps
+            CHECK(bspx.empty());
+
+            // check markfaces
+            CHECK(bsp.dleafs[0].nummarksurfaces == 0);
+            CHECK(bsp.dleafs[0].firstmarksurface == 0);
+
+            CHECK(bsp.dleafs[1].nummarksurfaces == 6);
+            CHECK(bsp.dleafs[1].firstmarksurface == 0);
+            CHECK_THAT(bsp.dleaffaces, Catch::Matchers::UnorderedEquals(std::vector<uint32_t>{0, 1, 2, 3, 4, 5}));
+        }
+    }
 }
 
 TEST_CASE("simple_sealed2", "[testmaps_q1]")
