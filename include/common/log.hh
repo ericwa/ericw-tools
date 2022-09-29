@@ -30,7 +30,7 @@
 #include <cstdarg>
 #include <filesystem>
 #include <list>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <common/bitflags.hh>
 #include <common/fs.hh>
 

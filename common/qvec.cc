@@ -20,7 +20,7 @@
 #include <common/qvec.hh>
 
 #include <cmath> // for NAN
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 /*
  * SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)

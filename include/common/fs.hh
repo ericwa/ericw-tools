@@ -131,15 +131,17 @@ inline fs::path DefaultExtension(const fs::path &path, const fs::path &extension
     return fs::path(path).replace_extension(extension);
 }
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 // TODO: no wchar_t support in this version apparently
 template<>
-struct fmt::formatter<fs::path> : formatter<std::string>
+struct fmt::formatter<fs::path>
 {
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
+
     template<typename FormatContext>
     auto format(const fs::path &p, FormatContext &ctx)
     {
-        return formatter<std::string>::format(p.string(), ctx);
+        return format_to(ctx.out(), "{}", p.string());
     }
 };

@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include <cinttypes>
 #include <array>
@@ -271,7 +271,9 @@ enum class plane_type_t
 };
 
 // Fmt support
-template <> struct fmt::formatter<plane_type_t> : formatter<string_view> {
+template <> struct fmt::formatter<plane_type_t> {
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
+
     template <typename FormatContext>
     auto format(plane_type_t t, FormatContext& ctx) {
         string_view name = "unknown";
@@ -284,7 +286,7 @@ template <> struct fmt::formatter<plane_type_t> : formatter<string_view> {
             case plane_type_t::PLANE_ANYY: name = "PLANE_ANYY"; break;
             case plane_type_t::PLANE_ANYZ: name = "PLANE_ANYZ"; break;
         }
-        return formatter<string_view>::format(name, ctx);
+        return format_to(ctx.out(), "{}", name);
     }
 };
 

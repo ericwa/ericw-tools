@@ -5,7 +5,6 @@
 
 #include <random>
 #include <algorithm> // for std::sort
-#include <fmt/format.h>
 
 #include <common/qvec.hh>
 

@@ -25,7 +25,7 @@
 #include <cstdint>
 #include <limits.h>
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include <atomic>
 #include <mutex>
