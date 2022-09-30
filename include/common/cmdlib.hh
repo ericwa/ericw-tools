@@ -27,6 +27,7 @@
 #include <cctype>
 #include <ctime>
 #include <cstdarg>
+#include <cstring> // for memcpy()
 #include <string>
 #include <string_view>
 #include <memory>
