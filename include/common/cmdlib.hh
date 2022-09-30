@@ -34,6 +34,7 @@
 #include <memory>
 #include <fmt/format.h>
 #include <common/log.hh>
+#include <tuple> // for std::apply()
 
 #if defined(__has_include) && __has_include(<strings.h>)
 #include <strings.h>
