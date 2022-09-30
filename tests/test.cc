@@ -1,8 +1,24 @@
-#include <catch2/catch_all.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
 
 #include "common/settings.hh"
 
 #include <type_traits>
+
+#include <catch2/reporters/catch_reporter_event_listener.hpp>
+#include <catch2/reporters/catch_reporter_registrars.hpp>
+
+class TestRunListener : public Catch::EventListenerBase {
+public:
+    using Catch::EventListenerBase::EventListenerBase;
+
+    void testRunStarting(Catch::TestRunInfo const&) override {
+        // writing console colors within test case output breaks Catch2/CLion integration
+        logging::enable_color_codes = false;
+    }
+};
+
+CATCH_REGISTER_LISTENER(TestRunListener)
 
 // test booleans
 TEST_CASE("booleanFlagImplicit", "[settings]")

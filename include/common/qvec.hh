@@ -26,7 +26,7 @@
 #include <algorithm>
 #include <array>
 #include <ostream>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <tuple>
 #include "common/mathlib.hh"
 #include "common/cmdlib.hh"
@@ -340,17 +340,19 @@ public:
 
 // Fmt support
 template<class T, size_t N>
-struct fmt::formatter<qvec<T, N>> : formatter<T>
+struct fmt::formatter<qvec<T, N>>
 {
+    constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
+
     template<typename FormatContext>
     auto format(const qvec<T, N> &p, FormatContext &ctx) -> decltype(ctx.out())
     {
         for (size_t i = 0; i < N - 1; i++) {
-            formatter<T>::format(p[i], ctx);
+            format_to(ctx.out(), "{}", p[i]);
             format_to(ctx.out(), " ");
         }
 
-        return formatter<T>::format(p[N - 1], ctx);
+        return format_to(ctx.out(), "{}", p[N - 1]);
     }
 };
 

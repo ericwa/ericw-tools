@@ -10,6 +10,7 @@ testmaps/*.bsp
 testmaps/*.bsp.qbsplog
 testmaps/*.log
 testmaps/*.prt
+testmaps/*.obj
 testmaps/*.pts
 testmaps/*.vis
 testmaps/*.texinfo

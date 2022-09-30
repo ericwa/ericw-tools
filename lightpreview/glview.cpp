@@ -26,7 +26,7 @@ See file, 'COPYING', for details.
 #include <QWheelEvent>
 #include <QKeyEvent>
 #include <QTime>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent), m_keysPressed(0), m_keymoveUpdateTimer(0), m_lastMouseDownPos(0, 0), m_displayAspect(1),

@@ -7,6 +7,8 @@ add_executable(tests
 		test_light.cc
 		test_ltface.cc
 		test_qbsp.cc
+		test_qbsp.hh
+		test_qbsp_q2.cc
 		test_vis.cc
 		${CMAKE_BINARY_DIR}/testmaps.hh
 )

@@ -30,7 +30,8 @@
 #include <cstdarg>
 #include <filesystem>
 #include <list>
-#include <fmt/format.h>
+#include <cmath> // for log10
+#include <fmt/core.h>
 #include <common/bitflags.hh>
 #include <common/fs.hh>
 

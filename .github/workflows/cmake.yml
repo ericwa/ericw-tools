@@ -9,8 +9,11 @@ jobs:
       # Don't cancel the macOS build if the Linux build fails, etc.
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, macos-11]
+        os: [ubuntu-20.04, macos-11, windows-2019]
         use-asan: [YES, NO]
+        exclude:
+          - os: windows-2019
+            use-asan: YES
     env:
         # Expose to the build-*.sh in an environment variable
         USE_ASAN: ${{ matrix.use-asan }}
@@ -18,6 +21,11 @@ jobs:
     - uses: actions/checkout@v2
       with:
         submodules: 'recursive'
+
+    # https://github.com/ilammy/msvc-dev-cmd
+    - name: Setup MSVC environment
+      if: runner.os == 'Windows' 
+      uses: ilammy/msvc-dev-cmd@v1
 
     - name: Linux Build
       if: runner.os == 'Linux'
@@ -31,3 +39,48 @@ jobs:
       if: runner.os == 'macOS'
       run: |
           ./build-osx.sh
+
+    - name: Windows Build
+      if: runner.os == 'Windows'
+      run: |
+          .\build-windows.ps1
+
+    # Upload artifacts.
+    # These need to be separate, otherwise all of the artifacts are bundled into
+    # one .zip file.
+
+    - name: Upload win64 artifact
+      uses: actions/upload-artifact@v3
+      if: ${{ runner.os == 'Windows' && matrix.use-asan == 'NO' }}
+      with:
+        name: ericw-tools-${{ github.sha }}-win64
+        path: |
+          build-windows/ericw-tools-*.zip
+
+    - name: Upload Linux artifact
+      uses: actions/upload-artifact@v3
+      if: ${{ runner.os == 'Linux' && matrix.use-asan == 'NO' }}
+      with:
+        name: ericw-tools-${{ github.sha }}-Linux
+        path: |
+          build-linux/ericw-tools-*.zip
+
+    - name: Upload macOS artifact
+      uses: actions/upload-artifact@v3
+      if: ${{ runner.os == 'macOS' && matrix.use-asan == 'NO' }}
+      with:
+        name: ericw-tools-${{ github.sha }}-macOS
+        path: |
+          build-osx/ericw-tools-*.zip
+
+    - name: Create GitHub Release and upload builds
+      uses: softprops/action-gh-release@v1
+      if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.use-asan == 'NO' }}
+      with:
+        draft: true
+        files: |
+          build-osx/ericw-tools-*.zip
+          build-linux/ericw-tools-*.zip
+          build-windows/ericw-tools-*.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
