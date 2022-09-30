@@ -1,0 +1,516 @@
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_vector.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+
+#include <qbsp/brush.hh>
+#include <qbsp/brushbsp.hh>
+#include <qbsp/qbsp.hh>
+#include <qbsp/map.hh>
+#include <common/fs.hh>
+#include <common/bsputils.hh>
+#include <common/decompile.hh>
+#include <common/prtfile.hh>
+#include <common/qvec.hh>
+#include <testmaps.hh>
+
+#include <subprocess.h>
+#include <nanobench.h>
+
+#include <algorithm>
+#include <cstring>
+#include <set>
+#include <stdexcept>
+#include <tuple>
+#include <map>
+
+#include <common/bspinfo.hh>
+
+#include "test_qbsp.hh"
+
+TEST_CASE("detail", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // stats
+    CHECK(1 == bsp.dmodels.size());
+    // Q2 reserves leaf 0 as an invalid leaf
+
+    // leafs:
+    //  6 solid leafs outside the room (* can be more depending on when the "divider" is cut)
+    //  1 empty leaf filling the room above the divider
+    //  2 empty leafs + 1 solid leaf for divider
+    //  1 detail leaf for button
+    //  4 empty leafs around + 1 on top of button 
+
+    std::map<int32_t, int> counts_by_contents;
+    for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
+        ++counts_by_contents[bsp.dleafs[i].contents];
+    }
+    CHECK(2 == counts_by_contents.size()); // number of types
+
+
+    CHECK(counts_by_contents.find(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == counts_by_contents.end()); // the detail bit gets cleared
+    CHECK(8 == counts_by_contents.at(0)); // empty leafs
+    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) >= 8);
+    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) <= 12);
+
+    // clusters:
+    //  1 empty cluster filling the room above the divider
+    //  2 empty clusters created by divider
+    //  1 cluster for the part of the room with the button
+
+    std::set<int> clusters;
+    // first add the empty leafs
+    for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
+        if (0 == bsp.dleafs[i].contents) {
+            clusters.insert(bsp.dleafs[i].cluster);
+        }
+    }
+    CHECK(4 == clusters.size());
+
+    // various points in the main room cluster
+    const qvec3d under_button{246, 436, 96}; // directly on the main floor plane
+    const qvec3d inside_button{246, 436, 98};
+    const qvec3d above_button{246, 436, 120};
+    const qvec3d beside_button{246, 400, 100}; // should be a different empty leaf than above_button, but same cluster
+
+    // side room (different cluster)
+    const qvec3d side_room{138, 576, 140};
+
+    // detail clips away world faces
+    CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], under_button, {0, 0, 1}));
+
+    // check for correct contents
+    auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
+    CHECK(Q2_CONTENTS_SOLID == detail_leaf->contents);
+    CHECK(-1 == detail_leaf->cluster);
+
+    // check for button (detail) brush
+    CHECK(1 == Leaf_Brushes(&bsp, detail_leaf).size());
+    CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) ==
+                Leaf_Brushes(&bsp, detail_leaf).at(0)->contents);
+
+    // get more leafs
+    auto *empty_leaf_above_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_button);
+    CHECK(0 == empty_leaf_above_button->contents);
+    CHECK(0 == Leaf_Brushes(&bsp, empty_leaf_above_button).size());
+
+    auto *empty_leaf_side_room = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], side_room);
+    CHECK(0 == empty_leaf_side_room->contents);
+    CHECK(0 == Leaf_Brushes(&bsp, empty_leaf_side_room).size());
+    CHECK(empty_leaf_side_room->cluster != empty_leaf_above_button->cluster);
+
+    auto *empty_leaf_beside_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], beside_button);
+    CHECK(0 == empty_leaf_beside_button->contents);
+    CHECK(-1 != empty_leaf_beside_button->cluster);
+    CHECK(empty_leaf_above_button->cluster == empty_leaf_beside_button->cluster);
+    CHECK(empty_leaf_above_button != empty_leaf_beside_button);
+
+    CHECK(prt->portals.size() == 5);
+    CHECK(prt->portalleafs_real == 0); // not used by Q2
+    CHECK(prt->portalleafs == 4);
+}
+
+TEST_CASE("playerclip", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_playerclip.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_playerclip{32, -136, 144};
+    auto *playerclip_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_playerclip);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL) == playerclip_leaf->contents);
+
+    // make sure faces at these locations aren't clipped away
+    const qvec3d floor_under_clip{32, -136, 96};
+    const qvec3d pillar_side_in_clip1{32, -48, 144};
+    const qvec3d pillar_side_in_clip2{32, -208, 144};
+
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_clip, {0, 0, 1}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip1, {0, -1, 0}));
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], pillar_side_in_clip2, {0, 1, 0}));
+
+    // make sure no face is generated for the playerclip brush
+    const qvec3d playerclip_front_face{16, -152, 144};
+    CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], playerclip_front_face, {-1, 0, 0}));
+
+    // check for brush
+    CHECK(1 == Leaf_Brushes(&bsp, playerclip_leaf).size());
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
+}
+
+TEST_CASE("areaportal", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // area 0 is a placeholder
+    // areaportal 0 is a placeholder
+    // 
+    // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
+    CHECK_THAT(bsp.dareaportals, Catch::Matchers::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareas, Catch::Matchers::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+
+    // look up the leafs
+    const qvec3d player_start{-88, -112, 120};
+    const qvec3d other_room{128, -112, 120};
+    const qvec3d areaportal_pos{32, -112, 120};
+    const qvec3d void_pos{-408, -112, 120};
+
+    auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
+    auto *other_room_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], other_room);
+    auto *areaportal_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], areaportal_pos);
+    auto *void_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], void_pos);
+
+    // check leaf contents
+    CHECK(0 == player_start_leaf->contents);
+    CHECK(0 == other_room_leaf->contents);
+    CHECK(Q2_CONTENTS_AREAPORTAL == areaportal_leaf->contents);
+    CHECK(Q2_CONTENTS_SOLID == void_leaf->contents);
+
+    // make sure faces at these locations aren't clipped away
+    const qvec3d floor_under_areaportal{32, -136, 96};
+    CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], floor_under_areaportal, {0, 0, 1}));
+
+    // check for brushes
+    CHECK(1 == Leaf_Brushes(&bsp, areaportal_leaf).size());
+    CHECK(Q2_CONTENTS_AREAPORTAL == Leaf_Brushes(&bsp, areaportal_leaf).at(0)->contents);
+
+    CHECK(1 == Leaf_Brushes(&bsp, void_leaf).size());
+    CHECK(Q2_CONTENTS_SOLID == Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
+
+    // check leaf areas
+    CHECK_THAT((std::vector<int32_t>{1, 2}), Catch::Matchers::UnorderedEquals(std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area}));
+    // the areaportal leaf itself actually gets assigned to one of the two sides' areas
+    CHECK((areaportal_leaf->area == 1 || areaportal_leaf->area == 2));
+    CHECK(0 == void_leaf->area); // a solid leaf gets the invalid area
+
+    // check the func_areaportal entity had its "style" set
+    parser_t parser(bsp.dentdata, { "qbsp_q2_areaportal.bsp" });
+    auto ents = EntData_Parse(parser);
+    auto it = std::find_if(ents.begin(), ents.end(),
+        [](const entdict_t &dict) { return dict.get("classname") == "func_areaportal"; });
+
+    REQUIRE(it != ents.end());
+    REQUIRE("1" == it->get("style"));
+}
+
+/**
+ *  Similar to above test, but there's a detail brush sticking into the area portal
+ */
+TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal_with_detail.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // area 0 is a placeholder
+    // areaportal 0 is a placeholder
+    //
+    // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
+    CHECK_THAT(bsp.dareaportals, Catch::Matchers::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_THAT(bsp.dareas, Catch::Matchers::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+}
+
+TEST_CASE("nodraw_light", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_light.map", {"-includeskip"});
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d topface_center {160, -148, 208};
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
+    REQUIRE(nullptr != topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    CHECK(std::string(texinfo->texture.data()) == "e1u1/trigger");
+    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
+}
+
+TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_detail_light.map", {"-includeskip"});
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d topface_center {160, -148, 208};
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], topface_center, {0, 0, 1});
+    REQUIRE(nullptr != topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    CHECK(std::string(texinfo->texture.data()) == "e1u1/trigger");
+    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
+}
+
+TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("base1-test.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    CHECK(prt);
+    CheckFilled(bsp);
+
+    // bspinfo output from a compile done with
+    // https://github.com/qbism/q2tools-220 at 46fd97bbe1b3657ca9e93227f89aaf0fbd3677c9.
+    // only took a couple of seconds (debug build)
+
+    //   35 models
+    // 9918 planes           198360
+    //10367 vertexes         124404
+    // 5177 nodes            144956
+    //  637 texinfos          48412
+    // 7645 faces            152900
+    // 5213 leafs            145964
+    // 9273 leaffaces         18546
+    // 7307 leafbrushes       14614
+    //20143 edges             80572
+    //37287 surfedges        149148
+    // 1765 brushes           21180
+    //15035 brushsides        60140
+    //    3 areas                24
+    //    3 areaportals          24
+    //      lightdata             0
+    //      visdata               0
+    //      entdata           53623
+
+    CHECK(3 == bsp.dareaportals.size());
+    CHECK(3 == bsp.dareas.size());
+
+    // check for a sliver face which we had issues with being missing
+    {
+        const qvec3d face_point {-315.975, -208.036, -84.5};
+        const qvec3d normal_point {-315.851, -208.051, -84.5072}; // obtained in TB
+
+        const qvec3d normal = qv::normalize(normal_point - face_point);
+
+        auto *sliver_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_point, normal);
+        REQUIRE(nullptr != sliver_face);
+
+        CHECK(std::string_view("e1u1/metal3_5") == Face_TextureName(&bsp, sliver_face));
+        CHECK(Face_Winding(&bsp, sliver_face).area() < 5.0);
+    }
+}
+
+TEST_CASE("base1leak", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("base1leak.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    CHECK(8 == bsp.dbrushes.size());
+
+    CHECK(bsp.dleafs.size() >= 8); // 1 placeholder + 1 empty (room interior) + 6 solid (sides of room)
+    CHECK(bsp.dleafs.size() <= 12); //q2tools-220 generates 12
+
+    const qvec3d in_plus_y_wall{-776, 976, -24};
+    auto *plus_y_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_plus_y_wall);
+    CHECK(Q2_CONTENTS_SOLID == plus_y_wall_leaf->contents);
+
+    CHECK(3 == plus_y_wall_leaf->numleafbrushes);
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
+}
+
+/**
+ * e1u1/brlava brush intersecting e1u1/clip
+ **/
+TEST_CASE("lavaclip", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavaclip.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // not touching the lava, but inside the clip
+    const qvec3d playerclip_outside1 { -88, -32, 8};
+    const qvec3d playerclip_outside2 { 88, -32, 8};
+
+    // inside both clip and lava
+    const qvec3d playerclip_inside_lava { 0, -32, 8};
+
+    const qvec3d in_lava_only {0, 32, 8};
+
+    // near the player start's feet. There should be a lava face here
+    const qvec3d lava_top_face_in_playerclip { 0, -32, 16};
+
+    // check leaf contents
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside1)->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside2)->contents);
+    CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_inside_lava)->contents);
+    CHECK(Q2_CONTENTS_LAVA == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_lava_only)->contents);
+
+    // search for face
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], lava_top_face_in_playerclip, {0, 0, 1});
+    REQUIRE(nullptr != topface);
+
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    CHECK(std::string(texinfo->texture.data()) == "e1u1/brlava");
+    CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_WARP));
+}
+
+/**
+ * check that e1u1/clip intersecting mist doesn't split up the mist faces
+ **/
+TEST_CASE("mist_clip", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_mist_clip.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    // mist is two sided, so 12 faces for a cube
+    CHECK(12 == bsp.dfaces.size());
+}
+
+/**
+ * e1u1/brlava brush intersecting e1u1/brwater
+ **/
+TEST_CASE("lavawater", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavawater.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d inside_both { 0, 32, 8};
+
+    // check leaf contents
+    CHECK((Q2_CONTENTS_LAVA | Q2_CONTENTS_WATER) == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_both)->contents);
+}
+
+/**
+ * Weird mystery issue with a func_wall with broken collision
+ * (ended up being a PLANE_X/Y/Z plane with negative facing normal, which is illegal - engine assumes they are positive)
+ */
+TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_bmodel_collision.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_bmodel {-544, -312, -258};
+    REQUIRE(2 == bsp.dmodels.size());
+    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
+}
+
+TEST_CASE("q2_liquids", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_liquids.map");
+
+    // water/air face is two sided
+    {
+        const qvec3d watertrans66_air{-116, -168, 144};
+        const qvec3d watertrans33_trans66 = watertrans66_air - qvec3d(0, 0, 48);
+        const qvec3d wateropaque_trans33 = watertrans33_trans66 - qvec3d(0, 0, 48);
+        const qvec3d floor_wateropaque = wateropaque_trans33 - qvec3d(0, 0, 48);
+
+        CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
+        CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans33_trans66).size());
+        CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], wateropaque_trans33).size());
+        CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/c_met11_2"}));
+    }
+
+    const qvec3d watertrans66_slimetrans66{-116, -144, 116};
+
+    // water trans66 / slime trans66
+    {
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, -1, 0))),
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, 1, 0))),
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+    }
+
+    // slime trans66 / lava trans66
+    const qvec3d slimetrans66_lavatrans66 = watertrans66_slimetrans66 + qvec3d(0, 48, 0);
+    {
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, -1, 0))),
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/brlava"}));
+
+        CHECK_THAT(
+            TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, 1, 0))),
+            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/brlava"}));
+    }
+
+}
+
+/**
+ * Empty rooms are sealed to solid in Q2
+ **/
+TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_seal_empty_rooms.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_start_room {-240, 80, 56};
+    const qvec3d in_empty_room {-244, 476, 68};
+
+    // check leaf contents
+    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_empty_room)->contents);
+
+    CHECK(prt->portals.size() == 0);
+    CHECK(prt->portalleafs == 1);
+}
+
+/**
+ * Detail seals in Q2
+ **/
+TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail_seals.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_start_room {-240, 80, 56};
+    const qvec3d in_void {-336, 80, 56};
+
+    // check leaf contents
+    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
+}
+
+/**
+ * Two areaportals with a small gap in between creating another area.
+ * 
+ * Also, the faces on the ceiling/floor cross the areaportal
+ * (due to our aggressive face merging).
+ */
+TEST_CASE("q2_double_areaportal", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_double_areaportal.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    CheckFilled(bsp);
+
+    CHECK(4 == bsp.dareas.size()); 
+    CHECK(5 == bsp.dareaportals.size());
+}
+
+TEST_CASE("q2_areaportal_split", "[testmaps_q2]")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_split.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    CheckFilled(bsp);
+
+    CHECK(3 == bsp.dareas.size()); // 1 invalid index zero reserved + 2 areas
+    CHECK(3 == bsp.dareaportals.size()); // 1 invalid index zero reserved + 2 dareaportals to store the two directions of the portal
+}
+
+/**
+ * Test for q2 bmodel bounds
+ **/
+TEST_CASE("q2_door", "[testmaps_q2]") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_door.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const aabb3d world_tight_bounds {{-64, -64, -16}, {64, 80, 128}};
+    const aabb3d bmodel_tight_bounds {{-48, 48, 16}, {48, 64, 112}};
+
+    CHECK(world_tight_bounds.mins() == bsp.dmodels[0].mins);
+    CHECK(world_tight_bounds.maxs() == bsp.dmodels[0].maxs);
+
+    CHECK(bmodel_tight_bounds.mins() == bsp.dmodels[1].mins);
+    CHECK(bmodel_tight_bounds.maxs() == bsp.dmodels[1].maxs);
+}

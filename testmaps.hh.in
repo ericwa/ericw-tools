@@ -1,3 +1,3 @@
-const char *testmaps_dir = "@CMAKE_SOURCE_DIR@/testmaps";
-const char *test_quake_maps_dir = "@TEST_QUAKE_MAP_EXPORT_DIR@";
-const char *test_quake2_maps_dir = "@TEST_QUAKE2_MAP_EXPORT_DIR@";
+inline const char *testmaps_dir = "@CMAKE_SOURCE_DIR@/testmaps";
+inline const char *test_quake_maps_dir = "@TEST_QUAKE_MAP_EXPORT_DIR@";
+inline const char *test_quake2_maps_dir = "@TEST_QUAKE2_MAP_EXPORT_DIR@";
