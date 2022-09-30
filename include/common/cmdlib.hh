@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <array>
 #include <algorithm> // for std::min
 #include <cassert>
 #include <cstring>
