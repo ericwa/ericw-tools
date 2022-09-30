@@ -39,3 +39,16 @@ add_library(common STATIC
 )
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json)
+
+target_precompile_headers(common INTERFACE
+        <filesystem>
+        <array>
+        <list>
+        <vector>
+        <set>
+        <unordered_set>
+        <map>
+        <unordered_map>
+        <memory>
+        <variant>
+)
