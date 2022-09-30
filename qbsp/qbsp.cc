@@ -679,6 +679,12 @@ static void UpdateEntLump(void)
 {
     logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
+    if (qbsp_options.target_game->id == GAME_QUAKE_II)
+    {
+        FError("this won't work on Q2 maps; for Q2, please use bsputil --extract-entities & --replace-entities.");
+        return;
+    }
+
     size_t modnum = 1;
 
     for (size_t i = 1; i < map.entities.size(); i++) {
