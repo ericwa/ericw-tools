@@ -51,7 +51,8 @@ otool -L ./bspinfo/bspinfo
 otool -L ./bsputil/bsputil
 
 # run tests
-./tests/tests || exit 1
 if [ "$USE_ASAN" != "YES" ]; then
-  ./tests/tests [.] || exit 1 # run hidden tests (releaseonly)
+  ./tests/tests --no-skip || exit 1 # run hidden tests (releaseonly)
+else
+  ./tests/tests || exit 1
 fi

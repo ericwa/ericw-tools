@@ -37,9 +37,10 @@ make -j8 VERBOSE=1 || exit 1
 cpack || exit 1
 
 # run tests
-./tests/tests || exit 1
 if [ "$USE_ASAN" != "YES" ]; then
-  ./tests/tests [.] || exit 1 # run hidden tests (releaseonly)
+  ./tests/tests --no-skip || exit 1 # run hidden tests (releaseonly)
+else
+  ./tests/tests || exit 1
 fi
 
 # check rpath

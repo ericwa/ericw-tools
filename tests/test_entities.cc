@@ -1,9 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
+#include <doctest/doctest.h>
 
 #include <light/entities.hh>
 #include <vector>
 
-TEST_CASE("CheckEmptyValues", "[entities]")
+TEST_SUITE("entities") {
+TEST_CASE("CheckEmptyValues")
 {
     entdict_t good1{};
     entdict_t good2{{"foo", "bar"}};
@@ -16,4 +17,5 @@ TEST_CASE("CheckEmptyValues", "[entities]")
     CHECK_FALSE(EntDict_CheckNoEmptyValues(nullptr, bad1));
     CHECK_FALSE(EntDict_CheckNoEmptyValues(nullptr, bad2));
     CHECK_FALSE(EntDict_CheckNoEmptyValues(nullptr, bad3));
+}
 }

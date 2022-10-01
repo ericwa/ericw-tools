@@ -1,5 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_approx.hpp>
+#include <doctest/doctest.h>
 
 #include <light/light.hh>
 #include <light/entities.hh>
@@ -13,16 +12,18 @@
 
 using namespace std;
 
-TEST_CASE("MakeCDF", "[mathlib]")
+TEST_SUITE("mathlib") {
+
+TEST_CASE("MakeCDF")
 {
 
     std::vector<float> pdfUnnormzlied{25, 50, 25};
     std::vector<float> cdf = MakeCDF(pdfUnnormzlied);
 
     REQUIRE(3u == cdf.size());
-    REQUIRE(Catch::Approx(0.25) == cdf.at(0));
-    REQUIRE(Catch::Approx(0.75) == cdf.at(1));
-    REQUIRE(Catch::Approx(1.0) == cdf.at(2));
+    REQUIRE(doctest::Approx(0.25) == cdf.at(0));
+    REQUIRE(doctest::Approx(0.75) == cdf.at(1));
+    REQUIRE(doctest::Approx(1.0) == cdf.at(2));
 
     // TODO: return pdf
     REQUIRE(0 == SampleCDF(cdf, 0));
@@ -47,7 +48,7 @@ static void checkBox(const vector<qvec4f> &edges, const vector<qvec3f> &poly)
     CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 64.1, 0)));
 }
 
-TEST_CASE("EdgePlanesOfNonConvexPoly", "[mathlib]")
+TEST_CASE("EdgePlanesOfNonConvexPoly")
 {
     // hourglass, non-convex
     const vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {0, 64, 0}, {64, 0, 0}};
@@ -56,7 +57,7 @@ TEST_CASE("EdgePlanesOfNonConvexPoly", "[mathlib]")
     //    CHECK(vector<qvec4f>() == edges);
 }
 
-TEST_CASE("SlightlyConcavePoly", "[mathlib]")
+TEST_CASE("SlightlyConcavePoly")
 {
     const vector<qvec3f> poly{qvec3f(225.846161, -1744, 1774), qvec3f(248, -1744, 1798),
         qvec3f(248, -1763.82605, 1799.65222), qvec3f(248, -1764, 1799.66663), qvec3f(248, -1892, 1810.33337),
@@ -68,7 +69,7 @@ TEST_CASE("SlightlyConcavePoly", "[mathlib]")
     CHECK(GLM_EdgePlanes_PointInside(edges, qvec3f(152.636963, -1814, 1702)));
 }
 
-TEST_CASE("PointInPolygon", "[mathlib]")
+TEST_CASE("PointInPolygon")
 {
     // clockwise
     const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
@@ -77,7 +78,7 @@ TEST_CASE("PointInPolygon", "[mathlib]")
     checkBox(edges, poly);
 }
 
-TEST_CASE("PointInPolygon_DegenerateEdgeHandling", "[mathlib]")
+TEST_CASE("PointInPolygon_DegenerateEdgeHandling")
 {
     // clockwise
     const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {0, 64, 0}, // repeat of last point
@@ -87,7 +88,7 @@ TEST_CASE("PointInPolygon_DegenerateEdgeHandling", "[mathlib]")
     checkBox(edges, poly);
 }
 
-TEST_CASE("PointInPolygon_DegenerateFaceHandling1", "[mathlib]")
+TEST_CASE("PointInPolygon_DegenerateFaceHandling1")
 {
     const vector<qvec3f> poly{};
 
@@ -96,7 +97,7 @@ TEST_CASE("PointInPolygon_DegenerateFaceHandling1", "[mathlib]")
     CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
 }
 
-TEST_CASE("PointInPolygon_DegenerateFaceHandling2", "[mathlib]")
+TEST_CASE("PointInPolygon_DegenerateFaceHandling2")
 {
     const vector<qvec3f> poly{
         {0, 0, 0},
@@ -110,7 +111,7 @@ TEST_CASE("PointInPolygon_DegenerateFaceHandling2", "[mathlib]")
     CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
 }
 
-TEST_CASE("PointInPolygon_DegenerateFaceHandling3", "[mathlib]")
+TEST_CASE("PointInPolygon_DegenerateFaceHandling3")
 {
     const vector<qvec3f> poly{
         {0, 0, 0},
@@ -124,7 +125,7 @@ TEST_CASE("PointInPolygon_DegenerateFaceHandling3", "[mathlib]")
     CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
 }
 
-TEST_CASE("PointInPolygon_ColinearPointHandling", "[mathlib]")
+TEST_CASE("PointInPolygon_ColinearPointHandling")
 {
     // clockwise
     const vector<qvec3f> poly{{0, 0, 0}, {0, 32, 0}, // colinear
@@ -135,12 +136,12 @@ TEST_CASE("PointInPolygon_ColinearPointHandling", "[mathlib]")
     checkBox(edges, poly);
 }
 
-TEST_CASE("ClosestPointOnLineSegment_Degenerate", "[mathlib]")
+TEST_CASE("ClosestPointOnLineSegment_Degenerate")
 {
     CHECK(qvec3f(0, 0, 0) == ClosestPointOnLineSegment(qvec3f(0, 0, 0), qvec3f(0, 0, 0), qvec3f(10, 10, 10)));
 }
 
-TEST_CASE("ClosestPointOnPolyBoundary", "[mathlib]")
+TEST_CASE("ClosestPointOnPolyBoundary")
 {
     // clockwise
     const vector<qvec3f> poly{
@@ -159,7 +160,7 @@ TEST_CASE("ClosestPointOnPolyBoundary", "[mathlib]")
     CHECK(make_pair(0, qvec3f(0, 0, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
 }
 
-TEST_CASE("PolygonCentroid_empty", "[mathlib]")
+TEST_CASE("PolygonCentroid_empty")
 {
     const std::initializer_list<qvec3d> empty{};
     const qvec3f res = qv::PolyCentroid(empty.begin(), empty.end());
@@ -169,19 +170,19 @@ TEST_CASE("PolygonCentroid_empty", "[mathlib]")
     }
 }
 
-TEST_CASE("PolygonCentroid_point", "[mathlib]")
+TEST_CASE("PolygonCentroid_point")
 {
     const std::initializer_list<qvec3d> point{{1, 1, 1}};
     CHECK(*point.begin() == qv::PolyCentroid(point.begin(), point.end()));
 }
 
-TEST_CASE("PolygonCentroid_line", "[mathlib]")
+TEST_CASE("PolygonCentroid_line")
 {
     const std::initializer_list<qvec3d> line{{0, 0, 0}, {2, 2, 2}};
     CHECK(qvec3d(1, 1, 1) == qv::PolyCentroid(line.begin(), line.end()));
 }
 
-TEST_CASE("PolygonCentroid", "[mathlib]")
+TEST_CASE("PolygonCentroid")
 {
     // poor test.. but at least checks that the colinear point is treated correctly
     const std::initializer_list<qvec3d> poly{{0, 0, 0}, {0, 32, 0}, // colinear
@@ -190,7 +191,7 @@ TEST_CASE("PolygonCentroid", "[mathlib]")
     CHECK(qvec3f(32, 32, 0) == qv::PolyCentroid(poly.begin(), poly.end()));
 }
 
-TEST_CASE("PolygonArea", "[mathlib]")
+TEST_CASE("PolygonArea")
 {
     // poor test.. but at least checks that the colinear point is treated correctly
     const std::initializer_list<qvec3d> poly{{0, 0, 0}, {0, 32, 0}, // colinear
@@ -204,7 +205,7 @@ TEST_CASE("PolygonArea", "[mathlib]")
     CHECK(0.0f == qv::PolyArea(poly.begin(), poly.begin() + 2));
 }
 
-TEST_CASE("BarycentricFromPoint", "[mathlib]")
+TEST_CASE("BarycentricFromPoint")
 {
     // clockwise
     const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
@@ -218,7 +219,7 @@ TEST_CASE("BarycentricFromPoint", "[mathlib]")
     CHECK(qvec3f(0.5, 0.0, 0.5) == qv::Barycentric_FromPoint({32, 0, 0}, tri[0], tri[1], tri[2]));
 }
 
-TEST_CASE("BarycentricToPoint", "[mathlib]")
+TEST_CASE("BarycentricToPoint")
 {
     // clockwise
     const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
@@ -232,7 +233,7 @@ TEST_CASE("BarycentricToPoint", "[mathlib]")
     CHECK(qvec3f(32, 0, 0) == qv::Barycentric_ToPoint({0.5, 0.0, 0.5}, tri[0], tri[1], tri[2]));
 }
 
-TEST_CASE("BarycentricRandom", "[mathlib]")
+TEST_CASE("BarycentricRandom")
 {
     // clockwise
     const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
@@ -251,16 +252,16 @@ TEST_CASE("BarycentricRandom", "[mathlib]")
         REQUIRE(r1 <= 1);
 
         const auto bary = qv::Barycentric_Random(r0, r1);
-        CHECK(Catch::Approx(1.0f) == bary[0] + bary[1] + bary[2]);
+        CHECK(doctest::Approx(1.0f) == bary[0] + bary[1] + bary[2]);
 
         const qvec3f point = qv::Barycentric_ToPoint(bary, tri[0], tri[1], tri[2]);
         CHECK(GLM_EdgePlanes_PointInside(edges, point));
 
-        CHECK(Catch::Approx(0.0f) == GLM_DistAbovePlane(plane, point));
+        CHECK(doctest::Approx(0.0f) == GLM_DistAbovePlane(plane, point));
     }
 }
 
-TEST_CASE("RotateFromUpToSurfaceNormal", "[mathlib]")
+TEST_CASE("RotateFromUpToSurfaceNormal")
 {
     std::mt19937 engine(0);
     std::uniform_real_distribution<float> dis(-4096, 4096);
@@ -274,20 +275,20 @@ TEST_CASE("RotateFromUpToSurfaceNormal", "[mathlib]")
     }
 }
 
-TEST_CASE("MakePlane", "[mathlib]")
+TEST_CASE("MakePlane")
 {
     CHECK(qvec4f(0, 0, 1, 10) == GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(0, 0, 10)));
     CHECK(qvec4f(0, 0, 1, 10) == GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(100, 100, 10)));
 }
 
-TEST_CASE("DistAbovePlane", "[mathlib]")
+TEST_CASE("DistAbovePlane")
 {
     qvec4f plane(0, 0, 1, 10);
     qvec3f point(100, 100, 100);
-    CHECK(Catch::Approx(90) == GLM_DistAbovePlane(plane, point));
+    CHECK(doctest::Approx(90) == GLM_DistAbovePlane(plane, point));
 }
 
-TEST_CASE("InterpolateNormalsDegenerate", "[mathlib]")
+TEST_CASE("InterpolateNormalsDegenerate")
 {
     CHECK_FALSE(GLM_InterpolateNormal({}, std::vector<qvec3f>{}, qvec3f(0, 0, 0)).first);
     CHECK_FALSE(GLM_InterpolateNormal({qvec3f(0, 0, 0)}, {qvec3f(0, 0, 1)}, qvec3f(0, 0, 0)).first);
@@ -296,7 +297,7 @@ TEST_CASE("InterpolateNormalsDegenerate", "[mathlib]")
             .first);
 }
 
-TEST_CASE("InterpolateNormals", "[mathlib]")
+TEST_CASE("InterpolateNormals")
 {
     // This test relies on the way GLM_InterpolateNormal is implemented
 
@@ -340,7 +341,7 @@ static bool polysEqual(const vector<qvec3f> &p1, const vector<qvec3f> &p2)
     return true;
 }
 
-TEST_CASE("ClipPoly1", "[mathlib]")
+TEST_CASE("ClipPoly1")
 {
     const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
@@ -354,7 +355,7 @@ TEST_CASE("ClipPoly1", "[mathlib]")
     CHECK(polysEqual(backRes, clipRes.second));
 }
 
-TEST_CASE("ShrinkPoly1", "[mathlib]")
+TEST_CASE("ShrinkPoly1")
 {
     const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
@@ -365,7 +366,7 @@ TEST_CASE("ShrinkPoly1", "[mathlib]")
     CHECK(polysEqual(shrunkPoly, actualShrunk));
 }
 
-TEST_CASE("ShrinkPoly2", "[mathlib]")
+TEST_CASE("ShrinkPoly2")
 {
     const vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {64, 0, 0}};
 
@@ -380,18 +381,18 @@ TEST_CASE("ShrinkPoly2", "[mathlib]")
     CHECK(polysEqual(shrunkPoly, actualShrunk));
 }
 
-TEST_CASE("SignedDegreesBetweenUnitVectors", "[mathlib]")
+TEST_CASE("SignedDegreesBetweenUnitVectors")
 {
     const qvec3f up{0, 0, 1};
     const qvec3f fwd{0, 1, 0};
     const qvec3f right{1, 0, 0};
 
-    CHECK(Catch::Approx(-90) == SignedDegreesBetweenUnitVectors(right, fwd, up));
-    CHECK(Catch::Approx(90) == SignedDegreesBetweenUnitVectors(fwd, right, up));
-    CHECK(Catch::Approx(0) == SignedDegreesBetweenUnitVectors(right, right, up));
+    CHECK(doctest::Approx(-90) == SignedDegreesBetweenUnitVectors(right, fwd, up));
+    CHECK(doctest::Approx(90) == SignedDegreesBetweenUnitVectors(fwd, right, up));
+    CHECK(doctest::Approx(0) == SignedDegreesBetweenUnitVectors(right, right, up));
 }
 
-TEST_CASE("ConcavityTest_concave", "[mathlib]")
+TEST_CASE("ConcavityTest_concave")
 {
     const qvec3f face1center{0, 0, 10};
     const qvec3f face2center{10, 0, 200};
@@ -402,7 +403,7 @@ TEST_CASE("ConcavityTest_concave", "[mathlib]")
     CHECK(concavity_t::Concave == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
-TEST_CASE("ConcavityTest_concave2", "[mathlib]")
+TEST_CASE("ConcavityTest_concave2")
 {
     const qvec3f face1center{0, 0, 10};
     const qvec3f face2center{-10, 0, 200};
@@ -413,7 +414,7 @@ TEST_CASE("ConcavityTest_concave2", "[mathlib]")
     CHECK(concavity_t::Concave == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
-TEST_CASE("ConcavityTest_convex", "[mathlib]")
+TEST_CASE("ConcavityTest_convex")
 {
     const qvec3f face1center{0, 0, 10};
     const qvec3f face2center{10, 0, 5};
@@ -424,7 +425,7 @@ TEST_CASE("ConcavityTest_convex", "[mathlib]")
     CHECK(concavity_t::Convex == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
-TEST_CASE("ConcavityTest_convex2", "[mathlib]")
+TEST_CASE("ConcavityTest_convex2")
 {
     const qvec3f face1center{0, 0, 10};
     const qvec3f face2center{-10, 0, 5};
@@ -435,7 +436,7 @@ TEST_CASE("ConcavityTest_convex2", "[mathlib]")
     CHECK(concavity_t::Convex == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
 
-TEST_CASE("ConcavityTest_coplanar", "[mathlib]")
+TEST_CASE("ConcavityTest_coplanar")
 {
     const qvec3f face1center{0, 0, 10};
     const qvec3f face2center{100, 100, 10};
@@ -445,9 +446,14 @@ TEST_CASE("ConcavityTest_coplanar", "[mathlib]")
 
     CHECK(concavity_t::Coplanar == FacePairConcavity(face1center, face1normal, face2center, face2normal));
 }
+
+}
+
 static const float MANGLE_EPSILON = 0.1f;
 
-TEST_CASE("vec_from_mangle", "[light]")
+TEST_SUITE("light") {
+
+TEST_CASE("vec_from_mangle")
 {
     CHECK(qv::epsilonEqual(qvec3f(1, 0, 0), qv::vec_from_mangle(qvec3f(0, 0, 0)), MANGLE_EPSILON));
     CHECK(qv::epsilonEqual(qvec3f(-1, 0, 0), qv::vec_from_mangle(qvec3f(180, 0, 0)), MANGLE_EPSILON));
@@ -455,7 +461,7 @@ TEST_CASE("vec_from_mangle", "[light]")
     CHECK(qv::epsilonEqual(qvec3f(0, 0, -1), qv::vec_from_mangle(qvec3f(0, -90, 0)), MANGLE_EPSILON));
 }
 
-TEST_CASE("mangle_from_vec", "[light]")
+TEST_CASE("mangle_from_vec")
 {
     CHECK(qv::epsilonEqual(qvec3f(0, 0, 0), qv::mangle_from_vec(qvec3f(1, 0, 0)), MANGLE_EPSILON));
     CHECK(qv::epsilonEqual(qvec3f(180, 0, 0), qv::mangle_from_vec(qvec3f(-1, 0, 0)), MANGLE_EPSILON));
@@ -472,7 +478,7 @@ TEST_CASE("mangle_from_vec", "[light]")
     }
 }
 
-TEST_CASE("bilinearInterpolate", "[mathlib]")
+TEST_CASE("bilinearInterpolate")
 {
     const qvec4f v1(0, 1, 2, 3);
     const qvec4f v2(4, 5, 6, 7);
@@ -489,7 +495,7 @@ TEST_CASE("bilinearInterpolate", "[mathlib]")
     CHECK(qvec4f(1.75, 2.25, 2.75, 3.25) == bilinearInterpolate(v1, v2, v3, v4, 0.5f, 0.5f));
 }
 
-TEST_CASE("bilinearWeightsAndCoords", "[mathlib]")
+TEST_CASE("bilinearWeightsAndCoords")
 {
     const auto res = bilinearWeightsAndCoords(qvec2f(0.5, 0.25), qvec2i(2, 2));
 
@@ -502,7 +508,7 @@ TEST_CASE("bilinearWeightsAndCoords", "[mathlib]")
     CHECK(qvec2f(0.5, 0.25) == sum);
 }
 
-TEST_CASE("bilinearWeightsAndCoords2", "[mathlib]")
+TEST_CASE("bilinearWeightsAndCoords2")
 {
     const auto res = bilinearWeightsAndCoords(qvec2f(1.5, 0.5), qvec2i(2, 2));
 
@@ -515,7 +521,7 @@ TEST_CASE("bilinearWeightsAndCoords2", "[mathlib]")
     CHECK(qvec2f(1.0, 0.5) == sum);
 }
 
-TEST_CASE("pointsAlongLine", "[mathlib]")
+TEST_CASE("pointsAlongLine")
 {
     const auto res = PointsAlongLine(qvec3f(1, 0, 0), qvec3f(3.5, 0, 0), 1.5f);
 
@@ -526,7 +532,7 @@ TEST_CASE("pointsAlongLine", "[mathlib]")
 
 // FIXME: this is failing
 #if 0
-TEST_CASE("RandomPointInPoly", "[mathlib]") {
+TEST_CASE("RandomPointInPoly") {
     const vector<qvec3f> poly {
         { 0,0,0 },
         { 0,32,0 }, // colinear point
@@ -568,18 +574,18 @@ TEST_CASE("RandomPointInPoly", "[mathlib]") {
 }
 #endif
 
-TEST_CASE("FractionOfLine", "[mathlib]")
+TEST_CASE("FractionOfLine")
 {
-    REQUIRE(Catch::Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0, 0, 0)));
-    REQUIRE(Catch::Approx(0.5) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0.5, 0.5, 0.5)));
-    REQUIRE(Catch::Approx(1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(1, 1, 1)));
-    REQUIRE(Catch::Approx(2) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(2, 2, 2)));
-    REQUIRE(Catch::Approx(-1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(-1, -1, -1)));
+    REQUIRE(doctest::Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0, 0, 0)));
+    REQUIRE(doctest::Approx(0.5) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(0.5, 0.5, 0.5)));
+    REQUIRE(doctest::Approx(1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(1, 1, 1)));
+    REQUIRE(doctest::Approx(2) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(2, 2, 2)));
+    REQUIRE(doctest::Approx(-1) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(1, 1, 1), qvec3f(-1, -1, -1)));
 
-    REQUIRE(Catch::Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(0, 0, 0), qvec3f(0, 0, 0)));
+    REQUIRE(doctest::Approx(0) == FractionOfLine(qvec3f(0, 0, 0), qvec3f(0, 0, 0), qvec3f(0, 0, 0)));
 }
 
-TEST_CASE("DistToLine", "[mathlib]")
+TEST_CASE("DistToLine")
 {
     const float epsilon = 0.001;
 
@@ -595,7 +601,7 @@ TEST_CASE("DistToLine", "[mathlib]")
     REQUIRE(fabs(0.5 - DistToLine(qvec3f(10, 0, 0), qvec3f(10, 0, 100), qvec3f(9.5, 0, 0))) < epsilon);
 }
 
-TEST_CASE("DistToLineSegment", "[mathlib]")
+TEST_CASE("DistToLineSegment")
 {
     const float epsilon = 0.001;
 
@@ -611,54 +617,54 @@ TEST_CASE("DistToLineSegment", "[mathlib]")
     REQUIRE(fabs(0.5 - DistToLineSegment(qvec3f(10, 0, 0), qvec3f(10, 0, 100), qvec3f(9.5, 0, 0))) < epsilon);
 }
 
-TEST_CASE("linesOverlap_points", "[mathlib]")
+TEST_CASE("linesOverlap_points")
 {
     REQUIRE(LinesOverlap({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}));
 }
 
-TEST_CASE("linesOverlap_point_line", "[mathlib]")
+TEST_CASE("linesOverlap_point_line")
 {
     REQUIRE(LinesOverlap({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 1}));
 }
 
-TEST_CASE("linesOverlap_same", "[mathlib]")
+TEST_CASE("linesOverlap_same")
 {
     REQUIRE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 0}, {0, 0, 1}));
 }
 
-TEST_CASE("linesOverlap_same_opposite_dir", "[mathlib]")
+TEST_CASE("linesOverlap_same_opposite_dir")
 {
     REQUIRE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 1}, {0, 0, 0}));
 }
 
-TEST_CASE("linesOverlap_overlap", "[mathlib]")
+TEST_CASE("linesOverlap_overlap")
 {
     REQUIRE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 0.5}, {0, 0, 1.5}));
 }
 
-TEST_CASE("linesOverlap_overlap_opposite_dir", "[mathlib]")
+TEST_CASE("linesOverlap_overlap_opposite_dir")
 {
     REQUIRE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 1.5}, {0, 0, 0.5}));
 }
 
-TEST_CASE("linesOverlap_only_tips_touching", "[mathlib]")
+TEST_CASE("linesOverlap_only_tips_touching")
 {
     REQUIRE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 1}, {0, 0, 2}));
 }
 
-TEST_CASE("linesOverlap_non_colinear", "[mathlib]")
+TEST_CASE("linesOverlap_non_colinear")
 {
     REQUIRE_FALSE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {5, 0, 0}, {5, 0, 1}));
 }
 
-TEST_CASE("linesOverlap_colinear_not_touching", "[mathlib]")
+TEST_CASE("linesOverlap_colinear_not_touching")
 {
     REQUIRE_FALSE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 0, 3}));
 }
 
 // qvec
 
-TEST_CASE("qvec_expand", "[mathlib]")
+TEST_CASE("qvec_expand")
 {
     const qvec2f test(1, 2);
     const qvec4f test2(test);
@@ -669,7 +675,7 @@ TEST_CASE("qvec_expand", "[mathlib]")
     CHECK(0 == test2[3]);
 }
 
-TEST_CASE("qvec_contract", "[mathlib]")
+TEST_CASE("qvec_contract")
 {
     const qvec4f test(1, 2, 0, 0);
     const qvec2f test2(test);
@@ -678,7 +684,7 @@ TEST_CASE("qvec_contract", "[mathlib]")
     CHECK(2 == test2[1]);
 }
 
-TEST_CASE("qvec_copy", "[mathlib]")
+TEST_CASE("qvec_copy")
 {
     const qvec2f test(1, 2);
     const qvec2f test2(test);
@@ -687,21 +693,21 @@ TEST_CASE("qvec_copy", "[mathlib]")
     CHECK(2 == test2[1]);
 }
 
-TEST_CASE("qvec_constructor_init", "[mathlib]")
+TEST_CASE("qvec_constructor_init")
 {
     const qvec2f test{};
     CHECK(0 == test[0]);
     CHECK(0 == test[1]);
 }
 
-TEST_CASE("qvec_constructor_1", "[mathlib]")
+TEST_CASE("qvec_constructor_1")
 {
     const qvec2f test(42);
     CHECK(42 == test[0]);
     CHECK(42 == test[1]);
 }
 
-TEST_CASE("qvec_constructor_fewer", "[mathlib]")
+TEST_CASE("qvec_constructor_fewer")
 {
     const qvec4f test(1, 2, 3);
     CHECK(1 == test[0]);
@@ -710,7 +716,7 @@ TEST_CASE("qvec_constructor_fewer", "[mathlib]")
     CHECK(0 == test[3]);
 }
 
-TEST_CASE("qvec_constructor_extra", "[mathlib]")
+TEST_CASE("qvec_constructor_extra")
 {
     const qvec2f test(1, 2, 3);
     CHECK(1 == test[0]);
@@ -719,7 +725,7 @@ TEST_CASE("qvec_constructor_extra", "[mathlib]")
 
 // aabb3f
 
-TEST_CASE("aabb_basic", "[mathlib]")
+TEST_CASE("aabb_basic")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -728,14 +734,14 @@ TEST_CASE("aabb_basic", "[mathlib]")
     CHECK(qvec3f(9, 9, 9) == b1.size());
 }
 
-TEST_CASE("aabb_grow", "[mathlib]")
+TEST_CASE("aabb_grow")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
     CHECK(aabb3f(qvec3f(0, 0, 0), qvec3f(11, 11, 11)) == b1.grow(qvec3f(1, 1, 1)));
 }
 
-TEST_CASE("aabb_unionwith", "[mathlib]")
+TEST_CASE("aabb_unionwith")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
     const aabb3f b2(qvec3f(11, 11, 11), qvec3f(12, 12, 12));
@@ -743,7 +749,7 @@ TEST_CASE("aabb_unionwith", "[mathlib]")
     CHECK(aabb3f(qvec3f(1, 1, 1), qvec3f(12, 12, 12)) == b1.unionWith(b2));
 }
 
-TEST_CASE("aabb_expand", "[mathlib]")
+TEST_CASE("aabb_expand")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -758,7 +764,7 @@ TEST_CASE("aabb_expand", "[mathlib]")
     CHECK(b3 == b1.expand(qvec3f(0, 1, 1)));
 }
 
-TEST_CASE("aabb_disjoint", "[mathlib]")
+TEST_CASE("aabb_disjoint")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -790,7 +796,7 @@ TEST_CASE("aabb_disjoint", "[mathlib]")
     CHECK_FALSE(b1.disjoint_or_touching(aabb3f(qvec3f(9.99, 1, 1), qvec3f(20, 10, 10))));
 }
 
-TEST_CASE("aabb_contains", "[mathlib]")
+TEST_CASE("aabb_contains")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -806,7 +812,7 @@ TEST_CASE("aabb_contains", "[mathlib]")
     CHECK_FALSE(b1.contains(no2));
 }
 
-TEST_CASE("aabb_containsPoint", "[mathlib]")
+TEST_CASE("aabb_containsPoint")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -826,7 +832,7 @@ TEST_CASE("aabb_containsPoint", "[mathlib]")
     CHECK_FALSE(b1.containsPoint(no3));
 }
 
-TEST_CASE("aabb_create_invalid", "[mathlib]")
+TEST_CASE("aabb_create_invalid")
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(-1, -1, -1));
     const aabb3f fixed(qvec3f(1, 1, 1), qvec3f(1, 1, 1));
@@ -835,7 +841,11 @@ TEST_CASE("aabb_create_invalid", "[mathlib]")
     CHECK(qvec3f(0, 0, 0) == b1.size());
 }
 
-TEST_CASE("matrix2x2inv", "[qvec]")
+}
+
+TEST_SUITE("qvec") {
+
+TEST_CASE("matrix2x2inv")
 {
     std::mt19937 engine(0);
     std::uniform_real_distribution<float> dis(-4096, 4096);
@@ -861,7 +871,7 @@ TEST_CASE("matrix2x2inv", "[qvec]")
     REQUIRE(std::isnan(nanMat.at(0, 0)));
 }
 
-TEST_CASE("matrix4x4inv", "[qvec]")
+TEST_CASE("matrix4x4inv")
 {
     std::mt19937 engine(0);
     std::uniform_real_distribution<float> dis(-4096, 4096);
@@ -887,7 +897,10 @@ TEST_CASE("matrix4x4inv", "[qvec]")
     REQUIRE(std::isnan(nanMat.at(0, 0)));
 }
 
-TEST_CASE("clamp_texcoord_small", "[trace]")
+}
+TEST_SUITE("trace") {
+    
+TEST_CASE("clamp_texcoord_small")
 {
     // positive
     CHECK(0 == clamp_texcoord(0.0f, 2));
@@ -905,7 +918,7 @@ TEST_CASE("clamp_texcoord_small", "[trace]")
     CHECK(1 == clamp_texcoord(-2.5f, 2));
 }
 
-TEST_CASE("clamp_texcoord", "[trace]")
+TEST_CASE("clamp_texcoord")
 {
     // positive
     CHECK(0 == clamp_texcoord(0.0f, 128));
@@ -924,13 +937,17 @@ TEST_CASE("clamp_texcoord", "[trace]")
     CHECK(127 == clamp_texcoord(-129.0f, 128));
 }
 
-TEST_CASE("delayDefault", "[settings]")
+}
+
+TEST_SUITE("settings") {
+
+TEST_CASE("delayDefault")
 {
     light_t light;
     CHECK(LF_LINEAR == light.formula.value());
 }
 
-TEST_CASE("delayParseInt", "[settings]")
+TEST_CASE("delayParseInt")
 {
     light_t light;
     parser_t p("2", { });
@@ -938,7 +955,7 @@ TEST_CASE("delayParseInt", "[settings]")
     CHECK(LF_INVERSE2 == light.formula.value());
 }
 
-TEST_CASE("delayParseIntUnknown", "[settings]")
+TEST_CASE("delayParseIntUnknown")
 {
     light_t light;
     parser_t p("500", { });
@@ -947,7 +964,7 @@ TEST_CASE("delayParseIntUnknown", "[settings]")
     CHECK(500 == light.formula.value());
 }
 
-TEST_CASE("delayParseFloat", "[settings]")
+TEST_CASE("delayParseFloat")
 {
     light_t light;
     parser_t p("2.0", { });
@@ -955,10 +972,12 @@ TEST_CASE("delayParseFloat", "[settings]")
     CHECK(LF_INVERSE2 == light.formula.value());
 }
 
-TEST_CASE("delayParseString", "[settings]")
+TEST_CASE("delayParseString")
 {
     light_t light;
     parser_t p("inverse2", { });
     CHECK(light.formula.parse(light.formula.primaryName(), p, settings::source::MAP));
     CHECK(LF_INVERSE2 == light.formula.value());
+}
+
 }

@@ -1,5 +1,5 @@
 add_subdirectory(fmt EXCLUDE_FROM_ALL)
-add_subdirectory(Catch2 EXCLUDE_FROM_ALL)
+add_subdirectory(doctest EXCLUDE_FROM_ALL)
 add_subdirectory(json EXCLUDE_FROM_ALL)
 add_subdirectory(nanobench EXCLUDE_FROM_ALL)
 

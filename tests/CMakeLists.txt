@@ -2,6 +2,7 @@ enable_testing()
 
 add_executable(tests
 		test.cc
+		test_main.cc
 		test_common.cc
 		test_entities.cc
 		test_light.cc
@@ -10,8 +11,9 @@ add_executable(tests
 		test_qbsp.hh
 		test_qbsp_q2.cc
 		test_vis.cc
+		testutils.hh
 		${CMAKE_BINARY_DIR}/testmaps.hh
-)
+		testutils.hh)
 
 find_package(embree 3.0 REQUIRED)
 INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
@@ -25,7 +27,7 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 	message(STATUS "Found embree EMBREE_TBB_DLL: ${EMBREE_TBB_DLL}")
 endif()
 
-target_link_libraries(tests libqbsp liblight libvis common TBB::tbb TBB::tbbmalloc Catch2::Catch2WithMain fmt::fmt nanobench::nanobench)
+target_link_libraries(tests libqbsp liblight libvis common TBB::tbb TBB::tbbmalloc doctest::doctest fmt::fmt nanobench::nanobench)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET tests POST_BUILD
@@ -39,6 +41,3 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 endif()
 
 add_definitions(-DHAVE_EMBREE)
-
-include(Catch)
-catch_discover_tests(tests)
