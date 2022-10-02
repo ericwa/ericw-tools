@@ -191,12 +191,14 @@ void percent_clock::print()
     }
 
     ready = false;
-
+    
+#ifdef _DEBUG
     if (max != indeterminate) {
         if (count != max) {
             logging::print("ERROR TO FIX LATER: clock counter ended too early\n");
         }
     }
+#endif
 
     percent(max, max, displayElapsed);
 }

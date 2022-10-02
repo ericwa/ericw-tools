@@ -6,7 +6,6 @@
 
 class mapbrush_t;
 struct mapface_t;
-class mapface_t;
 class mapentity_t;
 
 const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, const std::string &texname);

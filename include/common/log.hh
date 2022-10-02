@@ -149,9 +149,11 @@ struct percent_clock
     // increase count by 1
     inline void increase()
     {
+#ifdef _DEBUG
         if (count == max) {
             logging::print("ERROR TO FIX LATER: clock counter increased to end, but not finished yet\n");
         }
+#endif
 
         percent(count++, max, displayElapsed);
     }
