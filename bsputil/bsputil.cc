@@ -456,6 +456,16 @@ static void FindFaces(const mbsp_t *bsp, const qvec3d &pos, const qvec3d &normal
     }
 }
 
+static void FindLeaf(const mbsp_t *bsp, const qvec3d &pos)
+{
+    const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], pos);
+
+    fmt::print("leaf {}: contents {} ({})\n",
+        (leaf - bsp->dleafs.data()),
+        leaf->contents,
+        contentflags_t{leaf->contents}.to_string(bsp->loadversion->game));
+}
+
 // TODO
 settings::common_settings bsputil_options;
 
@@ -469,7 +479,7 @@ int main(int argc, char **argv)
     if (argc == 1) {
         printf(
             "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
-            "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--settexinfo facenum texinfonum]\n"
+            "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--findleaf x y z] [--settexinfo facenum texinfonum]\n"
             "[--decompile] [--decompile-geomonly] [--decompile-hull n] bspfile\n");
         exit(1);
     }
@@ -597,7 +607,22 @@ int main(int argc, char **argv)
                 Error("Error reading position/normal\n");
             }
             return 0;
-        } else if (!strcmp(argv[i], "--settexinfo")) {
+    } else if (!strcmp(argv[i], "--findleaf")) {
+        // (i + 1) ... (i + 3) = x y z
+        // i + 4 = bsp file
+
+        if (i + 4 >= argc) {
+            Error("--findleaf requires 3 arguments");
+        }
+
+        try {
+            const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
+            FindLeaf(&bsp, pos);
+        } catch (const std::exception &) {
+            Error("Error reading position/normal\n");
+        }
+        return 0;
+    } else if (!strcmp(argv[i], "--settexinfo")) {
             // (i + 1) facenum
             // (i + 2) texinfonum
 
