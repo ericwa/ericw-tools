@@ -102,6 +102,15 @@ bspbrush_t bspbrush_t::clone() const
     return result;
 }
 
+bool bspbrush_t::contains_point(const qvec3d &point, vec_t epsilon) const {
+    for (auto& side : sides) {
+        if (side.get_plane().distance_to(point) > epsilon) {
+            return false;
+        }
+    }
+    return true;
+}
+
 /*
 =================
 CheckFace
