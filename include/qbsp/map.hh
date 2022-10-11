@@ -214,6 +214,7 @@ struct brush_stats_t
     size_t liquid;
     size_t detail_fence;
     size_t detail;
+    size_t detail_wall;
     size_t sky;
     size_t solid;
 };

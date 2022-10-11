@@ -88,6 +88,7 @@ enum extended_cflags_t : uint16_t
 {
     CFLAGS_STRUCTURAL_COVERED_BY_DETAIL = nth_bit(0u),
     CFLAGS_WAS_ILLUSIONARY = nth_bit(1), /* was illusionary, got changed to something else */
+    CFLAGS_DETAIL_WALL = nth_bit(2), /* don't clip world for func_detail_wall entities */
     CFLAGS_BMODEL_MIRROR_INSIDE = nth_bit(3), /* set "_mirrorinside" "1" on a bmodel to mirror faces for when the player is inside. */
     CFLAGS_NO_CLIPPING_SAME_TYPE = nth_bit(4), /* Don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY */
     // only one of these flags below should ever be set.
@@ -99,7 +100,7 @@ enum extended_cflags_t : uint16_t
     CFLAGS_DETAIL_FENCE = nth_bit(10),
     CFLAGS_ILLUSIONARY_VISBLOCKER = nth_bit(11),
     // all of the detail values
-    CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE),
+    CFLAGS_DETAIL_MASK = (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_WALL),
     // all of the special content types
     CFLAGS_CONTENTS_MASK =
         (CFLAGS_HINT | CFLAGS_CLIP | CFLAGS_ORIGIN | CFLAGS_DETAIL_MASK | CFLAGS_ILLUSIONARY_VISBLOCKER)

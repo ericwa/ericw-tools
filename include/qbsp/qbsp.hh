@@ -382,7 +382,7 @@ struct surface_t
             lmshift = min(f->lmshift.front, f->lmshift.back);
 
             if (!((f->contents[0].extended | f->contents[1].extended) &
-                    (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_WAS_ILLUSIONARY))) {
+                    (CFLAGS_DETAIL | CFLAGS_DETAIL_ILLUSIONARY | CFLAGS_DETAIL_FENCE | CFLAGS_DETAIL_WALL | CFLAGS_WAS_ILLUSIONARY))) {
                 has_struct = true;
             }
 

@@ -36,7 +36,7 @@ std::atomic<int> splitnodes;
 
 static std::atomic<int> leaffaces;
 static std::atomic<int> nodefaces;
-static std::atomic<int> c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_fence;
+static std::atomic<int> c_solid, c_empty, c_water, c_detail, c_detail_illusionary, c_detail_fence, c_detail_wall;
 static std::atomic<int> c_illusionary_visblocker;
 static bool usemidsplit;
 
@@ -76,6 +76,8 @@ void DetailToSolid(node_t *node)
             node->contents = options.target_game->create_solid_contents();
         } else if (node->contents.is_detail(CFLAGS_DETAIL_ILLUSIONARY)) {
             node->contents = options.target_game->create_empty_contents();
+        } else if (node->contents.is_detail(CFLAGS_DETAIL_WALL)) {
+            node->contents = options.target_game->create_solid_contents();
         }
         /* N.B.: CONTENTS_DETAIL_FENCE is not remapped to CONTENTS_SOLID until the very last moment,
          * because we want to generate a leaf (if we set it to CONTENTS_SOLID now it would use leaf 0).
@@ -648,6 +650,8 @@ static void LinkConvexFaces(std::vector<surface_t> &planelist, node_t *leafnode)
         c_illusionary_visblocker++;
     } else if (leafnode->contents.extended & CFLAGS_DETAIL_FENCE) {
         c_detail_fence++;
+    } else if (leafnode->contents.extended & CFLAGS_DETAIL_WALL) {
+        c_detail_wall++;
     } else if (leafnode->contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
         c_detail_illusionary++;
     } else if (leafnode->contents.extended & CFLAGS_DETAIL) {
@@ -826,6 +830,7 @@ node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bo
     c_detail = 0;
     c_detail_illusionary = 0;
     c_detail_fence = 0;
+    c_detail_wall = 0;
     c_illusionary_visblocker = 0;
     // count map surfaces; this is used when deciding to switch between midsplit and the expensive partitioning
     mapsurfaces = surfhead.size();
@@ -841,6 +846,7 @@ node_t *SolidBSP(const mapentity_t *entity, std::vector<surface_t> &surfhead, bo
     logging::print(logging::flag::STAT, "     {:8} detail leafs\n", c_detail.load());
     logging::print(logging::flag::STAT, "     {:8} detail illusionary leafs\n", c_detail_illusionary.load());
     logging::print(logging::flag::STAT, "     {:8} detail fence leafs\n", c_detail_fence.load());
+    logging::print(logging::flag::STAT, "     {:8} detail wall leafs\n", c_detail_wall.load());
     logging::print(logging::flag::STAT, "     {:8} illusionary visblocker leafs\n", c_illusionary_visblocker.load());
     logging::print(logging::flag::STAT, "     {:8} leaffaces\n", leaffaces.load());
     logging::print(logging::flag::STAT, "     {:8} nodefaces\n", nodefaces.load());

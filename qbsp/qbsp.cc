@@ -838,6 +838,9 @@ static void ProcessEntity(mapentity_t *entity, const int hullnum)
     if (stats.detail) {
         logging::print(logging::flag::STAT, "     {:8} detail brushes\n", stats.detail);
     }
+    if (stats.detail_wall) {
+        logging::print(logging::flag::STAT, "     {:8} detail wall brushes\n", stats.detail_wall);
+    }
     if (stats.detail_illusionary) {
         logging::print(logging::flag::STAT, "     {:8} detail illusionary brushes\n", stats.detail_illusionary);
     }

@@ -99,6 +99,8 @@ struct gamedef_q1_like_t : public gamedef_t
     {
         if (contents.extended & CFLAGS_DETAIL) {
             return 5;
+        } else if (contents.extended & CFLAGS_DETAIL_WALL) {
+            return 5; // same priority as CFLAGS_DETAIL
         } else if (contents.extended & CFLAGS_DETAIL_FENCE) {
             return 4;
         } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
@@ -456,6 +458,8 @@ struct gamedef_q2_t : public gamedef_t
     {
         if (contents.extended & CFLAGS_DETAIL) {
             return 8;
+        } else if (contents.extended & CFLAGS_DETAIL_WALL) {
+            return 8; // same priority as CFLAGS_DETAIL
         } else if (contents.extended & CFLAGS_DETAIL_ILLUSIONARY) {
             return 6;
         } else if (contents.extended & CFLAGS_DETAIL_FENCE) {

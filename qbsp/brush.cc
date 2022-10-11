@@ -790,7 +790,7 @@ std::optional<brush_t> LoadBrush(const mapentity_t *src, const mapbrush_t *mapbr
 // temporary brush lists to hold sorting data
 struct brush_types_t
 {
-    std::vector<brush_t> detail_illusionary, liquid, detail_fence, detail, sky, solid;
+    std::vector<brush_t> detail_illusionary, liquid, detail_fence, detail_wall, detail, sky, solid;
 };
 
 static brush_stats_t Entity_SortBrushes(mapentity_t *dst, brush_types_t &types)
@@ -802,12 +802,13 @@ static brush_stats_t Entity_SortBrushes(mapentity_t *dst, brush_types_t &types)
     stats.detail_illusionary = types.detail_illusionary.size();
     stats.liquid = types.liquid.size();
     stats.detail_fence = types.detail_fence.size();
+    stats.detail_wall = types.detail_wall.size();
     stats.detail = types.detail.size();
     stats.sky = types.sky.size();
     stats.solid = types.solid.size();
 
     dst->brushes.reserve(
-        stats.detail_illusionary + stats.liquid + stats.detail_fence + stats.detail + stats.sky + stats.solid);
+        stats.detail_illusionary + stats.liquid + stats.detail_fence + stats.detail_wall + stats.detail + stats.sky + stats.solid);
 
     dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_illusionary.begin()),
         make_move_iterator(types.detail_illusionary.end()));
@@ -815,6 +816,8 @@ static brush_stats_t Entity_SortBrushes(mapentity_t *dst, brush_types_t &types)
         dst->brushes.end(), make_move_iterator(types.liquid.begin()), make_move_iterator(types.liquid.end()));
     dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_fence.begin()),
         make_move_iterator(types.detail_fence.end()));
+    dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.detail_wall.begin()),
+        make_move_iterator(types.detail_wall.end()));
     dst->brushes.insert(
         dst->brushes.end(), make_move_iterator(types.detail.begin()), make_move_iterator(types.detail.end()));
     dst->brushes.insert(dst->brushes.end(), make_move_iterator(types.sky.begin()), make_move_iterator(types.sky.end()));
@@ -830,7 +833,7 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
     qvec3d rotate_offset{};
     int i;
     int lmshift;
-    bool all_detail, all_detail_fence, all_detail_illusionary;
+    bool all_detail, all_detail_fence, all_detail_illusionary, all_detail_wall;
 
     const std::string &classname = src->epairs.get("classname");
     /*
@@ -882,8 +885,13 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             all_detail = true;
         }
 
+        all_detail_wall = false;
+        if (!Q_strcasecmp(classname, "func_detail_wall")) {
+            all_detail_wall = true;
+        }
+
         all_detail_fence = false;
-        if (!Q_strcasecmp(classname, "func_detail_fence") || !Q_strcasecmp(classname, "func_detail_wall")) {
+        if (!Q_strcasecmp(classname, "func_detail_fence")) {
             all_detail_fence = true;
         }
 
@@ -933,12 +941,14 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
         bool detail = false;
         bool detail_illusionary = false;
         bool detail_fence = false;
+        bool detail_wall = false;
         std::optional<bool> mirrorinside_brush = mirrorinside;
 
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
+        detail_wall |= all_detail_wall;
 
         if (!mirrorinside_brush) {
             if (options.target_game->id == GAME_QUAKE_II && (contents.native & (Q2_CONTENTS_AUX | Q2_CONTENTS_MIST))) {
@@ -957,6 +967,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             continue;
         if ((options.omitdetail.value() || options.omitdetailfence.value()) && detail_fence)
             continue;
+        if ((options.omitdetail.value() || options.omitdetailwall.value()) && detail_wall)
+            continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(options.target_game)) {
@@ -964,6 +976,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
                 contents = {contents.native, CFLAGS_DETAIL_ILLUSIONARY};
             } else if (detail_fence) {
                 contents = {contents.native, CFLAGS_DETAIL_FENCE};
+            } else if (detail_wall) {
+                contents = {contents.native, CFLAGS_DETAIL_WALL};
             } else if (detail) {
                 contents = {contents.native, CFLAGS_DETAIL};
             }
@@ -1054,6 +1068,8 @@ static void Brush_LoadEntity(mapentity_t *dst, const mapentity_t *src, const int
             types.detail_illusionary.emplace_back(std::move(brush.value()));
         } else if (brush->contents.is_detail(CFLAGS_DETAIL_FENCE)) {
             types.detail_fence.emplace_back(std::move(brush.value()));
+        } else if (brush->contents.is_detail(CFLAGS_DETAIL_WALL)) {
+            types.detail_wall.emplace_back(std::move(brush.value()));
         } else {
             types.liquid.emplace_back(std::move(brush.value()));
         }
