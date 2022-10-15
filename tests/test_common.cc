@@ -21,6 +21,7 @@ TEST_CASE("q1 contents")
 
     const auto solid = game_q1->create_solid_contents();
     const auto detail_solid = game_q1->create_detail_solid_contents(solid);
+    const auto detail_wall = game_q1->create_detail_wall_contents(solid);
     const auto detail_fence = game_q1->create_detail_fence_contents(solid);
     const auto detail_illusionary = game_q1->create_detail_illusionary_contents(solid);
 
@@ -33,6 +34,7 @@ TEST_CASE("q1 contents")
         contentflags_t{CONTENTS_SKY},
 
         detail_solid,
+        detail_wall,
         detail_fence,
         detail_illusionary
     };
@@ -60,10 +62,12 @@ TEST_CASE("q1 contents")
 
     SUBCASE("detail properties") {
         CHECK(detail_solid.is_any_detail(game_q1));
+        CHECK(detail_wall.is_any_detail(game_q1));
         CHECK(detail_fence.is_any_detail(game_q1));
         CHECK(detail_illusionary.is_any_detail(game_q1));
 
         CHECK(detail_solid.is_any_solid(game_q1));
+        CHECK(!detail_wall.is_any_solid(game_q1));
         CHECK(!detail_fence.is_any_solid(game_q1));
         CHECK(!detail_illusionary.is_any_solid(game_q1));
     }

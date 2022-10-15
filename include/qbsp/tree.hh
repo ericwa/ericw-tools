@@ -71,5 +71,4 @@ struct tree_t
     }
 };
 
-void DetailToSolid(node_t *node);
 void PruneNodes(node_t *node);

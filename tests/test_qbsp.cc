@@ -665,11 +665,17 @@ TEST_CASE("simple_worldspawn_detail_wall" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_wall.map");
 
-    REQUIRE(prt.has_value());
+    CHECK(prt.has_value());
 
     // 5 faces for the "button"
     // 6 faces for the room
-    REQUIRE(bsp.dfaces.size() == 11);
+    CHECK(bsp.dfaces.size() == 11);
+
+    const qvec3d button_pos = {16, -48, 104};
+    auto *button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], button_pos);
+
+    CHECK(button_leaf->contents == CONTENTS_SOLID);
+    CHECK(button_leaf == &bsp.dleafs[0]); // should be using shared solid leaf because it's func_detail_wall
 }
 
 TEST_CASE("simple_worldspawn_detail" * doctest::test_suite("testmaps_q1"))
@@ -822,7 +828,7 @@ TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 }
 
 /**
- * _noclipfaces 1 detail_wall meeting a _noclipfaces 0 one.
+ * _noclipfaces 1 detail_fence meeting a _noclipfaces 0 one.
  *
  * Currently, to simplify the implementation, we're treating that the same as if both had _noclipfaces 1
  */
@@ -1582,30 +1588,51 @@ TEST_CASE("q1_hull1_content_types" * doctest::test_suite("testmaps_q1"))
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
+    enum leaf {
+        shared_leaf_0,
+        new_leaf
+    };
+
     struct expected_types_t
     {
         int hull0_contenttype;
+        leaf hull0_leaf;
+
         int hull1_contenttype;
     };
 
     const std::vector<std::tuple<qvec3d, expected_types_t>> expected{
-        {{0, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}},
-        {{64, 0, 0}, {CONTENTS_WATER, CONTENTS_EMPTY}}, // liquids are absent in hull1
-        {{128, 0, 0}, {CONTENTS_SLIME, CONTENTS_EMPTY}},
-        {{192, 0, 0}, {CONTENTS_LAVA, CONTENTS_EMPTY}},
-        {{256, 0, 0}, {CONTENTS_SKY, CONTENTS_SOLID}}, // sky is solid in hull1
-        {{320, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail is solid in hull1
-        {{384, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail_fence is solid in hull1
-        {{384, -64, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail_fence + _mirrorinside is solid in hull1
-        {{448, 0, 0}, {CONTENTS_EMPTY, CONTENTS_EMPTY}},    // func_detail_illusionary is empty in hull1
-        {{448, -64, 0}, {CONTENTS_EMPTY, CONTENTS_EMPTY}} // func_detail_illusionary + _mirrorinside is empty in hull1
+        // box center,   hull0 contents,  hull0 leaf,    hull1 contents
+        {{0, 0, 0},     {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}},
+        {{64, 0, 0},    {CONTENTS_WATER, new_leaf,      CONTENTS_EMPTY}}, // liquids are absent in hull1
+        {{128, 0, 0},   {CONTENTS_SLIME, new_leaf,      CONTENTS_EMPTY}},
+        {{192, 0, 0},   {CONTENTS_LAVA,  new_leaf,      CONTENTS_EMPTY}},
+        {{256, 0, 0},   {CONTENTS_SKY,   new_leaf,      CONTENTS_SOLID}}, // sky is solid in hull1
+        {{320, 0, 0},   {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}}, // func_detail is solid in hull1
+        {{384, 0, 0},   {CONTENTS_SOLID, new_leaf,      CONTENTS_SOLID}}, // func_detail_fence is solid in hull1. uses a new leaf in hull0 because it can be seen through
+        {{384, -64, 0}, {CONTENTS_SOLID, new_leaf,      CONTENTS_SOLID}}, // func_detail_fence + _mirrorinside is solid in hull1
+        {{448, 0, 0},   {CONTENTS_EMPTY, new_leaf,      CONTENTS_EMPTY}}, // func_detail_illusionary is empty in hull1
+        {{448, -64, 0}, {CONTENTS_EMPTY, new_leaf,      CONTENTS_EMPTY}}, // func_detail_illusionary + _mirrorinside is empty in hull1
+        {{512, 0, 0},   {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}}, // func_detail_wall is solid in hull1
     };
 
     for (const auto &[point, expected_types] : expected) {
         std::string message = qv::to_string(point);
         CAPTURE(message);
 
-        CHECK(expected_types.hull0_contenttype == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
+        // hull 0
+        auto* hull0_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], point);
+
+        CHECK(expected_types.hull0_contenttype == hull0_leaf->contents);
+        ptrdiff_t hull0_leaf_index = hull0_leaf - &bsp.dleafs[0];
+
+        if (expected_types.hull0_leaf == shared_leaf_0) {
+            CHECK(hull0_leaf_index == 0);
+        } else {
+            CHECK(hull0_leaf_index != 0);
+        }
+
+        // hull 1
         CHECK(expected_types.hull1_contenttype == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
     }
 }

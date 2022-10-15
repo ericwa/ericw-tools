@@ -111,6 +111,7 @@ struct contentflags_t
     // is any kind of detail? (solid, liquid, etc.)
     bool is_any_detail(const gamedef_t *game) const;
     bool is_detail_solid(const gamedef_t *game) const;
+    bool is_detail_wall(const gamedef_t *game) const;
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
 
@@ -275,11 +276,13 @@ struct gamedef_t
     virtual contentflags_t create_solid_contents() const = 0;
     virtual contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_fence_contents(const contentflags_t &original) const = 0;
+    virtual contentflags_t create_detail_wall_contents(const contentflags_t &original) const = 0;
     virtual contentflags_t create_detail_solid_contents(const contentflags_t &original) const = 0;
     virtual bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
     virtual bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
     virtual bool contents_are_any_detail(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_solid(const contentflags_t &contents) const = 0;
+    virtual bool contents_are_detail_wall(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
     virtual bool contents_are_mirrored(const contentflags_t &contents) const = 0;

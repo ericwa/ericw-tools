@@ -109,9 +109,18 @@ struct prune_stats_t : logging::stat_tracker_t
     stat &nodes_pruned = register_stat("nodes pruned");
 };
 
+static bool IsAnySolidLeaf(const node_t *node)
+{
+    return node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game);
+}
+
 static void PruneNodes_R(node_t *node, prune_stats_t &stats)
 {
     if (node->is_leaf) {
+        // remap any contents
+        if (node->contents.is_detail_wall(qbsp_options.target_game)) {
+            node->contents = qbsp_options.target_game->create_solid_contents();
+        }
         return;
     }
 
@@ -120,8 +129,8 @@ static void PruneNodes_R(node_t *node, prune_stats_t &stats)
     g.run([&]() { PruneNodes_R(node->children[1], stats); });
     g.wait();
 
-    if (node->children[0]->is_leaf && node->children[0]->contents.is_any_solid(qbsp_options.target_game) &&
-        node->children[1]->is_leaf && node->children[1]->contents.is_any_solid(qbsp_options.target_game)) {
+    // fixme-brushbsp: is it correct to strip off detail flags here?
+    if (IsAnySolidLeaf(node->children[0]) && IsAnySolidLeaf(node->children[1])) {
         // This discards any faces on-node. Should be safe (?)
         ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         stats.nodes_pruned++;
