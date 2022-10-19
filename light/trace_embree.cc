@@ -38,19 +38,36 @@ sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection f
 
 /**
  * Returns 1.0 unless a custom alpha value is set.
- * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha"
+ * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha", then Q2 surface flags
  */
-static float Face_Alpha(const modelinfo_t *modelinfo, const mface_t *face)
+static float Face_Alpha(const mbsp_t *bsp, const modelinfo_t *modelinfo, const mface_t *face)
 {
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+    const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
+    const bool is_q2 = bsp->loadversion->game->id == GAME_QUAKE_II;
 
-    // for _light_alpha, 0 is considered unset
+    // for "_light_alpha", 0 is considered unset
     if (extended_flags.light_alpha) {
         return extended_flags.light_alpha;
     }
 
-    // next check modelinfo alpha (defaults to 1.0)
-    return modelinfo->alpha.value();
+    // next check "alpha" key (q1)
+    if (modelinfo->alpha.isChanged()) {
+        return modelinfo->alpha.value();
+    }
+
+    // next handle q2 surface flags
+    if (is_q2) {
+        if (surf_flags & Q2_SURF_TRANS33) {
+            return 0.33f;
+        }
+        if (surf_flags & Q2_SURF_TRANS66) {
+            return 0.66f;
+        }
+    }
+
+    // no alpha requested
+    return 1.0f;
 }
 
 sceneinfo CreateGeometry(
@@ -129,7 +146,7 @@ sceneinfo CreateGeometry(
             info.switchableshadow = modelinfo->switchableshadow.boolValue();
             info.switchshadstyle = modelinfo->switchshadstyle.value();
 
-            info.alpha = Face_Alpha(modelinfo, face);
+            info.alpha = Face_Alpha(bsp, modelinfo, face);
 
             // mxd
             if (bsp->loadversion->game->id == GAME_QUAKE_II) {
@@ -137,9 +154,6 @@ sceneinfo CreateGeometry(
                 info.is_fence = ((surf_flags & Q2_SURF_TRANSLUCENT) ==
                            Q2_SURF_TRANSLUCENT); // KMQuake 2-specific. Use texture alpha chanel when both flags are set.
                 info.is_glass = !info.is_fence && (surf_flags & Q2_SURF_TRANSLUCENT);
-                if (info.is_glass) {
-                    info.alpha = (surf_flags & Q2_SURF_TRANS33 ? 0.33f : 0.66f);
-                }
             } else {
                 const char *name = Face_TextureName(bsp, face);
                 info.is_fence = (name[0] == '{');
@@ -493,7 +507,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
                 continue;
 
             // handle glass / water
-            const float alpha = Face_Alpha(model, face);
+            const float alpha = Face_Alpha(bsp, model, face);
             if (alpha < 1.0f ||
                 (is_q2 && (contents_or_surf_flags & Q2_SURF_TRANSLUCENT))) { // mxd. Both fence and transparent textures
                                                                              // are done using SURF_TRANS flags in Q2
@@ -656,8 +670,8 @@ static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float
     // multiply ray color by glass color
     qvec3d tinted = rs->_ray_colors[rayIndex] * glasscolor;
 
-    // use the lerped color between original ray color and fully tinted, based on opacity
-    rs->_ray_colors[rayIndex] = mix(tinted, rs->_ray_colors[rayIndex], opacity);
+    // lerp ray color between original ray color and fully tinted by the glass texture color, based on the glass opacity
+    rs->_ray_colors[rayIndex] = mix(rs->_ray_colors[rayIndex], tinted, opacity);
 }
 
 static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style)
