@@ -81,10 +81,7 @@ data load(const resolve_result &pos);
 
 // attempt to load the specified file from the specified path.
 // shortcut to load(where(p))
-inline data load(const path &p, bool prefer_loose = false)
-{
-    return load(where(p, prefer_loose));
-}
+data load(const path &p, bool prefer_loose = false);
 
 struct archive_components
 {
@@ -94,42 +91,16 @@ struct archive_components
 };
 
 // Splits an archive load path (ie, "C:/pak0.pak/file/path") into two components ("C:/pak0.pak", "file/path").
-inline archive_components splitArchivePath(const path &source)
-{
-    // check direct archive loading
-    // this is a bit complex, but we check the whole
-    // path to see if any piece of it that isn't
-    // the last piece matches a file
-    for (path archive = source.parent_path(); archive.has_relative_path(); archive = archive.parent_path()) {
-        if (is_regular_file(archive)) {
-            return {archive, source.lexically_relative(archive)};
-        }
-    }
-
-    return {};
-}
+archive_components splitArchivePath(const path &source);
 
 // Quick helper to get the path this file would be in
 // if it wasn't in a pak
-inline path resolveArchivePath(const path &source)
-{
-    if (auto paths = splitArchivePath(source)) {
-        return paths.archive.parent_path() / paths.filename;
-    }
-
-    return source;
-}
+path resolveArchivePath(const path &source);
 }; // namespace fs
 
 // Returns the path itself if it has an extension already, otherwise
 // returns the path with extension replaced with `extension`.
-inline fs::path DefaultExtension(const fs::path &path, const fs::path &extension)
-{
-    if (path.has_extension())
-        return path;
-
-    return fs::path(path).replace_extension(extension);
-}
+fs::path DefaultExtension(const fs::path &path, const fs::path &extension);
 
 #include <fmt/core.h>
 

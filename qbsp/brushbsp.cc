@@ -23,6 +23,7 @@
 
 #include <climits>
 
+#include <common/log.hh>
 #include <common/vectorutils.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/csg.hh>

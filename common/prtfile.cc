@@ -19,6 +19,7 @@
 
 #include <common/prtfile.hh>
 
+#include <common/log.hh>
 #include <common/fs.hh>
 #include <common/bspfile.hh>
 

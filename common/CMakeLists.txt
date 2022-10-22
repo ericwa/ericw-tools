@@ -1,7 +1,11 @@
 add_library(common STATIC 
     ${CMAKE_SOURCE_DIR}/common/bspinfo.cc
     ${CMAKE_SOURCE_DIR}/common/bspfile.cc
+    ${CMAKE_SOURCE_DIR}/common/bspfile_generic.cc
+    ${CMAKE_SOURCE_DIR}/common/bspfile_q1.cc
+    ${CMAKE_SOURCE_DIR}/common/bspfile_q2.cc
     ${CMAKE_SOURCE_DIR}/common/bsputils.cc
+    ${CMAKE_SOURCE_DIR}/common/bspxfile.cc
     ${CMAKE_SOURCE_DIR}/common/cmdlib.cc
     ${CMAKE_SOURCE_DIR}/common/decompile.cc
     ${CMAKE_SOURCE_DIR}/common/entdata.cc
@@ -19,10 +23,15 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/include/common/bitflags.hh
     ${CMAKE_SOURCE_DIR}/include/common/bspinfo.hh
     ${CMAKE_SOURCE_DIR}/include/common/bspfile.hh
+    ${CMAKE_SOURCE_DIR}/include/common/bspfile_generic.hh
+    ${CMAKE_SOURCE_DIR}/include/common/bspfile_q1.hh
+    ${CMAKE_SOURCE_DIR}/include/common/bspfile_q2.hh
     ${CMAKE_SOURCE_DIR}/include/common/bsputils.hh
+    ${CMAKE_SOURCE_DIR}/include/common/bspxfile.hh
     ${CMAKE_SOURCE_DIR}/include/common/cmdlib.hh
     ${CMAKE_SOURCE_DIR}/include/common/decompile.hh
     ${CMAKE_SOURCE_DIR}/include/common/entdata.h
+    ${CMAKE_SOURCE_DIR}/include/common/iterators.hh
     ${CMAKE_SOURCE_DIR}/include/common/log.hh
     ${CMAKE_SOURCE_DIR}/include/common/mathlib.hh
     ${CMAKE_SOURCE_DIR}/include/common/parser.hh

@@ -20,6 +20,7 @@
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
 #include <common/polylib.hh>
+#include <common/log.hh>
 #include <cassert>
 
 #include <tuple>
@@ -524,6 +525,73 @@ concavity_t FacePairConcavity(
     } else {
         return concavity_t::Convex;
     }
+}
+
+qvec4f bilinearWeights(const float x, const float y)
+{
+    Q_assert(x >= 0.0f);
+    Q_assert(x <= 1.0f);
+
+    Q_assert(y >= 0.0f);
+    Q_assert(y <= 1.0f);
+
+    return qvec4f((1.0f - x) * (1.0f - y), x * (1.0f - y), (1.0f - x) * y, x * y);
+}
+
+std::array<std::pair<qvec2i, float>, 4> bilinearWeightsAndCoords(qvec2f pos, const qvec2i &size)
+{
+    Q_assert(pos[0] >= -0.5f && pos[0] <= (size[0] - 0.5f));
+    Q_assert(pos[1] >= -0.5f && pos[1] <= (size[1] - 0.5f));
+
+    // Handle extrapolation.
+    for (int i = 0; i < 2; i++) {
+        if (pos[i] < 0)
+            pos[i] = 0;
+
+        if (pos[i] > (size[i] - 1))
+            pos[i] = (size[i] - 1);
+    }
+
+    Q_assert(pos[0] >= 0.f && pos[0] <= (size[0] - 1));
+    Q_assert(pos[1] >= 0.f && pos[1] <= (size[1] - 1));
+
+    qvec2i integerPart{static_cast<int>(qv::floor(pos)[0]), static_cast<int>(qv::floor(pos)[1])};
+    qvec2f fractionalPart(pos - qv::floor(pos));
+
+    // ensure integerPart + (1, 1) is still in bounds
+    for (int i = 0; i < 2; i++) {
+        if (fractionalPart[i] == 0.0f && integerPart[i] > 0) {
+            integerPart[i] -= 1;
+            fractionalPart[i] = 1.0f;
+        }
+    }
+    Q_assert(integerPart[0] + 1 < size[0]);
+    Q_assert(integerPart[1] + 1 < size[1]);
+
+    Q_assert(qvec2f(integerPart) + fractionalPart == pos);
+
+    // f(0,0), f(1,0), f(0,1), f(1,1)
+    const qvec4f weights = bilinearWeights(fractionalPart[0], fractionalPart[1]);
+
+    std::array<std::pair<qvec2i, float>, 4> result;
+    for (int i = 0; i < 4; i++) {
+        const float weight = weights[i];
+        qvec2i pos(integerPart);
+
+        if ((i % 2) == 1)
+            pos[0] += 1;
+        if (i >= 2)
+            pos[1] += 1;
+
+        Q_assert(pos[0] >= 0);
+        Q_assert(pos[0] < size[0]);
+
+        Q_assert(pos[1] >= 0);
+        Q_assert(pos[1] < size[1]);
+
+        result[i] = std::make_pair(pos, weight);
+    }
+    return result;
 }
 
 /**

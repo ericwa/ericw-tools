@@ -22,6 +22,23 @@
 #include <cmath> // for NAN
 #include <fmt/core.h>
 
+namespace qv
+{
+// explicit specialization, for reducing compile times
+template<>
+[[nodiscard]] std::string to_string(const qvec<double, 3> &v1)
+{
+    return fmt::format("{}", v1);
+}
+
+// explicit specialization, for reducing compile times
+template<>
+[[nodiscard]] std::string to_string(const qvec<int, 3> &v1)
+{
+    return fmt::format("{}", v1);
+}
+}
+
 /*
  * SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
  * Copyright (C) 1991-2000 Silicon Graphics, Inc. All Rights Reserved.

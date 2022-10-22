@@ -21,6 +21,7 @@
 
 #include "common/cmdlib.hh"
 #include "common/fs.hh"
+#include "common/log.hh"
 #include <fstream>
 #include <memory>
 #include <array>
@@ -322,4 +323,41 @@ data load(const resolve_result &pos)
 
     return pos.archive->load(pos.filename);
 }
+
+data load(const path &p, bool prefer_loose)
+{
+    return load(where(p, prefer_loose));
+}
+
+archive_components splitArchivePath(const path &source)
+{
+    // check direct archive loading
+    // this is a bit complex, but we check the whole
+    // path to see if any piece of it that isn't
+    // the last piece matches a file
+    for (path archive = source.parent_path(); archive.has_relative_path(); archive = archive.parent_path()) {
+        if (is_regular_file(archive)) {
+            return {archive, source.lexically_relative(archive)};
+        }
+    }
+
+    return {};
+}
+
+path resolveArchivePath(const path &source)
+{
+    if (auto paths = splitArchivePath(source)) {
+        return paths.archive.parent_path() / paths.filename;
+    }
+
+    return source;
+}
 } // namespace fs
+
+fs::path DefaultExtension(const fs::path &path, const fs::path &extension)
+{
+    if (path.has_extension())
+        return path;
+
+    return fs::path(path).replace_extension(extension);
+}

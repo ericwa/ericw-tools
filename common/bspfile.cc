@@ -30,6 +30,16 @@
 #include <atomic>
 #include <mutex>
 
+void lump_t::stream_write(std::ostream &s) const
+{
+    s <= std::tie(fileofs, filelen);
+}
+
+void lump_t::stream_read(std::istream &s)
+{
+    s >= std::tie(fileofs, filelen);
+}
+
 static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
 {
     Q_assert((bytes.size() % 3) == 0);
@@ -1641,6 +1651,28 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
         {"areaportals", sizeof(dareaportal_t)},
     },
     &gamedef_q2};
+
+bool surfflags_t::needs_write() const
+{
+    return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle ||
+           phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0;
+}
+
+static auto as_tuple(const surfflags_t &flags)
+{
+    return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow, flags.no_bounce, flags.no_minlight, flags.no_expand,
+        flags.light_ignore, flags.phong_angle, flags.phong_angle_concave, flags.minlight, flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale);
+}
+
+bool surfflags_t::operator<(const surfflags_t &other) const
+{
+    return as_tuple(*this) < as_tuple(other);
+}
+
+bool surfflags_t::operator>(const surfflags_t &other) const
+{
+    return as_tuple(*this) > as_tuple(other);
+}
 
 bool surfflags_t::is_valid(const gamedef_t *game) const
 {

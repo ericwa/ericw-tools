@@ -20,6 +20,8 @@
 */
 
 #include <qbsp/qbsp.hh>
+
+#include <common/log.hh>
 #include <common/parser.hh>
 
 bool parser_t::parse_token(parseflags flags)

@@ -23,6 +23,7 @@
 #include <common/log.hh>
 #include <common/qvec.hh>
 #include <common/parser.hh>
+#include <common/cmdlib.hh>
 
 #include <vector>
 #include <string>
@@ -42,9 +43,8 @@ private:
     std::string _what;
 
 public:
-    parse_exception(std::string str) : _what(std::move(str)) { }
-
-    const char *what() const noexcept override { return _what.c_str(); }
+    parse_exception(std::string str);
+    const char *what() const noexcept override;
 };
 
 // thrown after displaying `--help` text.
@@ -67,10 +67,10 @@ enum class source
 class nameset : public std::vector<std::string>
 {
 public:
-    nameset(const char *str) : vector<std::string>({str}) { }
-    nameset(const std::string &str) : vector<std::string>({str}) { }
-    nameset(const std::initializer_list<const char *> &strs) : vector(strs.begin(), strs.end()) { }
-    nameset(const std::initializer_list<std::string> &strs) : vector(strs) { }
+    nameset(const char *str);
+    nameset(const std::string &str);
+    nameset(const std::initializer_list<const char *> &strs);
+    nameset(const std::initializer_list<std::string> &strs);
 };
 
 struct setting_group
@@ -93,14 +93,7 @@ protected:
     setting_base(
         setting_container *dictionary, const nameset &names, const setting_group *group, const char *description);
 
-    constexpr bool changeSource(source newSource)
-    {
-        if (newSource >= _source) {
-            _source = newSource;
-            return true;
-        }
-        return false;
-    }
+    bool changeSource(source newSource);
 
 public:
     ~setting_base() = default;
@@ -125,16 +118,7 @@ public:
     constexpr bool isChanged() const { return _source != source::DEFAULT; }
     constexpr source getSource() const { return _source; }
 
-    constexpr const char *sourceString() const
-    {
-        switch (_source) {
-            case source::DEFAULT: return "default";
-            case source::GAME_TARGET: return "game target";
-            case source::MAP: return "map";
-            case source::COMMANDLINE: return "command line";
-            default: FError("Error: unknown setting source");
-        }
-    }
+    const char *sourceString() const;
 
     // copies value and source
     virtual bool copyFrom(const setting_base &other) = 0;
@@ -220,74 +204,26 @@ public:
 class setting_bool : public setting_value<bool>
 {
 protected:
-    bool parseInternal(parser_base_t &parser, source source, bool truthValue)
-    {
-        // boolean flags can be just flagged themselves
-        if (parser.parse_token(PARSE_PEEK)) {
-            // if the token that follows is 1, 0 or -1, we'll handle it
-            // as a value, otherwise it's probably part of the next option.
-            if (parser.token == "1" || parser.token == "0" || parser.token == "-1") {
-                parser.parse_token();
-
-                int intval = std::stoi(parser.token);
-
-                const bool f = (intval != 0 && intval != -1) ? truthValue : !truthValue; // treat 0 and -1 as false
-
-                setValue(f, source);
-
-                return true;
-            }
-        }
-
-        setValue(truthValue, source);
-
-        return true;
-    }
+    bool parseInternal(parser_base_t &parser, source source, bool truthValue);
 
 public:
-    inline setting_bool(setting_container *dictionary, const nameset &names, bool v,
-        const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description)
-    {
-    }
+    setting_bool(setting_container *dictionary, const nameset &names, bool v,
+        const setting_group *group = nullptr, const char *description = "");
 
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        return parseInternal(parser, source, true);
-    }
-
-    std::string stringValue() const override { return _value ? "1" : "0"; }
-
-    std::string format() const override { return _default ? "[0]" : ""; }
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
 };
 
 // an extension to setting_bool; this automatically adds "no" versions
 // to the list, and will allow them to be used to act as `-name 0`.
 class setting_invertible_bool : public setting_bool
 {
-private:
-    nameset extendNames(const nameset &names)
-    {
-        nameset n = names;
-
-        for (auto &name : names) {
-            n.push_back("no" + name);
-        }
-
-        return n;
-    }
-
 public:
-    inline setting_invertible_bool(setting_container *dictionary, const nameset &names, bool v,
-        const setting_group *group = nullptr, const char *description = "")
-        : setting_bool(dictionary, extendNames(names), v, group, description)
-    {
-    }
+    setting_invertible_bool(setting_container *dictionary, const nameset &names, bool v,
+        const setting_group *group = nullptr, const char *description = "");
 
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        return parseInternal(parser, source, settingName.compare(0, 2, "no") == 0 ? false : true);
-    }
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
 };
 
 class setting_redirect : public setting_base
@@ -841,51 +777,35 @@ class common_settings : public virtual setting_container
 {
 public:
     // global settings
-    setting_int32 threads{
-        this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"};
-    setting_bool lowpriority{this, "lowpriority", false, &performance_group,
-        "run in a lower priority, to free up headroom for other processes"};
+    setting_int32 threads;
+    setting_bool lowpriority;
 
-    setting_invertible_bool log{this, "log", true, &logging_group, "whether log files are written or not"};
-    setting_bool verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"};
-    setting_bool nopercent{this, "nopercent", false, &logging_group, "don't output percentage messages"};
-    setting_bool nostat{this, "nostat", false, &logging_group, "don't output statistic messages"};
-    setting_bool noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"};
-    setting_bool nocolor{this, "nocolor", false, &logging_group, "don't output color codes (for TB, etc)"};
-    setting_redirect quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group,
-        "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"};
-    setting_path gamedir{this, "gamedir", "", &game_group,
-        "override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified."};
-    setting_path basedir{this, "basedir", "", &game_group,
-        "override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified."};
-    setting_enum<search_priority_t> filepriority{this, "filepriority", search_priority_t::LOOSE,
-        {{"loose", search_priority_t::LOOSE}, {"archive", search_priority_t::ARCHIVE}}, &game_group,
-        "which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching"};
-    setting_set paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &game_group,
-        "additional paths or archives to add to the search path, mostly for loose files"};
-    setting_bool q2rtx{this, "q2rtx", false, &game_group, "adjust settings to best support Q2RTX"};
-    setting_invertible_bool defaultpaths{this, "defaultpaths", true, &game_group,
-        "whether the compiler should attempt to automatically derive game/base paths for games that support it"};
+    setting_invertible_bool log;
+    setting_bool verbose;
+    setting_bool nopercent;
+    setting_bool nostat;
+    setting_bool noprogress;
+    setting_bool nocolor;
+    setting_redirect quiet;
+    setting_path gamedir;
+    setting_path basedir;
+    setting_enum<search_priority_t> filepriority;
+    setting_set paths;
+    setting_bool q2rtx;
+    setting_invertible_bool defaultpaths;
+
+    common_settings();
 
     virtual void setParameters(int argc, const char **argv);
 
     // before the parsing routine; set up options, members, etc
-    virtual void preinitialize(int argc, const char **argv) { setParameters(argc, argv); }
+    virtual void preinitialize(int argc, const char **argv);
     // do the actual parsing
-    virtual void initialize(int argc, const char **argv)
-    {
-        token_parser_t p(argc, argv, { "command line" });
-        parse(p);
-    }
+    virtual void initialize(int argc, const char **argv);
     // after parsing has concluded, handle the side effects
     virtual void postinitialize(int argc, const char **argv);
 
     // run all three steps
-    inline void run(int argc, const char **argv)
-    {
-        preinitialize(argc, argv);
-        initialize(argc, argv);
-        postinitialize(argc, argv);
-    }
+    void run(int argc, const char **argv);
 };
 }; // namespace settings

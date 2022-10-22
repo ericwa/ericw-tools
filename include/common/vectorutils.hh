@@ -19,9 +19,6 @@
 
 #pragma once
 
-#include <algorithm>
-#include <iterator>
-#include <vector>
 #include <list>
 
 template<class E>

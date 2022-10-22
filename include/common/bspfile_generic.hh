@@ -22,6 +22,7 @@
 #include <fmt/core.h>
 
 #include <cinttypes>
+#include <iosfwd>
 #include <array>
 #include <vector>
 #include <string>
@@ -44,7 +45,8 @@ struct dmodelh2_t
     int32_t numfaces;
 
     // serialize for streams
-    auto stream_data() { return std::tie(mins, maxs, origin, headnode, visleafs, firstface, numfaces); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 enum vistype_t
@@ -61,58 +63,20 @@ struct mvis_t
     std::vector<std::array<int32_t, 2>> bit_offsets;
     std::vector<uint8_t> bits;
 
-    inline size_t header_offset() const { return sizeof(int32_t) + (sizeof(int32_t) * bit_offsets.size() * 2); }
+    size_t header_offset() const;
 
     // set a bit offset of the specified cluster/vistype *relative to the start of the bits array*
     // (after the header)
-    inline void set_bit_offset(vistype_t type, size_t cluster, size_t offset)
-    {
-        bit_offsets[cluster][type] = offset + header_offset();
-    }
+    void set_bit_offset(vistype_t type, size_t cluster, size_t offset);
 
     // fetch the bit offset of the specified cluster/vistype
     // relative to the start of the bits array
-    inline int32_t get_bit_offset(vistype_t type, size_t cluster) const
-    {
-        return bit_offsets[cluster][type] - header_offset();
-    }
+    int32_t get_bit_offset(vistype_t type, size_t cluster) const;
 
-    void resize(size_t numclusters) { bit_offsets.resize(numclusters); }
+    void resize(size_t numclusters);
 
-    void stream_read(std::istream &stream, const lump_t &lump)
-    {
-        int32_t numclusters;
-
-        stream >= numclusters;
-
-        resize(numclusters);
-
-        // read cluster -> offset tables
-        for (auto &bit_offset : bit_offsets)
-            stream >= bit_offset;
-
-        // pull in final bit set
-        auto remaining = lump.filelen - (static_cast<int32_t>(stream.tellg()) - lump.fileofs);
-        bits.resize(remaining);
-        stream.read(reinterpret_cast<char *>(bits.data()), remaining);
-    }
-
-    void stream_write(std::ostream &stream) const
-    {
-        // no vis data
-        if (!bit_offsets.size()) {
-            return;
-        }
-
-        stream <= static_cast<int32_t>(bit_offsets.size());
-
-        // write cluster -> offset tables
-        for (auto &bit_offset : bit_offsets)
-            stream <= bit_offset;
-
-        // write bitset
-        stream.write(reinterpret_cast<const char *>(bits.data()), bits.size());
-    }
+    void stream_read(std::istream &stream, const lump_t &lump);
+    void stream_write(std::ostream &stream) const;
 };
 
 // structured data from BSP. this is the header of the miptex used
@@ -124,7 +88,9 @@ struct dmiptex_t
     uint32_t width, height;
     std::array<int32_t, MIPLEVELS> offsets; /* four mip maps stored */
 
-    auto stream_data() { return std::tie(name, width, height, offsets); }
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 // semi-structured miptex data; we don't directly care about
@@ -137,27 +103,10 @@ struct miptex_t
     uint32_t width, height;
     std::vector<uint8_t> data;
 
-    inline size_t stream_size() const { return data.size(); }
+    size_t stream_size() const;
 
-    inline void stream_read(std::istream &stream, size_t len)
-    {
-        data.resize(len);
-        stream.read(reinterpret_cast<char *>(data.data()), len);
-
-        imemstream miptex_stream(data.data(), len);
-
-        dmiptex_t dtex;
-        miptex_stream >= dtex;
-
-        name = dtex.name.data();
-        width = dtex.width;
-        height = dtex.height;
-    }
-
-    inline void stream_write(std::ostream &stream) const
-    {
-        stream.write(reinterpret_cast<const char *>(data.data()), data.size());
-    }
+    void stream_read(std::istream &stream, size_t len);
+    void stream_write(std::ostream &stream) const;
 };
 
 // structured miptex container lump
@@ -165,96 +114,10 @@ struct dmiptexlump_t
 {
     std::vector<miptex_t> textures;
 
-    void stream_read(std::istream &stream, const lump_t &lump)
-    {
-        int32_t nummiptex;
-        stream >= nummiptex;
+    void stream_read(std::istream &stream, const lump_t &lump);
+    void stream_write(std::ostream &stream) const;
 
-        // load in all of the offsets, we need them
-        // to calculate individual data sizes
-        std::vector<int32_t> offsets(nummiptex);
-
-        for (size_t i = 0; i < nummiptex; i++) {
-            stream >= offsets[i];
-        }
-
-        for (size_t i = 0; i < nummiptex; i++) {
-            miptex_t &tex = textures.emplace_back();
-
-            int32_t offset = offsets[i];
-
-            // dummy texture?
-            if (offset < 0) {
-                continue;
-            }
-
-            // move to miptex position (technically required
-            // because there might be dummy data between the offsets
-            // and the mip textures themselves...)
-            stream.seekg(lump.fileofs + offset);
-
-            // calculate the length of the data used for the individual miptex.
-            int32_t next_offset;
-
-            if (i == nummiptex - 1) {
-                next_offset = lump.filelen;
-            } else {
-                next_offset = offsets[i + 1];
-            }
-
-            if (next_offset > offset) {
-                tex.stream_read(stream, next_offset - offset);
-            }
-        }
-    }
-
-    void stream_write(std::ostream &stream) const
-    {
-        auto p = (size_t)stream.tellp();
-
-        stream <= static_cast<int32_t>(textures.size());
-
-        const size_t header_size = sizeof(int32_t) + (sizeof(int32_t) * textures.size());
-
-        size_t miptex_offset = 0;
-
-        // write out the miptex offsets
-        for (auto &texture : textures) {
-            if (!texture.name[0]) {
-                // dummy texture
-                stream <= static_cast<int32_t>(-1);
-                continue;
-            }
-
-            stream <= static_cast<int32_t>(header_size + miptex_offset);
-
-            miptex_offset += texture.stream_size();
-
-            // Half Life requires the padding, but it's also a good idea
-            // in general to keep them padded to 4s
-            if ((p + miptex_offset) % 4) {
-                miptex_offset += 4 - ((p + miptex_offset) % 4);
-            }
-        }
-
-        for (auto &texture : textures) {
-            if (texture.name[0]) {
-                // fix up the padding to match the above conditions
-                if (stream.tellp() % 4) {
-                    constexpr const char pad[4]{};
-                    stream.write(pad, 4 - (stream.tellp() % 4));
-                }
-                texture.stream_write(stream);
-            }
-        }
-    }
-
-    inline size_t stream_size() const
-    {
-        omemsizestream stream;
-        stream_write(stream);
-        return stream.tellp();
-    }
+    size_t stream_size() const;
 };
 
 // 0-2 are axial planes
@@ -297,7 +160,8 @@ struct dplane_t : qplane3f
     [[nodiscard]] constexpr dplane_t operator-() const { return {qplane3f::operator-(), type}; }
 
     // serialize for streams
-    auto stream_data() { return std::tie(normal, dist, type); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 
     // optimized case
     template<typename T>
@@ -324,7 +188,8 @@ struct bsp2_dnode_t
     uint32_t numfaces; /* counting both sides */
 
     // serialize for streams
-    auto stream_data() { return std::tie(planenum, children, mins, maxs, firstface, numfaces); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 struct mtexinfo_t
@@ -357,7 +222,8 @@ struct mface_t
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
 
     // serialize for streams
-    auto stream_data() { return std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 /*
@@ -372,7 +238,8 @@ struct bsp2_dclipnode_t
     std::array<int32_t, 2> children; /* negative numbers are contents */
 
     // serialize for streams
-    auto stream_data() { return std::tie(planenum, children); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 using bsp2_dedge_t = std::array<uint32_t, 2>; /* vertex numbers */
@@ -416,11 +283,11 @@ struct darea_t
     int32_t firstareaportal;
 
     // serialize for streams
-    auto stream_data() { return std::tie(numareaportals, firstareaportal); }
-    auto tuple() const { return std::tie(numareaportals, firstareaportal); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 
     // comparison operator for tests
-    bool operator==(const darea_t &other) const { return tuple() == other.tuple(); }
+    bool operator==(const darea_t &other) const;
 };
 
 // each area has a list of portals that lead into other areas
@@ -432,11 +299,11 @@ struct dareaportal_t
     int32_t otherarea;
 
     // serialize for streams
-    auto stream_data() { return std::tie(portalnum, otherarea); }
-    auto tuple() const { return std::tie(portalnum, otherarea); }
-
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
+    
     // comparison operator for tests
-    bool operator==(const dareaportal_t &other) const { return tuple() == other.tuple(); }
+    bool operator==(const dareaportal_t &other) const;
 };
 
 struct dbrush_t
@@ -446,7 +313,8 @@ struct dbrush_t
     int32_t contents;
 
     // serialize for streams
-    auto stream_data() { return std::tie(firstside, numsides, contents); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 struct q2_dbrushside_qbism_t
@@ -455,7 +323,8 @@ struct q2_dbrushside_qbism_t
     int32_t texinfo;
 
     // serialize for streams
-    auto stream_data() { return std::tie(planenum, texinfo); }
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 struct bspversion_t;

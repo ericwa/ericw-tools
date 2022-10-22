@@ -18,6 +18,7 @@
 */
 
 #include <common/bspinfo.hh>
+#include <common/log.hh>
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 

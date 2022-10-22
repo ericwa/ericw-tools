@@ -21,6 +21,7 @@
 
 #include <qbsp/prtfile.hh>
 
+#include <common/log.hh>
 #include <qbsp/map.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/qbsp.hh>

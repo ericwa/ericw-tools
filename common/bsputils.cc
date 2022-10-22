@@ -18,8 +18,9 @@
  */
 
 #include <common/bsputils.hh>
-#include <cstddef>
 
+#include <cstddef>
+#include <common/log.hh>
 #include <common/qvec.hh>
 
 const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp)
@@ -613,4 +614,177 @@ void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
             c--;
         }
     } while (out - decompressed < row);
+}
+
+qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex)
+{
+    /*
+     * The (long double) casts below are important: The original code
+     * was written for x87 floating-point which uses 80-bit floats for
+     * intermediate calculations. But if you compile it without the
+     * casts for modern x86_64, the compiler will round each
+     * intermediate result to a 32-bit float, which introduces extra
+     * rounding error.
+     *
+     * This becomes a problem if the rounding error causes the light
+     * utilities and the engine to disagree about the lightmap size
+     * for some surfaces.
+     *
+     * Casting to (long double) keeps the intermediate values at at
+     * least 64 bits of precision, probably 128.
+     */
+    return tex->vecs.uvs<long double>(world);
+}
+
+qvec2f Face_WorldToTexCoord(const mbsp_t *bsp, const mface_t *face, const qvec3f &world)
+{
+    const mtexinfo_t *tex = Face_Texinfo(bsp, face);
+
+    if (tex == nullptr)
+        return {};
+
+    return WorldToTexCoord(world, tex);
+}
+
+qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
+{
+    const mtexinfo_t *tex = Face_Texinfo(bsp, f);
+    if (tex == nullptr) {
+        Q_assert_unreachable();
+        return qmat4x4f();
+    }
+    const qplane3d plane = Face_Plane(bsp, f);
+
+    //           [s]
+    // T * vec = [t]
+    //           [distOffPlane]
+    //           [?]
+
+    qmat4x4f T{
+        tex->vecs.at(0, 0), tex->vecs.at(1, 0), static_cast<float>(plane.normal[0]), 0, // col 0
+        tex->vecs.at(0, 1), tex->vecs.at(1, 1), static_cast<float>(plane.normal[1]), 0, // col 1
+        tex->vecs.at(0, 2), tex->vecs.at(1, 2), static_cast<float>(plane.normal[2]), 0, // col 2
+        tex->vecs.at(0, 3), tex->vecs.at(1, 3), static_cast<float>(-plane.dist), 1 // col 3
+    };
+    return T;
+}
+
+qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f)
+{
+    return qv::inverse(WorldToTexSpace(bsp, f));
+}
+
+// faceextents_t
+
+faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmshift) : lightmapshift(lmshift)
+{
+    worldToTexCoordMatrix = WorldToTexSpace(&bsp, &face);
+    texCoordToWorldMatrix = TexSpaceToWorld(&bsp, &face);
+
+    aabb2d tex_bounds;
+
+    for (int i = 0; i < face.numedges; i++) {
+        const qvec3f &worldpoint = Face_PointAtIndex(&bsp, &face, i);
+        const qvec2f texcoord = Face_WorldToTexCoord(&bsp, &face, worldpoint);
+
+#ifdef PARANOID
+        // self test
+        auto texcoordRT = this->worldToTexCoord(worldpoint);
+        auto worldpointRT = this->texCoordToWorld(texcoord);
+        Q_assert(qv::epsilonEqual(texcoordRT, texcoord, 0.1f));
+        Q_assert(qv::epsilonEqual(worldpointRT, worldpoint, 0.1f));
+        // end self test
+#endif
+
+        tex_bounds += texcoord;
+        bounds += worldpoint;
+    }
+
+    for (int i = 0; i < 2; i++) {
+        tex_bounds[0][i] = floor(tex_bounds[0][i] / lightmapshift);
+        tex_bounds[1][i] = ceil(tex_bounds[1][i] / lightmapshift);
+        texmins[i] = static_cast<int>(tex_bounds[0][i]);
+        texextents[i] = static_cast<int>(tex_bounds[1][i] - tex_bounds[0][i]);
+
+        if (texextents[i] >= MAXDIMENSION * (16.0 / lightmapshift)) {
+            const qplane3d plane = Face_Plane(&bsp, &face);
+            const qvec3f &point = Face_PointAtIndex(&bsp, &face, 0); // grab first vert
+            const char *texname = Face_TextureName(&bsp, &face);
+
+            logging::print("WARNING: Bad surface extents (may not load in vanilla Q1 engines):\n"
+                            "   surface {}, {} extents = {}, shift = {}\n"
+                            "   texture {} at ({})\n"
+                            "   surface normal ({})\n",
+                Face_GetNum(&bsp, &face), i ? "t" : "s", texextents[i], lightmapshift, texname, point,
+                plane.normal);
+        }
+    }
+
+    exact_mid = Face_WorldToTexCoord(&bsp, &face, Face_Centroid(&bsp, &face));
+
+    // calculate a bounding sphere for the face
+    qvec3d radius = (bounds.maxs() - bounds.mins()) * 0.5;
+
+    origin = bounds.mins() + radius;
+    this->radius = qv::length(radius);
+}
+
+int faceextents_t::width() const
+{
+    return texextents[0] + 1;
+}
+
+int faceextents_t::height() const
+{
+    return texextents[1] + 1;
+}
+
+int faceextents_t::numsamples() const
+{
+    return width() * height();
+}
+
+qvec2i faceextents_t::texsize() const
+{
+    return {width(), height()};
+}
+
+qvec2f faceextents_t::lightmapCoordToTexCoord(const qvec2f &LMCoord) const
+{
+    return {lightmapshift * (texmins[0] + LMCoord[0]), lightmapshift * (texmins[1] + LMCoord[1])};
+}
+
+qvec2f faceextents_t::texCoordToLightmapCoord(const qvec2f &tc) const
+{
+    return {(tc[0] / lightmapshift) - texmins[0], (tc[1] / lightmapshift) - texmins[1]};
+}
+
+qvec2f faceextents_t::worldToTexCoord(qvec3f world) const
+{
+    const qvec4f worldPadded(world, 1.0f);
+    const qvec4f res = worldToTexCoordMatrix * worldPadded;
+
+    Q_assert(res[3] == 1.0f);
+
+    return res;
+}
+
+qvec3f faceextents_t::texCoordToWorld(qvec2f tc) const
+{
+    const qvec4f tcPadded(tc[0], tc[1], 0.0f, 1.0f);
+    const qvec4f res = texCoordToWorldMatrix * tcPadded;
+
+    Q_assert(fabs(res[3] - 1.0f) < 0.01f);
+
+    return res;
+}
+
+qvec2f faceextents_t::worldToLMCoord(qvec3f world) const
+{
+    return texCoordToLightmapCoord(worldToTexCoord(world));
+}
+
+qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
+{
+    return texCoordToWorld(lightmapCoordToTexCoord(lm));
 }

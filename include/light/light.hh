@@ -396,125 +396,48 @@ public:
         std::string format() const override { return ""; };
     };
 
-    setting_bool surflight_dump{this, "surflight_dump", false, &debug_group, "dump surface lights to a .map file"};
-    setting_scalar surflight_subdivide{
-        this, "surflight_subdivide", 128.0, 1.0, 2048.0, &performance_group, "surface light subdivision size"};
-    setting_bool onlyents{this, "onlyents", false, &output_group, "only update entities"};
-    setting_bool write_normals{
-        this, "wrnormals", false, &output_group, "output normals, tangents and bitangents in a BSPX lump"};
-    setting_bool novanilla{
-        this, "novanilla", false, &experimental_group, "implies -bspxlit; don't write vanilla lighting"};
-    setting_scalar gate{this, "gate", EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"};
-    setting_int32 sunsamples{
-        this, "sunsamples", 64, 8, 2048, &performance_group, "set samples for _sunlight2, default 64"};
-    setting_bool arghradcompat{
-        this, "arghradcompat", false, &output_group, "enable compatibility for Arghrad-specific keys"};
-    setting_bool nolighting{this, "nolighting", false, &output_group, "don't output main world lighting (Q2RTX)"};
-    setting_vec3 debugface{this, "debugface", std::numeric_limits<vec_t>::quiet_NaN(),
-        std::numeric_limits<vec_t>::quiet_NaN(), std::numeric_limits<vec_t>::quiet_NaN(), &debug_group, ""};
-    setting_vec3 debugvert{this, "debugvert", std::numeric_limits<vec_t>::quiet_NaN(),
-        std::numeric_limits<vec_t>::quiet_NaN(), std::numeric_limits<vec_t>::quiet_NaN(), &debug_group, ""};
-    setting_bool highlightseams{this, "highlightseams", false, &debug_group, ""};
-    setting_soft soft{this, "soft", 0, -1, std::numeric_limits<int32_t>::max(), &postprocessing_group,
-        "blurs the lightmap. specify n to blur radius in samples, otherwise auto"};
-    setting_set radlights{this, "radlights", "\"filename.rad\"", &experimental_group,
-        "loads a <surfacename> <r> <g> <b> <intensity> file"};
-    setting_int32 lightmap_scale{
-        this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"};
-    setting_extra extra{
-        this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"};
-    setting_bool fastbounce{this, "fastbounce", false, &performance_group, "use one bounce point in the middle of each face. for fast compilation."};
-    setting_enum<visapprox_t> visapprox{this, "visapprox", visapprox_t::AUTO,
-        {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
-            {"rays", visapprox_t::RAYS}},
-        &debug_group,
-        "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"};
-    setting_func lit{
-        this, "lit", [&](source) { write_litfile |= lightfile::external; }, &output_group, "write .lit file"};
-    setting_func lit2{
-        this, "lit2", [&](source) { write_litfile = lightfile::lit2; }, &experimental_group, "write .lit2 file"};
-    setting_func bspxlit{this, "bspxlit", [&](source) { write_litfile |= lightfile::bspx; }, &experimental_group,
-        "writes rgb data into the bsp itself"};
-    setting_func lux{
-        this, "lux", [&](source) { write_luxfile |= lightfile::external; }, &experimental_group, "write .lux file"};
-    setting_func bspxlux{this, "bspxlux", [&](source) { write_luxfile |= lightfile::bspx; }, &experimental_group,
-        "writes lux data into the bsp itself"};
-    setting_func bspxonly{this, "bspxonly",
-        [&](source source) {
-            write_litfile = lightfile::bspx;
-            write_luxfile = lightfile::bspx;
-            novanilla.setValue(true, source);
-        },
-        &experimental_group, "writes both rgb and directions data *only* into the bsp itself"};
-    setting_func bspx{this, "bspx",
-        [&](source source) {
-            write_litfile = lightfile::bspx;
-            write_luxfile = lightfile::bspx;
-        },
-        &experimental_group, "writes both rgb and directions data into the bsp itself"};
-    setting_bool litonly{this, "litonly", false, &output_group, "only write .lit file, don't modify BSP"};
-    setting_bool nolights{this, "nolights", false, &output_group, "ignore light entities (only sunlight/minlight)"};
-    setting_int32 facestyles{
-        this, "facestyles", 4, &output_group, "max amount of styles per face; requires BSPX lump if > 4"};
-    setting_bool exportobj{this, "exportobj", false, &output_group, "export an .OBJ for inspection"};
-    setting_int32 lmshift{this, "lmshift", 4, &output_group,
-        "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."};
+    void CheckNoDebugModeSet();
 
-    inline void CheckNoDebugModeSet()
-    {
-        if (debugmode != debugmodes::none) {
-            Error("Only one debug mode is allowed at a time");
-        }
-    }
+    setting_bool surflight_dump;
+    setting_scalar surflight_subdivide;
+    setting_bool onlyents;
+    setting_bool write_normals;
+    setting_bool novanilla;
+    setting_scalar gate;
+    setting_int32 sunsamples;
+    setting_bool arghradcompat;
+    setting_bool nolighting;
+    setting_vec3 debugface;
+    setting_vec3 debugvert;
+    setting_bool highlightseams;
+    setting_soft soft;
+    setting_set radlights;
+    setting_int32 lightmap_scale;
+    setting_extra extra;
+    setting_bool fastbounce;
+    setting_enum<visapprox_t> visapprox;
+    setting_func lit;
+    setting_func lit2;
+    setting_func bspxlit;
+    setting_func lux;
+    setting_func bspxlux;
+    setting_func bspxonly;
+    setting_func bspx;
+    setting_bool litonly;
+    setting_bool nolights;
+    setting_int32 facestyles;
+    setting_bool exportobj;
+    setting_int32 lmshift;
 
-    setting_func dirtdebug{this, {"dirtdebug", "debugdirt"},
-        [&](source) {
-            CheckNoDebugModeSet();
-            debugmode = debugmodes::dirt;
-        },
-        &debug_group, "only save the AO values to the lightmap"};
+    setting_func dirtdebug;
+    setting_func bouncedebug;
+    setting_func bouncelightsdebug;
+    setting_func phongdebug;
+    setting_func phongdebug_obj;
+    setting_func debugoccluded;
+    setting_func debugneighbours;
 
-    setting_func bouncedebug{this, "bouncedebug",
-        [&](source) {
-            CheckNoDebugModeSet();
-            debugmode = debugmodes::bounce;
-        },
-        &debug_group, "only save bounced lighting to the lightmap"};
-
-    setting_func bouncelightsdebug{this, "bouncelightsdebug",
-        [&](source) {
-            CheckNoDebugModeSet();
-            debugmode = debugmodes::bouncelights;
-        },
-        &debug_group, "only save bounced emitters lighting to the lightmap"};
-
-    setting_func phongdebug{this, "phongdebug",
-        [&](source) {
-            CheckNoDebugModeSet();
-            debugmode = debugmodes::phong;
-        },
-        &debug_group, "only save phong normals to the lightmap"};
-
-    setting_func phongdebug_obj{this, "phongdebug_obj",
-        [&](source) {
-            CheckNoDebugModeSet();
-            debugmode = debugmodes::phong_obj;
-        },
-        &debug_group, "save map as .obj with phonged normals"};
-
-    setting_func debugoccluded{this, "debugoccluded",
-        [&](source) {
-            CheckNoDebugModeSet();
-            debugmode = debugmodes::debugoccluded;
-        },
-        &debug_group, "save light occlusion data to lightmap"};
-
-    setting_func debugneighbours{this, "debugneighbours",
-        [&](source) {
-            CheckNoDebugModeSet();
-            debugmode = debugmodes::debugneighbours;
-        },
-        &debug_group, "save neighboring faces data to lightmap (requires -debugface)"};
+    light_settings();
 
     fs::path sourceMap;
 
@@ -522,13 +445,7 @@ public:
     bitflags<lightfile> write_luxfile = lightfile::none;
     debugmodes debugmode = debugmodes::none;
 
-    void setParameters(int argc, const char **argv) override
-    {
-        common_settings::setParameters(argc, argv);
-        programDescription = "light compiles lightmap data for BSPs\n\n";
-        remainderName = "mapname.bsp";
-    }
-
+    void setParameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;
     void postinitialize(int argc, const char **argv) override;
 };

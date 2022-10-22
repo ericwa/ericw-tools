@@ -27,6 +27,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/tree.hh>
 
+#include <common/log.hh>
 #include <climits>
 #include <vector>
 #include <set>

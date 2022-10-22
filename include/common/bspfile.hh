@@ -38,7 +38,9 @@ struct lump_t
     int32_t fileofs;
     int32_t filelen;
 
-    auto stream_data() { return std::tie(fileofs, filelen); }
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 // helper functions to quickly numerically cast mins/maxs
@@ -211,24 +213,12 @@ struct surfflags_t
     // light color scale
     vec_t lightcolorscale = 1.0;
 
-    constexpr bool needs_write() const
-    {
-        return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle ||
-               phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0;
-    }
-
-private:
-    constexpr auto as_tuple() const
-    {
-        return std::tie(native, is_nodraw, is_hintskip, is_hint, no_dirt, no_shadow, no_bounce, no_minlight, no_expand,
-            light_ignore, phong_angle, phong_angle_concave, minlight, minlight_color, light_alpha, maxlight, lightcolorscale);
-    }
+    bool needs_write() const;
 
 public:
     // sort support
-    constexpr bool operator<(const surfflags_t &other) const { return as_tuple() < other.as_tuple(); }
-
-    constexpr bool operator>(const surfflags_t &other) const { return as_tuple() > other.as_tuple(); }
+    bool operator<(const surfflags_t &other) const;
+    bool operator>(const surfflags_t &other) const;
 
     bool is_valid(const gamedef_t *game) const;
 };

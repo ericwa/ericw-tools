@@ -20,6 +20,7 @@
 #pragma once
 
 #include <common/qvec.hh>
+#include <common/iterators.hh>
 #include <array>
 
 /**!

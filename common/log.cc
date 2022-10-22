@@ -203,3 +203,19 @@ void percent_clock::print()
     percent(max, max, displayElapsed);
 }
 }; // namespace logging
+
+/*
+ * =================
+ * Error
+ * For abnormal program terminations
+ * =================
+ */
+[[noreturn]] void Error(const char *error)
+{
+    logging::print("************ ERROR ************\n{}\n", error);
+    logging::close();
+#ifdef _DEBUG
+    __debugbreak();
+#endif
+    exit(1);
+}

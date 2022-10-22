@@ -1,8 +1,8 @@
 #include "test_qbsp.hh"
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_vector.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
+#include <catch2/matchers/catch_matchers_vector.hpp>
 
 #include <qbsp/brush.hh>
 #include <qbsp/brushbsp.hh>
@@ -13,11 +13,13 @@
 #include <common/decompile.hh>
 #include <common/prtfile.hh>
 #include <common/qvec.hh>
+#include <common/log.hh>
 #include <testmaps.hh>
 
 #include <subprocess.h>
 #include <nanobench.h>
 
+#include <fstream>
 #include <algorithm>
 #include <cstring>
 #include <set>
@@ -569,7 +571,6 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 
     for (const auto& mapname : quake_maps) {
         DYNAMIC_SECTION("testing " << mapname) {
-
             const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
             REQUIRE(bsp.dleafs.size() == 2);

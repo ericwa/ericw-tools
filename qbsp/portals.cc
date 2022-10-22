@@ -31,6 +31,7 @@
 // TEMP
 #include <qbsp/writebsp.hh>
 
+#include <common/log.hh>
 #include <atomic>
 
 #include "tbb/task_group.h"

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fstream>
+#include <iosfwd>
 
 struct mbsp_t;
 struct bsp2_dnode_t;

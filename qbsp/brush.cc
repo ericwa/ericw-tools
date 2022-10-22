@@ -20,10 +20,11 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/brush.hh>
+
 #include <cstring>
 #include <list>
-
-#include <qbsp/brush.hh>
+#include <common/log.hh>
 #include <qbsp/csg.hh>
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>

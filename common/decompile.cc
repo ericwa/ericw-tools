@@ -27,7 +27,9 @@
 #include <common/mathlib.hh>
 #include <common/polylib.hh>
 #include <common/fs.hh>
+#include <common/log.hh>
 
+#include <fstream>
 #include <vector>
 #include <cstdio>
 #include <string>

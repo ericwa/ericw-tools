@@ -20,13 +20,15 @@
 #pragma once
 
 #include <initializer_list>
-#include <map>
 #include <string>
 #include <utility>
 #include <vector>
 #include <string_view>
+
 #include "qvec.hh"
-#include "parser.hh"
+
+struct parser_t;
+struct parser_base_t;
 
 using keyvalue_t = std::pair<std::string, std::string>;
 using keyvalues_t = std::vector<keyvalue_t>;
@@ -38,7 +40,7 @@ class entdict_t
 public:
     entdict_t(std::initializer_list<keyvalue_t> l);
     entdict_t();
-    inline entdict_t(parser_base_t &parser) { parse(parser); }
+    entdict_t(parser_base_t &parser);
 
     std::string get(const std::string_view &key) const;
     vec_t get_float(const std::string_view &key) const;
@@ -75,13 +77,6 @@ void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector);
  * EntData_Parse
  * ==================
  */
-inline std::vector<entdict_t> EntData_Parse(parser_t &parser)
-{
-    std::vector<entdict_t> result;
-
-    EntData_ParseInto(parser, result);
-
-    return result;
-}
+std::vector<entdict_t> EntData_Parse(parser_t &parser);
 
 std::string EntData_Write(const std::vector<entdict_t> &ents);

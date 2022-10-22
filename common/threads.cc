@@ -1,20 +1,9 @@
-/* common/threads.c */
-
-#include <cstdint>
-#include <cstdlib>
-#include <thread>
-#include <mutex>
-#include <vector>
-#include <optional>
-
-#include <common/log.hh>
 #include <common/threads.hh>
 
-/*
- * =======================================================================
- *                                TBB
- * =======================================================================
- */
+#include <memory>
+#include <common/log.hh>
+#include "tbb/global_control.h"
+
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>

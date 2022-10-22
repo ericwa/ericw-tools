@@ -26,6 +26,7 @@
 #include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 
+#include <common/log.hh>
 #include <atomic>
 #include <mutex>
 

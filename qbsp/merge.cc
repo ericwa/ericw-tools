@@ -22,6 +22,7 @@
 
 #include <qbsp/merge.hh>
 
+#include <common/log.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/csg.hh>
 #include <qbsp/map.hh>

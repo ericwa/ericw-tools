@@ -32,6 +32,8 @@ entdict_t::entdict_t(std::initializer_list<keyvalue_t> l) : keyvalues(l) { }
 
 entdict_t::entdict_t() = default;
 
+entdict_t::entdict_t(parser_base_t &parser) { parse(parser); }
+
 std::string entdict_t::get(const std::string_view &key) const
 {
     if (auto it = find(key); it != keyvalues.end()) {
@@ -193,6 +195,15 @@ void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector)
         // emplace a new entdict_t out of the parser
         vector.emplace_back(parser);
     }
+}
+
+std::vector<entdict_t> EntData_Parse(parser_t &parser)
+{
+    std::vector<entdict_t> result;
+
+    EntData_ParseInto(parser, result);
+
+    return result;
 }
 
 /*

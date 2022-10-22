@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <common/log.hh>
 #include <common/cmdlib.hh>
 #include <common/parser.hh>
 

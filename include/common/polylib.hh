@@ -3,6 +3,8 @@
 #pragma once
 
 #include <common/mathlib.hh>
+
+#include <common/log.hh>
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
 #include <common/aabb.hh>
@@ -1199,7 +1201,9 @@ public:
         return std::move(result);
     }
 
-    void dice(vec_t subdiv, std::function<void(winding_base_t &)> save_fn)
+    // SaveFn is a callable of type `winding_base_t & -> void`
+    template <typename SaveFn>
+    void dice(vec_t subdiv, SaveFn&& save_fn)
     {
         if (!size())
             return;
