@@ -18,8 +18,9 @@
     See file, 'COPYING', for details.
 */
 
-#include <qbsp/qbsp.hh>
+#include <qbsp/exportobj.hh>
 
+#include <qbsp/qbsp.hh>
 #include <common/log.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>

@@ -31,6 +31,7 @@
 
 #include <qbsp/brush.hh>
 #include <qbsp/csg.hh>
+#include <qbsp/exportobj.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
 #include <qbsp/portals.hh>

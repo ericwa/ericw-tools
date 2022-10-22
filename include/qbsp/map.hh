@@ -332,11 +332,6 @@ struct bspxbrushes_s
 void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
 void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
 
-void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces);
-void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bspbrush_t *> &brushes);
-void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
-void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
-
 void WriteBspBrushMap(std::string_view filename_suffix, const bspbrush_t::container &list);
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);
