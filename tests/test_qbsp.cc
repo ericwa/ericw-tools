@@ -39,10 +39,11 @@ const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, cons
 
 mapentity_t &LoadMap(const char *map)
 {
+    ::map.reset();
+    qbsp_options.reset();
+
     qbsp_options.target_version = &bspver_q1;
     qbsp_options.target_game = qbsp_options.target_version->game;
-
-    ::map.entities.clear();
 
     parser_t parser(map, { doctest::getContextOptions()->currentTest->m_name });
 

@@ -1215,9 +1215,6 @@ void InitQBSP(int argc, const char **argv)
     // In case we're launched more than once, in testqbsp
     map.reset();
     qbsp_options.reset();
-    // fixme-brushbsp: clear any other members of qbsp_settings
-    qbsp_options.target_game = nullptr;
-    qbsp_options.target_version = nullptr;
 
     qbsp_options.run(argc, argv);
 
