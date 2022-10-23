@@ -4,6 +4,7 @@
 #include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
+#include <qbsp/csg.hh>
 #include <common/fs.hh>
 #include <common/bsputils.hh>
 #include <common/decompile.hh>
@@ -37,7 +38,7 @@ const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, cons
     return nullptr;
 }
 
-mapentity_t &LoadMap(const char *map)
+mapentity_t &LoadMap(const char *map, size_t length)
 {
     ::map.reset();
     qbsp_options.reset();
@@ -45,7 +46,7 @@ mapentity_t &LoadMap(const char *map)
     qbsp_options.target_version = &bspver_q1;
     qbsp_options.target_game = qbsp_options.target_version->game;
 
-    parser_t parser(map, { doctest::getContextOptions()->currentTest->m_name });
+    parser_t parser(map, length, { doctest::getContextOptions()->currentTest->m_name });
 
     mapentity_t &entity = ::map.entities.emplace_back();
     texture_def_issues_t issue_stats;
@@ -56,6 +57,19 @@ mapentity_t &LoadMap(const char *map)
     CalculateWorldExtent();
 
     return entity;
+}
+
+mapentity_t &LoadMap(const char *map)
+{
+    return LoadMap(map, strlen(map));
+}
+
+mapentity_t &LoadMapPath(const std::filesystem::path &name)
+{
+    auto filename = std::filesystem::path(testmaps_dir) / name;
+    fs::data file_data = fs::load(filename);
+    return LoadMap(reinterpret_cast<const char *>(file_data->data()),
+        file_data->size());
 }
 
 #include <common/bspinfo.hh>
@@ -1356,6 +1370,28 @@ TEST_CASE("qbsp_q1_sealing" * doctest::test_suite("testmaps_q1")) {
     CHECK(prt->portals.size() == 2);
     CHECK(prt->portalleafs == 3); // 2 connected rooms + gap (other room is filled in with solid)
     CHECK(prt->portalleafs_real == 3); // no detail, so same as above
+}
+
+TEST_CASE("q1_csg" * doctest::test_suite("testmaps_q1")) {
+    auto &entity = LoadMapPath("qbsp_q1_csg.map");
+
+    REQUIRE(entity.mapbrushes.size() == 2);
+
+    bspbrush_t::container bspbrushes;
+    for (int i = 0; i < 2; ++i) {
+        auto b = LoadBrush(entity, entity.mapbrushes[i], {CONTENTS_SOLID}, 0, std::nullopt);
+
+        CHECK(6 == b->sides.size());
+
+        bspbrushes.push_back(bspbrush_t::make_ptr(std::move(*b)));
+    }
+
+    auto csged = CSGFaces(bspbrushes);
+    CHECK(2 == csged.size());
+
+    for (int i = 0; i < 2; ++i) {
+        CHECK(5 == csged[i]->sides.size());
+    }
 }
 
 /**
