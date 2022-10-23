@@ -23,12 +23,12 @@
 
 #include <vector>
 #include <string>
+#include <qbsp/brush.hh>
 
 struct face_t;
-struct bspbrush_t;
 struct node_t;
 
 void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces);
-void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bspbrush_t *> &brushes);
+void ExportObj_Brushes(const std::string &filesuffix, const bspbrush_t::container &brushes);
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
 void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);
