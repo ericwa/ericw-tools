@@ -10,9 +10,9 @@
 [submodule "3rdparty/subprocess.h"]
 	path = 3rdparty/subprocess.h
 	url = https://github.com/sheredom/subprocess.h
-[submodule "3rdparty/Catch2"]
-	path = 3rdparty/Catch2
-	url = https://github.com/catchorg/Catch2
 [submodule "3rdparty/pareto"]
 	path = 3rdparty/pareto
 	url = https://github.com/alandefreitas/pareto.git
+[submodule "3rdparty/doctest"]
+	path = 3rdparty/doctest
+	url = https://github.com/doctest/doctest

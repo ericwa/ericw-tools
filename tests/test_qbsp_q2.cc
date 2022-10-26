@@ -1,7 +1,3 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_vector.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
-
 #include <qbsp/brush.hh>
 #include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
@@ -26,8 +22,9 @@
 #include <common/bspinfo.hh>
 
 #include "test_qbsp.hh"
+#include "testutils.hh"
 
-TEST_CASE("detail", "[testmaps_q2]") {
+TEST_CASE("detail" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -112,7 +109,7 @@ TEST_CASE("detail", "[testmaps_q2]") {
     CHECK(prt->portalleafs == 4);
 }
 
-TEST_CASE("playerclip", "[testmaps_q2]")
+TEST_CASE("playerclip" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_playerclip.map");
 
@@ -140,7 +137,7 @@ TEST_CASE("playerclip", "[testmaps_q2]")
     CHECK((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
 }
 
-TEST_CASE("areaportal", "[testmaps_q2]")
+TEST_CASE("areaportal" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal.map");
 
@@ -150,8 +147,8 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     // areaportal 0 is a placeholder
     // 
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
-    CHECK_THAT(bsp.dareaportals, Catch::Matchers::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
-    CHECK_THAT(bsp.dareas, Catch::Matchers::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareaportals, std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}});
+    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareas, std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}});
 
     // look up the leafs
     const qvec3d player_start{-88, -112, 120};
@@ -182,7 +179,7 @@ TEST_CASE("areaportal", "[testmaps_q2]")
     CHECK(Q2_CONTENTS_SOLID == Leaf_Brushes(&bsp, void_leaf).at(0)->contents);
 
     // check leaf areas
-    CHECK_THAT((std::vector<int32_t>{1, 2}), Catch::Matchers::UnorderedEquals(std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area}));
+    CHECK_VECTORS_UNOREDERED_EQUAL((std::vector<int32_t>{1, 2}), std::vector<int32_t>{player_start_leaf->area, other_room_leaf->area});
     // the areaportal leaf itself actually gets assigned to one of the two sides' areas
     CHECK((areaportal_leaf->area == 1 || areaportal_leaf->area == 2));
     CHECK(0 == void_leaf->area); // a solid leaf gets the invalid area
@@ -200,7 +197,7 @@ TEST_CASE("areaportal", "[testmaps_q2]")
 /**
  *  Similar to above test, but there's a detail brush sticking into the area portal
  */
-TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
+TEST_CASE("areaportal_with_detail" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal_with_detail.map");
 
@@ -210,11 +207,11 @@ TEST_CASE("areaportal_with_detail", "[testmaps_q2]")
     // areaportal 0 is a placeholder
     //
     // the conceptual area portal has portalnum 1, and consists of two dareaportals entries with connections to area 1 and 2
-    CHECK_THAT(bsp.dareaportals, Catch::Matchers::UnorderedEquals(std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}}));
-    CHECK_THAT(bsp.dareas, Catch::Matchers::UnorderedEquals(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
+    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareaportals, std::vector<dareaportal_t>{{0, 0}, {1, 1}, {1, 2}});
+    CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dareas, std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}});
 }
 
-TEST_CASE("nodraw_light", "[testmaps_q2]") {
+TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_light.map", {"-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -228,7 +225,7 @@ TEST_CASE("nodraw_light", "[testmaps_q2]") {
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
+TEST_CASE("nodraw_detail_light" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_detail_light.map", {"-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -242,7 +239,7 @@ TEST_CASE("nodraw_detail_light", "[testmaps_q2]") {
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
+TEST_CASE("base1" * doctest::test_suite("testmaps_q2") * doctest::skip())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1-test.map");
 
@@ -291,7 +288,7 @@ TEST_CASE("base1", "[testmaps_q2][.releaseonly]")
     }
 }
 
-TEST_CASE("base1leak", "[testmaps_q2]")
+TEST_CASE("base1leak" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1leak.map");
 
@@ -315,7 +312,7 @@ TEST_CASE("base1leak", "[testmaps_q2]")
 /**
  * e1u1/brlava brush intersecting e1u1/clip
  **/
-TEST_CASE("lavaclip", "[testmaps_q2]") {
+TEST_CASE("lavaclip" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavaclip.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -350,7 +347,7 @@ TEST_CASE("lavaclip", "[testmaps_q2]") {
 /**
  * check that e1u1/clip intersecting mist doesn't split up the mist faces
  **/
-TEST_CASE("mist_clip", "[testmaps_q2]")
+TEST_CASE("mist_clip" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_mist_clip.map");
 
@@ -363,7 +360,7 @@ TEST_CASE("mist_clip", "[testmaps_q2]")
 /**
  * e1u1/brlava brush intersecting e1u1/brwater
  **/
-TEST_CASE("lavawater", "[testmaps_q2]") {
+TEST_CASE("lavawater" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavawater.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -378,7 +375,7 @@ TEST_CASE("lavawater", "[testmaps_q2]") {
  * Weird mystery issue with a func_wall with broken collision
  * (ended up being a PLANE_X/Y/Z plane with negative facing normal, which is illegal - engine assumes they are positive)
  */
-TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
+TEST_CASE("qbsp_q2_bmodel_collision" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_bmodel_collision.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -388,7 +385,7 @@ TEST_CASE("qbsp_q2_bmodel_collision", "[testmaps_q2]") {
     CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
 }
 
-TEST_CASE("q2_liquids", "[testmaps_q2]")
+TEST_CASE("q2_liquids" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_liquids.map");
 
@@ -399,37 +396,37 @@ TEST_CASE("q2_liquids", "[testmaps_q2]")
         const qvec3d wateropaque_trans33 = watertrans33_trans66 - qvec3d(0, 0, 48);
         const qvec3d floor_wateropaque = wateropaque_trans33 - qvec3d(0, 0, 48);
 
-        CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
-            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
+        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_air)),
+            std::vector<std::string>({"e1u1/bluwter", "e1u1/bluwter"}));
         CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans33_trans66).size());
         CHECK(0 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], wateropaque_trans33).size());
-        CHECK_THAT(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
-            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/c_met11_2"}));
+        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], floor_wateropaque)),
+            std::vector<std::string>({"e1u1/c_met11_2"}));
     }
 
     const qvec3d watertrans66_slimetrans66{-116, -144, 116};
 
     // water trans66 / slime trans66
     {
-        CHECK_THAT(
+        CHECK_VECTORS_UNOREDERED_EQUAL(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, -1, 0))),
-            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+            std::vector<std::string>({"e1u1/sewer1"}));
 
-        CHECK_THAT(
+        CHECK_VECTORS_UNOREDERED_EQUAL(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], watertrans66_slimetrans66, qvec3d(0, 1, 0))),
-            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/sewer1"}));
+            std::vector<std::string>({"e1u1/sewer1"}));
     }
 
     // slime trans66 / lava trans66
     const qvec3d slimetrans66_lavatrans66 = watertrans66_slimetrans66 + qvec3d(0, 48, 0);
     {
-        CHECK_THAT(
+        CHECK_VECTORS_UNOREDERED_EQUAL(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, -1, 0))),
-            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/brlava"}));
+            std::vector<std::string>({"e1u1/brlava"}));
 
-        CHECK_THAT(
+        CHECK_VECTORS_UNOREDERED_EQUAL(
             TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], slimetrans66_lavatrans66, qvec3d(0, 1, 0))),
-            Catch::Matchers::UnorderedEquals<std::string>({"e1u1/brlava"}));
+            std::vector<std::string>({"e1u1/brlava"}));
     }
 
 }
@@ -437,7 +434,7 @@ TEST_CASE("q2_liquids", "[testmaps_q2]")
 /**
  * Empty rooms are sealed to solid in Q2
  **/
-TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
+TEST_CASE("qbsp_q2_seal_empty_rooms" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_seal_empty_rooms.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -456,7 +453,7 @@ TEST_CASE("qbsp_q2_seal_empty_rooms", "[testmaps_q2]") {
 /**
  * Detail seals in Q2
  **/
-TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2]") {
+TEST_CASE("qbsp_q2_detail_seals" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail_seals.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
@@ -475,7 +472,7 @@ TEST_CASE("qbsp_q2_detail_seals", "[testmaps_q2]") {
  * Also, the faces on the ceiling/floor cross the areaportal
  * (due to our aggressive face merging).
  */
-TEST_CASE("q2_double_areaportal", "[testmaps_q2]")
+TEST_CASE("q2_double_areaportal" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_double_areaportal.map");
 
@@ -486,7 +483,7 @@ TEST_CASE("q2_double_areaportal", "[testmaps_q2]")
     CHECK(5 == bsp.dareaportals.size());
 }
 
-TEST_CASE("q2_areaportal_split", "[testmaps_q2]")
+TEST_CASE("q2_areaportal_split" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_split.map");
 
@@ -500,7 +497,7 @@ TEST_CASE("q2_areaportal_split", "[testmaps_q2]")
 /**
  * Test for q2 bmodel bounds
  **/
-TEST_CASE("q2_door", "[testmaps_q2]") {
+TEST_CASE("q2_door" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_door.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);

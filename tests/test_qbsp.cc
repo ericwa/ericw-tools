@@ -1,29 +1,30 @@
 #include "test_qbsp.hh"
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_vector.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
-
 #include <qbsp/brush.hh>
 #include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
+#include <qbsp/csg.hh>
 #include <common/fs.hh>
 #include <common/bsputils.hh>
 #include <common/decompile.hh>
 #include <common/prtfile.hh>
 #include <common/qvec.hh>
+#include <common/log.hh>
 #include <testmaps.hh>
 
 #include <subprocess.h>
 #include <nanobench.h>
 
+#include <fstream>
 #include <algorithm>
 #include <cstring>
 #include <set>
 #include <stdexcept>
 #include <tuple>
 #include <map>
+#include <doctest/doctest.h>
+#include "testutils.hh"
 
 // FIXME: Clear global data (planes, etc) between each test
 
@@ -37,14 +38,15 @@ const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, cons
     return nullptr;
 }
 
-mapentity_t &LoadMap(const char *map)
+mapentity_t &LoadMap(const char *map, size_t length)
 {
+    ::map.reset();
+    qbsp_options.reset();
+
     qbsp_options.target_version = &bspver_q1;
     qbsp_options.target_game = qbsp_options.target_version->game;
 
-    ::map.entities.clear();
-
-    parser_t parser(map, { Catch::getResultCapture().getCurrentTestName() });
+    parser_t parser(map, length, { doctest::getContextOptions()->currentTest->m_name });
 
     mapentity_t &entity = ::map.entities.emplace_back();
     texture_def_issues_t issue_stats;
@@ -55,6 +57,19 @@ mapentity_t &LoadMap(const char *map)
     CalculateWorldExtent();
 
     return entity;
+}
+
+mapentity_t &LoadMap(const char *map)
+{
+    return LoadMap(map, strlen(map));
+}
+
+mapentity_t &LoadMapPath(const std::filesystem::path &name)
+{
+    auto filename = std::filesystem::path(testmaps_dir) / name;
+    fs::data file_data = fs::load(filename);
+    return LoadMap(reinterpret_cast<const char *>(file_data->data()),
+        file_data->size());
 }
 
 #include <common/bspinfo.hh>
@@ -355,7 +370,7 @@ std::vector<const mface_t *> FacesWithTextureName(const mbsp_t &bsp, const std::
 }
 
 // https://github.com/ericwa/ericw-tools/issues/158
-TEST_CASE("testTextureIssue", "[qbsp]")
+TEST_CASE("testTextureIssue" * doctest::test_suite("qbsp"))
 {
     const char *bufActual = R"(
     {
@@ -394,13 +409,13 @@ TEST_CASE("testTextureIssue", "[qbsp]")
 #if 0
     for (int i=0; i<2; i++) {
         for (int j=0; j<4; j++) {
-            CHECK(Catch::Approx(texvecsExpected[i][j]) == texvecsActual[i][j]);
+            CHECK(doctest::Approx(texvecsExpected[i][j]) == texvecsActual[i][j]);
         }
     }
 #endif
 }
 
-TEST_CASE("duplicatePlanes", "[qbsp]")
+TEST_CASE("duplicatePlanes" * doctest::test_suite("qbsp"))
 {
     // a brush from e1m4.map with 7 planes, only 6 unique.
     const char *mapWithDuplicatePlanes = R"(
@@ -429,7 +444,7 @@ TEST_CASE("duplicatePlanes", "[qbsp]")
 /**
  * Test that this skip face gets auto-corrected.
  */
-TEST_CASE("InvalidTextureProjection", "[qbsp]")
+TEST_CASE("InvalidTextureProjection" * doctest::test_suite("qbsp"))
 {
     const char *map = R"(
     // entity 0
@@ -459,7 +474,7 @@ TEST_CASE("InvalidTextureProjection", "[qbsp]")
 /**
  * Same as above but the texture scales are 0
  */
-TEST_CASE("InvalidTextureProjection2", "[qbsp]")
+TEST_CASE("InvalidTextureProjection2" * doctest::test_suite("qbsp"))
 {
     const char *map = R"(
     // entity 0
@@ -489,7 +504,7 @@ TEST_CASE("InvalidTextureProjection2", "[qbsp]")
 /**
  * More realistic: *lava1 has tex vecs perpendicular to face
  */
-TEST_CASE("InvalidTextureProjection3", "[qbsp]")
+TEST_CASE("InvalidTextureProjection3" * doctest::test_suite("qbsp"))
 {
     const char *map = R"(
     // entity 0
@@ -517,7 +532,8 @@ TEST_CASE("InvalidTextureProjection3", "[qbsp]")
     CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
 }
 
-TEST_CASE("WindingArea", "[mathlib]")
+TEST_SUITE("mathlib") {
+TEST_CASE("WindingArea")
 {
     winding_t w(5);
 
@@ -530,14 +546,13 @@ TEST_CASE("WindingArea", "[mathlib]")
 
     CHECK(64.0f * 64.0f == w.area());
 }
-
-// Q1 testmaps
+}
 
 /**
  * checks that options are reset across tests.
  * set two random options and check that they don't carry over.
  */
-TEST_CASE("options_reset1", "[testmaps_q1]")
+TEST_CASE("options_reset1" * doctest::test_suite("testmaps_q1"))
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-transsky"});
 
@@ -545,7 +560,7 @@ TEST_CASE("options_reset1", "[testmaps_q1]")
     CHECK(qbsp_options.transsky.value());
 }
 
-TEST_CASE("options_reset2", "[testmaps_q1]")
+TEST_CASE("options_reset2" * doctest::test_suite("testmaps_q1"))
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-forcegoodtree"});
         
@@ -556,19 +571,19 @@ TEST_CASE("options_reset2", "[testmaps_q1]")
 /**
  * The brushes are touching but not intersecting, so ChopBrushes shouldn't change anything.
  */
-TEST_CASE("chop_no_change", "[testmaps_q1]")
+TEST_CASE("chop_no_change" * doctest::test_suite("testmaps_q1"))
 {
     LoadTestmapQ1("qbsp_chop_no_change.map");
 
     // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
 }
 
-TEST_CASE("simple_sealed", "[testmaps_q1]")
+TEST_CASE("simple_sealed" * doctest::test_suite("testmaps_q1"))
 {
     const std::vector<std::string> quake_maps{"qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map"};
 
     for (const auto& mapname : quake_maps) {
-        DYNAMIC_SECTION("testing " << mapname) {
+        SUBCASE(fmt::format("testing {}", mapname).c_str()) {
 
             const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
@@ -589,12 +604,12 @@ TEST_CASE("simple_sealed", "[testmaps_q1]")
 
             CHECK(bsp.dleafs[1].nummarksurfaces == 6);
             CHECK(bsp.dleafs[1].firstmarksurface == 0);
-            CHECK_THAT(bsp.dleaffaces, Catch::Matchers::UnorderedEquals(std::vector<uint32_t>{0, 1, 2, 3, 4, 5}));
+            CHECK_VECTORS_UNOREDERED_EQUAL(bsp.dleaffaces, std::vector<uint32_t>{0, 1, 2, 3, 4, 5});
         }
     }
 }
 
-TEST_CASE("simple_sealed2", "[testmaps_q1]")
+TEST_CASE("simple_sealed2" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_sealed2.map");
 
@@ -627,13 +642,13 @@ TEST_CASE("simple_sealed2", "[testmaps_q1]")
     auto *other_plus_y =
         BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-64, -368, 128), qvec3d(0, 1, 0)); // back wall +Y normal
 
-    CHECK_THAT(other_markfaces, Catch::Matchers::UnorderedEquals(std::vector<const mface_t*>{
+    CHECK_VECTORS_UNOREDERED_EQUAL(other_markfaces, std::vector<const mface_t*>{
         other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y
-    }));
+    });
 }
 
 
-TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
+TEST_CASE("simple_worldspawn_worldspawn" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map", {"-tjunc", "rotate"});
 
@@ -654,25 +669,31 @@ TEST_CASE("simple_worldspawn_worldspawn", "[testmaps_q1]")
         } else if (!strcmp(texname, "+0fan")) {
             ++fan_faces;
         } else {
-            FAIL();
+            FAIL("");
         }
     }
     REQUIRE(fan_faces == 5);
     REQUIRE(room_faces == 9);
 }
 
-TEST_CASE("simple_worldspawn_detail_wall", "[testmaps_q1]")
+TEST_CASE("simple_worldspawn_detail_wall" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_wall.map");
 
-    REQUIRE(prt.has_value());
+    CHECK(prt.has_value());
 
     // 5 faces for the "button"
     // 6 faces for the room
-    REQUIRE(bsp.dfaces.size() == 11);
+    CHECK(bsp.dfaces.size() == 11);
+
+    const qvec3d button_pos = {16, -48, 104};
+    auto *button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], button_pos);
+
+    CHECK(button_leaf->contents == CONTENTS_SOLID);
+    CHECK(button_leaf == &bsp.dleafs[0]); // should be using shared solid leaf because it's func_detail_wall
 }
 
-TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
+TEST_CASE("simple_worldspawn_detail" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map", {"-tjunc", "rotate"});
 
@@ -690,7 +711,7 @@ TEST_CASE("simple_worldspawn_detail", "[testmaps_q1]")
     CHECK(bsp.dclipnodes.size() <= 22);
 }
 
-TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
+TEST_CASE("simple_worldspawn_detail_illusionary" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_illusionary.map");
 
@@ -712,7 +733,7 @@ TEST_CASE("simple_worldspawn_detail_illusionary", "[testmaps_q1]")
     CHECK(prt->portalleafs == 1);
 }
 
-TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
+TEST_CASE("simple_worldspawn_sky" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map");
 
@@ -756,13 +777,13 @@ TEST_CASE("simple_worldspawn_sky", "[testmaps_q1]")
     // FIXME: unsure what the expected number of visclusters is, does sky get one?
 }
 
-TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
+TEST_CASE("water_detail_illusionary" * doctest::test_suite("testmaps_q1"))
 {
     static const std::string basic_mapname = "qbsp_water_detail_illusionary.map";
     static const std::string mirrorinside_mapname = "qbsp_water_detail_illusionary_mirrorinside.map";
 
     for (const auto& mapname : {basic_mapname, mirrorinside_mapname}) {
-        DYNAMIC_SECTION("testing " << mapname) {
+        SUBCASE(fmt::format("testing {}", mapname).c_str()) {
             const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
             REQUIRE(prt.has_value());
@@ -803,7 +824,7 @@ TEST_CASE("water_detail_illusionary", "[testmaps_q1]")
     }
 }
 
-TEST_CASE("noclipfaces", "[testmaps_q1]")
+TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");
 
@@ -822,11 +843,11 @@ TEST_CASE("noclipfaces", "[testmaps_q1]")
 }
 
 /**
- * _noclipfaces 1 detail_wall meeting a _noclipfaces 0 one.
+ * _noclipfaces 1 detail_fence meeting a _noclipfaces 0 one.
  *
  * Currently, to simplify the implementation, we're treating that the same as if both had _noclipfaces 1
  */
-TEST_CASE("noclipfaces_junction")
+TEST_CASE("noclipfaces_junction" * doctest::test_suite("testmaps_q1"))
 {
     const std::vector<std::string> maps{
         "qbsp_noclipfaces_junction.map",
@@ -836,7 +857,7 @@ TEST_CASE("noclipfaces_junction")
     for (const auto& map : maps) {
         const bool q2 = (map.find("q2") == 0);
 
-        DYNAMIC_SECTION(map) {
+        SUBCASE(map.c_str()) {
             const auto [bsp, bspx, prt] =
                 q2 ? LoadTestmapQ2(map) : LoadTestmapQ1(map);
 
@@ -864,7 +885,7 @@ TEST_CASE("noclipfaces_junction")
 /**
  * Same as previous test, but the T shaped brush entity has _mirrorinside
  */
-TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
+TEST_CASE("noclipfaces_mirrorinside" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces_mirrorinside.map");
 
@@ -882,7 +903,7 @@ TEST_CASE("noclipfaces_mirrorinside", "[testmaps_q1]")
     CHECK(prt->portalleafs == 1);
 }
 
-TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
+TEST_CASE("detail_illusionary_intersecting" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map", {"-tjunc", "rotate"});
 
@@ -908,7 +929,7 @@ TEST_CASE("detail_illusionary_intersecting", "[testmaps_q1]")
     CHECK(prt->portalleafs == 1);
 }
 
-TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
+TEST_CASE("detail_illusionary_noclipfaces_intersecting" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map", {"-tjunc", "rotate"});
 
@@ -934,14 +955,14 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting", "[testmaps_q1]")
 /**
  * Since moving to a qbsp3 codebase, detail seals by default.
  */
-TEST_CASE("detail_seals", "[testmaps_q1]")
+TEST_CASE("detail_seals" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_seals.map");
 
     CHECK(prt.has_value());
 }
 
-TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
+TEST_CASE("detail_doesnt_remove_world_nodes" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_remove_world_nodes.map");
 
@@ -976,7 +997,7 @@ TEST_CASE("detail_doesnt_remove_world_nodes", "[testmaps_q1]")
 #endif
 }
 
-TEST_CASE("merge", "[testmaps_q1]")
+TEST_CASE("merge" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_merge.map");
 
@@ -996,7 +1017,7 @@ TEST_CASE("merge", "[testmaps_q1]")
     CHECK(top_winding.bounds().maxs() == exp_bounds.maxs());
 }
 
-TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
+TEST_CASE("tjunc_many_sided_face" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map", {"-tjunc", "rotate"});
 
@@ -1017,7 +1038,7 @@ TEST_CASE("tjunc_many_sided_face", "[testmaps_q1]")
     CHECK(2 == (faces_by_normal.at({0, 0, -1}).size()));
 }
 
-TEST_CASE("tjunc_angled_face", "[testmaps_q1]")
+TEST_CASE("tjunc_angled_face" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_tjunc_angled_face.map");
     CheckFilled(bsp);
@@ -1033,7 +1054,7 @@ TEST_CASE("tjunc_angled_face", "[testmaps_q1]")
  * Because it comes second, the sbutt2 brush should "win" in clipping against the floor,
  * in both a worldspawn test case, as well as a func_wall.
  */
-TEST_CASE("brush_clipping_order", "[testmaps_q1]")
+TEST_CASE("brush_clipping_order" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_brush_clipping_order.map", {"-tjunc", "rotate"});
 
@@ -1062,7 +1083,7 @@ TEST_CASE("brush_clipping_order", "[testmaps_q1]")
 /**
  * Box room with a rotating fan (just a cube). Works in a mod with hiprotate - AD, Quoth, etc.
  */
-TEST_CASE("origin", "[testmaps_q1]")
+TEST_CASE("origin" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_origin.map");
 
@@ -1084,11 +1105,10 @@ TEST_CASE("origin", "[testmaps_q1]")
         [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
 
     REQUIRE(it != ents.end());
-    CHECK_THAT(it->get("origin"), Catch::Matchers::Equals("216 -216 340")
-                                      || Catch::Matchers::Equals("216.00 -216.00 340.00"));
+    CHECK(it->get("origin") == "216 -216 340");
 }
 
-TEST_CASE("simple", "[testmaps_q1]")
+TEST_CASE("simple" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map");
 
@@ -1099,7 +1119,7 @@ TEST_CASE("simple", "[testmaps_q1]")
 /**
  * Just a solid cuboid
  */
-TEST_CASE("q1_cube", "[testmaps_q1]")
+TEST_CASE("q1_cube")
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_cube.map");
 
@@ -1121,7 +1141,7 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
 
     // check the empty leafs
     for (int i = 1; i < 7; ++i) {
-        DYNAMIC_SECTION("leaf " << i) {
+        SUBCASE(fmt::format("leaf {}", i).c_str()) {
             auto &leaf = bsp.dleafs[i];
             CHECK(CONTENTS_EMPTY == leaf.contents);
 
@@ -1150,7 +1170,7 @@ TEST_CASE("q1_cube", "[testmaps_q1]")
 /**
  * Two solid cuboids touching along one edge
  */
-TEST_CASE("q1_cubes", "[testmaps_q1]")
+TEST_CASE("q1_cubes" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_cubes.map");
 
@@ -1161,7 +1181,7 @@ TEST_CASE("q1_cubes", "[testmaps_q1]")
 /**
  * Ensure submodels that are all "clip" get bounds set correctly
  */
-TEST_CASE("q1_clip_func_wall", "[testmaps_q1]")
+TEST_CASE("q1_clip_func_wall" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_clip_func_wall.map");
 
@@ -1187,7 +1207,7 @@ TEST_CASE("q1_clip_func_wall", "[testmaps_q1]")
 /**
  * Lots of features in one map, more for testing in game than automated testing
  */
-TEST_CASE("features", "[testmaps_q1]")
+TEST_CASE("features" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbspfeatures.map");
 
@@ -1201,7 +1221,7 @@ bool PortalMatcher(const prtfile_winding_t& a, const prtfile_winding_t &b)
     return a.undirectional_equal(b);
 }
 
-TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
+TEST_CASE("qbsp_func_detail various types" * doctest::test_suite("testmaps_q1")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_func_detail.map");
 
     REQUIRE(prt.has_value());
@@ -1247,7 +1267,7 @@ TEST_CASE("qbsp_func_detail various types", "[testmaps_q1]") {
     CHECK(prt->portalleafs_real > 3);
 }
 
-TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
+TEST_CASE("qbsp_angled_brush" * doctest::test_suite("testmaps_q1")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_angled_brush.map");
 
     REQUIRE(prt.has_value());
@@ -1258,13 +1278,13 @@ TEST_CASE("qbsp_angled_brush", "[testmaps_q1]") {
     CHECK(6 + 1 == bsp.dleafs.size());
 }
 
-TEST_CASE("qbsp_sealing_point_entity_on_outside", "[testmaps_q1]") {
+TEST_CASE("qbsp_sealing_point_entity_on_outside" * doctest::test_suite("testmaps_q1")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_sealing_point_entity_on_outside.map");
 
     REQUIRE(prt.has_value());
 }
 
-TEST_CASE("qbsp_q1_0125unit_faces", "[testmaps_q1][!mayfail]")
+TEST_CASE("qbsp_q1_0125unit_faces" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_0125unit_faces.map");
 
@@ -1272,7 +1292,7 @@ TEST_CASE("qbsp_q1_0125unit_faces", "[testmaps_q1][!mayfail]")
     CHECK(2 == bsp.dfaces.size());
 }
 
-TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
+TEST_CASE("quake maps" * doctest::test_suite("testmaps_q1") * doctest::skip())
 {
     const std::vector<std::string> quake_maps{"DM1-test.map", "DM2-test.map", "DM3-test.map", "DM4-test.map",
         "DM5-test.map", "DM6-test.map", "DM7-test.map", "E1M1-test.map", "E1M2-test.map", "E1M3-test.map",
@@ -1283,7 +1303,7 @@ TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
         "E4M6-test.map", "E4M7-test.map", "E4M8-test.map", "END-test.map"};
 
     for (const auto& map : quake_maps) {
-        DYNAMIC_SECTION("testing " << map) {
+        SUBCASE(map.c_str()) {
             const auto [bsp, bspx, prt] = LoadTestmapQ1("quake_map_source/" + map);
 
             CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -1293,7 +1313,7 @@ TEST_CASE("quake maps", "[testmaps_q1][.releaseonly]")
     }
 }
 
-TEST_CASE("chop", "[testmaps_q1][.releaseonly]")
+TEST_CASE("chop" * doctest::test_suite("testmaps_q1") * doctest::skip())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("quake_map_source/DM1-test.map", {"-chop", "-debugchop"});
 
@@ -1302,7 +1322,7 @@ TEST_CASE("chop", "[testmaps_q1][.releaseonly]")
     CheckFilled(bsp);
 }
 
-TEST_CASE("mountain", "[testmaps_q1][.releaseonly][!mayfail]")
+TEST_CASE("mountain" * doctest::test_suite("testmaps_q1") * doctest::skip() * doctest::may_fail())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_mountain.map");
 
@@ -1317,7 +1337,7 @@ TEST_CASE("mountain", "[testmaps_q1][.releaseonly][!mayfail]")
  * - hull1+ can't, because it would cause areas containing no entities but connected by a thin gap to the
  *   rest of the world to get sealed off as solid.
  **/
-TEST_CASE("qbsp_q1_sealing", "[testmaps_q1]") {
+TEST_CASE("qbsp_q1_sealing" * doctest::test_suite("testmaps_q1")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_sealing.map");
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -1352,10 +1372,32 @@ TEST_CASE("qbsp_q1_sealing", "[testmaps_q1]") {
     CHECK(prt->portalleafs_real == 3); // no detail, so same as above
 }
 
+TEST_CASE("q1_csg" * doctest::test_suite("testmaps_q1")) {
+    auto &entity = LoadMapPath("qbsp_q1_csg.map");
+
+    REQUIRE(entity.mapbrushes.size() == 2);
+
+    bspbrush_t::container bspbrushes;
+    for (int i = 0; i < 2; ++i) {
+        auto b = LoadBrush(entity, entity.mapbrushes[i], {CONTENTS_SOLID}, 0, std::nullopt);
+
+        CHECK(6 == b->sides.size());
+
+        bspbrushes.push_back(bspbrush_t::make_ptr(std::move(*b)));
+    }
+
+    auto csged = CSGFaces(bspbrushes);
+    CHECK(2 == csged.size());
+
+    for (int i = 0; i < 2; ++i) {
+        CHECK(5 == csged[i]->sides.size());
+    }
+}
+
 /**
  * Test for WAD internal textures
  **/
-TEST_CASE("q1_wad_internal", "[testmaps_q1]") {
+TEST_CASE("q1_wad_internal" * doctest::test_suite("testmaps_q1")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map");
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -1380,7 +1422,7 @@ TEST_CASE("q1_wad_internal", "[testmaps_q1]") {
 /**
  * Test for WAD internal textures
  **/
-TEST_CASE("q1_wad_external", "[testmaps_q1]") {
+TEST_CASE("q1_wad_external" * doctest::test_suite("testmaps_q1")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map", { "-xwadpath", std::string(testmaps_dir) });
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -1401,7 +1443,7 @@ TEST_CASE("q1_wad_external", "[testmaps_q1]") {
 /**
  * Test that we automatically try to load X.wad when compiling X.map
  **/
-TEST_CASE("q1_wad_mapname", "[testmaps_q1]")
+TEST_CASE("q1_wad_mapname" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_wad_mapname.map");
 
@@ -1415,7 +1457,7 @@ TEST_CASE("q1_wad_mapname", "[testmaps_q1]")
     CHECK(bsp.dtex.textures[1].data.size() > sizeof(dmiptex_t));
 }
 
-TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
+TEST_CASE("q1_merge_maps" * doctest::test_suite("testmaps_q1")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_merge_maps_base.map", { "-add", "q1_merge_maps_addition.map" });
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -1446,7 +1488,7 @@ TEST_CASE("q1_merge_maps", "[testmaps_q1]") {
 /**
  * Tests that hollow obj2map style geometry (tetrahedrons) get filled in, in all hulls.
  */
-TEST_CASE("q1_rocks", "[testmaps_q1][!mayfail]")
+TEST_CASE("q1_rocks" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
 {
     constexpr auto* q1_rocks_structural_cube = "q1_rocks_structural_cube.map";
 
@@ -1458,8 +1500,7 @@ TEST_CASE("q1_rocks", "[testmaps_q1][!mayfail]")
         q1_rocks_structural_cube // simpler version where the mountain is just a cube
     };
     for (auto *mapname : mapnames) {
-        DYNAMIC_SECTION(mapname) {
-            INFO(mapname);
+        SUBCASE(mapname) {
             const auto [bsp, bspx, prt] = LoadTestmapQ1(mapname);
 
             CHECK(GAME_QUAKE == bsp.loadversion->game->id);
@@ -1491,7 +1532,7 @@ TEST_CASE("q1_rocks", "[testmaps_q1][!mayfail]")
             if (std::string(q1_rocks_structural_cube) == mapname) {
                 CHECK((5 + 6) == bsp.dnodes.size());
             }
-        }
+        } 
     }
 }
 
@@ -1545,7 +1586,7 @@ int CountClipnodeNodes(const mbsp_t& bsp, int hullnum)
 /**
  * Tests a bad hull expansion
  */
-TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1][!mayfail]")
+TEST_CASE("q1_hull_expansion_lip" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull_expansion_lip.map");
 
@@ -1578,40 +1619,63 @@ TEST_CASE("q1_hull_expansion_lip", "[testmaps_q1][!mayfail]")
     }
 }
 
-TEST_CASE("q1_hull1_content_types", "[testmaps_q1]")
+TEST_CASE("q1_hull1_content_types" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull1_content_types.map");
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
+    enum leaf {
+        shared_leaf_0,
+        new_leaf
+    };
+
     struct expected_types_t
     {
         int hull0_contenttype;
+        leaf hull0_leaf;
+
         int hull1_contenttype;
     };
 
     const std::vector<std::tuple<qvec3d, expected_types_t>> expected{
-        {{0, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}},
-        {{64, 0, 0}, {CONTENTS_WATER, CONTENTS_EMPTY}}, // liquids are absent in hull1
-        {{128, 0, 0}, {CONTENTS_SLIME, CONTENTS_EMPTY}},
-        {{192, 0, 0}, {CONTENTS_LAVA, CONTENTS_EMPTY}},
-        {{256, 0, 0}, {CONTENTS_SKY, CONTENTS_SOLID}}, // sky is solid in hull1
-        {{320, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail is solid in hull1
-        {{384, 0, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail_fence is solid in hull1
-        {{384, -64, 0}, {CONTENTS_SOLID, CONTENTS_SOLID}}, // func_detail_fence + _mirrorinside is solid in hull1
-        {{448, 0, 0}, {CONTENTS_EMPTY, CONTENTS_EMPTY}},    // func_detail_illusionary is empty in hull1
-        {{448, -64, 0}, {CONTENTS_EMPTY, CONTENTS_EMPTY}} // func_detail_illusionary + _mirrorinside is empty in hull1
+        // box center,   hull0 contents,  hull0 leaf,    hull1 contents
+        {{0, 0, 0},     {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}},
+        {{64, 0, 0},    {CONTENTS_WATER, new_leaf,      CONTENTS_EMPTY}}, // liquids are absent in hull1
+        {{128, 0, 0},   {CONTENTS_SLIME, new_leaf,      CONTENTS_EMPTY}},
+        {{192, 0, 0},   {CONTENTS_LAVA,  new_leaf,      CONTENTS_EMPTY}},
+        {{256, 0, 0},   {CONTENTS_SKY,   new_leaf,      CONTENTS_SOLID}}, // sky is solid in hull1
+        {{320, 0, 0},   {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}}, // func_detail is solid in hull1
+        {{384, 0, 0},   {CONTENTS_SOLID, new_leaf,      CONTENTS_SOLID}}, // func_detail_fence is solid in hull1. uses a new leaf in hull0 because it can be seen through
+        {{384, -64, 0}, {CONTENTS_SOLID, new_leaf,      CONTENTS_SOLID}}, // func_detail_fence + _mirrorinside is solid in hull1
+        {{448, 0, 0},   {CONTENTS_EMPTY, new_leaf,      CONTENTS_EMPTY}}, // func_detail_illusionary is empty in hull1
+        {{448, -64, 0}, {CONTENTS_EMPTY, new_leaf,      CONTENTS_EMPTY}}, // func_detail_illusionary + _mirrorinside is empty in hull1
+        {{512, 0, 0},   {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}}, // func_detail_wall is solid in hull1
     };
 
     for (const auto &[point, expected_types] : expected) {
-        INFO("Testing point " << point);
+        std::string message = qv::to_string(point);
+        CAPTURE(message);
 
-        CHECK(expected_types.hull0_contenttype == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], point));
+        // hull 0
+        auto* hull0_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], point);
+
+        CHECK(expected_types.hull0_contenttype == hull0_leaf->contents);
+        ptrdiff_t hull0_leaf_index = hull0_leaf - &bsp.dleafs[0];
+
+        if (expected_types.hull0_leaf == shared_leaf_0) {
+            CHECK(hull0_leaf_index == 0);
+        } else {
+            CHECK(hull0_leaf_index != 0);
+        }
+
+        // hull 1
         CHECK(expected_types.hull1_contenttype == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
     }
 }
 
-TEST_CASE("winding", "[benchmark][.releaseonly]") {
+TEST_CASE("winding" * doctest::test_suite("benchmark")
+                    * doctest::skip()) {
     ankerl::nanobench::Bench bench;
 
     bench.run("std::vector<double> reserve(3*4*6)", [&] {

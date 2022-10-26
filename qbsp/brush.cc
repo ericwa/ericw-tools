@@ -20,10 +20,11 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/brush.hh>
+
 #include <cstring>
 #include <list>
-
-#include <qbsp/brush.hh>
+#include <common/log.hh>
 #include <qbsp/csg.hh>
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
@@ -676,7 +677,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
 {
     clock.max += src.mapbrushes.size();
 
-    bool all_detail, all_detail_fence, all_detail_illusionary;
+    bool all_detail, all_detail_wall, all_detail_fence, all_detail_illusionary;
 
     const std::string &classname = src.epairs.get("classname");
 
@@ -687,8 +688,13 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             all_detail = true;
         }
 
+        all_detail_wall = false;
+        if (!Q_strcasecmp(classname, "func_detail_wall")) {
+            all_detail_wall = true;
+        }
+
         all_detail_fence = false;
-        if (!Q_strcasecmp(classname, "func_detail_fence") || !Q_strcasecmp(classname, "func_detail_wall")) {
+        if (!Q_strcasecmp(classname, "func_detail_fence")) {
             all_detail_fence = true;
         }
 
@@ -710,11 +716,13 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         bool detail = false;
         bool detail_illusionary = false;
         bool detail_fence = false;
+        bool detail_wall = false;
 
         // inherit the per-entity settings
         detail |= all_detail;
         detail_illusionary |= all_detail_illusionary;
         detail_fence |= all_detail_fence;
+        detail_wall |= all_detail_wall;
 
         /* -omitdetail option omits all types of detail */
         if (qbsp_options.omitdetail.value() && detail)
@@ -723,6 +731,8 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
         if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailfence.value()) && detail_fence)
             continue;
+        if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailwall.value()) && detail_wall)
+            continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(qbsp_options.target_game)) {
@@ -730,6 +740,8 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
                 contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
             } else if (detail_fence) {
                 contents = qbsp_options.target_game->create_detail_fence_contents(contents);
+            } else if (detail_wall) {
+                contents = qbsp_options.target_game->create_detail_wall_contents(contents);
             } else if (detail) {
                 contents = qbsp_options.target_game->create_detail_solid_contents(contents);
             }

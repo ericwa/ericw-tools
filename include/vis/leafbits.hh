@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <common/cmdlib.hh>
+#include <common/bitflags.hh>
 
 class leafbits_t
 {

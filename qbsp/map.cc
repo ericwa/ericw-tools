@@ -36,6 +36,7 @@
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 
+#include <common/log.hh>
 #include <common/parser.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>

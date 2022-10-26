@@ -28,7 +28,6 @@
 
 #include <atomic>
 #include <cstdarg>
-#include <filesystem>
 #include <list>
 #include <cmath> // for log10
 #include <fmt/core.h>
@@ -261,3 +260,23 @@ struct stat_tracker_t
     }
 };
 }; // namespace logging
+
+[[noreturn]] void Error(const char *error);
+
+template<typename... Args>
+[[noreturn]] inline void Error(const char *fmt, const Args &...args)
+{
+    auto formatted = fmt::format(fmt, std::forward<const Args &>(args)...);
+    Error(formatted.c_str());
+}
+
+#define FError(fmt, ...) Error("{}: " fmt, __func__, ##__VA_ARGS__)
+
+/**
+ * assertion macro that is used in all builds (debug/release)
+ */
+#define Q_stringify__(x) #x
+#define Q_stringify(x) Q_stringify__(x)
+#define Q_assert(x) logging::assert_((x), Q_stringify(x), __FILE__, __LINE__)
+
+#define Q_assert_unreachable() Q_assert(false)

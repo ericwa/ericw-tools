@@ -27,6 +27,7 @@
 #include <vis/vis.hh>
 #include <common/cmdlib.hh>
 #include "common/fs.hh"
+#include <common/log.hh>
 #include <fstream>
 
 constexpr uint32_t VIS_STATE_VERSION = ('T' << 24 | 'Y' << 16 | 'R' << 8 | '1');

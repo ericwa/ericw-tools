@@ -21,6 +21,8 @@
 // writebsp.c
 
 #include <qbsp/map.hh>
+
+#include <common/log.hh>
 #include <qbsp/qbsp.hh>
 
 #include <vector>

@@ -20,6 +20,7 @@
 #pragma once
 
 #include <array>
+#include <iosfwd>
 #include <cstdint>
 #include <common/aabb.hh>
 #include <memory>
@@ -32,9 +33,11 @@ struct bspx_header_t
     uint32_t numlumps;
 
     bspx_header_t() = default;
-    constexpr bspx_header_t(uint32_t numlumps) : numlumps(numlumps) { }
+    bspx_header_t(uint32_t numlumps);
 
-    auto stream_data() { return std::tie(id, numlumps); }
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 struct bspx_lump_t
@@ -43,7 +46,9 @@ struct bspx_lump_t
     uint32_t fileofs;
     uint32_t filelen;
 
-    auto stream_data() { return std::tie(lumpname, fileofs, filelen); }
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 // BRUSHLIST BSPX lump
@@ -54,7 +59,9 @@ struct bspxbrushes_permodel
     int32_t numbrushes;
     int32_t numfaces;
 
-    auto stream_data() { return std::tie(ver, modelnum, numbrushes, numfaces); }
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 struct bspxbrushes_perbrush
@@ -63,7 +70,9 @@ struct bspxbrushes_perbrush
     int16_t contents;
     uint16_t numfaces;
 
-    auto stream_data() { return std::tie(bounds, contents, numfaces); }
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 using bspxbrushes_perface = qplane3f;

@@ -30,6 +30,16 @@
 #include <atomic>
 #include <mutex>
 
+void lump_t::stream_write(std::ostream &s) const
+{
+    s <= std::tie(fileofs, filelen);
+}
+
+void lump_t::stream_read(std::istream &s)
+{
+    s >= std::tie(fileofs, filelen);
+}
+
 static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
 {
     Q_assert((bytes.size() % 3) == 0);
@@ -57,6 +67,7 @@ private:
         // both water and is_fence/is_mist)
         bool is_origin = false;
         bool is_clip = false;
+        bool is_wall = false;
         bool is_fence = false;
         bool is_mist = false;
 
@@ -65,13 +76,13 @@ private:
 
         constexpr bool operator==(const q1_contentflags_data &other) const
         {
-            return is_origin == other.is_origin && is_clip == other.is_clip && is_fence == other.is_fence &&
-                   is_mist == other.is_mist && is_detail == other.is_detail;
+            return is_origin == other.is_origin && is_clip == other.is_clip && is_wall == other.is_wall &&
+                   is_fence == other.is_fence && is_mist == other.is_mist && is_detail == other.is_detail;
         }
 
         constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
 
-        constexpr explicit operator bool() const { return is_origin || is_clip || is_fence || is_mist || is_detail; }
+        constexpr explicit operator bool() const { return is_origin || is_clip || is_wall || is_fence || is_mist || is_detail; }
     };
 
     // returns a blank entry if the given contents don't have
@@ -91,11 +102,12 @@ private:
     // todo: this should be the only state inside a contentflags_t in q1 mode.
     struct q1_contentflags_bits
     {
-        using bitset_t = std::bitset<13>;
+        using bitset_t = std::bitset<14>;
 
         // visible contents
         bool solid = false;
         bool sky = false;
+        bool wall = false; // compiler-internal
         bool fence = false; // compiler-internal
         bool lava = false;
         bool slime = false;
@@ -112,54 +124,56 @@ private:
         bool mirror_inside = false;
         bool suppress_clipping_same_type = false;
 
-        constexpr size_t size() const { return 11; }
-        constexpr size_t last_visible_contents() const { return 6; }
+        constexpr size_t last_visible_contents() const { return 7; }
         constexpr bitset_t bitset() const
         {
             bitset_t result;
             result[0] = solid;
             result[1] = sky;
-            result[2] = fence;
-            result[3] = lava;
-            result[4] = slime;
-            result[5] = water;
-            result[6] = mist;
-            result[7] = origin;
-            result[8] = clip;
-            result[9] = illusionary_visblocker;
-            result[10] = detail;
-            result[11] = mirror_inside;
-            result[12] = suppress_clipping_same_type;
+            result[2] = wall;
+            result[3] = fence;
+            result[4] = lava;
+            result[5] = slime;
+            result[6] = water;
+            result[7] = mist;
+            result[8] = origin;
+            result[9] = clip;
+            result[10] = illusionary_visblocker;
+            result[11] = detail;
+            result[12] = mirror_inside;
+            result[13] = suppress_clipping_same_type;
             return result;
         }
 
         q1_contentflags_bits() = default;
         explicit q1_contentflags_bits(const bitset_t &bitset)
-            : solid(bitset[0]), sky(bitset[1]), fence(bitset[2]), lava(bitset[3]), slime(bitset[4]), water(bitset[5]),
-              mist(bitset[6]), origin(bitset[7]), clip(bitset[8]), illusionary_visblocker(bitset[9]),
-              detail(bitset[10]), mirror_inside(bitset[11]), suppress_clipping_same_type(bitset[12])
+            : solid(bitset[0]), sky(bitset[1]), wall(bitset[2]), fence(bitset[3]), lava(bitset[4]), slime(bitset[5]),
+              water(bitset[6]), mist(bitset[7]), origin(bitset[8]), clip(bitset[9]), illusionary_visblocker(bitset[10]),
+              detail(bitset[11]), mirror_inside(bitset[12]), suppress_clipping_same_type(bitset[13])
         {
         }
 
-        static constexpr const char *bitflag_names[] = {"SOLID", "SKY", "FENCE", "LAVA", "SLIME", "WATER", "MIST",
-            "ORIGIN", "CLIP", "ILLUSIONARY_VISBLOCKER", "DETAIL", "MIRROR_INSIDE", "SUPPRESS_CLIPPING_SAME_TYPE"};
+        static constexpr const char *bitflag_names[] = {"SOLID", "SKY", "WALL", "FENCE", "LAVA", "SLIME", "WATER",
+            "MIST", "ORIGIN", "CLIP", "ILLUSIONARY_VISBLOCKER", "DETAIL", "MIRROR_INSIDE",
+            "SUPPRESS_CLIPPING_SAME_TYPE"};
 
         constexpr bool operator[](size_t index) const
         {
             switch (index) {
                 case 0: return solid;
                 case 1: return sky;
-                case 2: return fence;
-                case 3: return lava;
-                case 4: return slime;
-                case 5: return water;
-                case 6: return mist;
-                case 7: return origin;
-                case 8: return clip;
-                case 9: return illusionary_visblocker;
-                case 10: return detail;
-                case 11: return mirror_inside;
-                case 12: return suppress_clipping_same_type;
+                case 2: return wall;
+                case 3: return fence;
+                case 4: return lava;
+                case 5: return slime;
+                case 6: return water;
+                case 7: return mist;
+                case 8: return origin;
+                case 9: return clip;
+                case 10: return illusionary_visblocker;
+                case 11: return detail;
+                case 12: return mirror_inside;
+                case 13: return suppress_clipping_same_type;
                 default: throw std::out_of_range("index");
             }
         }
@@ -169,17 +183,18 @@ private:
             switch (index) {
                 case 0: return solid;
                 case 1: return sky;
-                case 2: return fence;
-                case 3: return lava;
-                case 4: return slime;
-                case 5: return water;
-                case 6: return mist;
-                case 7: return origin;
-                case 8: return clip;
-                case 9: return illusionary_visblocker;
-                case 10: return detail;
-                case 11: return mirror_inside;
-                case 12: return suppress_clipping_same_type;
+                case 2: return wall;
+                case 3: return fence;
+                case 4: return lava;
+                case 5: return slime;
+                case 6: return water;
+                case 7: return mist;
+                case 8: return origin;
+                case 9: return clip;
+                case 10: return illusionary_visblocker;
+                case 11: return detail;
+                case 12: return mirror_inside;
+                case 13: return suppress_clipping_same_type;
                 default: throw std::out_of_range("index");
             }
         }
@@ -246,6 +261,7 @@ private:
         auto &data = get_data(contents);
         result.origin = data.is_origin;
         result.clip = data.is_clip;
+        result.wall = data.is_wall;
         result.fence = data.is_fence;
         result.mist = data.is_mist;
         result.detail = data.is_detail;
@@ -280,6 +296,7 @@ private:
         q1_contentflags_data data;
         data.is_origin = bits.origin;
         data.is_clip = bits.clip;
+        data.is_wall = bits.wall;
         data.is_fence = bits.fence;
         data.is_mist = bits.mist;
         data.is_detail = bits.detail;
@@ -368,6 +385,14 @@ public:
         return contentflags_from_bits(result);
     }
 
+    contentflags_t create_detail_wall_contents(const contentflags_t &original) const override
+    {
+        q1_contentflags_bits result;
+        result.wall = true;
+        result.detail = true;
+        return contentflags_from_bits(result);
+    }
+
     contentflags_t create_detail_solid_contents(const contentflags_t &original) const override
     {
         q1_contentflags_bits result;
@@ -401,6 +426,13 @@ public:
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|solid|detail)
         const auto bits = contentflags_to_bits(contents);
         return bits.detail && bits.solid;
+    }
+
+    bool contents_are_detail_wall(const contentflags_t &contents) const override
+    {
+        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
+        const auto bits = contentflags_to_bits(contents);
+        return bits.detail && bits.wall;
     }
 
     bool contents_are_detail_fence(const contentflags_t &contents) const override
@@ -544,7 +576,7 @@ public:
          *
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
-        if (contents_are_detail_fence(contents)) {
+        if (contents_are_detail_fence(contents) || contents_are_detail_wall(contents)) {
             return create_solid_contents();
         }
 
@@ -951,6 +983,14 @@ struct gamedef_q2_t : public gamedef_t
         return result;
     }
 
+    contentflags_t create_detail_wall_contents(const contentflags_t &original) const override
+    {
+        contentflags_t result = original;
+        result.native |= (Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL);
+        // FIXME: figure out how to implement this in q2 mode
+        return result;
+    }
+
     contentflags_t create_detail_solid_contents(const contentflags_t &original) const override
     {
         contentflags_t result = original;
@@ -978,6 +1018,16 @@ struct gamedef_q2_t : public gamedef_t
     {
         int32_t test = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID);
 
+        return ((contents.native & test) == test);
+    }
+
+    bool contents_are_detail_wall(const contentflags_t &contents) const override
+    {
+        if (contents.native & Q2_CONTENTS_SOLID) {
+            return false;
+        }
+
+        int32_t test = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW);
         return ((contents.native & test) == test);
     }
 
@@ -1642,6 +1692,28 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
     },
     &gamedef_q2};
 
+bool surfflags_t::needs_write() const
+{
+    return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || light_ignore || phong_angle ||
+           phong_angle_concave || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0;
+}
+
+static auto as_tuple(const surfflags_t &flags)
+{
+    return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow, flags.no_bounce, flags.no_minlight, flags.no_expand,
+        flags.light_ignore, flags.phong_angle, flags.phong_angle_concave, flags.minlight, flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale);
+}
+
+bool surfflags_t::operator<(const surfflags_t &other) const
+{
+    return as_tuple(*this) < as_tuple(other);
+}
+
+bool surfflags_t::operator>(const surfflags_t &other) const
+{
+    return as_tuple(*this) > as_tuple(other);
+}
+
 bool surfflags_t::is_valid(const gamedef_t *game) const
 {
     return game->surfflags_are_valid(*this);
@@ -1666,6 +1738,11 @@ bool contentflags_t::is_any_detail(const gamedef_t *game) const
 bool contentflags_t::is_detail_solid(const gamedef_t *game) const
 {
     return game->contents_are_detail_solid(*this);
+}
+
+bool contentflags_t::is_detail_wall(const gamedef_t *game) const
+{
+    return game->contents_are_detail_wall(*this);
 }
 
 bool contentflags_t::is_detail_fence(const gamedef_t *game) const

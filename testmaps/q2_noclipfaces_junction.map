@@ -8,7 +8,7 @@
 }
 // entity 1
 {
-"classname" "func_detail_wall"
+"classname" "func_detail_fence"
 "_noclipfaces" "1"
 // brush 0
 {
@@ -22,7 +22,7 @@
 }
 // entity 2
 {
-"classname" "func_detail_wall"
+"classname" "func_detail_fence"
 // brush 0
 {
 ( 96 16 48 ) ( 96 17 48 ) ( 96 16 49 ) e1u1/window1 [ 0 -1 0 56 ] [ 0 0 -1 0 ] 0 2 2

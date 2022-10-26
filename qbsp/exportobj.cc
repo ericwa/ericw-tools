@@ -18,7 +18,10 @@
     See file, 'COPYING', for details.
 */
 
+#include <qbsp/exportobj.hh>
+
 #include <qbsp/qbsp.hh>
+#include <common/log.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>
 
@@ -51,9 +54,8 @@ static std::ofstream InitMtlFile(const std::string &filesuffix)
     return file;
 }
 
-static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
+static void ExportObjFace(std::ofstream &f, std::string_view mtlname, const winding_t &w, const maptexinfo_t &texinfo, int *vertcount)
 {
-    const maptexinfo_t &texinfo = face->get_texinfo();
     const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
 
     const auto &texture = map.load_image_meta(texname);
@@ -61,8 +63,8 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
     const int height = texture ? texture->height : 64;
 
     // export the vertices and uvs
-    for (int i = 0; i < face->w.size(); i++) {
-        const qvec3d &pos = face->w[i];
+    for (int i = 0; i < w.size(); i++) {
+        const qvec3d &pos = w[i];
         fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
 
         qvec3d uv = texinfo.vecs.uvs(pos, width, height);
@@ -71,18 +73,19 @@ static void ExportObjFace(std::ofstream &f, const face_t *face, int *vertcount)
         fmt::print(f, "vt {:.9} {:.9}\n", uv[0], -uv[1]);
     }
 
-    // fixme-brushbsp
-    fmt::print(f, "usemtl contents{}\n", face->contents.native);
+    if (!mtlname.empty()) {
+        fmt::print(f, "usemtl {}\n", mtlname);
+    }
     f << 'f';
-    for (int i = 0; i < face->w.size(); i++) {
+    for (int i = 0; i < w.size(); i++) {
         // .obj vertexes start from 1
         // .obj faces are CCW, quake is CW, so reverse the order
-        const int vertindex = *vertcount + (face->w.size() - 1 - i) + 1;
+        const int vertindex = *vertcount + (w.size() - 1 - i) + 1;
         fmt::print(f, " {}/{}", vertindex, vertindex);
     }
     f << '\n';
 
-    *vertcount += face->w.size();
+    *vertcount += w.size();
 }
 
 static void WriteContentsMaterial(std::ofstream &mtlf, contentflags_t contents, float r, float g, float b)
@@ -117,11 +120,23 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
 
     int vertcount = 0;
     for (const face_t *face : faces) {
-        ExportObjFace(objfile, face, &vertcount);
+        std::string mtlname = fmt::format("contents{}\n", face->contents.native);
+
+        ExportObjFace(objfile, mtlname, face->w, face->get_texinfo(), &vertcount);
     }
 }
 
-void ExportObj_Brushes(const std::string &filesuffix, const std::vector<const bspbrush_t *> &brushes) { }
+void ExportObj_Brushes(const std::string &filesuffix, const bspbrush_t::container &brushes)
+{
+    std::ofstream objfile = InitObjFile(filesuffix);
+
+    int vertcount = 0;
+    for (auto &brush : brushes) {
+        for (auto &side : brush->sides) {
+            ExportObjFace(objfile, {}, side.w, side.get_texinfo(), &vertcount);
+        }
+    }
+}
 
 static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)
 {

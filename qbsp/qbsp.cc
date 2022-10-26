@@ -31,6 +31,7 @@
 
 #include <qbsp/brush.hh>
 #include <qbsp/csg.hh>
+#include <qbsp/exportobj.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
 #include <qbsp/portals.hh>
@@ -45,6 +46,15 @@
 #include <fmt/chrono.h>
 
 #include "tbb/global_control.h"
+
+static auto as_tuple(const maptexinfo_t &info)
+{
+    return std::tie(info.vecs, info.miptex, info.flags, info.value, info.next);
+}
+
+bool maptexinfo_t::operator<(const maptexinfo_t &other) const { return as_tuple(*this) < as_tuple(other); }
+
+bool maptexinfo_t::operator>(const maptexinfo_t &other) const { return as_tuple(*this) > as_tuple(other); }
 
 const maptexinfo_t &face_t::get_texinfo() const
 {
@@ -82,6 +92,123 @@ inline void set_target_version(const bspversion_t *version)
     }
 
     qbsp_options.target_version = version;
+}
+
+qbsp_settings::qbsp_settings()
+    : hexen2{this, "hexen2", false, &game_target_group, "target Hexen II's BSP format"},
+      hlbsp{this, "hlbsp", false, &game_target_group, "target Half Life's BSP format"},
+      q2bsp{this, "q2bsp", false, &game_target_group, "target Quake II's BSP format"},
+      qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"},
+      bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"},
+      bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
+      nosubdivide{this, "nosubdivide", [&](source src) { subdivide.setValue(0, src); }, &common_format_group,
+          "disable subdivision"},
+      software{this, "software", true, &common_format_group,
+          "change settings to allow for (or make adjustments to optimize for the lack of) software support"},
+      subdivide{this, "subdivide", 240, &common_format_group,
+          "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"},
+      nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"},
+      nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"},
+      noclip{this, "noclip", false, &common_format_group, "don't write clip nodes (Q1-like BSP formats)"},
+      noskip{this, "noskip", false, &debugging_group, "don't remove faces with the 'skip' texture"},
+      nodetail{this, "nodetail", false, &debugging_group, "treat all detail brushes to structural"},
+      chop{this, "chop", false, &debugging_group, "adjust brushes to remove intersections if possible"},
+      chopfragment{this, "chopfragment", false, &debugging_group, "always do full fragmentation for chop"},
+      onlyents{this, "onlyents", false, &map_development_group, "only updates .MAP entities"},
+      splitsky{this, "splitsky", false, &debugging_group, "doesn't combine sky faces into one large face"},
+      splitturb{this, {"litwater", "splitturb"}, true, &common_format_group,
+          "doesn't combine water faces into one large face"},
+      splitspecial{this, "splitspecial", {&splitsky, &splitturb}, &debugging_group,
+          "doesn't combine sky and water faces into one large face (splitturb + splitsky)"},
+      transwater{this, "transwater", true, &common_format_group, "compute portal information for transparent water"},
+      transsky{this, "transsky", false, &map_development_group, "compute portal information for transparent sky"},
+      notextures{this, "notex", false, &common_format_group,
+          "write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights"},
+      convertmapformat{this, "convert", conversion_t::none,
+          {{"quake", conversion_t::quake}, {"quake2", conversion_t::quake2}, {"valve", conversion_t::valve},
+              {"bp", conversion_t::bp}},
+          &common_format_group, "convert a .MAP to a different .MAP format"},
+      oldaxis{this, "oldaxis", true, &debugging_group,
+          "uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older"},
+      forcegoodtree{
+          this, "forcegoodtree", false, &debugging_group, "force use of expensive processing for BrushBSP stage"},
+      midsplitsurffraction{this, "midsplitsurffraction", 0.f, 0.f, 1.f, &debugging_group,
+          "if 0 (default), use `maxnodesize` for deciding when to switch to midsplit bsp heuristic.\nif 0 < midsplitSurfFraction <= 1, switch to midsplit if the node contains more than this fraction of the model's\ntotal surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)"},
+      maxnodesize{this, "maxnodesize", 1024, &debugging_group,
+          "triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)"},
+      oldrottex{this, "oldrottex", false, &debugging_group, "use old rotate_ brush texturing aligned at (0 0 0)"},
+      epsilon{this, "epsilon", 0.0001, 0.0, 1.0, &debugging_group, "customize epsilon value for point-on-plane checks"},
+      microvolume{this, "microvolume", 0.0, 0.0, 1000.0, &debugging_group, "microbrush volume"},
+      contenthack{this, "contenthack", false, &debugging_group,
+          "hack to fix leaks through solids. causes missing faces in some cases so disabled by default"},
+      leaktest{this, "leaktest", false, &map_development_group, "make compilation fail if the map leaks"},
+      outsidedebug{this, "outsidedebug", false, &debugging_group,
+          "write a .map after outside filling showing non-visible brush sides"},
+      debugchop{this, "debugchop", false, &debugging_group, "write a .map after ChopBrushes"},
+      debugleak{this, "debugleak", false, &debugging_group, "write more diagnostic files for debugging leaks"},
+      debugbspbrushes{this, "debugbspbrushes", false, &debugging_group,
+          "save bsp brushes after BrushBSP to a .map, for visualizing BSP splits"},
+      debugleafvolumes{this, "debugleafvolumes", false, &debugging_group,
+          "save bsp leaf volumes after BrushBSP to a .map, for visualizing BSP splits"},
+      debugexpand{this, "debugexpand", &debugging_group,
+          "write expanded hull .map for debugging/inspecting hulls/brush bevelling"},
+      keepprt{this, "keepprt", false, &debugging_group, "avoid deleting the .prt file on leaking maps"},
+      includeskip{this, "includeskip", false, &common_format_group,
+          "don't cull skip faces from the list of renderable surfaces (Q2RTX)"},
+      worldextent{this, "worldextent", 0.0, &debugging_group, "explicitly provide world extents; 0 will auto-detect"},
+      leakdist{this, "leakdist", 2, &debugging_group, "space between leakfile points"},
+      forceprt1{
+          this, "forceprt1", false, &debugging_group, "force a PRT1 output file even if PRT2 is required for vis"},
+      tjunc{this, {"tjunc", "notjunc"}, tjunclevel_t::MWT,
+          {{"none", tjunclevel_t::NONE}, {"rotate", tjunclevel_t::ROTATE}, {"retopologize", tjunclevel_t::RETOPOLOGIZE},
+              {"mwt", tjunclevel_t::MWT}},
+          &debugging_group, "T-junction fix level"},
+      objexport{
+          this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"},
+      wrbrushes{this, {"wrbrushes", "bspx"}, false, &common_format_group,
+          "includes a list of brushes for brush-based collision"},
+      wrbrushesonly{this, {"wrbrushesonly", "bspxonly"}, {&wrbrushes, &noclip}, &common_format_group,
+          "includes BSPX brushes and does not output clipping hulls (wrbrushes + noclip)"},
+      omitdetail{this, "omitdetail", false, &map_development_group, "omit *all* detail brushes from the compile"},
+      omitdetailwall{this, "omitdetailwall", false, &map_development_group,
+          "func_detail_wall brushes are omitted from the compile"},
+      omitdetailillusionary{this, "omitdetailillusionary", false, &map_development_group,
+          "func_detail_illusionary brushes are omitted from the compile"},
+      omitdetailfence{this, "omitdetailfence", false, &map_development_group,
+          "func_detail_fence brushes are omitted from the compile"},
+      wadpaths{this, {"wadpath", "xwadpath"}, &map_development_group,
+          "add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)"},
+      notriggermodels{this, "notriggermodels", false, &common_format_group,
+          "for supported game code only: triggers will not write a model\nout, and will instead just write out their mins/maxs."},
+      aliasdefs{this, "aliasdef", "\"path/to/file.def\" <multiple allowed>", &map_development_group,
+          "path to an alias definition file, which can transform entities in the .map into other entities."},
+      texturedefs{this, "texturedefs", "\"path/to/file.def\" <multiple allowed>", &map_development_group,
+          "path to a texture definition file, which can transform textures in the .map into other textures."},
+      lmscale{this, "lmscale", 1.0, &common_format_group,
+          "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump."},
+      filltype{this, "filltype", filltype_t::AUTO,
+          {{"auto", filltype_t::AUTO}, {"inside", filltype_t::INSIDE}, {"outside", filltype_t::OUTSIDE}},
+          &common_format_group,
+          "whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used."},
+      allow_upgrade{this, "allowupgrade", true, &common_format_group,
+          "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"},
+      maxedges{[](setting_int32 &setting) { return setting.value() == 0 || setting.value() >= 3; }, this, "maxedges",
+          64, &map_development_group,
+          "the max number of edges/vertices on a single face before it is split into another face"},
+      midsplitbrushfraction{this, "midsplitbrushfraction", 0.0, &common_format_group,
+          "switch to cheaper partitioning if a node contains this % of brushes in the map"},
+      add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"},
+      loghulls{this, {"loghulls"}, false, &logging_group, "print log output for collision hulls"},
+      logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"}
+{
+}
+
+void qbsp_settings::setParameters(int argc, const char **argv)
+{
+    common_settings::setParameters(argc, argv);
+    programDescription =
+        "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
+    remainderName = "sourcefile.map [destfile.bsp]";
 }
 
 void qbsp_settings::initialize(int argc, const char **argv)
@@ -1088,9 +1215,6 @@ void InitQBSP(int argc, const char **argv)
     // In case we're launched more than once, in testqbsp
     map.reset();
     qbsp_options.reset();
-    // fixme-brushbsp: clear any other members of qbsp_settings
-    qbsp_options.target_game = nullptr;
-    qbsp_options.target_version = nullptr;
 
     qbsp_options.run(argc, argv);
 

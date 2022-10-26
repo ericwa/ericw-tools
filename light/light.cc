@@ -32,6 +32,7 @@
 #include <light/entities.hh>
 #include <light/ltface.hh>
 
+#include <common/log.hh>
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 #include <common/fs.hh>
@@ -106,11 +107,133 @@ int dump_vertnum = -1;
 
 namespace settings
 {
+void light_settings::CheckNoDebugModeSet()
+{
+    if (debugmode != debugmodes::none) {
+        Error("Only one debug mode is allowed at a time");
+    }
+}
+
 setting_group worldspawn_group{"Overridable worldspawn keys", 500};
 setting_group output_group{"Output format options", 30};
 setting_group debug_group{"Debug modes", 40};
 setting_group postprocessing_group{"Postprocessing options", 50};
 setting_group experimental_group{"Experimental options", 60};
+
+light_settings::light_settings()
+    : surflight_dump{this, "surflight_dump", false, &debug_group, "dump surface lights to a .map file"},
+      surflight_subdivide{
+          this, "surflight_subdivide", 128.0, 1.0, 2048.0, &performance_group, "surface light subdivision size"},
+      onlyents{this, "onlyents", false, &output_group, "only update entities"},
+      write_normals{this, "wrnormals", false, &output_group, "output normals, tangents and bitangents in a BSPX lump"},
+      novanilla{this, "novanilla", false, &experimental_group, "implies -bspxlit; don't write vanilla lighting"},
+      gate{this, "gate", EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"},
+      sunsamples{this, "sunsamples", 64, 8, 2048, &performance_group, "set samples for _sunlight2, default 64"},
+      arghradcompat{this, "arghradcompat", false, &output_group, "enable compatibility for Arghrad-specific keys"},
+      nolighting{this, "nolighting", false, &output_group, "don't output main world lighting (Q2RTX)"},
+      debugface{this, "debugface", std::numeric_limits<vec_t>::quiet_NaN(), std::numeric_limits<vec_t>::quiet_NaN(),
+          std::numeric_limits<vec_t>::quiet_NaN(), &debug_group, ""},
+      debugvert{this, "debugvert", std::numeric_limits<vec_t>::quiet_NaN(), std::numeric_limits<vec_t>::quiet_NaN(),
+          std::numeric_limits<vec_t>::quiet_NaN(), &debug_group, ""},
+      highlightseams{this, "highlightseams", false, &debug_group, ""},
+      soft{this, "soft", 0, -1, std::numeric_limits<int32_t>::max(), &postprocessing_group,
+          "blurs the lightmap. specify n to blur radius in samples, otherwise auto"},
+      radlights{this, "radlights", "\"filename.rad\"", &experimental_group,
+          "loads a <surfacename> <r> <g> <b> <intensity> file"},
+      lightmap_scale{
+          this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"},
+      extra{
+          this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"},
+      fastbounce{this, "fastbounce", false, &performance_group,
+          "use one bounce point in the middle of each face. for fast compilation."},
+      visapprox{this, "visapprox", visapprox_t::AUTO,
+          {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
+              {"rays", visapprox_t::RAYS}},
+          &debug_group,
+          "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"},
+      lit{this, "lit", [&](source) { write_litfile |= lightfile::external; }, &output_group, "write .lit file"},
+      lit2{this, "lit2", [&](source) { write_litfile = lightfile::lit2; }, &experimental_group, "write .lit2 file"},
+      bspxlit{this, "bspxlit", [&](source) { write_litfile |= lightfile::bspx; }, &experimental_group,
+          "writes rgb data into the bsp itself"},
+      lux{this, "lux", [&](source) { write_luxfile |= lightfile::external; }, &experimental_group, "write .lux file"},
+      bspxlux{this, "bspxlux", [&](source) { write_luxfile |= lightfile::bspx; }, &experimental_group,
+          "writes lux data into the bsp itself"},
+      bspxonly{this, "bspxonly",
+          [&](source source) {
+              write_litfile = lightfile::bspx;
+              write_luxfile = lightfile::bspx;
+              novanilla.setValue(true, source);
+          },
+          &experimental_group, "writes both rgb and directions data *only* into the bsp itself"},
+      bspx{this, "bspx",
+          [&](source source) {
+              write_litfile = lightfile::bspx;
+              write_luxfile = lightfile::bspx;
+          },
+          &experimental_group, "writes both rgb and directions data into the bsp itself"},
+      litonly{this, "litonly", false, &output_group, "only write .lit file, don't modify BSP"},
+      nolights{this, "nolights", false, &output_group, "ignore light entities (only sunlight/minlight)"},
+      facestyles{this, "facestyles", 4, &output_group, "max amount of styles per face; requires BSPX lump if > 4"},
+      exportobj{this, "exportobj", false, &output_group, "export an .OBJ for inspection"},
+      lmshift{this, "lmshift", 4, &output_group,
+          "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."},
+      dirtdebug{this, {"dirtdebug", "debugdirt"},
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::dirt;
+          },
+          &debug_group, "only save the AO values to the lightmap"},
+
+      bouncedebug{this, "bouncedebug",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::bounce;
+          },
+          &debug_group, "only save bounced lighting to the lightmap"},
+
+      bouncelightsdebug{this, "bouncelightsdebug",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::bouncelights;
+          },
+          &debug_group, "only save bounced emitters lighting to the lightmap"},
+
+      phongdebug{this, "phongdebug",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::phong;
+          },
+          &debug_group, "only save phong normals to the lightmap"},
+
+      phongdebug_obj{this, "phongdebug_obj",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::phong_obj;
+          },
+          &debug_group, "save map as .obj with phonged normals"},
+
+      debugoccluded{this, "debugoccluded",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::debugoccluded;
+          },
+          &debug_group, "save light occlusion data to lightmap"},
+
+      debugneighbours{this, "debugneighbours",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::debugneighbours;
+          },
+          &debug_group, "save neighboring faces data to lightmap (requires -debugface)"}
+{
+}
+
+void light_settings::setParameters(int argc, const char **argv)
+{
+    common_settings::setParameters(argc, argv);
+    programDescription = "light compiles lightmap data for BSPs\n\n";
+    remainderName = "mapname.bsp";
+}
 
 void light_settings::initialize(int argc, const char **argv)
 {

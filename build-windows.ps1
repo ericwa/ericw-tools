@@ -32,15 +32,8 @@ if ( $? -eq $false ) {
   throw "package failed"
 }
 
-.\tests\tests.exe
+.\tests\tests.exe --no-skip
 
 if ( $? -eq $false ) {
   throw "tests failed"
-}
-
-# run hidden tests (releaseonly)
-.\tests\tests.exe [.]
-
-if ( $? -eq $false ) {
-  throw "tests [.] failed"
 }

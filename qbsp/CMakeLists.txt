@@ -2,6 +2,7 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/qbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brush.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/csg.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/exportobj.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/map.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/winding.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/merge.hh

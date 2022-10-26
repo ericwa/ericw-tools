@@ -21,21 +21,14 @@
 
 #pragma once
 
-#include <common/qvec.hh>
+#include <vector>
+#include <string>
 #include <qbsp/brush.hh>
 
-#include <list>
-#include <memory>
-#include <tuple>
-#include <vector>
-
 struct face_t;
-struct side_t;
+struct node_t;
 
-std::unique_ptr<face_t> NewFaceFromFace(const face_t *in);
-std::unique_ptr<face_t> CopyFace(const face_t *in);
-std::tuple<std::unique_ptr<face_t>, std::unique_ptr<face_t>> SplitFace(
-    std::unique_ptr<face_t> in, const qplane3d &split);
-void UpdateFaceSphere(face_t *in);
-
-bspbrush_t::container CSGFaces(bspbrush_t::container brushes);
+void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face_t *> &faces);
+void ExportObj_Brushes(const std::string &filesuffix, const bspbrush_t::container &brushes);
+void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes);
+void ExportObj_Marksurfaces(const std::string &filesuffix, const node_t *nodes);

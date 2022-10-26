@@ -40,27 +40,34 @@
 #include <algorithm>
 #include <string>
 
-/* set these before calling CheckParm */
-int myargc;
-char **myargv;
-
-char com_token[1024];
-bool com_eof;
-
-/*
- * =================
- * Error
- * For abnormal program terminations
- * =================
- */
-[[noreturn]] void Error(const char *error)
-{
-    logging::print("************ ERROR ************\n{}\n", error);
-    logging::close();
-#ifdef _DEBUG
-    __debugbreak();
+#if defined(__has_include) && __has_include(<strings.h>)
+#include <strings.h>
 #endif
-    exit(1);
+
+int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size_t maxcount)
+{
+    return
+#ifdef _WIN32
+        _strnicmp
+#elif defined(__has_include) && __has_include(<strings.h>)
+        strncasecmp
+#else
+        strnicmp
+#endif
+        (a.data(), b.data(), maxcount);
+}
+
+int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b)
+{
+    return
+#ifdef _WIN32
+        _stricmp
+#elif defined(__has_include) && __has_include(<strings.h>)
+        strcasecmp
+#else
+        stricmp
+#endif
+        (a.data(), b.data());
 }
 
 void // mxd
@@ -87,6 +94,29 @@ string_iequals(const std::string_view &a, const std::string_view &b)
         if (tolower(a[i]) != tolower(b[i]))
             return false;
     return true;
+}
+
+std::size_t case_insensitive_hash::operator()(const std::string &s) const noexcept
+{
+    std::size_t hash = 0x811c9dc5;
+    constexpr std::size_t prime = 0x1000193;
+
+    for (auto &c : s) {
+        hash ^= tolower(c);
+        hash *= prime;
+    }
+
+    return hash;
+}
+
+bool case_insensitive_equal::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
+}
+
+bool case_insensitive_less::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return Q_strcasecmp(l.c_str(), r.c_str()) < 0;
 }
 
 /* ========================================================================= */
@@ -403,6 +433,28 @@ bool natstrlt(const char *s1, const char *s2, bool case_sensitive)
     return false;
 }
 
+bool stlnatstrlt(const std::string &s1, const std::string &s2, bool case_sensitive)
+{
+    return natstrlt(s1.c_str(), s2.c_str(), case_sensitive);
+}
+
+bool natural_equal::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return strcmp(l.c_str(), r.c_str()) == 0;
+}
+
+bool natural_less::operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r); }
+
+bool natural_case_insensitive_equal::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
+}
+
+bool natural_case_insensitive_less::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return stlnatstrlt(l, r, false);
+}
+
 std::string_view::const_iterator string_ifind(std::string_view haystack, std::string_view needle)
 {
     return std::search(haystack.begin(), haystack.end(), needle.begin(), needle.end(),
@@ -412,4 +464,49 @@ std::string_view::const_iterator string_ifind(std::string_view haystack, std::st
 bool string_icontains(std::string_view haystack, std::string_view needle)
 {
     return string_ifind(haystack, needle) != haystack.end();
+}
+
+namespace detail
+{
+int32_t endian_i()
+{
+    static int32_t i = std::ios_base::xalloc();
+    return i;
+}
+
+bool need_swap(std::ios_base &os)
+{
+    st_en e = static_cast<st_en>(os.iword(detail::endian_i()));
+
+    // if we're in a "default state" of native endianness, we never
+    // need to swap.
+    if (e == st_en::na)
+        return false;
+
+    return (static_cast<int32_t>(e) - 1) != static_cast<int32_t>(std::endian::native);
+}
+} // namespace detail
+
+void *q_aligned_malloc(size_t align, size_t size)
+{
+#ifdef _mm_malloc
+    return _mm_malloc(size, align);
+#elif __STDC_VERSION__ >= 201112L
+    return aligned_alloc(align, size);
+#else
+    void *ptr;
+    if (0 != posix_memalign(&ptr, align, size)) {
+        return nullptr;
+    }
+    return ptr;
+#endif
+}
+
+void q_aligned_free(void *ptr)
+{
+#ifdef _mm_malloc
+    _mm_free(ptr);
+#else
+    free(ptr);
+#endif
 }

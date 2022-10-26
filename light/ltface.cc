@@ -25,6 +25,7 @@
 #include <light/trace.hh>
 #include <light/ltface.hh>
 
+#include <common/log.hh>
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
 

@@ -20,88 +20,33 @@
 #pragma once
 
 #include <array>
-#include <algorithm> // for std::min
-#include <cassert>
-#include <cstring>
-#include <cstdlib>
-#include <cerrno>
-#include <cctype>
-#include <ctime>
-#include <cstdarg>
 #include <cstring> // for memcpy()
 #include <string>
 #include <string_view>
-#include <memory>
-#include <fmt/format.h>
-#include <common/log.hh>
+#include <vector>
+#include <streambuf>
+#include <istream>
+#include <ostream>
 #include <tuple> // for std::apply()
 
-#if defined(__has_include) && __has_include(<strings.h>)
-#include <strings.h>
-#endif
-
-inline int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size_t maxcount)
-{
-    return
-#ifdef _WIN32
-        _strnicmp
-#elif defined(__has_include) && __has_include(<strings.h>)
-        strncasecmp
-#else
-        strnicmp
-#endif
-        (a.data(), b.data(), maxcount);
-}
-
-inline int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b)
-{
-    return
-#ifdef _WIN32
-        _stricmp
-#elif defined(__has_include) && __has_include(<strings.h>)
-        strcasecmp
-#else
-        stricmp
-#endif
-        (a.data(), b.data());
-}
-
+int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size_t maxcount);
+int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b);
 bool string_iequals(const std::string_view &a, const std::string_view &b); // mxd
 
 struct case_insensitive_hash
 {
-    std::size_t operator()(const std::string &s) const noexcept
-    {
-        std::size_t hash = 0x811c9dc5;
-        constexpr std::size_t prime = 0x1000193;
-
-        for (auto &c : s) {
-            hash ^= tolower(c);
-            hash *= prime;
-        }
-
-        return hash;
-    }
+    std::size_t operator()(const std::string &s) const noexcept;
 };
 
 struct case_insensitive_equal
 {
-    bool operator()(const std::string &l, const std::string &r) const noexcept
-    {
-        return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
-    }
+    bool operator()(const std::string &l, const std::string &r) const noexcept;
 };
 
 struct case_insensitive_less
 {
-    bool operator()(const std::string &l, const std::string &r) const noexcept
-    {
-        return Q_strcasecmp(l.c_str(), r.c_str()) < 0;
-    }
+    bool operator()(const std::string &l, const std::string &r) const noexcept;
 };
-
-// natural sorting
-#include <string>
 
 /**
  * standard C natural string compare
@@ -125,38 +70,27 @@ bool natstrlt(const char *s1, const char *s2, bool case_sensitive = true);
  * std::string variant of natstrlt.
  * @return true when natural s1 < s2
  */
-inline bool stlnatstrlt(const std::string &s1, const std::string &s2, bool case_sensitive = true)
-{
-    return natstrlt(s1.c_str(), s2.c_str(), case_sensitive);
-}
+bool stlnatstrlt(const std::string &s1, const std::string &s2, bool case_sensitive = true);
 
 struct natural_equal
 {
-    bool operator()(const std::string &l, const std::string &r) const noexcept
-    {
-        return strcmp(l.c_str(), r.c_str()) == 0;
-    }
+    bool operator()(const std::string &l, const std::string &r) const noexcept;
 };
 
 struct natural_less
 {
-    bool operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r); }
+    bool operator()(const std::string &l, const std::string &r) const noexcept;
 };
 
 struct natural_case_insensitive_equal
 {
-    bool operator()(const std::string &l, const std::string &r) const noexcept
-    {
-        return Q_strcasecmp(l.c_str(), r.c_str()) == 0;
-    }
+    bool operator()(const std::string &l, const std::string &r) const noexcept;
 };
 
 struct natural_case_insensitive_less
 {
-    bool operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r, false); }
+    bool operator()(const std::string &l, const std::string &r) const noexcept;
 };
-
-#include <string_view>
 
 std::string_view::const_iterator string_ifind(std::string_view haystack, std::string_view needle);
 bool string_icontains(std::string_view haystack, std::string_view needle);
@@ -171,17 +105,6 @@ inline time_point I_FloatTime()
 {
     return qclock::now();
 }
-
-[[noreturn]] void Error(const char *error);
-
-template<typename... Args>
-[[noreturn]] inline void Error(const char *fmt, const Args &...args)
-{
-    auto formatted = fmt::format(fmt, std::forward<const Args &>(args)...);
-    Error(formatted.c_str());
-}
-
-#define FError(fmt, ...) Error("{}: " fmt, __func__, ##__VA_ARGS__)
 
 /*
  * ============================================================================
@@ -208,25 +131,12 @@ enum class endian
 } // namespace std
 #endif
 
-/**
- * assertion macro that is used in all builds (debug/release)
- */
-#define Q_stringify__(x) #x
-#define Q_stringify(x) Q_stringify__(x)
-#define Q_assert(x) logging::assert_((x), Q_stringify(x), __FILE__, __LINE__)
-
-#define Q_assert_unreachable() Q_assert(false)
-
 // Binary streams; by default, streams use the native endianness
 // (unchanged bytes) but can be changed to a specific endianness
 // with the manipulator below.
 namespace detail
 {
-inline int32_t endian_i()
-{
-    static int32_t i = std::ios_base::xalloc();
-    return i;
-}
+int32_t endian_i();
 
 // 0 is the default for iwords
 enum class st_en : long
@@ -236,17 +146,7 @@ enum class st_en : long
     be = 2,
 };
 
-inline bool need_swap(std::ios_base &os)
-{
-    st_en e = static_cast<st_en>(os.iword(detail::endian_i()));
-
-    // if we're in a "default state" of native endianness, we never
-    // need to swap.
-    if (e == st_en::na)
-        return false;
-
-    return (static_cast<int32_t>(e) - 1) != static_cast<int32_t>(std::endian::native);
-}
+bool need_swap(std::ios_base &os);
 
 template<typename T>
 inline void write_swapped(std::ostream &s, const T &val)
@@ -900,49 +800,12 @@ struct omemsizestream : virtual omemsizebuf, std::ostream
     }
 };
 
-template<class T, class = void>
-struct is_iterator : std::false_type
-{
-};
-
-template<class T>
-struct is_iterator<T,
-    std::void_t<typename std::iterator_traits<T>::difference_type, typename std::iterator_traits<T>::pointer,
-        typename std::iterator_traits<T>::reference, typename std::iterator_traits<T>::value_type,
-        typename std::iterator_traits<T>::iterator_category>> : std::true_type
-{
-};
-
-template<class T>
-constexpr bool is_iterator_v = is_iterator<T>::value;
-
 void CRC_Init(uint16_t &crcvalue);
 void CRC_ProcessByte(uint16_t &crcvalue, uint8_t data);
 uint16_t CRC_Block(const uint8_t *start, int count);
 
-inline void *q_aligned_malloc(size_t align, size_t size)
-{
-#ifdef _mm_malloc
-    return _mm_malloc(size, align);
-#elif __STDC_VERSION__ >= 201112L
-    return aligned_alloc(align, size);
-#else
-    void *ptr;
-    if (0 != posix_memalign(&ptr, align, size)) {
-        return nullptr;
-    }
-    return ptr;
-#endif
-}
-
-inline void q_aligned_free(void *ptr)
-{
-#ifdef _mm_malloc
-    _mm_free(ptr);
-#else
-    free(ptr);
-#endif
-}
+void *q_aligned_malloc(size_t align, size_t size);
+void q_aligned_free(void *ptr);
 
 /**
  * Allocator for aligned data.
