@@ -708,6 +708,8 @@ int vis_main(int argc, const char **argv)
 
     vis_options.run(argc, argv);
 
+    vis_options.sourceMap.replace_extension("bsp");
+
     logging::init(fs::path(vis_options.sourceMap)
                       .replace_filename(vis_options.sourceMap.stem().string() + "-vis")
                       .replace_extension("log"),
