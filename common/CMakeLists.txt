@@ -51,13 +51,33 @@ target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc f
 
 target_precompile_headers(common INTERFACE
         <filesystem>
+        <functional>
         <array>
+        <any>
+        <bitset>
+        <cassert>
+        <cinttypes>
+        <cstdarg>
+        <iostream>
+        <fstream>
         <list>
+        <mutex>
         <vector>
         <set>
         <unordered_set>
         <map>
         <unordered_map>
         <memory>
+        <optional>
+        <sstream>
+        <string>
+        <shared_mutex>
+        <type_traits>
         <variant>
+        <fmt/core.h>
+        <tbb/scalable_allocator.h>
+        <tbb/task_group.h>
+        <tbb/task_group.h>
+        <tbb/parallel_for.h>
+        <tbb/parallel_for_each.h>
 )

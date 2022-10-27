@@ -29,6 +29,8 @@ endif()
 
 target_link_libraries(tests libqbsp liblight libvis common TBB::tbb TBB::tbbmalloc doctest::doctest fmt::fmt nanobench::nanobench)
 
+target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS)
+
 # HACK: copy .dll dependencies
 add_custom_command(TARGET tests POST_BUILD
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:tests>"
