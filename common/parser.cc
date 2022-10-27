@@ -24,6 +24,18 @@
 #include <common/log.hh>
 #include <common/parser.hh>
 
+parser_t::parser_t(const void *start, size_t length, parser_source_location base_location)
+    : parser_base_t(base_location.on_line(1)),
+      pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length)
+{
+}
+
+parser_t::parser_t(const std::string_view &view, parser_source_location base_location) : parser_t(&view.front(), view.size(), base_location) { }
+
+parser_t::parser_t(const fs::data &data, parser_source_location base_location) : parser_t(data.value().data(), data.value().size(), base_location) { }
+
+parser_t::parser_t(const char *str, parser_source_location base_location) : parser_t(str, strlen(str), base_location) { }
+
 bool parser_t::parse_token(parseflags flags)
 {
     /* for peek, we'll do a backup/restore. */
@@ -141,4 +153,59 @@ skipspace:
 
 out:
     return true;
+}
+
+parser_t::state_type parser_t::state() { return state_type(pos, location); }
+
+bool parser_t::at_end() const { return pos >= end; }
+
+void parser_t::push_state()
+{
+    _states.push_back(state());
+}
+
+void parser_t::pop_state()
+{
+    state() = _states.back();
+    _states.pop_back();
+}
+
+// token_parser_t
+
+token_parser_t::token_parser_t(int argc, const char **args, parser_source_location base_location) : parser_base_t(base_location), tokens(args, args + argc) { }
+
+token_parser_t::state_type token_parser_t::state() { return state_type(cur); }
+
+bool token_parser_t::parse_token(parseflags flags)
+{
+    /* for peek, we'll do a backup/restore. */
+    if (flags & PARSE_PEEK) {
+        auto restore = untie(state());
+        bool result = parse_token(flags & ~PARSE_PEEK);
+        state() = restore;
+        return result;
+    }
+
+    token.clear();
+    was_quoted = false;
+
+    if (at_end()) {
+        return false;
+    }
+
+    token = tokens[cur++];
+
+    was_quoted = std::any_of(token.begin(), token.end(), isspace);
+
+    return true;
+}
+
+bool token_parser_t::at_end() const { return cur >= tokens.size(); }
+
+void token_parser_t::push_state() { _states.push_back(state()); }
+
+void token_parser_t::pop_state()
+{
+    state() = _states.back();
+    _states.pop_back();
 }

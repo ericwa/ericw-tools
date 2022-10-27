@@ -149,42 +149,33 @@ struct parser_t : parser_base_t
     const char *end;
 
     // base constructor; accept raw start & length
-    inline parser_t(const void *start, size_t length, parser_source_location base_location)
-        : parser_base_t(base_location.on_line(1)),
-        pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length)
-    {
-    }
+    parser_t(const void *start, size_t length, parser_source_location base_location);
 
     // pull from string_view; note that the string view must live for the entire
     // duration of the parser's life time
-    inline parser_t(const std::string_view &view, parser_source_location base_location) : parser_t(&view.front(), view.size(), base_location) { }
+    parser_t(const std::string_view &view, parser_source_location base_location);
 
     // pull from fs::data; note that the data must live for the entire
     // duration of the parser's life time, and must has_value()
-    inline parser_t(const fs::data &data, parser_source_location base_location) : parser_t(data.value().data(), data.value().size(), base_location) { }
+    parser_t(const fs::data &data, parser_source_location base_location);
 
     // pull from C string; made explicit because this is error-prone
-    explicit parser_t(const char *str, parser_source_location base_location) : parser_t(str, strlen(str), base_location) { }
+    explicit parser_t(const char *str, parser_source_location base_location);
 
     bool parse_token(parseflags flags = PARSE_NORMAL) override;
 
     using state_type = decltype(std::tie(pos, location));
 
-    constexpr state_type state() { return state_type(pos, location); }
+    state_type state();
 
-    bool at_end() const override { return pos >= end; }
+    bool at_end() const override;
 
 private:
     std::vector<untied_t<state_type>> _states;
 
 public:
-    void push_state() override { _states.push_back(state()); }
-
-    void pop_state() override
-    {
-        state() = _states.back();
-        _states.pop_back();
-    }
+    void push_state() override;
+    void pop_state() override;
 };
 
 // a parser that works on a list of tokens
@@ -193,47 +184,19 @@ struct token_parser_t : parser_base_t
     std::vector<std::string_view> tokens;
     size_t cur = 0;
 
-    inline token_parser_t(int argc, const char **args, parser_source_location base_location) : parser_base_t(base_location), tokens(args, args + argc) { }
+    token_parser_t(int argc, const char **args, parser_source_location base_location);
 
     using state_type = decltype(std::tie(cur));
 
-    constexpr state_type state() { return state_type(cur); }
+    state_type state();
 
-    inline bool parse_token(parseflags flags = PARSE_NORMAL) override
-    {
-        /* for peek, we'll do a backup/restore. */
-        if (flags & PARSE_PEEK) {
-            auto restore = untie(state());
-            bool result = parse_token(flags & ~PARSE_PEEK);
-            state() = restore;
-            return result;
-        }
-
-        token.clear();
-        was_quoted = false;
-
-        if (at_end()) {
-            return false;
-        }
-
-        token = tokens[cur++];
-
-        was_quoted = std::any_of(token.begin(), token.end(), isspace);
-
-        return true;
-    }
-
-    bool at_end() const override { return cur >= tokens.size(); }
+    bool parse_token(parseflags flags = PARSE_NORMAL) override;
+    bool at_end() const override;
 
 private:
     std::vector<untied_t<state_type>> _states;
 
 public:
-    void push_state() override { _states.push_back(state()); }
-
-    void pop_state() override
-    {
-        state() = _states.back();
-        _states.pop_back();
-    }
+    void push_state() override;
+    void pop_state() override;
 };

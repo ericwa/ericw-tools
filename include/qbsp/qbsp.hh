@@ -470,67 +470,29 @@ protected:
     qplane3d plane;
     plane_type_t type = plane_type_t::PLANE_INVALID;
 
-    static inline plane_type_t calculate_type(const qplane3d &p)
-    {
-        for (size_t i = 0; i < 3; i++) {
-            if (p.normal[i] == 1.0 || p.normal[i] == -1.0) {
-                return (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
-            }
-        }
-
-        vec_t ax = fabs(p.normal[0]);
-        vec_t ay = fabs(p.normal[1]);
-        vec_t az = fabs(p.normal[2]);
-
-        if (ax >= ay && ax >= az) {
-            return plane_type_t::PLANE_ANYX;
-        } else if (ay >= ax && ay >= az) {
-            return plane_type_t::PLANE_ANYY;
-        } else {
-            return plane_type_t::PLANE_ANYZ;
-        }
-    }
+    static plane_type_t calculate_type(const qplane3d &p);
 
 public:
     qbsp_plane_t() = default;
     qbsp_plane_t(const qbsp_plane_t &) = default;
-    inline qbsp_plane_t(const qplane3d &plane, bool flip) noexcept : plane(plane) { normalize(flip); }
+    qbsp_plane_t(const qplane3d &plane, bool flip) noexcept;
 
-    inline qbsp_plane_t(const qplane3d &plane) noexcept : qbsp_plane_t(plane, false) { }
+    qbsp_plane_t(const qplane3d &plane) noexcept;
 
     qbsp_plane_t &operator=(const qbsp_plane_t &) = default;
-    inline qbsp_plane_t &operator=(const qplane3d &plane) noexcept
-    {
-        this->plane = plane;
-        normalize(false);
-        return *this;
-    }
+    qbsp_plane_t &operator=(const qplane3d &plane) noexcept;
 
-    [[nodiscard]] inline qbsp_plane_t operator-() const
-    {
-        qbsp_plane_t copy = *this;
-        copy.plane = -copy.plane;
-        return copy;
-    }
+    [[nodiscard]] qbsp_plane_t operator-() const;
 
-    [[nodiscard]] constexpr const plane_type_t &get_type() const { return type; }
-    [[nodiscard]] constexpr const vec_t &get_dist() const { return plane.dist; }
-    [[nodiscard]] constexpr vec_t &get_dist() { return plane.dist; }
-    [[nodiscard]] constexpr const qvec3d &get_normal() const { return plane.normal; }
-    inline bool set_normal(const qvec3d &vec, bool flip = false)
-    {
-        plane.normal = vec;
-        return normalize(flip);
-    }
+    [[nodiscard]] const plane_type_t &get_type() const;
+    [[nodiscard]] const vec_t &get_dist() const;
+    [[nodiscard]] vec_t &get_dist();
+    [[nodiscard]] const qvec3d &get_normal() const;
+    bool set_normal(const qvec3d &vec, bool flip = false);
+    bool set_plane(const qplane3d &plane, bool flip = false);
 
-    inline bool set_plane(const qplane3d &plane, bool flip = false)
-    {
-        this->plane = plane;
-        return normalize(flip);
-    }
-
-    [[nodiscard]] constexpr const qplane3d &get_plane() const { return plane; }
-    [[nodiscard]] constexpr operator const qplane3d &() const { return plane; }
+    [[nodiscard]] const qplane3d &get_plane() const;
+    [[nodiscard]] operator const qplane3d &() const;
 
     template<typename T>
     [[nodiscard]] inline T distance_to(const qvec<T, 3> &pt) const
@@ -540,51 +502,7 @@ public:
 
     // normalize the given plane, optionally flipping it to face
     // the positive direction. returns whether the plane was flipped or not.
-    inline bool normalize(bool flip) noexcept
-    {
-        for (size_t i = 0; i < 3; i++) {
-            if (plane.normal[i] == 1.0) {
-                plane.normal[(i + 1) % 3] = 0;
-                plane.normal[(i + 2) % 3] = 0;
-                type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
-                return false;
-            }
-            if (plane.normal[i] == -1.0) {
-                if (flip) {
-                    plane.normal[i] = 1.0;
-                    plane.dist = -plane.dist;
-                }
-                plane.normal[(i + 1) % 3] = 0;
-                plane.normal[(i + 2) % 3] = 0;
-                type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
-                return flip;
-            }
-        }
-
-        vec_t ax = fabs(plane.normal[0]);
-        vec_t ay = fabs(plane.normal[1]);
-        vec_t az = fabs(plane.normal[2]);
-
-        size_t nearest;
-
-        if (ax >= ay && ax >= az) {
-            nearest = 0;
-            type = plane_type_t::PLANE_ANYX;
-        } else if (ay >= ax && ay >= az) {
-            nearest = 1;
-            type = plane_type_t::PLANE_ANYY;
-        } else {
-            nearest = 2;
-            type = plane_type_t::PLANE_ANYZ;
-        }
-
-        if (flip && plane.normal[nearest] < 0) {
-            plane = -plane;
-            return true;
-        }
-
-        return false;
-    }
+    bool normalize(bool flip) noexcept;
 };
 
 // Fmt support
@@ -605,32 +523,8 @@ namespace qv
 {
 // faster version of epsilonEqual for BSP planes
 // which have a bit more info in them
-[[nodiscard]] inline bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2,
-    vec_t normalEpsilon = NORMAL_EPSILON, vec_t distEpsilon = DIST_EPSILON)
-{
-    // axial planes will never match on normal, so we can skip that check entirely
-    if (p1.get_type() < plane_type_t::PLANE_ANYX && p2.get_type() < plane_type_t::PLANE_ANYX) {
-        // if we aren't the same type, we definitely aren't equal
-        if (p1.get_type() != p2.get_type()) {
-            return false;
-        } else if (p1.get_normal()[static_cast<int32_t>(p1.get_type())] !=
-                   p2.get_normal()[static_cast<int32_t>(p2.get_type())]) {
-            // axials will always be only 1 or -1
-            return false;
-        }
-
-        // check dist
-        return epsilonEqual(p1.get_dist(), p2.get_dist(), distEpsilon);
-    }
-
-    // check dist
-    if (!epsilonEqual(p1.get_dist(), p2.get_dist(), distEpsilon)) {
-        return false;
-    }
-
-    // check normal
-    return epsilonEqual(p1.get_normal(), p2.get_normal(), normalEpsilon);
-}
+[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2,
+    vec_t normalEpsilon = NORMAL_EPSILON, vec_t distEpsilon = DIST_EPSILON);
 }; // namespace qv
 
 template<typename T>

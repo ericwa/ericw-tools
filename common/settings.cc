@@ -58,6 +58,28 @@ bool setting_base::changeSource(source newSource)
     return false;
 }
 
+// setting_func
+
+setting_func::setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
+    const setting_group *group, const char *description)
+    : setting_base(dictionary, names, group, description), _func(func)
+{
+}
+
+bool setting_func::copyFrom(const setting_base &other) { return true; }
+
+void setting_func::reset() { }
+
+bool setting_func::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    _func(source);
+    return true;
+}
+
+std::string setting_func::stringValue() const { return ""; }
+
+std::string setting_func::format() const { return ""; }
+
 // setting_bool
 
 bool setting_bool::parseInternal(parser_base_t &parser, source source, bool truthValue)
@@ -123,6 +145,47 @@ bool setting_invertible_bool::parse(const std::string &settingName, parser_base_
     return parseInternal(parser, source, settingName.compare(0, 2, "no") == 0 ? false : true);
 }
 
+// setting_redirect
+
+setting_redirect::setting_redirect(setting_container *dictionary, const nameset &names,
+    const std::initializer_list<setting_base *> &settings, const setting_group *group,
+    const char *description)
+    : setting_base(dictionary, names, group, description), _settings(settings)
+{
+}
+
+bool setting_redirect::copyFrom(const setting_base &other) { return true; }
+
+void setting_redirect::reset() { }
+
+bool setting_redirect::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    // this is a bit ugly, but we run the parse function for
+    // every setting that we redirect from. for every entry
+    // except the last, we'll backup & restore the state.
+    for (size_t i = 0; i < _settings.size(); i++) {
+        if (i != _settings.size() - 1) {
+            parser.push_state();
+        }
+
+        if (!_settings[i]->parse(settingName, parser, source)) {
+            return false;
+        }
+
+        if (i != _settings.size() - 1) {
+            parser.pop_state();
+        }
+    }
+
+    return true;
+}
+
+std::string setting_redirect::stringValue() const { return _settings[0]->stringValue(); }
+
+std::string setting_redirect::format() const { return _settings[0]->format(); }
+
+// setting_group
+
 setting_group performance_group{"Performance", 10};
 setting_group logging_group{"Logging", 5};
 setting_group game_group{"Game", 15};
@@ -149,6 +212,189 @@ const char *setting_base::sourceString() const
     }
 }
 
+// setting_string
+
+setting_string::setting_string(setting_container *dictionary, const nameset &names, std::string v,
+    const std::string_view &format, const setting_group *group, const char *description)
+    : setting_value(dictionary, names, v, group, description), _format(format)
+{
+}
+
+bool setting_string::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    if (parser.parse_token()) {
+        setValue(parser.token, source);
+        return true;
+    }
+
+    return false;
+}
+
+std::string setting_string::stringValue() const { return _value; }
+
+std::string setting_string::format() const { return _format; }
+
+// setting_path
+
+setting_path::setting_path(setting_container *dictionary, const nameset &names, fs::path v,
+    const setting_group *group, const char *description)
+    : setting_value(dictionary, names, v, group, description)
+{
+}
+
+bool setting_path::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    // make sure we can parse token out
+    if (!parser.parse_token()) {
+        return false;
+    }
+
+    setValue(parser.token, source);
+    return true;
+}
+
+std::string setting_path::stringValue() const { return _value.string(); }
+
+std::string setting_path::format() const { return "\"relative/path\" or \"C:/absolute/path\""; }
+
+// setting_set
+
+setting_set::setting_set(setting_container *dictionary, const nameset &names,
+    const std::string_view &format, const setting_group *group,
+    const char *description)
+    : setting_base(dictionary, names, group, description), _format(format)
+{
+}
+
+const std::unordered_set<std::string> &setting_set::values() const { return _values; }
+
+void setting_set::addValue(const std::string &value, source newSource)
+{
+    if (changeSource(newSource)) {
+        _values.insert(value);
+    }
+}
+
+bool setting_set::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    if (!parser.parse_token(PARSE_PEEK))
+        return false;
+
+    parser.parse_token();
+    addValue(parser.token, source);
+    return true;
+}
+
+bool setting_set::copyFrom(const setting_base &other)
+{
+    if (auto *casted = dynamic_cast<const setting_set *>(&other)) {
+        _values = casted->_values;
+        _source = casted->_source;
+        return true;
+    }
+    return false;
+}
+
+void setting_set::reset()
+{
+    _values.clear();
+    _source = source::DEFAULT;
+}
+
+std::string setting_set::format() const { return _format; }
+
+std::string setting_set::stringValue() const
+{
+    std::string result;
+
+    for (auto &v : _values) {
+        if (!result.empty()) {
+            result += ' ';
+        }
+
+        result += '\"' + v + '\"';
+    }
+
+    return result;
+}
+
+// setting_vec3
+
+qvec3d setting_vec3::transformVec3Value(const qvec3d &val) const
+{
+    return val;
+}
+
+setting_vec3::setting_vec3(setting_container *dictionary, const nameset &names, vec_t a, vec_t b, vec_t c,
+    const setting_group *group, const char *description)
+    : setting_value(dictionary, names, transformVec3Value({a, b, c}), group, description)
+{
+}
+
+void setting_vec3::setValue(const qvec3d &f, source newsource)
+{
+    setting_value::setValue(transformVec3Value(f), newsource);
+}
+
+bool setting_vec3::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    qvec3d vec;
+
+    for (int i = 0; i < 3; i++) {
+        if (!parser.parse_token()) {
+            return false;
+        }
+
+        try {
+            vec[i] = std::stod(parser.token);
+        } catch (std::exception &) {
+            return false;
+        }
+    }
+
+    setValue(vec, source);
+
+    return true;
+}
+
+std::string setting_vec3::stringValue() const { return qv::to_string(_value); }
+
+std::string setting_vec3::format() const { return "x y z"; }
+
+// setting_mangle
+
+qvec3d setting_mangle::transformVec3Value(const qvec3d &val) const { return qv::vec_from_mangle(val); }
+
+bool setting_mangle::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    qvec3d vec {};
+
+    for (int i = 0; i < 3; i++) {
+        if (!parser.parse_token(PARSE_PEEK)) {
+            break;
+        }
+
+        try {
+            vec[i] = std::stod(parser.token);
+        } catch (std::exception &) {
+            break;
+        }
+
+        parser.parse_token();
+    }
+
+    setValue(vec, source);
+
+    return true;
+}
+
+// setting_color
+
+qvec3d setting_color::transformVec3Value(const qvec3d &val) const
+{
+    return qv::normalize_color_format(val);
+}
+
 // setting_container
 
 void setting_container::copyFrom(const setting_container &other)
@@ -160,6 +406,58 @@ void setting_container::copyFrom(const setting_container &other)
         if (other_setting) {
             setting->copyFrom(*other_setting);
         }
+    }
+}
+
+void setting_container::registerSetting(setting_base *setting)
+{
+    for (const auto &name : setting->names()) {
+        Q_assert(_settingsmap.find(name) == _settingsmap.end());
+        _settingsmap.emplace(name, setting);
+    }
+
+    _settings.emplace(setting);
+    _groupedSettings[setting->getGroup()].insert(setting);
+}
+
+void setting_container::registerSettings(const std::initializer_list<setting_base *> &settings)
+{
+    registerSettings(settings.begin(), settings.end());
+}
+
+setting_base *setting_container::findSetting(const std::string &name) const
+{
+    // strip off leading underscores
+    if (name.find("_") == 0) {
+        return findSetting(name.substr(1, name.size() - 1));
+    }
+
+    if (auto it = _settingsmap.find(name); it != _settingsmap.end()) {
+        return it->second;
+    }
+
+    return nullptr;
+}
+
+setting_error setting_container::setSetting(const std::string &name, const std::string &value, source source)
+{
+    setting_base *setting = findSetting(name);
+
+    if (setting == nullptr) {
+        if (source == source::COMMANDLINE) {
+            throw parse_exception(fmt::format("Unrecognized command-line option '{}'\n", name));
+        }
+        return setting_error::MISSING;
+    }
+
+    parser_t p{value, { }};
+    return setting->parse(name, p, source) ? setting_error::NONE : setting_error::INVALID;
+}
+
+void setting_container::setSettings(const entdict_t &epairs, source source)
+{
+    for (const auto &epair : epairs) {
+        setSetting(epair.first, epair.second, source);
     }
 }
 

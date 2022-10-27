@@ -459,6 +459,16 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
     return {std::nullopt, {}, {}};
 }
 
+std::optional<texture_meta> load_wal_meta(
+    const std::string_view &name, const fs::data &file, const gamedef_t *game)
+{
+    if (auto tex = load_wal(name, file, true, game)) {
+        return tex->meta;
+    }
+
+    return std::nullopt;
+}
+
 /*
     JSON meta format, meant to supplant .wal's metadata for external texture use.
     All of the values are optional.

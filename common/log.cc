@@ -39,6 +39,13 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h> // for OutputDebugStringA
+
+#ifdef min
+#undef min
+#endif
+#ifdef max
+#undef max
+#endif
 #endif
 
 static std::ofstream logfile;
@@ -114,11 +121,33 @@ void print(flag logflag, const char *str)
     print_mutex.unlock();
 }
 
+void print(const char *str)
+{
+    print(flag::DEFAULT, str);
+}
+
 static time_point start_time;
 static bool is_timing = false;
 static uint64_t last_count = -1;
 static time_point last_indeterminate_time;
 static std::atomic_bool locked = false;
+
+void header(const char *name)
+{
+    print(flag::PROGRESS, "---- {} ----\n", name);
+}
+
+void assert_(bool success, const char *expr, const char *file, int line)
+{
+    if (!success) {
+        print("{}:{}: Q_assert({}) failed.\n", file, line, expr);
+        // assert(0);
+#ifdef _WIN32
+        __debugbreak();
+#endif
+        exit(1);
+    }
+}
 
 void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {
@@ -184,6 +213,36 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
     locked = false;
 }
 
+// percent_clock
+
+percent_clock::percent_clock(uint64_t i_max) : max(i_max)
+{
+    if (max != 0) {
+        percent(0, max, displayElapsed);
+    }
+}
+
+void percent_clock::increase()
+{
+#ifdef _DEBUG
+    if (count == max) {
+        logging::print("ERROR TO FIX LATER: clock counter increased to end, but not finished yet\n");
+    }
+#endif
+
+    percent(count++, max, displayElapsed);
+}
+
+void percent_clock::operator()()
+{
+    increase();
+}
+
+void percent_clock::operator++(int)
+{
+    increase();
+}
+
 void percent_clock::print()
 {
     if (!ready) {
@@ -201,6 +260,66 @@ void percent_clock::print()
 #endif
 
     percent(max, max, displayElapsed);
+}
+
+percent_clock::~percent_clock()
+{
+    print();
+}
+
+// stat_tracker_t
+
+stat_tracker_t::stat &stat_tracker_t::register_stat(const std::string &name, bool show_even_if_zero, bool is_warning)
+{
+    return stats.emplace_back(name, show_even_if_zero, is_warning);
+}
+
+size_t stat_tracker_t::number_of_digits(size_t n)
+{
+    return n ? ((size_t) log10(n) + 1) : 1;
+}
+
+size_t stat_tracker_t::number_of_digit_padding()
+{
+    size_t number_padding = 0;
+
+    // calculate padding for number
+    for (auto &stat : stats) {
+        if (!stat.is_warning && (stat.show_even_if_zero || stat.count)) {
+            number_padding = std::max(number_of_digits(stat.count.load()), number_padding);
+        }
+    }
+
+    if (!number_padding) {
+        return number_padding;
+    }
+
+    return number_padding + ((number_padding - 1) / 3);
+}
+
+void stat_tracker_t::print_stats()
+{
+    if (stats_printed) {
+        return;
+    }
+
+    stats_printed = true;
+
+    auto old = std::locale::global(std::locale("en_US.UTF-8"));
+    // add 8 char padding just to keep it away from the left side
+    size_t number_padding = number_of_digit_padding() + 4;
+
+    for (auto &stat : stats) {
+        if (stat.show_even_if_zero || stat.count) {
+            print(flag::STAT, "{}{:{}L} {}\n", stat.is_warning ? "WARNING: " : "", stat.count, stat.is_warning ? 0 : number_padding, stat.name);
+        }
+    }
+    std::locale::global(old);
+}
+
+stat_tracker_t::~stat_tracker_t()
+{
+    print_stats();
 }
 }; // namespace logging
 

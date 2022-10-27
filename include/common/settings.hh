@@ -139,25 +139,13 @@ protected:
     std::function<void(source)> _func;
 
 public:
-    inline setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
-        const setting_group *group = nullptr, const char *description = "")
-        : setting_base(dictionary, names, group, description), _func(func)
-    {
-    }
-
-    inline bool copyFrom(const setting_base &other) override { return true; }
-
-    inline void reset() override { }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        _func(source);
-        return true;
-    }
-
-    std::string stringValue() const override { return ""; }
-
-    std::string format() const override { return ""; }
+    setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
+        const setting_group *group = nullptr, const char *description = "");
+    bool copyFrom(const setting_base &other) override;
+    void reset() override;
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
 };
 
 // base class for a setting that has its own value
@@ -232,42 +220,14 @@ private:
     std::vector<setting_base *> _settings;
 
 public:
-    inline setting_redirect(setting_container *dictionary, const nameset &names,
+    setting_redirect(setting_container *dictionary, const nameset &names,
         const std::initializer_list<setting_base *> &settings, const setting_group *group = nullptr,
-        const char *description = "")
-        : setting_base(dictionary, names, group, description), _settings(settings)
-    {
-    }
-
-    inline bool copyFrom(const setting_base &other) override { return true; }
-
-    inline void reset() override { }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        // this is a bit ugly, but we run the parse function for
-        // every setting that we redirect from. for every entry
-        // except the last, we'll backup & restore the state.
-        for (size_t i = 0; i < _settings.size(); i++) {
-            if (i != _settings.size() - 1) {
-                parser.push_state();
-            }
-
-            if (!_settings[i]->parse(settingName, parser, source)) {
-                return false;
-            }
-
-            if (i != _settings.size() - 1) {
-                parser.pop_state();
-            }
-        }
-
-        return true;
-    }
-
-    std::string stringValue() const override { return _settings[0]->stringValue(); }
-
-    std::string format() const override { return _settings[0]->format(); }
+        const char *description = "");
+    bool copyFrom(const setting_base &other) override;
+    void reset() override;
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
 };
 
 template<typename T>
@@ -413,50 +373,21 @@ private:
     std::string _format;
 
 public:
-    inline setting_string(setting_container *dictionary, const nameset &names, std::string v,
-        const std::string_view &format = "\"str\"", const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description), _format(format)
-    {
-    }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        if (parser.parse_token()) {
-            setValue(parser.token, source);
-            return true;
-        }
-
-        return false;
-    }
-
-    [[deprecated("use value()")]] std::string stringValue() const override { return _value; }
-
-    std::string format() const override { return _format; }
+    setting_string(setting_container *dictionary, const nameset &names, std::string v,
+        const std::string_view &format = "\"str\"", const setting_group *group = nullptr, const char *description = "");
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    [[deprecated("use value()")]] std::string stringValue() const override;
+    std::string format() const override;
 };
 
 class setting_path : public setting_value<fs::path>
 {
 public:
-    inline setting_path(setting_container *dictionary, const nameset &names, fs::path v,
-        const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, v, group, description)
-    {
-    }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        // make sure we can parse token out
-        if (!parser.parse_token()) {
-            return false;
-        }
-
-        setValue(parser.token, source);
-        return true;
-    }
-
-    std::string stringValue() const override { return _value.string(); }
-
-    std::string format() const override { return "\"relative/path\" or \"C:/absolute/path\""; }
+    setting_path(setting_container *dictionary, const nameset &names, fs::path v,
+        const setting_group *group = nullptr, const char *description = "");
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
 };
 
 class setting_set : public setting_base
@@ -466,146 +397,51 @@ private:
     std::string _format;
 
 public:
-    inline setting_set(setting_container *dictionary, const nameset &names,
+    setting_set(setting_container *dictionary, const nameset &names,
         const std::string_view &format = "\"str\" <multiple allowed>", const setting_group *group = nullptr,
-        const char *description = "")
-        : setting_base(dictionary, names, group, description), _format(format)
-    {
-    }
+        const char *description = "");
 
-    const std::unordered_set<std::string> &values() const { return _values; }
+    const std::unordered_set<std::string> &values() const;
 
-    virtual void addValue(const std::string &value, source newSource)
-    {
-        if (changeSource(newSource)) {
-            _values.insert(value);
-        }
-    }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        if (!parser.parse_token(PARSE_PEEK))
-            return false;
-
-        parser.parse_token();
-        addValue(parser.token, source);
-        return true;
-    }
-
-    inline bool copyFrom(const setting_base &other) override
-    {
-        if (auto *casted = dynamic_cast<const setting_set *>(&other)) {
-            _values = casted->_values;
-            _source = casted->_source;
-            return true;
-        }
-        return false;
-    }
-
-    inline void reset() override
-    {
-        _values.clear();
-        _source = source::DEFAULT;
-    }
-
-    std::string format() const override { return _format; }
-
-    std::string stringValue() const override
-    {
-        std::string result;
-
-        for (auto &v : _values) {
-            if (!result.empty()) {
-                result += ' ';
-            }
-
-            result += '\"' + v + '\"';
-        }
-
-        return result;
-    }
+    virtual void addValue(const std::string &value, source newSource);
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    bool copyFrom(const setting_base &other) override;
+    void reset() override;
+    std::string format() const override;
+    std::string stringValue() const override;
 };
 
 class setting_vec3 : public setting_value<qvec3d>
 {
 protected:
-    virtual qvec3d transformVec3Value(const qvec3d &val) const { return val; }
+    virtual qvec3d transformVec3Value(const qvec3d &val) const;
 
 public:
-    inline setting_vec3(setting_container *dictionary, const nameset &names, vec_t a, vec_t b, vec_t c,
-        const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, transformVec3Value({a, b, c}), group, description)
-    {
-    }
+    setting_vec3(setting_container *dictionary, const nameset &names, vec_t a, vec_t b, vec_t c,
+        const setting_group *group = nullptr, const char *description = "");
 
-    void setValue(const qvec3d &f, source newsource) override
-    {
-        setting_value::setValue(transformVec3Value(f), newsource);
-    }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        qvec3d vec;
-
-        for (int i = 0; i < 3; i++) {
-            if (!parser.parse_token()) {
-                return false;
-            }
-
-            try {
-                vec[i] = std::stod(parser.token);
-            } catch (std::exception &) {
-                return false;
-            }
-        }
-
-        setValue(vec, source);
-
-        return true;
-    }
-
-    std::string stringValue() const override { return qv::to_string(_value); }
-
-    std::string format() const override { return "x y z"; }
+    void setValue(const qvec3d &f, source newsource) override;
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
 };
 
 class setting_mangle : public setting_vec3
 {
 protected:
-    qvec3d transformVec3Value(const qvec3d &val) const override { return qv::vec_from_mangle(val); }
+    qvec3d transformVec3Value(const qvec3d &val) const override;
 
 public:
     using setting_vec3::setting_vec3;
 
     // allow mangle to only specify pitch, or pitch yaw
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        qvec3d vec {};
-
-        for (int i = 0; i < 3; i++) {
-            if (!parser.parse_token(PARSE_PEEK)) {
-                break;
-            }
-
-            try {
-                vec[i] = std::stod(parser.token);
-            } catch (std::exception &) {
-                break;
-            }
-
-            parser.parse_token();
-        }
-        
-        setValue(vec, source);
-
-        return true;
-    }
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
 };
 
 class setting_color : public setting_vec3
 {
 protected:
-    qvec3d transformVec3Value(const qvec3d &val) const override { return qv::normalize_color_format(val); }
+    qvec3d transformVec3Value(const qvec3d &val) const override;
 
 public:
     using setting_vec3::setting_vec3;
@@ -683,16 +519,7 @@ public:
 
     void copyFrom(const setting_container &other);
 
-    inline void registerSetting(setting_base *setting)
-    {
-        for (const auto &name : setting->names()) {
-            Q_assert(_settingsmap.find(name) == _settingsmap.end());
-            _settingsmap.emplace(name, setting);
-        }
-
-        _settings.emplace(setting);
-        _groupedSettings[setting->getGroup()].insert(setting);
-    }
+    void registerSetting(setting_base *setting);
 
     template<typename TIt>
     inline void registerSettings(TIt begin, TIt end)
@@ -702,46 +529,10 @@ public:
         }
     }
 
-    inline void registerSettings(const std::initializer_list<setting_base *> &settings)
-    {
-        registerSettings(settings.begin(), settings.end());
-    }
-
-    inline setting_base *findSetting(const std::string &name) const
-    {
-        // strip off leading underscores
-        if (name.find("_") == 0) {
-            return findSetting(name.substr(1, name.size() - 1));
-        }
-
-        if (auto it = _settingsmap.find(name); it != _settingsmap.end()) {
-            return it->second;
-        }
-
-        return nullptr;
-    }
-
-    inline setting_error setSetting(const std::string &name, const std::string &value, source source)
-    {
-        setting_base *setting = findSetting(name);
-
-        if (setting == nullptr) {
-            if (source == source::COMMANDLINE) {
-                throw parse_exception(fmt::format("Unrecognized command-line option '{}'\n", name));
-            }
-            return setting_error::MISSING;
-        }
-
-        parser_t p{value, { }};
-        return setting->parse(name, p, source) ? setting_error::NONE : setting_error::INVALID;
-    }
-
-    inline void setSettings(const entdict_t &epairs, source source)
-    {
-        for (const auto &epair : epairs) {
-            setSetting(epair.first, epair.second, source);
-        }
-    }
+    void registerSettings(const std::initializer_list<setting_base *> &settings);
+    setting_base *findSetting(const std::string &name) const;
+    setting_error setSetting(const std::string &name, const std::string &value, source source);
+    void setSettings(const entdict_t &epairs, source source);
 
     inline auto begin() { return _settings.begin(); }
     inline auto end() { return _settings.end(); }

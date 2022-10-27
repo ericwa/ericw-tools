@@ -46,6 +46,8 @@
 
 mapdata_t map;
 
+mapplane_t::mapplane_t(const qbsp_plane_t &copy) : qbsp_plane_t(copy) { }
+
 struct planehash_t {
     // planes indices (into the `planes` vector)
     pareto::spatial_map<vec_t, 4, size_t> hash;
@@ -144,6 +146,11 @@ std::optional<size_t> mapdata_t::find_emitted_hash_vector(const qvec3d &vert)
 void mapdata_t::add_hash_vector(const qvec3d &point, const size_t &num)
 {
     hashverts->hash.emplace(pareto::point<vec_t, 3>({ point[0], point[1], point[2] }), num);
+}
+
+void mapdata_t::add_hash_edge(size_t v1, size_t v2, int64_t i)
+{
+    hashedges.emplace(std::make_pair(v1, v2), i);
 }
 
 const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
@@ -251,6 +258,12 @@ static void EnsureTexturesLoaded()
 }
 
 // Useful shortcuts
+
+const std::string &mapdata_t::miptexTextureName(int mt) const { return miptex.at(mt).name; }
+
+const std::string &mapdata_t::texinfoTextureName(int texinfo) const { return miptexTextureName(mtexinfos.at(texinfo).miptex); }
+
+
 mapentity_t &mapdata_t::world_entity()
 {
     if (entities.empty()) {
@@ -258,6 +271,11 @@ mapentity_t &mapdata_t::world_entity()
     }
 
     return entities.at(0);
+}
+
+bool mapdata_t::is_world_entity(const mapentity_t &entity)
+{
+    return &entity == &world_entity();
 }
 
 void mapdata_t::reset()
@@ -510,6 +528,12 @@ int FindTexinfo(const maptexinfo_t &texinfo)
     }
 
     return num_texinfo;
+}
+
+int FindMiptex(const char *name, bool internal, bool recursive)
+{
+    std::optional<extended_texinfo_t> extended_info;
+    return FindMiptex(name, extended_info, internal, recursive);
 }
 
 static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapentity_t &entity)

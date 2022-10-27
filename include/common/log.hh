@@ -67,10 +67,7 @@ void close();
 void print(flag logflag, const char *str);
 
 // print to default targets
-inline void print(const char *str)
-{
-    print(flag::DEFAULT, str);
-}
+void print(const char *str);
 
 // format print to specified targets
 template<typename... Args>
@@ -88,10 +85,7 @@ inline void print(const char *fmt, const Args &...args)
     print(flag::DEFAULT, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
 }
 
-inline void header(const char *name)
-{
-    print(flag::PROGRESS, "---- {} ----\n", name);
-}
+void header(const char *name);
 
 // TODO: C++20 source_location
 #ifdef _MSC_VER
@@ -102,17 +96,7 @@ inline void header(const char *name)
 #define funcheader() header(__func__)
 #endif
 
-inline void assert_(bool success, const char *expr, const char *file, int line)
-{
-    if (!success) {
-        print("{}:{}: Q_assert({}) failed.\n", file, line, expr);
-        // assert(0);
-#ifdef _WIN32
-        __debugbreak();
-#endif
-        exit(1);
-    }
-}
+void assert_(bool success, const char *expr, const char *file, int line);
 
 // Display a percent timer. This also keeps track of how long the
 // current task is taking to execute. Note that only one of these
@@ -137,43 +121,22 @@ struct percent_clock
 
     // runs a tick immediately to show up on stdout
     // unless max is zero
-    inline percent_clock(uint64_t max = indeterminate) :
-        max(max)
-    {
-        if (max != 0) {
-            percent(0, max, displayElapsed);
-        }
-    }
+    percent_clock(uint64_t i_max = indeterminate);
 
     // increase count by 1
-    inline void increase()
-    {
-#ifdef _DEBUG
-        if (count == max) {
-            logging::print("ERROR TO FIX LATER: clock counter increased to end, but not finished yet\n");
-        }
-#endif
+    void increase();
+    
+    // increase count by 1
+    void operator()();
 
-        percent(count++, max, displayElapsed);
-    }
-    
     // increase count by 1
-    inline void operator()()
-    {
-        increase();
-    }
-    
-    // increase count by 1
-    inline void operator++(int)
-    {
-        increase();
-    }
+    void operator++(int);
 
     // prints & ends the clock; class is invalid after this call.
     void print();
 
     // implicitly calls print()
-    inline ~percent_clock() { print(); }
+    ~percent_clock();
 };
 
 // base class intended to be inherited for stat trackers;
@@ -206,58 +169,11 @@ struct stat_tracker_t
     std::list<stat> stats;
     bool stats_printed = false;
 
-    inline stat &register_stat(const std::string &name, bool show_even_if_zero = false, bool is_warning = false)
-    {
-        return stats.emplace_back(name, show_even_if_zero, is_warning);
-    }
-
-    static inline size_t number_of_digits(size_t n)
-    {
-        return n ? ((size_t) log10(n) + 1) : 1;
-    }
-
-    inline size_t number_of_digit_padding()
-    {
-        size_t number_padding = 0;
-
-        // calculate padding for number
-        for (auto &stat : stats) {
-            if (!stat.is_warning && (stat.show_even_if_zero || stat.count)) {
-                number_padding = std::max(number_of_digits(stat.count.load()), number_padding);
-            }
-        }
-
-        if (!number_padding) {
-            return number_padding;
-        }
-
-        return number_padding + ((number_padding - 1) / 3);
-    }
-
-    void print_stats()
-    {
-        if (stats_printed) {
-            return;
-        }
-
-        stats_printed = true;
-
-        auto old = std::locale::global(std::locale("en_US.UTF-8"));
-        // add 8 char padding just to keep it away from the left side
-        size_t number_padding = number_of_digit_padding() + 4;
-
-        for (auto &stat : stats) {
-            if (stat.show_even_if_zero || stat.count) {
-                print(flag::STAT, "{}{:{}L} {}\n", stat.is_warning ? "WARNING: " : "", stat.count, stat.is_warning ? 0 : number_padding, stat.name);
-            }
-        }
-        std::locale::global(old);
-    }
-
-    virtual ~stat_tracker_t()
-    {
-        print_stats();
-    }
+    stat &register_stat(const std::string &name, bool show_even_if_zero = false, bool is_warning = false);
+    static size_t number_of_digits(size_t n);
+    size_t number_of_digit_padding();
+    void print_stats();
+    virtual ~stat_tracker_t();
 };
 }; // namespace logging
 

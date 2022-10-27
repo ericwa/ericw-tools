@@ -43,6 +43,16 @@ node_t *tree_t::create_node()
     return &(*it);
 }
 
+void tree_t::clear()
+{
+    headnode = nullptr;
+    outside_node = {};
+    bounds = {};
+
+    FreeTreePortals(*this);
+    nodes.clear();
+}
+
 /*
 ==================
 FreeTreePortals_r

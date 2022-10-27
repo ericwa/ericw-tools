@@ -60,15 +60,7 @@ struct tree_t
     node_t *create_node();
 
     // reset the tree without clearing allocated vector space
-    void clear()
-    {
-        headnode = nullptr;
-        outside_node = {};
-        bounds = {};
-
-        FreeTreePortals(*this);
-        nodes.clear();
-    }
+    void clear();
 };
 
 void PruneNodes(node_t *node);

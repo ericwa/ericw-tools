@@ -76,6 +76,142 @@ const qbsp_plane_t &node_t::get_plane() const
     return map.get_plane(planenum);
 }
 
+plane_type_t qbsp_plane_t::calculate_type(const qplane3d &p)
+{
+    for (size_t i = 0; i < 3; i++) {
+        if (p.normal[i] == 1.0 || p.normal[i] == -1.0) {
+            return (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
+        }
+    }
+
+    vec_t ax = fabs(p.normal[0]);
+    vec_t ay = fabs(p.normal[1]);
+    vec_t az = fabs(p.normal[2]);
+
+    if (ax >= ay && ax >= az) {
+        return plane_type_t::PLANE_ANYX;
+    } else if (ay >= ax && ay >= az) {
+        return plane_type_t::PLANE_ANYY;
+    } else {
+        return plane_type_t::PLANE_ANYZ;
+    }
+}
+
+qbsp_plane_t::qbsp_plane_t(const qplane3d &plane, bool flip) noexcept : plane(plane) { normalize(flip); }
+
+qbsp_plane_t::qbsp_plane_t(const qplane3d &plane) noexcept : qbsp_plane_t(plane, false) { }
+
+qbsp_plane_t &qbsp_plane_t::operator=(const qplane3d &plane) noexcept
+{
+    this->plane = plane;
+    normalize(false);
+    return *this;
+}
+
+[[nodiscard]] qbsp_plane_t qbsp_plane_t::operator-() const
+{
+    qbsp_plane_t copy = *this;
+    copy.plane = -copy.plane;
+    return copy;
+}
+
+[[nodiscard]] const plane_type_t &qbsp_plane_t::get_type() const { return type; }
+[[nodiscard]] const vec_t &qbsp_plane_t::get_dist() const { return plane.dist; }
+[[nodiscard]] vec_t &qbsp_plane_t::get_dist() { return plane.dist; }
+[[nodiscard]] const qvec3d &qbsp_plane_t::get_normal() const { return plane.normal; }
+bool qbsp_plane_t::set_normal(const qvec3d &vec, bool flip)
+{
+    plane.normal = vec;
+    return normalize(flip);
+}
+
+bool qbsp_plane_t::set_plane(const qplane3d &plane, bool flip)
+{
+    this->plane = plane;
+    return normalize(flip);
+}
+
+[[nodiscard]] const qplane3d &qbsp_plane_t::get_plane() const { return plane; }
+[[nodiscard]] qbsp_plane_t::operator const qplane3d &() const { return plane; }
+
+// normalize the given plane, optionally flipping it to face
+// the positive direction. returns whether the plane was flipped or not.
+bool qbsp_plane_t::normalize(bool flip) noexcept
+{
+    for (size_t i = 0; i < 3; i++) {
+        if (plane.normal[i] == 1.0) {
+            plane.normal[(i + 1) % 3] = 0;
+            plane.normal[(i + 2) % 3] = 0;
+            type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
+            return false;
+        }
+        if (plane.normal[i] == -1.0) {
+            if (flip) {
+                plane.normal[i] = 1.0;
+                plane.dist = -plane.dist;
+            }
+            plane.normal[(i + 1) % 3] = 0;
+            plane.normal[(i + 2) % 3] = 0;
+            type = (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
+            return flip;
+        }
+    }
+
+    vec_t ax = fabs(plane.normal[0]);
+    vec_t ay = fabs(plane.normal[1]);
+    vec_t az = fabs(plane.normal[2]);
+
+    size_t nearest;
+
+    if (ax >= ay && ax >= az) {
+        nearest = 0;
+        type = plane_type_t::PLANE_ANYX;
+    } else if (ay >= ax && ay >= az) {
+        nearest = 1;
+        type = plane_type_t::PLANE_ANYY;
+    } else {
+        nearest = 2;
+        type = plane_type_t::PLANE_ANYZ;
+    }
+
+    if (flip && plane.normal[nearest] < 0) {
+        plane = -plane;
+        return true;
+    }
+
+    return false;
+}
+
+namespace qv
+{
+[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2,
+    vec_t normalEpsilon, vec_t distEpsilon)
+{
+    // axial planes will never match on normal, so we can skip that check entirely
+    if (p1.get_type() < plane_type_t::PLANE_ANYX && p2.get_type() < plane_type_t::PLANE_ANYX) {
+        // if we aren't the same type, we definitely aren't equal
+        if (p1.get_type() != p2.get_type()) {
+            return false;
+        } else if (p1.get_normal()[static_cast<int32_t>(p1.get_type())] !=
+                   p2.get_normal()[static_cast<int32_t>(p2.get_type())]) {
+            // axials will always be only 1 or -1
+            return false;
+        }
+
+        // check dist
+        return epsilonEqual(p1.get_dist(), p2.get_dist(), distEpsilon);
+    }
+
+    // check dist
+    if (!epsilonEqual(p1.get_dist(), p2.get_dist(), distEpsilon)) {
+        return false;
+    }
+
+    // check normal
+    return epsilonEqual(p1.get_normal(), p2.get_normal(), normalEpsilon);
+}
+}; // namespace qv
+
 // command line flags
 namespace settings
 {

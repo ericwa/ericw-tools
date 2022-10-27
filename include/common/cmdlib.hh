@@ -101,10 +101,7 @@ using qclock = std::chrono::high_resolution_clock;
 using duration = std::chrono::duration<double>;
 using time_point = std::chrono::time_point<qclock, duration>;
 
-inline time_point I_FloatTime()
-{
-    return qclock::now();
-}
+time_point I_FloatTime();
 
 /*
  * ============================================================================
@@ -579,151 +576,48 @@ struct membuf : std::streambuf
 {
 public:
     // construct membuf for reading and/or writing
-    inline membuf(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out)
-    {
-        auto cbase = reinterpret_cast<char *>(base);
-
-        if (which & std::ios_base::in) {
-            this->setg(cbase, cbase, cbase + size);
-        }
-
-        if (which & std::ios_base::out) {
-            this->setp(cbase, cbase + size);
-        }
-    }
+    membuf(void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out);
 
     // construct membuf for reading
-    inline membuf(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in)
-    {
-        auto cbase = const_cast<char *>(reinterpret_cast<const char *>(base));
-
-        if (which & std::ios_base::in) {
-            this->setg(cbase, cbase, cbase + size);
-        }
-    }
+    membuf(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in);
 
 protected:
-    inline void setpptrs(char *first, char *next, char *end)
-    {
-        setp(first, end);
-        pbump(next - first);
-    }
+    void setpptrs(char *first, char *next, char *end);
 
     // seek operations
-    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
-    {
-        if (which & std::ios_base::in) {
-            setg(eback(), eback() + off, egptr());
-        }
-
-        if (which & std::ios_base::out) {
-            setpptrs(pbase(), pbase() + off, epptr());
-        }
-
-        if (which & std::ios_base::in) {
-            return gptr() - eback();
-        } else {
-            return pptr() - pbase();
-        }
-    }
-
+    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override;
     pos_type seekoff(off_type off, std::ios_base::seekdir dir,
-        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
-    {
-        if (which & std::ios_base::in) {
-            if (dir == std::ios_base::cur)
-                gbump(off);
-            else if (dir == std::ios_base::end)
-                setg(eback(), egptr() + off, egptr());
-            else if (dir == std::ios_base::beg)
-                setg(eback(), eback() + off, egptr());
-        }
-
-        if (which & std::ios_base::out) {
-            if (dir == std::ios_base::cur)
-                pbump(off);
-            else if (dir == std::ios_base::end)
-                setpptrs(pbase(), epptr() + off, epptr());
-            else if (dir == std::ios_base::beg)
-                setpptrs(pbase(), pbase() + off, epptr());
-        }
-
-        if (which & std::ios_base::in) {
-            return gptr() - eback();
-        } else {
-            return pptr() - pbase();
-        }
-    }
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override;
 
     // put stuff
-    std::streamsize xsputn(const char_type *s, std::streamsize n) override
-    {
-        if (pptr() == epptr()) {
-            return traits_type::eof();
-        }
-
-        std::streamsize free_space = epptr() - pptr();
-        std::streamsize num_write = std::min(free_space, n);
-
-        memcpy(pptr(), s, n);
-        setpptrs(pbase(), pptr() + n, epptr());
-
-        return num_write;
-    };
-
-    int_type overflow(int_type ch) override { return traits_type::eof(); }
+    std::streamsize xsputn(const char_type *s, std::streamsize n) override;
+    int_type overflow(int_type ch) override;
 
     // get stuff
-    std::streamsize xsgetn(char_type *s, std::streamsize n) override
-    {
-        if (gptr() == egptr()) {
-            return traits_type::eof();
-        }
+    std::streamsize xsgetn(char_type *s, std::streamsize n) override;
 
-        std::streamsize free_space = egptr() - gptr();
-        std::streamsize num_read = std::min(free_space, n);
-
-        memcpy(s, gptr(), n);
-        setg(eback(), gptr() + n, egptr());
-
-        return num_read;
-    };
-
-    int_type underflow() override { return traits_type::eof(); }
+    int_type underflow() override;
 };
 
 struct memstream : virtual membuf, std::ostream, std::istream
 {
-    inline memstream(void *base, size_t size,
-        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary)
-        : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
-          std::istream(static_cast<std::streambuf *>(this))
-    {
-    }
+    memstream(void *base, size_t size,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 
-    inline memstream(
-        const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary)
-        : membuf(base, size, which), std::ostream(nullptr), std::istream(static_cast<std::streambuf *>(this))
-    {
-    }
+    memstream(
+        const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary);
 };
 
 struct omemstream : virtual membuf, std::ostream
 {
-    inline omemstream(void *base, size_t size,
-        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary)
-        : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this))
-    {
-    }
+    omemstream(void *base, size_t size,
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 };
 
 struct imemstream : virtual membuf, std::istream
 {
-    inline imemstream(
-        const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary)
-        : membuf(base, size, which), std::istream(static_cast<std::streambuf *>(this))
-    {
-    }
+    imemstream(
+        const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary);
 };
 
 // A very strange stream buffer that just stores the written size.
@@ -732,72 +626,27 @@ struct omemsizebuf : std::streambuf
 {
 public:
     // construct membuf for writing
-    inline omemsizebuf(std::ios_base::openmode which = std::ios_base::out)
-    {
-        if (which & std::ios_base::in) {
-            throw std::invalid_argument("which");
-        }
-
-        this->setp(nullptr, nullptr);
-    }
+    omemsizebuf(std::ios_base::openmode which = std::ios_base::out);
 
 protected:
-    inline void setpptrs(char *first, char *next, char *end)
-    {
-        setp(first, end);
-        pbump(next - first);
-    }
+    void setpptrs(char *first, char *next, char *end);
 
     // seek operations
-    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
-    {
-        setpptrs(pbase(), pbase() + off, epptr());
-
-        return pptr() - pbase();
-    }
+    pos_type seekpos(pos_type off, std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override;
 
     pos_type seekoff(off_type off, std::ios_base::seekdir dir,
-        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override
-    {
-        if (dir == std::ios_base::cur)
-            pbump(off);
-        else if (dir == std::ios_base::end)
-            setpptrs(pbase(), epptr() + off, epptr());
-        else if (dir == std::ios_base::beg)
-            setpptrs(pbase(), pbase() + off, epptr());
-
-        return pptr() - pbase();
-    }
+        std::ios_base::openmode which = std::ios_base::in | std::ios_base::out) override;
 
     // put stuff
-    std::streamsize xsputn(const char_type *s, std::streamsize n) override
-    {
-        if (pptr() == epptr()) {
-            setpptrs(pbase(), epptr(), epptr() + n);
-        }
+    std::streamsize xsputn(const char_type *s, std::streamsize n) override;
 
-        std::streamsize free_space = epptr() - pptr();
-        std::streamsize num_write = std::min(free_space, n);
-
-        setpptrs(pbase(), pptr() + n, epptr());
-
-        return num_write;
-    };
-
-    int_type overflow(int_type ch) override
-    {
-        setpptrs(pbase(), epptr(), epptr() + 1);
-        return ch;
-    }
+    int_type overflow(int_type ch) override;
 };
 
 struct omemsizestream : virtual omemsizebuf, std::ostream
 {
-    inline omemsizestream(
-        std::ios_base::openmode which = std::ios_base::out | std::ios_base::binary)
-        : omemsizebuf(which), std::ostream(static_cast<std::streambuf *>(this))
-    {
-    }
+    omemsizestream(
+        std::ios_base::openmode which = std::ios_base::out | std::ios_base::binary);
 };
 
 void CRC_Init(uint16_t &crcvalue);

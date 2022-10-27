@@ -76,10 +76,7 @@ inline T Q_rint(T in)
    returns a pseudorandom number between 0 and 1
  */
 
-inline vec_t Random(void)
-{
-    return (vec_t)rand() / RAND_MAX;
-}
+vec_t Random();
 
 // noramlizes the given pdf so it sums to 1, then converts to a cdf
 std::vector<float> MakeCDF(const std::vector<float> &pdf);

@@ -27,6 +27,11 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <windows.h>
+
+// don't break std::min
+#ifdef min
+#undef min
+#endif
 #endif
 
 #ifdef LINUX
@@ -117,6 +122,211 @@ bool case_insensitive_equal::operator()(const std::string &l, const std::string 
 bool case_insensitive_less::operator()(const std::string &l, const std::string &r) const noexcept
 {
     return Q_strcasecmp(l.c_str(), r.c_str()) < 0;
+}
+
+// membuf
+
+membuf::membuf(void *base, size_t size, std::ios_base::openmode which)
+{
+    auto cbase = reinterpret_cast<char *>(base);
+
+    if (which & std::ios_base::in) {
+        this->setg(cbase, cbase, cbase + size);
+    }
+
+    if (which & std::ios_base::out) {
+        this->setp(cbase, cbase + size);
+    }
+}
+
+membuf::membuf(const void *base, size_t size, std::ios_base::openmode which)
+{
+    auto cbase = const_cast<char *>(reinterpret_cast<const char *>(base));
+
+    if (which & std::ios_base::in) {
+        this->setg(cbase, cbase, cbase + size);
+    }
+}
+
+void membuf::setpptrs(char *first, char *next, char *end)
+{
+    setp(first, end);
+    pbump(next - first);
+}
+
+membuf::pos_type membuf::seekpos(pos_type off, std::ios_base::openmode which)
+{
+    if (which & std::ios_base::in) {
+        setg(eback(), eback() + off, egptr());
+    }
+
+    if (which & std::ios_base::out) {
+        setpptrs(pbase(), pbase() + off, epptr());
+    }
+
+    if (which & std::ios_base::in) {
+        return gptr() - eback();
+    } else {
+        return pptr() - pbase();
+    }
+}
+
+membuf::pos_type membuf::seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
+{
+    if (which & std::ios_base::in) {
+        if (dir == std::ios_base::cur)
+            gbump(off);
+        else if (dir == std::ios_base::end)
+            setg(eback(), egptr() + off, egptr());
+        else if (dir == std::ios_base::beg)
+            setg(eback(), eback() + off, egptr());
+    }
+
+    if (which & std::ios_base::out) {
+        if (dir == std::ios_base::cur)
+            pbump(off);
+        else if (dir == std::ios_base::end)
+            setpptrs(pbase(), epptr() + off, epptr());
+        else if (dir == std::ios_base::beg)
+            setpptrs(pbase(), pbase() + off, epptr());
+    }
+
+    if (which & std::ios_base::in) {
+        return gptr() - eback();
+    } else {
+        return pptr() - pbase();
+    }
+}
+
+std::streamsize membuf::xsputn(const char_type *s, std::streamsize n)
+{
+    if (pptr() == epptr()) {
+        return traits_type::eof();
+    }
+
+    std::streamsize free_space = epptr() - pptr();
+    std::streamsize num_write = std::min(free_space, n);
+
+    memcpy(pptr(), s, n);
+    setpptrs(pbase(), pptr() + n, epptr());
+
+    return num_write;
+}
+
+membuf::int_type membuf::overflow(int_type ch)
+{
+    return traits_type::eof();
+}
+
+std::streamsize membuf::xsgetn(char_type *s, std::streamsize n)
+{
+    if (gptr() == egptr()) {
+        return traits_type::eof();
+    }
+
+    std::streamsize free_space = egptr() - gptr();
+    std::streamsize num_read = std::min(free_space, n);
+
+    memcpy(s, gptr(), n);
+    setg(eback(), gptr() + n, egptr());
+
+    return num_read;
+}
+
+membuf::int_type membuf::underflow()
+{
+    return traits_type::eof();
+}
+
+// memstream
+memstream::memstream(void *base, size_t size, std::ios_base::openmode which)
+    : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
+      std::istream(static_cast<std::streambuf *>(this))
+{
+}
+
+memstream::memstream(const void *base, size_t size, std::ios_base::openmode which)
+    : membuf(base, size, which), std::ostream(nullptr), std::istream(static_cast<std::streambuf *>(this))
+{
+}
+
+// omemstream
+
+omemstream::omemstream(void *base, size_t size, std::ios_base::openmode which)
+    : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this))
+{
+}
+
+// imemstream
+
+imemstream::imemstream(
+    const void *base, size_t size, std::ios_base::openmode which)
+    : membuf(base, size, which), std::istream(static_cast<std::streambuf *>(this))
+{
+}
+
+// omemsizebuf
+
+omemsizebuf::omemsizebuf(std::ios_base::openmode which)
+{
+    if (which & std::ios_base::in) {
+        throw std::invalid_argument("which");
+    }
+
+    this->setp(nullptr, nullptr);
+}
+
+void omemsizebuf::setpptrs(char *first, char *next, char *end)
+{
+    setp(first, end);
+    pbump(next - first);
+}
+
+omemsizebuf::pos_type omemsizebuf::seekpos(pos_type off, std::ios_base::openmode which)
+{
+    setpptrs(pbase(), pbase() + off, epptr());
+
+    return pptr() - pbase();
+}
+
+omemsizebuf::pos_type omemsizebuf::seekoff(off_type off, std::ios_base::seekdir dir,
+        std::ios_base::openmode which)
+{
+    if (dir == std::ios_base::cur)
+        pbump(off);
+    else if (dir == std::ios_base::end)
+        setpptrs(pbase(), epptr() + off, epptr());
+    else if (dir == std::ios_base::beg)
+        setpptrs(pbase(), pbase() + off, epptr());
+
+    return pptr() - pbase();
+}
+
+std::streamsize omemsizebuf::xsputn(const char_type *s, std::streamsize n)
+{
+    if (pptr() == epptr()) {
+        setpptrs(pbase(), epptr(), epptr() + n);
+    }
+
+    std::streamsize free_space = epptr() - pptr();
+    std::streamsize num_write = std::min(free_space, n);
+
+    setpptrs(pbase(), pptr() + n, epptr());
+
+    return num_write;
+}
+
+omemsizebuf::int_type omemsizebuf::overflow(int_type ch)
+{
+    setpptrs(pbase(), epptr(), epptr() + 1);
+    return ch;
+}
+
+// omemsizestream
+
+omemsizestream::omemsizestream(std::ios_base::openmode which)
+    : omemsizebuf(which), std::ostream(static_cast<std::streambuf *>(this))
+{
 }
 
 /* ========================================================================= */
@@ -464,6 +674,11 @@ std::string_view::const_iterator string_ifind(std::string_view haystack, std::st
 bool string_icontains(std::string_view haystack, std::string_view needle)
 {
     return string_ifind(haystack, needle) != haystack.end();
+}
+
+time_point I_FloatTime()
+{
+    return qclock::now();
 }
 
 namespace detail

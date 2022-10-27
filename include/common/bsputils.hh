@@ -89,11 +89,7 @@ struct clipnode_info_t {
     planeside_t side;
     int contents;
 
-    bool operator==(const clipnode_info_t& other) const {
-        return this->parent_clipnode == other.parent_clipnode
-            && this->side == other.side
-            && this->contents == other.contents;
-    }
+    bool operator==(const clipnode_info_t& other) const;
 };
 clipnode_info_t BSP_FindClipnodeAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);
 int BSP_FindContentsAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);

@@ -116,19 +116,11 @@ struct contentflags_t
     bool is_detail_illusionary(const gamedef_t *game) const;
 
     bool is_mirrored(const gamedef_t *game) const;
-    contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value)
-    {
-        mirror_inside = mirror_inside_value;
-        return *this;
-    }
+    contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value);
 
     inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
     bool will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const;
-    contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value)
-    {
-        clips_same_type = clips_same_type_value;
-        return *this;
-    }
+    contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value);
 
     bool is_empty(const gamedef_t *game) const;
     bool is_any_solid(const gamedef_t *game) const;
@@ -142,7 +134,7 @@ struct contentflags_t
 
     void make_valid(const gamedef_t *game);
 
-    inline bool is_fence(const gamedef_t *game) const { return is_detail_fence(game) || is_detail_illusionary(game); }
+    bool is_fence(const gamedef_t *game) const;
 
     // check if this content's `type` - which is distinct from various
     // flags that turn things on/off - match. Exactly what the native
@@ -263,7 +255,7 @@ struct gamedef_t
     size_t max_entity_key = 32;
     size_t max_entity_value = 128;
 
-    gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir) { }
+    gamedef_t(const char *default_base_dir);
 
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
@@ -441,22 +433,18 @@ struct bspdata_t
     std::variant<std::monostate, mbsp_t, bsp29_t, bsp2rmq_t, bsp2_t, q2bsp_t, q2bsp_qbism_t> bsp;
 
     // This can be used with any BSP format.
-    struct
+    struct bspxentries
     {
         bspxentries_t entries;
 
         // transfer ownership of the vector into a BSPX lump
-        inline void transfer(const char *xname, std::vector<uint8_t> &xdata)
-        {
-            entries.insert_or_assign(xname, std::move(xdata));
-        }
+        void transfer(const char *xname, std::vector<uint8_t> &xdata);
 
         // transfer ownership of the vector into a BSPX lump
-        inline void transfer(const char *xname, std::vector<uint8_t> &&xdata)
-        {
-            entries.insert_or_assign(xname, xdata);
-        }
-    } bspx;
+        void transfer(const char *xname, std::vector<uint8_t> &&xdata);
+    };
+
+    bspxentries bspx;
 };
 
 /* table of supported versions */

@@ -1760,9 +1760,21 @@ bool contentflags_t::is_mirrored(const gamedef_t *game) const
     return game->contents_are_mirrored(*this);
 }
 
+contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_inside_value)
+{
+    mirror_inside = mirror_inside_value;
+    return *this;
+}
+
 bool contentflags_t::will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const
 {
     return game->contents_clip_same_type(*this, other);
+}
+
+contentflags_t &contentflags_t::set_clips_same_type(const std::optional<bool> &clips_same_type_value)
+{
+    clips_same_type = clips_same_type_value;
+    return *this;
 }
 
 bool contentflags_t::is_empty(const gamedef_t *game) const
@@ -1810,6 +1822,11 @@ void contentflags_t::make_valid(const gamedef_t *game)
     game->contents_make_valid(*this);
 }
 
+bool contentflags_t::is_fence(const gamedef_t *game) const
+{
+    return is_detail_fence(game) || is_detail_illusionary(game);
+}
+
 std::string contentflags_t::to_string(const gamedef_t *game) const
 {
     std::string s = game->get_contents_display(*this);
@@ -1830,6 +1847,8 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
 
     return s;
 }
+
+gamedef_t::gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir) { }
 
 static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {
@@ -2227,6 +2246,16 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
     reader.read(Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
     reader.read(Q2_LUMP_AREAS, bsp.dareas);
     reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
+}
+
+void bspdata_t::bspxentries::transfer(const char *xname, std::vector<uint8_t> &xdata)
+{
+    entries.insert_or_assign(xname, std::move(xdata));
+}
+
+void bspdata_t::bspxentries::transfer(const char *xname, std::vector<uint8_t> &&xdata)
+{
+    entries.insert_or_assign(xname, xdata);
 }
 
 /*

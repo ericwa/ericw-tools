@@ -90,6 +90,11 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
     return qmat3x3f(rotations);
 }
 
+vec_t Random()
+{
+    return (vec_t)rand() / RAND_MAX;
+}
+
 static std::vector<float> NormalizePDF(const std::vector<float> &pdf)
 {
     float pdfSum = 0.0f;
