@@ -1629,6 +1629,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
             }
         }
 
+#if 0
         // This fixes a bug in some old maps.
         if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
             extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
@@ -1639,6 +1640,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
                 issue_stats.num_sky_nodraw++;
             }
         }
+#endif
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
