@@ -43,7 +43,14 @@ struct makefaces_stats_t : logging::stat_tracker_t
 static bool ShouldOmitFace(face_t *f)
 {
     if (!qbsp_options.includeskip.value() && f->get_texinfo().flags.is_nodraw)
+    {
+        // TODO: move to game specific
+        // always include LIGHT
+        if (qbsp_options.target_game->id == GAME_QUAKE_II && (f->get_texinfo().flags.native & Q2_SURF_LIGHT))
+            return false;
+
         return true;
+    }
     if (map.mtexinfos.at(f->texinfo).flags.is_hint)
         return true;
 
