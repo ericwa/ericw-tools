@@ -398,6 +398,10 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             tc[0] += face.x;
             tc[1] += face.y;
 
+            // add a half-texel offset (see BuildSurfaceDisplayList() in Quakespasm)
+            tc[0] += 0.5;
+            tc[1] += 0.5;
+
             tc[0] /= full_atlas.width;
             tc[1] /= full_atlas.height;
 
