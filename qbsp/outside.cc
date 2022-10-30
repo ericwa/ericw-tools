@@ -319,7 +319,7 @@ static void MarkOccupiedClusters(node_t *headnode)
         mapentity_t &entity = map.entities.at(i);
 
         /* skip entities at (0 0 0) (bmodels) */
-        if (qv::epsilonEmpty(entity.origin, EQUAL_EPSILON))
+        if (qv::epsilonEmpty(entity.origin, QBSP_EQUAL_EPSILON))
             continue;
 
 #if 0

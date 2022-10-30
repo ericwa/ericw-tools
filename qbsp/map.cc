@@ -644,12 +644,12 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         qvec3d mincolor{};
 
         entity.epairs.get_vector("_mincolor", mincolor);
-        if (qv::epsilonEmpty(mincolor, EQUAL_EPSILON)) {
+        if (qv::epsilonEmpty(mincolor, QBSP_EQUAL_EPSILON)) {
             entity.epairs.get_vector("_minlight_color", mincolor);
         }
 
         mincolor = qv::normalize_color_format(mincolor);
-        if (!qv::epsilonEmpty(mincolor, EQUAL_EPSILON)) {
+        if (!qv::epsilonEmpty(mincolor, QBSP_EQUAL_EPSILON)) {
             for (int32_t i = 0; i < 3; i++) {
                 flags.minlight_color[i] = clamp(mincolor[i], 0.0, 255.0);
             }
@@ -2060,7 +2060,7 @@ Doesn't add if duplicated
 static size_t AddHullPoint(map_hullbrush_t &hullbrush, const qvec3d &p, const aabb3d &hull_size)
 {
     for (auto &pt : hullbrush.points) {
-        if (qv::epsilonEqual(p, pt, EQUAL_EPSILON)) {
+        if (qv::epsilonEqual(p, pt, QBSP_EQUAL_EPSILON)) {
             return &pt - hullbrush.points.data();
         }
     }
@@ -2572,7 +2572,7 @@ void ProcessExternalMapEntity(mapentity_t &entity)
     qvec3d angles;
     entity.epairs.get_vector("_external_map_angles", angles);
 
-    if (qv::epsilonEmpty(angles, EQUAL_EPSILON)) {
+    if (qv::epsilonEmpty(angles, QBSP_EQUAL_EPSILON)) {
         angles[1] = entity.epairs.get_float("_external_map_angle");
     }
 

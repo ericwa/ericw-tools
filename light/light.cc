@@ -127,7 +127,7 @@ light_settings::light_settings()
       onlyents{this, "onlyents", false, &output_group, "only update entities"},
       write_normals{this, "wrnormals", false, &output_group, "output normals, tangents and bitangents in a BSPX lump"},
       novanilla{this, "novanilla", false, &experimental_group, "implies -bspxlit; don't write vanilla lighting"},
-      gate{this, "gate", EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"},
+      gate{this, "gate", LIGHT_EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"},
       sunsamples{this, "sunsamples", 64, 8, 2048, &performance_group, "set samples for _sunlight2, default 64"},
       arghradcompat{this, "arghradcompat", false, &output_group, "enable compatibility for Arghrad-specific keys"},
       nolighting{this, "nolighting", false, &output_group, "don't output main world lighting (Q2RTX)"},
@@ -1068,7 +1068,7 @@ static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
 {
     // check lights
     for (const auto &light : GetLights()) {
-        if (!qv::epsilonEqual(vec3_white, light->color.value(), EQUAL_EPSILON) ||
+        if (!qv::epsilonEqual(vec3_white, light->color.value(), LIGHT_EQUAL_EPSILON) ||
             light->projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
             SetLitNeeded();
             return;
@@ -1076,11 +1076,11 @@ static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
     }
 
     // check global settings
-    if (cfg.bouncecolorscale.value() != 0 || !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sun2_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight2_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight3_color.value(), vec3_white, EQUAL_EPSILON)) {
+    if (cfg.bouncecolorscale.value() != 0 || !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sun2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight3_color.value(), vec3_white, LIGHT_EQUAL_EPSILON)) {
         SetLitNeeded();
         return;
     }

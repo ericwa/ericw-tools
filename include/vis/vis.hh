@@ -26,8 +26,8 @@
 #include <common/prtfile.hh>
 #include <vis/leafbits.hh>
 
-constexpr vec_t ON_EPSILON = 0.1;
-constexpr vec_t EQUAL_EPSILON = 0.001;
+constexpr vec_t VIS_ON_EPSILON = 0.1;
+constexpr vec_t VIS_EQUAL_EPSILON = 0.001;
 
 constexpr size_t MAX_WINDING_FIXED = 24;
 constexpr size_t MAX_WINDING = 64;

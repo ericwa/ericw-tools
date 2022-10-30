@@ -1307,7 +1307,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
 
     /* Don't bother if surface facing away from sun */
     const vec_t dp = qv::dot(incoming, plane->normal);
-    if (dp < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
+    if (dp < -LIGHT_ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
         return;
     }
 

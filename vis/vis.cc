@@ -155,9 +155,9 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t &stack, const qplane3d &spli
     for (i = 0; i < in->size(); i++) {
         dot = split.distance_to((*in)[i]);
         dists[i] = dot;
-        if (dot > ON_EPSILON)
+        if (dot > VIS_ON_EPSILON)
             sides[i] = SIDE_FRONT;
-        else if (dot < -ON_EPSILON)
+        else if (dot < -VIS_ON_EPSILON)
             sides[i] = SIDE_BACK;
         else {
             sides[i] = SIDE_ON;

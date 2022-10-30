@@ -43,9 +43,9 @@
 #include <common/qvec.hh>
 #include <common/bsputils.hh>
 
-constexpr vec_t ON_EPSILON = 0.1;
-constexpr vec_t ANGLE_EPSILON = 0.001;
-constexpr vec_t EQUAL_EPSILON = 0.001;
+constexpr vec_t LIGHT_ON_EPSILON = 0.1;
+constexpr vec_t LIGHT_ANGLE_EPSILON = 0.001;
+constexpr vec_t LIGHT_EQUAL_EPSILON = 0.001;
 
 // FIXME: use maximum dimension of level
 constexpr vec_t MAX_SKY_DIST = 1000000;

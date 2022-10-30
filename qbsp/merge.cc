@@ -43,7 +43,7 @@ static void CheckColinear(face_t *f)
         j = (i + 1 == f->w.numpoints) ? 0 : i + 1;
         v2 = qv::normalize(f->w.points[j] - f->w.points[i]);
 
-        if (qv::epsilonEqual(v1, v2, EQUAL_EPSILON))
+        if (qv::epsilonEqual(v1, v2, QBSP_EQUAL_EPSILON))
             FError("Colinear edge");
     }
 }
@@ -85,7 +85,7 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
             p3 = f2->w[j];
             p4 = f2->w[(j + 1) % f2->w.size()];
             for (k = 0; k < 3; k++) {
-                if (fabs(p1[k] - p4[k]) > EQUAL_EPSILON || fabs(p2[k] - p3[k]) > EQUAL_EPSILON)
+                if (fabs(p1[k] - p4[k]) > QBSP_EQUAL_EPSILON || fabs(p2[k] - p3[k]) > QBSP_EQUAL_EPSILON)
                     break;
             }
             if (k == 3)

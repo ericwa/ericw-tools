@@ -56,9 +56,9 @@ static void ClipToSeparators(const winding_t *source, const qplane3d src_pl, con
             // This also tells us which side of the separating plane has
             //  the source portal.
             d = src_pl.distance_to(pass->at(j));
-            if (d < -ON_EPSILON)
+            if (d < -VIS_ON_EPSILON)
                 fliptest = true;
-            else if (d > ON_EPSILON)
+            else if (d > VIS_ON_EPSILON)
                 fliptest = false;
             else
                 continue; // Point lies in source plane
@@ -69,7 +69,7 @@ static void ClipToSeparators(const winding_t *source, const qplane3d src_pl, con
             len_sq = qv::length2(sep.normal);
 
             // If points don't make a valid plane, skip it.
-            if (len_sq < ON_EPSILON)
+            if (len_sq < VIS_ON_EPSILON)
                 continue;
 
             sep.normal *= (1.0 / sqrt(len_sq));
@@ -90,9 +90,9 @@ static void ClipToSeparators(const winding_t *source, const qplane3d src_pl, con
                 if (k == j)
                     continue;
                 d = sep.distance_to(pass->at(k));
-                if (d < -ON_EPSILON)
+                if (d < -VIS_ON_EPSILON)
                     break;
-                else if (d > ON_EPSILON)
+                else if (d > VIS_ON_EPSILON)
                     ++count;
             }
             if (k != pass->size())
@@ -218,7 +218,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         stack.portalplane = p->plane;
         backplane = -p->plane;
 
-        if (qv::epsilonEqual(prevstack.portalplane.normal, backplane.normal, EQUAL_EPSILON))
+        if (qv::epsilonEqual(prevstack.portalplane.normal, backplane.normal, VIS_EQUAL_EPSILON))
             continue; // can't go out a coplanar face
 
         c_portalcheck++;
@@ -409,7 +409,7 @@ static void BasePortalThread(size_t portalnum)
 
         for (j = 0; j < tw.size(); j++) {
             d = p.plane.distance_to(tw[j]);
-            if (d > -ON_EPSILON) // ericw -- changed from > ON_EPSILON for
+            if (d > -VIS_ON_EPSILON) // ericw -- changed from > ON_EPSILON for
                                  // https://github.com/ericwa/ericw-tools/issues/261
                 break;
         }
@@ -423,7 +423,7 @@ static void BasePortalThread(size_t portalnum)
 
         for (j = 0; j < w.size(); j++) {
             d = tp.plane.distance_to(w[j]);
-            if (d < ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
+            if (d < VIS_ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
                                 // https://github.com/ericwa/ericw-tools/issues/261
                 break;
         }

@@ -399,7 +399,7 @@ Doesn't add if duplicated
 static size_t AddHullPoint(hullbrush_t &hullbrush, const qvec3d &p, const aabb3d &hull_size)
 {
     for (auto &pt : hullbrush.points) {
-        if (qv::epsilonEqual(p, pt, EQUAL_EPSILON)) {
+        if (qv::epsilonEqual(p, pt, QBSP_EQUAL_EPSILON)) {
             return &pt - hullbrush.points.data();
         }
     }
