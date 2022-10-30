@@ -1475,3 +1475,13 @@ int light_main(int argc, const char **argv)
 
     return 0;
 }
+
+int light_main(const std::vector<std::string> &args)
+{
+    std::vector<const char *> argPtrs;
+    for (const std::string &arg : args) {
+        argPtrs.push_back(arg.data());
+    }
+
+    return light_main(argPtrs.size(), argPtrs.data());
+}
