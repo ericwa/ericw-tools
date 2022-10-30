@@ -60,7 +60,12 @@ size_t ExportMapTexinfo(size_t texinfonum)
     if (src.outputnum.has_value())
         return src.outputnum.value();
     else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw)
-        return -1;
+    {
+        // TODO: move to game specific
+        // always include LIGHT
+        if (qbsp_options.target_game->id != GAME_QUAKE_II || !(src.flags.native & Q2_SURF_LIGHT))
+            return -1;
+    }
 
     // this will be the index of the exported texinfo in the BSP lump
     const size_t i = map.bsp.texinfo.size();
@@ -172,7 +177,11 @@ static void ExportLeaf(node_t *node)
 
     for (auto &face : node->markfaces) {
         if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw) {
-            continue;
+
+            // TODO: move to game specific
+            // always include LIGHT
+            if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native & Q2_SURF_LIGHT))
+                continue;
         }
 
         /* grab final output faces */
