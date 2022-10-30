@@ -132,7 +132,6 @@ public:
     qvec3d origin;
     vec_t radius;
     aabb3d bounds;
-    qvec2d exact_mid;
 
     faceextents_t() = default;
 

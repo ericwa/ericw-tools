@@ -81,8 +81,6 @@ public:
 struct texorg_t
 {
     qmat4x4f texSpaceToWorld;
-    const mtexinfo_t *texinfo;
-    vec_t planedist;
 };
 
 class modelinfo_t;

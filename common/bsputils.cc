@@ -726,8 +726,6 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmshi
         }
     }
 
-    exact_mid = Face_WorldToTexCoord(&bsp, &face, Face_Centroid(&bsp, &face));
-
     // calculate a bounding sphere for the face
     qvec3d radius = (bounds.maxs() - bounds.mins()) * 0.5;
 

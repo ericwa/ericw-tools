@@ -697,8 +697,6 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
 
     /* Set up the texorg for coordinate transformation */
     lightsurf->texorg.texSpaceToWorld = spaceToWorld;
-    lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
-    lightsurf->texorg.planedist = plane.dist;
 
     const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
