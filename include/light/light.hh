@@ -120,7 +120,6 @@ struct lightsurf_t
     bool curved; /*normals are interpolated for smooth lighting*/
 
     faceextents_t extents, vanilla_extents;
-    qvec3d midpoint;
 
     std::vector<qvec3d> points;
     std::vector<qvec3d> normals;
@@ -138,10 +137,6 @@ struct lightsurf_t
      the pvs at each of the sample points
      */
     std::vector<uint8_t> pvs;
-
-    // for radiosity
-    qvec3d radiosity;
-    qvec3d texturecolor;
 
     /* stuff used by CalcPoint */
     texorg_t texorg;

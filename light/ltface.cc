@@ -391,13 +391,6 @@ static void CalcPoints(
 {
     const settings::worldspawn_keys &cfg = *surf->cfg;
 
-    /*
-     * Fill in the surface points. The points are biased towards the center of
-     * the surface to help avoid edge cases just inside walls
-     */
-    surf->midpoint = TexCoordToWorld(surf->extents.exact_mid[0], surf->extents.exact_mid[1], &surf->texorg);
-    surf->midpoint += offset;
-
     surf->width = surf->extents.width() * light_options.extra.value();
     surf->height = surf->extents.height() * light_options.extra.value();
     const float starts = (surf->extents.texmins[0] - 0.5 + (0.5 / light_options.extra.value())) * surf->lightmapscale;
