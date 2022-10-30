@@ -381,6 +381,8 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             strm.write((const char *) data, size);
         }, &strm, full_atlas.width, full_atlas.height, 4, full_atlas.pixels.data(), full_atlas.width * 4);
         memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
+
+        logging::print("wrote {}\n", lightmaps_path);
     }
 
     auto ExportObjFace = [&full_atlas](std::ostream &f, const mbsp_t *bsp, const face_rect &face, int &vertcount) {
@@ -395,6 +397,10 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             auto tc = face.extents.worldToLMCoord(pos);
             tc[0] += face.x;
             tc[1] += face.y;
+
+            // add a half-texel offset (see BuildSurfaceDisplayList() in Quakespasm)
+            tc[0] += 0.5;
+            tc[1] += 0.5;
 
             tc[0] /= full_atlas.width;
             tc[1] /= full_atlas.height;
@@ -426,6 +432,8 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
     };
 
     ExportObj(&bsp);
+
+    logging::print("wrote {}\n", obj_path);
 }
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
