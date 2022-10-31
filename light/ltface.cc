@@ -374,11 +374,6 @@ static position_t PositionSamplePointOnFace(
     return position_t(face, point, pointNormal);
 }
 
-constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const qmat4x4f &texSpaceToWorld)
-{
-    return (texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0)).xyz();
-}
-
 /*
  * =================
  * CalcPoints
@@ -417,7 +412,8 @@ static void CalcPoints(
             const vec_t us = starts + s * st_step;
             const vec_t ut = startt + t * st_step;
 
-            point = TexCoordToWorld(us, ut, surf->extents.texCoordToWorldMatrix);
+            point = surf->extents.texCoordToWorld(qvec2f(us, ut)) +
+                    surf->plane.normal; // one unit in front of face
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.value());
