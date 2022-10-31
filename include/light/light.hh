@@ -114,6 +114,7 @@ struct lightsurf_t
 
     faceextents_t extents, vanilla_extents;
 
+    // width * height sample points in world space
     std::vector<qvec3d> points;
     std::vector<qvec3d> normals;
     std::vector<bool> occluded;
@@ -131,7 +132,10 @@ struct lightsurf_t
      */
     std::vector<uint8_t> pvs;
 
-    int width, height;
+    // output width * extra
+    int width;
+    // output height * extra
+    int height;
 
     /* for lit water. receive light from either front or back. */
     bool twosided;
