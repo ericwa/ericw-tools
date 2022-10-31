@@ -374,9 +374,9 @@ static position_t PositionSamplePointOnFace(
     return position_t(face, point, pointNormal);
 }
 
-constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg)
+constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const qmat4x4f &texSpaceToWorld)
 {
-    return (texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0)).xyz();
+    return (texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0)).xyz();
 }
 
 /*
@@ -417,7 +417,7 @@ static void CalcPoints(
             const vec_t us = starts + s * st_step;
             const vec_t ut = startt + t * st_step;
 
-            point = TexCoordToWorld(us, ut, &surf->texorg);
+            point = TexCoordToWorld(us, ut, surf->extents.texCoordToWorldMatrix);
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.value());
@@ -694,9 +694,6 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     } else {
         plane = bsp->dplanes[face->planenum];
     }
-
-    /* Set up the texorg for coordinate transformation */
-    lightsurf->texorg.texSpaceToWorld = spaceToWorld;
 
     const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());

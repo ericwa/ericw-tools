@@ -78,11 +78,6 @@ public:
     const img::texture *suntexture_value;
 };
 
-struct texorg_t
-{
-    qmat4x4f texSpaceToWorld;
-};
-
 class modelinfo_t;
 namespace settings
 {
@@ -136,8 +131,6 @@ struct lightsurf_t
      */
     std::vector<uint8_t> pvs;
 
-    /* stuff used by CalcPoint */
-    texorg_t texorg;
     int width, height;
 
     /* for lit water. receive light from either front or back. */
