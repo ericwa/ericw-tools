@@ -20,14 +20,10 @@
 #include <light/light.hh>
 #include <light/bounce.hh>
 #include <light/trace_embree.hh>
-#include <light/ltface.hh>
 #include <common/bsputils.hh>
 #include <common/polylib.hh>
 #include <vector>
-#include <cassert>
 #include <climits>
-#include <cstdlib>
-#include <limits>
 
 using namespace std;
 using namespace polylib;

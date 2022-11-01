@@ -86,8 +86,6 @@ void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, cons
         litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
 }
 
-#include <fstream>
-
 void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version)
 {
     litheader_t header;

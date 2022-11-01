@@ -19,9 +19,7 @@
 
 #include <common/entdata.h>
 
-#include <cstring>
 #include <sstream>
-#include <common/cmdlib.hh>
 
 #include <common/bsputils.hh>
 #include <common/parser.hh>

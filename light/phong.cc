@@ -19,24 +19,19 @@
 */
 
 #include <cstdint>
-#include <cassert>
-//#include <cstdio>
 #include <iostream>
 
 #include <light/phong.hh>
-#include <light/ltface.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 
-#include <memory>
 #include <vector>
 #include <map>
 #include <unordered_map>
 #include <set>
 #include <algorithm>
 #include <mutex>
-#include <string>
 
 #include <common/qvec.hh>
 #include <tbb/parallel_for_each.h>

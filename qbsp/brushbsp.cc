@@ -24,9 +24,7 @@
 #include <climits>
 
 #include <common/log.hh>
-#include <common/vectorutils.hh>
 #include <qbsp/brush.hh>
-#include <qbsp/csg.hh>
 #include <qbsp/map.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/qbsp.hh>

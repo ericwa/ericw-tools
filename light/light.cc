@@ -18,8 +18,6 @@
 */
 
 #include <cstdint>
-#include <cassert>
-//#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <fmt/ostream.h>
@@ -33,7 +31,6 @@
 #include <light/ltface.hh>
 
 #include <common/log.hh>
-#include <common/polylib.hh>
 #include <common/bsputils.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
@@ -47,7 +44,6 @@
 #include <memory>
 #include <vector>
 #include <map>
-#include <unordered_map>
 #include <set>
 #include <algorithm>
 #include <mutex>

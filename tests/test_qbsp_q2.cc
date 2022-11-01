@@ -1,25 +1,15 @@
-#include <qbsp/brush.hh>
-#include <qbsp/brushbsp.hh>
-#include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
-#include <common/fs.hh>
 #include <common/bsputils.hh>
-#include <common/decompile.hh>
-#include <common/prtfile.hh>
 #include <common/qvec.hh>
-#include <testmaps.hh>
 
 #include <subprocess.h>
 #include <nanobench.h>
 
-#include <algorithm>
 #include <cstring>
 #include <set>
 #include <stdexcept>
 #include <tuple>
 #include <map>
-
-#include <common/bspinfo.hh>
 
 #include "test_qbsp.hh"
 #include "testutils.hh"

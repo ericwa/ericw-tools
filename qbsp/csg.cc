@@ -23,7 +23,6 @@
 #include <qbsp/brush.hh>
 #include <qbsp/csg.hh>
 #include <qbsp/map.hh>
-#include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 
 #include <common/log.hh>

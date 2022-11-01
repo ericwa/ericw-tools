@@ -1,4 +1,3 @@
-#include <common/threads.hh>
 #include <vis/vis.hh>
 #include <vis/leafbits.hh>
 #include <common/log.hh>

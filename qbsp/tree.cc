@@ -21,7 +21,6 @@
 
 #include <qbsp/tree.hh>
 
-#include <common/vectorutils.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/portals.hh>

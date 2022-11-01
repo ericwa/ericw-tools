@@ -18,14 +18,10 @@
 */
 
 #include <common/cmdlib.hh>
-#include <common/log.hh>
-#include <common/threads.hh>
 
 #include <sys/types.h>
-#include <sys/stat.h>
 
 #ifdef _WIN32
-#include <direct.h>
 #include <windows.h>
 
 // don't break std::min

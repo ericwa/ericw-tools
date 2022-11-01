@@ -1,4 +1,3 @@
-#include <map>
 #include <vector>
 #include <common/fs.hh>
 #include <common/imglib.hh>

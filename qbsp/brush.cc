@@ -25,7 +25,6 @@
 #include <cstring>
 #include <list>
 #include <common/log.hh>
-#include <qbsp/csg.hh>
 #include <qbsp/map.hh>
 #include <qbsp/qbsp.hh>
 

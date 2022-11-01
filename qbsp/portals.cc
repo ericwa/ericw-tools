@@ -28,9 +28,6 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/outside.hh>
 #include <qbsp/tree.hh>
-// TEMP
-#include <qbsp/writebsp.hh>
-
 #include <common/log.hh>
 #include <atomic>
 

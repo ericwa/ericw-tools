@@ -1,14 +1,12 @@
 // vis.c
 
 #include <climits>
-#include <cstddef>
 #include <cstdint>
 
 #include <vis/leafbits.hh>
 #include <vis/vis.hh>
 #include <common/log.hh>
 #include <common/bsputils.hh>
-#include <common/threads.hh>
 #include <common/fs.hh>
 #include <common/parallel.hh>
 #include <fmt/chrono.h>

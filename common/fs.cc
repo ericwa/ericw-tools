@@ -26,7 +26,6 @@
 #include <memory>
 #include <array>
 #include <list>
-#include <set>
 #include <stdexcept>
 #include <unordered_map>
 

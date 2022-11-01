@@ -26,14 +26,11 @@
 #include <common/log.hh>
 #include <common/aabb.hh>
 #include <common/fs.hh>
-#include <common/threads.hh>
 #include <common/settings.hh>
 
 #include <qbsp/brush.hh>
-#include <qbsp/csg.hh>
 #include <qbsp/exportobj.hh>
 #include <qbsp/map.hh>
-#include <qbsp/merge.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/prtfile.hh>
 #include <qbsp/brushbsp.hh>
@@ -44,8 +41,6 @@
 #include <qbsp/tree.hh>
 
 #include <fmt/chrono.h>
-
-#include "tbb/global_control.h"
 
 namespace settings
 {

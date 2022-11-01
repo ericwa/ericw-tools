@@ -1,7 +1,6 @@
 #include <doctest/doctest.h>
 
 #include <light/entities.hh>
-#include <vector>
 
 TEST_SUITE("entities") {
 TEST_CASE("CheckEmptyValues")
