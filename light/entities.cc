@@ -54,11 +54,49 @@ std::vector<entdict_t> &GetRadLights()
 static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
+light_t::light_t() :
+    light{this, "light", DEFAULTLIGHTLEVEL},
+    atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()},
+    formula{this, "delay", LF_LINEAR,
+        {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
+            {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}},
+    spotangle{this, "angle", 40.0},
+    spotangle2{this, "softangle", 0.0},
+    style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1},
+    anglescale{this, {"anglesense", "anglescale"}, -1.0},
+    dirtscale{this, "dirtscale", 0.0},
+    dirtgain{this, "dirtgain", 0},
+    dirt{this, "dirt", 0},
+    deviance{this, "deviance", 0},
+    samples{this, "samples", 16, 0, std::numeric_limits<int32_t>::max()},
+    projfov{this, "project_fov", 90},
+    bouncescale{this, "bouncescale", 1.0},
+    dirt_off_radius{this, "dirt_off_radius", 0.0},
+    dirt_on_radius{this, "dirt_on_radius", 0.0},
+    sun{this, "sun", false},
+    sunlight2{this, "sunlight2", 0},
+    sunlight3{this, "sunlight3", 0},
+    falloff{this, "falloff", 0.0, 0.0, std::numeric_limits<vec_t>::max()},
+    bleed{this, "bleed", false},
+    origin{this, "origin", 0, 0, 0},
+    color{this, "color", 255.0, 255.0, 255.0},
+    mangle{this, "mangle", 0, 0, 0},
+    projangle{this, "project_mangle", 20, 0, 0},
+    project_texture{this, "project_texture", ""},
+    suntexture{this, "suntexture", ""},
+    nostaticlight{this, "nostaticlight", false}
+{}
 
 std::string light_t::classname() const
 {
     return epairs->get("classname");
 }
+
+const light_formula_t &light_t::getFormula() const { return formula.value(); }
+
+void light_t::initAABB() { bounds = origin.value(); }
+
+void light_t::expandAABB(const qvec3d &pt) { bounds += pt; }
 
 /*
  * ============================================================================
