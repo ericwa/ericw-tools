@@ -17,8 +17,6 @@
     See file, 'COPYING', for details.
 */
 
-#include <cfloat>
-
 #include <common/log.hh>
 #include <vis/vis.hh>
 #include <common/bsputils.hh>

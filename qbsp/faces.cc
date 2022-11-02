@@ -26,11 +26,9 @@
 #include <qbsp/csg.hh>
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
-#include <qbsp/brushbsp.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
 
-#include <map>
 #include <list>
 
 struct makefaces_stats_t : logging::stat_tracker_t

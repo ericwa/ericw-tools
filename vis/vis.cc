@@ -1,14 +1,12 @@
 // vis.c
 
 #include <climits>
-#include <cstddef>
 #include <cstdint>
 
 #include <vis/leafbits.hh>
 #include <vis/vis.hh>
 #include <common/log.hh>
 #include <common/bsputils.hh>
-#include <common/threads.hh>
 #include <common/fs.hh>
 #include <common/parallel.hh>
 #include <fmt/chrono.h>
@@ -155,9 +153,9 @@ winding_t *ClipStackWinding(winding_t *in, pstack_t &stack, const qplane3d &spli
     for (i = 0; i < in->size(); i++) {
         dot = split.distance_to((*in)[i]);
         dists[i] = dot;
-        if (dot > ON_EPSILON)
+        if (dot > VIS_ON_EPSILON)
             sides[i] = SIDE_FRONT;
-        else if (dot < -ON_EPSILON)
+        else if (dot < -VIS_ON_EPSILON)
             sides[i] = SIDE_BACK;
         else {
             sides[i] = SIDE_ON;

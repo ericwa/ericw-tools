@@ -56,31 +56,26 @@ struct parser_source_location
     // by a source or line, but they are derived from a mapbrush_t which does have
     // a location. The object it points to must outlive this object. this is mainly
     // for debugging.
-    std::optional<std::reference_wrapper<const parser_source_location>> derivative = std::nullopt;
+    const parser_source_location *derivative = nullptr;
 
-    parser_source_location() = default;
-    inline parser_source_location(const std::string &source) : source_name(std::make_unique<std::string>(source)) { }
-    inline parser_source_location(const char *source) : source_name(std::make_unique<std::string>(source)) { }
-    inline parser_source_location(const std::string &source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
-    inline parser_source_location(const char *source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
+    parser_source_location();
+    parser_source_location(const std::string &source);
+    parser_source_location(const char *source);
+    parser_source_location(const std::string &source, size_t line);
+    parser_source_location(const char *source, size_t line);
 
     // check if this source location is valid
-    explicit operator bool() const { return source_name != nullptr; }
+    explicit operator bool() const;
 
     // return a modified source location with only the line changed
-    inline parser_source_location on_line(size_t new_line) const
-    {
-        parser_source_location loc(*this);
-        loc.line_number = new_line;
-        return loc;
-    }
+    parser_source_location on_line(size_t new_line) const;
 
     // return a new, constructed source location derived from this one
     template<typename ... Args>
     inline parser_source_location derive(Args&&... args)
     {
         parser_source_location loc(std::forward<Args>(args)...);
-        loc.derivative = *this;
+        loc.derivative = this;
         return loc;
     }
 

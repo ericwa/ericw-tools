@@ -87,7 +87,7 @@ struct wadpath
     bool external; // wads from this path are not to be embedded into the bsp, but will instead require the engine
                    // to load them from elsewhere. strongly recommended for eg halflife.wad
 
-    inline bool operator<(const wadpath &other) const { return path < other.path; }
+    bool operator<(const wadpath &other) const;
 };
 
 struct setting_wadpathset : public setting_base
@@ -96,65 +96,15 @@ private:
     std::set<wadpath> _paths;
 
 public:
-    inline setting_wadpathset(setting_container *dictionary, const nameset &names, const setting_group *group = nullptr,
-        const char *description = "")
-        : setting_base(dictionary, names, group, description)
-    {
-    }
-
-    inline void addPath(const wadpath &path) { _paths.insert(path); }
-
-    constexpr const std::set<wadpath> &pathsValue() const { return _paths; }
-
-    inline bool copyFrom(const setting_base &other) override
-    {
-        if (auto *casted = dynamic_cast<const setting_wadpathset *>(&other)) {
-            _paths = casted->_paths;
-            _source = casted->_source;
-            return true;
-        }
-        return false;
-    }
-
-    inline void reset() override
-    {
-        _paths = {};
-        _source = source::DEFAULT;
-    }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        if (!parser.parse_token()) {
-            return false;
-        }
-
-        if (changeSource(source)) {
-            _paths.insert(wadpath{fs::path(parser.token), settingName[0] == 'x'});
-        }
-
-        return true;
-    }
-
-    std::string stringValue() const override
-    {
-        std::string paths;
-
-        for (auto &path : _paths) {
-            if (!paths.empty()) {
-                paths += " ; ";
-            }
-
-            paths += path.path.string();
-
-            if (path.external) {
-                paths += " (external)";
-            }
-        }
-
-        return paths;
-    }
-
-    std::string format() const override { return "path/to/wads"; }
+    setting_wadpathset(setting_container *dictionary, const nameset &names, const setting_group *group = nullptr,
+        const char *description = "");
+    void addPath(const wadpath &path);
+    const std::set<wadpath> &pathsValue() const;
+    bool copyFrom(const setting_base &other) override;
+    void reset() override;
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
 };
 
 extern setting_group game_target_group;
@@ -183,15 +133,7 @@ struct setting_tjunc : public setting_enum<tjunclevel_t>
 public:
     using setting_enum<tjunclevel_t>::setting_enum;
 
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        if (settingName == "notjunc") {
-            this->setValue(tjunclevel_t::NONE, source);
-            return true;
-        }
-
-        return this->setting_enum<tjunclevel_t>::parse(settingName, parser, source);
-    }
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
 };
 
 // like qvec3f, but integer and allows up to three values (xyz, x y, or x y z)
@@ -200,109 +142,23 @@ class setting_blocksize : public setting_value<qvec3i>
 {
 public:
     inline setting_blocksize(setting_container *dictionary, const nameset &names, qvec3i val,
-        const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, val, group, description)
-    {
-    }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        qvec3d vec = { 1024, 1024, 1024 };
-
-        for (int i = 0; i < 3; i++) {
-            if (!parser.parse_token(PARSE_PEEK)) {
-                return false;
-            }
-
-            // don't allow negatives
-            if (parser.token[0] != '-') {
-                try {
-                    vec[i] = std::stol(parser.token);
-                    parser.parse_token();
-                    continue;
-                } catch (std::exception &) {
-                    // intentional fall-through
-                }
-            }
-
-            // if we didn't parse a valid number, fail
-            if (i == 0) {
-                return false;
-            } else if (i == 1) {
-                // we parsed one valid number; use it all the way through
-                vec[1] = vec[2] = vec[0];
-            }  
-
-            // for [x, y] z will be left default
-        }
-
-        setValue(vec, source);
-
-        return true;
-    }
-
-    std::string stringValue() const override { return qv::to_string(_value); }
-
-    std::string format() const override { return "[x [y [z]]]"; }
+        const setting_group *group = nullptr, const char *description = "");
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
 };
 
 class setting_debugexpand : public setting_value<std::variant<uint8_t, aabb3d>>
 {
 public:
     inline setting_debugexpand(setting_container *dictionary, const nameset &names,
-        const setting_group *group = nullptr, const char *description = "")
-        : setting_value(dictionary, names, {}, group, description)
-    {
-    }
-
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-    {
-        std::array<vec_t, 6> values;
-        size_t i = 0;
-
-        try {
-            for (; i < 6; i++) {
-                if (!parser.parse_token(PARSE_PEEK)) {
-                    throw std::exception();
-                }
-
-                values[i] = std::stod(parser.token);
-
-                parser.parse_token();
-            }
-
-            this->setValue(aabb3d { { values[0], values[1], values[2] }, { values[3], values[4], values[5] } }, source);
-
-            return true;
-        } catch (std::exception &) {
-            // single hull value
-            if (i == 1) {
-                setValue(static_cast<uint8_t>(values[0]), source);
-                return true;
-            }
-
-            return false;
-        }
-    }
-
-    std::string stringValue() const override { return is_hull() ? std::to_string(hull_index_value()) : fmt::format("{}", hull_bounds_value()); }
-
-    std::string format() const override { return "[single hull index] or [mins_x mins_y mins_z maxs_x maxs_y maxs_z]"; }
-
-    inline bool is_hull() const
-    {
-        return std::holds_alternative<uint8_t>(_value);
-    }
-
-    inline const uint8_t &hull_index_value() const
-    {
-        return std::get<uint8_t>(_value);
-    }
-
-    inline const aabb3d &hull_bounds_value() const
-    {
-        return std::get<aabb3d>(_value);
-    }
+        const setting_group *group = nullptr, const char *description = "");
+    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    std::string stringValue() const override;
+    std::string format() const override;
+    bool is_hull() const;
+    const uint8_t &hull_index_value() const;
+    const aabb3d &hull_bounds_value() const;
 };
 
 class qbsp_settings : public common_settings
@@ -398,12 +254,12 @@ extern settings::qbsp_settings qbsp_options;
  * The quality of the bsp output is highly sensitive to these epsilon values.
  * Notes:
  * - some calculations are sensitive to errors and need the various
- *   epsilons to be such that EQUAL_EPSILON < CONTINUOUS_EPSILON.
+ *   epsilons to be such that QBSP_EQUAL_EPSILON < CONTINUOUS_EPSILON.
  *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
  */
 constexpr vec_t ANGLEEPSILON = 0.000001;
 constexpr vec_t ZERO_EPSILON = 0.0001;
-constexpr vec_t EQUAL_EPSILON = 0.0001;
+constexpr vec_t QBSP_EQUAL_EPSILON = 0.0001;
 constexpr vec_t CONTINUOUS_EPSILON = 0.0005;
 
 // the exact bounding box of the brushes is expanded some for the headnode

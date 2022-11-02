@@ -871,6 +871,32 @@ TEST_CASE("matrix2x2inv")
     REQUIRE(std::isnan(nanMat.at(0, 0)));
 }
 
+TEST_CASE("matrix3x3inv")
+{
+    std::mt19937 engine(0);
+    std::uniform_real_distribution<float> dis(-4096, 4096);
+
+    qmat3x3f randMat;
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            randMat.at(i, j) = dis(engine);
+
+    qmat3x3f randInv = qv::inverse(randMat);
+    REQUIRE_FALSE(std::isnan(randInv.at(0, 0)));
+
+    qmat3x3f prod = randMat * randInv;
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            float exp = (i == j) ? 1.0f : 0.0f;
+            REQUIRE(fabs(exp - prod.at(i, j)) < 0.001);
+        }
+    }
+
+    // check non-invertible gives nan
+    qmat3x3f nanMat = qv::inverse(qmat3x3f(0));
+    REQUIRE(std::isnan(nanMat.at(0, 0)));
+}
+
 TEST_CASE("matrix4x4inv")
 {
     std::mt19937 engine(0);
@@ -897,6 +923,19 @@ TEST_CASE("matrix4x4inv")
     REQUIRE(std::isnan(nanMat.at(0, 0)));
 }
 
+TEST_CASE("qmat_construct_initialize") {
+    const qmat2x2f test{1,2,3,4}; // column major
+
+    CHECK(qvec2f{1,3} == test.row(0));
+    CHECK(qvec2f{2,4} == test.row(1));
+}
+
+TEST_CASE("qmat_construct_row_major") {
+    const qmat2x2f test = qmat2x2f::row_major({1, 2, 3, 4});
+
+    CHECK(qvec2f{1,2} == test.row(0));
+    CHECK(qvec2f{3,4} == test.row(1));
+}
 }
 TEST_SUITE("trace") {
     

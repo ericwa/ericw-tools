@@ -25,20 +25,27 @@ constexpr int32_t LIT_VERSION = 1;
 
 struct litheader_t
 {
-    struct
+    struct v1_t
     {
         std::array<char, 4> ident = {'Q', 'L', 'I', 'T'};
         int version;
 
-        auto stream_data() { return std::tie(ident, version); }
-    } v1;
-    struct
+        // serialize for streams
+        void stream_write(std::ostream &s) const;
+        void stream_read(std::istream &s);
+    };
+    struct v2_t
     {
         int numsurfs;
         int lmsamples;
 
-        auto stream_data() { return std::tie(numsurfs, lmsamples); }
-    } v2;
+        // serialize for streams
+        void stream_write(std::ostream &s) const;
+        void stream_read(std::istream &s);
+    };
+
+    v1_t v1;
+    v2_t v2;
 };
 
 constexpr size_t MAXLIGHTMAPSSUP = 16;

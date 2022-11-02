@@ -26,14 +26,11 @@
 #include <common/log.hh>
 #include <common/aabb.hh>
 #include <common/fs.hh>
-#include <common/threads.hh>
 #include <common/settings.hh>
 
 #include <qbsp/brush.hh>
-#include <qbsp/csg.hh>
 #include <qbsp/exportobj.hh>
 #include <qbsp/map.hh>
-#include <qbsp/merge.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/prtfile.hh>
 #include <qbsp/brushbsp.hh>
@@ -45,7 +42,192 @@
 
 #include <fmt/chrono.h>
 
-#include "tbb/global_control.h"
+namespace settings
+{
+bool wadpath::operator<(const wadpath &other) const
+{
+    return path < other.path;
+}
+
+// setting_wadpathset
+
+setting_wadpathset::setting_wadpathset(setting_container *dictionary, const nameset &names, const setting_group *group,
+    const char *description)
+    : setting_base(dictionary, names, group, description)
+{
+}
+
+void setting_wadpathset::addPath(const wadpath &path) { _paths.insert(path); }
+
+const std::set<wadpath> &setting_wadpathset::pathsValue() const { return _paths; }
+
+bool setting_wadpathset::copyFrom(const setting_base &other)
+{
+    if (auto *casted = dynamic_cast<const setting_wadpathset *>(&other)) {
+        _paths = casted->_paths;
+        _source = casted->_source;
+        return true;
+    }
+    return false;
+}
+
+void setting_wadpathset::reset()
+{
+    _paths = {};
+    _source = source::DEFAULT;
+}
+
+bool setting_wadpathset::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    if (!parser.parse_token()) {
+        return false;
+    }
+
+    if (changeSource(source)) {
+        _paths.insert(wadpath{fs::path(parser.token), settingName[0] == 'x'});
+    }
+
+    return true;
+}
+
+std::string setting_wadpathset::stringValue() const
+{
+    std::string paths;
+
+    for (auto &path : _paths) {
+        if (!paths.empty()) {
+            paths += " ; ";
+        }
+
+        paths += path.path.string();
+
+        if (path.external) {
+            paths += " (external)";
+        }
+    }
+
+    return paths;
+}
+
+std::string setting_wadpathset::format() const { return "path/to/wads"; }
+
+// setting_tjunc
+
+bool setting_tjunc::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    if (settingName == "notjunc") {
+        this->setValue(tjunclevel_t::NONE, source);
+        return true;
+    }
+
+    return this->setting_enum<tjunclevel_t>::parse(settingName, parser, source);
+}
+
+// setting_blocksize
+
+setting_blocksize::setting_blocksize(setting_container *dictionary, const nameset &names, qvec3i val,
+    const setting_group *group, const char *description)
+    : setting_value(dictionary, names, val, group, description)
+{
+}
+
+bool setting_blocksize::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    qvec3d vec = { 1024, 1024, 1024 };
+
+    for (int i = 0; i < 3; i++) {
+        if (!parser.parse_token(PARSE_PEEK)) {
+            return false;
+        }
+
+        // don't allow negatives
+        if (parser.token[0] != '-') {
+            try {
+                vec[i] = std::stol(parser.token);
+                parser.parse_token();
+                continue;
+            } catch (std::exception &) {
+                // intentional fall-through
+            }
+        }
+
+        // if we didn't parse a valid number, fail
+        if (i == 0) {
+            return false;
+        } else if (i == 1) {
+            // we parsed one valid number; use it all the way through
+            vec[1] = vec[2] = vec[0];
+        }
+
+        // for [x, y] z will be left default
+    }
+
+    setValue(vec, source);
+
+    return true;
+}
+
+std::string setting_blocksize::stringValue() const { return qv::to_string(_value); }
+
+std::string setting_blocksize::format() const { return "[x [y [z]]]"; }
+
+// setting_debugexpand
+
+setting_debugexpand::setting_debugexpand(setting_container *dictionary, const nameset &names,
+    const setting_group *group, const char *description)
+    : setting_value(dictionary, names, {}, group, description)
+{
+}
+
+bool setting_debugexpand::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    std::array<vec_t, 6> values;
+    size_t i = 0;
+
+    try {
+        for (; i < 6; i++) {
+            if (!parser.parse_token(PARSE_PEEK)) {
+                throw std::exception();
+            }
+
+            values[i] = std::stod(parser.token);
+
+            parser.parse_token();
+        }
+
+        this->setValue(aabb3d { { values[0], values[1], values[2] }, { values[3], values[4], values[5] } }, source);
+
+        return true;
+    } catch (std::exception &) {
+        // single hull value
+        if (i == 1) {
+            setValue(static_cast<uint8_t>(values[0]), source);
+            return true;
+        }
+
+        return false;
+    }
+}
+
+std::string setting_debugexpand::stringValue() const { return is_hull() ? std::to_string(hull_index_value()) : fmt::format("{}", hull_bounds_value()); }
+
+std::string setting_debugexpand::format() const { return "[single hull index] or [mins_x mins_y mins_z maxs_x maxs_y maxs_z]"; }
+
+bool setting_debugexpand::is_hull() const
+{
+    return std::holds_alternative<uint8_t>(_value);
+}
+
+const uint8_t &setting_debugexpand::hull_index_value() const
+{
+    return std::get<uint8_t>(_value);
+}
+
+const aabb3d &setting_debugexpand::hull_bounds_value() const
+{
+    return std::get<aabb3d>(_value);
+}
+}
 
 static auto as_tuple(const maptexinfo_t &info)
 {

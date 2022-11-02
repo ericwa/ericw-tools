@@ -909,6 +909,19 @@ public:
         std::copy(list.begin(), list.end(), m_values.begin());
     }
 
+    // static factory, row-major order
+    static qmat row_major(std::initializer_list<T> list) {
+        assert(list.size() == NRow * NCol);
+
+        qmat result;
+        for (size_t i = 0; i < NRow; i++) { // for each row
+            for (size_t j = 0; j < NCol; j++) { // for each col
+                result.at(i, j) = *(list.begin() + (i*NCol + j));
+            }
+        }
+        return result;
+    }
+
     // Sort support
     [[nodiscard]] constexpr bool operator<(const qmat &other) const { return m_values < other.m_values; }
     [[nodiscard]] constexpr bool operator<=(const qmat &other) const { return m_values <= other.m_values; }
@@ -1043,6 +1056,7 @@ namespace qv
 [[nodiscard]] qmat4x4d inverse(const qmat4x4d &input);
 
 [[nodiscard]] qmat2x2f inverse(const qmat2x2f &input);
+[[nodiscard]] qmat3x3f inverse(const qmat3x3f &input);
 }; // namespace qv
 
 // returns the normalized direction from `start` to `stop` in the `dir` param

@@ -374,11 +374,6 @@ static position_t PositionSamplePointOnFace(
     return position_t(face, point, pointNormal);
 }
 
-constexpr qvec3d TexCoordToWorld(vec_t s, vec_t t, const texorg_t *texorg)
-{
-    return (texorg->texSpaceToWorld * qvec4f(s, t, /* one "unit" in front of surface */ 1.0, 1.0)).xyz();
-}
-
 /*
  * =================
  * CalcPoints
@@ -391,18 +386,12 @@ static void CalcPoints(
 {
     const settings::worldspawn_keys &cfg = *surf->cfg;
 
-    /*
-     * Fill in the surface points. The points are biased towards the center of
-     * the surface to help avoid edge cases just inside walls
-     */
-    surf->midpoint = TexCoordToWorld(surf->extents.exact_mid[0], surf->extents.exact_mid[1], &surf->texorg);
-    surf->midpoint += offset;
-
     surf->width = surf->extents.width() * light_options.extra.value();
     surf->height = surf->extents.height() * light_options.extra.value();
-    const float starts = (surf->extents.texmins[0] - 0.5 + (0.5 / light_options.extra.value())) * surf->lightmapscale;
-    const float startt = (surf->extents.texmins[1] - 0.5 + (0.5 / light_options.extra.value())) * surf->lightmapscale;
-    const float st_step = surf->lightmapscale / light_options.extra.value();
+
+    const float starts = -0.5 + (0.5 / light_options.extra.value());
+    const float startt = -0.5 + (0.5 / light_options.extra.value());
+    const float st_step = 1.0f / light_options.extra.value();
 
     /* Allocate surf->points */
     size_t num_points = surf->width * surf->height;
@@ -424,7 +413,8 @@ static void CalcPoints(
             const vec_t us = starts + s * st_step;
             const vec_t ut = startt + t * st_step;
 
-            point = TexCoordToWorld(us, ut, &surf->texorg);
+            point = surf->extents.LMCoordToWorld(qvec2f(us, ut)) +
+                    surf->plane.normal; // one unit in front of face
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.value());
@@ -701,11 +691,6 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     } else {
         plane = bsp->dplanes[face->planenum];
     }
-
-    /* Set up the texorg for coordinate transformation */
-    lightsurf->texorg.texSpaceToWorld = spaceToWorld;
-    lightsurf->texorg.texinfo = &bsp->texinfo[face->texinfo];
-    lightsurf->texorg.planedist = plane.dist;
 
     const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
     lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
@@ -1314,7 +1299,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
 
     /* Don't bother if surface facing away from sun */
     const vec_t dp = qv::dot(incoming, plane->normal);
-    if (dp < -ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
+    if (dp < -LIGHT_ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
         return;
     }
 

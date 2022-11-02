@@ -34,13 +34,10 @@
 
 #include <common/qvec.hh>
 
-class neighbour_t
+struct neighbour_t
 {
-public:
     const mface_t *face;
     qvec3f p0, p1;
-
-    neighbour_t(const mface_t *f, const qvec3f p0in, const qvec3f p1in) : face(f), p0(p0in), p1(p1in) { }
 };
 
 void CalculateVertexNormals(const mbsp_t *bsp);
@@ -69,14 +66,8 @@ private:
     std::vector<neighbour_t> m_neighbours;
 
 public:
-    inline face_cache_t() { }
-
-    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
-        : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_plane(Face_Plane(bsp, face).vec4()),
-          m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)), m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
-          m_neighbours(NeighbouringFaces_new(bsp, face))
-    {
-    }
+    face_cache_t();
+    face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals);
 
     const std::vector<qvec3f> &points() const { return m_points; }
     const std::vector<face_normal_t> &normals() const { return m_normals; }

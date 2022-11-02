@@ -21,16 +21,13 @@
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 
-#include <sstream>
 #include <fstream>
-#include <iomanip>
 #include <fmt/ostream.h>
 #include <common/json.hh>
 #include "common/fs.hh"
 
 #include "common/polylib.hh"
 #include "common/bsputils.hh"
-#include "common/imglib.hh"
 
 static void PrintBSPTextureUsage(const mbsp_t &bsp)
 {

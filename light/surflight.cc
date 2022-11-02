@@ -19,11 +19,8 @@ See file, 'COPYING', for details.
 */
 
 #include <cassert>
-//#include <cstdio>
-#include <iostream>
 
 #include <light/light.hh>
-#include <light/bounce.hh>
 #include <light/surflight.hh>
 #include <light/ltface.hh>
 
@@ -34,7 +31,6 @@ See file, 'COPYING', for details.
 #include <vector>
 #include <map>
 #include <mutex>
-#include <string>
 
 #include <common/qvec.hh>
 

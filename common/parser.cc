@@ -24,6 +24,25 @@
 #include <common/log.hh>
 #include <common/parser.hh>
 
+// parser_source_location
+
+parser_source_location::parser_source_location() = default;
+parser_source_location::parser_source_location(const std::string &source) : source_name(std::make_unique<std::string>(source)) { }
+parser_source_location::parser_source_location(const char *source) : source_name(std::make_unique<std::string>(source)) { }
+parser_source_location::parser_source_location(const std::string &source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
+parser_source_location::parser_source_location(const char *source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
+
+parser_source_location::operator bool() const { return source_name != nullptr; }
+
+parser_source_location parser_source_location::on_line(size_t new_line) const
+{
+    parser_source_location loc(*this);
+    loc.line_number = new_line;
+    return loc;
+}
+
+// parser_t
+
 parser_t::parser_t(const void *start, size_t length, parser_source_location base_location)
     : parser_base_t(base_location.on_line(1)),
       pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length)

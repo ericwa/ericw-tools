@@ -70,44 +70,41 @@ public:
 
     aabb3d bounds;
 
-    settings::setting_scalar light{this, "light", DEFAULTLIGHTLEVEL};
-    settings::setting_scalar atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()};
-    settings::setting_enum<light_formula_t> formula{this, "delay", LF_LINEAR,
-        {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
-            {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}};
-    settings::setting_scalar spotangle{this, "angle", 40.0};
-    settings::setting_scalar spotangle2{this, "softangle", 0.0};
-    settings::setting_numeric<int32_t> style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1};
-    settings::setting_scalar anglescale{this, {"anglesense", "anglescale"}, -1.0}; // fallback to worldspawn
-    settings::setting_scalar dirtscale{this, "dirtscale", 0.0};
-    settings::setting_scalar dirtgain{this, "dirtgain", 0};
-    settings::setting_scalar dirt{this, "dirt", 0};
-    settings::setting_scalar deviance{this, "deviance", 0};
-    settings::setting_int32 samples{this, "samples", 16, 0, std::numeric_limits<int32_t>::max()};
-    settings::setting_scalar projfov{this, "project_fov", 90};
-    settings::setting_scalar bouncescale{this, "bouncescale", 1.0};
-    settings::setting_scalar dirt_off_radius{this, "dirt_off_radius", 0.0};
-    settings::setting_scalar dirt_on_radius{this, "dirt_on_radius", 0.0};
-    settings::setting_bool sun{this, "sun", false}; // mxd
-    settings::setting_bool sunlight2{this, "sunlight2", 0};
-    settings::setting_bool sunlight3{this, "sunlight3", 0};
-    settings::setting_scalar falloff{this, "falloff", 0.0, 0.0, std::numeric_limits<vec_t>::max()}; // mxd
-    settings::setting_bool bleed{this, "bleed", false};
-    settings::setting_vec3 origin{this, "origin", 0, 0, 0};
-    settings::setting_color color{this, "color", 255.0, 255.0, 255.0};
-    settings::setting_vec3 mangle{this, "mangle", 0, 0, 0}; // not transformed to vec
-    settings::setting_vec3 projangle{this, "project_mangle", 20, 0, 0}; // not transformed to vec
-    settings::setting_string project_texture{this, "project_texture", ""};
-    settings::setting_string suntexture{this, "suntexture", ""};
-    settings::setting_bool nostaticlight{this, "nostaticlight", false};
+    settings::setting_scalar light;
+    settings::setting_scalar atten;
+    settings::setting_enum<light_formula_t> formula;
+    settings::setting_scalar spotangle;
+    settings::setting_scalar spotangle2;
+    settings::setting_numeric<int32_t> style;
+    settings::setting_scalar anglescale;
+    settings::setting_scalar dirtscale;
+    settings::setting_scalar dirtgain;
+    settings::setting_scalar dirt;
+    settings::setting_scalar deviance;
+    settings::setting_int32 samples;
+    settings::setting_scalar projfov;
+    settings::setting_scalar bouncescale;
+    settings::setting_scalar dirt_off_radius;
+    settings::setting_scalar dirt_on_radius;
+    settings::setting_bool sun;
+    settings::setting_bool sunlight2;
+    settings::setting_bool sunlight3;
+    settings::setting_scalar falloff;
+    settings::setting_bool bleed;
+    settings::setting_vec3 origin;
+    settings::setting_color color;
+    settings::setting_vec3 mangle;
+    settings::setting_vec3 projangle;
+    settings::setting_string project_texture;
+    settings::setting_string suntexture;
+    settings::setting_bool nostaticlight;
+
+    light_t();
 
     std::string classname() const;
-
-    const light_formula_t &getFormula() const { return formula.value(); }
-
-    void initAABB() { bounds = origin.value(); }
-
-    void expandAABB(const qvec3d &pt) { bounds += pt; }
+    const light_formula_t &getFormula() const;
+    void initAABB();
+    void expandAABB(const qvec3d &pt);
 };
 
 /*

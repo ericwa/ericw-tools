@@ -17,9 +17,7 @@
 #include <nanobench.h>
 
 #include <fstream>
-#include <algorithm>
 #include <cstring>
-#include <set>
 #include <stdexcept>
 #include <tuple>
 #include <map>

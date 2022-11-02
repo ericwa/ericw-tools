@@ -43,9 +43,9 @@
 #include <common/qvec.hh>
 #include <common/bsputils.hh>
 
-constexpr vec_t ON_EPSILON = 0.1;
-constexpr vec_t ANGLE_EPSILON = 0.001;
-constexpr vec_t EQUAL_EPSILON = 0.001;
+constexpr vec_t LIGHT_ON_EPSILON = 0.1;
+constexpr vec_t LIGHT_ANGLE_EPSILON = 0.001;
+constexpr vec_t LIGHT_EQUAL_EPSILON = 0.001;
 
 // FIXME: use maximum dimension of level
 constexpr vec_t MAX_SKY_DIST = 1000000;
@@ -76,13 +76,6 @@ public:
     int style;
     std::string suntexture;
     const img::texture *suntexture_value;
-};
-
-struct texorg_t
-{
-    qmat4x4f texSpaceToWorld;
-    const mtexinfo_t *texinfo;
-    vec_t planedist;
 };
 
 class modelinfo_t;
@@ -120,8 +113,8 @@ struct lightsurf_t
     bool curved; /*normals are interpolated for smooth lighting*/
 
     faceextents_t extents, vanilla_extents;
-    qvec3d midpoint;
 
+    // width * height sample points in world space
     std::vector<qvec3d> points;
     std::vector<qvec3d> normals;
     std::vector<bool> occluded;
@@ -139,13 +132,10 @@ struct lightsurf_t
      */
     std::vector<uint8_t> pvs;
 
-    // for radiosity
-    qvec3d radiosity;
-    qvec3d texturecolor;
-
-    /* stuff used by CalcPoint */
-    texorg_t texorg;
-    int width, height;
+    // output width * extra
+    int width;
+    // output height * extra
+    int height;
 
     /* for lit water. receive light from either front or back. */
     bool twosided;
@@ -207,41 +197,30 @@ public:
     const mbsp_t *bsp;
     const dmodelh2_t *model;
     float lightmapscale;
-    qvec3d offset{};
+    qvec3d offset;
     
-    settings::setting_scalar minlight{this, "minlight", 0};
+    settings::setting_scalar minlight;
     // zero will apply no clamping; use lightignore instead to do that.
     // above zero, this controls the clamp value on the light, default 255
-    settings::setting_scalar maxlight{this, "maxlight", 0};
-    settings::setting_bool minlightMottle{this, "minlightMottle", false};
-    settings::setting_scalar shadow{this, "shadow", 0};
-    settings::setting_scalar shadowself{this, {"shadowself", "selfshadow"}, 0};
-    settings::setting_scalar shadowworldonly{this, "shadowworldonly", 0};
-    settings::setting_scalar switchableshadow{this, "switchableshadow", 0};
-    settings::setting_int32 switchshadstyle{this, "switchshadstyle", 0};
-    settings::setting_scalar dirt{this, "dirt", 0};
-    settings::setting_scalar phong{this, "phong", 0};
-    settings::setting_scalar phong_angle{this, "phong_angle", 0};
-    settings::setting_scalar alpha{this, "alpha", 1.0};
-    settings::setting_color minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0};
-    settings::setting_bool lightignore{this, "lightignore", false};
-    settings::setting_scalar lightcolorscale{this, "lightcolorscale", 1};
+    settings::setting_scalar maxlight;
+    settings::setting_bool minlightMottle;
+    settings::setting_scalar shadow;
+    settings::setting_scalar shadowself;
+    settings::setting_scalar shadowworldonly;
+    settings::setting_scalar switchableshadow;
+    settings::setting_int32 switchshadstyle;
+    settings::setting_scalar dirt;
+    settings::setting_scalar phong;
+    settings::setting_scalar phong_angle;
+    settings::setting_scalar alpha;
+    settings::setting_color minlight_color;
+    settings::setting_bool lightignore;
+    settings::setting_scalar lightcolorscale;
 
-    float getResolvedPhongAngle() const
-    {
-        const float s = phong_angle.value();
-        if (s != 0) {
-            return s;
-        }
-        if (phong.value() > 0) {
-            return DEFAULT_PHONG_ANGLE;
-        }
-        return 0;
-    }
+    float getResolvedPhongAngle() const;
+    bool isWorld() const;
 
-    bool isWorld() const { return &bsp->dmodels[0] == model; }
-
-    modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale) : bsp{b}, model{m}, lightmapscale{lmscale} { }
+    modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale);
 };
 
 enum class visapprox_t
@@ -271,68 +250,68 @@ extern setting_group worldspawn_group;
 class worldspawn_keys : public virtual setting_container
 {
 public:
-    setting_scalar scaledist{this, "dist", 1.0, 0.0, 100.0, &worldspawn_group};
-    setting_scalar rangescale{this, "range", 0.5, 0.0, 100.0, &worldspawn_group};
-    setting_scalar global_anglescale{this, {"anglescale", "anglesense"}, 0.5, 0.0, 1.0, &worldspawn_group};
-    setting_scalar lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group};
-    setting_bool addminlight{this, "addmin", false, &worldspawn_group};
-    setting_scalar minlight{this, {"light", "minlight"}, 0, &worldspawn_group};
-    setting_scalar maxlight{this, "maxlight", 0, &worldspawn_group};
-    setting_color minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group};
-    setting_bool spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group}; // mxd
-    setting_int32 compilerstyle_start{
-        this, "compilerstyle_start", 32, &worldspawn_group}; // start index for switchable light styles, default 32
-    setting_int32 compilerstyle_max{
-        this, "compilerstyle_max", 64, &worldspawn_group}; // max index for switchable light styles, default 64
+    setting_scalar scaledist;
+    setting_scalar rangescale;
+    setting_scalar global_anglescale;
+    setting_scalar lightmapgamma;
+    setting_bool addminlight;
+    setting_scalar minlight;
+    setting_scalar maxlight;
+    setting_color minlight_color;
+    setting_bool spotlightautofalloff;
+    // start index for switchable light styles, default 32
+    setting_int32 compilerstyle_start;
+    // max index for switchable light styles, default 64
+    setting_int32 compilerstyle_max;
 
     /* dirt */
-    setting_bool globalDirt{this, {"dirt", "dirty"}, false,
-        &worldspawn_group}; // apply dirt to all lights (unless they override it) + sunlight + minlight?
-    setting_scalar dirtMode{this, "dirtmode", 0.0f, &worldspawn_group};
-    setting_scalar dirtDepth{this, "dirtdepth", 128.0, 1.0, std::numeric_limits<vec_t>::infinity(), &worldspawn_group};
-    setting_scalar dirtScale{this, "dirtscale", 1.0, 0.0, 100.0, &worldspawn_group};
-    setting_scalar dirtGain{this, "dirtgain", 1.0, 0.0, 100.0, &worldspawn_group};
-    setting_scalar dirtAngle{this, "dirtangle", 88.0, 1.0, 90.0, &worldspawn_group};
-    setting_bool minlightDirt{this, "minlight_dirt", false, &worldspawn_group}; // apply dirt to minlight?
+    // apply dirt to all lights (unless they override it) + sunlight + minlight?
+    setting_bool globalDirt;
+    setting_scalar dirtMode;
+    setting_scalar dirtDepth;
+    setting_scalar dirtScale;
+    setting_scalar dirtGain;
+    setting_scalar dirtAngle;
+    setting_bool minlightDirt;
 
     /* phong */
-    setting_bool phongallowed{this, "phong", true, &worldspawn_group};
-    setting_scalar phongangle{this, "phong_angle", 0, &worldspawn_group};
+    setting_bool phongallowed;
+    setting_scalar phongangle;
 
     /* bounce */
-    setting_bool bounce{this, "bounce", false, &worldspawn_group};
-    setting_bool bouncestyled{this, "bouncestyled", false, &worldspawn_group};
-    setting_scalar bouncescale{this, "bouncescale", 1.0, 0.0, 100.0, &worldspawn_group};
-    setting_scalar bouncecolorscale{this, "bouncecolorscale", 0.0, 0.0, 1.0, &worldspawn_group};
-    setting_scalar bouncelightsubdivision{this, "bouncelightsubdivision", 64.0, 1.0, 8192.0,
-        &worldspawn_group};
+    setting_bool bounce;
+    setting_bool bouncestyled;
+    setting_scalar bouncescale;
+    setting_scalar bouncecolorscale;
+    setting_scalar bouncelightsubdivision;
 
     /* Q2 surface lights (mxd) */
-    setting_scalar surflightscale{this, "surflightscale", 1.0, &worldspawn_group};
-    setting_scalar surflightskyscale{this, "surflightskyscale", 1.0, &worldspawn_group};
-    setting_scalar surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0,
-        &worldspawn_group}; // "choplight" - arghrad3 name
+    setting_scalar surflightscale;
+    setting_scalar surflightskyscale;
+    // "choplight" - arghrad3 name
+    setting_scalar surflightsubdivision;
 
     /* sunlight */
     /* sun_light, sun_color, sun_angle for http://www.bspquakeeditor.com/arghrad/ compatibility */
-    setting_scalar sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group}; /* main sun */
-    setting_color sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group};
-    setting_scalar sun2{this, "sun2", 0.0, &worldspawn_group}; /* second sun */
-    setting_color sun2_color{this, "sun2_color", 255.0, 255.0, 255.0, &worldspawn_group};
-    setting_scalar sunlight2{this, "sunlight2", 0.0, &worldspawn_group}; /* top sky dome */
-    setting_color sunlight2_color{this, {"sunlight2_color", "sunlight_color2"}, 255.0, 255.0, 255.0, &worldspawn_group};
-    setting_scalar sunlight3{this, "sunlight3", 0.0, &worldspawn_group}; /* bottom sky dome */
-    setting_color sunlight3_color{this, {"sunlight3_color", "sunlight_color3"}, 255.0, 255.0, 255.0, &worldspawn_group};
-    setting_scalar sunlight_dirt{this, "sunlight_dirt", 0.0, &worldspawn_group};
-    setting_scalar sunlight2_dirt{this, "sunlight2_dirt", 0.0, &worldspawn_group};
-    setting_mangle sunvec{this, {"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, -90.0, 0.0,
-        &worldspawn_group}; /* defaults to straight down */
-    setting_mangle sun2vec{this, "sun2_mangle", 0.0, -90.0, 0.0, &worldspawn_group}; /* defaults to straight down */
-    setting_scalar sun_deviance{this, "sunlight_penumbra", 0.0, 0.0, 180.0, &worldspawn_group};
-    setting_color sky_surface{
-        this, {"sky_surface", "sun_surface"}, 0, 0, 0, &worldspawn_group} /* arghrad surface lights on sky faces */;
-    setting_int32 surflight_radiosity{this, "surflight_radiosity", SURFLIGHT_Q1, &worldspawn_group,
-        "whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity"};
+    setting_scalar sunlight;
+    setting_color sunlight_color;
+    setting_scalar sun2;
+    setting_color sun2_color;
+    setting_scalar sunlight2;
+    setting_color sunlight2_color;
+    setting_scalar sunlight3;
+    setting_color sunlight3_color;
+    setting_scalar sunlight_dirt;
+    setting_scalar sunlight2_dirt;
+    /* defaults to straight down */
+    setting_mangle sunvec;
+    /* defaults to straight down */
+    setting_mangle sun2vec;
+    setting_scalar sun_deviance;
+    setting_color sky_surface;
+    setting_int32 surflight_radiosity;
+
+    worldspawn_keys();
 };
 
 extern setting_group output_group;
@@ -350,29 +329,8 @@ public:
     public:
         using setting_int32::setting_int32;
 
-        bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-        {
-            if (!parser.parse_token(PARSE_PEEK)) {
-                return false;
-            }
-
-            try {
-                int32_t f = static_cast<int32_t>(std::stoull(parser.token));
-
-                setValue(f, source);
-
-                parser.parse_token();
-
-                return true;
-            } catch (std::exception &) {
-                // if we didn't provide a (valid) number, then
-                // assume it's meant to be the default of -1
-                setValue(-1, source);
-                return true;
-            }
-        }
-
-        std::string format() const override { return "[n]"; }
+        bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+        std::string format() const override;
     };
 
     class setting_extra : public setting_value<int32_t>
@@ -380,20 +338,9 @@ public:
     public:
         using setting_value::setting_value;
 
-        bool parse(const std::string &settingName, parser_base_t &parser, source source) override
-        {
-            if (settingName.back() == '4') {
-                setValue(4, source);
-            } else {
-                setValue(2, source);
-            }
-
-            return true;
-        }
-
-        std::string stringValue() const override { return std::to_string(_value); };
-
-        std::string format() const override { return ""; };
+        bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+        std::string stringValue() const override;
+        std::string format() const override;
     };
 
     void CheckNoDebugModeSet();
@@ -477,3 +424,4 @@ const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
 const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
 const qvec3d &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
 int light_main(int argc, const char **argv);
+int light_main(const std::vector<std::string> &args);

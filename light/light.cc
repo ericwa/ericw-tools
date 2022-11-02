@@ -18,8 +18,6 @@
 */
 
 #include <cstdint>
-#include <cassert>
-//#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <fmt/ostream.h>
@@ -33,7 +31,6 @@
 #include <light/ltface.hh>
 
 #include <common/log.hh>
-#include <common/polylib.hh>
 #include <common/bsputils.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
@@ -47,7 +44,6 @@
 #include <memory>
 #include <vector>
 #include <map>
-#include <unordered_map>
 #include <set>
 #include <algorithm>
 #include <mutex>
@@ -105,8 +101,137 @@ std::vector<surfflags_t> extended_texinfo_flags;
 int dump_facenum = -1;
 int dump_vertnum = -1;
 
+// modelinfo_t
+
+float modelinfo_t::getResolvedPhongAngle() const
+{
+    const float s = phong_angle.value();
+    if (s != 0) {
+        return s;
+    }
+    if (phong.value() > 0) {
+        return DEFAULT_PHONG_ANGLE;
+    }
+    return 0;
+}
+
+bool modelinfo_t::isWorld() const { return &bsp->dmodels[0] == model; }
+
+modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale) :
+      bsp{b},
+      model{m},
+      lightmapscale{lmscale},
+      offset{},
+      minlight{this, "minlight", 0},
+      maxlight{this, "maxlight", 0},
+      minlightMottle{this, "minlightMottle", false},
+      shadow{this, "shadow", 0},
+      shadowself{this, {"shadowself", "selfshadow"}, 0},
+      shadowworldonly{this, "shadowworldonly", 0},
+      switchableshadow{this, "switchableshadow", 0},
+      switchshadstyle{this, "switchshadstyle", 0},
+      dirt{this, "dirt", 0},
+      phong{this, "phong", 0},
+      phong_angle{this, "phong_angle", 0},
+      alpha{this, "alpha", 1.0},
+      minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0},
+      lightignore{this, "lightignore", false},
+      lightcolorscale{this, "lightcolorscale", 1}
+      {}
+
 namespace settings
 {
+// worldspawn_keys
+
+worldspawn_keys::worldspawn_keys() :
+    scaledist{this, "dist", 1.0, 0.0, 100.0, &worldspawn_group},
+    rangescale{this, "range", 0.5, 0.0, 100.0, &worldspawn_group},
+    global_anglescale{this, {"anglescale", "anglesense"}, 0.5, 0.0, 1.0, &worldspawn_group},
+    lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group},
+    addminlight{this, "addmin", false, &worldspawn_group},
+    minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
+    maxlight{this, "maxlight", 0, &worldspawn_group},
+    minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group},
+    spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group},
+    compilerstyle_start{this, "compilerstyle_start", 32, &worldspawn_group},
+    compilerstyle_max{this, "compilerstyle_max", 64, &worldspawn_group},
+    globalDirt{this, {"dirt", "dirty"}, false, &worldspawn_group},
+    dirtMode{this, "dirtmode", 0.0f, &worldspawn_group},
+    dirtDepth{this, "dirtdepth", 128.0, 1.0, std::numeric_limits<vec_t>::infinity(), &worldspawn_group},
+    dirtScale{this, "dirtscale", 1.0, 0.0, 100.0, &worldspawn_group},
+    dirtGain{this, "dirtgain", 1.0, 0.0, 100.0, &worldspawn_group},
+    dirtAngle{this, "dirtangle", 88.0, 1.0, 90.0, &worldspawn_group},
+    minlightDirt{this, "minlight_dirt", false, &worldspawn_group},
+    phongallowed{this, "phong", true, &worldspawn_group},
+    phongangle{this, "phong_angle", 0, &worldspawn_group},
+    bounce{this, "bounce", false, &worldspawn_group},
+    bouncestyled{this, "bouncestyled", false, &worldspawn_group},
+    bouncescale{this, "bouncescale", 1.0, 0.0, 100.0, &worldspawn_group},
+    bouncecolorscale{this, "bouncecolorscale", 0.0, 0.0, 1.0, &worldspawn_group},
+    bouncelightsubdivision{this, "bouncelightsubdivision", 64.0, 1.0, 8192.0, &worldspawn_group},
+    surflightscale{this, "surflightscale", 1.0, &worldspawn_group},
+    surflightskyscale{this, "surflightskyscale", 1.0, &worldspawn_group},
+    surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
+    sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},
+    sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group},
+    sun2{this, "sun2", 0.0, &worldspawn_group},
+    sun2_color{this, "sun2_color", 255.0, 255.0, 255.0, &worldspawn_group},
+    sunlight2{this, "sunlight2", 0.0, &worldspawn_group},
+    sunlight2_color{this, {"sunlight2_color", "sunlight_color2"}, 255.0, 255.0, 255.0, &worldspawn_group},
+    sunlight3{this, "sunlight3", 0.0, &worldspawn_group},
+    sunlight3_color{this, {"sunlight3_color", "sunlight_color3"}, 255.0, 255.0, 255.0, &worldspawn_group},
+    sunlight_dirt{this, "sunlight_dirt", 0.0, &worldspawn_group},
+    sunlight2_dirt{this, "sunlight2_dirt", 0.0, &worldspawn_group},
+    sunvec{this, {"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, -90.0, 0.0, &worldspawn_group},
+    sun2vec{this, "sun2_mangle", 0.0, -90.0, 0.0, &worldspawn_group},
+    sun_deviance{this, "sunlight_penumbra", 0.0, 0.0, 180.0, &worldspawn_group},
+    sky_surface{ this, {"sky_surface", "sun_surface"}, 0, 0, 0, &worldspawn_group},
+    surflight_radiosity{this, "surflight_radiosity", SURFLIGHT_Q1, &worldspawn_group, "whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity"}
+      {}
+
+// light_settings::setting_soft
+
+bool light_settings::setting_soft::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    if (!parser.parse_token(PARSE_PEEK)) {
+        return false;
+    }
+
+    try {
+        int32_t f = static_cast<int32_t>(std::stoull(parser.token));
+
+        setValue(f, source);
+
+        parser.parse_token();
+
+        return true;
+    } catch (std::exception &) {
+        // if we didn't provide a (valid) number, then
+        // assume it's meant to be the default of -1
+        setValue(-1, source);
+        return true;
+    }
+}
+
+std::string light_settings::setting_soft::format() const { return "[n]"; }
+
+// light_settings::setting_extra
+
+bool light_settings::setting_extra::parse(const std::string &settingName, parser_base_t &parser, source source)
+{
+    if (settingName.back() == '4') {
+        setValue(4, source);
+    } else {
+        setValue(2, source);
+    }
+
+    return true;
+}
+
+std::string light_settings::setting_extra::stringValue() const { return std::to_string(_value); };
+
+std::string light_settings::setting_extra::format() const { return ""; };
+
 void light_settings::CheckNoDebugModeSet()
 {
     if (debugmode != debugmodes::none) {
@@ -127,7 +252,7 @@ light_settings::light_settings()
       onlyents{this, "onlyents", false, &output_group, "only update entities"},
       write_normals{this, "wrnormals", false, &output_group, "output normals, tangents and bitangents in a BSPX lump"},
       novanilla{this, "novanilla", false, &experimental_group, "implies -bspxlit; don't write vanilla lighting"},
-      gate{this, "gate", EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"},
+      gate{this, "gate", LIGHT_EQUAL_EPSILON, &performance_group, "cutoff lights at this brightness level"},
       sunsamples{this, "sunsamples", 64, 8, 2048, &performance_group, "set samples for _sunlight2, default 64"},
       arghradcompat{this, "arghradcompat", false, &output_group, "enable compatibility for Arghrad-specific keys"},
       nolighting{this, "nolighting", false, &output_group, "don't output main world lighting (Q2RTX)"},
@@ -1068,7 +1193,7 @@ static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
 {
     // check lights
     for (const auto &light : GetLights()) {
-        if (!qv::epsilonEqual(vec3_white, light->color.value(), EQUAL_EPSILON) ||
+        if (!qv::epsilonEqual(vec3_white, light->color.value(), LIGHT_EQUAL_EPSILON) ||
             light->projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
             SetLitNeeded();
             return;
@@ -1076,11 +1201,11 @@ static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
     }
 
     // check global settings
-    if (cfg.bouncecolorscale.value() != 0 || !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sun2_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight2_color.value(), vec3_white, EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight3_color.value(), vec3_white, EQUAL_EPSILON)) {
+    if (cfg.bouncecolorscale.value() != 0 || !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sun2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+        !qv::epsilonEqual(cfg.sunlight3_color.value(), vec3_white, LIGHT_EQUAL_EPSILON)) {
         SetLitNeeded();
         return;
     }
@@ -1474,4 +1599,14 @@ int light_main(int argc, const char **argv)
     logging::close();
 
     return 0;
+}
+
+int light_main(const std::vector<std::string> &args)
+{
+    std::vector<const char *> argPtrs;
+    for (const std::string &arg : args) {
+        argPtrs.push_back(arg.data());
+    }
+
+    return light_main(argPtrs.size(), argPtrs.data());
 }

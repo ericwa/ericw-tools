@@ -19,29 +19,33 @@
 */
 
 #include <cstdint>
-#include <cassert>
-//#include <cstdio>
 #include <iostream>
 
 #include <light/phong.hh>
-#include <light/ltface.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 
-#include <memory>
 #include <vector>
 #include <map>
 #include <unordered_map>
 #include <set>
 #include <algorithm>
 #include <mutex>
-#include <string>
 
 #include <common/qvec.hh>
 #include <tbb/parallel_for_each.h>
 
 using namespace std;
+
+face_cache_t::face_cache_t() {};
+
+face_cache_t::face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
+    : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_plane(Face_Plane(bsp, face).vec4()),
+      m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)), m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
+      m_neighbours(NeighbouringFaces_new(bsp, face))
+{
+}
 
 static neighbour_t FaceOverlapsEdge(const qvec3f &p0, const qvec3f &p1, const mbsp_t *bsp, const mface_t *f)
 {
@@ -620,7 +624,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
             const auto &neighboursToSmooth = neighboursIt->second;
             if (!neighboursToSmooth.size()) {
                 for (auto &vertIndexNormalPair : smoothedNormals) {
-                    Q_assert(qv::epsilonEqual(vertIndexNormalPair.second.normal, f_norm, (float)EQUAL_EPSILON));
+                    Q_assert(qv::epsilonEqual(vertIndexNormalPair.second.normal, f_norm, (float)LIGHT_EQUAL_EPSILON));
                 }
             }
         }

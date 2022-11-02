@@ -894,8 +894,6 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
     }
 };
 
-#include <mutex>
-
 struct gamedef_q2_t : public gamedef_t
 {
     gamedef_q2_t() : gamedef_t("BASEQ2")

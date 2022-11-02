@@ -19,7 +19,6 @@
 
 #include <qbsp/qbsp.hh>
 #include <common/settings.hh>
-#include <common/fs.hh>
 
 int main(int argc, const char **argv)
 {

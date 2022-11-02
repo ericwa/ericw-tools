@@ -122,17 +122,17 @@ constexpr size_t MAXDIMENSION = 255 + 1;
 
 class faceextents_t
 {
-public:
-    qvec2i texmins;
-    qvec2i texextents;
-    float lightmapshift;
+private:
+    qvec2i lm_extents;
     qmat4x4f worldToTexCoordMatrix;
     qmat4x4f texCoordToWorldMatrix;
+    qmat4x4f lmToWorldMatrix;
+    qmat4x4f worldToLMMatrix;
 
+public:
     qvec3d origin;
     vec_t radius;
     aabb3d bounds;
-    qvec2d exact_mid;
 
     faceextents_t() = default;
 
@@ -141,9 +141,7 @@ public:
     int width() const;
     int height() const;
     int numsamples() const;
-    qvec2i texsize() const;
-    qvec2f lightmapCoordToTexCoord(const qvec2f &LMCoord) const;
-    qvec2f texCoordToLightmapCoord(const qvec2f &tc) const;
+    qvec2i lmsize() const;
     qvec2f worldToTexCoord(qvec3f world) const;
     qvec3f texCoordToWorld(qvec2f tc) const;
     qvec2f worldToLMCoord(qvec3f world) const;

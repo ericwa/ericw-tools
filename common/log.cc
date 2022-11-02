@@ -32,7 +32,6 @@
 #include <string>
 
 #include <common/log.hh>
-#include <common/threads.hh>
 #include <common/settings.hh>
 #include <common/cmdlib.hh>
 

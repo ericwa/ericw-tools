@@ -19,10 +19,8 @@
 */
 
 #include <cstdint>
-#include <cassert>
 //#include <cstdio>
 #include <atomic>
-#include <iostream>
 
 #include <light/light.hh>
 #include <light/bounce.hh>
@@ -32,14 +30,9 @@
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
 
-#include <memory>
 #include <vector>
-#include <map>
 #include <unordered_map>
-#include <set>
-#include <algorithm>
 #include <mutex>
-#include <string>
 
 #include <common/qvec.hh>
 #include <common/parallel.hh>
