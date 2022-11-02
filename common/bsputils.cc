@@ -733,12 +733,16 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
     origin = bounds.mins() + radius;
     this->radius = qv::length(radius);
 
-    LMToTexCoordMatrix = qmat3x3f::row_major({
-        lightmapshift, 0, lm_mins[0] * lightmapshift,
-        0            , lightmapshift, lm_mins[1] * lightmapshift,
-        0            , 0            , 1
+    qmat4x4f LMToTexCoordMatrix = qmat4x4f::row_major({
+        lightmapshift, 0            , 0                         , lm_mins[0] * lightmapshift,
+        0            , lightmapshift, 0                         , lm_mins[1] * lightmapshift,
+        0            , 0            , 1                         , 0,
+        0            , 0            , 0                         , 1
     });
-    TexCoordToLMMatrix = qv::inverse(LMToTexCoordMatrix);
+    qmat4x4f TexCoordToLMMatrix = qv::inverse(LMToTexCoordMatrix);
+
+    lmToWorldMatrix = texCoordToWorldMatrix * LMToTexCoordMatrix;
+    worldToLMMatrix = TexCoordToLMMatrix * worldToTexCoordMatrix;
 }
 
 int faceextents_t::width() const
@@ -756,23 +760,9 @@ int faceextents_t::numsamples() const
     return width() * height();
 }
 
-qvec2i faceextents_t::texsize() const
+qvec2i faceextents_t::lmsize() const
 {
     return {width(), height()};
-}
-
-qvec2f faceextents_t::lightmapCoordToTexCoord(const qvec2f &LMCoord) const
-{
-    qvec3f LMCoordPadded = {LMCoord[0], LMCoord[1], 1.0f};
-    qvec2f tex = LMToTexCoordMatrix * LMCoordPadded;
-    return tex;
-}
-
-qvec2f faceextents_t::texCoordToLightmapCoord(const qvec2f &tc) const
-{
-    qvec3f tcPadded = {tc[0], tc[1], 1.0f};
-    qvec2f lm = TexCoordToLMMatrix * tcPadded;
-    return lm;
 }
 
 qvec2f faceextents_t::worldToTexCoord(qvec3f world) const
@@ -797,10 +787,14 @@ qvec3f faceextents_t::texCoordToWorld(qvec2f tc) const
 
 qvec2f faceextents_t::worldToLMCoord(qvec3f world) const
 {
-    return texCoordToLightmapCoord(worldToTexCoord(world));
+    const qvec4f worldPadded(world, 1.0f);
+    const qvec4f res = worldToLMMatrix * worldPadded;
+    return res;
 }
 
 qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
 {
-    return texCoordToWorld(lightmapCoordToTexCoord(lm));
+    const qvec4f lmPadded(lm[0], lm[1], 0.0f, 1.0f);
+    const qvec4f res = lmToWorldMatrix * lmPadded;
+    return res;
 }
