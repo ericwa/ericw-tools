@@ -137,6 +137,27 @@ qmat4x4f qv::inverse(const qmat4x4f &input)
     return qmat4x4f(qv::inverse(qmat4x4d(input)));
 }
 
+qmat3x3f qv::inverse(const qmat3x3f &m)
+{
+    qmat4x4d temp {};
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            temp.at(r,c) = m.at(r,c);
+        }
+    }
+
+    temp = qv::inverse(temp);
+
+    // return the upper-left 3x3 matrix
+    qmat3x3f result;
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            result.at(r,c) = temp.at(r,c);
+        }
+    }
+    return result;
+}
+
 qmat2x2f qv::inverse(const qmat2x2f &m)
 {
     // http://www.mathwords.com/i/inverse_of_a_matrix.htm
