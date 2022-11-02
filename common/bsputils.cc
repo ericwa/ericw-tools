@@ -706,6 +706,7 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
         bounds += worldpoint;
     }
 
+    qvec2i texmins;
     for (int i = 0; i < 2; i++) {
         tex_bounds[0][i] = floor(tex_bounds[0][i] / lightmapshift);
         tex_bounds[1][i] = ceil(tex_bounds[1][i] / lightmapshift);

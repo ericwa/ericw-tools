@@ -123,7 +123,6 @@ constexpr size_t MAXDIMENSION = 255 + 1;
 class faceextents_t
 {
 public:
-    qvec2i texmins;
     qvec2i texextents;
     qmat4x4f worldToTexCoordMatrix;
     qmat4x4f texCoordToWorldMatrix;
