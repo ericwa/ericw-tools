@@ -36,6 +36,7 @@ static void LoadTestmap(const std::filesystem::path &name, std::vector<std::stri
     {
         std::vector<std::string> light_args{
             "", // the exe path, which we're ignoring in this case
+            "-extra",
             bsp_path.string()
         };
         light_main(light_args);

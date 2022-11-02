@@ -388,9 +388,10 @@ static void CalcPoints(
 
     surf->width = surf->extents.width() * light_options.extra.value();
     surf->height = surf->extents.height() * light_options.extra.value();
-    const float starts = (surf->extents.texmins[0] - 0.5 + (0.5 / light_options.extra.value())) * surf->lightmapscale;
-    const float startt = (surf->extents.texmins[1] - 0.5 + (0.5 / light_options.extra.value())) * surf->lightmapscale;
-    const float st_step = surf->lightmapscale / light_options.extra.value();
+
+    const float starts = -0.5 + (0.5 / light_options.extra.value());
+    const float startt = -0.5 + (0.5 / light_options.extra.value());
+    const float st_step = 1.0f / light_options.extra.value();
 
     /* Allocate surf->points */
     size_t num_points = surf->width * surf->height;
@@ -412,7 +413,7 @@ static void CalcPoints(
             const vec_t us = starts + s * st_step;
             const vec_t ut = startt + t * st_step;
 
-            point = surf->extents.texCoordToWorld(qvec2f(us, ut)) +
+            point = surf->extents.LMCoordToWorld(qvec2f(us, ut)) +
                     surf->plane.normal; // one unit in front of face
 
             // do this before correcting the point, so we can wrap around the inside of pipes
