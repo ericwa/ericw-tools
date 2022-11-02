@@ -96,6 +96,33 @@ static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
     return j;
 }
 
+static json serialize_bspx_decoupled_lm(const std::vector<uint8_t> &lump)
+{
+    json j = json::array();
+
+    imemstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
+
+    p >> endianness<std::endian::little>;
+
+    while (true) {
+        bspx_decoupled_lm_perface src_face;
+        p >= src_face;
+
+        if (!p) {
+            break;
+        }
+
+        json &model = j.insert(j.end(), json::object()).value();
+        model["lmwidth"] = src_face.lmwidth;
+        model["lmheight"] = src_face.lmheight;
+        model["offset"] = src_face.offset;
+        model["world_to_lm_space"] =
+            json::array({src_face.world_to_lm_space.row(0), src_face.world_to_lm_space.row(1)});
+    }
+
+    return j;
+}
+
 /**
  * The MIT License (MIT)
  * Copyright (c) 2016 tomykaira
@@ -191,8 +218,15 @@ static std::string serialize_image(const std::optional<img::texture> &texture_op
 
 #include "common/bsputils.hh"
 
-static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bspx, const mface_t &face, bool use_bspx)
+static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bspx,
+    const std::vector<bspx_decoupled_lm_perface> &bspx_decoupled, const mface_t &face, bool use_bspx,
+    bool use_decoupled)
 {
+    if (use_decoupled) {
+        ptrdiff_t face_idx = &face - bsp.dfaces.data();
+        auto &bspx = bspx_decoupled[face_idx];
+        return {face, bsp, bspx.lmwidth, bspx.lmheight, bspx.world_to_lm_space};
+    }
     if (!use_bspx) {
         return {face, bsp, 16.0};
     }
@@ -201,7 +235,7 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
         (float)nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()])};
 }
 
-static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, fs::path obj_path, fs::path lightmaps_path)
+static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled, fs::path obj_path, fs::path lightmaps_path)
 {
     struct face_rect
     {
@@ -235,18 +269,38 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
         bspx_lmoffset >> endianness<std::endian::little>;
     }
 
+    std::vector<bspx_decoupled_lm_perface> bspx_decoupled;
+    if (use_decoupled && (bspx.find("DECOUPLED_LM") != bspx.end())) {
+        bspx_decoupled.resize(bsp.dfaces.size());
+
+        imemstream stream(nullptr, 0);
+
+        auto &decoupled_lm = bspx.at("DECOUPLED_LM");
+        stream = imemstream(decoupled_lm.data(), decoupled_lm.size());
+        stream >> endianness<std::endian::little>;
+
+        for (size_t i = 0; i < bsp.dfaces.size(); ++i) {
+            stream >= bspx_decoupled[i];
+        }
+    } else {
+        use_decoupled = false;
+    }
+
     // make rectangles
     for (auto &face : bsp.dfaces) {
+        const ptrdiff_t face_idx = (&face - bsp.dfaces.data());
         int32_t faceofs;
 
-        if (!use_bspx) {
+        if (use_decoupled) {
+            faceofs = bspx_decoupled[face_idx].offset;
+        } else if (!use_bspx) {
             faceofs = face.lightofs;
         } else {
-            bspx_lmoffset.seekg((&face - bsp.dfaces.data()) * sizeof(int32_t));
+            bspx_lmoffset.seekg(face_idx * sizeof(int32_t));
             bspx_lmoffset >= faceofs;
         }
 
-        rectangles.emplace_back(face_rect{&face, get_face_extents(bsp, bspx, face, use_bspx), faceofs});
+        rectangles.emplace_back(face_rect{&face, get_face_extents(bsp, bspx, bspx_decoupled, face, use_bspx, use_decoupled), faceofs});
     }
 
     if (!rectangles.size()) {
@@ -684,6 +738,8 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
 
             if (lump.first == "BRUSHLIST") {
                 entry["models"] = serialize_bspxbrushlist(lump.second);
+            } else if (lump.first == "DECOUPLED_LM") {
+                entry["faces"] = serialize_bspx_decoupled_lm(lump.second);
             } else {
                 // unhandled BSPX lump, just write the raw data
                 entry["lumpdata"] = hex_string(lump.second.data(), lump.second.size());
@@ -705,7 +761,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
         }
     }
 #endif
-    export_obj_and_lightmaps(bsp, bspdata.bspx.entries, false, fs::path(name).replace_extension(".geometry.obj"), fs::path(name).replace_extension(".lm.png"));
+    export_obj_and_lightmaps(bsp, bspdata.bspx.entries, false, true, fs::path(name).replace_extension(".geometry.obj"), fs::path(name).replace_extension(".lm.png"));
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
 }

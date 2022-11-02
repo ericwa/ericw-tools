@@ -120,16 +120,17 @@ qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f);
  * it doesn't affect bsp complexity (actually, can simplify it a little)*/
 constexpr size_t MAXDIMENSION = 255 + 1;
 
+struct world_units_per_luxel_t {};
+
 class faceextents_t
 {
-private:
+public:
     qvec2i lm_extents;
     qmat4x4f worldToTexCoordMatrix;
     qmat4x4f texCoordToWorldMatrix;
     qmat4x4f lmToWorldMatrix;
     qmat4x4f worldToLMMatrix;
 
-public:
     qvec3d origin;
     vec_t radius;
     aabb3d bounds;
@@ -137,6 +138,8 @@ public:
     faceextents_t() = default;
 
     faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmshift);
+    faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lmwidth, uint16_t lmheight, texvecf world_to_lm_space);
+    faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units_per_luxel_t tag, float world_units_per_luxel);
 
     int width() const;
     int height() const;

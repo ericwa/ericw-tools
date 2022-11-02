@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <common/aabb.hh>
 #include <memory>
+#include <common/bspfile.hh>
 
 /* ========================================================================= */
 
@@ -96,6 +97,24 @@ struct bspxfacenormals_header
     uint32_t normal;
     uint32_t tangent;
     uint32_t bitangent;
+};
+
+// DECOUPLED_LM BSPX lump (subject to change!)
+struct bspx_decoupled_lm_perface
+{
+    uint16_t lmwidth; // pixels
+    uint16_t lmheight; // pixels
+    // offset into dlightdata lump.
+    // start of numstyles (from face struct) * (lmwidth * lmheight) samples
+    int32_t offset;
+
+    // 2 rows * 4 column matrix, stored in row major order
+    // this is a world -> lightmap space transformation matrix
+    texvecf world_to_lm_space;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
 };
 
 // BSPX data

@@ -63,6 +63,7 @@ std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces()
 }
 
 static std::vector<facesup_t> faces_sup; // lit2/bspx stuff
+static std::vector<bspx_decoupled_lm_perface> facesup_decoupled_global;
 
 bool IsOutputtingSupplementaryData()
 {
@@ -296,6 +297,7 @@ light_settings::light_settings()
               write_luxfile = lightfile::bspx;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
+      world_units_per_luxel{this, "world_units_per_luxel", 0, 0, 1024,  &output_group, "enables output of DECOUPLED_LM BSPX lump"},
       litonly{this, "litonly", false, &output_group, "only write .lit file, don't modify BSP"},
       nolights{this, "nolights", false, &output_group, "ignore light entities (only sunlight/minlight)"},
       facestyles{this, "facestyles", 4, &output_group, "max amount of styles per face; requires BSPX lump if > 4"},
@@ -619,6 +621,7 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
     logging::funcheader();
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
+        auto facesup_decoupled = facesup_decoupled_global.empty() ? nullptr : &facesup_decoupled_global[i];
         auto face = &bsp->dfaces[i];
 
         /* One extra lightmap is allocated to simplify handling overflow */
@@ -636,10 +639,14 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
                 for (size_t i = 0; i < MAXLIGHTMAPS; i++) {
                     face->styles[i] = INVALID_LIGHTSTYLE_OLD;
                 }
+
+                if (facesup_decoupled) {
+                    facesup_decoupled->offset = -1;
+                }
             }
         }
 
-        light_surfaces[i] = CreateLightmapSurface(bsp, face, facesup, light_options);
+        light_surfaces[i] = CreateLightmapSurface(bsp, face, facesup, facesup_decoupled, light_options);
     });
 }
 
@@ -658,22 +665,24 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
         auto f = &bsp->dfaces[i];
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
 
-        if (faces_sup.empty()) {
-            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->extents);
+        if (!facesup_decoupled_global.empty()) {
+            SaveLightmapSurface(bsp, f, nullptr, &facesup_decoupled_global[i], surf.get(), surf->extents, surf->extents);
+        } else if (faces_sup.empty()) {
+            SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->extents);
         } else if (light_options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
             if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
                 f->lightofs = faces_sup[i].lightofs;
             } else {
                 f->lightofs = -1;
             }
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
             for (int j = 0; j < MAXLIGHTMAPS; j++) {
                 f->styles[j] =
                     faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
             }
         } else {
-            SaveLightmapSurface(bsp, f, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
-            SaveLightmapSurface(bsp, f, &faces_sup[i], surf.get(), surf->extents, surf->extents);
+            SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
         }
 
         light_surfaces[i].reset();
@@ -831,6 +840,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         }
     }
 
+    // decoupled lightmaps
+    facesup_decoupled_global.clear();
+    if (light_options.world_units_per_luxel.isChanged()) {
+        facesup_decoupled_global.resize(bsp.dfaces.size());
+    }
+
     CalculateVertexNormals(&bsp);
 
     // create lightmap surfaces
@@ -896,6 +911,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     bspdata->bspx.entries.erase("LMSTYLE16");
     bspdata->bspx.entries.erase("LMSTYLE");
     bspdata->bspx.entries.erase("LMOFFSET");
+    bspdata->bspx.entries.erase("DECOUPLED_LM");
 
     if (!faces_sup.empty()) {
         bool needoffsets = false;
@@ -977,6 +993,20 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             logging::print("LMOFFSET BSPX lump written\n");
             bspdata->bspx.transfer("LMOFFSET", offsets_mem);
         }
+    }
+
+    if (!facesup_decoupled_global.empty()) {
+        std::vector<uint8_t> mem(sizeof(bspx_decoupled_lm_perface) * bsp.dfaces.size());
+
+        omemstream stream(mem.data(), mem.size(), std::ios_base::out | std::ios_base::binary);
+        stream << endianness<std::endian::little>;
+
+        for (size_t i = 0; i < bsp.dfaces.size(); i++) {
+            stream <= facesup_decoupled_global[i];
+        }
+
+        logging::print("DECOUPLED_LM BSPX lump written\n");
+        bspdata->bspx.transfer("DECOUPLED_LM", mem);
     }
 }
 

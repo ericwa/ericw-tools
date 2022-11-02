@@ -70,3 +70,15 @@ void bspxbrushes_perbrush::stream_read(std::istream &s)
 {
     s >= std::tie(bounds, contents, numfaces);
 }
+
+// bspx_decoupled_lm_perface
+
+void bspx_decoupled_lm_perface::stream_write(std::ostream &s) const
+{
+    s <= std::tie(lmwidth, lmheight, offset, world_to_lm_space);
+}
+
+void bspx_decoupled_lm_perface::stream_read(std::istream &s)
+{
+    s >= std::tie(lmwidth, lmheight, offset, world_to_lm_space);
+}

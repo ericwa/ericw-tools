@@ -21,9 +21,6 @@ static void LoadTestmap(const std::filesystem::path &name, std::vector<std::stri
         "-path",
         wal_metadata_path.string()
     };
-    for (auto &arg : extra_args) {
-        args.push_back(arg);
-    }
     args.push_back(map_path.string());
     args.push_back(bsp_path.string());
 
@@ -36,9 +33,12 @@ static void LoadTestmap(const std::filesystem::path &name, std::vector<std::stri
     {
         std::vector<std::string> light_args{
             "", // the exe path, which we're ignoring in this case
-            "-extra",
-            bsp_path.string()
         };
+        for (auto &arg : extra_args) {
+            light_args.push_back(arg);
+        }
+        light_args.push_back(bsp_path.string());
+
         light_main(light_args);
     }
 
@@ -56,5 +56,5 @@ static void LoadTestmap(const std::filesystem::path &name, std::vector<std::stri
 }
 
 TEST_CASE("TestLight") {
-    LoadTestmap("q2_lightmap_custom_scale.map", {});
+    LoadTestmap("q2_lightmap_custom_scale.map", {"-threads", "1", "-extra", "-world_units_per_luxel", "8"});
 }

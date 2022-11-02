@@ -413,8 +413,7 @@ static void CalcPoints(
             const vec_t us = starts + s * st_step;
             const vec_t ut = startt + t * st_step;
 
-            point = surf->extents.LMCoordToWorld(qvec2f(us, ut)) +
-                    surf->plane.normal; // one unit in front of face
+            point = surf->extents.LMCoordToWorld(qvec2f(us, ut)) + surf->plane.normal; // one unit in front of face
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.value());
@@ -587,7 +586,8 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
 }
 
 static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo, const settings::worldspawn_keys &cfg,
-    const mface_t *face, const mbsp_t *bsp, const facesup_t *facesup)
+    const mface_t *face, const mbsp_t *bsp, const facesup_t *facesup,
+    const bspx_decoupled_lm_perface *facesup_decoupled)
 {
     auto spaceToWorld = TexSpaceToWorld(bsp, face);
 
@@ -697,7 +697,12 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
 
     /* Set up the surface points */
-    lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
+    if (light_options.world_units_per_luxel.isChanged()) {
+        lightsurf->extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{},
+            light_options.world_units_per_luxel.value());
+    } else {
+        lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
+    }
     lightsurf->vanilla_extents = faceextents_t(*face, *bsp, 16.0);
 
     CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
@@ -2528,8 +2533,9 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     }
 }
 
-void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, lightsurf_t *lightsurf,
-    const faceextents_t &extents, const faceextents_t &output_extents)
+void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
+    bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
+    const faceextents_t &output_extents)
 {
     lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
     const int actual_width = extents.width();
@@ -2693,6 +2699,15 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, l
         for (; mapnum < MAXLIGHTMAPS; mapnum++) {
             face->styles[mapnum] = INVALID_LIGHTSTYLE_OLD;
         }
+
+        if (facesup_decoupled) {
+            facesup_decoupled->lmwidth = output_width;
+            facesup_decoupled->lmheight = output_height;
+            for (size_t i = 0; i < 2; ++i) {
+                facesup_decoupled->world_to_lm_space.set_row(i,
+                    output_extents.worldToLMMatrix.row(i));
+            }
+        }
     }
 
     if (!numstyles)
@@ -2714,6 +2729,9 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, l
         facesup->lightofs = lightofs;
     } else {
         face->lightofs = lightofs;
+        if (facesup_decoupled) {
+            facesup_decoupled->offset = lightofs;
+        }
     }
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
@@ -2741,8 +2759,8 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, l
     }
 }
 
-std::unique_ptr<lightsurf_t> CreateLightmapSurface(
-    const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup, const settings::worldspawn_keys &cfg)
+std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup,
+    const bspx_decoupled_lm_perface *facesup_decoupled, const settings::worldspawn_keys &cfg)
 {
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -2767,7 +2785,7 @@ std::unique_ptr<lightsurf_t> CreateLightmapSurface(
     if (!Q_strcasecmp(texname, "skip"))
         return nullptr;
 
-    return Lightsurf_Init(modelinfo, cfg, face, bsp, facesup);
+    return Lightsurf_Init(modelinfo, cfg, face, bsp, facesup, facesup_decoupled);
 }
 
 /*

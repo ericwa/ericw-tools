@@ -52,11 +52,12 @@ std::unordered_map<int, qvec3f> GetDirectLighting(
 void SetupDirt(settings::worldspawn_keys &cfg);
 float DirtAtPoint(const settings::worldspawn_keys &cfg, raystream_intersection_t *rs, const qvec3d &point,
     const qvec3d &normal, const modelinfo_t *selfshadow);
-std::unique_ptr<lightsurf_t> CreateLightmapSurface(
-    const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup, const settings::worldspawn_keys &cfg);
+std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup,
+    const bspx_decoupled_lm_perface *facesup_decoupled, const settings::worldspawn_keys &cfg);
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);
 void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 void FinishLightmapSurface(const mbsp_t *bsp, lightsurf_t *lightsurf);
-void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, lightsurf_t *lightsurf,
-    const faceextents_t &extents, const faceextents_t &output_extents);
+void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
+    bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
+    const faceextents_t &output_extents);

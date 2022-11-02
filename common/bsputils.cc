@@ -745,6 +745,107 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
     worldToLMMatrix = TexCoordToLMMatrix * worldToTexCoordMatrix;
 }
 
+faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lmwidth, uint16_t lmheight, texvecf world_to_lm_space) {
+    if (lmwidth > 0 && lmheight > 0) {
+        lm_extents = {lmwidth - 1, lmheight - 1};
+    }
+
+    worldToTexCoordMatrix = WorldToTexSpace(&bsp, &face);
+    texCoordToWorldMatrix = TexSpaceToWorld(&bsp, &face);
+
+    worldToLMMatrix.set_row(0, world_to_lm_space.row(0));
+    worldToLMMatrix.set_row(1, world_to_lm_space.row(1));
+    worldToLMMatrix.set_row(2, {0, 0, 1, 0});
+    worldToLMMatrix.set_row(3, {0, 0, 0, 1});
+
+    lmToWorldMatrix = qv::inverse(worldToLMMatrix);
+
+    // bounds
+    for (int i = 0; i < face.numedges; i++) {
+        const qvec3f &worldpoint = Face_PointAtIndex(&bsp, &face, i);
+        bounds += worldpoint;
+    }
+
+    // calculate a bounding sphere for the face
+    qvec3d radius = (bounds.maxs() - bounds.mins()) * 0.5;
+
+    origin = bounds.mins() + radius;
+    this->radius = qv::length(radius);
+}
+
+faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units_per_luxel_t tag, float world_units_per_luxel)
+{
+    auto orig_normal = Face_Normal(&bsp, &face);
+    size_t axis = qv::indexOfLargestMagnitudeComponent(orig_normal);
+
+#if 0
+    if (orig_normal == qvec3f(-1, 0, 0)) {
+        logging::print("-x\n");
+    }
+#endif
+
+    qvec3f snapped_normal{};
+    if (orig_normal[axis] > 0) {
+        snapped_normal[axis] = 1;
+    } else {
+        snapped_normal[axis] = -1;
+    }
+
+    auto [t, b] = qv::MakeTangentAndBitangentUnnormalized(snapped_normal);
+    t = t * (1/world_units_per_luxel);
+    b = b * (1/world_units_per_luxel);
+
+    qmat<float, 3, 3> world_to_lm;
+    world_to_lm.set_row(0, t);
+    world_to_lm.set_row(1, b);
+    world_to_lm.set_row(2, snapped_normal);
+
+    aabb2f lm_bounds;
+    for (int i = 0; i < face.numedges; i++) {
+        const qvec3f &worldpoint = Face_PointAtIndex(&bsp, &face, i);
+        const qvec2f lmcoord = world_to_lm * worldpoint;
+        lm_bounds += lmcoord;
+    }
+
+    qvec2i lm_mins;
+    for (int i = 0; i < 2; i++) {
+        lm_bounds[0][i] = floor(lm_bounds[0][i]);
+        lm_bounds[1][i] = ceil(lm_bounds[1][i]);
+        lm_mins[i] = static_cast<int>(lm_bounds[0][i]);
+        lm_extents[i] = static_cast<int>(lm_bounds[1][i] - lm_bounds[0][i]);
+    }
+
+    worldToLMMatrix.set_row(0, qvec4f(world_to_lm.row(0), -lm_mins[0]));
+    worldToLMMatrix.set_row(1, qvec4f(world_to_lm.row(1), -lm_mins[1]));
+    worldToLMMatrix.set_row(2, qvec4f(world_to_lm.row(2), 0));
+    worldToLMMatrix.set_row(3, qvec4f(0, 0, 0, 1));
+
+    lmToWorldMatrix = qv::inverse(worldToLMMatrix);
+
+    // world <-> tex conversions
+    worldToTexCoordMatrix = WorldToTexSpace(&bsp, &face);
+    texCoordToWorldMatrix = TexSpaceToWorld(&bsp, &face);
+
+    // bounds
+    for (int i = 0; i < face.numedges; i++) {
+        const qvec3f &worldpoint = Face_PointAtIndex(&bsp, &face, i);
+        bounds += worldpoint;
+
+        auto lm = worldToLMMatrix * qvec4f(worldpoint, 1.0f);
+#if 0
+        logging::print("testing world {} -> lm {}\n",
+            worldpoint,
+            lm);
+#endif
+    }
+
+    // calculate a bounding sphere for the face
+    qvec3d radius = (bounds.maxs() - bounds.mins()) * 0.5;
+
+    origin = bounds.mins() + radius;
+    this->radius = qv::length(radius);
+}
+
 int faceextents_t::width() const
 {
     return lm_extents[0] + 1;

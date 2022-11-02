@@ -370,6 +370,7 @@ public:
     setting_func bspxlux;
     setting_func bspxonly;
     setting_func bspx;
+    setting_scalar world_units_per_luxel;
     setting_bool litonly;
     setting_bool nolights;
     setting_int32 facestyles;
