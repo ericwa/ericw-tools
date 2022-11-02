@@ -706,14 +706,14 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
         bounds += worldpoint;
     }
 
-    qvec2i texmins;
+    qvec2i lm_mins;
     for (int i = 0; i < 2; i++) {
         tex_bounds[0][i] = floor(tex_bounds[0][i] / lightmapshift);
         tex_bounds[1][i] = ceil(tex_bounds[1][i] / lightmapshift);
-        texmins[i] = static_cast<int>(tex_bounds[0][i]);
-        texextents[i] = static_cast<int>(tex_bounds[1][i] - tex_bounds[0][i]);
+        lm_mins[i] = static_cast<int>(tex_bounds[0][i]);
+        lm_extents[i] = static_cast<int>(tex_bounds[1][i] - tex_bounds[0][i]);
 
-        if (texextents[i] >= MAXDIMENSION * (16.0 / lightmapshift)) {
+        if (lm_extents[i] >= MAXDIMENSION * (16.0 / lightmapshift)) {
             const qplane3d plane = Face_Plane(&bsp, &face);
             const qvec3f &point = Face_PointAtIndex(&bsp, &face, 0); // grab first vert
             const char *texname = Face_TextureName(&bsp, &face);
@@ -722,7 +722,7 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
                             "   surface {}, {} extents = {}, shift = {}\n"
                             "   texture {} at ({})\n"
                             "   surface normal ({})\n",
-                Face_GetNum(&bsp, &face), i ? "t" : "s", texextents[i], lightmapshift, texname, point,
+                Face_GetNum(&bsp, &face), i ? "t" : "s", lm_extents[i], lightmapshift, texname, point,
                 plane.normal);
         }
     }
@@ -734,8 +734,8 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
     this->radius = qv::length(radius);
 
     LMToTexCoordMatrix = qmat3x3f::row_major({
-        lightmapshift, 0,             texmins[0] * lightmapshift,
-        0            , lightmapshift, texmins[1] * lightmapshift,
+        lightmapshift, 0, lm_mins[0] * lightmapshift,
+        0            , lightmapshift, lm_mins[1] * lightmapshift,
         0            , 0            , 1
     });
     TexCoordToLMMatrix = qv::inverse(LMToTexCoordMatrix);
@@ -743,12 +743,12 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
 
 int faceextents_t::width() const
 {
-    return texextents[0] + 1;
+    return lm_extents[0] + 1;
 }
 
 int faceextents_t::height() const
 {
-    return texextents[1] + 1;
+    return lm_extents[1] + 1;
 }
 
 int faceextents_t::numsamples() const

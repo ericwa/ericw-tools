@@ -122,13 +122,14 @@ constexpr size_t MAXDIMENSION = 255 + 1;
 
 class faceextents_t
 {
-public:
-    qvec2i texextents;
+private:
+    qvec2i lm_extents;
     qmat4x4f worldToTexCoordMatrix;
     qmat4x4f texCoordToWorldMatrix;
     qmat3x3f LMToTexCoordMatrix;
     qmat3x3f TexCoordToLMMatrix;
 
+public:
     qvec3d origin;
     vec_t radius;
     aabb3d bounds;
