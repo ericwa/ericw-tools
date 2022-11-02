@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <light/light.hh>
+#include <common/bspinfo.hh>
 #include <qbsp/qbsp.hh>
 #include <testmaps.hh>
 
@@ -38,6 +39,18 @@ static void LoadTestmap(const std::filesystem::path &name, std::vector<std::stri
             bsp_path.string()
         };
         light_main(light_args);
+    }
+
+    // serialize obj
+    {
+        bspdata_t bspdata;
+        LoadBSPFile(bsp_path, &bspdata);
+
+        ConvertBSPFormat(&bspdata, &bspver_generic);
+
+        // write to .json for inspection
+        serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp),
+            fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
     }
 }
 

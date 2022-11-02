@@ -125,9 +125,10 @@ class faceextents_t
 public:
     qvec2i texmins;
     qvec2i texextents;
-    float lightmapshift;
     qmat4x4f worldToTexCoordMatrix;
     qmat4x4f texCoordToWorldMatrix;
+    qmat3x3f LMToTexCoordMatrix;
+    qmat3x3f TexCoordToLMMatrix;
 
     qvec3d origin;
     vec_t radius;
