@@ -51,7 +51,7 @@ void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
     const char *texname = Face_TextureName(bsp, face);
 
     logging::print("face {}, texture {}, {} edges; vectors:\n"
-                   "{: 3.3}\n",
+                   "{}\n",
         Face_GetNum(bsp, face), texname, face->numedges, tex->vecs);
 
     for (int i = 0; i < face->numedges; i++) {

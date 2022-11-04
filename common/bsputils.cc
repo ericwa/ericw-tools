@@ -746,6 +746,8 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
 }
 
 faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lmwidth, uint16_t lmheight, texvecf world_to_lm_space) {
+    const qplane3f plane = Face_Plane(&bsp, &face);
+
     if (lmwidth > 0 && lmheight > 0) {
         lm_extents = {lmwidth - 1, lmheight - 1};
     }
@@ -755,7 +757,7 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lm
 
     worldToLMMatrix.set_row(0, world_to_lm_space.row(0));
     worldToLMMatrix.set_row(1, world_to_lm_space.row(1));
-    worldToLMMatrix.set_row(2, {0, 0, 1, 0});
+    worldToLMMatrix.set_row(2, qvec4f(plane.normal[0], plane.normal[1], plane.normal[2], -plane.dist));
     worldToLMMatrix.set_row(3, {0, 0, 0, 1});
 
     lmToWorldMatrix = qv::inverse(worldToLMMatrix);
@@ -775,6 +777,7 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lm
 
 faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units_per_luxel_t tag, float world_units_per_luxel)
 {
+    const qplane3f plane = Face_Plane(&bsp, &face);
     auto orig_normal = Face_Normal(&bsp, &face);
     size_t axis = qv::indexOfLargestMagnitudeComponent(orig_normal);
 
@@ -795,10 +798,9 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units
     t = t * (1/world_units_per_luxel);
     b = b * (1/world_units_per_luxel);
 
-    qmat<float, 3, 3> world_to_lm;
+    qmat<float, 2, 3> world_to_lm;
     world_to_lm.set_row(0, t);
     world_to_lm.set_row(1, b);
-    world_to_lm.set_row(2, snapped_normal);
 
     aabb2f lm_bounds;
     for (int i = 0; i < face.numedges; i++) {
@@ -817,7 +819,7 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units
 
     worldToLMMatrix.set_row(0, qvec4f(world_to_lm.row(0), -lm_mins[0]));
     worldToLMMatrix.set_row(1, qvec4f(world_to_lm.row(1), -lm_mins[1]));
-    worldToLMMatrix.set_row(2, qvec4f(world_to_lm.row(2), 0));
+    worldToLMMatrix.set_row(2, qvec4f(plane.normal[0], plane.normal[1], plane.normal[2], -plane.dist));
     worldToLMMatrix.set_row(3, qvec4f(0, 0, 0, 1));
 
     lmToWorldMatrix = qv::inverse(worldToLMMatrix);
