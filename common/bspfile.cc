@@ -2713,7 +2713,7 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
     }
 
     if (bspdata->bspx.entries.size()) {
-        logging::print("\n{:<16 {:10}\n", "BSPX lump name", "byte size");
+        logging::print("\n{:<16} {:10}\n", "BSPX lump name", "byte size");
 
         for (auto &x : bspdata->bspx.entries) {
             logging::print("{:<16} {:10}\n", x.first, x.second.size());
