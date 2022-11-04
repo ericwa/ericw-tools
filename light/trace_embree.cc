@@ -416,7 +416,7 @@ static void Leaf_MakeFaces(
                 break;
         }
 
-        if (winding) {
+        if (!winding) {
             // logging::print("WARNING: winding clipped away\n");
         } else {
             result.push_back(std::move(*winding));
