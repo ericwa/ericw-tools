@@ -4,7 +4,10 @@ cmake-*/
 build*/
 CMakeFiles/
 *.xcodeproj
-.*/
+.vscode/**
+.vs
+.idea
+!.vscode/settings.json
 testmaps/*.bsp
 **/*decompile*.map
 testmaps/*.bsp.qbsplog
