@@ -660,7 +660,7 @@ static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float
     Q_assert(rayIndex < rs->_numrays);
 
     // multiply ray color by glass color
-    qvec3d tinted = rs->_ray_colors[rayIndex] * glasscolor;
+    qvec3f tinted = rs->_ray_colors[rayIndex] * glasscolor;
 
     // lerp ray color between original ray color and fully tinted by the glass texture color, based on the glass opacity
     rs->_ray_colors[rayIndex] = mix(rs->_ray_colors[rayIndex], tinted, opacity);

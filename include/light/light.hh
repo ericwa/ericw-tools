@@ -52,7 +52,8 @@ constexpr vec_t MAX_SKY_DIST = 1000000;
 
 struct lightsample_t
 {
-    qvec3d color, direction;
+    qvec3f color;
+    qvec3d direction;
 };
 
 // CHECK: isn't average a bad algorithm for color brightness?

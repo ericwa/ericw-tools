@@ -38,7 +38,7 @@ class raystream_embree_common_t
 public:
     std::vector<float> _rays_maxdist;
     std::vector<int> _point_indices;
-    std::vector<qvec3d> _ray_colors;
+    std::vector<qvec3f> _ray_colors;
     std::vector<qvec3d> _ray_normalcontribs;
 
     // This is set to the modelinfo's switchshadstyle if the ray hit
@@ -73,7 +73,7 @@ public:
         return _point_indices[j];
     }
 
-    inline qvec3d &getPushedRayColor(size_t j)
+    inline qvec3f &getPushedRayColor(size_t j)
     {
         Q_assert(j < _maxrays);
         return _ray_colors[j];
@@ -195,7 +195,7 @@ public:
         raystream_embree_common_t::resize(size);
     }
 
-    inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
+    inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3f *color = nullptr,
         const qvec3d *normalcontrib = nullptr)
     {
         Q_assert(_numrays < _maxrays);
@@ -282,7 +282,7 @@ public:
         raystream_embree_common_t::resize(size);
     }
 
-    inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3d *color = nullptr,
+    inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3f *color = nullptr,
         const qvec3d *normalcontrib = nullptr)
     {
         Q_assert(_numrays < _maxrays);

@@ -910,7 +910,7 @@ static bool Matrix4x4_CM_Project(const qvec3d &in, qvec3d &out, const std::array
 }
 
 static bool LightFace_SampleMipTex(
-    const img::texture *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point, qvec3d &result)
+    const img::texture *tex, const std::array<vec_t, 16> &projectionmatrix, const qvec3d &point, qvec3f &result)
 {
     // okay, yes, this is weird, yes we're using a vec3_t for a coord...
     // this is because we're treating it like a cubemap. why? no idea.
@@ -947,7 +947,7 @@ static bool LightFace_SampleMipTex(
 }
 
 static void GetLightContrib(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3d &surfnorm,
-    const qvec3d &surfpoint, bool twosided, qvec3d &color_out, qvec3d &surfpointToLightDir_out,
+    const qvec3d &surfpoint, bool twosided, qvec3f &color_out, qvec3d &surfpointToLightDir_out,
     qvec3d &normalmap_addition_out, float *dist_out)
 {
     float dist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir_out);
@@ -961,7 +961,7 @@ static void GetLightContrib(const settings::worldspawn_keys &cfg, const light_t 
 
     /* write out the final color */
     if (entity->projectedmip) {
-        qvec3d col;
+        qvec3f col;
         if (LightFace_SampleMipTex(entity->projectedmip, entity->projectionmatrix, surfpoint, col)) {
             // mxd. Modulate by light color...
             const auto &entcol = entity->color.value();
@@ -1022,7 +1022,7 @@ float GetLightDist(const settings::worldspawn_keys &cfg, const light_t *entity, 
 constexpr void Light_ClampMin(lightsample_t &sample, const vec_t light, const qvec3d &color)
 {
     for (int i = 0; i < 3; i++) {
-        sample.color[i] = std::max(sample.color[i], color[i] * (light / 255.0f));
+        sample.color[i] = std::max(sample.color[i], (float) (color[i] * (light / 255.0f)));
     }
 }
 
@@ -1221,7 +1221,8 @@ static void LightFace_Entity(
 
         qvec3d surfpointToLightDir;
         float surfpointToLightDist;
-        qvec3d color, normalcontrib;
+        qvec3f color;
+        qvec3d normalcontrib;
 
         GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir,
             normalcontrib, &surfpointToLightDist);
@@ -1334,7 +1335,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
 
-        qvec3d color = sun->sunlight_color * (value / 255.0);
+        qvec3f color = sun->sunlight_color * (value / 255.0);
 
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
@@ -1636,7 +1637,7 @@ static void // mxd
 LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, const std::vector<surfacelight_t> &surface_lights, const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    const vec_t surflight_gate = 0.01;
+    const float surflight_gate = 0.01f;
 
     for (const surfacelight_t &vpl : surface_lights) {
         if (SurfaceLight_SphereCull(&vpl, lightsurf, surflight_gate, hotspot_clamp))
@@ -1668,7 +1669,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 else
                     dir /= dist;
 
-                const qvec3d indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal, standard_scale, sky_scale, hotspot_clamp);
+                const qvec3f indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal, standard_scale, sky_scale, hotspot_clamp);
                 if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(i, pos, dir, dist, &indirect);
                 }
@@ -1690,7 +1691,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                     continue;
 
                 const int i = rs.getPushedRayPointIndex(j);
-                qvec3d indirect = rs.getPushedRayColor(j);
+                qvec3f indirect = rs.getPushedRayColor(j);
 
                 Q_assert(!std::isnan(indirect[0]));
 
@@ -2007,7 +2008,7 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
 
     for (lightmap_t &lightmap : lightsurf->lightmapsByStyle) {
         for (int i = 0; i < lightsurf->points.size(); i++) {
-            qvec3d &color = lightmap.samples[i].color;
+            qvec3f &color = lightmap.samples[i].color;
 
             /* Fix any negative values */
             color = qv::max(color, {0});
@@ -2025,7 +2026,7 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
 
             // color scaling
             if (lightsurf->lightcolorscale != 1.0) {
-                qvec3d grayscale { qv::max(color) };
+                qvec3f grayscale { qv::max(color) };
                 color = mix(grayscale, color, lightsurf->lightcolorscale);
             }
 
