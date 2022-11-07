@@ -564,7 +564,7 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
 common_settings::common_settings() :
 threads{
     this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"},
-lowpriority{this, "lowpriority", false, &performance_group,
+lowpriority{this, "lowpriority", true, &performance_group,
     "run in a lower priority, to free up headroom for other processes"},
 log{this, "log", true, &logging_group, "whether log files are written or not"},
 verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"},
