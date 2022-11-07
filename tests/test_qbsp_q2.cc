@@ -501,3 +501,22 @@ TEST_CASE("q2_door" * doctest::test_suite("testmaps_q2")) {
     CHECK(bmodel_tight_bounds.mins() == bsp.dmodels[1].mins);
     CHECK(bmodel_tight_bounds.maxs() == bsp.dmodels[1].maxs);
 }
+
+TEST_CASE("q2_mirrorinside" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_mirrorinside.map");
+
+    {
+        INFO("mist is two sided by default");
+        const qvec3d mist_pos{32, -28, 156};
+        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_pos)),
+            std::vector<std::string>({"e1u1/brwater", "e1u1/brwater"}));
+    }
+
+    {
+        INFO("_mirrorinside 0 disables the inside faces on mist");
+        const qvec3d mist_mirrorinside0_pos{32, -224, 156};
+        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_mirrorinside0_pos)),
+            std::vector<std::string>({"e1u1/brwater"}));
+    }
+}

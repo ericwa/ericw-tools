@@ -1227,7 +1227,8 @@ struct gamedef_q2_t : public gamedef_t
                 // windows don't generate inside faces
                 return false;
             }
-            return true;
+            // other types get mirrored by default, unless we override it with mirror_inside
+            return brushcontents.mirror_inside.value_or(true);
         }
         return true;
     }
