@@ -351,7 +351,14 @@ light_settings::light_settings()
               CheckNoDebugModeSet();
               debugmode = debugmodes::debugneighbours;
           },
-          &debug_group, "save neighboring faces data to lightmap (requires -debugface)"}
+          &debug_group, "save neighboring faces data to lightmap (requires -debugface)"},
+
+      debugmottle{this, "debugmottle",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::mottle;
+          },
+          &debug_group, "save mottle pattern to lightmap"}
 {
 }
 

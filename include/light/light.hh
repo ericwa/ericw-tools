@@ -161,7 +161,8 @@ enum class debugmodes
     debugoccluded,
     debugneighbours,
     phong_tangents,
-    phong_bitangents
+    phong_bitangents,
+    mottle
 };
 
 enum class lightfile
@@ -385,6 +386,7 @@ public:
     setting_func phongdebug_obj;
     setting_func debugoccluded;
     setting_func debugneighbours;
+    setting_func debugmottle;
 
     light_settings();
 
