@@ -822,6 +822,19 @@ TEST_CASE("water_detail_illusionary" * doctest::test_suite("testmaps_q1"))
     }
 }
 
+TEST_CASE("qbsp_bmodel_mirrorinside_with_liquid" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_bmodel_mirrorinside_with_liquid.map");
+
+    REQUIRE(prt.has_value());
+
+    const qvec3d model1_fenceface{-16, -56, 168};
+    const qvec3d model2_waterface{-16, -120, 168};
+
+    CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[1], model1_fenceface).size());
+    CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[2], model2_waterface).size());
+}
+
 TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");

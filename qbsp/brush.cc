@@ -779,19 +779,12 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
 
         /* entities in some games never use water merging */
         if (!map.is_world_entity(dst) && !qbsp_options.target_game->allow_contented_bmodels) {
-            contents = qbsp_options.target_game->create_solid_contents();
+            // bmodels become solid in Q1
 
-            /* Hack to turn bmodels with "_mirrorinside" into func_detail_fence in hull 0.
-                this is to allow "_mirrorinside" to work on func_illusionary, func_wall, etc.
-                Otherwise they would be CONTENTS_SOLID and the inside faces would be deleted.
-
-                It's CONTENTS_DETAIL_FENCE because this gets mapped to CONTENTS_SOLID just
-                before writing the bsp, and bmodels normally have CONTENTS_SOLID as their
-                contents type.
-                */
-            if (!hullnum.value_or(0) && contents.is_mirrored(qbsp_options.target_game)) {
-                contents = qbsp_options.target_game->create_detail_fence_contents(contents);
-            }
+            // to allow use of _mirrorinside, we'll set it to detail fence, which will get remapped back
+            // to CONTENTS_SOLID at export. (we wouldn't generate inside faces if the content was CONTENTS_SOLID
+            // from the start.)
+            contents = qbsp_options.target_game->create_detail_fence_contents(qbsp_options.target_game->create_solid_contents());
         }
 
         if (hullnum.value_or(0)) {
