@@ -1953,6 +1953,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
 
     /* iterate angle */
     float angle = 0.0f;
+    numDirtVectors = 0;
     for (int i = 0; i < DIRT_NUM_ANGLE_STEPS; i++, angle += angleStep) {
         /* iterate elevation */
         float elevation = elevationStep * 0.5f;
@@ -3036,4 +3037,21 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
             LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f);
         }
     }
+}
+
+void ResetLtFace()
+{
+    total_light_rays = 0;
+    total_light_ray_hits = 0;
+    total_samplepoints = 0;
+
+    total_bounce_rays = 0;
+    total_bounce_ray_hits = 0;
+    total_surflight_rays = 0;
+    total_surflight_ray_hits = 0;
+
+    fully_transparent_lightmaps = 0;
+
+    warned_about_light_map_overflow = false;
+    warned_about_light_style_overflow = false;
 }

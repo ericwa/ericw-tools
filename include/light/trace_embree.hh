@@ -27,6 +27,7 @@
 #include <common/polylib.hh>
 #include <vector>
 
+void ResetEmbree();
 void Embree_TraceInit(const mbsp_t *bsp);
 hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out);
 hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self);

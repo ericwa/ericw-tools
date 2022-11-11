@@ -1465,6 +1465,51 @@ void load_textures(const mbsp_t *bsp)
     }
 }
 
+/**
+ * Resets globals in this file
+ */
+static void ResetLight()
+{
+    dirt_in_use = false;
+    light_surfaces.clear();
+    faces_sup.clear();
+    facesup_decoupled_global.clear();
+
+    filebase.clear();
+    file_p = 0;
+    file_end = 0;
+
+    lit_filebase.clear();
+    lit_file_p = 0;
+    lit_file_end = 0;
+
+    lux_filebase.clear();
+    lux_file_p = 0;
+    lux_file_end = 0;
+
+    modelinfo.clear();
+    tracelist.clear();
+    selfshadowlist.clear();
+    shadowworldonlylist.clear();
+    switchableshadowlist.clear();
+
+    extended_texinfo_flags.clear();
+
+    dump_facenum = -1;
+    dump_vertnum = -1;
+}
+
+void light_reset()
+{
+    ResetBounce();
+    ResetLightEntities();
+    ResetLight();
+    ResetLtFace();
+    ResetPhong();
+    ResetSurflight();
+    ResetEmbree();
+}
+
 /*
  * ==================
  * main
@@ -1473,6 +1518,8 @@ void load_textures(const mbsp_t *bsp)
  */
 int light_main(int argc, const char **argv)
 {
+    light_reset();
+
     bspdata_t bspdata;
 
     light_options.preinitialize(argc, argv);

@@ -42,6 +42,13 @@ static std::vector<surfacelight_t> surfacelights;
 static std::map<int, std::vector<int>> surfacelightsByFacenum;
 static size_t total_surflight_points = 0;
 
+void ResetSurflight()
+{
+    surfacelights = {};
+    surfacelightsByFacenum = {};
+    total_surflight_points = {};
+}
+
 std::vector<surfacelight_t> &GetSurfaceLights()
 {
     return surfacelights;

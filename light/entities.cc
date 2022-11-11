@@ -33,6 +33,27 @@ std::vector<std::unique_ptr<light_t>> all_lights;
 std::vector<sun_t> all_suns;
 std::vector<entdict_t> entdicts;
 std::vector<entdict_t> radlights;
+static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
+static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
+static std::ofstream surflights_dump_file;
+static fs::path surflights_dump_filename;
+
+/**
+ * Resets global data in this file
+ */
+void ResetLightEntities()
+{
+    all_lights.clear();
+    all_suns.clear();
+    entdicts.clear();
+    radlights.clear();
+
+    lightstyleForTargetname.clear();
+
+    surfacelight_templates.clear();
+    surflights_dump_file = {};
+    surflights_dump_filename.clear();
+}
 
 std::vector<std::unique_ptr<light_t>> &GetLights()
 {
@@ -103,8 +124,6 @@ void light_t::expandAABB(const qvec3d &pt) { bounds += pt; }
  * If a light has a targetname, generate a unique style in the 32-63 range
  * ============================================================================
  */
-
-static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 
 entdict_t &WorldEnt()
 {
@@ -1152,15 +1171,10 @@ void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp)
  * =======================================================================
  */
 
-static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
-
 const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates()
 {
     return surfacelight_templates;
 }
-
-static std::ofstream surflights_dump_file;
-static fs::path surflights_dump_filename;
 
 static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3d &pos)
 {

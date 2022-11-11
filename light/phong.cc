@@ -182,6 +182,17 @@ static map<int, vector<const mface_t *>> planesToFaces;
 static edgeToFaceMap_t EdgeToFaceMap;
 static vector<face_cache_t> FaceCache;
 
+void ResetPhong()
+{
+    s_builtPhongCaches = false;
+    vertex_normals = {};
+    smoothFaces = {};
+    vertsToFaces = {};
+    planesToFaces = {};
+    EdgeToFaceMap = {};
+    FaceCache = {};
+}
+
 vector<const mface_t *> FacesUsingVert(int vertnum)
 {
     const auto &vertsToFaces_const = vertsToFaces;

@@ -122,6 +122,7 @@ public:
  *    Stores the RGB values to determine the light color
  */
 
+void ResetLightEntities();
 std::string TargetnameForLightStyle(int style);
 std::vector<std::unique_ptr<light_t>> &GetLights();
 std::vector<sun_t> &GetSuns();
