@@ -789,14 +789,14 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
 
         if (hullnum.value_or(0)) {
             /* nonsolid brushes don't show up in clipping hulls */
-            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game)) {
+            if (!contents.is_any_solid(qbsp_options.target_game)
+                && !contents.is_sky(qbsp_options.target_game)
+                && !contents.is_fence(qbsp_options.target_game)) {
                 continue;
             }
 
-            /* sky brushes are solid in the collision hulls */
-            if (contents.is_sky(qbsp_options.target_game)) {
-                contents = qbsp_options.target_game->create_solid_contents();
-            }
+            /* all used brushes are solid in the collision hulls */
+            contents = qbsp_options.target_game->create_solid_contents();
         }
 
         // fixme-brushbsp: function calls above can override the values below

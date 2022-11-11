@@ -833,6 +833,16 @@ TEST_CASE("qbsp_bmodel_mirrorinside_with_liquid" * doctest::test_suite("testmaps
 
     CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[1], model1_fenceface).size());
     CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[2], model2_waterface).size());
+
+    // both bmodels should be CONTENTS_SOLID in all hulls
+    for (int model_idx = 1; model_idx <= 2; ++model_idx) {
+        for (int hull = 0; hull <= 2; ++hull) {
+            auto &model = bsp.dmodels[model_idx];
+
+            INFO("model: ", model_idx, " hull: ", hull);
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, {hull}, &model, (model.mins + model.maxs) / 2));
+        }
+    }
 }
 
 TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
