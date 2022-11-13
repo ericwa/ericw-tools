@@ -108,25 +108,8 @@ time_point I_FloatTime();
  *                            BYTE ORDER FUNCTIONS
  * ============================================================================
  */
-// C++20 polyfill
-#if defined(__cpp_lib_endian) && __cpp_lib_endian >= 201907L
-#include <bit>
-#else
-namespace std
-{
-enum class endian
-{
-    little = 0,
-    big = 1,
 
-#ifdef __BIG_ENDIAN__
-    native = big
-#else
-    native = little
-#endif
-};
-} // namespace std
-#endif
+#include <bit>
 
 // Binary streams; by default, streams use the native endianness
 // (unchanged bytes) but can be changed to a specific endianness
