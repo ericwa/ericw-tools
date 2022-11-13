@@ -368,6 +368,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.light_ignore) {
             t["light_ignore"] = tx.flags.light_ignore;
         }
+        if (tx.flags.surflight_rescale == false) {
+            t["surflight_rescale"] = tx.flags.surflight_rescale;
+        }
         if (tx.flags.phong_angle) {
             t["phong_angle"] = tx.flags.phong_angle;
         }

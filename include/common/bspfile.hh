@@ -185,6 +185,10 @@ struct surfflags_t
     // this face doesn't receive light
     bool light_ignore;
 
+    // if true, rescales any surface light emitted by these brushes to emit 50% light at 90 degrees from the surface normal
+    // if false, use a more natural angle falloff of 0% at 90 degrees
+    bool surflight_rescale = true;
+
     // if non zero, enables phong shading and gives the angle threshold to use
     vec_t phong_angle;
 

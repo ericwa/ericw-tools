@@ -1072,6 +1072,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("light_ignore")) {
             flags.light_ignore = val.at("light_ignore").get<bool>();
         }
+        if (val.contains("surflight_rescale")) {
+            flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
+        }
         if (val.contains("phong_angle")) {
             flags.phong_angle = val.at("phong_angle").get<vec_t>();
         }

@@ -61,6 +61,8 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     auto poly = GLM_FacePoints(bsp, face);
     const float facearea = qv::PolyArea(poly.begin(), poly.end());
 
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+
     // Avoid small, or zero-area faces
     if (facearea < 1)
         return;
@@ -115,7 +117,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     l.omnidirectional = !is_directional;
     l.points = std::move(points);
     l.style = style;
-    l.rescale = true;
+    l.rescale = extended_flags.surflight_rescale;
 
     // Init bbox...
     if (light_options.visapprox.value() == visapprox_t::RAYS) {

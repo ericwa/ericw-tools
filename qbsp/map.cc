@@ -576,6 +576,8 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         flags.no_minlight = true;
     if (entity.epairs.get_int("_lightignore") == 1)
         flags.light_ignore = true;
+    if (entity.epairs.has("_surflight_rescale") && entity.epairs.get_int("_surflight_rescale") == 0)
+        flags.surflight_rescale = false;
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
     for (int i = 0; i <= 9; i++) {

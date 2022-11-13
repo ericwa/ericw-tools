@@ -20,6 +20,7 @@
 #pragma once
 
 #include <common/bspfile.hh>
+#include <common/bspxfile.hh>
 #include <common/mathlib.hh>
 #include <common/qvec.hh>
 #include <common/aabb.hh>
@@ -107,6 +108,8 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
 void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it);
 void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed);
 
+bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num);
+
 /* ======================================================================== */
 
 qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex);
@@ -150,3 +153,5 @@ public:
     qvec2f worldToLMCoord(qvec3f world) const;
     qvec3f LMCoordToWorld(qvec2f lm) const;
 };
+
+qvec3b LM_Sample(const mbsp_t *bsp, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord);

@@ -622,6 +622,20 @@ void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
     } while (out - decompressed < row);
 }
 
+bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num)
+{
+    auto &lump_bytes = entries.at("DECOUPLED_LM");
+
+    auto stream = imemstream(lump_bytes.data(), lump_bytes.size());
+
+    stream.seekg(face_num * sizeof(bspx_decoupled_lm_perface));
+    stream >> endianness<std::endian::little>;
+
+    bspx_decoupled_lm_perface result;
+    stream >= result;
+    return result;
+}
+
 qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex)
 {
     /*
@@ -900,4 +914,28 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
     const qvec4f lmPadded(lm[0], lm[1], 0.0f, 1.0f);
     const qvec4f res = lmToWorldMatrix * lmPadded;
     return res;
+}
+
+/**
+ * Samples the lightmap at an integer coordinate
+ */
+qvec3b LM_Sample(const mbsp_t *bsp, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord)
+{
+    int pixel = coord[0] + (coord[1] * faceextents.width());
+
+    const uint8_t* data = bsp->dlightdata.data();
+
+    if (bsp->loadversion->game->has_rgb_lightmap) {
+        return qvec3f{
+            data[byte_offset_of_face + (pixel * 3) + 0],
+            data[byte_offset_of_face + (pixel * 3) + 1],
+            data[byte_offset_of_face + (pixel * 3) + 2]
+        };
+    } else {
+        return qvec3f{
+            data[byte_offset_of_face + pixel],
+            data[byte_offset_of_face + pixel],
+            data[byte_offset_of_face + pixel]
+        };
+    }
 }
