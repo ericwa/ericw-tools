@@ -1146,7 +1146,7 @@ TEST_CASE("q1_cube")
 
     REQUIRE_FALSE(prt.has_value());
 
-    const aabb3d cube_bounds {
+    const aabb3f cube_bounds {
         {32, -240, 80},
         {80, -144, 112}
     };
@@ -1157,8 +1157,8 @@ TEST_CASE("q1_cube")
 
     // check the solid leaf
     auto& solid_leaf = bsp.dleafs[0];
-    CHECK(solid_leaf.mins == qvec3d(0,0,0));
-    CHECK(solid_leaf.maxs == qvec3d(0,0,0));
+    CHECK(solid_leaf.mins == qvec3f(0,0,0));
+    CHECK(solid_leaf.maxs == qvec3f(0,0,0));
 
     // check the empty leafs
     for (int i = 1; i < 7; ++i) {
@@ -1208,7 +1208,7 @@ TEST_CASE("q1_clip_func_wall" * doctest::test_suite("testmaps_q1"))
 
     REQUIRE(prt.has_value());
 
-    const aabb3d cube_bounds {
+    const aabb3f cube_bounds {
         {64, 64, 48},
         {128, 128, 80}
     };

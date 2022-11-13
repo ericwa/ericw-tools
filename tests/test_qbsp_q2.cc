@@ -492,8 +492,8 @@ TEST_CASE("q2_door" * doctest::test_suite("testmaps_q2")) {
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
-    const aabb3d world_tight_bounds {{-64, -64, -16}, {64, 80, 128}};
-    const aabb3d bmodel_tight_bounds {{-48, 48, 16}, {48, 64, 112}};
+    const aabb3f world_tight_bounds {{-64, -64, -16}, {64, 80, 128}};
+    const aabb3f bmodel_tight_bounds {{-48, 48, 16}, {48, 64, 112}};
 
     CHECK(world_tight_bounds.mins() == bsp.dmodels[0].mins);
     CHECK(world_tight_bounds.maxs() == bsp.dmodels[0].maxs);

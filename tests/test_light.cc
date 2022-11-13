@@ -188,7 +188,7 @@ TEST_CASE("PolygonCentroid")
     const std::initializer_list<qvec3d> poly{{0, 0, 0}, {0, 32, 0}, // colinear
         {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-    CHECK(qvec3f(32, 32, 0) == qv::PolyCentroid(poly.begin(), poly.end()));
+    CHECK(qvec3d(32, 32, 0) == qv::PolyCentroid(poly.begin(), poly.end()));
 }
 
 TEST_CASE("PolygonArea")
