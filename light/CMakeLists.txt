@@ -45,7 +45,12 @@ add_executable(light main.cc)
 target_link_libraries(light PRIVATE common liblight)
 
 if (embree_FOUND)
-	target_link_libraries (liblight PRIVATE embree)
+	if (LEGACY_EMBREE)
+		target_link_libraries (liblight PRIVATE ${EMBREE_LIBRARY})
+	else()
+		target_link_libraries (liblight PRIVATE embree)
+	endif()
+
 	add_definitions(-DHAVE_EMBREE)
 
 	# macOS/homebrew: hack around find_file applying the .. before resolving the symlink
@@ -74,10 +79,18 @@ if (embree_FOUND)
 	endif()
 
 	add_custom_command(TARGET light POST_BUILD
-                       COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:light>"
                        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:light>"
 					   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:light>"
 					   )
+
+	if (LEGACY_EMBREE)
+		add_custom_command(TARGET light POST_BUILD
+							COMMAND ${CMAKE_COMMAND} -E copy_if_different "${embree_DIR}/bin/embree3.dll"   "$<TARGET_FILE_DIR:light>")
+	else()
+		add_custom_command(TARGET light POST_BUILD
+							COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:light>")
+	endif()
+
 
 	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
 		add_custom_command(TARGET light POST_BUILD
@@ -94,7 +107,11 @@ if (embree_FOUND)
 			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
 	endif()
 	
-	install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+	if (LEGACY_EMBREE)
+		install(FILES "${embree_DIR}/bin/embree3.dll" DESTINATION bin)
+	else()
+		install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+	endif()
 
 	# install TBB
 	if(UNIX)
