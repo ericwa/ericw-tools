@@ -9,7 +9,6 @@ install:
 - ps: 7z x embree64.zip -oc:\
 - ps: Invoke-WebRequest 'https://github.com/oneapi-src/oneTBB/releases/download/v2020.2/tbb-2020.2-win.zip' -OutFile 'tbb.zip'
 - ps: 7z x tbb.zip -oc:\
-- cmd: call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" x64 8.1
 build_script:
 - cmd: powershell .\build-appveyor.ps1
 artifacts:

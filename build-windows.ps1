@@ -20,7 +20,7 @@ choco install ninja
 mkdir build-windows
 cd build-windows
 
-cmake .. -GNinja -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_BUILD_TYPE=Release
+cmake .. -GNinja -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_BUILD_TYPE=Release -DCMAKE_SYSTEM_VERSION="8.1"
 
 ninja
 if ( $? -eq $false ) {
