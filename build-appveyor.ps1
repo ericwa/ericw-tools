@@ -1,10 +1,3 @@
-# Download embree and tbb
-# Seems like TBB dropped Windows 8.1 support in version 2020 so we'll use older versions
-Invoke-WebRequest 'https://github.com/embree/embree/releases/download/v3.9.0/embree-3.9.0.x64.vc14.windows.zip' -OutFile 'embree64.zip'
-7z x embree64.zip -oc:\
-Invoke-WebRequest 'https://github.com/oneapi-src/oneTBB/releases/download/2019_U9/tbb2019_20191006oss_win.zip' -OutFile 'tbb.zip'
-7z x tbb.zip -oc:\
-
 git submodule update --init --recursive
 
 $env:Path += ";C:\cygwin64\bin"
@@ -25,7 +18,7 @@ mkdir cmakebuild
 
 cd cmakebuild
 
-cmake .. -T v143 -Dembree_DIR="C:\embree-3.9.0.x64.vc14.windows" -DTBB_DIR="C:\tbb2019_20191006oss\cmake" -DCMAKE_GENERATOR_PLATFORM=x64 -DLEGACY_EMBREE=YES
+cmake .. -T v143 -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
 
 $cmakePlatform = "x64"
 

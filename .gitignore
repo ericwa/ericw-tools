@@ -1,7 +1,7 @@
 bin/
 cmakebuild/
 cmake-*/
-*build*/
+build*/
 CMakeFiles/
 *.xcodeproj
 .vscode/**

@@ -33,18 +33,10 @@ target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET tests POST_BUILD
+					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:tests>"
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:tests>"
 					COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:tests>"
 					)
-
-if (LEGACY_EMBREE)
-	add_custom_command(TARGET tests POST_BUILD
-						COMMAND ${CMAKE_COMMAND} -E copy_if_different "${embree_DIR}/bin/embree3.dll"   "$<TARGET_FILE_DIR:tests>")
-else()
-	add_custom_command(TARGET tests POST_BUILD
-						COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:tests>")
-endif()
-
 if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 	add_custom_command(TARGET tests POST_BUILD
 					   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:tests>")
