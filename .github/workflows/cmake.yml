@@ -26,6 +26,8 @@ jobs:
     - name: Setup MSVC environment
       if: runner.os == 'Windows' 
       uses: ilammy/msvc-dev-cmd@v1
+      with:
+        sdk: 8.1 # maintain Windows 8.1 support
 
     - name: Linux Build
       if: runner.os == 'Linux'
