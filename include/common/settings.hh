@@ -34,6 +34,7 @@
 #include <limits>
 #include <optional>
 #include <unordered_set>
+#include <functional>
 
 namespace settings
 {

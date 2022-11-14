@@ -355,18 +355,18 @@ struct fmt::formatter<bspversion_t>
     auto format(const bspversion_t &v, FormatContext &ctx) -> decltype(ctx.out())
     {
         if (v.name) {
-            format_to(ctx.out(), "{} ", v.name);
+            fmt::format_to(ctx.out(), "{} ", v.name);
         }
 
         // Q2-esque BSPs are printed as, ex, IBSP:38
         if (v.version.has_value()) {
             char ident[5] = {(char)(v.ident & 0xFF), (char)((v.ident >> 8) & 0xFF), (char)((v.ident >> 16) & 0xFF),
                 (char)((v.ident >> 24) & 0xFF), '\0'};
-            return format_to(ctx.out(), "{}:{}", ident, v.version.value());
+            return fmt::format_to(ctx.out(), "{}:{}", ident, v.version.value());
         }
 
         // Q1-esque BSPs are printed as, ex, bsp29
-        return format_to(ctx.out(), "{}", v.short_name);
+        return fmt::format_to(ctx.out(), "{}", v.short_name);
     }
 };
 
@@ -410,7 +410,7 @@ struct texvec : qmat<T, 2, 4>
 
 // Fmt support
 template<class T>
-struct fmt::formatter<texvec<T>> : formatter<qmat<T, 2, 4>>
+struct fmt::formatter<texvec<T>> : fmt::formatter<qmat<T, 2, 4>>
 {
 };
 

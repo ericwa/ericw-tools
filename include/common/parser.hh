@@ -93,13 +93,13 @@ struct fmt::formatter<parser_source_location>
     auto format(const parser_source_location &v, FormatContext &ctx) -> decltype(ctx.out())
     {
         if (v.source_name) {
-            format_to(ctx.out(), "{}", *v.source_name.get());
+            fmt::format_to(ctx.out(), "{}", *v.source_name.get());
         } else {
-            format_to(ctx.out(), "unknown/unset location");
+            fmt::format_to(ctx.out(), "unknown/unset location");
         }
 
         if (v.line_number.has_value()) {
-            format_to(ctx.out(), "[line {}]", v.line_number.value());
+            fmt::format_to(ctx.out(), "[line {}]", v.line_number.value());
         }
 
         return ctx.out();

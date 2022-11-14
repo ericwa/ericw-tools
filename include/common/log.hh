@@ -74,15 +74,15 @@ template<typename... Args>
 inline void print(flag type, const char *fmt, const Args &...args)
 {
     if (mask & type) {
-        print(type, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
+        print(type, fmt::format(fmt::runtime(fmt), std::forward<const Args &>(args)...).c_str());
     }
 }
 
 // format print to default targets
 template<typename... Args>
-inline void print(const char *fmt, const Args &...args)
+inline void print(const char *formt, const Args &...args)
 {
-    print(flag::DEFAULT, fmt::format(fmt, std::forward<const Args &>(args)...).c_str());
+    print(flag::DEFAULT, fmt::format(fmt::runtime(formt), std::forward<const Args &>(args)...).c_str());
 }
 
 void header(const char *name);
@@ -182,7 +182,7 @@ struct stat_tracker_t
 template<typename... Args>
 [[noreturn]] inline void Error(const char *fmt, const Args &...args)
 {
-    auto formatted = fmt::format(fmt, std::forward<const Args &>(args)...);
+    auto formatted = fmt::format(fmt::runtime(fmt), std::forward<const Args &>(args)...);
     Error(formatted.c_str());
 }
 
