@@ -2848,13 +2848,15 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         lightofs = out - filebase.data();
     }
 
-    if (facesup) {
+    if (facesup_decoupled && light_options.novanilla.value()) {
+        facesup_decoupled->offset = lightofs;
+        face->lightofs = -1;
+    } else if (facesup_decoupled && !light_options.novanilla.value()) {
+        FError("-world_units_per_luxel currently requires -novanilla");
+    } else if (facesup) {
         facesup->lightofs = lightofs;
     } else {
         face->lightofs = lightofs;
-        if (facesup_decoupled) {
-            facesup_decoupled->offset = lightofs;
-        }
     }
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
