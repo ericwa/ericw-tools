@@ -2667,21 +2667,47 @@ static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *
     // this is the lightmap data in the "decoupled" coordinate system
     std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
 
+    // maps a luxel in the vanilla lightmap to the corresponding position in the decoupled lightmap
+    const qmat4x4f vanillaLMToDecoupled = lightsurf->extents.worldToLMMatrix * lightsurf->vanilla_extents.lmToWorldMatrix;
+
+    // samples the "decoupled" lightmap at an integer coordinate, with clamping
+    auto tex = [&lightsurf, &fullres](int x, int y) -> qvec4f {
+        const int x_clamped = clamp(x, 0, lightsurf->width - 1);
+        const int y_clamped = clamp(y, 0, lightsurf->height - 1);
+
+        const int sampleindex = (y_clamped * lightsurf->width) + x_clamped;
+        assert(sampleindex >= 0);
+        assert(sampleindex < fullres.size());
+
+        return fullres[sampleindex];
+    };
+
     for (int t = 0; t < output_height; t++) {
         for (int s = 0; s < output_width; s++) {
             // convert from vanilla lm coord to decoupled lm coord
-            qvec3f world = lightsurf->vanilla_extents.LMCoordToWorld(qvec2f(s, t));
-            qvec2f decoupled_lm_coord = lightsurf->extents.worldToLMCoord(world);
+            qvec2f decoupled_lm_coord = vanillaLMToDecoupled * qvec4f(s, t, 0, 1);
 
             decoupled_lm_coord = decoupled_lm_coord * light_options.extra.value();
 
-            const int input_sample_s = clamp((int)decoupled_lm_coord[0], 0, lightsurf->width - 1);
-            const int input_sample_t = clamp((int)decoupled_lm_coord[1], 0, lightsurf->height - 1);
-            const int sampleindex = (input_sample_t * lightsurf->width) + input_sample_s;
+            // split into integer/fractional part for bilinear interpolation
+            const int coord_floor_x = (int)decoupled_lm_coord[0];
+            const int coord_floor_y = (int)decoupled_lm_coord[1];
+
+            const float coord_frac_x = decoupled_lm_coord[0] - coord_floor_x;
+            const float coord_frac_y = decoupled_lm_coord[1] - coord_floor_y;
+
+            // 2D bilinear interpolation
+            const qvec4f color =
+                mix(
+                    mix(tex(coord_floor_x, coord_floor_y),
+                        tex(coord_floor_x + 1, coord_floor_y),
+                        coord_frac_x),
+                    mix(tex(coord_floor_x, coord_floor_y + 1),
+                        tex(coord_floor_x + 1, coord_floor_y + 1),
+                        coord_frac_x),
+                    coord_frac_y);
 
             if (lit || out) {
-                const qvec4f &color = fullres.at(sampleindex);
-
                 if (lit) {
                     *lit++ = color[0];
                     *lit++ = color[1];
