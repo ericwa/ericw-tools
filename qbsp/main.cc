@@ -20,8 +20,18 @@
 #include <qbsp/qbsp.hh>
 #include <common/settings.hh>
 
+#ifdef _WIN32
+#  include <windows.h>
+#endif
+
 int main(int argc, const char **argv)
 {
+#if defined(_WIN32)
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    SetConsoleMode(hInput, ENABLE_VIRTUAL_TERMINAL_INPUT);
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
     try {
         return qbsp_main(argc, argv);
     } catch (const settings::quit_after_help_exception &) {
