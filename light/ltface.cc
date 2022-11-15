@@ -2656,6 +2656,54 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     }
 }
 
+/**
+ * - Writes (output_width * output_height) bytes to `out`
+ * - Writes (output_width * output_height * 3) bytes to `lit`
+ * - Writes (output_width * output_height * 3) bytes to `lux`
+ */
+static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
+    const lightmap_t *lm, const int output_width, const int output_height, uint8_t *out, uint8_t *lit, uint8_t *lux)
+{
+    // this is the lightmap data in the "decoupled" coordinate system
+    std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
+
+    for (int t = 0; t < output_height; t++) {
+        for (int s = 0; s < output_width; s++) {
+            // convert from vanilla lm coord to decoupled lm coord
+            qvec3f world = lightsurf->vanilla_extents.LMCoordToWorld(qvec2f(s, t));
+            qvec2f decoupled_lm_coord = lightsurf->extents.worldToLMCoord(world);
+
+            decoupled_lm_coord = decoupled_lm_coord * light_options.extra.value();
+
+            const int input_sample_s = clamp((int)decoupled_lm_coord[0], 0, lightsurf->width - 1);
+            const int input_sample_t = clamp((int)decoupled_lm_coord[1], 0, lightsurf->height - 1);
+            const int sampleindex = (input_sample_t * lightsurf->width) + input_sample_s;
+
+            if (lit || out) {
+                const qvec4f &color = fullres.at(sampleindex);
+
+                if (lit) {
+                    *lit++ = color[0];
+                    *lit++ = color[1];
+                    *lit++ = color[2];
+                }
+
+                if (out) {
+                    // FIXME: implement
+                    *out++ = 0;
+                }
+            }
+
+            if (lux) {
+                // FIXME: implement
+                *lux++ = 0;
+                *lux++ = 0;
+                *lux++ = 0;
+            }
+        }
+    }
+}
+
 void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
     const faceextents_t &output_extents)
@@ -2848,11 +2896,9 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         lightofs = out - filebase.data();
     }
 
-    if (facesup_decoupled && light_options.novanilla.value()) {
+    if (facesup_decoupled) {
         facesup_decoupled->offset = lightofs;
         face->lightofs = -1;
-    } else if (facesup_decoupled && !light_options.novanilla.value()) {
-        FError("-world_units_per_luxel currently requires -novanilla");
     } else if (facesup) {
         facesup->lightofs = lightofs;
     } else {
@@ -2880,6 +2926,37 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         }
         if (lux) {
             lux += (size * 3);
+        }
+    }
+
+    // write vanilla lightmap if -world_units_per_luxel is in use but not -novanilla
+    if (facesup_decoupled && !light_options.novanilla.value()) {
+        // FIXME: duplicates some code from above
+        GetFileSpace(&out, &lit, &lux, lightsurf->vanilla_extents.numsamples() * numstyles);
+
+        // Q2/HL native colored lightmaps
+        if (bsp->loadversion->game->has_rgb_lightmap) {
+            lightofs = lit - lit_filebase.data();
+        } else {
+            lightofs = out - filebase.data();
+        }
+        face->lightofs = lightofs;
+
+        for (int mapnum = 0; mapnum < numstyles; mapnum++) {
+            const lightmap_t *lm = sorted.at(mapnum);
+
+            WriteSingleLightmap_FromDecoupled(bsp, face, lightsurf, lm, lightsurf->vanilla_extents.width(),
+                lightsurf->vanilla_extents.height(), out, lit, lux);
+
+            if (out) {
+                out += lightsurf->vanilla_extents.numsamples();
+            }
+            if (lit) {
+                lit += (lightsurf->vanilla_extents.numsamples() * 3);
+            }
+            if (lux) {
+                lux += (lightsurf->vanilla_extents.numsamples() * 3);
+            }
         }
     }
 }

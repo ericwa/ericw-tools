@@ -63,8 +63,8 @@ static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<
     }
 }
 
-TEST_CASE("TestLight") {
-    LoadTestmap("q2_lightmap_custom_scale.map", {"-threads", "1", "-world_units_per_luxel", "8", "-novanilla"});
+TEST_CASE("-world_units_per_luxel") {
+    LoadTestmap("q2_lightmap_custom_scale.map", {"-world_units_per_luxel", "8"});
 }
 
 TEST_CASE("emissive cube artifacts") {
