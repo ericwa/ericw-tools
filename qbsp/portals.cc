@@ -770,7 +770,7 @@ void EmitAreaPortals(node_t *headnode)
 
 struct visible_faces_stats_t : logging::stat_tracker_t
 {
-    stat &sides_not_found = register_stat("sides not found", false, true);
+    stat &sides_not_found = register_stat("sides not found (use -verbose to display)", false, true);
     stat &sides_visible = register_stat("sides visible");
 };
 
@@ -870,6 +870,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
 
     if (!bestside[0] && !bestside[1]) {
         stats.sides_not_found++;
+        logging::print(logging::flag::VERBOSE, "couldn't find portal side at {}\n", p->winding.center());
     }
 
     p->sidefound = true;
