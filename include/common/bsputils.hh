@@ -125,6 +125,8 @@ constexpr size_t MAXDIMENSION = 255 + 1;
 
 struct world_units_per_luxel_t {};
 
+constexpr float LMSCALE_DEFAULT = 16.0f;
+
 class faceextents_t
 {
 public:

@@ -714,10 +714,10 @@ static void FindModelInfo(const mbsp_t *bsp)
 
     float lightmapscale = WorldEnt().get_int("_lightmap_scale");
     if (!lightmapscale)
-        lightmapscale = 16; /* the default */
+        lightmapscale = LMSCALE_DEFAULT; /* the default */
     if (lightmapscale <= 0)
         FError("lightmap scale is 0 or negative\n");
-    if (light_options.lightmap_scale.isChanged() || lightmapscale != 16)
+    if (light_options.lightmap_scale.isChanged() || lightmapscale != LMSCALE_DEFAULT)
         logging::print("Forcing lightmap scale of {}qu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software
      * ones that might be able to just do some mip hacks). This tool doesn't really care.*/

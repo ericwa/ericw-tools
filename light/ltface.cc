@@ -703,7 +703,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     } else {
         lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
     }
-    lightsurf->vanilla_extents = faceextents_t(*face, *bsp, 16.0);
+    lightsurf->vanilla_extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
 
     CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
 
