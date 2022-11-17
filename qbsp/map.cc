@@ -431,7 +431,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
                 last_i = next_i;
 
                 // looped back
-                if (wal->animation == name)
+                if (!Q_strcasecmp(wal->animation.c_str(), name))
                     break;
             }
 
