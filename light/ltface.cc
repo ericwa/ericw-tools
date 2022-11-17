@@ -703,7 +703,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     } else {
         lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
     }
-    lightsurf->vanilla_extents = faceextents_t(*face, *bsp, 16.0);
+    lightsurf->vanilla_extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
 
     CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
 
@@ -1395,6 +1395,110 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
     }
 }
 
+// Mottle
+
+static int mod_round_to_neg_inf(int x, int y) {
+    assert(y > 0);
+    if (x >= 0) {
+        return x % y;
+    }
+    // e.g. with mod_round_to_neg_inf(-7, 3) we want +2
+    const int temp = (-x) % y;
+    return y - temp;
+}
+
+constexpr int mottle_texsize = 256;
+
+/**
+ * integers 0 through 255 shuffled with Python:
+ *
+ * import random
+ * a = list(range(0, 256))
+ * random.shuffle(a)
+ */
+static constexpr uint8_t MottlePermutation256[] = {11, 255, 250, 82, 217, 9, 144, 93, 136, 153, 55, 71, 73, 204, 96,
+    180, 126, 8, 50, 46, 113, 91, 238, 143, 30, 215, 191, 243, 65, 58, 208, 33, 86, 1, 182, 118, 83, 115, 207, 52, 94,
+    112, 205, 48, 99, 254, 117, 101, 157, 140, 72, 242, 244, 154, 10, 135, 155, 168, 125, 183, 148, 116, 187, 166, 25,
+    156, 177, 231, 165, 57, 221, 105, 28, 211, 127, 41, 142, 253, 146, 87, 122, 229, 162, 137, 194, 174, 167, 15, 220,
+    26, 235, 3, 39, 80, 88, 42, 202, 12, 97, 53, 70, 123, 170, 110, 214, 192, 173, 84, 169, 188, 64, 102, 147, 158, 100,
+    69, 213, 193, 43, 20, 13, 237, 171, 103, 32, 190, 223, 150, 131, 206, 85, 124, 163, 18, 139, 132, 79, 29, 216, 232,
+    178, 74, 24, 141, 201, 181, 152, 4, 7, 159, 134, 212, 226, 245, 164, 239, 47, 66, 27, 40, 197, 81, 78, 219, 228,
+    241, 121, 23, 120, 230, 76, 252, 199, 184, 45, 203, 161, 89, 16, 21, 119, 5, 209, 196, 68, 130, 195, 176, 225, 233,
+    128, 22, 248, 179, 249, 61, 108, 138, 145, 31, 49, 107, 56, 172, 224, 210, 6, 160, 189, 104, 200, 44, 175, 133, 77,
+    62, 106, 92, 186, 227, 14, 38, 247, 37, 17, 222, 36, 75, 129, 185, 251, 240, 54, 151, 2, 98, 149, 0, 63, 218, 60,
+    198, 19, 59, 90, 246, 234, 67, 51, 109, 95, 236, 35, 34, 114, 111};
+
+/**
+ * Return a noise texture value from 0-47.
+ *
+ * Vanilla Q2 tools just called (rand() % 48) per-luxel, which generates seams
+ * and scales in size with lightmap scale.
+ *
+ * Replacement code uses "value noise", generating a tiling 3D texture
+ * in world space.
+ */
+static float Mottle(const qvec3d &position)
+{
+#if 0
+    return rand() % 48;
+#else
+    const float world_to_tex = 1/16.0f;
+
+    qvec3d texspace_pos = position * world_to_tex;
+
+    int coord_floor_x = static_cast<int>(floor(texspace_pos[0]));
+    int coord_floor_y = static_cast<int>(floor(texspace_pos[1]));
+    int coord_floor_z = static_cast<int>(floor(texspace_pos[2]));
+
+    float coord_frac_x = static_cast<float>(texspace_pos[0] - coord_floor_x);
+    float coord_frac_y = static_cast<float>(texspace_pos[1] - coord_floor_y);
+    float coord_frac_z = static_cast<float>(texspace_pos[2] - coord_floor_z);
+
+    assert(coord_frac_x >= 0 && coord_frac_x <= 1);
+    assert(coord_frac_y >= 0 && coord_frac_y <= 1);
+    assert(coord_frac_z >= 0 && coord_frac_z <= 1);
+
+    coord_floor_x = mod_round_to_neg_inf(coord_floor_x, mottle_texsize);
+    coord_floor_y = mod_round_to_neg_inf(coord_floor_y, mottle_texsize);
+    coord_floor_z = mod_round_to_neg_inf(coord_floor_z, mottle_texsize);
+
+    assert(coord_floor_x >= 0 && coord_floor_x < mottle_texsize);
+    assert(coord_floor_y >= 0 && coord_floor_y < mottle_texsize);
+    assert(coord_floor_z >= 0 && coord_floor_z < mottle_texsize);
+
+    // look up sample in the 3d texture at an integer coordinate
+    auto tex = [](int x, int y, int z) -> uint8_t {
+        int v;
+        v = MottlePermutation256[x % 256];
+        v = MottlePermutation256[(v + y) % 256];
+        v = MottlePermutation256[(v + z) % 256];
+        return v;
+    };
+
+    // 3D bilinear interpolation
+    float res = mix(
+        mix(
+            mix(tex(coord_floor_x, coord_floor_y, coord_floor_z),
+                tex(coord_floor_x + 1, coord_floor_y, coord_floor_z),
+                coord_frac_x),
+            mix(tex(coord_floor_x, coord_floor_y + 1, coord_floor_z),
+                tex(coord_floor_x + 1, coord_floor_y + 1, coord_floor_z),
+                coord_frac_x),
+            coord_frac_y),
+        mix(
+            mix(tex(coord_floor_x, coord_floor_y, coord_floor_z + 1),
+                tex(coord_floor_x + 1, coord_floor_y, coord_floor_z + 1),
+                coord_frac_x),
+            mix(tex(coord_floor_x, coord_floor_y + 1, coord_floor_z + 1),
+                tex(coord_floor_x + 1, coord_floor_y + 1, coord_floor_z + 1),
+                coord_frac_x),
+            coord_frac_y),
+        coord_frac_z);
+
+    return (res / 255.0f) * 48.0f;
+#endif
+}
+
 /*
  * ============
  * LightFace_Min
@@ -1425,7 +1529,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             sample.color += color * (value / 255.0);
         } else {
             if (lightsurf->minlightMottle) {
-                value += rand() % 48;
+                value += Mottle(lightsurf->points[i]);
             }
             Light_ClampMin(sample, value, color);
         }
@@ -1558,6 +1662,23 @@ static void LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *l
         for (auto &v : sample.color) {
             v = abs(v) * 255;
         }
+    }
+
+    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+}
+
+static void LightFace_DebugMottle(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    /* use a style 0 light map */
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
+
+    /* Overwrite each point with the mottle noise for that sample... */
+    for (int i = 0; i < lightsurf->points.size(); i++) {
+        lightsample_t &sample = lightmap->samples[i];
+        // mottle is meant to be applied on top of minlight, so add some here
+        // for preview purposes.
+        const float minlight = 20.0f;
+        sample.color = qvec3f(minlight + Mottle(lightsurf->points[i]));
     }
 
     Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
@@ -1832,6 +1953,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
 
     /* iterate angle */
     float angle = 0.0f;
+    numDirtVectors = 0;
     for (int i = 0; i < DIRT_NUM_ANGLE_STEPS; i++, angle += angleStep) {
         /* iterate elevation */
         float elevation = elevationStep * 0.5f;
@@ -2534,6 +2656,80 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
     }
 }
 
+/**
+ * - Writes (output_width * output_height) bytes to `out`
+ * - Writes (output_width * output_height * 3) bytes to `lit`
+ * - Writes (output_width * output_height * 3) bytes to `lux`
+ */
+static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
+    const lightmap_t *lm, const int output_width, const int output_height, uint8_t *out, uint8_t *lit, uint8_t *lux)
+{
+    // this is the lightmap data in the "decoupled" coordinate system
+    std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
+
+    // maps a luxel in the vanilla lightmap to the corresponding position in the decoupled lightmap
+    const qmat4x4f vanillaLMToDecoupled = lightsurf->extents.worldToLMMatrix * lightsurf->vanilla_extents.lmToWorldMatrix;
+
+    // samples the "decoupled" lightmap at an integer coordinate, with clamping
+    auto tex = [&lightsurf, &fullres](int x, int y) -> qvec4f {
+        const int x_clamped = clamp(x, 0, lightsurf->width - 1);
+        const int y_clamped = clamp(y, 0, lightsurf->height - 1);
+
+        const int sampleindex = (y_clamped * lightsurf->width) + x_clamped;
+        assert(sampleindex >= 0);
+        assert(sampleindex < fullres.size());
+
+        return fullres[sampleindex];
+    };
+
+    for (int t = 0; t < output_height; t++) {
+        for (int s = 0; s < output_width; s++) {
+            // convert from vanilla lm coord to decoupled lm coord
+            qvec2f decoupled_lm_coord = vanillaLMToDecoupled * qvec4f(s, t, 0, 1);
+
+            decoupled_lm_coord = decoupled_lm_coord * light_options.extra.value();
+
+            // split into integer/fractional part for bilinear interpolation
+            const int coord_floor_x = (int)decoupled_lm_coord[0];
+            const int coord_floor_y = (int)decoupled_lm_coord[1];
+
+            const float coord_frac_x = decoupled_lm_coord[0] - coord_floor_x;
+            const float coord_frac_y = decoupled_lm_coord[1] - coord_floor_y;
+
+            // 2D bilinear interpolation
+            const qvec4f color =
+                mix(
+                    mix(tex(coord_floor_x, coord_floor_y),
+                        tex(coord_floor_x + 1, coord_floor_y),
+                        coord_frac_x),
+                    mix(tex(coord_floor_x, coord_floor_y + 1),
+                        tex(coord_floor_x + 1, coord_floor_y + 1),
+                        coord_frac_x),
+                    coord_frac_y);
+
+            if (lit || out) {
+                if (lit) {
+                    *lit++ = color[0];
+                    *lit++ = color[1];
+                    *lit++ = color[2];
+                }
+
+                if (out) {
+                    // FIXME: implement
+                    *out++ = 0;
+                }
+            }
+
+            if (lux) {
+                // FIXME: implement
+                *lux++ = 0;
+                *lux++ = 0;
+                *lux++ = 0;
+            }
+        }
+    }
+}
+
 void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
     const faceextents_t &output_extents)
@@ -2726,13 +2922,13 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         lightofs = out - filebase.data();
     }
 
-    if (facesup) {
+    if (facesup_decoupled) {
+        facesup_decoupled->offset = lightofs;
+        face->lightofs = -1;
+    } else if (facesup) {
         facesup->lightofs = lightofs;
     } else {
         face->lightofs = lightofs;
-        if (facesup_decoupled) {
-            facesup_decoupled->offset = lightofs;
-        }
     }
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
@@ -2756,6 +2952,37 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         }
         if (lux) {
             lux += (size * 3);
+        }
+    }
+
+    // write vanilla lightmap if -world_units_per_luxel is in use but not -novanilla
+    if (facesup_decoupled && !light_options.novanilla.value()) {
+        // FIXME: duplicates some code from above
+        GetFileSpace(&out, &lit, &lux, lightsurf->vanilla_extents.numsamples() * numstyles);
+
+        // Q2/HL native colored lightmaps
+        if (bsp->loadversion->game->has_rgb_lightmap) {
+            lightofs = lit - lit_filebase.data();
+        } else {
+            lightofs = out - filebase.data();
+        }
+        face->lightofs = lightofs;
+
+        for (int mapnum = 0; mapnum < numstyles; mapnum++) {
+            const lightmap_t *lm = sorted.at(mapnum);
+
+            WriteSingleLightmap_FromDecoupled(bsp, face, lightsurf, lm, lightsurf->vanilla_extents.width(),
+                lightsurf->vanilla_extents.height(), out, lit, lux);
+
+            if (out) {
+                out += lightsurf->vanilla_extents.numsamples();
+            }
+            if (lit) {
+                lit += (lightsurf->vanilla_extents.numsamples() * 3);
+            }
+            if (lux) {
+                lux += (lightsurf->vanilla_extents.numsamples() * 3);
+            }
         }
     }
 }
@@ -2888,6 +3115,9 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
     if (light_options.debugmode == debugmodes::debugneighbours)
         LightFace_DebugNeighbours(&lightsurf, lightmaps);
+
+    if (light_options.debugmode == debugmodes::mottle)
+        LightFace_DebugMottle(&lightsurf, lightmaps);
 }
 
 /*
@@ -2912,4 +3142,21 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
             LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f);
         }
     }
+}
+
+void ResetLtFace()
+{
+    total_light_rays = 0;
+    total_light_ray_hits = 0;
+    total_samplepoints = 0;
+
+    total_bounce_rays = 0;
+    total_bounce_ray_hits = 0;
+    total_surflight_rays = 0;
+    total_surflight_ray_hits = 0;
+
+    fully_transparent_lightmaps = 0;
+
+    warned_about_light_map_overflow = false;
+    warned_about_light_style_overflow = false;
 }

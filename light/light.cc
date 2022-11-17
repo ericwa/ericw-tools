@@ -351,7 +351,14 @@ light_settings::light_settings()
               CheckNoDebugModeSet();
               debugmode = debugmodes::debugneighbours;
           },
-          &debug_group, "save neighboring faces data to lightmap (requires -debugface)"}
+          &debug_group, "save neighboring faces data to lightmap (requires -debugface)"},
+
+      debugmottle{this, "debugmottle",
+          [&](source) {
+              CheckNoDebugModeSet();
+              debugmode = debugmodes::mottle;
+          },
+          &debug_group, "save mottle pattern to lightmap"}
 {
 }
 
@@ -707,10 +714,10 @@ static void FindModelInfo(const mbsp_t *bsp)
 
     float lightmapscale = WorldEnt().get_int("_lightmap_scale");
     if (!lightmapscale)
-        lightmapscale = 16; /* the default */
+        lightmapscale = LMSCALE_DEFAULT; /* the default */
     if (lightmapscale <= 0)
         FError("lightmap scale is 0 or negative\n");
-    if (light_options.lightmap_scale.isChanged() || lightmapscale != 16)
+    if (light_options.lightmap_scale.isChanged() || lightmapscale != LMSCALE_DEFAULT)
         logging::print("Forcing lightmap scale of {}qu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software
      * ones that might be able to just do some mip hacks). This tool doesn't really care.*/
@@ -1064,6 +1071,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         }
         if (val.contains("light_ignore")) {
             flags.light_ignore = val.at("light_ignore").get<bool>();
+        }
+        if (val.contains("surflight_rescale")) {
+            flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
         }
         if (val.contains("phong_angle")) {
             flags.phong_angle = val.at("phong_angle").get<vec_t>();
@@ -1458,6 +1468,51 @@ void load_textures(const mbsp_t *bsp)
     }
 }
 
+/**
+ * Resets globals in this file
+ */
+static void ResetLight()
+{
+    dirt_in_use = false;
+    light_surfaces.clear();
+    faces_sup.clear();
+    facesup_decoupled_global.clear();
+
+    filebase.clear();
+    file_p = 0;
+    file_end = 0;
+
+    lit_filebase.clear();
+    lit_file_p = 0;
+    lit_file_end = 0;
+
+    lux_filebase.clear();
+    lux_file_p = 0;
+    lux_file_end = 0;
+
+    modelinfo.clear();
+    tracelist.clear();
+    selfshadowlist.clear();
+    shadowworldonlylist.clear();
+    switchableshadowlist.clear();
+
+    extended_texinfo_flags.clear();
+
+    dump_facenum = -1;
+    dump_vertnum = -1;
+}
+
+void light_reset()
+{
+    ResetBounce();
+    ResetLightEntities();
+    ResetLight();
+    ResetLtFace();
+    ResetPhong();
+    ResetSurflight();
+    ResetEmbree();
+}
+
 /*
  * ==================
  * main
@@ -1466,6 +1521,8 @@ void load_textures(const mbsp_t *bsp)
  */
 int light_main(int argc, const char **argv)
 {
+    light_reset();
+
     bspdata_t bspdata;
 
     light_options.preinitialize(argc, argv);

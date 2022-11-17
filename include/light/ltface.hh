@@ -61,3 +61,4 @@ void FinishLightmapSurface(const mbsp_t *bsp, lightsurf_t *lightsurf);
 void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
     const faceextents_t &output_extents);
+void ResetLtFace();

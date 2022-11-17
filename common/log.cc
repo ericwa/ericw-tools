@@ -304,16 +304,14 @@ void stat_tracker_t::print_stats()
 
     stats_printed = true;
 
-    auto old = std::locale::global(std::locale("en_US.UTF-8"));
     // add 8 char padding just to keep it away from the left side
     size_t number_padding = number_of_digit_padding() + 4;
 
     for (auto &stat : stats) {
         if (stat.show_even_if_zero || stat.count) {
-            print(flag::STAT, "{}{:{}L} {}\n", stat.is_warning ? "WARNING: " : "", stat.count, stat.is_warning ? 0 : number_padding, stat.name);
+            print(flag::STAT, "{}{:{}} {}\n", stat.is_warning ? "WARNING: " : "", fmt::group_digits(stat.count.load()), stat.is_warning ? 0 : number_padding, stat.name);
         }
     }
-    std::locale::global(old);
 }
 
 stat_tracker_t::~stat_tracker_t()

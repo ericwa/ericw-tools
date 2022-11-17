@@ -42,6 +42,13 @@ static std::vector<surfacelight_t> surfacelights;
 static std::map<int, std::vector<int>> surfacelightsByFacenum;
 static size_t total_surflight_points = 0;
 
+void ResetSurflight()
+{
+    surfacelights = {};
+    surfacelightsByFacenum = {};
+    total_surflight_points = {};
+}
+
 std::vector<surfacelight_t> &GetSurfaceLights()
 {
     return surfacelights;
@@ -53,6 +60,8 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     // Create face points...
     auto poly = GLM_FacePoints(bsp, face);
     const float facearea = qv::PolyArea(poly.begin(), poly.end());
+
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
     // Avoid small, or zero-area faces
     if (facearea < 1)
@@ -108,7 +117,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     l.omnidirectional = !is_directional;
     l.points = std::move(points);
     l.style = style;
-    l.rescale = true;
+    l.rescale = extended_flags.surflight_rescale;
 
     // Init bbox...
     if (light_options.visapprox.value() == visapprox_t::RAYS) {

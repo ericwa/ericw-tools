@@ -161,7 +161,8 @@ enum class debugmodes
     debugoccluded,
     debugneighbours,
     phong_tangents,
-    phong_bitangents
+    phong_bitangents,
+    mottle
 };
 
 enum class lightfile
@@ -385,6 +386,7 @@ public:
     setting_func phongdebug_obj;
     setting_func debugoccluded;
     setting_func debugneighbours;
+    setting_func debugmottle;
 
     light_settings();
 
@@ -425,5 +427,6 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
 const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
 const qvec3d &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
+void light_reset();
 int light_main(int argc, const char **argv);
 int light_main(const std::vector<std::string> &args);

@@ -341,11 +341,11 @@ struct fmt::formatter<qvec<T, N>>
     auto format(const qvec<T, N> &p, FormatContext &ctx) -> decltype(ctx.out())
     {
         for (size_t i = 0; i < N - 1; i++) {
-            format_to(ctx.out(), "{}", p[i]);
-            format_to(ctx.out(), " ");
+            fmt::format_to(ctx.out(), "{}", p[i]);
+            fmt::format_to(ctx.out(), " ");
         }
 
-        return format_to(ctx.out(), "{}", p[N - 1]);
+        return fmt::format_to(ctx.out(), "{}", p[N - 1]);
     }
 };
 
@@ -838,9 +838,9 @@ struct fmt::formatter<qplane3<T>> : formatter<qvec<T, 3>>
     template<typename FormatContext>
     auto format(const qplane3<T> &p, FormatContext &ctx) -> decltype(ctx.out())
     {
-        format_to(ctx.out(), "{{normal: ");
-        formatter<qvec<T, 3>>::format(p.normal, ctx);
-        format_to(ctx.out(), ", dist: {}}}", p.dist);
+        fmt::format_to(ctx.out(), "{{normal: ");
+        fmt::formatter<qvec<T, 3>>::format(p.normal, ctx);
+        fmt::format_to(ctx.out(), ", dist: {}}}", p.dist);
         return ctx.out();
     }
 };
@@ -1026,12 +1026,12 @@ struct fmt::formatter<qmat<T, NRow, NCol>> : formatter<qvec<T, NCol>>
     auto format(const qmat<T, NRow, NCol> &p, FormatContext &ctx) -> decltype(ctx.out())
     {
         for (size_t i = 0; i < NRow; i++) {
-            format_to(ctx.out(), "[ ");
-            formatter<qvec<T, NCol>>::format(p.row(i), ctx);
-            format_to(ctx.out(), " ]");
+            fmt::format_to(ctx.out(), "[ ");
+            fmt::formatter<qvec<T, NCol>>::format(p.row(i), ctx);
+            fmt::format_to(ctx.out(), " ]");
 
             if (i != NRow - 1) {
-                format_to(ctx.out(), "\n");
+                fmt::format_to(ctx.out(), "\n");
             }
         }
 

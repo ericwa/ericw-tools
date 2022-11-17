@@ -44,6 +44,12 @@ mutex bouncelights_lock;
 static std::vector<surfacelight_t> bouncelights;
 static std::atomic_size_t bouncelightpoints;
 
+void ResetBounce()
+{
+    bouncelights.clear();
+    bouncelightpoints = 0;
+}
+
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
     // make bounce light, only if this face is shadow casting

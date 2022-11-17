@@ -228,7 +228,7 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
         return {face, bsp, bspx.lmwidth, bspx.lmheight, bspx.world_to_lm_space};
     }
     if (!use_bspx) {
-        return {face, bsp, 16.0};
+        return {face, bsp, LMSCALE_DEFAULT};
     }
 
     return {face, bsp,

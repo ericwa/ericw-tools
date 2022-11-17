@@ -32,6 +32,30 @@ sceneinfo skygeom; // sky. always occludes.
 sceneinfo solidgeom; // solids. always occludes.
 sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
 
+static RTCDevice device;
+RTCScene scene;
+
+static const mbsp_t *bsp_static;
+
+void ResetEmbree()
+{
+    skygeom = {};
+    solidgeom = {};
+    filtergeom = {};
+
+    if (scene) {
+        rtcReleaseScene(scene);
+        scene = nullptr;
+    }
+
+    if (device) {
+        rtcReleaseDevice(device);
+        device = nullptr;
+    }
+
+    bsp_static = nullptr;
+}
+
 /**
  * Returns 1.0 unless a custom alpha value is set.
  * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha", then Q2 surface flags
@@ -228,11 +252,6 @@ static void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const
 
     rtcCommitGeometry(geom_1);
 }
-
-RTCDevice device;
-RTCScene scene;
-
-static const mbsp_t *bsp_static;
 
 void ErrorCallback(void *userptr, const RTCError code, const char *str)
 {

@@ -49,6 +49,7 @@ struct surfacelight_t
     bool rescale;
 };
 
+void ResetSurflight();
 std::vector<surfacelight_t> &GetSurfaceLights();
 std::optional<std::tuple<int32_t, int32_t>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);

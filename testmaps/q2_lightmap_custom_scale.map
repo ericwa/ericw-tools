@@ -977,3 +977,10 @@
 "origin" "-398 -160 94"
 "light" "1200"
 }
+// entity 7
+{
+"classname" "light"
+"origin" "232 -248 104"
+"style" "1"
+"_color" "183 255 227"
+}

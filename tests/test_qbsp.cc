@@ -822,6 +822,29 @@ TEST_CASE("water_detail_illusionary" * doctest::test_suite("testmaps_q1"))
     }
 }
 
+TEST_CASE("qbsp_bmodel_mirrorinside_with_liquid" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_bmodel_mirrorinside_with_liquid.map");
+
+    REQUIRE(prt.has_value());
+
+    const qvec3d model1_fenceface{-16, -56, 168};
+    const qvec3d model2_waterface{-16, -120, 168};
+
+    CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[1], model1_fenceface).size());
+    CHECK(2 == BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[2], model2_waterface).size());
+
+    // both bmodels should be CONTENTS_SOLID in all hulls
+    for (int model_idx = 1; model_idx <= 2; ++model_idx) {
+        for (int hull = 0; hull <= 2; ++hull) {
+            auto &model = bsp.dmodels[model_idx];
+
+            INFO("model: ", model_idx, " hull: ", hull);
+            CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, {hull}, &model, (model.mins + model.maxs) / 2));
+        }
+    }
+}
+
 TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");
@@ -1123,7 +1146,7 @@ TEST_CASE("q1_cube")
 
     REQUIRE_FALSE(prt.has_value());
 
-    const aabb3d cube_bounds {
+    const aabb3f cube_bounds {
         {32, -240, 80},
         {80, -144, 112}
     };
@@ -1134,8 +1157,8 @@ TEST_CASE("q1_cube")
 
     // check the solid leaf
     auto& solid_leaf = bsp.dleafs[0];
-    CHECK(solid_leaf.mins == qvec3d(0,0,0));
-    CHECK(solid_leaf.maxs == qvec3d(0,0,0));
+    CHECK(solid_leaf.mins == qvec3f(0,0,0));
+    CHECK(solid_leaf.maxs == qvec3f(0,0,0));
 
     // check the empty leafs
     for (int i = 1; i < 7; ++i) {
@@ -1185,7 +1208,7 @@ TEST_CASE("q1_clip_func_wall" * doctest::test_suite("testmaps_q1"))
 
     REQUIRE(prt.has_value());
 
-    const aabb3d cube_bounds {
+    const aabb3f cube_bounds {
         {64, 64, 48},
         {128, 128, 80}
     };

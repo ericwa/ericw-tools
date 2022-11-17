@@ -113,6 +113,6 @@ struct fmt::formatter<fs::path>
     template<typename FormatContext>
     auto format(const fs::path &p, FormatContext &ctx)
     {
-        return format_to(ctx.out(), "{}", p.string());
+        return fmt::format_to(ctx.out(), "{}", p.string());
     }
 };
