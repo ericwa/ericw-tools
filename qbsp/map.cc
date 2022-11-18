@@ -1641,6 +1641,19 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
                 issue_stats.num_sky_nodraw++;
             }
         }
+
+        // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
+        // the front and back faces leading to light artifacts.
+        const bool wants_phong = !(extinfo.info->flags.native & Q2_SURF_LIGHT)
+                                 && (extinfo.info->value != 0);
+        // Technically this is not the 100% correct check for mirrored, but we don't have the full brush
+        // contents set up at this point. Correct would be to call `portal_generates_face()`.
+        const bool mirrored = (extinfo.info->contents.native != 0)
+                               && !(extinfo.info->contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW));
+        if (wants_phong && mirrored) {
+            logging::print("WARNING: {}: Q2 phong (value set, LIGHT unset) used on a mirrored face. Removing phong.\n", mapface.line);
+            extinfo.info->value = 0;
+        }
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
