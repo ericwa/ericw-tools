@@ -3,7 +3,10 @@
 
 #include <common/log.hh>
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
+    logging::preinitialize();
+
     // writing console colors within test case output breaks doctest/CLion integration
     logging::enable_color_codes = false;
 

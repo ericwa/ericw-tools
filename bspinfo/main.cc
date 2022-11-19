@@ -20,6 +20,7 @@
 #include <common/bspinfo.hh>
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
+#include <common/log.hh>
 
 #include <fstream>
 #include <fmt/ostream.h>
@@ -84,6 +85,8 @@ settings::common_settings bspinfo_options;
 
 int main(int argc, char **argv)
 {
+    logging::preinitialize();
+
     fmt::print("---- bspinfo / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
     if (argc == 1) {
         printf("usage: bspinfo bspfile [bspfiles]\n");
