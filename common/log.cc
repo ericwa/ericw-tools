@@ -54,6 +54,15 @@ namespace logging
 bitflags<flag> mask = bitflags<flag>(flag::ALL) & ~bitflags<flag>(flag::VERBOSE);
 bool enable_color_codes = true;
 
+void preinitialize()
+{
+#ifdef _WIN32
+    // enable processing of ANSI escape sequences on Windows
+    HANDLE hOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleMode(hOutput, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+#endif
+}
+
 void init(const fs::path &filename, const settings::common_settings &settings)
 {
     if (settings.log.value()) {

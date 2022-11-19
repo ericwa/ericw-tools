@@ -471,6 +471,8 @@ settings::common_settings bsputil_options;
 
 int main(int argc, char **argv)
 {
+    logging::preinitialize();
+
     bspdata_t bspdata;
     // FIXME: doesn't this get overwritten by ConvertBSPFormat below?
     mbsp_t &bsp = bspdata.bsp.emplace<mbsp_t>();
