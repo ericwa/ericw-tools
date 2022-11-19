@@ -31,7 +31,7 @@ else
 fi
 
 # not yet free of memory leaks, so don't abort on leak detection
-export ASAN_OPTIONS=exitcode=0
+export ASAN_OPTIONS=detect_leaks=false
 
 make -j8 VERBOSE=1 || exit 1
 cpack || exit 1
