@@ -147,3 +147,19 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
     }
     CHECK(bsp.dlightdata.size() == expected_dlightdata_bytes);
 }
+
+TEST_CASE("emissive lights") {
+    auto [bsp, bspx] = LoadTestmap("q2_light_flush.map", {});
+
+    // all of this face should be receiving some light
+    auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {244, -92, 92});
+    const faceextents_t extents(*face, bsp, LMSCALE_DEFAULT);
+
+    for (int x = 0; x < extents.width(); ++x) {
+        for (int y = 0; y < extents.height(); ++y) {
+            auto sample = LM_Sample(&bsp, extents, face->lightofs, {x, y});
+            INFO("sample ", x, ", ", y);
+            CHECK(sample[0] > 0);
+        }
+    }
+}

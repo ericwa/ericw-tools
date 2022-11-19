@@ -65,7 +65,7 @@ std::vector<const mface_t *> BSP_FindFacesAtPoint(
  * is used to disambiguate these.
  */
 const mface_t *BSP_FindFaceAtPoint(
-    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal);
+    const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal = qvec3d(0, 0, 0));
 /**
  * Searches for a decision node in hull0 that contains `point`, and has a plane normal of either
  * wanted_normal or -wanted_normal.

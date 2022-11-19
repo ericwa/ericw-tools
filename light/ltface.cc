@@ -1709,9 +1709,9 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     float dp2 = qv::dot(sp_vpl, normal);
 
     if (!vpl->omnidirectional) {
-        if (dp1 < 0.0f)
+        if (dp1 < -LIGHT_ANGLE_EPSILON)
             return {0}; // sample point behind vpl
-        if (dp2 < 0.0f)
+        if (dp2 < -LIGHT_ANGLE_EPSILON)
             return {0}; // vpl behind sample face
 
         // Rescale a bit to brighten the faces nearly-perpendicular to the surface light plane...
