@@ -399,6 +399,16 @@ static void WriteExtendedTexinfoFlags(void)
     std::ofstream(file, std::ios_base::out | std::ios_base::binary) << texinfofile;
 }
 
+static bool Is16BitMarkfsurfaceFormat(const bspversion_t *version) {
+    for (auto &lumpspec : qbsp_options.target_version->lumps) {
+        if ((!strcmp("marksurfaces", lumpspec.name)
+                || !strcmp("leaffaces", lumpspec.name)) && lumpspec.size == 2) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /*
 =============
 WriteBSPFile
@@ -417,6 +427,19 @@ static void WriteBSPFile()
     }
     if (!map.exported_bspxbrushes.empty()) {
         bspdata.bspx.transfer("BRUSHLIST", map.exported_bspxbrushes);
+    }
+
+    // Formats with 16-bit marksurfaces/leaffaces have two subformats:
+    //  - the vanilla format with int16_t face indices (imposing a limit of 32768 faces)
+    //  - an extended format with uint6_t face indices
+    //
+    // We don't model these as separate bspversion_t's, but this check allows -noallowupgrade
+    // to force the vanilla format.
+    if (Is16BitMarkfsurfaceFormat(qbsp_options.target_version)) {
+        const size_t faces = std::get<mbsp_t>(bspdata.bsp).dfaces.size();
+        if (!qbsp_options.allow_upgrade.value() && faces > 32768) {
+            FError("{} faces requires an extended-limits BSP, but allow_upgrade was disabled", faces);
+        }
     }
 
     if (!ConvertBSPFormat(&bspdata, qbsp_options.target_version)) {
