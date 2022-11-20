@@ -399,6 +399,7 @@ public:
     void setParameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;
     void postinitialize(int argc, const char **argv) override;
+    void reset() override;
 };
 }; // namespace settings
 

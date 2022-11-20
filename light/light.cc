@@ -448,6 +448,17 @@ void light_settings::postinitialize(int argc, const char **argv)
 
     common_settings::postinitialize(argc, argv);
 }
+
+void light_settings::reset()
+{
+    common_settings::reset();
+
+    sourceMap = fs::path();
+
+    write_litfile = lightfile::none;
+    write_luxfile = lightfile::none;
+    debugmode = debugmodes::none;
+}
 } // namespace settings
 
 settings::light_settings light_options;
@@ -1511,6 +1522,8 @@ void light_reset()
     ResetPhong();
     ResetSurflight();
     ResetEmbree();
+
+    light_options.reset();
 }
 
 /*
