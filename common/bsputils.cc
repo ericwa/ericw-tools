@@ -923,6 +923,8 @@ qvec3b LM_Sample(const mbsp_t *bsp, const faceextents_t &faceextents, int byte_o
 {
     int pixel = coord[0] + (coord[1] * faceextents.width());
 
+    assert(byte_offset_of_face >= 0);
+
     const uint8_t* data = bsp->dlightdata.data();
 
     if (bsp->loadversion->game->has_rgb_lightmap) {

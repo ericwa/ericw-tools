@@ -150,6 +150,7 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
 
 TEST_CASE("emissive lights") {
     auto [bsp, bspx] = LoadTestmap("q2_light_flush.map", {});
+    REQUIRE(bspx.empty());
 
     // all of this face should be receiving some light
     auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {244, -92, 92});
