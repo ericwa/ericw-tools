@@ -732,6 +732,8 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
         if ((qbsp_options.omitdetail.value() || qbsp_options.omitdetailwall.value()) && detail_wall)
             continue;
+        if (qbsp_options.omitdetail.value() && contents.is_any_detail(qbsp_options.target_game))
+            continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
         if (hullnum <= 0 && contents.is_solid(qbsp_options.target_game)) {

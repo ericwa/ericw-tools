@@ -99,6 +99,21 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2")) {
     CHECK(prt->portalleafs == 4);
 }
 
+TEST_CASE("q2 detail with -omitdetail" * doctest::test_suite("testmaps_q2")) {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map", {"-omitdetail"});
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d inside_button{246, 436, 98};
+    const qvec3d above_button{246, 436, 120};
+
+    auto *inside_button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
+    CHECK(Q2_CONTENTS_EMPTY == inside_button_leaf->contents);
+
+    auto *above_button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_button);
+    CHECK(inside_button_leaf == above_button_leaf);
+}
+
 TEST_CASE("playerclip" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_playerclip.map");
