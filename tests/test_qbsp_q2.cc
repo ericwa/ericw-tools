@@ -99,6 +99,17 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2")) {
     CHECK(prt->portalleafs == 4);
 }
 
+TEST_CASE("q2 detail with -nodetail" * doctest::test_suite("testmaps_q2")) {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map", {"-nodetail"});
+
+    const qvec3d inside_button{246, 436, 98};
+    auto *inside_button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
+    CHECK(Q2_CONTENTS_SOLID == inside_button_leaf->contents);
+
+    CHECK(prt->portals.size() > 5);
+    CHECK(prt->portalleafs == 8);
+}
+
 TEST_CASE("q2 detail with -omitdetail" * doctest::test_suite("testmaps_q2")) {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map", {"-omitdetail"});
 

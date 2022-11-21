@@ -401,6 +401,13 @@ public:
         return contentflags_from_bits(result);
     }
 
+    contentflags_t clear_detail(const contentflags_t &original) const override
+    {
+        auto bits = contentflags_to_bits(original);
+        bits.detail = false;
+        return contentflags_from_bits(bits);
+    }
+
     bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override
     {
         // fixme-brushbsp: document what this is supposed to do, remove if unneeded?
@@ -993,6 +1000,13 @@ struct gamedef_q2_t : public gamedef_t
     {
         contentflags_t result = original;
         result.native |= (Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL);
+        return result;
+    }
+
+    contentflags_t clear_detail(const contentflags_t &original) const override
+    {
+        contentflags_t result = original;
+        result.native &= ~Q2_CONTENTS_DETAIL;
         return result;
     }
 

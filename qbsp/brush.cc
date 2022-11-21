@@ -676,28 +676,27 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
 {
     clock.max += src.mapbrushes.size();
 
-    bool all_detail, all_detail_wall, all_detail_fence, all_detail_illusionary;
+    bool all_detail = false;
+    bool all_detail_wall = false;
+    bool all_detail_fence = false;
+    bool all_detail_illusionary = false;
 
     const std::string &classname = src.epairs.get("classname");
 
     /* If the source entity is func_detail, set the content flag */
     if (!qbsp_options.nodetail.value()) {
-        all_detail = false;
         if (!Q_strcasecmp(classname, "func_detail")) {
             all_detail = true;
         }
 
-        all_detail_wall = false;
         if (!Q_strcasecmp(classname, "func_detail_wall")) {
             all_detail_wall = true;
         }
 
-        all_detail_fence = false;
         if (!Q_strcasecmp(classname, "func_detail_fence")) {
             all_detail_fence = true;
         }
 
-        all_detail_illusionary = false;
         if (!Q_strcasecmp(classname, "func_detail_illusionary")) {
             all_detail_illusionary = true;
         }
@@ -707,6 +706,10 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         clock();
 
         contentflags_t contents = mapbrush.contents;
+
+        if (qbsp_options.nodetail.value()) {
+            contents = qbsp_options.target_game->clear_detail(contents);
+        }
 
         /* "origin" brushes always discarded beforehand */
         Q_assert(!contents.is_origin(qbsp_options.target_game));
