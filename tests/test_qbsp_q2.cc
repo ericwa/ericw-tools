@@ -125,6 +125,10 @@ TEST_CASE("q2 detail with -omitdetail" * doctest::test_suite("testmaps_q2")) {
     CHECK(inside_button_leaf == above_button_leaf);
 }
 
+TEST_CASE("-omitdetail removing all brushes in a func" * doctest::test_suite("testmaps_q2")) {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_omitdetail_in_func.map", {"-omitdetail"});
+}
+
 TEST_CASE("playerclip" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_playerclip.map");

@@ -983,6 +983,11 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         return;
     }
 
+    // corner case, -omitdetail with all detail in an bmodel
+    if (brushes.empty() && entity.bounds == aabb3d()) {
+        return;
+    }
+
     // simpler operation for hulls
     if (hullnum.value_or(0)) {
         tree_t tree;
