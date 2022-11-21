@@ -1,0 +1,6 @@
+{
+    "contents": ["SOLID"],
+    "flags": ["LIGHT"],
+    "value": 1000,
+    "color": [255, 128, 64]
+}

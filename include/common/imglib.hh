@@ -47,6 +47,10 @@ struct texture_meta
     // extension that we pulled the pixels in from.
     std::optional<ext> extension;
 
+    // so .json metadata can set an emissive color when we don't have
+    // texture data. Also useful to override the emissive color
+    std::optional<qvec3b> color_override;
+
     // Q2/WAL only
     surfflags_t flags{};
     contentflags_t contents{};

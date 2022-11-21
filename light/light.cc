@@ -1395,9 +1395,16 @@ static void AddTextureName(const std::string_view &textureName, const mbsp_t *bs
         tex.meta = std::move(texture_meta.value());
     }
 
-    tex.averageColor = img::calculate_average(tex.pixels);
-    tex.width_scale = (float)tex.width / (float)tex.meta.width;
-    tex.height_scale = (float)tex.height / (float)tex.meta.height;
+    if (tex.meta.color_override) {
+        tex.averageColor = *tex.meta.color_override;
+    } else {
+        tex.averageColor = img::calculate_average(tex.pixels);
+    }
+
+    if (tex.meta.width && tex.meta.height) {
+        tex.width_scale = (float)tex.width / (float)tex.meta.width;
+        tex.height_scale = (float)tex.height / (float)tex.meta.height;
+    }
 }
 
 // Load all of the referenced textures from the BSP texinfos into
@@ -1460,9 +1467,16 @@ static void ConvertTextures(const mbsp_t *bsp)
             continue;
         }
 
-        tex.averageColor = img::calculate_average(tex.pixels);
-        tex.width_scale = (float)tex.width / (float)tex.meta.width;
-        tex.height_scale = (float)tex.height / (float)tex.meta.height;
+        if (tex.meta.color_override) {
+            tex.averageColor = *tex.meta.color_override;
+        } else {
+            tex.averageColor = img::calculate_average(tex.pixels);
+        }
+
+        if (tex.meta.width && tex.meta.height) {
+            tex.width_scale = (float)tex.width / (float)tex.meta.width;
+            tex.height_scale = (float)tex.height / (float)tex.meta.height;
+        }
     }
 }
 

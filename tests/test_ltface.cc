@@ -38,9 +38,11 @@ static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<
     {
         std::vector<std::string> light_args{
             "", // the exe path, which we're ignoring in this case
-            "-nodefaultpaths" // in case test_quake2_maps_dir is pointing at a real Q2 install, don't
-                              // read texture data etc. from there - we want the tests to behave the same
-                              // during development as they do on CI (which doesn't have a Q2 install).
+            "-nodefaultpaths", // in case test_quake2_maps_dir is pointing at a real Q2 install, don't
+                               // read texture data etc. from there - we want the tests to behave the same
+                               // during development as they do on CI (which doesn't have a Q2 install).
+            "-path",
+            wal_metadata_path.string()
         };
         for (auto &arg : extra_args) {
             light_args.push_back(arg);
@@ -163,7 +165,7 @@ TEST_CASE("emissive lights") {
         for (int y = 0; y < extents.height(); ++y) {
             auto sample = LM_Sample(&bsp, extents, face->lightofs, {x, y});
             INFO("sample ", x, ", ", y);
-            //CHECK(sample[0] > 0);
+            CHECK(sample[0] > 0);
         }
     }
 }

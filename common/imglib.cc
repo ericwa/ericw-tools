@@ -565,6 +565,18 @@ std::optional<texture_meta> load_wal_json_meta(
             meta.animation = json["animation"].get<std::string>();
         }
 
+        if (json.contains("color")) {
+            auto &color = json["color"];
+
+            qvec3b color_vec = {
+                color.at(0).get<int32_t>(),
+                color.at(1).get<int32_t>(),
+                color.at(2).get<int32_t>()
+            };
+
+            meta.color_override = {color_vec};
+        }
+
         return meta;
     } catch (json::exception e) {
         logging::funcprint("{}, invalid JSON: {}\n", name, e.what());
