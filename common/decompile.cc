@@ -154,19 +154,15 @@ struct compiled_brush_t
 
         if (source) {
             fmt::print(stream, "// generated from brush #{}\n", static_cast<ptrdiff_t>(source - bsp->dbrushes.data()));
-
-            /*for (auto &side : sides) {
-
-                fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source -
-        bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
-            }*/
         }
 
         fmt::print(stream, "{{\n");
 
         for (auto &side : sides) {
             planepoints p;
-            if (side.winding && side.winding->size()) {
+            // HACK: area() test: if winding is tiny, don't trust it to generate a reasonable normal, just
+            // use the known normal/distance
+            if (side.winding && side.winding->size() && side.winding->area() > 1) {
                 p = WindingToThreePoints(*side.winding);
             } else {
                 p = NormalDistanceToThreePoints(side.plane);
@@ -181,6 +177,11 @@ struct compiled_brush_t
                 side.valve.shift[1] -= qv::dot(brush_offset.value(), side.valve.axis.row(1));
             }
 
+#if 0
+            fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source -
+                bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
+#endif
+            
             fmt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2],
                 side.texture_name, side.valve.axis.at(0, 0), side.valve.axis.at(0, 1), side.valve.axis.at(0, 2),
                 side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2),
@@ -655,7 +656,7 @@ static decomp_brush_t BuildInitialBrush_Q2(
                 break;
 
             // FIXME: epsilon is a lot larger than what qbsp uses
-            winding = winding->clip_back(plane2, DEFAULT_ON_EPSILON, true);
+            winding = winding->clip_front(-plane2, DEFAULT_ON_EPSILON, false);
         }
 
         if (!winding) {
