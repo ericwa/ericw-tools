@@ -36,6 +36,7 @@
 #include <algorithm> // std::sort
 #include <string>
 #include <fstream>
+#include <fmt/ostream.h>
 
 /* FIXME - share header with qbsp, etc. */
 struct wadinfo_t
@@ -469,32 +470,136 @@ static void FindLeaf(const mbsp_t *bsp, const qvec3d &pos)
 // TODO
 settings::common_settings bsputil_options;
 
+// map file stuff
+struct map_entity_t {
+    entdict_t epairs;
+    parser_source_location location;
+    std::string map_brushes; // raw brush data
+};
+
+struct map_file_t {
+    std::vector<map_entity_t> entities;
+};
+
+static void ParseEpair(parser_t &parser, map_entity_t &entity)
+{
+    std::string key = parser.token;
+
+    // trim whitespace from start/end
+    while (std::isspace(key.front())) {
+        key.erase(key.begin());
+    }
+    while (std::isspace(key.back())) {
+        key.erase(key.end() - 1);
+    }
+
+    parser.parse_token(PARSE_SAMELINE);
+
+    entity.epairs.set(key, parser.token);
+}
+
+bool ParseEntity(parser_t &parser, map_entity_t &entity)
+{
+    entity.location = parser.location;
+
+    if (!parser.parse_token()) {
+        return false;
+    }
+
+    if (parser.token != "{") {
+        FError("{}: Invalid entity format, { not found", parser.location);
+    }
+
+    do {
+        if (!parser.parse_token())
+            FError("Unexpected EOF (no closing brace)");
+        if (parser.token == "}")
+            break;
+        else if (parser.token == "{") {
+            auto start = parser.pos - 1;
+
+            // skip until a }
+            do {
+                if (!parser.parse_token()) {
+                    FError("Unexpected EOF (no closing brace)");
+                }
+            } while (parser.token != "}");
+
+            auto end = parser.pos;
+            entity.map_brushes += std::string(start, end) + "\n";
+        } else {
+            ParseEpair(parser, entity);
+        }
+    } while (1);
+
+    return true;
+}
+
+map_file_t LoadMapOrEntFile(const fs::path &source)
+{
+    logging::funcheader();
+
+    auto file = fs::load(source);
+    map_file_t map;
+
+    if (!file) {
+        FError("Couldn't load map/entity file \"{}\".\n", source);
+        return map;
+    }
+
+    parser_t parser(file, { source.string() });
+
+    for (int i = 0;; i++) {
+        map_entity_t &entity = map.entities.emplace_back();
+
+        if (!ParseEntity(parser, entity)) {
+            break;
+        }
+    }
+
+    // Remove dummy entity inserted above
+    assert(!map.entities.back().epairs.size());
+    map.entities.pop_back();
+
+    return map;
+}
+
+
 int main(int argc, char **argv)
 {
     logging::preinitialize();
 
     bspdata_t bspdata;
-    // FIXME: doesn't this get overwritten by ConvertBSPFormat below?
-    mbsp_t &bsp = bspdata.bsp.emplace<mbsp_t>();
 
     fmt::print("---- bsputil / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
     if (argc == 1) {
         printf(
             "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
             "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--findleaf x y z] [--settexinfo facenum texinfonum]\n"
-            "[--decompile] [--decompile-geomonly] [--decompile-hull n] bspfile\n");
+            "[--decompile] [--decompile-geomonly] [--decompile-hull n] bspfile/mapfile\n");
         exit(1);
     }
 
-    fs::path source = DefaultExtension(argv[argc - 1], "bsp");
+    fs::path source = argv[argc - 1];
+    
+    if (!fs::exists(source)) {
+        source = DefaultExtension(argv[argc - 1], "bsp");
+    }
+
     printf("---------------------\n");
     fmt::print("{}\n", source);
 
-    LoadBSPFile(source, &bspdata);
+    map_file_t map_file;
 
-    bspdata.version->game->init_filesystem(source, bsputil_options);
+    if (string_iequals(source.extension().string(), ".bsp")) {
+        LoadBSPFile(source, &bspdata);
 
-    ConvertBSPFormat(&bspdata, &bspver_generic);
+        bspdata.version->game->init_filesystem(source, bsputil_options);
+
+        ConvertBSPFormat(&bspdata, &bspver_generic);
+    } else {
+        map_file = LoadMapOrEntFile(source);
+    }
 
     for (int32_t i = 0; i < argc - 1; i++) {
         if (!strcmp(argv[i], "--replace-entities")) {
@@ -504,17 +609,67 @@ int main(int argc, char **argv)
             }
 
             // Load the .ent
-            fs::data ent = fs::load(argv[i]);
+            if (std::holds_alternative<mbsp_t>(bspdata.bsp)) {
+                fs::data ent = fs::load(argv[i]);
 
-            if (!ent) {
-                Error("couldn't load ent file {}", argv[i]);
+                if (!ent) {
+                    Error("couldn't load ent file {}", argv[i]);
+                }
+
+                mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+                bsp.dentdata = std::string(reinterpret_cast<char *>(ent->data()), ent->size());
+
+                ConvertBSPFormat(&bspdata, bspdata.loadversion);
+
+                WriteBSPFile(source, &bspdata);
+            } else {
+                map_file_t ents = LoadMapOrEntFile(argv[i]);
+
+                ents.entities[0].map_brushes = std::move(map_file.entities[0].map_brushes);
+
+                // move brushes over from .map into the .ent
+                for (int32_t i1 = 0, b = 1; i1 < map_file.entities.size(); i1++) {
+
+                    // skip worldspawn though
+                    if (map_file.entities[i1].map_brushes.empty() || i1 == 0) {
+                        continue;
+                    }
+
+                    for (int32_t i2 = 0, b2 = 1; i2 < ents.entities.size(); i2++) {
+                        if (ents.entities[i2].epairs.get("model").empty() && ents.entities[i2].epairs.get("classname") != "func_areaportal") {
+                            continue;
+                        }
+                        
+                        if (b2 == b) {
+                            ents.entities[i2].map_brushes = std::move(map_file.entities[i1].map_brushes);
+                            b++;
+                            break;
+                        }
+
+                        b2++;
+                    }
+
+                    if (!map_file.entities[i1].map_brushes.empty()) {
+                        Error("ent files' map brushes don't match\n");
+                    }
+                }
+
+                // write out .replaced.map
+                fs::path output = fs::path(source).replace_extension(".replaced.map");
+                std::ofstream strm(output, std::ios::binary);
+
+                for (const auto &ent : ents.entities) {
+                    strm << "{\n";
+                    for (const auto &epair : ent.epairs) {
+                        fmt::print(strm, "\"{}\" \"{}\"\n", epair.first, epair.second);
+                    }
+                    if (!ent.map_brushes.empty()) {
+                        strm << ent.map_brushes;
+                    }
+                    strm << "}\n";
+                }
             }
-
-            std::get<mbsp_t>(bspdata.bsp).dentdata = std::string(reinterpret_cast<char *>(ent->data()), ent->size());
-
-            ConvertBSPFormat(&bspdata, bspdata.loadversion);
-
-            WriteBSPFile(source, &bspdata);
         } else if (!strcmp(argv[i], "--compare")) {
             i++;
             if (i == argc - 1) {
@@ -529,6 +684,8 @@ int main(int argc, char **argv)
             ConvertBSPFormat(&refbspdata, &bspver_generic);
 
             fmt::print("comparing reference bsp {} with test bsp {}\n", refbspname, source);
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
             CompareBSPFiles(std::get<mbsp_t>(refbspdata.bsp), bsp);
 
@@ -557,6 +714,9 @@ int main(int argc, char **argv)
             WriteBSPFile(source.replace_filename(source.stem().string() + "-" + argv[i]), &bspdata);
 
         } else if (!strcmp(argv[i], "--extract-entities")) {
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
             uint32_t crc = CRC_Block((unsigned char *)bsp.dentdata.data(), bsp.dentdata.size() - 1);
 
             source.replace_extension(".ent");
@@ -575,6 +735,9 @@ int main(int argc, char **argv)
 
             printf("done.\n");
         } else if (!strcmp(argv[i], "--extract-textures")) {
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
             source.replace_extension(".wad");
             fmt::print("-> writing {}... ", source);
 
@@ -588,10 +751,12 @@ int main(int argc, char **argv)
             printf("done.\n");
         } else if (!strcmp(argv[i], "--check")) {
             printf("Beginning BSP data check...\n");
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             CheckBSPFile(&bsp);
             CheckBSPFacesPlanar(&bsp);
             printf("Done.\n");
         } else if (!strcmp(argv[i], "--modelinfo")) {
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
             PrintModelInfo(&bsp);
         } else if (!strcmp(argv[i], "--findfaces")) {
             // (i + 1) ... (i + 6) = x y z nx ny nz
@@ -600,6 +765,8 @@ int main(int argc, char **argv)
             if (i + 7 >= argc) {
                 Error("--findfaces requires 6 arguments");
             }
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
             try {
                 const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
@@ -617,6 +784,8 @@ int main(int argc, char **argv)
             Error("--findleaf requires 3 arguments");
         }
 
+        mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
         try {
             const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
             FindLeaf(&bsp, pos);
@@ -631,6 +800,8 @@ int main(int argc, char **argv)
             if (i + 2 >= argc) {
                 Error("--settexinfo requires 2 arguments");
             }
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
             const int fnum = std::stoi(argv[i + 1]);
             const int texinfonum = std::stoi(argv[i + 2]);
@@ -670,6 +841,8 @@ int main(int argc, char **argv)
 
             if (!f)
                 Error("couldn't open {} for writing\n", source);
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
             decomp_options options;
             options.geometryOnly = geomOnly;

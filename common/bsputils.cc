@@ -846,9 +846,10 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units
     for (int i = 0; i < face.numedges; i++) {
         const qvec3f &worldpoint = Face_PointAtIndex(&bsp, &face, i);
         bounds += worldpoint;
-
-        auto lm = worldToLMMatrix * qvec4f(worldpoint, 1.0f);
+        
 #if 0
+        auto lm = worldToLMMatrix * qvec4f(worldpoint, 1.0f);
+
         logging::print("testing world {} -> lm {}\n",
             worldpoint,
             lm);
