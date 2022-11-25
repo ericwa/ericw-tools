@@ -627,14 +627,29 @@ static decomp_brush_t BuildInitialBrush_Q2(
 {
     std::vector<decomp_brush_side_t> sides;
 
-    for (const decomp_plane_t &plane : planes) {
+    // flag for whether a given index in `planes` gets fully clipped away
+    std::vector<bool> clipped_away;
+    clipped_away.resize(planes.size(), false);
+
+    for (size_t i = 0; i < planes.size(); ++i) {
+        const decomp_plane_t &plane = planes[i];
+
         // FIXME: use a better max
         auto winding = std::make_optional(polylib::winding_t::from_plane(plane, 10e6));
 
         // clip `winding` by all of the other planes, and keep the back portion
-        for (const decomp_plane_t &plane2 : planes) {
-            if (&plane2 == &plane)
+        for (size_t j = 0; j < planes.size(); ++j) {
+            const decomp_plane_t &plane2 = planes[j];
+
+            if (i == j)
                 continue;
+
+            if (clipped_away[j]) {
+                // once a plane gets fully clipped away, don't use it for further clips.
+                // this ensures that e.g. if a brush contains 2 +X faces, the second one "wins",
+                // and we output a properly formed brush (not an "open" brush).
+                continue;
+            }
 
             if (!winding)
                 break;
@@ -643,8 +658,12 @@ static decomp_brush_t BuildInitialBrush_Q2(
             winding = winding->clip_back(plane2, DEFAULT_ON_EPSILON, true);
         }
 
-        if (!winding)
+        if (!winding) {
+            // this shouldn't normally happen, means the brush contains redundant planes
+            clipped_away[i] = true;
             continue;
+        }
+
 
         winding->remove_colinear();
 
