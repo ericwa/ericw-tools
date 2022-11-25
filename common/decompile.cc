@@ -152,15 +152,15 @@ struct compiled_brush_t
             return;
         }
 
-        /*if (source) {
+        if (source) {
             fmt::print(stream, "// generated from brush #{}\n", static_cast<ptrdiff_t>(source - bsp->dbrushes.data()));
 
-            for (auto &side : sides) {
+            /*for (auto &side : sides) {
 
                 fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source -
         bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
-            }
-        }*/
+            }*/
+        }
 
         fmt::print(stream, "{{\n");
 
