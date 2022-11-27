@@ -632,7 +632,7 @@ static decomp_brush_t BuildInitialBrush_Q2(
     std::vector<bool> clipped_away;
     clipped_away.resize(planes.size(), false);
 
-    for (size_t i = 0; i < planes.size(); ++i) {
+    for (int i = planes.size() - 1; i >= 0; --i) {
         const decomp_plane_t &plane = planes[i];
 
         // FIXME: use a better max
