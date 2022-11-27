@@ -608,6 +608,8 @@ int main(int argc, char **argv)
                 Error("--replace-entities requires two arguments");
             }
 
+            fmt::print("updating {} with {}\n", source, argv[i]);
+
             // Load the .ent
             if (std::holds_alternative<mbsp_t>(bspdata.bsp)) {
                 fs::data ent = fs::load(argv[i]);
@@ -652,6 +654,25 @@ int main(int argc, char **argv)
 
                     if (!map_file.entities[i1].map_brushes.empty()) {
                         Error("ent files' map brushes don't match\n");
+                    }
+                }
+
+                for (auto &ent : ents.entities) {
+                    // remove origin key from brushed entities
+                    if (!ent.map_brushes.empty() && ent.epairs.find("origin") != ent.epairs.end()) {
+                        ent.epairs.remove("origin");
+                    }
+
+                    // remove style keys from areaportals and lights that
+                    // have targetnames
+                    if (ent.epairs.find("style") != ent.epairs.end()) {
+                        if (ent.epairs.get("classname") == "light") {
+                            if (ent.epairs.find("targetname") != ent.epairs.end()) {
+                                ent.epairs.remove("style");
+                            }
+                        } else if (ent.epairs.get("classname") == "func_areaportal") {
+                            ent.epairs.remove("style");
+                        }
                     }
                 }
 
