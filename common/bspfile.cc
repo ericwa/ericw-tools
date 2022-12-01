@@ -325,6 +325,12 @@ public:
         return (flags.native & ~TEX_SPECIAL) == 0;
     }
 
+    bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const override
+    {
+        return (a.native & TEX_SPECIAL)
+            == (b.native & TEX_SPECIAL);
+    }
+
     int32_t surfflags_from_string(const std::string_view &str) const override
     {
         if (string_iequals(str, "special")) {
@@ -922,6 +928,17 @@ struct gamedef_q2_t : public gamedef_t
     {
         // no rules in Quake II baby
         return true;
+    }
+
+    bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const override
+    {
+        // these are the bits we'll require to match in order to allow phonging `a` and `b`
+        auto mask = [](const surfflags_t &flags) {
+            return flags.native & (Q2_SURF_SKY | Q2_SURF_WARP | Q2_SURF_TRANS33 |
+                                   Q2_SURF_TRANS66 | Q2_SURF_FLOWING | Q2_SURF_NODRAW);
+        };
+
+        return mask(a) == mask(b);
     }
 
     static constexpr const char *surf_bitflag_names[] = {

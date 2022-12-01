@@ -473,6 +473,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         }
 
         // Q1 phong angle stuff
+        auto *f_texinfo = Face_Texinfo(bsp, &f);
         const auto f_points = GLM_FacePoints(bsp, &f);
         const qvec3d f_norm = Face_Normal(bsp, &f);
         const qplane3d f_plane = Face_Plane(bsp, &f);
@@ -505,6 +506,14 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
                 if (!f2_wants_phong)
                     continue;
+
+                auto *f2_texinfo = Face_Texinfo(bsp, f2);
+                if (f2_texinfo != nullptr && f_texinfo != nullptr) {
+                    if (!bsp->loadversion->game->surfflags_may_phong(f_texinfo->flags, f2_texinfo->flags)) {
+                        // phong may be blocked by the gamedef, e.g. warping and non-warping never phong
+                        continue;
+                    }
+                }
 
                 const auto f2_points = GLM_FacePoints(bsp, f2);
                 const qvec3f f2_centroid = qv::PolyCentroid(f2_points.begin(), f2_points.end());

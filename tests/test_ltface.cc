@@ -169,3 +169,7 @@ TEST_CASE("emissive lights") {
         }
     }
 }
+
+TEST_CASE("q2_phong_doesnt_cross_contents") {
+    auto [bsp, bspx] = LoadTestmap("q2_phong_doesnt_cross_contents.map", {"-wrnormals"});
+}

@@ -264,6 +264,11 @@ struct gamedef_t
     virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
     virtual bool surfflags_are_valid(const surfflags_t &flags) const = 0;
+    /**
+     * We block certain surface flag combinations from ever smoothing together
+     * e.g. warping and non-warping
+     */
+    virtual bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const = 0;
     virtual int32_t surfflags_from_string(const std::string_view &str) const = 0;
     // FIXME: fix so that we don't have to pass a name here
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
