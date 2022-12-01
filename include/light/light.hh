@@ -193,6 +193,7 @@ extern int dump_vertnum;
 
 class modelinfo_t : public settings::setting_container
 {
+public:
     static constexpr vec_t DEFAULT_PHONG_ANGLE = 89.0;
 
 public:

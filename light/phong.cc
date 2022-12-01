@@ -452,25 +452,6 @@ void CalculateVertexNormals(const mbsp_t *bsp)
     for (auto &f : bsp->dfaces) {
         // Q2 shading groups
         const int f_phongValue = Q2_FacePhongValue(bsp, &f);
-        if (f_phongValue) {
-            for (int j = 0; j < f.numedges; j++) {
-                const int v = Face_VertexAtIndex(bsp, &f, j);
-                // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
-                for (const mface_t *f2 : vertsToFaces[v]) {
-                    if (f2 == &f)
-                        continue;
-
-                    const int f2_phongValue = Q2_FacePhongValue(bsp, f2);
-                    if (f_phongValue != f2_phongValue)
-                        continue;
-
-                    // we've already checked f_phongValue is nonzero, so smooth these two faces.
-                    smoothFaces[&f].insert(f2);
-                }
-            }
-
-            continue;
-        }
 
         // Q1 phong angle stuff
         auto *f_texinfo = Face_Texinfo(bsp, &f);
@@ -479,7 +460,11 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         const qplane3d f_plane = Face_Plane(bsp, &f);
 
         // any face normal within this many degrees can be smoothed with this face
-        const vec_t &f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
+        vec_t f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
+        if (f_phong_angle == 0 && f_phongValue != 0) {
+            // if Q2 style phong is requested, but Q1 is not in use, set the default phong angle
+            f_phong_angle = modelinfo_t::DEFAULT_PHONG_ANGLE;
+        }
         vec_t f_phong_angle_concave = extended_texinfo_flags[f.texinfo].phong_angle_concave;
         if (f_phong_angle_concave == 0) {
             f_phong_angle_concave = f_phong_angle;
@@ -497,7 +482,12 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                     continue;
 
                 // FIXME: factor out and share with above?
-                const vec_t &f2_phong_angle = extended_texinfo_flags[f2->texinfo].phong_angle;
+                const int f2_phongValue = Q2_FacePhongValue(bsp, f2);
+                vec_t f2_phong_angle = extended_texinfo_flags[f2->texinfo].phong_angle;
+                if (f2_phong_angle == 0 && f2_phongValue != 0) {
+                    // if Q2 style phong is requested, but Q1 is not in use, set the default phong angle
+                    f2_phong_angle = modelinfo_t::DEFAULT_PHONG_ANGLE;
+                }
                 vec_t f2_phong_angle_concave = extended_texinfo_flags[f2->texinfo].phong_angle_concave;
                 if (f2_phong_angle_concave == 0) {
                     f2_phong_angle_concave = f2_phong_angle;
@@ -526,6 +516,11 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 const vec_t f2_threshold = concave ? f2_phong_angle_concave : f2_phong_angle;
                 const vec_t min_threshold = min(f_threshold, f2_threshold);
                 const vec_t cosmaxangle = cos(DEG2RAD(min_threshold));
+
+                if (f_phongValue != f2_phongValue) {
+                    // mismatched smoothing groups never phong
+                    continue;
+                }
 
                 // check the angle between the face normals
                 if (cosangle >= cosmaxangle) {
