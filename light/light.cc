@@ -1080,6 +1080,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("no_expand")) {
             flags.no_expand = val.at("no_expand").get<bool>();
         }
+        if (val.contains("no_phong")) {
+            flags.no_expand = val.at("no_phong").get<bool>();
+        }
         if (val.contains("light_ignore")) {
             flags.light_ignore = val.at("light_ignore").get<bool>();
         }

@@ -480,6 +480,9 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         if (!f_wants_phong)
             continue;
 
+        if (extended_texinfo_flags[f.texinfo].no_phong)
+            continue;
+
         for (int j = 0; j < f.numedges; j++) {
             const int v = Face_VertexAtIndex(bsp, &f, j);
             // walk over all faces incident to f (we will walk over neighbours multiple times, doesn't matter)
@@ -501,6 +504,9 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 const bool f2_wants_phong = (f2_phong_angle || f2_phong_angle_concave);
 
                 if (!f2_wants_phong)
+                    continue;
+
+                if (extended_texinfo_flags[f2->texinfo].no_phong)
                     continue;
 
                 auto *f2_texinfo = Face_Texinfo(bsp, f2);
