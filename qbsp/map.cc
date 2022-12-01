@@ -616,6 +616,8 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     const vec_t phong_angle_concave = entity.epairs.get_float("_phong_angle_concave");
     flags.phong_angle_concave = clamp(phong_angle_concave, 0.0, 360.0);
 
+    flags.phong_group = entity.epairs.get_int("_phong_group");
+
     // handle "_minlight"
     const vec_t minlight = entity.epairs.get_float("_minlight");
     if (minlight > 0) {

@@ -392,6 +392,12 @@ int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
 {
     const mtexinfo_t *texinfo = BSP_GetTexinfo(bsp, face->texinfo);
     if (texinfo != nullptr) {
+        // FIXME: would be more convenient if common code loaded texinfo file
+        // so we could access these in mtexinfo_t rather than extended_texinfo_flags
+        if (auto phong_group = extended_texinfo_flags[face->texinfo].phong_group) {
+            // Q1 _phong_group syntax (also works in Q2 maps)
+            return phong_group;
+        }
         if (texinfo->value != 0 && ((texinfo->flags.native & Q2_SURF_LIGHT) == 0)) {
             return texinfo->value;
         }

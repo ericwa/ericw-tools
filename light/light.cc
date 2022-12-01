@@ -1092,6 +1092,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("phong_angle_concave")) {
             flags.phong_angle_concave = val.at("phong_angle_concave").get<vec_t>();
         }
+        if (val.contains("phong_group")) {
+            flags.phong_group = val.at("phong_group").get<int>();
+        }
         if (val.contains("minlight")) {
             flags.minlight = val.at("minlight").get<vec_t>();
         }

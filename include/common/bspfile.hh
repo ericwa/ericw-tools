@@ -195,6 +195,9 @@ struct surfflags_t
     // if non zero, overrides _phong_angle for concave joints
     vec_t phong_angle_concave;
 
+    // _phong_group key, equivalent q2 map format's use of the "value" field
+    int phong_group;
+
     // minlight value for this face
     vec_t minlight;
 

@@ -377,6 +377,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.phong_angle_concave) {
             t["phong_angle_concave"] = tx.flags.phong_angle_concave;
         }
+        if (tx.flags.phong_group) {
+            t["phong_group"] = tx.flags.phong_group;
+        }
         if (tx.flags.minlight) {
             t["minlight"] = tx.flags.minlight;
         }
