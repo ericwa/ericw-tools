@@ -1653,8 +1653,7 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
         const bool mirrored = (extinfo.info->contents.native != 0)
                                && !(extinfo.info->contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW));
         if (wants_phong && mirrored) {
-            logging::print("WARNING: {}: Q2 phong (value set, LIGHT unset) used on a mirrored face. Removing phong.\n", mapface.line);
-            extinfo.info->value = 0;
+            logging::print("WARNING: {}: Q2 phong (value set, LIGHT unset) used on a mirrored face.\n", mapface.line);
         }
     }
 
