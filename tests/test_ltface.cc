@@ -153,20 +153,35 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
     CHECK(bsp.dlightdata.size() == expected_dlightdata_bytes);
 }
 
+static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
+{
+    const faceextents_t extents(face, bsp, LMSCALE_DEFAULT);
+
+    for (int x = 0; x < extents.width(); ++x) {
+        for (int y = 0; y < extents.height(); ++y) {
+            auto sample = LM_Sample(&bsp, extents, face.lightofs, {x, y});
+            INFO("sample ", x, ", ", y);
+            CHECK(sample[0] > 0);
+        }
+    }
+}
+
 TEST_CASE("emissive lights") {
     auto [bsp, bspx] = LoadTestmap("q2_light_flush.map", {});
     REQUIRE(bspx.empty());
 
-    // all of this face should be receiving some light
-    auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {244, -92, 92});
-    const faceextents_t extents(*face, bsp, LMSCALE_DEFAULT);
+    {
+        INFO("the angled face on the right should not have any full black luxels");
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {244, -92, 92});
+        REQUIRE(face);
+        CheckFaceLuxelsNonBlack(bsp, *face);
+    }
 
-    for (int x = 0; x < extents.width(); ++x) {
-        for (int y = 0; y < extents.height(); ++y) {
-            auto sample = LM_Sample(&bsp, extents, face->lightofs, {x, y});
-            INFO("sample ", x, ", ", y);
-            CHECK(sample[0] > 0);
-        }
+    {
+        INFO("the angled face on the left should not have any full black luxels");
+        auto *left_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {470.4, 16, 112});
+        REQUIRE(left_face);
+        CheckFaceLuxelsNonBlack(bsp, *left_face);
     }
 }
 
