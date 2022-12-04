@@ -44,7 +44,7 @@
 #include <common/bsputils.hh>
 
 constexpr vec_t LIGHT_ON_EPSILON = 0.1;
-constexpr vec_t LIGHT_ANGLE_EPSILON = 0.001;
+constexpr vec_t LIGHT_ANGLE_EPSILON = 0.01;
 constexpr vec_t LIGHT_EQUAL_EPSILON = 0.001;
 
 // FIXME: use maximum dimension of level
