@@ -61,10 +61,15 @@ cmake ..
 Example using vcpkg (32-bit build):
 
 ```
-# TODO: sphinx installation
-
 git clone --recursive https://github.com/ericwa/ericw-tools
 cd ericw-tools
+
+# creates a python virtual environment in the directory `sphinx-venv`
+# and install sphinx (for building the docs)
+py.exe -m venv sphinx-venv
+.\sphinx-venv\Scripts\Activate.ps1
+py.exe -m pip install -r docs/requirements.txt
+
 git clone https://github.com/microsoft/vcpkg
 .\vcpkg\bootstrap-vcpkg.bat
 
@@ -76,7 +81,7 @@ cd build
 
 # PowerShell syntax for getting current directory -
 # otherwise, replace with absolute path to "vcpkg/scripts/buildsystems/vcpkg.cmake"
-cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_GENERATOR_PLATFORM=Win32
+cmake .. -DCMAKE_TOOLCHAIN_FILE="$(pwd)/../vcpkg/scripts/buildsystems/vcpkg.cmake" -DCMAKE_GENERATOR_PLATFORM=Win32 -DSPHINX_EXECUTABLE="$(pwd)/../sphinx-venv/Scripts/sphinx-build.exe"
 ```
 
 ### macOS 10.15
