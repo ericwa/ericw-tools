@@ -1725,13 +1725,15 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
 bool surfflags_t::needs_write() const
 {
     return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || no_phong || light_ignore || !surflight_rescale || phong_angle ||
-           phong_angle_concave || phong_group || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0;
+           phong_angle_concave || phong_group || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0 ||
+           surflight_group;
 }
 
 static auto as_tuple(const surfflags_t &flags)
 {
     return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow, flags.no_bounce, flags.no_minlight, flags.no_expand,
-        flags.no_phong, flags.light_ignore, flags.surflight_rescale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight, flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale);
+        flags.no_phong, flags.light_ignore, flags.surflight_rescale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight, flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale,
+        flags.surflight_group);
 }
 
 bool surfflags_t::operator<(const surfflags_t &other) const

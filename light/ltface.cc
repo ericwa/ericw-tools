@@ -3090,7 +3090,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
         if (auto value = IsSurfaceLitFace(bsp, face)) {
             minlight = std::get<0>(value.value()) * 64.0f;
-            minlight_color = Face_LookupTextureColor(bsp, face);
+            minlight_color = std::get<2>(value.value());
             LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()));
         }
 

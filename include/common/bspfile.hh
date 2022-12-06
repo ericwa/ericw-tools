@@ -216,6 +216,9 @@ struct surfflags_t
     // light color scale
     vec_t lightcolorscale = 1.0;
 
+    // surface light group
+    int32_t surflight_group;
+
     bool needs_write() const;
 
 public:
