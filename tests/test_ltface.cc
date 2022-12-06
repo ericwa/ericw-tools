@@ -153,17 +153,25 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
     CHECK(bsp.dlightdata.size() == expected_dlightdata_bytes);
 }
 
-static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
+template <class L>
+static void CheckFaceLuxels(const mbsp_t &bsp, const mface_t &face, L&& lambda)
 {
     const faceextents_t extents(face, bsp, LMSCALE_DEFAULT);
 
     for (int x = 0; x < extents.width(); ++x) {
         for (int y = 0; y < extents.height(); ++y) {
-            auto sample = LM_Sample(&bsp, extents, face.lightofs, {x, y});
+            const qvec3b sample = LM_Sample(&bsp, extents, face.lightofs, {x, y});
             INFO("sample ", x, ", ", y);
-            CHECK(sample[0] > 0);
+            lambda(sample);
         }
     }
+}
+
+static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
+{
+    CheckFaceLuxels(bsp, face, [](qvec3b sample){
+        CHECK(sample[0] > 0);
+    });
 }
 
 TEST_CASE("emissive lights") {
@@ -187,4 +195,17 @@ TEST_CASE("emissive lights") {
 
 TEST_CASE("q2_phong_doesnt_cross_contents") {
     auto [bsp, bspx] = LoadTestmap("q2_phong_doesnt_cross_contents.map", {"-wrnormals"});
+}
+
+TEST_CASE("q2_minlight_nomottle") {
+    INFO("_minlightMottle 0 works on worldspawn");
+
+    auto [bsp, bspx] = LoadTestmap("q2_minlight_nomottle.map", {});
+
+    auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {276, 84, 32});
+    REQUIRE(face);
+
+    CheckFaceLuxels(bsp, *face, [](qvec3b sample){
+        CHECK(sample == qvec3b(33, 33, 33));
+    });
 }

@@ -152,6 +152,7 @@ worldspawn_keys::worldspawn_keys() :
     addminlight{this, "addmin", false, &worldspawn_group},
     minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
     maxlight{this, "maxlight", 0, &worldspawn_group},
+    minlightMottle{this, "minlightMottle", false},
     minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group},
     spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group},
     compilerstyle_start{this, "compilerstyle_start", 32, &worldspawn_group},

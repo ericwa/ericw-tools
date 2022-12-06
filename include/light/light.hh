@@ -258,6 +258,7 @@ public:
     setting_scalar global_anglescale;
     setting_scalar lightmapgamma;
     setting_bool addminlight;
+    setting_scalar minlightMottle;
     setting_scalar minlight;
     setting_scalar maxlight;
     setting_color minlight_color;

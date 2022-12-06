@@ -624,8 +624,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         lightsurf->nodirt = extended_flags.no_dirt;
     }
 
-    lightsurf->minlightMottle = modelinfo->minlightMottle.value();
-    
+
     // minlight
     if (modelinfo->minlight.isChanged()) {
         lightsurf->minlight = modelinfo->minlight.value();
@@ -633,13 +632,23 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         lightsurf->minlight = extended_flags.minlight;
     }
 
+    // minlightMottle
+    if (modelinfo->minlightMottle.isChanged()) {
+        lightsurf->minlightMottle = modelinfo->minlightMottle.value();
+    } else if (light_options.minlightMottle.isChanged()) {
+        lightsurf->minlightMottle = light_options.minlightMottle.value();
+    } else {
+        // default value depends on game
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            lightsurf->minlightMottle = true;
+        } else {
+            lightsurf->minlightMottle = false;
+        }
+    }
+
     // Q2 uses a 0-1 range for minlight
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         lightsurf->minlight *= 128.f;
-
-        if (!modelinfo->minlightMottle.isChanged()) {
-            lightsurf->minlightMottle = true;
-        }
     }
 
     // maxlight
