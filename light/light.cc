@@ -1113,6 +1113,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("lightcolorscale")) {
             flags.lightcolorscale = val.at("lightcolorscale").get<vec_t>();
         }
+        if (val.contains("surflight_group")) {
+            flags.surflight_group = val.at("surflight_group").get<int32_t>();
+        }
     }
 }
 
@@ -1606,6 +1609,9 @@ int light_main(int argc, const char **argv)
         }
         if (!light_options.bounce.isChanged()) {
             light_options.bounce.setValue(true, settings::source::GAME_TARGET);
+        }
+        if (!light_options.surflight_radiosity.isChanged()) {
+            light_options.surflight_radiosity.setValue(SURFLIGHT_RAD, settings::source::GAME_TARGET);
         }
     }
 

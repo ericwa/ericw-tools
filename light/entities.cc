@@ -104,7 +104,8 @@ light_t::light_t() :
     projangle{this, "project_mangle", 20, 0, 0},
     project_texture{this, "project_texture", ""},
     suntexture{this, "suntexture", ""},
-    nostaticlight{this, "nostaticlight", false}
+    nostaticlight{this, "nostaticlight", false},
+    surflight_group{this, "surflight_group", 0}
 {}
 
 std::string light_t::classname() const
@@ -1242,7 +1243,7 @@ static aabb3d BoundPoly(int numverts, qvec3d *verts)
     return bounds;
 }
 
-bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const light_t &surflight, int surf_type)
+bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const modelinfo_t *face_modelinfo, const light_t &surflight, int surf_type)
 {
     const char *texname = Face_TextureName(bsp, face);
 
@@ -1254,7 +1255,19 @@ bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, con
         radiosity_type = light_options.surflight_radiosity.value();
     }
 
-    return !Q_strcasecmp(texname, surflight.epairs->get("_surface")) && radiosity_type == surf_type;
+    if (radiosity_type != surf_type) {
+        return false;
+    }
+
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+
+    if (extended_flags.surflight_group) {
+        if (surflight.surflight_group.value() && surflight.surflight_group.value() != extended_flags.surflight_group) {
+            return false;
+        }
+    }
+
+    return !Q_strcasecmp(texname, surflight.epairs->get("_surface"));
 }
 
 /*
@@ -1329,7 +1342,7 @@ static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modeli
     }
 
     for (const auto &surflight : surfacelight_templates) {
-        if (FaceMatchesSurfaceLightTemplate(bsp, face, *surflight, SURFLIGHT_Q1)) {
+        if (FaceMatchesSurfaceLightTemplate(bsp, face, face_modelinfo, *surflight, SURFLIGHT_Q1)) {
             CreateSurfaceLightOnFaceSubdivision(face, face_modelinfo, surflight.get(), bsp, numverts, verts);
         }
     }
@@ -1470,7 +1483,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
             /* Don't bother subdividing if it doesn't match any surface light templates */
             if (!std::any_of(surfacelight_templates.begin(), surfacelight_templates.end(), [&](const auto &surflight) {
-                    return FaceMatchesSurfaceLightTemplate(bsp, surf, *surflight, SURFLIGHT_Q1);
+                    return FaceMatchesSurfaceLightTemplate(bsp, surf, face_modelinfo, *surflight, SURFLIGHT_Q1);
                 }))
                 continue;
 

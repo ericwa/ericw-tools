@@ -534,11 +534,11 @@ template<size_t N, class T>
 [[nodiscard]] inline bool gate(const qvec<T, N> &v, T epsilon)
 {
     for (size_t i = 0; i < N; i++) {
-        if (gate(v[i], epsilon)) {
-            return true;
+        if (!gate(v[i], epsilon)) {
+            return false;
         }
     }
-    return false;
+    return true;
 }
 
 template<size_t N, class T>

@@ -643,6 +643,15 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         }
     }
 
+    if (entity.epairs.has("_surflight_group"))
+    {
+        const int32_t surflight_group = entity.epairs.get_int("_surflight_group");
+
+        if (surflight_group) {
+            flags.surflight_group = surflight_group;
+        }
+    }
+
     // handle "_mincolor"
     {
         qvec3d mincolor{};

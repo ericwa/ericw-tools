@@ -398,6 +398,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.lightcolorscale != 1.0) {
             t["lightcolorscale"] = tx.flags.lightcolorscale;
         }
+        if (tx.flags.surflight_group) {
+            t["surflight_group"] = tx.flags.surflight_group;
+        }
 
         texinfofile[std::to_string(*tx.outputnum)].swap(t);
     }
