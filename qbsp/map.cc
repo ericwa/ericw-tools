@@ -536,7 +536,7 @@ int FindMiptex(const char *name, bool internal, bool recursive)
     return FindMiptex(name, extended_info, internal, recursive);
 }
 
-static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapentity_t &entity)
+static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapentity_t &entity, const contentflags_t &face_contents)
 {
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
@@ -600,6 +600,13 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
             flags.no_shadow = true;
         }
     }
+    if (face_contents.is_liquid(qbsp_options.target_game)) {
+        // liquids (even opaque) don't cast shadow unless opted in
+        if (shadow != 1) {
+            flags.no_shadow = true;
+        }
+    }
+
 
     // handle "_phong" and "_phong_angle" and "_phong_angle_concave"
     vec_t phongangle = entity.epairs.get_float("_phong_angle");
@@ -1816,7 +1823,7 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
 
     ValidateTextureProjection(face, &tx);
 
-    tx.flags = SurfFlagsForEntity(tx, entity);
+    tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
     face.texinfo = FindTexinfo(tx);
 
     return face;

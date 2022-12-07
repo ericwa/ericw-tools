@@ -209,3 +209,16 @@ TEST_CASE("q2_minlight_nomottle") {
         CHECK(sample == qvec3b(33, 33, 33));
     });
 }
+
+TEST_CASE("q2_dirt") {
+    INFO("liquids don't cast dirt");
+
+    auto [bsp, bspx] = LoadTestmap("q2_dirt.map", {});
+
+    auto *face_under_lava = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {104, 112, 48});
+    REQUIRE(face_under_lava);
+
+    CheckFaceLuxels(bsp, *face_under_lava, [](qvec3b sample){
+        CHECK(sample == qvec3b(96));
+    });
+}
