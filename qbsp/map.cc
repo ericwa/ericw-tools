@@ -541,6 +541,7 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
     const int shadow = entity.epairs.get_int("_shadow");
+    bool is_translucent = false;
 
     // These flags are pulled from surf flags in Q2.
     // TODO: the Q1 version of this block can now be moved into texinfo
@@ -565,6 +566,8 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
             flags.is_nodraw = true;
         if ((flags.native & Q2_SURF_HINT) || IsHintName(texname))
             flags.is_hint = true;
+        if ((flags.native & Q2_SURF_TRANS33) || (flags.native & Q2_SURF_TRANS66))
+            is_translucent = true;
     }
     if (IsNoExpandName(texname))
         flags.no_expand = true;
@@ -600,8 +603,8 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
             flags.no_shadow = true;
         }
     }
-    if (face_contents.is_liquid(qbsp_options.target_game)) {
-        // liquids (even opaque) don't cast shadow unless opted in
+    if (face_contents.is_liquid(qbsp_options.target_game) && !is_translucent) {
+        // opaque liquids don't cast shadow unless opted in
         if (shadow != 1) {
             flags.no_shadow = true;
         }
