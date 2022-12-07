@@ -1614,6 +1614,9 @@ int light_main(int argc, const char **argv)
         if (!light_options.surflight_radiosity.isChanged()) {
             light_options.surflight_radiosity.setValue(SURFLIGHT_RAD, settings::source::GAME_TARGET);
         }
+        if (!light_options.bouncestyled.isChanged()) {
+            light_options.bouncestyled.setValue(true, settings::source::GAME_TARGET);
+        }
     }
 
     // check vis approx type

@@ -177,6 +177,11 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     bool has_any_color = false;
 
     for (const auto &lightmap : surf.lightmapsByStyle) {
+
+        if (lightmap.style && !cfg.bouncestyled.value()) {
+            continue;
+        }
+
         for (auto &sample : lightmap.samples) {
             sum[lightmap.style] += sample.color;
         }
