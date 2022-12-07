@@ -42,6 +42,10 @@ public:
     std::vector<qvec3f> _ray_colors;
     std::vector<qvec3d> _ray_normalcontribs;
 
+    std::vector<bool> _ray_hit_glass;
+    std::vector<qvec3f> _ray_glass_color;
+    std::vector<float> _ray_glass_opacity;
+
     // This is set to the modelinfo's switchshadstyle if the ray hit
     // a dynamic shadow caster. (note that for rays that hit dynamic
     // shadow casters, all of the other hit data is assuming the ray went
@@ -63,6 +67,9 @@ public:
         _point_indices.resize(size);
         _ray_colors.resize(size);
         _ray_normalcontribs.resize(size);
+        _ray_hit_glass.resize(size);
+        _ray_glass_color.resize(size);
+        _ray_glass_opacity.resize(size);
         _ray_dynamic_styles.resize(size);
     }
 
@@ -74,10 +81,23 @@ public:
         return _point_indices[j];
     }
 
-    inline qvec3f &getPushedRayColor(size_t j)
+    inline qvec3f getPushedRayColor(size_t j)
     {
         Q_assert(j < _maxrays);
-        return _ray_colors[j];
+        qvec3f result = _ray_colors[j];
+
+        if (_ray_hit_glass[j]) {
+            const qvec3f glasscolor = _ray_glass_color[j];
+            const float opacity = _ray_glass_opacity[j];
+
+            // multiply ray color by glass color
+            const qvec3f tinted = result * glasscolor;
+
+            // lerp ray color between original ray color and fully tinted by the glass texture color, based on the glass opacity
+            result = mix(result, tinted, opacity);
+        }
+
+        return result;
     }
 
     inline qvec3d &getPushedRayNormalContrib(size_t j)
@@ -210,6 +230,7 @@ public:
         if (normalcontrib) {
             _ray_normalcontribs[_numrays] = *normalcontrib;
         }
+        _ray_hit_glass[_numrays] = false;
         _ray_dynamic_styles[_numrays] = 0;
         _numrays++;
     }
@@ -296,6 +317,7 @@ public:
         if (normalcontrib) {
             _ray_normalcontribs[_numrays] = *normalcontrib;
         }
+        _ray_hit_glass[_numrays] = false;
         _ray_dynamic_styles[_numrays] = 0;
         _numrays++;
     }

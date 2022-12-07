@@ -222,3 +222,17 @@ TEST_CASE("q2_dirt") {
         CHECK(sample == qvec3b(96));
     });
 }
+
+TEST_CASE("q2_light_translucency") {
+    INFO("liquids cast translucent colored shadows (sampling texture) by default");
+
+    auto [bsp, bspx] = LoadTestmap("q2_light_translucency.map", {});
+
+    auto *face_under_water = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {152, -96, 32});
+    REQUIRE(face_under_water);
+
+    CheckFaceLuxels(bsp, *face_under_water, [](qvec3b sample){
+        INFO("green color from the texture");
+        CHECK(sample == qvec3b(100, 150, 100));
+    });
+}
