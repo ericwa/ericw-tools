@@ -80,7 +80,7 @@ light_t::light_t() :
     formula{this, "delay", LF_LINEAR,
         {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
             {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}},
-    spotangle{this, "angle", 40.0},
+    spotangle{this, {"angle", "cone"}, 40.0},
     spotangle2{this, "softangle", 0.0},
     style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1},
     anglescale{this, {"anglesense", "anglescale"}, -1.0},
