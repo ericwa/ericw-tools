@@ -699,8 +699,17 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
     }
 }
 
+void vis_reset()
+{
+    // FIXME: clear other data
+
+    vis_options.reset();
+}
+
 int vis_main(int argc, const char **argv)
 {
+    vis_reset();
+
     bspdata_t bspdata;
     const bspversion_t *loadversion;
 
@@ -782,4 +791,14 @@ int vis_main(int argc, const char **argv)
     logging::close();
 
     return 0;
+}
+
+int vis_main(const std::vector<std::string> &args)
+{
+    std::vector<const char *> argPtrs;
+    for (const std::string &arg : args) {
+        argPtrs.push_back(arg.data());
+    }
+
+    return vis_main(argPtrs.size(), argPtrs.data());
 }

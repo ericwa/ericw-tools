@@ -256,3 +256,4 @@ public:
 extern settings::vis_settings vis_options;
 
 int vis_main(int argc, const char **argv);
+int vis_main(const std::vector<std::string> &args);
