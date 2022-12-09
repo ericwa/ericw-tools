@@ -4,13 +4,19 @@
 #include <common/bspinfo.hh>
 #include <qbsp/qbsp.hh>
 #include <testmaps.hh>
+#include <vis/vis.hh>
 
 struct testresults_t {
     mbsp_t bsp;
     bspxentries_t bspx;
 };
 
-static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args)
+enum class runvis_t {
+    no, yes
+};
+
+static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args,
+    runvis_t run_vis = runvis_t::no)
 {
     auto map_path = std::filesystem::path(testmaps_dir) / name;
 
@@ -33,6 +39,15 @@ static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<
 
     InitQBSP(args);
     ProcessFile();
+
+    // run vis
+    if (run_vis == runvis_t::yes) {
+        std::vector<std::string> vis_args{
+            "", // the exe path, which we're ignoring in this case
+        };
+        vis_args.push_back(bsp_path.string());
+        vis_main(vis_args);
+    }
 
     // run light
     {
@@ -234,5 +249,21 @@ TEST_CASE("q2_light_translucency") {
     CheckFaceLuxels(bsp, *face_under_water, [](qvec3b sample){
         INFO("green color from the texture");
         CHECK(sample == qvec3b(100, 150, 100));
+    });
+}
+
+TEST_CASE("-visapprox vis with opaque liquids" * doctest::may_fail()) {
+    INFO("opaque liquids block vis, but don't cast shadows by default.");
+    INFO("this map has a point light in such an opaque liquid;");
+    INFO("make sure '-visapprox vis' doesn't wrongly cull rays that should illuminate the level.");
+
+    auto [bsp, bspx] = LoadTestmap("q2_light_visapprox.map", {"-visapprox", "vis"}, runvis_t::yes);
+
+    auto *ceil_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {968, 1368, 1248});
+    REQUIRE(ceil_face);
+
+    CheckFaceLuxels(bsp, *ceil_face, [](qvec3b sample){
+        INFO("ceiling above player start receiving light");
+        REQUIRE(sample[0] > 200);
     });
 }
