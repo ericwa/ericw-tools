@@ -252,18 +252,26 @@ TEST_CASE("q2_light_translucency") {
     });
 }
 
-TEST_CASE("-visapprox vis with opaque liquids" * doctest::may_fail()) {
+TEST_CASE("-visapprox vis with opaque liquids") {
     INFO("opaque liquids block vis, but don't cast shadows by default.");
-    INFO("this map has a point light in such an opaque liquid;");
     INFO("make sure '-visapprox vis' doesn't wrongly cull rays that should illuminate the level.");
 
-    auto [bsp, bspx] = LoadTestmap("q2_light_visapprox.map", {"-visapprox", "vis"}, runvis_t::yes);
+    const std::vector<std::string> maps{
+        "q2_light_visapprox.map", // light in liquid
+        "q2_light_visapprox2.map" // light outside of liquid
+    };
 
-    auto *ceil_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {968, 1368, 1248});
-    REQUIRE(ceil_face);
+    for (const auto& map : maps) {
+        SUBCASE(map.c_str()) {
+            auto [bsp, bspx] = LoadTestmap(map, {"-visapprox", "vis"}, runvis_t::yes);
 
-    CheckFaceLuxels(bsp, *ceil_face, [](qvec3b sample){
-        INFO("ceiling above player start receiving light");
-        REQUIRE(sample[0] > 200);
-    });
+            auto *ceil_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {968, 1368, 1248});
+            REQUIRE(ceil_face);
+
+            CheckFaceLuxels(bsp, *ceil_face, [](qvec3b sample){
+                INFO("ceiling above player start receiving light");
+                REQUIRE(sample[0] > 200);
+            });
+        }
+    }
 }
