@@ -56,8 +56,8 @@ int leafbytes_real; // (portalleafs_real+63)>>3, not used for Q2.
 
 namespace settings
 {
-setting_group output_group{"Output", 200};
-setting_group advanced_group{"Advanced", 300};
+setting_group vis_output_group{"Output", 200};
+setting_group vis_advanced_group{"Advanced", 300};
 
 void vis_settings::initialize(int argc, const char **argv)
 {

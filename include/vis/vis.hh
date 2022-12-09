@@ -218,27 +218,27 @@ void CleanVisState(void);
 
 namespace settings
 {
-extern setting_group output_group;
-extern setting_group advanced_group;
+extern setting_group vis_output_group;
+extern setting_group vis_advanced_group;
 
 class vis_settings : public common_settings
 {
 public:
     setting_bool fast{this, "fast", false, &performance_group, "run very simple & fast vis procedure"};
-    setting_int32 level{this, "level", 4, 0, 4, &advanced_group, "number of iterations for tests"};
-    setting_bool noambientsky{this, "noambientsky", false, &output_group, "don't output ambient sky sounds"};
-    setting_bool noambientwater{this, "noambientwater", false, &output_group, "don't output ambient water sounds"};
-    setting_bool noambientslime{this, "noambientslime", false, &output_group, "don't output ambient slime sounds"};
-    setting_bool noambientlava{this, "noambientlava", false, &output_group, "don't output ambient lava sounds"};
+    setting_int32 level{this, "level", 4, 0, 4, &vis_advanced_group, "number of iterations for tests"};
+    setting_bool noambientsky{this, "noambientsky", false, &vis_output_group, "don't output ambient sky sounds"};
+    setting_bool noambientwater{this, "noambientwater", false, &vis_output_group, "don't output ambient water sounds"};
+    setting_bool noambientslime{this, "noambientslime", false, &vis_output_group, "don't output ambient slime sounds"};
+    setting_bool noambientlava{this, "noambientlava", false, &vis_output_group, "don't output ambient lava sounds"};
     setting_redirect noambient{this, "noambient", {&noambientsky, &noambientwater, &noambientslime, &noambientlava},
-        &output_group, "don't output ambient sounds at all"};
+        &vis_output_group, "don't output ambient sounds at all"};
     setting_scalar visdist{
-        this, "visdist", 0.0, &advanced_group, "control the distance required for a portal to be considered seen"};
-    setting_bool nostate{this, "nostate", false, &advanced_group, "ignore saved state files, for forced re-runs"};
+        this, "visdist", 0.0, &vis_advanced_group, "control the distance required for a portal to be considered seen"};
+    setting_bool nostate{this, "nostate", false, &vis_advanced_group, "ignore saved state files, for forced re-runs"};
     setting_bool phsonly{
-        this, "phsonly", false, &advanced_group, "re-calculate the PHS of a Quake II BSP without touching the PVS"};
+        this, "phsonly", false, &vis_advanced_group, "re-calculate the PHS of a Quake II BSP without touching the PVS"};
     setting_invertible_bool autoclean{
-        this, "autoclean", true, &output_group, "remove any extra files on successful completion"};
+        this, "autoclean", true, &vis_output_group, "remove any extra files on successful completion"};
 
     fs::path sourceMap;
 
