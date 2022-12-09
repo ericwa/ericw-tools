@@ -88,7 +88,7 @@ fs::path portalfile, statefile, statetmpfile;
   Return a pointer to a free fixed winding on the stack
   ==================
 */
-winding_t *AllocStackWinding(pstack_t &stack)
+viswinding_t *AllocStackWinding(pstack_t &stack)
 {
     for (size_t i = 0; i < STACK_WINDINGS; i++) {
         if (!stack.windings_used[i]) {
@@ -110,7 +110,7 @@ winding_t *AllocStackWinding(pstack_t &stack)
   structure further up the call chain).
   ==================
 */
-void FreeStackWinding(winding_t *&w, pstack_t &stack)
+void FreeStackWinding(viswinding_t *&w, pstack_t &stack)
 {
     if (w >= stack.windings && w <= &stack.windings[STACK_WINDINGS]) {
         stack.windings_used[w - stack.windings] = false;
@@ -128,7 +128,7 @@ void FreeStackWinding(winding_t *&w, pstack_t &stack)
   is returned.
   ==================
 */
-winding_t *ClipStackWinding(winding_t *in, pstack_t &stack, const qplane3d &split)
+viswinding_t *ClipStackWinding(viswinding_t *in, pstack_t &stack, const qplane3d &split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
     int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
@@ -653,7 +653,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
         {
             auto &p = *dest_portal_it;
-            p.winding = winding_t{sourceportal.winding.begin(), sourceportal.winding.end()};
+            p.winding = viswinding_t{sourceportal.winding.begin(), sourceportal.winding.end()};
 
             // calc plane
             plane = p.winding.plane();
@@ -681,7 +681,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
             // Create a reverse winding
             const auto flipped = sourceportal.winding.flip();
-            p.winding = winding_t{flipped.begin(), flipped.end()};
+            p.winding = viswinding_t{flipped.begin(), flipped.end()};
             p.plane = plane;
             p.leaf = sourceportal.leafnums[0];
             dest_portal_it++;

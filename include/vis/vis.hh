@@ -39,32 +39,32 @@ enum pstatus_t
     pstat_done
 };
 
-struct winding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>
+struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>
 {
     qvec3d origin; // Bounding sphere for fast clipping tests
     vec_t radius; // Not updated, so won't shrink when clipping
 
-    inline winding_t() : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>() { }
+    inline viswinding_t() : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>() { }
 
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_t(Iter begin, Iter end) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(begin, end)
+    inline viswinding_t(Iter begin, Iter end) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(begin, end)
     {
         set_winding_sphere();
     }
 
     // initializer list constructor
-    inline winding_t(std::initializer_list<qvec3d> l) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(l)
+    inline viswinding_t(std::initializer_list<qvec3d> l) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(l)
     {
         set_winding_sphere();
     }
 
     // copy constructor
-    inline winding_t(const winding_t &copy) = delete;
+    inline viswinding_t(const viswinding_t &copy) = delete;
 
     // move constructor
-    inline winding_t(winding_t &&move) noexcept : winding_base_t(std::move(move)), origin(move.origin), radius(move.radius) { }
+    inline viswinding_t(viswinding_t &&move) noexcept : winding_base_t(std::move(move)), origin(move.origin), radius(move.radius) { }
 
     // sets origin & radius
     inline void set_winding_sphere()
@@ -84,10 +84,10 @@ struct winding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX
     }
 
     // assignment copy
-    inline winding_t &operator=(const winding_t &copy)  = delete;
+    inline viswinding_t &operator=(const viswinding_t &copy)  = delete;
 
     // assignment move
-    inline winding_t &operator=(winding_t &&move) noexcept
+    inline viswinding_t &operator=(viswinding_t &&move) noexcept
     {
         origin = move.origin;
         radius = move.radius;
@@ -109,14 +109,14 @@ struct portal_t
 {
     qplane3d plane; // normal pointing into neighbor
     int leaf; // neighbor
-    winding_t winding;
+    viswinding_t winding;
     pstatus_t status;
     leafbits_t visbits, mightsee;
     int nummightsee;
     int numcansee;
 };
 
-inline float winding_t::distFromPortal(portal_t &p)
+inline float viswinding_t::distFromPortal(portal_t &p)
 {
     vec_t mindist = 1e20;
 
@@ -158,8 +158,8 @@ struct pstack_t
     pstack_t *next;
     leaf_t *leaf;
     portal_t *portal; // portal exiting
-    winding_t *source, *pass;
-    winding_t windings[STACK_WINDINGS]; // Fixed size windings
+    viswinding_t *source, *pass;
+    viswinding_t windings[STACK_WINDINGS]; // Fixed size windings
     bool windings_used[STACK_WINDINGS];
     qplane3d portalplane;
     leafbits_t *mightsee; // bit string
@@ -167,9 +167,9 @@ struct pstack_t
     int numseparators[2];
 };
 
-winding_t *AllocStackWinding(pstack_t &stack);
-void FreeStackWinding(winding_t *&w, pstack_t &stack);
-winding_t *ClipStackWinding(winding_t *in, pstack_t &stack, const qplane3d &split);
+viswinding_t *AllocStackWinding(pstack_t &stack);
+void FreeStackWinding(viswinding_t *&w, pstack_t &stack);
+viswinding_t *ClipStackWinding(viswinding_t *in, pstack_t &stack, const qplane3d &split);
 
 struct threaddata_t
 {

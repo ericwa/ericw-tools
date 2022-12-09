@@ -30,7 +30,7 @@ static int c_leafskip;
   pointer, was measurably faster
   ==============
 */
-static void ClipToSeparators(const winding_t *source, const qplane3d src_pl, const winding_t *pass, winding_t *&target,
+static void ClipToSeparators(const viswinding_t *source, const qplane3d src_pl, const viswinding_t *pass, viswinding_t *&target,
     unsigned int test, pstack_t &stack)
 {
     int i, j, k, l;
@@ -389,7 +389,7 @@ static void BasePortalThread(size_t portalnum)
     leafbits_t portalsee(numportals * 2);
 
     portal_t &p = portals[portalnum];
-    winding_t &w = p.winding;
+    viswinding_t &w = p.winding;
 
     p.mightsee.resize(portalleafs);
 
@@ -399,7 +399,7 @@ static void BasePortalThread(size_t portalnum)
         }
 
         portal_t &tp = portals[i];
-        winding_t &tw = tp.winding;
+        viswinding_t &tw = tp.winding;
 
         // Quick test - completely at the back?
         d = p.plane.distance_to(tw.origin);
