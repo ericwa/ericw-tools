@@ -275,3 +275,21 @@ TEST_CASE("-visapprox vis with opaque liquids") {
         }
     }
 }
+
+TEST_CASE("negative lights work") {
+    const std::vector<std::string> maps{
+        "q2_light_negative.map",
+        "q2_light_negative_bounce.map"
+    };
+
+    for (const auto& map : maps) {
+        SUBCASE(map.c_str()) {
+            auto [bsp, bspx] = LoadTestmap(map, {});
+
+            auto *face_under_negative_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {632, 1304, 960});
+            REQUIRE(face_under_negative_light);
+
+            CheckFaceLuxels(bsp, *face_under_negative_light, [](qvec3b sample) { CHECK(sample == qvec3b(0)); });
+        }
+    }
+}
