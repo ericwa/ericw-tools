@@ -204,7 +204,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t &state)
     fs::path name = qbsp_options.bsp_path;
     name.replace_extension("prt");
 
-    std::ofstream portalFile(name, std::ios_base::binary | std::ios_base::out);
+    std::ofstream portalFile(name, std::ios_base::out);
     if (!portalFile)
         FError("Failed to open {}: {}", name, strerror(errno));
 
