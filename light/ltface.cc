@@ -1229,6 +1229,12 @@ static void LightFace_Entity(
         return;
     }
 
+    if (!entity->light_group.value().empty()) {
+        if (entity->light_group.value() != lightsurf->modelinfo->light_group.value()) {
+            return;
+        }
+    }
+
     /*
      * Check it for real
      */

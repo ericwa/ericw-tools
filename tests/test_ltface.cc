@@ -293,3 +293,29 @@ TEST_CASE("negative lights work") {
         }
     }
 }
+
+TEST_CASE("_light_group") {
+    auto [bsp, bspx] = LoadTestmap("q2_light_group.map", {});
+
+    {
+        INFO("world doesn't receive light from the light ent with '_light_group' 'pillar'");
+
+        auto *face_under_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {680, 1224, 944});
+        REQUIRE(face_under_light);
+
+        CheckFaceLuxels(bsp, *face_under_light, [](qvec3b sample) {
+            CHECK(sample == qvec3b(64));
+        });
+    }
+
+    {
+        INFO("pillar with matching _light_group is receiving light");
+
+        auto *face_on_pillar = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1248, 1000});
+        REQUIRE(face_on_pillar);
+
+        CheckFaceLuxels(bsp, *face_on_pillar, [](qvec3b sample) {
+            CHECK(sample[0] > 100);
+        });
+    }
+}

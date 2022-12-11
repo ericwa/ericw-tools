@@ -105,7 +105,8 @@ light_t::light_t() :
     project_texture{this, "project_texture", ""},
     suntexture{this, "suntexture", ""},
     nostaticlight{this, "nostaticlight", false},
-    surflight_group{this, "surflight_group", 0}
+    surflight_group{this, "surflight_group", 0},
+    light_group{this, "light_group", ""}
 {}
 
 std::string light_t::classname() const

@@ -137,7 +137,8 @@ modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale) :
       alpha{this, "alpha", 1.0},
       minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0},
       lightignore{this, "lightignore", false},
-      lightcolorscale{this, "lightcolorscale", 1}
+      lightcolorscale{this, "lightcolorscale", 1},
+      light_group{this, "light_group", ""}
       {}
 
 namespace settings
