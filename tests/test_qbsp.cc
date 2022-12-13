@@ -225,6 +225,7 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(const st
         auto dest = fs::path(destdir) / name.filename();
         dest.replace_extension(".bsp");
         fs::copy(qbsp_options.bsp_path, dest, fs::copy_options::overwrite_existing);
+        logging::print("copied from {} to {}\n", qbsp_options.bsp_path, dest);
     }
 
     // re-open the .bsp and return it
