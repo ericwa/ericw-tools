@@ -612,56 +612,6 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::print("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
-static RTCRayHit SetupRay_StartStop(const qvec3d &start, const qvec3d &stop)
-{
-    qvec3d dir = stop - start;
-    vec_t dist = qv::normalizeInPlace(dir);
-
-    return SetupRay(0, start, dir, dist);
-}
-
-// public
-hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self)
-{
-    RTCRay ray = SetupRay_StartStop(start, stop).ray;
-
-    ray_source_info ctx2(nullptr, self);
-    rtcOccluded1(scene, &ctx2, &ray);
-
-    if (ray.tfar < 0.0f)
-        return {false, 0}; // fully occluded
-
-    // no obstruction (or a switchable shadow obstruction only)
-    return {true, ctx2.singleRayShadowStyle};
-}
-
-// public
-hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out)
-{
-    // trace from the sample point towards the sun, and
-    // return true if we hit a sky poly.
-
-    qvec3d dir_normalized = qv::normalize(dirn);
-
-    RTCRayHit ray = SetupRay(0, start, dir_normalized, MAX_SKY_DIST);
-
-    ray_source_info ctx2(nullptr, self);
-    rtcIntersect1(scene, &ctx2, &ray);
-
-    bool hit_sky = (ray.hit.geomID == skygeom.geomID);
-
-    if (face_out) {
-        if (hit_sky) {
-            const sceneinfo &si = Embree_SceneinfoForGeomID(ray.hit.geomID);
-            *face_out = si.triInfo.at(ray.hit.primID).face;
-        } else {
-            *face_out = nullptr;
-        }
-    }
-
-    return {hit_sky, ctx2.singleRayShadowStyle};
-}
-
 static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor)
 {
     ray_source_info *ctx = static_cast<ray_source_info *>(context);
@@ -690,8 +640,5 @@ static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIn
 
     if (rs != nullptr) {
         rs->_ray_dynamic_styles[rayIndex] = style;
-    } else {
-        // TestLight case
-        ctx->singleRayShadowStyle = style;
     }
 }

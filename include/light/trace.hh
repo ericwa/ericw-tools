@@ -48,27 +48,6 @@ qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::text
 
 class modelinfo_t;
 
-using style_t = int;
-
-struct hitresult_t
-{
-    bool blocked;
-
-    /**
-     * non-zero means light passed through a shadow-casting bmodel with the given style.
-     * only valid if blocked == false.
-     */
-    style_t passedSwitchableShadowStyle;
-};
-
-/**
- * Convenience functions TestLight and TestSky will test against all shadow
- * casting bmodels and self-shadow the model 'self' if self != NULL.
- */
-hitresult_t TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out);
-hitresult_t TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self);
-
 const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3d &point);
-int Light_PointContents(const mbsp_t *bsp, const qvec3d &point);
 
 #include "trace_embree.hh"

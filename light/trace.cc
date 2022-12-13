@@ -37,24 +37,6 @@ const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3d &point)
     return &bsp->dleafs[-1 - num];
 }
 
-/*
-==============
-Light_PointContents
-
-from hmap2
-==============
-*/
-int Light_PointContents(const mbsp_t *bsp, const qvec3d &point)
-{
-    return Light_PointInLeaf(bsp, point)->contents;
-}
-
-/*
- * ============================================================================
- * FENCE TEXTURE TESTING
- * ============================================================================
- */
-
 /**
  * Given a float texture coordinate, returns a pixel index to sample in [0, width-1].
  * This assumes the texture repeats and nearest filtering

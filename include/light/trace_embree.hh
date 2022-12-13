@@ -29,8 +29,6 @@
 
 void ResetEmbree();
 void Embree_TraceInit(const mbsp_t *bsp);
-hitresult_t Embree_TestSky(const qvec3d &start, const qvec3d &dirn, const modelinfo_t *self, const mface_t **face_out);
-hitresult_t Embree_TestLight(const qvec3d &start, const qvec3d &stop, const modelinfo_t *self);
 
 class modelinfo_t;
 
@@ -148,11 +146,9 @@ struct ray_source_info : public RTCIntersectContext
 {
     raystream_embree_common_t *raystream; // may be null if this ray is not from a ray stream
     const modelinfo_t *self;
-    /// only used if raystream == null
-    int singleRayShadowStyle;
 
     ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_)
-        : raystream(raystream_), self(self_), singleRayShadowStyle(0)
+        : raystream(raystream_), self(self_)
     {
         rtcInitIntersectContext(this);
 
