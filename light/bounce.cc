@@ -77,6 +77,10 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
         return false;
     }
 
+    if (mi->object_channel_mask.value() != CHANNEL_MASK_DEFAULT) {
+        return false;
+    }
+
     return true;
 }
 
