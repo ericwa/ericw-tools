@@ -272,17 +272,10 @@ inline qvec3f Embree_RayEndpoint(RTCRayN *ray, const qvec3f &dir, size_t N, size
     return org + (dir * tfar);
 }
 
-enum class filtertype_t
-{
-    INTERSECTION,
-    OCCLUSION
-};
-
 static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor);
 static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style);
 
 // called to evaluate transparency
-template<filtertype_t filtertype>
 static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 {
     int *const valid = args->valid;
@@ -599,9 +592,9 @@ void Embree_TraceInit(const mbsp_t *bsp)
     CreateGeometryFromWindings(device, scene, skipwindings);
 
     rtcSetGeometryIntersectFilterFunction(
-        rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN<filtertype_t::INTERSECTION>);
+        rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN);
     rtcSetGeometryOccludedFilterFunction(
-        rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN<filtertype_t::OCCLUSION>);
+        rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN);
 
     rtcCommitScene(scene);
 

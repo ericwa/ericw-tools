@@ -1004,39 +1004,6 @@ constexpr vec_t SQR(vec_t x)
     return x * x;
 }
 
-// this is the inverse of GetLightValue
-float GetLightDist(const settings::worldspawn_keys &cfg, const light_t *entity, vec_t desiredLight)
-{
-    float fadedist;
-    if (entity->getFormula() == LF_LINEAR) {
-        /* Linear formula always has a falloff point */
-        fadedist = fabs(entity->light.value()) - desiredLight;
-        fadedist = fadedist / entity->atten.value() / cfg.scaledist.value();
-        fadedist = max(0.0f, fadedist);
-    } else {
-        /* Calculate the distance at which brightness falls to desiredLight */
-        switch (entity->getFormula()) {
-            case LF_INFINITE:
-            case LF_LOCALMIN: fadedist = FLT_MAX; break;
-            case LF_INVERSE:
-                fadedist = (LF_SCALE * fabs(entity->light.value())) /
-                           (cfg.scaledist.value() * entity->atten.value() * desiredLight);
-                break;
-            case LF_INVERSE2:
-            case LF_INVERSE2A:
-                fadedist = sqrt(fabs(entity->light.value() * SQR(LF_SCALE) /
-                                     (SQR(cfg.scaledist.value()) * SQR(entity->atten.value()) * desiredLight)));
-                if (entity->getFormula() == LF_INVERSE2A) {
-                    fadedist -= (LF_SCALE / (cfg.scaledist.value() * entity->atten.value()));
-                }
-                fadedist = max(0.0f, fadedist);
-                break;
-            default: FError("Internal error: formula not handled");
-        }
-    }
-    return fadedist;
-}
-
 // CHECK: naming? why clamp*min*?
 constexpr void Light_ClampMin(lightsample_t &sample, const vec_t light, const qvec3d &color)
 {
@@ -2039,52 +2006,6 @@ inline qvec3d GetDirtVector(const settings::worldspawn_keys &cfg, int i)
     return dirtVectors[i];
 }
 
-float DirtAtPoint(const settings::worldspawn_keys &cfg, raystream_intersection_t *rs, const qvec3d &point,
-    const qvec3d &normal, const modelinfo_t *selfshadow)
-{
-    if (!dirt_in_use) {
-        return 0.0f;
-    }
-
-    qvec3d myUp, myRt;
-    float occlusion = 0;
-
-    // this stuff is just per-point
-
-    GetUpRtVecs(normal, myUp, myRt);
-
-    rs->clearPushedRays();
-
-    for (int j = 0; j < numDirtVectors; j++) {
-
-        // fill in input buffers
-        qvec3d dirtvec = GetDirtVector(cfg, j);
-        qvec3d dir = TransformToTangentSpace(normal, myUp, myRt, dirtvec);
-
-        rs->pushRay(j, point, dir, cfg.dirtDepth.value());
-    }
-
-    Q_assert(rs->numPushedRays() == numDirtVectors);
-
-    // trace the batch
-    rs->tracePushedRaysIntersection(selfshadow);
-
-    // accumulate hitdists
-    for (int j = 0; j < numDirtVectors; j++) {
-        if (rs->getPushedRayHitType(j) == hittype_t::SOLID) {
-            const vec_t dist = rs->getPushedRayHitDist(j);
-            occlusion += min(cfg.dirtDepth.value(), dist);
-        } else {
-            occlusion += cfg.dirtDepth.value();
-        }
-    }
-
-    // process the results.
-    const vec_t avgHitdist = occlusion / numDirtVectors;
-    occlusion = 1 - (avgHitdist / cfg.dirtDepth.value());
-    return occlusion;
-}
-
 /*
  * ============
  * LightFace_CalculateDirt
@@ -2316,41 +2237,6 @@ static std::vector<qvec4f> LightmapNormalsToGLMVector(const lightsurf_t *lightsu
         res.emplace_back(color[0], color[1], color[2], alpha);
     }
     return res;
-}
-
-#if 0
-static std::vector<qvec4f> LightmapToGLMVector(const mbsp_t *bsp, const lightsurf_t *lightsurf)
-{
-    const lightmap_t *lm = Lightmap_ForStyle_ReadOnly(lightsurf, 0);
-    if (lm != nullptr) {
-        return LightmapColorsToGLMVector(lightsurf, lm);
-    }
-    return std::vector<qvec4f>();
-}
-#endif
-
-static qvec3f LinearToGamma22(const qvec3f &c)
-{
-    return qv::pow(c, qvec3f(1 / 2.2f));
-}
-
-static qvec3f Gamma22ToLinear(const qvec3f &c)
-{
-    return qv::pow(c, qvec3f(2.2f));
-}
-
-void GLMVector_GammaToLinear(std::vector<qvec3f> &vec)
-{
-    for (auto &v : vec) {
-        v = Gamma22ToLinear(v);
-    }
-}
-
-void GLMVector_LinearToGamma(std::vector<qvec3f> &vec)
-{
-    for (auto &v : vec) {
-        v = LinearToGamma22(v);
-    }
 }
 
 // Special handling of alpha channel:
