@@ -296,7 +296,7 @@ TEST_CASE("negative lights work") {
 
 TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shadow_channel_mask)") {
     auto [bsp, bspx] = LoadTestmap("q2_light_group.map", {});
-    REQUIRE(3 == bsp.dmodels.size());
+    REQUIRE(4 == bsp.dmodels.size());
 
     {
         INFO("world doesn't receive light from the light ent with _light_channel_mask 2");
@@ -316,7 +316,7 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         REQUIRE(face_on_pillar);
 
         CheckFaceLuxels(bsp, *face_on_pillar, [](qvec3b sample) {
-            CHECK(sample[0] > 100);
+            CHECK(sample == qvec3b(255, 0, 0));
         });
     }
 
@@ -327,7 +327,7 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         REQUIRE(occluded_face);
 
         CheckFaceLuxels(bsp, *occluded_face, [](qvec3b sample) {
-            CHECK(sample[0] == 0);
+            CHECK(sample == qvec3b(0));
         });
     }
 
@@ -343,13 +343,24 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
     }
 
     {
-        INFO("sunlight doesn't cast on _object_channel_mask 2 bmodel");
+        INFO("sunlight doesn't cast on _object_channel_mask 4 bmodel");
 
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[2], {904, 1248, 1016});
         REQUIRE(face);
 
         CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
-            CHECK(sample[0] == 0);
+            CHECK(sample == qvec3b(0, 255, 0));
+        });
+    }
+
+    {
+        INFO("surface light doesn't cast on _object_channel_mask 8 bmodel");
+
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[3], {1288, 1248, 1016});
+        REQUIRE(face);
+
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            CHECK(sample == qvec3b(0, 0, 255));
         });
     }
 }

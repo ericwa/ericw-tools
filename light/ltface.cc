@@ -1768,6 +1768,11 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const float surflight_gate = 0.01f;
 
+    // check lighting channels (currently surface lights are always on CHANNEL_MASK_DEFAULT)
+    if (!(lightsurf->modelinfo->object_channel_mask.value() & CHANNEL_MASK_DEFAULT)) {
+        return;
+    }
+
     for (const surfacelight_t &vpl : surface_lights) {
         if (SurfaceLight_SphereCull(&vpl, lightsurf, surflight_gate, hotspot_clamp))
             continue;
