@@ -294,11 +294,12 @@ TEST_CASE("negative lights work") {
     }
 }
 
-TEST_CASE("_light_group") {
+TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shadow_channel_mask)") {
     auto [bsp, bspx] = LoadTestmap("q2_light_group.map", {});
+    REQUIRE(2 == bsp.dmodels.size());
 
     {
-        INFO("world doesn't receive light from the light ent with '_light_group' 'pillar'");
+        INFO("world doesn't receive light from the light ent with _light_channel_mask 2");
 
         auto *face_under_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {680, 1224, 944});
         REQUIRE(face_under_light);
@@ -309,12 +310,34 @@ TEST_CASE("_light_group") {
     }
 
     {
-        INFO("pillar with matching _light_group is receiving light");
+        INFO("pillar with _object_channel_mask 2 is receiving light");
 
         auto *face_on_pillar = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1248, 1000});
         REQUIRE(face_on_pillar);
 
         CheckFaceLuxels(bsp, *face_on_pillar, [](qvec3b sample) {
+            CHECK(sample[0] > 100);
+        });
+    }
+
+    {
+        INFO("_object_channel_mask 2 implicitly makes bmodels cast shadow in channel 2");
+
+        auto *occluded_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1280, 1000});
+        REQUIRE(occluded_face);
+
+        CheckFaceLuxels(bsp, *occluded_face, [](qvec3b sample) {
+            CHECK(sample[0] == 0);
+        });
+    }
+
+    {
+        INFO("ensure AABB culling isn't breaking light channels");
+
+        auto *unoccluded_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1280, 1088});
+        REQUIRE(unoccluded_face);
+
+        CheckFaceLuxels(bsp, *unoccluded_face, [](qvec3b sample) {
             CHECK(sample[0] > 100);
         });
     }
