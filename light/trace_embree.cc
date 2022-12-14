@@ -307,6 +307,12 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
         const modelinfo_t *source_modelinfo = rsi->self;
         const triinfo &hit_triinfo = Embree_LookupTriangleInfo(geomID, primID);
 
+        if (!(hit_triinfo.channelmask & rsi->shadowmask)) {
+            // reject hit
+            valid[i] = INVALID;
+            continue;
+        }
+
         if (!hit_triinfo.modelinfo) {
             // we hit a "skip" face with no associated model
             // reject hit (???)
@@ -634,7 +640,9 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::funcprint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
 
     scene = rtcNewScene(device);
-    rtcSetSceneFlags(scene, RTC_SCENE_FLAG_NONE);
+    // we're using RTCIntersectContext::filter so it's required that we set
+    // RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION
+    rtcSetSceneFlags(scene, RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION);
     rtcSetSceneBuildQuality(scene, RTC_BUILD_QUALITY_HIGH);
     skygeom = CreateGeometry(bsp, device, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, device, scene, solidfaces);
