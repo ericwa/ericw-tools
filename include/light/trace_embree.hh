@@ -142,18 +142,15 @@ inline RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &
     return ray;
 }
 
+class light_t;
+
 struct ray_source_info : public RTCIntersectContext
 {
     raystream_embree_common_t *raystream; // may be null if this ray is not from a ray stream
     const modelinfo_t *self;
+    int shadowmask;
 
-    ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_)
-        : raystream(raystream_), self(self_)
-    {
-        rtcInitIntersectContext(this);
-
-        flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
-    }
+    ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_);
 };
 
 struct triinfo
@@ -166,10 +163,13 @@ struct triinfo
     float alpha;
     bool is_fence, is_glass;
 
+    // cached from modelinfo for faster access
     bool shadowworldonly;
     bool shadowself;
     bool switchableshadow;
     int32_t switchshadstyle;
+
+    int channelmask;
 };
 
 struct sceneinfo
@@ -231,12 +231,12 @@ public:
         _numrays++;
     }
 
-    inline void tracePushedRaysIntersection(const modelinfo_t *self)
+    inline void tracePushedRaysIntersection(const modelinfo_t *self, int shadowmask = 1)
     {
         if (!_numrays)
             return;
 
-        ray_source_info ctx2(this, self);
+        ray_source_info ctx2(this, self, shadowmask);
         rtcIntersect1M(scene, &ctx2, _rays.data(), _numrays, sizeof(_rays[0]));
     }
 
@@ -318,14 +318,14 @@ public:
         _numrays++;
     }
 
-    inline void tracePushedRaysOcclusion(const modelinfo_t *self)
+    inline void tracePushedRaysOcclusion(const modelinfo_t *self, int shadowmask = 1)
     {
         // Q_assert(_state == streamstate_t::READY);
 
         if (!_numrays)
             return;
 
-        ray_source_info ctx2(this, self);
+        ray_source_info ctx2(this, self, shadowmask);
         rtcOccluded1M(scene, &ctx2, _rays.data(), _numrays, sizeof(_rays[0]));
     }
 

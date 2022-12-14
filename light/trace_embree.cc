@@ -20,6 +20,7 @@
 #include <light/light.hh>
 #include <light/bounce.hh>
 #include <light/trace_embree.hh>
+#include <light/entities.hh>
 #include <common/bsputils.hh>
 #include <common/polylib.hh>
 #include <vector>
@@ -165,6 +166,7 @@ sceneinfo CreateGeometry(
             info.shadowself = modelinfo->shadowself.boolValue();
             info.switchableshadow = modelinfo->switchableshadow.boolValue();
             info.switchshadstyle = modelinfo->switchshadstyle.value();
+            info.channelmask = modelinfo->channel_mask.value();
 
             info.alpha = Face_Alpha(bsp, modelinfo, face);
 
@@ -390,6 +392,48 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
     }
 }
 
+/**
+ * For use with all rays coming from a model with non-default channel mask
+ */
+static void PerRay_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
+{
+    int *const valid = args->valid;
+    RTCIntersectContext *const context = args->context;
+    struct RTCRayN *const ray = args->ray;
+    struct RTCHitN *const potentialHit = args->hit;
+    const unsigned int N = args->N;
+
+    const int VALID = -1;
+    const int INVALID = 0;
+
+    auto *rsi = static_cast<const ray_source_info *>(context);
+
+    for (size_t i = 0; i < N; i++) {
+        if (valid[i] != VALID) {
+            // we only need to handle valid rays
+            continue;
+        }
+
+        const unsigned &rayID = RTCRayN_id(ray, N, i);
+        const unsigned &geomID = RTCHitN_geomID(potentialHit, N, i);
+        const unsigned &primID = RTCHitN_primID(potentialHit, N, i);
+
+        // unpack ray index
+        const unsigned rayIndex = rayID;
+
+        const triinfo &hit_triinfo = Embree_LookupTriangleInfo(geomID, primID);
+
+        if (!(hit_triinfo.channelmask & rsi->shadowmask)) {
+            // reject hit
+            valid[i] = INVALID;
+            continue;
+        }
+
+        // accept hit
+        // (just need to leave the `valid` value set to VALID)
+    }
+}
+
 // building faces for skip-textured bmodels
 
 qplane3d Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
@@ -499,6 +543,12 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
             // handle switchableshadow
             if (switchableshadow) {
+                filterfaces.push_back(face);
+                continue;
+            }
+
+            // non-default channel mask
+            if (model->channel_mask.value() != 1) {
                 filterfaces.push_back(face);
                 continue;
             }
@@ -633,5 +683,20 @@ static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIn
 
     if (rs != nullptr) {
         rs->_ray_dynamic_styles[rayIndex] = style;
+    }
+}
+
+ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_) :
+      raystream(raystream_),
+      self(self_),
+      shadowmask(shadowmask_)
+{
+    rtcInitIntersectContext(this);
+
+    flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
+
+    if (shadowmask != 1) {
+        // non-default shadow mask means we have to use the slow path
+        filter = PerRay_FilterFuncN;
     }
 }

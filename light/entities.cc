@@ -106,7 +106,8 @@ light_t::light_t() :
     suntexture{this, "suntexture", ""},
     nostaticlight{this, "nostaticlight", false},
     surflight_group{this, "surflight_group", 0},
-    light_group{this, "light_group", ""}
+    channel_mask{this, "channel_mask", 1},
+    shadow_mask{this, "shadow_mask", 1}
 {}
 
 std::string light_t::classname() const

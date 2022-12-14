@@ -99,7 +99,8 @@ public:
     settings::setting_string suntexture;
     settings::setting_bool nostaticlight;
     settings::setting_int32 surflight_group;
-    settings::setting_string light_group;
+    settings::setting_int32 channel_mask;
+    settings::setting_int32 shadow_mask;
 
     light_t();
 

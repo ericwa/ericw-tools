@@ -219,7 +219,7 @@ public:
     settings::setting_color minlight_color;
     settings::setting_bool lightignore;
     settings::setting_scalar lightcolorscale;
-    settings::setting_string light_group;
+    settings::setting_int32 channel_mask;
 
     float getResolvedPhongAngle() const;
     bool isWorld() const;

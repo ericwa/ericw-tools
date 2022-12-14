@@ -1196,10 +1196,9 @@ static void LightFace_Entity(
         return;
     }
 
-    if (!entity->light_group.value().empty()) {
-        if (entity->light_group.value() != lightsurf->modelinfo->light_group.value()) {
-            return;
-        }
+    // check lighting channels
+    if (!(entity->channel_mask.value() & lightsurf->modelinfo->channel_mask.value())) {
+        return;
     }
 
     /*
@@ -1236,7 +1235,7 @@ static void LightFace_Entity(
     }
 
     // don't need closest hit, just checking for occlusion between light and surface point
-    rs.tracePushedRaysOcclusion(modelinfo);
+    rs.tracePushedRaysOcclusion(modelinfo, entity->shadow_mask.value());
     total_light_rays += rs.numPushedRays();
 
     int cached_style = entity->style.value();
@@ -2051,7 +2050,10 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
         }
 
         // trace the batch. need closest hit for dirt, so intersection.
-        rs.tracePushedRaysIntersection(lightsurf->modelinfo);
+        //
+        // use the model's own channel mask as the shadow mask, e.g. so a model in channel 2's AO rays will only hit
+        // other things in channel 2
+        rs.tracePushedRaysIntersection(lightsurf->modelinfo, lightsurf->modelinfo->channel_mask.value());
 
         // accumulate hitdists
         for (int k = 0; k < rs.numPushedRays(); k++) {
