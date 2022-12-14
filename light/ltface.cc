@@ -1179,7 +1179,10 @@ static void LightFace_Entity(
     const qplane3d *plane = &lightsurf->plane;
 
     /* vis cull */
-    if (light_options.visapprox.value() == visapprox_t::VIS && VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
+    if (light_options.visapprox.value() == visapprox_t::VIS
+        && entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT
+        && entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT
+        && VisCullEntity(bsp, lightsurf->pvs, entity->leaf)) {
         return;
     }
 
