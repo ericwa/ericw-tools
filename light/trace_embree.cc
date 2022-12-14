@@ -535,8 +535,9 @@ void Embree_TraceInit(const mbsp_t *bsp)
         const bool shadowself = model->shadowself.boolValue();
         const bool shadowworldonly = model->shadowworldonly.boolValue();
         const bool switchableshadow = model->switchableshadow.boolValue();
+        const bool has_custom_channel_mask = (model->object_channel_mask.value() != CHANNEL_MASK_DEFAULT);
 
-        if (!(isWorld || shadow || shadowself || shadowworldonly || switchableshadow))
+        if (!(isWorld || shadow || shadowself || shadowworldonly || switchableshadow || has_custom_channel_mask))
             continue;
 
         for (int i = 0; i < model->model->numfaces; i++) {
