@@ -1122,7 +1122,12 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
     if (light_options.visapprox.value() == visapprox_t::RAYS &&
-        entity->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+        entity->bounds.disjoint(lightsurf->extents.bounds, 0.001) &&
+        entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
+        entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
+        // EstimateVisibleBoundsAtPoint uses CHANNEL_MASK_DEFAULT
+        // for its rays, so only cull lights that are also going to be using
+        // CHANNEL_MASK_DEFAULT for rendering
         return true;
     }
 
