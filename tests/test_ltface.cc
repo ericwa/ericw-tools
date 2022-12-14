@@ -296,7 +296,7 @@ TEST_CASE("negative lights work") {
 
 TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shadow_channel_mask)") {
     auto [bsp, bspx] = LoadTestmap("q2_light_group.map", {});
-    REQUIRE(2 == bsp.dmodels.size());
+    REQUIRE(3 == bsp.dmodels.size());
 
     {
         INFO("world doesn't receive light from the light ent with _light_channel_mask 2");
@@ -339,6 +339,17 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
 
         CheckFaceLuxels(bsp, *unoccluded_face, [](qvec3b sample) {
             CHECK(sample[0] > 100);
+        });
+    }
+
+    {
+        INFO("sunlight doesn't cast on _object_channel_mask 2 bmodel");
+
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[2], {904, 1248, 1016});
+        REQUIRE(face);
+
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            CHECK(sample[0] == 0);
         });
     }
 }

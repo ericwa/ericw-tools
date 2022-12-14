@@ -1312,6 +1312,11 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
         return;
     }
 
+    // check lighting channels (currently sunlight is always on CHANNEL_MASK_DEFAULT)
+    if (!(lightsurf->modelinfo->object_channel_mask.value() & CHANNEL_MASK_DEFAULT)) {
+        return;
+    }
+
     /* Check each point... */
     raystream_intersection_t &rs = lightsurf->intersection_stream;
     rs.clearPushedRays();
