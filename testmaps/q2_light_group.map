@@ -82,13 +82,13 @@
 "classname" "light"
 "origin" "680 1176 1000"
 "light" "300"
-"_channel_mask" "2"
-"_shadow_mask" "2"
+"_light_channel_mask" "2"
+"_shadow_channel_mask" "2"
 }
 // entity 3
 {
 "classname" "func_wall"
-"_channel_mask" "2"
+"_object_channel_mask" "2"
 // brush 0
 {
 ( 656 1248 944 ) ( 656 1249 944 ) ( 656 1248 945 ) e1u1/twall2_1 0 0 0 1 1

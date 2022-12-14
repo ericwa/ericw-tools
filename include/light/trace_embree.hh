@@ -231,7 +231,7 @@ public:
         _numrays++;
     }
 
-    inline void tracePushedRaysIntersection(const modelinfo_t *self, int shadowmask = 1)
+    inline void tracePushedRaysIntersection(const modelinfo_t *self, int shadowmask)
     {
         if (!_numrays)
             return;
@@ -318,7 +318,7 @@ public:
         _numrays++;
     }
 
-    inline void tracePushedRaysOcclusion(const modelinfo_t *self, int shadowmask = 1)
+    inline void tracePushedRaysOcclusion(const modelinfo_t *self, int shadowmask)
     {
         // Q_assert(_state == streamstate_t::READY);
 

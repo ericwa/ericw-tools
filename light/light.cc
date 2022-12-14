@@ -138,7 +138,7 @@ modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale) :
       minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0},
       lightignore{this, "lightignore", false},
       lightcolorscale{this, "lightcolorscale", 1},
-      channel_mask{this, "channel_mask", 1}
+      object_channel_mask{this, "object_channel_mask", CHANNEL_MASK_DEFAULT}
       {}
 
 namespace settings

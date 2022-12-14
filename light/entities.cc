@@ -106,8 +106,8 @@ light_t::light_t() :
     suntexture{this, "suntexture", ""},
     nostaticlight{this, "nostaticlight", false},
     surflight_group{this, "surflight_group", 0},
-    channel_mask{this, "channel_mask", 1},
-    shadow_mask{this, "shadow_mask", 1}
+    light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
+    shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT}
 {}
 
 std::string light_t::classname() const
@@ -1070,7 +1070,7 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
         }
     }
 
-    rs.tracePushedRaysIntersection(nullptr);
+    rs.tracePushedRaysIntersection(nullptr, CHANNEL_MASK_DEFAULT);
 
     for (int i = 0; i < N2; i++) {
         const vec_t &dist = rs.getPushedRayHitDist(i);

@@ -1197,7 +1197,7 @@ static void LightFace_Entity(
     }
 
     // check lighting channels
-    if (!(entity->channel_mask.value() & lightsurf->modelinfo->channel_mask.value())) {
+    if (!(entity->light_channel_mask.value() & lightsurf->modelinfo->object_channel_mask.value())) {
         return;
     }
 
@@ -1235,7 +1235,7 @@ static void LightFace_Entity(
     }
 
     // don't need closest hit, just checking for occlusion between light and surface point
-    rs.tracePushedRaysOcclusion(modelinfo, entity->shadow_mask.value());
+    rs.tracePushedRaysOcclusion(modelinfo, entity->shadow_channel_mask.value());
     total_light_rays += rs.numPushedRays();
 
     int cached_style = entity->style.value();
@@ -1344,7 +1344,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
 
     // We need to check if the first hit face is a sky face, so we need
     // to test intersection (not occlusion)
-    rs.tracePushedRaysIntersection(modelinfo);
+    rs.tracePushedRaysIntersection(modelinfo, CHANNEL_MASK_DEFAULT);
 
     /* if sunlight is set, use a style 0 light map */
     int cached_style = sun->style;
@@ -1586,7 +1586,7 @@ static void LightFace_LocalMin(const mbsp_t *bsp, const mface_t *face,
         }
 
         // local minlight just needs occlusion, not closest hit
-        rs.tracePushedRaysOcclusion(modelinfo);
+        rs.tracePushedRaysOcclusion(modelinfo, CHANNEL_MASK_DEFAULT);
         total_light_rays += rs.numPushedRays();
 
         const int N = rs.numPushedRays();
@@ -1795,7 +1795,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 continue;
 
             total_surflight_rays += rs.numPushedRays();
-            rs.tracePushedRaysOcclusion(lightsurf->modelinfo);
+            rs.tracePushedRaysOcclusion(lightsurf->modelinfo, CHANNEL_MASK_DEFAULT);
 
             const int lightmapstyle = vpl.style;
             lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, lightmapstyle, lightsurf);
@@ -2053,7 +2053,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
         //
         // use the model's own channel mask as the shadow mask, e.g. so a model in channel 2's AO rays will only hit
         // other things in channel 2
-        rs.tracePushedRaysIntersection(lightsurf->modelinfo, lightsurf->modelinfo->channel_mask.value());
+        rs.tracePushedRaysIntersection(lightsurf->modelinfo, lightsurf->modelinfo->object_channel_mask.value());
 
         // accumulate hitdists
         for (int k = 0; k < rs.numPushedRays(); k++) {

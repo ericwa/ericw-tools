@@ -191,6 +191,8 @@ constexpr qvec3d vec3_white{255};
 extern int dump_facenum;
 extern int dump_vertnum;
 
+constexpr int CHANNEL_MASK_DEFAULT = 1;
+
 class modelinfo_t : public settings::setting_container
 {
 public:
@@ -219,7 +221,7 @@ public:
     settings::setting_color minlight_color;
     settings::setting_bool lightignore;
     settings::setting_scalar lightcolorscale;
-    settings::setting_int32 channel_mask;
+    settings::setting_int32 object_channel_mask;
 
     float getResolvedPhongAngle() const;
     bool isWorld() const;

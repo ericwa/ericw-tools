@@ -166,7 +166,7 @@ sceneinfo CreateGeometry(
             info.shadowself = modelinfo->shadowself.boolValue();
             info.switchableshadow = modelinfo->switchableshadow.boolValue();
             info.switchshadstyle = modelinfo->switchshadstyle.value();
-            info.channelmask = modelinfo->channel_mask.value();
+            info.channelmask = modelinfo->object_channel_mask.value();
 
             info.alpha = Face_Alpha(bsp, modelinfo, face);
 
@@ -554,7 +554,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
             }
 
             // non-default channel mask
-            if (model->channel_mask.value() != 1) {
+            if (model->object_channel_mask.value() != CHANNEL_MASK_DEFAULT) {
                 filterfaces.push_back(face);
                 continue;
             }
@@ -703,7 +703,7 @@ ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const mo
 
     flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
 
-    if (shadowmask != 1) {
+    if (shadowmask != CHANNEL_MASK_DEFAULT) {
         // non-default shadow mask means we have to use the slow path
         filter = PerRay_FilterFuncN;
     }
