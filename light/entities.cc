@@ -296,6 +296,12 @@ static void CheckEntityFields(const settings::worldspawn_keys &cfg, light_t *ent
         entity->getFormula() == LF_INVERSE2A) {
         entity->light.setValue(entity->light.value() / entity->samples.value(), settings::source::MAP);
     }
+
+    // shadow_channel_mask defaults to light_channel_mask
+    if (!entity->shadow_channel_mask.isChanged()) {
+        entity->shadow_channel_mask.setValue(entity->light_channel_mask.value(),
+            settings::source::DEFAULT);
+    }
 }
 
 /*

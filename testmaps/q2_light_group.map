@@ -112,7 +112,6 @@
 "origin" "680 1176 1000"
 "light" "400"
 "_light_channel_mask" "2"
-"_shadow_channel_mask" "2"
 "_color" "1 0 0"
 }
 // entity 3
@@ -167,7 +166,6 @@
 "origin" "904 1176 1000"
 "light" "400"
 "_light_channel_mask" "4"
-"_shadow_channel_mask" "4"
 "_color" "0 1 0"
 }
 // entity 6
@@ -176,7 +174,6 @@
 "origin" "1288 1176 1000"
 "light" "400"
 "_light_channel_mask" "8"
-"_shadow_channel_mask" "8"
 "_color" "0 0 1"
 }
 // entity 7
