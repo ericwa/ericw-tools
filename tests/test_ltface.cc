@@ -274,6 +274,24 @@ TEST_CASE("q2_light_translucency") {
             CHECK(sample == qvec3b(0, 150, 0));
         });
     }
+
+    {
+        INFO("alpha test works");
+
+        auto *in_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-976, -316, 184});
+        REQUIRE(in_light);
+
+        CheckFaceLuxels(bsp, *in_light, [](qvec3b sample) {
+            CHECK(sample == qvec3b(150));
+        });
+
+        auto *in_shadow = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-976, -316, 88});
+        REQUIRE(in_shadow);
+
+        CheckFaceLuxels(bsp, *in_shadow, [](qvec3b sample) {
+            CHECK(sample == qvec3b(0));
+        });
+    }
 }
 
 TEST_CASE("-visapprox vis with opaque liquids") {
