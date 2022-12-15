@@ -1254,12 +1254,16 @@ struct gamedef_q2_t : public gamedef_t
         }
 
         if (brushside_side == SIDE_BACK) {
+            // explicit override?
+            if (brushcontents.mirror_inside) {
+                return *brushcontents.mirror_inside;
+            }
             if (portal_visible_contents.native & Q2_CONTENTS_WINDOW) {
                 // windows don't generate inside faces
                 return false;
             }
-            // other types get mirrored by default, unless we override it with mirror_inside
-            return brushcontents.mirror_inside.value_or(true);
+            // other types get mirrored by default
+            return true;
         }
         return true;
     }

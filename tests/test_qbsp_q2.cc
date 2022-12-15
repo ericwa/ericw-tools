@@ -549,4 +549,10 @@ TEST_CASE("q2_mirrorinside" * doctest::test_suite("testmaps_q2"))
         CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], mist_mirrorinside0_pos)),
             std::vector<std::string>({"e1u1/brwater"}));
     }
+
+    {
+        INFO("_mirrorinside 1 works on func_detail_fence");
+        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {32, -348, 156})),
+            std::vector<std::string>({"e1u1/alphamask", "e1u1/alphamask"}));
+    }
 }
