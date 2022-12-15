@@ -680,8 +680,8 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
     }
 
     // handle "_light_alpha"
-    const vec_t lightalpha = entity.epairs.get_float("_light_alpha");
-    if (lightalpha != 0.0) {
+    if (entity.epairs.has("_light_alpha")) {
+        const vec_t lightalpha = entity.epairs.get_float("_light_alpha");
         flags.light_alpha = clamp(lightalpha, 0.0, 1.0);
     }
 

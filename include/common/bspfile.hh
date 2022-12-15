@@ -208,7 +208,7 @@ struct surfflags_t
     qvec3b minlight_color;
 
     // custom opacity
-    vec_t light_alpha;
+    std::optional<vec_t> light_alpha;
 
     // maxlight value for this face
     vec_t maxlight;

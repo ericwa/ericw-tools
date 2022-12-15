@@ -243,13 +243,37 @@ TEST_CASE("q2_light_translucency") {
 
     auto [bsp, bspx] = LoadTestmap("q2_light_translucency.map", {});
 
-    auto *face_under_water = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {152, -96, 32});
-    REQUIRE(face_under_water);
+    {
+        auto *face_under_water = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {152, -96, 32});
+        REQUIRE(face_under_water);
 
-    CheckFaceLuxels(bsp, *face_under_water, [](qvec3b sample){
-        INFO("green color from the texture");
-        CHECK(sample == qvec3b(100, 150, 100));
-    });
+        CheckFaceLuxels(bsp, *face_under_water, [](qvec3b sample) {
+            INFO("green color from the texture");
+            CHECK(sample == qvec3b(100, 150, 100));
+        });
+    }
+
+    {
+        INFO("under _light_alpha 0 is not tinted");
+
+        auto *under_alpha_0_glass = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-296, -96, 40});
+        REQUIRE(under_alpha_0_glass);
+
+        CheckFaceLuxels(bsp, *under_alpha_0_glass, [](qvec3b sample) {
+            CHECK(sample == qvec3b(150));
+        });
+    }
+
+    {
+        INFO("under _light_alpha 1 is fully tinted");
+
+        auto *under_alpha_1_glass = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-616, -96, 40});
+        REQUIRE(under_alpha_1_glass);
+
+        CheckFaceLuxels(bsp, *under_alpha_1_glass, [](qvec3b sample) {
+            CHECK(sample == qvec3b(0, 150, 0));
+        });
+    }
 }
 
 TEST_CASE("-visapprox vis with opaque liquids") {

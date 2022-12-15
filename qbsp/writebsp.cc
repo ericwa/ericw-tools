@@ -393,7 +393,7 @@ static void WriteExtendedTexinfoFlags(void)
             t["minlight_color"] = tx.flags.minlight_color;
         }
         if (tx.flags.light_alpha) {
-            t["light_alpha"] = tx.flags.light_alpha;
+            t["light_alpha"] = *tx.flags.light_alpha;
         }
         if (tx.flags.lightcolorscale != 1.0) {
             t["lightcolorscale"] = tx.flags.lightcolorscale;

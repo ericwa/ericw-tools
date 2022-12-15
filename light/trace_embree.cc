@@ -67,9 +67,8 @@ static float Face_Alpha(const mbsp_t *bsp, const modelinfo_t *modelinfo, const m
     const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
     const bool is_q2 = bsp->loadversion->game->id == GAME_QUAKE_II;
 
-    // for "_light_alpha", 0 is considered unset
     if (extended_flags.light_alpha) {
-        return extended_flags.light_alpha;
+        return *extended_flags.light_alpha;
     }
 
     // next check "alpha" key (q1)
