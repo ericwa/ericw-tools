@@ -101,6 +101,7 @@ public:
     settings::setting_int32 surflight_group;
     settings::setting_int32 light_channel_mask;
     settings::setting_int32 shadow_channel_mask;
+    settings::setting_bool nonudge;
 
     light_t();
 

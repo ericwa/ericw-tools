@@ -107,7 +107,8 @@ light_t::light_t() :
     nostaticlight{this, "nostaticlight", false},
     surflight_group{this, "surflight_group", 0},
     light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
-    shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT}
+    shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT},
+    nonudge{this, "nonudge", false}
 {}
 
 std::string light_t::classname() const
@@ -1021,7 +1022,7 @@ static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
 void FixLightsOnFaces(const mbsp_t *bsp)
 {
     for (auto &entity : all_lights) {
-        if (entity->light.value() != 0) {
+        if (entity->light.value() != 0 && !entity->nonudge.value()) {
             entity->origin.setValue(FixLightOnFace(bsp, entity->origin.value()), settings::source::MAP);
         }
     }

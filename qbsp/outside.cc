@@ -322,11 +322,10 @@ static void MarkOccupiedClusters(node_t *headnode)
         if (qv::epsilonEmpty(entity.origin, QBSP_EQUAL_EPSILON))
             continue;
 
-#if 0
-        /* skip lights */
-        if (strcmp(ValueForKey(entity, "classname"), "light") == 0)
+        // skip nofill entities
+        if (entity.epairs.has("_nofill") && entity.epairs.get_int("_nofill")) {
             continue;
-#endif
+        }
 
         /* find the leaf it's in. Skip opqaue leafs */
         node_t *cluster = PointInLeaf(headnode, entity.origin);
