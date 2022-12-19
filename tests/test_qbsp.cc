@@ -992,27 +992,36 @@ TEST_CASE("brush_clipping_order" * doctest::test_suite("testmaps_q1"))
  */
 TEST_CASE("origin" * doctest::test_suite("testmaps_q1"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_origin.map");
+    const std::vector<std::string> maps{
+        "qbsp_origin.map",
+        "qbsp_hiprotate.map" // same, but uses info_rotate instead of an origin brush
+    };
 
-    REQUIRE(prt.has_value());
+    for (const auto& map : maps) {
+        SUBCASE(map.c_str()) {
+            const auto [bsp, bspx, prt] = LoadTestmapQ1(map);
 
-    // 0 = world, 1 = rotate_object
-    REQUIRE(2 == bsp.dmodels.size());
+            REQUIRE(prt.has_value());
 
-    // check that the origin brush didn't clip away any solid faces, or generate faces
-    REQUIRE(6 == bsp.dmodels[1].numfaces);
+            // 0 = world, 1 = rotate_object
+            REQUIRE(2 == bsp.dmodels.size());
 
-    // FIXME: should the origin brush update the dmodel's origin too?
-    REQUIRE(qvec3f(0, 0, 0) == bsp.dmodels[1].origin);
+            // check that the origin brush didn't clip away any solid faces, or generate faces
+            REQUIRE(6 == bsp.dmodels[1].numfaces);
 
-    // check that the origin brush updated the entity lump
-    parser_t parser(bsp.dentdata, { "qbsp_origin.bsp" });
-    auto ents = EntData_Parse(parser);
-    auto it = std::find_if(ents.begin(), ents.end(), 
-        [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
+            // FIXME: should the origin brush update the dmodel's origin too?
+            REQUIRE(qvec3f(0, 0, 0) == bsp.dmodels[1].origin);
 
-    REQUIRE(it != ents.end());
-    CHECK(it->get("origin") == "216 -216 340");
+            // check that the origin brush updated the entity lump
+            parser_t parser(bsp.dentdata, {"qbsp_origin.bsp"});
+            auto ents = EntData_Parse(parser);
+            auto it = std::find_if(ents.begin(), ents.end(),
+                [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
+
+            REQUIRE(it != ents.end());
+            CHECK(it->get("origin") == "216 -216 340");
+        }
+    }
 }
 
 TEST_CASE("simple" * doctest::test_suite("testmaps_q1"))

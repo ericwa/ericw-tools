@@ -206,14 +206,17 @@ static void CheckFace(side_t *face, const mapface_t &sourceface, std::optional<s
 /*
 =================
 FindTargetEntity
+
+Finds the entity whose `targetname` value is case-insensitve-equal to `target`.
 =================
 */
 static const mapentity_t *FindTargetEntity(const std::string &target)
 {
     for (const auto &entity : map.entities) {
         const std::string &name = entity.epairs.get("targetname");
-        if (!string_iequals(target, name))
+        if (string_iequals(target, name)) {
             return &entity;
+        }
     }
 
     return nullptr;

@@ -32,7 +32,7 @@ entdict_t::entdict_t() = default;
 
 entdict_t::entdict_t(parser_base_t &parser) { parse(parser); }
 
-std::string entdict_t::get(const std::string_view &key) const
+const std::string &entdict_t::get(const std::string_view &key) const
 {
     if (auto it = find(key); it != keyvalues.end()) {
         return it->second;
