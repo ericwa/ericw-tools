@@ -13,7 +13,6 @@
 #include <common/log.hh>
 #include <testmaps.hh>
 
-#include <subprocess.h>
 #include <nanobench.h>
 
 #include <fstream>
@@ -71,120 +70,6 @@ mapentity_t &LoadMapPath(const std::filesystem::path &name)
 }
 
 #include <common/bspinfo.hh>
-
-#if 0
-std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRef(const std::filesystem::path &name)
-{
-    const char *destdir = test_quake2_maps_dir;
-    if (strlen(destdir) == 0) {
-        return {};
-    }
-
-    auto testmap_path = std::filesystem::path(testmaps_dir) / name;
-    auto map_in_game_path = fs::path(destdir) / name.filename();
-    fs::copy(testmap_path, map_in_game_path, fs::copy_options::overwrite_existing);
-
-    std::string map_string = map_in_game_path.generic_string();
-
-    const char *command_line[] = {R"(C:\Users\Eric\Documents\q2tools-220\x64\Debug\4bsp.exe)",
-        map_string.c_str(),
-        NULL};
-
-    struct subprocess_s subprocess;
-    int result = subprocess_create(command_line, 0, &subprocess);
-    if (0 != result) {
-        throw std::runtime_error("error launching process");
-    }
-
-    // let the process write
-    FILE* p_stdout = subprocess_stdout(&subprocess);
-    char buf[32];
-    void *res;
-    do {
-        res = fgets(buf, 32, p_stdout);
-    } while (res != nullptr);
-
-    int retcode;
-    if (0 != subprocess_join(&subprocess, &retcode)) {
-        throw std::runtime_error("error joining");
-    }
-
-    // re-open the .bsp and return it
-    fs::path bsp_path = map_in_game_path;
-    bsp_path.replace_extension("bsp");
-
-    bspdata_t bspdata;
-    LoadBSPFile(bsp_path, &bspdata);
-
-    bspdata.version->game->init_filesystem(bsp_path, qbsp_options);
-
-    ConvertBSPFormat(&bspdata, &bspver_generic);
-
-    // write to .json for inspection
-    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(bsp_path).replace_extension(".bsp.json"));
-
-    std::optional<prtfile_t> prtfile;
-    if (const auto prtpath = fs::path(bsp_path).replace_extension(".prt"); fs::exists(prtpath)) {
-        prtfile = {LoadPrtFile(prtpath, bspdata.loadversion)};
-    }
-
-    return std::make_tuple(std::move(std::get<mbsp_t>(bspdata.bsp)),
-        std::move(bspdata.bspx.entries),
-        std::move(prtfile));
-}
-
-std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapRefQ1(const std::filesystem::path &name)
-{
-    auto testmap_path = std::filesystem::path(testmaps_dir) / name;
-    std::string testmap_path_string = testmap_path.generic_string();
-
-    const char *command_line[] = {R"(C:\Users\Eric\Downloads\ericw-tools-v0.18.1-win64\bin\qbsp.exe)",
-        testmap_path_string.c_str(),
-        NULL};
-
-    struct subprocess_s subprocess;
-    int result = subprocess_create(command_line, 0, &subprocess);
-    if (0 != result) {
-        throw std::runtime_error("error launching process");
-    }
-
-    // let the process write
-    FILE* p_stdout = subprocess_stdout(&subprocess);
-    char buf[32];
-    void *res;
-    do {
-        res = fgets(buf, 32, p_stdout);
-    } while (res != nullptr);
-
-    int retcode;
-    if (0 != subprocess_join(&subprocess, &retcode)) {
-        throw std::runtime_error("error joining");
-    }
-
-    // re-open the .bsp and return it
-    fs::path bsp_path = testmap_path;
-    bsp_path.replace_extension("bsp");
-
-    bspdata_t bspdata;
-    LoadBSPFile(bsp_path, &bspdata);
-
-    bspdata.version->game->init_filesystem(bsp_path, qbsp_options);
-
-    ConvertBSPFormat(&bspdata, &bspver_generic);
-
-    // write to .json for inspection
-    serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(bsp_path).replace_extension(".bsp.json"));
-
-    std::optional<prtfile_t> prtfile;
-    if (const auto prtpath = fs::path(bsp_path).replace_extension(".prt"); fs::exists(prtpath)) {
-        prtfile = {LoadPrtFile(prtpath, bspdata.loadversion)};
-    }
-
-    return std::make_tuple(std::move(std::get<mbsp_t>(bspdata.bsp)),
-        std::move(bspdata.bspx.entries),
-        std::move(prtfile));
-}
-#endif
 
 std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args)
 {

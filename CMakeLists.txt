@@ -21,8 +21,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "M
 endif()
 
 include_directories(
-	"${CMAKE_SOURCE_DIR}/include"
-	"${CMAKE_SOURCE_DIR}/3rdparty/subprocess.h")
+	"${CMAKE_SOURCE_DIR}/include")
 
 find_package (Threads)
 

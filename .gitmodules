@@ -7,9 +7,6 @@
 [submodule "3rdparty/nanobench"]
 	path = 3rdparty/nanobench
 	url = https://github.com/martinus/nanobench
-[submodule "3rdparty/subprocess.h"]
-	path = 3rdparty/subprocess.h
-	url = https://github.com/sheredom/subprocess.h
 [submodule "3rdparty/pareto"]
 	path = 3rdparty/pareto
 	url = https://github.com/alandefreitas/pareto.git

@@ -2,7 +2,6 @@
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
 
-#include <subprocess.h>
 #include <nanobench.h>
 
 #include <cstring>
