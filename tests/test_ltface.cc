@@ -15,8 +15,8 @@ enum class runvis_t {
     no, yes
 };
 
-static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<std::string> extra_args,
-    runvis_t run_vis = runvis_t::no)
+static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
+    std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
     auto map_path = std::filesystem::path(testmaps_dir) / name;
 
@@ -25,13 +25,16 @@ static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<
 
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
-    std::vector<std::string> args{
+    std::vector<std::string> args
+    {
         "", // the exe path, which we're ignoring in this case
-        "-noverbose",
-        "-q2bsp",
-        "-path",
-        wal_metadata_path.string()
+        "-noverbose"
     };
+    for (auto &extra : extra_qbsp_args) {
+        args.push_back(extra);
+    }
+    args.push_back("-path");
+    args.push_back(wal_metadata_path.string());
     args.push_back(map_path.string());
     args.push_back(bsp_path.string());
 
@@ -59,7 +62,7 @@ static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<
             "-path",
             wal_metadata_path.string()
         };
-        for (auto &arg : extra_args) {
+        for (auto &arg : extra_light_args) {
             light_args.push_back(arg);
         }
         light_args.push_back(bsp_path.string());
@@ -83,8 +86,20 @@ static testresults_t LoadTestmap(const std::filesystem::path &name, std::vector<
     }
 }
 
+static testresults_t QbspVisLight_Q1(const std::filesystem::path &name, std::vector<std::string> extra_light_args,
+    runvis_t run_vis = runvis_t::no)
+{
+    return QbspVisLight_Common(name, {}, extra_light_args, run_vis);
+}
+
+static testresults_t QbspVisLight_Q2(const std::filesystem::path &name, std::vector<std::string> extra_light_args,
+    runvis_t run_vis = runvis_t::no)
+{
+    return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+}
+
 TEST_CASE("-world_units_per_luxel") {
-    LoadTestmap("q2_lightmap_custom_scale.map", {"-world_units_per_luxel", "8"});
+    QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-world_units_per_luxel", "8"});
 }
 
 TEST_CASE("emissive cube artifacts") {
@@ -100,7 +115,7 @@ TEST_CASE("emissive cube artifacts") {
     //
     //     "_surflight_rescale" "0"
     //
-    auto [bsp, bspx] = LoadTestmap("light_q2_emissive_cube.map", {"-threads", "1", "-world_units_per_luxel", "4", "-novanilla"});
+    auto [bsp, bspx] = QbspVisLight_Q2("light_q2_emissive_cube.map", {"-threads", "1", "-world_units_per_luxel", "4", "-novanilla"});
 
     const auto start = qvec3d{1044, -1244, 880};
     const auto end = qvec3d{1044, -1272, 880};
@@ -130,7 +145,7 @@ TEST_CASE("emissive cube artifacts") {
 
 TEST_CASE("-novanilla + -world_units_per_luxel")
 {
-    auto [bsp, bspx] = LoadTestmap("q2_lightmap_custom_scale.map", {"-novanilla", "-world_units_per_luxel", "8"});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-novanilla", "-world_units_per_luxel", "8"});
 
     for (auto &face : bsp.dfaces) {
         CHECK(face.lightofs == -1);
@@ -190,7 +205,7 @@ static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
 }
 
 TEST_CASE("emissive lights") {
-    auto [bsp, bspx] = LoadTestmap("q2_light_flush.map", {});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_flush.map", {});
     REQUIRE(bspx.empty());
 
     {
@@ -209,13 +224,13 @@ TEST_CASE("emissive lights") {
 }
 
 TEST_CASE("q2_phong_doesnt_cross_contents") {
-    auto [bsp, bspx] = LoadTestmap("q2_phong_doesnt_cross_contents.map", {"-wrnormals"});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_phong_doesnt_cross_contents.map", {"-wrnormals"});
 }
 
 TEST_CASE("q2_minlight_nomottle") {
     INFO("_minlightMottle 0 works on worldspawn");
 
-    auto [bsp, bspx] = LoadTestmap("q2_minlight_nomottle.map", {});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_minlight_nomottle.map", {});
 
     auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {276, 84, 32});
     REQUIRE(face);
@@ -228,7 +243,7 @@ TEST_CASE("q2_minlight_nomottle") {
 TEST_CASE("q2_dirt") {
     INFO("liquids don't cast dirt");
 
-    auto [bsp, bspx] = LoadTestmap("q2_dirt.map", {});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_dirt.map", {});
 
     auto *face_under_lava = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {104, 112, 48});
     REQUIRE(face_under_lava);
@@ -241,7 +256,7 @@ TEST_CASE("q2_dirt") {
 TEST_CASE("q2_light_translucency") {
     INFO("liquids cast translucent colored shadows (sampling texture) by default");
 
-    auto [bsp, bspx] = LoadTestmap("q2_light_translucency.map", {});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_translucency.map", {});
 
     {
         auto *face_under_water = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {152, -96, 32});
@@ -305,7 +320,7 @@ TEST_CASE("-visapprox vis with opaque liquids") {
 
     for (const auto& map : maps) {
         SUBCASE(map.c_str()) {
-            auto [bsp, bspx] = LoadTestmap(map, {"-visapprox", "vis"}, runvis_t::yes);
+            auto [bsp, bspx] = QbspVisLight_Q2(map, {"-visapprox", "vis"}, runvis_t::yes);
 
             auto *ceil_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {968, 1368, 1248});
             REQUIRE(ceil_face);
@@ -326,7 +341,7 @@ TEST_CASE("negative lights work") {
 
     for (const auto& map : maps) {
         SUBCASE(map.c_str()) {
-            auto [bsp, bspx] = LoadTestmap(map, {});
+            auto [bsp, bspx] = QbspVisLight_Q2(map, {});
 
             auto *face_under_negative_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {632, 1304, 960});
             REQUIRE(face_under_negative_light);
@@ -337,7 +352,7 @@ TEST_CASE("negative lights work") {
 }
 
 TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shadow_channel_mask)") {
-    auto [bsp, bspx] = LoadTestmap("q2_light_group.map", {});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_group.map", {});
     REQUIRE(4 == bsp.dmodels.size());
 
     {
