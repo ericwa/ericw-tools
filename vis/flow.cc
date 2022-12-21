@@ -145,7 +145,7 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevstack)
 {
     pstack_t stack{};
-    portal_t *p;
+    visportal_t *p;
     qplane3d backplane;
     leaf_t *leaf;
     int i, j, err, numblocks;
@@ -333,7 +333,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
   PortalFlow
   ===============
 */
-void PortalFlow(portal_t *p)
+void PortalFlow(visportal_t *p)
 {
     threaddata_t data{p->visbits};
 
@@ -359,7 +359,7 @@ void PortalFlow(portal_t *p)
   ============================================================================
 */
 
-static void SimpleFlood(portal_t &srcportal, int leafnum, const leafbits_t &portalsee)
+static void SimpleFlood(visportal_t &srcportal, int leafnum, const leafbits_t &portalsee)
 {
     if (srcportal.mightsee[leafnum])
         return;
@@ -369,7 +369,7 @@ static void SimpleFlood(portal_t &srcportal, int leafnum, const leafbits_t &port
 
     leaf_t &leaf = leafs[leafnum];
     for (size_t i = 0; i < leaf.numportals; i++) {
-        const portal_t *p = leaf.portals[i];
+        const visportal_t *p = leaf.portals[i];
 
         if (portalsee[p - portals.data()]) {
             SimpleFlood(srcportal, p->leaf, portalsee);
@@ -388,7 +388,7 @@ static void BasePortalThread(size_t portalnum)
     float d;
     leafbits_t portalsee(numportals * 2);
 
-    portal_t &p = portals[portalnum];
+    visportal_t &p = portals[portalnum];
     viswinding_t &w = p.winding;
 
     p.mightsee.resize(portalleafs);
@@ -398,7 +398,7 @@ static void BasePortalThread(size_t portalnum)
             continue;
         }
 
-        portal_t &tp = portals[i];
+        visportal_t &tp = portals[i];
         viswinding_t &tw = tp.winding;
 
         // Quick test - completely at the back?

@@ -102,10 +102,10 @@ struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<
       Used for visdist to get the distance from a winding to a portal
       ============================================================================
     */
-    inline float distFromPortal(struct portal_t &p);
+    inline float distFromPortal(struct visportal_t &p);
 };
 
-struct portal_t
+struct visportal_t
 {
     qplane3d plane; // normal pointing into neighbor
     int leaf; // neighbor
@@ -116,7 +116,7 @@ struct portal_t
     int numcansee;
 };
 
-inline float viswinding_t::distFromPortal(portal_t &p)
+inline float viswinding_t::distFromPortal(visportal_t &p)
 {
     vec_t mindist = 1e20;
 
@@ -147,7 +147,7 @@ struct leaf_t
 {
     int numportals;
     passage_t *passages;
-    portal_t *portals[MAX_PORTALS_ON_LEAF];
+    visportal_t *portals[MAX_PORTALS_ON_LEAF];
 };
 
 constexpr size_t MAX_SEPARATORS = MAX_WINDING;
@@ -157,7 +157,7 @@ struct pstack_t
 {
     pstack_t *next;
     leaf_t *leaf;
-    portal_t *portal; // portal exiting
+    visportal_t *portal; // portal exiting
     viswinding_t *source, *pass;
     viswinding_t windings[STACK_WINDINGS]; // Fixed size windings
     bool windings_used[STACK_WINDINGS];
@@ -174,7 +174,7 @@ viswinding_t *ClipStackWinding(viswinding_t *in, pstack_t &stack, const qplane3d
 struct threaddata_t
 {
     leafbits_t &leafvis;
-    portal_t *base;
+    visportal_t *base;
     pstack_t pstack_head;
 };
 
@@ -182,7 +182,7 @@ extern int numportals;
 extern int portalleafs;
 extern int portalleafs_real;
 
-extern std::vector<portal_t> portals; // always numportals * 2; front and back
+extern std::vector<visportal_t> portals; // always numportals * 2; front and back
 extern std::vector<leaf_t> leafs;
 
 extern int c_noclip;
@@ -201,7 +201,7 @@ extern fs::path portalfile, statefile, statetmpfile;
 
 void BasePortalVis(void);
 
-void PortalFlow(portal_t *p);
+void PortalFlow(visportal_t *p);
 
 void CalcAmbientSounds(mbsp_t *bsp);
 

@@ -36,7 +36,7 @@ int numportals;
 int portalleafs; /* leafs (PRT1) or clusters (PRT2) */
 int portalleafs_real; /* real no. of leafs after expanding PRT2 clusters. Not used for Q2. */
 
-std::vector<portal_t> portals; // always numportals * 2; front and back
+std::vector<visportal_t> portals; // always numportals * 2; front and back
 std::vector<leaf_t> leafs;
 
 int c_portaltest, c_portalpass, c_portalcheck, c_mightseeupdate;
@@ -247,9 +247,9 @@ static std::atomic_int64_t portalIndex;
   the earlier information.
   =============
 */
-portal_t *GetNextPortal(void)
+visportal_t *GetNextPortal(void)
 {
-    portal_t *ret = nullptr;
+    visportal_t *ret = nullptr;
     uint32_t min = INT_MAX;
 
     portal_mutex.lock();
@@ -286,7 +286,7 @@ static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
 {
     size_t leafnum = &dest - leafs.data();
     for (size_t i = 0; i < source.numportals; i++) {
-        portal_t *p = source.portals[i];
+        visportal_t *p = source.portals[i];
         if (p->status != pstat_none) {
             continue;
         }
@@ -308,11 +308,11 @@ static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
   Called with the lock held.
   =============
 */
-static void PortalCompleted(portal_t *completed)
+static void PortalCompleted(visportal_t *completed)
 {
     int i, j, k, bit, numblocks;
     int leafnum;
-    const portal_t *p, *p2;
+    const visportal_t *p, *p2;
     uint32_t changed;
 
     portal_mutex.lock();
@@ -378,7 +378,7 @@ static duration stateinterval;
 */
 void LeafThread(size_t)
 {
-    portal_t *p;
+    visportal_t *p;
 
     portal_mutex.lock();
     /* Save state if sufficient time has elapsed */
@@ -418,7 +418,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     uint8_t *outbuffer;
     int i, j;
     int numvis, numblocks;
-    const portal_t *p;
+    const visportal_t *p;
 
     /*
      * Collect visible bits from all portals into buffer
