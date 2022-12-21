@@ -441,3 +441,15 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         });
     }
 }
+
+TEST_CASE("surface lights minlight") {
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_surflight_minlight.map", {});
+
+    {
+        INFO("there's a point entity in the void, but it has _nofill 1 so it should be ignored by filling");
+        CheckFilled(bsp);
+    }
+
+    auto *surflight = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-3264, -1664, -560});
+    REQUIRE(surflight);
+}
