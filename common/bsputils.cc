@@ -19,7 +19,9 @@
 
 #include <common/bsputils.hh>
 
+#include <array>
 #include <cstddef>
+#include <fstream>
 #include <common/log.hh>
 #include <common/qvec.hh>
 
@@ -920,7 +922,7 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
 /**
  * Samples the lightmap at an integer coordinate
  */
-qvec3b LM_Sample(const mbsp_t *bsp, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord)
+qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord)
 {
     int pixel = coord[0] + (coord[1] * faceextents.width());
 
@@ -928,7 +930,15 @@ qvec3b LM_Sample(const mbsp_t *bsp, const faceextents_t &faceextents, int byte_o
 
     const uint8_t* data = bsp->dlightdata.data();
 
-    if (bsp->loadversion->game->has_rgb_lightmap) {
+    if (lit) {
+        const uint8_t* lit_data = lit->data();
+
+        return qvec3f{
+            lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 0],
+            lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 1],
+            lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 2]
+        };
+    } else if (bsp->loadversion->game->has_rgb_lightmap) {
         return qvec3f{
             data[byte_offset_of_face + (pixel * 3) + 0],
             data[byte_offset_of_face + (pixel * 3) + 1],
@@ -941,4 +951,31 @@ qvec3b LM_Sample(const mbsp_t *bsp, const faceextents_t &faceextents, int byte_o
             data[byte_offset_of_face + pixel]
         };
     }
+}
+
+std::vector<uint8_t> LoadLitFile(const fs::path &path)
+{
+    std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
+    stream >> endianness<std::endian::little>;
+
+    std::array<char, 4> ident;
+    stream >= ident;
+    if (ident != std::array<char, 4>{'Q','L','I','T'}) {
+        throw std::exception("invalid lit ident");
+    }
+
+    int version;
+    stream >= version;
+    if (version != 1) {
+        throw std::exception("invalid lit version");
+    }
+
+    std::vector<uint8_t> litdata;
+    while (stream.good()) {
+        uint8_t b;
+        stream >= b;
+        litdata.push_back(b);
+    }
+
+    return litdata;
 }

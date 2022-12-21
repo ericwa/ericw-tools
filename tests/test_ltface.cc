@@ -5,10 +5,17 @@
 #include <qbsp/qbsp.hh>
 #include <testmaps.hh>
 #include <vis/vis.hh>
+#include "test_qbsp.hh"
 
 struct testresults_t {
     mbsp_t bsp;
     bspxentries_t bspx;
+};
+
+struct testresults_lit_t {
+    mbsp_t bsp;
+    bspxentries_t bspx;
+    std::vector<uint8_t> lit;
 };
 
 enum class runvis_t {
@@ -18,9 +25,10 @@ enum class runvis_t {
 static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
     std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
+    const bool is_q2 = std::find(extra_qbsp_args.begin(), extra_qbsp_args.end(), "-q2bsp") != extra_qbsp_args.end();
     auto map_path = std::filesystem::path(testmaps_dir) / name;
 
-    auto bsp_path = fs::path(test_quake2_maps_dir) / name.filename();
+    auto bsp_path = fs::path(is_q2 ? test_quake2_maps_dir : test_quake_maps_dir) / name.filename();
     bsp_path.replace_extension(".bsp");
 
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
@@ -86,10 +94,22 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
     }
 }
 
-static testresults_t QbspVisLight_Q1(const std::filesystem::path &name, std::vector<std::string> extra_light_args,
+static testresults_lit_t QbspVisLight_Q1(const std::filesystem::path &name, std::vector<std::string> extra_light_args,
     runvis_t run_vis = runvis_t::no)
 {
-    return QbspVisLight_Common(name, {}, extra_light_args, run_vis);
+    auto res = QbspVisLight_Common(name, {}, extra_light_args, run_vis);
+
+    // load .lit file
+    auto lit_path = fs::path(test_quake_maps_dir) / name.filename();
+    lit_path.replace_extension(".lit");
+
+    std::vector<uint8_t> litdata = LoadLitFile(lit_path);
+
+    return testresults_lit_t{
+        .bsp = res.bsp,
+        .bspx = res.bspx,
+        .lit = litdata
+    };
 }
 
 static testresults_t QbspVisLight_Q2(const std::filesystem::path &name, std::vector<std::string> extra_light_args,
@@ -134,7 +154,7 @@ TEST_CASE("emissive cube artifacts") {
 
         auto lm_coord = extents.worldToLMCoord(pos);
 
-        auto sample = LM_Sample(&bsp, extents, lm_info.offset, lm_coord);
+        auto sample = LM_Sample(&bsp, nullptr, extents, lm_info.offset, lm_coord);
         CHECK(sample[0] >= previous_sample[0]);
 
         //logging::print("world: {} lm_coord: {} sample: {} lm size: {}x{}\n", pos, lm_coord, sample, lm_info.lmwidth, lm_info.lmheight);
@@ -184,13 +204,13 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
 }
 
 template <class L>
-static void CheckFaceLuxels(const mbsp_t &bsp, const mface_t &face, L&& lambda)
+static void CheckFaceLuxels(const mbsp_t &bsp, const mface_t &face, L&& lambda, const std::vector<uint8_t>* lit = nullptr)
 {
     const faceextents_t extents(face, bsp, LMSCALE_DEFAULT);
 
     for (int x = 0; x < extents.width(); ++x) {
         for (int y = 0; y < extents.height(); ++y) {
-            const qvec3b sample = LM_Sample(&bsp, extents, face.lightofs, {x, y});
+            const qvec3b sample = LM_Sample(&bsp, lit, extents, face.lightofs, {x, y});
             INFO("sample ", x, ", ", y);
             lambda(sample);
         }

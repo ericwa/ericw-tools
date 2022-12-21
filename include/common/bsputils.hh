@@ -156,4 +156,5 @@ public:
     qvec3f LMCoordToWorld(qvec2f lm) const;
 };
 
-qvec3b LM_Sample(const mbsp_t *bsp, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord);
+qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord);
+std::vector<uint8_t> LoadLitFile(const fs::path &path);
