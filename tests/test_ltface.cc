@@ -452,4 +452,8 @@ TEST_CASE("surface lights minlight") {
 
     auto *surflight = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-3264, -1664, -560});
     REQUIRE(surflight);
+
+    CheckFaceLuxels(bsp, *surflight, [](qvec3b sample) {
+        CHECK(sample == qvec3b(255, 224, 214));
+    }, &lit);
 }

@@ -51,6 +51,6 @@ struct surfacelight_t
 
 void ResetSurflight();
 std::vector<surfacelight_t> &GetSurfaceLights();
-std::optional<std::tuple<int32_t, int32_t, qvec3b>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
+std::optional<std::tuple<int32_t, int32_t, qvec3d>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
 void MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);

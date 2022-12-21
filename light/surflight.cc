@@ -147,20 +147,20 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     surfacelightsByFacenum[Face_GetNum(bsp, face)].push_back(index);
 }
 
-std::optional<std::tuple<int32_t, int32_t, qvec3b>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
+std::optional<std::tuple<int32_t, int32_t, qvec3d>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         // first, check if it's a Q2 surface
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
 
         if (info != nullptr && (info->flags.native & Q2_SURF_LIGHT) && info->value > 0) {
-            return std::make_tuple(info->value, 0, Face_LookupTextureColor(bsp, face));
+            return std::make_tuple(info->value, 0, qvec3d(Face_LookupTextureColor(bsp, face)));
         }
     }
 
     for (const auto &surflight : GetSurfaceLightTemplates()) {
         if (FaceMatchesSurfaceLightTemplate(bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
-            return std::make_tuple(surflight->light.value(), surflight->style.value(), surflight->color.isChanged() ? qvec3b(surflight->color.value() * 255) : Face_LookupTextureColor(bsp, face));
+            return std::make_tuple(surflight->light.value(), surflight->style.value(), surflight->color.isChanged() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)));
         }
     }
 
