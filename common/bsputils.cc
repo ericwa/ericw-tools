@@ -22,6 +22,7 @@
 #include <array>
 #include <cstddef>
 #include <fstream>
+#include <stdexcept>
 #include <common/log.hh>
 #include <common/qvec.hh>
 
@@ -961,13 +962,13 @@ std::vector<uint8_t> LoadLitFile(const fs::path &path)
     std::array<char, 4> ident;
     stream >= ident;
     if (ident != std::array<char, 4>{'Q','L','I','T'}) {
-        throw std::exception("invalid lit ident");
+        throw std::runtime_error("invalid lit ident");
     }
 
     int version;
     stream >= version;
     if (version != 1) {
-        throw std::exception("invalid lit version");
+        throw std::runtime_error("invalid lit version");
     }
 
     std::vector<uint8_t> litdata;
