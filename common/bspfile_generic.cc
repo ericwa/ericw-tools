@@ -261,6 +261,29 @@ void bsp2_dclipnode_t::stream_read(std::istream &s)
     s >= std::tie(planenum, children);
 }
 
+// mleaf_t
+
+static auto tuple(const mleaf_t &l)
+{
+    return std::tie(
+        l.contents,
+        l.visofs,
+        l.mins,
+        l.maxs,
+        l.firstmarksurface,
+        l.nummarksurfaces,
+        l.ambient_level,
+        l.cluster,
+        l.area,
+        l.firstleafbrush,
+        l.numleafbrushes);
+}
+
+bool mleaf_t::operator==(const mleaf_t &other) const
+{
+    return tuple(*this) == tuple(other);
+}
+
 // darea_t
 
 void darea_t::stream_write(std::ostream &s) const

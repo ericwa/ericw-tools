@@ -275,6 +275,9 @@ struct mleaf_t
     int32_t area;
     uint32_t firstleafbrush;
     uint32_t numleafbrushes;
+
+    // comparison operator for tests
+    bool operator==(const mleaf_t &other) const;
 };
 
 struct darea_t

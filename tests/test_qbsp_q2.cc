@@ -21,6 +21,10 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2")) {
     // stats
     CHECK(1 == bsp.dmodels.size());
     // Q2 reserves leaf 0 as an invalid leaf
+    CHECK(mleaf_t{.contents = Q2_CONTENTS_SOLID, .visofs = -1} == bsp.dleafs[0]);
+    // no areaportals except the placeholder
+    CHECK(1 == bsp.dareaportals.size());
+    CHECK(2 == bsp.dareas.size());
 
     // leafs:
     //  6 solid leafs outside the room (* can be more depending on when the "divider" is cut)
@@ -81,17 +85,20 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2")) {
     auto *empty_leaf_above_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], above_button);
     CHECK(0 == empty_leaf_above_button->contents);
     CHECK(0 == Leaf_Brushes(&bsp, empty_leaf_above_button).size());
+    CHECK(1 == empty_leaf_above_button->area);
 
     auto *empty_leaf_side_room = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], side_room);
     CHECK(0 == empty_leaf_side_room->contents);
     CHECK(0 == Leaf_Brushes(&bsp, empty_leaf_side_room).size());
     CHECK(empty_leaf_side_room->cluster != empty_leaf_above_button->cluster);
+    CHECK(1 == empty_leaf_side_room->area);
 
     auto *empty_leaf_beside_button = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], beside_button);
     CHECK(0 == empty_leaf_beside_button->contents);
     CHECK(-1 != empty_leaf_beside_button->cluster);
     CHECK(empty_leaf_above_button->cluster == empty_leaf_beside_button->cluster);
     CHECK(empty_leaf_above_button != empty_leaf_beside_button);
+    CHECK(1 == empty_leaf_beside_button->area);
 
     CHECK(prt->portals.size() == 5);
     CHECK(prt->portalleafs_real == 0); // not used by Q2
