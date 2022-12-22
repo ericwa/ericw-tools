@@ -400,6 +400,10 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
                 continue;
             }
 
+            if (bsp.dlightdata.empty()) {
+                continue;
+            }
+
             auto in_pixel =
                 bsp.dlightdata.begin() + rect.lightofs + (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
 
