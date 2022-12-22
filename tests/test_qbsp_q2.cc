@@ -75,6 +75,7 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2")) {
     auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
     CHECK(Q2_CONTENTS_SOLID == detail_leaf->contents);
     CHECK(-1 == detail_leaf->cluster);
+    CHECK(0 == detail_leaf->area); // solid leafs get the invalid area 0
 
     // check for button (detail) brush
     CHECK(1 == Leaf_Brushes(&bsp, detail_leaf).size());
@@ -560,5 +561,28 @@ TEST_CASE("q2_mirrorinside" * doctest::test_suite("testmaps_q2"))
         INFO("_mirrorinside 1 works on func_detail_fence");
         CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {32, -348, 156})),
             std::vector<std::string>({"e1u1/alphamask", "e1u1/alphamask"}));
+    }
+}
+
+/**
+ * Ensure that leaked maps still get areas assigned properly
+ * (empty leafs should get area 1, solid leafs area 0)
+ */
+TEST_CASE("q2_leaked" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_leaked.map");
+
+    CHECK(!prt);
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    CHECK(bsp.dareaportals.size() == 1);
+    CHECK(bsp.dareas.size() == 2);
+    CHECK(bsp.dleafs.size() == 8);
+    for (auto &leaf : bsp.dleafs) {
+        if (leaf.contents == Q2_CONTENTS_SOLID) {
+            CHECK(0 == leaf.area);
+        } else {
+            CHECK(1 == leaf.area);
+        }
     }
 }

@@ -710,7 +710,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
         }
 
         // clear occupied state, so areas can be flooded in Q2
-        ClearOccupied_r(node);
+        //ClearOccupied_r(node);
 
         return false;
     }
