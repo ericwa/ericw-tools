@@ -586,3 +586,17 @@ TEST_CASE("q2_leaked" * doctest::test_suite("testmaps_q2"))
         }
     }
 }
+
+TEST_CASE("q2_missing_faces" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_missing_faces.map");
+
+    const qvec3d point_on_missing_face {-137, 125, -76.1593};
+    const qvec3d point_on_missing_face2 {-30, 12, -75.6411};
+    const qvec3d point_on_present_face {-137, 133, -76.6997};
+
+    CheckFilled(bsp);
+    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_missing_face));
+    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_missing_face2));
+    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_present_face));
+}
