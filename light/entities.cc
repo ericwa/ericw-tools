@@ -106,6 +106,7 @@ light_t::light_t() :
     suntexture{this, "suntexture", ""},
     nostaticlight{this, "nostaticlight", false},
     surflight_group{this, "surflight_group", 0},
+    surface_minlight_scale{this, "surface_minlight_scale", 64},
     light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
     shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT},
     nonudge{this, "nonudge", false}
@@ -262,7 +263,7 @@ static void SetupSpotlights(const settings::worldspawn_keys &cfg)
     }
 }
 
-static void CheckEntityFields(const settings::worldspawn_keys &cfg, light_t *entity)
+static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, light_t *entity)
 {
     if (entity->light.value() == 0.0f)
         entity->light.setValue(DEFAULTLIGHTLEVEL, settings::source::MAP);
@@ -302,6 +303,13 @@ static void CheckEntityFields(const settings::worldspawn_keys &cfg, light_t *ent
     if (!entity->shadow_channel_mask.isChanged()) {
         entity->shadow_channel_mask.setValue(entity->light_channel_mask.value(),
             settings::source::DEFAULT);
+    }
+
+    if (!entity->surface_minlight_scale.isChanged()) {
+        if (bsp->loadversion->game->id != GAME_QUAKE_II) {
+            // TODO: also use 1.0 for Q2?
+            entity->surface_minlight_scale.setValue(1.0, settings::source::DEFAULT);
+        }
     }
 }
 
@@ -987,7 +995,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                         entity->projfov.value(), entity->projectionmatrix);
             }
 
-            CheckEntityFields(cfg, entity.get());
+            CheckEntityFields(bsp, cfg, entity.get());
         }
     }
 

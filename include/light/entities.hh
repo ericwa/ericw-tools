@@ -99,6 +99,7 @@ public:
     settings::setting_string suntexture;
     settings::setting_bool nostaticlight;
     settings::setting_int32 surflight_group;
+    settings::setting_scalar surface_minlight_scale;
     settings::setting_int32 light_channel_mask;
     settings::setting_int32 shadow_channel_mask;
     settings::setting_bool nonudge;

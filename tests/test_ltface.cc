@@ -454,7 +454,24 @@ TEST_CASE("surface lights minlight" * doctest::may_fail()) {
     auto *surflight = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-3264, -1664, -560});
     REQUIRE(surflight);
 
-    CheckFaceLuxels(bsp, *surflight, [](qvec3b sample) {
-        CHECK(sample == qvec3b(255, 224, 214));
-    }, &lit);
+    const auto l = [](qvec3b sample) {
+        // "light" key is 100, color is (1, 0.5, 0), but values get halved due to overbright
+
+        CHECK(sample[0] <= 75);
+        CHECK(sample[0] >= 50);
+
+        CHECK(sample[1] <= 35);
+        CHECK(sample[1] >= 25);
+
+        CHECK(sample[2] == 0);
+    };
+
+    CheckFaceLuxels(bsp, *surflight, l, &lit);
+
+    INFO("same but with liquid");
+
+    auto *liquid_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-3264, -1456, -560}, {-1,0,0});
+    REQUIRE(liquid_face);
+
+    CheckFaceLuxels(bsp, *liquid_face, l, &lit);
 }
