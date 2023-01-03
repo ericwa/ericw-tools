@@ -13,8 +13,6 @@
 #include <common/log.hh>
 #include <testmaps.hh>
 
-#include <nanobench.h>
-
 #include <fstream>
 #include <cstring>
 #include <stdexcept>
@@ -1588,34 +1586,6 @@ TEST_CASE("q1_hull1_content_types" * doctest::test_suite("testmaps_q1"))
         // hull 1
         CHECK(expected_types.hull1_contenttype == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], point));
     }
-}
-
-TEST_CASE("winding" * doctest::test_suite("benchmark")
-                    * doctest::skip()) {
-    ankerl::nanobench::Bench bench;
-
-    bench.run("std::vector<double> reserve(3*4*6)", [&] {
-        std::vector<double> temp;
-        temp.reserve(3 * 4 * 6);
-        ankerl::nanobench::doNotOptimizeAway(temp);
-    });
-    bench.run("std::vector<qvec3d> reserve(4*6)", [&] {
-        std::vector<qvec3d> temp;
-        temp.reserve(4 * 6);
-        ankerl::nanobench::doNotOptimizeAway(temp);
-    });
-    bench.run("std::array<double, 3*4*6>", [&] {
-        std::array<double, 3 * 4 * 6> temp;
-        ankerl::nanobench::doNotOptimizeAway(temp);
-    });
-    bench.run("std::array<qvec3d, 4*6>", [&] {
-        std::array<qvec3d, 4 * 6> temp;
-        ankerl::nanobench::doNotOptimizeAway(temp);
-    });
-    bench.run("polylib::winding_base_t<6> construct", [&] {
-        polylib::winding_base_t<polylib::winding_storage_hybrid_t<6>> temp;
-        ankerl::nanobench::doNotOptimizeAway(temp);
-    });
 }
 
 TEST_CASE("BrushFromBounds") {

@@ -2,8 +2,6 @@
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
 
-#include <nanobench.h>
-
 #include <cstring>
 #include <set>
 #include <stdexcept>
