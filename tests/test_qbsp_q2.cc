@@ -598,3 +598,20 @@ TEST_CASE("q2_missing_faces" * doctest::test_suite("testmaps_q2") * doctest::may
     CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_missing_face2));
     CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_present_face));
 }
+
+TEST_CASE("q2_ladder" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_ladder.map");
+
+    const qvec3d point_in_ladder {-8, 184, 24};
+
+    CheckFilled(bsp);
+
+    auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], point_in_ladder);
+
+    // the brush lacked a visible contents, so it became solid. solid leafs wipe out any other content bits
+    CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+
+    CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
+    CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, leaf).at(0)->contents);
+}
