@@ -542,6 +542,13 @@ TEST_CASE("q2_mirrorinside" * doctest::test_suite("testmaps_q2"))
     const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_mirrorinside.map");
 
     {
+        INFO("window is not two sided by default");
+        const qvec3d window_pos{192, 96, 156};
+        CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], window_pos)),
+            std::vector<std::string>({"e2u2/wndow1_1"}));
+    }
+
+    {
         INFO("aux is not two sided by default");
         const qvec3d aux_pos{32, 96, 156};
         CHECK_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], aux_pos)),
