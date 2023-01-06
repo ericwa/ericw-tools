@@ -1089,7 +1089,7 @@ struct gamedef_q2_t : public gamedef_t
             return contents.mirror_inside.value();
 
         // Q2 is a bit different here. in vanilla tools,
-        // every content except SOLID is implicitly mirrorinside.
+        // every content except SOLID and WINDOW is implicitly mirrorinside.
         // the only exception is that 4bsp has the unused AUX
         // contents to default to not mirroring the insides.
         return !(contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_AUX));
