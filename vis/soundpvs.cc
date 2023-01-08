@@ -168,12 +168,21 @@ void CalcPHS(mbsp_t *bsp)
     std::vector<uint8_t> compressed(leafbytes * 2);
     std::vector<uint8_t> uncompressed_orig(leafbytes);
 
+    std::vector<uint8_t> uncompressed_test(leafbytes);
+
     int32_t count = 0;
     for (int32_t i = 0; i < portalleafs; i++) {
         const uint8_t *scan = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, i);
 
         DecompressRow(scan, leafbytes, uncompressed.data());
         std::copy(uncompressed.begin(), uncompressed.end(), uncompressed_orig.begin());
+
+        // migrating to this... for now, just check it produces the same value as the legacy function
+        Mod_Q1BSP_DecompressVis(scan,
+            bsp->dvis.bits.data() + bsp->dvis.bits.size(),
+            uncompressed_test.data(),
+            uncompressed_test.data() + uncompressed_test.size());
+        Q_assert(uncompressed_test == uncompressed);
 
         scan = uncompressed_orig.data();
 

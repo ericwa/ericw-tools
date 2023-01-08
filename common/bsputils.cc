@@ -625,6 +625,57 @@ void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
     } while (out - decompressed < row);
 }
 
+size_t DecompressedVisSize(const mbsp_t *bsp)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        return (bsp->dvis.bit_offsets.size() + 7) / 8;
+    }
+
+    return (bsp->dmodels[0].visleafs + 7) / 8;
+}
+
+// from DarkPlaces
+void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend)
+{
+    int c;
+    uint8_t *outstart = out;
+    while (out < outend) {
+        if (in == inend) {
+            logging::print("Mod_Q1BSP_DecompressVis: input underrun (decompressed {} of {} output bytes)\n",
+                (out - outstart), (outend - outstart));
+            return;
+        }
+
+        c = *in++;
+        if (c) {
+            *out++ = c;
+            continue;
+        }
+
+        if (in == inend) {
+            logging::print(
+                "Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n",
+                (out - outstart), (outend - outstart));
+            return;
+        }
+
+        const int run_length = *in++;
+        if (!run_length) {
+            logging::print("Mod_Q1BSP_DecompressVis: 0 repeat\n");
+            return;
+        }
+
+        for (c = run_length; c > 0; c--) {
+            if (out == outend) {
+                logging::print("Mod_Q1BSP_DecompressVis: output overrun (decompressed {} of {} output bytes)\n",
+                    (out - outstart), (outend - outstart));
+                return;
+            }
+            *out++ = 0;
+        }
+    }
+}
+
 bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num)
 {
     auto &lump_bytes = entries.at("DECOUPLED_LM");

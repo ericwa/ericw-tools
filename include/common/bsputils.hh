@@ -107,6 +107,8 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
 
 void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it);
 void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed);
+size_t DecompressedVisSize(const mbsp_t *bsp);
+void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend);
 
 bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num);
 
