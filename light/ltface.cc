@@ -449,57 +449,6 @@ static void CalcPoints(
     }
 }
 
-static size_t DecompressedVisSize(const mbsp_t *bsp)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        return (bsp->dvis.bit_offsets.size() + 7) / 8;
-    }
-
-    return (bsp->dmodels[0].visleafs + 7) / 8;
-}
-
-// from DarkPlaces
-static void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend)
-{
-    int c;
-    uint8_t *outstart = out;
-    while (out < outend) {
-        if (in == inend) {
-            logging::print("Mod_Q1BSP_DecompressVis: input underrun (decompressed {} of {} output bytes)\n",
-                (out - outstart), (outend - outstart));
-            return;
-        }
-
-        c = *in++;
-        if (c) {
-            *out++ = c;
-            continue;
-        }
-
-        if (in == inend) {
-            logging::print(
-                "Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n",
-                (out - outstart), (outend - outstart));
-            return;
-        }
-
-        const int run_length = *in++;
-        if (!run_length) {
-            logging::print("Mod_Q1BSP_DecompressVis: 0 repeat\n");
-            return;
-        }
-
-        for (c = run_length; c > 0; c--) {
-            if (out == outend) {
-                logging::print("Mod_Q1BSP_DecompressVis: output overrun (decompressed {} of {} output bytes)\n",
-                    (out - outstart), (outend - outstart));
-                return;
-            }
-            *out++ = 0;
-        }
-    }
-}
-
 static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
 {
     const size_t num_pvsclusterbytes = DecompressedVisSize(bsp);
