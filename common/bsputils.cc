@@ -594,37 +594,6 @@ void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_ite
     }
 }
 
-/*
-===================
-DecompressRow
-===================
-*/
-void DecompressRow(const uint8_t *in, const int numbytes, uint8_t *decompressed)
-{
-    int c;
-    uint8_t *out;
-    int row;
-
-    row = numbytes;
-    out = decompressed;
-
-    do {
-        if (*in) {
-            *out++ = *in++;
-            continue;
-        }
-
-        c = in[1];
-        if (!c)
-            FError("0 repeat");
-        in += 2;
-        while (c) {
-            *out++ = 0;
-            c--;
-        }
-    } while (out - decompressed < row);
-}
-
 size_t DecompressedVisSize(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
