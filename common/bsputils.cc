@@ -603,14 +603,14 @@ size_t DecompressedVisSize(const mbsp_t *bsp)
     return (bsp->dmodels[0].visleafs + 7) / 8;
 }
 
-// from DarkPlaces
-void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend)
+// from DarkPlaces (Mod_Q1BSP_DecompressVis)
+void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend)
 {
     int c;
     uint8_t *outstart = out;
     while (out < outend) {
         if (in == inend) {
-            logging::print("Mod_Q1BSP_DecompressVis: input underrun (decompressed {} of {} output bytes)\n",
+            logging::print("DecompressVis: input underrun (decompressed {} of {} output bytes)\n",
                 (out - outstart), (outend - outstart));
             return;
         }
@@ -623,20 +623,20 @@ void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *o
 
         if (in == inend) {
             logging::print(
-                "Mod_Q1BSP_DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n",
+                "DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n",
                 (out - outstart), (outend - outstart));
             return;
         }
 
         const int run_length = *in++;
         if (!run_length) {
-            logging::print("Mod_Q1BSP_DecompressVis: 0 repeat\n");
+            logging::print("DecompressVis: 0 repeat\n");
             return;
         }
 
         for (c = run_length; c > 0; c--) {
             if (out == outend) {
-                logging::print("Mod_Q1BSP_DecompressVis: output overrun (decompressed {} of {} output bytes)\n",
+                logging::print("DecompressVis: output overrun (decompressed {} of {} output bytes)\n",
                     (out - outstart), (outend - outstart));
                 return;
             }

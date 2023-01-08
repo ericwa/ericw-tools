@@ -449,7 +449,7 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
             return false;
         }
 
-        Mod_Q1BSP_DecompressVis(bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster),
+        DecompressVis(bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster),
             bsp->dvis.bits.data() + bsp->dvis.bits.size(), out, out + num_pvsclusterbytes);
     } else {
         if (leaf->visofs < 0) {
@@ -470,8 +470,8 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
             return false;
         }
 
-        Mod_Q1BSP_DecompressVis(bsp->dvis.bits.data() + leaf->visofs, bsp->dvis.bits.data() + bsp->dvis.bits.size(),
-            out, out + num_pvsclusterbytes);
+        DecompressVis(bsp->dvis.bits.data() + leaf->visofs, bsp->dvis.bits.data() + bsp->dvis.bits.size(), out,
+            out + num_pvsclusterbytes);
     }
 
     return true;

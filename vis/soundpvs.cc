@@ -172,9 +172,7 @@ void CalcPHS(mbsp_t *bsp)
     for (int32_t i = 0; i < portalleafs; i++) {
         const uint8_t *scan = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, i);
 
-        Mod_Q1BSP_DecompressVis(scan,
-            bsp->dvis.bits.data() + bsp->dvis.bits.size(),
-            uncompressed.data(),
+        DecompressVis(scan, bsp->dvis.bits.data() + bsp->dvis.bits.size(), uncompressed.data(),
             uncompressed.data() + uncompressed.size());
         std::copy(uncompressed.begin(), uncompressed.end(), uncompressed_orig.begin());
 
@@ -192,9 +190,7 @@ void CalcPHS(mbsp_t *bsp)
                 if (index >= portalleafs)
                     FError("Bad bit in PVS"); // pad bits should be 0
                 const uint8_t *src_compressed = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, index);
-                Mod_Q1BSP_DecompressVis(src_compressed,
-                    bsp->dvis.bits.data() + bsp->dvis.bits.size(),
-                    uncompressed_2.data(),
+                DecompressVis(src_compressed, bsp->dvis.bits.data() + bsp->dvis.bits.size(), uncompressed_2.data(),
                     uncompressed_2.data() + uncompressed_2.size());
                 const long *src = reinterpret_cast<long *>(uncompressed_2.data());
                 long *dest = reinterpret_cast<long *>(uncompressed.data());
