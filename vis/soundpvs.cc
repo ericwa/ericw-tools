@@ -168,21 +168,15 @@ void CalcPHS(mbsp_t *bsp)
     std::vector<uint8_t> compressed(leafbytes * 2);
     std::vector<uint8_t> uncompressed_orig(leafbytes);
 
-    std::vector<uint8_t> uncompressed_test(leafbytes);
-
     int32_t count = 0;
     for (int32_t i = 0; i < portalleafs; i++) {
         const uint8_t *scan = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, i);
 
-        DecompressRow(scan, leafbytes, uncompressed.data());
-        std::copy(uncompressed.begin(), uncompressed.end(), uncompressed_orig.begin());
-
-        // migrating to this... for now, just check it produces the same value as the legacy function
         Mod_Q1BSP_DecompressVis(scan,
             bsp->dvis.bits.data() + bsp->dvis.bits.size(),
-            uncompressed_test.data(),
-            uncompressed_test.data() + uncompressed_test.size());
-        Q_assert(uncompressed_test == uncompressed);
+            uncompressed.data(),
+            uncompressed.data() + uncompressed.size());
+        std::copy(uncompressed.begin(), uncompressed.end(), uncompressed_orig.begin());
 
         scan = uncompressed_orig.data();
 
@@ -198,7 +192,10 @@ void CalcPHS(mbsp_t *bsp)
                 if (index >= portalleafs)
                     FError("Bad bit in PVS"); // pad bits should be 0
                 const uint8_t *src_compressed = bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, index);
-                DecompressRow(src_compressed, leafbytes, uncompressed_2.data());
+                Mod_Q1BSP_DecompressVis(src_compressed,
+                    bsp->dvis.bits.data() + bsp->dvis.bits.size(),
+                    uncompressed_2.data(),
+                    uncompressed_2.data() + uncompressed_2.size());
                 const long *src = reinterpret_cast<long *>(uncompressed_2.data());
                 long *dest = reinterpret_cast<long *>(uncompressed.data());
                 for (int32_t l = 0; l < leaflongs; l++)
