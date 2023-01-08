@@ -483,7 +483,13 @@ static void Mod_Q1BSP_DecompressVis(const uint8_t *in, const uint8_t *inend, uin
             return;
         }
 
-        for (c = *in++; c > 0; c--) {
+        const int run_length = *in++;
+        if (!run_length) {
+            logging::print("Mod_Q1BSP_DecompressVis: 0 repeat\n");
+            return;
+        }
+
+        for (c = run_length; c > 0; c--) {
             if (out == outend) {
                 logging::print("Mod_Q1BSP_DecompressVis: output overrun (decompressed {} of {} output bytes)\n",
                     (out - outstart), (outend - outstart));
