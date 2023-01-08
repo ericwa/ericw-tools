@@ -925,6 +925,11 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
  */
 qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord)
 {
+    Q_assert(coord[0] >= 0);
+    Q_assert(coord[1] >= 0);
+    Q_assert(coord[0] < faceextents.width());
+    Q_assert(coord[1] < faceextents.height());
+
     int pixel = coord[0] + (coord[1] * faceextents.width());
 
     assert(byte_offset_of_face >= 0);

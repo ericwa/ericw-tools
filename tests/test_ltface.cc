@@ -206,6 +206,8 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
 template <class L>
 static void CheckFaceLuxels(const mbsp_t &bsp, const mface_t &face, L&& lambda, const std::vector<uint8_t>* lit = nullptr)
 {
+    // FIXME: assumes no DECOUPLED_LM lump
+
     const faceextents_t extents(face, bsp, LMSCALE_DEFAULT);
 
     for (int x = 0; x < extents.width(); ++x) {
@@ -222,6 +224,24 @@ static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
     CheckFaceLuxels(bsp, face, [](qvec3b sample){
         CHECK(sample[0] > 0);
     });
+}
+
+static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3b &expected_color,
+    const qvec3d &point, const qvec3d &normal = {0, 0, 0})
+{
+    auto *face = BSP_FindFaceAtPoint(bsp, model, point, normal);
+    REQUIRE(face);
+
+    // FIXME: assumes no DECOUPLED_LM lump
+
+    const faceextents_t extents(*face, *bsp, LMSCALE_DEFAULT);
+
+    const auto coord = extents.worldToLMCoord(point);
+
+    const qvec3b sample = LM_Sample(bsp, nullptr, extents, face->lightofs, qvec2i(coord));
+    INFO("sample ", coord[0], ", ", coord[1]);
+
+    CHECK(sample == expected_color);
 }
 
 TEST_CASE("emissive lights") {
@@ -440,6 +460,24 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
             CHECK(sample == qvec3b(0, 0, 255));
         });
     }
+}
+
+TEST_CASE("light channel mask / dirt interaction") {
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_group_dirt.map", {});
+
+    REQUIRE(2 == bsp.dmodels.size());
+
+    INFO("worldspawn has dirt in the corner");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {26,26,26}, {1432, 1480, 944});
+
+    INFO("worldspawn not receiving dirt from func_wall on different channel");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {62, 62, 62}, {1212, 1272, 1014});
+
+    INFO("func_wall on different channel not receiving dirt from worldspawn");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {64, 64, 64}, {1216, 1266, 1014});
+
+    INFO("func_wall on different channel is receiving dirt from itself");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {19, 19, 19}, {1236, 1308, 960});
 }
 
 // FIXME: figure out why this is failing on CI only
