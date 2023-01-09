@@ -3016,7 +3016,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
         if (auto value = IsSurfaceLitFace(bsp, face)) {
             auto *entity = std::get<3>(value.value());
-            const float surface_minlight_scale = entity ? entity->surface_minlight_scale.value() : 64.0f;
+            const float surface_minlight_scale = entity ? entity->surface_minlight_scale.value() : 64.f;
             minlight = std::get<0>(value.value()) * surface_minlight_scale;
             minlight_color = std::get<2>(value.value());
             LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()));

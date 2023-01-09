@@ -73,6 +73,7 @@ public:
     settings::setting_scalar light;
     settings::setting_scalar atten;
     settings::setting_enum<light_formula_t> formula;
+    settings::setting_scalar cone; // Q2
     settings::setting_scalar spotangle;
     settings::setting_scalar spotangle2;
     settings::setting_numeric<int32_t> style;
