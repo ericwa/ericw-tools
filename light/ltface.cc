@@ -42,7 +42,7 @@ std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
 std::atomic<uint32_t> fully_transparent_lightmaps;
-bool warned_about_light_map_overflow, warned_about_light_style_overflow;
+static bool warned_about_light_map_overflow, warned_about_light_style_overflow;
 
 /* Debug helper - move elsewhere? */
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp)
@@ -439,39 +439,19 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
     memset(out, 0xFF, num_pvsclusterbytes);
 
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        if (leaf->cluster < 0) {
+        auto it = UncompressedVis().find(leaf->cluster);
+        if (it == UncompressedVis().end()) {
             return false;
         }
 
-        if (leaf->cluster >= bsp->dvis.bit_offsets.size() ||
-            bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster) >= bsp->dvis.bits.size()) {
-            logging::print("Mod_LeafPvs: invalid visofs for cluster {}\n", leaf->cluster);
-            return false;
-        }
-
-        DecompressVis(bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster),
-            bsp->dvis.bits.data() + bsp->dvis.bits.size(), out, out + num_pvsclusterbytes);
+        memcpy(out, it->second.data(), num_pvsclusterbytes);
     } else {
-        if (leaf->visofs < 0) {
+        auto it = UncompressedVis().find(leaf->visofs);
+        if (it == UncompressedVis().end()) {
             return false;
         }
 
-        const ptrdiff_t leafnum = (leaf - bsp->dleafs.data());
-
-        // this is confusing.. "visleaf numbers" are the leaf number minus 1.
-        // they also don't go as high, bsp->dmodels[0].visleafs instead of bsp->numleafs
-        const int visleaf = leafnum - 1;
-        if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs) {
-            return false;
-        }
-
-        if (leaf->visofs >= bsp->dvis.bits.size()) {
-            logging::print("Mod_LeafPvs: invalid visofs for leaf {}\n", leafnum);
-            return false;
-        }
-
-        DecompressVis(bsp->dvis.bits.data() + leaf->visofs, bsp->dvis.bits.data() + bsp->dvis.bits.size(), out,
-            out + num_pvsclusterbytes);
+        memcpy(out, it->second.data(), num_pvsclusterbytes);
     }
 
     return true;

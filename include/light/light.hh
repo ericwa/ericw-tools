@@ -414,6 +414,8 @@ extern std::vector<uint8_t> filebase;
 extern std::vector<uint8_t> lit_filebase;
 extern std::vector<uint8_t> lux_filebase;
 
+const std::unordered_map<int, std::vector<uint8_t>> &UncompressedVis();
+
 bool IsOutputtingSupplementaryData();
 
 std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces();
