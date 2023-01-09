@@ -91,6 +91,13 @@ static int lux_file_p;
 /// offset of end of space for luxfile data
 static int lux_file_end;
 
+static std::unordered_map<int, std::vector<uint8_t>> all_uncompressed_vis;
+
+const std::unordered_map<int, std::vector<uint8_t>> &UncompressedVis()
+{
+    return all_uncompressed_vis;
+}
+
 std::vector<modelinfo_t *> modelinfo;
 std::vector<const modelinfo_t *> tracelist;
 std::vector<const modelinfo_t *> selfshadowlist;
@@ -1530,6 +1537,7 @@ static void ResetLight()
     lux_file_p = 0;
     lux_file_end = 0;
 
+    all_uncompressed_vis.clear();
     modelinfo.clear();
     tracelist.clear();
     selfshadowlist.clear();
@@ -1638,6 +1646,7 @@ int light_main(int argc, const char **argv)
 
     light_options.postinitialize(argc, argv);
 
+    all_uncompressed_vis = DecompressAllVis(&bsp, true);
     FindModelInfo(&bsp);
 
     FindDebugFace(&bsp);
