@@ -513,3 +513,20 @@ TEST_CASE("surface lights minlight" * doctest::may_fail()) {
 
     CheckFaceLuxels(bsp, *liquid_face, l, &lit);
 }
+
+TEST_CASE("q2_light_cone") {
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_cone.map", {});
+
+    // lights are 256 units from wall
+    // all 3 lights have a 10 degree cone radius
+    // radius on wall should be 256 * sin(10 degrees) = 44.45 units
+
+    auto check_cutoff = [&](const qvec3d &position){
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0,0,0}, position + qvec3d{16,0,0});
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {243,243,243}, position - qvec3d{16,0,0});
+    };
+
+    check_cutoff({948, 1472, 952});
+    check_cutoff({1092, 1472, 952});
+    check_cutoff({1236, 1472, 952});
+}
