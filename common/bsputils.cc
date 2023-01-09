@@ -668,6 +668,9 @@ static void ConnectLeafVisibilityDirectional(const mbsp_t *bsp, std::unordered_m
     if (b < 0)
         return;
 
+    if (all_visdata.find(b) == all_visdata.end()) {
+        return;
+    }
     const std::vector<uint8_t> b_pvs_copy = all_visdata.at(b);
 
     for (auto &[cluster, pvs] : all_visdata) {
