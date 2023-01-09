@@ -603,6 +603,16 @@ size_t DecompressedVisSize(const mbsp_t *bsp)
     return (bsp->dmodels[0].visleafs + 7) / 8;
 }
 
+int VisleafToLeafnum(int visleaf)
+{
+    return visleaf + 1;
+}
+
+int LeafnumToVisleaf(int leafnum)
+{
+    return leafnum - 1;
+}
+
 // from DarkPlaces (Mod_Q1BSP_DecompressVis)
 void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend)
 {
@@ -643,6 +653,64 @@ void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_
             *out++ = 0;
         }
     }
+}
+
+/**
+ * Decompress visdata for the entire map, and returns a map of:
+ *
+ *  - Q2: cluster number to decompressed visdata
+ *  - Q1/others: visofs to decompressed visdata
+ *
+ * Q1 uses visofs as the map key, rather than e.g. visleaf number or leaf number, because if func_detail is in use,
+ * many leafs will share the same visofs. This avoids storing the same visdata redundantly.
+ */
+std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp, bool trans_water)
+{
+    std::unordered_map<int, std::vector<uint8_t>> result;
+
+    const size_t decompressed_size = DecompressedVisSize(bsp);
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        const int num_clusters = bsp->dvis.bit_offsets.size();
+
+        for (int cluster = 0; cluster < num_clusters; ++cluster) {
+            if (bsp->dvis.get_bit_offset(VIS_PVS, cluster) >= bsp->dvis.bits.size()) {
+                logging::print("DecompressAllVis: invalid visofs for cluster {}\n", cluster);
+                continue;
+            }
+
+            std::vector<uint8_t> decompressed(decompressed_size);
+            DecompressVis(bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, cluster),
+                bsp->dvis.bits.data() + bsp->dvis.bits.size(), decompressed.data(), decompressed.data() + decompressed.size());
+            result[cluster] = std::move(decompressed);
+        }
+    } else {
+        for (int leafnum = 0; leafnum < bsp->dleafs.size(); ++leafnum) {
+            auto &leaf = bsp->dleafs[leafnum];
+            if (leaf.visofs < 0) {
+                continue;
+            }
+
+            const int map_key = leaf.visofs;
+
+            if (result.find(map_key) != result.end()) {
+                // already decompressed this cluster
+                continue;
+            }
+
+            if (leaf.visofs >= bsp->dvis.bits.size()) {
+                logging::print("DecompressAllVis: invalid visofs for leaf {}\n", leafnum);
+                continue;
+            }
+
+            std::vector<uint8_t> decompressed(decompressed_size);
+            DecompressVis(bsp->dvis.bits.data() + leaf.visofs,
+                bsp->dvis.bits.data() + bsp->dvis.bits.size(), decompressed.data(), decompressed.data() + decompressed.size());
+            result[map_key] = std::move(decompressed);
+        }
+    }
+
+    return result;
 }
 
 bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num)

@@ -29,6 +29,7 @@
 #include <iterator>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp);
 int Face_GetNum(const mbsp_t *bsp, const mface_t *f);
@@ -107,7 +108,10 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
 
 void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it);
 size_t DecompressedVisSize(const mbsp_t *bsp);
+int VisleafToLeafnum(int visleaf);
+int LeafnumToVisleaf(int leafnum);
 void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend);
+std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp, bool trans_water = false);
 
 bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num);
 
