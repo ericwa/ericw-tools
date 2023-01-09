@@ -252,7 +252,7 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
             if (entity->cone.isChanged()) {
                 // q2 style: "_cone" key specifies cone radius in degrees
                 base_angle = entity->cone.value() * 2.f;
-            } else {
+            } else if (entity->spotangle.isChanged()) {
                 // q1 style: "angle" key specifies cone diameter in degrees
                 base_angle = entity->spotangle.value();
             }
