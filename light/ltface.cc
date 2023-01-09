@@ -513,16 +513,6 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
         /* copy the pvs for this leaf into pointpvs */
         Mod_LeafPvs(bsp, leaf, pointpvs);
 
-        if (bsp->loadversion->game->contents_are_liquid({leaf->contents})) {
-            // hack for when the sample point might be in an opaque liquid, blocking vis,
-            // but we typically want light to pass through these.
-            // see also VisCullEntity() which handles the case when the light emitter is in liquid.
-            for (int j = 0; j < pvssize; j++) {
-                lightsurf->pvs[j] |= 0xff;
-            }
-            break;
-        }
-
         /* merge the pvs for this sample point into lightsurf->pvs */
         for (int j = 0; j < pvssize; j++) {
             lightsurf->pvs[j] |= pointpvs[j];
@@ -1090,11 +1080,7 @@ static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, co
     }
 
     if (bsp->loadversion->game->contents_are_solid({entleaf->contents}) ||
-        bsp->loadversion->game->contents_are_sky({entleaf->contents}) ||
-        bsp->loadversion->game->contents_are_liquid({entleaf->contents})) {
-        // the liquid case is because entleaf->contents might be in an opaque liquid,
-        // which we typically want light to pass through, but visdata would report that
-        // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.
+        bsp->loadversion->game->contents_are_sky({entleaf->contents})) {
         return false;
     }
 

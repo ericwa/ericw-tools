@@ -656,6 +656,35 @@ void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_
 }
 
 /**
+ * Updates the visdata so everything that:
+ * everything that can see into cluster a, can also see into cluster b + its pvs
+ */
+static void ConnectLeafVisibilityDirectional(const mbsp_t *bsp, std::unordered_map<int, std::vector<uint8_t>> &all_visdata, int a, int b)
+{
+    Q_assert(bsp->loadversion->game->id == GAME_QUAKE_II);
+
+    if (a < 0)
+        return;
+    if (b < 0)
+        return;
+
+    const std::vector<uint8_t> b_pvs_copy = all_visdata.at(b);
+
+    for (auto &[cluster, pvs] : all_visdata) {
+        // can cluster see into `a`?
+        if (pvs[a >> 3] & (1 << (a & 7))) {
+            // update `pvs` to see into `b`
+            pvs[b >> 3] |= (1 << (b & 7));
+
+            // update `pvs` to see into b's pvs
+            for (int i = 0; i < pvs.size(); ++i) {
+                pvs[i] |= b_pvs_copy[i];
+            }
+        }
+    }
+}
+
+/**
  * Decompress visdata for the entire map, and returns a map of:
  *
  *  - Q2: cluster number to decompressed visdata
@@ -666,6 +695,8 @@ void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_
  */
 std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp, bool trans_water)
 {
+    logging::funcheader();
+
     std::unordered_map<int, std::vector<uint8_t>> result;
 
     const size_t decompressed_size = DecompressedVisSize(bsp);
@@ -707,6 +738,47 @@ std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp
             DecompressVis(bsp->dvis.bits.data() + leaf.visofs,
                 bsp->dvis.bits.data() + bsp->dvis.bits.size(), decompressed.data(), decompressed.data() + decompressed.size());
             result[map_key] = std::move(decompressed);
+        }
+    }
+
+    if (trans_water && bsp->loadversion->game->id == GAME_QUAKE_II) {
+        // FIXME: implement non q2 path
+
+        // we want to make all visblocking liquids transparent
+
+        std::set<std::pair<int, int>> cluster_pairs_to_unify;
+
+        const auto &world = bsp->dmodels[0];
+        for (int i = world.firstface; i < (world.firstface + world.numfaces); ++i) {
+            const mface_t &face = bsp->dfaces[i];
+
+            qvec3f centroid = Face_Centroid(bsp, &face);
+            auto plane = Face_Plane(bsp, &face);
+
+            auto *top = BSP_FindLeafAtPoint(bsp, &world, centroid + (plane.normal * 0.5));
+            auto *bottom = BSP_FindLeafAtPoint(bsp, &world, centroid - (plane.normal * 0.5));
+
+            contentflags_t top_contents{top->contents};
+            contentflags_t bottom_contents{bottom->contents};
+
+            // this weakens the pvs culling effectiveness, so only do it if top and bottom can't see each other
+            // FIXME: would be better to do a PVS check (especially for Q1)
+            if (Face_IsTranslucent(bsp, &face)) {
+                continue;
+            }
+
+            if (top_contents.is_empty(bsp->loadversion->game) && bottom_contents.is_liquid(bsp->loadversion->game)) {
+                cluster_pairs_to_unify.insert(std::make_pair(top->cluster, bottom->cluster));
+            }
+        }
+
+        if (cluster_pairs_to_unify.size()) {
+            logging::print("{:9} cluster pairs PVS connected to make liquid translucent\n", cluster_pairs_to_unify.size());
+        }
+
+        for (auto [top, bottom] : cluster_pairs_to_unify) {
+            ConnectLeafVisibilityDirectional(bsp, result, top, bottom);
+            ConnectLeafVisibilityDirectional(bsp, result, bottom, top);
         }
     }
 
