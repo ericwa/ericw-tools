@@ -80,7 +80,7 @@ light_t::light_t() :
     formula{this, "delay", LF_LINEAR,
         {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
             {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}},
-    cone{this, {"cone"}, 10.f},
+    cone{this, "cone", 10.f},
     spotangle{this, "angle", 40.0},
     spotangle2{this, "softangle", 0.0},
     style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1},
@@ -235,7 +235,7 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
     return ok;
 }
 
-static void SetupSpotlights(const settings::worldspawn_keys &cfg)
+static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &cfg)
 {
     for (auto &entity : all_lights) {
         vec_t targetdist = 0.0; // mxd
@@ -247,20 +247,22 @@ static void SetupSpotlights(const settings::worldspawn_keys &cfg)
             entity->spotlight = true;
         }
         if (entity->spotlight) {
-
-            vec_t base_angle;
+            vec_t base_angle = 0.0; // spotlight cone "diameter" in degrees
 
             if (entity->cone.isChanged()) {
+                // q2 style: "_cone" key specifies cone radius in degrees
                 base_angle = entity->cone.value() * 2.f;
-
-                if (!base_angle) {
-                    base_angle = 10.f;
-                }
             } else {
+                // q1 style: "angle" key specifies cone diameter in degrees
                 base_angle = entity->spotangle.value();
+            }
 
-                if (!base_angle) {
-                    base_angle = 40.f;
+            if (!base_angle) {
+                // if we don't have a valid cone angle, the default depends on the target game
+                if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                    base_angle = entity->cone.default_value() * 2.f;
+                } else {
+                    base_angle = entity->spotangle.default_value();
                 }
             }
 
@@ -325,7 +327,7 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
     if (!entity->surface_minlight_scale.isChanged()) {
         if (bsp->loadversion->game->id != GAME_QUAKE_II) {
             // TODO: also use 1.0 for Q2?
-            entity->surface_minlight_scale.setValue(64.f, settings::source::DEFAULT);
+            entity->surface_minlight_scale.setValue(1.0f, settings::source::DEFAULT);
         }
     }
 }
@@ -1159,7 +1161,7 @@ void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     const size_t final_lightcount = all_lights.size();
 
     MatchTargets();
-    SetupSpotlights(cfg);
+    SetupSpotlights(bsp, cfg);
     SetupSuns(cfg);
     SetupSkyDomes(cfg);
     FixLightsOnFaces(bsp);

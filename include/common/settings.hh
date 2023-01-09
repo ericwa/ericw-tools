@@ -166,6 +166,8 @@ public:
 
     const T &value() const { return _value; }
 
+    const T &default_value() const { return _default; }
+
     virtual void setValue(const T &value, source newSource)
     {
         if (changeSource(newSource)) {
