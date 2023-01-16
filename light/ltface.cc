@@ -355,6 +355,24 @@ static position_t PositionSamplePointOnFace(
 
     const bool inSolid = Light_PointInAnySolid(bsp, mi->model, point + modelOffset);
     if (inSolid) {
+#if 1
+        // try +/- 0.5 units in X/Y/Z (8 tests)
+
+        for (int x = -1; x <= 1; x += 2) {
+            for (int y = -1; y <= 1; y += 2) {
+                for (int z = -1; z <= 1; z += 2) {
+                    const qvec3f jitter = qvec3f(x, y, z) * 0.5;
+                    const qvec3f new_point = point + jitter;
+
+                    if (!Light_PointInAnySolid(bsp, mi->model, new_point + modelOffset)) {
+                        return position_t(face, new_point, pointNormal);
+                    }
+                }
+            }
+        }
+#else
+        // this has issues with narrow sliver-shaped faces moving the sample points a lot into vastly different lighting
+
         // Check distance to border
         const float distanceInside = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
         if (distanceInside < 1.0f) {
@@ -367,7 +385,7 @@ static position_t PositionSamplePointOnFace(
                     return position_t(face, newPoint, pointNormal);
             }
         }
-
+#endif
         return position_t(point);
     }
 
