@@ -2001,25 +2001,6 @@ void SetupDirt(settings::worldspawn_keys &cfg)
 }
 
 // from q3map2
-static void GetUpRtVecs(const qvec3d &normal, qvec3d &myUp, qvec3d &myRt)
-{
-    /* check if the normal is aligned to the world-up */
-    if (normal[0] == 0.0f && normal[1] == 0.0f) {
-        if (normal[2] == 1.0f) {
-            myRt = {1.0, 0.0, 0.0};
-            myUp = {0.0, 1.0, 0.0};
-        } else if (normal[2] == -1.0f) {
-            myRt = {-1.0, 0.0, 0.0};
-            myUp = {0.0, 1.0, 0.0};
-        }
-    } else {
-        constexpr qvec3d worldUp{0, 0, 1};
-        myRt = qv::normalize(qv::cross(normal, worldUp));
-        myUp = qv::normalize(qv::cross(myRt, normal));
-    }
-}
-
-// from q3map2
 inline qvec3d TransformToTangentSpace(
     const qvec3d &normal, const qvec3d &myUp, const qvec3d &myRt, const qvec3d &inputvec)
 {
@@ -2066,7 +2047,10 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 
     // this stuff is just per-point
     for (int i = 0; i < lightsurf->points.size(); i++) {
-        GetUpRtVecs(lightsurf->normals[i], myUps[i], myRts[i]);
+        const auto [tangent, bitangent] = qv::MakeTangentAndBitangentUnnormalized(lightsurf->normals[i]);
+
+        myUps[i] = qv::normalize(tangent);
+        myRts[i] = qv::normalize(bitangent);
     }
 
     for (int j = 0; j < numDirtVectors; j++) {
