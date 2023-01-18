@@ -427,7 +427,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
     EdgeToFaceMap = MakeEdgeToFaceMap(bsp);
 
-    // read _phong and _phong_angle from entities for compatiblity with other qbsp's, at the expense of no
+    // read _phong and _phong_angle from entities for compatibility with other qbsp's, at the expense of no
     // support on func_detail/func_group
     for (size_t i = 0; i < bsp->dmodels.size(); i++) {
         const modelinfo_t *info = ModelInfoForModel(bsp, i);

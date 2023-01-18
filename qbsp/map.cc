@@ -613,7 +613,17 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
 
     // handle "_phong" and "_phong_angle" and "_phong_angle_concave"
     vec_t phongangle = entity.epairs.get_float("_phong_angle");
-    const int phong = entity.epairs.get_int("_phong");
+    int phong = entity.epairs.get_int("_phong");
+
+    // Paril: inherit phong from worldspawn if unset
+    if (!entity.epairs.has("_phong") && map.world_entity().epairs.has("_phong")) {
+        phong = map.world_entity().epairs.get_int("_phong");
+    }
+
+    // Paril: inherit phong from worldspawn if unset
+    if (!entity.epairs.has("_phong_angle") && map.world_entity().epairs.has("_phong_angle")) {
+        phongangle = map.world_entity().epairs.get_float("_phong_angle");
+    }
 
     if (phong && (phongangle == 0.0)) {
         phongangle = 89.0; // default _phong_angle

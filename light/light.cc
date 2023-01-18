@@ -441,6 +441,10 @@ void light_settings::postinitialize(int argc, const char **argv)
         if (!light_options.nolighting.isChanged()) {
             light_options.nolighting.setValue(true, settings::source::GAME_TARGET);
         }
+
+        if (!light_options.write_normals.isChanged()) {
+            light_options.write_normals.setValue(true, settings::source::GAME_TARGET);
+        }
     }
 
     // upgrade to uint16 if facestyles is specified
