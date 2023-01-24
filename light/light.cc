@@ -185,8 +185,9 @@ worldspawn_keys::worldspawn_keys() :
     sunlight3_color{this, {"sunlight3_color", "sunlight_color3"}, 255.0, 255.0, 255.0, &worldspawn_group},
     sunlight_dirt{this, "sunlight_dirt", 0.0, &worldspawn_group},
     sunlight2_dirt{this, "sunlight2_dirt", 0.0, &worldspawn_group},
-    sunvec{this, {"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, -90.0, 0.0, &worldspawn_group},
-    sun2vec{this, "sun2_mangle", 0.0, -90.0, 0.0, &worldspawn_group},
+    // NOTE: the default mangle needs to be in direction vector form, not euler angle
+    sunvec{this, {"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, 0.0, -1.0, &worldspawn_group},
+    sun2vec{this, "sun2_mangle", 0.0, 0.0, -1.0, &worldspawn_group},
     sun_deviance{this, "sunlight_penumbra", 0.0, 0.0, 180.0, &worldspawn_group},
     sky_surface{ this, {"sky_surface", "sun_surface"}, 0, 0, 0, &worldspawn_group},
     surflight_radiosity{this, "surflight_radiosity", SURFLIGHT_Q1, &worldspawn_group, "whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity"}

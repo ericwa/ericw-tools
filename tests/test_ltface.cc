@@ -531,3 +531,14 @@ TEST_CASE("q2_light_cone") {
     CheckSpotCutoff(bsp, {1092, 1472, 952});
     CheckSpotCutoff(bsp, {1236, 1472, 952});
 }
+
+TEST_CASE("q2_light_sunlight_default_mangle") {
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sunlight_default_mangle.map", {});
+
+    INFO("sunlight should be shining directly down if unspecified");
+    const qvec3d shadow_pos {1112, 1248, 944};
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, shadow_pos);
+
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{48, 0, 0});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{-48, 0, 0});
+}
