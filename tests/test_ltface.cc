@@ -542,3 +542,14 @@ TEST_CASE("q2_light_sunlight_default_mangle") {
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{48, 0, 0});
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{-48, 0, 0});
 }
+
+TEST_CASE("q2_light_sun") {
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sun.map", {});
+
+    INFO("sun entity shines at target");
+    const qvec3d shadow_pos {1084, 1284, 944};
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, shadow_pos);
+
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{128, 0, 0});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{-128, 0, 0});
+}
