@@ -93,14 +93,6 @@ static float Face_Alpha(const mbsp_t *bsp, const modelinfo_t *modelinfo, const m
 sceneinfo CreateGeometry(
     const mbsp_t *bsp, RTCDevice g_device, RTCScene scene, const std::vector<const mface_t *> &faces)
 {
-    // count triangles
-    int numtris = 0;
-    for (const mface_t *face : faces) {
-        if (face->numedges < 3)
-            continue;
-        numtris += (face->numedges - 2);
-    }
-
     unsigned int geomID;
     RTCGeometry geom_0 = rtcNewGeometry(g_device, RTC_GEOMETRY_TYPE_TRIANGLE);
     // we're not using masks, but they need to be set to something or else all rays miss
@@ -120,69 +112,95 @@ sceneinfo CreateGeometry(
         int v0, v1, v2;
     };
 
-    // fill in vertices
-    Vertex *vertices = (Vertex *)rtcSetNewGeometryBuffer(
-        geom_0, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 4 * sizeof(float), bsp->dvertexes.size());
-
-    size_t i = 0;
-    for (auto &dvertex : bsp->dvertexes) {
-        Vertex *vert = &vertices[i++];
-        for (int j = 0; j < 3; j++) {
-            vert->point[j] = dvertex[j];
-        }
-    }
+    // temprary buffers used while gathering faces
+    std::vector<Vertex> vertices_temp;
+    std::vector<Triangle> tris_temp;
 
     sceneinfo s;
     s.geomID = geomID;
 
-    // fill in triangles
-    Triangle *triangles = (Triangle *)rtcSetNewGeometryBuffer(
-        geom_0, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * sizeof(int), numtris);
-    int tri_index = 0;
-    for (const mface_t *face : faces) {
-        if (face->numedges < 3)
-            continue;
+    auto add_vert = [&](const qvec3f &pos) {
+        vertices_temp.push_back({.point {
+            pos[0], pos[1], pos[2], 0.0f
+        }});
+    };
 
+    // FIXME: reuse vertices
+    auto add_tri = [&](const mface_t *face, int bsp_vert0, int bsp_vert1, int bsp_vert2, const modelinfo_t *modelinfo) {
+        const qvec3f final_pos0 = Vertex_GetPos(bsp,bsp_vert0) + modelinfo->offset;
+        const qvec3f final_pos1 = Vertex_GetPos(bsp,bsp_vert1) + modelinfo->offset;
+        const qvec3f final_pos2 = Vertex_GetPos(bsp,bsp_vert2) + modelinfo->offset;
+
+        // push the 3 vertices
+        int first_vert_index = vertices_temp.size();
+        add_vert(final_pos0);
+        add_vert(final_pos1);
+        add_vert(final_pos2);
+
+        int tri_index = tris_temp.size();
+        tris_temp.push_back({first_vert_index, first_vert_index + 1, first_vert_index + 2});
+
+        triinfo info;
+
+        info.face = face;
+        info.modelinfo = modelinfo;
+        info.texinfo = &bsp->texinfo[face->texinfo];
+
+        info.texture = Face_Texture(bsp, face);
+
+        info.shadowworldonly = modelinfo->shadowworldonly.boolValue();
+        info.shadowself = modelinfo->shadowself.boolValue();
+        info.switchableshadow = modelinfo->switchableshadow.boolValue();
+        info.switchshadstyle = modelinfo->switchshadstyle.value();
+        info.channelmask = modelinfo->object_channel_mask.value();
+
+        info.alpha = Face_Alpha(bsp, modelinfo, face);
+
+        // mxd
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
+            info.is_fence = surf_flags & Q2_SURF_ALPHATEST;
+            info.is_glass = !info.is_fence && (surf_flags & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66));
+        } else {
+            const char *name = Face_TextureName(bsp, face);
+            info.is_fence = (name[0] == '{');
+            info.is_glass = (info.alpha < 1.0f);
+        }
+
+        s.triInfo.push_back(info);
+    };
+
+    auto add_face = [&](const mface_t *face, const modelinfo_t *modelinfo) {
+        if (face->numedges < 3)
+            return;
+
+        for (int j = 2; j < face->numedges; j++) {
+            int bsp_vert0 = Face_VertexAtIndex(bsp, face, j - 1);
+            int bsp_vert1 = Face_VertexAtIndex(bsp, face, j);
+            int bsp_vert2 = Face_VertexAtIndex(bsp, face, 0);
+
+            add_tri(face, bsp_vert0, bsp_vert1, bsp_vert2, modelinfo);
+        }
+    };
+
+    for (const mface_t *face : faces) {
         // NOTE: can be null for "skip" faces
         const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
 
-        for (int j = 2; j < face->numedges; j++) {
-            Triangle *tri = &triangles[tri_index];
-            tri->v0 = Face_VertexAtIndex(bsp, face, j - 1);
-            tri->v1 = Face_VertexAtIndex(bsp, face, j);
-            tri->v2 = Face_VertexAtIndex(bsp, face, 0);
-            tri_index++;
-
-            triinfo info;
-
-            info.face = face;
-            info.modelinfo = modelinfo;
-            info.texinfo = &bsp->texinfo[face->texinfo];
-
-            info.texture = Face_Texture(bsp, face);
-
-            info.shadowworldonly = modelinfo->shadowworldonly.boolValue();
-            info.shadowself = modelinfo->shadowself.boolValue();
-            info.switchableshadow = modelinfo->switchableshadow.boolValue();
-            info.switchshadstyle = modelinfo->switchshadstyle.value();
-            info.channelmask = modelinfo->object_channel_mask.value();
-
-            info.alpha = Face_Alpha(bsp, modelinfo, face);
-
-            // mxd
-            if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-                const int surf_flags = Face_ContentsOrSurfaceFlags(bsp, face);
-                info.is_fence = surf_flags & Q2_SURF_ALPHATEST;
-                info.is_glass = !info.is_fence && (surf_flags & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66));
-            } else {
-                const char *name = Face_TextureName(bsp, face);
-                info.is_fence = (name[0] == '{');
-                info.is_glass = (info.alpha < 1.0f);
-            }
-
-            s.triInfo.push_back(info);
+        if (modelinfo) {
+            add_face(face, modelinfo);
         }
     }
+
+    // copy vertices, triangles from temporary buffers to embree-managed memory
+    Vertex *vertices = (Vertex *)rtcSetNewGeometryBuffer(
+        geom_0, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 4 * sizeof(float), vertices_temp.size());
+
+    Triangle *triangles = (Triangle *)rtcSetNewGeometryBuffer(
+        geom_0, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * sizeof(int), tris_temp.size());
+
+    memcpy(vertices, vertices_temp.data(), sizeof(Vertex) * vertices_temp.size());
+    memcpy(triangles, tris_temp.data(), sizeof(Triangle) * tris_temp.size());
 
     rtcCommitGeometry(geom_0);
     return s;
@@ -456,7 +474,7 @@ qplane3d Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
 static void Leaf_MakeFaces(
-    const mbsp_t *bsp, const mleaf_t *leaf, const std::vector<qplane3d> &planes, std::vector<winding_t> &result)
+    const mbsp_t *bsp, const modelinfo_t *modelinfo, const mleaf_t *leaf, const std::vector<qplane3d> &planes, std::vector<winding_t> &result)
 {
     for (const qplane3d &plane : planes) {
         // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
@@ -480,12 +498,12 @@ static void Leaf_MakeFaces(
         if (!winding) {
             // logging::print("WARNING: winding clipped away\n");
         } else {
-            result.push_back(std::move(*winding));
+            result.push_back(winding->translate(modelinfo->offset));
         }
     }
 }
 
-void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<qplane3d> *planes, std::vector<winding_t> &result)
+void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int nodenum, std::vector<qplane3d> *planes, std::vector<winding_t> &result)
 {
     if (nodenum < 0) {
         const int leafnum = -nodenum - 1;
@@ -493,7 +511,7 @@ void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<qplane3d> *pl
 
         if ((bsp->loadversion->game->id == GAME_QUAKE_II) ? (leaf->contents & Q2_CONTENTS_SOLID)
                                                           : leaf->contents == CONTENTS_SOLID) {
-            Leaf_MakeFaces(bsp, leaf, *planes, result);
+            Leaf_MakeFaces(bsp, modelinfo, leaf, *planes, result);
         }
         return;
     }
@@ -502,19 +520,19 @@ void MakeFaces_r(const mbsp_t *bsp, const int nodenum, std::vector<qplane3d> *pl
 
     // go down the front side
     planes->push_back(Node_Plane(bsp, node, false));
-    MakeFaces_r(bsp, node->children[0], planes, result);
+    MakeFaces_r(bsp, modelinfo, node->children[0], planes, result);
     planes->pop_back();
 
     // go down the back side
     planes->push_back(Node_Plane(bsp, node, true));
-    MakeFaces_r(bsp, node->children[1], planes, result);
+    MakeFaces_r(bsp, modelinfo, node->children[1], planes, result);
     planes->pop_back();
 }
 
-static void MakeFaces(const mbsp_t *bsp, const dmodelh2_t *model, std::vector<winding_t> &result)
+static void MakeFaces(const mbsp_t *bsp, const modelinfo_t *modelinfo, const dmodelh2_t *model, std::vector<winding_t> &result)
 {
     std::vector<qplane3d> planes;
-    MakeFaces_r(bsp, model->headnode[0], &planes, result);
+    MakeFaces_r(bsp, modelinfo, model->headnode[0], &planes, result);
     Q_assert(planes.empty());
 }
 
@@ -623,9 +641,9 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
     /* Special handling of skip-textured bmodels */
     std::vector<winding_t> skipwindings;
-    for (const modelinfo_t *model : tracelist) {
-        if (model->model->numfaces == 0) {
-            MakeFaces(bsp, model->model, skipwindings);
+    for (const modelinfo_t *modelinfo : tracelist) {
+        if (modelinfo->model->numfaces == 0) {
+            MakeFaces(bsp, modelinfo, modelinfo->model, skipwindings);
         }
     }
 

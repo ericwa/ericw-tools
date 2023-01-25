@@ -555,3 +555,26 @@ TEST_CASE("q2_light_sun" * doctest::may_fail()) {
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{128, 0, 0});
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{-128, 0, 0});
 }
+
+TEST_CASE("q2_light_origin_brush_shadow" * doctest::may_fail()) {
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_origin_brush_shadow.map", {});
+
+    const qvec3d under_shadow_bmodel {-320, 176, 0};
+    const qvec3d under_nonshadow_bmodel {-432, 176, 0};
+
+    const qvec3d under_nodraw_shadow_bmodel = under_shadow_bmodel - qvec3d(0, 96, 0);
+    const qvec3d under_nodraw_nonshadow_bmodel = under_nonshadow_bmodel - qvec3d(0, 96, 0);
+
+    const qvec3d at_origin {0, 0, 0};
+
+    INFO("ensure expected shadow");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, under_shadow_bmodel);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, under_nodraw_shadow_bmodel);
+
+    INFO("ensure no spurious shadow under non-_shadow 1 bmodel");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, under_nonshadow_bmodel);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, under_nodraw_nonshadow_bmodel);
+
+    INFO("ensure no spurious shadow at the world origin (would happen if we didn't apply model offset)");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, at_origin);
+}
