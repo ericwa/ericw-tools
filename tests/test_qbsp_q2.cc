@@ -629,3 +629,10 @@ TEST_CASE("q2_ladder" * doctest::test_suite("testmaps_q2"))
     CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
     CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, leaf).at(0)->contents);
 }
+
+TEST_CASE("q2_hint_missing_faces" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_hint_missing_faces.map");
+
+    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {36, 144, 30}));
+}
