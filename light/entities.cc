@@ -362,7 +362,7 @@ static void AddSun(const settings::worldspawn_keys &cfg, const qvec3d &sunvec, v
 
     // add to list
     sun_t &sun = all_suns.emplace_back();
-    sun.sunvec = qv::normalize(sunvec);
+    sun.sunvec = qv::normalize(sunvec) * -16384;
     sun.sunlight = light;
     sun.sunlight_color = color;
     sun.anglescale = sun_anglescale;
