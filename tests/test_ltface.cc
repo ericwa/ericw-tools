@@ -480,8 +480,7 @@ TEST_CASE("light channel mask / dirt interaction") {
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {19, 19, 19}, {1236, 1308, 960});
 }
 
-// FIXME: figure out why this is failing on CI only
-TEST_CASE("surface lights minlight" * doctest::may_fail()) {
+TEST_CASE("surface lights minlight") {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_surflight_minlight.map", {});
 
     {
@@ -532,8 +531,7 @@ TEST_CASE("q2_light_cone") {
     CheckSpotCutoff(bsp, {1236, 1472, 952});
 }
 
-// FIXME: figure out why this is failing on CI only
-TEST_CASE("q2_light_sunlight_default_mangle" * doctest::may_fail()) {
+TEST_CASE("q2_light_sunlight_default_mangle") {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sunlight_default_mangle.map", {});
 
     INFO("sunlight should be shining directly down if unspecified");
@@ -544,8 +542,7 @@ TEST_CASE("q2_light_sunlight_default_mangle" * doctest::may_fail()) {
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{-48, 0, 0});
 }
 
-// FIXME: figure out why this is failing on CI only
-TEST_CASE("q2_light_sun" * doctest::may_fail()) {
+TEST_CASE("q2_light_sun") {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sun.map", {});
 
     INFO("sun entity shines at target");
@@ -556,7 +553,7 @@ TEST_CASE("q2_light_sun" * doctest::may_fail()) {
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{-128, 0, 0});
 }
 
-TEST_CASE("q2_light_origin_brush_shadow" * doctest::may_fail()) {
+TEST_CASE("q2_light_origin_brush_shadow") {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_origin_brush_shadow.map", {});
 
     const qvec3d under_shadow_bmodel {-320, 176, 0};
