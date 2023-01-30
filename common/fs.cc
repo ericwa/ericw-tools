@@ -298,7 +298,10 @@ resolve_result where(const path &p, bool prefer_loose)
     for (int32_t pass = 0; pass < 2; pass++) {
         if (prefer_loose != !!pass) {
             // check absolute + relative
-            if (exists(p)) {
+
+            // !is_directory() is a hack to avoid picking up a dir called "light"
+            // when requesting a texture called "light" (was happening on CI)
+            if (exists(p) && !is_directory(p)) {
                 return {absrel_dir, p};
             }
         } else if (!p.is_absolute()) { // absolute doesn't make sense for other load types
