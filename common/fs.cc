@@ -48,11 +48,16 @@ struct directory_archive : archive_like
             return std::nullopt;
         }
 
-        uintmax_t size = file_size(p);
-        std::ifstream stream(p, std::ios_base::in | std::ios_base::binary);
-        std::vector<uint8_t> data(size);
-        stream.read(reinterpret_cast<char *>(data.data()), size);
-        return data;
+        try {
+            uintmax_t size = file_size(p);
+            std::ifstream stream(p, std::ios_base::in | std::ios_base::binary);
+            std::vector<uint8_t> data(size);
+            stream.read(reinterpret_cast<char *>(data.data()), size);
+            return data;
+        } catch (const filesystem_error &e) {
+            logging::funcprint("WARNING: {}\n", e.what());
+            return std::nullopt;
+        }
     }
 };
 
