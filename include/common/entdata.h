@@ -78,5 +78,7 @@ void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector);
  * ==================
  */
 std::vector<entdict_t> EntData_Parse(parser_t &parser);
+struct mbsp_t;
+std::vector<entdict_t> EntData_Parse(const mbsp_t &bsp);
 
 std::string EntData_Write(const std::vector<entdict_t> &ents);

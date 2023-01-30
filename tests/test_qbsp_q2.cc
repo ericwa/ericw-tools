@@ -210,8 +210,7 @@ TEST_CASE("areaportal" * doctest::test_suite("testmaps_q2"))
     CHECK(0 == void_leaf->area); // a solid leaf gets the invalid area
 
     // check the func_areaportal entity had its "style" set
-    parser_t parser(bsp.dentdata, { "qbsp_q2_areaportal.bsp" });
-    auto ents = EntData_Parse(parser);
+    auto ents = EntData_Parse(bsp);
     auto it = std::find_if(ents.begin(), ents.end(),
         [](const entdict_t &dict) { return dict.get("classname") == "func_areaportal"; });
 

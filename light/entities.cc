@@ -866,10 +866,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
     logging::funcheader();
 
-    {
-        parser_t parser{bsp->dentdata, { bsp->file.string() }};
-        entdicts = EntData_Parse(parser);
-    }
+    entdicts = EntData_Parse(*bsp);
 
     // Make warnings
     for (auto &entdict : entdicts) {

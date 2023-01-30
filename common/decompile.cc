@@ -1294,8 +1294,7 @@ static void DecompileEntity(
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file)
 {
-    parser_t parser{bsp->dentdata, { bsp->file.string() }};
-    auto entdicts = EntData_Parse(parser);
+    auto entdicts = EntData_Parse(*bsp);
 
     for (size_t i = 0; i < entdicts.size(); ++i) {
         // entity 0 is implicitly worldspawn (model 0)

@@ -1434,8 +1434,7 @@ static void LoadTextures(const mbsp_t *bsp)
 
     // gather textures used by _project_texture.
     // FIXME: I'm sure we can resolve this so we don't parse entdata twice.
-    parser_t parser{bsp->dentdata, { bsp->file.string() }};
-    auto entdicts = EntData_Parse(parser);
+    auto entdicts = EntData_Parse(*bsp);
     for (auto &entdict : entdicts) {
         if (entdict.get("classname").find("light") == 0) {
             const auto &tex = entdict.get("_project_texture");

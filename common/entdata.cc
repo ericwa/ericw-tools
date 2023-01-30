@@ -204,6 +204,12 @@ std::vector<entdict_t> EntData_Parse(parser_t &parser)
     return result;
 }
 
+std::vector<entdict_t> EntData_Parse(const mbsp_t &bsp)
+{
+    parser_t parser{bsp.dentdata, { bsp.file.string() }};
+    return EntData_Parse(parser);
+}
+
 /*
  * ================
  * EntData_Write

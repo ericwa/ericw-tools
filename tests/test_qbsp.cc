@@ -1011,8 +1011,7 @@ TEST_CASE("origin" * doctest::test_suite("testmaps_q1"))
             REQUIRE(qvec3f(0, 0, 0) == bsp.dmodels[1].origin);
 
             // check that the origin brush updated the entity lump
-            parser_t parser(bsp.dentdata, {"qbsp_origin.bsp"});
-            auto ents = EntData_Parse(parser);
+            auto ents = EntData_Parse(bsp);
             auto it = std::find_if(ents.begin(), ents.end(),
                 [](const entdict_t &dict) -> bool { return dict.get("classname") == "rotate_object"; });
 
@@ -1381,8 +1380,7 @@ TEST_CASE("q1_merge_maps" * doctest::test_suite("testmaps_q1")) {
     REQUIRE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-5,0,16}, {0, 0, 1}));
 
     // check that the worldspawn keys from the base map are used
-    parser_t parser(bsp.dentdata, { "q1_merge_maps_base.bsp" });
-    auto ents = EntData_Parse(parser);
+    auto ents = EntData_Parse(bsp);
     REQUIRE(ents.size() == 3); // worldspawn, info_player_start, func_wall
 
     REQUIRE(ents[0].get("classname") == "worldspawn");
