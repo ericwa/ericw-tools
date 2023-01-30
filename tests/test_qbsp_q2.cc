@@ -635,3 +635,21 @@ TEST_CASE("q2_hint_missing_faces" * doctest::test_suite("testmaps_q2") * doctest
 
     CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {36, 144, 30}));
 }
+
+TEST_CASE("q2_tb_cleanup" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_tb_cleanup.map");
+
+    {
+        INFO("check that __TB_empty was converted to skip");
+        CHECK(nullptr == BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}));
+    }
+
+    {
+        auto ents = EntData_Parse(bsp);
+
+        REQUIRE(ents.size() == 2);
+        INFO("check that _tb_textures was stripped out");
+        CHECK(entdict_t{{"classname", "worldspawn"}} == ents[0]);
+    }
+}

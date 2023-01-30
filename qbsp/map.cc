@@ -459,6 +459,8 @@ static bool IsSkipName(const char *name)
         return true;
     if (!Q_strcasecmp(name, "null")) // zhlt compat
         return true;
+    if (!Q_strcasecmp(name, "__TB_empty"))
+        return true;
     return false;
 }
 
@@ -3287,6 +3289,11 @@ void WriteEntitiesToString()
         map.bsp.dentdata += "{\n";
 
         for (auto &ep : entity.epairs) {
+            if (ep.first.starts_with("_tb_")) {
+                // Remove TrenchBroom keys. _tb_textures tends to be long and can crash vanilla clients.
+                // generally, these are mapper metadata and unwanted in the .bsp.
+                continue;
+            }
 
             if (ep.first.size() >= qbsp_options.target_game->max_entity_key - 1) {
                 logging::print("WARNING: {} at {} has long key {} (length {} >= {})\n", entity.epairs.get("classname"),

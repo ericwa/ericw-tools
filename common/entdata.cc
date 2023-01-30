@@ -182,6 +182,11 @@ void entdict_t::parse(parser_base_t &parser)
     }
 }
 
+bool entdict_t::operator==(const entdict_t& other) const
+{
+    return this->keyvalues == other.keyvalues;
+}
+
 void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector)
 {
     /* go through all the entities */

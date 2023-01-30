@@ -68,6 +68,9 @@ public:
     // the parser must be at a position where { is
     // the next token parsed.
     void parse(parser_base_t &parser);
+
+    // order-sensitive
+    bool operator==(const entdict_t& other) const;
 };
 
 void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector);
