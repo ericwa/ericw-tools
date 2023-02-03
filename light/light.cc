@@ -905,11 +905,6 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     });
 
     if (bouncerequired && !light_options.nolighting.value()) {
-        GetLights().clear();
-        GetRadLights().clear();
-        GetSuns().clear();
-        GetSurfaceLights().clear();
-
         MakeBounceLights(light_options, &bsp);
 
         logging::header("Indirect Lighting"); // mxd
