@@ -383,6 +383,7 @@ public:
     setting_int32 facestyles;
     setting_bool exportobj;
     setting_int32 lmshift;
+    setting_bool lightgrid;
 
     setting_func dirtdebug;
     setting_func bouncedebug;

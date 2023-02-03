@@ -816,9 +816,15 @@ vec_t GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity,
 }
 
 static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3d &surfnorm,
-    const qvec3d &surfpointToLightDir, float dist, bool twosided)
+    bool use_surfnorm, const qvec3d &surfpointToLightDir, float dist, bool twosided)
 {
-    vec_t angle = qv::dot(surfpointToLightDir, surfnorm);
+    vec_t angle;
+    if (use_surfnorm) {
+        angle = qv::dot(surfpointToLightDir, surfnorm);
+    } else {
+        angle = 1.0f;
+    }
+
     if (entity->bleed.value() || twosided) {
         if (angle < 0) {
             angle = -angle; // ericw -- support "_bleed" option
@@ -919,7 +925,7 @@ static bool LightFace_SampleMipTex(
 }
 
 static void GetLightContrib(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3d &surfnorm,
-    const qvec3d &surfpoint, bool twosided, qvec3f &color_out, qvec3d &surfpointToLightDir_out,
+    bool use_surfnorm, const qvec3d &surfpoint, bool twosided, qvec3f &color_out, qvec3d &surfpointToLightDir_out,
     qvec3d &normalmap_addition_out, float *dist_out)
 {
     float dist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir_out);
@@ -929,7 +935,7 @@ static void GetLightContrib(const settings::worldspawn_keys &cfg, const light_t 
         dist = 0.1f;
         surfpointToLightDir_out = {0, 0, 1};
     }
-    const float add = GetLightValueWithAngle(cfg, entity, surfnorm, surfpointToLightDir_out, dist, twosided);
+    const float add = GetLightValueWithAngle(cfg, entity, surfnorm, use_surfnorm, surfpointToLightDir_out, dist, twosided);
 
     /* write out the final color */
     if (entity->projectedmip) {
@@ -1180,7 +1186,7 @@ static void LightFace_Entity(
         qvec3f color;
         qvec3d normalcontrib;
 
-        GetLightContrib(cfg, entity, surfnorm, surfpoint, lightsurf->twosided, color, surfpointToLightDir,
+        GetLightContrib(cfg, entity, surfnorm, true, surfpoint, lightsurf->twosided, color, surfpointToLightDir,
             normalcontrib, &surfpointToLightDist);
 
         const float occlusion =
@@ -1240,6 +1246,45 @@ static void LightFace_Entity(
         sample.direction += rs.getPushedRayNormalContrib(j);
 
         Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
+    }
+}
+
+/**
+ * Calculates light at a given point from an entity
+ */
+static void LightPoint_Entity(
+    const mbsp_t *bsp, raystream_occlusion_t &rs, const light_t *entity, const qvec3d &surfpoint, qvec3d &result)
+{
+    if (entity->style.value() != 0)
+        return; // not doing style lightgrid for now
+
+    rs.clearPushedRays();
+
+    qvec3d surfpointToLightDir;
+    float surfpointToLightDist;
+    qvec3f color;
+    qvec3d normalcontrib;
+
+    GetLightContrib(light_options, entity, {0,0,0}, false, surfpoint, false, color, surfpointToLightDir,
+        normalcontrib, &surfpointToLightDist);
+
+    /* Quick distance check first */
+    if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
+        return;
+    }
+
+    rs.pushRay(0, surfpoint, surfpointToLightDir, surfpointToLightDist, &color, &normalcontrib);
+
+    rs.tracePushedRaysOcclusion(nullptr, CHANNEL_MASK_DEFAULT);
+
+    // add result
+    const int N = rs.numPushedRays();
+    for (int j = 0; j < N; j++) {
+        if (rs.getPushedRayOccluded(j)) {
+            continue;
+        }
+
+        result += rs.getPushedRayColor(j);
     }
 }
 
@@ -1353,6 +1398,49 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
         total_light_ray_hits++;
 
         Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
+    }
+}
+
+static void LightPoint_Sky(
+    const mbsp_t *bsp, raystream_intersection_t &rs, const sun_t *sun, const qvec3d &surfpoint, qvec3d &result)
+{
+    if (sun->style != 0)
+        return; // not doing style lightgrid for now
+
+    // FIXME: Normalized sun vector should be stored in the sun_t. Also clarify which way the vector points (towards or
+    // away..)
+    // FIXME: Much of this is copied/pasted from LightFace_Entity, should probably be merged
+    qvec3d incoming = qv::normalize(sun->sunvec);
+
+    rs.clearPushedRays();
+
+    // only 1 ray
+    {
+        float value = sun->sunlight;
+        qvec3f color = sun->sunlight_color * (value / 255.0);
+
+        /* Quick distance check first */
+        if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
+            return;
+        }
+
+        qvec3d normalcontrib{}; // unused
+
+        rs.pushRay(0, surfpoint, incoming, MAX_SKY_DIST, &color, &normalcontrib);
+    }
+
+    // We need to check if the first hit face is a sky face, so we need
+    // to test intersection (not occlusion)
+    rs.tracePushedRaysIntersection(nullptr, CHANNEL_MASK_DEFAULT);
+
+    // add result
+    const int N = rs.numPushedRays();
+    for (int j = 0; j < N; j++) {
+        if (rs.getPushedRayHitType(j) != hittype_t::SKY) {
+            continue;
+        }
+
+        result += rs.getPushedRayColor(j);
     }
 }
 
@@ -1660,14 +1748,14 @@ inline qvec3f SurfaceLight_ColorAtDist(
 // dir: vpl -> sample point direction
 // mxd. returns color in [0,255]
 inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t *vpl, const qvec3f &dir,
-    const float dist, const qvec3f &normal, const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp)
+    const float dist, const qvec3f &normal, bool use_normal, const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp)
 {
     qvec3f result;
     float dotProductFactor = 1.0f;
 
     float dp1 = qv::dot(vpl->surfnormal, dir);
     const qvec3f sp_vpl = dir * -1.0f;
-    float dp2 = qv::dot(sp_vpl, normal);
+    float dp2 = use_normal ? qv::dot(sp_vpl, normal) : 1.0f;
 
     if (!vpl->omnidirectional) {
         if (dp1 < -LIGHT_ANGLE_EPSILON)
@@ -1756,7 +1844,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 else
                     dir /= dist;
 
-                const qvec3f indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal, standard_scale, sky_scale, hotspot_clamp);
+                const qvec3f indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, lightsurf_normal, true, standard_scale, sky_scale, hotspot_clamp);
                 if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(i, pos, dir, dist, &indirect);
                 }
@@ -1796,6 +1884,54 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
             // If surface light contributed anything, save.
             if (hit)
                 Lightmap_Save(lightmaps, lightsurf, lightmap, lightmapstyle);
+        }
+    }
+}
+
+static void // mxd
+LightPoint_SurfaceLight(const mbsp_t *bsp, raystream_occlusion_t &rs, const std::vector<surfacelight_t> &surface_lights,
+    const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp, const qvec3d &surfpoint, qvec3d &result)
+{
+    const settings::worldspawn_keys &cfg = light_options;
+    const float surflight_gate = 0.01f;
+
+    for (const surfacelight_t &vpl : surface_lights) {
+        for (int c = 0; c < vpl.points.size(); c++) {
+            rs.clearPushedRays();
+
+            // 1 ray
+            {
+                qvec3f pos = vpl.points[c];
+                qvec3f dir = surfpoint - pos;
+                float dist = qv::length(dir);
+
+                if (dist == 0.0f)
+                    dir = {0, 0, 1};
+                else
+                    dir /= dist;
+
+                const qvec3f indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, {0,0,0}, false, standard_scale, sky_scale, hotspot_clamp);
+                if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
+                    rs.pushRay(0, pos, dir, dist, &indirect);
+                }
+            }
+
+            if (!rs.numPushedRays())
+                continue;
+
+            rs.tracePushedRaysOcclusion(nullptr, CHANNEL_MASK_DEFAULT);
+
+            const int numrays = rs.numPushedRays();
+            for (int j = 0; j < numrays; j++) {
+                if (rs.getPushedRayOccluded(j))
+                    continue;
+
+                qvec3f indirect = rs.getPushedRayColor(j);
+
+                Q_assert(!std::isnan(indirect[0]));
+
+                result += indirect;
+            }
         }
     }
 }
@@ -3016,6 +3152,78 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
             LightFace_SurfaceLight(bsp, &lightsurf, lightmaps, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f);
         }
     }
+}
+
+// lightgrid
+
+qvec3d CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point)
+{
+    // TODO: use more than 1 ray for better performance
+    raystream_occlusion_t rs(1);
+    raystream_intersection_t rsi(1);
+
+    auto &cfg = light_options;
+
+    qvec3d result {0, 0, 0};
+
+    // from DirectLightFace
+
+    /*
+     * The lighting procedure is: cast all positive lights, fix
+     * minlight levels, then cast all negative lights. Finally, we
+     * clamp any values that may have gone negative.
+     */
+
+    /* positive lights */
+    for (const auto &entity : GetLights()) {
+        if (entity->getFormula() == LF_LOCALMIN)
+            continue;
+        if (entity->nostaticlight.value())
+            continue;
+        if (entity->light.value() > 0)
+            LightPoint_Entity(bsp, rs, entity.get(), world_point, result);
+    }
+
+    for (const sun_t &sun : GetSuns())
+        if (sun.sunlight > 0)
+            LightPoint_Sky(bsp, rsi, &sun, world_point, result);
+
+    // mxd. Add surface lights...
+    // FIXME: negative surface lights
+    LightPoint_SurfaceLight(bsp, rs, GetSurfaceLights(), cfg.surflightscale.value(), cfg.surflightskyscale.value(), 16.0f, world_point, result);
+
+#if 0
+    // FIXME: port to lightgrid
+    float minlight = cfg.minlight.value();
+    qvec3d minlight_color = cfg.minlight_color.value();
+
+    if (minlight) {
+        LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, 0);
+    }
+
+    LightFace_LocalMin(bsp, face, &lightsurf, lightmaps);
+#endif
+
+    /* negative lights */
+    for (const auto &entity : GetLights()) {
+        if (entity->getFormula() == LF_LOCALMIN)
+            continue;
+        if (entity->nostaticlight.value())
+            continue;
+        if (entity->light.value() < 0)
+            LightPoint_Entity(bsp, rs, entity.get(), world_point, result);
+    }
+    for (const sun_t &sun : GetSuns())
+        if (sun.sunlight < 0)
+            LightPoint_Sky(bsp, rsi, &sun, world_point, result);
+
+    // from IndirectLightFace
+
+    /* add bounce lighting */
+    // note: scale here is just to keep it close-ish to the old code
+    LightPoint_SurfaceLight(bsp, rs, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f, world_point, result);
+
+    return result;
 }
 
 void ResetLtFace()

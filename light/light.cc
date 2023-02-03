@@ -35,6 +35,7 @@
 #include <common/fs.hh>
 #include <common/imglib.hh>
 #include <common/parallel.hh>
+#include <tbb/blocked_range3d.h>
 
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
 #include <xmmintrin.h>
@@ -314,6 +315,8 @@ light_settings::light_settings()
       exportobj{this, "exportobj", false, &output_group, "export an .OBJ for inspection"},
       lmshift{this, "lmshift", 4, &output_group,
           "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."},
+      lightgrid{this, "lightgrid", false, &experimental_group, "experimental LIGHTGRID bspx lump"},
+
       dirtdebug{this, {"dirtdebug", "debugdirt"},
           [&](source) {
               CheckNoDebugModeSet();
@@ -1042,6 +1045,51 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     }
 }
 
+static void LightGrid(bspdata_t *bspdata)
+{
+    if (!light_options.lightgrid.value())
+        return;
+
+    logging::funcheader();
+
+    auto &bsp = std::get<mbsp_t>(bspdata->bsp);
+    auto world_size = bsp.dmodels[0].maxs - bsp.dmodels[0].mins;
+
+    constexpr int GRIDSIZE = 64;
+
+    std::vector<uint8_t> grid_result;
+    grid_result.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE * 3);
+
+    tbb::parallel_for(tbb::blocked_range3d<int>(0, GRIDSIZE, 0, GRIDSIZE, 0, GRIDSIZE),
+        [&](const tbb::blocked_range3d<int>& range) {
+            const auto &z_range = range.pages();
+            const auto &y_range = range.rows();
+            const auto &x_range = range.cols();
+
+            for (int z = z_range.begin(); z < z_range.end(); ++z) {
+                for (int y = y_range.begin(); y < y_range.end(); ++y) {
+                    for (int x = x_range.begin(); x < x_range.end(); ++x) {
+                        double max_grid_coord = GRIDSIZE - 1;
+                        qvec3d world_point = bsp.dmodels[0].mins + (world_size * qvec3d{x / max_grid_coord,
+                                                                                     y / max_grid_coord,
+                                                                                     z / max_grid_coord});
+
+                        qvec3d color = CalcLightgridAtPoint(&bsp, world_point);
+
+                        int sample_index = (GRIDSIZE * GRIDSIZE * z) + (GRIDSIZE * y) + x;
+
+                        grid_result[sample_index * 3] = clamp((int)color[0], 0, 255);
+                        grid_result[sample_index * 3 + 1] = clamp((int)color[1], 0, 255);
+                        grid_result[sample_index * 3 + 2] = clamp((int)color[2], 0, 255);
+                    }
+                }
+            }
+        });
+
+    // non-final, experimental lump
+    bspdata->bspx.transfer("LIGHTGRID", std::move(grid_result));
+}
+
 static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp)
 {
     // always create the zero'ed array
@@ -1675,6 +1723,8 @@ int light_main(int argc, const char **argv)
         SetupDirt(light_options);
 
         LightWorld(&bspdata, light_options.lightmap_scale.isChanged());
+
+        LightGrid(&bspdata);
 
         // invalidate normals
         bspdata.bspx.entries.erase("FACENORMALS");
