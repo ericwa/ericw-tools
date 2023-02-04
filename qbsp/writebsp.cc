@@ -438,19 +438,9 @@ static void WriteBSPFile()
         bspdata.bspx.transfer("BRUSHLIST", map.exported_bspxbrushes);
     }
 
-    // Formats with 16-bit marksurfaces/leaffaces have two subformats:
-    //  - the vanilla format with int16_t face indices (imposing a limit of 32768 faces)
-    //  - an extended format with uint6_t face indices
-    //
-    // We don't model these as separate bspversion_t's, but this check allows -noallowupgrade
-    // to force the vanilla format.
-    if (Is16BitMarkfsurfaceFormat(qbsp_options.target_version)) {
-        const size_t faces = std::get<mbsp_t>(bspdata.bsp).dfaces.size();
-        if (!qbsp_options.allow_upgrade.value() && faces > 32768) {
-            FError("{} faces requires an extended-limits BSP, but allow_upgrade was disabled", faces);
-        }
-    }
+    const size_t num_faces = std::get<mbsp_t>(bspdata.bsp).dfaces.size();
 
+    // convert to output format
     if (!ConvertBSPFormat(&bspdata, qbsp_options.target_version)) {
         const bspversion_t *extendedLimitsFormat = qbsp_options.target_version->extended_limits;
 
@@ -464,6 +454,21 @@ static void WriteBSPFile()
             extendedLimitsFormat->name);
 
         Q_assert(ConvertBSPFormat(&bspdata, extendedLimitsFormat));
+    }
+
+    // Formats with 16-bit marksurfaces/leaffaces have two subformats:
+    //  - the vanilla format with int16_t face indices (imposing a limit of 32768 faces)
+    //  - an extended format with uint6_t face indices
+    //
+    // We don't model these as separate bspversion_t's, but this check allows -noallowupgrade
+    // to force the vanilla format.
+    if (Is16BitMarkfsurfaceFormat(bspdata.version) && num_faces > 32768) {
+        if (!qbsp_options.allow_upgrade.value()) {
+            FError("{} faces requires an extended-limits BSP, but allow_upgrade was disabled", num_faces);
+        } else {
+            logging::print("WARNING: {} faces requires unsigned marksurfaces, which is not supported by all "
+                           "engines. Recompile with -bsp2 if targeting ezQuake.\n", num_faces);
+        }
     }
 
     qbsp_options.bsp_path.replace_extension("bsp");
