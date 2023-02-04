@@ -1806,6 +1806,8 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
         dotProductFactor = dp2;
     }
 
+    dotProductFactor = max(0.0f, dotProductFactor);
+
     // Get light contribution
     result = SurfaceLight_ColorAtDist(cfg, vpl->omnidirectional ? sky_scale : standard_scale, vpl->intensity, vpl->color, dist, hotspot_clamp);
 
