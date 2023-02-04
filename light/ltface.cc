@@ -1262,18 +1262,31 @@ static void LightPoint_Entity(
 
     qvec3d surfpointToLightDir;
     float surfpointToLightDist;
-    qvec3f color;
-    qvec3d normalcontrib;
+    qvec3f color{};
 
-    GetLightContrib(light_options, entity, {0,0,0}, false, surfpoint, false, color, surfpointToLightDir,
-        normalcontrib, &surfpointToLightDist);
+    for (int axis = 0; axis < 3; ++axis) {
+        for (int sign = -1; sign <= +1; sign += 2) {
+
+            qvec3f cube_color;
+
+            qvec3f cube_normal{};
+            cube_normal[axis] = sign;
+
+            qvec3d normalcontrib_unused;
+
+            GetLightContrib(light_options, entity, cube_normal, true, surfpoint, false, cube_color, surfpointToLightDir,
+                normalcontrib_unused, &surfpointToLightDist);
+
+            color += cube_color / 6.0;
+        }
+    }
 
     /* Quick distance check first */
     if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
         return;
     }
 
-    rs.pushRay(0, surfpoint, surfpointToLightDir, surfpointToLightDist, &color, &normalcontrib);
+    rs.pushRay(0, surfpoint, surfpointToLightDir, surfpointToLightDist, &color);
 
     rs.tracePushedRaysOcclusion(nullptr, CHANNEL_MASK_DEFAULT);
 
@@ -1416,8 +1429,26 @@ static void LightPoint_Sky(
 
     // only 1 ray
     {
-        float value = sun->sunlight;
-        qvec3f color = sun->sunlight_color * (value / 255.0);
+        qvec3f color {};
+
+        for (int axis = 0; axis < 3; ++axis) {
+            for (int sign = -1; sign <= +1; sign += 2) {
+
+                qvec3f cube_color;
+
+                qvec3f cube_normal{};
+                cube_normal[axis] = sign;
+
+                vec_t angle = qv::dot(incoming, cube_normal);
+                angle = max(0.0, angle);
+                angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
+
+                float value = angle * sun->sunlight;
+                cube_color = sun->sunlight_color * (value / 255.0);
+
+                color += cube_color / 6;
+            }
+        }
 
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
@@ -1910,7 +1941,22 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, raystream_occlusion_t &rs, const std:
                 else
                     dir /= dist;
 
-                const qvec3f indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, {0,0,0}, false, standard_scale, sky_scale, hotspot_clamp);
+                qvec3f indirect{};
+
+                for (int axis = 0; axis < 3; ++axis) {
+                    for (int sign = -1; sign <= +1; sign += 2) {
+
+                        qvec3f cube_color;
+
+                        qvec3f cube_normal{};
+                        cube_normal[axis] = sign;
+
+                        cube_color = GetSurfaceLighting(cfg, &vpl, dir, dist, cube_normal, true, standard_scale, sky_scale, hotspot_clamp);
+
+                        indirect += cube_color / 6.0;
+                    }
+                }
+
                 if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(0, pos, dir, dist, &indirect);
                 }
