@@ -1619,3 +1619,29 @@ TEST_CASE("BrushFromBounds") {
     }
     CHECK(found == 2);
 }
+
+TEST_CASE("q1_water_subdivision with lit water off") {
+    INFO("-litwater 0 should suppress water subdivision");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_water_subdivision.map", {"-litwater", "0"});
+
+    auto faces = FacesWithTextureName(bsp, "*swater5");
+    CHECK(2 == faces.size());
+
+    for (auto* face : faces) {
+        auto *texinfo = BSP_GetTexinfo(&bsp, face->texinfo);
+        CHECK(texinfo->flags.native == TEX_SPECIAL);
+    }
+}
+
+TEST_CASE("q1_water_subdivision with defaults") {
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_water_subdivision.map");
+
+    auto faces = FacesWithTextureName(bsp, "*swater5");
+    CHECK(faces.size() > 2);
+
+    for (auto* face : faces) {
+        auto *texinfo = BSP_GetTexinfo(&bsp, face->texinfo);
+        CHECK(texinfo->flags.native == 0);
+    }
+}
