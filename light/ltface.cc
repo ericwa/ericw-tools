@@ -2215,6 +2215,46 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
     }
 }
 
+/**
+ * Same as above LightFace_ScaleAndClamp, but for lightgrid
+ * TODO: share code with above
+ */
+inline void LightPoint_ScaleAndClamp(qvec3d &color)
+{
+    const settings::worldspawn_keys &cfg = light_options;
+
+    /* Fix any negative values */
+    color = qv::max(color, {0});
+
+    // before any other scaling, apply maxlight
+    if (cfg.maxlight.value()) {
+        vec_t maxcolor = qv::max(color);
+        // FIXME: for colored lighting, this doesn't seem to generate the right values...
+        vec_t maxval = cfg.maxlight.value() * 2.0;
+
+        if (maxcolor > maxval) {
+            color *= (maxval / maxcolor);
+        }
+    }
+
+    /* Scale and handle gamma adjustment */
+    color *= cfg.rangescale.value();
+
+    if (cfg.lightmapgamma.value() != 1.0) {
+        for (auto &c : color) {
+            c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+        }
+    }
+
+    // clamp
+    // FIXME: should this be a brightness clamp?
+    vec_t maxcolor = qv::max(color);
+
+    if (maxcolor > 255.0) {
+        color *= (255.0 / maxcolor);
+    }
+}
+
 void FinishLightmapSurface(const mbsp_t *bsp, lightsurf_t *lightsurf)
 {
     /* Apply gamma, rangescale, and clamp */
@@ -3222,6 +3262,8 @@ qvec3d CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point)
     /* add bounce lighting */
     // note: scale here is just to keep it close-ish to the old code
     LightPoint_SurfaceLight(bsp, rs, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f, world_point, result);
+
+    LightPoint_ScaleAndClamp(result);
 
     return result;
 }
