@@ -1040,6 +1040,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     }
 }
 
+static std::vector<uint8_t> StringToVector(const std::string &str)
+{
+    std::vector<uint8_t> result(str.begin(), str.end());
+    return result;
+}
+
 static void LightGrid(bspdata_t *bspdata)
 {
     if (!light_options.lightgrid.value())
@@ -1051,9 +1057,20 @@ static void LightGrid(bspdata_t *bspdata)
     auto world_size = bsp.dmodels[0].maxs - bsp.dmodels[0].mins;
 
     constexpr int GRIDSIZE = 64;
+    constexpr double max_grid_coord = GRIDSIZE - 1;
+
+    // distance between consecutive points
+    const qvec3f grid_dist = world_size * qvec3d(1.0 / max_grid_coord);
+    // number of grid points on each axis
+    const qvec3i grid_size = {GRIDSIZE, GRIDSIZE, GRIDSIZE};
+    const qvec3f grid_mins = bsp.dmodels[0].mins;
+    const uint8_t num_styles = 1;
 
     std::vector<uint8_t> grid_result;
     grid_result.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE * 3);
+
+    std::vector<uint8_t> occlusion;
+    occlusion.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE);
 
     tbb::parallel_for(tbb::blocked_range3d<int>(0, GRIDSIZE, 0, GRIDSIZE, 0, GRIDSIZE),
         [&](const tbb::blocked_range3d<int>& range) {
@@ -1064,25 +1081,57 @@ static void LightGrid(bspdata_t *bspdata)
             for (int z = z_range.begin(); z < z_range.end(); ++z) {
                 for (int y = y_range.begin(); y < y_range.end(); ++y) {
                     for (int x = x_range.begin(); x < x_range.end(); ++x) {
-                        double max_grid_coord = GRIDSIZE - 1;
-                        qvec3d world_point = bsp.dmodels[0].mins + (world_size * qvec3d{x / max_grid_coord,
-                                                                                     y / max_grid_coord,
-                                                                                     z / max_grid_coord});
+
+                        qvec3d world_point = grid_mins + (qvec3d{x,y,z} * grid_dist);
 
                         qvec3d color = CalcLightgridAtPoint(&bsp, world_point);
+                        bool occluded = Light_PointInWorld(&bsp, world_point);
 
                         int sample_index = (GRIDSIZE * GRIDSIZE * z) + (GRIDSIZE * y) + x;
 
                         grid_result[sample_index * 3] = clamp((int)color[0], 0, 255);
                         grid_result[sample_index * 3 + 1] = clamp((int)color[1], 0, 255);
                         grid_result[sample_index * 3 + 2] = clamp((int)color[2], 0, 255);
+
+                        occlusion[sample_index] = occluded;
                     }
                 }
             }
         });
 
     // non-final, experimental lump
-    bspdata->bspx.transfer("LIGHTGRID", std::move(grid_result));
+    std::ostringstream str(std::ios_base::out | std::ios_base::binary);
+    str << endianness<std::endian::little>;
+    str <= grid_dist;
+    str <= grid_size;
+    str <= grid_mins;
+    str <= num_styles;
+
+    // color data 3D array
+    for (uint8_t byte : grid_result) {
+        str <= byte;
+    }
+
+    // occlusion 3D array
+    {
+        std::vector<uint8_t> occlusion_bitarray;
+        occlusion_bitarray.resize(
+            static_cast<size_t>(ceil(GRIDSIZE * GRIDSIZE * GRIDSIZE / 8.0)));
+
+        // transfer bytes to bits
+        for (int i = 0; i < occlusion.size(); ++i) {
+            if (occlusion[i]) {
+                occlusion_bitarray[i / 8] |= 1 << (i % 8);
+            }
+        }
+
+        // add to lump
+        for (uint8_t byte : occlusion_bitarray) {
+            str <= byte;
+        }
+    }
+
+    bspdata->bspx.transfer("LIGHTGRID", StringToVector(str.str()));
 }
 
 static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp)
