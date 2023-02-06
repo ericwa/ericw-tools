@@ -57,5 +57,21 @@ void FinishLightmapSurface(const mbsp_t *bsp, lightsurf_t *lightsurf);
 void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
     const faceextents_t &output_extents);
-qvec3d CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point);
+
+struct lightgrid_sample_t {
+    bool used = false;
+    int style = 0;
+    qvec3d color {};
+
+    qvec3b round_to_int() const;
+};
+
+struct lightgrid_samples_t {
+    std::array<lightgrid_sample_t, 4> samples_by_style;
+
+    void add(const qvec3d &color, int style);
+    int used_styles() const;
+};
+
+lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point);
 void ResetLtFace();

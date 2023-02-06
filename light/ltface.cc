@@ -1253,11 +1253,8 @@ static void LightFace_Entity(
  * Calculates light at a given point from an entity
  */
 static void LightPoint_Entity(
-    const mbsp_t *bsp, raystream_occlusion_t &rs, const light_t *entity, const qvec3d &surfpoint, qvec3d &result)
+    const mbsp_t *bsp, raystream_occlusion_t &rs, const light_t *entity, const qvec3d &surfpoint, lightgrid_samples_t &result)
 {
-    if (entity->style.value() != 0)
-        return; // not doing style lightgrid for now
-
     rs.clearPushedRays();
 
     qvec3d surfpointToLightDir;
@@ -1297,7 +1294,7 @@ static void LightPoint_Entity(
             continue;
         }
 
-        result += rs.getPushedRayColor(j);
+        result.add(rs.getPushedRayColor(j), entity->style.value());
     }
 }
 
@@ -1415,11 +1412,8 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
 }
 
 static void LightPoint_Sky(
-    const mbsp_t *bsp, raystream_intersection_t &rs, const sun_t *sun, const qvec3d &surfpoint, qvec3d &result)
+    const mbsp_t *bsp, raystream_intersection_t &rs, const sun_t *sun, const qvec3d &surfpoint, lightgrid_samples_t &result)
 {
-    if (sun->style != 0)
-        return; // not doing style lightgrid for now
-
     // FIXME: Normalized sun vector should be stored in the sun_t. Also clarify which way the vector points (towards or
     // away..)
     // FIXME: Much of this is copied/pasted from LightFace_Entity, should probably be merged
@@ -1471,7 +1465,7 @@ static void LightPoint_Sky(
             continue;
         }
 
-        result += rs.getPushedRayColor(j);
+        result.add(rs.getPushedRayColor(j), sun->style);
     }
 }
 
@@ -1923,7 +1917,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
 static void // mxd
 LightPoint_SurfaceLight(const mbsp_t *bsp, raystream_occlusion_t &rs, const std::vector<surfacelight_t> &surface_lights,
-    const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp, const qvec3d &surfpoint, qvec3d &result)
+    const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp, const qvec3d &surfpoint, lightgrid_samples_t &result)
 {
     const settings::worldspawn_keys &cfg = light_options;
     const float surflight_gate = 0.01f;
@@ -1978,7 +1972,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, raystream_occlusion_t &rs, const std:
 
                 Q_assert(!std::isnan(indirect[0]));
 
-                result += indirect;
+                result.add(indirect, vpl.style);
             }
         }
     }
@@ -2267,7 +2261,7 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
  * Same as above LightFace_ScaleAndClamp, but for lightgrid
  * TODO: share code with above
  */
-inline void LightPoint_ScaleAndClamp(qvec3d &color)
+static void LightPoint_ScaleAndClamp(qvec3d &color)
 {
     const settings::worldspawn_keys &cfg = light_options;
 
@@ -2300,6 +2294,15 @@ inline void LightPoint_ScaleAndClamp(qvec3d &color)
 
     if (maxcolor > 255.0) {
         color *= (255.0 / maxcolor);
+    }
+}
+
+static void LightPoint_ScaleAndClamp(lightgrid_samples_t &result)
+{
+    for (auto &sample : result.samples_by_style) {
+        if (sample.used) {
+            LightPoint_ScaleAndClamp(sample.color);
+        }
     }
 }
 
@@ -3244,7 +3247,56 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
 
 // lightgrid
 
-qvec3d CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point)
+void lightgrid_samples_t::add(const qvec3d &color, int style)
+{
+    for (auto &sample : samples_by_style) {
+        if (!sample.used) {
+            // allocate new style
+            sample.used = true;
+            sample.style = style;
+            sample.color = color;
+            return;
+        }
+
+        if (sample.style == style) {
+            // found matching style
+            sample.color += color;
+            return;
+        }
+    }
+
+    // uncommon case: all slots are used, but we didn't find a matching style
+    // drop the style with the lowest brightness
+
+    // FIXME: pick lowest brightness
+    logging::print("out of lightstyles\n");
+    samples_by_style[0].style = style;
+    samples_by_style[0].color = color;
+}
+
+qvec3b lightgrid_sample_t::round_to_int() const
+{
+    return qvec3b{
+        clamp((int)round(color[0]), 0, 255),
+        clamp((int)round(color[1]), 0, 255),
+        clamp((int)round(color[2]), 0, 255)
+    };
+}
+
+int lightgrid_samples_t::used_styles() const
+{
+    int used = 0;
+    for (auto &sample : samples_by_style) {
+        if (sample.used) {
+            used++;
+        } else {
+            break;
+        }
+    }
+    return used;
+}
+
+lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point)
 {
     // TODO: use more than 1 ray for better performance
     raystream_occlusion_t rs(1);
@@ -3252,7 +3304,7 @@ qvec3d CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point)
 
     auto &cfg = light_options;
 
-    qvec3d result {0, 0, 0};
+    lightgrid_samples_t result;
 
     // from DirectLightFace
 

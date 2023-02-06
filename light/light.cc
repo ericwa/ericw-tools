@@ -1064,10 +1064,9 @@ static void LightGrid(bspdata_t *bspdata)
     // number of grid points on each axis
     const qvec3i grid_size = {GRIDSIZE, GRIDSIZE, GRIDSIZE};
     const qvec3f grid_mins = bsp.dmodels[0].mins;
-    const uint8_t num_styles = 1;
 
-    std::vector<uint8_t> grid_result;
-    grid_result.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE * 3);
+    std::vector<lightgrid_samples_t> grid_result;
+    grid_result.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE);
 
     std::vector<uint8_t> occlusion;
     occlusion.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE);
@@ -1081,23 +1080,41 @@ static void LightGrid(bspdata_t *bspdata)
             for (int z = z_range.begin(); z < z_range.end(); ++z) {
                 for (int y = y_range.begin(); y < y_range.end(); ++y) {
                     for (int x = x_range.begin(); x < x_range.end(); ++x) {
-
                         qvec3d world_point = grid_mins + (qvec3d{x,y,z} * grid_dist);
 
-                        qvec3d color = CalcLightgridAtPoint(&bsp, world_point);
+                        lightgrid_samples_t samples = CalcLightgridAtPoint(&bsp, world_point);
                         bool occluded = Light_PointInWorld(&bsp, world_point);
 
                         int sample_index = (GRIDSIZE * GRIDSIZE * z) + (GRIDSIZE * y) + x;
 
-                        grid_result[sample_index * 3] = clamp((int)color[0], 0, 255);
-                        grid_result[sample_index * 3 + 1] = clamp((int)color[1], 0, 255);
-                        grid_result[sample_index * 3 + 2] = clamp((int)color[2], 0, 255);
-
+                        grid_result[sample_index] = samples;
                         occlusion[sample_index] = occluded;
                     }
                 }
             }
         });
+
+    // num_styles == 1 is a flag for "all grid points use only style 0"
+    const uint8_t all_style_0 = [&](){
+        for (auto &samples : grid_result) {
+            if (samples.used_styles() != 1)
+                return false;
+            if (samples.samples_by_style[0].style != 0)
+                return false;
+        }
+        return true;
+    }();
+
+    // otherwise, it gives the maximum used styles across the map.
+    const uint8_t num_styles = [&](){
+        int result = 0;
+        for (auto &samples : grid_result) {
+            result = max(result, samples.used_styles());
+        }
+        return result;
+    }();
+
+    // FIXME: technically num_styles == 1 could happen if all grid points are style 1 or something
 
     // non-final, experimental lump
     std::ostringstream str(std::ios_base::out | std::ios_base::binary);
@@ -1107,9 +1124,23 @@ static void LightGrid(bspdata_t *bspdata)
     str <= grid_mins;
     str <= num_styles;
 
-    // color data 3D array
-    for (uint8_t byte : grid_result) {
-        str <= byte;
+    // if the map only has 1 style, write a more compact form
+    if (num_styles == 1) {
+        // color data 3D array
+        for (const lightgrid_samples_t &samples : grid_result) {
+            str <= samples.samples_by_style[0].round_to_int();
+        }
+    } else {
+        // general case
+        for (const lightgrid_samples_t &samples : grid_result) {
+            str <= static_cast<uint8_t>(samples.used_styles());
+            for (int i = 0; i < samples.used_styles(); ++i) {
+                str <= static_cast<uint8_t>(samples.samples_by_style[i].style);
+            }
+            for (int i = 0; i < samples.used_styles(); ++i) {
+                str <= samples.samples_by_style[i].round_to_int();
+            }
+        }
     }
 
     // occlusion 3D array
