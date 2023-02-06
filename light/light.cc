@@ -1124,22 +1124,13 @@ static void LightGrid(bspdata_t *bspdata)
     str <= grid_mins;
     str <= num_styles;
 
-    // if the map only has 1 style, write a more compact form
-    if (num_styles == 1) {
-        // color data 3D array
-        for (const lightgrid_samples_t &samples : grid_result) {
-            str <= samples.samples_by_style[0].round_to_int();
+    for (const lightgrid_samples_t &samples : grid_result) {
+        str <= static_cast<uint8_t>(samples.used_styles());
+        for (int i = 0; i < samples.used_styles(); ++i) {
+            str <= static_cast<uint8_t>(samples.samples_by_style[i].style);
         }
-    } else {
-        // general case
-        for (const lightgrid_samples_t &samples : grid_result) {
-            str <= static_cast<uint8_t>(samples.used_styles());
-            for (int i = 0; i < samples.used_styles(); ++i) {
-                str <= static_cast<uint8_t>(samples.samples_by_style[i].style);
-            }
-            for (int i = 0; i < samples.used_styles(); ++i) {
-                str <= samples.samples_by_style[i].round_to_int();
-            }
+        for (int i = 0; i < samples.used_styles(); ++i) {
+            str <= samples.samples_by_style[i].round_to_int();
         }
     }
 
