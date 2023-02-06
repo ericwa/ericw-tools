@@ -3269,7 +3269,6 @@ void lightgrid_samples_t::add(const qvec3d &color, int style)
     // drop the style with the lowest brightness
 
     // FIXME: pick lowest brightness
-    logging::print("out of lightstyles\n");
     samples_by_style[0].style = style;
     samples_by_style[0].color = color;
 }

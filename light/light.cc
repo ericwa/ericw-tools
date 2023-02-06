@@ -1094,18 +1094,7 @@ static void LightGrid(bspdata_t *bspdata)
             }
         });
 
-    // num_styles == 1 is a flag for "all grid points use only style 0"
-    const uint8_t all_style_0 = [&](){
-        for (auto &samples : grid_result) {
-            if (samples.used_styles() != 1)
-                return false;
-            if (samples.samples_by_style[0].style != 0)
-                return false;
-        }
-        return true;
-    }();
-
-    // otherwise, it gives the maximum used styles across the map.
+    // the maximum used styles across the map.
     const uint8_t num_styles = [&](){
         int result = 0;
         for (auto &samples : grid_result) {
