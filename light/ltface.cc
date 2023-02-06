@@ -3268,9 +3268,21 @@ void lightgrid_samples_t::add(const qvec3d &color, int style)
     // uncommon case: all slots are used, but we didn't find a matching style
     // drop the style with the lowest brightness
 
-    // FIXME: pick lowest brightness
-    samples_by_style[0].style = style;
-    samples_by_style[0].color = color;
+    int min_brightness_index = 0;
+    float min_brightness = FLT_MAX;
+
+    for (int i = 0; i < samples_by_style.size(); ++i) {
+        float i_brightness = samples_by_style[i].brightness();
+        if (i_brightness < min_brightness) {
+            min_brightness_index = i;
+            min_brightness = i_brightness;
+        }
+    }
+
+    // overwrite the sample at min_brightness_index
+    auto &target = samples_by_style[min_brightness_index];
+    target.style = style;
+    target.color = color;
 }
 
 qvec3b lightgrid_sample_t::round_to_int() const
@@ -3280,6 +3292,11 @@ qvec3b lightgrid_sample_t::round_to_int() const
         clamp((int)round(color[1]), 0, 255),
         clamp((int)round(color[2]), 0, 255)
     };
+}
+
+float lightgrid_sample_t::brightness() const
+{
+    return (color[0] + color[1] + color[2]) / 3.0;
 }
 
 int lightgrid_samples_t::used_styles() const

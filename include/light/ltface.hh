@@ -64,6 +64,7 @@ struct lightgrid_sample_t {
     qvec3d color {};
 
     qvec3b round_to_int() const;
+    float brightness() const;
 };
 
 struct lightgrid_samples_t {
