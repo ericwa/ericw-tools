@@ -1117,8 +1117,6 @@ static void LightGrid(bspdata_t *bspdata)
         str <= static_cast<uint8_t>(samples.used_styles());
         for (int i = 0; i < samples.used_styles(); ++i) {
             str <= static_cast<uint8_t>(samples.samples_by_style[i].style);
-        }
-        for (int i = 0; i < samples.used_styles(); ++i) {
             str <= samples.samples_by_style[i].round_to_int();
         }
     }
