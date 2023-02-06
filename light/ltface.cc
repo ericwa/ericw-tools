@@ -1944,17 +1944,23 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, raystream_occlusion_t &rs, const std:
 
                 qvec3f indirect{};
 
-                for (int axis = 0; axis < 3; ++axis) {
-                    for (int sign = -1; sign <= +1; sign += 2) {
+                if (vpl.omnidirectional) {
+                    // HACK: receive light omnidirectionally
+                    indirect = GetSurfaceLighting(cfg, &vpl, dir, dist, {0, 0, 0}, false, standard_scale, sky_scale, hotspot_clamp);
+                } else {
+                    for (int axis = 0; axis < 3; ++axis) {
+                        for (int sign = -1; sign <= +1; sign += 2) {
 
-                        qvec3f cube_color;
+                            qvec3f cube_color;
 
-                        qvec3f cube_normal{};
-                        cube_normal[axis] = sign;
+                            qvec3f cube_normal{};
+                            cube_normal[axis] = sign;
 
-                        cube_color = GetSurfaceLighting(cfg, &vpl, dir, dist, cube_normal, true, standard_scale, sky_scale, hotspot_clamp);
+                            cube_color = GetSurfaceLighting(
+                                cfg, &vpl, dir, dist, cube_normal, true, standard_scale, sky_scale, hotspot_clamp);
 
-                        indirect += cube_color / 6.0;
+                            indirect += cube_color / 6.0;
+                        }
                     }
                 }
 
