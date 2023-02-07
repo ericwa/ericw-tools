@@ -475,6 +475,23 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
     return true;
 }
 
+static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf)
+{
+    if (bsp->loadversion->game->contents_are_liquid({leaf->contents})) {
+        // the liquid case is because leaf->contents might be in an opaque liquid,
+        // which we typically want light to pass through, but visdata would report that
+        // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.
+        return nullptr;
+    }
+
+    const int key = (bsp->loadversion->game->id == GAME_QUAKE_II)
+                        ? leaf->cluster : leaf->visofs;
+    if (auto it = UncompressedVis().find(leaf->cluster); it != UncompressedVis().end()) {
+        return &it->second;
+    }
+    return nullptr;
+}
+
 // returns true if pvs can see leaf
 static bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *leaf)
 {
@@ -1916,7 +1933,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 }
 
 static void // mxd
-LightPoint_SurfaceLight(const mbsp_t *bsp, raystream_occlusion_t &rs, const std::vector<surfacelight_t> &surface_lights,
+LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, raystream_occlusion_t &rs, const std::vector<surfacelight_t> &surface_lights,
     const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp, const qvec3d &surfpoint, lightgrid_samples_t &result)
 {
     const settings::worldspawn_keys &cfg = light_options;
@@ -1924,6 +1941,11 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, raystream_occlusion_t &rs, const std:
 
     for (const surfacelight_t &vpl : surface_lights) {
         for (int c = 0; c < vpl.points.size(); c++) {
+            if (light_options.visapprox.value() == visapprox_t::VIS &&
+                pvs && VisCullEntity(bsp, *pvs, vpl.leaves[c])) {
+                continue;
+            }
+
             rs.clearPushedRays();
 
             // 1 ray
@@ -3318,6 +3340,8 @@ lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_
     raystream_occlusion_t rs(1);
     raystream_intersection_t rsi(1);
 
+    const auto *pvs = Mod_LeafPvs(bsp, BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], world_point));
+
     auto &cfg = light_options;
 
     lightgrid_samples_t result;
@@ -3346,7 +3370,7 @@ lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_
 
     // mxd. Add surface lights...
     // FIXME: negative surface lights
-    LightPoint_SurfaceLight(bsp, rs, GetSurfaceLights(), cfg.surflightscale.value(), cfg.surflightskyscale.value(), 16.0f, world_point, result);
+    LightPoint_SurfaceLight(bsp, pvs, rs, GetSurfaceLights(), cfg.surflightscale.value(), cfg.surflightskyscale.value(), 16.0f, world_point, result);
 
 #if 0
     // FIXME: port to lightgrid
@@ -3377,7 +3401,7 @@ lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_
 
     /* add bounce lighting */
     // note: scale here is just to keep it close-ish to the old code
-    LightPoint_SurfaceLight(bsp, rs, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f, world_point, result);
+    LightPoint_SurfaceLight(bsp, pvs, rs, BounceLights(), cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f, world_point, result);
 
     LightPoint_ScaleAndClamp(result);
 
