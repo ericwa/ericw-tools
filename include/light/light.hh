@@ -384,6 +384,7 @@ public:
     setting_bool exportobj;
     setting_int32 lmshift;
     setting_bool lightgrid;
+    setting_vec3 lightgrid_dist;
 
     setting_func dirtdebug;
     setting_func bouncedebug;

@@ -316,6 +316,7 @@ light_settings::light_settings()
       lmshift{this, "lmshift", 4, &output_group,
           "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."},
       lightgrid{this, "lightgrid", false, &experimental_group, "experimental LIGHTGRID bspx lump"},
+      lightgrid_dist{this, "lightgrid_dist", 64.f, 64.f, 64.f, &experimental_group, "distance between lightgrid sample points, in world units. controls lightgrid size."},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
           [&](source) {
@@ -1056,46 +1057,36 @@ static void LightGrid(bspdata_t *bspdata)
     auto &bsp = std::get<mbsp_t>(bspdata->bsp);
     auto world_size = bsp.dmodels[0].maxs - bsp.dmodels[0].mins;
 
-    constexpr int GRIDSIZE = 64;
-    constexpr double max_grid_coord = GRIDSIZE - 1;
-
-    // distance between consecutive points
-    const qvec3f grid_dist = world_size * qvec3d(1.0 / max_grid_coord);
     // number of grid points on each axis
-    const qvec3i grid_size = {GRIDSIZE, GRIDSIZE, GRIDSIZE};
+    const qvec3i grid_size = {
+        ceil(world_size[0] / light_options.lightgrid_dist.value()[0]),
+        ceil(world_size[1] / light_options.lightgrid_dist.value()[1]),
+        ceil(world_size[2] / light_options.lightgrid_dist.value()[2])
+    };
     const qvec3f grid_mins = bsp.dmodels[0].mins;
 
     std::vector<lightgrid_samples_t> grid_result;
-    grid_result.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE);
+    grid_result.resize(grid_size[0] * grid_size[1] * grid_size[2]);
 
     std::vector<uint8_t> occlusion;
-    occlusion.resize(GRIDSIZE * GRIDSIZE * GRIDSIZE);
+    occlusion.resize(grid_size[0] * grid_size[1] * grid_size[2]);
 
-    tbb::parallel_for(tbb::blocked_range3d<int>(0, GRIDSIZE, 0, GRIDSIZE, 0, GRIDSIZE),
-        [&](const tbb::blocked_range3d<int>& range) {
-            const auto &z_range = range.pages();
-            const auto &y_range = range.rows();
-            const auto &x_range = range.cols();
+    logging::parallel_for(0, grid_size[0] * grid_size[1] * grid_size[2], [&](int sample_index){
+        const int z = (sample_index / (grid_size[0] * grid_size[1]));
+        const int y = (sample_index / grid_size[0]) % grid_size[1];
+        const int x = sample_index % grid_size[0];
 
-            for (int z = z_range.begin(); z < z_range.end(); ++z) {
-                for (int y = y_range.begin(); y < y_range.end(); ++y) {
-                    for (int x = x_range.begin(); x < x_range.end(); ++x) {
-                        qvec3d world_point = grid_mins + (qvec3d{x,y,z} * grid_dist);
+        qvec3d world_point = grid_mins + (qvec3d{x,y,z} * light_options.lightgrid_dist.value());
 
-                        bool occluded = Light_PointInWorld(&bsp, world_point);
-                        lightgrid_samples_t samples;
+        bool occluded = Light_PointInWorld(&bsp, world_point);
+        lightgrid_samples_t samples;
 
-                        if (!occluded)
-                            samples = CalcLightgridAtPoint(&bsp, world_point);
+        if (!occluded)
+            samples = CalcLightgridAtPoint(&bsp, world_point);
 
-                        int sample_index = (GRIDSIZE * GRIDSIZE * z) + (GRIDSIZE * y) + x;
-
-                        grid_result[sample_index] = samples;
-                        occlusion[sample_index] = occluded;
-                    }
-                }
-            }
-        });
+        grid_result[sample_index] = samples;
+        occlusion[sample_index] = occluded;
+    });
 
     // the maximum used styles across the map.
     const uint8_t num_styles = [&](){
@@ -1106,12 +1097,10 @@ static void LightGrid(bspdata_t *bspdata)
         return result;
     }();
 
-    // FIXME: technically num_styles == 1 could happen if all grid points are style 1 or something
-
     // non-final, experimental lump
     std::ostringstream str(std::ios_base::out | std::ios_base::binary);
     str << endianness<std::endian::little>;
-    str <= grid_dist;
+    str <= qvec3f{light_options.lightgrid_dist.value()};
     str <= grid_size;
     str <= grid_mins;
     str <= num_styles;
@@ -1128,7 +1117,7 @@ static void LightGrid(bspdata_t *bspdata)
     {
         std::vector<uint8_t> occlusion_bitarray;
         occlusion_bitarray.resize(
-            static_cast<size_t>(ceil(GRIDSIZE * GRIDSIZE * GRIDSIZE / 8.0)));
+            static_cast<size_t>(ceil(grid_size[0] * grid_size[1] * grid_size[2] / 8.0)));
 
         // transfer bytes to bits
         for (int i = 0; i < occlusion.size(); ++i) {
