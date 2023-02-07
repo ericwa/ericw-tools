@@ -75,13 +75,11 @@ public:
 
     inline int &getPushedRayPointIndex(size_t j)
     {
-        Q_assert(j < _maxrays);
         return _point_indices[j];
     }
 
     inline qvec3f getPushedRayColor(size_t j)
     {
-        Q_assert(j < _maxrays);
         qvec3f result = _ray_colors[j];
 
         if (_ray_hit_glass[j]) {
@@ -100,13 +98,11 @@ public:
 
     inline qvec3d &getPushedRayNormalContrib(size_t j)
     {
-        Q_assert(j < _maxrays);
         return _ray_normalcontribs[j];
     }
 
     inline int &getPushedRayDynamicStyle(size_t j)
     {
-        Q_assert(j < _maxrays);
         return _ray_dynamic_styles[j];
     }
 
@@ -215,7 +211,6 @@ public:
     inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3f *color = nullptr,
         const qvec3d *normalcontrib = nullptr)
     {
-        Q_assert(_numrays < _maxrays);
         const RTCRayHit rayHit = SetupRay(_numrays, origin, dir, dist);
         _rays[_numrays] = rayHit;
         _rays_maxdist[_numrays] = dist;
@@ -242,20 +237,16 @@ public:
 
     inline qvec3d getPushedRayDir(size_t j)
     {
-        Q_assert(j < _maxrays);
         return {_rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z};
     }
 
     inline float getPushedRayHitDist(size_t j)
     {
-        Q_assert(j < _maxrays);
         return _rays[j].ray.tfar;
     }
 
     inline hittype_t getPushedRayHitType(size_t j)
     {
-        Q_assert(j < _maxrays);
-
         const unsigned id = _rays[j].hit.geomID;
         if (id == RTC_INVALID_GEOMETRY_ID) {
             return hittype_t::NONE;
@@ -268,8 +259,6 @@ public:
 
     inline const triinfo *getPushedRayHitFaceInfo(size_t j)
     {
-        Q_assert(j < _maxrays);
-
         const RTCRayHit &ray = _rays[j];
 
         if (ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) {
@@ -303,7 +292,6 @@ public:
     inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3f *color = nullptr,
         const qvec3d *normalcontrib = nullptr)
     {
-        Q_assert(_numrays < _maxrays);
         _rays[_numrays] = SetupRay(_numrays, origin, dir, dist).ray;
         _rays_maxdist[_numrays] = dist;
         _point_indices[_numrays] = i;
@@ -320,8 +308,6 @@ public:
 
     inline void tracePushedRaysOcclusion(const modelinfo_t *self, int shadowmask)
     {
-        // Q_assert(_state == streamstate_t::READY);
-
         if (!_numrays)
             return;
 
@@ -331,14 +317,11 @@ public:
 
     inline bool getPushedRayOccluded(size_t j)
     {
-        Q_assert(j < _maxrays);
         return (_rays[j].tfar < 0.0f);
     }
 
     inline qvec3d getPushedRayDir(size_t j)
     {
-        Q_assert(j < _maxrays);
-
         return {_rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z};
     }
 };
