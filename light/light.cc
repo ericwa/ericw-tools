@@ -1079,6 +1079,15 @@ static void LightGrid(bspdata_t *bspdata)
         qvec3d world_point = grid_mins + (qvec3d{x,y,z} * light_options.lightgrid_dist.value());
 
         bool occluded = Light_PointInWorld(&bsp, world_point);
+        if (occluded) {
+            // search for a nearby point
+            auto [fixed_pos, success] = FixLightOnFace(&bsp, world_point, false, 2.0f);
+            if (success) {
+                occluded = false;
+                world_point = fixed_pos;
+            }
+        }
+
         lightgrid_samples_t samples;
 
         if (!occluded)

@@ -149,3 +149,4 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point);
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
 
 entdict_t &WorldEnt();
+std::tuple<qvec3d, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, bool warn = true, float max_dist = 2.f);

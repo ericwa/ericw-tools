@@ -1018,11 +1018,11 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     logging::print("{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
 }
 
-static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
+std::tuple<qvec3d, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, bool warn, float max_dist)
 {
     // FIXME: Check all shadow casters
     if (!Light_PointInWorld(bsp, point)) {
-        return point;
+        return {point, true};
     }
 
     for (int i = 0; i < 6; i++) {
@@ -1030,24 +1030,27 @@ static qvec3d FixLightOnFace(const mbsp_t *bsp, const qvec3d &point)
 
         int axis = i / 2;
         bool add = i % 2;
-        testpoint[axis] += (add ? 2 : -2); // sample points are 1 unit off faces. so nudge by 2 units, so the lights are
-                                           // above the sample points
+        // sample points are 1 unit off faces. so nudge by 2 units, so the lights are
+        // above the sample points
+        testpoint[axis] += (add ? max_dist : -max_dist);
 
         // FIXME: Check all shadow casters
         if (!Light_PointInWorld(bsp, testpoint)) {
-            return testpoint;
+            return {testpoint, true};
         }
     }
 
-    logging::print("WARNING: couldn't nudge light out of solid at {}\n", point);
-    return point;
+    if (warn)
+        logging::print("WARNING: couldn't nudge light out of solid at {}\n", point);
+    return {point, false};
 }
 
 void FixLightsOnFaces(const mbsp_t *bsp)
 {
     for (auto &entity : all_lights) {
         if (entity->light.value() != 0 && !entity->nonudge.value()) {
-            entity->origin.setValue(FixLightOnFace(bsp, entity->origin.value()), settings::source::MAP);
+            auto [fixed_pos, success] = FixLightOnFace(bsp, entity->origin.value());
+            entity->origin.setValue(fixed_pos, settings::source::MAP);
         }
     }
 }
