@@ -1082,8 +1082,11 @@ static void LightGrid(bspdata_t *bspdata)
                     for (int x = x_range.begin(); x < x_range.end(); ++x) {
                         qvec3d world_point = grid_mins + (qvec3d{x,y,z} * grid_dist);
 
-                        lightgrid_samples_t samples = CalcLightgridAtPoint(&bsp, world_point);
                         bool occluded = Light_PointInWorld(&bsp, world_point);
+                        lightgrid_samples_t samples;
+
+                        if (!occluded)
+                            samples = CalcLightgridAtPoint(&bsp, world_point);
 
                         int sample_index = (GRIDSIZE * GRIDSIZE * z) + (GRIDSIZE * y) + x;
 
