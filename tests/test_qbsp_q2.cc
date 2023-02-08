@@ -19,7 +19,19 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2")) {
     // stats
     CHECK(1 == bsp.dmodels.size());
     // Q2 reserves leaf 0 as an invalid leaf
-    CHECK(mleaf_t{.contents = Q2_CONTENTS_SOLID, .visofs = -1} == bsp.dleafs[0]);
+    const auto &leaf0 = bsp.dleafs[0];
+    CHECK(Q2_CONTENTS_SOLID == leaf0.contents);
+    CHECK(-1 == leaf0.visofs);
+    CHECK(qvec3f{} == leaf0.mins);
+    CHECK(qvec3f{} == leaf0.maxs);
+    CHECK(0 == leaf0.firstmarksurface);
+    CHECK(0 == leaf0.nummarksurfaces);
+    CHECK(leaf0.ambient_level == std::array<uint8_t, NUM_AMBIENTS>{0, 0, 0, 0});
+    CHECK(CLUSTER_INVALID == leaf0.cluster);
+    CHECK(AREA_INVALID == leaf0.area);
+    CHECK(0 == leaf0.firstleafbrush);
+    CHECK(0 == leaf0.numleafbrushes);
+
     // no areaportals except the placeholder
     CHECK(1 == bsp.dareaportals.size());
     CHECK(2 == bsp.dareas.size());

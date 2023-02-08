@@ -259,6 +259,9 @@ enum ambient_type_t : uint8_t
     NUM_AMBIENTS = 4
 };
 
+constexpr int32_t CLUSTER_INVALID = -1;
+constexpr int32_t AREA_INVALID = 0;
+
 struct mleaf_t
 {
     // bsp2_dleaf_t

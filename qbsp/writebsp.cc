@@ -304,6 +304,7 @@ void BeginBSPFile(void)
     // Leave room for leaf 0 (must be solid)
     auto &solid_leaf = map.bsp.dleafs.emplace_back();
     solid_leaf.contents = qbsp_options.target_game->create_solid_contents().native;
+    solid_leaf.cluster = CLUSTER_INVALID;
     Q_assert(map.bsp.dleafs.size() == 1);
 }
 
