@@ -1074,16 +1074,28 @@ std::vector<uint8_t> LoadLitFile(const fs::path &path)
     return litdata;
 }
 
+static void AddLeafs(const mbsp_t *bsp, int nodenum, std::map<int, std::vector<int>> &cluster_to_leafnums)
+{
+    if (nodenum < 0) {
+        const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
+
+        // cluster -1 is invalid
+        if (leaf->cluster != -1) {
+            int leafnum = leaf - bsp->dleafs.data();
+            cluster_to_leafnums[leaf->cluster].push_back(leafnum);
+        }
+
+        return;
+    }
+
+    auto *node = BSP_GetNode(bsp, nodenum);
+    AddLeafs(bsp, node->children[0], cluster_to_leafnums);
+    AddLeafs(bsp, node->children[1], cluster_to_leafnums);
+}
+
 std::map<int, std::vector<int>> ClusterToLeafnumsMap(const mbsp_t *bsp)
 {
     std::map<int, std::vector<int>> result;
-    // leaf 0 is invalid, so skip it
-    for (int i = 1; i < bsp->dleafs.size(); ++i) {
-        auto &leaf = bsp->dleafs[i];
-        // cluster -1 is also invalid
-        if (leaf.cluster != -1) {
-            result[leaf.cluster].push_back(i);
-        }
-    }
+    AddLeafs(bsp, bsp->dmodels[0].headnode[0], result);
     return result;
 }
