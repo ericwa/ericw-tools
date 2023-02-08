@@ -316,7 +316,7 @@ light_settings::light_settings()
       lmshift{this, "lmshift", 4, &output_group,
           "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."},
       lightgrid{this, "lightgrid", false, &experimental_group, "experimental LIGHTGRID bspx lump"},
-      lightgrid_dist{this, "lightgrid_dist", 64.f, 64.f, 64.f, &experimental_group, "distance between lightgrid sample points, in world units. controls lightgrid size."},
+      lightgrid_dist{this, "lightgrid_dist", 32.f, 32.f, 32.f, &experimental_group, "distance between lightgrid sample points, in world units. controls lightgrid size."},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
           [&](source) {
@@ -1106,42 +1106,115 @@ static void LightGrid(bspdata_t *bspdata)
         return result;
     }();
 
+    logging::print("     {} lightgrid_dist\n", light_options.lightgrid_dist.value());
+    logging::print("     {} grid_size\n", grid_size);
+    logging::print("     {} grid_mins\n", grid_mins);
+    logging::print("     {} num_styles\n", num_styles);
+
     // non-final, experimental lump
-    std::ostringstream str(std::ios_base::out | std::ios_base::binary);
-    str << endianness<std::endian::little>;
-    str <= qvec3f{light_options.lightgrid_dist.value()};
-    str <= grid_size;
-    str <= grid_mins;
-    str <= num_styles;
-
-    for (const lightgrid_samples_t &samples : grid_result) {
-        str <= static_cast<uint8_t>(samples.used_styles());
-        for (int i = 0; i < samples.used_styles(); ++i) {
-            str <= static_cast<uint8_t>(samples.samples_by_style[i].style);
-            str <= samples.samples_by_style[i].round_to_int();
-        }
-    }
-
-    // occlusion 3D array
     {
-        std::vector<uint8_t> occlusion_bitarray;
-        occlusion_bitarray.resize(
-            static_cast<size_t>(ceil(grid_size[0] * grid_size[1] * grid_size[2] / 8.0)));
+        std::ostringstream str(std::ios_base::out | std::ios_base::binary);
+        str << endianness<std::endian::little>;
+        str <= qvec3f{light_options.lightgrid_dist.value()};
+        str <= grid_size;
+        str <= grid_mins;
+        str <= num_styles;
 
-        // transfer bytes to bits
-        for (int i = 0; i < occlusion.size(); ++i) {
-            if (occlusion[i]) {
-                occlusion_bitarray[i / 8] |= 1 << (i % 8);
+        for (const lightgrid_samples_t &samples : grid_result) {
+            str <= static_cast<uint8_t>(samples.used_styles());
+            for (int i = 0; i < samples.used_styles(); ++i) {
+                str <= static_cast<uint8_t>(samples.samples_by_style[i].style);
+                str <= samples.samples_by_style[i].round_to_int();
             }
         }
 
-        // add to lump
-        for (uint8_t byte : occlusion_bitarray) {
-            str <= byte;
+        // occlusion 3D array
+        {
+            std::vector<uint8_t> occlusion_bitarray;
+            occlusion_bitarray.resize(
+                static_cast<size_t>(ceil(grid_size[0] * grid_size[1] * grid_size[2] / 8.0)));
+
+            // transfer bytes to bits
+            for (int i = 0; i < occlusion.size(); ++i) {
+                if (occlusion[i]) {
+                    occlusion_bitarray[i / 8] |= 1 << (i % 8);
+                }
+            }
+
+            // add to lump
+            for (uint8_t byte : occlusion_bitarray) {
+                str <= byte;
+            }
         }
+
+        auto vec = StringToVector(str.str());
+        logging::print( "     {:8} bytes LIGHTGRID\n", vec.size());
+
+        bspdata->bspx.transfer("LIGHTGRID", std::move(vec));
     }
 
-    bspdata->bspx.transfer("LIGHTGRID", StringToVector(str.str()));
+    // other lump
+    {
+        const qvec3f grid_dist = qvec3f{light_options.lightgrid_dist.value()};
+
+        std::ostringstream str(std::ios_base::out | std::ios_base::binary);
+        str << endianness<std::endian::little>;
+        str <= grid_dist;
+        str <= grid_size;
+        str <= grid_mins;
+        str <= num_styles;
+
+        auto cluster_to_leafnums = ClusterToLeafnumsMap(&bsp);
+        for (int cluster = 0;; ++cluster) {
+            auto it = cluster_to_leafnums.find(cluster);
+            if (it == cluster_to_leafnums.end())
+                break;
+
+            // compute cluster bounds by adding up leaf bounds
+            aabb3f bounds;
+            for (int leafnum : it->second) {
+                auto &leaf = bsp.dleafs[leafnum];
+                bounds += aabb3f{leaf.mins, leaf.maxs};
+            }
+
+            qvec3i cluster_min_grid_coord = qv::floor((bounds.mins() - grid_mins) / grid_dist);
+            qvec3i cluster_max_grid_coord = qv::ceil((bounds.maxs() - grid_mins) / grid_dist);
+            qvec3i cluster_grid_size = cluster_max_grid_coord - cluster_min_grid_coord;
+
+            str <= cluster_min_grid_coord;
+            str <= cluster_grid_size;
+
+            // logging::print("cluster {} bounds grid mins {} grid size {}\n", cluster, cluster_min_grid_coord, cluster_grid_size);
+
+            auto &cm = cluster_min_grid_coord;
+            auto &cs = cluster_grid_size;
+
+            for (int z = cm[2]; z < (cm[2] + cs[2]); ++z) {
+                for (int y = cm[1]; y < (cm[1] + cs[1]); ++y) {
+                    for (int x = cm[0]; x < (cm[0] + cs[0]); ++x) {
+                        int sample_index = (grid_size[0] * grid_size[1] * z) + (grid_size[0] * y) + x;
+
+                        if (occlusion[sample_index]) {
+                            str <= static_cast<uint8_t>(0xff);
+                            continue;
+                        }
+
+                        const lightgrid_samples_t &samples = grid_result[sample_index];
+                        str <= static_cast<uint8_t>(samples.used_styles());
+                        for (int i = 0; i < samples.used_styles(); ++i) {
+                            str <= static_cast<uint8_t>(samples.samples_by_style[i].style);
+                            str <= samples.samples_by_style[i].round_to_int();
+                        }
+                    }
+                }
+            }
+        }
+
+        auto vec = StringToVector(str.str());
+        logging::print("     {:8} bytes LIGHTGRID_PERCLUSTER\n", vec.size());
+
+        bspdata->bspx.transfer("LIGHTGRID_PERCLUSTER", std::move(vec));
+    }
 }
 
 static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp)

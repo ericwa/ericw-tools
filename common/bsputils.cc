@@ -1073,3 +1073,17 @@ std::vector<uint8_t> LoadLitFile(const fs::path &path)
 
     return litdata;
 }
+
+std::map<int, std::vector<int>> ClusterToLeafnumsMap(const mbsp_t *bsp)
+{
+    std::map<int, std::vector<int>> result;
+    // leaf 0 is invalid, so skip it
+    for (int i = 1; i < bsp->dleafs.size(); ++i) {
+        auto &leaf = bsp->dleafs[i];
+        // cluster -1 is also invalid
+        if (leaf.cluster != -1) {
+            result[leaf.cluster].push_back(i);
+        }
+    }
+    return result;
+}
