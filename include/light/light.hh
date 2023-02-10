@@ -237,6 +237,11 @@ enum class visapprox_t
     RAYS
 };
 
+enum class lightgrid_format_t {
+    UNIFORM,
+    CLUSTER,
+};
+
 //
 // worldspawn keys / command-line settings
 //
@@ -385,6 +390,7 @@ public:
     setting_int32 lmshift;
     setting_bool lightgrid;
     setting_vec3 lightgrid_dist;
+    setting_enum<lightgrid_format_t> lightgrid_format;
 
     setting_func dirtdebug;
     setting_func bouncedebug;
