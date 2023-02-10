@@ -65,6 +65,8 @@ struct lightgrid_sample_t {
 
     qvec3b round_to_int() const;
     float brightness() const;
+
+    bool operator==(const lightgrid_sample_t &other) const;
 };
 
 struct lightgrid_samples_t {
@@ -72,6 +74,8 @@ struct lightgrid_samples_t {
 
     void add(const qvec3d &color, int style);
     int used_styles() const;
+
+    bool operator==(const lightgrid_samples_t &other) const;
 };
 
 lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point);

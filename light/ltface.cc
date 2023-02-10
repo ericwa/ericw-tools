@@ -3326,6 +3326,13 @@ float lightgrid_sample_t::brightness() const
     return (color[0] + color[1] + color[2]) / 3.0;
 }
 
+bool lightgrid_sample_t::operator==(const lightgrid_sample_t &other) const
+{
+    return used == other.used &&
+        style == other.style &&
+        color == other.color;
+}
+
 int lightgrid_samples_t::used_styles() const
 {
     int used = 0;
@@ -3337,6 +3344,11 @@ int lightgrid_samples_t::used_styles() const
         }
     }
     return used;
+}
+
+bool lightgrid_samples_t::operator==(const lightgrid_samples_t &other) const
+{
+    return samples_by_style == other.samples_by_style;
 }
 
 lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point)
