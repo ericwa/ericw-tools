@@ -1179,8 +1179,13 @@ static void LightGrid(bspdata_t *bspdata)
                 bounds += aabb3f{leaf.mins, leaf.maxs};
             }
 
-            qvec3i cluster_min_grid_coord = qv::floor((bounds.mins() - grid_mins) / grid_dist);
-            qvec3i cluster_max_grid_coord = qv::ceil((bounds.maxs() - grid_mins) / grid_dist);
+            qvec3i cluster_min_grid_coord = qv::floor((bounds.mins() - grid_mins) / grid_dist) + qvec3i(-1, -1, -1);
+            qvec3i cluster_max_grid_coord = qv::ceil((bounds.maxs() - grid_mins) / grid_dist) + qvec3i(1, 1, 1);
+
+            // clamp to overall size
+            cluster_min_grid_coord = qv::max(qvec3i(0, 0, 0), cluster_min_grid_coord);
+            cluster_max_grid_coord = qv::min(grid_size, cluster_max_grid_coord);
+
             qvec3i cluster_grid_size = cluster_max_grid_coord - cluster_min_grid_coord;
 
             str <= cluster_min_grid_coord;
