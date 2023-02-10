@@ -240,6 +240,7 @@ enum class visapprox_t
 enum class lightgrid_format_t {
     UNIFORM,
     CLUSTER,
+    OCTREE
 };
 
 //
