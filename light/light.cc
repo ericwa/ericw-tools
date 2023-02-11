@@ -1451,19 +1451,19 @@ static void LightGrid(bspdata_t *bspdata)
         str <= grid_mins;
         str <= num_styles;
 
-        str << static_cast<uint32_t>(root_node);
+        str <= static_cast<uint32_t>(root_node);
 
         // the nodes (fixed-size)
-        str << static_cast<uint32_t>(octree_nodes.size());
+        str <= static_cast<uint32_t>(octree_nodes.size());
         for (const auto &node : octree_nodes) {
-            str << node.division_point;
+            str <= node.division_point;
             for (const auto child : node.children) {
-                str << child;
+                str <= child;
             }
         }
 
         // the leafs (each is variable sized)
-        str << static_cast<uint32_t>(octree_leafs.size());
+        str <= static_cast<uint32_t>(octree_leafs.size());
         for (const auto &leaf : octree_leafs) {
             str <= leaf.mins;
             str <= leaf.size;
