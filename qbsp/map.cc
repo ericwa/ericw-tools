@@ -1562,7 +1562,7 @@ parse_error:
     FError("{}: couldn't parse Brush Primitives texture info", parser.location);
 }
 
-static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush_t &brush, maptexinfo_t *tx,
+static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface_t &mapface, const mapbrush_t &brush, maptexinfo_t *tx,
     std::array<qvec3d, 3> &planepts, const qplane3d &plane, texture_def_issues_t &issue_stats)
 {
     vec_t rotate;
@@ -1681,8 +1681,13 @@ static void ParseTextureDef(parser_t &parser, mapface_t &mapface, const mapbrush
                                  && (extinfo.info->value != 0);
         // Technically this is not the 100% correct check for mirrored, but we don't have the full brush
         // contents set up at this point. Correct would be to call `portal_generates_face()`.
-        const bool mirrored = (extinfo.info->contents.native != 0)
-                               && !(extinfo.info->contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW));
+        bool mirrored = (extinfo.info->contents.native != 0)
+                               && !(extinfo.info->contents.native & (Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_AUX));
+
+        if (entity.epairs.has("_mirrorinside") && !entity.epairs.get_int("_mirrorinside")) {
+            mirrored = false;
+        }
+
         if (wants_phong && mirrored) {
             logging::print("WARNING: {}: Q2 phong (value set, LIGHT unset) used on a mirrored face.\n", mapface.line);
         }
@@ -1818,7 +1823,7 @@ static std::optional<mapface_t> ParseBrushFace(parser_t &parser, const mapbrush_
 
     normal_ok = face.set_planepts(planepts);
 
-    ParseTextureDef(parser, face, brush, &tx, face.planepts, face.get_plane(), issue_stats);
+    ParseTextureDef(entity, parser, face, brush, &tx, face.planepts, face.get_plane(), issue_stats);
 
     if (!normal_ok) {
         logging::print("WARNING: {}: Brush plane with no normal\n", parser.location);
