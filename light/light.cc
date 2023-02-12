@@ -1057,7 +1057,11 @@ static void LightGrid(bspdata_t *bspdata)
     logging::funcheader();
 
     auto &bsp = std::get<mbsp_t>(bspdata->bsp);
-    auto world_size = bsp.dmodels[0].maxs - bsp.dmodels[0].mins;
+
+    auto faces_size = Model_BoundsOfFaces(bsp, bsp.dmodels[0]);
+    const qvec3f grid_maxs = faces_size.maxs();
+    const qvec3f grid_mins = faces_size.mins();
+    const qvec3f world_size = grid_maxs - grid_mins;
 
     // number of grid points on each axis
     const qvec3i grid_size = {
@@ -1065,7 +1069,6 @@ static void LightGrid(bspdata_t *bspdata)
         ceil(world_size[1] / light_options.lightgrid_dist.value()[1]),
         ceil(world_size[2] / light_options.lightgrid_dist.value()[2])
     };
-    const qvec3f grid_mins = bsp.dmodels[0].mins;
 
     std::vector<lightgrid_samples_t> grid_result;
     grid_result.resize(grid_size[0] * grid_size[1] * grid_size[2]);
@@ -1115,6 +1118,7 @@ static void LightGrid(bspdata_t *bspdata)
     logging::print("     {} lightgrid_dist\n", light_options.lightgrid_dist.value());
     logging::print("     {} grid_size\n", grid_size);
     logging::print("     {} grid_mins\n", grid_mins);
+    logging::print("     {} grid_maxs\n", grid_maxs);
     logging::print("     {} num_styles\n", num_styles);
 
     // non-final, experimental lump
