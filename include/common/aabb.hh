@@ -228,6 +228,21 @@ public:
     auto stream_data() { return std::tie(m_corners); }
 };
 
+template<class V>
+inline std::array<qplane3<V>, 6> aabb_planes(const aabb<V, 3> &bbox)
+{
+    return {
+        qplane3<V>{qvec<V,3>( 1,0,0),  bbox.maxs()[0]},  // +X
+        qplane3<V>{qvec<V,3>(-1,0,0), -bbox.mins()[0]},  // -X
+
+        qplane3<V>{qvec<V,3>(0, 1,0),  bbox.maxs()[1]},  // +Y
+        qplane3<V>{qvec<V,3>(0,-1,0), -bbox.mins()[1]},  // -Y
+
+        qplane3<V>{qvec<V,3>(0,0, 1),  bbox.maxs()[2]},  // +Z
+        qplane3<V>{qvec<V,3>(0,0,-1), -bbox.mins()[2]},  // -Z
+    };
+}
+
 // Fmt support
 template<class T, size_t Dim>
 struct fmt::formatter<aabb<T, Dim>> : formatter<qvec<T, Dim>>

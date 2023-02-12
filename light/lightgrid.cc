@@ -32,6 +32,7 @@
 #include <common/log.hh>
 #include <common/bsputils.hh>
 #include <common/fs.hh>
+#include <common/prtfile.hh>
 #include <common/imglib.hh>
 #include <common/parallel.hh>
 
@@ -94,6 +95,10 @@ void LightGrid(bspdata_t *bspdata)
         ceil(world_size[0] / light_options.lightgrid_dist.value()[0]),
         ceil(world_size[1] / light_options.lightgrid_dist.value()[1]),
         ceil(world_size[2] / light_options.lightgrid_dist.value()[2])
+    };
+
+    auto grid_index_to_world = [&](const qvec3i &index) -> qvec3f {
+        return grid_mins + (index * light_options.lightgrid_dist.value());
     };
 
     std::vector<lightgrid_samples_t> grid_result;
@@ -413,6 +418,25 @@ void LightGrid(bspdata_t *bspdata)
 
         // build the root node
         const uint32_t root_node = build_octree(qvec3i{0,0,0}, grid_size, 0);
+
+        // visualize the leafs
+        {
+            std::vector<polylib::winding_t> windings;
+
+            for (auto &leaf : octree_leafs) {
+                auto leaf_world_mins = grid_index_to_world(leaf.mins);
+                auto leaf_world_maxs = grid_index_to_world(leaf.mins + leaf.size - qvec3i(1,1,1));
+
+                aabb3d bounds(leaf_world_mins, leaf_world_maxs);
+
+                auto bounds_windings = polylib::winding_t::aabb_windings(bounds);
+                for (auto &w : bounds_windings) {
+                    windings.push_back(std::move(w));
+                }
+            }
+
+            WriteDebugPortals(windings, fs::path(light_options.sourceMap).replace_extension(".octree.prt"));
+        }
 
         // stats
         int stored_cells = 0;

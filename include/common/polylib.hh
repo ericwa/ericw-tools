@@ -1321,6 +1321,33 @@ public:
     {
         return directional_equal(w, equal_epsilon) || directional_equal(w.flip(), equal_epsilon);
     }
+
+    static std::array<winding_base_t, 6> aabb_windings(const aabb3d &bbox) {
+        double worldextent = 0;
+        for (int i = 0; i < 3; ++i) {
+            worldextent = max(worldextent, abs(bbox.maxs()[i]));
+            worldextent = max(worldextent, abs(bbox.mins()[i]));
+        }
+        worldextent += 1;
+
+        std::array<winding_base_t, 6> result;
+        auto planes = aabb_planes(bbox);
+
+        for (int i = 0; i < 6; ++i) {
+            result[i] = winding_base_t::from_plane(planes[i], worldextent);
+        }
+
+        for (int i = 0; i < 6; ++i) {
+            for (int j = 0; j < 6; ++j) {
+                if (i == j)
+                    continue;
+
+                result[i] = *result[i].clip_back(planes[j]);
+            }
+        }
+
+        return result;
+    }
 };
 
 // the default amount of points to keep on stack
