@@ -306,6 +306,18 @@ static void WriteLeafVolumes(const std::vector<portal_t *> &leakline, std::strin
     WriteBspBrushMap(filename_suffix, volumes_to_write);
 }
 
+/**
+ * Is this entity allowed to be in the void without causing a leak?
+ */
+static bool IsNofillEntity(const entdict_t &edict)
+{
+    if (edict.get_int("_nofill"))
+        return true;
+    if (edict.get_int("_lightgrid_hint"))
+        return true;
+    return false;
+}
+
 /*
 ==================
 FindOccupiedLeafs
@@ -323,7 +335,7 @@ static void MarkOccupiedClusters(node_t *headnode)
             continue;
 
         // skip nofill entities
-        if (entity.epairs.has("_nofill") && entity.epairs.get_int("_nofill")) {
+        if (IsNofillEntity(entity.epairs)) {
             continue;
         }
 

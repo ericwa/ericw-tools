@@ -131,6 +131,7 @@ public:
 void ResetLightEntities();
 std::string TargetnameForLightStyle(int style);
 std::vector<std::unique_ptr<light_t>> &GetLights();
+const std::vector<entdict_t> &GetEntdicts();
 std::vector<sun_t> &GetSuns();
 std::vector<entdict_t> &GetRadLights();
 

@@ -51,6 +51,30 @@ static std::vector<uint8_t> StringToVector(const std::string &str)
     return result;
 }
 
+static aabb3f LightGridBounds(const mbsp_t &bsp)
+{
+    aabb3f result;
+
+    // see if `_lightgrid_hint` entities are in use
+    for (auto &entity : GetEntdicts()) {
+        if (entity.get_int("_lightgrid_hint")) {
+            qvec3d point{};
+            entity.get_vector("origin", point);
+            result += point;
+        }
+    }
+
+    if (result.valid()) {
+        auto size = result.size();
+        if (size[0] > 0 && size[1] > 0 && size[2] > 0) {
+            return result;
+        }
+    }
+
+    result = Model_BoundsOfFaces(bsp, bsp.dmodels[0]);
+    return result;
+}
+
 void LightGrid(bspdata_t *bspdata)
 {
     if (!light_options.lightgrid.value())
@@ -60,9 +84,9 @@ void LightGrid(bspdata_t *bspdata)
 
     auto &bsp = std::get<mbsp_t>(bspdata->bsp);
 
-    auto faces_size = Model_BoundsOfFaces(bsp, bsp.dmodels[0]);
-    const qvec3f grid_maxs = faces_size.maxs();
-    const qvec3f grid_mins = faces_size.mins();
+    const auto grid_bounds = LightGridBounds(bsp);
+    const qvec3f grid_maxs = grid_bounds.maxs();
+    const qvec3f grid_mins = grid_bounds.mins();
     const qvec3f world_size = grid_maxs - grid_mins;
 
     // number of grid points on each axis

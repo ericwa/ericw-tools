@@ -194,6 +194,17 @@ public:
 
     constexpr value_type size() const { return maxs() - mins(); }
 
+    constexpr bool valid() const {
+        value_type our_size = size();
+
+        if (our_size[0] < static_cast<V>(0)
+            || our_size[1] < static_cast<V>(0)
+            || our_size[2] < static_cast<V>(0)) {
+            return false;
+        }
+        return true;
+    }
+
     constexpr aabb grow(const value_type &size) const { return {mins() - size, maxs() + size}; }
 
     constexpr value_type &operator[](const size_t &index) { return m_corners[index]; }

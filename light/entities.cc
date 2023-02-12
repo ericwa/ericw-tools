@@ -29,10 +29,10 @@
 #include <common/bsputils.hh>
 #include <common/parallel.hh>
 
-std::vector<std::unique_ptr<light_t>> all_lights;
-std::vector<sun_t> all_suns;
-std::vector<entdict_t> entdicts;
-std::vector<entdict_t> radlights;
+static std::vector<std::unique_ptr<light_t>> all_lights;
+static std::vector<sun_t> all_suns;
+static std::vector<entdict_t> entdicts;
+static std::vector<entdict_t> radlights;
 static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
 static std::ofstream surflights_dump_file;
@@ -58,6 +58,11 @@ void ResetLightEntities()
 std::vector<std::unique_ptr<light_t>> &GetLights()
 {
     return all_lights;
+}
+
+const std::vector<entdict_t> &GetEntdicts()
+{
+    return entdicts;
 }
 
 std::vector<sun_t> &GetSuns()
