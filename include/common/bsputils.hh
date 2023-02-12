@@ -98,13 +98,13 @@ int BSP_FindContentsAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmode
 
 std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *leaf);
 std::vector<const dbrush_t *> Leaf_Brushes(const mbsp_t *bsp, const mleaf_t *leaf);
-const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f);
 const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);
 qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f);
 std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face);
 polylib::winding_t Face_Winding(const mbsp_t *bsp, const mface_t *face);
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face);
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
+aabb3f Model_BoundsOfFaces(const mbsp_t& bsp, const dmodelh2_t &model);
 
 void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it);
 size_t DecompressedVisSize(const mbsp_t *bsp);

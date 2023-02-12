@@ -566,6 +566,18 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
     }
 }
 
+aabb3f Model_BoundsOfFaces(const mbsp_t& bsp, const dmodelh2_t &model)
+{
+    aabb3f result;
+    for (int i = model.firstface; i < model.firstface + model.numfaces; ++i) {
+        auto &face = bsp.dfaces[i];
+        for (int j = 0; j < face.numedges; ++j) {
+            result += Face_PointAtIndex(&bsp, &face, j);
+        }
+    }
+    return result;
+}
+
 /*
 ===============
 CompressRow
