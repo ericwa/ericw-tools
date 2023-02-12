@@ -1409,7 +1409,7 @@ static void LightGrid(bspdata_t *bspdata)
         std::function<std::tuple<lightgrid_samples_t, bool>(uint32_t, qvec3i)> octree_lookup_r;
         octree_lookup_r = [&](uint32_t node_index, qvec3i test_point) -> std::tuple<lightgrid_samples_t, bool> {
             if (node_index & FLAG_OCCLUDED) {
-                return {{}, true};
+                return {lightgrid_samples_t{}, true};
             }
             if (node_index & FLAG_LEAF) {
                 auto &leaf = octree_leafs.at(node_index & (~FLAG_LEAF));
