@@ -410,7 +410,7 @@ static void WriteExtendedTexinfoFlags(void)
 }
 
 static bool Is16BitMarkfsurfaceFormat(const bspversion_t *version) {
-    for (auto &lumpspec : qbsp_options.target_version->lumps) {
+    for (auto &lumpspec : version->lumps) {
         if ((!strcmp("marksurfaces", lumpspec.name)
                 || !strcmp("leaffaces", lumpspec.name)) && lumpspec.size == 2) {
             return true;
