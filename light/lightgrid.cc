@@ -322,18 +322,21 @@ void LightGrid(bspdata_t *bspdata)
             return mins + (size / 2);
         };
 
-        auto is_all_occluded = [&](qvec3i mins, qvec3i size) -> bool {
+        auto count_occluded_unoccluded = [&](qvec3i mins, qvec3i size) -> std::tuple<int, int> {
+            std::tuple<int, int> occluded_unoccluded;
             for (int z = mins[2]; z < (mins[2] + size[2]); ++z) {
                 for (int y = mins[1]; y < (mins[1] + size[1]); ++y) {
                     for (int x = mins[0]; x < (mins[0] + size[0]); ++x) {
                         int sample_index = get_grid_index(x, y, z);
-                        if (!occlusion[sample_index]) {
-                            return false;
+                        if (occlusion[sample_index]) {
+                            std::get<0>(occluded_unoccluded)++;
+                        } else {
+                            std::get<1>(occluded_unoccluded)++;
                         }
                     }
                 }
             }
-            return true;
+            return occluded_unoccluded;
         };
 
         constexpr int MAX_DEPTH = 5;
@@ -374,7 +377,8 @@ void LightGrid(bspdata_t *bspdata)
             assert(size[2] > 0);
 
             // special case: fully occluded leaf, just represented as a flag bit
-            if (is_all_occluded(mins, size)) {
+            auto [occluded_count, unoccluded_count] = count_occluded_unoccluded(mins, size);
+            if (!unoccluded_count) {
                 occluded_cells += size[0] * size[1] * size[2];
                 return FLAG_OCCLUDED;
             }
@@ -385,6 +389,11 @@ void LightGrid(bspdata_t *bspdata)
                 make_leaf = true;
             if (depth == MAX_DEPTH)
                 make_leaf = true;
+
+            if (occluded_count < 8) {
+                // force a leaf if it's mostly unoccluded
+                make_leaf = true;
+            }
 
             if (make_leaf) {
                 // make a leaf
