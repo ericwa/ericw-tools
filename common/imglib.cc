@@ -502,7 +502,11 @@ std::optional<texture_meta> load_wal_meta(
         // are these rather than the ones pulled in from the image
         // itself. they must be integers.
         "width": 64,
-        "height": 64
+        "height": 64,
+
+        // color to use for lighting bounces. if specified, this
+        // is used instead of averaging the pixels of the image.
+        "color": [255, 128, 64]
     }
 */
 std::optional<texture_meta> load_wal_json_meta(
