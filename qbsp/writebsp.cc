@@ -193,7 +193,14 @@ static void ExportLeaf(node_t *node)
     }
     dleaf.nummarksurfaces = static_cast<int>(map.bsp.dleaffaces.size()) - dleaf.firstmarksurface;
 
-    dleaf.area = node->area;
+    if (map.leakfile) {
+        if (!(dleaf.contents & Q2_CONTENTS_SOLID)) {
+            dleaf.area = 1;
+        }
+    } else {
+        dleaf.area = node->area;
+    }
+
     dleaf.cluster = node->viscluster;
     dleaf.firstleafbrush = node->firstleafbrush;
     dleaf.numleafbrushes = node->numleafbrushes;
