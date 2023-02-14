@@ -722,12 +722,18 @@ emit them.
 void EmitAreaPortals(node_t *headnode)
 {
     logging::funcheader();
-    
-    FindAreas_r(headnode);
-    SetAreaPortalAreas_r(headnode);
 
     map.bsp.dareaportals.emplace_back();
     map.bsp.dareas.emplace_back();
+
+    // don't do anything else if we've leaked
+    if (map.leakfile) {
+        map.bsp.dareas.emplace_back();
+        return;
+    }
+    
+    FindAreas_r(headnode);
+    SetAreaPortalAreas_r(headnode);
 
     for (size_t i = 1; i <= map.c_areas; i++) {
         darea_t &area = map.bsp.dareas.emplace_back();
