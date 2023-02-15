@@ -188,6 +188,7 @@ static std::vector<uint8_t> MakeClusterLump(const mbsp_t &bsp, const lightgrid_r
 
     auto vec = StringToVector(str.str());
     logging::print("     {:8} bytes LIGHTGRID_PERCLUSTER\n", vec.size());
+    return vec;
 }
 
 static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_raw_data &data)
@@ -486,6 +487,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
 
     auto vec = StringToVector(str.str());
     logging::print("     {:8} bytes LIGHTGRID_OCTREE\n", vec.size());
+    return vec;
 }
 
 void LightGrid(bspdata_t *bspdata)
