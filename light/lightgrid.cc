@@ -512,11 +512,9 @@ void LightGrid(bspdata_t *bspdata)
         ceil(world_size[2] / data.grid_dist[2])
     };
 
-    std::vector<lightgrid_samples_t> grid_result;
-    grid_result.resize(data.grid_size[0] * data.grid_size[1] * data.grid_size[2]);
+    data.grid_result.resize(data.grid_size[0] * data.grid_size[1] * data.grid_size[2]);
 
-    std::vector<uint8_t> occlusion;
-    occlusion.resize(data.grid_size[0] * data.grid_size[1] * data.grid_size[2]);
+    data.occlusion.resize(data.grid_size[0] * data.grid_size[1] * data.grid_size[2]);
 
     logging::parallel_for(0, data.grid_size[0] * data.grid_size[1] * data.grid_size[2], [&](int sample_index){
         const int z = (sample_index / (data.grid_size[0] * data.grid_size[1]));
@@ -540,14 +538,14 @@ void LightGrid(bspdata_t *bspdata)
         if (!occluded)
             samples = CalcLightgridAtPoint(&bsp, world_point);
 
-        grid_result[sample_index] = samples;
-        occlusion[sample_index] = occluded;
+        data.grid_result[sample_index] = samples;
+        data.occlusion[sample_index] = occluded;
     });
 
     // the maximum used styles across the map.
     data.num_styles = [&](){
         int result = 0;
-        for (auto &samples : grid_result) {
+        for (auto &samples : data.grid_result) {
             result = max(result, samples.used_styles());
         }
         return result;
