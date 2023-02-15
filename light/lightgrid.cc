@@ -498,6 +498,7 @@ void LightGrid(bspdata_t *bspdata)
     auto &bsp = std::get<mbsp_t>(bspdata->bsp);
 
     lightgrid_raw_data data;
+    data.grid_dist = light_options.lightgrid_dist.value();
 
     const auto grid_bounds = LightGridBounds(bsp);
     const qvec3f grid_maxs = grid_bounds.maxs();
@@ -510,8 +511,6 @@ void LightGrid(bspdata_t *bspdata)
         ceil(world_size[1] / data.grid_dist[1]),
         ceil(world_size[2] / data.grid_dist[2])
     };
-
-    data.grid_dist = light_options.lightgrid_dist.value();
 
     std::vector<lightgrid_samples_t> grid_result;
     grid_result.resize(data.grid_size[0] * data.grid_size[1] * data.grid_size[2]);
