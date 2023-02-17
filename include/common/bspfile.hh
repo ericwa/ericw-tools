@@ -219,6 +219,9 @@ struct surfflags_t
     // surface light group
     int32_t surflight_group;
 
+    // custom world_units_per_luxel for this geometry
+    std::optional<float> world_units_per_luxel;
+
     bool needs_write() const;
 
 public:

@@ -409,6 +409,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.surflight_group) {
             t["surflight_group"] = tx.flags.surflight_group;
         }
+        if (tx.flags.world_units_per_luxel) {
+            t["world_units_per_luxel"] = *tx.flags.world_units_per_luxel;
+        }
 
         texinfofile[std::to_string(*tx.outputnum)].swap(t);
     }

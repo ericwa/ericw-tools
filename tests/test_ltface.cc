@@ -119,7 +119,31 @@ static testresults_t QbspVisLight_Q2(const std::filesystem::path &name, std::vec
 }
 
 TEST_CASE("-world_units_per_luxel") {
-    QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-world_units_per_luxel", "8"});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {});
+
+    {
+        INFO("back wall has texture scale 8 but still gets a luxel every 8 units");
+        auto *back_wall = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {448, -84, 276}, {-1, 0, 0});
+        auto back_wall_info = BSPX_DecoupledLM(bspx, Face_GetNum(&bsp, back_wall));
+        auto back_wall_extents = faceextents_t(
+            *back_wall, bsp, back_wall_info.lmwidth, back_wall_info.lmheight, back_wall_info.world_to_lm_space);
+
+        // NOTE: the exact values are not critical (depends on BSP splitting) but they should be relatively large
+        CHECK(75 == back_wall_extents.width());
+        CHECK(43 == back_wall_extents.height());
+    }
+
+    {
+        INFO("side wall func_group has _world_units_per_luxel 48, small lightmap");
+
+        auto *side_wall = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {384, 240, 84}, {0, -1, 0});
+        auto side_wall_info = BSPX_DecoupledLM(bspx, Face_GetNum(&bsp, side_wall));
+        auto side_wall_extents = faceextents_t(
+            *side_wall, bsp, side_wall_info.lmwidth, side_wall_info.lmheight, side_wall_info.world_to_lm_space);
+
+        CHECK(4 == side_wall_extents.width());
+        CHECK(5 == side_wall_extents.height());
+    }
 }
 
 TEST_CASE("emissive cube artifacts") {
@@ -165,7 +189,7 @@ TEST_CASE("emissive cube artifacts") {
 
 TEST_CASE("-novanilla + -world_units_per_luxel")
 {
-    auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-novanilla", "-world_units_per_luxel", "8"});
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-novanilla"});
 
     for (auto &face : bsp.dfaces) {
         CHECK(face.lightofs == -1);

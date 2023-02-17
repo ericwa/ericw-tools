@@ -674,6 +674,10 @@ static surfflags_t SurfFlagsForEntity(const maptexinfo_t &texinfo, const mapenti
         }
     }
 
+    if (entity.epairs.has("_world_units_per_luxel")) {
+        flags.world_units_per_luxel = entity.epairs.get_float("_world_units_per_luxel");
+    }
+
     // handle "_mincolor"
     {
         qvec3d mincolor{};

@@ -1132,6 +1132,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("surflight_group")) {
             flags.surflight_group = val.at("surflight_group").get<int32_t>();
         }
+        if (val.contains("world_units_per_luxel")) {
+            flags.world_units_per_luxel = val.at("world_units_per_luxel").get<float>();
+        }
     }
 }
 

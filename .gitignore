@@ -30,4 +30,5 @@ testmaps/quake_map_source/*.bsp.json
 **/autosave
 CMakeSettings.json
 sphinx-venv
+**/__pycache__
 *-env
