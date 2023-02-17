@@ -144,6 +144,18 @@ TEST_CASE("-world_units_per_luxel") {
         CHECK(4 == side_wall_extents.width());
         CHECK(5 == side_wall_extents.height());
     }
+
+    {
+        INFO("sky gets an optimized lightmap");
+
+        auto *side_wall = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {256, 240, 84}, {0, -1, 0});
+        auto side_wall_info = BSPX_DecoupledLM(bspx, Face_GetNum(&bsp, side_wall));
+        auto side_wall_extents = faceextents_t(
+            *side_wall, bsp, side_wall_info.lmwidth, side_wall_info.lmheight, side_wall_info.world_to_lm_space);
+
+        CHECK(2 == side_wall_extents.width());
+        CHECK(2 == side_wall_extents.height());
+    }
 }
 
 TEST_CASE("emissive cube artifacts") {
