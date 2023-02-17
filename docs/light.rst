@@ -193,138 +193,173 @@ Worldspawn Keys
 
 The following keys can be added to the *worldspawn* entity:
 
-"light" "n" \| "_minlight" "n"
+.. worldspawn-key:: "light" "n"
+                    "_minlight" "n"
+
    Set a global minimum light level of "n" across the whole map. This is
    an easy way to eliminate completely dark areas of the level, however
    you may lose some contrast as a result, so use with care. Default 0.
 
-"_minlight_color" "r g b" \| "_mincolor" "r g b"
+.. worldspawn-key:: "_minlight_color" "r g b"
+                    "_mincolor" "r g b"
+
    Specify red(r), green(g) and blue(b) components for the colour of the
    minlight. RGB component values are between 0 and 255 (between 0 and 1
    is also accepted). Default is white light ("255 255 255").
 
-"_dist" "n"
+.. worldspawn-key:: "_dist" "n"
+
    Scales the fade distance of all lights by a factor of n. If n > 1
    lights fade more quickly with distance and if n < 1, lights fade more
    slowly with distance and light reaches further.
 
-"_range" "n"
+.. worldspawn-key:: "_range" "n"
+
    Scales the brightness range of all lights without affecting their
    fade discance. Values of n > 0.5 makes lights brighter and n < 0.5
    makes lights less bright. The same effect can be achieved on
    individual lights by adjusting both the "light" and "wait"
    attributes.
 
-"_sunlight" "n"
+.. worldspawn-key:: "_sunlight" "n"
+
    Set the brightness of the sunlight coming from an unseen sun in the
    sky. Sky brushes (or more accurately bsp leafs with sky contents)
    will emit sunlight at an angle specified by the "_sun_mangle" key.
    Default 0.
 
-"_anglescale" "n" \| "_anglesense" "n"
+.. worldspawn-key:: "_anglescale" "n"
+                    "_anglesense" "n"
+
    Set the scaling of sunlight brightness due to the angle of incidence
    with a surface (more detailed explanation in the "_anglescale" light
    entity key below).
 
-"_sunlight_mangle" "yaw pitch roll" \| "_sun_mangle" "yaw pitch roll"
+.. worldspawn-key:: "_sunlight_mangle" "yaw pitch roll"
+                    "_sun_mangle" "yaw pitch roll"
+
    Specifies the direction of sunlight using yaw, pitch and roll in
    degrees. Yaw specifies the angle around the Z-axis from 0 to 359
    degrees and pitch specifies the angle from 90 (shining straight up)
    to -90 (shining straight down from above). Roll has no effect, so use
    any value (e.g. 0). Default is straight down ("0 -90 0").
 
-"_sunlight_penumbra" "n"
+.. worldspawn-key:: "_sunlight_penumbra" "n"
+
    Specifies the penumbra width, in degrees, of sunlight. Useful values
    are 3-4 for a gentle soft edge, or 10-20+ for more diffuse sunlight.
    Default is 0.
 
-"_sunlight_color" "r g b"
+.. worldspawn-key:: "_sunlight_color" "r g b"
+
    Specify red(r), green(g) and blue(b) components for the colour of the
    sunlight. RGB component values are between 0 and 255 (between 0 and 1
    is also accepted). Default is white light ("255 255 255").
 
-"_sunlight2" "n"
+.. worldspawn-key:: "_sunlight2" "n"
+
    Set the brightness of a dome of lights arranged around the upper
    hemisphere. (i.e. ambient light, coming from above the horizon).
    Default 0.
 
-"_sunlight_color2" "r g b" \| "_sunlight2_color" "r g b"
+.. worldspawn-key:: "_sunlight_color2" "r g b"
+                    "_sunlight2_color" "r g b"
+
    Specifies the colour of \_sunlight2, same format as
    "_sunlight_color". Default is white light ("255 255 255").
 
-"_sunlight3" "n"
+.. worldspawn-key:: "_sunlight3" "n"
+
    Same as "_sunlight2", but for the bottom hemisphere (i.e. ambient
    light, coming from below the horizon). Combine "_sunlight2" and
    "_sunlight3" to have light coming equally from all directions, e.g.
    for levels floating in the clouds. Default 0.
 
-"_sunlight_color3" "r g b" \| "_sunlight3_color" "r g b"
+.. worldspawn-key:: "_sunlight_color3" "r g b"
+                    "_sunlight3_color" "r g b"
+
    Specifies the colour of "_sunlight3". Default is white light ("255
    255 255").
 
-"_dirt" "n"
+.. worldspawn-key:: "_dirt" "n"
+
    1 enables dirtmapping (ambient occlusion) on all lights, borrowed
    from q3map2. This adds shadows to corners and crevices. You can
    override the global setting for specific lights with the "_dirt"
    light entity key or "_sunlight_dirt", "_sunlight2_dirt", and
    "_minlight_dirt" worldspawn keys. Default is no dirtmapping (-1).
 
-"_sunlight_dirt" "n"
+.. worldspawn-key:: "_sunlight_dirt" "n"
+
    1 enables dirtmapping (ambient occlusion) on sunlight, -1 to disable
    (making it illuminate the dirtmapping shadows). Default is to use the
    value of "_dirt".
 
-"_sunlight2_dirt" "n"
+.. worldspawn-key:: "_sunlight2_dirt" "n"
+   
    1 enables dirtmapping (ambient occlusion) on sunlight2/3, -1 to
    disable. Default is to use the value of "_dirt".
 
-"_minlight_dirt" "n"
+.. worldspawn-key:: "_minlight_dirt" "n"
+   
    1 enables dirtmapping (ambient occlusion) on minlight, -1 to disable.
    Default is to use the value of "_dirt".
 
-"_dirtmode" "n"
+.. worldspawn-key:: "_dirtmode" "n"
+
    Choose between ordered (0, default) and randomized (1) dirtmapping.
 
-"_dirtdepth" "n"
+.. worldspawn-key:: "_dirtdepth" "n"
+
    Maximum depth of occlusion checking for dirtmapping, default 128.
 
-"_dirtscale" "n"
+.. worldspawn-key:: "_dirtscale" "n"
+
    Scale factor used in dirt calculations, default 1. Lower values (e.g.
    0.5) make the dirt fainter, 2.0 would create much darker shadows.
 
-"_dirtgain" "n"
+.. worldspawn-key:: "_dirtgain" "n"
+
    Exponent used in dirt calculation, default 1. Lower values (e.g. 0.5)
    make the shadows darker and stretch further away from corners.
 
-"_dirtangle" "n"
+.. worldspawn-key:: "_dirtangle" "n"
+
    Cone angle in degrees for occlusion testing, default 88. Allowed
    range 1-90. Lower values can avoid unwanted dirt on arches, pipe
    interiors, etc.
 
-"_gamma" "n"
+.. worldspawn-key:: "_gamma" "n"
+
    Adjust brightness of final lightmap. Default 1, >1 is brighter, <1 is
    darker.
 
-"_lightmap_scale" "n"
+.. worldspawn-key:: "_lightmap_scale" "n"
+
    Forces all surfaces+submodels to use this specific lightmap scale.
    Removes "LMSHIFT" field.
 
-"_bounce" "n"
+.. worldspawn-key:: "_bounce" "n"
+
    1 enables bounce lighting, disabled by default.
 
-"_bouncescale" "n"
+.. worldspawn-key:: "_bouncescale" "n"
+
    Scales brightness of bounce lighting, default 1.
 
-"_bouncecolorscale" "n"
+.. worldspawn-key:: "_bouncecolorscale" "n"
+
    Weight for bounce lighting to use texture colors from the map:
    0=ignore map textures (default), 1=multiply bounce light color by
    texture color.
 
-"_bouncestyled" "n"
+.. worldspawn-key:: "_bouncestyled" "n"
+
    1 makes styled lights bounce (e.g. flickering or switchable lights),
    default is 0, they do not bounce.
 
-"_spotlightautofalloff" "n"
+.. worldspawn-key:: "_spotlightautofalloff" "n"
+
    When set to 1, spotlight falloff is calculated from the distance to
    the targeted info_null. Ignored when "_falloff" is not 0. Default 0.
 
@@ -336,36 +371,45 @@ The following keys can be used on any entity with a brush model.
 "_phong_angle_concave", "_shadow", "_bounce" are supported on
 func_detail/func_group as well, if qbsp from these tools is used.
 
-"_minlight" "n"
+.. bmodel-key:: "_minlight" "n"
+
    Set the minimum light level for any surface of the brush model.
    Default 0.
 
-"_minlight_exclude" "texname"
+.. bmodel-key:: "_minlight_exclude" "texname"
+
    Faces with the given texture are excluded from receiving minlight on
    this brush model.
 
-"_minlight_color" "r g b" \| "_mincolor" "r g b"
+.. bmodel-key:: "_minlight_color" "r g b"
+                "_mincolor" "r g b"
+
    Specify red(r), green(g) and blue(b) components for the colour of the
    minlight. RGB component values are between 0 and 255 (between 0 and 1
    is also accepted). Default is white light ("255 255 255").
 
-"_shadow" "n"
+.. bmodel-key:: "_shadow" "n"
+
    If n is 1, this model will cast shadows on other models and itself
    (i.e. "_shadow" implies "_shadowself"). Note that this doesn't
    magically give Quake dynamic lighting powers, so the shadows will not
    move if the model moves. Set to -1 on func_detail/func_group to
    prevent them from casting shadows. Default 0.
 
-"_shadowself" "n" \| "_selfshadow" "n"
+.. bmodel-key:: "_shadowself" "n"
+                "_selfshadow" "n"
+
    If n is 1, this model will cast shadows on itself if one part of the
    model blocks the light from another model surface. This can be a
    better compromise for moving models than full shadowing. Default 0.
 
-"_shadowworldonly" "n"
+.. bmodel-key:: "_shadowworldonly" "n"
+
    If n is 1, this model will cast shadows on the world only (not other
    bmodels).
 
-"_switchableshadow" "n"
+.. bmodel-key:: "_switchableshadow" "n"
+
    If n is 1, this model casts a shadow that can be switched on/off
    using QuakeC. To make this work, a lightstyle is automatically
    assigned and stored in a key called "switchshadstyle", which the
@@ -374,21 +418,24 @@ func_detail/func_group as well, if qbsp from these tools is used.
    targetname, and with "_switchableshadow" set to 1, will share the
    same lightstyle.
 
-These models are only able to block style 0 light (i.e., non-flickering
-or switchable lights). Flickering or switchable lights will shine
-through the switchable shadow casters, regardless of whether the shadow
-is off or on.
+   These models are only able to block style 0 light (i.e., non-flickering
+   or switchable lights). Flickering or switchable lights will shine
+   through the switchable shadow casters, regardless of whether the shadow
+   is off or on.
 
-"_dirt" "n"
+.. bmodel-key:: "_dirt" "n"
+
    For brush models, -1 prevents dirtmapping on the brush model. Useful
    if the bmodel touches or sticks into the world, and you want to
    prevent those areas from turning black. Default 0.
 
-"_phong" "n"
+.. bmodel-key:: "_phong" "n"
+
    1 enables phong shading on this model with a default \_phong_angle of
    89 (softens columns etc).
 
-"_phong_angle" "n"
+.. bmodel-key:: "_phong_angle" "n"
+
    Enables phong shading on faces of this model with a custom angle.
    Adjacent faces with normals this many degrees apart (or less) will be
    smoothed. Consider setting "_anglescale" to "1" on lights or
@@ -397,7 +444,8 @@ is off or on.
    the lightmap for previewing (use "r_lightmap 1" or "gl_lightmaps 1"
    in your engine to preview.)
 
-"_phong_angle_concave" "n"
+.. bmodel-key:: "_phong_angle_concave" "n"
+
    Optional key for setting a different angle threshold for concave
    joints. A pair of faces will either use "_phong_angle" or
    "_phong_angle_concave" as the smoothing threshold, depending on
@@ -409,11 +457,13 @@ is off or on.
    1 degree apart, almost a flat plane.) If it's 0 or unset, the same
    value as "_phong_angle" is used.
 
-"_lightignore" "n"
+.. bmodel-key:: "_lightignore" "n"
+
    1 makes a model receive minlight only, ignoring all lights /
    sunlight. Could be useful on rotators / trains.
 
-"_bounce" "n"
+.. bmodel-key:: "_bounce" "n"
+   
    Set to -1 to prevent this model from bouncing light (i.e. prevents
    its brushes from emitting bounced light they receive from elsewhere.)
    Only has an effect if "_bounce" is enabled in worldspawn.
@@ -425,93 +475,110 @@ Light entity keys can be used in any entity with a classname starting
 with the first five letters "light". E.g. "light", "light_globe",
 "light_flame_small_yellow", etc.
 
-"light" "n"
+.. light-key:: "light" "n"
+
    Set the light intensity. Negative values are also allowed and will
    cause the entity to subtract light cast by other entities. Default
    300.
 
-"wait" "n"
+.. light-key:: "wait" "n"
+
    Scale the fade distance of the light by "n". Values of n > 1 make the
    light fade more quickly with distance, and values < 1 make the light
    fade more slowly (and thus reach further). Default 1.
 
-"delay" "n"
+.. light-key:: "delay" "n"
+
    Select an attenuation formaula for the light:
 
-::
+   ::
 
-     0 => Linear attenuation (default)
-     1 => 1/x attenuation
-     2 => 1/(x^2) attenuation
-     3 => No attenuation (same brightness at any distance)
-     4 => "local minlight" - No attenuation and like minlight,
-          it won't raise the lighting above it's light value.
-          Unlike minlight, it will only affect surfaces within
-          line of sight of the entity.
-     5 => 1/(x^2) attenuation, but slightly more attenuated and
-          without the extra bright effect that "delay 2" has
-          near the source.
+      0 => Linear attenuation (default)
+      1 => 1/x attenuation
+      2 => 1/(x^2) attenuation
+      3 => No attenuation (same brightness at any distance)
+      4 => "local minlight" - No attenuation and like minlight,
+            it won't raise the lighting above it's light value.
+            Unlike minlight, it will only affect surfaces within
+            line of sight of the entity.
+      5 => 1/(x^2) attenuation, but slightly more attenuated and
+            without the extra bright effect that "delay 2" has
+            near the source.
 
-"_falloff" "n"
+.. light-key:: "_falloff" "n"
+
    Sets the distance at which the light drops to 0, in map units.
 
-In this mode, "wait" is ignored and "light" only controls the brightness
-at the center of the light, and no longer affects the falloff distance.
+   In this mode, "wait" is ignored and "light" only controls the brightness
+   at the center of the light, and no longer affects the falloff distance.
 
-Only supported on linear attenuation (delay 0) lights currently.
+   Only supported on linear attenuation (delay 0) lights currently.
 
-"_color" "r g b"
+.. light-key:: "_color" "r g b"
+
    Specify red(r), green(g) and blue(b) components for the colour of the
    light. RGB component values are between 0 and 255 (between 0 and 1 is
    also accepted). Default is white light ("255 255 255").
 
-"target" "name"
+.. light-key:: "target" "name"
+
    Turns the light into a spotlight, with the direction of light being
    towards another entity with it's "targetname" key set to "name".
 
-"mangle" "yaw pitch roll"
+.. light-key:: "mangle" "yaw pitch roll"
+
    Turns the light into a spotlight and specifies the direction of light
    using yaw, pitch and roll in degrees. Yaw specifies the angle around
    the Z-axis from 0 to 359 degrees and pitch specifies the angle from
    90 (straight up) to -90 (straight down). Roll has no effect, so use
    any value (e.g. 0). Often easier than the "target" method.
 
-"angle" "n"
+.. light-key:: "angle" "n"
+
    Specifies the angle in degrees for a spotlight cone. Default 40.
 
-"_softangle" "n"
+.. light-key:: "_softangle" "n"
+
    Specifies the angle in degrees for an inner spotlight cone (must be
    less than the "angle" cone. Creates a softer transition between the
    full brightness of the inner cone to the edge of the outer cone.
    Default 0 (disabled).
 
-"targetname" "name"
+.. light-key:: "targetname" "name"
+
    Turns the light into a switchable light, toggled by another entity
    targeting it's name.
 
-"style" "n"
+.. light-key:: "style" "n"
+
    Set the animated light style. Default 0.
 
-"_anglescale" "n" \| "_anglesense" "n"
+.. light-key:: "_anglescale" "n"
+               "_anglesense" "n"
+
    Sets a scaling factor for how much influence the angle of incidence
    of light on a surface has on the brightness of the surface. *n* must
    be between 0.0 and 1.0. Smaller values mean less attenuation, with
    zero meaning that angle of incidence has no effect at all on the
    brightness. Default 0.5.
 
-"_dirtscale" "n" \| "_dirtgain" "n"
+.. light-key:: "_dirtscale" "n"
+               "_dirtgain" "n"
+
    Override the global "_dirtscale" or "_dirtgain" settings to change
    how this light is affected by dirtmapping (ambient occlusion). See
    descriptions of these keys in the worldspawn section.
 
-"_dirt" "n"
+.. light-key:: "_dirt" "n"
+
    Overrides the worldspawn setting of "_dirt" for this particular
    light. -1 to disable dirtmapping (ambient occlusion) for this light,
    making it illuminate the dirtmapping shadows. 1 to enable ambient
    occlusion for this light. Default is to defer to the worldspawn
    setting.
 
-"_deviance" "n"
+.. light-key:: "_deviance" "n"
+
    Split up the light into a sphere of randomly positioned lights within
    radius "n" (in world units). Useful to give shadows a wider penumbra.
    "_samples" specifies the number of lights in the sphere. The "light"
@@ -519,83 +586,95 @@ Only supported on linear attenuation (delay 0) lights currently.
    linear and non-additive minlight) to attempt to keep the brightness
    equal. Default is 0, do not split up lights.
 
-"_samples" "n"
+.. light-key:: "_samples" "n"
+
    Number of lights to use for "_deviance". Default 16 (only used if
    "_deviance" is set).
 
-"_surface" "texturename"
+.. light-key:: "_surface" "texturename"
+
    Makes surfaces with the given texture name emit light, by using this
    light as a template which is copied across those surfaces. Lights are
    spaced about 128 units (though possibly closer due to bsp splitting)
    apart and positioned 2 units above the surfaces.
 
-"_surface_offset" "n"
+.. light-key:: "_surface_offset" "n"
+
    Controls the offset lights are placed above surfaces for "_surface".
    Default 2.
 
-"_surface_spotlight" "n"
+.. light-key:: "_surface_spotlight" "n"
+
    For a surface light template (i.e. a light with "_surface" set),
    setting this to "1" makes each instance into a spotlight, with the
    direction of light pointing along the surface normal. In other words,
    it automatically sets "mangle" on each of the generated lights.
 
-"_project_texture" "texture"
+.. light-key:: "_project_texture" "texture"
+
    Specifies that a light should project this texture. The texture must
    be used in the map somewhere.
 
-"_project_mangle" "yaw pitch roll"
+.. light-key:: "_project_mangle" "yaw pitch roll"
+
    Specifies the yaw/pitch/roll angles for a texture projection
    (overriding mangle).
 
-"_project_fov" "n"
+.. light-key:: "_project_fov" "n"
+
    Specifies the fov angle for a texture projection. Default 90.
 
-"_bouncescale" "n"
+.. light-key:: "_bouncescale" "n"
+
    Scales the amount of light that is contributed by bounces. Default is
    1.0, 0.0 disables bounce lighting for this light.
 
-"_sun" "n"
+.. light-key:: "_sun" "n"
+
    Set to 1 to make this entity a sun, as an alternative to using the
    sunlight worldspawn keys. If the light targets an info_null entity,
    the direction towards that entity sets sun direction. The light
    itself is disabled, so it can be placed anywhere in the map.
 
-The following light properties correspond to these sunlight settings:
+   The following light properties correspond to these sunlight settings:
 
-::
+   ::
 
-     light       => _sunlight
-     mangle      => _sunlight_mangle
-     deviance    => _sunlight_penumbra
-     _color      => _sunlight_color
-     _dirt       => _sunlight_dirt
-     _anglescale => _anglescale
-     style       => flicker style for styled sunlight
-     targetname  => targetname for switchable sunlight
-     _suntexture => this sunlight is only emitted from faces with this texture name
+      light       => _sunlight
+      mangle      => _sunlight_mangle
+      deviance    => _sunlight_penumbra
+      _color      => _sunlight_color
+      _dirt       => _sunlight_dirt
+      _anglescale => _anglescale
+      style       => flicker style for styled sunlight
+      targetname  => targetname for switchable sunlight
+      _suntexture => this sunlight is only emitted from faces with this texture name
 
-"_sunlight2" "n"
+.. light-key:: "_sunlight2" "n"
+
    Set to 1 to make this entity control the upper dome lighting emitted
    from sky faces, as an alternative to the worldspawn key "_sunlight2".
    The light entity itself is disabled, so it can be placed anywhere in
    the map.
 
-The following light properties correspond to these sunlight settings:
+   The following light properties correspond to these sunlight settings:
 
-::
+   ::
 
-     light       => _sunlight2
-     _color      => _sunlight2_color
-     _dirt       => _sunlight2_dirt
-     _anglescale => _anglescale
-     style       => flicker style for styled dome light
-     targetname  => targetname for switchable sunlight
-     _suntexture => this sunlight is only emitted from faces with this texture name
+      light       => _sunlight2
+      _color      => _sunlight2_color
+      _dirt       => _sunlight2_dirt
+      _anglescale => _anglescale
+      style       => flicker style for styled dome light
+      targetname  => targetname for switchable sunlight
+      _suntexture => this sunlight is only emitted from faces with this texture name
 
-"_sunlight3" "n"
+.. light-key:: "_sunlight3" "n"
+
    Same as "_sunlight2", but for the lower hemisphere.
 
-"_nostaticlight" "n"
+.. light-key:: "_nostaticlight" "n"
+
    Set to 1 to make the light compiler ignore this entity (prevents it
    from casting any light). e.g. could be useful with rtlights.
 

@@ -232,62 +232,63 @@ The contents inside a brush depend on the texture name(s) assigned to
 it.
 
 By default brush contents are solid unless they have a special name.
-Names beginning with an asterisk are liquids. A prefix of *\*slime*
-indicates slime, *\*lava* is for lava and anything else beginning with
-*\** will have contents as water.
-
 All faces of a brush must have textures which indicate the same
 contents. Mixed content types will cause qbsp to print an error and
 exit.
 
-skip
-^^^^
+.. texture:: *slime
+             *lava
+             *
 
-Any surfaces assigned a texture name of *skip* will be compiled into the
-bsp as invisible surfaces. Solid surfaces will still be solid (e.g. the
-play can't walk or shoot through them) but they will not be drawn.
-Water, slime and lava surfaces can be made invisible using the texture
-names *\*waterskip*, *\*slimeskip* and *\*lavaskip* respectively.
+   Names beginning with an asterisk are liquids. A prefix of *\*slime*
+   indicates slime, *\*lava* is for lava and anything else beginning with
+   *\** will have contents as water.
 
-hint
-^^^^
+.. texture:: skip
 
-Hint surfaces cause a bsp split and portal to be generated the on the
-surface plane, after which they are removed from the final bsp - they
-are neither visible, nor structural. Strategic placement of hint
-surfaces can be used by a map author to optimise the PVS calculations so
-as to limit overdraw by the engine (see also: **vis**\ (1)).
+   Any surfaces assigned a texture name of *skip* will be compiled into the
+   bsp as invisible surfaces. Solid surfaces will still be solid (e.g. the
+   play can't walk or shoot through them) but they will not be drawn.
+   Water, slime and lava surfaces can be made invisible using the texture
+   names *\*waterskip*, *\*slimeskip* and *\*lavaskip* respectively.
 
-Use a texture with the name *hintskip* on any surfaces of a hint brush
-which you don't want to generate bsp splits or portals. All surfaces of
-a hint brush must use either the *hint* or *hintskip* texture name.
+.. texture:: hint
 
-origin
-^^^^^^
+   Hint surfaces cause a bsp split and portal to be generated the on the
+   surface plane, after which they are removed from the final bsp - they
+   are neither visible, nor structural. Strategic placement of hint
+   surfaces can be used by a map author to optimise the PVS calculations so
+   as to limit overdraw by the engine (see also: **vis**\ (1)).
 
-An origin brush (all faces textured with "origin") can be added to a
-brush entity (but not detail or compiler-internal entities like
-func_group). Doing so causes all of the brushes in the brush entitiy to
-be translated so the center of the origin brush lines up with 0 0 0. The
-entity key "origin" is then automatically set on the brush entity to the
-original cooridnates of the center of the "origin" brush before it was
-translated to 0 0 0.
+   Use a texture with the name *hintskip* on any surfaces of a hint brush
+   which you don't want to generate bsp splits or portals. All surfaces of
+   a hint brush must use either the *hint* or *hintskip* texture name.
 
-In Hexen 2, origin brushes are the native way of marking the center
-point of the rotation axis for rotating entities.
+.. texture:: origin
 
-In Quake, origin brushes can be used to make some map hacks easier to
-set up that would otherwise require placing brushes at the world origin
-and entering an "origin" value by hand.
+   An origin brush (all faces textured with "origin") can be added to a
+   brush entity (but not detail or compiler-internal entities like
+   func_group). Doing so causes all of the brushes in the brush entitiy to
+   be translated so the center of the origin brush lines up with 0 0 0. The
+   entity key "origin" is then automatically set on the brush entity to the
+   original cooridnates of the center of the "origin" brush before it was
+   translated to 0 0 0.
 
-Note that, unlike the Hipnotic rotation support in QBSP, using origin
-brushes does not cause the model bounds to be expanded. (With Hipnotic
-rotation this was to ensure that the model is not vis culled, regardless
-of its rotated angle.) Origin brushes are useful for more than just
-rotation, and doing this bounds expansion would break some use cases, so
-if you're going to rotate a model with an origin brush you might need to
-expand the bounds of it a bit using clip brushes so it doesn't get vis
-culled.
+   In Hexen 2, origin brushes are the native way of marking the center
+   point of the rotation axis for rotating entities.
+
+   In Quake, origin brushes can be used to make some map hacks easier to
+   set up that would otherwise require placing brushes at the world origin
+   and entering an "origin" value by hand.
+
+   Note that, unlike the Hipnotic rotation support in QBSP, using origin
+   brushes does not cause the model bounds to be expanded. (With Hipnotic
+   rotation this was to ensure that the model is not vis culled, regardless
+   of its rotated angle.) Origin brushes are useful for more than just
+   rotation, and doing this bounds expansion would break some use cases, so
+   if you're going to rotate a model with an origin brush you might need to
+   expand the bounds of it a bit using clip brushes so it doesn't get vis
+   culled.
 
 External Map Prefab Support
 ---------------------------
@@ -314,24 +315,29 @@ configure the final entity type. e.g. if you set
 "targetname" key on the "misc_external_map", or any other keys for
 "func_door".
 
-\_external_map
+.. other-key:: _external_map
+   
    Specifies the filename of the .map to import.
 
-\_external_map_classname
+.. other-key:: _external_map_classname
+   
    What entity you want the external map to turn in to. You can use
    internal qbsp entity types such as "func_detail", or a regular bmodel
    classname like "func_wall" or "func_door".
 
-\_external_map_angles
+.. other-key:: _external_map_angles
+
    Rotation for the prefab, "pitch yaw roll" format. Assuming the
    exernal map is facing the +X axis, positive pitch is down. Yaw of
    180, for example, would rotate it to face -X.
 
-\_external_map_angle
+.. other-key:: _external_map_angle
+
    Short version of "_external_map_angles" for when you want to specify
    just a yaw rotation.
 
-\_external_map_scale
+.. other-key:: _external_map_scale
+
    Scale factor for the prefab, defaults to 1. Either specify a single
    value or three scales, "x y z".
 
@@ -405,46 +411,45 @@ processing the PRT2 file format.
 Detail Variants
 ---------------
 
-func_detail_illusionary
-^^^^^^^^^^^^^^^^^^^^^^^
+.. classname:: func_detail_illusionary
 
-func_detail variant with no collision (players / monsters / gunfire) and
-doesn't split world faces. Doesn't cast shadows unless enabled with
-"_shadow" "1". Useful for hanging vines. Still creates BSP leafs, which
-is unavoidable without a new .bsp file format.
+   func_detail variant with no collision (players / monsters / gunfire) and
+   doesn't split world faces. Doesn't cast shadows unless enabled with
+   "_shadow" "1". Useful for hanging vines. Still creates BSP leafs, which
+   is unavoidable without a new .bsp file format.
 
-Intersecting func_detail_illusionary brushes don't clip each other; this
-is intended to make trees/shrubs/foliage easier with "_mirrorinside"
-"1".
+   Intersecting func_detail_illusionary brushes don't clip each other; this
+   is intended to make trees/shrubs/foliage easier with "_mirrorinside"
+   "1".
 
-func_detail_wall
-^^^^^^^^^^^^^^^^
+.. classname:: func_detail_wall
 
-func_detail variant that doesn't split world faces. Useful for when you
-want a decoration touching a floor or wall to not split the floor/wall
-faces (you'll get some overdraw instead.) If it completely covers up a
-world face, that face will get clipped away, so it's not suitable for
-fence textures; see func_detail_fence instead.
+   func_detail variant that doesn't split world faces. Useful for when you
+   want a decoration touching a floor or wall to not split the floor/wall
+   faces (you'll get some overdraw instead.) If it completely covers up a
+   world face, that face will get clipped away, so it's not suitable for
+   fence textures; see func_detail_fence instead.
 
-Intersecting func_detail_wall brushes don't clip each other.
+   Intersecting func_detail_wall brushes don't clip each other.
 
-func_detail_fence
-^^^^^^^^^^^^^^^^^
+.. classname:: func_detail_fence
 
-Similar to func_detail_wall except it's suitable for fence textures,
-never clips away world faces. Useful for fences, grates, etc., that are
-solid and block gunfire.
+   Similar to func_detail_wall except it's suitable for fence textures,
+   never clips away world faces. Useful for fences, grates, etc., that are
+   solid and block gunfire.
 
-Intersecting func_detail_fence brushes don't clip each other.
+   Intersecting func_detail_fence brushes don't clip each other.
 
 Model Entity Keys
 -----------------
 
-"_lmscale" "n"
+.. bmodel-key:: "_lmscale" "n"
+
    Generates an LMSHIFT bspx lump for use by a light util. Note that
    both scaled and unscaled lighting will normally be used.
 
-"_mirrorinside" "n"
+.. bmodel-key:: "_mirrorinside" "n"
+
    Set to 1 to save mirrored inside faces for bmodels, so when the
    player view is inside the bmodel, they will still see the faces.
    (e.g. for func_water, or func_illusionary)
@@ -452,18 +457,17 @@ Model Entity Keys
 Other Special-Purpose Entities
 ------------------------------
 
-func_illusionary_visblocker
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. classname:: func_illusionary_visblocker
 
-For creating vis-blocking illusionary brushes (similar to
-"func_detail_illusionary" or "func_illusionary". The player can walk
-through them.) This gives the same effect as water brushes when the
-"-notranswater" flag is used, except the interior of these brushes are
-saved as CONTENTS_EMPTY. One thing to be aware of is, if the player's
-view is very close to the faces of these brushes, they might be able to
-see into the void (depending on the engine). Fitzquake family engines
-have a workaround for this that is enabled if the brushes are textured
-with a water texture ("*" prefix).
+   For creating vis-blocking illusionary brushes (similar to
+   "func_detail_illusionary" or "func_illusionary". The player can walk
+   through them.) This gives the same effect as water brushes when the
+   "-notranswater" flag is used, except the interior of these brushes are
+   saved as CONTENTS_EMPTY. One thing to be aware of is, if the player's
+   view is very close to the faces of these brushes, they might be able to
+   see into the void (depending on the engine). Fitzquake family engines
+   have a workaround for this that is enabled if the brushes are textured
+   with a water texture ("*" prefix).
 
 Map Compatibility
 -----------------
