@@ -19,7 +19,6 @@
     See file, 'COPYING', for details.
 */
 
-#include <memory>
 #include <cstring>
 #include <algorithm>
 

@@ -20,7 +20,6 @@
 #include <light/light.hh>
 #include <light/bounce.hh>
 #include <light/trace_embree.hh>
-#include <light/entities.hh>
 #include <common/bsputils.hh>
 #include <common/polylib.hh>
 #include <vector>

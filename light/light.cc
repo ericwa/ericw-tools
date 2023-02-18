@@ -19,7 +19,6 @@
 
 #include <cstdint>
 #include <iostream>
-#include <fstream>
 #include <fmt/ostream.h>
 #include <fmt/chrono.h>
 
@@ -36,7 +35,6 @@
 #include <common/fs.hh>
 #include <common/imglib.hh>
 #include <common/parallel.hh>
-#include <tbb/blocked_range3d.h>
 
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
 #include <xmmintrin.h>

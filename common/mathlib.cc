@@ -24,7 +24,6 @@
 #include <cassert>
 
 #include <tuple>
-#include <map>
 #include <cmath>
 
 #include <common/qvec.hh>

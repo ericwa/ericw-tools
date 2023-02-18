@@ -34,7 +34,6 @@
 #include <list>
 #include <unordered_set>
 #include <utility>
-#include <fstream>
 #include <fmt/ostream.h>
 
 static bool LeafSealsMap(const node_t *node)
