@@ -118,8 +118,8 @@ static testresults_t QbspVisLight_Q2(const std::filesystem::path &name, std::vec
     return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
 }
 
-TEST_CASE("-world_units_per_luxel") {
-    auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {});
+TEST_CASE("-world_units_per_luxel, -lightgrid") {
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-lightgrid"});
 
     {
         INFO("back wall has texture scale 8 but still gets a luxel every 8 units");
@@ -148,13 +148,12 @@ TEST_CASE("-world_units_per_luxel") {
     {
         INFO("sky gets an optimized lightmap");
 
-        auto *side_wall = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {256, 240, 84}, {0, -1, 0});
-        auto side_wall_info = BSPX_DecoupledLM(bspx, Face_GetNum(&bsp, side_wall));
-        auto side_wall_extents = faceextents_t(
-            *side_wall, bsp, side_wall_info.lmwidth, side_wall_info.lmheight, side_wall_info.world_to_lm_space);
+        auto *sky_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {256, 240, 84}, {0, -1, 0});
+        CHECK(sky_face->styles[0] == 255);
 
-        CHECK(2 == side_wall_extents.width());
-        CHECK(2 == side_wall_extents.height());
+        auto sky_face_info = BSPX_DecoupledLM(bspx, Face_GetNum(&bsp, sky_face));
+        CHECK(sky_face_info.lmwidth == 0);
+        CHECK(sky_face_info.lmheight == 0);
     }
 }
 

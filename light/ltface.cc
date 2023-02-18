@@ -2684,8 +2684,17 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
         return false;
 
     // Q2RTX should light nodraw faces
-    if (light_options.q2rtx.value() && (texinfo->flags.native & Q2_SURF_NODRAW)) {
+    if (light_options.q2rtx.value() &&
+        bsp->loadversion->game->id == GAME_QUAKE_II &&
+        (texinfo->flags.native & Q2_SURF_NODRAW)) {
         return true;
+    }
+
+    // Very specific hack: the only reason to lightmap sky faces in Q2 is to light mdl's floating over sky.
+    // If lightgrid is in use, this reason is no longer relevant, so skip lightmapping.
+    if (light_options.lightgrid.value() && bsp->loadversion->game->id == GAME_QUAKE_II
+        && (texinfo->flags.native & Q2_SURF_SKY)) {
+        return false;
     }
 
     return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
