@@ -276,14 +276,6 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const qve
 // Tests hull 0 of the given model
 bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point)
 {
-    // fast bounds check
-    for (int i = 0; i < 3; ++i) {
-        if (point[i] < model->mins[i])
-            return false;
-        if (point[i] > model->maxs[i])
-            return false;
-    }
-
     return Light_PointInSolid_r(bsp, model->headnode[0], point);
 }
 
