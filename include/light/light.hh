@@ -391,6 +391,7 @@ public:
     setting_int32 lmshift;
     setting_bool lightgrid;
     setting_vec3 lightgrid_dist;
+    setting_bool lightgrid_force_cube;
     setting_enum<lightgrid_format_t> lightgrid_format;
 
     setting_func dirtdebug;

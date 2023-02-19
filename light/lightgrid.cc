@@ -23,6 +23,7 @@
 #include <vector>
 #include <algorithm>
 #include <string>
+#include <utility>
 #include <fmt/ostream.h>
 #include <fmt/chrono.h>
 
@@ -490,6 +491,16 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     return vec;
 }
 
+static aabb3f MakeCube(const aabb3f &input)
+{
+    qvec3f centroid = input.centroid();
+
+    const float new_size = max(max(input.size()[0], input.size()[1]), input.size()[2]);
+
+    return aabb3f(centroid - qvec3f(new_size / 2),
+        centroid + qvec3f(new_size / 2));
+}
+
 void LightGrid(bspdata_t *bspdata)
 {
     if (!light_options.lightgrid.value())
@@ -502,7 +513,13 @@ void LightGrid(bspdata_t *bspdata)
     lightgrid_raw_data data;
     data.grid_dist = light_options.lightgrid_dist.value();
 
-    const auto grid_bounds = LightGridBounds(bsp);
+    auto grid_bounds = LightGridBounds(bsp);
+    if (light_options.lightgrid_force_cube.value()) {
+        logging::print("before MakeCube: {}\n", grid_bounds);
+        grid_bounds = MakeCube(grid_bounds);
+        logging::print("after MakeCube: {}\n", grid_bounds);
+    }
+
     const qvec3f grid_maxs = grid_bounds.maxs();
     data.grid_mins = grid_bounds.mins();
     const qvec3f world_size = grid_maxs - data.grid_mins;
