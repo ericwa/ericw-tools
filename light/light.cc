@@ -316,7 +316,7 @@ light_settings::light_settings()
           "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."},
       lightgrid{this, "lightgrid", false, &experimental_group, "experimental LIGHTGRID bspx lump"},
       lightgrid_dist{this, "lightgrid_dist", 32.f, 32.f, 32.f, &experimental_group, "distance between lightgrid sample points, in world units. controls lightgrid size."},
-      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::CLUSTER,
+      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE,
         {{"cluster", lightgrid_format_t::CLUSTER}, {"uniform", lightgrid_format_t::UNIFORM}, {"octree", lightgrid_format_t::OCTREE}}, &experimental_group, "lightgrid BSPX lump to use"},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
