@@ -3,8 +3,8 @@
 #include <doctest/doctest.h>
 #include <algorithm>
 
-template <class A>
-void CHECK_VECTORS_UNOREDERED_EQUAL(const A& a, const A& b)
+template<class A>
+void CHECK_VECTORS_UNOREDERED_EQUAL(const A &a, const A &b)
 {
     if (a.size() != b.size()) {
         FAIL_CHECK("Expected vectors to be equal (ignoring order)");

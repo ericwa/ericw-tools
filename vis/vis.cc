@@ -62,7 +62,7 @@ setting_group vis_advanced_group{"Advanced", 300};
 void vis_settings::initialize(int argc, const char **argv)
 {
     try {
-        token_parser_t p(argc - 1, argv + 1, { "command line" });
+        token_parser_t p(argc - 1, argv + 1, {"command line"});
         auto remainder = parse(p);
 
         if (remainder.size() <= 0 || remainder.size() > 1) {

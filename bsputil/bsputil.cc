@@ -461,9 +461,7 @@ static void FindLeaf(const mbsp_t *bsp, const qvec3d &pos)
 {
     const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], pos);
 
-    fmt::print("leaf {}: contents {} ({})\n",
-        (leaf - bsp->dleafs.data()),
-        leaf->contents,
+    fmt::print("leaf {}: contents {} ({})\n", (leaf - bsp->dleafs.data()), leaf->contents,
         contentflags_t{leaf->contents}.to_string(bsp->loadversion->game));
 }
 
@@ -471,13 +469,15 @@ static void FindLeaf(const mbsp_t *bsp, const qvec3d &pos)
 settings::common_settings bsputil_options;
 
 // map file stuff
-struct map_entity_t {
+struct map_entity_t
+{
     entdict_t epairs;
     parser_source_location location;
     std::string map_brushes; // raw brush data
 };
 
-struct map_file_t {
+struct map_file_t
+{
     std::vector<map_entity_t> entities;
 };
 
@@ -547,7 +547,7 @@ map_file_t LoadMapOrEntFile(const fs::path &source)
         return map;
     }
 
-    parser_t parser(file, { source.string() });
+    parser_t parser(file, {source.string()});
 
     for (int i = 0;; i++) {
         map_entity_t &entity = map.entities.emplace_back();
@@ -563,7 +563,6 @@ map_file_t LoadMapOrEntFile(const fs::path &source)
 
     return map;
 }
-
 
 int main(int argc, char **argv)
 {
@@ -581,7 +580,7 @@ int main(int argc, char **argv)
     }
 
     fs::path source = argv[argc - 1];
-    
+
     if (!fs::exists(source)) {
         source = DefaultExtension(argv[argc - 1], "bsp");
     }
@@ -639,10 +638,11 @@ int main(int argc, char **argv)
                     }
 
                     for (int32_t i2 = 0, b2 = 1; i2 < ents.entities.size(); i2++) {
-                        if (ents.entities[i2].epairs.get("model").empty() && ents.entities[i2].epairs.get("classname") != "func_areaportal") {
+                        if (ents.entities[i2].epairs.get("model").empty() &&
+                            ents.entities[i2].epairs.get("classname") != "func_areaportal") {
                             continue;
                         }
-                        
+
                         if (b2 == b) {
                             ents.entities[i2].map_brushes = std::move(map_file.entities[i1].map_brushes);
                             b++;
@@ -797,24 +797,24 @@ int main(int argc, char **argv)
                 Error("Error reading position/normal\n");
             }
             return 0;
-    } else if (!strcmp(argv[i], "--findleaf")) {
-        // (i + 1) ... (i + 3) = x y z
-        // i + 4 = bsp file
+        } else if (!strcmp(argv[i], "--findleaf")) {
+            // (i + 1) ... (i + 3) = x y z
+            // i + 4 = bsp file
 
-        if (i + 4 >= argc) {
-            Error("--findleaf requires 3 arguments");
-        }
+            if (i + 4 >= argc) {
+                Error("--findleaf requires 3 arguments");
+            }
 
-        mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
-        try {
-            const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
-            FindLeaf(&bsp, pos);
-        } catch (const std::exception &) {
-            Error("Error reading position/normal\n");
-        }
-        return 0;
-    } else if (!strcmp(argv[i], "--settexinfo")) {
+            try {
+                const qvec3d pos{std::stof(argv[i + 1]), std::stof(argv[i + 2]), std::stof(argv[i + 3])};
+                FindLeaf(&bsp, pos);
+            } catch (const std::exception &) {
+                Error("Error reading position/normal\n");
+            }
+            return 0;
+        } else if (!strcmp(argv[i], "--settexinfo")) {
             // (i + 1) facenum
             // (i + 2) texinfonum
 
@@ -836,10 +836,8 @@ int main(int argc, char **argv)
             WriteBSPFile(source, &bspdata);
 
             return 0;
-        } else if (!strcmp(argv[i], "--decompile")
-                   || !strcmp(argv[i], "--decompile-geomonly")
-                   || !strcmp(argv[i], "--decompile-ignore-brushes")
-                   || !strcmp(argv[i], "--decompile-hull")) {
+        } else if (!strcmp(argv[i], "--decompile") || !strcmp(argv[i], "--decompile-geomonly") ||
+                   !strcmp(argv[i], "--decompile-ignore-brushes") || !strcmp(argv[i], "--decompile-hull")) {
             const bool geomOnly = !strcmp(argv[i], "--decompile-geomonly");
             const bool ignoreBrushes = !strcmp(argv[i], "--decompile-ignore-brushes");
             const bool hull = !strcmp(argv[i], "--decompile-hull");

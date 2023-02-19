@@ -134,11 +134,14 @@ enum class plane_type_t
 };
 
 // Fmt support
-template <> struct fmt::formatter<plane_type_t> {
+template<>
+struct fmt::formatter<plane_type_t>
+{
     constexpr auto parse(format_parse_context &ctx) -> decltype(ctx.begin()) { return ctx.end(); }
 
-    template <typename FormatContext>
-    auto format(plane_type_t t, FormatContext& ctx) {
+    template<typename FormatContext>
+    auto format(plane_type_t t, FormatContext &ctx)
+    {
         string_view name = "unknown";
         switch (t) {
             case plane_type_t::PLANE_INVALID: name = "PLANE_INVALID"; break;
@@ -307,7 +310,7 @@ struct dareaportal_t
     // serialize for streams
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
-    
+
     // comparison operator for tests
     bool operator==(const dareaportal_t &other) const;
 };

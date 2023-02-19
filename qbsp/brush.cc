@@ -29,7 +29,7 @@
 #include <qbsp/qbsp.hh>
 
 side_t side_t::clone_non_winding_data() const
-{ 
+{
     side_t result;
     result.planenum = this->planenum;
     result.texinfo = this->texinfo;
@@ -106,8 +106,9 @@ bspbrush_t bspbrush_t::clone() const
     return result;
 }
 
-bool bspbrush_t::contains_point(const qvec3d &point, vec_t epsilon) const {
-    for (auto& side : sides) {
+bool bspbrush_t::contains_point(const qvec3d &point, vec_t epsilon) const
+{
+    for (auto &side : sides) {
         if (side.get_plane().distance_to(point) > epsilon) {
             return false;
         }
@@ -122,15 +123,17 @@ CheckFace
 Note: this will not catch 0 area polygons
 =================
 */
-static void CheckFace(side_t *face, const mapface_t &sourceface, std::optional<std::reference_wrapper<size_t>> num_clipped)
+static void CheckFace(
+    side_t *face, const mapface_t &sourceface, std::optional<std::reference_wrapper<size_t>> num_clipped)
 {
     if (face->w.size() < 3) {
         if (qbsp_options.verbose.value()) {
             if (face->w.size() == 2) {
-                logging::print(
-                    "WARNING: {}: partially clipped into degenerate polygon @ ({}) - ({})\n", sourceface.line, face->w[0], face->w[1]);
+                logging::print("WARNING: {}: partially clipped into degenerate polygon @ ({}) - ({})\n",
+                    sourceface.line, face->w[0], face->w[1]);
             } else if (face->w.size() == 1) {
-                logging::print("WARNING: {}: partially clipped into degenerate polygon @ ({})\n", sourceface.line, face->w[0]);
+                logging::print(
+                    "WARNING: {}: partially clipped into degenerate polygon @ ({})\n", sourceface.line, face->w[0]);
             } else {
                 logging::print("WARNING: {}: completely clipped away\n", sourceface.line);
             }
@@ -162,8 +165,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface, std::optional<s
         {
             vec_t dist = face->get_plane().distance_to(p1);
             if (fabs(dist) > qbsp_options.epsilon.value()) {
-                logging::print("WARNING: {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.line,
-                    p1[0], p1[1], p1[2], dist);
+                logging::print("WARNING: {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.line, p1[0],
+                    p1[1], p1[2], dist);
             }
         }
 
@@ -171,8 +174,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface, std::optional<s
         qvec3d edgevec = p2 - p1;
         vec_t length = qv::length(edgevec);
         if (length < qbsp_options.epsilon.value()) {
-            logging::print("WARNING: {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n",
-                sourceface.line, length, p1[0], p1[1], p1[2]);
+            logging::print("WARNING: {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.line,
+                length, p1[0], p1[1], p1[2]);
             for (size_t j = i + 1; j < face->w.size(); j++)
                 face->w[j - 1] = face->w[j];
             face->w.resize(face->w.size() - 1);
@@ -190,8 +193,8 @@ static void CheckFace(side_t *face, const mapface_t &sourceface, std::optional<s
                 continue;
             vec_t dist = qv::dot(face->w[j], edgenormal);
             if (dist > edgedist) {
-                logging::print("WARNING: {}: Found a non-convex face (error size {}, point: {})\n",
-                    sourceface.line, dist - edgedist, face->w[j]);
+                logging::print("WARNING: {}: Found a non-convex face (error size {}, point: {})\n", sourceface.line,
+                    dist - edgedist, face->w[j]);
                 face->w.clear();
                 return;
             }
@@ -284,7 +287,8 @@ bool CreateBrushWindings(bspbrush_t &brush)
             for (auto &p : *w) {
                 for (auto &v : p) {
                     if (fabs(v) > qbsp_options.worldextent.value()) {
-                        logging::print("WARNING: {}: invalid winding point\n", brush.mapbrush ? brush.mapbrush->line : parser_source_location{});
+                        logging::print("WARNING: {}: invalid winding point\n",
+                            brush.mapbrush ? brush.mapbrush->line : parser_source_location{});
                         w = std::nullopt;
                         break;
                     }
@@ -322,7 +326,8 @@ This is done by brute force, and could easily get a lot faster if anyone cares.
 ==============================================================================
 */
 
-struct hullbrush_t {
+struct hullbrush_t
+{
     bspbrush_t &brush;
 
     std::vector<qvec3d> points;
@@ -361,8 +366,7 @@ static bool TestAddPlane(hullbrush_t &hullbrush, const qbsp_plane_t &plane)
 {
     /* see if the plane has already been added */
     for (auto &s : hullbrush.brush.sides) {
-        if (qv::epsilonEqual(plane, s.get_plane()) ||
-            qv::epsilonEqual(plane, s.get_positive_plane())) {
+        if (qv::epsilonEqual(plane, s.get_plane()) || qv::epsilonEqual(plane, s.get_positive_plane())) {
             return false;
         }
     }
@@ -415,14 +419,13 @@ static size_t AddHullPoint(hullbrush_t &hullbrush, const qvec3d &p, const aabb3d
     for (size_t x = 0; x < 2; x++) {
         for (size_t y = 0; y < 2; y++) {
             for (size_t z = 0; z < 2; z++) {
-                hullbrush.corners.emplace_back(p + qvec3d { hull_size[x][0], hull_size[y][1], hull_size[z][2] });
+                hullbrush.corners.emplace_back(p + qvec3d{hull_size[x][0], hull_size[y][1], hull_size[z][2]});
             }
         }
     }
 
     return hullbrush.points.size() - 1;
 }
-
 
 /*
 ============
@@ -433,13 +436,10 @@ Creates all of the hull planes around the given edge, if not done already
 */
 static bool AddHullEdge(hullbrush_t &hullbrush, const qvec3d &p1, const qvec3d &p2, const aabb3d &hull_size)
 {
-    std::array<size_t, 2> edge = {
-        AddHullPoint(hullbrush, p1, hull_size),
-        AddHullPoint(hullbrush, p2, hull_size)
-    };
+    std::array<size_t, 2> edge = {AddHullPoint(hullbrush, p1, hull_size), AddHullPoint(hullbrush, p2, hull_size)};
 
     for (auto &e : hullbrush.edges) {
-        if (e == edge || e == decltype(edge) { edge[1], edge[0] }) {
+        if (e == edge || e == decltype(edge){edge[1], edge[0]}) {
             return false;
         }
     }
@@ -518,7 +518,7 @@ static void ExpandBrush(hullbrush_t &hullbrush, const aabb3d &hull_size)
             // add the plane
             qplane3d plane;
             plane.normal = {};
-            plane.normal[x] = (vec_t) s;
+            plane.normal[x] = (vec_t)s;
             if (s == -1) {
                 plane.dist = -hullbrush.brush.bounds.mins()[x] + -hull_size[0][x];
             } else {
@@ -628,7 +628,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
             return std::nullopt;
         }
 
-        hullbrush_t hullbrush { brush };
+        hullbrush_t hullbrush{brush};
         ExpandBrush(hullbrush, hull);
 #endif
     }
@@ -653,14 +653,13 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
     // uses (e.g. func_train). This means it's up to the mapper to expand the model bounds with
     // clip brushes if they're going to rotate a model in vanilla Quake and not use hipnotic rotation.
     // The idea behind the bounds expansion was to avoid incorrect vis culling (AFAIK).
-    const bool shouldExpand = !qv::emptyExact(src.origin) &&
-                              src.rotation == rotation_t::hipnotic &&
+    const bool shouldExpand = !qv::emptyExact(src.origin) && src.rotation == rotation_t::hipnotic &&
                               hullnum.has_value() &&
                               qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
         vec_t max = -std::numeric_limits<vec_t>::infinity(), min = std::numeric_limits<vec_t>::infinity();
-            
+
         for (auto &v : brush.bounds.mins()) {
             min = ::min(min, v);
             max = ::max(max, v);
@@ -679,7 +678,8 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
 
 //=============================================================================
 
-static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_base_t &stats, bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
+static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hullnum, content_stats_base_t &stats,
+    bspbrush_t::container &brushes, logging::percent_clock &clock, size_t &num_clipped)
 {
     clock.max += src.mapbrushes.size();
 
@@ -796,14 +796,14 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             // to allow use of _mirrorinside, we'll set it to detail fence, which will get remapped back
             // to CONTENTS_SOLID at export. (we wouldn't generate inside faces if the content was CONTENTS_SOLID
             // from the start.)
-            contents = qbsp_options.target_game->create_detail_fence_contents(qbsp_options.target_game->create_solid_contents());
+            contents = qbsp_options.target_game->create_detail_fence_contents(
+                qbsp_options.target_game->create_solid_contents());
         }
 
         if (hullnum.value_or(0)) {
             /* nonsolid brushes don't show up in clipping hulls */
-            if (!contents.is_any_solid(qbsp_options.target_game)
-                && !contents.is_sky(qbsp_options.target_game)
-                && !contents.is_fence(qbsp_options.target_game)) {
+            if (!contents.is_any_solid(qbsp_options.target_game) && !contents.is_sky(qbsp_options.target_game) &&
+                !contents.is_fence(qbsp_options.target_game)) {
                 continue;
             }
 
@@ -905,21 +905,25 @@ bool bspbrush_t::update_bounds(bool warn_on_failures)
         }
     }
 
-	for (size_t i = 0; i < 3; i++) {
+    for (size_t i = 0; i < 3; i++) {
         // todo: map_source_location in bspbrush_t
-		if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() || this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+        if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() ||
+            this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
             if (warn_on_failures) {
-    			logging::print("WARNING: {}: brush bounds out of range\n", mapbrush ? mapbrush->line : parser_source_location());
+                logging::print(
+                    "WARNING: {}: brush bounds out of range\n", mapbrush ? mapbrush->line : parser_source_location());
             }
             return false;
         }
-		if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() || this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+        if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() ||
+            this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
             if (warn_on_failures) {
-    			logging::print("WARNING: {}: no visible sides on brush\n", mapbrush ? mapbrush->line : parser_source_location());
+                logging::print(
+                    "WARNING: {}: no visible sides on brush\n", mapbrush ? mapbrush->line : parser_source_location());
             }
             return false;
         }
-	}
+    }
 
     this->sphere_origin = (bounds.mins() + bounds.maxs()) / 2.0;
     this->sphere_radius = qv::length((bounds.maxs() - bounds.mins()) / 2.0);

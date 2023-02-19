@@ -27,7 +27,10 @@ namespace settings
 // parse_exception
 parse_exception::parse_exception(std::string str) : _what(std::move(str)) { }
 
-const char *parse_exception::what() const noexcept { return _what.c_str(); }
+const char *parse_exception::what() const noexcept
+{
+    return _what.c_str();
+}
 
 // nameset
 
@@ -66,7 +69,10 @@ setting_func::setting_func(setting_container *dictionary, const nameset &names, 
 {
 }
 
-bool setting_func::copyFrom(const setting_base &other) { return true; }
+bool setting_func::copyFrom(const setting_base &other)
+{
+    return true;
+}
 
 void setting_func::reset() { }
 
@@ -76,9 +82,15 @@ bool setting_func::parse(const std::string &settingName, parser_base_t &parser, 
     return true;
 }
 
-std::string setting_func::stringValue() const { return ""; }
+std::string setting_func::stringValue() const
+{
+    return "";
+}
 
-std::string setting_func::format() const { return ""; }
+std::string setting_func::format() const
+{
+    return "";
+}
 
 // setting_bool
 
@@ -106,8 +118,8 @@ bool setting_bool::parseInternal(parser_base_t &parser, source source, bool trut
     return true;
 }
 
-setting_bool::setting_bool(setting_container *dictionary, const nameset &names, bool v,
-    const setting_group *group, const char *description)
+setting_bool::setting_bool(
+    setting_container *dictionary, const nameset &names, bool v, const setting_group *group, const char *description)
     : setting_value(dictionary, names, v, group, description)
 {
 }
@@ -117,9 +129,15 @@ bool setting_bool::parse(const std::string &settingName, parser_base_t &parser, 
     return parseInternal(parser, source, true);
 }
 
-std::string setting_bool::stringValue() const { return _value ? "1" : "0"; }
+std::string setting_bool::stringValue() const
+{
+    return _value ? "1" : "0";
+}
 
-std::string setting_bool::format() const { return _default ? "[0]" : ""; }
+std::string setting_bool::format() const
+{
+    return _default ? "[0]" : "";
+}
 
 // setting_invertible_bool
 
@@ -134,8 +152,8 @@ static nameset extendNames(const nameset &names)
     return n;
 }
 
-setting_invertible_bool::setting_invertible_bool(setting_container *dictionary, const nameset &names, bool v,
-    const setting_group *group, const char *description)
+setting_invertible_bool::setting_invertible_bool(
+    setting_container *dictionary, const nameset &names, bool v, const setting_group *group, const char *description)
     : setting_bool(dictionary, extendNames(names), v, group, description)
 {
 }
@@ -148,13 +166,15 @@ bool setting_invertible_bool::parse(const std::string &settingName, parser_base_
 // setting_redirect
 
 setting_redirect::setting_redirect(setting_container *dictionary, const nameset &names,
-    const std::initializer_list<setting_base *> &settings, const setting_group *group,
-    const char *description)
+    const std::initializer_list<setting_base *> &settings, const setting_group *group, const char *description)
     : setting_base(dictionary, names, group, description), _settings(settings)
 {
 }
 
-bool setting_redirect::copyFrom(const setting_base &other) { return true; }
+bool setting_redirect::copyFrom(const setting_base &other)
+{
+    return true;
+}
 
 void setting_redirect::reset() { }
 
@@ -180,9 +200,15 @@ bool setting_redirect::parse(const std::string &settingName, parser_base_t &pars
     return true;
 }
 
-std::string setting_redirect::stringValue() const { return _settings[0]->stringValue(); }
+std::string setting_redirect::stringValue() const
+{
+    return _settings[0]->stringValue();
+}
 
-std::string setting_redirect::format() const { return _settings[0]->format(); }
+std::string setting_redirect::format() const
+{
+    return _settings[0]->format();
+}
 
 // setting_group
 
@@ -230,14 +256,20 @@ bool setting_string::parse(const std::string &settingName, parser_base_t &parser
     return false;
 }
 
-std::string setting_string::stringValue() const { return _value; }
+std::string setting_string::stringValue() const
+{
+    return _value;
+}
 
-std::string setting_string::format() const { return _format; }
+std::string setting_string::format() const
+{
+    return _format;
+}
 
 // setting_path
 
-setting_path::setting_path(setting_container *dictionary, const nameset &names, fs::path v,
-    const setting_group *group, const char *description)
+setting_path::setting_path(setting_container *dictionary, const nameset &names, fs::path v, const setting_group *group,
+    const char *description)
     : setting_value(dictionary, names, v, group, description)
 {
 }
@@ -253,20 +285,28 @@ bool setting_path::parse(const std::string &settingName, parser_base_t &parser, 
     return true;
 }
 
-std::string setting_path::stringValue() const { return _value.string(); }
+std::string setting_path::stringValue() const
+{
+    return _value.string();
+}
 
-std::string setting_path::format() const { return "\"relative/path\" or \"C:/absolute/path\""; }
+std::string setting_path::format() const
+{
+    return "\"relative/path\" or \"C:/absolute/path\"";
+}
 
 // setting_set
 
-setting_set::setting_set(setting_container *dictionary, const nameset &names,
-    const std::string_view &format, const setting_group *group,
-    const char *description)
+setting_set::setting_set(setting_container *dictionary, const nameset &names, const std::string_view &format,
+    const setting_group *group, const char *description)
     : setting_base(dictionary, names, group, description), _format(format)
 {
 }
 
-const std::unordered_set<std::string> &setting_set::values() const { return _values; }
+const std::unordered_set<std::string> &setting_set::values() const
+{
+    return _values;
+}
 
 void setting_set::addValue(const std::string &value, source newSource)
 {
@@ -301,7 +341,10 @@ void setting_set::reset()
     _source = source::DEFAULT;
 }
 
-std::string setting_set::format() const { return _format; }
+std::string setting_set::format() const
+{
+    return _format;
+}
 
 std::string setting_set::stringValue() const
 {
@@ -357,17 +400,26 @@ bool setting_vec3::parse(const std::string &settingName, parser_base_t &parser, 
     return true;
 }
 
-std::string setting_vec3::stringValue() const { return qv::to_string(_value); }
+std::string setting_vec3::stringValue() const
+{
+    return qv::to_string(_value);
+}
 
-std::string setting_vec3::format() const { return "x y z"; }
+std::string setting_vec3::format() const
+{
+    return "x y z";
+}
 
 // setting_mangle
 
-qvec3d setting_mangle::transformVec3Value(const qvec3d &val) const { return qv::vec_from_mangle(val); }
+qvec3d setting_mangle::transformVec3Value(const qvec3d &val) const
+{
+    return qv::vec_from_mangle(val);
+}
 
 bool setting_mangle::parse(const std::string &settingName, parser_base_t &parser, source source)
 {
-    qvec3d vec {};
+    qvec3d vec{};
 
     for (int i = 0; i < 3; i++) {
         if (!parser.parse_token(PARSE_PEEK)) {
@@ -450,7 +502,7 @@ setting_error setting_container::setSetting(const std::string &name, const std::
         return setting_error::MISSING;
     }
 
-    parser_t p{value, { }};
+    parser_t p{value, {}};
     return setting->parse(name, p, source) ? setting_error::NONE : setting_error::INVALID;
 }
 
@@ -561,32 +613,33 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
 }
 
 // global settings
-common_settings::common_settings() :
-threads{
-    this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"},
-lowpriority{this, "lowpriority", true, &performance_group,
-    "run in a lower priority, to free up headroom for other processes"},
-log{this, "log", true, &logging_group, "whether log files are written or not"},
-verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"},
-nopercent{this, "nopercent", false, &logging_group, "don't output percentage messages"},
-nostat{this, "nostat", false, &logging_group, "don't output statistic messages"},
-noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"},
-nocolor{this, "nocolor", false, &logging_group, "don't output color codes (for TB, etc)"},
-quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group,
-    "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"},
-gamedir{this, "gamedir", "", &game_group,
-    "override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified."},
-basedir{this, "basedir", "", &game_group,
-    "override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified."},
-filepriority{this, "filepriority", search_priority_t::LOOSE,
-    {{"loose", search_priority_t::LOOSE}, {"archive", search_priority_t::ARCHIVE}}, &game_group,
-    "which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching"},
-paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &game_group,
-    "additional paths or archives to add to the search path, mostly for loose files"},
-q2rtx{this, "q2rtx", false, &game_group, "adjust settings to best support Q2RTX"},
-defaultpaths{this, "defaultpaths", true, &game_group,
-    "whether the compiler should attempt to automatically derive game/base paths for games that support it"}
-{}
+common_settings::common_settings()
+    : threads{this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"},
+      lowpriority{this, "lowpriority", true, &performance_group,
+          "run in a lower priority, to free up headroom for other processes"},
+      log{this, "log", true, &logging_group, "whether log files are written or not"},
+      verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"}, nopercent{this, "nopercent", false,
+                                                                                    &logging_group,
+                                                                                    "don't output percentage messages"},
+      nostat{this, "nostat", false, &logging_group, "don't output statistic messages"},
+      noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"},
+      nocolor{this, "nocolor", false, &logging_group, "don't output color codes (for TB, etc)"},
+      quiet{this, {"quiet", "noverbose"}, {&nopercent, &nostat, &noprogress}, &logging_group,
+          "suppress non-important messages (equivalent to -nopercent -nostat -noprogress)"},
+      gamedir{this, "gamedir", "", &game_group,
+          "override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified."},
+      basedir{this, "basedir", "", &game_group,
+          "override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified."},
+      filepriority{this, "filepriority", search_priority_t::LOOSE,
+          {{"loose", search_priority_t::LOOSE}, {"archive", search_priority_t::ARCHIVE}}, &game_group,
+          "which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching"},
+      paths{this, "path", "\"/path/to/folder\" <multiple allowed>", &game_group,
+          "additional paths or archives to add to the search path, mostly for loose files"},
+      q2rtx{this, "q2rtx", false, &game_group, "adjust settings to best support Q2RTX"},
+      defaultpaths{this, "defaultpaths", true, &game_group,
+          "whether the compiler should attempt to automatically derive game/base paths for games that support it"}
+{
+}
 
 void common_settings::setParameters(int argc, const char **argv)
 {
@@ -594,11 +647,14 @@ void common_settings::setParameters(int argc, const char **argv)
     fmt::print("---- {} / ericw-tools {} ----\n", programName, ERICWTOOLS_VERSION);
 }
 
-void common_settings::preinitialize(int argc, const char **argv) { setParameters(argc, argv); }
+void common_settings::preinitialize(int argc, const char **argv)
+{
+    setParameters(argc, argv);
+}
 
 void common_settings::initialize(int argc, const char **argv)
 {
-    token_parser_t p(argc, argv, { "command line" });
+    token_parser_t p(argc, argv, {"command line"});
     parse(p);
 }
 
@@ -623,7 +679,7 @@ void common_settings::postinitialize(int argc, const char **argv)
     if (noprogress.value()) {
         logging::mask &= ~bitflags<logging::flag>(logging::flag::PROGRESS);
     }
-    
+
     if (nocolor.value()) {
         logging::enable_color_codes = false;
     }

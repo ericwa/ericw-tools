@@ -27,12 +27,26 @@
 // parser_source_location
 
 parser_source_location::parser_source_location() = default;
-parser_source_location::parser_source_location(const std::string &source) : source_name(std::make_unique<std::string>(source)) { }
-parser_source_location::parser_source_location(const char *source) : source_name(std::make_unique<std::string>(source)) { }
-parser_source_location::parser_source_location(const std::string &source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
-parser_source_location::parser_source_location(const char *source, size_t line) : source_name(std::make_unique<std::string>(source)), line_number(line) { }
+parser_source_location::parser_source_location(const std::string &source)
+    : source_name(std::make_unique<std::string>(source))
+{
+}
+parser_source_location::parser_source_location(const char *source) : source_name(std::make_unique<std::string>(source))
+{
+}
+parser_source_location::parser_source_location(const std::string &source, size_t line)
+    : source_name(std::make_unique<std::string>(source)), line_number(line)
+{
+}
+parser_source_location::parser_source_location(const char *source, size_t line)
+    : source_name(std::make_unique<std::string>(source)), line_number(line)
+{
+}
 
-parser_source_location::operator bool() const { return source_name != nullptr; }
+parser_source_location::operator bool() const
+{
+    return source_name != nullptr;
+}
 
 parser_source_location parser_source_location::on_line(size_t new_line) const
 {
@@ -44,16 +58,23 @@ parser_source_location parser_source_location::on_line(size_t new_line) const
 // parser_t
 
 parser_t::parser_t(const void *start, size_t length, parser_source_location base_location)
-    : parser_base_t(base_location.on_line(1)),
-      pos(reinterpret_cast<const char *>(start)), end(reinterpret_cast<const char *>(start) + length)
+    : parser_base_t(base_location.on_line(1)), pos(reinterpret_cast<const char *>(start)),
+      end(reinterpret_cast<const char *>(start) + length)
 {
 }
 
-parser_t::parser_t(const std::string_view &view, parser_source_location base_location) : parser_t(&view.front(), view.size(), base_location) { }
+parser_t::parser_t(const std::string_view &view, parser_source_location base_location)
+    : parser_t(&view.front(), view.size(), base_location)
+{
+}
 
-parser_t::parser_t(const fs::data &data, parser_source_location base_location) : parser_t(data.value().data(), data.value().size(), base_location) { }
+parser_t::parser_t(const fs::data &data, parser_source_location base_location)
+    : parser_t(data.value().data(), data.value().size(), base_location)
+{
+}
 
-parser_t::parser_t(const char *str, parser_source_location base_location) : parser_t(str, strlen(str), base_location) { }
+parser_t::parser_t(const char *str, parser_source_location base_location)
+    : parser_t(str, strlen(str), base_location) { }
 
 bool parser_t::parse_token(parseflags flags)
 {
@@ -174,9 +195,15 @@ out:
     return true;
 }
 
-parser_t::state_type parser_t::state() { return state_type(pos, location); }
+parser_t::state_type parser_t::state()
+{
+    return state_type(pos, location);
+}
 
-bool parser_t::at_end() const { return pos >= end; }
+bool parser_t::at_end() const
+{
+    return pos >= end;
+}
 
 void parser_t::push_state()
 {
@@ -191,9 +218,15 @@ void parser_t::pop_state()
 
 // token_parser_t
 
-token_parser_t::token_parser_t(int argc, const char **args, parser_source_location base_location) : parser_base_t(base_location), tokens(args, args + argc) { }
+token_parser_t::token_parser_t(int argc, const char **args, parser_source_location base_location)
+    : parser_base_t(base_location), tokens(args, args + argc)
+{
+}
 
-token_parser_t::state_type token_parser_t::state() { return state_type(cur); }
+token_parser_t::state_type token_parser_t::state()
+{
+    return state_type(cur);
+}
 
 bool token_parser_t::parse_token(parseflags flags)
 {
@@ -219,9 +252,15 @@ bool token_parser_t::parse_token(parseflags flags)
     return true;
 }
 
-bool token_parser_t::at_end() const { return cur >= tokens.size(); }
+bool token_parser_t::at_end() const
+{
+    return cur >= tokens.size();
+}
 
-void token_parser_t::push_state() { _states.push_back(state()); }
+void token_parser_t::push_state()
+{
+    _states.push_back(state());
+}
 
 void token_parser_t::pop_state()
 {

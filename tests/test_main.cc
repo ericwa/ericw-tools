@@ -3,7 +3,7 @@
 
 #include <common/log.hh>
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     logging::preinitialize();
 

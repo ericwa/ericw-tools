@@ -30,7 +30,10 @@ entdict_t::entdict_t(std::initializer_list<keyvalue_t> l) : keyvalues(l) { }
 
 entdict_t::entdict_t() = default;
 
-entdict_t::entdict_t(parser_base_t &parser) { parse(parser); }
+entdict_t::entdict_t(parser_base_t &parser)
+{
+    parse(parser);
+}
 
 const std::string &entdict_t::get(const std::string_view &key) const
 {
@@ -182,7 +185,7 @@ void entdict_t::parse(parser_base_t &parser)
     }
 }
 
-bool entdict_t::operator==(const entdict_t& other) const
+bool entdict_t::operator==(const entdict_t &other) const
 {
     return this->keyvalues == other.keyvalues;
 }
@@ -211,7 +214,7 @@ std::vector<entdict_t> EntData_Parse(parser_t &parser)
 
 std::vector<entdict_t> EntData_Parse(const mbsp_t &bsp)
 {
-    parser_t parser{bsp.dentdata, { bsp.file.string() }};
+    parser_t parser{bsp.dentdata, {bsp.file.string()}};
     return EntData_Parse(parser);
 }
 

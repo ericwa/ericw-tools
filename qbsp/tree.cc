@@ -77,9 +77,7 @@ void FreeTreePortals(tree_t &tree)
         tree.outside_node.portals = nullptr;
     }
 
-    tbb::parallel_for_each(tree.portals, [](std::unique_ptr<portal_t> &portal) {
-        portal.reset();
-    });
+    tbb::parallel_for_each(tree.portals, [](std::unique_ptr<portal_t> &portal) { portal.reset(); });
 
     tree.portals.clear();
 }
@@ -91,11 +89,11 @@ static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
     // merge the children's brush lists
     size_t base = node->children[0]->original_brushes.size() > node->children[1]->original_brushes.size() ? 0 : 1;
     node->original_brushes = std::move(node->children[base]->original_brushes);
-    node->original_brushes.insert(node->original_brushes.end(), node->children[base ^ 1]->original_brushes.begin(), node->children[base ^ 1]->original_brushes.end());
+    node->original_brushes.insert(node->original_brushes.end(), node->children[base ^ 1]->original_brushes.begin(),
+        node->children[base ^ 1]->original_brushes.end());
 
-    std::sort(node->original_brushes.begin(), node->original_brushes.end(), [](const bspbrush_t *a, const bspbrush_t *b) {
-        return a->mapbrush < b->mapbrush;
-    });
+    std::sort(node->original_brushes.begin(), node->original_brushes.end(),
+        [](const bspbrush_t *a, const bspbrush_t *b) { return a->mapbrush < b->mapbrush; });
     auto unique = std::unique(node->original_brushes.begin(), node->original_brushes.end());
     node->original_brushes.erase(unique, node->original_brushes.end());
 

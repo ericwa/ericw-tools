@@ -70,7 +70,7 @@ public:
     void parse(parser_base_t &parser);
 
     // order-sensitive
-    bool operator==(const entdict_t& other) const;
+    bool operator==(const entdict_t &other) const;
 };
 
 void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector);

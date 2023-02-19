@@ -73,10 +73,7 @@ public:
 
     constexpr size_t numPushedRays() { return _numrays; }
 
-    inline int &getPushedRayPointIndex(size_t j)
-    {
-        return _point_indices[j];
-    }
+    inline int &getPushedRayPointIndex(size_t j) { return _point_indices[j]; }
 
     inline qvec3f getPushedRayColor(size_t j)
     {
@@ -89,22 +86,17 @@ public:
             // multiply ray color by glass color
             const qvec3f tinted = result * glasscolor;
 
-            // lerp ray color between original ray color and fully tinted by the glass texture color, based on the glass opacity
+            // lerp ray color between original ray color and fully tinted by the glass texture color, based on the glass
+            // opacity
             result = mix(result, tinted, opacity);
         }
 
         return result;
     }
 
-    inline qvec3d &getPushedRayNormalContrib(size_t j)
-    {
-        return _ray_normalcontribs[j];
-    }
+    inline qvec3d &getPushedRayNormalContrib(size_t j) { return _ray_normalcontribs[j]; }
 
-    inline int &getPushedRayDynamicStyle(size_t j)
-    {
-        return _ray_dynamic_styles[j];
-    }
+    inline int &getPushedRayDynamicStyle(size_t j) { return _ray_dynamic_styles[j]; }
 
     inline void clearPushedRays() { _numrays = 0; }
 };
@@ -235,15 +227,9 @@ public:
         rtcIntersect1M(scene, &ctx2, _rays.data(), _numrays, sizeof(_rays[0]));
     }
 
-    inline qvec3d getPushedRayDir(size_t j)
-    {
-        return {_rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z};
-    }
+    inline qvec3d getPushedRayDir(size_t j) { return {_rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z}; }
 
-    inline float getPushedRayHitDist(size_t j)
-    {
-        return _rays[j].ray.tfar;
-    }
+    inline float getPushedRayHitDist(size_t j) { return _rays[j].ray.tfar; }
 
     inline hittype_t getPushedRayHitType(size_t j)
     {
@@ -315,13 +301,7 @@ public:
         rtcOccluded1M(scene, &ctx2, _rays.data(), _numrays, sizeof(_rays[0]));
     }
 
-    inline bool getPushedRayOccluded(size_t j)
-    {
-        return (_rays[j].tfar < 0.0f);
-    }
+    inline bool getPushedRayOccluded(size_t j) { return (_rays[j].tfar < 0.0f); }
 
-    inline qvec3d getPushedRayDir(size_t j)
-    {
-        return {_rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z};
-    }
+    inline qvec3d getPushedRayDir(size_t j) { return {_rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z}; }
 };

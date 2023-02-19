@@ -80,7 +80,8 @@ const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, c
  * Leaf nodes in the clipnode tree don't have an identity like hull0 leaf nodes,
  * so this struct helps tests determine if two clipnodes are the same.
  */
-struct clipnode_info_t {
+struct clipnode_info_t
+{
     /**
      * Index into bsp->dclipnodes
      */
@@ -91,9 +92,10 @@ struct clipnode_info_t {
     planeside_t side;
     int contents;
 
-    bool operator==(const clipnode_info_t& other) const;
+    bool operator==(const clipnode_info_t &other) const;
 };
-clipnode_info_t BSP_FindClipnodeAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);
+clipnode_info_t BSP_FindClipnodeAtPoint(
+    const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);
 int BSP_FindContentsAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point);
 
 std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *leaf);
@@ -104,7 +106,7 @@ std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face);
 polylib::winding_t Face_Winding(const mbsp_t *bsp, const mface_t *face);
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face);
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
-aabb3f Model_BoundsOfFaces(const mbsp_t& bsp, const dmodelh2_t &model);
+aabb3f Model_BoundsOfFaces(const mbsp_t &bsp, const dmodelh2_t &model);
 
 void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_iterator<std::vector<uint8_t>> it);
 size_t DecompressedVisSize(const mbsp_t *bsp);
@@ -128,7 +130,9 @@ qmat4x4f TexSpaceToWorld(const mbsp_t *bsp, const mface_t *f);
  * it doesn't affect bsp complexity (actually, can simplify it a little)*/
 constexpr size_t MAXDIMENSION = 255 + 1;
 
-struct world_units_per_luxel_t {};
+struct world_units_per_luxel_t
+{
+};
 
 constexpr float LMSCALE_DEFAULT = 16.0f;
 
@@ -148,7 +152,8 @@ public:
     faceextents_t() = default;
 
     faceextents_t(const mface_t &face, const mbsp_t &bsp, float lmshift);
-    faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lmwidth, uint16_t lmheight, texvecf world_to_lm_space);
+    faceextents_t(
+        const mface_t &face, const mbsp_t &bsp, uint16_t lmwidth, uint16_t lmheight, texvecf world_to_lm_space);
     faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units_per_luxel_t tag, float world_units_per_luxel);
 
     int width() const;
@@ -161,7 +166,8 @@ public:
     qvec3f LMCoordToWorld(qvec2f lm) const;
 };
 
-qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord);
+qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents,
+    int byte_offset_of_face, qvec2i coord);
 std::vector<uint8_t> LoadLitFile(const fs::path &path);
 
 std::map<int, std::vector<int>> ClusterToLeafnumsMap(const mbsp_t *bsp);

@@ -181,7 +181,7 @@ struct compiled_brush_t
             fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source -
                 bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
 #endif
-            
+
             fmt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2],
                 side.texture_name, side.valve.axis.at(0, 0), side.valve.axis.at(0, 1), side.valve.axis.at(0, 2),
                 side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2),
@@ -301,10 +301,9 @@ public:
     }
 
     // FIXME
-    decomp_brush_face_t(const decomp_brush_face_t &face) :
-        winding(face.winding ? decltype(winding)(face.winding->clone()) : std::nullopt),
-        original_face(face.original_face),
-        inwardFacingEdgePlanes(face.inwardFacingEdgePlanes)
+    decomp_brush_face_t(const decomp_brush_face_t &face)
+        : winding(face.winding ? decltype(winding)(face.winding->clone()) : std::nullopt),
+          original_face(face.original_face), inwardFacingEdgePlanes(face.inwardFacingEdgePlanes)
     {
     }
 
@@ -397,10 +396,8 @@ struct decomp_brush_side_t
     }
 
     // FIXME
-    decomp_brush_side_t(const decomp_brush_side_t &copy) :
-        faces(copy.faces),
-        plane(copy.plane),
-        winding(copy.winding.clone())
+    decomp_brush_side_t(const decomp_brush_side_t &copy)
+        : faces(copy.faces), plane(copy.plane), winding(copy.winding.clone())
     {
     }
 
@@ -664,7 +661,6 @@ static decomp_brush_t BuildInitialBrush_Q2(
             clipped_away[i] = true;
             continue;
         }
-
 
         winding->remove_colinear();
 
@@ -1003,8 +999,7 @@ static void DecompileClipNode(std::vector<decomp_plane_t> &planestack, const mbs
     handleSide(false);
 }
 
-static void AddMapBoundsToStack(
-    std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const aabb3d &bounds)
+static void AddMapBoundsToStack(std::vector<decomp_plane_t> &planestack, const mbsp_t *bsp, const aabb3d &bounds)
 {
     for (int i = 0; i < 3; ++i) {
         for (int sign = 0; sign < 2; ++sign) {
@@ -1097,7 +1092,7 @@ static void DecompileEntity(
             continue;
         } else if (modelNum > 0 && keyValue.first == "origin") {
             auto &value = keyValue.second;
-            parser_t parser(value, { });
+            parser_t parser(value, {});
             qvec3d vec;
             parser.parse_token();
             vec[0] = stof(parser.token);
@@ -1195,7 +1190,7 @@ static void DecompileEntity(
             std::vector<decomp_plane_t> stack;
             std::vector<leaf_decompile_task> tasks;
             AddMapBoundsToStack(stack, bsp, aabb3d(qvec3d(headnode->mins), qvec3d(headnode->maxs)));
-            
+
             DecompileNode(stack, bsp, headnode, tasks);
 
             // decompile the leafs in parallel

@@ -198,8 +198,8 @@ protected:
     bool parseInternal(parser_base_t &parser, source source, bool truthValue);
 
 public:
-    setting_bool(setting_container *dictionary, const nameset &names, bool v,
-        const setting_group *group = nullptr, const char *description = "");
+    setting_bool(setting_container *dictionary, const nameset &names, bool v, const setting_group *group = nullptr,
+        const char *description = "");
 
     bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
     std::string stringValue() const override;
@@ -386,8 +386,8 @@ public:
 class setting_path : public setting_value<fs::path>
 {
 public:
-    setting_path(setting_container *dictionary, const nameset &names, fs::path v,
-        const setting_group *group = nullptr, const char *description = "");
+    setting_path(setting_container *dictionary, const nameset &names, fs::path v, const setting_group *group = nullptr,
+        const char *description = "");
     bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
     std::string stringValue() const override;
     std::string format() const override;

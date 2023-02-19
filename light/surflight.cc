@@ -159,8 +159,11 @@ std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(
     }
 
     for (const auto &surflight : GetSurfaceLightTemplates()) {
-        if (FaceMatchesSurfaceLightTemplate(bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
-            return std::make_tuple(surflight->light.value(), surflight->style.value(), surflight->color.isChanged() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)), surflight.get());
+        if (FaceMatchesSurfaceLightTemplate(
+                bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
+            return std::make_tuple(surflight->light.value(), surflight->style.value(),
+                surflight->color.isChanged() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)),
+                surflight.get());
         }
     }
 
@@ -193,7 +196,8 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
 
     // check matching templates
     for (const auto &surflight : GetSurfaceLightTemplates()) {
-        if (FaceMatchesSurfaceLightTemplate(bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
+        if (FaceMatchesSurfaceLightTemplate(
+                bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
             std::optional<qvec3f> texture_color;
 
             if (surflight->color.isChanged()) {

@@ -37,7 +37,7 @@ template<>
 {
     return fmt::format("{}", v1);
 }
-}
+} // namespace qv
 
 /*
  * SGI FREE SOFTWARE LICENSE B (Version 2.0, Sept. 18, 2008)
@@ -139,10 +139,10 @@ qmat4x4f qv::inverse(const qmat4x4f &input)
 
 qmat3x3f qv::inverse(const qmat3x3f &m)
 {
-    qmat4x4d temp {};
+    qmat4x4d temp{};
     for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
-            temp.at(r,c) = m.at(r,c);
+            temp.at(r, c) = m.at(r, c);
         }
     }
 
@@ -152,7 +152,7 @@ qmat3x3f qv::inverse(const qmat3x3f &m)
     qmat3x3f result;
     for (int r = 0; r < 3; ++r) {
         for (int c = 0; c < 3; ++c) {
-            result.at(r,c) = temp.at(r,c);
+            result.at(r, c) = temp.at(r, c);
         }
     }
     return result;

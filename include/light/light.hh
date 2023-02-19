@@ -203,7 +203,7 @@ public:
     const dmodelh2_t *model;
     float lightmapscale;
     qvec3d offset;
-    
+
     settings::setting_scalar minlight;
     // zero will apply no clamping; use lightignore instead to do that.
     // above zero, this controls the clamp value on the light, default 255
@@ -237,7 +237,8 @@ enum class visapprox_t
     RAYS
 };
 
-enum class lightgrid_format_t {
+enum class lightgrid_format_t
+{
     UNIFORM,
     CLUSTER,
     OCTREE

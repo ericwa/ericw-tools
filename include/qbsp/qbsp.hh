@@ -38,7 +38,7 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdint>
-//#include <cstdio>
+// #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -242,6 +242,7 @@ public:
     std::unordered_map<std::string, entdict_t> loaded_entity_defs;
 
     qbsp_settings();
+
 private:
     void load_texture_def(const std::string &pathname);
     void load_entity_def(const std::string &pathname);
@@ -362,7 +363,7 @@ public:
 };
 
 // Fmt support
-template <>
+template<>
 struct fmt::formatter<qbsp_plane_t> : formatter<qplane3d>
 {
     template<typename FormatContext>
@@ -379,8 +380,8 @@ namespace qv
 {
 // faster version of epsilonEqual for BSP planes
 // which have a bit more info in them
-[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2,
-    vec_t normalEpsilon = NORMAL_EPSILON, vec_t distEpsilon = DIST_EPSILON);
+[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, vec_t normalEpsilon = NORMAL_EPSILON,
+    vec_t distEpsilon = DIST_EPSILON);
 }; // namespace qv
 
 template<typename T>

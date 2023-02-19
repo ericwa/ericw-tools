@@ -229,7 +229,8 @@ static void ClipInside(
          */
         bool spurious_onplane = false;
         {
-            std::array<size_t, SIDE_TOTAL> counts = face.w.calc_sides(splitplane, nullptr, nullptr, qbsp_options.epsilon.value());
+            std::array<size_t, SIDE_TOTAL> counts =
+                face.w.calc_sides(splitplane, nullptr, nullptr, qbsp_options.epsilon.value());
 
             if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
                 spurious_onplane = true;
@@ -268,7 +269,8 @@ static void ClipInside(
     }
 }
 
-struct csg_stats {
+struct csg_stats
+{
     std::atomic<int> fullyeatenbrushes{};
     std::atomic<int> postcsgfaces{};
 };
@@ -334,7 +336,7 @@ bspbrush_t::container CSGFaces(bspbrush_t::container brushes)
      * The output of this is a face list for each brush called "outside"
      */
     logging::parallel_for(static_cast<size_t>(0), brushes.size(), [&](size_t i) {
-        bspbrush_t::ptr& brush = brushes[i];
+        bspbrush_t::ptr &brush = brushes[i];
 
         bspbrush_t::ptr brush_result = bspbrush_t::make_ptr(brush->clone());
 

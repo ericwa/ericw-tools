@@ -66,7 +66,8 @@ static aabb3f LightGridBounds(const mbsp_t &bsp)
     return result;
 }
 
-struct lightgrid_raw_data {
+struct lightgrid_raw_data
+{
     qvec3f grid_dist;
     qvec3f grid_mins;
     qvec3i grid_size;
@@ -74,13 +75,9 @@ struct lightgrid_raw_data {
     std::vector<uint8_t> occlusion;
     uint8_t num_styles;
 
-    int get_grid_index(int x, int y, int z) const {
-        return (grid_size[0] * grid_size[1] * z) + (grid_size[0] * y) + x;
-    }
+    int get_grid_index(int x, int y, int z) const { return (grid_size[0] * grid_size[1] * z) + (grid_size[0] * y) + x; }
 
-    qvec3f grid_index_to_world(const qvec3i &index) const {
-        return grid_mins + (index * grid_dist);
-    }
+    qvec3f grid_index_to_world(const qvec3i &index) const { return grid_mins + (index * grid_dist); }
 };
 
 static std::vector<uint8_t> MakeUniformLump(const mbsp_t &bsp, const lightgrid_raw_data &data)
@@ -120,7 +117,7 @@ static std::vector<uint8_t> MakeUniformLump(const mbsp_t &bsp, const lightgrid_r
     }
 
     auto vec = StringToVector(str.str());
-    logging::print( "     {:8} bytes LIGHTGRID\n", vec.size());
+    logging::print("     {:8} bytes LIGHTGRID\n", vec.size());
 
     return vec;
 }
@@ -161,7 +158,8 @@ static std::vector<uint8_t> MakeClusterLump(const mbsp_t &bsp, const lightgrid_r
         str <= cluster_min_grid_coord;
         str <= cluster_grid_size;
 
-        // logging::print("cluster {} bounds grid mins {} grid size {}\n", cluster, cluster_min_grid_coord, cluster_grid_size);
+        // logging::print("cluster {} bounds grid mins {} grid size {}\n", cluster, cluster_min_grid_coord,
+        // cluster_grid_size);
 
         auto &cm = cluster_min_grid_coord;
         auto &cs = cluster_grid_size;
@@ -205,14 +203,14 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
         return (4 * sign[0]) + (2 * sign[1]) + (sign[2]);
     };
 
-    Q_assert(child_index({1,1,1}, {2,2,2}) == 7);
-    Q_assert(child_index({1,1,1}, {1,1,0}) == 6);
-    Q_assert(child_index({1,1,1}, {1,0,1}) == 5);
-    Q_assert(child_index({1,1,1}, {1,0,0}) == 4);
-    Q_assert(child_index({1,1,1}, {0,1,1}) == 3);
-    Q_assert(child_index({1,1,1}, {0,1,0}) == 2);
-    Q_assert(child_index({1,1,1}, {0,0,1}) == 1);
-    Q_assert(child_index({1,1,1}, {0,0,0}) == 0);
+    Q_assert(child_index({1, 1, 1}, {2, 2, 2}) == 7);
+    Q_assert(child_index({1, 1, 1}, {1, 1, 0}) == 6);
+    Q_assert(child_index({1, 1, 1}, {1, 0, 1}) == 5);
+    Q_assert(child_index({1, 1, 1}, {1, 0, 0}) == 4);
+    Q_assert(child_index({1, 1, 1}, {0, 1, 1}) == 3);
+    Q_assert(child_index({1, 1, 1}, {0, 1, 0}) == 2);
+    Q_assert(child_index({1, 1, 1}, {0, 0, 1}) == 1);
+    Q_assert(child_index({1, 1, 1}, {0, 0, 0}) == 0);
 
     /**
      * returns octant index `i`'s mins and size
@@ -241,15 +239,13 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
         return {child_mins, child_size};
     };
 
-    Q_assert(get_octant(0, {0,0,0}, {2,2,2}, {1,1,1}) == (std::tuple<qvec3i, qvec3i>{{0,0,0}, {1,1,1}}));
-    Q_assert(get_octant(7, {0,0,0}, {2,2,2}, {1,1,1}) == (std::tuple<qvec3i, qvec3i>{{1,1,1}, {1,1,1}}));
+    Q_assert(get_octant(0, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}) == (std::tuple<qvec3i, qvec3i>{{0, 0, 0}, {1, 1, 1}}));
+    Q_assert(get_octant(7, {0, 0, 0}, {2, 2, 2}, {1, 1, 1}) == (std::tuple<qvec3i, qvec3i>{{1, 1, 1}, {1, 1, 1}}));
 
     /**
-         * given a bounding box, selects the division point.
+     * given a bounding box, selects the division point.
      */
-    auto get_division_point = [](qvec3i mins, qvec3i size) -> qvec3i {
-        return mins + (size / 2);
-    };
+    auto get_division_point = [](qvec3i mins, qvec3i size) -> qvec3i { return mins + (size / 2); };
 
     auto count_occluded_unoccluded = [&](qvec3i mins, qvec3i size) -> std::tuple<int, int> {
         std::tuple<int, int> occluded_unoccluded;
@@ -278,12 +274,14 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     constexpr uint32_t FLAGS = (FLAG_LEAF | FLAG_OCCLUDED);
     // if neither flags are set, it's a node index
 
-    struct octree_node {
+    struct octree_node
+    {
         qvec3i division_point;
         std::array<uint32_t, 8> children;
     };
 
-    struct octree_leaf {
+    struct octree_leaf
+    {
         qvec3i mins, size;
     };
 
@@ -293,11 +291,11 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     int occluded_cells = 0;
 
     /**
-         * - inserts either a node or leaf
-         * - returns one of:
-         *   - FLAG_OCCLUDED if the entire bounds is occluded
-         *   - (FLAG_LEAF | leaf_num) for a leaf - a literal chunk of grid samples
-         *   - otherwise, it's a node index
+     * - inserts either a node or leaf
+     * - returns one of:
+     *   - FLAG_OCCLUDED if the entire bounds is occluded
+     *   - (FLAG_LEAF | leaf_num) for a leaf - a literal chunk of grid samples
+     *   - otherwise, it's a node index
      */
     std::function<int(qvec3i, qvec3i, int depth)> build_octree;
     build_octree = [&](qvec3i mins, qvec3i size, int depth) -> uint32_t {
@@ -327,9 +325,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
         if (make_leaf) {
             // make a leaf
             const uint32_t leafnum = static_cast<uint32_t>(octree_leafs.size());
-            octree_leafs.push_back({
-                .mins = mins, .size = size
-            });
+            octree_leafs.push_back({.mins = mins, .size = size});
             return FLAG_LEAF | leafnum;
         }
 
@@ -347,15 +343,12 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
 
         // insert the node
         const uint32_t nodenum = static_cast<uint32_t>(octree_nodes.size());
-        octree_nodes.push_back({
-            .division_point = division_point,
-            .children = children
-        });
+        octree_nodes.push_back({.division_point = division_point, .children = children});
         return nodenum;
     };
 
     // build the root node
-    const uint32_t root_node = build_octree(qvec3i{0,0,0}, data.grid_size, 0);
+    const uint32_t root_node = build_octree(qvec3i{0, 0, 0}, data.grid_size, 0);
 
     // visualize the leafs
     {
@@ -363,7 +356,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
 
         for (auto &leaf : octree_leafs) {
             auto leaf_world_mins = data.grid_index_to_world(leaf.mins);
-            auto leaf_world_maxs = data.grid_index_to_world(leaf.mins + leaf.size - qvec3i(1,1,1));
+            auto leaf_world_maxs = data.grid_index_to_world(leaf.mins + leaf.size - qvec3i(1, 1, 1));
 
             aabb3d bounds(leaf_world_mins, leaf_world_maxs);
 
@@ -382,20 +375,14 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
         stored_cells += leaf.size[0] * leaf.size[1] * leaf.size[2];
     }
     logging::print("octree stored {} grid nodes + {} occluded = {} total, full stored {} (octree is {} percent)\n",
-        stored_cells,
-        occluded_cells,
-        stored_cells + occluded_cells,
-        data.occlusion.size(),
-        100.0f * stored_cells / (float) data.occlusion.size());
+        stored_cells, occluded_cells, stored_cells + occluded_cells, data.occlusion.size(),
+        100.0f * stored_cells / (float)data.occlusion.size());
 
-    logging::print("octree nodes size: {} bytes ({} * {})\n",
-        octree_nodes.size() * sizeof(octree_node),
-        octree_nodes.size(),
-        sizeof(octree_node));
+    logging::print("octree nodes size: {} bytes ({} * {})\n", octree_nodes.size() * sizeof(octree_node),
+        octree_nodes.size(), sizeof(octree_node));
 
-    logging::print("octree leafs {} overhead {} bytes\n",
-        octree_leafs.size(),
-        octree_leafs.size() * sizeof(octree_leaf));
+    logging::print(
+        "octree leafs {} overhead {} bytes\n", octree_leafs.size(), octree_leafs.size() * sizeof(octree_leaf));
 
     // lookup function
     std::function<std::tuple<lightgrid_samples_t, bool>(uint32_t, qvec3i)> octree_lookup_r;
@@ -460,7 +447,8 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
         str <= leaf.mins;
         str <= leaf.size;
 
-        // logging::print("cluster {} bounds grid mins {} grid size {}\n", cluster, cluster_min_grid_coord, cluster_grid_size);
+        // logging::print("cluster {} bounds grid mins {} grid size {}\n", cluster, cluster_min_grid_coord,
+        // cluster_grid_size);
 
         auto &cm = leaf.mins;
         auto &cs = leaf.size;
@@ -497,11 +485,10 @@ static aabb3f MakeCube(const aabb3f &input)
 
     const float new_size = max(max(input.size()[0], input.size()[1]), input.size()[2]);
 
-    return aabb3f(centroid - qvec3f(new_size / 2),
-        centroid + qvec3f(new_size / 2));
+    return aabb3f(centroid - qvec3f(new_size / 2), centroid + qvec3f(new_size / 2));
 }
 
-static qvec3i MakePOT(const qvec3i& input)
+static qvec3i MakePOT(const qvec3i &input)
 {
     float x = static_cast<float>(input[0]);
     x = log2(x);
@@ -534,11 +521,8 @@ void LightGrid(bspdata_t *bspdata)
     const qvec3f world_size = grid_maxs - data.grid_mins;
 
     // number of grid points on each axis
-    data.grid_size = {
-        ceil(world_size[0] / data.grid_dist[0]),
-        ceil(world_size[1] / data.grid_dist[1]),
-        ceil(world_size[2] / data.grid_dist[2])
-    };
+    data.grid_size = {ceil(world_size[0] / data.grid_dist[0]), ceil(world_size[1] / data.grid_dist[1]),
+        ceil(world_size[2] / data.grid_dist[2])};
 
     if (light_options.lightgrid_force_pot.value()) {
         const auto old_grid_size = data.grid_size;
@@ -564,12 +548,12 @@ void LightGrid(bspdata_t *bspdata)
 
     data.occlusion.resize(data.grid_size[0] * data.grid_size[1] * data.grid_size[2]);
 
-    logging::parallel_for(0, data.grid_size[0] * data.grid_size[1] * data.grid_size[2], [&](int sample_index){
+    logging::parallel_for(0, data.grid_size[0] * data.grid_size[1] * data.grid_size[2], [&](int sample_index) {
         const int z = (sample_index / (data.grid_size[0] * data.grid_size[1]));
         const int y = (sample_index / data.grid_size[0]) % data.grid_size[1];
         const int x = sample_index % data.grid_size[0];
 
-        qvec3d world_point = data.grid_mins + (qvec3d{x,y,z} * data.grid_dist);
+        qvec3d world_point = data.grid_mins + (qvec3d{x, y, z} * data.grid_dist);
 
         bool occluded = Light_PointInWorld(&bsp, world_point);
         if (occluded) {
@@ -591,7 +575,7 @@ void LightGrid(bspdata_t *bspdata)
     });
 
     // the maximum used styles across the map.
-    data.num_styles = [&](){
+    data.num_styles = [&]() {
         int result = 0;
         for (auto &samples : data.grid_result) {
             result = max(result, samples.used_styles());

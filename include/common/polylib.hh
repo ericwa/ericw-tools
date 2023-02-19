@@ -136,40 +136,22 @@ public:
     }
 
     // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index)
-    {
-        return array[index];
-    }
+    inline qvec3d &operator[](const size_t &index) { return array[index]; }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const
-    {
-        return array[index];
-    }
+    inline const qvec3d &operator[](const size_t &index) const { return array[index]; }
 
     using const_iterator = typename array_type::const_iterator;
 
-    inline const const_iterator begin() const
-    {
-        return array.begin();
-    }
+    inline const const_iterator begin() const { return array.begin(); }
 
-    inline const const_iterator end() const
-    {
-        return array.begin() + count;
-    }
+    inline const const_iterator end() const { return array.begin() + count; }
 
     using iterator = typename array_type::iterator;
 
-    inline iterator begin()
-    {
-        return array.begin();
-    }
+    inline iterator begin() { return array.begin(); }
 
-    inline iterator end()
-    {
-        return array.begin() + count;
-    }
+    inline iterator end() { return array.begin() + count; }
 
     inline qvec3d &emplace_back(const qvec3d &vec)
     {
@@ -191,14 +173,9 @@ public:
         count = new_size;
     }
 
-    inline void reserve(size_t size)
-    {
-    }
+    inline void reserve(size_t size) { }
 
-    inline void clear()
-    {
-        count = 0;
-    }
+    inline void clear() { count = 0; }
 };
 
 // Heap storage; uses a vector.
@@ -214,9 +191,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_heap_t(const size_t &initial_size) : values(initial_size)
-    {
-    }
+    inline winding_storage_heap_t(const size_t &initial_size) : values(initial_size) { }
 
     // construct winding from range.
     // iterators must have operator+ and operator-.
@@ -227,14 +202,10 @@ public:
 
     // copy constructor; uses optimized method of copying
     // data over.
-    inline winding_storage_heap_t(const winding_storage_heap_t &copy) : values(copy.values)
-    {
-    }
+    inline winding_storage_heap_t(const winding_storage_heap_t &copy) : values(copy.values) { }
 
     // move constructor
-    inline winding_storage_heap_t(winding_storage_heap_t &&move) noexcept : values(std::move(move.values))
-    {
-    }
+    inline winding_storage_heap_t(winding_storage_heap_t &&move) noexcept : values(std::move(move.values)) { }
 
     // assignment copy
     inline winding_storage_heap_t &operator=(const winding_storage_heap_t &copy)
@@ -258,67 +229,31 @@ public:
 
     inline size_t size() const { return values.size(); }
 
-    inline qvec3d &at(const size_t &index)
-    {
-        return values[index];
-    }
+    inline qvec3d &at(const size_t &index) { return values[index]; }
 
-    inline const qvec3d &at(const size_t &index) const
-    {
-        return values[index];
-    }
+    inline const qvec3d &at(const size_t &index) const { return values[index]; }
 
     // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index)
-    {
-        return values[index];
-    }
+    inline qvec3d &operator[](const size_t &index) { return values[index]; }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const
-    {
-        return values[index];
-    }
+    inline const qvec3d &operator[](const size_t &index) const { return values[index]; }
 
-    inline const auto begin() const
-    {
-        return values.begin();
-    }
+    inline const auto begin() const { return values.begin(); }
 
-    inline const auto end() const
-    {
-        return values.end();
-    }
+    inline const auto end() const { return values.end(); }
 
-    inline auto begin()
-    {
-        return values.begin();
-    }
+    inline auto begin() { return values.begin(); }
 
-    inline auto end()
-    {
-        return values.end();
-    }
+    inline auto end() { return values.end(); }
 
-    inline qvec3d &emplace_back(const qvec3d &vec)
-    {
-        return values.emplace_back(vec);
-    }
+    inline qvec3d &emplace_back(const qvec3d &vec) { return values.emplace_back(vec); }
 
-    inline void resize(const size_t &new_size)
-    {
-        values.resize(new_size);
-    }
+    inline void resize(const size_t &new_size) { values.resize(new_size); }
 
-    inline void reserve(size_t size)
-    {
-        values.reserve(size);
-    }
+    inline void reserve(size_t size) { values.reserve(size); }
 
-    inline void clear()
-    {
-        values.clear();
-    }
+    inline void clear() { values.clear(); }
 };
 
 // Hybrid storage; uses stack allocation for the first N
@@ -341,7 +276,8 @@ public:
     {
         friend struct winding_storage_hybrid_t;
 
-        using container_type = typename std::conditional_t<is_const, const winding_storage_hybrid_t *, winding_storage_hybrid_t *>;
+        using container_type =
+            typename std::conditional_t<is_const, const winding_storage_hybrid_t *, winding_storage_hybrid_t *>;
         size_t index;
         container_type w;
 
@@ -571,27 +507,15 @@ public:
 
     using const_iterator = iterator_base<true>;
 
-    inline const const_iterator begin() const
-    {
-        return const_iterator(0, this);
-    }
+    inline const const_iterator begin() const { return const_iterator(0, this); }
 
-    inline const const_iterator end() const
-    {
-        return const_iterator(count, this);
-    }
+    inline const const_iterator end() const { return const_iterator(count, this); }
 
     using iterator = iterator_base<false>;
 
-    inline iterator begin()
-    {
-        return iterator(0, this);
-    }
+    inline iterator begin() { return iterator(0, this); }
 
-    inline iterator end()
-    {
-        return iterator(count, this);
-    }
+    inline iterator end() { return iterator(count, this); }
 
     inline qvec3d &emplace_back(const qvec3d &vec)
     {
@@ -614,14 +538,9 @@ public:
         count = new_size;
     }
 
-    inline void reserve(size_t size)
-    {
-    }
+    inline void reserve(size_t size) { }
 
-    inline void clear()
-    {
-        count = 0;
-    }
+    inline void clear() { count = 0; }
 };
 
 // Winding type, with storage template. Doesn't inherit the storage,
@@ -644,7 +563,9 @@ public:
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_base_t(Iter begin, Iter end) : storage(begin, end) { }
+    inline winding_base_t(Iter begin, Iter end) : storage(begin, end)
+    {
+    }
 
     // initializer list constructor
     inline winding_base_t(std::initializer_list<qvec3d> l) : storage(l.begin(), l.end()) { }
@@ -671,47 +592,23 @@ public:
 
     inline size_t size() const { return storage.size(); }
 
-    inline qvec3d &at(const size_t &index)
-    {
-        return storage.at(index);
-    }
+    inline qvec3d &at(const size_t &index) { return storage.at(index); }
 
-    inline const qvec3d &at(const size_t &index) const
-    {
-        return storage.at(index);
-    }
+    inline const qvec3d &at(const size_t &index) const { return storage.at(index); }
 
     // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index)
-    {
-        return storage[index];
-    }
+    inline qvec3d &operator[](const size_t &index) { return storage[index]; }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const
-    {
-        return storage[index];
-    }
+    inline const qvec3d &operator[](const size_t &index) const { return storage[index]; }
 
-    inline const auto begin() const
-    {
-        return storage.begin();
-    }
+    inline const auto begin() const { return storage.begin(); }
 
-    inline const auto end() const
-    {
-        return storage.end();
-    }
+    inline const auto end() const { return storage.end(); }
 
-    inline auto begin()
-    {
-        return storage.begin();
-    }
+    inline auto begin() { return storage.begin(); }
 
-    inline auto end()
-    {
-        return storage.end();
-    }
+    inline auto end() { return storage.end(); }
 
     template<typename... Args>
     inline qvec3d &emplace_back(Args &&...vec)
@@ -719,25 +616,13 @@ public:
         return storage.emplace_back(qvec3d(std::forward<Args>(vec)...));
     }
 
-    inline void push_back(const qvec3d &vec)
-    {
-        storage.emplace_back(vec);
-    }
+    inline void push_back(const qvec3d &vec) { storage.emplace_back(vec); }
 
-    inline void resize(const size_t &new_size)
-    {
-        storage.resize(new_size);
-    }
+    inline void resize(const size_t &new_size) { storage.resize(new_size); }
 
-    inline void reserve(size_t size)
-    {
-        storage.reserve(size);
-    }
+    inline void reserve(size_t size) { storage.reserve(size); }
 
-    inline void clear()
-    {
-        storage.clear();
-    }
+    inline void clear() { storage.clear(); }
 
     template<typename TStor>
     friend struct winding_base_t;
@@ -747,7 +632,7 @@ public:
     winding_base_t<TStor> clone() const
     {
         winding_base_t<TStor> result;
-        if constexpr(std::is_same_v<TStor, TStorage>) {
+        if constexpr (std::is_same_v<TStor, TStorage>) {
             result.storage = storage;
         } else {
             result.storage = TStor{begin(), end()};
@@ -918,10 +803,7 @@ public:
         }
     }
 
-    std::vector<qvec3f> glm_winding_points() const
-    {
-        return {begin(), end()};
-    }
+    std::vector<qvec3f> glm_winding_points() const { return {begin(), end()}; }
 
     static inline winding_base_t from_winding_points(const std::vector<qvec3f> &points)
     {
@@ -990,7 +872,7 @@ public:
         return counts;
     }
 
-    vec_t max_dist_off_plane(const qplane3d& plane)
+    vec_t max_dist_off_plane(const qplane3d &plane)
     {
         vec_t max_dist = 0.0;
         for (size_t i = 0; i < size(); i++) {
@@ -1136,7 +1018,6 @@ public:
         return result;
     }
 
-
     /*
     ==================
     clip_back
@@ -1163,7 +1044,7 @@ public:
             return std::move(*this);
         else if (!counts[SIDE_BACK])
             return std::nullopt;
-       
+
         winding_base_t result;
         result.reserve(size() + 4);
 
@@ -1202,8 +1083,8 @@ public:
     }
 
     // SaveFn is a callable of type `winding_base_t & -> void`
-    template <typename SaveFn>
-    void dice(vec_t subdiv, SaveFn&& save_fn)
+    template<typename SaveFn>
+    void dice(vec_t subdiv, SaveFn &&save_fn)
     {
         if (!size())
             return;
@@ -1322,7 +1203,8 @@ public:
         return directional_equal(w, equal_epsilon) || directional_equal(w.flip(), equal_epsilon);
     }
 
-    static std::array<winding_base_t, 6> aabb_windings(const aabb3d &bbox) {
+    static std::array<winding_base_t, 6> aabb_windings(const aabb3d &bbox)
+    {
         double worldextent = 0;
         for (int i = 0; i < 3; ++i) {
             worldextent = max(worldextent, abs(bbox.maxs()[i]));

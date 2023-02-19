@@ -49,7 +49,7 @@ static void WriteFloat(std::ofstream &portalFile, vec_t v)
 static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool clusters)
 {
     const portal_t *p, *next;
-    const winding_t* w;
+    const winding_t *w;
     int i, front, back;
     qplane3d plane2;
 
@@ -257,7 +257,7 @@ void WritePortalFile(tree_t &tree)
     FreeTreePortals(tree);
 
     MakeHeadnodePortals(tree);
-    
+
     {
         logging::percent_clock clock;
 
@@ -273,7 +273,6 @@ void WritePortalFile(tree_t &tree)
     /* save portal file for vis tracing */
     WritePortalfile(tree.headnode, state);
 }
-
 
 /*
 ==============================================================================
@@ -359,7 +358,7 @@ void WriteDebugTreePortalFile(tree_t &tree, std::string_view filename_suffix)
     logging::print(logging::flag::STAT, "     {:8} tree portals written to {}\n", portal_count, name);
 }
 
-void WriteDebugPortals(std::vector<portal_t*> portals, std::string_view filename_suffix)
+void WriteDebugPortals(std::vector<portal_t *> portals, std::string_view filename_suffix)
 {
     logging::funcheader();
 
@@ -386,7 +385,7 @@ void WriteDebugPortals(std::vector<portal_t*> portals, std::string_view filename
         if (p->winding) {
             WriteDebugPortal(p, portal_file);
         }
-    }    
+    }
 
     logging::print(logging::flag::STAT, "     {:8} portals written to {}\n", portal_count, name);
 }

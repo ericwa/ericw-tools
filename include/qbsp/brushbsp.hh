@@ -39,7 +39,6 @@ struct tree_t;
 
 constexpr vec_t EDGE_LENGTH_EPSILON = 0.2;
 
-
 /*
 ================
 WindingIsTiny

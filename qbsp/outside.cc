@@ -285,7 +285,7 @@ static void WriteLeakLine(const mapentity_t &leakentity, const std::vector<porta
 }
 
 static void WriteLeafVolumes(const std::vector<portal_t *> &leakline, std::string_view filename_suffix)
-{ 
+{
     std::set<node_t *> used_leafs;
     std::vector<bspbrush_t::ptr> volumes_to_write;
 
@@ -388,9 +388,9 @@ void MarkBrushSidesInvisible(bspbrush_t::container &brushes)
         for (auto &face : brush->sides) {
             if (face.source) {
                 face.source->visible = false;
-                
-			    if (face.source->get_texinfo().flags.is_hint) {
-				    face.source->visible = true;	// hints are always visible
+
+                if (face.source->get_texinfo().flags.is_hint) {
+                    face.source->visible = true; // hints are always visible
                 }
             }
         }
@@ -435,7 +435,7 @@ static void MarkVisibleBrushSides_R(node_t *node)
             for (auto *brush : neighbour_leaf->original_brushes) {
                 for (auto &side : brush->sides) {
                     // fixme-brushbsp: should this be get_plane() ?
-                    // fixme-brushbsp: planenum 
+                    // fixme-brushbsp: planenum
                     if (side.source && qv::epsilonEqual(side.get_positive_plane(), portal->plane)) {
                         // we've found a brush side in an original brush in the neighbouring
                         // leaf, on a portal to this (non-opaque) leaf, so mark it as visible.
@@ -721,7 +721,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
         }
 
         // clear occupied state, so areas can be flooded in Q2
-        //ClearOccupied_r(node);
+        // ClearOccupied_r(node);
 
         return false;
     }

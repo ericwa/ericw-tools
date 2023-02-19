@@ -137,7 +137,8 @@ std::vector<entdict_t> &GetRadLights();
 
 const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates();
 
-bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const modelinfo_t *face_modelinfo, const light_t &surflight, int surf_type);
+bool FaceMatchesSurfaceLightTemplate(
+    const mbsp_t *bsp, const mface_t *face, const modelinfo_t *face_modelinfo, const light_t &surflight, int surf_type);
 
 const entdict_t *FindEntDictWithKeyPair(const std::string &key, const std::string &value);
 

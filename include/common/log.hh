@@ -128,7 +128,7 @@ struct percent_clock
 
     // increase count by 1
     void increase();
-    
+
     // increase count by 1
     void operator()();
 
@@ -154,13 +154,11 @@ struct stat_tracker_t
         bool is_warning;
         std::atomic_size_t count = 0;
 
-        inline stat(const std::string &name, bool show_even_if_zero, bool is_warning) :
-            name(name),
-            show_even_if_zero(show_even_if_zero),
-            is_warning(is_warning)
+        inline stat(const std::string &name, bool show_even_if_zero, bool is_warning)
+            : name(name), show_even_if_zero(show_even_if_zero), is_warning(is_warning)
         {
         }
-        
+
         inline size_t operator++(int) noexcept { return count++; }
         inline size_t operator++() noexcept { return ++count; }
         inline size_t operator+=(size_t v) noexcept { return count += v; }

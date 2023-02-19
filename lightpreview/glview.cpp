@@ -19,7 +19,7 @@ See file, 'COPYING', for details.
 
 #include "glview.h"
 
-//#include <cstdio>
+// #include <cstdio>
 #include <cassert>
 
 #include <QMouseEvent>

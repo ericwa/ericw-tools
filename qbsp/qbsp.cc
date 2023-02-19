@@ -50,15 +50,21 @@ bool wadpath::operator<(const wadpath &other) const
 
 // setting_wadpathset
 
-setting_wadpathset::setting_wadpathset(setting_container *dictionary, const nameset &names, const setting_group *group,
-    const char *description)
+setting_wadpathset::setting_wadpathset(
+    setting_container *dictionary, const nameset &names, const setting_group *group, const char *description)
     : setting_base(dictionary, names, group, description)
 {
 }
 
-void setting_wadpathset::addPath(const wadpath &path) { _paths.insert(path); }
+void setting_wadpathset::addPath(const wadpath &path)
+{
+    _paths.insert(path);
+}
 
-const std::set<wadpath> &setting_wadpathset::pathsValue() const { return _paths; }
+const std::set<wadpath> &setting_wadpathset::pathsValue() const
+{
+    return _paths;
+}
 
 bool setting_wadpathset::copyFrom(const setting_base &other)
 {
@@ -108,7 +114,10 @@ std::string setting_wadpathset::stringValue() const
     return paths;
 }
 
-std::string setting_wadpathset::format() const { return "path/to/wads"; }
+std::string setting_wadpathset::format() const
+{
+    return "path/to/wads";
+}
 
 // setting_tjunc
 
@@ -132,7 +141,7 @@ setting_blocksize::setting_blocksize(setting_container *dictionary, const namese
 
 bool setting_blocksize::parse(const std::string &settingName, parser_base_t &parser, source source)
 {
-    qvec3d vec = { 1024, 1024, 1024 };
+    qvec3d vec = {1024, 1024, 1024};
 
     for (int i = 0; i < 3; i++) {
         if (!parser.parse_token(PARSE_PEEK)) {
@@ -166,14 +175,20 @@ bool setting_blocksize::parse(const std::string &settingName, parser_base_t &par
     return true;
 }
 
-std::string setting_blocksize::stringValue() const { return qv::to_string(_value); }
+std::string setting_blocksize::stringValue() const
+{
+    return qv::to_string(_value);
+}
 
-std::string setting_blocksize::format() const { return "[x [y [z]]]"; }
+std::string setting_blocksize::format() const
+{
+    return "[x [y [z]]]";
+}
 
 // setting_debugexpand
 
-setting_debugexpand::setting_debugexpand(setting_container *dictionary, const nameset &names,
-    const setting_group *group, const char *description)
+setting_debugexpand::setting_debugexpand(
+    setting_container *dictionary, const nameset &names, const setting_group *group, const char *description)
     : setting_value(dictionary, names, {}, group, description)
 {
 }
@@ -194,7 +209,7 @@ bool setting_debugexpand::parse(const std::string &settingName, parser_base_t &p
             parser.parse_token();
         }
 
-        this->setValue(aabb3d { { values[0], values[1], values[2] }, { values[3], values[4], values[5] } }, source);
+        this->setValue(aabb3d{{values[0], values[1], values[2]}, {values[3], values[4], values[5]}}, source);
 
         return true;
     } catch (std::exception &) {
@@ -208,9 +223,15 @@ bool setting_debugexpand::parse(const std::string &settingName, parser_base_t &p
     }
 }
 
-std::string setting_debugexpand::stringValue() const { return is_hull() ? std::to_string(hull_index_value()) : fmt::format("{}", hull_bounds_value()); }
+std::string setting_debugexpand::stringValue() const
+{
+    return is_hull() ? std::to_string(hull_index_value()) : fmt::format("{}", hull_bounds_value());
+}
 
-std::string setting_debugexpand::format() const { return "[single hull index] or [mins_x mins_y mins_z maxs_x maxs_y maxs_z]"; }
+std::string setting_debugexpand::format() const
+{
+    return "[single hull index] or [mins_x mins_y mins_z maxs_x maxs_y maxs_z]";
+}
 
 bool setting_debugexpand::is_hull() const
 {
@@ -226,16 +247,22 @@ const aabb3d &setting_debugexpand::hull_bounds_value() const
 {
     return std::get<aabb3d>(_value);
 }
-}
+} // namespace settings
 
 static auto as_tuple(const maptexinfo_t &info)
 {
     return std::tie(info.vecs, info.miptex, info.flags, info.value, info.next);
 }
 
-bool maptexinfo_t::operator<(const maptexinfo_t &other) const { return as_tuple(*this) < as_tuple(other); }
+bool maptexinfo_t::operator<(const maptexinfo_t &other) const
+{
+    return as_tuple(*this) < as_tuple(other);
+}
 
-bool maptexinfo_t::operator>(const maptexinfo_t &other) const { return as_tuple(*this) > as_tuple(other); }
+bool maptexinfo_t::operator>(const maptexinfo_t &other) const
+{
+    return as_tuple(*this) > as_tuple(other);
+}
 
 const maptexinfo_t &face_t::get_texinfo() const
 {
@@ -278,7 +305,10 @@ plane_type_t qbsp_plane_t::calculate_type(const qplane3d &p)
     }
 }
 
-qbsp_plane_t::qbsp_plane_t(const qplane3d &plane, bool flip) noexcept : plane(plane) { normalize(flip); }
+qbsp_plane_t::qbsp_plane_t(const qplane3d &plane, bool flip) noexcept : plane(plane)
+{
+    normalize(flip);
+}
 
 qbsp_plane_t::qbsp_plane_t(const qplane3d &plane) noexcept : qbsp_plane_t(plane, false) { }
 
@@ -296,10 +326,22 @@ qbsp_plane_t &qbsp_plane_t::operator=(const qplane3d &plane) noexcept
     return copy;
 }
 
-[[nodiscard]] const plane_type_t &qbsp_plane_t::get_type() const { return type; }
-[[nodiscard]] const vec_t &qbsp_plane_t::get_dist() const { return plane.dist; }
-[[nodiscard]] vec_t &qbsp_plane_t::get_dist() { return plane.dist; }
-[[nodiscard]] const qvec3d &qbsp_plane_t::get_normal() const { return plane.normal; }
+[[nodiscard]] const plane_type_t &qbsp_plane_t::get_type() const
+{
+    return type;
+}
+[[nodiscard]] const vec_t &qbsp_plane_t::get_dist() const
+{
+    return plane.dist;
+}
+[[nodiscard]] vec_t &qbsp_plane_t::get_dist()
+{
+    return plane.dist;
+}
+[[nodiscard]] const qvec3d &qbsp_plane_t::get_normal() const
+{
+    return plane.normal;
+}
 bool qbsp_plane_t::set_normal(const qvec3d &vec, bool flip)
 {
     plane.normal = vec;
@@ -312,8 +354,14 @@ bool qbsp_plane_t::set_plane(const qplane3d &plane, bool flip)
     return normalize(flip);
 }
 
-[[nodiscard]] const qplane3d &qbsp_plane_t::get_plane() const { return plane; }
-[[nodiscard]] qbsp_plane_t::operator const qplane3d &() const { return plane; }
+[[nodiscard]] const qplane3d &qbsp_plane_t::get_plane() const
+{
+    return plane;
+}
+[[nodiscard]] qbsp_plane_t::operator const qplane3d &() const
+{
+    return plane;
+}
 
 // normalize the given plane, optionally flipping it to face
 // the positive direction. returns whether the plane was flipped or not.
@@ -365,8 +413,7 @@ bool qbsp_plane_t::normalize(bool flip) noexcept
 
 namespace qv
 {
-[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2,
-    vec_t normalEpsilon, vec_t distEpsilon)
+[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, vec_t normalEpsilon, vec_t distEpsilon)
 {
     // axial planes will never match on normal, so we can skip that check entirely
     if (p1.get_type() < plane_type_t::PLANE_ANYX && p2.get_type() < plane_type_t::PLANE_ANYX) {
@@ -532,12 +579,12 @@ void qbsp_settings::initialize(int argc, const char **argv)
 {
     if (auto file = fs::load("qbsp.ini")) {
         logging::print("Loading options from qbsp.ini\n");
-        parser_t p(file, { "qbsp.ini" });
+        parser_t p(file, {"qbsp.ini"});
         parse(p);
     }
 
     try {
-        token_parser_t p(argc - 1, argv + 1, { "command line" });
+        token_parser_t p(argc - 1, argv + 1, {"command line"});
         auto remainder = parse(p);
 
         if (remainder.size() <= 0 || remainder.size() > 2) {
@@ -562,7 +609,7 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
     }
 
     fs::data data = fs::load(pathname);
-    parser_t parser(data, { pathname });
+    parser_t parser(data, {pathname});
 
     while (true) {
         if (!parser.parse_token() || parser.at_end()) {
@@ -607,7 +654,7 @@ void qbsp_settings::load_entity_def(const std::string &pathname)
     }
 
     fs::data data = fs::load(pathname);
-    parser_t parser(data, { pathname });
+    parser_t parser(data, {pathname});
 
     while (true) {
         if (!parser.parse_token() || parser.at_end()) {
@@ -729,7 +776,8 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
     common_settings::postinitialize(argc, argv);
 }
 
-void qbsp_settings::reset() {
+void qbsp_settings::reset()
+{
     common_settings::reset();
 
     target_version = nullptr;
@@ -768,7 +816,7 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
 
                         for (auto &side : b->mapbrush->faces) {
                             map.bsp.dbrushsides.push_back(
-                                {(uint32_t) ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(side.texinfo)});
+                                {(uint32_t)ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(side.texinfo)});
                             brush.numsides++;
                             stats.total_brush_sides++;
                         }
@@ -824,7 +872,7 @@ static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
     CountLeafs_r(node->children[1], stats);
 }
 
-static int NodeHeight(node_t* node)
+static int NodeHeight(node_t *node)
 {
     if (node->parent) {
         return 1 + NodeHeight(node->parent);
@@ -867,7 +915,7 @@ void CountLeafs(node_t *headnode)
 }
 
 static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
-{ 
+{
     if (node->is_leaf) {
         for (auto &brush : node->bsp_brushes) {
             container.push_back(brush);
@@ -960,7 +1008,9 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
     Brush_LoadEntity(entity, hullnum, brushes, num_clipped);
 
     if (num_clipped && !qbsp_options.verbose.value()) {
-        logging::print(logging::flag::STAT, "WARNING: {} faces were crunched away by being too small. {}Use -verbose to see which faces were affected.\n", num_clipped, hullnum.value_or(0) ? "This is normal for the hulls. " : "");
+        logging::print(logging::flag::STAT,
+            "WARNING: {} faces were crunched away by being too small. {}Use -verbose to see which faces were affected.\n",
+            num_clipped, hullnum.value_or(0) ? "This is normal for the hulls. " : "");
     }
 
     size_t num_sides = 0;
@@ -968,7 +1018,8 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         num_sides += brushes[i]->sides.size();
     }
 
-    logging::print(logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
+    logging::print(
+        logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
     // always chop the other hulls to reduce brush tests
     if (qbsp_options.chop.value() || hullnum.value_or(0)) {
@@ -1016,8 +1067,9 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     BrushBSP(tree, entity, brushes,
         qbsp_options.forcegoodtree.value() ? tree_split_t::PRECISE : // we asked for the slow method
-        !map.is_world_entity(entity) ? tree_split_t::FAST : // brush models are assumed to be simple
-        tree_split_t::AUTO);
+            !map.is_world_entity(entity) ? tree_split_t::FAST
+                                         : // brush models are assumed to be simple
+            tree_split_t::AUTO);
 
     // build all the portals in the bsp tree
     // some portals are solid polygons, and some are paths to other leafs
@@ -1130,8 +1182,7 @@ static void UpdateEntLump(void)
 {
     logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
-    if (qbsp_options.target_game->id == GAME_QUAKE_II)
-    {
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
         FError("this won't work on Q2 maps; for Q2, please use bsputil --extract-entities & --replace-entities.");
         return;
     }
@@ -1202,8 +1253,7 @@ Generates a submodel's direct brush information to a separate file, so the engin
 hull sizes
 */
 
-static void BSPX_Brushes_AddModel(
-    struct bspxbrushes_s *ctx, int modelnum, const std::vector<mapbrush_t> &brushes)
+static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const std::vector<mapbrush_t> &brushes)
 {
     bspxbrushes_permodel permodel{1, modelnum};
 
@@ -1506,7 +1556,7 @@ void ProcessFile()
 
     // create hulls!
     CreateHulls();
-    
+
     WriteEntitiesToString();
     BSPX_CreateBrushList();
     FinishBSPFile();

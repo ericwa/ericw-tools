@@ -6,8 +6,8 @@
 #include <array>
 #include <vector>
 
-TEST_CASE("winding" * doctest::test_suite("benchmark")
-          * doctest::skip()) {
+TEST_CASE("winding" * doctest::test_suite("benchmark") * doctest::skip())
+{
     ankerl::nanobench::Bench bench;
 
     bench.run("std::vector<double> reserve(3*4*6)", [&] {
@@ -40,8 +40,8 @@ static void test_polylib(bool check_results)
 
     // top face to TB default brush
     w[0] = {-64, 64, 16};
-    w[1] = { 64, 64, 16};
-    w[2] = { 64, -64, 16};
+    w[1] = {64, 64, 16};
+    w[2] = {64, -64, 16};
     w[3] = {-64, -64, 16};
 
     qplane3d splitplane{{1, 0, 0}, 0};
@@ -73,9 +73,7 @@ static void test_polylib(bool check_results)
 
 TEST_CASE("SplitFace" * doctest::test_suite("benchmark"))
 {
-    ankerl::nanobench::Bench().run("create and split a face (polylib)", [&]() {
-        test_polylib(false);
-    });
+    ankerl::nanobench::Bench().run("create and split a face (polylib)", [&]() { test_polylib(false); });
 
     // run with doctest assertions, to validate that they actually work
     test_polylib(true);

@@ -167,7 +167,7 @@ struct bsp29_dclipnode_t
     // convert to mbsp_t
     operator bsp2_dclipnode_t() const;
 
-        // serialize for streams
+    // serialize for streams
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
 

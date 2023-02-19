@@ -118,17 +118,13 @@ sceneinfo CreateGeometry(
     sceneinfo s;
     s.geomID = geomID;
 
-    auto add_vert = [&](const qvec3f &pos) {
-        vertices_temp.push_back({.point {
-            pos[0], pos[1], pos[2], 0.0f
-        }});
-    };
+    auto add_vert = [&](const qvec3f &pos) { vertices_temp.push_back({.point{pos[0], pos[1], pos[2], 0.0f}}); };
 
     // FIXME: reuse vertices
     auto add_tri = [&](const mface_t *face, int bsp_vert0, int bsp_vert1, int bsp_vert2, const modelinfo_t *modelinfo) {
-        const qvec3f final_pos0 = Vertex_GetPos(bsp,bsp_vert0) + modelinfo->offset;
-        const qvec3f final_pos1 = Vertex_GetPos(bsp,bsp_vert1) + modelinfo->offset;
-        const qvec3f final_pos2 = Vertex_GetPos(bsp,bsp_vert2) + modelinfo->offset;
+        const qvec3f final_pos0 = Vertex_GetPos(bsp, bsp_vert0) + modelinfo->offset;
+        const qvec3f final_pos1 = Vertex_GetPos(bsp, bsp_vert1) + modelinfo->offset;
+        const qvec3f final_pos2 = Vertex_GetPos(bsp, bsp_vert2) + modelinfo->offset;
 
         // push the 3 vertices
         int first_vert_index = vertices_temp.size();
@@ -472,8 +468,8 @@ qplane3d Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
 /**
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
-static void Leaf_MakeFaces(
-    const mbsp_t *bsp, const modelinfo_t *modelinfo, const mleaf_t *leaf, const std::vector<qplane3d> &planes, std::vector<winding_t> &result)
+static void Leaf_MakeFaces(const mbsp_t *bsp, const modelinfo_t *modelinfo, const mleaf_t *leaf,
+    const std::vector<qplane3d> &planes, std::vector<winding_t> &result)
 {
     for (const qplane3d &plane : planes) {
         // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
@@ -485,7 +481,7 @@ static void Leaf_MakeFaces(
         for (const qplane3d &plane2 : planes) {
             if (&plane2 == &plane)
                 continue;
-            
+
             // discard the back, continue clipping the front part
             winding = winding->clip_front(plane2);
 
@@ -502,7 +498,8 @@ static void Leaf_MakeFaces(
     }
 }
 
-void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int nodenum, std::vector<qplane3d> *planes, std::vector<winding_t> &result)
+void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int nodenum, std::vector<qplane3d> *planes,
+    std::vector<winding_t> &result)
 {
     if (nodenum < 0) {
         const int leafnum = -nodenum - 1;
@@ -528,7 +525,8 @@ void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int node
     planes->pop_back();
 }
 
-static void MakeFaces(const mbsp_t *bsp, const modelinfo_t *modelinfo, const dmodelh2_t *model, std::vector<winding_t> &result)
+static void MakeFaces(
+    const mbsp_t *bsp, const modelinfo_t *modelinfo, const dmodelh2_t *model, std::vector<winding_t> &result)
 {
     std::vector<qplane3d> planes;
     MakeFaces_r(bsp, modelinfo, model->headnode[0], &planes, result);
@@ -666,10 +664,8 @@ void Embree_TraceInit(const mbsp_t *bsp)
     filtergeom = CreateGeometry(bsp, device, scene, filterfaces);
     CreateGeometryFromWindings(device, scene, skipwindings);
 
-    rtcSetGeometryIntersectFilterFunction(
-        rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN);
-    rtcSetGeometryOccludedFilterFunction(
-        rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN);
+    rtcSetGeometryIntersectFilterFunction(rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN);
+    rtcSetGeometryOccludedFilterFunction(rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN);
 
     rtcCommitScene(scene);
 
@@ -711,10 +707,8 @@ static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIn
     }
 }
 
-ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_) :
-      raystream(raystream_),
-      self(self_),
-      shadowmask(shadowmask_)
+ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_)
+    : raystream(raystream_), self(self_), shadowmask(shadowmask_)
 {
     rtcInitIntersectContext(this);
 

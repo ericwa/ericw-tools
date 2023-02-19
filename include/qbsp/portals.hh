@@ -69,10 +69,13 @@ struct portalstats_t : logging::stat_tracker_t
 contentflags_t ClusterContents(const node_t *node);
 bool Portal_VisFlood(const portal_t *p);
 bool Portal_EntityFlood(const portal_t *p, int32_t s);
-enum class portaltype_t {
-    TREE, VIS
+enum class portaltype_t
+{
+    TREE,
+    VIS
 };
-std::list<buildportal_t> MakeTreePortals_r(node_t *node, portaltype_t type, std::list<buildportal_t> boundary_portals, portalstats_t &stats, logging::percent_clock &clock);
+std::list<buildportal_t> MakeTreePortals_r(node_t *node, portaltype_t type, std::list<buildportal_t> boundary_portals,
+    portalstats_t &stats, logging::percent_clock &clock);
 void MakeTreePortals(tree_t &tree);
 std::list<buildportal_t> MakeHeadnodePortals(tree_t &tree);
 void MakePortalsFromBuildportals(tree_t &tree, std::list<buildportal_t> &buildportals);

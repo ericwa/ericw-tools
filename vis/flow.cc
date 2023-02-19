@@ -30,8 +30,8 @@ static int c_leafskip;
   pointer, was measurably faster
   ==============
 */
-static void ClipToSeparators(const viswinding_t *source, const qplane3d src_pl, const viswinding_t *pass, viswinding_t *&target,
-    unsigned int test, pstack_t &stack)
+static void ClipToSeparators(const viswinding_t *source, const qplane3d src_pl, const viswinding_t *pass,
+    viswinding_t *&target, unsigned int test, pstack_t &stack)
 {
     int i, j, k, l;
     qplane3d sep;
@@ -409,7 +409,7 @@ static void BasePortalThread(size_t portalnum)
         for (j = 0; j < tw.size(); j++) {
             d = p.plane.distance_to(tw[j]);
             if (d > -VIS_ON_EPSILON) // ericw -- changed from > ON_EPSILON for
-                                 // https://github.com/ericwa/ericw-tools/issues/261
+                                     // https://github.com/ericwa/ericw-tools/issues/261
                 break;
         }
         if (j == tw.size())
@@ -423,7 +423,7 @@ static void BasePortalThread(size_t portalnum)
         for (j = 0; j < w.size(); j++) {
             d = tp.plane.distance_to(w[j]);
             if (d < VIS_ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
-                                // https://github.com/ericwa/ericw-tools/issues/261
+                                    // https://github.com/ericwa/ericw-tools/issues/261
                 break;
         }
         if (j == w.size())

@@ -63,7 +63,7 @@ struct bspbrush_t
     using list = std::list<ptr>;
 
     template<typename... Args>
-    static inline ptr make_ptr(Args&& ...args)
+    static inline ptr make_ptr(Args &&...args)
     {
         return std::make_shared<bspbrush_t>(std::forward<Args>(args)...);
     }
@@ -95,5 +95,6 @@ struct bspbrush_t
     bool contains_point(const qvec3d &point, vec_t epsilon = 0.0) const;
 };
 
-std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, const contentflags_t &contents, hull_index_t hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped);
+std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, const contentflags_t &contents,
+    hull_index_t hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped);
 bool CreateBrushWindings(bspbrush_t &brush);

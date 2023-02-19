@@ -115,8 +115,7 @@ enum class meta_ext
 };
 
 // Load wal
-std::optional<texture_meta> load_wal_meta(
-    const std::string_view &name, const fs::data &file, const gamedef_t *game);
+std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game);
 
 std::optional<texture_meta> load_wal_json_meta(
     const std::string_view &name, const fs::data &file, const gamedef_t *game);

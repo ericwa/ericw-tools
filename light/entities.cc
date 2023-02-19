@@ -79,55 +79,49 @@ std::vector<entdict_t> &GetRadLights()
 static void MakeSurfaceLights(const mbsp_t *bsp);
 
 // light_t
-light_t::light_t() :
-    light{this, "light", DEFAULTLIGHTLEVEL},
-    atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()},
-    formula{this, "delay", LF_LINEAR,
-        {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
-            {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}},
-    cone{this, "cone", 10.f},
-    spotangle{this, "angle", 40.0},
-    spotangle2{this, "softangle", 0.0},
-    style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1},
-    anglescale{this, {"anglesense", "anglescale"}, -1.0},
-    dirtscale{this, "dirtscale", 0.0},
-    dirtgain{this, "dirtgain", 0},
-    dirt{this, "dirt", 0},
-    deviance{this, "deviance", 0},
-    samples{this, "samples", 16, 0, std::numeric_limits<int32_t>::max()},
-    projfov{this, "project_fov", 90},
-    bouncescale{this, "bouncescale", 1.0},
-    dirt_off_radius{this, "dirt_off_radius", 0.0},
-    dirt_on_radius{this, "dirt_on_radius", 0.0},
-    sun{this, "sun", false},
-    sunlight2{this, "sunlight2", 0},
-    sunlight3{this, "sunlight3", 0},
-    falloff{this, "falloff", 0.0, 0.0, std::numeric_limits<vec_t>::max()},
-    bleed{this, "bleed", false},
-    origin{this, "origin", 0, 0, 0},
-    color{this, "color", 255.0, 255.0, 255.0},
-    mangle{this, "mangle", 0, 0, 0},
-    projangle{this, "project_mangle", 20, 0, 0},
-    project_texture{this, "project_texture", ""},
-    suntexture{this, "suntexture", ""},
-    nostaticlight{this, "nostaticlight", false},
-    surflight_group{this, "surflight_group", 0},
-    surface_minlight_scale{this, "surface_minlight_scale", 64.f},
-    light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
-    shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT},
-    nonudge{this, "nonudge", false}
-{}
+light_t::light_t()
+    : light{this, "light", DEFAULTLIGHTLEVEL}, atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()},
+      formula{this, "delay", LF_LINEAR,
+          {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
+              {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}},
+      cone{this, "cone", 10.f}, spotangle{this, "angle", 40.0}, spotangle2{this, "softangle", 0.0},
+      style{this, "style", 0, 0, INVALID_LIGHTSTYLE - 1}, anglescale{this, {"anglesense", "anglescale"}, -1.0},
+      dirtscale{this, "dirtscale", 0.0}, dirtgain{this, "dirtgain", 0}, dirt{this, "dirt", 0}, deviance{this,
+                                                                                                   "deviance", 0},
+      samples{this, "samples", 16, 0, std::numeric_limits<int32_t>::max()}, projfov{this, "project_fov", 90},
+      bouncescale{this, "bouncescale", 1.0}, dirt_off_radius{this, "dirt_off_radius", 0.0},
+      dirt_on_radius{this, "dirt_on_radius", 0.0}, sun{this, "sun", false}, sunlight2{this, "sunlight2", 0},
+      sunlight3{this, "sunlight3", 0}, falloff{this, "falloff", 0.0, 0.0, std::numeric_limits<vec_t>::max()},
+      bleed{this, "bleed", false}, origin{this, "origin", 0, 0, 0}, color{this, "color", 255.0, 255.0, 255.0},
+      mangle{this, "mangle", 0, 0, 0}, projangle{this, "project_mangle", 20, 0, 0}, project_texture{this,
+                                                                                        "project_texture", ""},
+      suntexture{this, "suntexture", ""}, nostaticlight{this, "nostaticlight", false}, surflight_group{this,
+                                                                                           "surflight_group", 0},
+      surface_minlight_scale{this, "surface_minlight_scale", 64.f}, light_channel_mask{this, "light_channel_mask",
+                                                                        CHANNEL_MASK_DEFAULT},
+      shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT}, nonudge{this, "nonudge", false}
+{
+}
 
 std::string light_t::classname() const
 {
     return epairs->get("classname");
 }
 
-const light_formula_t &light_t::getFormula() const { return formula.value(); }
+const light_formula_t &light_t::getFormula() const
+{
+    return formula.value();
+}
 
-void light_t::initAABB() { bounds = origin.value(); }
+void light_t::initAABB()
+{
+    bounds = origin.value();
+}
 
-void light_t::expandAABB(const qvec3d &pt) { bounds += pt; }
+void light_t::expandAABB(const qvec3d &pt)
+{
+    bounds += pt;
+}
 
 /*
  * ============================================================================
@@ -325,8 +319,7 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
 
     // shadow_channel_mask defaults to light_channel_mask
     if (!entity->shadow_channel_mask.isChanged()) {
-        entity->shadow_channel_mask.setValue(entity->light_channel_mask.value(),
-            settings::source::DEFAULT);
+        entity->shadow_channel_mask.setValue(entity->light_channel_mask.value(), settings::source::DEFAULT);
     }
 
     if (!entity->surface_minlight_scale.isChanged()) {
@@ -880,7 +873,8 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
     /* handle worldspawn */
     for (const auto &epair : WorldEnt()) {
-        if (light_options.setSetting(epair.first, epair.second, settings::source::MAP) == settings::setting_error::INVALID) {
+        if (light_options.setSetting(epair.first, epair.second, settings::source::MAP) ==
+            settings::setting_error::INVALID) {
             logging::print("WARNING: worldspawn key {} has invalid value of \"{}\"\n", epair.first, epair.second);
         }
     }
@@ -1284,7 +1278,8 @@ static aabb3d BoundPoly(int numverts, qvec3d *verts)
     return bounds;
 }
 
-bool FaceMatchesSurfaceLightTemplate(const mbsp_t *bsp, const mface_t *face, const modelinfo_t *face_modelinfo, const light_t &surflight, int surf_type)
+bool FaceMatchesSurfaceLightTemplate(
+    const mbsp_t *bsp, const mface_t *face, const modelinfo_t *face_modelinfo, const light_t &surflight, int surf_type)
 {
     const char *texname = Face_TextureName(bsp, face);
 
@@ -1416,7 +1411,7 @@ static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_mod
 static bool ParseEntityLights(std::ifstream &f, const fs::path &fname)
 {
     std::string str{std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>()};
-    parser_t p(str, { fname.string() });
+    parser_t p(str, {fname.string()});
     EntData_ParseInto(p, radlights);
     return true;
 }
@@ -1437,7 +1432,7 @@ bool ParseLightsFile(const fs::path &fname)
         std::string buf;
         std::getline(f, buf);
 
-        parser_t parser(buf, { fname.string() });
+        parser_t parser(buf, {fname.string()});
 
         if (!parser.parse_token())
             continue;

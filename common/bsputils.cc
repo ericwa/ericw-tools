@@ -441,7 +441,8 @@ const mleaf_t *BSP_FindLeafAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, c
     return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point);
 }
 
-static clipnode_info_t BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int parent_clipnodenum, const planeside_t parent_side, const int clipnodenum, const qvec3d &point)
+static clipnode_info_t BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int parent_clipnodenum,
+    const planeside_t parent_side, const int clipnodenum, const qvec3d &point)
 {
     if (clipnodenum < 0) {
         // actually contents
@@ -456,19 +457,20 @@ static clipnode_info_t BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int pa
     const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist >= 0) {
-        return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_FRONT, node->children[SIDE_FRONT],  point);
+        return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_FRONT, node->children[SIDE_FRONT], point);
     } else {
         return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_BACK, node->children[SIDE_BACK], point);
     }
 }
 
-bool clipnode_info_t::operator==(const clipnode_info_t& other) const {
-    return this->parent_clipnode == other.parent_clipnode
-           && this->side == other.side
-           && this->contents == other.contents;
+bool clipnode_info_t::operator==(const clipnode_info_t &other) const
+{
+    return this->parent_clipnode == other.parent_clipnode && this->side == other.side &&
+           this->contents == other.contents;
 }
 
-clipnode_info_t BSP_FindClipnodeAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point)
+clipnode_info_t BSP_FindClipnodeAtPoint(
+    const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point)
 {
     Q_assert(hullnum.value() > 0);
     return BSP_FindClipnodeAtPoint_r(bsp, 0, static_cast<planeside_t>(-1), model->headnode.at(hullnum.value()), point);
@@ -479,7 +481,8 @@ int BSP_FindContentsAtPoint(const mbsp_t *bsp, hull_index_t hullnum, const dmode
     if (!hullnum.value_or(0)) {
         return BSP_FindLeafAtPoint_r(bsp, model->headnode[0], point)->contents;
     }
-    auto info = BSP_FindClipnodeAtPoint_r(bsp, 0, static_cast<planeside_t>(-1), model->headnode.at(hullnum.value()), point);
+    auto info =
+        BSP_FindClipnodeAtPoint_r(bsp, 0, static_cast<planeside_t>(-1), model->headnode.at(hullnum.value()), point);
     return info.contents;
 }
 
@@ -558,7 +561,7 @@ void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face)
     }
 }
 
-aabb3f Model_BoundsOfFaces(const mbsp_t& bsp, const dmodelh2_t &model)
+aabb3f Model_BoundsOfFaces(const mbsp_t &bsp, const dmodelh2_t &model)
 {
     aabb3f result;
     for (int i = model.firstface; i < model.firstface + model.numfaces; ++i) {
@@ -624,8 +627,8 @@ void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_
     uint8_t *outstart = out;
     while (out < outend) {
         if (in == inend) {
-            logging::print("DecompressVis: input underrun (decompressed {} of {} output bytes)\n",
-                (out - outstart), (outend - outstart));
+            logging::print("DecompressVis: input underrun (decompressed {} of {} output bytes)\n", (out - outstart),
+                (outend - outstart));
             return;
         }
 
@@ -636,8 +639,7 @@ void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_
         }
 
         if (in == inend) {
-            logging::print(
-                "DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n",
+            logging::print("DecompressVis: input underrun (during zero-run) (decompressed {} of {} output bytes)\n",
                 (out - outstart), (outend - outstart));
             return;
         }
@@ -650,8 +652,8 @@ void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_
 
         for (c = run_length; c > 0; c--) {
             if (out == outend) {
-                logging::print("DecompressVis: output overrun (decompressed {} of {} output bytes)\n",
-                    (out - outstart), (outend - outstart));
+                logging::print("DecompressVis: output overrun (decompressed {} of {} output bytes)\n", (out - outstart),
+                    (outend - outstart));
                 return;
             }
             *out++ = 0;
@@ -685,7 +687,8 @@ std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp
 
             std::vector<uint8_t> decompressed(decompressed_size);
             DecompressVis(bsp->dvis.bits.data() + bsp->dvis.get_bit_offset(VIS_PVS, cluster),
-                bsp->dvis.bits.data() + bsp->dvis.bits.size(), decompressed.data(), decompressed.data() + decompressed.size());
+                bsp->dvis.bits.data() + bsp->dvis.bits.size(), decompressed.data(),
+                decompressed.data() + decompressed.size());
             result[cluster] = std::move(decompressed);
         }
     } else {
@@ -708,8 +711,8 @@ std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp
             }
 
             std::vector<uint8_t> decompressed(decompressed_size);
-            DecompressVis(bsp->dvis.bits.data() + leaf.visofs,
-                bsp->dvis.bits.data() + bsp->dvis.bits.size(), decompressed.data(), decompressed.data() + decompressed.size());
+            DecompressVis(bsp->dvis.bits.data() + leaf.visofs, bsp->dvis.bits.data() + bsp->dvis.bits.size(),
+                decompressed.data(), decompressed.data() + decompressed.size());
             result[map_key] = std::move(decompressed);
         }
     }
@@ -828,11 +831,10 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
             const char *texname = Face_TextureName(&bsp, &face);
 
             logging::print("WARNING: Bad surface extents (may not load in vanilla Q1 engines):\n"
-                            "   surface {}, {} extents = {}, shift = {}\n"
-                            "   texture {} at ({})\n"
-                            "   surface normal ({})\n",
-                Face_GetNum(&bsp, &face), i ? "t" : "s", lm_extents[i], lightmapshift, texname, point,
-                plane.normal);
+                           "   surface {}, {} extents = {}, shift = {}\n"
+                           "   texture {} at ({})\n"
+                           "   surface normal ({})\n",
+                Face_GetNum(&bsp, &face), i ? "t" : "s", lm_extents[i], lightmapshift, texname, point, plane.normal);
         }
     }
 
@@ -842,19 +844,17 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
     origin = bounds.mins() + radius;
     this->radius = qv::length(radius);
 
-    qmat4x4f LMToTexCoordMatrix = qmat4x4f::row_major({
-        lightmapshift, 0            , 0                         , lm_mins[0] * lightmapshift,
-        0            , lightmapshift, 0                         , lm_mins[1] * lightmapshift,
-        0            , 0            , 1                         , 0,
-        0            , 0            , 0                         , 1
-    });
+    qmat4x4f LMToTexCoordMatrix = qmat4x4f::row_major({lightmapshift, 0, 0, lm_mins[0] * lightmapshift, 0,
+        lightmapshift, 0, lm_mins[1] * lightmapshift, 0, 0, 1, 0, 0, 0, 0, 1});
     qmat4x4f TexCoordToLMMatrix = qv::inverse(LMToTexCoordMatrix);
 
     lmToWorldMatrix = texCoordToWorldMatrix * LMToTexCoordMatrix;
     worldToLMMatrix = TexCoordToLMMatrix * worldToTexCoordMatrix;
 }
 
-faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lmwidth, uint16_t lmheight, texvecf world_to_lm_space) {
+faceextents_t::faceextents_t(
+    const mface_t &face, const mbsp_t &bsp, uint16_t lmwidth, uint16_t lmheight, texvecf world_to_lm_space)
+{
     const qplane3f plane = Face_Plane(&bsp, &face);
 
     if (lmwidth > 0 && lmheight > 0) {
@@ -884,7 +884,8 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, uint16_t lm
     this->radius = qv::length(radius);
 }
 
-faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units_per_luxel_t tag, float world_units_per_luxel)
+faceextents_t::faceextents_t(
+    const mface_t &face, const mbsp_t &bsp, world_units_per_luxel_t tag, float world_units_per_luxel)
 {
     const qplane3f plane = Face_Plane(&bsp, &face);
     auto orig_normal = Face_Normal(&bsp, &face);
@@ -904,8 +905,8 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units
     }
 
     auto [t, b] = qv::MakeTangentAndBitangentUnnormalized(snapped_normal);
-    t = t * (1/world_units_per_luxel);
-    b = b * (1/world_units_per_luxel);
+    t = t * (1 / world_units_per_luxel);
+    b = b * (1 / world_units_per_luxel);
 
     qmat<float, 2, 3> world_to_lm;
     world_to_lm.set_row(0, t);
@@ -941,7 +942,7 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, world_units
     for (int i = 0; i < face.numedges; i++) {
         const qvec3f &worldpoint = Face_PointAtIndex(&bsp, &face, i);
         bounds += worldpoint;
-        
+
 #if 0
         auto lm = worldToLMMatrix * qvec4f(worldpoint, 1.0f);
 
@@ -1015,7 +1016,8 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
 /**
  * Samples the lightmap at an integer coordinate
  */
-qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents, int byte_offset_of_face, qvec2i coord)
+qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents,
+    int byte_offset_of_face, qvec2i coord)
 {
     Q_assert(coord[0] >= 0);
     Q_assert(coord[1] >= 0);
@@ -1026,28 +1028,20 @@ qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const facee
 
     assert(byte_offset_of_face >= 0);
 
-    const uint8_t* data = bsp->dlightdata.data();
+    const uint8_t *data = bsp->dlightdata.data();
 
     if (lit) {
-        const uint8_t* lit_data = lit->data();
+        const uint8_t *lit_data = lit->data();
 
-        return qvec3f{
-            lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 0],
+        return qvec3f{lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 0],
             lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 1],
-            lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 2]
-        };
+            lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 2]};
     } else if (bsp->loadversion->game->has_rgb_lightmap) {
-        return qvec3f{
-            data[byte_offset_of_face + (pixel * 3) + 0],
-            data[byte_offset_of_face + (pixel * 3) + 1],
-            data[byte_offset_of_face + (pixel * 3) + 2]
-        };
+        return qvec3f{data[byte_offset_of_face + (pixel * 3) + 0], data[byte_offset_of_face + (pixel * 3) + 1],
+            data[byte_offset_of_face + (pixel * 3) + 2]};
     } else {
         return qvec3f{
-            data[byte_offset_of_face + pixel],
-            data[byte_offset_of_face + pixel],
-            data[byte_offset_of_face + pixel]
-        };
+            data[byte_offset_of_face + pixel], data[byte_offset_of_face + pixel], data[byte_offset_of_face + pixel]};
     }
 }
 
@@ -1058,7 +1052,7 @@ std::vector<uint8_t> LoadLitFile(const fs::path &path)
 
     std::array<char, 4> ident;
     stream >= ident;
-    if (ident != std::array<char, 4>{'Q','L','I','T'}) {
+    if (ident != std::array<char, 4>{'Q', 'L', 'I', 'T'}) {
         throw std::runtime_error("invalid lit ident");
     }
 

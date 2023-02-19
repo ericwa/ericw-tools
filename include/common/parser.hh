@@ -71,8 +71,8 @@ struct parser_source_location
     parser_source_location on_line(size_t new_line) const;
 
     // return a new, constructed source location derived from this one
-    template<typename ... Args>
-    inline parser_source_location derive(Args&&... args)
+    template<typename... Args>
+    inline parser_source_location derive(Args &&...args)
     {
         parser_source_location loc(std::forward<Args>(args)...);
         loc.derivative = this;
@@ -121,10 +121,7 @@ struct parser_base_t
     bool was_quoted = false; // whether the current token was from a quoted string or not
     parser_source_location location; // parse location, if any
 
-    inline parser_base_t(parser_source_location base_location) :
-        location(base_location)
-    {
-    }
+    inline parser_base_t(parser_source_location base_location) : location(base_location) { }
 
     virtual bool parse_token(parseflags flags = PARSE_NORMAL) = 0;
 

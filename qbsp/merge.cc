@@ -155,7 +155,8 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
 MergeFaceToList
 ===============
 */
-void MergeFaceToList(std::unique_ptr<face_t> face, std::list<std::unique_ptr<face_t>> &list, logging::stat_tracker_t::stat &num_merged)
+void MergeFaceToList(
+    std::unique_ptr<face_t> face, std::list<std::unique_ptr<face_t>> &list, logging::stat_tracker_t::stat &num_merged)
 {
     for (auto it = list.begin(); it != list.end();) {
 #ifdef PARANOID
@@ -182,7 +183,8 @@ void MergeFaceToList(std::unique_ptr<face_t> face, std::list<std::unique_ptr<fac
 MergeFaceList
 ===============
 */
-std::list<std::unique_ptr<face_t>> MergeFaceList(std::list<std::unique_ptr<face_t>> input, logging::stat_tracker_t::stat &num_merged)
+std::list<std::unique_ptr<face_t>> MergeFaceList(
+    std::list<std::unique_ptr<face_t>> input, logging::stat_tracker_t::stat &num_merged)
 {
     std::list<std::unique_ptr<face_t>> result;
 

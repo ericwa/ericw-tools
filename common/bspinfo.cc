@@ -235,7 +235,8 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
         (float)nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()])};
 }
 
-static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled, fs::path obj_path, fs::path lightmaps_path)
+static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled,
+    fs::path obj_path, fs::path lightmaps_path)
 {
     struct face_rect
     {
@@ -300,7 +301,8 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             bspx_lmoffset >= faceofs;
         }
 
-        rectangles.emplace_back(face_rect{&face, get_face_extents(bsp, bspx, bspx_decoupled, face, use_bspx, use_decoupled), faceofs});
+        rectangles.emplace_back(
+            face_rect{&face, get_face_extents(bsp, bspx, bspx_decoupled, face, use_bspx, use_decoupled), faceofs});
     }
 
     if (!rectangles.size()) {
@@ -434,10 +436,12 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
 
         lightmaps_path.replace_filename(lightmaps_path.stem().string() + "_" + std::to_string(i) + ".png");
         std::ofstream strm(lightmaps_path, std::ofstream::out | std::ofstream::binary);
-        stbi_write_png_to_func([](void *context, void *data, int size) {
-            std::ofstream &strm = *((std::ofstream *) context);
-            strm.write((const char *) data, size);
-        }, &strm, full_atlas.width, full_atlas.height, 4, full_atlas.pixels.data(), full_atlas.width * 4);
+        stbi_write_png_to_func(
+            [](void *context, void *data, int size) {
+                std::ofstream &strm = *((std::ofstream *)context);
+                strm.write((const char *)data, size);
+            },
+            &strm, full_atlas.width, full_atlas.height, 4, full_atlas.pixels.data(), full_atlas.width * 4);
         memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
 
         logging::print("wrote {}\n", lightmaps_path);
@@ -765,7 +769,8 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
         }
     }
 #endif
-    export_obj_and_lightmaps(bsp, bspdata.bspx.entries, false, true, fs::path(name).replace_extension(".geometry.obj"), fs::path(name).replace_extension(".lm.png"));
+    export_obj_and_lightmaps(bsp, bspdata.bspx.entries, false, true, fs::path(name).replace_extension(".geometry.obj"),
+        fs::path(name).replace_extension(".lm.png"));
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
 }

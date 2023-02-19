@@ -587,8 +587,7 @@ struct memstream : virtual membuf, std::ostream, std::istream
     memstream(void *base, size_t size,
         std::ios_base::openmode which = std::ios_base::in | std::ios_base::out | std::ios_base::binary);
 
-    memstream(
-        const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary);
+    memstream(const void *base, size_t size, std::ios_base::openmode which = std::ios_base::in | std::ios_base::binary);
 };
 
 struct omemstream : virtual membuf, std::ostream
@@ -628,8 +627,7 @@ protected:
 
 struct omemsizestream : virtual omemsizebuf, std::ostream
 {
-    omemsizestream(
-        std::ios_base::openmode which = std::ios_base::out | std::ios_base::binary);
+    omemsizestream(std::ios_base::openmode which = std::ios_base::out | std::ios_base::binary);
 };
 
 void CRC_Init(uint16_t &crcvalue);

@@ -458,8 +458,7 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
     return {std::nullopt, {}, {}};
 }
 
-std::optional<texture_meta> load_wal_meta(
-    const std::string_view &name, const fs::data &file, const gamedef_t *game)
+std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game)
 {
     if (auto tex = load_wal(name, file, true, game)) {
         return tex->meta;
@@ -572,11 +571,7 @@ std::optional<texture_meta> load_wal_json_meta(
         if (json.contains("color")) {
             auto &color = json["color"];
 
-            qvec3b color_vec = {
-                color.at(0).get<int32_t>(),
-                color.at(1).get<int32_t>(),
-                color.at(2).get<int32_t>()
-            };
+            qvec3b color_vec = {color.at(0).get<int32_t>(), color.at(1).get<int32_t>(), color.at(2).get<int32_t>()};
 
             meta.color_override = {color_vec};
         }

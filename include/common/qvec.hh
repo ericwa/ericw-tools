@@ -126,36 +126,15 @@ public:
         v[N - 1] = value;
     }
 
-    [[nodiscard]] constexpr size_t size() const
-    {
-        return N;
-    }
+    [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qvec &other) const
-    {
-        return v < other.v;
-    }
-    [[nodiscard]] constexpr bool operator<=(const qvec &other) const
-    {
-        return v <= other.v;
-    }
-    [[nodiscard]] constexpr bool operator>(const qvec &other) const
-    {
-        return v > other.v;
-    }
-    [[nodiscard]] constexpr bool operator>=(const qvec &other) const
-    {
-        return v >= other.v;
-    }
-    [[nodiscard]] constexpr bool operator==(const qvec &other) const
-    {
-        return v == other.v;
-    }
-    [[nodiscard]] constexpr bool operator!=(const qvec &other) const
-    {
-        return v != other.v;
-    }
+    [[nodiscard]] constexpr bool operator<(const qvec &other) const { return v < other.v; }
+    [[nodiscard]] constexpr bool operator<=(const qvec &other) const { return v <= other.v; }
+    [[nodiscard]] constexpr bool operator>(const qvec &other) const { return v > other.v; }
+    [[nodiscard]] constexpr bool operator>=(const qvec &other) const { return v >= other.v; }
+    [[nodiscard]] constexpr bool operator==(const qvec &other) const { return v == other.v; }
+    [[nodiscard]] constexpr bool operator!=(const qvec &other) const { return v != other.v; }
 
     [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
@@ -169,14 +148,8 @@ public:
         return v[idx];
     }
 
-    [[nodiscard]] constexpr const T &operator[](const size_t idx) const
-    {
-        return at(idx);
-    }
-    [[nodiscard]] constexpr T &operator[](const size_t idx)
-    {
-        return at(idx);
-    }
+    [[nodiscard]] constexpr const T &operator[](const size_t idx) const { return at(idx); }
+    [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
 
     template<typename F>
     [[nodiscard]] inline auto operator+(const qvec<F, N> &other) const
@@ -299,36 +272,15 @@ public:
     }
 
     // stream support
-    auto stream_data()
-    {
-        return std::tie(v);
-    }
+    auto stream_data() { return std::tie(v); }
 
     // iterator support
-    constexpr auto begin()
-    {
-        return v.begin();
-    }
-    constexpr auto end()
-    {
-        return v.end();
-    }
-    constexpr auto begin() const
-    {
-        return v.begin();
-    }
-    constexpr auto end() const
-    {
-        return v.end();
-    }
-    constexpr auto cbegin() const
-    {
-        return v.cbegin();
-    }
-    constexpr auto cend() const
-    {
-        return v.cend();
-    }
+    constexpr auto begin() { return v.begin(); }
+    constexpr auto end() { return v.end(); }
+    constexpr auto begin() const { return v.begin(); }
+    constexpr auto end() const { return v.end(); }
+    constexpr auto cbegin() const { return v.cbegin(); }
+    constexpr auto cend() const { return v.cend(); }
 };
 
 // Fmt support
@@ -821,18 +773,12 @@ public:
     }
 
     // stream support
-    void stream_write(std::ostream &s) const
-    {
-        s <= std::tie(normal, dist);
-    }
-    void stream_read(std::istream &s)
-    {
-        s >= std::tie(normal, dist);
-    }
+    void stream_write(std::ostream &s) const { s <= std::tie(normal, dist); }
+    void stream_read(std::istream &s) { s >= std::tie(normal, dist); }
 };
 
 // Fmt support
-template <class T>
+template<class T>
 struct fmt::formatter<qplane3<T>> : formatter<qvec<T, 3>>
 {
     template<typename FormatContext>
@@ -910,13 +856,14 @@ public:
     }
 
     // static factory, row-major order
-    static qmat row_major(std::initializer_list<T> list) {
+    static qmat row_major(std::initializer_list<T> list)
+    {
         assert(list.size() == NRow * NCol);
 
         qmat result;
         for (size_t i = 0; i < NRow; i++) { // for each row
             for (size_t j = 0; j < NCol; j++) { // for each col
-                result.at(i, j) = *(list.begin() + (i*NCol + j));
+                result.at(i, j) = *(list.begin() + (i * NCol + j));
             }
         }
         return result;

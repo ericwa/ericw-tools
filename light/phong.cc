@@ -38,7 +38,7 @@
 
 using namespace std;
 
-face_cache_t::face_cache_t() {};
+face_cache_t::face_cache_t(){};
 
 face_cache_t::face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
     : m_points(GLM_FacePoints(bsp, face)), m_normals(normals), m_plane(Face_Plane(bsp, face).vec4()),

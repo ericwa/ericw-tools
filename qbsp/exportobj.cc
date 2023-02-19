@@ -54,7 +54,8 @@ static std::ofstream InitMtlFile(const std::string &filesuffix)
     return file;
 }
 
-static void ExportObjFace(std::ofstream &f, std::string_view mtlname, const winding_t &w, const maptexinfo_t &texinfo, int *vertcount)
+static void ExportObjFace(
+    std::ofstream &f, std::string_view mtlname, const winding_t &w, const maptexinfo_t &texinfo, int *vertcount)
 {
     const char *texname = map.miptexTextureName(texinfo.miptex).c_str();
 

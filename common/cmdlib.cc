@@ -236,8 +236,9 @@ membuf::int_type membuf::underflow()
 
 // memstream
 memstream::memstream(void *base, size_t size, std::ios_base::openmode which)
-    : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)),
-      std::istream(static_cast<std::streambuf *>(this))
+    : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)), std::istream(
+                                                                                        static_cast<std::streambuf *>(
+                                                                                            this))
 {
 }
 
@@ -255,8 +256,7 @@ omemstream::omemstream(void *base, size_t size, std::ios_base::openmode which)
 
 // imemstream
 
-imemstream::imemstream(
-    const void *base, size_t size, std::ios_base::openmode which)
+imemstream::imemstream(const void *base, size_t size, std::ios_base::openmode which)
     : membuf(base, size, which), std::istream(static_cast<std::streambuf *>(this))
 {
 }
@@ -285,8 +285,7 @@ omemsizebuf::pos_type omemsizebuf::seekpos(pos_type off, std::ios_base::openmode
     return pptr() - pbase();
 }
 
-omemsizebuf::pos_type omemsizebuf::seekoff(off_type off, std::ios_base::seekdir dir,
-        std::ios_base::openmode which)
+omemsizebuf::pos_type omemsizebuf::seekoff(off_type off, std::ios_base::seekdir dir, std::ios_base::openmode which)
 {
     if (dir == std::ios_base::cur)
         pbump(off);
@@ -649,7 +648,10 @@ bool natural_equal::operator()(const std::string &l, const std::string &r) const
     return strcmp(l.c_str(), r.c_str()) == 0;
 }
 
-bool natural_less::operator()(const std::string &l, const std::string &r) const noexcept { return stlnatstrlt(l, r); }
+bool natural_less::operator()(const std::string &l, const std::string &r) const noexcept
+{
+    return stlnatstrlt(l, r);
+}
 
 bool natural_case_insensitive_equal::operator()(const std::string &l, const std::string &r) const noexcept
 {

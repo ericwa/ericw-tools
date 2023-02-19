@@ -38,7 +38,7 @@
 
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
 #include <xmmintrin.h>
-//#include <pmmintrin.h>
+// #include <pmmintrin.h>
 #endif
 
 #include <memory>
@@ -123,82 +123,80 @@ float modelinfo_t::getResolvedPhongAngle() const
     return 0;
 }
 
-bool modelinfo_t::isWorld() const { return &bsp->dmodels[0] == model; }
+bool modelinfo_t::isWorld() const
+{
+    return &bsp->dmodels[0] == model;
+}
 
-modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale) :
-      bsp{b},
-      model{m},
-      lightmapscale{lmscale},
-      offset{},
-      minlight{this, "minlight", 0},
-      maxlight{this, "maxlight", 0},
-      minlightMottle{this, "minlightMottle", false},
-      shadow{this, "shadow", 0},
-      shadowself{this, {"shadowself", "selfshadow"}, 0},
-      shadowworldonly{this, "shadowworldonly", 0},
-      switchableshadow{this, "switchableshadow", 0},
-      switchshadstyle{this, "switchshadstyle", 0},
-      dirt{this, "dirt", 0},
-      phong{this, "phong", 0},
-      phong_angle{this, "phong_angle", 0},
-      alpha{this, "alpha", 1.0},
-      minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0},
-      lightignore{this, "lightignore", false},
-      lightcolorscale{this, "lightcolorscale", 1},
-      object_channel_mask{this, "object_channel_mask", CHANNEL_MASK_DEFAULT}
-      {}
+modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
+    : bsp{b}, model{m}, lightmapscale{lmscale}, offset{}, minlight{this, "minlight", 0}, maxlight{this, "maxlight", 0},
+      minlightMottle{this, "minlightMottle", false}, shadow{this, "shadow", 0}, shadowself{this,
+                                                                                    {"shadowself", "selfshadow"}, 0},
+      shadowworldonly{this, "shadowworldonly", 0}, switchableshadow{this, "switchableshadow", 0},
+      switchshadstyle{this, "switchshadstyle", 0}, dirt{this, "dirt", 0}, phong{this, "phong", 0},
+      phong_angle{this, "phong_angle", 0}, alpha{this, "alpha", 1.0}, minlight_color{this,
+                                                                          {"minlight_color", "mincolor"}, 255.0, 255.0,
+                                                                          255.0},
+      lightignore{this, "lightignore", false}, lightcolorscale{this, "lightcolorscale", 1}, object_channel_mask{this,
+                                                                                                "object_channel_mask",
+                                                                                                CHANNEL_MASK_DEFAULT}
+{
+}
 
 namespace settings
 {
 // worldspawn_keys
 
-worldspawn_keys::worldspawn_keys() :
-    scaledist{this, "dist", 1.0, 0.0, 100.0, &worldspawn_group},
-    rangescale{this, "range", 0.5, 0.0, 100.0, &worldspawn_group},
-    global_anglescale{this, {"anglescale", "anglesense"}, 0.5, 0.0, 1.0, &worldspawn_group},
-    lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group},
-    addminlight{this, "addmin", false, &worldspawn_group},
-    minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
-    maxlight{this, "maxlight", 0, &worldspawn_group},
-    minlightMottle{this, "minlightMottle", false},
-    minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group},
-    spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group},
-    compilerstyle_start{this, "compilerstyle_start", 32, &worldspawn_group},
-    compilerstyle_max{this, "compilerstyle_max", 64, &worldspawn_group},
-    globalDirt{this, {"dirt", "dirty"}, false, &worldspawn_group},
-    dirtMode{this, "dirtmode", 0.0f, &worldspawn_group},
-    dirtDepth{this, "dirtdepth", 128.0, 1.0, std::numeric_limits<vec_t>::infinity(), &worldspawn_group},
-    dirtScale{this, "dirtscale", 1.0, 0.0, 100.0, &worldspawn_group},
-    dirtGain{this, "dirtgain", 1.0, 0.0, 100.0, &worldspawn_group},
-    dirtAngle{this, "dirtangle", 88.0, 1.0, 90.0, &worldspawn_group},
-    minlightDirt{this, "minlight_dirt", false, &worldspawn_group},
-    phongallowed{this, "phong", true, &worldspawn_group},
-    phongangle{this, "phong_angle", 0, &worldspawn_group},
-    bounce{this, "bounce", false, &worldspawn_group},
-    bouncestyled{this, "bouncestyled", false, &worldspawn_group},
-    bouncescale{this, "bouncescale", 1.0, 0.0, 100.0, &worldspawn_group},
-    bouncecolorscale{this, "bouncecolorscale", 0.0, 0.0, 1.0, &worldspawn_group},
-    bouncelightsubdivision{this, "bouncelightsubdivision", 64.0, 1.0, 8192.0, &worldspawn_group},
-    surflightscale{this, "surflightscale", 1.0, &worldspawn_group},
-    surflightskyscale{this, "surflightskyscale", 1.0, &worldspawn_group},
-    surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
-    sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},
-    sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group},
-    sun2{this, "sun2", 0.0, &worldspawn_group},
-    sun2_color{this, "sun2_color", 255.0, 255.0, 255.0, &worldspawn_group},
-    sunlight2{this, "sunlight2", 0.0, &worldspawn_group},
-    sunlight2_color{this, {"sunlight2_color", "sunlight_color2"}, 255.0, 255.0, 255.0, &worldspawn_group},
-    sunlight3{this, "sunlight3", 0.0, &worldspawn_group},
-    sunlight3_color{this, {"sunlight3_color", "sunlight_color3"}, 255.0, 255.0, 255.0, &worldspawn_group},
-    sunlight_dirt{this, "sunlight_dirt", 0.0, &worldspawn_group},
-    sunlight2_dirt{this, "sunlight2_dirt", 0.0, &worldspawn_group},
-    // NOTE: the default mangle needs to be in direction vector form, not euler angle
-    sunvec{this, {"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, 0.0, -1.0, &worldspawn_group},
-    sun2vec{this, "sun2_mangle", 0.0, 0.0, -1.0, &worldspawn_group},
-    sun_deviance{this, "sunlight_penumbra", 0.0, 0.0, 180.0, &worldspawn_group},
-    sky_surface{ this, {"sky_surface", "sun_surface"}, 0, 0, 0, &worldspawn_group},
-    surflight_radiosity{this, "surflight_radiosity", SURFLIGHT_Q1, &worldspawn_group, "whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity"}
-      {}
+worldspawn_keys::worldspawn_keys()
+    : scaledist{this, "dist", 1.0, 0.0, 100.0, &worldspawn_group}, rangescale{this, "range", 0.5, 0.0, 100.0,
+                                                                       &worldspawn_group},
+      global_anglescale{this, {"anglescale", "anglesense"}, 0.5, 0.0, 1.0, &worldspawn_group},
+      lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group}, addminlight{this, "addmin", false,
+                                                                            &worldspawn_group},
+      minlight{this, {"light", "minlight"}, 0, &worldspawn_group}, maxlight{this, "maxlight", 0, &worldspawn_group},
+      minlightMottle{this, "minlightMottle", false}, minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0,
+                                                         255.0, &worldspawn_group},
+      spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group}, compilerstyle_start{this,
+                                                                                        "compilerstyle_start", 32,
+                                                                                        &worldspawn_group},
+      compilerstyle_max{this, "compilerstyle_max", 64, &worldspawn_group}, globalDirt{this, {"dirt", "dirty"}, false,
+                                                                               &worldspawn_group},
+      dirtMode{this, "dirtmode", 0.0f, &worldspawn_group}, dirtDepth{this, "dirtdepth", 128.0, 1.0,
+                                                               std::numeric_limits<vec_t>::infinity(),
+                                                               &worldspawn_group},
+      dirtScale{this, "dirtscale", 1.0, 0.0, 100.0, &worldspawn_group}, dirtGain{this, "dirtgain", 1.0, 0.0, 100.0,
+                                                                            &worldspawn_group},
+      dirtAngle{this, "dirtangle", 88.0, 1.0, 90.0, &worldspawn_group}, minlightDirt{this, "minlight_dirt", false,
+                                                                            &worldspawn_group},
+      phongallowed{this, "phong", true, &worldspawn_group}, phongangle{this, "phong_angle", 0, &worldspawn_group},
+      bounce{this, "bounce", false, &worldspawn_group}, bouncestyled{this, "bouncestyled", false, &worldspawn_group},
+      bouncescale{this, "bouncescale", 1.0, 0.0, 100.0, &worldspawn_group}, bouncecolorscale{this, "bouncecolorscale",
+                                                                                0.0, 0.0, 1.0, &worldspawn_group},
+      bouncelightsubdivision{this, "bouncelightsubdivision", 64.0, 1.0, 8192.0, &worldspawn_group},
+      surflightscale{this, "surflightscale", 1.0, &worldspawn_group}, surflightskyscale{this, "surflightskyscale", 1.0,
+                                                                          &worldspawn_group},
+      surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
+      sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group}, sunlight_color{this,
+                                                                             {"sunlight_color", "sun_color"}, 255.0,
+                                                                             255.0, 255.0, &worldspawn_group},
+      sun2{this, "sun2", 0.0, &worldspawn_group},
+      sun2_color{this, "sun2_color", 255.0, 255.0, 255.0, &worldspawn_group}, sunlight2{this, "sunlight2", 0.0,
+                                                                                  &worldspawn_group},
+      sunlight2_color{this, {"sunlight2_color", "sunlight_color2"}, 255.0, 255.0, 255.0, &worldspawn_group},
+      sunlight3{this, "sunlight3", 0.0, &worldspawn_group}, sunlight3_color{this,
+                                                                {"sunlight3_color", "sunlight_color3"}, 255.0, 255.0,
+                                                                255.0, &worldspawn_group},
+      sunlight_dirt{this, "sunlight_dirt", 0.0, &worldspawn_group}, sunlight2_dirt{this, "sunlight2_dirt", 0.0,
+                                                                        &worldspawn_group},
+      // NOTE: the default mangle needs to be in direction vector form, not euler angle
+      sunvec{this, {"sunlight_mangle", "sun_mangle", "sun_angle"}, 0.0, 0.0, -1.0, &worldspawn_group},
+      sun2vec{this, "sun2_mangle", 0.0, 0.0, -1.0, &worldspawn_group}, sun_deviance{this, "sunlight_penumbra", 0.0, 0.0,
+                                                                           180.0, &worldspawn_group},
+      sky_surface{this, {"sky_surface", "sun_surface"}, 0, 0, 0, &worldspawn_group},
+      surflight_radiosity{this, "surflight_radiosity", SURFLIGHT_Q1, &worldspawn_group,
+          "whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity"}
+{
+}
 
 // light_settings::setting_soft
 
@@ -224,7 +222,10 @@ bool light_settings::setting_soft::parse(const std::string &settingName, parser_
     }
 }
 
-std::string light_settings::setting_soft::format() const { return "[n]"; }
+std::string light_settings::setting_soft::format() const
+{
+    return "[n]";
+}
 
 // light_settings::setting_extra
 
@@ -239,9 +240,15 @@ bool light_settings::setting_extra::parse(const std::string &settingName, parser
     return true;
 }
 
-std::string light_settings::setting_extra::stringValue() const { return std::to_string(_value); };
+std::string light_settings::setting_extra::stringValue() const
+{
+    return std::to_string(_value);
+};
 
-std::string light_settings::setting_extra::format() const { return ""; };
+std::string light_settings::setting_extra::format() const
+{
+    return "";
+};
 
 void light_settings::CheckNoDebugModeSet()
 {
@@ -307,7 +314,8 @@ light_settings::light_settings()
               write_luxfile = lightfile::bspx;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
-      world_units_per_luxel{this, "world_units_per_luxel", 0, 0, 1024,  &output_group, "enables output of DECOUPLED_LM BSPX lump"},
+      world_units_per_luxel{
+          this, "world_units_per_luxel", 0, 0, 1024, &output_group, "enables output of DECOUPLED_LM BSPX lump"},
       litonly{this, "litonly", false, &output_group, "only write .lit file, don't modify BSP"},
       nolights{this, "nolights", false, &output_group, "ignore light entities (only sunlight/minlight)"},
       facestyles{this, "facestyles", 4, &output_group, "max amount of styles per face; requires BSPX lump if > 4"},
@@ -315,11 +323,15 @@ light_settings::light_settings()
       lmshift{this, "lmshift", 4, &output_group,
           "force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP."},
       lightgrid{this, "lightgrid", false, &experimental_group, "experimental LIGHTGRID bspx lump"},
-      lightgrid_dist{this, "lightgrid_dist", 32.f, 32.f, 32.f, &experimental_group, "distance between lightgrid sample points, in world units. controls lightgrid size."},
+      lightgrid_dist{this, "lightgrid_dist", 32.f, 32.f, 32.f, &experimental_group,
+          "distance between lightgrid sample points, in world units. controls lightgrid size."},
       lightgrid_force_cube{this, "lightgrid_force_cube", false, &experimental_group, "force lightgrid to be a cube"},
-      lightgrid_force_pot{this, "lightgrid_force_pot", false, &experimental_group, "force lightgrid to be a power of 2"},
+      lightgrid_force_pot{
+          this, "lightgrid_force_pot", false, &experimental_group, "force lightgrid to be a power of 2"},
       lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE,
-        {{"cluster", lightgrid_format_t::CLUSTER}, {"uniform", lightgrid_format_t::UNIFORM}, {"octree", lightgrid_format_t::OCTREE}}, &experimental_group, "lightgrid BSPX lump to use"},
+          {{"cluster", lightgrid_format_t::CLUSTER}, {"uniform", lightgrid_format_t::UNIFORM},
+              {"octree", lightgrid_format_t::OCTREE}},
+          &experimental_group, "lightgrid BSPX lump to use"},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
           [&](source) {
@@ -389,7 +401,7 @@ void light_settings::setParameters(int argc, const char **argv)
 void light_settings::initialize(int argc, const char **argv)
 {
     try {
-        token_parser_t p(argc - 1, argv + 1, { "command line" });
+        token_parser_t p(argc - 1, argv + 1, {"command line"});
         auto remainder = parse(p);
 
         if (remainder.size() <= 0 || remainder.size() > 1) {
@@ -637,19 +649,13 @@ static void CacheTextures(const mbsp_t &bsp)
         const char *name = Face_TextureName(&bsp, &bsp.dfaces[i]);
 
         if (!name || !*name) {
-            face_textures[i] = {
-                nullptr,
-                { 127 },
-                { 0.5 }
-            };
+            face_textures[i] = {nullptr, {127}, {0.5}};
         } else {
             auto tex = img::find(name);
-            face_textures[i] = {
-                tex,
-                tex->averageColor,
-                // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
-                mix(qvec3d{127}, qvec3d(tex->averageColor), light_options.bouncecolorscale.value()) / 255.0
-            };
+            face_textures[i] = {tex, tex->averageColor,
+                // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use
+                // texture color)
+                mix(qvec3d{127}, qvec3d(tex->averageColor), light_options.bouncecolorscale.value()) / 255.0};
         }
     }
 }
@@ -705,7 +711,8 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
 
         if (!facesup_decoupled_global.empty()) {
-            SaveLightmapSurface(bsp, f, nullptr, &facesup_decoupled_global[i], surf.get(), surf->extents, surf->extents);
+            SaveLightmapSurface(
+                bsp, f, nullptr, &facesup_decoupled_global[i], surf.get(), surf->extents, surf->extents);
         } else if (faces_sup.empty()) {
             SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->extents);
         } else if (light_options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
@@ -1280,7 +1287,8 @@ static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
     }
 
     // check global settings
-    if (cfg.bouncecolorscale.value() != 0 || !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
+    if (cfg.bouncecolorscale.value() != 0 ||
+        !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
         !qv::epsilonEqual(cfg.sunlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
         !qv::epsilonEqual(cfg.sun2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
         !qv::epsilonEqual(cfg.sunlight2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||

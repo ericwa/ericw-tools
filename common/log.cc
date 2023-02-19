@@ -166,7 +166,8 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
     }
 
     if (count == max) {
-        while (!locked.compare_exchange_weak(expected, true)) ; // wait until everybody else is done
+        while (!locked.compare_exchange_weak(expected, true))
+            ; // wait until everybody else is done
     } else {
         if (!locked.compare_exchange_weak(expected, true)) {
             return; // somebody else is doing this already
@@ -204,12 +205,7 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
             auto t = I_FloatTime();
 
             if (t - last_indeterminate_time > std::chrono::milliseconds(100)) {
-                constexpr const char *spinners[] = {
-                    ".   ",
-                    " .  ",
-                    "  . ",
-                    "   ."
-                };
+                constexpr const char *spinners[] = {".   ", " .  ", "  . ", "   ."};
                 last_count = (last_count + 1) >= std::size(spinners) ? 0 : (last_count + 1);
                 print(flag::PERCENT, "[{}]\r", spinners[last_count]);
                 last_indeterminate_time = t;
@@ -258,7 +254,7 @@ void percent_clock::print()
     }
 
     ready = false;
-    
+
 #ifdef _DEBUG
     if (max != indeterminate) {
         if (count != max) {
@@ -284,7 +280,7 @@ stat_tracker_t::stat &stat_tracker_t::register_stat(const std::string &name, boo
 
 size_t stat_tracker_t::number_of_digits(size_t n)
 {
-    return n ? ((size_t) log10(n) + 1) : 1;
+    return n ? ((size_t)log10(n) + 1) : 1;
 }
 
 size_t stat_tracker_t::number_of_digit_padding()
@@ -318,7 +314,8 @@ void stat_tracker_t::print_stats()
 
     for (auto &stat : stats) {
         if (stat.show_even_if_zero || stat.count) {
-            print(flag::STAT, "{}{:{}} {}\n", stat.is_warning ? "WARNING: " : "", fmt::group_digits(stat.count.load()), stat.is_warning ? 0 : number_padding, stat.name);
+            print(flag::STAT, "{}{:{}} {}\n", stat.is_warning ? "WARNING: " : "", fmt::group_digits(stat.count.load()),
+                stat.is_warning ? 0 : number_padding, stat.name);
         }
     }
 }

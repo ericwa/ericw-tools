@@ -49,13 +49,15 @@ struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline viswinding_t(Iter begin, Iter end) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(begin, end)
+    inline viswinding_t(Iter begin, Iter end)
+        : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(begin, end)
     {
         set_winding_sphere();
     }
 
     // initializer list constructor
-    inline viswinding_t(std::initializer_list<qvec3d> l) : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(l)
+    inline viswinding_t(std::initializer_list<qvec3d> l)
+        : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(l)
     {
         set_winding_sphere();
     }
@@ -64,7 +66,10 @@ struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<
     inline viswinding_t(const viswinding_t &copy) = delete;
 
     // move constructor
-    inline viswinding_t(viswinding_t &&move) noexcept : winding_base_t(std::move(move)), origin(move.origin), radius(move.radius) { }
+    inline viswinding_t(viswinding_t &&move) noexcept
+        : winding_base_t(std::move(move)), origin(move.origin), radius(move.radius)
+    {
+    }
 
     // sets origin & radius
     inline void set_winding_sphere()
@@ -84,7 +89,7 @@ struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<
     }
 
     // assignment copy
-    inline viswinding_t &operator=(const viswinding_t &copy)  = delete;
+    inline viswinding_t &operator=(const viswinding_t &copy) = delete;
 
     // assignment move
     inline viswinding_t &operator=(viswinding_t &&move) noexcept

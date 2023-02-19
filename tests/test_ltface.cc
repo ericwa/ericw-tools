@@ -7,19 +7,23 @@
 #include <vis/vis.hh>
 #include "test_qbsp.hh"
 
-struct testresults_t {
+struct testresults_t
+{
     mbsp_t bsp;
     bspxentries_t bspx;
 };
 
-struct testresults_lit_t {
+struct testresults_lit_t
+{
     mbsp_t bsp;
     bspxentries_t bspx;
     std::vector<uint8_t> lit;
 };
 
-enum class runvis_t {
-    no, yes
+enum class runvis_t
+{
+    no,
+    yes
 };
 
 static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
@@ -33,11 +37,8 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
 
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
-    std::vector<std::string> args
-    {
-        "", // the exe path, which we're ignoring in this case
-        "-noverbose"
-    };
+    std::vector<std::string> args{"", // the exe path, which we're ignoring in this case
+        "-noverbose"};
     for (auto &extra : extra_qbsp_args) {
         args.push_back(extra);
     }
@@ -62,14 +63,11 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
 
     // run light
     {
-        std::vector<std::string> light_args{
-            "", // the exe path, which we're ignoring in this case
+        std::vector<std::string> light_args{"", // the exe path, which we're ignoring in this case
             "-nodefaultpaths", // in case test_quake2_maps_dir is pointing at a real Q2 install, don't
                                // read texture data etc. from there - we want the tests to behave the same
                                // during development as they do on CI (which doesn't have a Q2 install).
-            "-path",
-            wal_metadata_path.string()
-        };
+            "-path", wal_metadata_path.string()};
         for (auto &arg : extra_light_args) {
             light_args.push_back(arg);
         }
@@ -86,16 +84,15 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
         ConvertBSPFormat(&bspdata, &bspver_generic);
 
         // write to .json for inspection
-        serialize_bsp(bspdata, std::get<mbsp_t>(bspdata.bsp),
-            fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
+        serialize_bsp(
+            bspdata, std::get<mbsp_t>(bspdata.bsp), fs::path(qbsp_options.bsp_path).replace_extension(".bsp.json"));
 
-        return {std::move(std::get<mbsp_t>(bspdata.bsp)),
-                std::move(bspdata.bspx.entries)};
+        return {std::move(std::get<mbsp_t>(bspdata.bsp)), std::move(bspdata.bspx.entries)};
     }
 }
 
-static testresults_lit_t QbspVisLight_Q1(const std::filesystem::path &name, std::vector<std::string> extra_light_args,
-    runvis_t run_vis = runvis_t::no)
+static testresults_lit_t QbspVisLight_Q1(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no)
 {
     auto res = QbspVisLight_Common(name, {}, extra_light_args, run_vis);
 
@@ -105,20 +102,17 @@ static testresults_lit_t QbspVisLight_Q1(const std::filesystem::path &name, std:
 
     std::vector<uint8_t> litdata = LoadLitFile(lit_path);
 
-    return testresults_lit_t{
-        .bsp = res.bsp,
-        .bspx = res.bspx,
-        .lit = litdata
-    };
+    return testresults_lit_t{.bsp = res.bsp, .bspx = res.bspx, .lit = litdata};
 }
 
-static testresults_t QbspVisLight_Q2(const std::filesystem::path &name, std::vector<std::string> extra_light_args,
-    runvis_t run_vis = runvis_t::no)
+static testresults_t QbspVisLight_Q2(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no)
 {
     return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
 }
 
-TEST_CASE("-world_units_per_luxel, -lightgrid") {
+TEST_CASE("-world_units_per_luxel, -lightgrid")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-lightgrid"});
 
     {
@@ -157,7 +151,8 @@ TEST_CASE("-world_units_per_luxel, -lightgrid") {
     }
 }
 
-TEST_CASE("emissive cube artifacts") {
+TEST_CASE("emissive cube artifacts")
+{
     // A cube with surface flags "light", value "100", placed in a hallway.
     //
     // Generates harsh lines on the walls/ceiling due to a hack in `light` allowing
@@ -170,7 +165,8 @@ TEST_CASE("emissive cube artifacts") {
     //
     //     "_surflight_rescale" "0"
     //
-    auto [bsp, bspx] = QbspVisLight_Q2("light_q2_emissive_cube.map", {"-threads", "1", "-world_units_per_luxel", "4", "-novanilla"});
+    auto [bsp, bspx] =
+        QbspVisLight_Q2("light_q2_emissive_cube.map", {"-threads", "1", "-world_units_per_luxel", "4", "-novanilla"});
 
     const auto start = qvec3d{1044, -1244, 880};
     const auto end = qvec3d{1044, -1272, 880};
@@ -192,7 +188,8 @@ TEST_CASE("emissive cube artifacts") {
         auto sample = LM_Sample(&bsp, nullptr, extents, lm_info.offset, lm_coord);
         CHECK(sample[0] >= previous_sample[0]);
 
-        //logging::print("world: {} lm_coord: {} sample: {} lm size: {}x{}\n", pos, lm_coord, sample, lm_info.lmwidth, lm_info.lmheight);
+        // logging::print("world: {} lm_coord: {} sample: {} lm size: {}x{}\n", pos, lm_coord, sample, lm_info.lmwidth,
+        // lm_info.lmheight);
 
         previous_sample = sample;
     }
@@ -238,8 +235,9 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
     CHECK(bsp.dlightdata.size() == expected_dlightdata_bytes);
 }
 
-template <class L>
-static void CheckFaceLuxels(const mbsp_t &bsp, const mface_t &face, L&& lambda, const std::vector<uint8_t>* lit = nullptr)
+template<class L>
+static void CheckFaceLuxels(
+    const mbsp_t &bsp, const mface_t &face, L &&lambda, const std::vector<uint8_t> *lit = nullptr)
 {
     // FIXME: assumes no DECOUPLED_LM lump
 
@@ -256,9 +254,7 @@ static void CheckFaceLuxels(const mbsp_t &bsp, const mface_t &face, L&& lambda, 
 
 static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
 {
-    CheckFaceLuxels(bsp, face, [](qvec3b sample){
-        CHECK(sample[0] > 0);
-    });
+    CheckFaceLuxels(bsp, face, [](qvec3b sample) { CHECK(sample[0] > 0); });
 }
 
 static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3b &expected_color,
@@ -279,7 +275,8 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
     CHECK(sample == expected_color);
 }
 
-TEST_CASE("emissive lights") {
+TEST_CASE("emissive lights")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_flush.map", {});
     REQUIRE(bspx.empty());
 
@@ -298,11 +295,13 @@ TEST_CASE("emissive lights") {
     }
 }
 
-TEST_CASE("q2_phong_doesnt_cross_contents") {
+TEST_CASE("q2_phong_doesnt_cross_contents")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_phong_doesnt_cross_contents.map", {"-wrnormals"});
 }
 
-TEST_CASE("q2_minlight_nomottle") {
+TEST_CASE("q2_minlight_nomottle")
+{
     INFO("_minlightMottle 0 works on worldspawn");
 
     auto [bsp, bspx] = QbspVisLight_Q2("q2_minlight_nomottle.map", {});
@@ -310,12 +309,11 @@ TEST_CASE("q2_minlight_nomottle") {
     auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {276, 84, 32});
     REQUIRE(face);
 
-    CheckFaceLuxels(bsp, *face, [](qvec3b sample){
-        CHECK(sample == qvec3b(33, 33, 33));
-    });
+    CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(33, 33, 33)); });
 }
 
-TEST_CASE("q2_dirt") {
+TEST_CASE("q2_dirt")
+{
     INFO("liquids don't cast dirt");
 
     auto [bsp, bspx] = QbspVisLight_Q2("q2_dirt.map", {});
@@ -323,12 +321,11 @@ TEST_CASE("q2_dirt") {
     auto *face_under_lava = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {104, 112, 48});
     REQUIRE(face_under_lava);
 
-    CheckFaceLuxels(bsp, *face_under_lava, [](qvec3b sample){
-        CHECK(sample == qvec3b(96));
-    });
+    CheckFaceLuxels(bsp, *face_under_lava, [](qvec3b sample) { CHECK(sample == qvec3b(96)); });
 }
 
-TEST_CASE("q2_light_translucency") {
+TEST_CASE("q2_light_translucency")
+{
     INFO("liquids cast translucent colored shadows (sampling texture) by default");
 
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_translucency.map", {});
@@ -349,9 +346,7 @@ TEST_CASE("q2_light_translucency") {
         auto *under_alpha_0_glass = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-296, -96, 40});
         REQUIRE(under_alpha_0_glass);
 
-        CheckFaceLuxels(bsp, *under_alpha_0_glass, [](qvec3b sample) {
-            CHECK(sample == qvec3b(150));
-        });
+        CheckFaceLuxels(bsp, *under_alpha_0_glass, [](qvec3b sample) { CHECK(sample == qvec3b(150)); });
     }
 
     {
@@ -360,9 +355,7 @@ TEST_CASE("q2_light_translucency") {
         auto *under_alpha_1_glass = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-616, -96, 40});
         REQUIRE(under_alpha_1_glass);
 
-        CheckFaceLuxels(bsp, *under_alpha_1_glass, [](qvec3b sample) {
-            CHECK(sample == qvec3b(0, 150, 0));
-        });
+        CheckFaceLuxels(bsp, *under_alpha_1_glass, [](qvec3b sample) { CHECK(sample == qvec3b(0, 150, 0)); });
     }
 
     {
@@ -371,20 +364,17 @@ TEST_CASE("q2_light_translucency") {
         auto *in_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-976, -316, 184});
         REQUIRE(in_light);
 
-        CheckFaceLuxels(bsp, *in_light, [](qvec3b sample) {
-            CHECK(sample == qvec3b(150));
-        });
+        CheckFaceLuxels(bsp, *in_light, [](qvec3b sample) { CHECK(sample == qvec3b(150)); });
 
         auto *in_shadow = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-976, -316, 88});
         REQUIRE(in_shadow);
 
-        CheckFaceLuxels(bsp, *in_shadow, [](qvec3b sample) {
-            CHECK(sample == qvec3b(0));
-        });
+        CheckFaceLuxels(bsp, *in_shadow, [](qvec3b sample) { CHECK(sample == qvec3b(0)); });
     }
 }
 
-TEST_CASE("-visapprox vis with opaque liquids") {
+TEST_CASE("-visapprox vis with opaque liquids")
+{
     INFO("opaque liquids block vis, but don't cast shadows by default.");
     INFO("make sure '-visapprox vis' doesn't wrongly cull rays that should illuminate the level.");
 
@@ -393,14 +383,15 @@ TEST_CASE("-visapprox vis with opaque liquids") {
         "q2_light_visapprox2.map" // light outside of liquid
     };
 
-    for (const auto& map : maps) {
-        SUBCASE(map.c_str()) {
+    for (const auto &map : maps) {
+        SUBCASE(map.c_str())
+        {
             auto [bsp, bspx] = QbspVisLight_Q2(map, {"-visapprox", "vis"}, runvis_t::yes);
 
             auto *ceil_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {968, 1368, 1248});
             REQUIRE(ceil_face);
 
-            CheckFaceLuxels(bsp, *ceil_face, [](qvec3b sample){
+            CheckFaceLuxels(bsp, *ceil_face, [](qvec3b sample) {
                 INFO("ceiling above player start receiving light");
                 REQUIRE(sample[0] > 200);
             });
@@ -408,14 +399,13 @@ TEST_CASE("-visapprox vis with opaque liquids") {
     }
 }
 
-TEST_CASE("negative lights work") {
-    const std::vector<std::string> maps{
-        "q2_light_negative.map",
-        "q2_light_negative_bounce.map"
-    };
+TEST_CASE("negative lights work")
+{
+    const std::vector<std::string> maps{"q2_light_negative.map", "q2_light_negative_bounce.map"};
 
-    for (const auto& map : maps) {
-        SUBCASE(map.c_str()) {
+    for (const auto &map : maps) {
+        SUBCASE(map.c_str())
+        {
             auto [bsp, bspx] = QbspVisLight_Q2(map, {});
 
             auto *face_under_negative_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {632, 1304, 960});
@@ -426,7 +416,8 @@ TEST_CASE("negative lights work") {
     }
 }
 
-TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shadow_channel_mask)") {
+TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shadow_channel_mask)")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_group.map", {});
     REQUIRE(4 == bsp.dmodels.size());
 
@@ -436,9 +427,7 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face_under_light = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {680, 1224, 944});
         REQUIRE(face_under_light);
 
-        CheckFaceLuxels(bsp, *face_under_light, [](qvec3b sample) {
-            CHECK(sample == qvec3b(64));
-        });
+        CheckFaceLuxels(bsp, *face_under_light, [](qvec3b sample) { CHECK(sample == qvec3b(64)); });
     }
 
     {
@@ -447,9 +436,7 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face_on_pillar = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1248, 1000});
         REQUIRE(face_on_pillar);
 
-        CheckFaceLuxels(bsp, *face_on_pillar, [](qvec3b sample) {
-            CHECK(sample == qvec3b(255, 0, 0));
-        });
+        CheckFaceLuxels(bsp, *face_on_pillar, [](qvec3b sample) { CHECK(sample == qvec3b(255, 0, 0)); });
     }
 
     {
@@ -458,9 +445,7 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *occluded_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1280, 1000});
         REQUIRE(occluded_face);
 
-        CheckFaceLuxels(bsp, *occluded_face, [](qvec3b sample) {
-            CHECK(sample == qvec3b(0));
-        });
+        CheckFaceLuxels(bsp, *occluded_face, [](qvec3b sample) { CHECK(sample == qvec3b(0)); });
     }
 
     {
@@ -469,9 +454,7 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *unoccluded_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1280, 1088});
         REQUIRE(unoccluded_face);
 
-        CheckFaceLuxels(bsp, *unoccluded_face, [](qvec3b sample) {
-            CHECK(sample[0] > 100);
-        });
+        CheckFaceLuxels(bsp, *unoccluded_face, [](qvec3b sample) { CHECK(sample[0] > 100); });
     }
 
     {
@@ -480,9 +463,7 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[2], {904, 1248, 1016});
         REQUIRE(face);
 
-        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
-            CHECK(sample == qvec3b(0, 255, 0));
-        });
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(0, 255, 0)); });
     }
 
     {
@@ -491,19 +472,18 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[3], {1288, 1248, 1016});
         REQUIRE(face);
 
-        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
-            CHECK(sample == qvec3b(0, 0, 255));
-        });
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(0, 0, 255)); });
     }
 }
 
-TEST_CASE("light channel mask / dirt interaction") {
+TEST_CASE("light channel mask / dirt interaction")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_group_dirt.map", {});
 
     REQUIRE(2 == bsp.dmodels.size());
 
     INFO("worldspawn has dirt in the corner");
-    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {26,26,26}, {1432, 1480, 944});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {26, 26, 26}, {1432, 1480, 944});
 
     INFO("worldspawn not receiving dirt from func_wall on different channel");
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {62, 62, 62}, {1212, 1272, 1014});
@@ -515,7 +495,8 @@ TEST_CASE("light channel mask / dirt interaction") {
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {19, 19, 19}, {1236, 1308, 960});
 }
 
-TEST_CASE("surface lights minlight") {
+TEST_CASE("surface lights minlight")
+{
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_surflight_minlight.map", {});
 
     {
@@ -542,7 +523,7 @@ TEST_CASE("surface lights minlight") {
 
     INFO("same but with liquid");
 
-    auto *liquid_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-3264, -1456, -560}, {-1,0,0});
+    auto *liquid_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-3264, -1456, -560}, {-1, 0, 0});
     REQUIRE(liquid_face);
 
     CheckFaceLuxels(bsp, *liquid_face, l, &lit);
@@ -554,7 +535,8 @@ static void CheckSpotCutoff(const mbsp_t &bsp, const qvec3d &position)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {243, 243, 243}, position - qvec3d{16, 0, 0});
 }
 
-TEST_CASE("q2_light_cone") {
+TEST_CASE("q2_light_cone")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_cone.map", {});
 
     // lights are 256 units from wall
@@ -566,38 +548,41 @@ TEST_CASE("q2_light_cone") {
     CheckSpotCutoff(bsp, {1236, 1472, 952});
 }
 
-TEST_CASE("q2_light_sunlight_default_mangle") {
+TEST_CASE("q2_light_sunlight_default_mangle")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sunlight_default_mangle.map", {});
 
     INFO("sunlight should be shining directly down if unspecified");
-    const qvec3d shadow_pos {1112, 1248, 944};
+    const qvec3d shadow_pos{1112, 1248, 944};
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, shadow_pos);
 
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{48, 0, 0});
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{-48, 0, 0});
 }
 
-TEST_CASE("q2_light_sun") {
+TEST_CASE("q2_light_sun")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sun.map", {});
 
     INFO("sun entity shines at target");
-    const qvec3d shadow_pos {1084, 1284, 944};
+    const qvec3d shadow_pos{1084, 1284, 944};
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, shadow_pos);
 
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{128, 0, 0});
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{-128, 0, 0});
 }
 
-TEST_CASE("q2_light_origin_brush_shadow") {
+TEST_CASE("q2_light_origin_brush_shadow")
+{
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_origin_brush_shadow.map", {});
 
-    const qvec3d under_shadow_bmodel {-320, 176, 0};
-    const qvec3d under_nonshadow_bmodel {-432, 176, 0};
+    const qvec3d under_shadow_bmodel{-320, 176, 0};
+    const qvec3d under_nonshadow_bmodel{-432, 176, 0};
 
     const qvec3d under_nodraw_shadow_bmodel = under_shadow_bmodel - qvec3d(0, 96, 0);
     const qvec3d under_nodraw_nonshadow_bmodel = under_nonshadow_bmodel - qvec3d(0, 96, 0);
 
-    const qvec3d at_origin {0, 0, 0};
+    const qvec3d at_origin{0, 0, 0};
 
     INFO("ensure expected shadow");
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, under_shadow_bmodel);

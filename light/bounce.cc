@@ -19,7 +19,7 @@
 */
 
 #include <cstdint>
-//#include <cstdio>
+// #include <cstdio>
 #include <atomic>
 
 #include <light/light.hh>
@@ -212,7 +212,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     for (const auto &styleColor : sum) {
         emitcolors[styleColor.first] = styleColor.second * blendedcolor;
     }
-    
+
     qplane3d faceplane = winding.plane();
 
     // Get face normal and midpoint...
@@ -220,10 +220,11 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
 
     if (light_options.fastbounce.value()) {
-        vector<qvec3f> points { facemidpoint };
+        vector<qvec3f> points{facemidpoint};
 
         for (auto &style : emitcolors) {
-            MakeBounceLight(bsp, cfg, &face, style.second, style.first, points, winding, area, facenormal, facemidpoint);
+            MakeBounceLight(
+                bsp, cfg, &face, style.second, style.first, points, winding, area, facenormal, facemidpoint);
         }
     } else {
         vector<qvec3f> points;
@@ -231,7 +232,8 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
             [&points, &faceplane](winding_t &w) { points.push_back(w.center() + faceplane.normal); });
 
         for (auto &style : emitcolors) {
-            MakeBounceLight(bsp, cfg, &face, style.second, style.first, points, winding, area, facenormal, facemidpoint);
+            MakeBounceLight(
+                bsp, cfg, &face, style.second, style.first, points, winding, area, facenormal, facemidpoint);
         }
     }
 }

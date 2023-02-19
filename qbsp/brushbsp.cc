@@ -271,10 +271,10 @@ static int TestBrushToPlanenum(
     // if the brush actually uses the planenum,
     // we can tell the side for sure
     for (auto &side : brush.sides) {
-		if (side.planenum == planenum) {
-			return PSIDE_BACK | PSIDE_FACING;
+        if (side.planenum == planenum) {
+            return PSIDE_BACK | PSIDE_FACING;
         } else if (side.planenum == (planenum ^ 1)) {
-			return PSIDE_FRONT | PSIDE_FACING;
+            return PSIDE_FRONT | PSIDE_FACING;
         }
     }
 
@@ -403,7 +403,8 @@ input.
 https://github.com/id-Software/Quake-2-Tools/blob/master/bsp/qbsp3/brushbsp.c#L935
 ================
 */
-static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planenum, std::optional<std::reference_wrapper<bspstats_t>> stats)
+static twosided<bspbrush_t::ptr> SplitBrush(
+    bspbrush_t::ptr brush, size_t planenum, std::optional<std::reference_wrapper<bspstats_t>> stats)
 {
     const qplane3d &split = map.planes[planenum];
     twosided<bspbrush_t::ptr> result;
@@ -490,7 +491,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
 
     for (int i = 0; i < 2; i++) {
         bool bogus = false;
-        
+
         if (result[i]->sides.size() < 3) {
             bogus = true;
         } else if (!result[i]->update_bounds(false)) {
@@ -500,7 +501,8 @@ static twosided<bspbrush_t::ptr> SplitBrush(bspbrush_t::ptr brush, size_t planen
             bogus = true;
         } else {
             for (int j = 0; j < 3; j++) {
-                if (result[i]->bounds.mins()[j] < -qbsp_options.worldextent.value() || result[i]->bounds.maxs()[j] > qbsp_options.worldextent.value()) {
+                if (result[i]->bounds.mins()[j] < -qbsp_options.worldextent.value() ||
+                    result[i]->bounds.maxs()[j] > qbsp_options.worldextent.value()) {
                     if (stats) {
                         stats->get().c_bogus++;
                     }
@@ -614,15 +616,17 @@ struct stack_brush_t
             }
         }
 
-	    for (size_t i = 0; i < 3; i++) {
+        for (size_t i = 0; i < 3; i++) {
             // todo: map_source_location in bspbrush_t
-		    if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() || this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+            if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() ||
+                this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
                 return false;
             }
-		    if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() || this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+            if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() ||
+                this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
                 return false;
             }
-	    }
+        }
 
         return true;
     }
@@ -685,7 +689,7 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     twosided<stack_brush_t> temporary_brushes;
 
     for (int i = 0; i < 2; i++) {
-        temporary_brushes[i].sides = (stack_side_t *) alloca(sizeof(stack_side_t) * (brush->sides.size() + 1));
+        temporary_brushes[i].sides = (stack_side_t *)alloca(sizeof(stack_side_t) * (brush->sides.size() + 1));
         temporary_brushes[i].num_sides = 0;
     }
 
@@ -701,7 +705,7 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
 
             // add the clipped face to result[j]
             stack_side_t &faceCopy = temporary_brushes[j].sides[temporary_brushes[j].num_sides++];
-            new(&faceCopy) stack_side_t; 
+            new (&faceCopy) stack_side_t;
             faceCopy.planenum = face.planenum;
             faceCopy.w = std::move(*cw[j]);
         }
@@ -719,7 +723,8 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
         }
 
         for (int j = 0; j < 3; j++) {
-            if (temporary_brushes[i].bounds.mins()[j] < -qbsp_options.worldextent.value() || temporary_brushes[i].bounds.maxs()[j] > qbsp_options.worldextent.value()) {
+            if (temporary_brushes[i].bounds.mins()[j] < -qbsp_options.worldextent.value() ||
+                temporary_brushes[i].bounds.maxs()[j] > qbsp_options.worldextent.value()) {
                 return false;
             }
         }
@@ -730,7 +735,7 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     // will have the same result either way
     for (int i = 0; i < 2; i++) {
         stack_side_t &cs = temporary_brushes[i].sides[temporary_brushes[i].num_sides++];
-        new(&cs) stack_side_t; 
+        new (&cs) stack_side_t;
 
         const bool brushOnFront = (i == 0);
 
@@ -757,7 +762,7 @@ inline bool CheckPlaneAgainstVolume(size_t planenum, const node_t *node)
 {
     bool valid = CheckSplitBrush(node->volume, planenum);
 #ifdef PARANOID
-    auto [ front, back ] = SplitBrush(node->volume, planenum, std::nullopt);
+    auto [front, back] = SplitBrush(node->volume, planenum, std::nullopt);
     Q_assert(valid == (front && back));
 #endif
     return valid;
@@ -778,7 +783,8 @@ inline void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
     front_bounds = back_bounds = in_bounds;
 
     if (split.get_type() < plane_type_t::PLANE_ANYX) {
-        front_bounds[0][static_cast<size_t>(split.get_type())] = back_bounds[1][static_cast<size_t>(split.get_type())] = split.get_dist();
+        front_bounds[0][static_cast<size_t>(split.get_type())] = back_bounds[1][static_cast<size_t>(split.get_type())] =
+            split.get_dist();
         return;
     }
 
@@ -886,7 +892,6 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
     return bestaxialplane ? bestaxialplane : bestanyplane;
 }
 
-
 /*
 ================
 SelectSplitPlane
@@ -895,7 +900,8 @@ Using heuristics, chooses a plane to partition the brushes with.
 Returns nullopt if there are no valid planes to split with.
 ================
 */
-static side_t *SelectSplitPlane(const bspbrush_t::container &brushes, node_t *node, tree_split_t split_type, bspstats_t &stats)
+static side_t *SelectSplitPlane(
+    const bspbrush_t::container &brushes, node_t *node, tree_split_t split_type, bspstats_t &stats)
 {
     // no brushes left to split, so we can't use any plane.
     if (!brushes.size()) {
@@ -909,7 +915,7 @@ static side_t *SelectSplitPlane(const bspbrush_t::container &brushes, node_t *no
             if (qbsp_options.midsplitbrushfraction.value() != 0.0) {
                 // new way (opt-in)
                 // how much of the map are we partitioning?
-                double fractionOfMap = brushes.size() / (double) map.total_brushes;
+                double fractionOfMap = brushes.size() / (double)map.total_brushes;
                 if (fractionOfMap > qbsp_options.midsplitbrushfraction.value()) {
                     split_type = tree_split_t::FAST;
                 }
@@ -918,9 +924,9 @@ static side_t *SelectSplitPlane(const bspbrush_t::container &brushes, node_t *no
                 if (qbsp_options.maxnodesize.value() >= 64) {
                     const vec_t maxnodesize = qbsp_options.maxnodesize.value() - qbsp_options.epsilon.value();
 
-                    if    ((node->bounds.maxs()[0] - node->bounds.mins()[0]) > maxnodesize
-                        || (node->bounds.maxs()[1] - node->bounds.mins()[1]) > maxnodesize
-                        || (node->bounds.maxs()[2] - node->bounds.mins()[2]) > maxnodesize) {
+                    if ((node->bounds.maxs()[0] - node->bounds.mins()[0]) > maxnodesize ||
+                        (node->bounds.maxs()[1] - node->bounds.mins()[1]) > maxnodesize ||
+                        (node->bounds.maxs()[2] - node->bounds.mins()[2]) > maxnodesize) {
                         split_type = tree_split_t::FAST;
                     }
                 }
@@ -1126,7 +1132,8 @@ BuildTree_r
 Called in parallel.
 ==================
 */
-static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::container brushes, tree_split_t split_type, bspstats_t &stats, logging::percent_clock &clock)
+static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::container brushes, tree_split_t split_type,
+    bspstats_t &stats, logging::percent_clock &clock)
 {
     // find the best plane to use as a splitter
     auto *bestside = SelectSplitPlane(brushes, node, split_type, stats);
@@ -1153,7 +1160,7 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
     Q_assert(!(bestplane & 1));
 
     node->planenum = bestplane;
-    
+
     auto &plane = map.get_plane(bestplane);
     auto children = SplitBrushList(std::move(brushes), bestplane, stats);
 
@@ -1164,13 +1171,13 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
         newnode->bounds = node->bounds;
     }
 
-	for (int i = 0; i < 3; i++) {
-		if (plane.get_normal()[i] == 1.0) {
+    for (int i = 0; i < 3; i++) {
+        if (plane.get_normal()[i] == 1.0) {
             node->children[0]->bounds[0][i] = plane.get_dist();
-			node->children[1]->bounds[1][i] = plane.get_dist();
-			break;
-		}
-	}
+            node->children[1]->bounds[1][i] = plane.get_dist();
+            break;
+        }
+    }
 
     // to save time/memory we can destroy node's volume at this point
     auto children_volumes = SplitBrush(std::move(node->volume), bestplane, stats);
@@ -1200,7 +1207,7 @@ BrushBSP
 */
 void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &brushlist, tree_split_t split_type)
 {
-    logging::header(__func__ );
+    logging::header(__func__);
 
     if (brushlist.empty()) {
         /*
@@ -1248,8 +1255,8 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
             for (side_t &side : b->sides) {
                 // since we're reusing bspbrush_t's across passes, we need to clear any data from the previous pass
 
-                // behaviour break from qbsp3 - they would sometimes set `onnode` as a way to indicate "don't split on this side".
-                // we can't do this since we're reusing brushes, and need to add a separate flag for that.
+                // behaviour break from qbsp3 - they would sometimes set `onnode` as a way to indicate "don't split on
+                // this side". we can't do this since we're reusing brushes, and need to add a separate flag for that.
                 side.onnode = false;
 
                 if (side.bevel)
@@ -1265,11 +1272,10 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
 
             tree.bounds += b->bounds;
         }
-
     }
 
     auto node = tree.create_node();
-    
+
     node->bounds = tree.bounds.grow(SIDESPACE);
     node->volume = BrushFromBounds(node->bounds);
 
@@ -1297,13 +1303,12 @@ Returns true if b1 is allowed to bite b2
 */
 inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
 {
-	// detail brushes never bite structural brushes
-	if ((b1.contents.is_any_detail(qbsp_options.target_game))
-		&& !(b2.contents.is_any_detail(qbsp_options.target_game))) {
-		return false;
+    // detail brushes never bite structural brushes
+    if ((b1.contents.is_any_detail(qbsp_options.target_game)) &&
+        !(b2.contents.is_any_detail(qbsp_options.target_game))) {
+        return false;
     }
-	return b1.contents.is_any_solid(qbsp_options.target_game) &&
-           b2.contents.is_any_solid(qbsp_options.target_game);
+    return b1.contents.is_any_solid(qbsp_options.target_game) && b2.contents.is_any_solid(qbsp_options.target_game);
 }
 
 /*
@@ -1314,24 +1319,24 @@ Returns true if the two brushes definately do not intersect.
 There will be false negatives for some non-axial combinations.
 ===============
 */
-inline bool BrushesDisjoint (const bspbrush_t &a, const bspbrush_t &b)
+inline bool BrushesDisjoint(const bspbrush_t &a, const bspbrush_t &b)
 {
     if (a.bounds.disjoint_or_touching(b.bounds)) {
         // bounding boxes don't overlap
         return true;
     }
 
-	// check for opposing planes
+    // check for opposing planes
     for (auto &as : a.sides) {
         for (auto &bs : b.sides) {
-			if (as.planenum == (bs.planenum ^ 1)) {
+            if (as.planenum == (bs.planenum ^ 1)) {
                 // opposite planes, so not touching
-				return true;
+                return true;
             }
         }
     }
 
-	return false;	// might intersect
+    return false; // might intersect
 }
 
 /*
@@ -1349,21 +1354,21 @@ inline bspbrush_t::list SubtractBrush(const bspbrush_t::ptr &a, const bspbrush_t
     bspbrush_t::list out;
     bspbrush_t::ptr in = a;
 
-	for (auto &side : b->sides) {
-		auto [ front, back ] = SplitBrush(in, side.planenum, std::nullopt);
+    for (auto &side : b->sides) {
+        auto [front, back] = SplitBrush(in, side.planenum, std::nullopt);
 
         if (front) {
             // add to list
             out.push_front(front);
-		}
+        }
 
-		in = back;
+        in = back;
 
         if (!in) {
             // didn't really intersect
-            return { a };
+            return {a};
         }
-	}
+    }
 
     return out;
 }
@@ -1391,8 +1396,8 @@ void ChopBrushes(bspbrush_t::container &brushes, bool allow_fragmentation)
 
     // convert brush container to list, so we don't lose
     // track of the original ptrs and so we can re-organize things
-    bspbrush_t::list list { std::make_move_iterator(brushes.begin()), std::make_move_iterator(brushes.end()) };
-    
+    bspbrush_t::list list{std::make_move_iterator(brushes.begin()), std::make_move_iterator(brushes.end())};
+
     // clear original list
     brushes.clear();
 
@@ -1403,86 +1408,84 @@ void ChopBrushes(bspbrush_t::container &brushes, bool allow_fragmentation)
 
 newlist:
 
-	if (!list.size()) {
+    if (!list.size()) {
         // clear output since this is kind of an error...
         brushes.clear();
-		return;
+        return;
     }
 
     decltype(list)::iterator next;
 
-	for (; b1_it != list.end(); b1_it = next)
-	{
+    for (; b1_it != list.end(); b1_it = next) {
         clock.max = list.size();
-		next = std::next(b1_it);
+        next = std::next(b1_it);
 
         auto &b1 = *b1_it;
 
-		for (auto b2_it = next; b2_it != list.end(); b2_it++)
-		{
+        for (auto b2_it = next; b2_it != list.end(); b2_it++) {
             auto &b2 = *b2_it;
 
-			if (BrushesDisjoint(*b1, *b2)) {
-				continue;
+            if (BrushesDisjoint(*b1, *b2)) {
+                continue;
             }
 
-			bspbrush_t::list sub, sub2;
-			size_t c1 = std::numeric_limits<size_t>::max(), c2 = c1;
+            bspbrush_t::list sub, sub2;
+            size_t c1 = std::numeric_limits<size_t>::max(), c2 = c1;
 
-			if (BrushGE(*b2, *b1)) {
-				sub = SubtractBrush(b1, b2);
-				if (sub.size() == 1 && sub.front() == b1) {
-					continue;		// didn't really intersect
+            if (BrushGE(*b2, *b1)) {
+                sub = SubtractBrush(b1, b2);
+                if (sub.size() == 1 && sub.front() == b1) {
+                    continue; // didn't really intersect
                 }
 
-				if (sub.empty()) { // b1 is swallowed by b2
+                if (sub.empty()) { // b1 is swallowed by b2
                     b1_it = list.erase(b1_it); // continue after b1_it
                     stats.c_swallowed++;
-					goto newlist;
-				}
-				c1 = sub.size();
-			}
-
-			if (BrushGE (*b1, *b2)) {
-				sub2 = SubtractBrush (b2, b1);
-				if (sub2.size() == 1 && sub2.front() == b2) {
-					continue;		// didn't really intersect
+                    goto newlist;
                 }
-				if (sub2.empty()) {	// b2 is swallowed by b1
+                c1 = sub.size();
+            }
+
+            if (BrushGE(*b1, *b2)) {
+                sub2 = SubtractBrush(b2, b1);
+                if (sub2.size() == 1 && sub2.front() == b2) {
+                    continue; // didn't really intersect
+                }
+                if (sub2.empty()) { // b2 is swallowed by b1
                     list.erase(b2_it);
                     // continue where b1_it was
                     stats.c_swallowed++;
-					goto newlist;
-				}
-				c2 = sub2.size();
-			}
-
-			if (sub.empty() && sub2.empty()) {
-				continue;		// neither one can bite
+                    goto newlist;
+                }
+                c2 = sub2.size();
             }
 
-			// only accept if it didn't fragment
-			if (!allow_fragmentation && c1 > 1 && c2 > 1) {
-				continue;
-			}
+            if (sub.empty() && sub2.empty()) {
+                continue; // neither one can bite
+            }
 
-			if (c1 < c2) {
+            // only accept if it didn't fragment
+            if (!allow_fragmentation && c1 > 1 && c2 > 1) {
+                continue;
+            }
+
+            if (c1 < c2) {
                 stats.c_from_split += sub.size();
                 auto before = list.erase(b1_it); // remove the current brush, go back one
                 list.splice(before, sub); // splice new list in place of where the brush was
                 b1_it = before; // restart list with the new brushes
-				goto newlist;
-			} else {
+                goto newlist;
+            } else {
                 stats.c_from_split += sub2.size();
                 list.splice(b2_it, sub2); // splice new brushes before b2_it
                 list.erase(b2_it); // remove b2_it
                 // continue where b1_it left off
-				goto newlist;
-			}
-		}
+                goto newlist;
+            }
+        }
 
         clock();
-	}
+    }
 
     // since chopbrushes can remove stuff, exact counts are hard...
     clock.max = list.size();

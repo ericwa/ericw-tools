@@ -49,7 +49,10 @@ int32_t mvis_t::get_bit_offset(vistype_t type, size_t cluster) const
     return bit_offsets[cluster][type] - header_offset();
 }
 
-void mvis_t::resize(size_t numclusters) { bit_offsets.resize(numclusters); }
+void mvis_t::resize(size_t numclusters)
+{
+    bit_offsets.resize(numclusters);
+}
 
 void mvis_t::stream_read(std::istream &stream, const lump_t &lump)
 {
@@ -100,7 +103,10 @@ void dmiptex_t::stream_read(std::istream &s)
 
 // miptex_t
 
-size_t miptex_t::stream_size() const { return data.size(); }
+size_t miptex_t::stream_size() const
+{
+    return data.size();
+}
 
 void miptex_t::stream_read(std::istream &stream, size_t len)
 {
@@ -265,18 +271,8 @@ void bsp2_dclipnode_t::stream_read(std::istream &s)
 
 static auto tuple(const mleaf_t &l)
 {
-    return std::tie(
-        l.contents,
-        l.visofs,
-        l.mins,
-        l.maxs,
-        l.firstmarksurface,
-        l.nummarksurfaces,
-        l.ambient_level,
-        l.cluster,
-        l.area,
-        l.firstleafbrush,
-        l.numleafbrushes);
+    return std::tie(l.contents, l.visofs, l.mins, l.maxs, l.firstmarksurface, l.nummarksurfaces, l.ambient_level,
+        l.cluster, l.area, l.firstleafbrush, l.numleafbrushes);
 }
 
 bool mleaf_t::operator==(const mleaf_t &other) const
@@ -298,8 +294,7 @@ void darea_t::stream_read(std::istream &s)
 
 bool darea_t::operator==(const darea_t &other) const
 {
-    return std::tie(numareaportals, firstareaportal) 
-        == std::tie(other.numareaportals, other.firstareaportal);
+    return std::tie(numareaportals, firstareaportal) == std::tie(other.numareaportals, other.firstareaportal);
 }
 
 // dareaportal_t
@@ -316,8 +311,7 @@ void dareaportal_t::stream_read(std::istream &s)
 
 bool dareaportal_t::operator==(const dareaportal_t &other) const
 {
-    return std::tie(portalnum, otherarea) 
-        == std::tie(other.portalnum, other.otherarea);
+    return std::tie(portalnum, otherarea) == std::tie(other.portalnum, other.otherarea);
 }
 
 // dbrush_t

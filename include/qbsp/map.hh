@@ -68,9 +68,9 @@ struct mapface_t
     // with no transformations; this is for conversions only.
     std::optional<extended_texinfo_t> raw_info;
 
-    bool visible;         // can any part of this side be seen from non-void parts of the level?
-                          // non-visible means we can discard the brush side
-                          // (avoiding generating a BSP spit, so expanding it outwards)
+    bool visible; // can any part of this side be seen from non-void parts of the level?
+                  // non-visible means we can discard the brush side
+                  // (avoiding generating a BSP spit, so expanding it outwards)
 
     // this face is a bevel added by AddBrushBevels, and shouldn't be used as a splitter
     // for the main hull.
@@ -82,7 +82,7 @@ struct mapface_t
 
     const texvecf &get_texvecs() const;
     void set_texvecs(const texvecf &vecs);
-    
+
     const qbsp_plane_t &get_plane() const;
     const qbsp_plane_t &get_positive_plane() const;
 };
@@ -100,10 +100,10 @@ class mapbrush_t
 public:
     std::vector<mapface_t> faces;
     brushformat_t format = brushformat_t::NORMAL;
-    aabb3d bounds {};
+    aabb3d bounds{};
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
     parser_source_location line;
-    contentflags_t contents {};
+    contentflags_t contents{};
     int16_t lmshift = 0; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
     mapentity_t *func_areaportal = nullptr;
     bool is_hint = false; // whether we are a hint brush or not (at least one side is "hint" or SURF_HINT)
@@ -190,7 +190,7 @@ struct mapdata_t
 
     // add the specified plane to the list
     size_t add_plane(const qplane3d &plane);
-    
+
     std::optional<size_t> find_plane_nonfatal(const qplane3d &plane);
 
     // find the specified plane in the list if it exists. throws
@@ -270,12 +270,16 @@ struct texture_def_issues_t : logging::stat_tracker_t
     // reference (in theory...); this meant that sky brushes would disappear. It
     // doesn't really make sense to have these two mixed, because sky is drawn in-game
     // and the texture is still referenced on them.
-    stat &num_sky_nodraw = register_stat("faces have SKY | NODRAW flags mixed; NODRAW removed as this combo makes no sense. Use -verbose to display affected faces.", false, true);
+    stat &num_sky_nodraw = register_stat(
+        "faces have SKY | NODRAW flags mixed; NODRAW removed as this combo makes no sense. Use -verbose to display affected faces.",
+        false, true);
 
     // Q2 specific: TRANSLUCENT is an internal compiler flag and should never
     // be set directly. In older tools, the only side effect this has is to
     // turn it into DETAIL effectively.
-    stat &num_translucent = register_stat("faces have TRANSLUCENT flag swapped to DETAIL; TRANSLUCENT is an internal flag. Use -verbose to display affected faces.", false, true);
+    stat &num_translucent = register_stat(
+        "faces have TRANSLUCENT flag swapped to DETAIL; TRANSLUCENT is an internal flag. Use -verbose to display affected faces.",
+        false, true);
 };
 
 bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issues_stats);

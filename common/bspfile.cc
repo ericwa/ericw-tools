@@ -82,7 +82,10 @@ private:
 
         constexpr bool operator!=(const q1_contentflags_data &other) const { return !(*this == other); }
 
-        constexpr explicit operator bool() const { return is_origin || is_clip || is_wall || is_fence || is_mist || is_detail; }
+        constexpr explicit operator bool() const
+        {
+            return is_origin || is_clip || is_wall || is_fence || is_mist || is_detail;
+        }
     };
 
     // returns a blank entry if the given contents don't have
@@ -327,8 +330,7 @@ public:
 
     bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const override
     {
-        return (a.native & TEX_SPECIAL)
-            == (b.native & TEX_SPECIAL);
+        return (a.native & TEX_SPECIAL) == (b.native & TEX_SPECIAL);
     }
 
     int32_t surfflags_from_string(const std::string_view &str) const override
@@ -828,7 +830,8 @@ public:
         logging::stat_tracker_t stat_print;
 
         for (auto [bits, count] : stats.native_types) {
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(q1_contentflags_bits(bits)), what)).count += count;
+            stat_print.register_stat(fmt::format("{} {}", get_contents_display(q1_contentflags_bits(bits)), what))
+                .count += count;
         }
 
         stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
@@ -934,17 +937,16 @@ struct gamedef_q2_t : public gamedef_t
     {
         // these are the bits we'll require to match in order to allow phonging `a` and `b`
         auto mask = [](const surfflags_t &flags) {
-            return flags.native & (Q2_SURF_SKY | Q2_SURF_WARP | Q2_SURF_TRANS33 |
-                                   Q2_SURF_TRANS66 | Q2_SURF_FLOWING | Q2_SURF_NODRAW);
+            return flags.native &
+                   (Q2_SURF_SKY | Q2_SURF_WARP | Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_FLOWING | Q2_SURF_NODRAW);
         };
 
         return mask(a) == mask(b);
     }
 
-    static constexpr const char *surf_bitflag_names[] = {
-        "LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66", "FLOWING", "NODRAW",
-        "HINT", "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536",
-        "131072", "262144", "524288", "1048576", "2097152", "4194304", "8388608", "16777216", "ALPHATEST" };
+    static constexpr const char *surf_bitflag_names[] = {"LIGHT", "SLICK", "SKY", "WARP", "TRANS33", "TRANS66",
+        "FLOWING", "NODRAW", "HINT", "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072",
+        "262144", "524288", "1048576", "2097152", "4194304", "8388608", "16777216", "ALPHATEST"};
 
     int32_t surfflags_from_string(const std::string_view &str) const override
     {
@@ -1551,7 +1553,7 @@ public:
         if (stats.visblocker_brushes) {
             stat_print.register_stat(fmt::format("VISBLOCKER {}", what)).count += stats.visblocker_brushes;
         }
-        
+
         stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
     }
 };
@@ -1728,16 +1730,19 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
 
 bool surfflags_t::needs_write() const
 {
-    return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || no_phong || light_ignore || !surflight_rescale || phong_angle ||
-           phong_angle_concave || phong_group || minlight || !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0 ||
-           surflight_group || world_units_per_luxel;
+    return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || no_phong || light_ignore ||
+           !surflight_rescale || phong_angle || phong_angle_concave || phong_group || minlight ||
+           !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0 || surflight_group ||
+           world_units_per_luxel;
 }
 
 static auto as_tuple(const surfflags_t &flags)
 {
-    return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow, flags.no_bounce, flags.no_minlight, flags.no_expand,
-        flags.no_phong, flags.light_ignore, flags.surflight_rescale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight, flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale,
-        flags.surflight_group, flags.world_units_per_luxel);
+    return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow,
+        flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
+        flags.surflight_rescale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
+        flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
+        flags.world_units_per_luxel);
 }
 
 bool surfflags_t::operator<(const surfflags_t &other) const

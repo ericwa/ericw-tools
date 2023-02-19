@@ -23,7 +23,7 @@
 // dheader_t
 
 void dheader_t::stream_write(std::ostream &s) const
-{ 
+{
     s <= std::tie(ident, lumps);
 }
 
@@ -75,12 +75,12 @@ bsp29_dnode_t::operator bsp2_dnode_t() const
 }
 
 void bsp29_dnode_t::stream_write(std::ostream &s) const
-{ 
+{
     s <= std::tie(planenum, children, mins, maxs, firstface, numfaces);
 }
 
-void bsp29_dnode_t::stream_read(std::istream & s)
-{ 
+void bsp29_dnode_t::stream_read(std::istream &s)
+{
     s >= std::tie(planenum, children, mins, maxs, firstface, numfaces);
 }
 
@@ -120,12 +120,12 @@ bsp29_dclipnode_t::operator bsp2_dclipnode_t() const
     return {planenum, {upcast(children[0]), upcast(children[1])}};
 }
 
-void bsp29_dclipnode_t::stream_write(std::ostream& s) const
+void bsp29_dclipnode_t::stream_write(std::ostream &s) const
 {
     s <= std::tie(planenum, children);
 }
 
-void bsp29_dclipnode_t::stream_read(std::istream& s)
+void bsp29_dclipnode_t::stream_read(std::istream &s)
 {
     s >= std::tie(planenum, children);
 }
@@ -168,10 +168,9 @@ void texinfo_t::stream_read(std::istream &s)
 
 bsp29_dface_t::bsp29_dface_t(const mface_t &model)
     : planenum(numeric_cast<int16_t>(model.planenum, "dface_t::planenum")),
-        side(numeric_cast<int16_t>(model.side, "dface_t::side")), firstedge(model.firstedge),
-        numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
-        texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")), styles(model.styles),
-        lightofs(model.lightofs)
+      side(numeric_cast<int16_t>(model.side, "dface_t::side")), firstedge(model.firstedge),
+      numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
+      texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")), styles(model.styles), lightofs(model.lightofs)
 {
 }
 
@@ -185,7 +184,8 @@ void bsp29_dface_t::stream_write(std::ostream &s) const
     s <= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
 }
 
-void bsp29_dface_t::stream_read(std::istream &s){
+void bsp29_dface_t::stream_read(std::istream &s)
+{
     s >= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
 }
 
@@ -193,19 +193,22 @@ void bsp29_dface_t::stream_read(std::istream &s){
 
 bsp2_dface_t::bsp2_dface_t(const mface_t &model)
     : planenum(numeric_cast<int32_t>(model.planenum, "dface_t::planenum")), side(model.side),
-        firstedge(model.firstedge), numedges(model.numedges), texinfo(model.texinfo), styles(model.styles),
-        lightofs(model.lightofs)
+      firstedge(model.firstedge), numedges(model.numedges), texinfo(model.texinfo), styles(model.styles),
+      lightofs(model.lightofs)
 {
 }
 
-bsp2_dface_t::operator mface_t() const { return {planenum, side, firstedge, numedges, texinfo, styles, lightofs}; }
+bsp2_dface_t::operator mface_t() const
+{
+    return {planenum, side, firstedge, numedges, texinfo, styles, lightofs};
+}
 
-void bsp2_dface_t::stream_write(std::ostream& s) const
+void bsp2_dface_t::stream_write(std::ostream &s) const
 {
     s <= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
 }
 
-void bsp2_dface_t::stream_read(std::istream& s)
+void bsp2_dface_t::stream_read(std::istream &s)
 {
     s >= std::tie(planenum, side, firstedge, numedges, texinfo, styles, lightofs);
 }
@@ -214,10 +217,10 @@ void bsp2_dface_t::stream_read(std::istream& s)
 
 bsp29_dleaf_t::bsp29_dleaf_t(const mleaf_t &model)
     : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
-        firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
-        nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
-        ambient_level(model.ambient_level)
+      maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
+      firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
+      nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
+      ambient_level(model.ambient_level)
 {
 }
 
@@ -227,12 +230,12 @@ bsp29_dleaf_t::operator mleaf_t() const
         aabb_mins_cast<float>(maxs, "dleaf_t::maxs"), firstmarksurface, nummarksurfaces, ambient_level};
 }
 
-void bsp29_dleaf_t::stream_write(std::ostream& s) const
+void bsp29_dleaf_t::stream_write(std::ostream &s) const
 {
     s <= std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
 }
 
-void bsp29_dleaf_t::stream_read(std::istream& s)
+void bsp29_dleaf_t::stream_read(std::istream &s)
 {
     s >= std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
 }
@@ -241,8 +244,8 @@ void bsp29_dleaf_t::stream_read(std::istream& s)
 
 bsp2rmq_dleaf_t::bsp2rmq_dleaf_t(const mleaf_t &model)
     : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-        maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")), firstmarksurface(model.firstmarksurface),
-        nummarksurfaces(model.nummarksurfaces), ambient_level(model.ambient_level)
+      maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")), firstmarksurface(model.firstmarksurface),
+      nummarksurfaces(model.nummarksurfaces), ambient_level(model.ambient_level)
 {
 }
 
@@ -266,8 +269,8 @@ void bsp2rmq_dleaf_t::stream_read(std::istream &s)
 
 bsp2_dleaf_t::bsp2_dleaf_t(const mleaf_t &model)
     : contents(model.contents), visofs(model.visofs), mins(model.mins), maxs(model.maxs),
-        firstmarksurface(model.firstmarksurface), nummarksurfaces(model.nummarksurfaces),
-        ambient_level(model.ambient_level)
+      firstmarksurface(model.firstmarksurface), nummarksurfaces(model.nummarksurfaces),
+      ambient_level(model.ambient_level)
 {
 }
 
@@ -276,12 +279,12 @@ bsp2_dleaf_t::operator mleaf_t() const
     return {contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level};
 }
 
-void bsp2_dleaf_t::stream_write(std::ostream& s) const
+void bsp2_dleaf_t::stream_write(std::ostream &s) const
 {
     s <= std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
 }
 
-void bsp2_dleaf_t::stream_read(std::istream& s)
+void bsp2_dleaf_t::stream_read(std::istream &s)
 {
     s >= std::tie(contents, visofs, mins, maxs, firstmarksurface, nummarksurfaces, ambient_level);
 }

@@ -59,8 +59,7 @@ size_t ExportMapTexinfo(size_t texinfonum)
 
     if (src.outputnum.has_value())
         return src.outputnum.value();
-    else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw)
-    {
+    else if (!qbsp_options.includeskip.value() && src.flags.is_nodraw) {
         // TODO: move to game specific
         // always include LIGHT
         if (qbsp_options.target_game->id != GAME_QUAKE_II || !(src.flags.native & Q2_SURF_LIGHT))
@@ -419,10 +418,10 @@ static void WriteExtendedTexinfoFlags(void)
     std::ofstream(file, std::ios_base::out | std::ios_base::binary) << texinfofile;
 }
 
-static bool Is16BitMarkfsurfaceFormat(const bspversion_t *version) {
+static bool Is16BitMarkfsurfaceFormat(const bspversion_t *version)
+{
     for (auto &lumpspec : version->lumps) {
-        if ((!strcmp("marksurfaces", lumpspec.name)
-                || !strcmp("leaffaces", lumpspec.name)) && lumpspec.size == 2) {
+        if ((!strcmp("marksurfaces", lumpspec.name) || !strcmp("leaffaces", lumpspec.name)) && lumpspec.size == 2) {
             return true;
         }
     }
@@ -478,7 +477,8 @@ static void WriteBSPFile()
             FError("{} faces requires an extended-limits BSP, but allow_upgrade was disabled", num_faces);
         } else {
             logging::print("WARNING: {} faces requires unsigned marksurfaces, which is not supported by all "
-                           "engines. Recompile with -bsp2 if targeting ezQuake.\n", num_faces);
+                           "engines. Recompile with -bsp2 if targeting ezQuake.\n",
+                num_faces);
         }
     }
 

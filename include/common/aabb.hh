@@ -66,14 +66,19 @@ private:
     }
 
 public:
-    constexpr aabb() : m_corners({value_type{ std::numeric_limits<V>::max() }, value_type{ std::numeric_limits<V>::lowest() }}) { }
+    constexpr aabb()
+        : m_corners({value_type{std::numeric_limits<V>::max()}, value_type{std::numeric_limits<V>::lowest()}})
+    {
+    }
 
-    constexpr aabb(const value_type &mins, const value_type &maxs) : m_corners({ mins, maxs }) { fix(); }
+    constexpr aabb(const value_type &mins, const value_type &maxs) : m_corners({mins, maxs}) { fix(); }
 
     constexpr aabb(const value_type &points) : aabb(points, points) { }
 
     template<typename V2>
-    constexpr aabb(const aabb<V2, N> &other) : aabb(other.m_corners[0], other.m_corners[1]) { }
+    constexpr aabb(const aabb<V2, N> &other) : aabb(other.m_corners[0], other.m_corners[1])
+    {
+    }
 
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
     constexpr aabb(Iter start, Iter end) : aabb()
@@ -95,8 +100,7 @@ public:
     constexpr bool disjoint(const aabb<F, N> &other, const F &epsilon = 0) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (maxs()[i] < (other.mins()[i] - epsilon) ||
-                mins()[i] > (other.maxs()[i] + epsilon)) {
+            if (maxs()[i] < (other.mins()[i] - epsilon) || mins()[i] > (other.maxs()[i] + epsilon)) {
                 return true;
             }
         }
@@ -107,8 +111,7 @@ public:
     constexpr bool disjoint_or_touching(const aabb<F, N> &other, const F &epsilon = 0) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (maxs()[i] <= (other.mins()[i] - epsilon) ||
-                mins()[i] >= (other.maxs()[i] + epsilon)) {
+            if (maxs()[i] <= (other.mins()[i] - epsilon) || mins()[i] >= (other.maxs()[i] + epsilon)) {
                 return true;
             }
         }
@@ -118,8 +121,7 @@ public:
     constexpr bool contains(const aabb &other) const
     {
         for (size_t i = 0; i < N; i++) {
-            if (other.mins()[i] < mins()[i] ||
-                other.maxs()[i] > maxs()[i]) {
+            if (other.mins()[i] < mins()[i] || other.maxs()[i] > maxs()[i]) {
                 return false;
             }
         }
@@ -171,8 +173,8 @@ public:
     constexpr aabb &unionWith_in_place(const aabb &other)
     {
         for (size_t i = 0; i < N; i++) {
-            m_corners[0][i] = min({ m_corners[0][i], other.mins()[i], other.maxs()[i] });
-            m_corners[1][i] = max({ m_corners[1][i], other.mins()[i], other.maxs()[i] });
+            m_corners[0][i] = min({m_corners[0][i], other.mins()[i], other.maxs()[i]});
+            m_corners[1][i] = max({m_corners[1][i], other.mins()[i], other.maxs()[i]});
         }
 
         return *this;
@@ -194,12 +196,11 @@ public:
 
     constexpr value_type size() const { return maxs() - mins(); }
 
-    constexpr bool valid() const {
+    constexpr bool valid() const
+    {
         value_type our_size = size();
 
-        if (our_size[0] < static_cast<V>(0)
-            || our_size[1] < static_cast<V>(0)
-            || our_size[2] < static_cast<V>(0)) {
+        if (our_size[0] < static_cast<V>(0) || our_size[1] < static_cast<V>(0) || our_size[2] < static_cast<V>(0)) {
             return false;
         }
         return true;
@@ -213,7 +214,8 @@ public:
 
     constexpr value_type centroid() const { return (mins() + maxs()) * 0.5; }
 
-    constexpr V volume() const { 
+    constexpr V volume() const
+    {
         auto s = size();
         return s[0] * s[1] * s[2];
     }
@@ -232,14 +234,14 @@ template<class V>
 inline std::array<qplane3<V>, 6> aabb_planes(const aabb<V, 3> &bbox)
 {
     return {
-        qplane3<V>{qvec<V,3>( 1,0,0),  bbox.maxs()[0]},  // +X
-        qplane3<V>{qvec<V,3>(-1,0,0), -bbox.mins()[0]},  // -X
+        qplane3<V>{qvec<V, 3>(1, 0, 0), bbox.maxs()[0]}, // +X
+        qplane3<V>{qvec<V, 3>(-1, 0, 0), -bbox.mins()[0]}, // -X
 
-        qplane3<V>{qvec<V,3>(0, 1,0),  bbox.maxs()[1]},  // +Y
-        qplane3<V>{qvec<V,3>(0,-1,0), -bbox.mins()[1]},  // -Y
+        qplane3<V>{qvec<V, 3>(0, 1, 0), bbox.maxs()[1]}, // +Y
+        qplane3<V>{qvec<V, 3>(0, -1, 0), -bbox.mins()[1]}, // -Y
 
-        qplane3<V>{qvec<V,3>(0,0, 1),  bbox.maxs()[2]},  // +Z
-        qplane3<V>{qvec<V,3>(0,0,-1), -bbox.mins()[2]},  // -Z
+        qplane3<V>{qvec<V, 3>(0, 0, 1), bbox.maxs()[2]}, // +Z
+        qplane3<V>{qvec<V, 3>(0, 0, -1), -bbox.mins()[2]}, // -Z
     };
 }
 
