@@ -1142,6 +1142,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("world_units_per_luxel")) {
             flags.world_units_per_luxel = val.at("world_units_per_luxel").get<float>();
         }
+        if (val.contains("object_channel_mask")) {
+            flags.object_channel_mask = val.at("object_channel_mask").get<int32_t>();
+        }
     }
 }
 

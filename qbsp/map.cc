@@ -691,6 +691,10 @@ static surfflags_t SurfFlagsForEntity(
         flags.world_units_per_luxel = entity.epairs.get_float("_world_units_per_luxel");
     }
 
+    if (entity.epairs.has("_object_channel_mask")) {
+        flags.object_channel_mask = entity.epairs.get_int("_object_channel_mask");
+    }
+
     // handle "_mincolor"
     {
         qvec3d mincolor{};

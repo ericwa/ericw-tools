@@ -671,6 +671,13 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         lightsurf->twosided = true;
     }
 
+    /* object channel mask */
+    if (extended_flags.object_channel_mask) {
+        lightsurf->object_channel_mask = *extended_flags.object_channel_mask;
+    } else {
+        lightsurf->object_channel_mask = modelinfo->object_channel_mask.value();
+    }
+
     /* Set up the plane, not including model offset */
     qplane3d &plane = lightsurf->plane;
     if (face->side) {
@@ -1187,7 +1194,7 @@ static void LightFace_Entity(
     }
 
     // check lighting channels
-    if (!(entity->light_channel_mask.value() & lightsurf->modelinfo->object_channel_mask.value())) {
+    if (!(entity->light_channel_mask.value() & lightsurf->object_channel_mask)) {
         return;
     }
 
@@ -1344,7 +1351,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
     }
 
     // check lighting channels (currently sunlight is always on CHANNEL_MASK_DEFAULT)
-    if (!(lightsurf->modelinfo->object_channel_mask.value() & CHANNEL_MASK_DEFAULT)) {
+    if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
         return;
     }
 
@@ -1861,7 +1868,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
     const float surflight_gate = 0.01f;
 
     // check lighting channels (currently surface lights are always on CHANNEL_MASK_DEFAULT)
-    if (!(lightsurf->modelinfo->object_channel_mask.value() & CHANNEL_MASK_DEFAULT)) {
+    if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
         return;
     }
 
@@ -2217,7 +2224,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
         //
         // use the model's own channel mask as the shadow mask, e.g. so a model in channel 2's AO rays will only hit
         // other things in channel 2
-        rs.tracePushedRaysIntersection(lightsurf->modelinfo, lightsurf->modelinfo->object_channel_mask.value());
+        rs.tracePushedRaysIntersection(lightsurf->modelinfo, lightsurf->object_channel_mask);
 
         // accumulate hitdists
         for (int k = 0; k < rs.numPushedRays(); k++) {

@@ -474,6 +474,29 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
 
         CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(0, 0, 255)); });
     }
+
+    {
+        INFO("check that _object_channel_mask 8 func_group receives _light_channel_mask 8");
+
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1480, 1248, 1004});
+        REQUIRE(face);
+
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(0, 0, 255)); });
+    }
+
+    {
+        INFO("_object_channel_mask 8 func_group doesn't cast shadow on default channel");
+
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1484, 1280, 1016});
+        REQUIRE(face);
+
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            qvec3i delta = qv::abs(qvec3i(sample) - qvec3i{255, 127, 64});
+            CHECK(delta[0] <= 2);
+            CHECK(delta[1] <= 2);
+            CHECK(delta[2] <= 2);
+        });
+    }
 }
 
 TEST_CASE("light channel mask / dirt interaction")

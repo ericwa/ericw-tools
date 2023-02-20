@@ -104,6 +104,7 @@ struct lightsurf_t
     vec_t minlight, maxlight, lightcolorscale = 1.0;
     qvec3d minlight_color;
     bool nodirt, minlightMottle;
+    int32_t object_channel_mask;
 
     qplane3d plane;
     qvec3d snormal;

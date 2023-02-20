@@ -222,6 +222,8 @@ struct surfflags_t
     // custom world_units_per_luxel for this geometry
     std::optional<float> world_units_per_luxel;
 
+    std::optional<int32_t> object_channel_mask;
+
     bool needs_write() const;
 
 public:

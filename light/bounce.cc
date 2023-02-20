@@ -68,7 +68,8 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
     }
 
     // check for "_bounce" "-1"
-    if (extended_texinfo_flags[face->texinfo].no_bounce) {
+    const auto &ext_info = extended_texinfo_flags[face->texinfo];
+    if (ext_info.no_bounce) {
         return false;
     }
 
@@ -77,7 +78,11 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
         return false;
     }
 
+    // don't bounce from faces on non-default object channels
     if (mi->object_channel_mask.value() != CHANNEL_MASK_DEFAULT) {
+        return false;
+    }
+    if (ext_info.object_channel_mask.value_or(CHANNEL_MASK_DEFAULT) != CHANNEL_MASK_DEFAULT) {
         return false;
     }
 

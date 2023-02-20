@@ -135,6 +135,8 @@ sceneinfo CreateGeometry(
         int tri_index = tris_temp.size();
         tris_temp.push_back({first_vert_index, first_vert_index + 1, first_vert_index + 2});
 
+        const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+
         triinfo info;
 
         info.face = face;
@@ -143,11 +145,14 @@ sceneinfo CreateGeometry(
 
         info.texture = Face_Texture(bsp, face);
 
+        // FIXME: don't these need to check extended_flags?
         info.shadowworldonly = modelinfo->shadowworldonly.boolValue();
         info.shadowself = modelinfo->shadowself.boolValue();
         info.switchableshadow = modelinfo->switchableshadow.boolValue();
         info.switchshadstyle = modelinfo->switchshadstyle.value();
-        info.channelmask = modelinfo->object_channel_mask.value();
+
+        info.channelmask = extended_flags.object_channel_mask.value_or(
+            modelinfo->object_channel_mask.value());
 
         info.alpha = Face_Alpha(bsp, modelinfo, face);
 
@@ -544,6 +549,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     for (size_t mi = 0; mi < bsp->dmodels.size(); mi++) {
         const modelinfo_t *model = ModelInfoForModel(bsp, mi);
 
+        // check reasons that a bmodel can be shadow casting
         const bool isWorld = model->isWorld();
         const bool shadow = model->shadow.boolValue();
         const bool shadowself = model->shadowself.boolValue();
@@ -569,7 +575,8 @@ void Embree_TraceInit(const mbsp_t *bsp)
             }
 
             // non-default channel mask
-            if (model->object_channel_mask.value() != CHANNEL_MASK_DEFAULT) {
+            if (model->object_channel_mask.value() != CHANNEL_MASK_DEFAULT ||
+                extended_flags.object_channel_mask.value_or(CHANNEL_MASK_DEFAULT) != CHANNEL_MASK_DEFAULT) {
                 filterfaces.push_back(face);
                 continue;
             }
