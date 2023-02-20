@@ -39,14 +39,24 @@ public:
 
     leafbits_t() = default;
 
-    inline leafbits_t(size_t size) : _size(size), bits(allocate()) { }
+    inline leafbits_t(size_t size)
+        : _size(size),
+          bits(allocate())
+    {
+    }
 
-    inline leafbits_t(const leafbits_t &copy) : leafbits_t(copy._size)
+    inline leafbits_t(const leafbits_t &copy)
+        : leafbits_t(copy._size)
     {
         memcpy(bits.get(), copy.bits.get(), byte_size());
     }
 
-    inline leafbits_t(leafbits_t &&move) noexcept : _size(move._size), bits(std::move(move.bits)) { move._size = 0; }
+    inline leafbits_t(leafbits_t &&move) noexcept
+        : _size(move._size),
+          bits(std::move(move.bits))
+    {
+        move._size = 0;
+    }
 
     inline leafbits_t &operator=(leafbits_t &&move) noexcept
     {

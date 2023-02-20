@@ -160,7 +160,9 @@ protected:
 public:
     inline setting_value(setting_container *dictionary, const nameset &names, T v, const setting_group *group = nullptr,
         const char *description = "")
-        : setting_base(dictionary, names, group, description), _default(v), _value(v)
+        : setting_base(dictionary, names, group, description),
+          _default(v),
+          _value(v)
     {
     }
 
@@ -244,7 +246,9 @@ protected:
 public:
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
         const setting_group *group = nullptr, const char *description = "")
-        : setting_value<T>(dictionary, names, v, group, description), _min(minval), _max(maxval)
+        : setting_value<T>(dictionary, names, v, group, description),
+          _min(minval),
+          _max(maxval)
     {
         // check the default value is valid
         Q_assert(_min < _max);
@@ -314,7 +318,8 @@ public:
     inline setting_enum(setting_container *dictionary, const nameset &names, T v,
         const std::initializer_list<std::pair<const char *, T>> &enumValues, const setting_group *group = nullptr,
         const char *description = "")
-        : setting_value<T>(dictionary, names, v, group, description), _values(enumValues.begin(), enumValues.end())
+        : setting_value<T>(dictionary, names, v, group, description),
+          _values(enumValues.begin(), enumValues.end())
     {
     }
 
@@ -462,7 +467,8 @@ protected:
 public:
     template<typename... Args>
     inline setting_validator(const decltype(_validator) &validator, Args &&...args)
-        : T(std::forward<Args>(args)...), _validator(validator)
+        : T(std::forward<Args>(args)...),
+          _validator(validator)
     {
     }
 

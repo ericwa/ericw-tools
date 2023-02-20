@@ -121,7 +121,10 @@ struct parser_base_t
     bool was_quoted = false; // whether the current token was from a quoted string or not
     parser_source_location location; // parse location, if any
 
-    inline parser_base_t(parser_source_location base_location) : location(base_location) { }
+    inline parser_base_t(parser_source_location base_location)
+        : location(base_location)
+    {
+    }
 
     virtual bool parse_token(parseflags flags = PARSE_NORMAL) = 0;
 

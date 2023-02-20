@@ -26,7 +26,10 @@
 
 #include <fmt/ostream.h>
 
-entdict_t::entdict_t(std::initializer_list<keyvalue_t> l) : keyvalues(l) { }
+entdict_t::entdict_t(std::initializer_list<keyvalue_t> l)
+    : keyvalues(l)
+{
+}
 
 entdict_t::entdict_t() = default;
 

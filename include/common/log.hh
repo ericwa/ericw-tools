@@ -155,7 +155,9 @@ struct stat_tracker_t
         std::atomic_size_t count = 0;
 
         inline stat(const std::string &name, bool show_even_if_zero, bool is_warning)
-            : name(name), show_even_if_zero(show_even_if_zero), is_warning(is_warning)
+            : name(name),
+              show_even_if_zero(show_even_if_zero),
+              is_warning(is_warning)
         {
         }
 

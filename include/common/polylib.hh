@@ -57,7 +57,8 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_stack_t(const size_t &initial_size) : count(initial_size)
+    inline winding_storage_stack_t(const size_t &initial_size)
+        : count(initial_size)
     {
         if (initial_size > N) {
             throw std::bad_alloc();
@@ -67,20 +68,23 @@ public:
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_storage_stack_t(Iter begin, Iter end) : winding_storage_stack_t(end - begin)
+    inline winding_storage_stack_t(Iter begin, Iter end)
+        : winding_storage_stack_t(end - begin)
     {
         std::copy_n(begin, count, array.begin());
     }
 
     // copy constructor; uses optimized method of copying
     // data over.
-    inline winding_storage_stack_t(const winding_storage_stack_t &copy) : winding_storage_stack_t(copy.size())
+    inline winding_storage_stack_t(const winding_storage_stack_t &copy)
+        : winding_storage_stack_t(copy.size())
     {
         std::copy_n(copy.array.begin(), copy.count, array.begin());
     }
 
     // move constructor
-    inline winding_storage_stack_t(winding_storage_stack_t &&move) noexcept : count(move.count)
+    inline winding_storage_stack_t(winding_storage_stack_t &&move) noexcept
+        : count(move.count)
     {
         count = move.count;
 
@@ -191,21 +195,31 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_heap_t(const size_t &initial_size) : values(initial_size) { }
+    inline winding_storage_heap_t(const size_t &initial_size)
+        : values(initial_size)
+    {
+    }
 
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_storage_heap_t(Iter begin, Iter end) : values(begin, end)
+    inline winding_storage_heap_t(Iter begin, Iter end)
+        : values(begin, end)
     {
     }
 
     // copy constructor; uses optimized method of copying
     // data over.
-    inline winding_storage_heap_t(const winding_storage_heap_t &copy) : values(copy.values) { }
+    inline winding_storage_heap_t(const winding_storage_heap_t &copy)
+        : values(copy.values)
+    {
+    }
 
     // move constructor
-    inline winding_storage_heap_t(winding_storage_heap_t &&move) noexcept : values(std::move(move.values)) { }
+    inline winding_storage_heap_t(winding_storage_heap_t &&move) noexcept
+        : values(std::move(move.values))
+    {
+    }
 
     // assignment copy
     inline winding_storage_heap_t &operator=(const winding_storage_heap_t &copy)
@@ -281,7 +295,11 @@ public:
         size_t index;
         container_type w;
 
-        iterator_base(size_t index_in, container_type w_in) : index(index_in), w(w_in) { }
+        iterator_base(size_t index_in, container_type w_in)
+            : index(index_in),
+              w(w_in)
+        {
+        }
 
     public:
         using iterator_category = std::random_access_iterator_tag;
@@ -366,7 +384,8 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_hybrid_t(const size_t &initial_size) : count(initial_size)
+    inline winding_storage_hybrid_t(const size_t &initial_size)
+        : count(initial_size)
     {
         if (count > N) {
             vector.reserve(count);
@@ -377,7 +396,8 @@ public:
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_storage_hybrid_t(Iter begin, Iter end) : winding_storage_hybrid_t(end - begin)
+    inline winding_storage_hybrid_t(Iter begin, Iter end)
+        : winding_storage_hybrid_t(end - begin)
     {
         // copy the array range
         std::copy_n(begin, min(count, N), array.begin());
@@ -390,7 +410,8 @@ public:
 
     // copy constructor; uses optimized method of copying
     // data over.
-    inline winding_storage_hybrid_t(const winding_storage_hybrid_t &copy) : winding_storage_hybrid_t(copy.size())
+    inline winding_storage_hybrid_t(const winding_storage_hybrid_t &copy)
+        : winding_storage_hybrid_t(copy.size())
     {
         // copy array range
         memcpy(&array.front(), &copy.array.front(), min(count, N) * sizeof(qvec3d));
@@ -402,7 +423,8 @@ public:
     }
 
     // move constructor
-    inline winding_storage_hybrid_t(winding_storage_hybrid_t &&move) noexcept : count(move.count)
+    inline winding_storage_hybrid_t(winding_storage_hybrid_t &&move) noexcept
+        : count(move.count)
     {
         count = move.count;
 
@@ -558,23 +580,33 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_base_t(const size_t &initial_size) : storage(initial_size) { }
+    inline winding_base_t(const size_t &initial_size)
+        : storage(initial_size)
+    {
+    }
 
     // construct winding from range.
     // iterators must have operator+ and operator-.
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline winding_base_t(Iter begin, Iter end) : storage(begin, end)
+    inline winding_base_t(Iter begin, Iter end)
+        : storage(begin, end)
     {
     }
 
     // initializer list constructor
-    inline winding_base_t(std::initializer_list<qvec3d> l) : storage(l.begin(), l.end()) { }
+    inline winding_base_t(std::initializer_list<qvec3d> l)
+        : storage(l.begin(), l.end())
+    {
+    }
 
     // copy constructor; we require copying to be done with clone() to avoid performance bugs
     inline winding_base_t(const winding_base_t &copy) = delete;
 
     // move constructor
-    inline winding_base_t(winding_base_t &&move) noexcept : storage(std::move(move.storage)) { }
+    inline winding_base_t(winding_base_t &&move) noexcept
+        : storage(std::move(move.storage))
+    {
+    }
 
     // assignment copy
     inline winding_base_t &operator=(const winding_base_t &copy) = delete;

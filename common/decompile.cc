@@ -286,16 +286,22 @@ private:
     }
 
 public:
-    decomp_brush_face_t() : winding(std::nullopt), original_face(nullptr) { }
+    decomp_brush_face_t()
+        : winding(std::nullopt),
+          original_face(nullptr)
+    {
+    }
 
     decomp_brush_face_t(const mbsp_t *bsp, const mface_t *face)
-        : winding(winding_t::from_face(bsp, face)), original_face(face)
+        : winding(winding_t::from_face(bsp, face)),
+          original_face(face)
     {
         buildInwardFacingEdgePlanes();
     }
 
     decomp_brush_face_t(std::optional<winding_t> &&windingToTakeOwnership, const mface_t *face)
-        : winding(std::move(windingToTakeOwnership)), original_face(face)
+        : winding(std::move(windingToTakeOwnership)),
+          original_face(face)
     {
         buildInwardFacingEdgePlanes();
     }
@@ -303,7 +309,8 @@ public:
     // FIXME
     decomp_brush_face_t(const decomp_brush_face_t &face)
         : winding(face.winding ? decltype(winding)(face.winding->clone()) : std::nullopt),
-          original_face(face.original_face), inwardFacingEdgePlanes(face.inwardFacingEdgePlanes)
+          original_face(face.original_face),
+          inwardFacingEdgePlanes(face.inwardFacingEdgePlanes)
     {
     }
 
@@ -386,18 +393,22 @@ struct decomp_brush_side_t
     polylib::winding_t winding;
 
     decomp_brush_side_t(const mbsp_t *bsp, const leaf_decompile_task &model, const decomp_plane_t &planeIn)
-        : faces(BuildDecompFacesOnPlane(bsp, model, planeIn)), plane(planeIn)
+        : faces(BuildDecompFacesOnPlane(bsp, model, planeIn)),
+          plane(planeIn)
     {
     }
 
     decomp_brush_side_t(const std::vector<decomp_brush_face_t> &facesIn, const decomp_plane_t &planeIn)
-        : faces(facesIn), plane(planeIn)
+        : faces(facesIn),
+          plane(planeIn)
     {
     }
 
     // FIXME
     decomp_brush_side_t(const decomp_brush_side_t &copy)
-        : faces(copy.faces), plane(copy.plane), winding(copy.winding.clone())
+        : faces(copy.faces),
+          plane(copy.plane),
+          winding(copy.winding.clone())
     {
     }
 
@@ -412,7 +423,11 @@ struct decomp_brush_side_t
     /**
      * Construct a new side with no faces on it, with the given outward-facing plane
      */
-    decomp_brush_side_t(const qvec3d &normal, double distance) : faces(), plane({{normal, distance}}) { }
+    decomp_brush_side_t(const qvec3d &normal, double distance)
+        : faces(),
+          plane({{normal, distance}})
+    {
+    }
 
     /**
      * Returns the { front, back } after the clip.
@@ -442,7 +457,10 @@ struct decomp_brush_t
 {
     std::vector<decomp_brush_side_t> sides;
 
-    decomp_brush_t(std::vector<decomp_brush_side_t> sidesIn) : sides(std::move(sidesIn)) { }
+    decomp_brush_t(std::vector<decomp_brush_side_t> sidesIn)
+        : sides(std::move(sidesIn))
+    {
+    }
 
     /**
      * Returns the front and back side after clipping to the given plane.

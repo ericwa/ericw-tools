@@ -23,7 +23,10 @@
 
 // bspx_header_t
 
-bspx_header_t::bspx_header_t(uint32_t numlumps) : numlumps(numlumps) { }
+bspx_header_t::bspx_header_t(uint32_t numlumps)
+    : numlumps(numlumps)
+{
+}
 
 void bspx_header_t::stream_write(std::ostream &s) const
 {

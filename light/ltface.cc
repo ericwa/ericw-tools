@@ -73,12 +73,17 @@ public:
     qvec3f m_interpolatedNormal;
 
     position_t(qvec3f position)
-        : m_unoccluded(false), m_actualFace(nullptr), m_position(position), m_interpolatedNormal({})
+        : m_unoccluded(false),
+          m_actualFace(nullptr),
+          m_position(position),
+          m_interpolatedNormal({})
     {
     }
 
     position_t(const mface_t *actualFace, const qvec3f &position, const qvec3f &interpolatedNormal)
-        : m_unoccluded(true), m_actualFace(actualFace), m_position(position),
+        : m_unoccluded(true),
+          m_actualFace(actualFace),
+          m_position(position),
           m_interpolatedNormal(interpolatedNormal){};
 };
 
@@ -303,7 +308,7 @@ static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, con
     for (const auto &modelinfo : tracelist) {
         if (modelinfo->object_channel_mask.value() != self_modelinfo->object_channel_mask.value())
             continue;
-        
+
         if (Light_PointInSolid(bsp, modelinfo->model, point)) {
             // Only mark occluded if the bmodel is fully opaque
             if (modelinfo->alpha.value() == 1.0f)

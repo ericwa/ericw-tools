@@ -31,12 +31,18 @@ private:
     using type = typename std::underlying_type_t<Enum>;
     std::bitset<sizeof(type) * 8> _bits{};
 
-    constexpr bitflags(const std::bitset<sizeof(type) * 8> &bits) : _bits(bits) { }
+    constexpr bitflags(const std::bitset<sizeof(type) * 8> &bits)
+        : _bits(bits)
+    {
+    }
 
 public:
     constexpr bitflags() { }
 
-    constexpr bitflags(const Enum &enumValue) : _bits(static_cast<type>(enumValue)) { }
+    constexpr bitflags(const Enum &enumValue)
+        : _bits(static_cast<type>(enumValue))
+    {
+    }
 
     constexpr bitflags(const bitflags &copy) = default;
     constexpr bitflags(bitflags &&move) noexcept = default;

@@ -38,9 +38,17 @@ public:
         bool valid;
         aabb bbox;
 
-        constexpr intersection_t() : valid(false), bbox(value_type{}, value_type{}) { }
+        constexpr intersection_t()
+            : valid(false),
+              bbox(value_type{}, value_type{})
+        {
+        }
 
-        constexpr intersection_t(const aabb &i) : valid(true), bbox(i) { }
+        constexpr intersection_t(const aabb &i)
+            : valid(true),
+              bbox(i)
+        {
+        }
 
         constexpr bool operator==(const intersection_t &other) const
         {
@@ -71,17 +79,26 @@ public:
     {
     }
 
-    constexpr aabb(const value_type &mins, const value_type &maxs) : m_corners({mins, maxs}) { fix(); }
+    constexpr aabb(const value_type &mins, const value_type &maxs)
+        : m_corners({mins, maxs})
+    {
+        fix();
+    }
 
-    constexpr aabb(const value_type &points) : aabb(points, points) { }
+    constexpr aabb(const value_type &points)
+        : aabb(points, points)
+    {
+    }
 
     template<typename V2>
-    constexpr aabb(const aabb<V2, N> &other) : aabb(other.m_corners[0], other.m_corners[1])
+    constexpr aabb(const aabb<V2, N> &other)
+        : aabb(other.m_corners[0], other.m_corners[1])
     {
     }
 
     template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    constexpr aabb(Iter start, Iter end) : aabb()
+    constexpr aabb(Iter start, Iter end)
+        : aabb()
     {
         for (auto it = start; it != end; it++) {
             *this += *it;

@@ -167,7 +167,10 @@ struct padding_n
 {
     size_t n;
 
-    constexpr padding_n(size_t np) : n(np) { }
+    constexpr padding_n(size_t np)
+        : n(np)
+    {
+    }
 };
 
 // using <= for ostream and >= for istream

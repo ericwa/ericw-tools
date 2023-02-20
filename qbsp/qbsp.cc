@@ -305,12 +305,16 @@ plane_type_t qbsp_plane_t::calculate_type(const qplane3d &p)
     }
 }
 
-qbsp_plane_t::qbsp_plane_t(const qplane3d &plane, bool flip) noexcept : plane(plane)
+qbsp_plane_t::qbsp_plane_t(const qplane3d &plane, bool flip) noexcept
+    : plane(plane)
 {
     normalize(flip);
 }
 
-qbsp_plane_t::qbsp_plane_t(const qplane3d &plane) noexcept : qbsp_plane_t(plane, false) { }
+qbsp_plane_t::qbsp_plane_t(const qplane3d &plane) noexcept
+    : qbsp_plane_t(plane, false)
+{
+}
 
 qbsp_plane_t &qbsp_plane_t::operator=(const qplane3d &plane) noexcept
 {

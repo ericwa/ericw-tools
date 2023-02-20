@@ -35,9 +35,13 @@ void dheader_t::stream_read(std::istream &s)
 // dmodelq1_t
 
 dmodelq1_t::dmodelq1_t(const dmodelh2_t &model)
-    : mins(model.mins), maxs(model.maxs), origin(model.origin),
-      headnode(array_cast<decltype(headnode)>(model.headnode, "dmodelh2_t::headnode")), visleafs(model.visleafs),
-      firstface(model.firstface), numfaces(model.numfaces)
+    : mins(model.mins),
+      maxs(model.maxs),
+      origin(model.origin),
+      headnode(array_cast<decltype(headnode)>(model.headnode, "dmodelh2_t::headnode")),
+      visleafs(model.visleafs),
+      firstface(model.firstface),
+      numfaces(model.numfaces)
 {
 }
 
@@ -59,7 +63,8 @@ void dmodelq1_t::stream_read(std::istream &s)
 // bsp29_dnode_t
 
 bsp29_dnode_t::bsp29_dnode_t(const bsp2_dnode_t &model)
-    : planenum(model.planenum), children(array_cast<decltype(children)>(model.children, "dnode_t::children")),
+    : planenum(model.planenum),
+      children(array_cast<decltype(children)>(model.children, "dnode_t::children")),
       mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
       maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
       firstface(numeric_cast<uint16_t>(model.firstface, "dnode_t::firstface")),
@@ -87,8 +92,12 @@ void bsp29_dnode_t::stream_read(std::istream &s)
 // bsp2rmq_dnode_t
 
 bsp2rmq_dnode_t::bsp2rmq_dnode_t(const bsp2_dnode_t &model)
-    : planenum(model.planenum), children(model.children), mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
-      maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")), firstface(model.firstface), numfaces(model.numfaces)
+    : planenum(model.planenum),
+      children(model.children),
+      mins(aabb_mins_cast<int16_t>(model.mins, "dnode_t::mins")),
+      maxs(aabb_maxs_cast<int16_t>(model.maxs, "dnode_t::maxs")),
+      firstface(model.firstface),
+      numfaces(model.numfaces)
 {
 }
 
@@ -111,7 +120,8 @@ void bsp2rmq_dnode_t::stream_read(std::istream &s)
 // bsp29_dclipnode_t
 
 bsp29_dclipnode_t::bsp29_dclipnode_t(const bsp2_dclipnode_t &model)
-    : planenum(model.planenum), children({downcast(model.children[0]), downcast(model.children[1])})
+    : planenum(model.planenum),
+      children({downcast(model.children[0]), downcast(model.children[1])})
 {
 }
 
@@ -147,7 +157,12 @@ int32_t bsp29_dclipnode_t::upcast(const int16_t &v)
 
 // texinfo_t
 
-texinfo_t::texinfo_t(const mtexinfo_t &model) : vecs(model.vecs), miptex(model.miptex), flags(model.flags.native) { }
+texinfo_t::texinfo_t(const mtexinfo_t &model)
+    : vecs(model.vecs),
+      miptex(model.miptex),
+      flags(model.flags.native)
+{
+}
 
 texinfo_t::operator mtexinfo_t() const
 {
@@ -168,9 +183,12 @@ void texinfo_t::stream_read(std::istream &s)
 
 bsp29_dface_t::bsp29_dface_t(const mface_t &model)
     : planenum(numeric_cast<int16_t>(model.planenum, "dface_t::planenum")),
-      side(numeric_cast<int16_t>(model.side, "dface_t::side")), firstedge(model.firstedge),
+      side(numeric_cast<int16_t>(model.side, "dface_t::side")),
+      firstedge(model.firstedge),
       numedges(numeric_cast<int16_t>(model.numedges, "dface_t::numedges")),
-      texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")), styles(model.styles), lightofs(model.lightofs)
+      texinfo(numeric_cast<int16_t>(model.texinfo, "dface_t::texinfo")),
+      styles(model.styles),
+      lightofs(model.lightofs)
 {
 }
 
@@ -192,8 +210,12 @@ void bsp29_dface_t::stream_read(std::istream &s)
 // bsp2_dface_t
 
 bsp2_dface_t::bsp2_dface_t(const mface_t &model)
-    : planenum(numeric_cast<int32_t>(model.planenum, "dface_t::planenum")), side(model.side),
-      firstedge(model.firstedge), numedges(model.numedges), texinfo(model.texinfo), styles(model.styles),
+    : planenum(numeric_cast<int32_t>(model.planenum, "dface_t::planenum")),
+      side(model.side),
+      firstedge(model.firstedge),
+      numedges(model.numedges),
+      texinfo(model.texinfo),
+      styles(model.styles),
       lightofs(model.lightofs)
 {
 }
@@ -216,7 +238,9 @@ void bsp2_dface_t::stream_read(std::istream &s)
 // bsp29_dleaf_t
 
 bsp29_dleaf_t::bsp29_dleaf_t(const mleaf_t &model)
-    : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+    : contents(model.contents),
+      visofs(model.visofs),
+      mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
       maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
       firstmarksurface(numeric_cast<uint16_t>(model.firstmarksurface, "dleaf_t::firstmarksurface")),
       nummarksurfaces(numeric_cast<uint16_t>(model.nummarksurfaces, "dleaf_t::nummarksurfaces")),
@@ -243,9 +267,13 @@ void bsp29_dleaf_t::stream_read(std::istream &s)
 // bsp2rmq_dleaf_t
 
 bsp2rmq_dleaf_t::bsp2rmq_dleaf_t(const mleaf_t &model)
-    : contents(model.contents), visofs(model.visofs), mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
-      maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")), firstmarksurface(model.firstmarksurface),
-      nummarksurfaces(model.nummarksurfaces), ambient_level(model.ambient_level)
+    : contents(model.contents),
+      visofs(model.visofs),
+      mins(aabb_mins_cast<int16_t>(model.mins, "dleaf_t::mins")),
+      maxs(aabb_maxs_cast<int16_t>(model.maxs, "dleaf_t::maxs")),
+      firstmarksurface(model.firstmarksurface),
+      nummarksurfaces(model.nummarksurfaces),
+      ambient_level(model.ambient_level)
 {
 }
 
@@ -268,8 +296,12 @@ void bsp2rmq_dleaf_t::stream_read(std::istream &s)
 // bsp2_dleaf_t
 
 bsp2_dleaf_t::bsp2_dleaf_t(const mleaf_t &model)
-    : contents(model.contents), visofs(model.visofs), mins(model.mins), maxs(model.maxs),
-      firstmarksurface(model.firstmarksurface), nummarksurfaces(model.nummarksurfaces),
+    : contents(model.contents),
+      visofs(model.visofs),
+      mins(model.mins),
+      maxs(model.maxs),
+      firstmarksurface(model.firstmarksurface),
+      nummarksurfaces(model.nummarksurfaces),
       ambient_level(model.ambient_level)
 {
 }

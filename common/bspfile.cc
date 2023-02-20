@@ -150,9 +150,20 @@ private:
 
         q1_contentflags_bits() = default;
         explicit q1_contentflags_bits(const bitset_t &bitset)
-            : solid(bitset[0]), sky(bitset[1]), wall(bitset[2]), fence(bitset[3]), lava(bitset[4]), slime(bitset[5]),
-              water(bitset[6]), mist(bitset[7]), origin(bitset[8]), clip(bitset[9]), illusionary_visblocker(bitset[10]),
-              detail(bitset[11]), mirror_inside(bitset[12]), suppress_clipping_same_type(bitset[13])
+            : solid(bitset[0]),
+              sky(bitset[1]),
+              wall(bitset[2]),
+              fence(bitset[3]),
+              lava(bitset[4]),
+              slime(bitset[5]),
+              water(bitset[6]),
+              mist(bitset[7]),
+              origin(bitset[8]),
+              clip(bitset[9]),
+              illusionary_visblocker(bitset[10]),
+              detail(bitset[11]),
+              mirror_inside(bitset[12]),
+              suppress_clipping_same_type(bitset[13])
         {
         }
 
@@ -316,7 +327,11 @@ private:
     }
 
 public:
-    explicit gamedef_q1_like_t(const char *base_dir = "ID1") : gamedef_t(base_dir) { this->id = ID; }
+    explicit gamedef_q1_like_t(const char *base_dir = "ID1")
+        : gamedef_t(base_dir)
+    {
+        this->id = ID;
+    }
 
     bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
 
@@ -840,7 +855,10 @@ public:
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 {
-    gamedef_h2_t() : gamedef_q1_like_t("DATA1") { }
+    gamedef_h2_t()
+        : gamedef_q1_like_t("DATA1")
+    {
+    }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const override
     {
@@ -893,7 +911,11 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 
 struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 {
-    gamedef_hl_t() : gamedef_q1_like_t("VALVE") { has_rgb_lightmap = true; }
+    gamedef_hl_t()
+        : gamedef_q1_like_t("VALVE")
+    {
+        has_rgb_lightmap = true;
+    }
 
     const std::initializer_list<aabb3d> &get_hull_sizes() const override
     {
@@ -912,7 +934,8 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 
 struct gamedef_q2_t : public gamedef_t
 {
-    gamedef_q2_t() : gamedef_t("BASEQ2")
+    gamedef_q2_t()
+        : gamedef_t("BASEQ2")
     {
         this->id = GAME_QUAKE_II;
         has_rgb_lightmap = true;
@@ -1889,7 +1912,10 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     return s;
 }
 
-gamedef_t::gamedef_t(const char *default_base_dir) : default_base_dir(default_base_dir) { }
+gamedef_t::gamedef_t(const char *default_base_dir)
+    : default_base_dir(default_base_dir)
+{
+}
 
 static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {

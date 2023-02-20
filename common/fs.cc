@@ -87,7 +87,8 @@ struct pak_archive : archive_like
         files;
 
     inline pak_archive(const path &pathname, bool external)
-        : archive_like(pathname, external), pakstream(pathname, std::ios_base::in | std::ios_base::binary)
+        : archive_like(pathname, external),
+          pakstream(pathname, std::ios_base::in | std::ios_base::binary)
     {
         pakstream >> endianness<std::endian::little>;
 
@@ -166,7 +167,8 @@ struct wad_archive : archive_like
         files;
 
     inline wad_archive(const path &pathname, bool external)
-        : archive_like(pathname, external), wadstream(pathname, std::ios_base::in | std::ios_base::binary)
+        : archive_like(pathname, external),
+          wadstream(pathname, std::ios_base::in | std::ios_base::binary)
     {
         wadstream >> endianness<std::endian::little>;
 

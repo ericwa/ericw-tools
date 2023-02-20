@@ -219,7 +219,8 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
 
 // percent_clock
 
-percent_clock::percent_clock(uint64_t i_max) : max(i_max)
+percent_clock::percent_clock(uint64_t i_max)
+    : max(i_max)
 {
     if (max != 0) {
         percent(0, max, displayElapsed);

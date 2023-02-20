@@ -151,8 +151,7 @@ sceneinfo CreateGeometry(
         info.switchableshadow = modelinfo->switchableshadow.boolValue();
         info.switchshadstyle = modelinfo->switchshadstyle.value();
 
-        info.channelmask = extended_flags.object_channel_mask.value_or(
-            modelinfo->object_channel_mask.value());
+        info.channelmask = extended_flags.object_channel_mask.value_or(modelinfo->object_channel_mask.value());
 
         info.alpha = Face_Alpha(bsp, modelinfo, face);
 
@@ -715,7 +714,9 @@ static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIn
 }
 
 ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_)
-    : raystream(raystream_), self(self_), shadowmask(shadowmask_)
+    : raystream(raystream_),
+      self(self_),
+      shadowmask(shadowmask_)
 {
     rtcInitIntersectContext(this);
 

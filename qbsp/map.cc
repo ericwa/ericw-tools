@@ -46,7 +46,10 @@
 
 mapdata_t map;
 
-mapplane_t::mapplane_t(const qbsp_plane_t &copy) : qbsp_plane_t(copy) { }
+mapplane_t::mapplane_t(const qbsp_plane_t &copy)
+    : qbsp_plane_t(copy)
+{
+}
 
 struct planehash_t
 {
@@ -60,7 +63,11 @@ struct vertexhash_t
     pareto::spatial_map<vec_t, 3, size_t> hash;
 };
 
-mapdata_t::mapdata_t() : plane_hash(std::make_unique<planehash_t>()), hashverts(std::make_unique<vertexhash_t>()) { }
+mapdata_t::mapdata_t()
+    : plane_hash(std::make_unique<planehash_t>()),
+      hashverts(std::make_unique<vertexhash_t>())
+{
+}
 
 // add the specified plane to the list
 size_t mapdata_t::add_plane(const qplane3d &plane)

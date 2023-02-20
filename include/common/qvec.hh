@@ -50,7 +50,8 @@ public:
 #endif
     template<typename... Args,
         typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
-    constexpr qvec(Args... a) : v({})
+    constexpr qvec(Args... a)
+        : v({})
     {
         constexpr size_t count = sizeof...(Args);
 
@@ -749,11 +750,16 @@ public:
     T dist;
 
     constexpr qplane3() = default;
-    constexpr qplane3(const qvec<T, 3> &normal, const T &dist) : normal(normal), dist(dist) { }
+    constexpr qplane3(const qvec<T, 3> &normal, const T &dist)
+        : normal(normal),
+          dist(dist)
+    {
+    }
 
     // convert from plane of a different type
     template<typename T2>
-    constexpr qplane3(const qplane3<T2> &plane) : qplane3(plane.normal, static_cast<T2>(plane.dist))
+    constexpr qplane3(const qplane3<T2> &plane)
+        : qplane3(plane.normal, static_cast<T2>(plane.dist))
     {
     }
 
@@ -830,7 +836,8 @@ public:
     /**
      * Identity matrix if square, otherwise fill with 0
      */
-    constexpr qmat() : m_values({})
+    constexpr qmat()
+        : m_values({})
     {
         if constexpr (NRow == NCol) {
             // identity matrix
@@ -846,7 +853,10 @@ public:
     inline qmat(const T &val) { m_values.fill(val); }
 
     // copy constructor
-    constexpr qmat(const qmat &other) : m_values(other.m_values) { }
+    constexpr qmat(const qmat &other)
+        : m_values(other.m_values)
+    {
+    }
 
     /**
      * Casting from another matrix type of the same size

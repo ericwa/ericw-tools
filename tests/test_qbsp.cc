@@ -1565,7 +1565,7 @@ TEST_CASE("q1_hull1_content_types" * doctest::test_suite("testmaps_q1"))
         {{256, 0, 0}, {CONTENTS_SKY, new_leaf, CONTENTS_SOLID}}, // sky is solid in hull1
         {{320, 0, 0}, {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}}, // func_detail is solid in hull1
         {{384, 0, 0}, {CONTENTS_SOLID, new_leaf, CONTENTS_SOLID}}, // func_detail_fence is solid in hull1. uses a new
-                                                                   // leaf in hull0 because it can be seen through
+        // leaf in hull0 because it can be seen through
         {{384, -64, 0},
             {CONTENTS_SOLID, new_leaf, CONTENTS_SOLID}}, // func_detail_fence + _mirrorinside is solid in hull1
         {{448, 0, 0}, {CONTENTS_EMPTY, new_leaf, CONTENTS_EMPTY}}, // func_detail_illusionary is empty in hull1

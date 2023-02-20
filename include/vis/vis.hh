@@ -44,7 +44,10 @@ struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<
     qvec3d origin; // Bounding sphere for fast clipping tests
     vec_t radius; // Not updated, so won't shrink when clipping
 
-    inline viswinding_t() : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>() { }
+    inline viswinding_t()
+        : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>()
+    {
+    }
 
     // construct winding from range.
     // iterators must have operator+ and operator-.
@@ -67,7 +70,9 @@ struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<
 
     // move constructor
     inline viswinding_t(viswinding_t &&move) noexcept
-        : winding_base_t(std::move(move)), origin(move.origin), radius(move.radius)
+        : winding_base_t(std::move(move)),
+          origin(move.origin),
+          radius(move.radius)
     {
     }
 

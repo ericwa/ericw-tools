@@ -236,28 +236,32 @@ membuf::int_type membuf::underflow()
 
 // memstream
 memstream::memstream(void *base, size_t size, std::ios_base::openmode which)
-    : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this)), std::istream(
-                                                                                        static_cast<std::streambuf *>(
-                                                                                            this))
+    : membuf(base, size, which),
+      std::ostream(static_cast<std::streambuf *>(this)),
+      std::istream(static_cast<std::streambuf *>(this))
 {
 }
 
 memstream::memstream(const void *base, size_t size, std::ios_base::openmode which)
-    : membuf(base, size, which), std::ostream(nullptr), std::istream(static_cast<std::streambuf *>(this))
+    : membuf(base, size, which),
+      std::ostream(nullptr),
+      std::istream(static_cast<std::streambuf *>(this))
 {
 }
 
 // omemstream
 
 omemstream::omemstream(void *base, size_t size, std::ios_base::openmode which)
-    : membuf(base, size, which), std::ostream(static_cast<std::streambuf *>(this))
+    : membuf(base, size, which),
+      std::ostream(static_cast<std::streambuf *>(this))
 {
 }
 
 // imemstream
 
 imemstream::imemstream(const void *base, size_t size, std::ios_base::openmode which)
-    : membuf(base, size, which), std::istream(static_cast<std::streambuf *>(this))
+    : membuf(base, size, which),
+      std::istream(static_cast<std::streambuf *>(this))
 {
 }
 
@@ -320,7 +324,8 @@ omemsizebuf::int_type omemsizebuf::overflow(int_type ch)
 // omemsizestream
 
 omemsizestream::omemsizestream(std::ios_base::openmode which)
-    : omemsizebuf(which), std::ostream(static_cast<std::streambuf *>(this))
+    : omemsizebuf(which),
+      std::ostream(static_cast<std::streambuf *>(this))
 {
 }
 

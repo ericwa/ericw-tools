@@ -25,7 +25,10 @@
 namespace settings
 {
 // parse_exception
-parse_exception::parse_exception(std::string str) : _what(std::move(str)) { }
+parse_exception::parse_exception(std::string str)
+    : _what(std::move(str))
+{
+}
 
 const char *parse_exception::what() const noexcept
 {
@@ -34,16 +37,30 @@ const char *parse_exception::what() const noexcept
 
 // nameset
 
-nameset::nameset(const char *str) : vector<std::string>({str}) { }
-nameset::nameset(const std::string &str) : vector<std::string>({str}) { }
-nameset::nameset(const std::initializer_list<const char *> &strs) : vector(strs.begin(), strs.end()) { }
-nameset::nameset(const std::initializer_list<std::string> &strs) : vector(strs) { }
+nameset::nameset(const char *str)
+    : vector<std::string>({str})
+{
+}
+nameset::nameset(const std::string &str)
+    : vector<std::string>({str})
+{
+}
+nameset::nameset(const std::initializer_list<const char *> &strs)
+    : vector(strs.begin(), strs.end())
+{
+}
+nameset::nameset(const std::initializer_list<std::string> &strs)
+    : vector(strs)
+{
+}
 
 // setting_base
 
 setting_base::setting_base(
     setting_container *dictionary, const nameset &names, const setting_group *group, const char *description)
-    : _names(names), _group(group), _description(description)
+    : _names(names),
+      _group(group),
+      _description(description)
 {
     Q_assert(_names.size() > 0);
 
@@ -65,7 +82,8 @@ bool setting_base::changeSource(source newSource)
 
 setting_func::setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
     const setting_group *group, const char *description)
-    : setting_base(dictionary, names, group, description), _func(func)
+    : setting_base(dictionary, names, group, description),
+      _func(func)
 {
 }
 
@@ -167,7 +185,8 @@ bool setting_invertible_bool::parse(const std::string &settingName, parser_base_
 
 setting_redirect::setting_redirect(setting_container *dictionary, const nameset &names,
     const std::initializer_list<setting_base *> &settings, const setting_group *group, const char *description)
-    : setting_base(dictionary, names, group, description), _settings(settings)
+    : setting_base(dictionary, names, group, description),
+      _settings(settings)
 {
 }
 
@@ -242,7 +261,8 @@ const char *setting_base::sourceString() const
 
 setting_string::setting_string(setting_container *dictionary, const nameset &names, std::string v,
     const std::string_view &format, const setting_group *group, const char *description)
-    : setting_value(dictionary, names, v, group, description), _format(format)
+    : setting_value(dictionary, names, v, group, description),
+      _format(format)
 {
 }
 
@@ -299,7 +319,8 @@ std::string setting_path::format() const
 
 setting_set::setting_set(setting_container *dictionary, const nameset &names, const std::string_view &format,
     const setting_group *group, const char *description)
-    : setting_base(dictionary, names, group, description), _format(format)
+    : setting_base(dictionary, names, group, description),
+      _format(format)
 {
 }
 
@@ -618,9 +639,8 @@ common_settings::common_settings()
       lowpriority{this, "lowpriority", true, &performance_group,
           "run in a lower priority, to free up headroom for other processes"},
       log{this, "log", true, &logging_group, "whether log files are written or not"},
-      verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"}, nopercent{this, "nopercent", false,
-                                                                                    &logging_group,
-                                                                                    "don't output percentage messages"},
+      verbose{this, {"verbose", "v"}, false, &logging_group, "verbose output"},
+      nopercent{this, "nopercent", false, &logging_group, "don't output percentage messages"},
       nostat{this, "nostat", false, &logging_group, "don't output statistic messages"},
       noprogress{this, "noprogress", false, &logging_group, "don't output progress messages"},
       nocolor{this, "nocolor", false, &logging_group, "don't output color codes (for TB, etc)"},
