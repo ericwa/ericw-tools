@@ -476,6 +476,21 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
     }
 
     {
+        INFO("_object_channel_mask 8 bmodel doesn't occlude luxels of a (channel 1) worldspawn brush touching it");
+
+        auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1290, 1264, 1014});
+        REQUIRE(face);
+
+        INFO("should be receiving orange light from surface light");
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            qvec3i delta = qv::abs(qvec3i(sample) - qvec3i{255, 127, 64});
+            CHECK(delta[0] <= 2);
+            CHECK(delta[1] <= 2);
+            CHECK(delta[2] <= 2);
+        });
+    }
+
+    {
         INFO("check that _object_channel_mask 8 func_group receives _light_channel_mask 8");
 
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1480, 1248, 1004});

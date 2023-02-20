@@ -289,15 +289,21 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 /// 3. the `self` model (regardless of whether it's selfshadowing)
 ///
 /// This is used for marking sample points as occluded.
-bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, const qvec3d &point)
+static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, const qvec3d &point)
 {
     if (Light_PointInSolid(bsp, self, point))
         return true;
 
-    if (Light_PointInWorld(bsp, point))
-        return true;
+    auto *self_modelinfo = ModelInfoForModel(bsp, self - bsp->dmodels.data());
+    if (self_modelinfo->object_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
+        if (Light_PointInWorld(bsp, point))
+            return true;
+    }
 
     for (const auto &modelinfo : tracelist) {
+        if (modelinfo->object_channel_mask.value() != self_modelinfo->object_channel_mask.value())
+            continue;
+        
         if (Light_PointInSolid(bsp, modelinfo->model, point)) {
             // Only mark occluded if the bmodel is fully opaque
             if (modelinfo->alpha.value() == 1.0f)

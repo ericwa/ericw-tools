@@ -1047,7 +1047,9 @@ std::tuple<qvec3d, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, 
 void FixLightsOnFaces(const mbsp_t *bsp)
 {
     for (auto &entity : all_lights) {
-        if (entity->light.value() != 0 && !entity->nonudge.value()) {
+        if (entity->light.value() != 0 && !entity->nonudge.value() &&
+            entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
+            entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
             auto [fixed_pos, success] = FixLightOnFace(bsp, entity->origin.value());
             entity->origin.setValue(fixed_pos, settings::source::MAP);
         }
