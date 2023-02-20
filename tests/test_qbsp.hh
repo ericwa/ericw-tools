@@ -27,3 +27,27 @@ int CountClipnodeNodes(const mbsp_t &bsp, int hullnum);
 bool PortalMatcher(const prtfile_winding_t &a, const prtfile_winding_t &b);
 std::map<int, int> CountClipnodeLeafsByContentType(const mbsp_t &bsp, int hullnum);
 int CountClipnodeNodes(const mbsp_t &bsp, int hullnum);
+
+struct testresults_t
+{
+    mbsp_t bsp;
+    bspxentries_t bspx;
+};
+
+struct testresults_lit_t
+{
+    mbsp_t bsp;
+    bspxentries_t bspx;
+    std::vector<uint8_t> lit;
+};
+
+enum class runvis_t
+{
+    no,
+    yes
+};
+
+testresults_lit_t QbspVisLight_Q1(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);
+testresults_t QbspVisLight_Q2(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);

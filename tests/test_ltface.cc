@@ -7,25 +7,6 @@
 #include <vis/vis.hh>
 #include "test_qbsp.hh"
 
-struct testresults_t
-{
-    mbsp_t bsp;
-    bspxentries_t bspx;
-};
-
-struct testresults_lit_t
-{
-    mbsp_t bsp;
-    bspxentries_t bspx;
-    std::vector<uint8_t> lit;
-};
-
-enum class runvis_t
-{
-    no,
-    yes
-};
-
 static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
     std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
@@ -91,8 +72,8 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
     }
 }
 
-static testresults_lit_t QbspVisLight_Q1(
-    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no)
+testresults_lit_t QbspVisLight_Q1(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
     auto res = QbspVisLight_Common(name, {}, extra_light_args, run_vis);
 
@@ -105,8 +86,8 @@ static testresults_lit_t QbspVisLight_Q1(
     return testresults_lit_t{.bsp = res.bsp, .bspx = res.bspx, .lit = litdata};
 }
 
-static testresults_t QbspVisLight_Q2(
-    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no)
+testresults_t QbspVisLight_Q2(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
     return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
 }
