@@ -686,75 +686,90 @@ TEST_CASE("q2_tb_cleanup" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_wall.map");
+    // q2_detail_wall_with_detail_bit.map has the DETAIL content flag set on the
+    // brushes inside the func_detail_wall. the func_detail_wall should take priority.
+    const std::vector<std::string> maps{"q2_detail_wall.map", "q2_detail_wall_with_detail_bit.map"};
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    for (const auto &mapname : maps) {
+        SUBCASE(mapname.c_str()) {
+            const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
 
-    const auto deleted_face_pos = qvec3d{320, 384, 96};
-    const auto in_detail_wall = qvec3d{320, 384, 100};
+            CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
-    auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_detail_wall);
+            const auto deleted_face_pos = qvec3d{320, 384, 96};
+            const auto in_detail_wall = qvec3d{320, 384, 100};
 
-    {
-        INFO("check leaf / brush contents");
+            auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_detail_wall);
 
-        CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
-        CHECK(Q2_CONTENTS_SOLID == detail_wall_leaf->contents);
+            {
+                INFO("check leaf / brush contents");
 
-        REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
-        auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
+                CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
+                CHECK(Q2_CONTENTS_SOLID == detail_wall_leaf->contents);
 
-        CAPTURE(contentflags_t{brush->contents}.to_string(bsp.loadversion->game));
-        CHECK(Q2_CONTENTS_SOLID == brush->contents);
-    }
+                REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
+                auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
 
-    {
-        INFO("check fully covered face is deleted");
-        CHECK(!BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], deleted_face_pos));
-    }
+                CAPTURE(contentflags_t{brush->contents}.to_string(bsp.loadversion->game));
+                CHECK(Q2_CONTENTS_SOLID == brush->contents);
+            }
 
-    {
-        INFO("check floor under detail fence is not deleted, and not split");
+            {
+                INFO("check fully covered face is deleted");
+                CHECK(!BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], deleted_face_pos));
+            }
 
-        auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
-        auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
+            {
+                INFO("check floor under detail fence is not deleted, and not split");
 
-        CHECK(face_under_fence);
-        CHECK(face_under_fence == face_outside_fence);
+                auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
+                auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
+
+                CHECK(face_under_fence);
+                CHECK(face_under_fence == face_outside_fence);
+            }
+        }
     }
 }
 
 TEST_CASE("q2_detail_fence" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_fence.map");
+    const std::vector<std::string> maps{"q2_detail_fence.map", "q2_detail_fence_with_detail_bit.map"};
 
-    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+    for (const auto &mapname : maps) {
+        SUBCASE(mapname.c_str())
+        {
+            const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
 
-    auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 100});
+            CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
-    {
-        INFO("check leaf / brush contents");
-        CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
+            auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 100});
 
-        CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) == detail_wall_leaf->contents);
+            {
+                INFO("check leaf / brush contents");
+                CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
 
-        REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
-        CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) ==
-              Leaf_Brushes(&bsp, detail_wall_leaf).at(0)->contents);
-    }
+                CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) == detail_wall_leaf->contents);
 
-    {
-        INFO("check fully covered face is not deleted");
-        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 96}));
-    }
+                REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
+                CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) ==
+                      Leaf_Brushes(&bsp, detail_wall_leaf).at(0)->contents);
+            }
 
-    {
-        INFO("check floor under detail fence is not deleted, and not split");
+            {
+                INFO("check fully covered face is not deleted");
+                CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 96}));
+            }
 
-        auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
-        auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
+            {
+                INFO("check floor under detail fence is not deleted, and not split");
 
-        CHECK(face_under_fence);
-        CHECK(face_under_fence == face_outside_fence);
+                auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
+                auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
+
+                CHECK(face_under_fence);
+                CHECK(face_under_fence == face_outside_fence);
+            }
+        }
     }
 }
