@@ -684,7 +684,7 @@ TEST_CASE("q2_tb_cleanup" * doctest::test_suite("testmaps_q2"))
     }
 }
 
-TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_wall.map");
 

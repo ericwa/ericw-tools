@@ -133,7 +133,10 @@ enum q2_contents_t : int32_t
     Q2_CONTENTS_DEADMONSTER = nth_bit(26),
     Q2_CONTENTS_DETAIL = nth_bit(27), // brushes to be added after vis leafs
     Q2_CONTENTS_TRANSLUCENT = nth_bit(28), // auto set if any surface has trans
-    Q2_CONTENTS_LADDER = nth_bit(29)
+    Q2_CONTENTS_LADDER = nth_bit(29),
+
+    // HACK: using Q2_CONTENTS_MONSTER for func_detail_wall
+    Q2_ALL_VISIBLE_CONTENTS_PLUS_MONSTER = Q2_ALL_VISIBLE_CONTENTS | Q2_CONTENTS_MONSTER,
 };
 
 struct q2_dnode_t

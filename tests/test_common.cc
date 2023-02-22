@@ -54,7 +54,7 @@ TEST_SUITE("common")
         }
     }
 
-    TEST_CASE("shared content flag tests" * doctest::may_fail())
+    TEST_CASE("shared content flag tests")
     {
         for (auto *bspver : bspversions) {
             auto *game = bspver->game;

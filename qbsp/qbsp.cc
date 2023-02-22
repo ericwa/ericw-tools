@@ -816,7 +816,9 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
                         b->mapbrush->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
 
                         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
-                            dbrush_t{static_cast<int32_t>(map.bsp.dbrushsides.size()), 0, b->contents.native});
+                            dbrush_t{.firstside = static_cast<int32_t>(map.bsp.dbrushsides.size()),
+                                .numsides = 0,
+                                .contents = qbsp_options.target_game->contents_remap_for_export(b->contents).native});
 
                         for (auto &side : b->mapbrush->faces) {
                             map.bsp.dbrushsides.push_back(

@@ -1005,9 +1005,10 @@ struct gamedef_q2_t : public gamedef_t
 
     inline int32_t get_content_type(const contentflags_t &contents) const
     {
-        return contents.native &
-               (Q2_ALL_VISIBLE_CONTENTS | (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
-                                              Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
+        // HACK: Q2_CONTENTS_MONSTER is only here for func_detail_wall
+        return contents.native & (Q2_ALL_VISIBLE_CONTENTS_PLUS_MONSTER |
+                                     (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_ORIGIN |
+                                         Q2_CONTENTS_TRANSLUCENT | Q2_CONTENTS_AREAPORTAL));
     }
 
     contentflags_t create_empty_contents() const override { return {Q2_CONTENTS_EMPTY}; }
@@ -1033,8 +1034,9 @@ struct gamedef_q2_t : public gamedef_t
     contentflags_t create_detail_wall_contents(const contentflags_t &original) const override
     {
         contentflags_t result = original;
-        result.native |= (Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL);
-        // FIXME: figure out how to implement this in q2 mode
+        // HACK: borrowing Q2_CONTENTS_MONSTER as a compiler internal flag
+        result.native &= ~Q2_CONTENTS_SOLID;
+        result.native |= (Q2_CONTENTS_MONSTER | Q2_CONTENTS_DETAIL);
         return result;
     }
 
@@ -1081,7 +1083,7 @@ struct gamedef_q2_t : public gamedef_t
             return false;
         }
 
-        int32_t test = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW);
+        int32_t test = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_MONSTER);
         return ((contents.native & test) == test);
     }
 
@@ -1132,7 +1134,8 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const override
     {
-        return (self.native & Q2_ALL_VISIBLE_CONTENTS) == (other.native & Q2_ALL_VISIBLE_CONTENTS) &&
+        return (self.native & Q2_ALL_VISIBLE_CONTENTS_PLUS_MONSTER) ==
+                   (other.native & Q2_ALL_VISIBLE_CONTENTS_PLUS_MONSTER) &&
                self.clips_same_type.value_or(true);
     }
 
@@ -1170,7 +1173,7 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_valid(const contentflags_t &contents, bool strict) const override
     {
         // check that we don't have more than one visible contents type
-        const int32_t x = contents.native & Q2_ALL_VISIBLE_CONTENTS;
+        const int32_t x = contents.native & Q2_ALL_VISIBLE_CONTENTS_PLUS_MONSTER;
 
         // TODO: check other invalid mixes
         if (!x && strict) {
@@ -1201,7 +1204,16 @@ struct gamedef_q2_t : public gamedef_t
      */
     constexpr int32_t visible_contents(const int32_t &contents) const
     {
-        for (int32_t i = 1; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
+        // HACK: func_detail_wall (Q2_CONTENTS_MONSTER) fits between Q2_CONTENTS_SOLID and
+        // Q2_CONTENTS_WINDOW
+
+        if (contents & Q2_CONTENTS_SOLID)
+            return Q2_CONTENTS_SOLID;
+
+        if (contents & Q2_CONTENTS_MONSTER)
+            return Q2_CONTENTS_MONSTER;
+
+        for (int32_t i = Q2_CONTENTS_WINDOW; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
             if (contents & i) {
                 return i;
             }
@@ -1255,7 +1267,15 @@ struct gamedef_q2_t : public gamedef_t
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
-    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override { return contents; }
+    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override
+    {
+        // HACK: borrowing Q2_CONTENTS_MONSTER for func_detail_wall
+        if (contents.native & Q2_CONTENTS_MONSTER) {
+            return {Q2_CONTENTS_SOLID};
+        }
+
+        return contents;
+    }
 
     contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
     {

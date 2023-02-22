@@ -56,6 +56,11 @@ static bool ShouldOmitFace(face_t *f)
         return true;
     }
 
+    // omit faces fully covered by detail wall
+    if (f->contents.is_detail_wall(qbsp_options.target_game)) {
+        return true;
+    }
+
     return false;
 }
 
