@@ -691,11 +691,12 @@ TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2"))
     const std::vector<std::string> maps{"q2_detail_wall.map", "q2_detail_wall_with_detail_bit.map"};
 
     for (const auto &mapname : maps) {
-        SUBCASE(mapname.c_str()) {
+        SUBCASE(mapname.c_str())
+        {
             const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
             auto *game = bsp.loadversion->game;
 
-            CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+            CHECK(GAME_QUAKE_II == game->id);
 
             const auto deleted_face_pos = qvec3d{320, 384, 96};
             const auto in_detail_wall = qvec3d{320, 384, 100};
@@ -741,16 +742,18 @@ TEST_CASE("q2_detail_fence" * doctest::test_suite("testmaps_q2"))
         SUBCASE(mapname.c_str())
         {
             const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
+            auto *game = bsp.loadversion->game;
 
-            CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+            CHECK(GAME_QUAKE_II == game->id);
 
             auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 100});
 
             {
                 INFO("check leaf / brush contents");
-                CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
+                CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(game));
 
-                CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) == detail_wall_leaf->contents);
+                CHECK(
+                    (Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) == detail_wall_leaf->contents);
 
                 REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
                 CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) ==
