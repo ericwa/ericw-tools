@@ -693,6 +693,7 @@ TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2"))
     for (const auto &mapname : maps) {
         SUBCASE(mapname.c_str()) {
             const auto [bsp, bspx, prt] = LoadTestmapQ2(mapname);
+            auto *game = bsp.loadversion->game;
 
             CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -704,13 +705,13 @@ TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2"))
             {
                 INFO("check leaf / brush contents");
 
-                CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
+                CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(game));
                 CHECK(Q2_CONTENTS_SOLID == detail_wall_leaf->contents);
 
                 REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
                 auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
 
-                CAPTURE(contentflags_t{brush->contents}.to_string(bsp.loadversion->game));
+                CAPTURE(contentflags_t{brush->contents}.to_string(game));
                 CHECK(Q2_CONTENTS_SOLID == brush->contents);
             }
 
