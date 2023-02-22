@@ -683,3 +683,78 @@ TEST_CASE("q2_tb_cleanup" * doctest::test_suite("testmaps_q2"))
         CHECK(entdict_t{{"classname", "worldspawn"}} == ents[0]);
     }
 }
+
+TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_wall.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const auto deleted_face_pos = qvec3d{320, 384, 96};
+    const auto in_detail_wall = qvec3d{320, 384, 100};
+
+    auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_detail_wall);
+
+    {
+        INFO("check leaf / brush contents");
+
+        CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
+        CHECK(Q2_CONTENTS_SOLID == detail_wall_leaf->contents);
+
+        REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
+        auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
+
+        CAPTURE(contentflags_t{brush->contents}.to_string(bsp.loadversion->game));
+        CHECK(Q2_CONTENTS_SOLID == brush->contents);
+    }
+
+    {
+        INFO("check fully covered face is deleted");
+        CHECK(!BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], deleted_face_pos));
+    }
+
+    {
+        INFO("check floor under detail fence is not deleted, and not split");
+
+        auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
+        auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
+
+        CHECK(face_under_fence);
+        CHECK(face_under_fence == face_outside_fence);
+    }
+}
+
+TEST_CASE("q2_detail_fence" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_fence.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    auto *detail_wall_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 100});
+
+    {
+        INFO("check leaf / brush contents");
+        CAPTURE(contentflags_t{detail_wall_leaf->contents}.to_string(bsp.loadversion->game));
+
+        CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) == detail_wall_leaf->contents);
+
+        REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
+        CHECK((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT) ==
+              Leaf_Brushes(&bsp, detail_wall_leaf).at(0)->contents);
+    }
+
+    {
+        INFO("check fully covered face is not deleted");
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 384, 96}));
+    }
+
+    {
+        INFO("check floor under detail fence is not deleted, and not split");
+
+        auto *face_under_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 348, 96});
+        auto *face_outside_fence = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d{320, 312, 96});
+
+        CHECK(face_under_fence);
+        CHECK(face_under_fence == face_outside_fence);
+    }
+}

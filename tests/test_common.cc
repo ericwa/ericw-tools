@@ -69,17 +69,74 @@ TEST_SUITE("common")
                 const auto detail_fence = game->create_detail_fence_contents(solid);
                 const auto detail_illusionary = game->create_detail_illusionary_contents(solid);
 
-                SUBCASE("detail properties")
+                CAPTURE(solid.to_string(game));
+                CAPTURE(detail_solid.to_string(game));
+                CAPTURE(detail_wall.to_string(game));
+                CAPTURE(detail_fence.to_string(game));
+                CAPTURE(detail_illusionary.to_string(game));
+
+                SUBCASE("is_empty")
                 {
+                    CHECK(game->create_empty_contents().is_empty(game));
+                    CHECK(!solid.is_empty(game));
+                    CHECK(!detail_solid.is_empty(game));
+                    CHECK(!detail_wall.is_empty(game));
+                    CHECK(!detail_fence.is_empty(game));
+                    CHECK(!detail_illusionary.is_empty(game));
+                }
+
+                SUBCASE("is_any_detail")
+                {
+                    CHECK(!solid.is_any_detail(game));
                     CHECK(detail_solid.is_any_detail(game));
                     CHECK(detail_wall.is_any_detail(game));
                     CHECK(detail_fence.is_any_detail(game));
                     CHECK(detail_illusionary.is_any_detail(game));
+                }
 
+                SUBCASE("is_any_solid")
+                {
+                    CHECK(solid.is_any_solid(game));
                     CHECK(detail_solid.is_any_solid(game));
                     CHECK(!detail_wall.is_any_solid(game));
                     CHECK(!detail_fence.is_any_solid(game));
                     CHECK(!detail_illusionary.is_any_solid(game));
+                }
+
+                SUBCASE("is_detail_solid")
+                {
+                    CHECK(!solid.is_detail_solid(game));
+                    CHECK(detail_solid.is_detail_solid(game));
+                    CHECK(!detail_wall.is_detail_solid(game));
+                    CHECK(!detail_fence.is_detail_solid(game));
+                    CHECK(!detail_illusionary.is_detail_solid(game));
+                }
+
+                SUBCASE("is_detail_wall")
+                {
+                    CHECK(!solid.is_detail_wall(game));
+                    CHECK(!detail_solid.is_detail_wall(game));
+                    CHECK(detail_wall.is_detail_wall(game));
+                    CHECK(!detail_fence.is_detail_wall(game));
+                    CHECK(!detail_illusionary.is_detail_wall(game));
+                }
+
+                SUBCASE("is_detail_fence")
+                {
+                    CHECK(!solid.is_detail_fence(game));
+                    CHECK(!detail_solid.is_detail_fence(game));
+                    CHECK(!detail_wall.is_detail_fence(game));
+                    CHECK(detail_fence.is_detail_fence(game));
+                    CHECK(!detail_illusionary.is_detail_fence(game));
+                }
+
+                SUBCASE("is_detail_illusionary")
+                {
+                    CHECK(!solid.is_detail_illusionary(game));
+                    CHECK(!detail_solid.is_detail_illusionary(game));
+                    CHECK(!detail_wall.is_detail_illusionary(game));
+                    CHECK(!detail_fence.is_detail_illusionary(game));
+                    CHECK(detail_illusionary.is_detail_illusionary(game));
                 }
             }
         }
