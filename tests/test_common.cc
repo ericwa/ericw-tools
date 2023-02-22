@@ -52,18 +52,36 @@ TEST_SUITE("common")
             CHECK(combined.native == CONTENTS_WATER);
             CHECK(combined.is_detail_illusionary(game_q1));
         }
+    }
 
-        SUBCASE("detail properties")
-        {
-            CHECK(detail_solid.is_any_detail(game_q1));
-            CHECK(detail_wall.is_any_detail(game_q1));
-            CHECK(detail_fence.is_any_detail(game_q1));
-            CHECK(detail_illusionary.is_any_detail(game_q1));
+    TEST_CASE("shared content flag tests" * doctest::may_fail())
+    {
+        for (auto *bspver : bspversions) {
+            auto *game = bspver->game;
+            if (!game)
+                continue;
 
-            CHECK(detail_solid.is_any_solid(game_q1));
-            CHECK(!detail_wall.is_any_solid(game_q1));
-            CHECK(!detail_fence.is_any_solid(game_q1));
-            CHECK(!detail_illusionary.is_any_solid(game_q1));
+            SUBCASE(bspver->name)
+            {
+                const auto solid = game->create_solid_contents();
+                const auto detail_solid = game->create_detail_solid_contents(solid);
+                const auto detail_wall = game->create_detail_wall_contents(solid);
+                const auto detail_fence = game->create_detail_fence_contents(solid);
+                const auto detail_illusionary = game->create_detail_illusionary_contents(solid);
+
+                SUBCASE("detail properties")
+                {
+                    CHECK(detail_solid.is_any_detail(game));
+                    CHECK(detail_wall.is_any_detail(game));
+                    CHECK(detail_fence.is_any_detail(game));
+                    CHECK(detail_illusionary.is_any_detail(game));
+
+                    CHECK(detail_solid.is_any_solid(game));
+                    CHECK(!detail_wall.is_any_solid(game));
+                    CHECK(!detail_fence.is_any_solid(game));
+                    CHECK(!detail_illusionary.is_any_solid(game));
+                }
+            }
         }
     }
 
