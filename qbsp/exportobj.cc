@@ -121,7 +121,7 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
 
     int vertcount = 0;
     for (const face_t *face : faces) {
-        std::string mtlname = fmt::format("contents{}\n", face->contents.native);
+        std::string mtlname = fmt::format("contents{}\n", face->contents.back.native);
 
         ExportObjFace(objfile, mtlname, face->w, face->get_texinfo(), &vertcount);
     }

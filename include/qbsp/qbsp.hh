@@ -302,7 +302,7 @@ struct face_t
 {
     size_t planenum;
     int texinfo;
-    contentflags_t contents; // contents on the front of the face
+    twosided<contentflags_t> contents; // contents on the front/back of the face
     winding_t w;
     std::vector<size_t> original_vertices; // the vertices of this face before fragmentation; filled in by EmitVertices
     std::vector<face_fragment_t> fragments; // the vertices of this face post-fragmentation; filled in by TJunc

@@ -52,12 +52,12 @@ static bool ShouldOmitFace(face_t *f)
         return true;
 
     // HACK: to save a few faces, don't output the interior faces of sky brushes
-    if (f->contents.is_sky(qbsp_options.target_game)) {
+    if (f->contents.front.is_sky(qbsp_options.target_game)) {
         return true;
     }
 
     // omit faces fully covered by detail wall
-    if (f->contents.is_detail_wall(qbsp_options.target_game)) {
+    if (f->contents.front.is_detail_wall(qbsp_options.target_game)) {
         return true;
     }
 
@@ -138,7 +138,7 @@ Returns a global edge number, possibly negative to indicate a backwards edge.
 */
 inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, emit_faces_stats_t &stats)
 {
-    if (!face->contents.is_valid(qbsp_options.target_game, false))
+    if (!face->contents.front.is_valid(qbsp_options.target_game, false))
         FError("Face with invalid contents");
 
     // search for existing edges
@@ -495,7 +495,7 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
         f->w = p->winding.clone();
     }
 
-    f->contents = p->nodes[pside]->contents;
+    f->contents = {.front = p->nodes[pside]->contents, .back = p->nodes[!pside]->contents};
 
     UpdateFaceSphere(f.get());
 
