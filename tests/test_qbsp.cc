@@ -1121,7 +1121,7 @@ TEST_CASE("features" * doctest::test_suite("testmaps_q1"))
     CHECK(bsp.loadversion == &bspver_q1);
 }
 
-TEST_CASE("q1_detail_wall tjuncs" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
+TEST_CASE("q1_detail_wall tjuncs" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_wall.map");
 
@@ -1134,7 +1134,7 @@ TEST_CASE("q1_detail_wall tjuncs" * doctest::test_suite("testmaps_q1") * doctest
 
     INFO("func_detail_wall should not generate extra tjunctions on structural faces");
     auto w = Face_Winding(&bsp, face);
-    CHECK(w.size() == 4);
+    CHECK(w.size() == 5);
 }
 
 bool PortalMatcher(const prtfile_winding_t &a, const prtfile_winding_t &b)

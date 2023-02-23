@@ -138,6 +138,28 @@ static void FindEdgeVerts_BruteForce(
 }
 #endif
 
+/**
+ * This is to prevent func_detail_wall touching solid from creating
+ * tjunc fixes. func_detail_wall is meant to act like a separate mesh,
+ * so it shouldn't interact with solid.
+ */
+static bool HasTJuncInteraction(const face_t *f1, const face_t *f2)
+{
+    // FIXME: handle func_detail_fence, func_detail_illusionary,
+    // liquids? make sure a combination of solid + func_detail_wall
+    // is treated as solid?
+
+    if (f1->contents.back.is_detail_wall(qbsp_options.target_game) &&
+        !f2->contents.back.is_detail_wall(qbsp_options.target_game))
+        return false;
+
+    if (f2->contents.back.is_detail_wall(qbsp_options.target_game) &&
+        !f1->contents.back.is_detail_wall(qbsp_options.target_game))
+        return false;
+
+    return true;
+}
+
 /*
 ==========
 FindEdgeVerts_FaceBounds_R
@@ -146,7 +168,8 @@ Recursive function for matching nodes that intersect the aabb
 for vertex checking.
 ==========
 */
-static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, std::vector<size_t> &verts)
+static void FindEdgeVerts_FaceBounds_R(
+    const node_t *node, const face_t *f, const aabb3d &aabb, std::vector<size_t> &verts)
 {
     if (node->is_leaf) {
         return;
@@ -155,6 +178,8 @@ static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, s
     }
 
     for (auto &face : node->facelist) {
+        if (!HasTJuncInteraction(f, face.get()))
+            continue;
         for (auto &v : face->original_vertices) {
             if (aabb.containsPoint(map.bsp.dvertexes[v])) {
                 verts.push_back(v);
@@ -162,8 +187,8 @@ static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, s
         }
     }
 
-    FindEdgeVerts_FaceBounds_R(node->children[0], aabb, verts);
-    FindEdgeVerts_FaceBounds_R(node->children[1], aabb, verts);
+    FindEdgeVerts_FaceBounds_R(node->children[0], f, aabb, verts);
+    FindEdgeVerts_FaceBounds_R(node->children[1], f, aabb, verts);
 }
 
 /*
@@ -171,15 +196,18 @@ static void FindEdgeVerts_FaceBounds_R(const node_t *node, const aabb3d &aabb, s
 FindEdgeVerts_FaceBounds
 
 Use a loose AABB around the line and only capture vertices that intersect it.
+
+f is the face we're fixing; this will affect the candidate other faces
+because not everything has tjunc interactions (e.g. func_detail_wall and worldspawn.)
 ==========
 */
 static void FindEdgeVerts_FaceBounds(
-    const node_t *headnode, const qvec3d &p1, const qvec3d &p2, std::vector<size_t> &verts)
+    const node_t *headnode, const face_t *f, const qvec3d &p1, const qvec3d &p2, std::vector<size_t> &verts)
 {
     // magic number, average of "usual" points per edge
     verts.reserve(8);
 
-    FindEdgeVerts_FaceBounds_R(headnode, (aabb3d{} + p1 + p2).grow(qvec3d(1.0, 1.0, 1.0)), verts);
+    FindEdgeVerts_FaceBounds_R(headnode, f, (aabb3d{} + p1 + p2).grow(qvec3d(1.0, 1.0, 1.0)), verts);
 }
 
 /*
@@ -269,7 +297,7 @@ static std::vector<size_t> CreateSuperFace(node_t *headnode, face_t *f, tjunc_st
         qvec3d e2 = map.bsp.dvertexes[v2];
 
         edge_verts.clear();
-        FindEdgeVerts_FaceBounds(headnode, edge_start, e2, edge_verts);
+        FindEdgeVerts_FaceBounds(headnode, f, edge_start, e2, edge_verts);
 
         vec_t len;
         qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
