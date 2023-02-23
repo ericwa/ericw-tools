@@ -18,7 +18,8 @@
 
     See file, 'COPYING', for details.
 */
-// tjunc.c
+
+#include <qbsp/tjunc.hh>
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/map.hh>
@@ -52,7 +53,7 @@ struct tjunc_stats_t : logging::stat_tracker_t
     stat &faceoverflows = register_stat("faces added by splitting large faces");
 };
 
-inline std::optional<vec_t> PointOnEdge(
+static std::optional<vec_t> PointOnEdge(
     const qvec3d &p, const qvec3d &edge_start, const qvec3d &edge_dir, float start = 0, float end = 1)
 {
     qvec3d delta = p - edge_start;
@@ -83,7 +84,7 @@ TestEdge
 Can be recursively reentered
 ==========
 */
-inline void TestEdge(vec_t start, vec_t end, size_t p1, size_t p2, size_t startvert,
+static void TestEdge(vec_t start, vec_t end, size_t p1, size_t p2, size_t startvert,
     const std::vector<size_t> &edge_verts, const qvec3d &edge_start, const qvec3d &edge_dir,
     std::vector<size_t> &superface, tjunc_stats_t &stats)
 {
@@ -192,7 +193,7 @@ max edge count.
 Modifies `superface`. Adds the results to the end of `output`.
 ==================
 */
-inline void SplitFaceIntoFragments(
+static void SplitFaceIntoFragments(
     std::vector<size_t> &superface, std::list<std::vector<size_t>> &output, tjunc_stats_t &stats)
 {
     const int32_t &maxedges = qbsp_options.maxedges.value();
@@ -217,7 +218,7 @@ inline void SplitFaceIntoFragments(
     output.splice(output.end(), output, output.begin());
 }
 
-float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
+static float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 {
     vec_t num = (b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1]) + (b[2] - a[2]) * (c[2] - a[2]);
     vec_t den = sqrt(pow((b[0] - a[0]), 2) + pow((b[1] - a[1]), 2) + pow((b[2] - a[2]), 2)) *
@@ -229,7 +230,7 @@ float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 // Check whether the given input triangle would be valid
 // on the given face and not have any other points
 // intersecting it.
-inline bool TriangleIsValid(size_t v0, size_t v1, size_t v2, vec_t angle_epsilon)
+static bool TriangleIsValid(size_t v0, size_t v1, size_t v2, vec_t angle_epsilon)
 {
     if (AngleOfTriangle(map.bsp.dvertexes[v0], map.bsp.dvertexes[v1], map.bsp.dvertexes[v2]) < angle_epsilon ||
         AngleOfTriangle(map.bsp.dvertexes[v1], map.bsp.dvertexes[v2], map.bsp.dvertexes[v0]) < angle_epsilon ||
@@ -286,7 +287,7 @@ using qvectri = qvec<size_t, 3>;
 
 // check if the given triangle exists in the set of triangles
 // in any permutation
-std::optional<size_t> triangle_exists(const std::vector<qvectri> &triangles, size_t a, size_t b, size_t c)
+static std::optional<size_t> triangle_exists(const std::vector<qvectri> &triangles, size_t a, size_t b, size_t c)
 {
     for (size_t i = 0; i < triangles.size(); i++) {
         auto &tri = triangles[i];
@@ -303,7 +304,7 @@ std::optional<size_t> triangle_exists(const std::vector<qvectri> &triangles, siz
 
 // find the triangles best suited to create a
 // fan out of in the given set of triangles.
-std::vector<size_t> find_best_fan(const std::vector<qvectri> &triangles, size_t num_vertices)
+static std::vector<size_t> find_best_fan(const std::vector<qvectri> &triangles, size_t num_vertices)
 {
     // find the triangle with the most fannable vertices.
     std::vector<size_t> best_triangles;
@@ -345,7 +346,7 @@ std::vector<size_t> find_best_fan(const std::vector<qvectri> &triangles, size_t 
 
 // find the seed vertex (vertex referenced by the most edges) of
 // the fan.
-size_t find_seed_vertex(const std::vector<qvectri> &triangles, const std::vector<size_t> &fan)
+static size_t find_seed_vertex(const std::vector<qvectri> &triangles, const std::vector<size_t> &fan)
 {
     std::unordered_set<size_t> verts{triangles[fan[0]].begin(), triangles[fan[0]].end()};
 
@@ -444,7 +445,7 @@ static std::list<std::vector<size_t>> compress_triangles_into_fans(
 
 // Function to calculate the weight of optimal triangulation of a convex polygon
 // represented by a given set of vertices
-std::vector<qvectri> minimum_weight_triangulation(
+static std::vector<qvectri> minimum_weight_triangulation(
     const std::vector<size_t> &indices, const std::vector<qvec2d> &vertices)
 {
     // get the number of vertices in the polygon

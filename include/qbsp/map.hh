@@ -314,7 +314,6 @@ qvec3d FixRotateOrigin(mapentity_t &entity);
 /* Create BSP brushes from map brushes */
 void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::container &brushes, size_t &num_clipped);
 
-void TJunc(node_t *headnode);
 size_t EmitFaces(node_t *headnode);
 void EmitVertices(node_t *headnode);
 void ExportClipNodes(mapentity_t &entity, node_t *headnode, hull_index_t::value_type hullnum);

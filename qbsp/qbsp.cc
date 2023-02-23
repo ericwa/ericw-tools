@@ -37,6 +37,7 @@
 #include <qbsp/qbsp.hh>
 #include <qbsp/writebsp.hh>
 #include <qbsp/outside.hh>
+#include <qbsp/tjunc.hh>
 #include <qbsp/tree.hh>
 
 #include <fmt/chrono.h>

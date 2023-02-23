@@ -11,6 +11,7 @@ set(QBSP_INCLUDES
 	${CMAKE_SOURCE_DIR}/include/qbsp/prtfile.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/brushbsp.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/faces.hh
+	${CMAKE_SOURCE_DIR}/include/qbsp/tjunc.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/tree.hh
 	${CMAKE_SOURCE_DIR}/include/qbsp/writebsp.hh)
 
