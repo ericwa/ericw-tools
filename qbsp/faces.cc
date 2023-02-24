@@ -57,7 +57,8 @@ static bool ShouldOmitFace(face_t *f)
     }
 
     // omit faces fully covered by detail wall
-    if (f->contents.front.is_detail_wall(qbsp_options.target_game)) {
+    if (std::all_of(f->markleafs.begin(), f->markleafs.end(),
+            [](auto *l) { return l->contents.is_detail_wall(qbsp_options.target_game); })) {
         return true;
     }
 
@@ -279,6 +280,7 @@ static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, n
 {
     if (node->is_leaf) {
         node->markfaces.push_back(face);
+        face->markleafs.push_back(node);
         return;
     }
 

@@ -297,6 +297,7 @@ struct face_fragment_t
 struct portal_t;
 struct qbsp_plane_t;
 struct mapface_t;
+struct node_t;
 
 struct face_t
 {
@@ -306,6 +307,7 @@ struct face_t
     winding_t w;
     std::vector<size_t> original_vertices; // the vertices of this face before fragmentation; filled in by EmitVertices
     std::vector<face_fragment_t> fragments; // the vertices of this face post-fragmentation; filled in by TJunc
+    std::vector<node_t *> markleafs; // populated at the same time as markfaces; reverse mapping to that
 
     qvec3d origin;
     vec_t radius;
