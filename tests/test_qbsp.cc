@@ -1031,7 +1031,7 @@ TEST_CASE("simple" * doctest::test_suite("testmaps_q1"))
  */
 TEST_CASE("q1_cube")
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_cube.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cube.map");
 
     REQUIRE_FALSE(prt.has_value());
 
@@ -1080,7 +1080,7 @@ TEST_CASE("q1_cube")
  */
 TEST_CASE("q1_cubes" * doctest::test_suite("testmaps_q1"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_cubes.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cubes.map");
 
     // index 0 is reserved, and the first cube has 12 edges, the second can share one edge so only needs 11
     CHECK(bsp.dedges.size() == 24);
@@ -1091,7 +1091,7 @@ TEST_CASE("q1_cubes" * doctest::test_suite("testmaps_q1"))
  */
 TEST_CASE("q1_clip_func_wall" * doctest::test_suite("testmaps_q1"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_clip_func_wall.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_clip_func_wall.map");
 
     REQUIRE(prt.has_value());
 
@@ -1211,9 +1211,9 @@ TEST_CASE("qbsp_sealing_point_entity_on_outside" * doctest::test_suite("testmaps
     REQUIRE(prt.has_value());
 }
 
-TEST_CASE("qbsp_q1_0125unit_faces" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
+TEST_CASE("q1_0125unit_faces" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_0125unit_faces.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_0125unit_faces.map");
 
     CHECK(bsp.loadversion == &bspver_q1);
     CHECK(2 == bsp.dfaces.size());
@@ -1252,7 +1252,7 @@ TEST_CASE("chop" * doctest::test_suite("testmaps_q1") * doctest::skip())
 
 TEST_CASE("mountain" * doctest::test_suite("testmaps_q1") * doctest::skip() * doctest::may_fail())
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_mountain.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_mountain.map");
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
     CHECK(prt);
@@ -1265,9 +1265,9 @@ TEST_CASE("mountain" * doctest::test_suite("testmaps_q1") * doctest::skip() * do
  * - hull1+ can't, because it would cause areas containing no entities but connected by a thin gap to the
  *   rest of the world to get sealed off as solid.
  **/
-TEST_CASE("qbsp_q1_sealing" * doctest::test_suite("testmaps_q1"))
+TEST_CASE("q1_sealing" * doctest::test_suite("testmaps_q1"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_q1_sealing.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_sealing.map");
 
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
@@ -1304,7 +1304,7 @@ TEST_CASE("qbsp_q1_sealing" * doctest::test_suite("testmaps_q1"))
 
 TEST_CASE("q1_csg" * doctest::test_suite("testmaps_q1"))
 {
-    auto &entity = LoadMapPath("qbsp_q1_csg.map");
+    auto &entity = LoadMapPath("q1_csg.map");
 
     REQUIRE(entity.mapbrushes.size() == 2);
 

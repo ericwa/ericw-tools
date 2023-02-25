@@ -6,9 +6,9 @@
 #include "test_qbsp.hh"
 #include "testutils.hh"
 
-TEST_CASE("qbsp_q2_detail_leak_test.map" * doctest::may_fail())
+TEST_CASE("q2_detail_leak_test.map" * doctest::may_fail())
 {
-    auto [bsp, bspx] = QbspVisLight_Q2("qbsp_q2_detail_leak_test.map", {}, runvis_t::yes);
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_detail_leak_test.map", {}, runvis_t::yes);
     const auto vis = DecompressAllVis(&bsp);
 
     auto leaf_sees = [&](const mleaf_t *a, const mleaf_t *b) -> bool {

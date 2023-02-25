@@ -13,7 +13,7 @@
 
 TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -118,7 +118,7 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("q2 detail with -nodetail" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map", {"-nodetail"});
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map", {"-nodetail"});
 
     const qvec3d inside_button{246, 436, 98};
     auto *inside_button_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
@@ -130,7 +130,7 @@ TEST_CASE("q2 detail with -nodetail" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("q2 detail with -omitdetail" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail.map", {"-omitdetail"});
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map", {"-omitdetail"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -151,7 +151,7 @@ TEST_CASE("-omitdetail removing all brushes in a func" * doctest::test_suite("te
 
 TEST_CASE("playerclip" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_playerclip.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_playerclip.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -179,7 +179,7 @@ TEST_CASE("playerclip" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("areaportal" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -240,7 +240,7 @@ TEST_CASE("areaportal" * doctest::test_suite("testmaps_q2"))
  */
 TEST_CASE("areaportal_with_detail" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_areaportal_with_detail.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_with_detail.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -255,7 +255,7 @@ TEST_CASE("areaportal_with_detail" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_light.map", {"-includeskip"});
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_light.map", {"-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -270,7 +270,7 @@ TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("nodraw_detail_light" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_nodraw_detail_light.map", {"-includeskip"});
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_detail_light.map", {"-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -358,7 +358,7 @@ TEST_CASE("base1leak" * doctest::test_suite("testmaps_q2"))
  **/
 TEST_CASE("lavaclip" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavaclip.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_lavaclip.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -397,7 +397,7 @@ TEST_CASE("lavaclip" * doctest::test_suite("testmaps_q2"))
  **/
 TEST_CASE("mist_clip" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_mist_clip.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_clip.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -410,7 +410,7 @@ TEST_CASE("mist_clip" * doctest::test_suite("testmaps_q2"))
  **/
 TEST_CASE("lavawater" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_lavawater.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_lavawater.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -424,9 +424,9 @@ TEST_CASE("lavawater" * doctest::test_suite("testmaps_q2"))
  * Weird mystery issue with a func_wall with broken collision
  * (ended up being a PLANE_X/Y/Z plane with negative facing normal, which is illegal - engine assumes they are positive)
  */
-TEST_CASE("qbsp_q2_bmodel_collision" * doctest::test_suite("testmaps_q2"))
+TEST_CASE("q2_bmodel_collision" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_bmodel_collision.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_bmodel_collision.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -483,9 +483,9 @@ TEST_CASE("q2_liquids" * doctest::test_suite("testmaps_q2"))
 /**
  * Empty rooms are sealed to solid in Q2
  **/
-TEST_CASE("qbsp_q2_seal_empty_rooms" * doctest::test_suite("testmaps_q2"))
+TEST_CASE("q2_seal_empty_rooms" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_seal_empty_rooms.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_seal_empty_rooms.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -503,9 +503,9 @@ TEST_CASE("qbsp_q2_seal_empty_rooms" * doctest::test_suite("testmaps_q2"))
 /**
  * Detail seals in Q2
  **/
-TEST_CASE("qbsp_q2_detail_seals" * doctest::test_suite("testmaps_q2"))
+TEST_CASE("q2_detail_seals" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_detail_seals.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_seals.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -567,7 +567,7 @@ TEST_CASE("q2_door" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("q2_mirrorinside" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("qbsp_q2_mirrorinside.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mirrorinside.map");
 
     {
         INFO("window is not two sided by default");
