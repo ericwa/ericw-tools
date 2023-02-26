@@ -13,6 +13,13 @@ static std::unique_ptr<tbb::global_control> tbbGlobalControl;
 
 void configureTBB(int maxthreads, bool lowPriority)
 {
+    if (tbbGlobalControl) {
+        logging::print("ignoring multiple configureTBB calls\n");
+        // only allow calling once per process, so we can disable threading in test_main.cc
+        // and further attempts to re-enable it will be ignored
+        return;
+    }
+
     tbbGlobalControl = std::unique_ptr<tbb::global_control>();
 
     if (maxthreads > 0) {
