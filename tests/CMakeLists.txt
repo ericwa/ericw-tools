@@ -14,7 +14,8 @@ add_executable(tests
 		testutils.hh
 		${CMAKE_BINARY_DIR}/testmaps.hh
 		testutils.hh
-		benchmark.cc)
+		benchmark.cc
+		test_bsputil.cc)
 
 find_package(embree 3.0 REQUIRED)
 INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})

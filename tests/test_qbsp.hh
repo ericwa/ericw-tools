@@ -10,6 +10,7 @@ class mapentity_t;
 
 const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, const std::string &texname);
 mapentity_t &LoadMap(const char *map);
+mapentity_t &LoadMapPath(const std::filesystem::path &name);
 std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     const std::filesystem::path &name, std::vector<std::string> extra_args = {});
 std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmapQ2(

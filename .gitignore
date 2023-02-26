@@ -9,7 +9,7 @@ CMakeFiles/
 .idea
 !.vscode/settings.json
 testmaps/*.bsp
-**/*decompile*.map
+**/*-decompile*.map
 testmaps/*.bsp.qbsplog
 testmaps/*.log
 testmaps/*.prt
