@@ -806,7 +806,7 @@ static void DecompileLeaf(const std::vector<decomp_plane_t> &planestack, const m
     result.push_back({planestack, leaf});
 }
 
-static compiled_brush_t DecompileLeafTaskGeometryOnly(
+static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
     const mbsp_t *bsp, const leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     compiled_brush_t brush;
@@ -824,17 +824,14 @@ static compiled_brush_t DecompileLeafTaskGeometryOnly(
         side.valve = plane.normal;
     }
 
-    return brush;
+    std::vector<compiled_brush_t> result;
+    result.push_back(std::move(brush));
+    return result;
 }
 
-static compiled_brush_t DecompileLeafTask(
+static std::vector<compiled_brush_t> DecompileLeafTask(
     const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
-    compiled_brush_t brush;
-    brush.source = task.brush;
-    brush.brush_offset = brush_offset;
-    brush.contents = {task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()};
-
     std::vector<decomp_brush_t> finalBrushes;
     if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
         // Q2 doesn't need this - we assume each brush in the brush lump corresponds to exactly one .map file brush
@@ -870,7 +867,13 @@ static compiled_brush_t DecompileLeafTask(
         }
     }
 
+    std::vector<compiled_brush_t> finalCompiledBrushes;
     for (decomp_brush_t &finalBrush : finalBrushes) {
+        compiled_brush_t brush;
+        brush.source = task.brush;
+        brush.brush_offset = brush_offset;
+        brush.contents = {task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()};
+
         for (auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
             side.plane = finalSide.plane;
@@ -929,9 +932,11 @@ static compiled_brush_t DecompileLeafTask(
                 }
             }
         }
+
+        finalCompiledBrushes.push_back(std::move(brush));
     }
 
-    return brush;
+    return finalCompiledBrushes;
 }
 
 /**
@@ -1039,7 +1044,7 @@ static void AddMapBoundsToStack(std::vector<decomp_plane_t> &planestack, const m
     }
 }
 
-static compiled_brush_t DecompileBrushTask(
+static std::vector<compiled_brush_t> DecompileBrushTask(
     const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
@@ -1127,7 +1132,7 @@ static void DecompileEntity(
         fmt::print(file, "\"{}\" \"{}\"\n", keyValue.first, keyValue.second);
     }
 
-    std::vector<compiled_brush_t> compiledBrushes;
+    std::vector<std::vector<compiled_brush_t>> compiledBrushes;
 
     // Print brushes if any
     if (modelNum >= 0) {
@@ -1229,9 +1234,11 @@ static void DecompileEntity(
 
     // If we run into a trigger brush, replace all of its faces with trigger texture.
     if (modelNum > 0 && dict.find("classname")->second.compare(0, 8, "trigger_") == 0) {
-        for (auto &brush : compiledBrushes) {
-            for (auto &side : brush.sides) {
-                DefaultTriggerSide(side, bsp);
+        for (auto &brushlist : compiledBrushes) {
+            for (auto &brush : brushlist) {
+                for (auto &side : brush.sides) {
+                    DefaultTriggerSide(side, bsp);
+                }
             }
         }
     }
@@ -1239,45 +1246,48 @@ static void DecompileEntity(
     // cleanup step: we're left with visible faces having textures, but
     // things that aren't output in BSP faces will use a skip texture.
     // we'll find the best matching texture that we think would work well.
-    for (auto &brush : compiledBrushes) {
-        for (auto &side : brush.sides) {
-            if (side.texture_name != DefaultSkipTexture(bsp)) {
-                continue;
-            }
-
-            // check all of the other sides, find the one with the nearest opposite plane
-            qvec3d normal_to_check = -side.plane.normal;
-            vec_t closest_dot = -DBL_MAX;
-            compiled_brush_side_t *closest = nullptr;
-
-            for (auto &side2 : brush.sides) {
-                if (&side2 == &side) {
+    for (auto &brushlist : compiledBrushes) {
+        for (auto &brush : brushlist) {
+            for (auto &side : brush.sides) {
+                if (side.texture_name != DefaultSkipTexture(bsp)) {
                     continue;
                 }
 
-                if (side2.texture_name == DefaultSkipTexture(bsp)) {
-                    continue;
+                // check all of the other sides, find the one with the nearest opposite plane
+                qvec3d normal_to_check = -side.plane.normal;
+                vec_t closest_dot = -DBL_MAX;
+                compiled_brush_side_t *closest = nullptr;
+
+                for (auto &side2 : brush.sides) {
+                    if (&side2 == &side) {
+                        continue;
+                    }
+
+                    if (side2.texture_name == DefaultSkipTexture(bsp)) {
+                        continue;
+                    }
+
+                    vec_t d = qv::dot(normal_to_check, side2.plane.normal);
+
+                    if (!closest || d > closest_dot) {
+                        closest_dot = d;
+                        closest = &side2;
+                    }
                 }
 
-                vec_t d = qv::dot(normal_to_check, side2.plane.normal);
-
-                if (!closest || d > closest_dot) {
-                    closest_dot = d;
-                    closest = &side2;
+                if (closest) {
+                    side.texture_name = closest->texture_name;
+                } else {
+                    side.texture_name = DefaultTextureForContents(bsp, brush.contents);
                 }
-            }
-
-            if (closest) {
-                side.texture_name = closest->texture_name;
-            } else {
-                side.texture_name = DefaultTextureForContents(bsp, brush.contents);
             }
         }
     }
 
     // add the origin brush, if we have one
     if (brush_offset.has_value()) {
-        compiled_brush_t &brush = compiledBrushes.emplace_back();
+        std::vector<compiled_brush_t> &brushlist = compiledBrushes.emplace_back();
+        compiled_brush_t &brush = brushlist.emplace_back();
         brush.brush_offset = brush_offset;
         brush.contents = {Q2_CONTENTS_ORIGIN};
 
@@ -1298,8 +1308,10 @@ static void DecompileEntity(
         }
     }
 
-    for (auto &brush : compiledBrushes) {
-        brush.write(bsp, file);
+    for (auto &brushlist : compiledBrushes) {
+        for (auto &brush : brushlist) {
+            brush.write(bsp, file);
+        }
     }
 
     fmt::print(file, "}}\n");
