@@ -1673,3 +1673,34 @@ TEST_CASE("q1_water_subdivision with defaults")
         CHECK(texinfo->flags.native == 0);
     }
 }
+
+TEST_CASE("textures search relative to current directory")
+{
+    // QuArK runs the compilers like this:
+    //
+    // working directory: "c:\quake\tmpquark"
+    // command line:      "maps\something.map"
+    // worldspawn key:    "wad" "gfx/quark.wad"
+    // wad located in:    "c:\quake\tmpquark\gfx\quark.wad"
+
+    auto target_gfx_dir = fs::current_path() / "gfx";
+
+    fs::create_directory(target_gfx_dir);
+
+    try {
+        fs::copy(std::filesystem::path(testmaps_dir) / "deprecated" / "free_wad.wad", target_gfx_dir);
+    } catch (const fs::filesystem_error &e) {
+        logging::print("{}\n", e.what());
+    }
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cwd_relative_wad.map");
+    REQUIRE(2 == bsp.dtex.textures.size());
+    // FIXME: we shouldn't really be writing skip
+    CHECK("skip" == bsp.dtex.textures[0].name);
+
+    // make sure the texture was written
+    CHECK("orangestuff8" == bsp.dtex.textures[1].name);
+    CHECK(64 == bsp.dtex.textures[1].width);
+    CHECK(64 == bsp.dtex.textures[1].height);
+    CHECK(bsp.dtex.textures[1].data.size() > 0);
+}

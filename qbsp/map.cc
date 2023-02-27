@@ -212,12 +212,21 @@ const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::st
 
 static std::shared_ptr<fs::archive_like> LoadTexturePath(const fs::path &path)
 {
-    if (qbsp_options.wadpaths.pathsValue().empty() || path.is_absolute()) {
+    // if absolute, don't try anything else
+    if (path.is_absolute()) {
         return fs::addArchive(path, false);
     }
 
+    // try wadpath (this includes relative to the .map file)
     for (auto &wadpath : qbsp_options.wadpaths.pathsValue()) {
-        return fs::addArchive(wadpath.path / path, wadpath.external);
+        if (auto archive = fs::addArchive(wadpath.path / path, wadpath.external)) {
+            return archive;
+        }
+    }
+
+    // try relative to cwd
+    if (auto archive = fs::addArchive(path, false)) {
+        return archive;
     }
 
     return nullptr;
