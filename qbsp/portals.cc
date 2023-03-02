@@ -869,6 +869,12 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
                 // see how close the match is
                 const auto &p2 = side.get_positive_plane();
                 double dot = qv::dot(p1.get_normal(), p2.get_normal());
+
+                // HACK: both the node plane and side.get_positive_plane() are supposed to be "positive", but the
+                // which would imply dot >= 0, but the meaning of "positive" is ambiguous on 45 degree planes.
+                // so take the absolute value to work around that case (this is an undirectional test anyway).
+                dot = std::fabs(dot);
+
                 if (dot > bestdot) {
                     bestdot = dot;
                     if (generate_outside_face) {
