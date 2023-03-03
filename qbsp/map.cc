@@ -443,7 +443,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         map.miptex.push_back({name, extended_info->flags, extended_info->value, extended_info->animation});
 
         /* Handle animating textures carefully */
-        if (!extended_info->animation.empty() && recursive) {
+        if (!extended_info->animation.empty() && recursive && Q_strcasecmp(name, wal->animation.c_str())) {
 
             int last_i = i;
 
@@ -451,6 +451,10 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
             while (true) {
                 // wal for next chain
                 wal = map.load_image_meta(wal->animation.c_str());
+
+                // can't find...
+                if (wal == std::nullopt)
+                    break;
 
                 // texinfo base for animated wal
                 std::optional<extended_texinfo_t> animation_info = extended_info;
