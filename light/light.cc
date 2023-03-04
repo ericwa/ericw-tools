@@ -336,9 +336,7 @@ light_settings::light_settings()
       lightgrid_force_cube{this, "lightgrid_force_cube", false, &experimental_group, "force lightgrid to be a cube"},
       lightgrid_force_pot{
           this, "lightgrid_force_pot", false, &experimental_group, "force lightgrid to be a power of 2"},
-      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE,
-          {{"cluster", lightgrid_format_t::CLUSTER}, {"uniform", lightgrid_format_t::UNIFORM},
-              {"octree", lightgrid_format_t::OCTREE}},
+      lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE, {{"octree", lightgrid_format_t::OCTREE}},
           &experimental_group, "lightgrid BSPX lump to use"},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
