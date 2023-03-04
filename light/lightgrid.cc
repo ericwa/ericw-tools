@@ -578,7 +578,7 @@ void LightGrid(bspdata_t *bspdata)
         bool occluded;
         lightgrid_samples_t samples;
 
-        if (!light_options.extra.value()) {
+        if (light_options.extra.value() == 1) {
             std::tie(samples, occluded) = FixPointAndCalcLightgrid(&bsp, world_point);
         } else {
             // do a 2x2 grid, centered around world_point, at +/- (grid_dist / 3)
