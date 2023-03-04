@@ -420,11 +420,6 @@ void LightGrid(bspdata_t *bspdata)
     data.grid_dist = light_options.lightgrid_dist.value();
 
     auto grid_bounds = LightGridBounds(bsp);
-    if (light_options.lightgrid_force_cube.value()) {
-        logging::print("before MakeCube: {}\n", grid_bounds);
-        grid_bounds = MakeCube(grid_bounds);
-        logging::print("after MakeCube: {}\n", grid_bounds);
-    }
 
     const qvec3f grid_maxs = grid_bounds.maxs();
     data.grid_mins = grid_bounds.mins();
@@ -433,26 +428,6 @@ void LightGrid(bspdata_t *bspdata)
     // number of grid points on each axis
     data.grid_size = {ceil(world_size[0] / data.grid_dist[0]), ceil(world_size[1] / data.grid_dist[1]),
         ceil(world_size[2] / data.grid_dist[2])};
-
-    if (light_options.lightgrid_force_pot.value()) {
-        const auto old_grid_size = data.grid_size;
-
-        logging::print("before making power of 2: data.grid_size: {}\n", data.grid_size);
-        data.grid_size = MakePOT(data.grid_size);
-        logging::print("after: data.grid_size: {}\n", data.grid_size);
-
-        // adjust the grid mins to preserve the old center point
-
-        qvec3f old_maxs = data.grid_mins + (old_grid_size * data.grid_dist);
-        // should always be >= old_maxs on each component
-        qvec3f new_maxs = data.grid_mins + (data.grid_size * data.grid_dist);
-
-        qvec3f delta = (new_maxs - old_maxs) / 2;
-
-        logging::print("shifting by -{}\n", delta);
-
-        data.grid_mins -= delta;
-    }
 
     data.grid_result.resize(data.grid_size[0] * data.grid_size[1] * data.grid_size[2]);
 

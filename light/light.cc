@@ -333,9 +333,6 @@ light_settings::light_settings()
       lightgrid{this, "lightgrid", false, &experimental_group, "experimental LIGHTGRID bspx lump"},
       lightgrid_dist{this, "lightgrid_dist", 32.f, 32.f, 32.f, &experimental_group,
           "distance between lightgrid sample points, in world units. controls lightgrid size."},
-      lightgrid_force_cube{this, "lightgrid_force_cube", false, &experimental_group, "force lightgrid to be a cube"},
-      lightgrid_force_pot{
-          this, "lightgrid_force_pot", false, &experimental_group, "force lightgrid to be a power of 2"},
       lightgrid_format{this, "lightgrid_format", lightgrid_format_t::OCTREE, {{"octree", lightgrid_format_t::OCTREE}},
           &experimental_group, "lightgrid BSPX lump to use"},
 
