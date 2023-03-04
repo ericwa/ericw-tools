@@ -3301,6 +3301,28 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
 
 // lightgrid
 
+lightgrid_samples_t &lightgrid_samples_t::operator+=(const lightgrid_samples_t &other) noexcept
+{
+    for (auto &other_sample : other.samples_by_style) {
+        if (!other_sample.used) {
+            break;
+        }
+        add(other_sample.color, other_sample.style);
+    }
+    return *this;
+}
+
+lightgrid_samples_t &lightgrid_samples_t::operator/=(float scale) noexcept
+{
+    for (auto &sample : samples_by_style) {
+        if (!sample.used) {
+            break;
+        }
+        sample.color /= scale;
+    }
+    return *this;
+}
+
 void lightgrid_samples_t::add(const qvec3d &color, int style)
 {
     for (auto &sample : samples_by_style) {

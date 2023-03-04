@@ -74,6 +74,9 @@ struct lightgrid_samples_t
 {
     std::array<lightgrid_sample_t, 4> samples_by_style;
 
+    lightgrid_samples_t &operator+=(const lightgrid_samples_t &other) noexcept;
+    lightgrid_samples_t &operator/=(float scale) noexcept;
+
     void add(const qvec3d &color, int style);
     int used_styles() const;
 

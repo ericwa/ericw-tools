@@ -497,6 +497,26 @@ static qvec3i MakePOT(const qvec3i &input)
     return qvec3i(static_cast<int>(x));
 }
 
+static std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3d world_point)
+{
+    bool occluded = Light_PointInWorld(bsp, world_point);
+    if (occluded) {
+        // search for a nearby point
+        auto [fixed_pos, success] = FixLightOnFace(bsp, world_point, false, 2.0f);
+        if (success) {
+            occluded = false;
+            world_point = fixed_pos;
+        }
+    }
+
+    lightgrid_samples_t samples;
+
+    if (!occluded)
+        samples = CalcLightgridAtPoint(bsp, world_point);
+
+    return {samples, occluded};
+}
+
 void LightGrid(bspdata_t *bspdata)
 {
     if (!light_options.lightgrid.value())
@@ -555,20 +575,37 @@ void LightGrid(bspdata_t *bspdata)
 
         qvec3d world_point = data.grid_mins + (qvec3d{x, y, z} * data.grid_dist);
 
-        bool occluded = Light_PointInWorld(&bsp, world_point);
-        if (occluded) {
-            // search for a nearby point
-            auto [fixed_pos, success] = FixLightOnFace(&bsp, world_point, false, 2.0f);
-            if (success) {
-                occluded = false;
-                world_point = fixed_pos;
-            }
-        }
-
+        bool occluded;
         lightgrid_samples_t samples;
 
-        if (!occluded)
-            samples = CalcLightgridAtPoint(&bsp, world_point);
+        if (!light_options.extra.value()) {
+            std::tie(samples, occluded) = FixPointAndCalcLightgrid(&bsp, world_point);
+        } else {
+            // do a 2x2 grid, centered around world_point, at +/- (grid_dist / 3)
+
+            int unoccluded_count = 0;
+
+            for (int extra_x = -1; extra_x <= 1; extra_x += 2) {
+                for (int extra_y = -1; extra_y <= 1; extra_y += 2) {
+                    for (int extra_z = -1; extra_z <= 1; extra_z += 2) {
+                        qvec3d delta = data.grid_dist * qvec3d(extra_x, extra_y, extra_z) / 3.0;
+                        auto [extra_sample, extra_occluded] = FixPointAndCalcLightgrid(&bsp, world_point + delta);
+
+                        if (!extra_occluded) {
+                            samples += extra_sample;
+                            ++unoccluded_count;
+                        }
+                    }
+                }
+            }
+
+            if (!unoccluded_count) {
+                occluded = true;
+            } else {
+                occluded = false;
+                samples /= static_cast<float>(unoccluded_count);
+            }
+        }
 
         data.grid_result[sample_index] = samples;
         data.occlusion[sample_index] = occluded;
