@@ -578,34 +578,7 @@ void LightGrid(bspdata_t *bspdata)
         bool occluded;
         lightgrid_samples_t samples;
 
-        if (light_options.extra.value() == 1) {
-            std::tie(samples, occluded) = FixPointAndCalcLightgrid(&bsp, world_point);
-        } else {
-            // do a 2x2 grid, centered around world_point, at +/- (grid_dist / 3)
-
-            int unoccluded_count = 0;
-
-            for (int extra_x = -1; extra_x <= 1; extra_x += 2) {
-                for (int extra_y = -1; extra_y <= 1; extra_y += 2) {
-                    for (int extra_z = -1; extra_z <= 1; extra_z += 2) {
-                        qvec3d delta = data.grid_dist * qvec3d(extra_x, extra_y, extra_z) / 3.0;
-                        auto [extra_sample, extra_occluded] = FixPointAndCalcLightgrid(&bsp, world_point + delta);
-
-                        if (!extra_occluded) {
-                            samples += extra_sample;
-                            ++unoccluded_count;
-                        }
-                    }
-                }
-            }
-
-            if (!unoccluded_count) {
-                occluded = true;
-            } else {
-                occluded = false;
-                samples /= static_cast<float>(unoccluded_count);
-            }
-        }
+        std::tie(samples, occluded) = FixPointAndCalcLightgrid(&bsp, world_point);
 
         data.grid_result[sample_index] = samples;
         data.occlusion[sample_index] = occluded;
