@@ -1716,6 +1716,21 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
             }
         }
 
+        // Mixing visible contents on the input brush is illegal
+        {
+            const int32_t visible_contents = extinfo.info->contents.native & Q2_ALL_VISIBLE_CONTENTS;
+
+            // TODO: Move to bspfile.hh API
+            for (int32_t i = Q2_CONTENTS_SOLID; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
+                if (visible_contents & i) {
+                    if (visible_contents != i) {
+                        FError("{}: Mixed visible contents: {}", mapface.line,
+                            extinfo.info->contents.to_string(qbsp_options.target_game));
+                    }
+                }
+            }
+        }
+
         // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
         // the front and back faces leading to light artifacts.
         const bool wants_phong = !(extinfo.info->flags.native & Q2_SURF_LIGHT) && (extinfo.info->value != 0);
