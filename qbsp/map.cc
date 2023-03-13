@@ -1731,6 +1731,12 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
             }
         }
 
+        // Other Q2 hard errors
+        if (extinfo.info->contents.native & (Q2_CONTENTS_MONSTER | Q2_CONTENTS_DEADMONSTER)) {
+            FError(
+                "{}: Illegal contents: {}", mapface.line, extinfo.info->contents.to_string(qbsp_options.target_game));
+        }
+
         // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
         // the front and back faces leading to light artifacts.
         const bool wants_phong = !(extinfo.info->flags.native & Q2_SURF_LIGHT) && (extinfo.info->value != 0);
