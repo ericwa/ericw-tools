@@ -69,10 +69,16 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
     bool keep1, keep2;
 
     if (!f1->w.size() || !f2->w.size() || f1->planenum != f2->planenum || f1->texinfo != f2->texinfo ||
-        /*!f1->contents[0].equals(options.target_game, f2->contents[0]) || !f1->contents[1].equals(options.target_game,
-           f2->contents[1]) || */
         f1->original_side->lmshift != f2->original_side->lmshift)
         return NULL;
+
+    // Q1: don't merge across water boundaries; ezQuake/nQuake water caustics will leak onto
+    // above-water faces.
+    // TODO: make this configurable?
+    if (qbsp_options.target_game->id != GAME_QUAKE_II) {
+        if (f1->contents[0].is_liquid(qbsp_options.target_game) != f2->contents[0].is_liquid(qbsp_options.target_game))
+            return nullptr;
+    }
 
     // find a common edge
     p1 = p2 = NULL; // stop compiler warning
