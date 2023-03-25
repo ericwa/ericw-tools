@@ -30,6 +30,7 @@
 #include <qbsp/tree.hh>
 #include <common/log.hh>
 #include <atomic>
+#include <common/prtfile.hh>
 
 #include "tbb/task_group.h"
 #include "common/vectorutils.hh"
@@ -792,6 +793,8 @@ struct visible_faces_stats_t : logging::stat_tracker_t
 {
     stat &sides_not_found = register_stat("sides not found (use -verbose to display)", false, true);
     stat &sides_visible = register_stat("sides visible");
+
+    std::vector<polylib::winding_t> missing_portal_sides;
 };
 
 /*
@@ -898,6 +901,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
     if (!bestside[0] && !bestside[1]) {
         stats.sides_not_found++;
         logging::print(logging::flag::VERBOSE, "couldn't find portal side at {}\n", p->winding.center());
+        stats.missing_portal_sides.push_back(p->winding.clone());
     }
 
     p->sidefound = true;
@@ -959,4 +963,10 @@ void MarkVisibleSides(tree_t &tree, bspbrush_t::container &brushes)
     visible_faces_stats_t stats;
     // set visible flags on the sides that are used by portals
     MarkVisibleSides_r(tree.headnode, stats);
+
+    if (!stats.missing_portal_sides.empty()) {
+        fs::path name = qbsp_options.bsp_path;
+        name.replace_extension("missing_portal_sides.prt");
+        WriteDebugPortals(stats.missing_portal_sides, name);
+    }
 }
