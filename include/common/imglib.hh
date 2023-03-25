@@ -31,7 +31,11 @@ enum class ext
 {
     TGA,
     WAL,
-    MIP
+    MIP,
+    /**
+     * Anything loadable by stb_image.h
+     */
+    STB
 };
 
 extern std::vector<qvec3b> palette;
@@ -66,6 +70,7 @@ struct texture
     // the width/height of the metadata.
     uint32_t width = 0, height = 0;
 
+    // RGBA order
     std::vector<qvec4b> pixels;
 
     // the scale required to map a pixel from the
@@ -95,14 +100,18 @@ std::optional<texture> load_tga(
 std::optional<texture> load_mip(
     const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
+// stb_image.h loaders
+std::optional<texture> load_stb(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
+
 // list of supported extensions and their loaders
 constexpr struct
 {
     const char *suffix;
     ext id;
     decltype(load_wal) *loader;
-} extension_list[] = {
-    {".tga", ext::TGA, load_tga}, {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
+} extension_list[] = {{".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb}, {".tga", ext::TGA, load_tga},
+    {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
 
 // Attempt to load a texture from the specified name.
 std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(
