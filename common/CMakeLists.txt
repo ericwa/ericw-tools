@@ -1,4 +1,5 @@
-add_library(common STATIC 
+add_library(common STATIC
+    ${CMAKE_SOURCE_DIR}/3rdparty/miniz.c
     ${CMAKE_SOURCE_DIR}/common/bspinfo.cc
     ${CMAKE_SOURCE_DIR}/common/bspfile.cc
     ${CMAKE_SOURCE_DIR}/common/bspfile_generic.cc
@@ -19,6 +20,7 @@ add_library(common STATIC
     ${CMAKE_SOURCE_DIR}/common/settings.cc
     ${CMAKE_SOURCE_DIR}/common/prtfile.cc
     ${CMAKE_SOURCE_DIR}/common/debugger.natvis
+    ${CMAKE_SOURCE_DIR}/3rdparty/miniz.h
     ${CMAKE_SOURCE_DIR}/include/common/aabb.hh
     ${CMAKE_SOURCE_DIR}/include/common/bitflags.hh
     ${CMAKE_SOURCE_DIR}/include/common/bspinfo.hh

@@ -29,6 +29,8 @@
 #include <stdexcept>
 #include <unordered_map>
 
+#include "../3rdparty/miniz.h"
+
 namespace fs
 {
 struct directory_archive : archive_like
@@ -131,6 +133,25 @@ struct pak_archive : archive_like
         pakstream.read(reinterpret_cast<char *>(data.data()), size);
         return data;
     }
+};
+
+struct zip_archive : archive_like
+{
+    std::ifstream zipstream;
+    mz_zip_archive archive;
+    std::unordered_map<std::string, std::tuple<uint32_t, uint32_t>, case_insensitive_hash, case_insensitive_equal>
+        files;
+    
+    inline zip_archive(const path &pathname, bool external)
+        : archive_like(pathname, external),
+          zipstream(pathname, std::ios_base::in | std::ios_base::binary),
+          archive()
+    {
+    }
+
+    bool contains(const path &filename) override { return false; }
+
+    data load(const path &filename) override { return std::nullopt; }
 };
 
 struct wad_archive : archive_like
@@ -252,6 +273,11 @@ inline std::shared_ptr<archive_like> addArchiveInternal(const path &p, bool exte
                 auto &arch = archives.emplace_front(std::make_shared<wad_archive>(p, external));
                 auto &wad = reinterpret_cast<std::shared_ptr<wad_archive> &>(arch);
                 logging::print(logging::flag::VERBOSE, "Added wad '{}' with {} lumps\n", p, wad->files.size());
+                return arch;
+            } else if (string_iequals(ext.generic_string(), ".pk3") || string_iequals(ext.generic_string(), ".pkz")) {
+                auto &arch = archives.emplace_front(std::make_shared<zip_archive>(p, external));
+                auto &zip = reinterpret_cast<std::shared_ptr<zip_archive> &>(arch);
+                logging::print(logging::flag::VERBOSE, "Added zip '{}' with {} files\n", p, zip->files.size());
                 return arch;
             } else {
                 logging::funcprint("WARNING: no idea what to do with archive '{}'\n", p);
