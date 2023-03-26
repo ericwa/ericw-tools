@@ -1287,11 +1287,10 @@ struct gamedef_q2_t : public gamedef_t
 
     contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
-#if 0
-        if ((a.native & Q2_CONTENTS_SOLID) || (b.native & Q2_CONTENTS_SOLID)) {
+        // structural solid (but not detail solid) eats any other contents
+        if (contents_are_solid(a) || contents_are_solid(b)) {
             return {Q2_CONTENTS_SOLID};
         }
-#endif
 
         contentflags_t result;
         result.native = a.native | b.native;

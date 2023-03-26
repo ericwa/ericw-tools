@@ -514,6 +514,20 @@ TEST_CASE("q2_detail_non_sealing" * doctest::test_suite("testmaps_q2"))
     CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
 }
 
+TEST_CASE("q2_detail_overlapping_solid_sealing" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_overlapping_solid_sealing.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    const qvec3d in_start_room{-240, 80, 56};
+    const qvec3d in_void{-336, 80, 56};
+
+    // check leaf contents
+    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
+    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
+}
+
 /**
  * Two areaportals with a small gap in between creating another area.
  *
