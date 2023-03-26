@@ -715,6 +715,10 @@ static surfflags_t SurfFlagsForEntity(
         flags.object_channel_mask = entity.epairs.get_int("_object_channel_mask");
     }
 
+    if (entity.epairs.has("_surflight_minlight_scale")) {
+        flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
+    }
+
     // handle "_mincolor"
     {
         qvec3d mincolor{};

@@ -102,6 +102,7 @@ struct lightsurf_t
     const mface_t *face;
     /* these take precedence the values in modelinfo */
     vec_t minlight, maxlight, lightcolorscale = 1.0;
+    vec_t surflight_minlight_scale;
     qvec3d minlight_color;
     bool nodirt, minlightMottle;
     int32_t object_channel_mask;
@@ -223,6 +224,7 @@ public:
     settings::setting_bool lightignore;
     settings::setting_scalar lightcolorscale;
     settings::setting_int32 object_channel_mask;
+    settings::setting_scalar surflight_minlight_scale;
 
     float getResolvedPhongAngle() const;
     bool isWorld() const;

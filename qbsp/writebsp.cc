@@ -414,6 +414,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.object_channel_mask) {
             t["object_channel_mask"] = *tx.flags.object_channel_mask;
         }
+        if (tx.flags.surflight_minlight_scale) {
+            t["surflight_minlight_scale"] = *tx.flags.surflight_minlight_scale;
+        }
 
         texinfofile[std::to_string(*tx.outputnum)].swap(t);
     }

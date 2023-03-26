@@ -689,6 +689,12 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         lightsurf->object_channel_mask = modelinfo->object_channel_mask.value();
     }
 
+    if (extended_flags.surflight_minlight_scale) {
+        lightsurf->surflight_minlight_scale = *extended_flags.surflight_minlight_scale;
+    } else {
+        lightsurf->surflight_minlight_scale = 1.0f;
+    }
+
     /* Set up the plane, not including model offset */
     qplane3d &plane = lightsurf->plane;
     if (face->side) {
@@ -3233,7 +3239,8 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
         if (auto value = IsSurfaceLitFace(bsp, face)) {
             auto *entity = std::get<3>(value.value());
-            const float surface_minlight_scale = entity ? entity->surface_minlight_scale.value() : 64.f;
+            float surface_minlight_scale = entity ? entity->surface_minlight_scale.value() : 64.f;
+            surface_minlight_scale *= lightsurf.surflight_minlight_scale;
             minlight = std::get<0>(value.value()) * surface_minlight_scale;
             minlight_color = std::get<2>(value.value());
             LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()));

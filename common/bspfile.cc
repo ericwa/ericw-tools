@@ -1776,7 +1776,7 @@ bool surfflags_t::needs_write() const
     return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || no_phong || light_ignore ||
            !surflight_rescale || phong_angle || phong_angle_concave || phong_group || minlight ||
            !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0 || surflight_group ||
-           world_units_per_luxel || object_channel_mask;
+           world_units_per_luxel || object_channel_mask || surflight_minlight_scale;
 }
 
 static auto as_tuple(const surfflags_t &flags)
@@ -1785,7 +1785,7 @@ static auto as_tuple(const surfflags_t &flags)
         flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
         flags.surflight_rescale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
         flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
-        flags.world_units_per_luxel, flags.object_channel_mask);
+        flags.world_units_per_luxel, flags.object_channel_mask, flags.surflight_minlight_scale);
 }
 
 bool surfflags_t::operator<(const surfflags_t &other) const

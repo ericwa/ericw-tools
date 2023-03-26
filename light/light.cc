@@ -148,7 +148,8 @@ modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
       minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0},
       lightignore{this, "lightignore", false},
       lightcolorscale{this, "lightcolorscale", 1},
-      object_channel_mask{this, "object_channel_mask", CHANNEL_MASK_DEFAULT}
+      object_channel_mask{this, "object_channel_mask", CHANNEL_MASK_DEFAULT},
+      surflight_minlight_scale{this, "surflight_minlight_scale", 1.f}
 {
 }
 
@@ -1147,6 +1148,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         }
         if (val.contains("object_channel_mask")) {
             flags.object_channel_mask = val.at("object_channel_mask").get<int32_t>();
+        }
+        if (val.contains("surflight_minlight_scale")) {
+            flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<float>();
         }
     }
 }

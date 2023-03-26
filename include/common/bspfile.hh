@@ -224,6 +224,8 @@ struct surfflags_t
 
     std::optional<int32_t> object_channel_mask;
 
+    std::optional<float> surflight_minlight_scale;
+
     bool needs_write() const;
 
 public:
