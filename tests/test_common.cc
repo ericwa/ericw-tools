@@ -166,7 +166,8 @@ TEST_SUITE("common")
             for (const auto &c : test_contents) {
                 // solid is treated specially in Q2 and wipes out any other content
                 // flags when combined
-                auto combined = game_q2->combine_contents(solid, c);
+                auto combined = game_q2->contents_remap_for_export(
+                    game_q2->combine_contents(solid, c), gamedef_t::remap_type_t::leaf);
 
                 CHECK(combined.native == Q2_CONTENTS_SOLID);
                 CHECK(!combined.game_data.has_value());

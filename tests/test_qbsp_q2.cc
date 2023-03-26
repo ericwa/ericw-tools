@@ -500,12 +500,9 @@ TEST_CASE("q2_seal_empty_rooms" * doctest::test_suite("testmaps_q2"))
     CHECK(prt->portalleafs == 1);
 }
 
-/**
- * Detail seals in Q2
- **/
-TEST_CASE("q2_detail_seals" * doctest::test_suite("testmaps_q2"))
+TEST_CASE("q2_detail_non_sealing" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_seals.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_non_sealing.map");
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
@@ -514,7 +511,7 @@ TEST_CASE("q2_detail_seals" * doctest::test_suite("testmaps_q2"))
 
     // check leaf contents
     CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
-    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
+    CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
 }
 
 /**
