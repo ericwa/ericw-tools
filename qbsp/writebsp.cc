@@ -150,7 +150,8 @@ static void ExportLeaf(node_t *node)
 {
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
-    const contentflags_t remapped = qbsp_options.target_game->contents_remap_for_export(node->contents);
+    const contentflags_t remapped =
+        qbsp_options.target_game->contents_remap_for_export(node->contents, gamedef_t::remap_type_t::leaf);
 
     if (!remapped.is_valid(qbsp_options.target_game, false)) {
         FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1,

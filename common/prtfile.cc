@@ -186,7 +186,7 @@ void WriteDebugPortals(const std::vector<polylib::winding_t> &portals, fs::path 
 {
     size_t portal_count = portals.size();
 
-    std::ofstream portal_file(name, std::ios_base::binary | std::ios_base::out);
+    std::ofstream portal_file(name, std::ios_base::out);
     if (!portal_file)
         FError("Failed to open {}: {}", name, strerror(errno));
 

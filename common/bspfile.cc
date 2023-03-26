@@ -598,7 +598,7 @@ public:
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
-    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override
+    contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
     {
         /*
          * This is for func_detail_wall.. we want to write a solid leaf that has faces,
@@ -1267,11 +1267,19 @@ struct gamedef_q2_t : public gamedef_t
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
-    contentflags_t contents_remap_for_export(const contentflags_t &contents) const override
+    contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
     {
         // HACK: borrowing Q2_CONTENTS_MONSTER for func_detail_wall
         if (contents.native & Q2_CONTENTS_MONSTER) {
             return {Q2_CONTENTS_SOLID};
+        }
+        // Solid wipes out any other contents
+        // Previously, this was done in LeafNode but we've changed to detail-solid being
+        // non-sealing.
+        if (type == remap_type_t::leaf) {
+            if (contents.native & Q2_CONTENTS_SOLID) {
+                return {Q2_CONTENTS_SOLID};
+            }
         }
 
         return contents;
@@ -1279,9 +1287,11 @@ struct gamedef_q2_t : public gamedef_t
 
     contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
+#if 0
         if ((a.native & Q2_CONTENTS_SOLID) || (b.native & Q2_CONTENTS_SOLID)) {
             return {Q2_CONTENTS_SOLID};
         }
+#endif
 
         contentflags_t result;
         result.native = a.native | b.native;
