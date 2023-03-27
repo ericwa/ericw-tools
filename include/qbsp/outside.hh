@@ -21,11 +21,15 @@
 
 #pragma once
 
+#include <fstream>
 #include <vector>
 #include <qbsp/brush.hh>
+#include <common/qvec.hh>
 
 struct node_t;
 struct tree_t;
+
+void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d &point2);
 
 bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes);
 std::vector<node_t *> FindOccupiedClusters(node_t *headnode);
