@@ -89,8 +89,8 @@ bool Portal_EntityFlood(const portal_t *p, int32_t s)
     }
 
     // can never cross to a solid
-    if (p->nodes[0]->contents.is_any_solid(qbsp_options.target_game) ||
-        p->nodes[1]->contents.is_any_solid(qbsp_options.target_game)) {
+    if (p->nodes[0]->contents.is_solid(qbsp_options.target_game) ||
+        p->nodes[1]->contents.is_solid(qbsp_options.target_game)) {
         return false;
     }
 
