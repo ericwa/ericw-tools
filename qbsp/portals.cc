@@ -687,6 +687,183 @@ static void FindAreas_r(node_t *node)
     FloodAreas_r(node);
 }
 
+/**
+ * Starting at `a`, find and return the shortest path to `b`.
+ *
+ * Reference:
+ * https://en.wikipedia.org/wiki/Breadth-first_search#Pseudocode
+ */
+static std::list<node_t *> FindShortestPath(node_t *a, node_t *b, const std::function<bool(portal_t *)> &passable)
+{
+    std::list<node_t *> queue;
+    std::unordered_set<node_t *> queue_set;
+    std::unordered_map<node_t *, node_t *> parent;
+
+    queue.push_back(a);
+    queue_set.insert(a);
+
+    while (!queue.empty()) {
+        node_t *node = queue.front();
+        queue.pop_front();
+
+        if (node == b) {
+            // reached target. now we just need to extract the path we took from the `parent` map.
+            std::list<node_t *> result;
+            for (node_t *n = b;; n = parent.at(n)) {
+                result.push_front(n);
+                if (n == a)
+                    break;
+            }
+            return result;
+        }
+
+        // push neighbouring nodes onto the back of the queue,
+        // if they're not already enqueued, and if the portal is passable
+        int side;
+        for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
+            side = (portal->nodes[0] == node);
+
+            node_t *neighbour = portal->nodes[side];
+
+            if (!passable(portal))
+                continue;
+            if (queue_set.find(neighbour) != queue_set.end())
+                continue;
+
+            // enqueue it
+            queue.push_back(neighbour);
+            queue_set.insert(neighbour);
+            parent[neighbour] = node;
+        }
+    }
+
+    // couldn't find a path
+    return {};
+}
+
+using exit_t = std::tuple<portal_t *, node_t *>;
+
+static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visited, std::vector<exit_t> &exits)
+{
+    Q_assert(n->is_leaf);
+
+    visited.insert(n);
+
+    int s;
+    for (portal_t *p = n->portals; p; p = p->next[!s]) {
+        s = (p->nodes[0] == n);
+
+        node_t *neighbour = p->nodes[s];
+
+        // already visited?
+        if (visited.find(neighbour) != visited.end())
+            continue;
+
+        // is this an exit?
+        if (!(neighbour->contents.native & Q2_CONTENTS_AREAPORTAL) &&
+            !neighbour->contents.is_solid(qbsp_options.target_game)) {
+            exits.emplace_back(p, neighbour);
+            continue;
+        }
+
+        // valid edge to explore?
+        // if this isn't an exit, don't leave AREAPORTAL
+        if (!(neighbour->contents.native & Q2_CONTENTS_AREAPORTAL))
+            continue;
+
+        // continue exploding
+        return FindAreaPortalExits_R(neighbour, visited, exits);
+    }
+}
+
+/**
+ * DFS to find all portals leading out of the Q2_CONTENTS_AREAPORTAL leaf `n`, into non-solid leafs.
+ * Returns all of the portals and corresponding "outside" leafs.
+ */
+static std::vector<exit_t> FindAreaPortalExits(node_t *n)
+{
+    std::unordered_set<node_t *> visited;
+    std::vector<exit_t> exits;
+
+    FindAreaPortalExits_R(n, visited, exits);
+
+    return exits;
+}
+
+/**
+ * Attempts to write a leak line showing how the two sides of the areaportal are reachable.
+ */
+static void DebugAreaPortalBothSidesLeak(node_t *node)
+{
+    std::vector<exit_t> exits = FindAreaPortalExits(node);
+
+    logging::print("found {} exits:\n", exits.size());
+    for (auto [exit_portal, exit_leaf] : exits) {
+        logging::print(
+            "     {} ({}):\n", exit_leaf->bounds.centroid(), exit_leaf->contents.to_string(qbsp_options.target_game));
+    }
+    if (exits.size() < 2)
+        return;
+
+    auto [exit_portal0, exit_leaf0] = exits[0];
+
+    // look for the other exit `i`, such that the shortest path between exit 0 and `i` is the longest.
+    // this is to avoid picking two exits on the same side of the areaportal, which would not help
+    // track down the leak.
+    size_t longest_length = 0;
+    std::list<node_t *> longest_path;
+
+    for (size_t i = 1; i < exits.size(); ++i) {
+        auto [exit_portal_i, exit_leaf_i] = exits[i];
+
+        auto path = FindShortestPath(exit_leaf0, exit_leaf_i, [](portal_t *p) -> bool {
+            if (!Portal_EntityFlood(p, 0))
+                return false;
+
+            // don't go back into an areaportal
+            if ((p->nodes[0]->contents.native & Q2_CONTENTS_AREAPORTAL) ||
+                (p->nodes[1]->contents.native & Q2_CONTENTS_AREAPORTAL))
+                return false;
+
+            return true;
+        });
+
+        logging::print("shortest path from exit 0 to {} is {} leafs long\n", i, path.size());
+
+        if (path.size() > longest_length) {
+            longest_length = path.size();
+            longest_path = path;
+        }
+    }
+
+    // write `longest_path` as the leak
+
+    mapentity_t *entity = AreanodeEntityForLeaf(node);
+
+    fs::path name = qbsp_options.bsp_path;
+    name.replace_extension(fmt::format("areaportal{}_leak.pts", entity - map.entities.data()));
+
+    std::ofstream ptsfile(name);
+
+    if (!ptsfile)
+        FError("Failed to open {}: {}", name, strerror(errno));
+
+    for (auto it = longest_path.begin();; ++it) {
+        if (it == longest_path.end())
+            break;
+
+        auto next_it = it;
+        next_it++;
+
+        if (next_it == longest_path.end())
+            break;
+
+        WriteLeakTrail(ptsfile, (*it)->bounds.centroid(), (*next_it)->bounds.centroid());
+    }
+
+    logging::print("Wrote {}\n", name);
+}
+
 /*
 =============
 SetAreaPortalAreas_r
@@ -722,6 +899,7 @@ static void SetAreaPortalAreas_r(node_t *node)
         logging::print(
             "WARNING: areaportal entity {} with targetname {} doesn't touch two areas\n  Node bounds: {} -> {}\n",
             entity - map.entities.data(), entity->epairs.get("targetname"), node->bounds.mins(), node->bounds.maxs());
+        DebugAreaPortalBothSidesLeak(node);
         return;
     }
 }
