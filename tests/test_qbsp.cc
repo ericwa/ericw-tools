@@ -854,14 +854,11 @@ TEST_CASE("detail_illusionary_noclipfaces_intersecting" * doctest::test_suite("t
     CHECK(prt->portalleafs == 1);
 }
 
-/**
- * Since moving to a qbsp3 codebase, detail seals by default.
- */
-TEST_CASE("detail_seals" * doctest::test_suite("testmaps_q1"))
+TEST_CASE("q1_detail_non_sealing" * doctest::test_suite("testmaps_q1"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_seals.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_non_sealing.map");
 
-    CHECK(prt.has_value());
+    CHECK(!prt.has_value());
 }
 
 TEST_CASE("detail_doesnt_remove_world_nodes" * doctest::test_suite("testmaps_q1"))
@@ -887,16 +884,12 @@ TEST_CASE("detail_doesnt_remove_world_nodes" * doctest::test_suite("testmaps_q1"
     // make sure the detail face exists
     CHECK(nullptr != BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {32, -72, 136}, {-1, 0, 0}));
 
-#if 0
-// fixme-brushbsp: with qbsp3 code, the strucutral node is actually clippped away.
-// we could repurpose this test case to test func_detail_wall (q2 window) in which case it would not be clipped away.
     {
         // but the sturctural nodes/leafs should not be clipped away by detail
         const qvec3d covered_by_detail{48, -88, 128};
         auto *covered_by_detail_node = BSP_FindNodeAtPoint(&bsp, &bsp.dmodels[0], covered_by_detail, {-1, 0, 0});
         CHECK(nullptr != covered_by_detail_node);
     }
-#endif
 }
 
 TEST_CASE("merge" * doctest::test_suite("testmaps_q1"))

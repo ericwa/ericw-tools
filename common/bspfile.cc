@@ -618,8 +618,7 @@ public:
         auto bits_a = contentflags_to_bits(a);
         auto bits_b = contentflags_to_bits(b);
 
-        if (bits_a.solid || bits_b.solid) {
-            // qbsp3 behaviour: clear any other set content flags
+        if (contents_are_solid(a) || contents_are_solid(b)) {
             return create_solid_contents();
         }
 

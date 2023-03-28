@@ -52,6 +52,15 @@ TEST_SUITE("common")
             CHECK(combined.native == CONTENTS_WATER);
             CHECK(combined.is_detail_illusionary(game_q1));
         }
+
+        SUBCASE("detail_solid plus water")
+        {
+            auto combined = game_q1->combine_contents(detail_solid, contentflags_t{CONTENTS_WATER});
+
+            CHECK(combined.is_detail_solid(game_q1));
+            CHECK(!combined.is_liquid(game_q1));
+            CHECK(!combined.is_solid(game_q1));
+        }
     }
 
     TEST_CASE("shared content flag tests")
