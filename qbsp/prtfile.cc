@@ -73,8 +73,14 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         front = clusters ? p->nodes[0]->viscluster : p->nodes[0]->visleafnum;
         back = clusters ? p->nodes[1]->viscluster : p->nodes[1]->visleafnum;
 
-        Q_assert(front != -1);
-        Q_assert(back != -1);
+        if (front == -1 || back == -1) {
+            auto front_contents = ClusterContents(p->nodes.front);
+            auto back_contents = ClusterContents(p->nodes.back);
+
+            FError("front {}, cluster contents: {}. back {}, cluster contents: {}. portal: {}", front,
+                front_contents.to_string(qbsp_options.target_game), back,
+                back_contents.to_string(qbsp_options.target_game), w->center());
+        }
 
         /*
          * sometimes planes get turned around when they are very near the

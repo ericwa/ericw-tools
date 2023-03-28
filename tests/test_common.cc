@@ -102,6 +102,9 @@ TEST_SUITE("common")
                 CHECK(solid_empty_cluster.is_empty(game));
                 // this is a bit weird...
                 CHECK(solid_empty_cluster.is_any_detail(game));
+
+                // check portal_can_see_through
+                CHECK(!game->portal_can_see_through(empty, solid_detail, true, true));
             }
         }
     }

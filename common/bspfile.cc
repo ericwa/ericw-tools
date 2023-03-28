@@ -586,6 +586,11 @@ public:
         auto bits_a = contentflags_to_bits(contents0);
         auto bits_b = contentflags_to_bits(contents1);
 
+        // can't see through solid
+        if (bits_a.solid || bits_b.solid) {
+            return false;
+        }
+
         bool a_translucent = transwater ? (bits_a.water || bits_a.slime || bits_a.lava) : false;
         bool b_translucent = transwater ? (bits_b.water || bits_b.slime || bits_b.lava) : false;
 
@@ -596,9 +601,6 @@ public:
             bits_a = q1_contentflags_bits();
         if (bits_b.detail || b_translucent)
             bits_b = q1_contentflags_bits();
-
-        if (bits_a.solid || bits_b.solid)
-            return false; // can't see through solid
 
         if ((bits_a ^ bits_b).all_empty())
             return true; // identical on both sides

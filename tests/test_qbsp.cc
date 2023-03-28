@@ -868,6 +868,13 @@ TEST_CASE("q1_sealing_contents" * doctest::test_suite("testmaps_q1"))
     CHECK(prt.has_value());
 }
 
+TEST_CASE("q1_detail_touching_water" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_touching_water.map");
+
+    CHECK(prt.has_value());
+}
+
 TEST_CASE("detail_doesnt_remove_world_nodes" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_remove_world_nodes.map");
