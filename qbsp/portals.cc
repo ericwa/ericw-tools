@@ -797,13 +797,10 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
 {
     std::vector<exit_t> exits = FindAreaPortalExits(node);
 
-    logging::print("found {} exits:\n", exits.size());
-    for (auto [exit_portal, exit_leaf] : exits) {
-        logging::print(
-            "     {} ({}):\n", exit_leaf->bounds.centroid(), exit_leaf->contents.to_string(qbsp_options.target_game));
-    }
-    if (exits.size() < 2)
+    if (exits.size() < 2) {
+        logging::funcprint("WARNING: only found {} exits\n", exits.size());
         return;
+    }
 
     auto [exit_portal0, exit_leaf0] = exits[0];
 
@@ -827,8 +824,6 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
 
             return true;
         });
-
-        logging::print("shortest path from exit 0 to {} is {} leafs long\n", i, path.size());
 
         if (path.size() > longest_length) {
             longest_length = path.size();
@@ -859,7 +854,7 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
         WriteLeakTrail(ptsfile, (*it)->bounds.centroid(), (*next_it)->bounds.centroid());
     }
 
-    logging::print("Wrote {}\n", name);
+    logging::print("Wrote areaportal leak to {}\n", name);
 
     ++map.numareaportal_leaks;
 }
