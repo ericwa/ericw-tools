@@ -621,6 +621,9 @@ public:
         if (contents_are_solid(a) || contents_are_solid(b)) {
             return create_solid_contents();
         }
+        if (contents_are_sky(a) || contents_are_sky(b)) {
+            return contentflags_t{CONTENTS_SKY};
+        }
 
         return contentflags_from_bits(bits_a | bits_b);
     }
