@@ -838,10 +838,8 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
 
     // write `longest_path` as the leak
 
-    mapentity_t *entity = AreanodeEntityForLeaf(node);
-
     fs::path name = qbsp_options.bsp_path;
-    name.replace_extension(fmt::format("areaportal{}_leak.pts", entity - map.entities.data()));
+    name.replace_extension(fmt::format("areaportal_leak{}.pts", map.numareaportal_leaks));
 
     std::ofstream ptsfile(name);
 
@@ -862,6 +860,8 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
     }
 
     logging::print("Wrote {}\n", name);
+
+    ++map.numareaportal_leaks;
 }
 
 /*

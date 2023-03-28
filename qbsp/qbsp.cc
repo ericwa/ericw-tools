@@ -1628,6 +1628,16 @@ void InitQBSP(int argc, const char **argv)
         fs::path porfile = qbsp_options.bsp_path;
         porfile.replace_extension("por");
         remove(porfile);
+
+        // areaportal leaks
+        for (int i = 0;; i++) {
+            fs::path name = qbsp_options.bsp_path;
+            name.replace_extension(fmt::format("areaportal_leak{}.pts", i));
+
+            if (!remove(name)) {
+                break;
+            }
+        }
     }
 
     // onlyents might not load this yet
