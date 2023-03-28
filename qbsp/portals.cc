@@ -891,10 +891,14 @@ static void SetAreaPortalAreas_r(node_t *node)
 
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
-        logging::print(
-            "WARNING: areaportal entity {} with targetname {} doesn't touch two areas\n  Node bounds: {} -> {}\n",
-            entity - map.entities.data(), entity->epairs.get("targetname"), node->bounds.mins(), node->bounds.maxs());
-        DebugAreaPortalBothSidesLeak(node);
+        if (!entity->wrote_doesnt_touch_two_areas_warning) {
+            entity->wrote_doesnt_touch_two_areas_warning = true;
+            logging::print(
+                "WARNING: {}: areaportal entity {} with targetname {} doesn't touch two areas\n  Node bounds: {} -> {}\n",
+                entity->location, entity - map.entities.data(), entity->epairs.get("targetname"), node->bounds.mins(),
+                node->bounds.maxs());
+            DebugAreaPortalBothSidesLeak(node);
+        }
         return;
     }
 }
