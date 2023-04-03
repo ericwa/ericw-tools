@@ -135,7 +135,7 @@ modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
       offset{},
       minlight{this, "minlight", 0},
       maxlight{this, "maxlight", 0},
-      minlightMottle{this, "minlightMottle", false},
+      minlightMottle{this, {"minlight_mottle", "minlightMottle"}, false},
       shadow{this, "shadow", 0},
       shadowself{this, {"shadowself", "selfshadow"}, 0},
       shadowworldonly{this, "shadowworldonly", 0},

@@ -376,6 +376,14 @@ func_detail/func_group as well, if qbsp from these tools is used.
    Set the minimum light level for any surface of the brush model.
    Default 0.
 
+   .. note:: Q2 uses a 0..1 scale for this key
+
+.. bmodel-key:: "_minlight_mottle" "n"
+                "_minlightMottle" "n"
+
+   Whether minlight should have a mottled pattern. Defaults
+   to 1 in Q2 mode and 0 otherwise.
+
 .. bmodel-key:: "_minlight_exclude" "texname"
 
    Faces with the given texture are excluded from receiving minlight on

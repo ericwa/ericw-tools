@@ -146,6 +146,9 @@ public:
     std::array<int32_t, 2> portalareas = {};
 
     parser_source_location location;
+
+    // warnings
+    bool wrote_doesnt_touch_two_areas_warning = false;
 };
 
 struct maptexdata_t
@@ -237,6 +240,7 @@ struct mapdata_t
     // Q2 stuff
     int32_t c_areas = 0;
     int32_t numareaportals = 0;
+    int32_t numareaportal_leaks = 0;
     // running total
     uint32_t brush_offset = 0;
     // Small cache for image meta in the current map

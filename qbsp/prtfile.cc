@@ -58,7 +58,8 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         WritePortals_r(node->children[1], portalFile, clusters);
         return;
     }
-    if (node->contents.is_solid(qbsp_options.target_game))
+    // at this point, `node` may be a leaf or a cluster
+    if (node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game))
         return;
 
     for (p = node->portals; p; p = next) {
@@ -98,14 +99,14 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
     }
 }
 
-static int WriteClusters_r(node_t *node, std::ofstream &portalFile, int viscluster)
+static int WritePTR2ClusterMapping_r(node_t *node, std::ofstream &portalFile, int viscluster)
 {
     if (!node->is_leaf) {
-        viscluster = WriteClusters_r(node->children[0], portalFile, viscluster);
-        viscluster = WriteClusters_r(node->children[1], portalFile, viscluster);
+        viscluster = WritePTR2ClusterMapping_r(node->children[0], portalFile, viscluster);
+        viscluster = WritePTR2ClusterMapping_r(node->children[1], portalFile, viscluster);
         return viscluster;
     }
-    if (node->contents.is_solid(qbsp_options.target_game))
+    if (node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game))
         return viscluster;
 
     /* If we're in the next cluster, start a new line */
@@ -173,7 +174,7 @@ static void NumberLeafs_r(node_t *node, portal_state_t &state, int cluster)
         return;
     }
 
-    if (node->contents.is_any_solid(qbsp_options.target_game)) {
+    if (node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game)) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;
@@ -237,7 +238,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t &state)
         fmt::print(portalFile, "{}\n", state.num_visclusters.count.load());
         fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
         WritePortals_r(headnode, portalFile, true);
-        check = WriteClusters_r(headnode, portalFile, 0);
+        check = WritePTR2ClusterMapping_r(headnode, portalFile, 0);
         if (check != state.num_visclusters.count.load() - 1) {
             FError("Internal error: Detail cluster mismatch");
         }

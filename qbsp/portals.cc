@@ -797,13 +797,10 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
 {
     std::vector<exit_t> exits = FindAreaPortalExits(node);
 
-    logging::print("found {} exits:\n", exits.size());
-    for (auto [exit_portal, exit_leaf] : exits) {
-        logging::print(
-            "     {} ({}):\n", exit_leaf->bounds.centroid(), exit_leaf->contents.to_string(qbsp_options.target_game));
-    }
-    if (exits.size() < 2)
+    if (exits.size() < 2) {
+        logging::funcprint("WARNING: only found {} exits\n", exits.size());
         return;
+    }
 
     auto [exit_portal0, exit_leaf0] = exits[0];
 
@@ -828,8 +825,6 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
             return true;
         });
 
-        logging::print("shortest path from exit 0 to {} is {} leafs long\n", i, path.size());
-
         if (path.size() > longest_length) {
             longest_length = path.size();
             longest_path = path;
@@ -838,10 +833,8 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
 
     // write `longest_path` as the leak
 
-    mapentity_t *entity = AreanodeEntityForLeaf(node);
-
     fs::path name = qbsp_options.bsp_path;
-    name.replace_extension(fmt::format("areaportal{}_leak.pts", entity - map.entities.data()));
+    name.replace_extension(fmt::format("areaportal_leak{}.pts", map.numareaportal_leaks));
 
     std::ofstream ptsfile(name);
 
@@ -861,7 +854,9 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
         WriteLeakTrail(ptsfile, (*it)->bounds.centroid(), (*next_it)->bounds.centroid());
     }
 
-    logging::print("Wrote {}\n", name);
+    logging::print("Wrote areaportal leak to {}\n", name);
+
+    ++map.numareaportal_leaks;
 }
 
 /*
@@ -896,10 +891,14 @@ static void SetAreaPortalAreas_r(node_t *node)
 
     node->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
-        logging::print(
-            "WARNING: areaportal entity {} with targetname {} doesn't touch two areas\n  Node bounds: {} -> {}\n",
-            entity - map.entities.data(), entity->epairs.get("targetname"), node->bounds.mins(), node->bounds.maxs());
-        DebugAreaPortalBothSidesLeak(node);
+        if (!entity->wrote_doesnt_touch_two_areas_warning) {
+            entity->wrote_doesnt_touch_two_areas_warning = true;
+            logging::print(
+                "WARNING: {}: areaportal entity {} with targetname {} doesn't touch two areas\n  Node bounds: {} -> {}\n",
+                entity->location, entity - map.entities.data(), entity->epairs.get("targetname"), node->bounds.mins(),
+                node->bounds.maxs());
+            DebugAreaPortalBothSidesLeak(node);
+        }
         return;
     }
 }
