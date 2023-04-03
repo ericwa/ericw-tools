@@ -2409,6 +2409,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
     }
     // ericw -- end brush primitives
 
+    bool is_hint = false;
+
     while (parser.parse_token()) {
 
         // set linenum after first parsed token
@@ -2444,8 +2446,28 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
             continue;
         }
 
+        if (face->get_texinfo().flags.is_hint) {
+            is_hint = true;
+        }
+
         /* Save the face, update progress */
         brush.faces.emplace_back(std::move(face.value()));
+    }
+
+    // mark hintskip faces
+    if (is_hint) {
+        int32_t num_hintskip = 0;
+
+        for (auto &face : brush.faces) {
+            if (qbsp_options.target_game->texinfo_is_hintskip(face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
+                auto copy = face.get_texinfo();
+                copy.flags.is_hintskip = true;
+                face.texinfo = FindTexinfo(copy);
+                num_hintskip++;
+            }
+        }
+
+        //logging::print("{}: {} hintskip faces\n", parser.location, num_hintskip);
     }
 
     // ericw -- brush primitives - there should be another closing }

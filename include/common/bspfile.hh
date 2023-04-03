@@ -161,11 +161,11 @@ struct surfflags_t
     // an invisible surface (Q1 "skip" texture, Q2 SURF_NODRAW)
     bool is_nodraw;
 
-    // completely ignore, allowing non-closed brushes (Q2 SURF_SKIP)
-    bool is_hintskip;
-
     // hint surface
     bool is_hint;
+
+    // is a skip surface from a hint brush
+    bool is_hintskip;
 
     // don't receive dirtmapping
     bool no_dirt;
