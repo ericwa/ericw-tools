@@ -48,13 +48,18 @@ static bool LeafSealsMap(const node_t *node)
 PointInLeaf
 
 If the point is exactly on a node plane, prefer to return the
-opaque leaf.
+one that seals the map if `prefer_sealing` is true (otherwise
+prefer the one that doesn't seal).
 
 This avoids spurious leaks if a point entity is on the outside
 of the map (exactly on a brush faces) - happens in base1.map.
+
+However, in Q1 hull1/hull2, it makes more sense to prefer the empty
+leaf, so an info_player_start 24 units off a floor causes the
+room to not get filled in as solid.
 ===========
 */
-static node_t *PointInLeaf(node_t *node, const qvec3d &point)
+static node_t *PointInLeaf(node_t *node, const qvec3d &point, bool prefer_sealing)
 {
     if (node->is_leaf) {
         return node;
@@ -64,18 +69,17 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point)
 
     if (dist > 0) {
         // point is on the front of the node plane
-        return PointInLeaf(node->children[0], point);
+        return PointInLeaf(node->children[0], point, prefer_sealing);
     } else if (dist < 0) {
         // point is on the back of the node plane
-        return PointInLeaf(node->children[1], point);
+        return PointInLeaf(node->children[1], point, prefer_sealing);
     } else {
         // point is exactly on the node plane
 
-        node_t *front = PointInLeaf(node->children[0], point);
-        node_t *back = PointInLeaf(node->children[1], point);
+        node_t *front = PointInLeaf(node->children[0], point, prefer_sealing);
+        node_t *back = PointInLeaf(node->children[1], point, prefer_sealing);
 
-        // prefer the opaque one
-        if (LeafSealsMap(front)) {
+        if (prefer_sealing == LeafSealsMap(front)) {
             return front;
         }
         return back;
@@ -324,7 +328,7 @@ FindOccupiedLeafs
 sets node->occupant
 ==================
 */
-static void MarkOccupiedClusters(node_t *headnode)
+static void MarkOccupiedClusters(node_t *headnode, hull_index_t hullnum)
 {
     for (int i = 1; i < map.entities.size(); i++) {
         mapentity_t &entity = map.entities.at(i);
@@ -339,7 +343,8 @@ static void MarkOccupiedClusters(node_t *headnode)
         }
 
         /* find the leaf it's in. Skip opqaue leafs */
-        node_t *cluster = PointInLeaf(headnode, entity.origin);
+        bool prefer_sealing = !hullnum.has_value() || hullnum.value() == 0;
+        node_t *cluster = PointInLeaf(headnode, entity.origin, prefer_sealing);
 
         if (LeafSealsMap(cluster)) {
             continue;
@@ -630,7 +635,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     ClearOccupied_r(node);
 
     // Sets leaf->occupant
-    MarkOccupiedClusters(node);
+    MarkOccupiedClusters(node, hullnum);
     const std::vector<node_t *> occupied_clusters = FindOccupiedClusters(node);
 
     for (auto *occupied_cluster : occupied_clusters) {

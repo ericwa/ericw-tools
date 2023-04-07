@@ -1211,6 +1211,25 @@ TEST_CASE("qbsp_sealing_point_entity_on_outside" * doctest::test_suite("testmaps
     REQUIRE(prt.has_value());
 }
 
+TEST_CASE("q1_sealing_hull1_onnode" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_sealing_hull1_onnode.map");
+
+    const auto player_start_pos = qvec3d(-192, 132, 56);
+
+    INFO("hull0 is empty at the player start");
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], player_start_pos));
+
+    INFO("hull1/2 are empty just above the player start");
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1)));
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1)));
+
+    INFO("hull0/1/2 are solid in the void");
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
+    CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
+}
+
 TEST_CASE("q1_0125unit_faces" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_0125unit_faces.map");
