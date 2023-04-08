@@ -77,8 +77,18 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Dice winding...
     vector<qvec3f> points;
-    winding.dice(cfg.surflightsubdivision.value(),
-        [&points, &facenormal](winding_t &w) { points.push_back(w.center() + facenormal); });
+    size_t points_before_culling = 0;
+    winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
+        ++points_before_culling;
+
+        qvec3f point = w.center() + facenormal;
+
+        // optimization - cull surface lights in the void
+        if (Light_PointInWorld(bsp, point))
+            return;
+
+        points.push_back(point);
+    });
 
     // Calculate emit color and intensity...
 
@@ -108,7 +118,8 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         texture_color.value() *= 1.0f / intensity;
 
     // Sanity checks...
-    Q_assert(!points.empty());
+    if (points.empty())
+        return;
 
     // Add surfacelight...
     surfacelight_t l;
@@ -135,7 +146,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Store surfacelight settings...
     l.totalintensity = intensity * facearea;
-    l.intensity = l.totalintensity / l.points.size();
+    l.intensity = l.totalintensity / points_before_culling;
     l.color = texture_color.value();
 
     // Store light...
