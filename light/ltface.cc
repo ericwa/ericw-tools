@@ -309,7 +309,7 @@ static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, con
         if (modelinfo->object_channel_mask.value() != self_modelinfo->object_channel_mask.value())
             continue;
 
-        if (Light_PointInSolid(bsp, modelinfo->model, point)) {
+        if (Light_PointInSolid(bsp, modelinfo->model, point - modelinfo->offset)) {
             // Only mark occluded if the bmodel is fully opaque
             if (modelinfo->alpha.value() == 1.0f)
                 return true;

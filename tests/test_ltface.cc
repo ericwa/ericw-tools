@@ -595,13 +595,13 @@ TEST_CASE("q2_light_origin_brush_shadow")
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_origin_brush_shadow.map", {});
 
-    const qvec3d under_shadow_bmodel{-320, 176, 0};
-    const qvec3d under_nonshadow_bmodel{-432, 176, 0};
+    const qvec3d under_shadow_bmodel{-320, 176, 1};
+    const qvec3d under_nonshadow_bmodel{-432, 176, 1};
 
     const qvec3d under_nodraw_shadow_bmodel = under_shadow_bmodel - qvec3d(0, 96, 0);
     const qvec3d under_nodraw_nonshadow_bmodel = under_nonshadow_bmodel - qvec3d(0, 96, 0);
 
-    const qvec3d at_origin{0, 0, 0};
+    const qvec3d at_origin{0, 0, 1};
 
     INFO("ensure expected shadow");
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, under_shadow_bmodel);
