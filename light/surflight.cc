@@ -79,7 +79,6 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     vector<qvec3f> points;
     winding.dice(cfg.surflightsubdivision.value(),
         [&points, &facenormal](winding_t &w) { points.push_back(w.center() + facenormal); });
-    total_surflight_points += points.size();
 
     // Calculate emit color and intensity...
 
@@ -141,6 +140,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Store light...
     unique_lock<mutex> lck{surfacelights_lock};
+    total_surflight_points += l.points.size();
     surfacelights.push_back(l);
 
     const int index = static_cast<int>(surfacelights.size()) - 1;
