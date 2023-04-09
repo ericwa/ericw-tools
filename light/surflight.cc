@@ -84,10 +84,13 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         qvec3f point = w.center() + facenormal;
 
         // optimization - cull surface lights in the void
-        if (Light_PointInWorld(bsp, point))
+        // also try to move them if they're slightly inside a wall
+        auto [fixed_point, success] = FixLightOnFace(bsp, point, false, 0.5f);
+        if (!success) {
             return;
+        }
 
-        points.push_back(point);
+        points.push_back(fixed_point);
     });
 
     // Calculate emit color and intensity...
