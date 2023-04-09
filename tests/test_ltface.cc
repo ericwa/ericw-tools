@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <light/light.hh>
+#include <light/surflight.hh>
 #include <common/bspinfo.hh>
 #include <qbsp/qbsp.hh>
 #include <testmaps.hh>
@@ -613,4 +614,13 @@ TEST_CASE("q2_light_origin_brush_shadow")
 
     INFO("ensure no spurious shadow at the world origin (would happen if we didn't apply model offset)");
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, at_origin);
+}
+
+TEST_CASE("q2_surface_lights_culling")
+{
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_surface_lights_culling.map", {});
+
+    CHECK(7 == GetSurflightPoints());
+
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {155, 78, 39}, {-480, 168, 64});
 }

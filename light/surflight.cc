@@ -54,6 +54,11 @@ std::vector<surfacelight_t> &GetSurfaceLights()
     return surfacelights;
 }
 
+size_t GetSurflightPoints()
+{
+    return total_surflight_points;
+}
+
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
     std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
