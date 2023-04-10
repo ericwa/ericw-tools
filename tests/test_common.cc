@@ -4,6 +4,9 @@
 #include <common/bspfile.hh>
 #include <common/bspfile_q1.hh>
 #include <common/bspfile_q2.hh>
+#include <common/imglib.hh>
+#include <common/settings.hh>
+#include <testmaps.hh>
 
 TEST_SUITE("common")
 {
@@ -210,5 +213,31 @@ TEST_SUITE("common")
                 }
             }
         }
+    }
+
+    TEST_CASE("imglib png loader")
+    {
+        auto *game = bspver_q2.game;
+        auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
+
+        settings::common_settings settings;
+        settings.paths.addValue(wal_metadata_path.string(), settings::source::COMMANDLINE);
+
+        game->init_filesystem("placeholder.map", settings);
+
+        auto [texture, resolve, data] = img::load_texture("e1u1/yellow32x32", false, game, settings);
+        REQUIRE(texture);
+
+        CHECK(texture->meta.name == "e1u1/yellow32x32");
+        CHECK(texture->meta.width == 32);
+        CHECK(texture->meta.height == 32);
+        CHECK(texture->meta.extension.value() == img::ext::STB);
+        CHECK(!texture->meta.color_override);
+
+        CHECK(texture->width == 32);
+        CHECK(texture->height == 32);
+
+        CHECK(texture->width_scale == 1);
+        CHECK(texture->height_scale == 1);
     }
 }
