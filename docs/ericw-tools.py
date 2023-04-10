@@ -22,12 +22,15 @@ def parse_epair(env, sig: str, signode) -> str:
     if not m:
          signode += addnodes.desc_name(sig, sig)
          return sig
-    
+
+    # e.g. name would be 'light' and args would be 'n'
     name, args = m.groups()
-        
-    signode += addnodes.desc_name(name, name)
+
+    # wrap name in double quotes again so double-clicking the key name doesn't select
+    # following whitespace
+    signode += addnodes.desc_name(name, f'"{name}"')
     signode += addnodes.desc_sig_literal_string(text=' ')    
-    signode += addnodes.desc_sig_literal_string(text=args)
+    signode += addnodes.desc_sig_literal_string(text=f'"{args}"')
 
     return name
 
