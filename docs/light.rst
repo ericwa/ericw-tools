@@ -200,6 +200,8 @@ The following keys can be added to the *worldspawn* entity:
    an easy way to eliminate completely dark areas of the level, however
    you may lose some contrast as a result, so use with care. Default 0.
 
+   .. note:: In Q2 mode, minlight uses a 0..1 range.
+
 .. worldspawn-key:: "_minlight_color" "r g b"
                     "_mincolor" "r g b"
 
@@ -469,6 +471,8 @@ func_detail/func_group as well, if qbsp from these tools is used.
 
    1 makes a model receive minlight only, ignoring all lights /
    sunlight. Could be useful on rotators / trains.
+
+   .. seealso:: `Lighting Channels`_ for a more powerful version of this
 
 .. bmodel-key:: "_bounce" "n"
    
@@ -766,9 +770,3 @@ Copyright
 
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
-
-See Also
-========
-
-**qbsp**\ (1) **vis**\ (1) **bspinfo**\ (1) **bsputil**\ (1)
-**quake**\ (6)

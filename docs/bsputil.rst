@@ -66,8 +66,3 @@ Copyright
 
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
-
-See Also
-========
-
-**qbsp(1)** **light(1)** **vis(1)** **bspinfo(1)** **quake(6)**
