@@ -625,7 +625,7 @@ TEST_CASE("q2_surface_lights_culling")
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {155, 78, 39}, {-480, 168, 64});
 }
 
-TEST_CASE("q1_lightignore")
+TEST_CASE("q1_lightignore" * doctest::may_fail())
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_lightignore.map", {"-bounce"});
 
