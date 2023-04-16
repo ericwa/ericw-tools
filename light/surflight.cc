@@ -102,7 +102,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
     if (!texture_color.has_value()) {
-        if (cfg.sky_surface.isChanged() && is_sky) {
+        if (cfg.sky_surface.is_changed() && is_sky) {
             // FIXME: this only handles the "_sky_surface"  "red green blue" format.
             //        There are other more complex variants we could handle documented in the link above.
             // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
@@ -181,7 +181,7 @@ std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(
         if (FaceMatchesSurfaceLightTemplate(
                 bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
             return std::make_tuple(surflight->light.value(), surflight->style.value(),
-                surflight->color.isChanged() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)),
+                surflight->color.is_changed() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)),
                 surflight.get());
         }
     }
@@ -219,7 +219,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
                 bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
             std::optional<qvec3f> texture_color;
 
-            if (surflight->color.isChanged()) {
+            if (surflight->color.is_changed()) {
                 texture_color = surflight->color.value();
             }
 

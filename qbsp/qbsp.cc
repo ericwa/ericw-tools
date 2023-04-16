@@ -67,7 +67,7 @@ const std::set<wadpath> &setting_wadpathset::pathsValue() const
     return _paths;
 }
 
-bool setting_wadpathset::copyFrom(const setting_base &other)
+bool setting_wadpathset::copy_from(const setting_base &other)
 {
     if (auto *casted = dynamic_cast<const setting_wadpathset *>(&other)) {
         _paths = casted->_paths;
@@ -83,20 +83,20 @@ void setting_wadpathset::reset()
     _source = source::DEFAULT;
 }
 
-bool setting_wadpathset::parse(const std::string &settingName, parser_base_t &parser, source source)
+bool setting_wadpathset::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
     if (!parser.parse_token()) {
         return false;
     }
 
-    if (changeSource(source)) {
-        _paths.insert(wadpath{fs::path(parser.token), settingName[0] == 'x'});
+    if (change_source(source)) {
+        _paths.insert(wadpath{fs::path(parser.token), setting_name[0] == 'x'});
     }
 
     return true;
 }
 
-std::string setting_wadpathset::stringValue() const
+std::string setting_wadpathset::string_value() const
 {
     std::string paths;
 
@@ -122,14 +122,14 @@ std::string setting_wadpathset::format() const
 
 // setting_tjunc
 
-bool setting_tjunc::parse(const std::string &settingName, parser_base_t &parser, source source)
+bool setting_tjunc::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    if (settingName == "notjunc") {
-        this->setValue(tjunclevel_t::NONE, source);
+    if (setting_name == "notjunc") {
+        this->set_value(tjunclevel_t::NONE, source);
         return true;
     }
 
-    return this->setting_enum<tjunclevel_t>::parse(settingName, parser, source);
+    return this->setting_enum<tjunclevel_t>::parse(setting_name, parser, source);
 }
 
 // setting_blocksize
@@ -140,7 +140,7 @@ setting_blocksize::setting_blocksize(setting_container *dictionary, const namese
 {
 }
 
-bool setting_blocksize::parse(const std::string &settingName, parser_base_t &parser, source source)
+bool setting_blocksize::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
     qvec3d vec = {1024, 1024, 1024};
 
@@ -171,12 +171,12 @@ bool setting_blocksize::parse(const std::string &settingName, parser_base_t &par
         // for [x, y] z will be left default
     }
 
-    setValue(vec, source);
+    set_value(vec, source);
 
     return true;
 }
 
-std::string setting_blocksize::stringValue() const
+std::string setting_blocksize::string_value() const
 {
     return qv::to_string(_value);
 }
@@ -194,7 +194,7 @@ setting_debugexpand::setting_debugexpand(
 {
 }
 
-bool setting_debugexpand::parse(const std::string &settingName, parser_base_t &parser, source source)
+bool setting_debugexpand::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
     std::array<vec_t, 6> values;
     size_t i = 0;
@@ -210,13 +210,13 @@ bool setting_debugexpand::parse(const std::string &settingName, parser_base_t &p
             parser.parse_token();
         }
 
-        this->setValue(aabb3d{{values[0], values[1], values[2]}, {values[3], values[4], values[5]}}, source);
+        this->set_value(aabb3d{{values[0], values[1], values[2]}, {values[3], values[4], values[5]}}, source);
 
         return true;
     } catch (std::exception &) {
         // single hull value
         if (i == 1) {
-            setValue(static_cast<uint8_t>(values[0]), source);
+            set_value(static_cast<uint8_t>(values[0]), source);
             return true;
         }
 
@@ -224,7 +224,7 @@ bool setting_debugexpand::parse(const std::string &settingName, parser_base_t &p
     }
 }
 
-std::string setting_debugexpand::stringValue() const
+std::string setting_debugexpand::string_value() const
 {
     return is_hull() ? std::to_string(hull_index_value()) : fmt::format("{}", hull_bounds_value());
 }
@@ -470,7 +470,7 @@ qbsp_settings::qbsp_settings()
       qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"},
       bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"},
       bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
-      nosubdivide{this, "nosubdivide", [&](source src) { subdivide.setValue(0, src); }, &common_format_group,
+      nosubdivide{this, "nosubdivide", [&](source src) { subdivide.set_value(0, src); }, &common_format_group,
           "disable subdivision"},
       software{this, "software", true, &common_format_group,
           "change settings to allow for (or make adjustments to optimize for the lack of) software support"},
@@ -572,12 +572,12 @@ qbsp_settings::qbsp_settings()
 {
 }
 
-void qbsp_settings::setParameters(int argc, const char **argv)
+void qbsp_settings::set_parameters(int argc, const char **argv)
 {
-    common_settings::setParameters(argc, argv);
-    programDescription =
+    common_settings::set_parameters(argc, argv);
+    program_description =
         "qbsp performs geometric level processing of Quake .MAP files to create\nQuake .BSP files.\n\n";
-    remainderName = "sourcefile.map [destfile.bsp]";
+    remainder_name = "sourcefile.map [destfile.bsp]";
 }
 
 void qbsp_settings::initialize(int argc, const char **argv)
@@ -593,7 +593,7 @@ void qbsp_settings::initialize(int argc, const char **argv)
         auto remainder = parse(p);
 
         if (remainder.size() <= 0 || remainder.size() > 2) {
-            printHelp();
+            print_help();
         }
 
         qbsp_options.map_path = remainder[0];
@@ -603,7 +603,7 @@ void qbsp_settings::initialize(int argc, const char **argv)
         }
     } catch (parse_exception &ex) {
         logging::print(ex.what());
-        printHelp();
+        print_help();
     }
 }
 
@@ -688,7 +688,7 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
         set_target_version(&bspver_hl);
     }
 
-    if (q2bsp.value() || (q2rtx.value() && !q2bsp.isChanged() && !qbism.isChanged())) {
+    if (q2bsp.value() || (q2rtx.value() && !q2bsp.is_changed() && !qbism.is_changed())) {
         set_target_version(&bspver_q2);
     }
 
@@ -739,33 +739,33 @@ void qbsp_settings::postinitialize(int argc, const char **argv)
 
     // side effects from q2rtx
     if (q2rtx.value()) {
-        if (!includeskip.isChanged()) {
-            includeskip.setValue(true, settings::source::GAME_TARGET);
+        if (!includeskip.is_changed()) {
+            includeskip.set_value(true, settings::source::GAME_TARGET);
         }
 
-        if (!software.isChanged()) {
-            software.setValue(false, settings::source::GAME_TARGET);
+        if (!software.is_changed()) {
+            software.set_value(false, settings::source::GAME_TARGET);
         }
     }
 
     // side effects from Quake II
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-        if (!maxedges.isChanged()) {
-            maxedges.setValue(0, settings::source::GAME_TARGET);
+        if (!maxedges.is_changed()) {
+            maxedges.set_value(0, settings::source::GAME_TARGET);
         }
 
         if (qbsp_options.target_version == &bspver_qbism) {
-            if (!software.isChanged()) {
-                software.setValue(false, settings::source::GAME_TARGET);
+            if (!software.is_changed()) {
+                software.set_value(false, settings::source::GAME_TARGET);
             }
         }
 
-        if (!software.value() && !subdivide.isChanged()) {
-            subdivide.setValue(496, settings::source::GAME_TARGET);
+        if (!software.value() && !subdivide.is_changed()) {
+            subdivide.set_value(496, settings::source::GAME_TARGET);
         }
 
-        if (!qbsp_options.chop.isChanged()) {
-            qbsp_options.chop.setValue(true, settings::source::GAME_TARGET);
+        if (!qbsp_options.chop.is_changed()) {
+            qbsp_options.chop.set_value(true, settings::source::GAME_TARGET);
         }
     }
 
@@ -998,7 +998,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         }
     }
 
-    if (qbsp_options.lmscale.isChanged() && !entity.epairs.has("_lmscale")) {
+    if (qbsp_options.lmscale.is_changed() && !entity.epairs.has("_lmscale")) {
         entity.epairs.set("_lmscale", std::to_string(qbsp_options.lmscale.value()));
     }
 

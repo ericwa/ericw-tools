@@ -1446,10 +1446,10 @@ public:
             fs::path gamedir, basedir;
 
             // pull in from settings
-            if (options.gamedir.isChanged()) {
+            if (options.gamedir.is_changed()) {
                 gamedir = options.gamedir.value();
             }
-            if (options.basedir.isChanged()) {
+            if (options.basedir.is_changed()) {
                 basedir = options.basedir.value();
             }
 

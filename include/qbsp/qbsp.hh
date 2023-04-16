@@ -100,10 +100,10 @@ public:
         const char *description = "");
     void addPath(const wadpath &path);
     const std::set<wadpath> &pathsValue() const;
-    bool copyFrom(const setting_base &other) override;
+    bool copy_from(const setting_base &other) override;
     void reset() override;
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
-    std::string stringValue() const override;
+    bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
+    std::string string_value() const override;
     std::string format() const override;
 };
 
@@ -133,7 +133,7 @@ struct setting_tjunc : public setting_enum<tjunclevel_t>
 public:
     using setting_enum<tjunclevel_t>::setting_enum;
 
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+    bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
 };
 
 // like qvec3f, but integer and allows up to three values (xyz, x y, or x y z)
@@ -143,8 +143,8 @@ class setting_blocksize : public setting_value<qvec3i>
 public:
     inline setting_blocksize(setting_container *dictionary, const nameset &names, qvec3i val,
         const setting_group *group = nullptr, const char *description = "");
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
-    std::string stringValue() const override;
+    bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
+    std::string string_value() const override;
     std::string format() const override;
 };
 
@@ -153,8 +153,8 @@ class setting_debugexpand : public setting_value<std::variant<uint8_t, aabb3d>>
 public:
     inline setting_debugexpand(setting_container *dictionary, const nameset &names,
         const setting_group *group = nullptr, const char *description = "");
-    bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
-    std::string stringValue() const override;
+    bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
+    std::string string_value() const override;
     std::string format() const override;
     bool is_hull() const;
     const uint8_t &hull_index_value() const;
@@ -229,7 +229,7 @@ public:
     setting_bool loghulls;
     setting_bool logbmodels;
 
-    void setParameters(int argc, const char **argv) override;
+    void set_parameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;
     void postinitialize(int argc, const char **argv) override;
     void reset() override;

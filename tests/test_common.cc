@@ -221,7 +221,7 @@ TEST_SUITE("common")
         auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
         settings::common_settings settings;
-        settings.paths.addValue(wal_metadata_path.string(), settings::source::COMMANDLINE);
+        settings.paths.add_value(wal_metadata_path.string(), settings::source::COMMANDLINE);
 
         game->init_filesystem("placeholder.map", settings);
 

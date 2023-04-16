@@ -608,23 +608,23 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
 
     // nodirt
-    if (modelinfo->dirt.isChanged()) {
+    if (modelinfo->dirt.is_changed()) {
         lightsurf->nodirt = (modelinfo->dirt.value() == -1);
     } else {
         lightsurf->nodirt = extended_flags.no_dirt;
     }
 
     // minlight
-    if (modelinfo->minlight.isChanged()) {
+    if (modelinfo->minlight.is_changed()) {
         lightsurf->minlight = modelinfo->minlight.value();
     } else {
         lightsurf->minlight = extended_flags.minlight;
     }
 
     // minlightMottle
-    if (modelinfo->minlightMottle.isChanged()) {
+    if (modelinfo->minlightMottle.is_changed()) {
         lightsurf->minlightMottle = modelinfo->minlightMottle.value();
-    } else if (light_options.minlightMottle.isChanged()) {
+    } else if (light_options.minlightMottle.is_changed()) {
         lightsurf->minlightMottle = light_options.minlightMottle.value();
     } else {
         // default value depends on game
@@ -641,14 +641,14 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     }
 
     // maxlight
-    if (modelinfo->maxlight.isChanged()) {
+    if (modelinfo->maxlight.is_changed()) {
         lightsurf->maxlight = modelinfo->maxlight.value();
     } else {
         lightsurf->maxlight = extended_flags.maxlight;
     }
 
     // lightcolorscale
-    if (modelinfo->lightcolorscale.isChanged()) {
+    if (modelinfo->lightcolorscale.is_changed()) {
         lightsurf->lightcolorscale = modelinfo->lightcolorscale.value();
     } else {
         lightsurf->lightcolorscale = extended_flags.lightcolorscale;
@@ -660,7 +660,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     }
 
     // minlight_color
-    if (modelinfo->minlight_color.isChanged()) {
+    if (modelinfo->minlight_color.is_changed()) {
         lightsurf->minlight_color = modelinfo->minlight_color.value();
     } else {
         // if modelinfo mincolor not set, use the one from the .texinfo file
@@ -708,7 +708,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
 
     /* Set up the surface points */
-    if (light_options.world_units_per_luxel.isChanged()) {
+    if (light_options.world_units_per_luxel.is_changed()) {
         if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native & Q2_SURF_SKY)) {
             lightsurf->extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
         } else if (extended_flags.world_units_per_luxel) {
@@ -1098,7 +1098,7 @@ inline vec_t Dirt_GetScaleFactor(const settings::worldspawn_keys &cfg, vec_t occ
         // From _dirt_off_radius to _dirt_on_radius, the dirt linearly ramps from 0 to full, and after _dirt_on_radius,
         // it's full dirt.
 
-        if (entity->dirt_on_radius.isChanged() && entity->dirt_off_radius.isChanged()) {
+        if (entity->dirt_on_radius.is_changed() && entity->dirt_off_radius.is_changed()) {
 
             const float onRadius = entity->dirt_on_radius.value();
             const float offRadius = entity->dirt_off_radius.value();
@@ -2117,7 +2117,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
 {
     // check if needed
 
-    if (!cfg.globalDirt.value() && cfg.globalDirt.getSource() == settings::source::COMMANDLINE) {
+    if (!cfg.globalDirt.value() && cfg.globalDirt.get_source() == settings::source::COMMANDLINE) {
         // HACK: "-dirt 0" disables all dirtmapping even if we would otherwise use it.
         dirt_in_use = false;
         return;

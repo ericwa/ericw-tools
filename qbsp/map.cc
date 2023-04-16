@@ -2459,7 +2459,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         int32_t num_hintskip = 0;
 
         for (auto &face : brush.faces) {
-            if (qbsp_options.target_game->texinfo_is_hintskip(face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
+            if (qbsp_options.target_game->texinfo_is_hintskip(
+                    face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
                 auto copy = face.get_texinfo();
                 copy.flags.is_hintskip = true;
                 face.texinfo = FindTexinfo(copy);
@@ -2467,7 +2468,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
             }
         }
 
-        //logging::print("{}: {} hintskip faces\n", parser.location, num_hintskip);
+        // logging::print("{}: {} hintskip faces\n", parser.location, num_hintskip);
     }
 
     // ericw -- brush primitives - there should be another closing }
@@ -3076,7 +3077,7 @@ void ProcessMapBrushes()
 
     logging::print(logging::flag::STAT, "\n");
 
-    if (qbsp_options.debugexpand.isChanged()) {
+    if (qbsp_options.debugexpand.is_changed()) {
         aabb3d hull;
 
         if (qbsp_options.debugexpand.is_hull()) {
@@ -3495,7 +3496,7 @@ void CalculateWorldExtent(void)
         }
     }
 
-    qbsp_options.worldextent.setValue(ceil((extents + hull_extents) * 2) + SIDESPACE, settings::source::GAME_TARGET);
+    qbsp_options.worldextent.set_value(ceil((extents + hull_extents) * 2) + SIDESPACE, settings::source::GAME_TARGET);
 
     logging::print("INFO: world extents calculated to {} units\n", qbsp_options.worldextent.value());
 }

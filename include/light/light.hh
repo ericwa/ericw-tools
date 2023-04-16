@@ -344,7 +344,7 @@ public:
     public:
         using setting_int32::setting_int32;
 
-        bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
+        bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
         std::string format() const override;
     };
 
@@ -353,8 +353,8 @@ public:
     public:
         using setting_value::setting_value;
 
-        bool parse(const std::string &settingName, parser_base_t &parser, source source) override;
-        std::string stringValue() const override;
+        bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
+        std::string string_value() const override;
         std::string format() const override;
     };
 
@@ -412,7 +412,7 @@ public:
     bitflags<lightfile> write_luxfile = lightfile::none;
     debugmodes debugmode = debugmodes::none;
 
-    void setParameters(int argc, const char **argv) override;
+    void set_parameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;
     void postinitialize(int argc, const char **argv) override;
     void reset() override;

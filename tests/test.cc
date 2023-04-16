@@ -208,25 +208,25 @@ TEST_SUITE("settings")
         settings::setting_scalar waitSetting(&settings, "wait", 0.0);
         settings::setting_string stringSetting(&settings, "string", "test");
 
-        CHECK(settings::source::DEFAULT == scaleSetting.getSource());
-        CHECK(settings::source::DEFAULT == waitSetting.getSource());
+        CHECK(settings::source::DEFAULT == scaleSetting.get_source());
+        CHECK(settings::source::DEFAULT == waitSetting.get_source());
         CHECK(0 == waitSetting.value());
 
-        CHECK(waitSetting.copyFrom(scaleSetting));
-        CHECK(settings::source::DEFAULT == waitSetting.getSource());
+        CHECK(waitSetting.copy_from(scaleSetting));
+        CHECK(settings::source::DEFAULT == waitSetting.get_source());
         CHECK(1.5 == waitSetting.value());
 
         // if copy fails, the value remains unchanged
-        CHECK_FALSE(waitSetting.copyFrom(stringSetting));
-        CHECK(settings::source::DEFAULT == waitSetting.getSource());
+        CHECK_FALSE(waitSetting.copy_from(stringSetting));
+        CHECK(settings::source::DEFAULT == waitSetting.get_source());
         CHECK(1.5 == waitSetting.value());
 
-        scaleSetting.setValue(2.5, settings::source::MAP);
-        CHECK(settings::source::MAP == scaleSetting.getSource());
+        scaleSetting.set_value(2.5, settings::source::MAP);
+        CHECK(settings::source::MAP == scaleSetting.get_source());
 
         // source is also copied
-        CHECK(waitSetting.copyFrom(scaleSetting));
-        CHECK(settings::source::MAP == waitSetting.getSource());
+        CHECK(waitSetting.copy_from(scaleSetting));
+        CHECK(settings::source::MAP == waitSetting.get_source());
         CHECK(2.5 == waitSetting.value());
     }
 
@@ -242,7 +242,7 @@ TEST_SUITE("settings")
         CHECK(doctest::Approx(-1) == sunvec.value()[2]);
 
         settings::setting_mangle sunvec2{&settings, {"sunlight_mangle2"}, 0.0, 0.0, 0.0};
-        sunvec2.copyFrom(sunvec);
+        sunvec2.copy_from(sunvec);
 
         CHECK(doctest::Approx(0) == sunvec2.value()[0]);
         CHECK(doctest::Approx(0) == sunvec2.value()[1]);
@@ -254,20 +254,20 @@ TEST_SUITE("settings")
         settings::setting_container settings1;
         settings::setting_bool boolSetting1(&settings1, "boolSetting", false);
         CHECK_FALSE(boolSetting1.value());
-        CHECK(settings::source::DEFAULT == boolSetting1.getSource());
+        CHECK(settings::source::DEFAULT == boolSetting1.get_source());
 
-        boolSetting1.setValue(true, settings::source::MAP);
+        boolSetting1.set_value(true, settings::source::MAP);
         CHECK(boolSetting1.value());
-        CHECK(settings::source::MAP == boolSetting1.getSource());
+        CHECK(settings::source::MAP == boolSetting1.get_source());
 
         {
             settings::setting_container settings2;
             settings::setting_bool boolSetting2(&settings2, "boolSetting", false);
             CHECK_FALSE(boolSetting2.value());
 
-            settings2.copyFrom(settings1);
+            settings2.copy_from(settings1);
             CHECK(boolSetting2.value());
-            CHECK(settings::source::MAP == boolSetting2.getSource());
+            CHECK(settings::source::MAP == boolSetting2.get_source());
         }
     }
 
@@ -286,24 +286,24 @@ TEST_SUITE("settings")
         static_assert(!std::is_copy_constructible_v<my_settings>);
 
         my_settings s1;
-        CHECK(&s1.boolSetting == s1.findSetting("boolSetting"));
-        CHECK(&s1.stringSetting == s1.findSetting("stringSetting"));
+        CHECK(&s1.boolSetting == s1.find_setting("boolSetting"));
+        CHECK(&s1.stringSetting == s1.find_setting("stringSetting"));
         CHECK(1 == s1.grouped().size());
         CHECK((std::set<settings::setting_base *>{&s1.boolSetting, &s1.stringSetting}) == s1.grouped().at(&test_group));
-        s1.boolSetting.setValue(true, settings::source::MAP);
-        CHECK(settings::source::MAP == s1.boolSetting.getSource());
+        s1.boolSetting.set_value(true, settings::source::MAP);
+        CHECK(settings::source::MAP == s1.boolSetting.get_source());
 
         my_settings s2;
-        s2.copyFrom(s1);
-        CHECK(&s2.boolSetting == s2.findSetting("boolSetting"));
+        s2.copy_from(s1);
+        CHECK(&s2.boolSetting == s2.find_setting("boolSetting"));
         CHECK(s2.grouped().size() == 1);
         CHECK((std::set<settings::setting_base *>{&s2.boolSetting, &s2.stringSetting}) == s2.grouped().at(&test_group));
         CHECK(s2.boolSetting.value());
-        CHECK(settings::source::MAP == s2.boolSetting.getSource());
+        CHECK(settings::source::MAP == s2.boolSetting.get_source());
 
         // s2.stringSetting is still at its default
         CHECK("default" == s2.stringSetting.value());
-        CHECK(settings::source::DEFAULT == s2.stringSetting.getSource());
+        CHECK(settings::source::DEFAULT == s2.stringSetting.get_source());
     }
 
     TEST_CASE("resetBool")
@@ -311,12 +311,12 @@ TEST_SUITE("settings")
         settings::setting_container settings;
         settings::setting_bool boolSetting1(&settings, "boolSetting", false);
 
-        boolSetting1.setValue(true, settings::source::MAP);
-        CHECK(settings::source::MAP == boolSetting1.getSource());
+        boolSetting1.set_value(true, settings::source::MAP);
+        CHECK(settings::source::MAP == boolSetting1.get_source());
         CHECK(boolSetting1.value());
 
         boolSetting1.reset();
-        CHECK(settings::source::DEFAULT == boolSetting1.getSource());
+        CHECK(settings::source::DEFAULT == boolSetting1.get_source());
         CHECK_FALSE(boolSetting1.value());
     }
 
@@ -325,12 +325,12 @@ TEST_SUITE("settings")
         settings::setting_container settings;
         settings::setting_scalar scalarSetting1(&settings, "scalarSetting", 12.34);
 
-        scalarSetting1.setValue(-2, settings::source::MAP);
-        CHECK(settings::source::MAP == scalarSetting1.getSource());
+        scalarSetting1.set_value(-2, settings::source::MAP);
+        CHECK(settings::source::MAP == scalarSetting1.get_source());
         CHECK(-2 == scalarSetting1.value());
 
         scalarSetting1.reset();
-        CHECK(settings::source::DEFAULT == scalarSetting1.getSource());
+        CHECK(settings::source::DEFAULT == scalarSetting1.get_source());
         CHECK(12.34 == scalarSetting1.value());
     }
 
@@ -340,14 +340,14 @@ TEST_SUITE("settings")
         settings::setting_vec3 vec3Setting1(&settings, "vec", 3, 4, 5);
         settings::setting_string stringSetting1(&settings, "name", "abc");
 
-        vec3Setting1.setValue(qvec3d(-1, -2, -3), settings::source::MAP);
-        stringSetting1.setValue("test", settings::source::MAP);
+        vec3Setting1.set_value(qvec3d(-1, -2, -3), settings::source::MAP);
+        stringSetting1.set_value("test", settings::source::MAP);
         settings.reset();
 
-        CHECK(settings::source::DEFAULT == vec3Setting1.getSource());
+        CHECK(settings::source::DEFAULT == vec3Setting1.get_source());
         CHECK(qvec3d(3, 4, 5) == vec3Setting1.value());
 
-        CHECK(settings::source::DEFAULT == stringSetting1.getSource());
+        CHECK(settings::source::DEFAULT == stringSetting1.get_source());
         CHECK("abc" == stringSetting1.value());
     }
 
