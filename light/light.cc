@@ -165,7 +165,7 @@ worldspawn_keys::worldspawn_keys()
       addminlight{this, "addmin", false, &worldspawn_group},
       minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
       maxlight{this, "maxlight", 0, &worldspawn_group},
-      minlightMottle{this, "minlightMottle", false},
+      minlightMottle{this, "minlightMottle", false, &worldspawn_group},
       minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group},
       spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group},
       compilerstyle_start{this, "compilerstyle_start", 32, &worldspawn_group},
@@ -266,11 +266,11 @@ void light_settings::CheckNoDebugModeSet()
     }
 }
 
-setting_group worldspawn_group{"Overridable worldspawn keys", 500};
-setting_group output_group{"Output format options", 30};
-setting_group debug_group{"Debug modes", 40};
-setting_group postprocessing_group{"Postprocessing options", 50};
-setting_group experimental_group{"Experimental options", 60};
+setting_group worldspawn_group{"Overridable worldspawn keys", 500, expected_source::worldspawn};
+setting_group output_group{"Output format options", 30, expected_source::commandline};
+setting_group debug_group{"Debug modes", 40, expected_source::commandline};
+setting_group postprocessing_group{"Postprocessing options", 50, expected_source::commandline};
+setting_group experimental_group{"Experimental options", 60, expected_source::commandline};
 
 light_settings::light_settings()
     : surflight_dump{this, "surflight_dump", false, &debug_group, "dump surface lights to a .map file"},

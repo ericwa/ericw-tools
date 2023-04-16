@@ -271,7 +271,7 @@ TEST_SUITE("settings")
         }
     }
 
-    const settings::setting_group test_group{"Test"};
+    const settings::setting_group test_group{"Test", 0, settings::expected_source::commandline};
 
     TEST_CASE("copyContainerSubclass")
     {

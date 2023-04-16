@@ -74,10 +74,17 @@ public:
     nameset(const std::initializer_list<std::string> &strs);
 };
 
+enum class expected_source
+{
+    commandline,
+    worldspawn
+};
+
 struct setting_group
 {
     const char *name;
     const int32_t order;
+    expected_source type;
 };
 
 class setting_container;
@@ -553,6 +560,7 @@ public:
 
     void print_help();
     void print_summary();
+    void print_rst_documentation();
 
     /**
      * Parse options from the input parser. The parsing

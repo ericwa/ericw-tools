@@ -231,9 +231,9 @@ std::string setting_redirect::format() const
 
 // setting_group
 
-setting_group performance_group{"Performance", 10};
-setting_group logging_group{"Logging", 5};
-setting_group game_group{"Game", 15};
+setting_group performance_group{"Performance", 10, expected_source::commandline};
+setting_group logging_group{"Logging", 5, expected_source::commandline};
+setting_group game_group{"Game", 15, expected_source::commandline};
 
 // setting_container
 
@@ -571,6 +571,86 @@ void setting_container::print_summary()
     logging::print("\n");
 }
 
+static void print_rst_heading(const std::string &text, char c, bool overline = false)
+{
+    if (overline) {
+        fmt::print("{}\n", std::string(text.size(), c));
+    }
+    fmt::print("{}\n", text);
+    fmt::print("{}\n\n", std::string(text.size(), c));
+}
+
+void setting_container::print_rst_documentation()
+{
+    // heading (overline + underline with ===)
+    print_rst_heading(program_name, '=', true);
+
+    // specify the scope for the ".. option::" directives to follow
+    fmt::print(".. program:: {}\n\n", program_name);
+
+    fmt::print("{}\n\n", program_description);
+
+    print_rst_heading("Command-line options", '=');
+
+    const std::string option_directive = ".. option::";
+    const std::string option_directive_padding = std::string(option_directive.size(), ' ');
+
+    for (auto &[group, settings] : grouped()) {
+        if (group == nullptr || group->type == expected_source::commandline) {
+            if (group == nullptr) {
+                print_rst_heading("Uncategeorized", '-');
+            } else {
+                print_rst_heading(group->name, '-');
+            }
+
+            for (auto setting : settings) {
+                for (size_t i = 0; i < setting->names().size(); ++i) {
+                    auto directive = (i == 0) ? option_directive : option_directive_padding;
+                    auto args = setting->format().empty() ? std::string() : std::string(" ") + setting->format();
+
+                    fmt::print("{} -{}{}\n", directive, setting->names()[i], args);
+                }
+
+                if (strlen(setting->description())) {
+                    fmt::print("\n   {}\n\n", setting->description());
+                } else {
+                    fmt::print("\n");
+                }
+            }
+        }
+    }
+
+    print_rst_heading("Worldspawn keys", '=');
+
+    const std::string worldspawn_key_directive = ".. worldspawn-key::";
+    const std::string worldspawn_key_directive_padding = std::string(worldspawn_key_directive.size(), ' ');
+
+    for (auto &[group, settings] : grouped()) {
+        if (group == nullptr)
+            continue;
+
+        if (group->type == expected_source::worldspawn) {
+            print_rst_heading(group->name, '-');
+
+            for (auto setting : settings) {
+                for (size_t i = 0; i < setting->names().size(); ++i) {
+                    auto directive = (i == 0) ? worldspawn_key_directive : worldspawn_key_directive_padding;
+
+                    fmt::print("{} \"_{}\" \"{}\"\n", directive, setting->names()[i], setting->format());
+                }
+
+                if (strlen(setting->description())) {
+                    fmt::print("\n   {}\n\n", setting->description());
+                } else {
+                    fmt::print("\n");
+                }
+            }
+        }
+    }
+
+    throw quit_after_help_exception();
+}
+
 std::vector<std::string> setting_container::parse(parser_base_t &parser)
 {
     // the settings parser loop will continuously eat tokens as long as
@@ -601,6 +681,9 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
 
         if (parser.token == "help" || parser.token == "h" || parser.token == "?") {
             print_help();
+        }
+        if (parser.token == "rst") {
+            print_rst_documentation();
         }
 
         auto setting = find_setting(parser.token);

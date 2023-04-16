@@ -448,10 +448,10 @@ namespace qv
 // command line flags
 namespace settings
 {
-setting_group game_target_group{"Game/BSP Target", -1};
-setting_group map_development_group{"Map development", 1};
-setting_group common_format_group{"Common format options", 2};
-setting_group debugging_group{"Advanced/tool debugging", 500};
+setting_group game_target_group{"Game/BSP Target", -1, expected_source::commandline};
+setting_group map_development_group{"Map development", 1, expected_source::commandline};
+setting_group common_format_group{"Common format options", 2, expected_source::commandline};
+setting_group debugging_group{"Advanced/tool debugging", 500, expected_source::commandline};
 
 inline void set_target_version(const bspversion_t *version)
 {
