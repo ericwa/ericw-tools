@@ -2,6 +2,376 @@
 light
 =====
 
+.. program:: light
+
+light compiles lightmap data for BSPs
+
+
+
+Command-line options
+====================
+
+Logging
+-------
+
+.. option:: -log [0]
+            -nolog [0]
+
+   whether log files are written or not
+
+.. option:: -verbose
+            -v
+
+   verbose output
+
+.. option:: -nopercent
+
+   don't output percentage messages
+
+.. option:: -nostat
+
+   don't output statistic messages
+
+.. option:: -noprogress
+
+   don't output progress messages
+
+.. option:: -nocolor
+
+   don't output color codes (for TB, etc)
+
+.. option:: -quiet
+            -noverbose
+
+   suppress non-important messages (equivalent to -nopercent -nostat -noprogress)
+
+Performance
+-----------
+
+.. option:: -threads n
+
+   number of threads to use, maximum; leave 0 for automatic
+
+.. option:: -lowpriority [0]
+
+   run in a lower priority, to free up headroom for other processes
+
+.. option:: -surflight_subdivide n
+
+   surface light subdivision size
+
+.. option:: -gate n
+
+   cutoff lights at this brightness level
+
+.. option:: -sunsamples n
+
+   set samples for _sunlight2, default 64
+
+.. option:: -extra
+            -extra4
+
+   supersampling; 2x2 (extra) or 4x4 (extra4) respectively
+
+.. option:: -fastbounce
+
+   use one bounce point in the middle of each face. for fast compilation.
+
+Game
+----
+
+.. option:: -gamedir "relative/path" or "C:/absolute/path"
+
+   override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified.
+
+.. option:: -basedir "relative/path" or "C:/absolute/path"
+
+   override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified.
+
+.. option:: -filepriority archive | loose
+
+   which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching
+
+.. option:: -path "/path/to/folder" <multiple allowed>
+
+   additional paths or archives to add to the search path, mostly for loose files
+
+.. option:: -q2rtx
+
+   adjust settings to best support Q2RTX
+
+.. option:: -defaultpaths [0]
+            -nodefaultpaths [0]
+
+   whether the compiler should attempt to automatically derive game/base paths for games that support it
+
+Output format options
+---------------------
+
+.. option:: -onlyents
+
+   only update entities
+
+.. option:: -wrnormals
+
+   output normals, tangents and bitangents in a BSPX lump
+
+.. option:: -arghradcompat
+
+   enable compatibility for Arghrad-specific keys
+
+.. option:: -nolighting
+
+   don't output main world lighting (Q2RTX)
+
+.. option:: -lit
+
+   write .lit file
+
+.. option:: -world_units_per_luxel n
+
+   enables output of DECOUPLED_LM BSPX lump
+
+.. option:: -litonly
+
+   only write .lit file, don't modify BSP
+
+.. option:: -nolights
+
+   ignore light entities (only sunlight/minlight)
+
+.. option:: -facestyles n
+
+   max amount of styles per face; requires BSPX lump if > 4
+
+.. option:: -exportobj
+
+   export an .OBJ for inspection
+
+.. option:: -lmshift n
+
+   force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP.
+
+Debug modes
+-----------
+
+.. option:: -surflight_dump
+
+   dump surface lights to a .map file
+
+.. option:: -debugface x y z
+
+.. option:: -debugvert x y z
+
+.. option:: -highlightseams
+
+.. option:: -visapprox auto | none | rays | vis
+
+   change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)
+
+.. option:: -dirtdebug
+            -debugdirt
+
+   only save the AO values to the lightmap
+
+.. option:: -bouncedebug
+
+   only save bounced lighting to the lightmap
+
+.. option:: -bouncelightsdebug
+
+   only save bounced emitters lighting to the lightmap
+
+.. option:: -phongdebug
+
+   only save phong normals to the lightmap
+
+.. option:: -phongdebug_obj
+
+   save map as .obj with phonged normals
+
+.. option:: -debugoccluded
+
+   save light occlusion data to lightmap
+
+.. option:: -debugneighbours
+
+   save neighboring faces data to lightmap (requires -debugface)
+
+.. option:: -debugmottle
+
+   save mottle pattern to lightmap
+
+Postprocessing options
+----------------------
+
+.. option:: -soft [n]
+
+   blurs the lightmap. specify n to blur radius in samples, otherwise auto
+
+Experimental options
+--------------------
+
+.. option:: -novanilla
+
+   implies -bspxlit; don't write vanilla lighting
+
+.. option:: -radlights "filename.rad"
+
+   loads a <surfacename> <r> <g> <b> <intensity> file
+
+.. option:: -lightmap_scale n
+
+   force change lightmap scale; vanilla engines only allow 16
+
+.. option:: -lit2
+
+   write .lit2 file
+
+.. option:: -bspxlit
+
+   writes rgb data into the bsp itself
+
+.. option:: -lux
+
+   write .lux file
+
+.. option:: -bspxlux
+
+   writes lux data into the bsp itself
+
+.. option:: -bspxonly
+
+   writes both rgb and directions data *only* into the bsp itself
+
+.. option:: -bspx
+
+   writes both rgb and directions data into the bsp itself
+
+.. option:: -lightgrid
+
+   experimental LIGHTGRID bspx lump
+
+.. option:: -lightgrid_dist x y z
+
+   distance between lightgrid sample points, in world units. controls lightgrid size.
+
+.. option:: -lightgrid_format octree
+
+   lightgrid BSPX lump to use
+
+Worldspawn keys
+===============
+
+Overridable worldspawn keys
+---------------------------
+
+.. worldspawn-key:: "_dist" "n"
+
+.. worldspawn-key:: "_range" "n"
+
+.. worldspawn-key:: "_anglescale" "n"
+                    "_anglesense" "n"
+
+.. worldspawn-key:: "_gamma" "n"
+
+.. worldspawn-key:: "_addmin" ""
+
+.. worldspawn-key:: "_minlightMottle" "n"
+
+.. worldspawn-key:: "_light" "n"
+                    "_minlight" "n"
+
+.. worldspawn-key:: "_maxlight" "n"
+
+.. worldspawn-key:: "_minlight_color" "x y z"
+                    "_mincolor" "x y z"
+
+.. worldspawn-key:: "_spotlightautofalloff" ""
+
+.. worldspawn-key:: "_compilerstyle_start" "n"
+
+.. worldspawn-key:: "_compilerstyle_max" "n"
+
+.. worldspawn-key:: "_dirt" ""
+                    "_dirty" ""
+
+.. worldspawn-key:: "_dirtmode" "n"
+
+.. worldspawn-key:: "_dirtdepth" "n"
+
+.. worldspawn-key:: "_dirtscale" "n"
+
+.. worldspawn-key:: "_dirtgain" "n"
+
+.. worldspawn-key:: "_dirtangle" "n"
+
+.. worldspawn-key:: "_minlight_dirt" ""
+
+.. worldspawn-key:: "_phong" "[0]"
+
+.. worldspawn-key:: "_phong_angle" "n"
+
+.. worldspawn-key:: "_bounce" ""
+
+.. worldspawn-key:: "_bouncestyled" ""
+
+.. worldspawn-key:: "_bouncescale" "n"
+
+.. worldspawn-key:: "_bouncecolorscale" "n"
+
+.. worldspawn-key:: "_bouncelightsubdivision" "n"
+
+.. worldspawn-key:: "_surflightscale" "n"
+
+.. worldspawn-key:: "_surflightskyscale" "n"
+
+.. worldspawn-key:: "_surflightsubdivision" "n"
+                    "_choplight" "n"
+
+.. worldspawn-key:: "_sunlight" "n"
+                    "_sun_light" "n"
+
+.. worldspawn-key:: "_sunlight_color" "x y z"
+                    "_sun_color" "x y z"
+
+.. worldspawn-key:: "_sun2" "n"
+
+.. worldspawn-key:: "_sun2_color" "x y z"
+
+.. worldspawn-key:: "_sunlight2" "n"
+
+.. worldspawn-key:: "_sunlight2_color" "x y z"
+                    "_sunlight_color2" "x y z"
+
+.. worldspawn-key:: "_sunlight3" "n"
+
+.. worldspawn-key:: "_sunlight3_color" "x y z"
+                    "_sunlight_color3" "x y z"
+
+.. worldspawn-key:: "_sunlight_dirt" "n"
+
+.. worldspawn-key:: "_sunlight2_dirt" "n"
+
+.. worldspawn-key:: "_sunlight_mangle" "x y z"
+                    "_sun_mangle" "x y z"
+                    "_sun_angle" "x y z"
+
+.. worldspawn-key:: "_sun2_mangle" "x y z"
+
+.. worldspawn-key:: "_sunlight_penumbra" "n"
+
+.. worldspawn-key:: "_sky_surface" "x y z"
+                    "_sun_surface" "x y z"
+
+.. worldspawn-key:: "_surflight_radiosity" "n"
+
+   whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity
+
+=====
+light
+=====
+
 light - Caclulate lightmap data for a Quake BSP file
 
 Synopsis

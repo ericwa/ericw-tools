@@ -2,7 +2,381 @@
 qbsp
 ====
 
-qbsp - Compile a Quake BSP file from a MAP source file
+.. program:: qbsp
+
+qbsp performs geometric level processing of Quake .MAP files to create
+Quake .BSP files.
+
+Command-line options
+====================
+
+Game/BSP Target
+---------------
+
+.. option:: -hexen2
+
+   Generate a hexen2 bsp. This can be used in addition to :option:`-bsp2` to avoid
+   clipnode issues.
+
+.. option:: -hlbsp
+
+   Create the output BSP file in Half-Life's format. Note that the hull
+   size differences prevent this from being generally usable for the
+   vanilla quake gamecode. This cannot be used in combination with the
+   :option:`-bsp2` argument.
+
+.. option:: -q2bsp
+
+   target Quake II's BSP format
+
+.. option:: -qbism
+
+   target Qbism's extended Quake II BSP format
+
+.. option:: -bsp2
+
+   Create the output BSP file in BSP2 format. Allows the creation of
+   much larger and more complex maps than the original BSP 29 format).
+
+.. option:: -2psb
+
+   Create the output BSP file in 2PSB format. This an earlier version of
+   the BSP2 format, supported by the RMQ engine (and thus is also known
+   as the BSP2rmq or RMQe bsp format).
+
+   .. deprecated:: 1.0
+      Use :option:`-bsp2` instead
+
+Map development
+---------------
+
+.. option:: -onlyents
+
+   only updates .MAP entities
+
+.. option:: -transsky
+
+   compute portal information for transparent sky
+
+.. option:: -leaktest
+
+   make compilation fail if the map leaks
+
+.. option:: -omitdetail
+
+   omit *all* detail brushes from the compile
+
+.. option:: -omitdetailwall
+
+   func_detail_wall brushes are omitted from the compile
+
+.. option:: -omitdetailillusionary
+
+   func_detail_illusionary brushes are omitted from the compile
+
+.. option:: -omitdetailfence
+
+   func_detail_fence brushes are omitted from the compile
+
+.. option:: -wadpath path/to/wads
+            -xwadpath path/to/wads
+
+   add a path to the wad search paths; wads found in xwadpath's will not be embedded, otherwise they will be embedded (if not -notex)
+
+.. option:: -aliasdef "path/to/file.def" <multiple allowed>
+
+   path to an alias definition file, which can transform entities in the .map into other entities.
+
+.. option:: -texturedefs "path/to/file.def" <multiple allowed>
+
+   path to a texture definition file, which can transform textures in the .map into other textures.
+
+.. option:: -maxedges n
+
+   the max number of edges/vertices on a single face before it is split into another face
+
+Common format options
+---------------------
+
+.. option:: -nosubdivide
+
+   disable subdivision
+
+.. option:: -software [0]
+            -nosoftware [0]
+
+   change settings to allow for (or make adjustments to optimize for the lack of) software support
+
+.. option:: -subdivide n
+
+   change the subdivide threshold, in luxels. 0 will disable subdivision entirely
+
+.. option:: -noclip
+
+   don't write clip nodes (Q1-like BSP formats)
+
+.. option:: -litwater [0]
+            -splitturb [0]
+
+   doesn't combine water faces into one large face
+
+.. option:: -transwater [0]
+            -notranswater [0]
+
+   compute portal information for transparent water
+
+.. option:: -notex
+
+   write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights
+
+.. option:: -convert bp | quake | quake2 | valve
+
+   convert a .MAP to a different .MAP format
+
+.. option:: -includeskip
+
+   don't cull skip faces from the list of renderable surfaces (Q2RTX)
+
+.. option:: -wrbrushes
+            -bspx
+
+   includes a list of brushes for brush-based collision
+
+.. option:: -wrbrushesonly
+            -bspxonly
+
+   includes BSPX brushes and does not output clipping hulls (wrbrushes + noclip)
+
+.. option:: -notriggermodels
+
+   for supported game code only: triggers will not write a model
+out, and will instead just write out their mins/maxs.
+
+.. option:: -lmscale n
+
+   change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump.
+
+.. option:: -filltype auto | inside | outside
+
+   whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used.
+
+.. option:: -allowupgrade [0]
+            -noallowupgrade [0]
+
+   allow formats to "upgrade" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)
+
+.. option:: -midsplitbrushfraction n
+
+   switch to cheaper partitioning if a node contains this % of brushes in the map
+
+.. option:: -add
+
+   the given map file will be appended to the base map
+
+Logging
+-------
+
+.. option:: -log [0]
+            -nolog [0]
+
+   whether log files are written or not
+
+.. option:: -verbose
+            -v
+
+   verbose output
+
+.. option:: -nopercent
+
+   don't output percentage messages
+
+.. option:: -nostat
+
+   don't output statistic messages
+
+.. option:: -noprogress
+
+   don't output progress messages
+
+.. option:: -nocolor
+
+   don't output color codes (for TB, etc)
+
+.. option:: -quiet
+            -noverbose
+
+   suppress non-important messages (equivalent to -nopercent -nostat -noprogress)
+
+.. option:: -loghulls
+
+   print log output for collision hulls
+
+.. option:: -logbmodels
+
+   print log output for bmodels
+
+Performance
+-----------
+
+.. option:: -threads n
+
+   number of threads to use, maximum; leave 0 for automatic
+
+.. option:: -lowpriority [0]
+
+   run in a lower priority, to free up headroom for other processes
+
+Game
+----
+
+.. option:: -gamedir "relative/path" or "C:/absolute/path"
+
+   override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified.
+
+.. option:: -basedir "relative/path" or "C:/absolute/path"
+
+   override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified.
+
+.. option:: -filepriority archive | loose
+
+   which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching
+
+.. option:: -path "/path/to/folder" <multiple allowed>
+
+   additional paths or archives to add to the search path, mostly for loose files
+
+.. option:: -q2rtx
+
+   adjust settings to best support Q2RTX
+
+.. option:: -defaultpaths [0]
+            -nodefaultpaths [0]
+
+   whether the compiler should attempt to automatically derive game/base paths for games that support it
+
+Advanced/tool debugging
+-----------------------
+
+.. option:: -nofill
+
+   don't perform outside filling
+
+.. option:: -nomerge
+
+   don't perform face merging
+
+.. option:: -noskip
+
+   don't remove faces with the 'skip' texture
+
+.. option:: -nodetail
+
+   treat all detail brushes to structural
+
+.. option:: -chop
+            -nochop
+
+   adjust brushes to remove intersections if possible
+
+.. option:: -chopfragment
+
+   always do full fragmentation for chop
+
+.. option:: -splitsky
+
+   doesn't combine sky faces into one large face
+
+.. option:: -splitspecial
+
+   doesn't combine sky and water faces into one large face (splitturb + splitsky)
+
+.. option:: -oldaxis [0]
+            -nooldaxis [0]
+
+   uses alternate texture alignment which was default in tyrutils-ericw v0.15.1 and older
+
+.. option:: -forcegoodtree
+
+   force use of expensive processing for BrushBSP stage
+
+.. option:: -midsplitsurffraction n
+
+   if 0 (default), use `maxnodesize` for deciding when to switch to midsplit bsp heuristic.
+if 0 < midsplitSurfFraction <= 1, switch to midsplit if the node contains more than this fraction of the model's
+total surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for maps with a 3D skybox (e.g. +-128K unit maps)
+
+.. option:: -maxnodesize n
+
+   triggers simpler BSP Splitting when node exceeds size (default 1024, 0 to disable)
+
+.. option:: -oldrottex
+
+   use old rotate_ brush texturing aligned at (0 0 0)
+
+.. option:: -epsilon n
+
+   customize epsilon value for point-on-plane checks
+
+.. option:: -microvolume n
+
+   microbrush volume
+
+.. option:: -contenthack
+
+   hack to fix leaks through solids. causes missing faces in some cases so disabled by default
+
+.. option:: -outsidedebug
+
+   write a .map after outside filling showing non-visible brush sides
+
+.. option:: -debugchop
+
+   write a .map after ChopBrushes
+
+.. option:: -debugleak
+
+   write more diagnostic files for debugging leaks
+
+.. option:: -debugbspbrushes
+
+   save bsp brushes after BrushBSP to a .map, for visualizing BSP splits
+
+.. option:: -debugleafvolumes
+
+   save bsp leaf volumes after BrushBSP to a .map, for visualizing BSP splits
+
+.. option:: -debugexpand [single hull index] or [mins_x mins_y mins_z maxs_x maxs_y maxs_z]
+
+   write expanded hull .map for debugging/inspecting hulls/brush bevelling
+
+.. option:: -keepprt
+
+   avoid deleting the .prt file on leaking maps
+
+.. option:: -worldextent n
+
+   explicitly provide world extents; 0 will auto-detect
+
+.. option:: -leakdist n
+
+   space between leakfile points
+
+.. option:: -forceprt1
+
+   force a PRT1 output file even if PRT2 is required for vis
+
+.. option:: -tjunc mwt | none | retopologize | rotate
+            -notjunc mwt | none | retopologize | rotate
+
+   T-junction fix level
+
+.. option:: -objexport
+
+   export the map file as .OBJ models during various CSG phases
+
+Worldspawn keys
+===============
+
 
 Synopsis
 --------
@@ -34,10 +408,6 @@ Options
 .. option:: -noskip
 
    Doesn't remove faces using the 'skip' texture
-
-.. option:: -onlyents
-
-   Only updates .map entities
 
 .. option:: -verbose
 
@@ -91,29 +461,6 @@ Options
 .. option:: -nopercent
 
    Prevents output of percent completion information
-
-.. option:: -hexen2
-
-   Generate a hexen2 bsp. This can be used in addition to -bsp2 to avoid
-   clipnode issues.
-
-.. option:: -bsp2
-
-   Create the output BSP file in BSP2 format. Allows the creation of
-   much larger and more complex maps than the original BSP 29 format).
-
-.. option:: -2psb
-
-   Create the output BSP file in 2PSB format. This an earlier version of
-   the BSP2 format, supported by the RMQ engine (and thus is also known
-   as the BSP2rmq or RMQe bsp format).
-
-.. option:: -hlbsp
-
-   Create the output BSP file in Half-Life's format. Note that the hull
-   size differences prevent this from being generally usable for the
-   vanilla quake gamecode. This cannot be used in combination with the
-   -bsp2 argument.
 
 .. option:: -leakdist [n]
 

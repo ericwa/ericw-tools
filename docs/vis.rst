@@ -2,6 +2,147 @@
 vis
 ===
 
+.. program:: vis
+
+vis calculates the visibility (and hearability) sets for
+.BSP files.
+
+
+
+Command-line options
+====================
+
+Logging
+-------
+
+.. option:: -log [0]
+            -nolog [0]
+
+   whether log files are written or not
+
+.. option:: -verbose
+            -v
+
+   verbose output
+
+.. option:: -nopercent
+
+   don't output percentage messages
+
+.. option:: -nostat
+
+   don't output statistic messages
+
+.. option:: -noprogress
+
+   don't output progress messages
+
+.. option:: -nocolor
+
+   don't output color codes (for TB, etc)
+
+.. option:: -quiet
+            -noverbose
+
+   suppress non-important messages (equivalent to -nopercent -nostat -noprogress)
+
+Performance
+-----------
+
+.. option:: -threads n
+
+   number of threads to use, maximum; leave 0 for automatic
+
+.. option:: -lowpriority [0]
+
+   run in a lower priority, to free up headroom for other processes
+
+.. option:: -fast
+
+   run very simple & fast vis procedure
+
+Game
+----
+
+.. option:: -gamedir "relative/path" or "C:/absolute/path"
+
+   override the default mod base directory. if this is not set, or if it is relative, it will be derived from the input file or the basedir if specified.
+
+.. option:: -basedir "relative/path" or "C:/absolute/path"
+
+   override the default game base directory. if this is not set, or if it is relative, it will be derived from the input file or the gamedir if specified.
+
+.. option:: -filepriority archive | loose
+
+   which types of archives (folders/loose files or packed archives) are higher priority and chosen first for path searching
+
+.. option:: -path "/path/to/folder" <multiple allowed>
+
+   additional paths or archives to add to the search path, mostly for loose files
+
+.. option:: -q2rtx
+
+   adjust settings to best support Q2RTX
+
+.. option:: -defaultpaths [0]
+            -nodefaultpaths [0]
+
+   whether the compiler should attempt to automatically derive game/base paths for games that support it
+
+Output
+------
+
+.. option:: -noambientsky
+
+   don't output ambient sky sounds
+
+.. option:: -noambientwater
+
+   don't output ambient water sounds
+
+.. option:: -noambientslime
+
+   don't output ambient slime sounds
+
+.. option:: -noambientlava
+
+   don't output ambient lava sounds
+
+.. option:: -noambient
+
+   don't output ambient sounds at all
+
+.. option:: -autoclean [0]
+            -noautoclean [0]
+
+   remove any extra files on successful completion
+
+Advanced
+--------
+
+.. option:: -level n
+
+   number of iterations for tests
+
+.. option:: -visdist n
+
+   control the distance required for a portal to be considered seen
+
+.. option:: -nostate
+
+   ignore saved state files, for forced re-runs
+
+.. option:: -phsonly
+
+   re-calculate the PHS of a Quake II BSP without touching the PVS
+
+Worldspawn keys
+===============
+
+===
+vis
+===
+
 vis - Compute visibility (PVS) for a Quake BSP file
 
 Synopsis
