@@ -76,6 +76,56 @@ TEST_SUITE("common")
         }
     }
 
+    TEST_CASE("cluster_contents")
+    {
+        for (auto *bspver : bspversions) {
+            auto *game = bspver->game;
+            if (!game)
+                continue;
+
+            SUBCASE(bspver->name)
+            {
+                const auto solid = game->create_solid_contents();
+                const auto solid_detail = game->create_detail_solid_contents(solid);
+                const auto empty = game->create_empty_contents();
+
+                auto solid_solid_cluster = game->cluster_contents(solid_detail, solid_detail);
+                CAPTURE(solid_solid_cluster.to_string(game));
+                CHECK(solid_solid_cluster.is_detail_solid(game));
+
+                auto solid_empty_cluster = game->cluster_contents(solid_detail, empty);
+                CAPTURE(solid_empty_cluster.to_string(game));
+
+                // it's empty because of the rule that:
+                // - if all leaves in the cluster are solid, it means you can't see in, and there's no visportal
+                // - otherwise, you can see in, and it needs a visportal
+                CHECK(solid_empty_cluster.is_empty(game));
+                // this is a bit weird...
+                CHECK(solid_empty_cluster.is_any_detail(game));
+            }
+        }
+    }
+
+    TEST_CASE("q1 origin")
+    {
+        auto *game = bspver_q1.game;
+
+        auto origin = game->face_get_contents("origin", {}, {});
+
+        CHECK(origin.is_origin(game));
+        CHECK(!origin.is_empty(game));
+    }
+
+    TEST_CASE("q2 origin")
+    {
+        auto *game = bspver_q2.game;
+
+        auto origin = game->face_get_contents("", {}, {Q2_CONTENTS_ORIGIN});
+
+        CHECK(origin.is_origin(game));
+        CHECK(!origin.is_empty(game));
+    }
+
     TEST_CASE("shared content flag tests")
     {
         for (auto *bspver : bspversions) {

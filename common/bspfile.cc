@@ -117,7 +117,7 @@ private:
         bool water = false;
         bool mist = false; // compiler-internal
 
-        // non-visible contents contents
+        // non-visible contents
         bool origin = false;
         bool clip = false;
         bool illusionary_visblocker = false;
@@ -250,11 +250,26 @@ private:
             return result;
         }
 
-        constexpr bool empty() const
+        constexpr bool all_empty() const
         {
-            // fixme-brushbsp: what should we do with empty, but the detail flag set?
             q1_contentflags_bits empty_test;
             return (*this) == empty_test;
+        }
+
+        /**
+         * Contents (excluding non-contents flags) are all unset
+         */
+        constexpr bool contents_empty() const
+        {
+            q1_contentflags_bits this_test = *this;
+
+            // clear flags
+            this_test.detail = false;
+            this_test.mirror_inside = false;
+            this_test.suppress_clipping_same_type = false;
+
+            q1_contentflags_bits empty_test;
+            return this_test == empty_test;
         }
     };
 
@@ -513,7 +528,7 @@ public:
     bool contents_are_empty(const contentflags_t &contents) const override
     {
         const auto bits = contentflags_to_bits(contents);
-        return bits.empty();
+        return bits.contents_empty();
     }
 
     bool contents_are_any_solid(const contentflags_t &contents) const override
@@ -574,7 +589,7 @@ public:
         bool a_translucent = transwater ? (bits_a.water || bits_a.slime || bits_a.lava) : false;
         bool b_translucent = transwater ? (bits_b.water || bits_b.slime || bits_b.lava) : false;
 
-        if ((bits_a ^ bits_b).visible_contents().empty())
+        if ((bits_a ^ bits_b).visible_contents().all_empty())
             return true;
 
         if (bits_a.detail || a_translucent)
@@ -585,10 +600,10 @@ public:
         if (bits_a.solid || bits_b.solid)
             return false; // can't see through solid
 
-        if ((bits_a ^ bits_b).empty())
+        if ((bits_a ^ bits_b).all_empty())
             return true; // identical on both sides
 
-        if ((bits_a ^ bits_b).visible_contents().empty())
+        if ((bits_a ^ bits_b).visible_contents().all_empty())
             return true;
         return false;
     }
@@ -671,7 +686,7 @@ public:
 
     inline std::string get_contents_display(const q1_contentflags_bits &bits) const
     {
-        if (bits.empty()) {
+        if (bits.all_empty()) {
             return "EMPTY";
         }
 
