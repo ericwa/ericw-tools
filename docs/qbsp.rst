@@ -164,6 +164,14 @@ Options
    "-wrbrushes" combined with "-noclip" argument. This is NOT backwards
    compatible.
 
+.. option:: -bmodelcontents
+
+   Allow bmodels to have contents other than "solid" in Q1 based games,
+   e.g. water in a func_door. This is supported in FTEQW; in winquake,
+   the bmodel will have no collision.
+
+   Q2 supports this feature natively and this option has no effect.
+
 .. option:: -notex
 
    Write only placeholder textures, to depend upon replacements. This

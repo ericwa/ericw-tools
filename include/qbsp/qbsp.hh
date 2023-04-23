@@ -212,6 +212,7 @@ public:
     setting_bool objexport;
     setting_bool wrbrushes;
     setting_redirect wrbrushesonly;
+    setting_bool bmodelcontents;
     setting_bool omitdetail;
     setting_bool omitdetailwall;
     setting_bool omitdetailillusionary;

@@ -728,6 +728,21 @@ TEST_CASE("qbsp_bmodel_mirrorinside_with_liquid" * doctest::test_suite("testmaps
     }
 }
 
+TEST_CASE("q1_bmodel_liquid" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_bmodel_liquid.map", {"-bmodelcontents"});
+    REQUIRE(prt.has_value());
+
+    // nonsolid brushes don't show up in clipping hulls. so 6 for the box room in hull1, and 6 for hull2.
+    REQUIRE(12 == bsp.dclipnodes.size());
+
+    const auto inside_water = qvec3d{8, -120, 184};
+    CHECK(CONTENTS_WATER == BSP_FindContentsAtPoint(&bsp, {0}, &bsp.dmodels[1], inside_water));
+
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, {1}, &bsp.dmodels[1], inside_water));
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, {2}, &bsp.dmodels[1], inside_water));
+}
+
 TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");

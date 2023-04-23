@@ -790,7 +790,8 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
         }
 
         /* entities in some games never use water merging */
-        if (!map.is_world_entity(dst) && !qbsp_options.target_game->allow_contented_bmodels) {
+        if (!map.is_world_entity(dst) &&
+            !(qbsp_options.target_game->allow_contented_bmodels || qbsp_options.bmodelcontents.value())) {
             // bmodels become solid in Q1
 
             // to allow use of _mirrorinside, we'll set it to detail fence, which will get remapped back

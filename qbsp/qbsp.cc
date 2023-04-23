@@ -538,6 +538,8 @@ qbsp_settings::qbsp_settings()
           "includes a list of brushes for brush-based collision"},
       wrbrushesonly{this, {"wrbrushesonly", "bspxonly"}, {&wrbrushes, &noclip}, &common_format_group,
           "includes BSPX brushes and does not output clipping hulls (wrbrushes + noclip)"},
+      bmodelcontents{this, "bmodelcontents", false, &common_format_group,
+          "allow control over brush contents in bmodels, don't force CONTENTS_SOLID"},
       omitdetail{this, "omitdetail", false, &map_development_group, "omit *all* detail brushes from the compile"},
       omitdetailwall{this, "omitdetailwall", false, &map_development_group,
           "func_detail_wall brushes are omitted from the compile"},
