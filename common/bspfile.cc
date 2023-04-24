@@ -1799,12 +1799,6 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
     },
     &gamedef_q2};
 
-
-bool surfflags_t::needs_write() const
-{
-    return as_tuple(*this) != as_tuple(surfflags_t());
-}
-
 static auto as_tuple(const surfflags_t &flags)
 {
     return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow,
@@ -1812,6 +1806,11 @@ static auto as_tuple(const surfflags_t &flags)
         flags.surflight_rescale, flags.surflight_color, flags.surflight_minlight_scale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
         flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
         flags.world_units_per_luxel, flags.object_channel_mask);
+}
+
+bool surfflags_t::needs_write() const
+{
+    return as_tuple(*this) != as_tuple(surfflags_t());
 }
 
 bool surfflags_t::operator<(const surfflags_t &other) const

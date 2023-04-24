@@ -338,10 +338,10 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
         entity->shadow_channel_mask.set_value(entity->light_channel_mask.value(), settings::source::DEFAULT);
     }
 
-    if (!entity->surflight_minlight_scale.isChanged()) {
+    if (!entity->surflight_minlight_scale.is_changed()) {
         if (bsp->loadversion->game->id != GAME_QUAKE_II) {
             // TODO: also use 1.0 for Q2?
-            entity->surflight_minlight_scale.setValue(1.0f, settings::source::DEFAULT);
+            entity->surflight_minlight_scale.set_value(1.0f, settings::source::DEFAULT);
         }
     }
 }
