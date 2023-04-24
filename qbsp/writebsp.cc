@@ -384,6 +384,12 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.surflight_rescale == false) {
             t["surflight_rescale"] = tx.flags.surflight_rescale;
         }
+        if (tx.flags.surflight_color.has_value()) {
+            t["surflight_color"] = tx.flags.surflight_color.value();
+        }
+        if (tx.flags.surflight_minlight_scale.has_value()) {
+            t["surflight_minlight_scale"] = tx.flags.surflight_minlight_scale.value();
+        }
         if (tx.flags.phong_angle) {
             t["phong_angle"] = tx.flags.phong_angle;
         }
@@ -416,9 +422,6 @@ static void WriteExtendedTexinfoFlags(void)
         }
         if (tx.flags.object_channel_mask) {
             t["object_channel_mask"] = *tx.flags.object_channel_mask;
-        }
-        if (tx.flags.surflight_minlight_scale) {
-            t["surflight_minlight_scale"] = *tx.flags.surflight_minlight_scale;
         }
 
         texinfofile[std::to_string(*tx.outputnum)].swap(t);

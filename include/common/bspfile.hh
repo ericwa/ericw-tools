@@ -192,6 +192,12 @@ struct surfflags_t
     // normal if false, use a more natural angle falloff of 0% at 90 degrees
     bool surflight_rescale = true;
 
+    // override the textures' surflight color
+    std::optional<qvec3b> surflight_color;
+
+    // surface light rescaling
+    std::optional<vec_t> surflight_minlight_scale;
+
     // if non zero, enables phong shading and gives the angle threshold to use
     vec_t phong_angle;
 
@@ -223,8 +229,6 @@ struct surfflags_t
     std::optional<float> world_units_per_luxel;
 
     std::optional<int32_t> object_channel_mask;
-
-    std::optional<float> surflight_minlight_scale;
 
     bool needs_write() const;
 

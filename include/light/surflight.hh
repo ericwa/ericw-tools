@@ -47,6 +47,7 @@ struct surfacelight_t
 
     // rescale faces to account for perpendicular lights
     bool rescale;
+    std::optional<vec_t> minlight_scale;
 };
 
 class light_t;

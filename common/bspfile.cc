@@ -1782,21 +1782,19 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
     },
     &gamedef_q2};
 
+
 bool surfflags_t::needs_write() const
 {
-    return no_dirt || no_shadow || no_bounce || no_minlight || no_expand || no_phong || light_ignore ||
-           !surflight_rescale || phong_angle || phong_angle_concave || phong_group || minlight ||
-           !qv::emptyExact(minlight_color) || light_alpha || maxlight || lightcolorscale != 1.0 || surflight_group ||
-           world_units_per_luxel || object_channel_mask || surflight_minlight_scale;
+    return as_tuple(*this) != as_tuple(surfflags_t());
 }
 
 static auto as_tuple(const surfflags_t &flags)
 {
     return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow,
         flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
-        flags.surflight_rescale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
+        flags.surflight_rescale, flags.surflight_color, flags.surflight_minlight_scale, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
         flags.minlight_color, flags.light_alpha, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
-        flags.world_units_per_luxel, flags.object_channel_mask, flags.surflight_minlight_scale);
+        flags.world_units_per_luxel, flags.object_channel_mask);
 }
 
 bool surfflags_t::operator<(const surfflags_t &other) const

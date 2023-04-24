@@ -516,6 +516,14 @@ std::optional<texture_meta> load_wal_json_meta(
 
         texture_meta meta{};
 
+        {
+            fs::path wal = fs::path(name).replace_extension(".wal");
+
+            if (auto wal_file = fs::load(wal))
+                if (auto wal_meta = load_wal_meta(wal.string(), wal_file, game))
+                    meta = *wal_meta;
+        }
+
         if (json.contains("width") && json["width"].is_number_integer()) {
             meta.width = json["width"].get<int32_t>();
         }

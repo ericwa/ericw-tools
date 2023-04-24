@@ -102,7 +102,7 @@ struct lightsurf_t
     const mface_t *face;
     /* these take precedence the values in modelinfo */
     vec_t minlight, maxlight, lightcolorscale = 1.0;
-    vec_t surflight_minlight_scale;
+    vec_t surflight_minlight_scale = 1.0;
     qvec3d minlight_color;
     bool nodirt, minlightMottle;
     int32_t object_channel_mask;
@@ -269,8 +269,8 @@ public:
     setting_scalar global_anglescale;
     setting_scalar lightmapgamma;
     setting_bool addminlight;
-    setting_scalar minlightMottle;
     setting_scalar minlight;
+    setting_scalar minlightMottle;
     setting_scalar maxlight;
     setting_color minlight_color;
     setting_bool spotlightautofalloff;

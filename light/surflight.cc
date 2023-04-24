@@ -83,15 +83,19 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Calculate emit color and intensity...
 
-    // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
-    if (!texture_color.has_value()) {
-        if (cfg.sky_surface.isChanged() && is_sky) {
-            // FIXME: this only handles the "_sky_surface"  "red green blue" format.
-            //        There are other more complex variants we could handle documented in the link above.
-            // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-            texture_color = cfg.sky_surface.value() * 255.0;
-        } else {
-            texture_color = qvec3f(Face_LookupTextureColor(bsp, face));
+    if (extended_flags.surflight_color.has_value()) {
+        texture_color = extended_flags.surflight_color.value();
+    } else {
+        // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
+        if (!texture_color.has_value()) {
+            if (cfg.sky_surface.isChanged() && is_sky) {
+                // FIXME: this only handles the "_sky_surface"  "red green blue" format.
+                //        There are other more complex variants we could handle documented in the link above.
+                // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
+                texture_color = cfg.sky_surface.value() * 255.0;
+            } else {
+                texture_color = qvec3f(Face_LookupTextureColor(bsp, face));
+            }
         }
     }
 
@@ -118,6 +122,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     l.points = std::move(points);
     l.style = style;
     l.rescale = extended_flags.surflight_rescale;
+    l.minlight_scale = extended_flags.surflight_minlight_scale;
 
     // Init bbox...
     if (light_options.visapprox.value() == visapprox_t::RAYS) {

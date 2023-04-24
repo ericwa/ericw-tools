@@ -102,7 +102,11 @@ constexpr struct
     ext id;
     decltype(load_wal) *loader;
 } extension_list[] = {
-    {".tga", ext::TGA, load_tga}, {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
+    {".tga", ext::TGA, load_tga},
+    {".wal", ext::WAL, load_wal},
+    {".mip", ext::MIP, load_mip},
+    {"", ext::MIP, load_mip}
+};
 
 // Attempt to load a texture from the specified name.
 std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(
@@ -127,7 +131,9 @@ constexpr struct
     meta_ext id;
     decltype(load_wal_meta) *loader;
 } meta_extension_list[] = {
-    {".wal", meta_ext::WAL, load_wal_meta}, {".wal_json", meta_ext::WAL_JSON, load_wal_json_meta}};
+    {".wal_json", meta_ext::WAL_JSON, load_wal_json_meta},
+    {".wal", meta_ext::WAL, load_wal_meta}
+};
 
 // Attempt to load a texture meta from the specified name.
 std::tuple<std::optional<texture_meta>, fs::resolve_result, fs::data> load_texture_meta(

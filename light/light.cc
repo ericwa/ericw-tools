@@ -164,8 +164,8 @@ worldspawn_keys::worldspawn_keys()
       lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group},
       addminlight{this, "addmin", false, &worldspawn_group},
       minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
-      maxlight{this, "maxlight", 0, &worldspawn_group},
       minlightMottle{this, "minlightMottle", false},
+      maxlight{this, "maxlight", 0, &worldspawn_group},
       minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group},
       spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group},
       compilerstyle_start{this, "compilerstyle_start", 32, &worldspawn_group},
@@ -1118,6 +1118,12 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         }
         if (val.contains("surflight_rescale")) {
             flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
+        }
+        if (val.contains("surflight_color")) {
+            flags.surflight_color = val.at("surflight_color").get<qvec3b>();
+        }
+        if (val.contains("surflight_minlight_scale")) {
+            flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<vec_t>();
         }
         if (val.contains("phong_angle")) {
             flags.phong_angle = val.at("phong_angle").get<vec_t>();

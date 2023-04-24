@@ -619,6 +619,15 @@ static surfflags_t SurfFlagsForEntity(
         flags.light_ignore = true;
     if (entity.epairs.has("_surflight_rescale") && entity.epairs.get_int("_surflight_rescale") == 0)
         flags.surflight_rescale = false;
+    {
+        qvec3d color;
+        // FIXME: get_color, to match settings
+        if (entity.epairs.has("_surflight_color") && entity.epairs.get_vector("_surflight_color", color) == 3) {
+            flags.surflight_color = qvec3b{ (uint8_t) (color[0] * 255), (uint8_t) (color[1] * 255), (uint8_t) (color[2] * 255) };
+        }
+    }
+    if (entity.epairs.has("_surflight_minlight_scale"))
+        flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
     for (int i = 0; i <= 9; i++) {
@@ -713,10 +722,6 @@ static surfflags_t SurfFlagsForEntity(
 
     if (entity.epairs.has("_object_channel_mask")) {
         flags.object_channel_mask = entity.epairs.get_int("_object_channel_mask");
-    }
-
-    if (entity.epairs.has("_surflight_minlight_scale")) {
-        flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
     }
 
     // handle "_mincolor"
