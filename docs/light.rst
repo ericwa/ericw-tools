@@ -200,6 +200,8 @@ The following keys can be added to the *worldspawn* entity:
    an easy way to eliminate completely dark areas of the level, however
    you may lose some contrast as a result, so use with care. Default 0.
 
+   .. note:: In Q2 mode, minlight uses a 0..1 range.
+
 .. worldspawn-key:: "_minlight_color" "r g b"
                     "_mincolor" "r g b"
 
@@ -470,6 +472,8 @@ func_detail/func_group as well, if qbsp from these tools is used.
    1 makes a model receive minlight only, ignoring all lights /
    sunlight. Could be useful on rotators / trains.
 
+   .. seealso:: `Lighting Channels`_ for a more powerful version of this
+
 .. bmodel-key:: "_bounce" "n"
    
    Set to -1 to prevent this model from bouncing light (i.e. prevents
@@ -686,6 +690,53 @@ with the first five letters "light". E.g. "light", "light_globe",
    Set to 1 to make the light compiler ignore this entity (prevents it
    from casting any light). e.g. could be useful with rtlights.
 
+Lighting Channels
+=================
+
+Lighting channels allow custom lighting setups where certain light entities only affect certain bmodels. Useful
+for lighting rotators, doors, etc.
+
+.. note:: Currently, bounced light, surface lights, and sunlight are always on channel 1.
+
+Light Keys
+----------
+
+.. light-key:: "_light_channel_mask" "n"
+
+   Mask of lighting channels that the light casts on.
+
+   In order for this light to cast light on a bmodel, there needs to be a least 1 bit in common between
+   :light-key:`_light_channel_mask` and the receiving bmodel's :bmodel-key:`_object_channel_mask` (i.e. the bitwise AND must be nonzero).
+
+   Default 1.
+
+.. light-key:: "_shadow_channel_mask" "n"
+
+   This is the mask of lighting channels that will block this entity's light rays. If the the bitwise AND of this
+   and another bmodel's :bmodel-key:`_object_channel_mask` is nonzero, the light ray is stopped.
+
+   This is an advanced option, for making bmodels only cast shadows for specific lights (but not others).
+
+   Defaults to :light-key:`_light_channel_mask`
+
+Model Keys
+----------
+
+.. bmodel-key:: "_object_channel_mask" "n"
+
+   Mask of lighting channels that this bmodel receives light on, blocks light on, and tests for AO on.
+
+   Default 1.
+
+   .. note:: Changing this from 1 will disable bouncing light off of this bmodel.
+
+   .. note:: Changing this from 1 implicitly enables :bmodel-key:`_shadow`.
+
+   .. note::
+
+      Changing to 2, for example, will cause the bmodel to initially be solid black. You'll need to add minlight or lights
+      with :light-key:`_light_channel_mask` ``2``.
+
 Other Information
 =================
 
@@ -719,9 +770,3 @@ Copyright
 
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
-
-See Also
-========
-
-**qbsp**\ (1) **vis**\ (1) **bspinfo**\ (1) **bsputil**\ (1)
-**quake**\ (6)

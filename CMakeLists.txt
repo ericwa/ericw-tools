@@ -119,7 +119,6 @@ add_subdirectory(docs)
 add_subdirectory(tests)
 
 install(FILES README.md DESTINATION bin)
-install(FILES changelog.md DESTINATION bin)
 
 #CTest
 enable_testing()

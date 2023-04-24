@@ -252,11 +252,11 @@ public:
 
     fs::path sourceMap;
 
-    void setParameters(int argc, const char **argv) override
+    void set_parameters(int argc, const char **argv) override
     {
-        common_settings::setParameters(argc, argv);
-        programDescription = "vis calculates the visibility (and hearability) sets for \n.BSP files.\n\n";
-        remainderName = "mapname.bsp";
+        common_settings::set_parameters(argc, argv);
+        program_description = "vis calculates the visibility (and hearability) sets for \n.BSP files.\n\n";
+        remainder_name = "mapname.bsp";
     }
     void initialize(int argc, const char **argv) override;
 };

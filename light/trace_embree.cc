@@ -71,7 +71,7 @@ static float Face_Alpha(const mbsp_t *bsp, const modelinfo_t *modelinfo, const m
     }
 
     // next check "alpha" key (q1)
-    if (modelinfo->alpha.isChanged()) {
+    if (modelinfo->alpha.is_changed()) {
         return modelinfo->alpha.value();
     }
 

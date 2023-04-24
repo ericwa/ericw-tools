@@ -4,6 +4,9 @@
 #include <common/entdata.h>
 #include <common/json.hh>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "../3rdparty/stb_image.h"
+
 /*
 ============================================================================
 PALETTE
@@ -402,6 +405,42 @@ breakOut:;
     }
 
     return tex; // mxd
+}
+
+std::optional<texture> load_stb(
+    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+{
+    int x, y, channels_in_file;
+    stbi_uc *rgba_data = stbi_load_from_memory(file->data(), file->size(), &x, &y, &channels_in_file, 4);
+
+    if (!rgba_data) {
+        logging::funcprint("stbi error: {}\n", stbi_failure_reason());
+        return {};
+    }
+
+    texture tex;
+    tex.meta.extension = ext::STB;
+    tex.meta.name = name;
+    tex.meta.width = tex.width = x;
+    tex.meta.height = tex.height = y;
+
+    if (!meta_only) {
+        int num_pixels = x * y;
+        if (num_pixels < 0) {
+            return {};
+        }
+
+        tex.pixels.resize(num_pixels);
+
+        qvec4b *out = tex.pixels.data();
+        for (int i = 0; i < num_pixels; ++i) {
+            out[i] = {rgba_data[4 * i], rgba_data[4 * i + 1], rgba_data[4 * i + 2], rgba_data[4 * i + 3]};
+        }
+    }
+
+    stbi_image_free(rgba_data);
+
+    return tex;
 }
 
 // texture cache

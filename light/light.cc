@@ -164,7 +164,7 @@ worldspawn_keys::worldspawn_keys()
       lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group},
       addminlight{this, "addmin", false, &worldspawn_group},
       minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
-      minlightMottle{this, "minlightMottle", false},
+      minlightMottle{this, "minlightMottle", false, &worldspawn_group},
       maxlight{this, "maxlight", 0, &worldspawn_group},
       minlight_color{this, {"minlight_color", "mincolor"}, 255.0, 255.0, 255.0, &worldspawn_group},
       spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group},
@@ -209,7 +209,7 @@ worldspawn_keys::worldspawn_keys()
 
 // light_settings::setting_soft
 
-bool light_settings::setting_soft::parse(const std::string &settingName, parser_base_t &parser, source source)
+bool light_settings::setting_soft::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
     if (!parser.parse_token(PARSE_PEEK)) {
         return false;
@@ -218,7 +218,7 @@ bool light_settings::setting_soft::parse(const std::string &settingName, parser_
     try {
         int32_t f = static_cast<int32_t>(std::stoull(parser.token));
 
-        setValue(f, source);
+        set_value(f, source);
 
         parser.parse_token();
 
@@ -226,7 +226,7 @@ bool light_settings::setting_soft::parse(const std::string &settingName, parser_
     } catch (std::exception &) {
         // if we didn't provide a (valid) number, then
         // assume it's meant to be the default of -1
-        setValue(-1, source);
+        set_value(-1, source);
         return true;
     }
 }
@@ -238,18 +238,18 @@ std::string light_settings::setting_soft::format() const
 
 // light_settings::setting_extra
 
-bool light_settings::setting_extra::parse(const std::string &settingName, parser_base_t &parser, source source)
+bool light_settings::setting_extra::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    if (settingName.back() == '4') {
-        setValue(4, source);
+    if (setting_name.back() == '4') {
+        set_value(4, source);
     } else {
-        setValue(2, source);
+        set_value(2, source);
     }
 
     return true;
 }
 
-std::string light_settings::setting_extra::stringValue() const
+std::string light_settings::setting_extra::string_value() const
 {
     return std::to_string(_value);
 };
@@ -266,11 +266,11 @@ void light_settings::CheckNoDebugModeSet()
     }
 }
 
-setting_group worldspawn_group{"Overridable worldspawn keys", 500};
-setting_group output_group{"Output format options", 30};
-setting_group debug_group{"Debug modes", 40};
-setting_group postprocessing_group{"Postprocessing options", 50};
-setting_group experimental_group{"Experimental options", 60};
+setting_group worldspawn_group{"Overridable worldspawn keys", 500, expected_source::worldspawn};
+setting_group output_group{"Output format options", 30, expected_source::commandline};
+setting_group debug_group{"Debug modes", 40, expected_source::commandline};
+setting_group postprocessing_group{"Postprocessing options", 50, expected_source::commandline};
+setting_group experimental_group{"Experimental options", 60, expected_source::commandline};
 
 light_settings::light_settings()
     : surflight_dump{this, "surflight_dump", false, &debug_group, "dump surface lights to a .map file"},
@@ -314,7 +314,7 @@ light_settings::light_settings()
           [&](source source) {
               write_litfile = lightfile::bspx;
               write_luxfile = lightfile::bspx;
-              novanilla.setValue(true, source);
+              novanilla.set_value(true, source);
           },
           &experimental_group, "writes both rgb and directions data *only* into the bsp itself"},
       bspx{this, "bspx",
@@ -395,11 +395,11 @@ light_settings::light_settings()
 {
 }
 
-void light_settings::setParameters(int argc, const char **argv)
+void light_settings::set_parameters(int argc, const char **argv)
 {
-    common_settings::setParameters(argc, argv);
-    programDescription = "light compiles lightmap data for BSPs\n\n";
-    remainderName = "mapname.bsp";
+    common_settings::set_parameters(argc, argv);
+    program_description = "light compiles lightmap data for BSPs\n\n";
+    remainder_name = "mapname.bsp";
 }
 
 void light_settings::initialize(int argc, const char **argv)
@@ -409,13 +409,13 @@ void light_settings::initialize(int argc, const char **argv)
         auto remainder = parse(p);
 
         if (remainder.size() <= 0 || remainder.size() > 1) {
-            printHelp();
+            print_help();
         }
 
         sourceMap = remainder[0];
     } catch (parse_exception &ex) {
         logging::print(ex.what());
-        printHelp();
+        print_help();
     }
 }
 
@@ -425,7 +425,7 @@ void light_settings::postinitialize(int argc, const char **argv)
         logging::print("WARNING: -gate value greater than 1 may cause artifacts\n");
     }
 
-    if (radlights.isChanged()) {
+    if (radlights.is_changed()) {
         if (!ParseLightsFile(*radlights.values().begin())) {
             logging::print("Unable to read surface lights file {}\n", *radlights.values().begin());
         }
@@ -433,9 +433,9 @@ void light_settings::postinitialize(int argc, const char **argv)
 
     if (soft.value() == -1) {
         switch (extra.value()) {
-            case 2: soft.setValue(1, settings::source::COMMANDLINE); break;
-            case 4: soft.setValue(2, settings::source::COMMANDLINE); break;
-            default: soft.setValue(0, settings::source::COMMANDLINE); break;
+            case 2: soft.set_value(1, settings::source::COMMANDLINE); break;
+            case 4: soft.set_value(2, settings::source::COMMANDLINE); break;
+            default: soft.set_value(0, settings::source::COMMANDLINE); break;
         }
     }
 
@@ -461,26 +461,26 @@ void light_settings::postinitialize(int argc, const char **argv)
     }
 
     if (debugmode == debugmodes::dirt) {
-        light_options.globalDirt.setValue(true, settings::source::COMMANDLINE);
+        light_options.globalDirt.set_value(true, settings::source::COMMANDLINE);
     } else if (debugmode == debugmodes::bounce || debugmode == debugmodes::bouncelights) {
-        light_options.bounce.setValue(true, settings::source::COMMANDLINE);
-    } else if (debugmode == debugmodes::debugneighbours && !debugface.isChanged()) {
+        light_options.bounce.set_value(true, settings::source::COMMANDLINE);
+    } else if (debugmode == debugmodes::debugneighbours && !debugface.is_changed()) {
         FError("-debugneighbours without -debugface specified\n");
     }
 
     if (light_options.q2rtx.value()) {
-        if (!light_options.nolighting.isChanged()) {
-            light_options.nolighting.setValue(true, settings::source::GAME_TARGET);
+        if (!light_options.nolighting.is_changed()) {
+            light_options.nolighting.set_value(true, settings::source::GAME_TARGET);
         }
 
-        if (!light_options.write_normals.isChanged()) {
-            light_options.write_normals.setValue(true, settings::source::GAME_TARGET);
+        if (!light_options.write_normals.is_changed()) {
+            light_options.write_normals.set_value(true, settings::source::GAME_TARGET);
         }
     }
 
     // upgrade to uint16 if facestyles is specified
-    if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.isChanged()) {
-        light_options.compilerstyle_max.setValue(INVALID_LIGHTSTYLE, settings::source::COMMANDLINE);
+    if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.is_changed()) {
+        light_options.compilerstyle_max.set_value(INVALID_LIGHTSTYLE, settings::source::COMMANDLINE);
     }
 
     common_settings::postinitialize(argc, argv);
@@ -510,14 +510,14 @@ void FixupGlobalSettings()
     // dirtmapping by default.
 
     if (light_options.globalDirt.value()) {
-        if (!light_options.minlightDirt.isChanged()) {
-            light_options.minlightDirt.setValue(true, settings::source::COMMANDLINE);
+        if (!light_options.minlightDirt.is_changed()) {
+            light_options.minlightDirt.set_value(true, settings::source::COMMANDLINE);
         }
-        if (!light_options.sunlight_dirt.isChanged()) {
-            light_options.sunlight_dirt.setValue(1, settings::source::COMMANDLINE);
+        if (!light_options.sunlight_dirt.is_changed()) {
+            light_options.sunlight_dirt.set_value(1, settings::source::COMMANDLINE);
         }
-        if (!light_options.sunlight2_dirt.isChanged()) {
-            light_options.sunlight2_dirt.setValue(1, settings::source::COMMANDLINE);
+        if (!light_options.sunlight2_dirt.is_changed()) {
+            light_options.sunlight2_dirt.set_value(1, settings::source::COMMANDLINE);
         }
     }
 }
@@ -751,8 +751,8 @@ static void FindModelInfo(const mbsp_t *bsp)
         FError("Corrupt .BSP: bsp->nummodels is 0!");
     }
 
-    if (light_options.lightmap_scale.isChanged()) {
-        WorldEnt().set("_lightmap_scale", light_options.lightmap_scale.stringValue());
+    if (light_options.lightmap_scale.is_changed()) {
+        WorldEnt().set("_lightmap_scale", light_options.lightmap_scale.string_value());
     }
 
     float lightmapscale = WorldEnt().get_int("_lightmap_scale");
@@ -760,7 +760,7 @@ static void FindModelInfo(const mbsp_t *bsp)
         lightmapscale = LMSCALE_DEFAULT; /* the default */
     if (lightmapscale <= 0)
         FError("lightmap scale is 0 or negative\n");
-    if (light_options.lightmap_scale.isChanged() || lightmapscale != LMSCALE_DEFAULT)
+    if (light_options.lightmap_scale.is_changed() || lightmapscale != LMSCALE_DEFAULT)
         logging::print("Forcing lightmap scale of {}qu\n", lightmapscale);
     /*I'm going to do this check in the hopes that there's a benefit to cheaper scaling in engines (especially software
      * ones that might be able to just do some mip hacks). This tool doesn't really care.*/
@@ -776,8 +776,8 @@ static void FindModelInfo(const mbsp_t *bsp)
 
     /* The world always casts shadows */
     modelinfo_t *world = new modelinfo_t{bsp, &bsp->dmodels[0], lightmapscale};
-    world->shadow.setValue(1.0f, settings::source::MAP); /* world always casts shadows */
-    world->phong_angle.copyFrom(light_options.phongangle);
+    world->shadow.set_value(1.0f, settings::source::MAP); /* world always casts shadows */
+    world->phong_angle.copy_from(light_options.phongangle);
     modelinfo.push_back(world);
     tracelist.push_back(world);
 
@@ -793,7 +793,7 @@ static void FindModelInfo(const mbsp_t *bsp)
             FError("Couldn't find entity for model {}.\n", modelname);
 
         // apply settings
-        info->setSettings(*entdict, settings::source::MAP);
+        info->set_settings(*entdict, settings::source::MAP);
 
         /* Check if this model will cast shadows (shadow => shadowself) */
         if (info->switchableshadow.boolValue()) {
@@ -858,7 +858,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     if (forcedscale) {
         bspdata->bspx.entries.erase("LMSHIFT");
-    } else if (light_options.lmshift.isChanged()) {
+    } else if (light_options.lmshift.is_changed()) {
         // if we forcefully specified an lmshift lump, we have to generate one.
         bspdata->bspx.entries.erase("LMSHIFT");
 
@@ -892,7 +892,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     // decoupled lightmaps
     facesup_decoupled_global.clear();
-    if (light_options.world_units_per_luxel.isChanged()) {
+    if (light_options.world_units_per_luxel.is_changed()) {
         facesup_decoupled_global.resize(bsp.dfaces.size());
     }
 
@@ -1229,7 +1229,7 @@ static const mface_t *Face_NearestCentroid(const mbsp_t *bsp, const qvec3f &poin
 
 static void FindDebugFace(const mbsp_t *bsp)
 {
-    if (!light_options.debugface.isChanged())
+    if (!light_options.debugface.is_changed())
         return;
 
     const mface_t *f = Face_NearestCentroid(bsp, light_options.debugface.value());
@@ -1269,7 +1269,7 @@ static int Vertex_NearestPoint(const mbsp_t *bsp, const qvec3d &point)
 
 static void FindDebugVert(const mbsp_t *bsp)
 {
-    if (!light_options.debugvert.isChanged())
+    if (!light_options.debugvert.is_changed())
         return;
 
     int v = Vertex_NearestPoint(bsp, light_options.debugvert.value());
@@ -1638,35 +1638,35 @@ int light_main(int argc, const char **argv)
 
     // mxd. Use 1.0 rangescale as a default to better match with qrad3/arghrad
     if (bspdata.loadversion->game->id == GAME_QUAKE_II) {
-        if (!light_options.rangescale.isChanged()) {
-            light_options.rangescale.setValue(1.0, settings::source::GAME_TARGET);
+        if (!light_options.rangescale.is_changed()) {
+            light_options.rangescale.set_value(1.0, settings::source::GAME_TARGET);
         }
-        if (!light_options.bouncecolorscale.isChanged()) {
-            light_options.bouncecolorscale.setValue(0.5, settings::source::GAME_TARGET);
+        if (!light_options.bouncecolorscale.is_changed()) {
+            light_options.bouncecolorscale.set_value(0.5, settings::source::GAME_TARGET);
         }
-        if (!light_options.surflightscale.isChanged()) {
-            light_options.surflightscale.setValue(0.65f, settings::source::GAME_TARGET);
+        if (!light_options.surflightscale.is_changed()) {
+            light_options.surflightscale.set_value(0.65f, settings::source::GAME_TARGET);
         }
-        if (!light_options.surflightskyscale.isChanged()) {
-            light_options.surflightskyscale.setValue(0.65f, settings::source::GAME_TARGET);
+        if (!light_options.surflightskyscale.is_changed()) {
+            light_options.surflightskyscale.set_value(0.65f, settings::source::GAME_TARGET);
         }
-        if (!light_options.bouncescale.isChanged()) {
-            light_options.bouncescale.setValue(0.85f, settings::source::GAME_TARGET);
+        if (!light_options.bouncescale.is_changed()) {
+            light_options.bouncescale.set_value(0.85f, settings::source::GAME_TARGET);
         }
-        if (!light_options.bounce.isChanged()) {
-            light_options.bounce.setValue(true, settings::source::GAME_TARGET);
+        if (!light_options.bounce.is_changed()) {
+            light_options.bounce.set_value(true, settings::source::GAME_TARGET);
         }
-        if (!light_options.surflight_radiosity.isChanged()) {
-            light_options.surflight_radiosity.setValue(SURFLIGHT_RAD, settings::source::GAME_TARGET);
+        if (!light_options.surflight_radiosity.is_changed()) {
+            light_options.surflight_radiosity.set_value(SURFLIGHT_RAD, settings::source::GAME_TARGET);
         }
-        if (!light_options.bouncestyled.isChanged()) {
-            light_options.bouncestyled.setValue(true, settings::source::GAME_TARGET);
+        if (!light_options.bouncestyled.is_changed()) {
+            light_options.bouncestyled.set_value(true, settings::source::GAME_TARGET);
         }
     }
 
     // check vis approx type
     if (light_options.visapprox.value() == visapprox_t::AUTO) {
-        light_options.visapprox.setValue(visapprox_t::RAYS, settings::source::DEFAULT);
+        light_options.visapprox.set_value(visapprox_t::RAYS, settings::source::DEFAULT);
     }
 
     load_textures(&bsp);
@@ -1706,7 +1706,7 @@ int light_main(int argc, const char **argv)
 
         SetupDirt(light_options);
 
-        LightWorld(&bspdata, light_options.lightmap_scale.isChanged());
+        LightWorld(&bspdata, light_options.lightmap_scale.is_changed());
 
         LightGrid(&bspdata);
 

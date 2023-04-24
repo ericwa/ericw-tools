@@ -264,10 +264,10 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
         if (entity->spotlight) {
             vec_t base_angle = 0.0; // spotlight cone "diameter" in degrees
 
-            if (entity->cone.isChanged()) {
+            if (entity->cone.is_changed()) {
                 // q2 style: "_cone" key specifies cone radius in degrees
                 base_angle = entity->cone.value() * 2.f;
-            } else if (entity->spotangle.isChanged()) {
+            } else if (entity->spotangle.is_changed()) {
                 // q1 style: "angle" key specifies cone diameter in degrees
                 base_angle = entity->spotangle.value();
             }
@@ -291,7 +291,7 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
             // mxd. Apply autofalloff?
             if (targetdist > 0.0f && entity->falloff.value() == 0 && cfg.spotlightautofalloff.value()) {
                 const vec_t coneradius = targetdist * tan(base_angle / 2 * Q_PI / 180);
-                entity->falloff.setValue(targetdist + coneradius, settings::source::MAP);
+                entity->falloff.set_value(targetdist + coneradius, settings::source::MAP);
             }
         }
     }
@@ -300,29 +300,29 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
 static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, light_t *entity)
 {
     if (entity->light.value() == 0.0f)
-        entity->light.setValue(DEFAULTLIGHTLEVEL, settings::source::MAP);
+        entity->light.set_value(DEFAULTLIGHTLEVEL, settings::source::MAP);
 
     if (entity->atten.value() <= 0.0)
-        entity->atten.setValue(1.0, settings::source::MAP);
+        entity->atten.set_value(1.0, settings::source::MAP);
     if (entity->anglescale.value() < 0 || entity->anglescale.value() > 1.0)
-        entity->anglescale.setValue(cfg.global_anglescale.value(), settings::source::MAP);
+        entity->anglescale.set_value(cfg.global_anglescale.value(), settings::source::MAP);
 
     // mxd. Warn about unsupported _falloff / delay combos...
     if (entity->falloff.value() > 0.0f && entity->getFormula() != LF_LINEAR) {
         logging::print("WARNING: _falloff is currently only supported on linear (delay 0) lights\n"
                        "   {} at [{}]\n",
             entity->classname(), entity->origin.value());
-        entity->falloff.setValue(0.0f, settings::source::MAP);
+        entity->falloff.set_value(0.0f, settings::source::MAP);
     }
 
     /* set up deviance and samples defaults */
     if (entity->deviance.value() > 0 && entity->samples.value() == 0) {
-        entity->samples.setValue(16, settings::source::MAP);
+        entity->samples.set_value(16, settings::source::MAP);
     }
 
     if (entity->deviance.value() <= 0.0f || entity->samples.value() <= 1) {
-        entity->deviance.setValue(0.0f, settings::source::MAP);
-        entity->samples.setValue(1, settings::source::MAP);
+        entity->deviance.set_value(0.0f, settings::source::MAP);
+        entity->samples.set_value(1, settings::source::MAP);
     }
 
     /* For most formulas, we need to divide the light value by the number of
@@ -330,12 +330,12 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
     if (entity->getFormula() == LF_INVERSE || entity->getFormula() == LF_INVERSE2 ||
         entity->getFormula() == LF_INFINITE || (entity->getFormula() == LF_LOCALMIN && cfg.addminlight.value()) ||
         entity->getFormula() == LF_INVERSE2A) {
-        entity->light.setValue(entity->light.value() / entity->samples.value(), settings::source::MAP);
+        entity->light.set_value(entity->light.value() / entity->samples.value(), settings::source::MAP);
     }
 
     // shadow_channel_mask defaults to light_channel_mask
-    if (!entity->shadow_channel_mask.isChanged()) {
-        entity->shadow_channel_mask.setValue(entity->light_channel_mask.value(), settings::source::DEFAULT);
+    if (!entity->shadow_channel_mask.is_changed()) {
+        entity->shadow_channel_mask.set_value(entity->light_channel_mask.value(), settings::source::DEFAULT);
     }
 
     if (!entity->surflight_minlight_scale.isChanged()) {
@@ -475,7 +475,7 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
                 entity->deviance.value(), entity->dirt.value(), entity->style.value(), entity->suntexture.value());
 
             // Disable the light itself...
-            entity->light.setValue(0.0f, settings::source::MAP);
+            entity->light.set_value(0.0f, settings::source::MAP);
         }
     }
 
@@ -602,7 +602,7 @@ static void SetupSkyDomes(const settings::worldspawn_keys &cfg)
             }
 
             // Disable the light itself...
-            entity->light.setValue(0.0f, settings::source::MAP);
+            entity->light.set_value(0.0f, settings::source::MAP);
         }
     }
 }
@@ -617,7 +617,7 @@ static std::unique_ptr<light_t> DuplicateEntity(const light_t &src)
     std::unique_ptr<light_t> entity = std::make_unique<light_t>();
 
     // copy settings::setting_container members
-    entity->copyFrom(src);
+    entity->copy_from(src);
 
     // copy other members
     entity->spotlight = src.spotlight;
@@ -662,7 +662,7 @@ static void JitterEntity(const light_t &entity)
         qvec3d neworigin = {(entity.origin.value())[0] + (Random() * 2.0f - 1.0f) * entity.deviance.value(),
             (entity.origin.value())[1] + (Random() * 2.0f - 1.0f) * entity.deviance.value(),
             (entity.origin.value())[2] + (Random() * 2.0f - 1.0f) * entity.deviance.value()};
-        light2->origin.setValue(neworigin, settings::source::MAP);
+        light2->origin.set_value(neworigin, settings::source::MAP);
     }
 
     // move the new lights into all_lights
@@ -889,7 +889,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
     /* handle worldspawn */
     for (const auto &epair : WorldEnt()) {
-        if (light_options.setSetting(epair.first, epair.second, settings::source::MAP) ==
+        if (light_options.set_setting(epair.first, epair.second, settings::source::MAP) ==
             settings::setting_error::INVALID) {
             logging::print("WARNING: worldspawn key {} has invalid value of \"{}\"\n", epair.first, epair.second);
         }
@@ -981,15 +981,15 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
             entity->epairs = &entdict;
 
             // populate settings
-            entity->setSettings(*entity->epairs, settings::source::MAP);
+            entity->set_settings(*entity->epairs, settings::source::MAP);
 
-            if (entity->mangle.isChanged()) {
+            if (entity->mangle.is_changed()) {
                 entity->spotvec = qv::vec_from_mangle(entity->mangle.value());
                 entity->spotlight = true;
 
-                if (!entity->projangle.isChanged()) {
+                if (!entity->projangle.is_changed()) {
                     // copy from mangle
-                    entity->projangle.setValue(entity->mangle.value(), settings::source::MAP);
+                    entity->projangle.set_value(entity->mangle.value(), settings::source::MAP);
                 }
             }
 
@@ -1001,12 +1001,12 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                         "WARNING: light has \"_project_texture\" \"{}\", but this texture was not found\n", texname);
                 }
 
-                if (!entity->projangle.isChanged()) { // mxd
+                if (!entity->projangle.is_changed()) { // mxd
                     // Copy from angles
                     qvec3d angles;
                     entdict.get_vector("angles", angles);
                     qvec3d mangle{angles[1], -angles[0], angles[2]}; // -pitch yaw roll -> yaw pitch roll
-                    entity->projangle.setValue(mangle, settings::source::MAP);
+                    entity->projangle.set_value(mangle, settings::source::MAP);
 
                     entity->spotlight = true;
                 }
@@ -1067,7 +1067,7 @@ void FixLightsOnFaces(const mbsp_t *bsp)
             entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
             entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
             auto [fixed_pos, success] = FixLightOnFace(bsp, entity->origin.value());
-            entity->origin.setValue(fixed_pos, settings::source::MAP);
+            entity->origin.set_value(fixed_pos, settings::source::MAP);
         }
     }
 }
@@ -1245,7 +1245,7 @@ static void CreateSurfaceLight(const qvec3d &origin, const qvec3d &normal, const
 {
     auto &entity = all_lights.emplace_back(DuplicateEntity(*surflight_template));
 
-    entity->origin.setValue(origin, settings::source::MAP);
+    entity->origin.set_value(origin, settings::source::MAP);
 
     /* don't write to bsp */
     entity->generated = true;
@@ -1481,7 +1481,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
     for (entdict_t &l : radlights) {
         auto &entity = surfacelight_templates.emplace_back(std::make_unique<light_t>());
         entity->epairs = &l;
-        entity->setSettings(*entity->epairs, settings::source::MAP);
+        entity->set_settings(*entity->epairs, settings::source::MAP);
     }
 
     for (auto &entity : all_lights) {
@@ -1490,7 +1490,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
             surfacelight_templates.push_back(DuplicateEntity(*entity)); // makes a copy
 
             // Hack: clear templates light value to 0 so they don't cast light
-            entity->light.setValue(0, settings::source::MAP);
+            entity->light.set_value(0, settings::source::MAP);
 
             logging::print("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
                 entity->epairs->get("origin"));

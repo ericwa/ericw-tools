@@ -54,6 +54,11 @@ std::vector<surfacelight_t> &GetSurfaceLights()
     return surfacelights;
 }
 
+size_t GetSurflightPoints()
+{
+    return total_surflight_points;
+}
+
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
     std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
@@ -77,9 +82,21 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Dice winding...
     vector<qvec3f> points;
-    winding.dice(cfg.surflightsubdivision.value(),
-        [&points, &facenormal](winding_t &w) { points.push_back(w.center() + facenormal); });
-    total_surflight_points += points.size();
+    size_t points_before_culling = 0;
+    winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
+        ++points_before_culling;
+
+        qvec3f point = w.center() + facenormal;
+
+        // optimization - cull surface lights in the void
+        // also try to move them if they're slightly inside a wall
+        auto [fixed_point, success] = FixLightOnFace(bsp, point, false, 0.5f);
+        if (!success) {
+            return;
+        }
+
+        points.push_back(fixed_point);
+    });
 
     // Calculate emit color and intensity...
 
@@ -88,7 +105,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     } else {
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
         if (!texture_color.has_value()) {
-            if (cfg.sky_surface.isChanged() && is_sky) {
+        if (cfg.sky_surface.is_changed() && is_sky) {
                 // FIXME: this only handles the "_sky_surface"  "red green blue" format.
                 //        There are other more complex variants we could handle documented in the link above.
                 // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
@@ -113,7 +130,8 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         texture_color.value() *= 1.0f / intensity;
 
     // Sanity checks...
-    Q_assert(!points.empty());
+    if (points.empty())
+        return;
 
     // Add surfacelight...
     surfacelight_t l;
@@ -141,11 +159,12 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Store surfacelight settings...
     l.totalintensity = intensity * facearea;
-    l.intensity = l.totalintensity / l.points.size();
+    l.intensity = l.totalintensity / points_before_culling;
     l.color = texture_color.value();
 
     // Store light...
     unique_lock<mutex> lck{surfacelights_lock};
+    total_surflight_points += l.points.size();
     surfacelights.push_back(l);
 
     const int index = static_cast<int>(surfacelights.size()) - 1;
@@ -167,7 +186,7 @@ std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(
         if (FaceMatchesSurfaceLightTemplate(
                 bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
             return std::make_tuple(surflight->light.value(), surflight->style.value(),
-                surflight->color.isChanged() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)),
+                surflight->color.is_changed() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)),
                 surflight.get());
         }
     }
@@ -205,7 +224,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
                 bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
             std::optional<qvec3f> texture_color;
 
-            if (surflight->color.isChanged()) {
+            if (surflight->color.is_changed()) {
                 texture_color = surflight->color.value();
             }
 

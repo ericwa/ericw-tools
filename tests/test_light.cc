@@ -994,7 +994,7 @@ TEST_SUITE("settings")
     {
         light_t light;
         parser_t p("2", {});
-        CHECK(light.formula.parse(light.formula.primaryName(), p, settings::source::MAP));
+        CHECK(light.formula.parse(light.formula.primary_name(), p, settings::source::MAP));
         CHECK(LF_INVERSE2 == light.formula.value());
     }
 
@@ -1002,7 +1002,7 @@ TEST_SUITE("settings")
     {
         light_t light;
         parser_t p("500", {});
-        CHECK(light.formula.parse(light.formula.primaryName(), p, settings::source::MAP));
+        CHECK(light.formula.parse(light.formula.primary_name(), p, settings::source::MAP));
         // not sure if we should be strict and reject parsing this?
         CHECK(500 == light.formula.value());
     }
@@ -1011,7 +1011,7 @@ TEST_SUITE("settings")
     {
         light_t light;
         parser_t p("2.0", {});
-        CHECK(light.formula.parse(light.formula.primaryName(), p, settings::source::MAP));
+        CHECK(light.formula.parse(light.formula.primary_name(), p, settings::source::MAP));
         CHECK(LF_INVERSE2 == light.formula.value());
     }
 
@@ -1019,7 +1019,7 @@ TEST_SUITE("settings")
     {
         light_t light;
         parser_t p("inverse2", {});
-        CHECK(light.formula.parse(light.formula.primaryName(), p, settings::source::MAP));
+        CHECK(light.formula.parse(light.formula.primary_name(), p, settings::source::MAP));
         CHECK(LF_INVERSE2 == light.formula.value());
     }
 }

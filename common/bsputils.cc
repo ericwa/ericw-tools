@@ -1015,10 +1015,15 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
 
 /**
  * Samples the lightmap at an integer coordinate
+ * FIXME: this doesn't deal with styles at all
  */
 qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents,
     int byte_offset_of_face, qvec2i coord)
 {
+    if (byte_offset_of_face == -1) {
+        return {0, 0, 0};
+    }
+
     Q_assert(coord[0] >= 0);
     Q_assert(coord[1] >= 0);
     Q_assert(coord[0] < faceextents.width());

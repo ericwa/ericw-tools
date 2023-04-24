@@ -164,6 +164,14 @@ Options
    "-wrbrushes" combined with "-noclip" argument. This is NOT backwards
    compatible.
 
+.. option:: -bmodelcontents
+
+   Allow bmodels to have contents other than "solid" in Q1 based games,
+   e.g. water in a func_door. This is supported in FTEQW; in winquake,
+   the bmodel will have no collision.
+
+   Q2 supports this feature natively and this option has no effect.
+
 .. option:: -notex
 
    Write only placeholder textures, to depend upon replacements. This
@@ -196,6 +204,55 @@ Options
 
    Set number of threads to use. By default, qbsp will attempt to
    use all available hardware threads.
+
+.. option:: -aliasdef <aliases.def> [...]
+
+   Adds alias definition files, which can transform entities in the .map into other entities.
+
+   For example, given this alias definition file:
+
+   .. code-block:: none
+      :caption: aliases.def
+
+      misc_torch1 // source classname
+      {
+      "classname" "misc_model" // classname to transform into
+      "model" "torch1.mdl"
+      }
+
+      misc_torch2
+      {
+      "classname" "misc_model"
+      "model" "torch2.mdl"
+      }
+
+   and an input map file:
+
+   .. code-block:: none
+
+      {
+      "classname" "misc_torch1"
+      "model" "override.mdl"
+      }
+
+      {
+      "classname" "misc_torch2"
+      }
+
+   the following will be output in the .bsp's entity lump:
+
+   .. code-block:: none
+
+      {
+      "classname" "misc_model"
+      "model" "override.mdl" // key/value from map takes precedence
+      }
+
+      {
+      "classname" "misc_model"
+      "model" "torch2.mdl" // key/value from alias file
+      }
+
 
 Game Path Specification
 -----------------------
@@ -513,9 +570,3 @@ Copyright
 
 This is free software: you are free to change and redistribute it. There
 is NO WARRANTY, to the extent permitted by law.
-
-See Also
---------
-
-**light**\ (1) **vis**\ (1) **bspinfo**\ (1) **bsputil**\ (1)
-**quake**\ (6)

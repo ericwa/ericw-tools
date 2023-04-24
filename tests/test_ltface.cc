@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <light/light.hh>
+#include <light/surflight.hh>
 #include <common/bspinfo.hh>
 #include <qbsp/qbsp.hh>
 #include <testmaps.hh>
@@ -239,7 +240,7 @@ static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
 }
 
 static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3b &expected_color,
-    const qvec3d &point, const qvec3d &normal = {0, 0, 0})
+    const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const std::vector<uint8_t> *lit = nullptr)
 {
     auto *face = BSP_FindFaceAtPoint(bsp, model, point, normal);
     REQUIRE(face);
@@ -250,7 +251,7 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
 
     const auto coord = extents.worldToLMCoord(point);
 
-    const qvec3b sample = LM_Sample(bsp, nullptr, extents, face->lightofs, qvec2i(coord));
+    const qvec3b sample = LM_Sample(bsp, lit, extents, face->lightofs, qvec2i(coord));
     INFO("sample ", coord[0], ", ", coord[1]);
 
     CHECK(sample == expected_color);
@@ -613,4 +614,31 @@ TEST_CASE("q2_light_origin_brush_shadow")
 
     INFO("ensure no spurious shadow at the world origin (would happen if we didn't apply model offset)");
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, at_origin);
+}
+
+TEST_CASE("q2_surface_lights_culling")
+{
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_surface_lights_culling.map", {});
+
+    CHECK(7 == GetSurflightPoints());
+
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {155, 78, 39}, {-480, 168, 64});
+}
+
+TEST_CASE("q1_lightignore" * doctest::may_fail())
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_lightignore.map", {"-bounce"});
+
+    {
+        INFO("func_wall");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {0, 0, 0}, {-48, 144, 48}, {0, 0, 1}, &lit);
+    }
+    {
+        INFO("func_detail");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {72, 144, 48}, {0, 0, 1}, &lit);
+    }
+    {
+        INFO("worldspawn (receives light)");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {55, 69, 83}, {-128, 144, 32}, {0, 0, 1}, &lit);
+    }
 }

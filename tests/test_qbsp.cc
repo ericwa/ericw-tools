@@ -728,6 +728,21 @@ TEST_CASE("qbsp_bmodel_mirrorinside_with_liquid" * doctest::test_suite("testmaps
     }
 }
 
+TEST_CASE("q1_bmodel_liquid" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_bmodel_liquid.map", {"-bmodelcontents"});
+    REQUIRE(prt.has_value());
+
+    // nonsolid brushes don't show up in clipping hulls. so 6 for the box room in hull1, and 6 for hull2.
+    REQUIRE(12 == bsp.dclipnodes.size());
+
+    const auto inside_water = qvec3d{8, -120, 184};
+    CHECK(CONTENTS_WATER == BSP_FindContentsAtPoint(&bsp, {0}, &bsp.dmodels[1], inside_water));
+
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, {1}, &bsp.dmodels[1], inside_water));
+    CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, {2}, &bsp.dmodels[1], inside_water));
+}
+
 TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");
@@ -864,6 +879,13 @@ TEST_CASE("q1_detail_non_sealing" * doctest::test_suite("testmaps_q1"))
 TEST_CASE("q1_sealing_contents" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_sealing_contents.map");
+
+    CHECK(prt.has_value());
+}
+
+TEST_CASE("q1_detail_touching_water" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_touching_water.map");
 
     CHECK(prt.has_value());
 }
@@ -1634,7 +1656,7 @@ TEST_CASE("BrushFromBounds")
 {
     map.reset();
     qbsp_options.reset();
-    qbsp_options.worldextent.setValue(1024, settings::source::COMMANDLINE);
+    qbsp_options.worldextent.set_value(1024, settings::source::COMMANDLINE);
 
     auto brush = BrushFromBounds({{2, 2, 2}, {32, 32, 32}});
 

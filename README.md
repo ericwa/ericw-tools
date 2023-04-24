@@ -44,6 +44,8 @@ Dependencies: Embree 3.0+, TBB (TODO: version?), Sphinx (for building manuals)
 
 ### Ubuntu
 
+NOTE: Builds using Ubuntu's embree packages produce a significantly slower `light` (i.e. over twice as slow) than ones released on Embree's GitHub. See `build-linux-64.sh` for a better method. 
+
 ```
 sudo apt install libembree-dev libtbb-dev cmake build-essential g++
 sudo apt install python3-pip

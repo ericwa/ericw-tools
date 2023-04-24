@@ -4,6 +4,9 @@
 #include <common/bspfile.hh>
 #include <common/bspfile_q1.hh>
 #include <common/bspfile_q2.hh>
+#include <common/imglib.hh>
+#include <common/settings.hh>
+#include <testmaps.hh>
 
 TEST_SUITE("common")
 {
@@ -71,6 +74,59 @@ TEST_SUITE("common")
             CHECK(combined.is_sky(game_q1));
             CHECK(!combined.is_solid(game_q1));
         }
+    }
+
+    TEST_CASE("cluster_contents")
+    {
+        for (auto *bspver : bspversions) {
+            auto *game = bspver->game;
+            if (!game)
+                continue;
+
+            SUBCASE(bspver->name)
+            {
+                const auto solid = game->create_solid_contents();
+                const auto solid_detail = game->create_detail_solid_contents(solid);
+                const auto empty = game->create_empty_contents();
+
+                auto solid_solid_cluster = game->cluster_contents(solid_detail, solid_detail);
+                CAPTURE(solid_solid_cluster.to_string(game));
+                CHECK(solid_solid_cluster.is_detail_solid(game));
+
+                auto solid_empty_cluster = game->cluster_contents(solid_detail, empty);
+                CAPTURE(solid_empty_cluster.to_string(game));
+
+                // it's empty because of the rule that:
+                // - if all leaves in the cluster are solid, it means you can't see in, and there's no visportal
+                // - otherwise, you can see in, and it needs a visportal
+                CHECK(solid_empty_cluster.is_empty(game));
+                // this is a bit weird...
+                CHECK(solid_empty_cluster.is_any_detail(game));
+
+                // check portal_can_see_through
+                CHECK(!game->portal_can_see_through(empty, solid_detail, true, true));
+            }
+        }
+    }
+
+    TEST_CASE("q1 origin")
+    {
+        auto *game = bspver_q1.game;
+
+        auto origin = game->face_get_contents("origin", {}, {});
+
+        CHECK(origin.is_origin(game));
+        CHECK(!origin.is_empty(game));
+    }
+
+    TEST_CASE("q2 origin")
+    {
+        auto *game = bspver_q2.game;
+
+        auto origin = game->face_get_contents("", {}, {Q2_CONTENTS_ORIGIN});
+
+        CHECK(origin.is_origin(game));
+        CHECK(!origin.is_empty(game));
     }
 
     TEST_CASE("shared content flag tests")
@@ -210,5 +266,31 @@ TEST_SUITE("common")
                 }
             }
         }
+    }
+
+    TEST_CASE("imglib png loader")
+    {
+        auto *game = bspver_q2.game;
+        auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
+
+        settings::common_settings settings;
+        settings.paths.add_value(wal_metadata_path.string(), settings::source::COMMANDLINE);
+
+        game->init_filesystem("placeholder.map", settings);
+
+        auto [texture, resolve, data] = img::load_texture("e1u1/yellow32x32", false, game, settings);
+        REQUIRE(texture);
+
+        CHECK(texture->meta.name == "e1u1/yellow32x32");
+        CHECK(texture->meta.width == 32);
+        CHECK(texture->meta.height == 32);
+        CHECK(texture->meta.extension.value() == img::ext::STB);
+        CHECK(!texture->meta.color_override);
+
+        CHECK(texture->width == 32);
+        CHECK(texture->height == 32);
+
+        CHECK(texture->width_scale == 1);
+        CHECK(texture->height_scale == 1);
     }
 }

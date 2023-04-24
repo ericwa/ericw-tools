@@ -13,6 +13,7 @@ Welcome to ericw-tools's documentation!
    light
    bspinfo
    bsputil
+   changelog
 
 
 Indices and tables
