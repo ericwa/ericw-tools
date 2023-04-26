@@ -1159,6 +1159,22 @@ TEST_CASE("q1_detail_wall tjuncs" * doctest::test_suite("testmaps_q1"))
     CHECK(w.size() == 5);
 }
 
+TEST_CASE("q1_detail_wall_intersecting_detail" * doctest::test_suite("testmaps_q1") * doctest::may_fail())
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_wall_intersecting_detail.map");
+
+    const auto *left_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-152, -192, 160}, {1, 0, 0});
+    const auto *under_detail_wall_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-152, -176, 160}, {1, 0, 0});
+    const auto *right_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-152, -152, 160}, {1, 0, 0});
+
+    CHECK(left_face != nullptr);
+    CHECK(under_detail_wall_face != nullptr);
+    CHECK(right_face != nullptr);
+
+    CHECK(left_face == under_detail_wall_face);
+    CHECK(left_face == right_face);
+}
+
 bool PortalMatcher(const prtfile_winding_t &a, const prtfile_winding_t &b)
 {
     return a.undirectional_equal(b);
