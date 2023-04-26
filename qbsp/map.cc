@@ -2582,6 +2582,12 @@ static void ScaleMapFace(mapface_t &face, const qvec3d &scale)
     }
 
     face.set_texvecs(newtexvecs);
+
+    // update winding
+
+    for (qvec3d &p : face.winding) {
+        p = scaleM * p;
+    }
 }
 
 static void RotateMapFace(mapface_t &face, const qvec3d &angles)
@@ -3070,6 +3076,27 @@ void ProcessMapBrushes()
                 }
             }
 
+            // apply global scale
+            if (qbsp_options.scale.value() != 1.0) {
+                // scale brushes
+                for (auto &brush : entity.mapbrushes) {
+                    for (auto &f : brush.faces) {
+                        ScaleMapFace(f, qvec3d(qbsp_options.scale.value()));
+                    }
+                    CalculateBrushBounds(brush);
+                }
+
+                // scale point entity origin
+                if (entity.epairs.find("origin") != entity.epairs.end()) {
+                    qvec3d origin;
+                    if (3 == entity.epairs.get_vector("origin", origin)) {
+                        origin *= qbsp_options.scale.value();
+
+                        entity.epairs.set("origin", qv::to_string(origin));
+                    }
+                }
+            }
+
             // remove windings, we no longer need them
             for (auto &brush : entity.mapbrushes) {
                 for (auto &f : brush.faces) {
@@ -3472,6 +3499,10 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
                 }
             }
         }
+    }
+
+    if (qbsp_options.scale.value() != 1) {
+        extents *= qbsp_options.scale.value();
     }
 
     return extents;
