@@ -227,6 +227,7 @@ public:
     setting_validator<setting_int32> maxedges;
     setting_numeric<vec_t> midsplitbrushfraction;
     setting_string add;
+    setting_scalar scale;
     setting_bool loghulls;
     setting_bool logbmodels;
 

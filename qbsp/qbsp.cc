@@ -569,6 +569,8 @@ qbsp_settings::qbsp_settings()
       midsplitbrushfraction{this, "midsplitbrushfraction", 0.0, &common_format_group,
           "switch to cheaper partitioning if a node contains this % of brushes in the map"},
       add{this, "add", "", "", &common_format_group, "the given map file will be appended to the base map"},
+      scale{this, "scale", 1.0, &map_development_group,
+          "scales the map brushes and point entity origins by a give factor"},
       loghulls{this, {"loghulls"}, false, &logging_group, "print log output for collision hulls"},
       logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"}
 {
