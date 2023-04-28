@@ -305,6 +305,7 @@ public:
     setting_scalar surflightskyscale;
     // "choplight" - arghrad3 name
     setting_scalar surflightsubdivision;
+    setting_scalar surflight_minlight_scale;
 
     /* sunlight */
     /* sun_light, sun_color, sun_angle for http://www.bspquakeeditor.com/arghrad/ compatibility */

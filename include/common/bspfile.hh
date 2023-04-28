@@ -192,6 +192,9 @@ struct surfflags_t
     // normal if false, use a more natural angle falloff of 0% at 90 degrees
     bool surflight_rescale = true;
 
+    // override surface lighting style
+    std::optional<int32_t> surflight_style;
+
     // override the textures' surflight color
     std::optional<qvec3b> surflight_color;
 

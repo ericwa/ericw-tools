@@ -187,6 +187,7 @@ worldspawn_keys::worldspawn_keys()
       surflightscale{this, "surflightscale", 1.0, &worldspawn_group},
       surflightskyscale{this, "surflightskyscale", 1.0, &worldspawn_group},
       surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
+      surflight_minlight_scale{this, "surflight_minlight_scale", 1.0f, 0.f, 510.f, &worldspawn_group },
       sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},
       sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group},
       sun2{this, "sun2", 0.0, &worldspawn_group},
@@ -1118,6 +1119,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         }
         if (val.contains("surflight_rescale")) {
             flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
+        }
+        if (val.contains("surflight_style")) {
+            flags.surflight_style = val.at("surflight_style").get<int32_t>();
         }
         if (val.contains("surflight_color")) {
             flags.surflight_color = val.at("surflight_color").get<qvec3b>();

@@ -138,7 +138,11 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     l.surfnormal = facenormal;
     l.omnidirectional = !is_directional;
     l.points = std::move(points);
-    l.style = style;
+    if (extended_flags.surflight_style) {
+        l.style = extended_flags.surflight_style.value();
+    } else {
+        l.style = style;
+    }
     l.rescale = extended_flags.surflight_rescale;
     l.minlight_scale = extended_flags.surflight_minlight_scale;
 

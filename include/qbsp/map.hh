@@ -250,6 +250,9 @@ struct mapdata_t
     // whether we had attempted loading texture stuff
     bool textures_loaded = false;
 
+    // map compile region
+    std::optional<mapbrush_t> region = std::nullopt;
+
     // helpers
     const std::string &miptexTextureName(int mt) const;
     const std::string &texinfoTextureName(int texinfo) const;
@@ -284,6 +287,10 @@ struct texture_def_issues_t : logging::stat_tracker_t
     stat &num_translucent = register_stat(
         "faces have TRANSLUCENT flag swapped to DETAIL; TRANSLUCENT is an internal flag. Use -verbose to display affected faces.",
         false, true);
+
+    stat &num_repaired = register_stat(
+        "faces have invalid texture projections and were repaired. Use -verbose to display affected faces."
+        , false, true);
 };
 
 bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issues_stats);

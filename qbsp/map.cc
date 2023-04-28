@@ -340,6 +340,51 @@ struct texdef_etp_t
     bool tx2 = false;
 };
 
+/*
+================
+CalculateBrushBounds
+================
+*/
+inline void CalculateBrushBounds(mapbrush_t &ob)
+{
+    ob.bounds = {};
+
+    for (size_t i = 0; i < ob.faces.size(); i++) {
+        const auto &plane = ob.faces[i].get_plane();
+        std::optional<winding_t> w = BaseWindingForPlane<winding_t>(plane);
+
+        for (size_t j = 0; j < ob.faces.size() && w; j++) {
+            if (i == j) {
+                continue;
+            }
+            if (ob.faces[j].bevel) {
+                continue;
+            }
+            const auto &plane = map.get_plane(ob.faces[j].planenum ^ 1);
+            w = w->clip_front(plane, 0); // CLIP_EPSILON);
+        }
+
+        if (w) {
+            // calc bounds before moving from w
+            for (auto &p : w.value()) {
+                ob.bounds += p;
+            }
+            ob.faces[i].winding = std::move(w.value());
+        }
+    }
+
+    for (size_t i = 0; i < 3; i++) {
+        if (ob.bounds.mins()[0] <= -qbsp_options.worldextent.value() ||
+            ob.bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+            logging::print("WARNING: {}: brush bounds out of range\n", ob.line);
+        }
+        if (ob.bounds.mins()[0] >= qbsp_options.worldextent.value() ||
+            ob.bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+            logging::print("WARNING: {}: no visible sides on brush\n", ob.line);
+        }
+    }
+}
+
 using texdef_brush_primitives_t = qmat<vec_t, 2, 3>;
 
 static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
@@ -623,11 +668,21 @@ static surfflags_t SurfFlagsForEntity(
         qvec3d color;
         // FIXME: get_color, to match settings
         if (entity.epairs.has("_surflight_color") && entity.epairs.get_vector("_surflight_color", color) == 3) {
-            flags.surflight_color = qvec3b{ (uint8_t) (color[0] * 255), (uint8_t) (color[1] * 255), (uint8_t) (color[2] * 255) };
+            if (color[0] <= 1 && color[1] <= 1 && color[2] <= 1) {
+                flags.surflight_color = qvec3b{ (uint8_t) (color[0] * 255), (uint8_t) (color[1] * 255), (uint8_t) (color[2] * 255) };
+            } else {
+                flags.surflight_color = qvec3b{ (uint8_t) (color[0]), (uint8_t) (color[1]), (uint8_t) (color[2]) };
+            }
         }
     }
+    if (entity.epairs.has("_surflight_style") && entity.epairs.get_int("_surflight_style") != 0)
+        flags.surflight_style = entity.epairs.get_int("_surflight_style");
+
     if (entity.epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
+    // Paril: inherit _surflight_minlight_scale from worldspawn if unset
+    else if (!entity.epairs.has("_surflight_minlight_scale") && map.world_entity().epairs.has("_surflight_minlight_scale"))
+        flags.surflight_minlight_scale = map.world_entity().epairs.get_float("_surflight_minlight_scale");
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
     for (int i = 0; i <= 9; i++) {
@@ -1863,11 +1918,15 @@ inline bool IsValidTextureProjection(const mapface_t &mapface, const maptexinfo_
     return IsValidTextureProjection(mapface.get_plane().get_normal(), tx->vecs.row(0).xyz(), tx->vecs.row(1).xyz());
 }
 
-static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx)
+static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx, texture_def_issues_t &issue_stats)
 {
     if (!IsValidTextureProjection(mapface, tx)) {
-        logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", mapface.line,
-            mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
+        if (qbsp_options.verbose.value()) {
+            logging::print("WARNING: {}: repairing invalid texture projection (\"{}\" near {} {} {})\n", mapface.line,
+                mapface.texname, (int)mapface.planepts[0][0], (int)mapface.planepts[0][1], (int)mapface.planepts[0][2]);
+        } else {
+            issue_stats.num_repaired++;
+        }
 
         // Reset texturing to sensible defaults
         const std::array<vec_t, 2> shift{0, 0};
@@ -1912,7 +1971,7 @@ static std::optional<mapface_t> ParseBrushFace(
         }
     }
 
-    ValidateTextureProjection(face, &tx);
+    ValidateTextureProjection(face, &tx, issue_stats);
 
     tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
     face.texinfo = FindTexinfo(tx);
@@ -2459,6 +2518,74 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         brush.faces.emplace_back(std::move(face.value()));
     }
 
+    // check for region brush
+    if (string_iequals(brush.faces[0].texname, "region")) {
+        if (!map.is_world_entity(entity)) {
+            FError("Region brush at {} isn't part of the world entity", parser.token);
+        }
+
+        CalculateBrushBounds(brush);
+
+        // construct region brushes
+        for (auto &new_brush_side : brush.faces) {
+
+            // copy the brush
+            mapbrush_t new_brush;
+
+            new_brush.contents = brush.contents;
+            new_brush.line = brush.line;
+            
+            for (auto &side : brush.faces) {
+
+                // if it's the side we're extruding, increase its dist
+                if (side.planenum == new_brush_side.planenum) {
+                    mapface_t new_side;
+                    new_side.texinfo = side.texinfo;
+                    new_side.contents = side.contents;
+                    new_side.raw_info = side.raw_info;
+                    new_side.texname = side.texname;
+                    new_side.planenum = side.planenum;
+                    new_side.planenum = map.add_or_find_plane({ new_side.get_plane().get_normal(), new_side.get_plane().get_dist() + 16.f });
+
+                    new_brush.faces.emplace_back(std::move(new_side));
+                // the inverted side is special
+                } else if (side.get_plane().get_normal() == -new_brush_side.get_plane().get_normal()) {
+
+                    // add the other side
+                    mapface_t flipped_side;
+                    flipped_side.texinfo = side.texinfo;
+                    flipped_side.contents = side.contents;
+                    flipped_side.raw_info = side.raw_info;
+                    flipped_side.texname = side.texname;
+                    flipped_side.planenum = map.add_or_find_plane({ -new_brush_side.get_plane().get_normal(), -new_brush_side.get_plane().get_dist() });
+
+                    new_brush.faces.emplace_back(std::move(flipped_side));
+                } else {
+                    mapface_t new_side;
+                    new_side.texinfo = side.texinfo;
+                    new_side.contents = side.contents;
+                    new_side.raw_info = side.raw_info;
+                    new_side.texname = side.texname;
+                    new_side.planenum = side.planenum;
+
+                    new_brush.faces.emplace_back(std::move(new_side));
+                }
+            }
+
+            // add
+            new_brush.contents = Brush_GetContents(entity, new_brush);
+            map.world_entity().mapbrushes.push_back(std::move(new_brush));
+        }
+
+        if (!map.region) {
+            map.region = std::move(brush);
+        } else {
+            FError("Multiple region brushes detected; newest at {}", parser.token);
+        }
+
+        return brush;
+    }
+
     // mark hintskip faces
     if (is_hint) {
         int32_t num_hintskip = 0;
@@ -2532,7 +2659,11 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &is
                     }
                 } while (parser.token != "}");
             } else {
-                entity.mapbrushes.emplace_back(ParseBrush(parser, entity, issue_stats));
+                auto brush = ParseBrush(parser, entity, issue_stats);
+
+                if (brush.faces.size()) {
+                    entity.mapbrushes.push_back(std::move(brush));
+                }
             }
         } else {
             ParseEpair(parser, entity);
@@ -2818,51 +2949,6 @@ bool IsNonRemoveWorldBrushEntity(const mapentity_t &entity)
     return false;
 }
 
-/*
-================
-CalculateBrushBounds
-================
-*/
-inline void CalculateBrushBounds(mapbrush_t &ob)
-{
-    ob.bounds = {};
-
-    for (size_t i = 0; i < ob.faces.size(); i++) {
-        const auto &plane = ob.faces[i].get_plane();
-        std::optional<winding_t> w = BaseWindingForPlane<winding_t>(plane);
-
-        for (size_t j = 0; j < ob.faces.size() && w; j++) {
-            if (i == j) {
-                continue;
-            }
-            if (ob.faces[j].bevel) {
-                continue;
-            }
-            const auto &plane = map.get_plane(ob.faces[j].planenum ^ 1);
-            w = w->clip_front(plane, 0); // CLIP_EPSILON);
-        }
-
-        if (w) {
-            // calc bounds before moving from w
-            for (auto &p : w.value()) {
-                ob.bounds += p;
-            }
-            ob.faces[i].winding = std::move(w.value());
-        }
-    }
-
-    for (size_t i = 0; i < 3; i++) {
-        if (ob.bounds.mins()[0] <= -qbsp_options.worldextent.value() ||
-            ob.bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
-            logging::print("WARNING: {}: brush bounds out of range\n", ob.line);
-        }
-        if (ob.bounds.mins()[0] >= qbsp_options.worldextent.value() ||
-            ob.bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
-            logging::print("WARNING: {}: no visible sides on brush\n", ob.line);
-        }
-    }
-}
-
 inline bool MapBrush_IsHint(const mapbrush_t &brush)
 {
     for (auto &f : brush.faces) {
@@ -2940,6 +3026,11 @@ void ProcessMapBrushes()
     }
 
     map.total_brushes = 0;
+
+    if (map.region) {
+        CalculateBrushBounds(map.region.value());
+        logging::print("NOTE: map region detected! only compiling map within {}\n", map.region.value().bounds);
+    }
 
     {
         logging::percent_clock clock(map.entities.size());
@@ -3081,6 +3172,23 @@ void ProcessMapBrushes()
     }
 
     logging::print(logging::flag::STAT, "\n");
+
+    // remove ents in region
+    if (map.region) {
+
+        for (auto it = map.entities.begin(); it != map.entities.end(); ) {
+            auto &entity = *it;
+
+            if (!entity.mapbrushes.size()) {
+                if (map.region && !map.region->bounds.containsPoint(entity.origin)) {
+                    it = map.entities.erase(it);
+                    continue;
+                }
+            }
+
+            ++it;
+        }
+    }
 
     if (qbsp_options.debugexpand.is_changed()) {
         aabb3d hull;

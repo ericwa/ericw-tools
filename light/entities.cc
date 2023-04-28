@@ -112,7 +112,7 @@ light_t::light_t()
       suntexture{this, "suntexture", ""},
       nostaticlight{this, "nostaticlight", false},
       surflight_group{this, "surflight_group", 0},
-      surflight_minlight_scale{this, "surflight_minlight_scale", 64.f},
+      surflight_minlight_scale{this, "surflight_minlight_scale", 1.f},
       light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
       shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT},
       nonudge{this, "nonudge", false}
@@ -339,9 +339,12 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
     }
 
     if (!entity->surflight_minlight_scale.is_changed()) {
-        if (bsp->loadversion->game->id != GAME_QUAKE_II) {
-            // TODO: also use 1.0 for Q2?
-            entity->surflight_minlight_scale.set_value(1.0f, settings::source::DEFAULT);
+        if (cfg.surflight_minlight_scale.is_changed()) {
+            entity->surflight_minlight_scale.set_value(cfg.surflight_minlight_scale.value(), settings::source::DEFAULT);
+        } else if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            // this default value mimicks the fullbright-ish nature of emissive surfaces
+            // in Q2.
+            entity->surflight_minlight_scale.set_value(64.0f, settings::source::DEFAULT);
         }
     }
 }
