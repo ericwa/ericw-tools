@@ -2447,6 +2447,30 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     return base_contents;
 }
 
+static mapbrush_t CloneBrush(const mapbrush_t &input, bool faces = false)
+{
+    mapbrush_t brush;
+
+    brush.contents = input.contents;
+    brush.format = input.format;
+    brush.line = input.line;
+
+    if (faces) {
+        for (auto &face : input.faces) {
+            auto &new_face = brush.faces.emplace_back();
+            new_face.contents = face.contents;
+            new_face.line = face.line;
+            new_face.planenum = face.planenum;
+            new_face.planepts = face.planepts;
+            new_face.raw_info = face.raw_info;
+            new_face.texinfo = face.texinfo;
+            new_face.texname = face.texname;
+        }
+    }
+
+    return brush;
+}
+
 static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
     mapbrush_t brush;
@@ -2518,13 +2542,17 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         brush.faces.emplace_back(std::move(face.value()));
     }
 
-    // check for region brush
-    if (string_iequals(brush.faces[0].texname, "region")) {
+    // check for region/antiregion brushes
+    if (brush.faces[0].texname.ends_with("antiregion")) {
         if (!map.is_world_entity(entity)) {
             FError("Region brush at {} isn't part of the world entity", parser.token);
         }
 
-        CalculateBrushBounds(brush);
+        map.antiregions.push_back(CloneBrush(brush, true));
+    } else if (brush.faces[0].texname.ends_with("region")) {
+        if (!map.is_world_entity(entity)) {
+            FError("Region brush at {} isn't part of the world entity", parser.token);
+        }
 
         // construct region brushes
         for (auto &new_brush_side : brush.faces) {
@@ -2588,7 +2616,6 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
 
     // mark hintskip faces
     if (is_hint) {
-        int32_t num_hintskip = 0;
 
         for (auto &face : brush.faces) {
             if (qbsp_options.target_game->texinfo_is_hintskip(
@@ -2596,11 +2623,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
                 auto copy = face.get_texinfo();
                 copy.flags.is_hintskip = true;
                 face.texinfo = FindTexinfo(copy);
-                num_hintskip++;
             }
         }
-
-        // logging::print("{}: {} hintskip faces\n", parser.location, num_hintskip);
     }
 
     // ericw -- brush primitives - there should be another closing }
@@ -3038,6 +3062,14 @@ void ProcessMapBrushes()
         logging::print("NOTE: map region detected! only compiling map within {}\n", map.region.value().bounds);
     }
 
+    if (map.antiregions.size()) {
+        logging::print("NOTE: map anti-regions detected! {} brush regions will be omitted\n", map.antiregions.size());
+
+        for (auto &region : map.antiregions) {
+            CalculateBrushBounds(region);
+        }
+    }
+
     {
         logging::percent_clock clock(map.entities.size());
 
@@ -3201,19 +3233,32 @@ void ProcessMapBrushes()
     logging::print(logging::flag::STAT, "\n");
 
     // remove ents in region
-    if (map.region) {
+    if (map.region || map.antiregions.size()) {
 
         for (auto it = map.entities.begin(); it != map.entities.end(); ) {
             auto &entity = *it;
 
+            bool removed = false;
+
             if (!entity.mapbrushes.size()) {
                 if (map.region && !map.region->bounds.containsPoint(entity.origin)) {
                     it = map.entities.erase(it);
-                    continue;
+                    removed = true;
+                }
+
+                for (auto &region : map.antiregions) {
+                    if (region.bounds.containsPoint(entity.origin)) {
+                        logging::print("removed {}\n", entity.epairs.get("classname"));
+                        it = map.entities.erase(it);
+                        removed = true;
+                        break;
+                    }
                 }
             }
 
-            ++it;
+            if (!removed) {
+                ++it;
+            }
         }
     }
 

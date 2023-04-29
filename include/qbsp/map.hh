@@ -252,6 +252,7 @@ struct mapdata_t
 
     // map compile region
     std::optional<mapbrush_t> region = std::nullopt;
+    std::vector<mapbrush_t> antiregions;
 
     // helpers
     const std::string &miptexTextureName(int mt) const;

@@ -712,12 +712,23 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
     for (auto &mapbrush : src.mapbrushes) {
         clock();
 
-        if (map.region && (map.is_world_entity(src) || IsWorldBrushEntity(src) || IsNonRemoveWorldBrushEntity(src))) {
-            if (map.region->bounds.disjoint(mapbrush.bounds)) {
-                //stats.regioned_brushes++;
-                //it = entity.mapbrushes.erase(it);
-                //logging::print("removed broosh\n");
-                continue;
+        if (map.is_world_entity(src) || IsWorldBrushEntity(src) || IsNonRemoveWorldBrushEntity(src)) {
+            if (map.region) {
+                if (map.region->bounds.disjoint(mapbrush.bounds)) {
+                    //stats.regioned_brushes++;
+                    //it = entity.mapbrushes.erase(it);
+                    //logging::print("removed broosh\n");
+                    continue;
+                }
+            }
+
+            for (auto &region : map.antiregions) {
+                if (!region.bounds.disjoint(mapbrush.bounds)) {
+                    //stats.regioned_brushes++;
+                    //it = entity.mapbrushes.erase(it);
+                    //logging::print("removed broosh\n");
+                    continue;
+                }
             }
         }
 
