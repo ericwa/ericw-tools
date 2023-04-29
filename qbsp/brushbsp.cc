@@ -410,11 +410,11 @@ static twosided<bspbrush_t::ptr> SplitBrush(
     twosided<bspbrush_t::ptr> result;
 
     // check all points
-    vec_t d_front = 0;
-    vec_t d_back = 0;
+    vec_t d_front = 0; // for points above plane, greatest distance from plane (positive)
+    vec_t d_back = 0; // for points below plane, greatest distance from plane (negative)
     for (auto &face : brush->sides) {
-        for (int j = 0; j < face.w.size(); j++) {
-            vec_t d = qv::dot(face.w[j], split.normal) - split.dist;
+        for (const qvec3d &p : face.w) {
+            vec_t d = split.dist_above(p);
             if (d > 0 && d > d_front)
                 d_front = d;
             if (d < 0 && d < d_back)
