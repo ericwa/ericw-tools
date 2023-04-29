@@ -240,19 +240,30 @@ static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
 }
 
 static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3b &expected_color,
-    const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const std::vector<uint8_t> *lit = nullptr)
+    const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const std::vector<uint8_t> *lit = nullptr,
+    const bspxentries_t *bspx = nullptr)
 {
     auto *face = BSP_FindFaceAtPoint(bsp, model, point, normal);
     REQUIRE(face);
 
-    // FIXME: assumes no DECOUPLED_LM lump
+    faceextents_t extents;
+    int offset;
 
-    const faceextents_t extents(*face, *bsp, LMSCALE_DEFAULT);
+    if (bspx && bspx->find("DECOUPLED_LM") != bspx->end()) {
+        auto lm_info = BSPX_DecoupledLM(*bspx, Face_GetNum(bsp, face));
+        extents = faceextents_t(*face, *bsp, lm_info.lmwidth, lm_info.lmheight, lm_info.world_to_lm_space);
+        offset = lm_info.offset;
+    } else {
+        // vanilla lightmap
+        extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
+        offset = face->lightofs;
+    }
 
     const auto coord = extents.worldToLMCoord(point);
 
-    const qvec3b sample = LM_Sample(bsp, lit, extents, face->lightofs, qvec2i(coord));
-    INFO("sample ", coord[0], ", ", coord[1]);
+    const qvec3b sample = LM_Sample(bsp, lit, extents, offset, qvec2i(coord));
+    INFO("world point: ", point);
+    INFO("lm coord: ", coord[0], ", ", coord[1]);
 
     CHECK(sample == expected_color);
 }
@@ -640,5 +651,20 @@ TEST_CASE("q1_lightignore" * doctest::may_fail())
     {
         INFO("worldspawn (receives light)");
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {55, 69, 83}, {-128, 144, 32}, {0, 0, 1}, &lit);
+    }
+}
+
+TEST_CASE("q2_light_low_luxel_res" * doctest::may_fail())
+{
+    auto [bsp, bspx] = QbspVisLight_Q2(
+        "q2_light_low_luxel_res.map", {"-world_units_per_luxel", "32", "-dirt", "-debugface", "2164", "712", "-968"});
+
+    {
+        INFO("non-sloped cube");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {254, 203, 0}, {2138, 712, -968}, {0, 1, 0}, nullptr, &bspx);
+    }
+    {
+        INFO("sloped cube");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {254, 203, 0}, {2164, 712, -968}, {0, 1, 0}, nullptr, &bspx);
     }
 }
