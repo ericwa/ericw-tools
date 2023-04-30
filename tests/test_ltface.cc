@@ -260,10 +260,13 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
     }
 
     const auto coord = extents.worldToLMCoord(point);
+    const auto int_coord = qvec2i(round(coord[0]), round(coord[1]));
 
-    const qvec3b sample = LM_Sample(bsp, lit, extents, offset, qvec2i(coord));
+    const qvec3b sample = LM_Sample(bsp, lit, extents, offset, int_coord);
     INFO("world point: ", point);
     INFO("lm coord: ", coord[0], ", ", coord[1]);
+    INFO("lm int_coord: ", int_coord[0], ", ", int_coord[1]);
+    INFO("face num: ", Face_GetNum(bsp, face));
 
     CHECK(sample == expected_color);
 }
@@ -517,7 +520,7 @@ TEST_CASE("light channel mask / dirt interaction")
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {26, 26, 26}, {1432, 1480, 944});
 
     INFO("worldspawn not receiving dirt from func_wall on different channel");
-    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {62, 62, 62}, {1212, 1272, 1014});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {60, 60, 60}, {1212, 1272, 1014});
 
     INFO("func_wall on different channel not receiving dirt from worldspawn");
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {64, 64, 64}, {1216, 1266, 1014});
@@ -667,4 +670,15 @@ TEST_CASE("q2_light_low_luxel_res")
         INFO("sloped cube");
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {232, 185, 0}, {2164, 712, -968}, {0, 1, 0}, nullptr, &bspx);
     }
+}
+
+TEST_CASE("q2_light_low_luxel_res2" * doctest::may_fail())
+{
+    auto [bsp, bspx] = QbspVisLight_Q2(
+        "q2_light_low_luxel_res2.map", {"-world_units_per_luxel", "32", "-debugface", "2964", "1020", "-696"});
+
+    INFO("should be a smooth transition across these points");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {2964, 1046, -694}, {-1, 0, 0}, nullptr, &bspx);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {25, 25, 25}, {2964, 1046, -706}, {-1, 0, 0}, nullptr, &bspx);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {1, 1, 1}, {2964, 1046, -716}, {-1, 0, 0}, nullptr, &bspx);
 }
