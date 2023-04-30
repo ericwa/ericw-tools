@@ -4,6 +4,7 @@
 {
 "classname" "worldspawn"
 "_tb_textures" "textures/e1u1"
+"_minlightMottle" "0"
 // brush 0
 {
 ( 1840 692 -1000 ) ( 1840 693 -1000 ) ( 1840 692 -999 ) e1u1/color1_2 [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 0.5 0.5

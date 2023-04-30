@@ -654,17 +654,17 @@ TEST_CASE("q1_lightignore" * doctest::may_fail())
     }
 }
 
-TEST_CASE("q2_light_low_luxel_res" * doctest::may_fail())
+TEST_CASE("q2_light_low_luxel_res")
 {
     auto [bsp, bspx] = QbspVisLight_Q2(
         "q2_light_low_luxel_res.map", {"-world_units_per_luxel", "32", "-dirt", "-debugface", "2164", "712", "-968"});
 
     {
         INFO("non-sloped cube");
-        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {254, 203, 0}, {2138, 712, -968}, {0, 1, 0}, nullptr, &bspx);
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {232, 185, 0}, {2138, 712, -968}, {0, 1, 0}, nullptr, &bspx);
     }
     {
         INFO("sloped cube");
-        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {254, 203, 0}, {2164, 712, -968}, {0, 1, 0}, nullptr, &bspx);
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {232, 185, 0}, {2164, 712, -968}, {0, 1, 0}, nullptr, &bspx);
     }
 }

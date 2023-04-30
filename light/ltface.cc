@@ -89,14 +89,6 @@ public:
 
 static constexpr float sampleOffPlaneDist = 1.0f;
 
-static float TexSpaceDist(const mbsp_t *bsp, const mface_t *face, const qvec3f &p0, const qvec3f &p1)
-{
-    const qvec2f p0_tex = Face_WorldToTexCoord(bsp, face, p0);
-    const qvec2f p1_tex = Face_WorldToTexCoord(bsp, face, p1);
-
-    return qv::length(p1_tex - p0_tex);
-}
-
 /*
 
  Why this is so complicated:
@@ -128,7 +120,7 @@ std::vector<const mface_t *> NeighbouringFaces_old(const mbsp_t *bsp, const mfac
 }
 
 position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f &origPoint, bool phongShaded,
-    float face_lmscale, int recursiondepth, const qvec3f &modelOffset)
+    const faceextents_t &faceextents, int recursiondepth, const qvec3f &modelOffset)
 {
     const auto &facecache = FaceCacheForFNum(Face_GetNum(bsp, face));
     const qvec4f &surfplane = facecache.plane();
@@ -236,7 +228,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
                 if (recursiondepth < 3) {
                     // call recursively to look up normal in the adjacent face
                     return CalcPointNormal(
-                        bsp, smoothed, point, phongShaded, face_lmscale, recursiondepth + 1, modelOffset);
+                        bsp, smoothed, point, phongShaded, faceextents, recursiondepth + 1, modelOffset);
                 }
             }
         }
@@ -245,9 +237,15 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
     // 2. Try snapping to poly
 
     const pair<int, qvec3f> closest = GLM_ClosestPointOnPolyBoundary(points, point);
-    const float texSpaceDist = TexSpaceDist(bsp, face, closest.second, point);
+    float luxelSpaceDist;
+    {
+        auto desired_point_in_lmspace = faceextents.worldToLMCoord(point);
+        auto closest_point_on_face_in_lmspace = faceextents.worldToLMCoord(closest.second);
 
-    if (texSpaceDist <= face_lmscale) {
+        luxelSpaceDist = qv::distance(desired_point_in_lmspace, closest_point_on_face_in_lmspace);
+    }
+
+    if (luxelSpaceDist <= 1) {
         // Snap it to the face edge. Add the 1 unit off plane.
         const qvec3f snapped = closest.second + (qvec3f(surfplane) * sampleOffPlaneDist);
         return PositionSamplePointOnFace(bsp, face, phongShaded, snapped, modelOffset);
@@ -446,7 +444,7 @@ static void CalcPoints(
 
             // do this before correcting the point, so we can wrap around the inside of pipes
             const bool phongshaded = (surf->curved && cfg.phongallowed.value());
-            const auto res = CalcPointNormal(bsp, face, point, phongshaded, surf->lightmapscale, 0, offset);
+            const auto res = CalcPointNormal(bsp, face, point, phongshaded, surf->extents, 0, offset);
 
             surf->occluded[i] = !res.m_unoccluded;
             realfacenum = res.m_actualFace != nullptr ? Face_GetNum(bsp, res.m_actualFace) : -1;
