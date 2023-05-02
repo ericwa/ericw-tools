@@ -40,6 +40,11 @@ Enhancements
 - light: print key name for ``Key length > MAX_ENT_KEY-1`` error (af4deba)
 - vis: temporary hack of raising MAX_PORTALS_ON_LEAF to 512 (e2a5f62)
 
+Removed
+-------
+
+- qbsp: -oldleak, -bspleak, -contenthack flags
+
 2019-03-25 ericw-tools 0.18.2-rc1
 =================================
 
@@ -352,7 +357,7 @@ Bugfixes
 
 * qbsp: fix broken -onlyents flag
 * qbsp: fix texture offset on rotate_object, so they match in the
- editor. Added "-oldrottex" flag to revert to old behaviour. From txqbsp-xt.
+  editor. Added "-oldrottex" flag to revert to old behaviour. From txqbsp-xt.
 
 2015-04-27 TyrUtils-ericw snapshot
 ==================================
@@ -487,8 +492,8 @@ other
 * qbsp: added support for using WAD3 texture wads used by Hammer
 * qbsp: include clip brushes when calculating bmodel bounding box
 * qbsp: enable creation of clip-only bmodels
-* qbsp: recognise and remove *waterskip, *slimeskip and *lavaskip surfaces
-* qbsp: added hintskip texture support
+* qbsp: recognise and remove :texture:`*waterskip`, :texture:`*slimeskip` and :texture:`*lavaskip` surfaces
+* qbsp: added :texture:`hintskip` texture support
 * qbsp: fixed some bugs parsing empty func_group/func_detail entities
 * light: implemented self shadowing and full shadows for brush models
 * light: implemented the "-soft" command line option
