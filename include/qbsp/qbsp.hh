@@ -195,7 +195,6 @@ public:
     setting_bool oldrottex;
     setting_scalar epsilon;
     setting_scalar microvolume;
-    setting_bool contenthack;
     setting_bool leaktest;
     setting_bool outsidedebug;
     setting_bool debugchop;
