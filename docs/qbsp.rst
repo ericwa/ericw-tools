@@ -27,30 +27,88 @@ Options
 
    Doesn't perform outside filling
 
+.. option:: -filltype auto | inside | outside
+
+   Whether to fill the map from the outside in (lenient), from the inside out
+   (aggressive), or to automatically decide based on the hull being used.
+
+.. option:: -nomerge
+
+   Don't perform face merging.
+
 .. option:: -noclip
 
-   Doesn't build clip hulls
+   Doesn't build clip hulls (only applicable for Q1-like BSP formats).
 
 .. option:: -noskip
 
-   Doesn't remove faces using the 'skip' texture
+   Doesn't remove faces using the :texture:`skip` texture
+
+.. option:: -nodetail
+
+   Treat all detail brushes as structural.
 
 .. option:: -onlyents
 
    Only updates .map entities
 
 .. option:: -verbose
+            -v
 
-   Print out more .map information
+   Print out more .map information.
 
-.. option:: -noverbose
+   Note, this switch no longer implies :option:`-loghulls`; use that if you want to see
+   statistics for collision hulls.
 
-   Print out almost no information at all
+.. option:: -loghulls
+
+   Print log output for collision hulls.
+
+.. option:: -logbmodels
+
+   Print log output for bmodels.
+
+.. option:: -quiet
+            -noverbose
+
+   Suppress non-important messages (equivalent to :option:`-nopercent` :option:`-nostat` :option:`-noprogress`).
+
+.. option:: -log
+
+   Write log files. Enabled by default.
+
+.. option:: -nolog
+
+   Don't write log files.
+
+.. option:: -chop
+
+   Adjust brushes to remove intersections if possible. Enabled by default.
+
+.. option:: -nochop
+
+   Do not chop intersecting brushes.
+
+.. option:: -chopfragment
+
+   Always do full fragmentation for chop.
+
+.. option:: -splitsky
+
+   Doesn't combine sky faces into one large face.
 
 .. option:: -splitspecial
    
    Doesn't combine sky and water faces into one large face. This allows
    for statically lit water.
+
+.. option:: -litwater
+            -splitturb
+
+   Enable lit liquids. This allows for statically lit water in compatible source ports,
+   which still works but renders as fullbright on non-supporting source ports.
+   The only downside is that water faces will be split up more, as per :option:`-subdivide`.
+   Enabled by default.
 
 .. option:: -transwater
 
@@ -64,25 +122,21 @@ Options
 
    Computes portal information for transparent sky
 
+.. option:: -oldaxis
+
+   Use the original QBSP texture alignment algorithm. Enabled by default.
+
 .. option:: -nooldaxis
 
    Use alternate texture alignment algorithm. The default is to use the
    original QBSP texture alignment algorithm, which required the
-   -oldaxis switch in tyrutils-ericw v0.15.1 and earlier.
+   :option:`-oldaxis` switch in tyrutils-ericw v0.15.1 and earlier.
 
-.. option:: -forcegoodtree (experimental)
+.. option:: -forcegoodtree
 
    Force use of expensive processing for SolidBSP stage. Often results
    in a more optimal BSP file in terms of file size, at the expense of
    extra processing time.
-
-.. option:: -bspleak
-
-   Creates a .por file, used in the BSP editor
-
-.. option:: -oldleak
-
-   Create an old-style QBSP .PTS file (default is new)
 
 .. option:: -leaktest
 
@@ -92,9 +146,33 @@ Options
 
    Prevents output of percent completion information
 
+.. option:: -nostat
+
+   Don't output statistic messages.
+
+.. option:: -noprogress
+
+   Don't output progress messages.
+
+.. option:: -nocolor
+
+   Don't output ANSI color codes (in case the terminal doesn't recognize colors, e.g. TB).
+
+.. option:: -q2bsp
+
+   Target Quake II's BSP format.
+
+.. option:: -qbism
+
+   Target Qbism's extended Quake II BSP format.
+
+.. option:: -q2rtx
+
+   Adjust settings to best support Q2RTX.
+
 .. option:: -hexen2
 
-   Generate a hexen2 bsp. This can be used in addition to -bsp2 to avoid
+   Generate a hexen2 bsp. This can be used in addition to :option:`-bsp2` to avoid
    clipnode issues.
 
 .. option:: -bsp2
@@ -108,12 +186,28 @@ Options
    the BSP2 format, supported by the RMQ engine (and thus is also known
    as the BSP2rmq or RMQe bsp format).
 
+   .. deprecated:: 1.0
+      Use :option:`-bsp2` instead.
+
+.. option:: -allowupgrade
+
+   Allow formats to "upgrade" to compatible extended formats when a limit is
+   exceeded (e.g. Quake BSP to BSP2, or Quake 2 BSP to Qbism BSP). Enabled by default.
+
+.. option:: -noallowupgrade
+
+   Opt out of :option:`-allowupgrade`.
+
 .. option:: -hlbsp
 
    Create the output BSP file in Half-Life's format. Note that the hull
    size differences prevent this from being generally usable for the
    vanilla quake gamecode. This cannot be used in combination with the
-   -bsp2 argument.
+   :option:`-bsp2` argument.
+
+.. option:: -add [mapfile]
+
+   The given map file will be appended to the base map.
 
 .. option:: -leakdist [n]
 
@@ -127,26 +221,68 @@ Options
    values will cause other engines to crash-to-console. Use zero to
    specify no subdivision.
 
+.. option:: -nosubdivide
+
+   Disable subdivision. Requires a compatible source port. See also :option:`-subdivide`.
+
+.. option:: -lmscale n
+
+   Change global lmscale (force :bmodel-key:`_lmscale` key on all entities).
+   Outputs the LMSCALE BSPX lump.
+
+.. option:: -software
+
+   Change settings to allow for (or make adjustments to optimize for the lack of) software support.
+
+.. option:: -nosoftware
+
+   Explicitly drop support for software renderers.
+
 .. option:: -wadpath <dir>
 
    Search this directory for wad files (default is cwd). Multiple
-   -wadpath args may be used. This argument is ignored for wads
+   :option:`-wadpath` args may be used. This argument is ignored for wads
    specified using an absolute path.
 
 .. option:: -xwadpath <dir>
 
-   Like -wadpath, except textures found using the specified path will
-   NOT be embedded into the bsp (equivelent to -notex, but for only
+   Like :option:`-wadpath`, except textures found using the specified path will
+   NOT be embedded into the bsp (equivelent to :option:`-notex`, but for only
    textures from specific wads). You should use this for wads like
    halflife's standard wad files, but q1bsps require an engine extension
    and players are not nearly as likely to have the same wad version.
+
+.. option:: -path "/path/to/folder" <multiple allowed>
+
+   Additional paths or archives to add to the search path, mostly for loose files.
+
+.. option:: -defaultpaths
+
+   Whether the compiler should attempt to automatically derive game/base paths for
+   games that support it. Enabled by default.
+
+.. option:: -nodefaultpaths
+
+   Opt out of :option:`-defaultpaths`.
 
 .. option:: -oldrottex
 
    Use old method of texturing rotate\_ brushes where the mapper aligns
    textures for the object at (0 0 0).
 
-.. option:: -maxNodeSize [n]
+.. option:: -midsplitsurffraction n
+
+   If 0 (default), use :option:`-maxnodesize` for deciding when to switch to midsplit bsp heuristic.
+
+   If 0 < midsplitSurfFraction <= 1, switch to midsplit if the node contains more than this
+   fraction of the model's total surfaces. Try 0.15 to 0.5. Works better than maxNodeSize for
+   maps with a 3D skybox (e.g. +-128K unit maps)
+
+.. option:: -midsplitbrushfraction n
+
+   Switch to cheaper BSP partitioning test if a node contains this % of brushes in the map.
+
+.. option:: -maxnodesize [n]
 
    Switch to the cheap spatial subdivion bsp heuristic when splitting
    nodes of this size (in any dimension). This gives much faster qbsp
@@ -154,14 +290,16 @@ Options
    as well. From txqbsp-xt, thanks rebb. (default 1024, 0 to disable)
 
 .. option:: -wrbrushes
+            -bspx
 
-   (bspx) Includes a list of brushes for brush-based collision. This
+   Includes a list of brushes for brush-based collision. This
    allows for arbitrary collision sizes in engines that support it,
    currently only FTEQW.
 
 .. option:: -wrbrushesonly
+            -bspxonly
 
-   "-wrbrushes" combined with "-noclip" argument. This is NOT backwards
+   :option:`-wrbrushes` combined with :option:`-noclip` argument. This is NOT backwards
    compatible.
 
 .. option:: -bmodelcontents
@@ -172,6 +310,11 @@ Options
 
    Q2 supports this feature natively and this option has no effect.
 
+.. option:: -notriggermodels
+
+   For supported game code only: triggers will not write a model out,
+   and will instead just write out their mins/maxs.
+
 .. option:: -notex
 
    Write only placeholder textures, to depend upon replacements. This
@@ -180,30 +323,79 @@ Options
 
 .. option:: -notjunc
 
-   Don't attempt to fix T-junctions. This is only for engines or formats
-   that prefer micro-cracks over degenerate triangles. If you don't know
-   what that means, don't set this.
+   Alias for :option:`-tjunc none`
+
+.. option:: -tjunc mwt | none | retopologize | rotate
+
+   T-junction fix level:
+
+   none
+      Don't attempt to fix T-junctions. This is only for engines or formats
+      that prefer micro-cracks over degenerate triangles. If you don't know
+      what that means, don't set this.
+
+   rotate
+      Allow faces' vertices to be rotated to prevent zero-area triangles.
+
+   retopologize
+      If a face still has zero-area triangles, allow it to be re-topologized
+      by splitting it into multiple fans.
+
+   mwt
+      Attempt to triangulate faces (along with their T-junction fixes)
+      using a `MWT <https://en.wikipedia.org/wiki/Minimum-weight_triangulation>`_
+      first, only falling back to the prior two steps if it fails.
+
 
 .. option:: -omitdetail
 
    Detail brushes are omitted from the compile.
 
+.. option:: -omitdetailwall
+
+   :classname:`func_detail_wall` brushes are omitted from the compile.
+
+.. option:: -omitdetailillusionary
+
+   :classname:`func_detail_illusionary` brushes are omitted from the compile.
+
+.. option:: -omitdetailfence
+
+   :classname:`func_detail_fence` brushes are omitted from the compile.
+
 .. option:: -convert <fmt>
 
-   Convert a .MAP to a different .MAP format. fmt can be: quake, quake2,
-   valve, bp (brush primitives). Conversions to "quake" or "quake2"
+   Convert a .MAP to a different .MAP format. fmt can be:
+
+   quake
+      Q1 vanilla map format.
+
+   quake2
+      Q2 vanilla map format.
+
+   valve
+      Valve 220 map format.
+
+   bp
+      Brush Primitives format.
+
+   Conversions to "quake" or "quake2"
    format may not be able to match the texture alignment in the source
    map, other conversions are lossless. The converted map is saved to
    <source map name>-<fmt>.map.
 
 .. option:: -includeskip
 
-   Emit skip/nodraw faces. Mainly for Q2RTX.
+   Emit skip/nodraw faces (default is to discard them). Mainly for Q2RTX.
 
 .. option:: -threads n
 
    Set number of threads to use. By default, qbsp will attempt to
    use all available hardware threads.
+
+.. option:: -lowpriority
+
+   Run in a lower priority, to free up headroom for other processes. Enabled by default.
 
 .. option:: -aliasdef <aliases.def> [...]
 
@@ -253,6 +445,62 @@ Options
       "model" "torch2.mdl" // key/value from alias file
       }
 
+.. option:: -texturedefs "path/to/file.def" <multiple allowed>
+
+   Path to a texture definition file, which can transform textures in the .map into other textures.
+
+.. option:: -epsilon n
+
+   Customize epsilon value for point-on-plane checks.
+
+.. option:: -microvolume n
+
+   Microbrush volume.
+
+.. option:: -outsidedebug
+
+   Write a .map after outside filling showing non-visible brush sides.
+
+.. option:: -debugchop
+
+   Write a .map after ChopBrushes.
+
+.. option:: -debugleak
+
+   Write more diagnostic files for debugging leaks.
+
+.. option:: -debugbspbrushes
+
+   Save bsp brushes after BrushBSP to a .map, for visualizing BSP splits.
+
+.. option:: -debugleafvolumes
+
+   Save bsp leaf volumes after BrushBSP to a .map, for visualizing BSP splits.
+
+.. option:: -debugexpand [single hull index] or [mins_x mins_y mins_z maxs_x maxs_y maxs_z]
+
+   Write expanded hull .map for debugging/inspecting hulls/brush bevelling.
+
+.. option:: -keepprt
+
+   Avoid deleting the .prt file on leaking maps.
+
+.. option:: -maxedges n
+
+   The max number of edges/vertices on a single face before it is split into another face.
+
+.. option:: -worldextent n
+
+   Explicitly provide world extents; 0 will auto-detect. Default 0.
+
+.. option:: -forceprt1
+
+   Force a PRT1 output file even if PRT2 is required for vis.
+
+.. option:: -objexport
+
+   Export the map file as .OBJ models during various compilation phases.
+
 
 Game Path Specification
 -----------------------
@@ -282,6 +530,21 @@ The common cases are:
 
      qbsp -basedir "c:/quake2/baseq2" -gamedir mymod input.map
 
+.. option:: -gamedir "relative/path" or "C:/absolute/path"
+
+   Override the default mod base directory. if this is not set, or if it is relative, it will be derived from
+   the input file or the basedir if specified.
+
+.. option:: -basedir "relative/path" or "C:/absolute/path"
+
+   Override the default game base directory. if this is not set, or if it is relative, it will be derived
+   from the input file or the gamedir if specified.
+
+.. option:: -filepriority archive | loose
+
+   Which types of archives (folders/loose files or packed archives) are higher priority and chosen first
+   for path searching.
+
 Special Texture Names
 ---------------------
 
@@ -297,9 +560,9 @@ exit.
              *lava
              *
 
-   Names beginning with an asterisk are liquids. A prefix of *\*slime*
-   indicates slime, *\*lava* is for lava and anything else beginning with
-   *\** will have contents as water.
+   Names beginning with an asterisk are liquids. A prefix of ``*slime``
+   indicates slime, ``*lava`` is for lava and anything else beginning with
+   ``*`` will have contents as water.
 
 .. texture:: skip
 
@@ -379,7 +642,7 @@ configure the final entity type. e.g. if you set
 .. other-key:: _external_map_classname
    
    What entity you want the external map to turn in to. You can use
-   internal qbsp entity types such as "func_detail", or a regular bmodel
+   internal qbsp entity types such as :classname:`func_detail`, or a regular bmodel
    classname like "func_wall" or "func_door".
 
 .. other-key:: _external_map_angles
@@ -390,7 +653,7 @@ configure the final entity type. e.g. if you set
 
 .. other-key:: _external_map_angle
 
-   Short version of "_external_map_angles" for when you want to specify
+   Short version of :other-key:`_external_map_angles` for when you want to specify
    just a yaw rotation.
 
 .. other-key:: _external_map_scale
@@ -472,12 +735,11 @@ Detail Variants
 
    func_detail variant with no collision (players / monsters / gunfire) and
    doesn't split world faces. Doesn't cast shadows unless enabled with
-   "_shadow" "1". Useful for hanging vines. Still creates BSP leafs, which
+   :bmodel-key:`_shadow` "1". Useful for hanging vines. Still creates BSP leafs, which
    is unavoidable without a new .bsp file format.
 
    Intersecting func_detail_illusionary brushes don't clip each other; this
-   is intended to make trees/shrubs/foliage easier with "_mirrorinside"
-   "1".
+   is intended to make trees/shrubs/foliage easier with :bmodel-key:`_mirrorinside` "1".
 
 .. classname:: func_detail_wall
 
@@ -491,7 +753,7 @@ Detail Variants
 
 .. classname:: func_detail_fence
 
-   Similar to func_detail_wall except it's suitable for fence textures,
+   Similar to :classname:`func_detail_wall` except it's suitable for fence textures,
    never clips away world faces. Useful for fences, grates, etc., that are
    solid and block gunfire.
 
@@ -517,9 +779,9 @@ Other Special-Purpose Entities
 .. classname:: func_illusionary_visblocker
 
    For creating vis-blocking illusionary brushes (similar to
-   "func_detail_illusionary" or "func_illusionary". The player can walk
+   :classname:`func_detail_illusionary` or "func_illusionary". The player can walk
    through them.) This gives the same effect as water brushes when the
-   "-notranswater" flag is used, except the interior of these brushes are
+   :option:`-notranswater` flag is used, except the interior of these brushes are
    saved as CONTENTS_EMPTY. One thing to be aware of is, if the player's
    view is very close to the faces of these brushes, they might be able to
    see into the void (depending on the engine). Fitzquake family engines
