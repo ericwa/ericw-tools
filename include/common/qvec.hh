@@ -22,6 +22,7 @@
 #include <initializer_list>
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <string>
 #include <algorithm>
 #include <array>
