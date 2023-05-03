@@ -22,12 +22,90 @@ Options
 
 .. program:: light
 
-| Note, any of the Worldspawn Keys listed in the next section can be
-  supplied as command-line options, which will override any setting in
-  worldspawn.
+Note, any of the Worldspawn Keys listed in the next section can be
+supplied as command-line options, which will override any setting in
+worldspawn.
 
-Performance options:
---------------------
+Logging
+-------
+
+.. option:: -log
+
+   Write log files. Enabled by default.
+
+.. option:: -nolog
+
+   Don't write log files.
+
+.. option:: -verbose
+            -v
+
+   Verbose output.
+
+.. option:: -nopercent
+
+   Don't output percentage messages.
+
+.. option:: -nostat
+
+   Don't output statistic messages.
+
+.. option:: -noprogress
+
+   Don't output progress messages.
+
+.. option:: -nocolor
+
+   Don't output color codes (for TB, etc).
+
+.. option:: -quiet
+            -noverbose
+
+   Suppress non-important messages (equivalent to :option:`-nopercent` :option:`-nostat`
+   :option:`-noprogress`)
+
+
+Game
+----
+
+.. option:: -gamedir "relative/path" or "C:/absolute/path"
+
+   Override the default mod base directory. if this is not set, or if it is relative, it will be derived from
+   the input file or the basedir if specified.
+
+.. option:: -basedir "relative/path" or "C:/absolute/path"
+
+   Override the default game base directory. if this is not set, or if it is relative, it will be derived
+   from the input file or the gamedir if specified.
+
+.. option:: -filepriority archive | loose
+
+   Which types of archives (folders/loose files or packed archives) are higher priority and chosen first
+   for path searching.
+
+.. option:: -path "/path/to/folder" <multiple allowed>
+
+   Additional paths or archives to add to the search path, mostly for loose files.
+
+.. option:: -q2rtx
+
+   Adjust settings to best support Q2RTX.
+
+.. option:: -defaultpaths
+
+   Whether the compiler should attempt to automatically derive game/base paths for
+   games that support it. Enabled by default.
+
+.. option:: -nodefaultpaths
+
+   Opt out of :option:`-defaultpaths`.
+
+Performance
+-----------
+
+.. option:: -lowpriority [0]
+
+   Run in a lower priority, to free up headroom for other processes.
 
 .. option:: -threads n
 
@@ -54,24 +132,32 @@ Performance options:
 
 .. option:: -sunsamples [n]
 
-   Set the number of samples to use for "_sunlight_penumbra" and
-   "_sunlight2" (sunlight2 may use more or less because of how the suns
+   Set the number of samples to use for :worldspawn-key:`_sunlight_penumbra` and
+   :worldspawn-key:`_sunlight2` (sunlight2 may use more or less because of how the suns
    are set up in a sphere). Default 100.
 
 .. option:: -surflight_subdivide [n]
 
-   | Configure spacing of all surface lights. Default 128 units. Minimum
-     setting: 64 / max 2048. In the future I'd like to make this
-     configurable per-surface-light.
+   Configure spacing of all surface lights. Default 128 units. Minimum
+   setting: 64 / max 2048. In the future I'd like to make this
+   configurable per-surface-light.
 
-Output format options:
-----------------------
+.. option:: -fastbounce
+
+   Use one bounce point in the middle of each face. For fast compilation.
+
+Output format options
+---------------------
 
 .. option:: -lit
 
    Force generation of a .lit file, even if your map does not have any
    coloured lights. By default, light will automatically generate the
    .lit file when needed.
+
+.. option:: -world_units_per_luxel n
+
+   Enables output of DECOUPLED_LM BSPX lump.
 
 .. option:: -onlyents
 
@@ -98,29 +184,44 @@ Output format options:
    performing any lighting calculations. This is mainly for engines that
    don't use the light data, but still need switchable lights, etc.
 
-| 
+.. option:: -nolights
 
-Postprocessing options:
------------------------
+   Ignore light entities (only sunlight/minlight).
+
+.. option:: -facestyles n
+
+   Max amount of styles per face; requires BSPX lump if > 4.
+
+.. option:: -exportobj
+
+   Export an .OBJ for inspection.
+
+.. option:: -lmshift n
+
+   Force a specified lmshift to be applied to the entire map; this is useful if you want to re-light a map with
+   higher quality BSPX lighting without the sources. Will add the LMSHIFT lump to the BSP.
+
+Postprocessing options
+----------------------
 
 .. option:: -soft [n]
 
-   | Perform post-processing on the lightmap which averages adjacent
-     samples to smooth shadow edges. If n is specified, the algorithm
-     will take 'n' samples on each side of the sample point and replace
-     the original value with the average. e.g. a value of 1 results in
-     averaging a 3x3 square centred on the original sample. 2 implies a
-     5x5 square and so on. If -soft is specified, but n is omitted, a
-     value will be the level of oversampling requested. If no
-     oversampling, then the implied value is 1. -extra implies a value
-     of 2 and -extra4 implies 3. Default 0 (off).
+   Perform post-processing on the lightmap which averages adjacent
+   samples to smooth shadow edges. If n is specified, the algorithm
+   will take 'n' samples on each side of the sample point and replace
+   the original value with the average. e.g. a value of 1 results in
+   averaging a 3x3 square centred on the original sample. 2 implies a
+   5x5 square and so on. If -soft is specified, but n is omitted, a
+   value will be the level of oversampling requested. If no
+   oversampling, then the implied value is 1. :option:`-extra` implies a value
+   of 2 and :option:`-extra4` implies 3. Default 0 (off).
 
-Debug modes:
-------------
+Debug modes
+-----------
 
 .. option:: -dirtdebug
 
-   Implies "-dirt", and renders just the dirtmap against a fullbright
+   Implies :worldspawn-key:`_dirt` "1", and renders just the dirtmap against a fullbright
    background, ignoring all lights in the map. Useful for previewing and
    turning the dirt settings.
 
@@ -133,18 +234,61 @@ Debug modes:
    Write bounced lighting only to the lightmap for debugging /
    previewing -bounce.
 
+.. option:: -bouncelightsdebug
+
+   Only save bounced emitters lighting to the lightmap.
+
 .. option:: -surflight_dump
 
    Saves the lights generated by surfacelights to a
    "mapname-surflights.map" file.
 
+.. option:: -visapprox auto | none | rays | vis
+
+   Change approximate visibility algorithm.
+
+   auto
+      choose default based on format
+
+   vis
+      use BSP vis data (slow but precise).
+
+   rays
+      use sphere culling with fired rays (fast but may miss faces).
+
+   none
+      Disable approximate visibility culling of lights, which has a small
+      chance of introducing artifacts where lights cut off too soon.
+
 .. option:: -novisapprox
 
-   | Disable approximate visibility culling of lights, which has a small
-     chance of introducing artifacts where lights cut off too soon.
+   Alias for :option:`-visapprox none`
 
-Experimental options:
----------------------
+.. option:: -phongdebug_obj
+
+   Save map as .obj with phonged normals.
+
+.. option:: -debugoccluded
+
+   Save luxel occlusion data to lightmap.
+
+.. option:: -debugneighbours
+
+   Save neighboring faces data to lightmap (requires :option:`-debugface`).
+
+.. option:: -debugmottle
+
+   Save mottle pattern (used by Q2 minlight, unless opted out with :bmodel-key:`_minlight_mottle`)
+   to lightmap.
+
+.. option:: -debugface x y z
+
+.. option:: -debugvert x y z
+
+.. option:: -highlightseams
+
+Experimental options
+--------------------
 
 .. option:: -addmin
 
@@ -161,7 +305,11 @@ Experimental options:
 .. option:: -lux
 
    Generate a .lux file storing average incoming light directions for
-   surfaces. Usable by FTEQW with "r_deluxemapping 1"
+   surfaces. Usable by FTEQW with "r_deluxemapping 1".
+
+.. option:: -bspxlux
+
+   Writes lux data into the bsp itself.
 
 .. option:: -lmscale n
 
@@ -175,15 +323,39 @@ Experimental options:
 
    Writes both rgb and directions data into the bsp itself.
 
+.. option:: -bspxonly
+
+   Writes both rgb and directions data *only* into the bsp itself.
+
 .. option:: -novanilla
 
    Fallback scaled lighting will be omitted. Standard grey lighting will
-   be omitted if there are coloured lights. Implies "-bspxlit". "-lit"
+   be omitted if there are coloured lights. Implies :option:`-bspxlit`. :option:`-lit`
    will no longer be implied by the presence of coloured lights.
 
 .. option:: -wrnormals
    
    Writes normal data into the bsp itself.
+
+.. option:: -arghradcompat
+
+   Enable compatibility for Arghrad-specific keys.
+
+.. option:: -radlights "filename.rad"
+
+   Loads a <surfacename> <r> <g> <b> <intensity> file.
+
+.. option:: -lightgrid
+
+   Experimental LIGHTGRID bspx lump.
+
+.. option:: -lightgrid_dist x y z
+
+   Distance between lightgrid sample points, in world units. Controls lightgrid size.
+
+.. option:: -lightgrid_format octree
+
+   Lightgrid BSPX lump to use.
 
 Model Entity Keys
 =================
@@ -209,6 +381,8 @@ The following keys can be added to the *worldspawn* entity:
    minlight. RGB component values are between 0 and 255 (between 0 and 1
    is also accepted). Default is white light ("255 255 255").
 
+.. worldspawn-key:: "_maxlight" "n"
+
 .. worldspawn-key:: "_dist" "n"
 
    Scales the fade distance of all lights by a factor of n. If n > 1
@@ -224,6 +398,7 @@ The following keys can be added to the *worldspawn* entity:
    attributes.
 
 .. worldspawn-key:: "_sunlight" "n"
+                    "_sun_light" "n"
 
    Set the brightness of the sunlight coming from an unseen sun in the
    sky. Sky brushes (or more accurately bsp leafs with sky contents)
@@ -239,12 +414,19 @@ The following keys can be added to the *worldspawn* entity:
 
 .. worldspawn-key:: "_sunlight_mangle" "yaw pitch roll"
                     "_sun_mangle" "yaw pitch roll"
+                    "_sun_angle" "yaw pitch roll"
 
    Specifies the direction of sunlight using yaw, pitch and roll in
    degrees. Yaw specifies the angle around the Z-axis from 0 to 359
    degrees and pitch specifies the angle from 90 (shining straight up)
    to -90 (shining straight down from above). Roll has no effect, so use
    any value (e.g. 0). Default is straight down ("0 -90 0").
+
+.. worldspawn-key:: "_sun2" "n"
+
+.. worldspawn-key:: "_sun2_color" "x y z"
+
+.. worldspawn-key:: "_sun2_mangle" "x y z"
 
 .. worldspawn-key:: "_sunlight_penumbra" "n"
 
@@ -253,6 +435,7 @@ The following keys can be added to the *worldspawn* entity:
    Default is 0.
 
 .. worldspawn-key:: "_sunlight_color" "r g b"
+                    "_sun_color" "r g b"
 
    Specify red(r), green(g) and blue(b) components for the colour of the
    sunlight. RGB component values are between 0 and 255 (between 0 and 1
@@ -284,6 +467,7 @@ The following keys can be added to the *worldspawn* entity:
    255 255").
 
 .. worldspawn-key:: "_dirt" "n"
+                    "_dirty" "n"
 
    1 enables dirtmapping (ambient occlusion) on all lights, borrowed
    from q3map2. This adds shadows to corners and crevices. You can
@@ -355,6 +539,13 @@ The following keys can be added to the *worldspawn* entity:
    0=ignore map textures (default), 1=multiply bounce light color by
    texture color.
 
+.. worldspawn-key:: "_bouncelightsubdivision" "n"
+
+.. worldspawn-key:: "_surflightscale" "n"
+
+.. worldspawn-key:: "_surflightsubdivision" "n"
+                    "_choplight" "n"
+
 .. worldspawn-key:: "_bouncestyled" "n"
 
    1 makes styled lights bounce (e.g. flickering or switchable lights),
@@ -364,6 +555,17 @@ The following keys can be added to the *worldspawn* entity:
 
    When set to 1, spotlight falloff is calculated from the distance to
    the targeted info_null. Ignored when "_falloff" is not 0. Default 0.
+
+.. worldspawn-key:: "_surflight_radiosity" "n"
+
+   Whether to use Q1-style surface subdivision (0) or Q2-style surface radiosity.
+
+.. worldspawn-key:: "_sky_surface" "x y z"
+                    "_sun_surface" "x y z"
+
+.. worldspawn-key:: "_compilerstyle_start" "n"
+
+.. worldspawn-key:: "_compilerstyle_max" "n"
 
 Model Entity Keys
 -----------------
@@ -665,25 +867,36 @@ with the first five letters "light". E.g. "light", "light_globe",
 .. light-key:: "_sunlight2" "n"
 
    Set to 1 to make this entity control the upper dome lighting emitted
-   from sky faces, as an alternative to the worldspawn key "_sunlight2".
+   from sky faces, as an alternative to the worldspawn key :worldspawn-key:`_sunlight2`.
    The light entity itself is disabled, so it can be placed anywhere in
    the map.
 
    The following light properties correspond to these sunlight settings:
 
-   ::
+   light
+      _sunlight2
 
-      light       => _sunlight2
-      _color      => _sunlight2_color
-      _dirt       => _sunlight2_dirt
-      _anglescale => _anglescale
-      style       => flicker style for styled dome light
-      targetname  => targetname for switchable sunlight
-      _suntexture => this sunlight is only emitted from faces with this texture name
+   _color
+      _sunlight2_color
+
+   _dirt
+      _sunlight2_dirt
+
+   _anglescale
+      _anglescale
+
+   style
+      flicker style for styled dome light
+
+   targetname
+      targetname for switchable sunlight
+
+   _suntexture
+      this sunlight is only emitted from faces with this texture name
 
 .. light-key:: "_sunlight3" "n"
 
-   Same as "_sunlight2", but for the lower hemisphere.
+   Same as :light-key:`_sunlight2`, but for the lower hemisphere.
 
 .. light-key:: "_nostaticlight" "n"
 
@@ -740,9 +953,9 @@ Model Keys
 Other Information
 =================
 
-The "\b" escape sequence toggles red text on/off, you can use this in
-any strings in the map file. e.g. "message" "Here is \\bsome red
-text\b..."
+The ``\b`` escape sequence toggles red text on/off, you can use this in
+any strings in the map file. e.g. ``"message" "Here is \bsome red
+text\b..."``
 
 Author
 ======
