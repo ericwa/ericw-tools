@@ -31,6 +31,51 @@ Options
 
 .. program:: vis
 
+Logging
+-------
+
+.. option:: -log
+
+   Write log files. Enabled by default.
+
+.. option:: -nolog
+
+   Don't write log files.
+
+.. option:: -verbose
+            -v
+
+   Verbose output.
+
+.. option:: -nopercent
+
+   Don't output percentage messages.
+
+.. option:: -nostat
+
+   Don't output statistic messages.
+
+.. option:: -noprogress
+
+   Don't output progress messages.
+
+.. option:: -nocolor
+
+   Don't output color codes (for TB, etc).
+
+.. option:: -quiet
+            -noverbose
+
+   Suppress non-important messages (equivalent to :option:`-nopercent` :option:`-nostat`
+   :option:`-noprogress`)
+
+Performance
+-----------
+
+.. option:: -lowpriority [0]
+
+   Run in a lower priority, to free up headroom for other processes.
+
 .. option:: -threads n
 
    Set number of threads explicitly. By default vis will attempt to
@@ -41,20 +86,43 @@ Options
    Skip detailed calculations and calculate a very loose set of PVS
    data. Sometimes useful for a quick test while developing a map.
 
-.. option:: -level n
+Game
+----
 
-   Select a test level from 0 to 4 for detailed visibility calculations.
-   Lower levels are not necessarily faster in in all cases. It is not
-   recommended that you change the default level unless you are
-   experiencing problems. Default 4.
+.. option:: -gamedir "relative/path" or "C:/absolute/path"
 
-.. option:: -v
+   Override the default mod base directory. if this is not set, or if it is relative, it will be derived from
+   the input file or the basedir if specified.
 
-   Verbose output.
+.. option:: -basedir "relative/path" or "C:/absolute/path"
 
-.. option:: -vv
+   Override the default game base directory. if this is not set, or if it is relative, it will be derived
+   from the input file or the gamedir if specified.
 
-   Very verbose output.
+.. option:: -filepriority archive | loose
+
+   Which types of archives (folders/loose files or packed archives) are higher priority and chosen first
+   for path searching.
+
+.. option:: -path "/path/to/folder" <multiple allowed>
+
+   Additional paths or archives to add to the search path, mostly for loose files.
+
+.. option:: -q2rtx
+
+   Adjust settings to best support Q2RTX.
+
+.. option:: -defaultpaths
+
+   Whether the compiler should attempt to automatically derive game/base paths for
+   games that support it. Enabled by default.
+
+.. option:: -nodefaultpaths
+
+   Opt out of :option:`-defaultpaths`.
+
+Output
+------
 
 .. option:: -noambientsky
 
@@ -64,25 +132,47 @@ Options
 .. option:: -noambientwater
 
    Disable ambient sound generation for textures with names beginning
-   with '*WATER' or '*04WATER'.
+   with ``*WATER`` or ``*04WATER``.
 
 .. option:: -noambientslime
 
    Disable ambient sound generation for textures with names beginning
-   with '*SLIME'.
+   with ``*SLIME``.
 
 .. option:: -noambientlava
 
    Disable ambient sound generation for textures with names beginning
-   with '*LAVA'.
+   with ``*LAVA``.
 
 .. option:: -noambient
 
    Disable all ambient sound generation.
 
+.. option:: -noautoclean
+
+   Don't remove extra files on successful completion. Default is to remove them.
+
+Advanced
+--------
+
+.. option:: -level n
+
+   Select a test level from 0 to 4 for detailed visibility calculations.
+   Lower levels are not necessarily faster in in all cases. It is not
+   recommended that you change the default level unless you are
+   experiencing problems. Default 4.
+
 .. option:: -visdist n
    
    Allow culling of areas further than n units.
+
+.. option:: -nostate
+
+   Ignore saved state files, for forced re-runs.
+
+.. option:: -phsonly
+
+   Re-calculate the PHS of a Quake II BSP without touching the PVS.
 
 Author
 ======
