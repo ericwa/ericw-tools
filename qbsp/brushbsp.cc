@@ -46,6 +46,8 @@ constexpr int PSIDE_BOTH = (PSIDE_FRONT | PSIDE_BACK);
 // this gets OR'ed in in the return value of QuickTestBrushToPlanenum if one of the brush sides is on the input plane
 constexpr int PSIDE_FACING = 4;
 
+#define CHECK_PLANE_AGAINST_VOLUME 0
+
 struct bspstats_t : logging::stat_tracker_t
 {
     std::unique_ptr<content_stats_base_t> leafstats;
@@ -866,9 +868,11 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
             size_t positive_planenum = side.planenum & ~1;
             const qbsp_plane_t &plane = side.get_positive_plane();
 
+#if CHECK_PLANE_AGAINST_VOLUME
             if (!CheckPlaneAgainstVolume(positive_planenum, node)) {
                 continue; // would produce a tiny volume
             }
+#endif
 
             /* calculate the split metric, smaller values are better */
             const vec_t metric = SplitPlaneMetric(plane, node->bounds);
@@ -983,8 +987,10 @@ static side_t *SelectSplitPlane(
 
                 CheckPlaneAgainstParents(positive_planenum, node);
 
+#if CHECK_PLANE_AGAINST_VOLUME
                 if (!CheckPlaneAgainstVolume(positive_planenum, node))
                     continue; // would produce a tiny volume
+#endif
 
                 int front = 0;
                 int back = 0;
@@ -1184,10 +1190,12 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
     }
 
     // to save time/memory we can destroy node's volume at this point
-    auto children_volumes = SplitBrush(std::move(node->volume), bestplane, stats);
-    node->volume = nullptr;
-    node->children[0]->volume = std::move(children_volumes[0]);
-    node->children[1]->volume = std::move(children_volumes[1]);
+    if (node->volume) {
+        auto children_volumes = SplitBrush(std::move(node->volume), bestplane, stats);
+        node->volume = nullptr;
+        node->children[0]->volume = std::move(children_volumes[0]);
+        node->children[1]->volume = std::move(children_volumes[1]);
+    }
 
     // recursively process children
     tbb::task_group g;
