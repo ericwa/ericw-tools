@@ -195,6 +195,9 @@ struct surfflags_t
     // override surface lighting style
     std::optional<int32_t> surflight_style;
 
+    // override surface lighting targetname
+    std::optional<std::string> surflight_targetname;
+
     // override the textures' surflight color
     std::optional<qvec3b> surflight_color;
 

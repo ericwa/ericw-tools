@@ -160,7 +160,7 @@ entdict_t &WorldEnt()
  *
  * Pass an empty string to generate a new unique lightstyle.
  */
-static int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const std::string &targetname)
+int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const std::string &targetname)
 {
     // check if already assigned
     for (const auto &pr : lightstyleForTargetname) {

@@ -677,6 +677,8 @@ static surfflags_t SurfFlagsForEntity(
     }
     if (entity.epairs.has("_surflight_style") && entity.epairs.get_int("_surflight_style") != 0)
         flags.surflight_style = entity.epairs.get_int("_surflight_style");
+    if (entity.epairs.has("_surflight_targetname"))
+        flags.surflight_targetname = entity.epairs.get("_surflight_targetname");
 
     if (entity.epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
@@ -2931,6 +2933,10 @@ void ProcessAreaPortal(mapentity_t &entity)
         }
     }
 
+    if (map.antiregions.size() || map.region) {
+        return;
+    }
+
     entity.areaportalnum = ++map.numareaportals;
     // set the portal number as "style"
     entity.epairs.set("style", std::to_string(map.numareaportals));
@@ -3113,6 +3119,10 @@ void ProcessMapBrushes()
                 brush.lmshift = lmshift;
                 brush.func_areaportal = areaportal;
                 brush.is_hint = MapBrush_IsHint(brush);
+
+                if (entity.epairs.has("_chop") && !entity.epairs.get_int("_chop")) {
+                    brush.no_chop = true;
+                }
 
                 // calculate brush bounds
                 CalculateBrushBounds(brush);

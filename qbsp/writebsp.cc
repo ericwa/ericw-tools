@@ -387,6 +387,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.surflight_style.has_value()) {
             t["surflight_style"] = tx.flags.surflight_style.value();
         }
+        if (tx.flags.surflight_targetname.has_value()) {
+            t["surflight_targetname"] = tx.flags.surflight_targetname.value();
+        }
         if (tx.flags.surflight_color.has_value()) {
             t["surflight_color"] = tx.flags.surflight_color.value();
         }

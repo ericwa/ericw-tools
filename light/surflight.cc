@@ -59,6 +59,8 @@ size_t GetSurflightPoints()
     return total_surflight_points;
 }
 
+int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const std::string &targetname);
+
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
     std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
@@ -138,7 +140,9 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     l.surfnormal = facenormal;
     l.omnidirectional = !is_directional;
     l.points = std::move(points);
-    if (extended_flags.surflight_style) {
+    if (extended_flags.surflight_targetname) {
+        l.style = LightStyleForTargetname(cfg, extended_flags.surflight_targetname.value());
+    } else if (extended_flags.surflight_style) {
         l.style = extended_flags.surflight_style.value();
     } else {
         l.style = style;

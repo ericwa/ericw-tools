@@ -1434,8 +1434,16 @@ newlist:
 
         auto &b1 = *b1_it;
 
+        if (b1->mapbrush->no_chop) {
+            continue;
+        }
+
         for (auto b2_it = next; b2_it != list.end(); b2_it++) {
             auto &b2 = *b2_it;
+
+            if (b2->mapbrush->no_chop) {
+                continue;
+            }
 
             if (BrushesDisjoint(*b1, *b2)) {
                 continue;

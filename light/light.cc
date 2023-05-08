@@ -1123,6 +1123,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("surflight_style")) {
             flags.surflight_style = val.at("surflight_style").get<int32_t>();
         }
+        if (val.contains("surflight_targetname")) {
+            flags.surflight_targetname = val.at("surflight_targetname").get<std::string>();
+        }
         if (val.contains("surflight_color")) {
             flags.surflight_color = val.at("surflight_color").get<qvec3b>();
         }
