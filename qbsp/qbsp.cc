@@ -532,6 +532,7 @@ qbsp_settings::qbsp_settings()
           &debugging_group, "T-junction fix level"},
       objexport{
           this, "objexport", false, &debugging_group, "export the map file as .OBJ models during various CSG phases"},
+      noextendedsurfflags{this, "noextendedsurfflags", false, &debugging_group, "suppress writing a .texinfo file"},
       wrbrushes{this, {"wrbrushes", "bspx"}, false, &common_format_group,
           "includes a list of brushes for brush-based collision"},
       wrbrushesonly{this, {"wrbrushesonly", "bspxonly"}, {&wrbrushes, &noclip}, &common_format_group,

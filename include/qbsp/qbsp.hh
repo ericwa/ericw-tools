@@ -209,6 +209,7 @@ public:
     setting_bool forceprt1;
     setting_tjunc tjunc;
     setting_bool objexport;
+    setting_bool noextendedsurfflags;
     setting_bool wrbrushes;
     setting_redirect wrbrushesonly;
     setting_bool bmodelcontents;

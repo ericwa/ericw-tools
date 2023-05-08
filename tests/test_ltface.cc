@@ -688,11 +688,41 @@ TEST_CASE("q2_minlight_inherited")
     auto [bsp, bspx] = QbspVisLight_Q2("q2_minlight_inherited.map", {});
 
     {
+        INFO("check worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {64, 64, 64}, {456, 196, 0}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
         INFO("check that func_group inherits worldspawn minlight");
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {64, 64, 64}, {360, 72, 16}, {0, 0, 1}, nullptr, &bspx);
     }
     {
         INFO("check that func_wall inherits worldspawn minlight");
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {64, 64, 64}, {208, 72, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
+        INFO("check that func_group can override worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {128, 128, 128}, {360, -84, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+    {
+        INFO("check that func_wall can override worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[2], {128, 128, 128}, {208, -84, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+}
+
+TEST_CASE("q2_minlight_inherited + -noextendedsurfflags")
+{
+    auto [bsp, bspx] =
+        QbspVisLight_Common("q2_minlight_inherited.map", {"-q2bsp", "-noextendedsurfflags"}, {}, runvis_t::no);
+
+    {
+        INFO("check that func_wall inherits worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {64, 64, 64}, {208, 72, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
+        INFO("check that func_wall can override worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[2], {128, 128, 128}, {208, -84, 16}, {0, 0, 1}, nullptr, &bspx);
     }
 }

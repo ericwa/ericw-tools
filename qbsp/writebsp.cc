@@ -338,7 +338,7 @@ static void WriteExtendedTexinfoFlags(void)
         }
     }
 
-    if (!needwrite)
+    if (!needwrite || qbsp_options.noextendedsurfflags.value())
         return;
 
     // sort by output texinfo number
