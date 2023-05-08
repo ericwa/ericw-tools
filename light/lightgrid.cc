@@ -463,7 +463,7 @@ void LightGrid(bspdata_t *bspdata)
     logging::print("     {} grid_mins\n", data.grid_mins);
     logging::print("     {} grid_maxs\n", grid_maxs);
     logging::print("     {} num_styles\n", data.num_styles);
-    
+
     // octree lump
     if (light_options.lightgrid_format.value() == lightgrid_format_t::OCTREE) {
         bspdata->bspx.transfer("LIGHTGRID_OCTREE", MakeOctreeLump(bsp, data));

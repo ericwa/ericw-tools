@@ -669,9 +669,10 @@ static surfflags_t SurfFlagsForEntity(
         // FIXME: get_color, to match settings
         if (entity.epairs.has("_surflight_color") && entity.epairs.get_vector("_surflight_color", color) == 3) {
             if (color[0] <= 1 && color[1] <= 1 && color[2] <= 1) {
-                flags.surflight_color = qvec3b{ (uint8_t) (color[0] * 255), (uint8_t) (color[1] * 255), (uint8_t) (color[2] * 255) };
+                flags.surflight_color =
+                    qvec3b{(uint8_t)(color[0] * 255), (uint8_t)(color[1] * 255), (uint8_t)(color[2] * 255)};
             } else {
-                flags.surflight_color = qvec3b{ (uint8_t) (color[0]), (uint8_t) (color[1]), (uint8_t) (color[2]) };
+                flags.surflight_color = qvec3b{(uint8_t)(color[0]), (uint8_t)(color[1]), (uint8_t)(color[2])};
             }
         }
     }
@@ -681,7 +682,8 @@ static surfflags_t SurfFlagsForEntity(
     if (entity.epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
     // Paril: inherit _surflight_minlight_scale from worldspawn if unset
-    else if (!entity.epairs.has("_surflight_minlight_scale") && map.world_entity().epairs.has("_surflight_minlight_scale"))
+    else if (!entity.epairs.has("_surflight_minlight_scale") &&
+             map.world_entity().epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = map.world_entity().epairs.get_float("_surflight_minlight_scale");
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
@@ -2561,7 +2563,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
 
             new_brush.contents = brush.contents;
             new_brush.line = brush.line;
-            
+
             for (auto &side : brush.faces) {
 
                 // if it's the side we're extruding, increase its dist
@@ -2572,10 +2574,11 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
                     new_side.raw_info = side.raw_info;
                     new_side.texname = side.texname;
                     new_side.planenum = side.planenum;
-                    new_side.planenum = map.add_or_find_plane({ new_side.get_plane().get_normal(), new_side.get_plane().get_dist() + 16.f });
+                    new_side.planenum = map.add_or_find_plane(
+                        {new_side.get_plane().get_normal(), new_side.get_plane().get_dist() + 16.f});
 
                     new_brush.faces.emplace_back(std::move(new_side));
-                // the inverted side is special
+                    // the inverted side is special
                 } else if (side.get_plane().get_normal() == -new_brush_side.get_plane().get_normal()) {
 
                     // add the other side
@@ -2584,7 +2587,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
                     flipped_side.contents = side.contents;
                     flipped_side.raw_info = side.raw_info;
                     flipped_side.texname = side.texname;
-                    flipped_side.planenum = map.add_or_find_plane({ -new_brush_side.get_plane().get_normal(), -new_brush_side.get_plane().get_dist() });
+                    flipped_side.planenum = map.add_or_find_plane(
+                        {-new_brush_side.get_plane().get_normal(), -new_brush_side.get_plane().get_dist()});
 
                     new_brush.faces.emplace_back(std::move(flipped_side));
                 } else {
@@ -3234,7 +3238,7 @@ void ProcessMapBrushes()
     // remove ents in region
     if (map.region || map.antiregions.size()) {
 
-        for (auto it = map.entities.begin(); it != map.entities.end(); ) {
+        for (auto it = map.entities.begin(); it != map.entities.end();) {
             auto &entity = *it;
 
             bool removed = false;

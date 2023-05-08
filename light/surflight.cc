@@ -105,7 +105,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     } else {
         // Handle arghrad sky light settings http://www.bspquakeeditor.com/arghrad/sunlight.html#sky
         if (!texture_color.has_value()) {
-        if (cfg.sky_surface.is_changed() && is_sky) {
+            if (cfg.sky_surface.is_changed() && is_sky) {
                 // FIXME: this only handles the "_sky_surface"  "red green blue" format.
                 //        There are other more complex variants we could handle documented in the link above.
                 // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad

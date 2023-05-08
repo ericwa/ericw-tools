@@ -290,8 +290,8 @@ struct texture_def_issues_t : logging::stat_tracker_t
         false, true);
 
     stat &num_repaired = register_stat(
-        "faces have invalid texture projections and were repaired. Use -verbose to display affected faces."
-        , false, true);
+        "faces have invalid texture projections and were repaired. Use -verbose to display affected faces.", false,
+        true);
 };
 
 bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issues_stats);
