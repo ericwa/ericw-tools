@@ -63,7 +63,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
     // Create face points...
-    auto poly = GLM_FacePoints(bsp, face);
+    auto poly = Face_Points(bsp, face);
     const float facearea = qv::PolyArea(poly.begin(), poly.end());
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];

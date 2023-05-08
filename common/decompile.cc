@@ -282,7 +282,7 @@ private:
         if (!winding) {
             return;
         }
-        inwardFacingEdgePlanes = GLM_MakeInwardFacingEdgePlanes(winding->glm_winding_points());
+        inwardFacingEdgePlanes = MakeInwardFacingEdgePlanes(winding->glm_winding_points());
     }
 
 public:
@@ -493,8 +493,7 @@ struct decomp_brush_t
                 for (auto &point : face.winding.value()) {
                     // check against all planes
                     for (auto &otherSide : sides) {
-                        float distance =
-                            GLM_DistAbovePlane(qvec4f(otherSide.plane.normal, otherSide.plane.dist), point);
+                        float distance = DistAbovePlane(qvec4f(otherSide.plane.normal, otherSide.plane.dist), point);
                         if (distance > 0.1) {
                             return false;
                         }

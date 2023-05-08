@@ -133,10 +133,10 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
         return position_t(origPoint);
 
     // project `point` onto the surface plane, then lift it off again
-    const qvec3f point = GLM_ProjectPointOntoPlane(surfplane, origPoint) + (qvec3f(surfplane) * sampleOffPlaneDist);
+    const qvec3f point = ProjectPointOntoPlane(surfplane, origPoint) + (qvec3f(surfplane) * sampleOffPlaneDist);
 
     // check if in face..
-    if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
+    if (EdgePlanes_PointInside(edgeplanes, point)) {
         return PositionSamplePointOnFace(bsp, face, phongShaded, point, modelOffset);
     }
 
@@ -161,21 +161,21 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
         
         const qvec3f in1_normal = qv::cross(qv::normalize(n.p0 - centroid), facecache.normal());
         const qvec3f in2_normal = qv::cross(facecache.normal(), qv::normalize(n.p1 - centroid));
-        const qvec4f in1 = GLM_MakePlane(in1_normal, n.p0);
-        const qvec4f in2 = GLM_MakePlane(in2_normal, n.p1);
+        const qvec4f in1 = MakePlane(in1_normal, n.p0);
+        const qvec4f in2 = MakePlane(in2_normal, n.p1);
         
-        const float in1_dist = GLM_DistAbovePlane(in1, point);
-        const float in2_dist = GLM_DistAbovePlane(in2, point);
+        const float in1_dist = DistAbovePlane(in1, point);
+        const float in2_dist = DistAbovePlane(in2, point);
         if (in1_dist >= 0 && in2_dist >= 0) {
             const auto &n_facecache = FaceCacheForFNum(Face_GetNum(bsp, n.face));
             const qvec4f &n_surfplane = n_facecache.plane();
             const auto &n_edgeplanes = n_facecache.edgePlanes();
             
             // project `point` onto the surface plane, then lift it off again
-            const qvec3f n_point = GLM_ProjectPointOntoPlane(n_surfplane, origPoint) + (qvec3f(n_surfplane) * sampleOffPlaneDist);
+            const qvec3f n_point = ProjectPointOntoPlane(n_surfplane, origPoint) + (qvec3f(n_surfplane) * sampleOffPlaneDist);
             
             // check if in face..
-            if (GLM_EdgePlanes_PointInside(n_edgeplanes, n_point)) {
+            if (EdgePlanes_PointInside(n_edgeplanes, n_point)) {
                 return PositionSamplePointOnFace(bsp, n.face, phongShaded, n_point, modelOffset);
             }
         }
@@ -192,11 +192,11 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
             const qvec3f &v0 = points.at(i);
             const qvec3f &v1 = points.at((i + 1) % points.size());
 
-            const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, surfplane);
+            const auto edgeplane = MakeInwardFacingEdgePlane(v0, v1, surfplane);
             if (!edgeplane.first)
                 continue; // degenerate edge
 
-            const float planedist = GLM_DistAbovePlane(edgeplane.second, point);
+            const float planedist = DistAbovePlane(edgeplane.second, point);
             if (planedist < POINT_EQUAL_EPSILON) {
                 // behind this plane. check whether we're between the endpoints.
 
@@ -236,7 +236,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
 
     // 2. Try snapping to poly
 
-    const pair<int, qvec3f> closest = GLM_ClosestPointOnPolyBoundary(points, point);
+    const pair<int, qvec3f> closest = ClosestPointOnPolyBoundary(points, point);
     float luxelSpaceDist;
     {
         auto desired_point_in_lmspace = faceextents.worldToLMCoord(point);
@@ -332,13 +332,13 @@ static position_t PositionSamplePointOnFace(
         return position_t(point);
     }
 
-    const float planedist = GLM_DistAbovePlane(plane, point);
+    const float planedist = DistAbovePlane(plane, point);
     if (!(fabs(planedist - sampleOffPlaneDist) <= 0.1)) {
         // something is wrong?
         return position_t(point);
     }
 
-    const float insideDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+    const float insideDist = EdgePlanes_PointInsideDist(edgeplanes, point);
     if (insideDist < -POINT_EQUAL_EPSILON) {
         // Non-convex polygon
         return position_t(point);
@@ -353,7 +353,7 @@ static position_t PositionSamplePointOnFace(
     // Get the point normal
     qvec3f pointNormal;
     if (phongShaded) {
-        const auto interpNormal = GLM_InterpolateNormal(points, normals, point);
+        const auto interpNormal = InterpolateNormal(points, normals, point);
         // We already know the point is in the face, so this should always succeed
         if (!interpNormal.first)
             return position_t(point);
@@ -383,12 +383,12 @@ static position_t PositionSamplePointOnFace(
         // this has issues with narrow sliver-shaped faces moving the sample points a lot into vastly different lighting
 
         // Check distance to border
-        const float distanceInside = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+        const float distanceInside = EdgePlanes_PointInsideDist(edgeplanes, point);
         if (distanceInside < 1.0f) {
             // Point is too close to the border. Try nudging it inside.
             const auto &shrunk = facecache.pointsShrunkBy1Unit();
             if (!shrunk.empty()) {
-                const pair<int, qvec3f> closest = GLM_ClosestPointOnPolyBoundary(shrunk, point);
+                const pair<int, qvec3f> closest = ClosestPointOnPolyBoundary(shrunk, point);
                 const qvec3f newPoint = closest.second + (qvec3f(plane) * sampleOffPlaneDist);
                 if (!Light_PointInAnySolid(bsp, mi->model, newPoint + modelOffset))
                     return position_t(face, newPoint, pointNormal);
@@ -427,8 +427,8 @@ static void CalcPoints(
     surf->occluded.resize(num_points);
     surf->realfacenums.resize(num_points);
 
-    const auto points = GLM_FacePoints(bsp, face);
-    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(points);
+    const auto points = Face_Points(bsp, face);
+    const auto edgeplanes = MakeInwardFacingEdgePlanes(points);
 
     for (int t = 0; t < surf->height; t++) {
         for (int s = 0; s < surf->width; s++) {

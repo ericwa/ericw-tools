@@ -102,7 +102,7 @@ std::vector<const mface_t *> Leaf_Markfaces(const mbsp_t *bsp, const mleaf_t *le
 std::vector<const dbrush_t *> Leaf_Brushes(const mbsp_t *bsp, const mleaf_t *leaf);
 const qvec3f &Vertex_GetPos(const mbsp_t *bsp, int num);
 qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f);
-std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face);
+std::vector<qvec3f> Face_Points(const mbsp_t *bsp, const mface_t *face);
 polylib::winding_t Face_Winding(const mbsp_t *bsp, const mface_t *face);
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face);
 void Face_DebugPrint(const mbsp_t *bsp, const mface_t *face);
