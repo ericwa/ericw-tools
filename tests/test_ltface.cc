@@ -682,3 +682,61 @@ TEST_CASE("q2_light_low_luxel_res2" * doctest::may_fail())
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {25, 25, 25}, {2964, 1046, -706}, {-1, 0, 0}, nullptr, &bspx);
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {1, 1, 1}, {2964, 1046, -716}, {-1, 0, 0}, nullptr, &bspx);
 }
+
+TEST_CASE("q2_minlight_inherited")
+{
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_minlight_inherited.map", {});
+
+    {
+        INFO("check worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {64, 0, 0}, {456, 196, 0}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
+        INFO("check that func_group inherits worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {64, 0, 0}, {360, 72, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+    {
+        INFO("check that func_wall inherits worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {64, 0, 0}, {208, 72, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
+        INFO("check that func_group can override worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {128, 0, 0}, {360, -84, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+    {
+        INFO("check that func_wall can override worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[2], {128, 0, 0}, {208, -84, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
+        INFO("check that func_group can override worldspawn minlight color");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 64, 0}, {360, -248, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+    {
+        INFO("check that func_wall can override worldspawn minlight color");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[3], {0, 64, 0}, {208, -248, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+}
+
+TEST_CASE("q2_minlight_inherited + -noextendedsurfflags")
+{
+    auto [bsp, bspx] =
+        QbspVisLight_Common("q2_minlight_inherited.map", {"-q2bsp", "-noextendedsurfflags"}, {}, runvis_t::no);
+
+    {
+        INFO("check that func_wall inherits worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {64, 0, 0}, {208, 72, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
+        INFO("check that func_wall can override worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[2], {128, 0, 0}, {208, -84, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+
+    {
+        INFO("check that func_wall can override worldspawn minlight color");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[3], {0, 64, 0}, {208, -248, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+}

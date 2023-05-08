@@ -338,7 +338,7 @@ static void WriteExtendedTexinfoFlags(void)
         }
     }
 
-    if (!needwrite)
+    if (!needwrite || qbsp_options.noextendedsurfflags.value())
         return;
 
     // sort by output texinfo number
@@ -406,7 +406,7 @@ static void WriteExtendedTexinfoFlags(void)
             t["phong_group"] = tx.flags.phong_group;
         }
         if (tx.flags.minlight) {
-            t["minlight"] = tx.flags.minlight;
+            t["minlight"] = *tx.flags.minlight;
         }
         if (tx.flags.maxlight) {
             t["maxlight"] = tx.flags.maxlight;

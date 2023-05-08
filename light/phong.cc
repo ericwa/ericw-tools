@@ -41,11 +41,11 @@ using namespace std;
 face_cache_t::face_cache_t(){};
 
 face_cache_t::face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
-    : m_points(GLM_FacePoints(bsp, face)),
+    : m_points(Face_Points(bsp, face)),
       m_normals(normals),
       m_plane(Face_Plane(bsp, face).vec4()),
-      m_edgePlanes(GLM_MakeInwardFacingEdgePlanes(m_points)),
-      m_pointsShrunkBy1Unit(GLM_ShrinkPoly(m_points, 1.0f)),
+      m_edgePlanes(MakeInwardFacingEdgePlanes(m_points)),
+      m_pointsShrunkBy1Unit(ShrinkPoly(m_points, 1.0f)),
       m_neighbours(NeighbouringFaces_new(bsp, face))
 {
 }
@@ -464,7 +464,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
         // Q1 phong angle stuff
         auto *f_texinfo = Face_Texinfo(bsp, &f);
-        const auto f_points = GLM_FacePoints(bsp, &f);
+        const auto f_points = Face_Points(bsp, &f);
         const qvec3d f_norm = Face_Normal(bsp, &f);
         const qplane3d f_plane = Face_Plane(bsp, &f);
 
@@ -520,7 +520,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                     }
                 }
 
-                const auto f2_points = GLM_FacePoints(bsp, f2);
+                const auto f2_points = Face_Points(bsp, f2);
                 const qvec3f f2_centroid = qv::PolyCentroid(f2_points.begin(), f2_points.end());
                 const qvec3d f2_norm = Face_Normal(bsp, f2);
 
@@ -580,7 +580,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
         // walk fPlusNeighbours
         for (auto f2 : fPlusNeighbours) {
-            const auto f2_poly = GLM_FacePoints(bsp, f2);
+            const auto f2_poly = Face_Points(bsp, f2);
             const float f2_area = qv::PolyArea(f2_poly.begin(), f2_poly.end());
             const qvec3f f2_norm = Face_Normal(bsp, f2);
 

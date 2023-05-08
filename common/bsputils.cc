@@ -512,8 +512,7 @@ std::vector<const dbrush_t *> Leaf_Brushes(const mbsp_t *bsp, const mleaf_t *lea
     return result;
 }
 
-// glm stuff
-std::vector<qvec3f> GLM_FacePoints(const mbsp_t *bsp, const mface_t *face)
+std::vector<qvec3f> Face_Points(const mbsp_t *bsp, const mface_t *face)
 {
     std::vector<qvec3f> points;
 
@@ -539,7 +538,7 @@ polylib::winding_t Face_Winding(const mbsp_t *bsp, const mface_t *face)
 
 qvec3f Face_Centroid(const mbsp_t *bsp, const mface_t *face)
 {
-    auto points = GLM_FacePoints(bsp, face);
+    auto points = Face_Points(bsp, face);
     return qv::PolyCentroid(points.begin(), points.end());
 }
 

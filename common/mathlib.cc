@@ -172,7 +172,7 @@ float Lanczos2D(float x, float y, float a)
 
 using namespace std;
 
-qvec3f GLM_FaceNormal(std::vector<qvec3f> points)
+qvec3f FaceNormal(std::vector<qvec3f> points)
 {
     const int N = static_cast<int>(points.size());
     float maxArea = -FLT_MAX;
@@ -200,14 +200,14 @@ qvec3f GLM_FaceNormal(std::vector<qvec3f> points)
     return normal;
 }
 
-qvec4f GLM_PolyPlane(const std::vector<qvec3f> &points)
+qvec4f PolyPlane(const std::vector<qvec3f> &points)
 {
-    const qvec3f normal = GLM_FaceNormal(points);
+    const qvec3f normal = FaceNormal(points);
     const float dist = qv::dot(points.at(0), normal);
     return qvec4f(normal[0], normal[1], normal[2], dist);
 }
 
-std::pair<bool, qvec4f> GLM_MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f &v1, const qvec3f &faceNormal)
+std::pair<bool, qvec4f> MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f &v1, const qvec3f &faceNormal)
 {
     const float v0v1len = qv::length(v1 - v0);
     if (v0v1len < POINT_EQUAL_EPSILON)
@@ -220,7 +220,7 @@ std::pair<bool, qvec4f> GLM_MakeInwardFacingEdgePlane(const qvec3f &v0, const qv
     return make_pair(true, qvec4f(edgeplane_normal[0], edgeplane_normal[1], edgeplane_normal[2], edgeplane_dist));
 }
 
-vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
+vector<qvec4f> MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
 {
     const size_t N = points.size();
     if (N < 3)
@@ -229,7 +229,7 @@ vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
     vector<qvec4f> result;
     result.reserve(points.size());
 
-    const qvec3f faceNormal = GLM_FaceNormal(points);
+    const qvec3f faceNormal = FaceNormal(points);
 
     if (qv::emptyExact(faceNormal))
         return {};
@@ -238,7 +238,7 @@ vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
         const qvec3f &v0 = points[i];
         const qvec3f &v1 = points[(i + 1) % N];
 
-        const auto edgeplane = GLM_MakeInwardFacingEdgePlane(v0, v1, faceNormal);
+        const auto edgeplane = MakeInwardFacingEdgePlane(v0, v1, faceNormal);
         if (!edgeplane.first)
             continue;
 
@@ -248,12 +248,12 @@ vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
     return result;
 }
 
-float GLM_EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point)
+float EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point)
 {
     float min = FLT_MAX;
 
     for (int i = 0; i < edgeplanes.size(); i++) {
-        const float planedist = GLM_DistAbovePlane(edgeplanes[i], point);
+        const float planedist = DistAbovePlane(edgeplanes[i], point);
         if (planedist < min)
             min = planedist;
     }
@@ -261,33 +261,33 @@ float GLM_EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, cons
     return min; // "outermost" point
 }
 
-bool GLM_EdgePlanes_PointInside(const vector<qvec4f> &edgeplanes, const qvec3f &point)
+bool EdgePlanes_PointInside(const vector<qvec4f> &edgeplanes, const qvec3f &point)
 {
     if (edgeplanes.empty())
         return false;
 
-    const float minDist = GLM_EdgePlanes_PointInsideDist(edgeplanes, point);
+    const float minDist = EdgePlanes_PointInsideDist(edgeplanes, point);
     return minDist >= -POINT_EQUAL_EPSILON;
 }
 
-qvec4f GLM_MakePlane(const qvec3f &normal, const qvec3f &point)
+qvec4f MakePlane(const qvec3f &normal, const qvec3f &point)
 {
     return qvec4f(normal[0], normal[1], normal[2], qv::dot(point, normal));
 }
 
-float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point)
+float DistAbovePlane(const qvec4f &plane, const qvec3f &point)
 {
     return qv::dot(qvec3f(plane), point) - plane[3];
 }
 
-qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point)
+qvec3f ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point)
 {
-    float dist = GLM_DistAbovePlane(plane, point);
+    float dist = DistAbovePlane(plane, point);
     qvec3f move = qvec3f(plane) * -dist;
     return point + move;
 }
 
-poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &points)
+poly_random_point_state_t PolyRandomPoint_Setup(const std::vector<qvec3f> &points)
 {
     Q_assert(points.size() >= 3);
 
@@ -314,7 +314,7 @@ poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &p
 }
 
 // r1, r2, r3 must be in [0, 1]
-qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, float r2, float r3)
+qvec3f PolyRandomPoint(const poly_random_point_state_t &state, float r1, float r2, float r3)
 {
     // Pick a random triangle, with probability proportional to triangle area
     const float uniformRandom = r1;
@@ -330,7 +330,7 @@ qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, flo
     return point;
 }
 
-std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point)
+std::pair<int, qvec3f> ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point)
 {
     const int N = static_cast<int>(poly.size());
 
@@ -357,7 +357,7 @@ std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> 
     return make_pair(bestI, bestPointOnPoly);
 }
 
-std::pair<bool, qvec3f> GLM_InterpolateNormal(
+std::pair<bool, qvec3f> InterpolateNormal(
     const std::vector<qvec3f> &points, const std::vector<face_normal_t> &normals, const qvec3f &point)
 {
     std::vector<qvec3f> normalvecs;
@@ -365,10 +365,10 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
         normalvecs.push_back(normal.normal);
     }
 
-    return GLM_InterpolateNormal(points, normalvecs, point);
+    return InterpolateNormal(points, normalvecs, point);
 }
 
-std::pair<bool, qvec3f> GLM_InterpolateNormal(
+std::pair<bool, qvec3f> InterpolateNormal(
     const std::vector<qvec3f> &points, const std::vector<qvec3f> &normals, const qvec3f &point)
 {
     Q_assert(points.size() == normals.size());
@@ -388,11 +388,11 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
         const qvec3f &p2 = points.at(i);
         const qvec3f &n2 = normals.at(i);
 
-        const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes({p0, p1, p2});
+        const auto edgeplanes = MakeInwardFacingEdgePlanes({p0, p1, p2});
         if (edgeplanes.size() != 3)
             continue;
 
-        if (GLM_EdgePlanes_PointInside(edgeplanes, point)) {
+        if (EdgePlanes_PointInside(edgeplanes, point)) {
             // Found the correct triangle
 
             const qvec3f bary = qv::Barycentric_FromPoint(point, p0, p1, p2);
@@ -409,7 +409,7 @@ std::pair<bool, qvec3f> GLM_InterpolateNormal(
 }
 
 /// Returns (front part, back part)
-std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane)
+std::pair<std::vector<qvec3f>, std::vector<qvec3f>> ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane)
 {
     if (poly.empty())
         return make_pair(vector<qvec3f>(), vector<qvec3f>());
@@ -428,15 +428,15 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vect
     return result;
 }
 
-std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount)
+std::vector<qvec3f> ShrinkPoly(const std::vector<qvec3f> &poly, const float amount)
 {
-    const vector<qvec4f> edgeplanes = GLM_MakeInwardFacingEdgePlanes(poly);
+    const vector<qvec4f> edgeplanes = MakeInwardFacingEdgePlanes(poly);
 
     vector<qvec3f> clipped = poly;
 
     for (const qvec4f &edge : edgeplanes) {
         const qvec4f shrunkEdgePlane(edge[0], edge[1], edge[2], edge[3] + amount);
-        clipped = GLM_ClipPoly(clipped, shrunkEdgePlane).first;
+        clipped = ClipPoly(clipped, shrunkEdgePlane).first;
     }
 
     return clipped;

@@ -41,7 +41,7 @@ static void PrintBSPTextureUsage(const mbsp_t &bsp)
             continue;
         }
 
-        auto points = GLM_FacePoints(&bsp, &face);
+        auto points = Face_Points(&bsp, &face);
         polylib::winding_t w(points.begin(), points.end());
         vec_t area = w.area();
 

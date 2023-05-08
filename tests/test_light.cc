@@ -38,15 +38,15 @@ TEST_SUITE("mathlib")
 
     static void checkBox(const vector<qvec4f> &edges, const vector<qvec3f> &poly)
     {
-        CHECK(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
-        CHECK(GLM_EdgePlanes_PointInside(edges, qvec3f(64, 0, 0)));
-        CHECK(GLM_EdgePlanes_PointInside(edges, qvec3f(32, 32, 0)));
-        CHECK(GLM_EdgePlanes_PointInside(edges, qvec3f(32, 32, 32))); // off plane
+        CHECK(EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
+        CHECK(EdgePlanes_PointInside(edges, qvec3f(64, 0, 0)));
+        CHECK(EdgePlanes_PointInside(edges, qvec3f(32, 32, 0)));
+        CHECK(EdgePlanes_PointInside(edges, qvec3f(32, 32, 32))); // off plane
 
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-0.1, 0, 0)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(64.1, 0, 0)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, -0.1, 0)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 64.1, 0)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(-0.1, 0, 0)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(64.1, 0, 0)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(0, -0.1, 0)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(0, 64.1, 0)));
     }
 
     TEST_CASE("EdgePlanesOfNonConvexPoly")
@@ -54,7 +54,7 @@ TEST_SUITE("mathlib")
         // hourglass, non-convex
         const vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {0, 64, 0}, {64, 0, 0}};
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
         //    CHECK(vector<qvec4f>() == edges);
     }
 
@@ -65,9 +65,9 @@ TEST_SUITE("mathlib")
             qvec3f(248, -1893.21741, 1810.43481), qvec3f(248, -1921.59998, 1812.80005), qvec3f(248, -1924, 1813),
             qvec3f(80, -1924, 1631), qvec3f(80, -1744, 1616)};
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
         REQUIRE_FALSE(edges.empty());
-        CHECK(GLM_EdgePlanes_PointInside(edges, qvec3f(152.636963, -1814, 1702)));
+        CHECK(EdgePlanes_PointInside(edges, qvec3f(152.636963, -1814, 1702)));
     }
 
     TEST_CASE("PointInPolygon")
@@ -75,7 +75,7 @@ TEST_SUITE("mathlib")
         // clockwise
         const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
         checkBox(edges, poly);
     }
 
@@ -85,7 +85,7 @@ TEST_SUITE("mathlib")
         const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {0, 64, 0}, // repeat of last point
             {64, 64, 0}, {64, 0, 0}};
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
         checkBox(edges, poly);
     }
 
@@ -93,9 +93,9 @@ TEST_SUITE("mathlib")
     {
         const vector<qvec3f> poly{};
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
     }
 
     TEST_CASE("PointInPolygon_DegenerateFaceHandling2")
@@ -106,10 +106,10 @@ TEST_SUITE("mathlib")
             {0, 0, 0},
         };
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
     }
 
     TEST_CASE("PointInPolygon_DegenerateFaceHandling3")
@@ -120,10 +120,10 @@ TEST_SUITE("mathlib")
             {20, 20, 20},
         };
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
-        CHECK_FALSE(GLM_EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(10, 10, 10)));
+        CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(-10, -10, -10)));
     }
 
     TEST_CASE("PointInPolygon_ColinearPointHandling")
@@ -132,7 +132,7 @@ TEST_SUITE("mathlib")
         const vector<qvec3f> poly{{0, 0, 0}, {0, 32, 0}, // colinear
             {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(poly);
+        const auto edges = MakeInwardFacingEdgePlanes(poly);
 
         checkBox(edges, poly);
     }
@@ -152,13 +152,13 @@ TEST_SUITE("mathlib")
             {64, 0, 0} // edge 3 start, edge 2 end
         };
 
-        CHECK(make_pair(0, qvec3f(0, 0, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(0, 0, 0)));
+        CHECK(make_pair(0, qvec3f(0, 0, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(0, 0, 0)));
 
         // Either edge 1 or 2 contain the point qvec3f(64,64,0), but we expect the first edge to be returned
-        CHECK(make_pair(1, qvec3f(64, 64, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(100, 100, 100)));
-        CHECK(make_pair(2, qvec3f(64, 32, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(100, 32, 0)));
+        CHECK(make_pair(1, qvec3f(64, 64, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(100, 100, 100)));
+        CHECK(make_pair(2, qvec3f(64, 32, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(100, 32, 0)));
 
-        CHECK(make_pair(0, qvec3f(0, 0, 0)) == GLM_ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
+        CHECK(make_pair(0, qvec3f(0, 0, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
     }
 
     TEST_CASE("PolygonCentroid_empty")
@@ -240,8 +240,8 @@ TEST_SUITE("mathlib")
         const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
         const auto triAsVec = vector<qvec3f>{tri.begin(), tri.end()};
-        const auto edges = GLM_MakeInwardFacingEdgePlanes(triAsVec);
-        const auto plane = GLM_PolyPlane(triAsVec);
+        const auto edges = MakeInwardFacingEdgePlanes(triAsVec);
+        const auto plane = PolyPlane(triAsVec);
 
         for (int i = 0; i < 100; i++) {
             const float r0 = Random();
@@ -256,9 +256,9 @@ TEST_SUITE("mathlib")
             CHECK(doctest::Approx(1.0f) == bary[0] + bary[1] + bary[2]);
 
             const qvec3f point = qv::Barycentric_ToPoint(bary, tri[0], tri[1], tri[2]);
-            CHECK(GLM_EdgePlanes_PointInside(edges, point));
+            CHECK(EdgePlanes_PointInside(edges, point));
 
-            CHECK(doctest::Approx(0.0f) == GLM_DistAbovePlane(plane, point));
+            CHECK(doctest::Approx(0.0f) == DistAbovePlane(plane, point));
         }
     }
 
@@ -278,29 +278,29 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("MakePlane")
     {
-        CHECK(qvec4f(0, 0, 1, 10) == GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(0, 0, 10)));
-        CHECK(qvec4f(0, 0, 1, 10) == GLM_MakePlane(qvec3f(0, 0, 1), qvec3f(100, 100, 10)));
+        CHECK(qvec4f(0, 0, 1, 10) == MakePlane(qvec3f(0, 0, 1), qvec3f(0, 0, 10)));
+        CHECK(qvec4f(0, 0, 1, 10) == MakePlane(qvec3f(0, 0, 1), qvec3f(100, 100, 10)));
     }
 
     TEST_CASE("DistAbovePlane")
     {
         qvec4f plane(0, 0, 1, 10);
         qvec3f point(100, 100, 100);
-        CHECK(doctest::Approx(90) == GLM_DistAbovePlane(plane, point));
+        CHECK(doctest::Approx(90) == DistAbovePlane(plane, point));
     }
 
     TEST_CASE("InterpolateNormalsDegenerate")
     {
-        CHECK_FALSE(GLM_InterpolateNormal({}, std::vector<qvec3f>{}, qvec3f(0, 0, 0)).first);
-        CHECK_FALSE(GLM_InterpolateNormal({qvec3f(0, 0, 0)}, {qvec3f(0, 0, 1)}, qvec3f(0, 0, 0)).first);
-        CHECK_FALSE(GLM_InterpolateNormal(
-            {qvec3f(0, 0, 0), qvec3f(10, 0, 0)}, {qvec3f(0, 0, 1), qvec3f(0, 0, 1)}, qvec3f(0, 0, 0))
-                        .first);
+        CHECK_FALSE(InterpolateNormal({}, std::vector<qvec3f>{}, qvec3f(0, 0, 0)).first);
+        CHECK_FALSE(InterpolateNormal({qvec3f(0, 0, 0)}, {qvec3f(0, 0, 1)}, qvec3f(0, 0, 0)).first);
+        CHECK_FALSE(
+            InterpolateNormal({qvec3f(0, 0, 0), qvec3f(10, 0, 0)}, {qvec3f(0, 0, 1), qvec3f(0, 0, 1)}, qvec3f(0, 0, 0))
+                .first);
     }
 
     TEST_CASE("InterpolateNormals")
     {
-        // This test relies on the way GLM_InterpolateNormal is implemented
+        // This test relies on the way InterpolateNormal is implemented
 
         // o--o--o
         // | / / |
@@ -315,20 +315,20 @@ TEST_SUITE("mathlib")
 
         // First try all the known points
         for (int i = 0; i < poly.size(); i++) {
-            const auto res = GLM_InterpolateNormal(poly, normals, poly.at(i));
+            const auto res = InterpolateNormal(poly, normals, poly.at(i));
             CHECK(true == res.first);
             CHECK(qv::epsilonEqual(normals.at(i), res.second, static_cast<float>(POINT_EQUAL_EPSILON)));
         }
 
         {
             const qvec3f firstTriCentroid = (poly[0] + poly[1] + poly[2]) / 3.0f;
-            const auto res = GLM_InterpolateNormal(poly, normals, firstTriCentroid);
+            const auto res = InterpolateNormal(poly, normals, firstTriCentroid);
             CHECK(true == res.first);
             CHECK(qv::epsilonEqual(qvec3f(1 / 3.0f), res.second, static_cast<float>(POINT_EQUAL_EPSILON)));
         }
 
         // Outside poly
-        CHECK_FALSE(GLM_InterpolateNormal(poly, normals, qvec3f(-0.1, 0, 0)).first);
+        CHECK_FALSE(InterpolateNormal(poly, normals, qvec3f(-0.1, 0, 0)).first);
     }
 
     static bool polysEqual(const vector<qvec3f> &p1, const vector<qvec3f> &p2)
@@ -350,7 +350,7 @@ TEST_SUITE("mathlib")
 
         const vector<qvec3f> backRes{{32, 64, 0}, {64, 64, 0}, {64, 0, 0}, {32, 0, 0}};
 
-        auto clipRes = GLM_ClipPoly(poly, qvec4f(-1, 0, 0, -32));
+        auto clipRes = ClipPoly(poly, qvec4f(-1, 0, 0, -32));
 
         CHECK(polysEqual(frontRes, clipRes.first));
         CHECK(polysEqual(backRes, clipRes.second));
@@ -362,7 +362,7 @@ TEST_SUITE("mathlib")
 
         const vector<qvec3f> shrunkPoly{{1, 1, 0}, {1, 63, 0}, {63, 63, 0}, {63, 1, 0}};
 
-        const auto actualShrunk = GLM_ShrinkPoly(poly, 1.0f);
+        const auto actualShrunk = ShrinkPoly(poly, 1.0f);
 
         CHECK(polysEqual(shrunkPoly, actualShrunk));
     }
@@ -377,7 +377,7 @@ TEST_SUITE("mathlib")
             {63, 1, 0},
         };
 
-        const auto actualShrunk = GLM_ShrinkPoly(poly, 1.0f);
+        const auto actualShrunk = ShrinkPoly(poly, 1.0f);
 
         CHECK(polysEqual(shrunkPoly, actualShrunk));
     }
@@ -542,18 +542,18 @@ TEST_CASE("RandomPointInPoly") {
         { 64,0,0 }
     };
     
-    const auto edgeplanes = GLM_MakeInwardFacingEdgePlanes(poly);
+    const auto edgeplanes = MakeInwardFacingEdgePlanes(poly);
     
     qvec3f min(FLT_MAX);
     qvec3f max(-FLT_MAX);
     qvec3f avg{};
     
-    const auto randomstate = GLM_PolyRandomPoint_Setup(poly);
+    const auto randomstate = PolyRandomPoint_Setup(poly);
     
     const int N=100;
     for (int i=0; i<N; i++) {
-        const qvec3f point = GLM_PolyRandomPoint(randomstate, Random(), Random(), Random());
-        REQUIRE(GLM_EdgePlanes_PointInside(edgeplanes, point));
+        const qvec3f point = PolyRandomPoint(randomstate, Random(), Random(), Random());
+        REQUIRE(EdgePlanes_PointInside(edgeplanes, point));
         
         //std::cout << "point: " << qv::to_string(point) << std::endl;
         

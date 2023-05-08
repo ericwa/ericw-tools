@@ -1047,25 +1047,25 @@ qmat3x3d RotateAboutZ(double radians);
 qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal);
 
 // Returns (0 0 0) if we couldn't determine the normal
-qvec3f GLM_FaceNormal(std::vector<qvec3f> points);
-std::pair<bool, qvec4f> GLM_MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f &v1, const qvec3f &faceNormal);
-std::vector<qvec4f> GLM_MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points);
-bool GLM_EdgePlanes_PointInside(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
-float GLM_EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
-qvec4f GLM_MakePlane(const qvec3f &normal, const qvec3f &point);
-float GLM_DistAbovePlane(const qvec4f &plane, const qvec3f &point);
-qvec3f GLM_ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point);
-qvec4f GLM_PolyPlane(const std::vector<qvec3f> &points);
+qvec3f FaceNormal(std::vector<qvec3f> points);
+std::pair<bool, qvec4f> MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f &v1, const qvec3f &faceNormal);
+std::vector<qvec4f> MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points);
+bool EdgePlanes_PointInside(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
+float EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qvec3f &point);
+qvec4f MakePlane(const qvec3f &normal, const qvec3f &point);
+float DistAbovePlane(const qvec4f &plane, const qvec3f &point);
+qvec3f ProjectPointOntoPlane(const qvec4f &plane, const qvec3f &point);
+qvec4f PolyPlane(const std::vector<qvec3f> &points);
 /// Returns the index of the polygon edge, and the closest point on that edge, to the given point
-std::pair<int, qvec3f> GLM_ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point);
+std::pair<int, qvec3f> ClosestPointOnPolyBoundary(const std::vector<qvec3f> &poly, const qvec3f &point);
 /// Returns `true` and the interpolated normal if `point` is in the polygon, otherwise returns false.
-std::pair<bool, qvec3f> GLM_InterpolateNormal(
+std::pair<bool, qvec3f> InterpolateNormal(
     const std::vector<qvec3f> &points, const std::vector<face_normal_t> &normals, const qvec3f &point);
-std::pair<bool, qvec3f> GLM_InterpolateNormal(
+std::pair<bool, qvec3f> InterpolateNormal(
     const std::vector<qvec3f> &points, const std::vector<qvec3f> &normals, const qvec3f &point);
-std::vector<qvec3f> GLM_ShrinkPoly(const std::vector<qvec3f> &poly, const float amount);
+std::vector<qvec3f> ShrinkPoly(const std::vector<qvec3f> &poly, const float amount);
 /// Returns (front part, back part)
-std::pair<std::vector<qvec3f>, std::vector<qvec3f>> GLM_ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane);
+std::pair<std::vector<qvec3f>, std::vector<qvec3f>> ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane);
 
 class poly_random_point_state_t
 {
@@ -1075,8 +1075,8 @@ public:
     std::vector<float> triareas_cdf;
 };
 
-poly_random_point_state_t GLM_PolyRandomPoint_Setup(const std::vector<qvec3f> &points);
-qvec3f GLM_PolyRandomPoint(const poly_random_point_state_t &state, float r1, float r2, float r3);
+poly_random_point_state_t PolyRandomPoint_Setup(const std::vector<qvec3f> &points);
+qvec3f PolyRandomPoint(const poly_random_point_state_t &state, float r1, float r2, float r3);
 
 /// projects p onto the vw line.
 /// returns 0 for p==v, 1 for p==w
