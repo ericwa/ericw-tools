@@ -145,6 +145,7 @@
 {
 "classname" "func_wall"
 "_object_channel_mask" "2"
+"_minlight" "0"
 // brush 0
 {
 ( 656 1280 944 ) ( 656 1281 944 ) ( 656 1280 945 ) e1u1/twall2_1 -32 0 0 1 1
@@ -177,6 +178,7 @@
 {
 "classname" "func_wall"
 "_object_channel_mask" "4"
+"_minlight" "0"
 // brush 0
 {
 ( 880 1248 944 ) ( 880 1249 944 ) ( 880 1248 945 ) e1u1/twall2_1 0 0 0 1 1
@@ -208,6 +210,7 @@
 "classname" "func_wall"
 "_object_channel_mask" "8"
 "_shadow" "1"
+"_minlight" "0"
 // brush 0
 {
 ( 1264 1248 944 ) ( 1264 1249 944 ) ( 1264 1248 945 ) e1u1/twall2_1 0 0 0 1 1
@@ -230,6 +233,7 @@
 {
 "classname" "func_group"
 "_object_channel_mask" "8"
+"_minlight" "0"
 // brush 0
 {
 ( 1456 1248 944 ) ( 1456 1249 944 ) ( 1456 1248 945 ) e1u1/twall2_1 0 0 0 1 1

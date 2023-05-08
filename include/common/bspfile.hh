@@ -176,7 +176,8 @@ struct surfflags_t
     // light doesn't bounce off this face
     bool no_bounce;
 
-    // opt out of minlight on this face
+    // opt out of minlight on this face (including opting out of local minlight, so
+    // not the same as just setting minlight to 0).
     bool no_minlight;
 
     // don't expand this face for larger clip hulls
@@ -210,8 +211,8 @@ struct surfflags_t
     // _phong_group key, equivalent q2 map format's use of the "value" field
     int phong_group;
 
-    // minlight value for this face
-    vec_t minlight;
+    // minlight value for this face. empty = inherit from worldspawn.
+    std::optional<vec_t> minlight;
 
     // red minlight colors for this face
     qvec3b minlight_color;

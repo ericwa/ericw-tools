@@ -615,8 +615,10 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     // minlight
     if (modelinfo->minlight.is_changed()) {
         lightsurf->minlight = modelinfo->minlight.value();
+    } else if (extended_flags.minlight) {
+        lightsurf->minlight = *extended_flags.minlight;
     } else {
-        lightsurf->minlight = extended_flags.minlight;
+        lightsurf->minlight = light_options.minlight.value();
     }
 
     // minlightMottle

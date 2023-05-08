@@ -403,7 +403,7 @@ static void WriteExtendedTexinfoFlags(void)
             t["phong_group"] = tx.flags.phong_group;
         }
         if (tx.flags.minlight) {
-            t["minlight"] = tx.flags.minlight;
+            t["minlight"] = *tx.flags.minlight;
         }
         if (tx.flags.maxlight) {
             t["maxlight"] = tx.flags.maxlight;

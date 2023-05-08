@@ -740,11 +740,10 @@ static surfflags_t SurfFlagsForEntity(
     flags.phong_group = entity.epairs.get_int("_phong_group");
 
     // handle "_minlight"
-    const vec_t minlight = entity.epairs.get_float("_minlight");
-    if (minlight > 0) {
-        // CHECK: allow > 510 now that we're float? or is it not worth it since it will
-        // be beyond max?
-        flags.minlight = clamp(minlight, 0.0, 510.0);
+    if (entity.epairs.has("_minlight")) {
+        const vec_t minlight = entity.epairs.get_float("_minlight");
+        // handle -1 as an alias for 0 (same with other negative values).
+        flags.minlight = max(0., minlight);
     }
 
     // handle "_maxlight"

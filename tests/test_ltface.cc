@@ -682,3 +682,17 @@ TEST_CASE("q2_light_low_luxel_res2" * doctest::may_fail())
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {25, 25, 25}, {2964, 1046, -706}, {-1, 0, 0}, nullptr, &bspx);
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {1, 1, 1}, {2964, 1046, -716}, {-1, 0, 0}, nullptr, &bspx);
 }
+
+TEST_CASE("q2_minlight_inherited")
+{
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_minlight_inherited.map", {});
+
+    {
+        INFO("check that func_group inherits worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {64, 64, 64}, {360, 72, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+    {
+        INFO("check that func_wall inherits worldspawn minlight");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {64, 64, 64}, {208, 72, 16}, {0, 0, 1}, nullptr, &bspx);
+    }
+}
