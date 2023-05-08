@@ -662,13 +662,10 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     // minlight_color
     if (modelinfo->minlight_color.is_changed()) {
         lightsurf->minlight_color = modelinfo->minlight_color.value();
+    } else if (!qv::emptyExact(extended_flags.minlight_color)) {
+        lightsurf->minlight_color = extended_flags.minlight_color;
     } else {
-        // if modelinfo mincolor not set, use the one from the .texinfo file
-        if (lightsurf->minlight > 0 && qv::emptyExact(extended_flags.minlight_color)) {
-            lightsurf->minlight_color = {255.0};
-        } else {
-            lightsurf->minlight_color = extended_flags.minlight_color;
-        }
+        lightsurf->minlight_color = light_options.minlight_color.value();
     }
 
     /* never receive dirtmapping on lit liquids */
