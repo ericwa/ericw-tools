@@ -280,14 +280,13 @@ public:
     setting_int32 compilerstyle_max;
 
     /* dirt */
-    // apply dirt to all lights (unless they override it) + sunlight + minlight?
-    setting_bool globalDirt;
-    setting_scalar dirtMode;
-    setting_scalar dirtDepth;
-    setting_scalar dirtScale;
-    setting_scalar dirtGain;
-    setting_scalar dirtAngle;
-    setting_bool minlightDirt;
+    setting_bool dirt;
+    setting_scalar dirtmode;
+    setting_scalar dirtdepth;
+    setting_scalar dirtscale;
+    setting_scalar dirtgain;
+    setting_scalar dirtangle;
+    setting_bool minlight_dirt;
 
     /* phong */
     setting_bool phongallowed;

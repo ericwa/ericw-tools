@@ -1035,8 +1035,8 @@ constexpr vec_t fraction(const vec_t &min, const vec_t &val, const vec_t &max)
 inline vec_t Dirt_GetScaleFactor(const settings::worldspawn_keys &cfg, vec_t occlusion, const light_t *entity,
     const vec_t entitydist, const lightsurf_t *surf)
 {
-    vec_t light_dirtgain = cfg.dirtGain.value();
-    vec_t light_dirtscale = cfg.dirtScale.value();
+    vec_t light_dirtgain = cfg.dirtgain.value();
+    vec_t light_dirtscale = cfg.dirtscale.value();
     bool usedirt;
 
     /* is dirt processing disabled entirely? */
@@ -1052,7 +1052,7 @@ inline vec_t Dirt_GetScaleFactor(const settings::worldspawn_keys &cfg, vec_t occ
         } else if (entity->dirt.value() == 1) {
             usedirt = true;
         } else {
-            usedirt = cfg.globalDirt.value();
+            usedirt = cfg.dirt.value();
         }
     } else {
         /* no entity is provided, assume the caller wants dirt */
@@ -1634,7 +1634,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
         lightsample_t &sample = lightmap->samples[i];
 
         vec_t value = light;
-        if (cfg.minlightDirt.value()) {
+        if (cfg.minlight_dirt.value()) {
             value *= Dirt_GetScaleFactor(cfg, lightsurf->occlusion[i], NULL, 0.0, lightsurf);
         }
         if (cfg.addminlight.value()) {
@@ -2114,13 +2114,13 @@ void SetupDirt(settings::worldspawn_keys &cfg)
 {
     // check if needed
 
-    if (!cfg.globalDirt.value() && cfg.globalDirt.get_source() == settings::source::COMMANDLINE) {
+    if (!cfg.dirt.value() && cfg.dirt.get_source() == settings::source::COMMANDLINE) {
         // HACK: "-dirt 0" disables all dirtmapping even if we would otherwise use it.
         dirt_in_use = false;
         return;
     }
 
-    if (cfg.globalDirt.value() || cfg.minlightDirt.value() || cfg.sunlight_dirt.boolValue() ||
+    if (cfg.dirt.value() || cfg.minlight_dirt.value() || cfg.sunlight_dirt.boolValue() ||
         cfg.sunlight2_dirt.boolValue()) {
         dirt_in_use = true;
     }
@@ -2145,7 +2145,7 @@ void SetupDirt(settings::worldspawn_keys &cfg)
 
     /* calculate angular steps */
     constexpr float angleStep = (float)DEG2RAD(360.0f / DIRT_NUM_ANGLE_STEPS);
-    const float elevationStep = (float)DEG2RAD(cfg.dirtAngle.value() / DIRT_NUM_ELEVATION_STEPS);
+    const float elevationStep = (float)DEG2RAD(cfg.dirtangle.value() / DIRT_NUM_ELEVATION_STEPS);
 
     /* iterate angle */
     float angle = 0.0f;
@@ -2177,10 +2177,10 @@ inline qvec3d GetDirtVector(const settings::worldspawn_keys &cfg, int i)
 {
     Q_assert(i < numDirtVectors);
 
-    if (cfg.dirtMode.value() == 1) {
+    if (cfg.dirtmode.value() == 1) {
         /* get random vector */
         float angle = Random() * DEG2RAD(360.0f);
-        float elevation = Random() * DEG2RAD(cfg.dirtAngle.value());
+        float elevation = Random() * DEG2RAD(cfg.dirtangle.value());
         return {cos(angle) * sin(elevation), sin(angle) * sin(elevation), cos(elevation)};
     }
 
@@ -2231,7 +2231,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             qvec3d dirtvec = GetDirtVector(cfg, j);
             qvec3d dir = TransformToTangentSpace(lightsurf->normals[i], myUps[i], myRts[i], dirtvec);
 
-            rs.pushRay(i, lightsurf->points[i], dir, cfg.dirtDepth.value());
+            rs.pushRay(i, lightsurf->points[i], dir, cfg.dirtdepth.value());
         }
 
         // trace the batch. need closest hit for dirt, so intersection.
@@ -2245,9 +2245,9 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             const int i = rs.getPushedRayPointIndex(k);
             if (rs.getPushedRayHitType(k) == hittype_t::SOLID) {
                 vec_t dist = rs.getPushedRayHitDist(k);
-                lightsurf->occlusion[i] += min(cfg.dirtDepth.value(), dist);
+                lightsurf->occlusion[i] += min(cfg.dirtdepth.value(), dist);
             } else {
-                lightsurf->occlusion[i] += cfg.dirtDepth.value();
+                lightsurf->occlusion[i] += cfg.dirtdepth.value();
             }
         }
     }
@@ -2255,7 +2255,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
     // process the results.
     for (int i = 0; i < lightsurf->points.size(); i++) {
         vec_t avgHitdist = lightsurf->occlusion[i] / (float)numDirtVectors;
-        lightsurf->occlusion[i] = 1 - (avgHitdist / cfg.dirtDepth.value());
+        lightsurf->occlusion[i] = 1 - (avgHitdist / cfg.dirtdepth.value());
     }
 }
 

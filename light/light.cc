@@ -170,13 +170,14 @@ worldspawn_keys::worldspawn_keys()
       spotlightautofalloff{this, "spotlightautofalloff", false, &worldspawn_group},
       compilerstyle_start{this, "compilerstyle_start", 32, &worldspawn_group},
       compilerstyle_max{this, "compilerstyle_max", 64, &worldspawn_group},
-      globalDirt{this, {"dirt", "dirty"}, false, &worldspawn_group},
-      dirtMode{this, "dirtmode", 0.0f, &worldspawn_group},
-      dirtDepth{this, "dirtdepth", 128.0, 1.0, std::numeric_limits<vec_t>::infinity(), &worldspawn_group},
-      dirtScale{this, "dirtscale", 1.0, 0.0, 100.0, &worldspawn_group},
-      dirtGain{this, "dirtgain", 1.0, 0.0, 100.0, &worldspawn_group},
-      dirtAngle{this, "dirtangle", 88.0, 1.0, 90.0, &worldspawn_group},
-      minlightDirt{this, "minlight_dirt", false, &worldspawn_group},
+      dirt{this, {"dirt", "dirty"}, false, &worldspawn_group,
+          "apply dirt to all lights (unless they override it) + sunlight + minlight"},
+      dirtmode{this, "dirtmode", 0.0f, &worldspawn_group},
+      dirtdepth{this, "dirtdepth", 128.0, 1.0, std::numeric_limits<vec_t>::infinity(), &worldspawn_group},
+      dirtscale{this, "dirtscale", 1.0, 0.0, 100.0, &worldspawn_group},
+      dirtgain{this, "dirtgain", 1.0, 0.0, 100.0, &worldspawn_group},
+      dirtangle{this, "dirtangle", 88.0, 1.0, 90.0, &worldspawn_group},
+      minlight_dirt{this, "minlight_dirt", false, &worldspawn_group},
       phongallowed{this, "phong", true, &worldspawn_group},
       phongangle{this, "phong_angle", 0, &worldspawn_group},
       bounce{this, "bounce", false, &worldspawn_group},
@@ -462,7 +463,7 @@ void light_settings::postinitialize(int argc, const char **argv)
     }
 
     if (debugmode == debugmodes::dirt) {
-        light_options.globalDirt.set_value(true, settings::source::COMMANDLINE);
+        light_options.dirt.set_value(true, settings::source::COMMANDLINE);
     } else if (debugmode == debugmodes::bounce || debugmode == debugmodes::bouncelights) {
         light_options.bounce.set_value(true, settings::source::COMMANDLINE);
     } else if (debugmode == debugmodes::debugneighbours && !debugface.is_changed()) {
@@ -510,9 +511,9 @@ void FixupGlobalSettings()
     // We can't just default "minlight_dirt" to "1" because that would enable
     // dirtmapping by default.
 
-    if (light_options.globalDirt.value()) {
-        if (!light_options.minlightDirt.is_changed()) {
-            light_options.minlightDirt.set_value(true, settings::source::COMMANDLINE);
+    if (light_options.dirt.value()) {
+        if (!light_options.minlight_dirt.is_changed()) {
+            light_options.minlight_dirt.set_value(true, settings::source::COMMANDLINE);
         }
         if (!light_options.sunlight_dirt.is_changed()) {
             light_options.sunlight_dirt.set_value(1, settings::source::COMMANDLINE);

@@ -363,7 +363,7 @@ static bool Dirt_ResolveFlag(const settings::worldspawn_keys &cfg, int dirtInt)
     else if (dirtInt == -1)
         return false;
     else
-        return cfg.globalDirt.value();
+        return cfg.dirt.value();
 }
 
 /*
