@@ -1,13 +1,13 @@
 set(LIGHT_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/light/entities.hh
-	${CMAKE_SOURCE_DIR}/include/light/light.hh
-	${CMAKE_SOURCE_DIR}/include/light/lightgrid.hh
-	${CMAKE_SOURCE_DIR}/include/light/phong.hh
-	${CMAKE_SOURCE_DIR}/include/light/bounce.hh
-	${CMAKE_SOURCE_DIR}/include/light/surflight.hh
-	${CMAKE_SOURCE_DIR}/include/light/ltface.hh
-	${CMAKE_SOURCE_DIR}/include/light/trace.hh
-	${CMAKE_SOURCE_DIR}/include/light/litfile.hh)
+	../include/light/entities.hh
+	../include/light/light.hh
+	../include/light/lightgrid.hh
+	../include/light/phong.hh
+	../include/light/bounce.hh
+	../include/light/surflight.hh
+	../include/light/ltface.hh
+	../include/light/trace.hh
+	../include/light/litfile.hh)
 
 set(LIGHT_SOURCES
 	entities.cc
@@ -27,11 +27,11 @@ if (embree_FOUND)
 	MESSAGE(STATUS "Embree library found: ${EMBREE_LIBRARY}")
 	INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
 	set(LIGHT_INCLUDES
-		${CMAKE_SOURCE_DIR}/include/light/trace_embree.hh
+		../include/light/trace_embree.hh
 		${LIGHT_INCLUDES})
 	set(LIGHT_SOURCES
 		trace_embree.cc
-		${CMAKE_SOURCE_DIR}/include/light/trace_embree.hh
+		../include/light/trace_embree.hh
 		${LIGHT_SOURCES})
 
 	# This needs to be before the add_executable
@@ -54,7 +54,7 @@ if (embree_FOUND)
 	# causing it not to find the LICENSE.txt
 	get_filename_component(embree_DIR_ABS "${embree_DIR}" REALPATH CACHE)
 
-	find_file(EMBREE_LICENSE LICENSE.txt 
+	find_file(EMBREE_LICENSE LICENSE.txt
 		"${embree_DIR_ABS}/doc"
 		"${embree_DIR_ABS}/../../../doc"
 		"${embree_DIR_ABS}/../embree3/embree3" # vcpkg puts it here
@@ -90,12 +90,12 @@ if (embree_FOUND)
 				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:light>")
 	endif()
 
-	# so the executable will search for dylib's in the same directory as the executable 
+	# so the executable will search for dylib's in the same directory as the executable
 	if(APPLE)
-		add_custom_command(TARGET light POST_BUILD 
+		add_custom_command(TARGET light POST_BUILD
 			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
 	endif()
-	
+
 	install(FILES $<TARGET_FILE:embree> DESTINATION bin)
 
 	# install TBB
@@ -127,4 +127,4 @@ if (embree_FOUND)
 endif(embree_FOUND)
 
 install(TARGETS light RUNTIME DESTINATION bin)
-install(FILES ${CMAKE_SOURCE_DIR}/gpl_v3.txt DESTINATION bin)
+install(FILES ../gpl_v3.txt DESTINATION bin)

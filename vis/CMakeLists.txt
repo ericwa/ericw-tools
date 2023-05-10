@@ -1,6 +1,6 @@
 set(VIS_INCLUDES
-	${CMAKE_SOURCE_DIR}/include/vis/leafbits.hh
-	${CMAKE_SOURCE_DIR}/include/vis/vis.hh)
+	../include/vis/leafbits.hh
+	../include/vis/vis.hh)
 
 set(VIS_SOURCES
 	flow.cc
