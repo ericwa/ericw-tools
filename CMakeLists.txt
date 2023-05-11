@@ -53,7 +53,7 @@ if (WIN32)
 		add_definitions(-D_CONTAINER_DEBUG_LEVEL=0)
 	endif (NO_ITERATOR_DEBUG)
 
-	# TODO: remove these 
+	# TODO: remove these
 	add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
 	if (MSVC)
@@ -97,11 +97,6 @@ find_package(TBB REQUIRED)
 set(TEST_QUAKE_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake maps to this directory (useful for testing in game)")
 set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake 2 maps to this directory (useful for testing in game)")
 
-# just creates testmaps.hh with absolute path to the testmaps source directory.
-# include it as #include <testmaps.hh>
-configure_file(testmaps.hh.in testmaps.hh @ONLY)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
 add_subdirectory(3rdparty)
 add_subdirectory(common)
 add_subdirectory(bspinfo)
@@ -114,13 +109,26 @@ endif ()
 
 add_subdirectory(qbsp)
 add_subdirectory(vis)
-add_subdirectory(docs)
-add_subdirectory(tests)
+
+option(DISABLE_TESTS "Disables Tests" OFF)
+option(DISABLE_DOCS "Disables Docs" OFF)
+
+if(NOT DISABLE_TESTS)
+	# just creates testmaps.hh with absolute path to the testmaps source directory.
+	# include it as #include <testmaps.hh>
+	configure_file(testmaps.hh.in testmaps.hh @ONLY)
+	include_directories(${CMAKE_CURRENT_BINARY_DIR})
+	add_subdirectory(tests)
+
+	#CTest
+	enable_testing()
+endif ()
+
+if(NOT DISABLE_DOCS)
+	add_subdirectory(docs)
+endif ()
 
 install(FILES README.md DESTINATION bin)
-
-#CTest
-enable_testing()
 
 #CPack configuration
 
