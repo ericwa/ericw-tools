@@ -3279,7 +3279,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
         LightFace_LocalMin(bsp, face, &lightsurf, lightmaps);
 
         if (!modelinfo->isWorld() &&
-            std::all_of(lightsurf.occluded.begin(), lightsurf.occluded.end(), std::identity{})) {
+            std::all_of(lightsurf.occluded.begin(), lightsurf.occluded.end(), [](bool v) { return v; })) {
             LightFace_AutoMin(bsp, face, &lightsurf, lightmaps);
         }
 
