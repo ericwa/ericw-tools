@@ -387,7 +387,7 @@ static qvec3i MakePOT(const qvec3i &input)
     return qvec3i(static_cast<int>(x));
 }
 
-static std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3d world_point)
+std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3d world_point)
 {
     bool occluded = Light_PointInWorld(bsp, world_point);
     if (occluded) {

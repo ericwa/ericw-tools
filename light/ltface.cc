@@ -22,6 +22,7 @@
 #include <light/bounce.hh>
 #include <light/surflight.hh> //mxd
 #include <light/entities.hh>
+#include <light/lightgrid.hh>
 #include <light/trace.hh>
 #include <light/ltface.hh>
 
@@ -1734,6 +1735,38 @@ static void LightFace_LocalMin(
     }
 }
 
+static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+{
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
+    const modelinfo_t *modelinfo = lightsurf->modelinfo;
+
+    const qvec3f center = (modelinfo->model->mins + modelinfo->model->maxs) / 2;
+    auto [grid_samples, occluded] = FixPointAndCalcLightgrid(bsp, center);
+
+    if (!occluded) {
+        // clear occluded state, since we're going to fill it with a solid autominlight color
+        for (int i = 0; i < lightsurf->points.size(); i++) {
+            Q_assert(lightsurf->occluded[i]);
+            lightsurf->occluded[i] = false;
+        }
+
+        // process each of the captured styles
+        for (const auto &grid_sample : grid_samples.samples_by_style) {
+            if (!grid_sample.used)
+                break;
+
+            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, grid_sample.style, lightsurf);
+
+            // Overwrite each luxel with the new minlight value
+            for (int i = 0; i < lightsurf->points.size(); i++) {
+                lightmap->samples[i].color = grid_sample.color;
+            }
+
+            Lightmap_Save(lightmaps, lightsurf, lightmap, grid_sample.style);
+        }
+    }
+}
+
 /*
  * =============
  * LightFace_DirtDebug
@@ -3244,6 +3277,11 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
         }
 
         LightFace_LocalMin(bsp, face, &lightsurf, lightmaps);
+
+        if (!modelinfo->isWorld() &&
+            std::all_of(lightsurf.occluded.begin(), lightsurf.occluded.end(), std::identity{})) {
+            LightFace_AutoMin(bsp, face, &lightsurf, lightmaps);
+        }
 
         /* negative lights */
         if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {

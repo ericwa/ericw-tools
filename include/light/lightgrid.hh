@@ -19,6 +19,9 @@
 
 #pragma once
 
+#include <light/ltface.hh>
+
 struct bspdata_t;
 
+std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3d world_point);
 void LightGrid(bspdata_t *bspdata);
