@@ -10,7 +10,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/3rdparty/Catch2/extras")
 # Thanks to http://xit0.org/2013/04/cmake-use-git-branch-and-commit-details-in-project/
 execute_process(
   COMMAND git describe --dirty
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_DESCRIBE
   OUTPUT_STRIP_TRAILING_WHITESPACE
 )
@@ -20,8 +20,7 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "M
 	message(STATUS "working around exceptions not being enabled by default on clang-cl")
 endif()
 
-include_directories(
-	"${CMAKE_SOURCE_DIR}/include")
+include_directories(include)
 
 find_package (Threads)
 
@@ -101,7 +100,7 @@ set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Qu
 # just creates testmaps.hh with absolute path to the testmaps source directory.
 # include it as #include <testmaps.hh>
 configure_file(testmaps.hh.in testmaps.hh @ONLY)
-include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(3rdparty)
 add_subdirectory(common)
