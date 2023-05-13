@@ -1762,3 +1762,23 @@ TEST_CASE("textures search relative to current directory")
     CHECK(64 == bsp.dtex.textures[1].height);
     CHECK(bsp.dtex.textures[1].data.size() > 0);
 }
+
+// specifically designed to break the old isHexen2()
+// (has 0 faces, and model lump size is divisible by both Q1 and H2 model struct size)
+TEST_CASE("q1_skip_only")
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_skip_only.map");
+
+    CHECK(bsp.loadversion == &bspver_q1);
+    CHECK(0 == bsp.dfaces.size());
+}
+
+// specifically designed to break the old isHexen2()
+// (has 0 faces, and model lump size is divisible by both Q1 and H2 model struct size)
+TEST_CASE("h2_skip_only")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("h2_skip_only.map", {"-hexen2"});
+
+    CHECK(bsp.loadversion == &bspver_h2);
+    CHECK(0 == bsp.dfaces.size());
+}

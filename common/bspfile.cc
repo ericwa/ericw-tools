@@ -2207,15 +2207,63 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
     return false;
 }
 
-static bool isHexen2(const dheader_t *header)
+static bool isHexen2(const dheader_t *header, const bspversion_t *bspversion)
 {
-    /*
-        the world should always have some face.
-        however, if the sizes are wrong then we're actually reading headnode[6]. hexen2 only used 5 hulls, so this
-       should be 0 in hexen2, and not in quake.
-    */
-    const dmodelq1_t *modelsq1 = (const dmodelq1_t *)((const uint8_t *)header + header->lumps[LUMP_MODELS].fileofs);
-    return !modelsq1->numfaces;
+    if (0 != (header->lumps[LUMP_MODELS].filelen % sizeof(dmodelh2_t))) {
+        // definitely not H2
+        return false;
+    }
+    if (0 != (header->lumps[LUMP_MODELS].filelen % sizeof(dmodelq1_t))) {
+        // definitely not Q1
+        return true;
+    }
+
+    // models lump is divisible by both the Q1 model size (64 bytes) and the H2 model size (80 bytes).
+
+    const int bytes_per_face = bspversion->lumps.begin()[LUMP_FACES].size;
+    const int bytes_per_node = bspversion->lumps.begin()[LUMP_NODES].size;
+    const int bytes_per_leaf = bspversion->lumps.begin()[LUMP_LEAFS].size;
+    const int bytes_per_clipnode = bspversion->lumps.begin()[LUMP_CLIPNODES].size;
+
+    const int faces_count = header->lumps[LUMP_FACES].filelen / bytes_per_face;
+    const int nodes_count = header->lumps[LUMP_NODES].filelen / bytes_per_node;
+    const int leafs_count = header->lumps[LUMP_LEAFS].filelen / bytes_per_leaf;
+    const int clipnodes_count = header->lumps[LUMP_CLIPNODES].filelen / bytes_per_clipnode;
+
+    // assume H2, and do some basic validation
+    // FIXME: this potentially does unaligned reads, convert to using streams like the rest of the loading code
+    
+    const dmodelh2_t *models_h2 = (const dmodelh2_t *)((const uint8_t *)header + header->lumps[LUMP_MODELS].fileofs);
+    const int models_h2_count = header->lumps[LUMP_MODELS].filelen / sizeof(dmodelh2_t);
+
+    for (int i = 0; i < models_h2_count; ++i) {
+        const dmodelh2_t *model = &models_h2[i];
+
+        // visleafs
+        if (model->visleafs < 0 || model->visleafs > leafs_count)
+            return false;
+
+        // numfaces, firstface
+        if (model->numfaces < 0)
+            return false;
+        if (model->firstface < 0)
+            return false;
+        if (model->firstface + model->numfaces > faces_count)
+            return false;
+
+        // headnode[0]
+        if (model->headnode[0] >= nodes_count)
+            return false;
+
+        // clipnode headnodes
+        for (int j = 1; j < 8; ++j) {
+            if (model->headnode[j] >= clipnodes_count)
+                return false;
+        }
+    }
+
+    // passed all checks, assume H2
+    return true;
 }
 
 struct lump_reader
@@ -2425,7 +2473,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         Error("Sorry, this bsp version is not supported.");
     } else {
         // special case handling for Hexen II
-        if (bspdata->version->game->id == GAME_QUAKE && isHexen2((dheader_t *)file_data->data())) {
+        if (bspdata->version->game->id == GAME_QUAKE && isHexen2((dheader_t *)file_data->data(), bspdata->version)) {
             if (bspdata->version == &bspver_q1) {
                 bspdata->version = &bspver_h2;
             } else if (bspdata->version == &bspver_bsp2) {
