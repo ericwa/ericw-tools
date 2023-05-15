@@ -21,19 +21,29 @@ See file, 'COPYING', for details.
 
 #include <QMainWindow>
 
-namespace Ui
-{
-class MainWindow;
-}
+class GLView;
+class QFileSystemWatcher;
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+private:
+    QFileSystemWatcher *m_watcher = nullptr;
+    QString m_mapFile;
+
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
+protected:
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
+
 private:
-    Ui::MainWindow *ui;
+    void loadFile(const QString &file);
+    void loadFileInternal(const QString &file);
+
+private:
+    GLView *glView;
 };

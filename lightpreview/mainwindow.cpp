@@ -18,16 +18,130 @@ See file, 'COPYING', for details.
 */
 
 #include "mainwindow.h"
-#include "ui_mainwindow.h"
+
+#include <QDragEnterEvent>
+#include <QMimeData>
+#include <QFileSystemWatcher>
+
+#include <common/bspfile.hh>
+#include <qbsp/qbsp.hh>
+#include <vis/vis.hh>
+#include <light/light.hh>
+
+#include "glview.h"
 
 MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent),
-      ui(new Ui::MainWindow)
+    : QMainWindow(parent)
 {
-    ui->setupUi(this);
+    resize(640, 480);
+    glView = new GLView();
+    this->setCentralWidget(glView);
+
+    setAcceptDrops(true);
 }
 
-MainWindow::~MainWindow()
+MainWindow::~MainWindow() { }
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
-    delete ui;
+    if (event->mimeData()->hasUrls())
+        event->acceptProposedAction();
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    auto urls = event->mimeData()->urls();
+    if (!urls.empty()) {
+        const QUrl &url = urls[0];
+        if (url.isLocalFile()) {
+            loadFile(url.toLocalFile());
+
+            event->acceptProposedAction();
+        }
+    }
+}
+
+void MainWindow::loadFile(const QString &file)
+{
+    qDebug() << "load " << file;
+
+    if (m_watcher) {
+        delete m_watcher;
+    }
+    m_watcher = new QFileSystemWatcher(this);
+
+    // start watching it
+    qDebug() << "adding path: " << m_watcher->addPath(file);
+    connect(m_watcher, &QFileSystemWatcher::fileChanged, this,
+        [](const QString &path) { qDebug() << "got change notif for " << path; });
+
+    loadFileInternal(file);
+}
+
+std::filesystem::path MakeFSPath(const QString &string)
+{
+    return std::filesystem::path{string.toStdU16String()};
+}
+
+static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
+    std::vector<std::string> extra_light_args, bool run_vis)
+{
+    auto bsp_path = name;
+    bsp_path.replace_extension(".bsp");
+
+    std::vector<std::string> args{
+        "", // the exe path, which we're ignoring in this case
+    };
+    for (auto &extra : extra_qbsp_args) {
+        args.push_back(extra);
+    }
+    args.push_back(name.string());
+
+    // run qbsp
+
+    InitQBSP(args);
+    ProcessFile();
+
+    // run vis
+    if (run_vis) {
+        std::vector<std::string> vis_args{
+            "", // the exe path, which we're ignoring in this case
+        };
+        vis_args.push_back(name.string());
+        vis_main(vis_args);
+    }
+
+    // run light
+    {
+        std::vector<std::string> light_args{
+            "", // the exe path, which we're ignoring in this case
+        };
+        for (auto &arg : extra_light_args) {
+            light_args.push_back(arg);
+        }
+        light_args.push_back(name.string());
+
+        light_main(light_args);
+    }
+
+    // serialize obj
+    {
+        bspdata_t bspdata;
+        LoadBSPFile(bsp_path, &bspdata);
+
+        ConvertBSPFormat(&bspdata, &bspver_generic);
+
+        return std::move(bspdata);
+    }
+}
+
+void MainWindow::loadFileInternal(const QString &file)
+{
+    qDebug() << "loadFileInternal " << file;
+
+    auto d = QbspVisLight_Common(MakeFSPath(file), {}, {}, true);
+
+    const auto &bsp = std::get<mbsp_t>(d.bsp);
+
+    glView->renderBSP(bsp);
 }

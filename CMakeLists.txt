@@ -102,16 +102,16 @@ add_subdirectory(common)
 add_subdirectory(bspinfo)
 add_subdirectory(bsputil)
 add_subdirectory(light)
-
-if (ENABLE_LIGHTPREVIEW)
-	add_subdirectory(lightpreview)
-endif ()
-
 add_subdirectory(qbsp)
 add_subdirectory(vis)
 
 option(DISABLE_TESTS "Disables Tests" OFF)
 option(DISABLE_DOCS "Disables Docs" OFF)
+option(ENABLE_LIGHTPREVIEW "Enable light preview tool" OFF)
+
+if (ENABLE_LIGHTPREVIEW)
+	add_subdirectory(lightpreview)
+endif ()
 
 if(NOT DISABLE_TESTS)
 	# just creates testmaps.hh with absolute path to the testmaps source directory.

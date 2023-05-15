@@ -28,6 +28,8 @@ See file, 'COPYING', for details.
 #include <QTime>
 #include <fmt/core.h>
 
+#include <common/bspfile.hh>
+
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
       m_keysPressed(0),
@@ -236,3 +238,5 @@ void GLView::timerEvent(QTimerEvent *event)
 
     update(); // schedule a repaint
 }
+
+void GLView::renderBSP(const mbsp_t &bsp) { }

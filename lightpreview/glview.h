@@ -38,6 +38,8 @@ enum class keys_t : uint32_t
     left = 8
 };
 
+struct mbsp_t;
+
 class GLView : public QOpenGLWidget, protected QOpenGLFunctions
 {
 private:
@@ -66,6 +68,8 @@ private:
 public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
+
+    void renderBSP(const mbsp_t &bsp);
 
 protected:
     void initializeGL() override;
