@@ -29,6 +29,7 @@ See file, 'COPYING', for details.
 #include <fmt/core.h>
 
 #include <common/bspfile.hh>
+#include <common/bsputils.hh>
 
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
@@ -39,6 +40,8 @@ GLView::GLView(QWidget *parent)
       m_cameraOrigin(0, 0, 0),
       m_cameraFwd(0, 1, 0),
       m_vao(),
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer),
+      m_indexCount(0),
       m_program(nullptr),
       m_program_mvp_location(0)
 {
@@ -47,7 +50,15 @@ GLView::GLView(QWidget *parent)
 
 GLView::~GLView()
 {
+    makeCurrent();
+
     delete m_program;
+
+    m_vbo.destroy();
+    m_indexBuffer.destroy();
+    m_vao.destroy();
+
+    doneCurrent();
 }
 
 static const char *s_fragShader = R"(
@@ -56,7 +67,7 @@ static const char *s_fragShader = R"(
 out vec4 color;
 
 void main() {
-    color = vec4(1.0, 0.5, 0.2, 1.0);
+    color = vec4(1.0, 0.5, 0.2, 0.2);
 }
 )";
 
@@ -88,31 +99,12 @@ void GLView::initializeGL()
     m_program_mvp_location = m_program->uniformLocation("MVP");
 
     m_vao.create();
-    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
-
-    m_vbo.create();
-    m_vbo.bind();
-
-    static const GLfloat g_vertex_buffer_data[] = {
-        -1.0f,
-        0,
-        -1.0f,
-        1.0f,
-        0,
-        -1.0f,
-        0.0f,
-        0,
-        1.0f,
-    };
-    assert(sizeof(g_vertex_buffer_data) == 36);
-
-    m_vbo.allocate(g_vertex_buffer_data, sizeof(g_vertex_buffer_data));
 }
 
 void GLView::paintGL()
 {
     // draw
-    glClearColor(1, 0, 0, 1);
+    glClearColor(0, 0, 0, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_program->bind();
@@ -120,23 +112,76 @@ void GLView::paintGL()
     QMatrix4x4 modelMatrix;
     QMatrix4x4 viewMatrix;
     QMatrix4x4 projectionMatrix;
-    projectionMatrix.perspective(90, m_displayAspect, 0.1f, 100.0f);
+    projectionMatrix.perspective(90, m_displayAspect, 0.01f, 1'000'000.0f);
     viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
 
     m_program->setUniformValue(m_program_mvp_location, MVP);
 
-    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+    if (m_indexCount > 0) {
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
-    glEnableVertexAttribArray(0);
-    assert(m_vbo.bind());
+        glEnableVertexAttribArray(0);
+        assert(m_vbo.bind());
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
-    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    glDisableVertexAttribArray(0);
+        assert(m_indexBuffer.bind());
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, (void *)0);
+
+        glDisable(GL_BLEND);
+
+        glDisableVertexAttribArray(0);
+    }
 
     m_program->release();
+}
+
+void GLView::renderBSP(const mbsp_t &bsp)
+{
+    // NOTE: according to https://doc.qt.io/qt-6/qopenglwidget.html#resource-initialization-and-cleanup
+    // we can only do this after `initializeGL()` has run once.
+    makeCurrent();
+
+    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+
+    // just upload the bsp.dvertexes data as-is
+    m_vbo.create();
+    m_vbo.bind();
+    m_vbo.allocate(bsp.dvertexes.data(), bsp.dvertexes.size() * sizeof(bsp.dvertexes[0]));
+
+    // populate index buffer
+    std::vector<uint32_t> indexBuffer;
+    auto &m = bsp.dmodels[0];
+
+    for (int i = m.firstface; i < m.firstface + m.numfaces; ++i) {
+        auto &f = bsp.dfaces[i];
+
+        if (f.numedges < 3)
+            continue;
+
+        for (int j = 2; j < f.numedges; ++j) {
+            indexBuffer.push_back(Face_VertexAtIndex(&bsp, &f, 0));
+            indexBuffer.push_back(Face_VertexAtIndex(&bsp, &f, j - 1));
+            indexBuffer.push_back(Face_VertexAtIndex(&bsp, &f, j));
+        }
+    }
+
+    // upload index buffer
+    m_indexBuffer.create();
+    m_indexBuffer.bind();
+    m_indexBuffer.allocate(indexBuffer.data(), indexBuffer.size() * sizeof(indexBuffer[0]));
+
+    m_indexCount = indexBuffer.size();
+
+    doneCurrent();
+
+    // schedule repaint
+    update();
 }
 
 void GLView::resizeGL(int width, int height)
@@ -225,7 +270,7 @@ void GLView::timerEvent(QTimerEvent *event)
 {
     fmt::print("key movement {}\n", QTime::currentTime().toString().toStdString());
 
-    const float speed = 0.1;
+    const float speed = 10;
 
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))
         m_cameraOrigin += m_cameraFwd * speed;
@@ -238,5 +283,3 @@ void GLView::timerEvent(QTimerEvent *event)
 
     update(); // schedule a repaint
 }
-
-void GLView::renderBSP(const mbsp_t &bsp) { }

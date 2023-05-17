@@ -60,6 +60,9 @@ private:
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
+    QOpenGLBuffer m_indexBuffer;
+    int m_indexCount;
+
     QOpenGLShaderProgram *m_program;
 
     // uniform locations
