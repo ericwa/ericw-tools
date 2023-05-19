@@ -84,6 +84,9 @@ struct texture
 
 extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
 
+// clears the texture cache
+void clear();
+
 qvec3b calculate_average(const std::vector<qvec4b> &pixels);
 
 const texture *find(const std::string_view &str);

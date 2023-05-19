@@ -771,6 +771,7 @@ public:
 
     void init_filesystem(const fs::path &map_or_bsp, const settings::common_settings &options) const override
     {
+        img::clear();
         // Q1-like games don't care about the local
         // filesystem.
         // they do care about the palette though.
@@ -1454,6 +1455,7 @@ public:
 
     void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
     {
+        img::clear();
         fs::clear();
 
         if (options.defaultpaths.value()) {
@@ -2232,7 +2234,7 @@ static bool isHexen2(const dheader_t *header, const bspversion_t *bspversion)
 
     // assume H2, and do some basic validation
     // FIXME: this potentially does unaligned reads, convert to using streams like the rest of the loading code
-    
+
     const dmodelh2_t *models_h2 = (const dmodelh2_t *)((const uint8_t *)header + header->lumps[LUMP_MODELS].fileofs);
     const int models_h2_count = header->lumps[LUMP_MODELS].filelen / sizeof(dmodelh2_t);
 

@@ -457,6 +457,11 @@ const texture *find(const std::string_view &str)
     return &it->second;
 }
 
+void clear()
+{
+    textures.clear();
+}
+
 qvec3b calculate_average(const std::vector<qvec4b> &pixels)
 {
     qvec3d avg{};
