@@ -141,4 +141,7 @@ constexpr struct
 // Attempt to load a texture meta from the specified name.
 std::tuple<std::optional<texture_meta>, fs::resolve_result, fs::data> load_texture_meta(
     const std::string_view &name, const gamedef_t *game, const settings::common_settings &options);
+
+// Loads textures referenced by the bsp into the texture cache.
+void load_textures(const mbsp_t *bsp, const settings::common_settings &options);
 }; // namespace img
