@@ -139,7 +139,7 @@ void MainWindow::loadFileInternal(const QString &file)
 {
     qDebug() << "loadFileInternal " << file;
 
-    auto d = QbspVisLight_Common(MakeFSPath(file), {}, {}, true);
+    auto d = QbspVisLight_Common(MakeFSPath(file), {}, {}, false);
 
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 

@@ -22,6 +22,7 @@ See file, 'COPYING', for details.
 // #include <cstdio>
 #include <cassert>
 
+#include <QImage>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QKeyEvent>
@@ -30,6 +31,8 @@ See file, 'COPYING', for details.
 
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
+#include <common/imglib.hh>
+#include <light/light.hh>
 
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
@@ -41,9 +44,9 @@ GLView::GLView(QWidget *parent)
       m_cameraFwd(0, 1, 0),
       m_vao(),
       m_indexBuffer(QOpenGLBuffer::IndexBuffer),
-      m_indexCount(0),
       m_program(nullptr),
-      m_program_mvp_location(0)
+      m_program_mvp_location(0),
+      m_program_texture_sampler_location(0)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
@@ -64,10 +67,14 @@ GLView::~GLView()
 static const char *s_fragShader = R"(
 #version 330 core
 
+in vec2 uv;
+
 out vec4 color;
 
+uniform sampler2D texture_sampler;
+
 void main() {
-    color = vec4(1.0, 0.5, 0.2, 0.2);
+    color = vec4(texture(texture_sampler, uv).rgb, 1.0);
 }
 )";
 
@@ -75,11 +82,16 @@ static const char *s_vertShader = R"(
 #version 330 core
 
 layout (location = 0) in vec3 position;
+layout (location = 1) in vec2 vertex_uv;
+
+out vec2 uv;
 
 uniform mat4 MVP;
 
 void main() {
     gl_Position = MVP * vec4(position.x, position.y, position.z, 1.0);
+
+    uv = vertex_uv;
 }
 )";
 
@@ -92,12 +104,11 @@ void GLView::initializeGL()
     m_program = new QOpenGLShaderProgram();
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader);
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader);
-    m_program->bindAttributeLocation("vertex", 0);
     assert(m_program->link());
 
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");
-
+    m_program_texture_sampler_location = m_program->uniformLocation("texture_sampler");
     m_vao.create();
 }
 
@@ -118,24 +129,20 @@ void GLView::paintGL()
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
 
     m_program->setUniformValue(m_program_mvp_location, MVP);
+    m_program->setUniformValue(m_program_texture_sampler_location, 0 /* texture unit */);
 
-    if (m_indexCount > 0) {
+    for (auto &draw : m_drawcalls) {
+        draw.texture->bind(0 /* texture unit */);
+
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
-        glEnableVertexAttribArray(0);
-        assert(m_vbo.bind());
-        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+        // glEnable(GL_BLEND);
+        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        assert(m_indexBuffer.bind());
+        glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
+            reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
 
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-        glDrawElements(GL_TRIANGLES, m_indexCount, GL_UNSIGNED_INT, (void *)0);
-
-        glDisable(GL_BLEND);
-
-        glDisableVertexAttribArray(0);
+        // glDisable(GL_BLEND);
     }
 
     m_program->release();
@@ -143,40 +150,104 @@ void GLView::paintGL()
 
 void GLView::renderBSP(const mbsp_t &bsp)
 {
+    // FIXME: move to a lightpreview_settings
+    settings::common_settings settings;
+
+    bsp.loadversion->game->init_filesystem("placeholder.map", settings);
+    img::load_textures(&bsp, settings);
+
     // NOTE: according to https://doc.qt.io/qt-6/qopenglwidget.html#resource-initialization-and-cleanup
     // we can only do this after `initializeGL()` has run once.
     makeCurrent();
 
-    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
-
-    // just upload the bsp.dvertexes data as-is
-    m_vbo.create();
-    m_vbo.bind();
-    m_vbo.allocate(bsp.dvertexes.data(), bsp.dvertexes.size() * sizeof(bsp.dvertexes[0]));
-
-    // populate index buffer
-    std::vector<uint32_t> indexBuffer;
     auto &m = bsp.dmodels[0];
+
+    // collect faces grouped by texture name
+    std::map<std::string, std::vector<const mface_t *>> faces_by_texname;
 
     for (int i = m.firstface; i < m.firstface + m.numfaces; ++i) {
         auto &f = bsp.dfaces[i];
-
+        std::string t = Face_TextureName(&bsp, &f);
+        // FIXME: keep empty texture names?
+        if (t.empty())
+            continue;
         if (f.numedges < 3)
             continue;
-
-        for (int j = 2; j < f.numedges; ++j) {
-            indexBuffer.push_back(Face_VertexAtIndex(&bsp, &f, 0));
-            indexBuffer.push_back(Face_VertexAtIndex(&bsp, &f, j - 1));
-            indexBuffer.push_back(Face_VertexAtIndex(&bsp, &f, j));
-        }
+        faces_by_texname[t].push_back(&f);
     }
+
+    // populate the vertex/index buffers
+    struct vertex_t
+    {
+        qvec3f pos;
+        qvec2f uv;
+    };
+    std::vector<vertex_t> verts;
+    std::vector<uint32_t> indexBuffer;
+
+    for (const auto &[texname, faces] : faces_by_texname) {
+        // upload texture
+        // FIXME: we should have a separate lightpreview_options
+        auto *texture = img::find(texname);
+
+        if (!texture) {
+            logging::print("warning, couldn't locate {}", texname);
+            continue;
+        }
+
+        std::unique_ptr<QOpenGLTexture> qtexture =
+            std::make_unique<QOpenGLTexture>(QImage(reinterpret_cast<const uint8_t *>(texture->pixels.data()),
+                texture->width, texture->height, QImage::Format_RGBA8888));
+
+        const size_t dc_first_index = indexBuffer.size();
+
+        for (const mface_t *f : faces) {
+            const size_t first_vertex_of_face = verts.size();
+
+            // output a vertex for each vertex of the face
+            for (int j = 0; j < f->numedges; ++j) {
+                qvec3f pos = Face_PointAtIndex(&bsp, f, j);
+                qvec2f uv = Face_WorldToTexCoord(&bsp, f, pos);
+
+                uv[0] *= (1.0 / texture->width);
+                uv[1] *= (1.0 / texture->height);
+
+                verts.push_back({.pos = pos, .uv = uv});
+            }
+
+            // output the vertex indices for this face
+            for (int j = 2; j < f->numedges; ++j) {
+                indexBuffer.push_back(first_vertex_of_face);
+                indexBuffer.push_back(first_vertex_of_face + j - 1);
+                indexBuffer.push_back(first_vertex_of_face + j);
+            }
+        }
+
+        const size_t dc_index_count = indexBuffer.size() - dc_first_index;
+
+        drawcall_t dc = {.texture = std::move(qtexture), .first_index = dc_first_index, .index_count = dc_index_count};
+        m_drawcalls.push_back(std::move(dc));
+    }
+
+    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
     // upload index buffer
     m_indexBuffer.create();
     m_indexBuffer.bind();
     m_indexBuffer.allocate(indexBuffer.data(), indexBuffer.size() * sizeof(indexBuffer[0]));
 
-    m_indexCount = indexBuffer.size();
+    // upload vertex buffer
+    m_vbo.create();
+    m_vbo.bind();
+    m_vbo.allocate(verts.data(), verts.size() * sizeof(verts[0]));
+
+    // positions
+    glEnableVertexAttribArray(0 /* attrib */);
+    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+
+    // normals
+    glEnableVertexAttribArray(1 /* attrib */);
+    glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
 
     doneCurrent();
 
@@ -268,8 +339,6 @@ void GLView::wheelEvent(QWheelEvent *event)
 
 void GLView::timerEvent(QTimerEvent *event)
 {
-    fmt::print("key movement {}\n", QTime::currentTime().toString().toStdString());
-
     const float speed = 10;
 
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))

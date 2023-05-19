@@ -24,10 +24,12 @@ See file, 'COPYING', for details.
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
-
+#include <QOpenGLTexture>
 #include <QElapsedTimer>
 #include <QVector3D>
 #include <QMatrix4x4>
+
+#include <vector>
 
 enum class keys_t : uint32_t
 {
@@ -61,12 +63,20 @@ private:
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
     QOpenGLBuffer m_indexBuffer;
-    int m_indexCount;
+
+    struct drawcall_t
+    {
+        std::unique_ptr<QOpenGLTexture> texture;
+        size_t first_index = 0;
+        size_t index_count = 0;
+    };
+    std::vector<drawcall_t> m_drawcalls;
 
     QOpenGLShaderProgram *m_program;
 
     // uniform locations
     int m_program_mvp_location;
+    int m_program_texture_sampler_location;
 
 public:
     GLView(QWidget *parent = nullptr);
