@@ -64,6 +64,7 @@ private:
     QOpenGLBuffer m_vbo;
     QOpenGLBuffer m_indexBuffer;
 
+    std::unique_ptr<QOpenGLTexture> lightmap_texture;
     struct drawcall_t
     {
         std::unique_ptr<QOpenGLTexture> texture;
@@ -77,6 +78,7 @@ private:
     // uniform locations
     int m_program_mvp_location;
     int m_program_texture_sampler_location;
+    int m_program_lightmap_sampler_location;
 
 public:
     GLView(QWidget *parent = nullptr);

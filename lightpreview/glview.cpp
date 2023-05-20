@@ -31,6 +31,7 @@ See file, 'COPYING', for details.
 
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
+#include <common/bspinfo.hh>
 #include <common/imglib.hh>
 #include <light/light.hh>
 
@@ -46,7 +47,8 @@ GLView::GLView(QWidget *parent)
       m_indexBuffer(QOpenGLBuffer::IndexBuffer),
       m_program(nullptr),
       m_program_mvp_location(0),
-      m_program_texture_sampler_location(0)
+      m_program_texture_sampler_location(0),
+      m_program_lightmap_sampler_location(0)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
@@ -68,13 +70,18 @@ static const char *s_fragShader = R"(
 #version 330 core
 
 in vec2 uv;
+in vec2 lightmap_uv;
 
 out vec4 color;
 
 uniform sampler2D texture_sampler;
+uniform sampler2D lightmap_sampler;
 
 void main() {
-    color = vec4(texture(texture_sampler, uv).rgb, 1.0);
+    vec3 texcolor = texture(texture_sampler, uv).rgb;
+    vec3 lmcolor = texture(lightmap_sampler, lightmap_uv).rgb;
+
+    color = vec4(texcolor * lmcolor, 1.0);
 }
 )";
 
@@ -83,8 +90,10 @@ static const char *s_vertShader = R"(
 
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec2 vertex_uv;
+layout (location = 2) in vec2 vertex_lightmap_uv;
 
 out vec2 uv;
+out vec2 lightmap_uv;
 
 uniform mat4 MVP;
 
@@ -92,6 +101,7 @@ void main() {
     gl_Position = MVP * vec4(position.x, position.y, position.z, 1.0);
 
     uv = vertex_uv;
+    lightmap_uv =  vertex_lightmap_uv;
 }
 )";
 
@@ -109,6 +119,7 @@ void GLView::initializeGL()
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");
     m_program_texture_sampler_location = m_program->uniformLocation("texture_sampler");
+    m_program_lightmap_sampler_location = m_program->uniformLocation("lightmap_sampler");
     m_vao.create();
 
     glEnable(GL_DEPTH_TEST);
@@ -134,9 +145,11 @@ void GLView::paintGL()
 
     m_program->setUniformValue(m_program_mvp_location, MVP);
     m_program->setUniformValue(m_program_texture_sampler_location, 0 /* texture unit */);
+    m_program->setUniformValue(m_program_lightmap_sampler_location, 1 /* texture unit */);
 
     for (auto &draw : m_drawcalls) {
         draw.texture->bind(0 /* texture unit */);
+        lightmap_texture->bind(1 /* texture unit */);
 
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
@@ -160,9 +173,21 @@ void GLView::renderBSP(const mbsp_t &bsp)
     bsp.loadversion->game->init_filesystem("placeholder.map", settings);
     img::load_textures(&bsp, settings);
 
+    // build lightmap atlas
+    auto atlas = build_lightmap_atlas(bsp, bspxentries_t{}, false, false);
+
     // NOTE: according to https://doc.qt.io/qt-6/qopenglwidget.html#resource-initialization-and-cleanup
     // we can only do this after `initializeGL()` has run once.
     makeCurrent();
+
+    // upload lightmap atlas
+    {
+        const auto &lm_tex = atlas.style_to_lightmap_atlas.at(0);
+
+        lightmap_texture =
+            std::make_unique<QOpenGLTexture>(QImage(reinterpret_cast<const uint8_t *>(lm_tex.pixels.data()),
+                lm_tex.width, lm_tex.height, QImage::Format_RGBA8888));
+    }
 
     auto &m = bsp.dmodels[0];
 
@@ -185,6 +210,7 @@ void GLView::renderBSP(const mbsp_t &bsp)
     {
         qvec3f pos;
         qvec2f uv;
+        qvec2f lightmap_uv;
     };
     std::vector<vertex_t> verts;
     std::vector<uint32_t> indexBuffer;
@@ -208,6 +234,8 @@ void GLView::renderBSP(const mbsp_t &bsp)
         for (const mface_t *f : faces) {
             const size_t first_vertex_of_face = verts.size();
 
+            const auto lm_uvs = atlas.facenum_to_lightmap_uvs.at(Face_GetNum(&bsp, f));
+
             // output a vertex for each vertex of the face
             for (int j = 0; j < f->numedges; ++j) {
                 qvec3f pos = Face_PointAtIndex(&bsp, f, j);
@@ -216,7 +244,9 @@ void GLView::renderBSP(const mbsp_t &bsp)
                 uv[0] *= (1.0 / texture->width);
                 uv[1] *= (1.0 / texture->height);
 
-                verts.push_back({.pos = pos, .uv = uv});
+                qvec2f lightmap_uv = lm_uvs.at(j);
+
+                verts.push_back({.pos = pos, .uv = uv, .lightmap_uv = lightmap_uv});
             }
 
             // output the vertex indices for this face
@@ -247,11 +277,15 @@ void GLView::renderBSP(const mbsp_t &bsp)
 
     // positions
     glEnableVertexAttribArray(0 /* attrib */);
-    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)0);
 
     // normals
     glEnableVertexAttribArray(1 /* attrib */);
-    glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)(3 * sizeof(float)));
+
+    // lightmap uvs
+    glEnableVertexAttribArray(2 /* attrib */);
+    glVertexAttribPointer(2 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)(5 * sizeof(float)));
 
     doneCurrent();
 
