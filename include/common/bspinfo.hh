@@ -20,8 +20,27 @@
 #pragma once
 
 #include "common/fs.hh"
+#include "common/bsputils.hh"
+#include "common/imglib.hh"
+#include "common/qvec.hh"
+
+#include <map>
+#include <vector>
 
 struct bspdata_t;
 struct mbsp_t;
+struct mface_t;
+
+struct full_atlas_t
+{
+    /**
+     * these are normalized to 0..1
+     */
+    std::map<int, std::vector<qvec2f>> facenum_to_lightmap_uvs;
+
+    std::map<int, img::texture> style_to_lightmap_atlas;
+};
+
+full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled);
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name);

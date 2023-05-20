@@ -235,8 +235,7 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
         (float)nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()])};
 }
 
-static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled,
-    fs::path obj_path, fs::path lightmaps_path)
+full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled)
 {
     struct face_rect
     {
@@ -306,7 +305,7 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
     }
 
     if (!rectangles.size()) {
-        return;
+        return {};
     }
 
     // sort faces
@@ -383,6 +382,8 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
     full_atlas.height = full_atlas.meta.height = trimmed_height;
     full_atlas.pixels.resize(full_atlas.width * full_atlas.height);
 
+    full_atlas_t result;
+
     // compile all of the styles that are available
     // TODO: LMSTYLE16
     for (size_t i = 0; i < INVALID_LIGHTSTYLE_OLD - 1; i++) {
@@ -434,27 +435,18 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             continue;
         }
 
-        lightmaps_path.replace_filename(lightmaps_path.stem().string() + "_" + std::to_string(i) + ".png");
-        std::ofstream strm(lightmaps_path, std::ofstream::out | std::ofstream::binary);
-        stbi_write_png_to_func(
-            [](void *context, void *data, int size) {
-                std::ofstream &strm = *((std::ofstream *)context);
-                strm.write((const char *)data, size);
-            },
-            &strm, full_atlas.width, full_atlas.height, 4, full_atlas.pixels.data(), full_atlas.width * 4);
-        memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
+        // copy out the atlas texture
+        result.style_to_lightmap_atlas[i] = full_atlas;
 
-        logging::print("wrote {}\n", lightmaps_path);
+        memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
     }
 
-    auto ExportObjFace = [&full_atlas](std::ostream &f, const mbsp_t *bsp, const face_rect &face, int &vertcount) {
-        // export the vertices and uvs
+    auto ExportLightmapUVs = [&full_atlas, &result](const mbsp_t *bsp, const face_rect &face) {
+        std::vector<qvec2f> face_lightmap_uvs;
+
         for (int i = 0; i < face.face->numedges; i++) {
             const int vertnum = Face_VertexAtIndex(bsp, face.face, i);
-            const qvec3f normal = bsp->dplanes[face.face->planenum].normal;
             const qvec3f &pos = bsp->dvertexes[vertnum];
-            fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
-            fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
 
             auto tc = face.extents.worldToLMCoord(pos);
             tc[0] += face.x;
@@ -467,29 +459,79 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             tc[0] /= full_atlas.width;
             tc[1] /= full_atlas.height;
 
+            face_lightmap_uvs.push_back(tc);
+        }
+
+        result.facenum_to_lightmap_uvs[Face_GetNum(bsp, face.face)] = std::move(face_lightmap_uvs);
+    };
+
+    for (auto &rect : rectangles) {
+        ExportLightmapUVs(&bsp, rect);
+    }
+    
+    return result;
+}
+
+static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled,
+    fs::path obj_path, fs::path lightmaps_path)
+{
+    const auto atlas = build_lightmap_atlas(bsp, bspx, use_bspx, use_decoupled);
+
+    if (atlas.facenum_to_lightmap_uvs.empty()) {
+        return;
+    }
+
+    // write .png's, one per style
+    for (const auto &[i, full_atlas] : atlas.style_to_lightmap_atlas) {
+        lightmaps_path.replace_filename(lightmaps_path.stem().string() + "_" + std::to_string(i) + ".png");
+        std::ofstream strm(lightmaps_path, std::ofstream::out | std::ofstream::binary);
+        stbi_write_png_to_func(
+            [](void *context, void *data, int size) {
+                std::ofstream &strm = *((std::ofstream *)context);
+                strm.write((const char *)data, size);
+            },
+            &strm, full_atlas.width, full_atlas.height, 4, full_atlas.pixels.data(), full_atlas.width * 4);
+        logging::print("wrote {}\n", lightmaps_path);
+    }
+
+    auto ExportObjFace = [&atlas](std::ostream &f, const mbsp_t *bsp, int face_num, int &vertcount) {
+        const auto *face = BSP_GetFace(bsp, face_num);
+
+        const auto &tcs = atlas.facenum_to_lightmap_uvs.at(face_num);
+
+        // export the vertices and uvs
+        for (int i = 0; i < face->numedges; i++) {
+            const int vertnum = Face_VertexAtIndex(bsp, face, i);
+            const qvec3f normal = bsp->dplanes[face->planenum].normal;
+            const qvec3f &pos = bsp->dvertexes[vertnum];
+            fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
+            fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
+
+            qvec2f tc = tcs[i];
+
             tc[1] = 1.0 - tc[1];
 
             fmt::print(f, "vt {:.9} {:.9}\n", tc[0], tc[1]);
         }
 
         f << "f";
-        for (int i = 0; i < face.face->numedges; i++) {
+        for (int i = 0; i < face->numedges; i++) {
             // .obj vertexes start from 1
             // .obj faces are CCW, quake is CW, so reverse the order
-            const int vertindex = vertcount + (face.face->numedges - 1 - i) + 1;
+            const int vertindex = vertcount + (face->numedges - 1 - i) + 1;
             fmt::print(f, " {0}/{0}/{0}", vertindex);
         }
         f << '\n';
 
-        vertcount += face.face->numedges;
+        vertcount += face->numedges;
     };
 
-    auto ExportObj = [&ExportObjFace, &rectangles, &obj_path](const mbsp_t *bsp) {
+    auto ExportObj = [&ExportObjFace, &obj_path](const mbsp_t *bsp) {
         std::ofstream objstream(obj_path, std::ofstream::out);
         int vertcount = 0;
 
-        for (auto &rect : rectangles) {
-            ExportObjFace(objstream, bsp, rect, vertcount);
+        for (int i = 0; i < bsp->dfaces.size(); ++i) {
+            ExportObjFace(objstream, bsp, i, vertcount);
         }
     };
 
