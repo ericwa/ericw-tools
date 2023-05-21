@@ -84,7 +84,7 @@ public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
 
-    void renderBSP(const mbsp_t &bsp);
+    void renderBSP(const QString &file, const mbsp_t &bsp);
 
 protected:
     void initializeGL() override;

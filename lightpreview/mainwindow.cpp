@@ -23,6 +23,10 @@ See file, 'COPYING', for details.
 #include <QMimeData>
 #include <QFileSystemWatcher>
 #include <QFileInfo>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QSplitter>
+#include <QCheckBox>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -35,9 +39,33 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     resize(640, 480);
-    glView = new GLView();
-    this->setCentralWidget(glView);
 
+    // gl view
+    glView = new GLView();
+
+    // properties form
+    auto *formLayout = new QFormLayout();
+
+    vis_checkbox = new QCheckBox(tr("vis"));
+
+    qbsp_options = new QLineEdit();
+    vis_options = new QLineEdit();
+    light_options = new QLineEdit();
+
+    formLayout->addRow(tr("qbsp"), qbsp_options);
+    formLayout->addRow(vis_checkbox, vis_options);
+    formLayout->addRow(tr("light"), light_options);
+
+    auto *form = new QWidget();
+    form->setLayout(formLayout);
+
+    // splitter
+
+    auto *splitter = new QSplitter();
+    splitter->addWidget(form);
+    splitter->addWidget(glView);
+
+    setCentralWidget(splitter);
     setAcceptDrops(true);
 }
 
@@ -92,7 +120,7 @@ std::filesystem::path MakeFSPath(const QString &string)
 }
 
 static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
-    std::vector<std::string> extra_light_args, bool run_vis)
+    std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
 {
     auto bsp_path = name;
     bsp_path.replace_extension(".bsp");
@@ -115,6 +143,9 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
         std::vector<std::string> vis_args{
             "", // the exe path, which we're ignoring in this case
         };
+        for (auto &extra : extra_vis_args) {
+            vis_args.push_back(extra);
+        }
         vis_args.push_back(name.string());
         vis_main(vis_args);
     }
@@ -143,13 +174,30 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
     }
 }
 
+static std::vector<std::string> ParseArgs(const QLineEdit *line_edit)
+{
+    std::vector<std::string> result;
+
+    QString text = line_edit->text().trimmed();
+    if (text.isEmpty())
+        return result;
+
+    for (const auto &str : text.split(' ')) {
+        qDebug() << "got token " << str;
+        result.push_back(str.toStdString());
+    }
+
+    return result;
+}
+
 void MainWindow::loadFileInternal(const QString &file)
 {
     qDebug() << "loadFileInternal " << file;
 
-    auto d = QbspVisLight_Common(MakeFSPath(file), {}, {}, false);
+    auto d = QbspVisLight_Common(MakeFSPath(file), ParseArgs(qbsp_options), ParseArgs(vis_options),
+        ParseArgs(light_options), vis_checkbox->isChecked());
 
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 
-    glView->renderBSP(bsp);
+    glView->renderBSP(file, bsp);
 }

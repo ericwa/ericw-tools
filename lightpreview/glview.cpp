@@ -169,12 +169,12 @@ void GLView::paintGL()
     m_program->release();
 }
 
-void GLView::renderBSP(const mbsp_t &bsp)
+void GLView::renderBSP(const QString &file, const mbsp_t &bsp)
 {
     // FIXME: move to a lightpreview_settings
     settings::common_settings settings;
 
-    bsp.loadversion->game->init_filesystem("placeholder.map", settings);
+    bsp.loadversion->game->init_filesystem(file.toStdString(), settings);
     img::load_textures(&bsp, settings);
 
     // build lightmap atlas

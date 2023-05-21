@@ -23,6 +23,8 @@ See file, 'COPYING', for details.
 
 class GLView;
 class QFileSystemWatcher;
+class QLineEdit;
+class QCheckBox;
 
 class MainWindow : public QMainWindow
 {
@@ -46,4 +48,10 @@ private:
 
 private:
     GLView *glView;
+
+    QCheckBox *vis_checkbox;
+
+    QLineEdit *qbsp_options;
+    QLineEdit *vis_options;
+    QLineEdit *light_options;
 };
