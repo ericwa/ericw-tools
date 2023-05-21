@@ -40,6 +40,7 @@ GLView::GLView(QWidget *parent)
       m_keysPressed(0),
       m_keymoveUpdateTimer(0),
       m_lastMouseDownPos(0, 0),
+      m_moveSpeed(1000),
       m_displayAspect(1),
       m_cameraOrigin(0, 0, 0),
       m_cameraFwd(0, 1, 0),
@@ -318,6 +319,9 @@ void GLView::mousePressEvent(QMouseEvent *event)
 
 void GLView::mouseMoveEvent(QMouseEvent *event)
 {
+    if (!(event->buttons() & Qt::RightButton))
+        return;
+
     QPointF delta = event->screenPos() - m_lastMouseDownPos;
     m_lastMouseDownPos = event->screenPos();
 
@@ -352,7 +356,7 @@ void GLView::startMovementTimer()
         return;
 
     m_lastKeymoveFrame = I_FloatTime();
-    m_keymoveUpdateTimer = startTimer(1); // repaint timer, calls timerEvent()
+    m_keymoveUpdateTimer = startTimer(1, Qt::PreciseTimer); // repaint timer, calls timerEvent()
 }
 
 void GLView::stopMovementTimer()
@@ -384,9 +388,13 @@ void GLView::keyReleaseEvent(QKeyEvent *event)
 
 void GLView::wheelEvent(QWheelEvent *event)
 {
-    static float speed = 0.02;
-    m_cameraOrigin += m_cameraFwd * event->angleDelta().y() * speed;
-    update();
+    if (!(event->buttons() & Qt::RightButton))
+        return;
+
+    double delta = event->angleDelta().y();
+
+    m_moveSpeed += delta;
+    m_moveSpeed = clamp(m_moveSpeed, 10.0f, 5000.0f);
 }
 
 void GLView::timerEvent(QTimerEvent *event)
@@ -398,7 +406,7 @@ void GLView::timerEvent(QTimerEvent *event)
 
     // qDebug() << "timer event: duration: " << duration.count();
 
-    const float distance = 1000 * duration.count();
+    const float distance = m_moveSpeed * duration.count();
 
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))
         m_cameraOrigin += m_cameraFwd * distance;

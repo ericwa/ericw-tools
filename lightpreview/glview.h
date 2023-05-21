@@ -51,6 +51,10 @@ private:
     int m_keymoveUpdateTimer;
     time_point m_lastKeymoveFrame;
     QPointF m_lastMouseDownPos;
+    /**
+     * units / second
+     */
+    float m_moveSpeed;
 
     // camera stuff
     float m_displayAspect;
