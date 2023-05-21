@@ -332,7 +332,7 @@ void GLView::mouseMoveEvent(QMouseEvent *event)
     // now rotate m_cameraFwd and m_cameraUp by mouseRotation
     m_cameraFwd = mouseRotation * m_cameraFwd;
 
-    repaint();
+    update();
 }
 
 static keys_t Qt_Key_To_keys_t(int key)
@@ -351,7 +351,8 @@ void GLView::startMovementTimer()
     if (m_keymoveUpdateTimer)
         return;
 
-    m_keymoveUpdateTimer = startTimer(10); // repaint timer, calls timerEvent()
+    m_lastKeymoveFrame = I_FloatTime();
+    m_keymoveUpdateTimer = startTimer(1); // repaint timer, calls timerEvent()
 }
 
 void GLView::stopMovementTimer()
@@ -390,16 +391,23 @@ void GLView::wheelEvent(QWheelEvent *event)
 
 void GLView::timerEvent(QTimerEvent *event)
 {
-    const float speed = 10;
+    // update frame time
+    auto current_time = I_FloatTime();
+    auto duration = current_time - m_lastKeymoveFrame;
+    m_lastKeymoveFrame = current_time;
+
+    // qDebug() << "timer event: duration: " << duration.count();
+
+    const float distance = 1000 * duration.count();
 
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))
-        m_cameraOrigin += m_cameraFwd * speed;
+        m_cameraOrigin += m_cameraFwd * distance;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::down))
-        m_cameraOrigin -= m_cameraFwd * speed;
+        m_cameraOrigin -= m_cameraFwd * distance;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::left))
-        m_cameraOrigin -= cameraRight() * speed;
+        m_cameraOrigin -= cameraRight() * distance;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::right))
-        m_cameraOrigin += cameraRight() * speed;
+        m_cameraOrigin += cameraRight() * distance;
 
     update(); // schedule a repaint
 }

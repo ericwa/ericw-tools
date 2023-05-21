@@ -31,6 +31,8 @@ See file, 'COPYING', for details.
 
 #include <vector>
 
+#include <common/cmdlib.hh>
+
 enum class keys_t : uint32_t
 {
     none = 0,
@@ -47,6 +49,7 @@ class GLView : public QOpenGLWidget, protected QOpenGLFunctions
 private:
     uint32_t m_keysPressed;
     int m_keymoveUpdateTimer;
+    time_point m_lastKeymoveFrame;
     QPointF m_lastMouseDownPos;
 
     // camera stuff
