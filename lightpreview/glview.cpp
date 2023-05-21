@@ -63,6 +63,9 @@ GLView::~GLView()
     m_indexBuffer.destroy();
     m_vao.destroy();
 
+    lightmap_texture.reset();
+    m_drawcalls.clear();
+
     doneCurrent();
 }
 
@@ -180,6 +183,12 @@ void GLView::renderBSP(const mbsp_t &bsp)
     // we can only do this after `initializeGL()` has run once.
     makeCurrent();
 
+    // clear old data
+    lightmap_texture.reset();
+    m_drawcalls.clear();
+    m_vbo.allocate(0);
+    m_indexBuffer.allocate(0);
+    
     // upload lightmap atlas
     {
         const auto &lm_tex = atlas.style_to_lightmap_atlas.at(0);
