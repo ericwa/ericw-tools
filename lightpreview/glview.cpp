@@ -84,7 +84,8 @@ void main() {
     vec3 texcolor = texture(texture_sampler, uv).rgb;
     vec3 lmcolor = texture(lightmap_sampler, lightmap_uv).rgb;
 
-    color = vec4(texcolor * lmcolor, 1.0);
+    // 2.0 for overbright
+    color = vec4(texcolor * lmcolor * 2.0, 1.0);
 }
 )";
 
@@ -188,7 +189,7 @@ void GLView::renderBSP(const mbsp_t &bsp)
     m_drawcalls.clear();
     m_vbo.allocate(0);
     m_indexBuffer.allocate(0);
-    
+
     // upload lightmap atlas
     {
         const auto &lm_tex = atlas.style_to_lightmap_atlas.at(0);
