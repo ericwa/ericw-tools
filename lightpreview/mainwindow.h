@@ -43,6 +43,7 @@ protected:
     void dropEvent(QDropEvent *event) override;
 
 private:
+    void reload();
     void loadFile(const QString &file);
     void loadFileInternal(const QString &file);
 

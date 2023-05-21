@@ -28,6 +28,7 @@ See file, 'COPYING', for details.
 #include <QLineEdit>
 #include <QSplitter>
 #include <QCheckBox>
+#include <QPushButton>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -52,10 +53,12 @@ MainWindow::MainWindow(QWidget *parent)
     qbsp_options = new QLineEdit();
     vis_options = new QLineEdit();
     light_options = new QLineEdit();
+    auto *reload_button = new QPushButton(tr("Reload"));
 
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
+    formLayout->addRow(reload_button);
 
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -68,6 +71,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(splitter);
     setAcceptDrops(true);
+
+    // setup event handlers
+
+    connect(reload_button, &QAbstractButton::clicked, this, &MainWindow::reload);
 }
 
 MainWindow::~MainWindow() { }
@@ -94,6 +101,8 @@ void MainWindow::dropEvent(QDropEvent *event)
 void MainWindow::loadFile(const QString &file)
 {
     qDebug() << "load " << file;
+
+    m_mapFile = file;
 
     if (m_watcher) {
         delete m_watcher;
@@ -203,14 +212,20 @@ static std::vector<std::string> ParseArgs(const QLineEdit *line_edit)
     return result;
 }
 
+void MainWindow::reload()
+{
+    if (m_mapFile.isEmpty())
+        return;
+
+    loadFileInternal(m_mapFile);
+}
+
 void MainWindow::loadFileInternal(const QString &file)
 {
     setWindowFilePath(file);
     setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
-    
-    fs::path fs_path = MakeFSPath(file);
 
-    // setWindowTitle()
+    fs::path fs_path = MakeFSPath(file);
 
     qDebug() << "loadFileInternal " << file;
 
