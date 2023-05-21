@@ -19,6 +19,7 @@ See file, 'COPYING', for details.
 
 #include "mainwindow.h"
 
+#include <QString>
 #include <QDragEnterEvent>
 #include <QMimeData>
 #include <QFileSystemWatcher>
@@ -182,9 +183,21 @@ static std::vector<std::string> ParseArgs(const QLineEdit *line_edit)
     if (text.isEmpty())
         return result;
 
-    for (const auto &str : text.split(' ')) {
-        qDebug() << "got token " << str;
-        result.push_back(str.toStdString());
+    bool inside_quotes = false;
+    for (const auto &str : text.split('"')) {
+        qDebug() << "got token " << str << " inside quote? " << inside_quotes;
+
+        if (inside_quotes) {
+            result.push_back(str.toStdString());
+        } else {
+            // split by spaces
+            for (const auto &str2 : str.split(' ', QString::SkipEmptyParts)) {
+                qDebug() << "got sub token " << str2;
+                result.push_back(str2.toStdString());
+            }
+        }
+
+        inside_quotes = !inside_quotes;
     }
 
     return result;
