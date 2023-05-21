@@ -299,7 +299,7 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
 
 static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, light_t *entity)
 {
-    if (entity->light.value() == 0.0f)
+    if (!entity->light.is_changed())
         entity->light.set_value(DEFAULTLIGHTLEVEL, settings::source::MAP);
 
     if (entity->atten.value() <= 0.0)

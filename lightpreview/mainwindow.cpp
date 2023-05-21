@@ -131,7 +131,7 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
 
         ConvertBSPFormat(&bspdata, &bspver_generic);
 
-        return std::move(bspdata);
+        return bspdata;
     }
 }
 
