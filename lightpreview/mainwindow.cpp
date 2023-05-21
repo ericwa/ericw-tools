@@ -205,10 +205,17 @@ static std::vector<std::string> ParseArgs(const QLineEdit *line_edit)
 
 void MainWindow::loadFileInternal(const QString &file)
 {
+    setWindowFilePath(file);
+    setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
+    
+    fs::path fs_path = MakeFSPath(file);
+
+    // setWindowTitle()
+
     qDebug() << "loadFileInternal " << file;
 
-    auto d = QbspVisLight_Common(MakeFSPath(file), ParseArgs(qbsp_options), ParseArgs(vis_options),
-        ParseArgs(light_options), vis_checkbox->isChecked());
+    auto d = QbspVisLight_Common(
+        fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
 
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 
