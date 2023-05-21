@@ -346,6 +346,8 @@ static keys_t Qt_Key_To_keys_t(int key)
         case Qt::Key_A: return keys_t::left;
         case Qt::Key_S: return keys_t::down;
         case Qt::Key_D: return keys_t::right;
+        case Qt::Key_Q: return keys_t::fly_down;
+        case Qt::Key_E: return keys_t::fly_up;
     }
     return keys_t::none;
 }
@@ -416,6 +418,10 @@ void GLView::timerEvent(QTimerEvent *event)
         m_cameraOrigin -= cameraRight() * distance;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::right))
         m_cameraOrigin += cameraRight() * distance;
+    if (m_keysPressed & static_cast<uint32_t>(keys_t::fly_down))
+        m_cameraOrigin -= QVector3D(0, 0, 1) * distance;
+    if (m_keysPressed & static_cast<uint32_t>(keys_t::fly_up))
+        m_cameraOrigin += QVector3D(0, 0, 1) * distance;
 
     update(); // schedule a repaint
 }

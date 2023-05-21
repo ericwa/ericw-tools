@@ -39,7 +39,9 @@ enum class keys_t : uint32_t
     up = 1,
     right = 2,
     down = 4,
-    left = 8
+    left = 8,
+    fly_down = 16,
+    fly_up = 32
 };
 
 struct mbsp_t;
