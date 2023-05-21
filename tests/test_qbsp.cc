@@ -1782,3 +1782,23 @@ TEST_CASE("h2_skip_only")
     CHECK(bsp.loadversion == &bspver_h2);
     CHECK(0 == bsp.dfaces.size());
 }
+
+TEST_CASE("q1_hull1_fail" * doctest::may_fail())
+{
+    INFO("weird example of a phantom clip brush in hull1");
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_hull1_fail.map");
+
+    {
+        INFO("contents at info_player_start");
+        CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], qvec3d{-2256, -64, 264}));
+    }
+    {
+        INFO("contents at air_bubbles");
+        CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], qvec3d{-2164, 126, 260}));
+    }
+    {
+        INFO("contents in void");
+        CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], qvec3d{0, 0, 0}));
+        CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], qvec3d{0, 0, 0}));
+    }
+}
