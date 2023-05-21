@@ -22,6 +22,7 @@ See file, 'COPYING', for details.
 #include <QDragEnterEvent>
 #include <QMimeData>
 #include <QFileSystemWatcher>
+#include <QFileInfo>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -72,8 +73,15 @@ void MainWindow::loadFile(const QString &file)
 
     // start watching it
     qDebug() << "adding path: " << m_watcher->addPath(file);
-    connect(m_watcher, &QFileSystemWatcher::fileChanged, this,
-        [](const QString &path) { qDebug() << "got change notif for " << path; });
+    connect(m_watcher, &QFileSystemWatcher::fileChanged, this, [&](const QString &path) {
+        if (QFileInfo(path).size() == 0) {
+            // saving a map in TB produces 2 change notifications on Windows; the
+            // first truncates the file to 0 bytes, so ignore that.
+            return;
+        }
+        qDebug() << "got change notif for " << path;
+        loadFileInternal(path);
+    });
 
     loadFileInternal(file);
 }
