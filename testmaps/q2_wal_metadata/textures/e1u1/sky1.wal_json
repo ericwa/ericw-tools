@@ -1,3 +1,4 @@
 {
-    "flags": ["SKY", "NODRAW"]
+    "flags": ["SKY", "NODRAW"],
+    "color": [255, 128, 64]
 }
