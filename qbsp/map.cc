@@ -3290,7 +3290,10 @@ void ProcessMapBrushes()
             hull = qbsp_options.debugexpand.hull_bounds_value();
         }
 
-        WriteMapBrushMap("expanded.map", map.world_entity().mapbrushes, hull);
+        fs::path name = qbsp_options.bsp_path;
+        name.replace_extension("expanded.map");
+        
+        WriteMapBrushMap(name, map.world_entity().mapbrushes, hull);
     }
 }
 

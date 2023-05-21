@@ -457,6 +457,11 @@ const texture *find(const std::string_view &str)
     return &it->second;
 }
 
+void clear()
+{
+    textures.clear();
+}
+
 qvec3b calculate_average(const std::vector<qvec4b> &pixels)
 {
     qvec3d avg{};
@@ -652,5 +657,157 @@ std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_
     }
 
     return {std::nullopt, {}, {}};
+}
+
+/*
+// Add empty to keep texture index in case of load problems...
+auto &tex = img::textures.emplace(miptex.name, img::texture{}).first->second;
+
+// try to load it externally first
+auto [texture, _0, _1] = img::load_texture(miptex.name, false, bsp->loadversion->game, options);
+
+if (texture) {
+    tex = std::move(texture.value());
+} else {
+    if (miptex.data.size() <= sizeof(dmiptex_t)) {
+        logging::funcprint("WARNING: can't find texture {}\n", miptex.name);
+        continue;
+    }
+
+    auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game);
+
+    if (!loaded_tex) {
+        logging::funcprint("WARNING: Texture {} is invalid\n", miptex.name);
+        continue;
+    }
+
+    tex = std::move(loaded_tex.value());
+}
+
+tex.meta.averageColor = img::calculate_average(tex.pixels);
+*/
+
+// Load the specified texture from the BSP
+static void AddTextureName(
+    const std::string_view &textureName, const mbsp_t *bsp, const settings::common_settings &options)
+{
+    if (img::find(textureName)) {
+        return;
+    }
+
+    // always add entry
+    auto &tex = img::textures.emplace(textureName, img::texture{}).first->second;
+
+    // find texture & meta
+    auto [texture, _0, _1] = img::load_texture(textureName, false, bsp->loadversion->game, options);
+
+    if (!texture) {
+        logging::funcprint("WARNING: can't find pixel data for {}\n", textureName);
+    } else {
+        tex = std::move(texture.value());
+    }
+
+    auto [texture_meta, __0, __1] = img::load_texture_meta(textureName, bsp->loadversion->game, options);
+
+    if (!texture_meta) {
+        logging::funcprint("WARNING: can't find meta data for {}\n", textureName);
+    } else {
+        tex.meta = std::move(texture_meta.value());
+    }
+
+    if (tex.meta.color_override) {
+        tex.averageColor = *tex.meta.color_override;
+    } else {
+        tex.averageColor = img::calculate_average(tex.pixels);
+    }
+
+    if (tex.meta.width && tex.meta.height) {
+        tex.width_scale = (float)tex.width / (float)tex.meta.width;
+        tex.height_scale = (float)tex.height / (float)tex.meta.height;
+    }
+}
+
+// Load all of the referenced textures from the BSP texinfos into
+// the texture cache.
+static void LoadTextures(const mbsp_t *bsp, const settings::common_settings &options)
+{
+    // gather all loadable textures...
+    for (auto &texinfo : bsp->texinfo) {
+        AddTextureName(texinfo.texture.data(), bsp, options);
+    }
+
+    // gather textures used by _project_texture.
+    // FIXME: I'm sure we can resolve this so we don't parse entdata twice.
+    auto entdicts = EntData_Parse(*bsp);
+    for (auto &entdict : entdicts) {
+        if (entdict.get("classname").find("light") == 0) {
+            const auto &tex = entdict.get("_project_texture");
+            if (!tex.empty()) {
+                AddTextureName(tex.c_str(), bsp, options);
+            }
+        }
+    }
+}
+
+// Load all of the paletted textures from the BSP into
+// the texture cache.
+static void ConvertTextures(const mbsp_t *bsp, const settings::common_settings &options)
+{
+    if (!bsp->dtex.textures.size()) {
+        return;
+    }
+
+    for (auto &miptex : bsp->dtex.textures) {
+        if (img::find(miptex.name)) {
+            logging::funcprint("WARNING: Texture {} duplicated\n", miptex.name);
+            continue;
+        }
+
+        // always add entry
+        auto &tex = img::textures.emplace(miptex.name, img::texture{}).first->second;
+
+        // if the miptex entry isn't a dummy, use it as our base
+        if (miptex.data.size() >= sizeof(dmiptex_t)) {
+            if (auto loaded_tex = img::load_mip(miptex.name, miptex.data, false, bsp->loadversion->game)) {
+                tex = std::move(loaded_tex.value());
+            }
+        }
+
+        // find replacement texture
+        if (auto [texture, _0, _1] = img::load_texture(miptex.name, false, bsp->loadversion->game, options); texture) {
+            tex.width = texture->width;
+            tex.height = texture->height;
+            tex.pixels = std::move(texture->pixels);
+        }
+
+        if (!tex.pixels.size() || !tex.width || !tex.meta.width) {
+            logging::funcprint("WARNING: invalid size data for {}\n", miptex.name);
+            continue;
+        }
+
+        if (tex.meta.color_override) {
+            tex.averageColor = *tex.meta.color_override;
+        } else {
+            tex.averageColor = img::calculate_average(tex.pixels);
+        }
+
+        if (tex.meta.width && tex.meta.height) {
+            tex.width_scale = (float)tex.width / (float)tex.meta.width;
+            tex.height_scale = (float)tex.height / (float)tex.meta.height;
+        }
+    }
+}
+
+void load_textures(const mbsp_t *bsp, const settings::common_settings &options)
+{
+    logging::funcheader();
+
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        LoadTextures(bsp, options);
+    } else if (bsp->dtex.textures.size() > 0) {
+        ConvertTextures(bsp, options);
+    } else {
+        logging::print("WARNING: failed to load or convert textures.\n");
+    }
 }
 } // namespace img

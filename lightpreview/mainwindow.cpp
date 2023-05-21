@@ -19,9 +19,15 @@ See file, 'COPYING', for details.
 
 #include "mainwindow.h"
 
+#include <QString>
 #include <QDragEnterEvent>
 #include <QMimeData>
 #include <QFileSystemWatcher>
+#include <QFileInfo>
+#include <QFormLayout>
+#include <QLineEdit>
+#include <QSplitter>
+#include <QCheckBox>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -34,9 +40,33 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
     resize(640, 480);
-    glView = new GLView();
-    this->setCentralWidget(glView);
 
+    // gl view
+    glView = new GLView();
+
+    // properties form
+    auto *formLayout = new QFormLayout();
+
+    vis_checkbox = new QCheckBox(tr("vis"));
+
+    qbsp_options = new QLineEdit();
+    vis_options = new QLineEdit();
+    light_options = new QLineEdit();
+
+    formLayout->addRow(tr("qbsp"), qbsp_options);
+    formLayout->addRow(vis_checkbox, vis_options);
+    formLayout->addRow(tr("light"), light_options);
+
+    auto *form = new QWidget();
+    form->setLayout(formLayout);
+
+    // splitter
+
+    auto *splitter = new QSplitter();
+    splitter->addWidget(form);
+    splitter->addWidget(glView);
+
+    setCentralWidget(splitter);
     setAcceptDrops(true);
 }
 
@@ -72,8 +102,15 @@ void MainWindow::loadFile(const QString &file)
 
     // start watching it
     qDebug() << "adding path: " << m_watcher->addPath(file);
-    connect(m_watcher, &QFileSystemWatcher::fileChanged, this,
-        [](const QString &path) { qDebug() << "got change notif for " << path; });
+    connect(m_watcher, &QFileSystemWatcher::fileChanged, this, [&](const QString &path) {
+        if (QFileInfo(path).size() == 0) {
+            // saving a map in TB produces 2 change notifications on Windows; the
+            // first truncates the file to 0 bytes, so ignore that.
+            return;
+        }
+        qDebug() << "got change notif for " << path;
+        loadFileInternal(path);
+    });
 
     loadFileInternal(file);
 }
@@ -84,7 +121,7 @@ std::filesystem::path MakeFSPath(const QString &string)
 }
 
 static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
-    std::vector<std::string> extra_light_args, bool run_vis)
+    std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
 {
     auto bsp_path = name;
     bsp_path.replace_extension(".bsp");
@@ -107,6 +144,9 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
         std::vector<std::string> vis_args{
             "", // the exe path, which we're ignoring in this case
         };
+        for (auto &extra : extra_vis_args) {
+            vis_args.push_back(extra);
+        }
         vis_args.push_back(name.string());
         vis_main(vis_args);
     }
@@ -135,13 +175,42 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
     }
 }
 
+static std::vector<std::string> ParseArgs(const QLineEdit *line_edit)
+{
+    std::vector<std::string> result;
+
+    QString text = line_edit->text().trimmed();
+    if (text.isEmpty())
+        return result;
+
+    bool inside_quotes = false;
+    for (const auto &str : text.split('"')) {
+        qDebug() << "got token " << str << " inside quote? " << inside_quotes;
+
+        if (inside_quotes) {
+            result.push_back(str.toStdString());
+        } else {
+            // split by spaces
+            for (const auto &str2 : str.split(' ', QString::SkipEmptyParts)) {
+                qDebug() << "got sub token " << str2;
+                result.push_back(str2.toStdString());
+            }
+        }
+
+        inside_quotes = !inside_quotes;
+    }
+
+    return result;
+}
+
 void MainWindow::loadFileInternal(const QString &file)
 {
     qDebug() << "loadFileInternal " << file;
 
-    auto d = QbspVisLight_Common(MakeFSPath(file), {}, {}, true);
+    auto d = QbspVisLight_Common(MakeFSPath(file), ParseArgs(qbsp_options), ParseArgs(vis_options),
+        ParseArgs(light_options), vis_checkbox->isChecked());
 
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 
-    glView->renderBSP(bsp);
+    glView->renderBSP(file, bsp);
 }

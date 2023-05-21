@@ -84,6 +84,9 @@ struct texture
 
 extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
 
+// clears the texture cache
+void clear();
+
 qvec3b calculate_average(const std::vector<qvec4b> &pixels);
 
 const texture *find(const std::string_view &str);
@@ -141,4 +144,7 @@ constexpr struct
 // Attempt to load a texture meta from the specified name.
 std::tuple<std::optional<texture_meta>, fs::resolve_result, fs::data> load_texture_meta(
     const std::string_view &name, const gamedef_t *game, const settings::common_settings &options);
+
+// Loads textures referenced by the bsp into the texture cache.
+void load_textures(const mbsp_t *bsp, const settings::common_settings &options);
 }; // namespace img
