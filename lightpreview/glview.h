@@ -78,18 +78,20 @@ private:
     std::unique_ptr<QOpenGLTexture> lightmap_texture;
     struct drawcall_t
     {
+        float opacity = 1.0f;
         std::unique_ptr<QOpenGLTexture> texture;
         size_t first_index = 0;
         size_t index_count = 0;
     };
     std::vector<drawcall_t> m_drawcalls;
 
-    QOpenGLShaderProgram *m_program;
+    QOpenGLShaderProgram *m_program = nullptr;
 
     // uniform locations
-    int m_program_mvp_location;
-    int m_program_texture_sampler_location;
-    int m_program_lightmap_sampler_location;
+    int m_program_mvp_location = 0;
+    int m_program_texture_sampler_location = 0;
+    int m_program_lightmap_sampler_location = 0;
+    int m_program_opacity_location = 0;
 
 public:
     GLView(QWidget *parent = nullptr);

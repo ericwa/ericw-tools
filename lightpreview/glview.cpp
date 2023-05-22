@@ -21,6 +21,7 @@ See file, 'COPYING', for details.
 
 // #include <cstdio>
 #include <cassert>
+#include <tuple>
 
 #include <QImage>
 #include <QMouseEvent>
@@ -45,11 +46,7 @@ GLView::GLView(QWidget *parent)
       m_cameraOrigin(0, 0, 0),
       m_cameraFwd(0, 1, 0),
       m_vao(),
-      m_indexBuffer(QOpenGLBuffer::IndexBuffer),
-      m_program(nullptr),
-      m_program_mvp_location(0),
-      m_program_texture_sampler_location(0),
-      m_program_lightmap_sampler_location(0)
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
@@ -80,13 +77,14 @@ out vec4 color;
 
 uniform sampler2D texture_sampler;
 uniform sampler2D lightmap_sampler;
+uniform float opacity;
 
 void main() {
     vec3 texcolor = texture(texture_sampler, uv).rgb;
     vec3 lmcolor = texture(lightmap_sampler, lightmap_uv).rgb;
 
     // 2.0 for overbright
-    color = vec4(texcolor * lmcolor * 2.0, 1.0);
+    color = vec4(texcolor * lmcolor * 2.0, opacity);
 }
 )";
 
@@ -125,6 +123,7 @@ void GLView::initializeGL()
     m_program_mvp_location = m_program->uniformLocation("MVP");
     m_program_texture_sampler_location = m_program->uniformLocation("texture_sampler");
     m_program_lightmap_sampler_location = m_program->uniformLocation("lightmap_sampler");
+    m_program_opacity_location = m_program->uniformLocation("opacity");
     m_vao.create();
 
     glEnable(GL_DEPTH_TEST);
@@ -151,20 +150,43 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_mvp_location, MVP);
     m_program->setUniformValue(m_program_texture_sampler_location, 0 /* texture unit */);
     m_program->setUniformValue(m_program_lightmap_sampler_location, 1 /* texture unit */);
+    m_program->setUniformValue(m_program_opacity_location, 1.0f);
 
+    // opaque draws
     for (auto &draw : m_drawcalls) {
+        if (draw.opacity != 1.0f)
+            continue;
+
         draw.texture->bind(0 /* texture unit */);
         lightmap_texture->bind(1 /* texture unit */);
 
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
-        // glEnable(GL_BLEND);
-        // glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
         glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
             reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
+    }
 
-        // glDisable(GL_BLEND);
+    // translucent draws
+    {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        for (auto &draw : m_drawcalls) {
+            if (draw.opacity == 1.0f)
+                continue;
+
+            draw.texture->bind(0 /* texture unit */);
+            lightmap_texture->bind(1 /* texture unit */);
+
+            m_program->setUniformValue(m_program_opacity_location, draw.opacity);
+
+            QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+
+            glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
+                reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
+        }
+
+        glDisable(GL_BLEND);
     }
 
     m_program->release();
@@ -172,8 +194,8 @@ void GLView::paintGL()
 
 void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
 {
-    m_cameraOrigin = { (float) origin[0], (float) origin[1], (float) origin[2] };
-    m_cameraFwd = { (float) fwd[0], (float) fwd[1], (float) fwd[2] };
+    m_cameraOrigin = {(float)origin[0], (float)origin[1], (float)origin[2]};
+    m_cameraFwd = {(float)fwd[0], (float)fwd[1], (float)fwd[2]};
 }
 
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector<entdict_t> &entities)
@@ -213,24 +235,31 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
     }
 
-    // collect faces grouped by texture name
-    std::map<std::string, std::vector<const mface_t *>> faces_by_texname;
+    // this determines what can be batched together in a draw call
+    struct material_key
+    {
+        std::string texname;
+        float opacity;
+
+        auto as_tuple() const { return std::make_tuple(texname, opacity); }
+
+        bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
+    };
+
+    // collect faces grouped by material_key
+    std::map<material_key, std::vector<const mface_t *>> faces_by_material_key;
 
     // collect entity bmodels
-    for (int mi = 0; mi < bsp.dmodels.size(); mi++)
-    {
-        qvec3d origin {};
+    for (int mi = 0; mi < bsp.dmodels.size(); mi++) {
+        qvec3d origin{};
 
-        if (mi != 0)
-        {
+        if (mi != 0) {
             // find matching entity
             std::string modelStr = fmt::format("*{}", mi);
             bool found = false;
 
-            for (auto &ent : entities)
-            {
-                if (ent.get("model") == modelStr)
-                {
+            for (auto &ent : entities) {
+                if (ent.get("model") == modelStr) {
                     found = true;
                     ent.get_vector("origin", origin);
                     break;
@@ -251,9 +280,25 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
                 continue;
             if (f.numedges < 3)
                 continue;
-            faces_by_texname[t].push_back(&f);
-        }
 
+            const mtexinfo_t *texinfo = Face_Texinfo(&bsp, &f);
+            if (!texinfo)
+                continue; // FIXME: render as checkerboard?
+
+            // determine opacity
+            float opacity = 1.0f;
+            if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+                if (texinfo->flags.native & Q2_SURF_TRANS33) {
+                    opacity = 0.33f;
+                }
+                if (texinfo->flags.native & Q2_SURF_TRANS66) {
+                    opacity = 0.66f;
+                }
+            }
+
+            material_key k = {.texname = t, .opacity = opacity};
+            faces_by_material_key[k].push_back(&f);
+        }
     }
 
     // populate the vertex/index buffers
@@ -266,13 +311,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
     std::vector<vertex_t> verts;
     std::vector<uint32_t> indexBuffer;
 
-    for (const auto &[texname, faces] : faces_by_texname) {
+    for (const auto &[k, faces] : faces_by_material_key) {
         // upload texture
         // FIXME: we should have a separate lightpreview_options
-        auto *texture = img::find(texname);
+        auto *texture = img::find(k.texname);
 
         if (!texture) {
-            logging::print("warning, couldn't locate {}", texname);
+            logging::print("warning, couldn't locate {}", k.texname);
             continue;
         }
 
@@ -313,7 +358,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
 
         const size_t dc_index_count = indexBuffer.size() - dc_first_index;
 
-        drawcall_t dc = {.texture = std::move(qtexture), .first_index = dc_first_index, .index_count = dc_index_count};
+        drawcall_t dc = {.opacity = k.opacity,
+            .texture = std::move(qtexture),
+            .first_index = dc_first_index,
+            .index_count = dc_index_count};
         m_drawcalls.push_back(std::move(dc));
     }
 
