@@ -306,8 +306,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
         bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
     };
 
+    struct face_payload
+    {
+        const mface_t *face;
+        qvec3d model_offset;
+    };
+
     // collect faces grouped by material_key
-    std::map<material_key, std::vector<const mface_t *>> faces_by_material_key;
+    std::map<material_key, std::vector<face_payload>> faces_by_material_key;
 
     // collect entity bmodels
     for (int mi = 0; mi < bsp.dmodels.size(); mi++) {
@@ -357,7 +363,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
             }
 
             material_key k = {.texname = t, .opacity = opacity};
-            faces_by_material_key[k].push_back(&f);
+            faces_by_material_key[k].push_back({.face = &f, .model_offset = origin});
         }
     }
 
@@ -392,7 +398,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
 
         const size_t dc_first_index = indexBuffer.size();
 
-        for (const mface_t *f : faces) {
+        for (const auto &[f, model_offset] : faces) {
             const auto plane_normal = Face_Normal(&bsp, f);
             const qvec3f flat_color = qvec3f{Random(), Random(), Random()};
 
@@ -410,7 +416,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
 
                 qvec2f lightmap_uv = lm_uvs.at(j);
 
-                verts.push_back({.pos = pos,
+                verts.push_back({.pos = pos + model_offset,
                     .uv = uv,
                     .lightmap_uv = lightmap_uv,
                     .normal = plane_normal,
