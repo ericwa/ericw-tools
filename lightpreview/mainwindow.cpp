@@ -29,6 +29,7 @@ See file, 'COPYING', for details.
 #include <QSplitter>
 #include <QCheckBox>
 #include <QPushButton>
+#include <QSettings>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -71,6 +72,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(splitter);
     setAcceptDrops(true);
+
+    // load state persisted in settings
+    QSettings s;
+    qbsp_options->setText(s.value("qbsp_options").toString());
+    vis_checkbox->setChecked(s.value("vis_enabled").toBool());
+    vis_options->setText(s.value("vis_options").toString());
+    light_options->setText(s.value("light_options").toString());
 
     // setup event handlers
 
@@ -222,6 +230,14 @@ void MainWindow::reload()
 
 void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 {
+    // persist settings
+    QSettings s;
+    s.setValue("qbsp_options", qbsp_options->text());
+    s.setValue("vis_enabled", vis_checkbox->isChecked());
+    s.setValue("vis_options", vis_options->text());
+    s.setValue("light_options", light_options->text());
+
+    // update title bar
     setWindowFilePath(file);
     setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
 

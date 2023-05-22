@@ -20,9 +20,16 @@ See file, 'COPYING', for details.
 #include "mainwindow.h"
 #include <QApplication>
 #include <QSurfaceFormat>
+#include <QSettings>
+#include <QCoreApplication>
 
 int main(int argc, char *argv[])
 {
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+
+    QCoreApplication::setOrganizationName("ericw-tools");
+    QCoreApplication::setApplicationName("lightpreview");
+
     QApplication a(argc, argv);
 
     QSurfaceFormat fmt;
