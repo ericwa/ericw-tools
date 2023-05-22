@@ -20,7 +20,7 @@ See file, 'COPYING', for details.
 #pragma once
 
 #include <QOpenGLWidget>
-#include <QOpenGLFunctions>
+#include <QOpenGLFunctions_3_3_Core>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
@@ -48,7 +48,7 @@ enum class keys_t : uint32_t
 
 struct mbsp_t;
 
-class GLView : public QOpenGLWidget, protected QOpenGLFunctions
+class GLView : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 {
 private:
     uint32_t m_keysPressed;

@@ -73,6 +73,7 @@ static const char *s_fragShader = R"(
 in vec2 uv;
 in vec2 lightmap_uv;
 in vec3 normal;
+flat in vec3 flat_color;
 
 out vec4 color;
 
@@ -89,6 +90,8 @@ void main() {
     if (drawnormals) {
         // remap -1..+1 to 0..1
         color = vec4((normal + vec3(1.0)) / vec3(2.0), opacity);
+    } else if (drawflat) {
+        color = vec4(flat_color, opacity);
     } else {
         vec3 texcolor = lightmap_only ? vec3(0.5) : texture(texture_sampler, uv).rgb;
         vec3 lmcolor = fullbright ? vec3(0.5) : texture(lightmap_sampler, lightmap_uv).rgb;
@@ -106,10 +109,12 @@ layout (location = 0) in vec3 position;
 layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
+layout (location = 4) in vec3 vertex_flat_color;
 
 out vec2 uv;
 out vec2 lightmap_uv;
 out vec3 normal;
+flat out vec3 flat_color;
 
 uniform mat4 MVP;
 
@@ -117,8 +122,9 @@ void main() {
     gl_Position = MVP * vec4(position.x, position.y, position.z, 1.0);
 
     uv = vertex_uv;
-    lightmap_uv =  vertex_lightmap_uv;
+    lightmap_uv = vertex_lightmap_uv;
     normal = vertex_normal;
+    flat_color = vertex_flat_color;
 }
 )";
 
@@ -362,6 +368,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
         qvec2f uv;
         qvec2f lightmap_uv;
         qvec3f normal;
+        qvec3f flat_color;
     };
     std::vector<vertex_t> verts;
     std::vector<uint32_t> indexBuffer;
@@ -387,6 +394,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
 
         for (const mface_t *f : faces) {
             const auto plane_normal = Face_Normal(&bsp, f);
+            const qvec3f flat_color = qvec3f{Random(), Random(), Random()};
 
             const size_t first_vertex_of_face = verts.size();
 
@@ -402,7 +410,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
 
                 qvec2f lightmap_uv = lm_uvs.at(j);
 
-                verts.push_back({.pos = pos, .uv = uv, .lightmap_uv = lightmap_uv, .normal = plane_normal});
+                verts.push_back({.pos = pos,
+                    .uv = uv,
+                    .lightmap_uv = lightmap_uv,
+                    .normal = plane_normal,
+                    .flat_color = flat_color});
             }
 
             // output the vertex indices for this face
@@ -450,6 +462,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
     // normals
     glEnableVertexAttribArray(3 /* attrib */);
     glVertexAttribPointer(3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
+
+    // flat shading color
+    glEnableVertexAttribArray(4 /* attrib */);
+    glVertexAttribPointer(
+        4 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, flat_color));
 
     doneCurrent();
 
