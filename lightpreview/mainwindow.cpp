@@ -57,6 +57,9 @@ MainWindow::MainWindow(QWidget *parent)
     auto *reload_button = new QPushButton(tr("Reload"));
     auto *lightmap_only = new QCheckBox(tr("Lightmap Only"));
     auto *fullbright = new QCheckBox(tr("Fullbright"));
+    auto *normals = new QCheckBox(tr("Normals"));
+    auto *showtris = new QCheckBox(tr("Show Tris"));
+    auto *drawflat = new QCheckBox(tr("Flat shading"));
 
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
@@ -64,6 +67,9 @@ MainWindow::MainWindow(QWidget *parent)
     formLayout->addRow(reload_button);
     formLayout->addRow(lightmap_only);
     formLayout->addRow(fullbright);
+    formLayout->addRow(normals);
+    formLayout->addRow(showtris);
+    formLayout->addRow(drawflat);
 
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -87,9 +93,16 @@ MainWindow::MainWindow(QWidget *parent)
     // setup event handlers
 
     connect(reload_button, &QAbstractButton::clicked, this, &MainWindow::reload);
-    connect(
-        lightmap_only, &QCheckBox::stateChanged, this, [=]() { glView->setLighmapOnly(lightmap_only->isChecked()); });
-    connect(fullbright, &QCheckBox::stateChanged, this, [=]() { glView->setFullbright(fullbright->isChecked()); });
+    connect(lightmap_only, &QCheckBox::stateChanged, this,
+        [=](int state) { glView->setLighmapOnly(state == Qt::CheckState::Checked); });
+    connect(fullbright, &QCheckBox::stateChanged, this,
+        [=](int state) { glView->setFullbright(state == Qt::CheckState::Checked); });
+    connect(normals, &QCheckBox::stateChanged, this,
+        [=](int state) { glView->setDrawNormals(state == Qt::CheckState::Checked); });
+    connect(showtris, &QCheckBox::stateChanged, this,
+        [=](int state) { glView->setShowTris(state == Qt::CheckState::Checked); });
+    connect(drawflat, &QCheckBox::stateChanged, this,
+        [=](int state) { glView->setDrawFlat(state == Qt::CheckState::Checked); });
 }
 
 MainWindow::~MainWindow() { }

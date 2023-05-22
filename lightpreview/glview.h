@@ -74,6 +74,9 @@ private:
     // render options
     bool m_lighmapOnly = false;
     bool m_fullbright = false;
+    bool m_drawNormals = false;
+    bool m_showTris = false;
+    bool m_drawFlat = false;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -98,6 +101,9 @@ private:
     int m_program_opacity_location = 0;
     int m_program_lightmap_only_location = 0;
     int m_program_fullbright_location = 0;
+    int m_program_drawnormals_location = 0;
+    int m_program_showtris_location = 0;
+    int m_program_drawflat_location = 0;
 
 public:
     GLView(QWidget *parent = nullptr);
@@ -107,6 +113,9 @@ public:
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
+    void setDrawNormals(bool drawnormals);
+    void setShowTris(bool showtris);
+    void setDrawFlat(bool drawflat);
 
 protected:
     void initializeGL() override;

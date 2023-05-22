@@ -72,6 +72,7 @@ static const char *s_fragShader = R"(
 
 in vec2 uv;
 in vec2 lightmap_uv;
+in vec3 normal;
 
 out vec4 color;
 
@@ -80,13 +81,21 @@ uniform sampler2D lightmap_sampler;
 uniform float opacity;
 uniform bool lightmap_only;
 uniform bool fullbright;
+uniform bool drawnormals;
+uniform bool showtris;
+uniform bool drawflat;
 
 void main() {
-    vec3 texcolor = lightmap_only ? vec3(0.5) : texture(texture_sampler, uv).rgb;
-    vec3 lmcolor = fullbright ? vec3(0.5) : texture(lightmap_sampler, lightmap_uv).rgb;
+    if (drawnormals) {
+        // remap -1..+1 to 0..1
+        color = vec4((normal + vec3(1.0)) / vec3(2.0), opacity);
+    } else {
+        vec3 texcolor = lightmap_only ? vec3(0.5) : texture(texture_sampler, uv).rgb;
+        vec3 lmcolor = fullbright ? vec3(0.5) : texture(lightmap_sampler, lightmap_uv).rgb;
 
-    // 2.0 for overbright
-    color = vec4(texcolor * lmcolor * 2.0, opacity);
+        // 2.0 for overbright
+        color = vec4(texcolor * lmcolor * 2.0, opacity);
+    }
 }
 )";
 
@@ -96,9 +105,11 @@ static const char *s_vertShader = R"(
 layout (location = 0) in vec3 position;
 layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec2 vertex_lightmap_uv;
+layout (location = 3) in vec3 vertex_normal;
 
 out vec2 uv;
 out vec2 lightmap_uv;
+out vec3 normal;
 
 uniform mat4 MVP;
 
@@ -107,6 +118,7 @@ void main() {
 
     uv = vertex_uv;
     lightmap_uv =  vertex_lightmap_uv;
+    normal = vertex_normal;
 }
 )";
 
@@ -128,6 +140,9 @@ void GLView::initializeGL()
     m_program_opacity_location = m_program->uniformLocation("opacity");
     m_program_lightmap_only_location = m_program->uniformLocation("lightmap_only");
     m_program_fullbright_location = m_program->uniformLocation("fullbright");
+    m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
+    m_program_showtris_location = m_program->uniformLocation("showtris");
+    m_program_drawflat_location = m_program->uniformLocation("drawflat");
     m_vao.create();
 
     glEnable(GL_DEPTH_TEST);
@@ -157,6 +172,9 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_opacity_location, 1.0f);
     m_program->setUniformValue(m_program_lightmap_only_location, m_lighmapOnly);
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
+    m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
+    m_program->setUniformValue(m_program_showtris_location, m_showTris);
+    m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
 
     // opaque draws
     for (auto &draw : m_drawcalls) {
@@ -213,6 +231,24 @@ void GLView::setLighmapOnly(bool lighmapOnly)
 void GLView::setFullbright(bool fullbright)
 {
     m_fullbright = fullbright;
+    update();
+}
+
+void GLView::setDrawNormals(bool drawnormals)
+{
+    m_drawNormals = drawnormals;
+    update();
+}
+
+void GLView::setShowTris(bool showtris)
+{
+    m_showTris = showtris;
+    update();
+}
+
+void GLView::setDrawFlat(bool drawflat)
+{
+    m_drawFlat = drawflat;
     update();
 }
 
@@ -325,6 +361,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
         qvec3f pos;
         qvec2f uv;
         qvec2f lightmap_uv;
+        qvec3f normal;
     };
     std::vector<vertex_t> verts;
     std::vector<uint32_t> indexBuffer;
@@ -349,6 +386,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
         const size_t dc_first_index = indexBuffer.size();
 
         for (const mface_t *f : faces) {
+            const auto plane_normal = Face_Normal(&bsp, f);
+
             const size_t first_vertex_of_face = verts.size();
 
             const auto lm_uvs = atlas.facenum_to_lightmap_uvs.at(Face_GetNum(&bsp, f));
@@ -363,7 +402,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
 
                 qvec2f lightmap_uv = lm_uvs.at(j);
 
-                verts.push_back({.pos = pos, .uv = uv, .lightmap_uv = lightmap_uv});
+                verts.push_back({.pos = pos, .uv = uv, .lightmap_uv = lightmap_uv, .normal = plane_normal});
             }
 
             // output the vertex indices for this face
@@ -397,15 +436,20 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
 
     // positions
     glEnableVertexAttribArray(0 /* attrib */);
-    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)0);
+    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, pos));
 
-    // normals
+    // texture uvs
     glEnableVertexAttribArray(1 /* attrib */);
-    glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, uv));
 
     // lightmap uvs
     glEnableVertexAttribArray(2 /* attrib */);
-    glVertexAttribPointer(2 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)(5 * sizeof(float)));
+    glVertexAttribPointer(
+        2 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, lightmap_uv));
+
+    // normals
+    glEnableVertexAttribArray(3 /* attrib */);
+    glVertexAttribPointer(3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
 
     doneCurrent();
 
