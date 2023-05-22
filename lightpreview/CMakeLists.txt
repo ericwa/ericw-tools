@@ -60,5 +60,8 @@ endif()
 install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION bin)
 install(FILES $<TARGET_FILE:Qt5::Gui> DESTINATION bin)
 install(FILES $<TARGET_FILE:Qt5::Core> DESTINATION bin)
+if (WIN32)
+    install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION bin/platforms)
+endif ()
 
 install(TARGETS lightpreview RUNTIME DESTINATION bin)
