@@ -55,11 +55,13 @@ MainWindow::MainWindow(QWidget *parent)
     vis_options = new QLineEdit();
     light_options = new QLineEdit();
     auto *reload_button = new QPushButton(tr("Reload"));
+    auto *lightmap_only = new QCheckBox(tr("Lightmap Only"));
 
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
     formLayout->addRow(reload_button);
+    formLayout->addRow(lightmap_only);
 
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -83,6 +85,8 @@ MainWindow::MainWindow(QWidget *parent)
     // setup event handlers
 
     connect(reload_button, &QAbstractButton::clicked, this, &MainWindow::reload);
+    connect(
+        lightmap_only, &QCheckBox::stateChanged, this, [&]() { glView->setLighmapOnly(lightmap_only->isChecked()); });
 }
 
 MainWindow::~MainWindow() { }
@@ -254,24 +258,19 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
     glView->renderBSP(file, bsp, ents);
 
-    if (!is_reload)
-    {
-        for (auto &ent : ents)
-        {
-            if (ent.get("classname") == "info_player_start")
-            {
+    if (!is_reload) {
+        for (auto &ent : ents) {
+            if (ent.get("classname") == "info_player_start") {
                 qvec3d origin;
                 ent.get_vector("origin", origin);
 
-                qvec3d angles {};
+                qvec3d angles{};
 
-                if (ent.has("angles"))
-                {
+                if (ent.has("angles")) {
                     ent.get_vector("angles", angles);
-                    angles = { angles[1], -angles[0], angles[2] }; // -pitch yaw roll -> yaw pitch roll
-                }
-                else if (ent.has("angle"))
-                    angles = { ent.get_float("angle"), 0, 0 };
+                    angles = {angles[1], -angles[0], angles[2]}; // -pitch yaw roll -> yaw pitch roll
+                } else if (ent.has("angle"))
+                    angles = {ent.get_float("angle"), 0, 0};
                 else if (ent.has("mangle"))
                     ent.get_vector("mangle", angles);
 

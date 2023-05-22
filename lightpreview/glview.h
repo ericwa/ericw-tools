@@ -71,6 +71,9 @@ private:
         return v;
     }
 
+    // render options
+    bool m_lighmapOnly = false;
+
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
     QOpenGLBuffer m_indexBuffer;
@@ -92,6 +95,7 @@ private:
     int m_program_texture_sampler_location = 0;
     int m_program_lightmap_sampler_location = 0;
     int m_program_opacity_location = 0;
+    int m_program_lightmap_only_location = 0;
 
 public:
     GLView(QWidget *parent = nullptr);
@@ -99,6 +103,7 @@ public:
 
     void renderBSP(const QString &file, const mbsp_t &bsp, const std::vector<entdict_t> &entities);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
+    void setLighmapOnly(bool lighmapOnly);
 
 protected:
     void initializeGL() override;
