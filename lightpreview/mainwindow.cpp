@@ -234,12 +234,12 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 
-    glView->renderBSP(file, bsp);
+    auto ents = EntData_Parse(bsp);
+
+    glView->renderBSP(file, bsp, ents);
 
     if (!is_reload)
     {
-        auto ents = EntData_Parse(bsp);
-
         for (auto &ent : ents)
         {
             if (ent.get("classname") == "info_player_start")

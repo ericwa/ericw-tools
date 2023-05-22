@@ -176,7 +176,7 @@ void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
     m_cameraFwd = { (float) fwd[0], (float) fwd[1], (float) fwd[2] };
 }
 
-void GLView::renderBSP(const QString &file, const mbsp_t &bsp)
+void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector<entdict_t> &entities)
 {
     // FIXME: move to a lightpreview_settings
     settings::common_settings settings;
@@ -213,20 +213,47 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp)
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
     }
 
-    auto &m = bsp.dmodels[0];
-
     // collect faces grouped by texture name
     std::map<std::string, std::vector<const mface_t *>> faces_by_texname;
 
-    for (int i = m.firstface; i < m.firstface + m.numfaces; ++i) {
-        auto &f = bsp.dfaces[i];
-        std::string t = Face_TextureName(&bsp, &f);
-        // FIXME: keep empty texture names?
-        if (t.empty())
-            continue;
-        if (f.numedges < 3)
-            continue;
-        faces_by_texname[t].push_back(&f);
+    // collect entity bmodels
+    for (int mi = 0; mi < bsp.dmodels.size(); mi++)
+    {
+        qvec3d origin {};
+
+        if (mi != 0)
+        {
+            // find matching entity
+            std::string modelStr = fmt::format("*{}", mi);
+            bool found = false;
+
+            for (auto &ent : entities)
+            {
+                if (ent.get("model") == modelStr)
+                {
+                    found = true;
+                    ent.get_vector("origin", origin);
+                    break;
+                }
+            }
+
+            if (!found)
+                continue;
+        }
+
+        auto &m = bsp.dmodels[mi];
+
+        for (int i = m.firstface; i < m.firstface + m.numfaces; ++i) {
+            auto &f = bsp.dfaces[i];
+            std::string t = Face_TextureName(&bsp, &f);
+            // FIXME: keep empty texture names?
+            if (t.empty())
+                continue;
+            if (f.numedges < 3)
+                continue;
+            faces_by_texname[t].push_back(&f);
+        }
+
     }
 
     // populate the vertex/index buffers

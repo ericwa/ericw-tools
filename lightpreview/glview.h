@@ -33,6 +33,7 @@ See file, 'COPYING', for details.
 
 #include <common/qvec.hh>
 #include <common/cmdlib.hh>
+#include <common/entdata.h>
 
 enum class keys_t : uint32_t
 {
@@ -94,7 +95,7 @@ public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
 
-    void renderBSP(const QString &file, const mbsp_t &bsp);
+    void renderBSP(const QString &file, const mbsp_t &bsp, const std::vector<entdict_t> &entities);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
 
 protected:
