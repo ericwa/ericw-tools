@@ -12,6 +12,8 @@ add_executable(lightpreview
     glview.cpp
     glview.h)
 
+set_target_properties(lightpreview PROPERTIES WIN32_EXECUTABLE YES)
+
 find_package(embree 3.0 REQUIRED)
 INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
 
