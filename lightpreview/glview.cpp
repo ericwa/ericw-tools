@@ -170,6 +170,12 @@ void GLView::paintGL()
     m_program->release();
 }
 
+void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
+{
+    m_cameraOrigin = { (float) origin[0], (float) origin[1], (float) origin[2] };
+    m_cameraFwd = { (float) fwd[0], (float) fwd[1], (float) fwd[2] };
+}
+
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp)
 {
     // FIXME: move to a lightpreview_settings
@@ -201,6 +207,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp)
         lightmap_texture =
             std::make_unique<QOpenGLTexture>(QImage(reinterpret_cast<const uint8_t *>(lm_tex.pixels.data()),
                 lm_tex.width, lm_tex.height, QImage::Format_RGBA8888));
+
+        lightmap_texture->setAutoMipMapGenerationEnabled(false);
+        lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
+        lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
     }
 
     auto &m = bsp.dmodels[0];
@@ -242,6 +252,9 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp)
         std::unique_ptr<QOpenGLTexture> qtexture =
             std::make_unique<QOpenGLTexture>(QImage(reinterpret_cast<const uint8_t *>(texture->pixels.data()),
                 texture->width, texture->height, QImage::Format_RGBA8888));
+
+        qtexture->setMaximumAnisotropy(16);
+        qtexture->setAutoMipMapGenerationEnabled(true);
 
         const size_t dc_first_index = indexBuffer.size();
 

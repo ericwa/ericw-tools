@@ -118,10 +118,10 @@ void MainWindow::loadFile(const QString &file)
             return;
         }
         qDebug() << "got change notif for " << path;
-        loadFileInternal(path);
+        loadFileInternal(path, true);
     });
 
-    loadFileInternal(file);
+    loadFileInternal(file, false);
 }
 
 std::filesystem::path MakeFSPath(const QString &string)
@@ -217,10 +217,10 @@ void MainWindow::reload()
     if (m_mapFile.isEmpty())
         return;
 
-    loadFileInternal(m_mapFile);
+    loadFileInternal(m_mapFile, true);
 }
 
-void MainWindow::loadFileInternal(const QString &file)
+void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 {
     setWindowFilePath(file);
     setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
@@ -235,4 +235,33 @@ void MainWindow::loadFileInternal(const QString &file)
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 
     glView->renderBSP(file, bsp);
+
+    if (!is_reload)
+    {
+        auto ents = EntData_Parse(bsp);
+
+        for (auto &ent : ents)
+        {
+            if (ent.get("classname") == "info_player_start")
+            {
+                qvec3d origin;
+                ent.get_vector("origin", origin);
+
+                qvec3d angles {};
+
+                if (ent.has("angles"))
+                {
+                    ent.get_vector("angles", angles);
+                    angles = { angles[1], -angles[0], angles[2] }; // -pitch yaw roll -> yaw pitch roll
+                }
+                else if (ent.has("angle"))
+                    angles = { ent.get_float("angle"), 0, 0 };
+                else if (ent.has("mangle"))
+                    ent.get_vector("mangle", angles);
+
+                glView->setCamera(origin, qv::vec_from_mangle(angles));
+                break;
+            }
+        }
+    }
 }

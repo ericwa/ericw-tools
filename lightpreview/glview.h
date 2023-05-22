@@ -31,6 +31,7 @@ See file, 'COPYING', for details.
 
 #include <vector>
 
+#include <common/qvec.hh>
 #include <common/cmdlib.hh>
 
 enum class keys_t : uint32_t
@@ -94,6 +95,7 @@ public:
     ~GLView();
 
     void renderBSP(const QString &file, const mbsp_t &bsp);
+    void setCamera(const qvec3d &origin, const qvec3d &fwd);
 
 protected:
     void initializeGL() override;

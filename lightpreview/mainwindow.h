@@ -45,7 +45,7 @@ protected:
 private:
     void reload();
     void loadFile(const QString &file);
-    void loadFileInternal(const QString &file);
+    void loadFileInternal(const QString &file, bool is_reload);
 
 private:
     GLView *glView;
