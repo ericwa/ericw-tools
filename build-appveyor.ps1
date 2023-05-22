@@ -18,7 +18,7 @@ mkdir cmakebuild
 
 cd cmakebuild
 
-cmake .. -T v143 -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=NO -DQt5Widgets_DIR="C:\Qt\5.8\msvc2013_64\lib\cmake\Qt5Widgets"
+cmake .. -T v143 -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_GENERATOR_PLATFORM=x64 -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5Widgets"
 
 $cmakePlatform = "x64"
 
