@@ -56,12 +56,14 @@ MainWindow::MainWindow(QWidget *parent)
     light_options = new QLineEdit();
     auto *reload_button = new QPushButton(tr("Reload"));
     auto *lightmap_only = new QCheckBox(tr("Lightmap Only"));
+    auto *fullbright = new QCheckBox(tr("Fullbright"));
 
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
     formLayout->addRow(reload_button);
     formLayout->addRow(lightmap_only);
+    formLayout->addRow(fullbright);
 
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -86,7 +88,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(reload_button, &QAbstractButton::clicked, this, &MainWindow::reload);
     connect(
-        lightmap_only, &QCheckBox::stateChanged, this, [&]() { glView->setLighmapOnly(lightmap_only->isChecked()); });
+        lightmap_only, &QCheckBox::stateChanged, this, [=]() { glView->setLighmapOnly(lightmap_only->isChecked()); });
+    connect(fullbright, &QCheckBox::stateChanged, this, [=]() { glView->setFullbright(fullbright->isChecked()); });
 }
 
 MainWindow::~MainWindow() { }

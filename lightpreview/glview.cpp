@@ -79,10 +79,11 @@ uniform sampler2D texture_sampler;
 uniform sampler2D lightmap_sampler;
 uniform float opacity;
 uniform bool lightmap_only;
+uniform bool fullbright;
 
 void main() {
     vec3 texcolor = lightmap_only ? vec3(0.5) : texture(texture_sampler, uv).rgb;
-    vec3 lmcolor = texture(lightmap_sampler, lightmap_uv).rgb;
+    vec3 lmcolor = fullbright ? vec3(0.5) : texture(lightmap_sampler, lightmap_uv).rgb;
 
     // 2.0 for overbright
     color = vec4(texcolor * lmcolor * 2.0, opacity);
@@ -126,6 +127,7 @@ void GLView::initializeGL()
     m_program_lightmap_sampler_location = m_program->uniformLocation("lightmap_sampler");
     m_program_opacity_location = m_program->uniformLocation("opacity");
     m_program_lightmap_only_location = m_program->uniformLocation("lightmap_only");
+    m_program_fullbright_location = m_program->uniformLocation("fullbright");
     m_vao.create();
 
     glEnable(GL_DEPTH_TEST);
@@ -154,6 +156,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_lightmap_sampler_location, 1 /* texture unit */);
     m_program->setUniformValue(m_program_opacity_location, 1.0f);
     m_program->setUniformValue(m_program_lightmap_only_location, m_lighmapOnly);
+    m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
 
     // opaque draws
     for (auto &draw : m_drawcalls) {
@@ -204,6 +207,12 @@ void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
 void GLView::setLighmapOnly(bool lighmapOnly)
 {
     m_lighmapOnly = lighmapOnly;
+    update();
+}
+
+void GLView::setFullbright(bool fullbright)
+{
+    m_fullbright = fullbright;
     update();
 }
 
