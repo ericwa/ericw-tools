@@ -93,6 +93,7 @@ private:
     std::vector<drawcall_t> m_drawcalls;
 
     QOpenGLShaderProgram *m_program = nullptr;
+    QOpenGLShaderProgram *m_program_wireframe = nullptr;
 
     // uniform locations
     int m_program_mvp_location = 0;
@@ -104,6 +105,9 @@ private:
     int m_program_drawnormals_location = 0;
     int m_program_showtris_location = 0;
     int m_program_drawflat_location = 0;
+
+    // uniform locations (wireframe program)
+    int m_program_wireframe_mvp_location = 0;
 
 public:
     GLView(QWidget *parent = nullptr);

@@ -56,6 +56,7 @@ GLView::~GLView()
     makeCurrent();
 
     delete m_program;
+    delete m_program_wireframe;
 
     m_vbo.destroy();
     m_indexBuffer.destroy();
@@ -66,6 +67,28 @@ GLView::~GLView()
 
     doneCurrent();
 }
+
+static const char *s_fragShader_Wireframe = R"(
+#version 330 core
+
+out vec4 color;
+
+void main() {
+    color = vec4(1.0);
+}
+)";
+
+static const char *s_vertShader_Wireframe = R"(
+#version 330 core
+
+layout (location = 0) in vec3 position;
+
+uniform mat4 MVP;
+
+void main() {
+    gl_Position = MVP * vec4(position, 1.0);
+}
+)";
 
 static const char *s_fragShader = R"(
 #version 330 core
@@ -139,6 +162,11 @@ void GLView::initializeGL()
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader);
     assert(m_program->link());
 
+    m_program_wireframe = new QOpenGLShaderProgram();
+    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Wireframe);
+    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Wireframe);
+    assert(m_program_wireframe->link());
+
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");
     m_program_texture_sampler_location = m_program->uniformLocation("texture_sampler");
@@ -149,6 +177,12 @@ void GLView::initializeGL()
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
     m_program_showtris_location = m_program->uniformLocation("showtris");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
+    m_program->release();
+
+    m_program_wireframe->bind();
+    m_program_wireframe_mvp_location = m_program_wireframe->uniformLocation("MVP");
+    m_program_wireframe->release();
+
     m_vao.create();
 
     glEnable(GL_DEPTH_TEST);
@@ -162,8 +196,6 @@ void GLView::paintGL()
     glClearColor(0.1, 0.1, 0.1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_program->bind();
-
     QMatrix4x4 modelMatrix;
     QMatrix4x4 viewMatrix;
     QMatrix4x4 projectionMatrix;
@@ -172,6 +204,24 @@ void GLView::paintGL()
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
 
+    // wireframe
+    if (m_showTris) {
+        m_program_wireframe->bind();
+        m_program_wireframe->setUniformValue(m_program_wireframe_mvp_location, MVP);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+
+        for (auto &draw : m_drawcalls) {
+            glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
+                reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
+        }
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+        m_program_wireframe->release();
+    }
+
+    m_program->bind();
     m_program->setUniformValue(m_program_mvp_location, MVP);
     m_program->setUniformValue(m_program_texture_sampler_location, 0 /* texture unit */);
     m_program->setUniformValue(m_program_lightmap_sampler_location, 1 /* texture unit */);
