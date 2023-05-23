@@ -46,7 +46,7 @@ constexpr int PSIDE_BOTH = (PSIDE_FRONT | PSIDE_BACK);
 // this gets OR'ed in in the return value of QuickTestBrushToPlanenum if one of the brush sides is on the input plane
 constexpr int PSIDE_FACING = 4;
 
-#define CHECK_PLANE_AGAINST_VOLUME 0
+#define CHECK_PLANE_AGAINST_VOLUME 1
 
 struct bspstats_t : logging::stat_tracker_t
 {
