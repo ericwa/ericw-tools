@@ -2545,14 +2545,35 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         brush.faces.emplace_back(std::move(face.value()));
     }
 
+    bool is_antiregion = brush.faces[0].texname.ends_with("antiregion"), is_region = !is_antiregion && brush.faces[0].texname.ends_with("region");
+
+    // check regionness
+    if (is_antiregion) {
+        for (auto &face : brush.faces) {
+            if (!face.texname.ends_with("antiregion")) {
+                is_antiregion = false;
+                break;
+            }
+        }
+    }
+
+    if (is_region) {
+        for (auto &face : brush.faces) {
+            if (!face.texname.ends_with("region")) {
+                is_region = false;
+                break;
+            }
+        }
+    }
+
     // check for region/antiregion brushes
-    if (brush.faces[0].texname.ends_with("antiregion")) {
+    if (is_antiregion) {
         if (!map.is_world_entity(entity)) {
             FError("Region brush at {} isn't part of the world entity", parser.token);
         }
 
         map.antiregions.push_back(CloneBrush(brush, true));
-    } else if (brush.faces[0].texname.ends_with("region")) {
+    } else if (is_region) {
         if (!map.is_world_entity(entity)) {
             FError("Region brush at {} isn't part of the world entity", parser.token);
         }
