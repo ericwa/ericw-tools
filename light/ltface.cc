@@ -1294,6 +1294,8 @@ static void LightFace_Entity(
     }
 }
 
+#define LIGHTPOINT_TAKE_MAX
+
 /**
  * Calculates light at a given point from an entity
  */
@@ -1319,7 +1321,13 @@ static void LightPoint_Entity(const mbsp_t *bsp, raystream_occlusion_t &rs, cons
             GetLightContrib(light_options, entity, cube_normal, true, surfpoint, false, cube_color, surfpointToLightDir,
                 normalcontrib_unused, &surfpointToLightDist);
 
+#ifdef LIGHTPOINT_TAKE_MAX
+            if (qv::length2(cube_color) > qv::length2(color)) {
+                color = cube_color;
+            }
+#else
             color += cube_color / 6.0;
+#endif
         }
     }
 
@@ -1485,7 +1493,13 @@ static void LightPoint_Sky(const mbsp_t *bsp, raystream_intersection_t &rs, cons
                 float value = angle * sun->sunlight;
                 cube_color = sun->sunlight_color * (value / 255.0);
 
+#ifdef LIGHTPOINT_TAKE_MAX
+                if (qv::length2(cube_color) > qv::length2(color)) {
+                    color = cube_color;
+                }
+#else
                 color += cube_color / 6;
+#endif
             }
         }
 
@@ -2034,7 +2048,13 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
                         cube_color = GetSurfaceLighting(
                             cfg, &vpl, dir, dist, cube_normal, true, standard_scale, sky_scale, hotspot_clamp);
 
+#ifdef LIGHTPOINT_TAKE_MAX
+                        if (qv::length2(cube_color) > qv::length2(indirect)) {
+                            indirect = cube_color;
+                        }
+#else
                         indirect += cube_color / 6.0;
+#endif
                     }
                 }
 
