@@ -575,7 +575,10 @@ int main(int argc, char **argv)
         printf(
             "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
             "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--findleaf x y z] [--settexinfo facenum texinfonum]\n"
-            "[--decompile] [--decompile-geomonly] [--decompile-hull n] bspfile/mapfile\n");
+            "[--decompile] [--decompile-geomonly] [--decompile-hull n]\n"
+            "[--extract-bspx-lump lump_name output_file_name]\n"
+            "[--insert-bspx-lump lump_name input_file_name]\n"
+            "[--remove-bspx-lump lump_name] bspfile/mapfile\n");
         exit(1);
     }
 
@@ -876,6 +879,84 @@ int main(int argc, char **argv)
                 Error("{}", strerror(errno));
 
             printf("done!\n");
+            return 0;
+        } else if (!strcmp(argv[i], "--extract-bspx-lump")) {
+            std::string lump_name = argv[i + 1];
+            fs::path output_file_name = argv[i + 2];
+            // argv[i + 3] == input bsp
+
+            if (i + 3 >= argc) {
+                Error("--extract-bspx-lump requires 3 arguments");
+            }
+
+            const auto &entries = bspdata.bspx.entries;
+            if (entries.find(lump_name) == entries.end()) {
+                FError("couldn't find bspx lump {}", lump_name);
+            }
+
+            const std::vector<uint8_t> &entry = entries.at(lump_name);
+
+            fmt::print("-> writing {} BSPX lump data to {}... ", lump_name, output_file_name);
+            std::ofstream f(output_file_name, std::ios_base::out | std::ios_base::binary);
+            if (!f)
+                FError("couldn't open {} for writing\n", output_file_name);
+
+            f.write(reinterpret_cast<const char *>(entry.data()), entry.size());
+
+            if (!f)
+                FError("{}", strerror(errno));
+            f.close();
+
+            fmt::print("done.\n");
+            return 0;
+        } else if (!strcmp(argv[i], "--insert-bspx-lump")) {
+            std::string lump_name = argv[i + 1];
+            fs::path input_file_name = argv[i + 2];
+            // argv[i + 3] == input bsp
+
+            if (i + 3 >= argc) {
+                Error("--insert-bspx-lump requires 3 arguments");
+            }
+
+            // read entire input
+            auto data = fs::load(input_file_name);
+            if (!data)
+                FError("couldn't open {} for reading\n", input_file_name);
+
+            // put bspx lump
+            fmt::print("-> inserting BSPX lump {} from {} ({} bytes)...", lump_name, input_file_name, data->size());
+            auto &entries = bspdata.bspx.entries;
+            entries[lump_name] = std::move(*data);
+
+            // Overwrite source bsp!
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
+            WriteBSPFile(source, &bspdata);
+
+            fmt::print("done.\n");
+            return 0;
+        } else if (!strcmp(argv[i], "--remove-bspx-lump")) {
+            std::string lump_name = argv[i + 1];
+            // argv[i + 2] == input bsp
+
+            if (i + 2 >= argc) {
+                Error("--remove-bspx-lump requires 2 arguments");
+            }
+
+            // remove bspx lump
+            fmt::print("-> removing bspx lump {}\n", lump_name);
+
+            auto &entries = bspdata.bspx.entries;
+            auto it = entries.find(lump_name);
+            if (it == entries.end()) {
+                FError("couldn't find bspx lump {}", lump_name);
+            }
+            entries.erase(it);
+
+            // Overwrite source bsp!
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
+            WriteBSPFile(source, &bspdata);
+
+            fmt::print("done.\n");
             return 0;
         } else {
             fmt::print("unknown command {}\n", argv[i]);
