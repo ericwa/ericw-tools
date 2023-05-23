@@ -30,6 +30,11 @@ See file, 'COPYING', for details.
 #include <QCheckBox>
 #include <QPushButton>
 #include <QSettings>
+#include <QMenu>
+#include <QMenuBar>
+#include <QFileDialog>
+#include <QGroupBox>
+#include <QRadioButton>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -55,21 +60,32 @@ MainWindow::MainWindow(QWidget *parent)
     vis_options = new QLineEdit();
     light_options = new QLineEdit();
     auto *reload_button = new QPushButton(tr("Reload"));
-    auto *lightmap_only = new QCheckBox(tr("Lightmap Only"));
-    auto *fullbright = new QCheckBox(tr("Fullbright"));
-    auto *normals = new QCheckBox(tr("Normals"));
+
+    auto *lightmapped = new QRadioButton(tr("Lightmapped"));
+    lightmapped->setChecked(true);
+    auto *lightmap_only = new QRadioButton(tr("Lightmap Only"));
+    auto *fullbright = new QRadioButton(tr("Fullbright"));
+    auto *normals = new QRadioButton(tr("Normals"));
+    auto *drawflat = new QRadioButton(tr("Flat shading"));
+
+    auto *rendermode_layout = new QVBoxLayout();
+    rendermode_layout->addWidget(lightmapped);
+    rendermode_layout->addWidget(lightmap_only);
+    rendermode_layout->addWidget(fullbright);
+    rendermode_layout->addWidget(normals);
+    rendermode_layout->addWidget(drawflat);
+
+    auto *rendermode_group = new QGroupBox(tr("Render mode"));
+    rendermode_group->setLayout(rendermode_layout);
+
     auto *showtris = new QCheckBox(tr("Show Tris"));
-    auto *drawflat = new QCheckBox(tr("Flat shading"));
 
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
     formLayout->addRow(reload_button);
-    formLayout->addRow(lightmap_only);
-    formLayout->addRow(fullbright);
-    formLayout->addRow(normals);
+    formLayout->addRow(rendermode_group);
     formLayout->addRow(showtris);
-    formLayout->addRow(drawflat);
 
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -93,19 +109,29 @@ MainWindow::MainWindow(QWidget *parent)
     // setup event handlers
 
     connect(reload_button, &QAbstractButton::clicked, this, &MainWindow::reload);
-    connect(lightmap_only, &QCheckBox::stateChanged, this,
-        [=](int state) { glView->setLighmapOnly(state == Qt::CheckState::Checked); });
-    connect(fullbright, &QCheckBox::stateChanged, this,
-        [=](int state) { glView->setFullbright(state == Qt::CheckState::Checked); });
-    connect(normals, &QCheckBox::stateChanged, this,
-        [=](int state) { glView->setDrawNormals(state == Qt::CheckState::Checked); });
-    connect(showtris, &QCheckBox::stateChanged, this,
-        [=](int state) { glView->setShowTris(state == Qt::CheckState::Checked); });
-    connect(drawflat, &QCheckBox::stateChanged, this,
-        [=](int state) { glView->setDrawFlat(state == Qt::CheckState::Checked); });
+    connect(lightmap_only, &QAbstractButton::toggled, this, [=](bool checked) { glView->setLighmapOnly(checked); });
+    connect(fullbright, &QAbstractButton::toggled, this, [=](bool checked) { glView->setFullbright(checked); });
+    connect(normals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawNormals(checked); });
+    connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
+    connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
+
+    setupMenu();
 }
 
 MainWindow::~MainWindow() { }
+
+void MainWindow::setupMenu()
+{
+    auto *menu = menuBar()->addMenu(tr("&File"));
+
+    auto *open = menu->addAction(tr("&Open"), this, &MainWindow::fileOpen);
+    open->setShortcut(QKeySequence::Open);
+
+    auto *openRecent = menu->addAction(tr("Open &Recent"));
+
+    auto *exit = menu->addAction(tr("E&xit"), this, &QWidget::close);
+    exit->setShortcut(QKeySequence::Quit);
+}
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
@@ -124,6 +150,14 @@ void MainWindow::dropEvent(QDropEvent *event)
             event->acceptProposedAction();
         }
     }
+}
+
+void MainWindow::fileOpen()
+{
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), "", tr("Map (*.map);; BSP (*.bsp)"));
+
+    if (!fileName.isEmpty())
+        loadFile(fileName);
 }
 
 void MainWindow::loadFile(const QString &file)
