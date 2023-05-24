@@ -202,7 +202,7 @@ void GLView::paintGL()
     QMatrix4x4 modelMatrix;
     QMatrix4x4 viewMatrix;
     QMatrix4x4 projectionMatrix;
-    projectionMatrix.perspective(90, m_displayAspect, 0.01f, 1'000'000.0f);
+    projectionMatrix.perspective(90, m_displayAspect, 1.0f, 1'000'000.0f);
     viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
