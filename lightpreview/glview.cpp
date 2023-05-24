@@ -316,7 +316,7 @@ void GLView::setKeepOrigin(bool keeporigin)
     m_keepOrigin = keeporigin;
 }
 
-void GLView::takeScreenshot(int w, int h)
+void GLView::takeScreenshot(QString destPath, int w, int h)
 {
     // update aspect ratio
     float backupDisplayAspect = m_displayAspect;
@@ -334,12 +334,8 @@ void GLView::takeScreenshot(int w, int h)
         glViewport(0, 0, w, h);
         paintGL();
 
-        QString dest = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation) +
-                       QLatin1String("/Screenshots/lightpreview_") +
-                       QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss") + QLatin1String(".png");
-
         QImage image = fbo.toImage();
-        image.save(dest);
+        image.save(destPath);
 
         assert(fbo.release());
     }

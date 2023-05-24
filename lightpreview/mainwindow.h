@@ -41,6 +41,7 @@ public:
 private:
     void setupMenu();
     void fileOpen();
+    void takeScreenshot();
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;

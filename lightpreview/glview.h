@@ -115,7 +115,8 @@ public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
 
-    void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<entdict_t> &entities, const settings::common_settings &settings);
+    void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
+        const std::vector<entdict_t> &entities, const settings::common_settings &settings);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
@@ -125,7 +126,7 @@ public:
     void setKeepOrigin(bool keeporigin);
     const bool &getKeepOrigin() const { return m_keepOrigin; }
 
-    void takeScreenshot(int w, int h);
+    void takeScreenshot(QString destPath, int w, int h);
 
 protected:
     void initializeGL() override;

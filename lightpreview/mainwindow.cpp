@@ -135,9 +135,9 @@ void MainWindow::setupMenu()
     auto *open = menu->addAction(tr("&Open"), this, &MainWindow::fileOpen);
     open->setShortcut(QKeySequence::Open);
 
-    auto *openRecent = menu->addAction(tr("Open &Recent"));
+    // auto *openRecent = menu->addAction(tr("Open &Recent"));
 
-    auto *takeScreenshot = menu->addAction(tr("Take Screenshot"), this, [=]() { glView->takeScreenshot(3840, 2160); });
+    auto *takeScreenshot = menu->addAction(tr("Save Screenshot..."), this, &MainWindow::takeScreenshot);
 
     auto *exit = menu->addAction(tr("E&xit"), this, &QWidget::close);
     exit->setShortcut(QKeySequence::Quit);
@@ -178,6 +178,14 @@ void MainWindow::fileOpen()
 
     if (!fileName.isEmpty())
         loadFile(fileName);
+}
+
+void MainWindow::takeScreenshot()
+{
+    QString fileName = QFileDialog::getSaveFileName(this, tr("Save Screenshot"), "", tr("PNG (*.png)"));
+
+    if (!fileName.isEmpty())
+        glView->takeScreenshot(fileName, 3840, 2160);
 }
 
 void MainWindow::loadFile(const QString &file)
