@@ -41,10 +41,11 @@ public:
 private:
     void setupMenu();
     void fileOpen();
-    
+
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private:
     void reload();

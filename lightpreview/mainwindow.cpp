@@ -19,6 +19,7 @@ See file, 'COPYING', for details.
 
 #include "mainwindow.h"
 
+#include <QCoreApplication>
 #include <QString>
 #include <QDragEnterEvent>
 #include <QMimeData>
@@ -35,6 +36,7 @@ See file, 'COPYING', for details.
 #include <QFileDialog>
 #include <QGroupBox>
 #include <QRadioButton>
+#include <QTimer>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -98,6 +100,8 @@ MainWindow::MainWindow(QWidget *parent)
     auto *splitter = new QSplitter();
     splitter->addWidget(form);
     splitter->addWidget(glView);
+    splitter->setStretchFactor(0, 0);
+    splitter->setStretchFactor(1, 1);
 
     setCentralWidget(splitter);
     setAcceptDrops(true);
@@ -155,6 +159,16 @@ void MainWindow::dropEvent(QDropEvent *event)
 
             event->acceptProposedAction();
         }
+    }
+}
+
+void MainWindow::showEvent(QShowEvent *event)
+{
+    // FIXME: move command-line parsing somewhere else?
+    // FIXME: support more command-line options?
+    auto args = QCoreApplication::arguments();
+    if (args.size() == 2) {
+        QTimer::singleShot(0, this, [=] { loadFile(args.at(1)); });
     }
 }
 
@@ -304,7 +318,7 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
 
     fs::path fs_path = MakeFSPath(file);
-    
+
     bspdata_t d;
 
     settings::common_settings render_settings;
@@ -332,8 +346,8 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
         ConvertBSPFormat(&d, &bspver_generic);
 
     } else {
-        d = QbspVisLight_Common(
-            fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
+        d = QbspVisLight_Common(fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options), ParseArgs(light_options),
+            vis_checkbox->isChecked());
 
         // FIXME: move to a lightpreview_settings
         settings::common_settings settings;
