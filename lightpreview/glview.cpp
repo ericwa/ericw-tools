@@ -29,6 +29,9 @@ See file, 'COPYING', for details.
 #include <QKeyEvent>
 #include <QTime>
 #include <fmt/core.h>
+#include <QOpenGLFramebufferObject>
+#include <QStandardPaths>
+#include <QDateTime>
 
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
@@ -305,6 +308,40 @@ void GLView::setShowTris(bool showtris)
 void GLView::setDrawFlat(bool drawflat)
 {
     m_drawFlat = drawflat;
+    update();
+}
+
+void GLView::takeScreenshot(int w, int h)
+{
+    // update aspect ratio
+    float backupDisplayAspect = m_displayAspect;
+    m_displayAspect = static_cast<float>(w) / static_cast<float>(h);
+
+    makeCurrent();
+    {
+        QOpenGLFramebufferObjectFormat format;
+        format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        format.setSamples(4);
+        
+        QOpenGLFramebufferObject fbo(w, h, format);
+        assert(fbo.bind());
+
+        glViewport(0, 0, w, h);
+        paintGL();
+
+        QString dest = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation) +
+                       QLatin1String("/Screenshots/lightpreview_") +
+                       QDateTime::currentDateTime().toString("yyyyMMdd_HHmmss") + QLatin1String(".png");
+
+        QImage image = fbo.toImage();
+        image.save(dest);
+
+        assert(fbo.release());
+    }
+    doneCurrent();
+
+    // restore aspect ratio
+    m_displayAspect = backupDisplayAspect;
     update();
 }
 

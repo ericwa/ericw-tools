@@ -121,6 +121,8 @@ public:
     void setShowTris(bool showtris);
     void setDrawFlat(bool drawflat);
 
+    void takeScreenshot(int w, int h);
+
 protected:
     void initializeGL() override;
     void paintGL() override;
