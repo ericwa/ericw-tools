@@ -350,15 +350,8 @@ void GLView::takeScreenshot(int w, int h)
     update();
 }
 
-void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<entdict_t> &entities)
+void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<entdict_t> &entities, const settings::common_settings &settings)
 {
-    // FIXME: move to a lightpreview_settings
-    settings::common_settings settings;
-
-    // FIXME: copy the -path args from light
-    settings.paths.copy_from(light_options.paths);
-
-    bsp.loadversion->game->init_filesystem(file.toStdString(), settings);
     img::load_textures(&bsp, settings);
 
     // build lightmap atlas

@@ -307,6 +307,8 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     
     bspdata_t d;
 
+    settings::common_settings render_settings;
+
     if (fs_path.extension().compare(".bsp") == 0) {
 
         LoadBSPFile(fs_path, &d);
@@ -321,26 +323,32 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
             argPtrs.push_back(arg.data());
         }
 
-        settings::common_settings settings;
+        render_settings.preinitialize(argPtrs.size(), argPtrs.data());
+        render_settings.initialize(argPtrs.size() - 1, argPtrs.data() + 1);
+        render_settings.postinitialize(argPtrs.size(), argPtrs.data());
 
-        settings.preinitialize(argPtrs.size(), argPtrs.data());
-        settings.initialize(argPtrs.size(), argPtrs.data());
-        settings.postinitialize(argPtrs.size(), argPtrs.data());
-
-        d.version->game->init_filesystem(fs_path, settings);
+        d.version->game->init_filesystem(fs_path, render_settings);
 
         ConvertBSPFormat(&d, &bspver_generic);
 
     } else {
         d = QbspVisLight_Common(
             fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
+
+        // FIXME: move to a lightpreview_settings
+        settings::common_settings settings;
+
+        // FIXME: copy the -path args from light
+        settings.paths.copy_from(::light_options.paths);
+
+        d.loadversion->game->init_filesystem(file.toStdString(), settings);
     }
 
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 
     auto ents = EntData_Parse(bsp);
 
-    glView->renderBSP(file, bsp, d.bspx.entries, ents);
+    glView->renderBSP(file, bsp, d.bspx.entries, ents, render_settings);
 
     if (!is_reload && !glView->getKeepOrigin()) {
         for (auto &ent : ents) {
