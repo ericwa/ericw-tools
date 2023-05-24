@@ -733,6 +733,21 @@ bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int fac
     return result;
 }
 
+std::optional<bspxfacenormals> BSPX_FaceNormals(const mbsp_t &bsp, const bspxentries_t &entries)
+{
+    auto it = entries.find("FACENORMALS");
+    if (it == entries.end()) {
+        return std::nullopt;
+    }
+
+    auto stream = imemstream(it->second.data(), it->second.size());
+    stream >> endianness<std::endian::little>;
+
+    bspxfacenormals result;
+    result.stream_read(stream, bsp);
+    return result;
+}
+
 qvec2d WorldToTexCoord(const qvec3d &world, const mtexinfo_t *tex)
 {
     /*

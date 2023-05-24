@@ -78,25 +78,46 @@ struct bspxbrushes_perbrush
 
 using bspxbrushes_perface = qplane3f;
 
-// FACENORMALS BSPX lump
-// struct isn't actually used, but provides technical
-// specs of the lump
-struct bspxfacenormals_header
+struct bspxfacenormals_per_vert
 {
-    // num unique normals
-    uint32_t num_normals;
-    qvec3f *normals; // [num_normals]
-
-    // the vertex data is stored per face, because vertex data
-    // in the BSP is shared between faces; this won't allow for mixed
-    // smoothing groups to work properly since they can't share normals.
-    // if the BSP has 4 faces with 4 vertices each, then what follows is
-    // 4 * 4 * (3 uint32_t); normal/tangent/bitangent per vertex per face.
-    // for each bsp face:
-    // for each face vertex:
+    // these are all indices into bspxfacenormals::normals
     uint32_t normal;
     uint32_t tangent;
     uint32_t bitangent;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
+};
+
+struct bspxfacenormals_per_face
+{
+    // the size of this must match the corresponding face's numedges
+    std::vector<bspxfacenormals_per_vert> per_vert;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s, const mface_t &face);
+};
+
+// FACENORMALS BSPX lump
+struct bspxfacenormals
+{
+    // we can't just store 1 normal per bsp.dvertexes;
+    // to allow smoothing groups to work, a single vertex may have different normals
+    // when it's used by different faces.
+
+    // table of vectors referenced by the per-face data below,
+    // these could be used as normals, tangents, or bitangents.
+    // the size of this table doesn't correspond to bsp.dvertexes.
+    std::vector<qvec3f> normals;
+
+    // the size of this must match bsp.dfaces
+    std::vector<bspxfacenormals_per_face> per_face;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s, const mbsp_t &bsp);
 };
 
 // DECOUPLED_LM BSPX lump (subject to change!)

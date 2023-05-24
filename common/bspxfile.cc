@@ -74,6 +74,76 @@ void bspxbrushes_perbrush::stream_read(std::istream &s)
     s >= std::tie(bounds, contents, numfaces);
 }
 
+// bspxfacenormals_per_vert
+
+void bspxfacenormals_per_vert::stream_write(std::ostream &s) const
+{
+    s <= std::tie(normal, tangent, bitangent);
+}
+
+void bspxfacenormals_per_vert::stream_read(std::istream &s)
+{
+    s >= std::tie(normal, tangent, bitangent);
+}
+
+// bspxfacenormals_per_face
+
+void bspxfacenormals_per_face::stream_write(std::ostream &s) const
+{
+    for (const auto &v : per_vert) {
+        s <= v;
+    }
+}
+
+void bspxfacenormals_per_face::stream_read(std::istream &s, const mface_t &f)
+{
+    for (int i = 0; i < f.numedges; ++i) {
+        bspxfacenormals_per_vert v;
+        s >= v;
+        per_vert.push_back(v);
+    }
+}
+
+// bspxfacenormals
+
+void bspxfacenormals::stream_write(std::ostream &s) const
+{
+    // write the table of normals
+    s <= static_cast<uint32_t>(normals.size());
+
+    for (const qvec3f &v : normals) {
+        s <= v;
+    }
+
+    // write the per-face, per-vertex indices into the prior table
+    for (const auto &f : per_face) {
+        s <= f;
+    }
+}
+
+void bspxfacenormals::stream_read(std::istream &s, const mbsp_t &bsp)
+{
+    normals.clear();
+    per_face.clear();
+
+    // read normals table
+    uint32_t size;
+    s >= size;
+
+    for (uint32_t i = 0; i < size; ++i) {
+        qvec3f v;
+        s >= v;
+        normals.push_back(v);
+    }
+
+    // read, based on the faces in the provided bsp
+    for (const auto &f : bsp.dfaces) {
+        bspxfacenormals_per_face pf;
+        pf.stream_read(s, f);
+        per_face.push_back(pf);
+    }
+}
+
 // bspx_decoupled_lm_perface
 
 void bspx_decoupled_lm_perface::stream_write(std::ostream &s) const

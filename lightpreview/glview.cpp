@@ -327,7 +327,7 @@ void GLView::takeScreenshot(int w, int h)
         QOpenGLFramebufferObjectFormat format;
         format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
         format.setSamples(4);
-        
+
         QOpenGLFramebufferObject fbo(w, h, format);
         assert(fbo.bind());
 
@@ -350,12 +350,14 @@ void GLView::takeScreenshot(int w, int h)
     update();
 }
 
-void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<entdict_t> &entities, const settings::common_settings &settings)
+void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
+    const std::vector<entdict_t> &entities, const settings::common_settings &settings)
 {
     img::load_textures(&bsp, settings);
 
     // build lightmap atlas
     auto atlas = build_lightmap_atlas(bsp, bspx, false, true);
+    auto facenormals = BSPX_FaceNormals(bsp, bspx);
 
     // NOTE: according to https://doc.qt.io/qt-6/qopenglwidget.html#resource-initialization-and-cleanup
     // we can only do this after `initializeGL()` has run once.
@@ -489,12 +491,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         const size_t dc_first_index = indexBuffer.size();
 
         for (const auto &[f, model_offset] : faces) {
+            const int fnum = Face_GetNum(&bsp, f);
             const auto plane_normal = Face_Normal(&bsp, f);
             const qvec3f flat_color = qvec3f{Random(), Random(), Random()};
 
             const size_t first_vertex_of_face = verts.size();
 
-            const auto lm_uvs = atlas.facenum_to_lightmap_uvs.at(Face_GetNum(&bsp, f));
+            const auto lm_uvs = atlas.facenum_to_lightmap_uvs.at(fnum);
 
             // output a vertex for each vertex of the face
             for (int j = 0; j < f->numedges; ++j) {
@@ -506,10 +509,18 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
                 qvec2f lightmap_uv = lm_uvs.at(j);
 
+                qvec3f vertex_normal;
+                if (facenormals) {
+                    auto normal_index = facenormals->per_face[fnum].per_vert[j].normal;
+                    vertex_normal = facenormals->normals[normal_index];
+                } else {
+                    vertex_normal = plane_normal;
+                }
+
                 verts.push_back({.pos = pos + model_offset,
                     .uv = uv,
                     .lightmap_uv = lightmap_uv,
-                    .normal = plane_normal,
+                    .normal = vertex_normal,
                     .flat_color = flat_color});
             }
 
