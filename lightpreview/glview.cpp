@@ -311,6 +311,11 @@ void GLView::setDrawFlat(bool drawflat)
     update();
 }
 
+void GLView::setKeepOrigin(bool keeporigin)
+{
+    m_keepOrigin = keeporigin;
+}
+
 void GLView::takeScreenshot(int w, int h)
 {
     // update aspect ratio
@@ -345,7 +350,7 @@ void GLView::takeScreenshot(int w, int h)
     update();
 }
 
-void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector<entdict_t> &entities)
+void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<entdict_t> &entities)
 {
     // FIXME: move to a lightpreview_settings
     settings::common_settings settings;
@@ -357,7 +362,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
     img::load_textures(&bsp, settings);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, bspxentries_t{}, false, false);
+    auto atlas = build_lightmap_atlas(bsp, bspx, false, true);
 
     // NOTE: according to https://doc.qt.io/qt-6/qopenglwidget.html#resource-initialization-and-cleanup
     // we can only do this after `initializeGL()` has run once.
@@ -441,6 +446,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const std::vector
             // determine opacity
             float opacity = 1.0f;
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+
+                if (texinfo->flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKY)) {
+                    continue;
+                }
+
                 if (texinfo->flags.native & Q2_SURF_TRANS33) {
                     opacity = 0.33f;
                 }

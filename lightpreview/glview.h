@@ -34,6 +34,7 @@ See file, 'COPYING', for details.
 #include <common/qvec.hh>
 #include <common/cmdlib.hh>
 #include <common/entdata.h>
+#include <common/bspfile.hh>
 
 enum class keys_t : uint32_t
 {
@@ -77,6 +78,7 @@ private:
     bool m_drawNormals = false;
     bool m_showTris = false;
     bool m_drawFlat = false;
+    bool m_keepOrigin = false;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -113,13 +115,15 @@ public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
 
-    void renderBSP(const QString &file, const mbsp_t &bsp, const std::vector<entdict_t> &entities);
+    void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<entdict_t> &entities);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
     void setDrawNormals(bool drawnormals);
     void setShowTris(bool showtris);
     void setDrawFlat(bool drawflat);
+    void setKeepOrigin(bool keeporigin);
+    const bool &getKeepOrigin() const { return m_keepOrigin; }
 
     void takeScreenshot(int w, int h);
 

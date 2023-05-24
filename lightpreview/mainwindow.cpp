@@ -80,12 +80,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     auto *showtris = new QCheckBox(tr("Show Tris"));
 
+    auto *keepposition = new QCheckBox(tr("Keep Camera Pos"));
+
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
     formLayout->addRow(reload_button);
     formLayout->addRow(rendermode_group);
     formLayout->addRow(showtris);
+    formLayout->addRow(keepposition);
 
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -114,6 +117,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(normals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawNormals(checked); });
     connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
+    connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
 
     setupMenu();
 }
@@ -286,6 +290,8 @@ void MainWindow::reload()
 
 void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 {
+    qDebug() << "loadFileInternal " << file;
+
     // persist settings
     QSettings s;
     s.setValue("qbsp_options", qbsp_options->text());
@@ -298,19 +304,43 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
 
     fs::path fs_path = MakeFSPath(file);
+    
+    bspdata_t d;
 
-    qDebug() << "loadFileInternal " << file;
+    if (fs_path.extension().compare(".bsp") == 0) {
 
-    auto d = QbspVisLight_Common(
-        fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
+        LoadBSPFile(fs_path, &d);
+
+        auto opts = ParseArgs(light_options);
+
+        std::vector<const char *> argPtrs;
+
+        for (const std::string &arg : opts) {
+            argPtrs.push_back(arg.data());
+        }
+
+        settings::common_settings settings;
+
+        settings.preinitialize(argPtrs.size(), argPtrs.data());
+        settings.initialize(argPtrs.size(), argPtrs.data());
+        settings.postinitialize(argPtrs.size(), argPtrs.data());
+
+        d.version->game->init_filesystem(fs_path, settings);
+
+        ConvertBSPFormat(&d, &bspver_generic);
+
+    } else {
+        d = QbspVisLight_Common(
+            fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
+    }
 
     const auto &bsp = std::get<mbsp_t>(d.bsp);
 
     auto ents = EntData_Parse(bsp);
 
-    glView->renderBSP(file, bsp, ents);
+    glView->renderBSP(file, bsp, d.bspx.entries, ents);
 
-    if (!is_reload) {
+    if (!is_reload && !glView->getKeepOrigin()) {
         for (auto &ent : ents) {
             if (ent.get("classname") == "info_player_start") {
                 qvec3d origin;
