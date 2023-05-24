@@ -315,6 +315,8 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
         std::vector<const char *> argPtrs;
 
+        argPtrs.push_back("");
+
         for (const std::string &arg : opts) {
             argPtrs.push_back(arg.data());
         }
