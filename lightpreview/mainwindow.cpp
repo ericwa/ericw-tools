@@ -129,6 +129,8 @@ void MainWindow::setupMenu()
 
     auto *openRecent = menu->addAction(tr("Open &Recent"));
 
+    auto *takeScreenshot = menu->addAction(tr("Take Screenshot"), this, [=]() { glView->takeScreenshot(3840, 2160); });
+
     auto *exit = menu->addAction(tr("E&xit"), this, &QWidget::close);
     exit->setShortcut(QKeySequence::Quit);
 }
