@@ -37,11 +37,16 @@ See file, 'COPYING', for details.
 #include <QGroupBox>
 #include <QRadioButton>
 #include <QTimer>
+#include <QScrollArea>
+#include <QSlider>
+#include <QFrame>
+#include <QLabel>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
 #include <vis/vis.hh>
 #include <light/light.hh>
+#include <common/bspinfo.hh>
 
 #include "glview.h"
 
@@ -91,6 +96,20 @@ MainWindow::MainWindow(QWidget *parent)
     formLayout->addRow(rendermode_group);
     formLayout->addRow(showtris);
     formLayout->addRow(keepposition);
+
+    lightstyles = new QVBoxLayout();
+
+    auto *lightstyles_group = new QGroupBox(tr("Lightstyles"));
+    lightstyles_group->setLayout(lightstyles);
+
+    auto *scrollArea = new QScrollArea();
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setWidget(lightstyles_group);
+    scrollArea->setBackgroundRole(QPalette::Window);
+    scrollArea->setFrameShadow(QFrame::Plain);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+
+    formLayout->addRow(scrollArea);
 
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -310,6 +329,48 @@ void MainWindow::reload()
     loadFileInternal(m_mapFile, true);
 }
 
+class QLightStyleSlider : public QFrame
+{
+public:
+    int32_t style_id;
+
+    QLightStyleSlider(int32_t style_id, GLView *glView) :
+        QFrame(),
+        style_id(style_id),
+        glView(glView)
+    {
+        auto *style_layout = new QHBoxLayout();
+
+        auto *style = new QSlider(Qt::Horizontal);
+        style->setRange(0, 200);
+        style->setValue(100);
+        style->setSingleStep(1);
+        style->setTickPosition(QSlider::TicksBothSides);
+        style->setTickInterval(50);
+
+        connect(style, &QSlider::valueChanged,
+            this, &QLightStyleSlider::setValue);
+
+        auto *style_label = new QLabel();
+        style_label->setText(QString::asprintf("%i", style_id));
+
+        style_layout->addWidget(style_label);
+        style_layout->addWidget(style);
+
+        setLayout(style_layout);
+        setFrameShadow(QFrame::Plain);
+        setFrameShape(QFrame::NoFrame);
+    }
+
+private:
+    void setValue(int value)
+    {
+        glView->setLightStyleIntensity(style_id, value);
+    }
+
+    GLView *glView;
+};
+
 void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 {
     qDebug() << "loadFileInternal " << file;
@@ -370,7 +431,10 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
     auto ents = EntData_Parse(bsp);
 
-    glView->renderBSP(file, bsp, d.bspx.entries, ents, render_settings);
+    // build lightmap atlas
+    auto atlas = build_lightmap_atlas(bsp, d.bspx.entries, false, true);
+
+    glView->renderBSP(file, bsp, d.bspx.entries, ents, atlas, render_settings);
 
     if (!is_reload && !glView->getKeepOrigin()) {
         for (auto &ent : ents) {
@@ -391,6 +455,19 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
                 glView->setCamera(origin, qv::vec_from_mangle(angles));
                 break;
             }
+        }
+    }
+
+    // set lightstyle data
+    if (!is_reload) {
+        while ( QWidget* w = lightstyles->parentWidget()->findChild<QWidget*>(QString(), Qt::FindDirectChildrenOnly) ) {
+            delete w;
+        }
+
+        for (auto &style_entry : atlas.style_to_lightmap_atlas) {
+
+            auto *style = new QLightStyleSlider(style_entry.first, glView);
+            lightstyles->addWidget(style);
         }
     }
 }

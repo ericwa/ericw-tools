@@ -20,6 +20,7 @@ See file, 'COPYING', for details.
 #pragma once
 
 #include <QMainWindow>
+#include <QVBoxLayout>
 
 class GLView;
 class QFileSystemWatcher;
@@ -61,4 +62,5 @@ private:
     QLineEdit *qbsp_options;
     QLineEdit *vis_options;
     QLineEdit *light_options;
+    QVBoxLayout *lightstyles;
 };

@@ -30,6 +30,7 @@ See file, 'COPYING', for details.
 #include <QTime>
 #include <fmt/core.h>
 #include <QOpenGLFramebufferObject>
+#include <QOpenGLDebugLogger>
 #include <QStandardPaths>
 #include <QDateTime>
 
@@ -100,17 +101,18 @@ in vec2 uv;
 in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
+flat in uint styles;
 
 out vec4 color;
 
 uniform sampler2D texture_sampler;
-uniform sampler2D lightmap_sampler;
+uniform sampler2DArray lightmap_sampler;
 uniform float opacity;
 uniform bool lightmap_only;
 uniform bool fullbright;
 uniform bool drawnormals;
-uniform bool showtris;
 uniform bool drawflat;
+uniform float style_scalars[256];
 
 void main() {
     if (drawnormals) {
@@ -120,7 +122,20 @@ void main() {
         color = vec4(flat_color, opacity);
     } else {
         vec3 texcolor = lightmap_only ? vec3(0.5) : texture(texture_sampler, uv).rgb;
-        vec3 lmcolor = fullbright ? vec3(0.5) : texture(lightmap_sampler, lightmap_uv).rgb;
+        vec3 lmcolor = fullbright ? vec3(0.5) : vec3(0);
+
+        if (!fullbright)
+        {
+            for (uint i = 0u; i < 32u; i += 8u)
+            {
+                uint style = (styles >> i) & 0xFFu;
+
+                if (style == 0xFFu)
+                    break;
+
+                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, (float) style)).rgb * style_scalars[style];
+            }
+        }
 
         // 2.0 for overbright
         color = vec4(texcolor * lmcolor * 2.0, opacity);
@@ -136,11 +151,13 @@ layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
+layout (location = 5) in uint vertex_styles;
 
 out vec2 uv;
 out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
+flat out uint styles;
 
 uniform mat4 MVP;
 
@@ -151,12 +168,26 @@ void main() {
     lightmap_uv = vertex_lightmap_uv;
     normal = vertex_normal;
     flat_color = vertex_flat_color;
+    styles = vertex_styles;
 }
 )";
+
+void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
+{
+    qDebug() << debugMessage.message();
+}
 
 void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
+
+    QOpenGLContext *ctx = QOpenGLContext::currentContext();
+    QOpenGLDebugLogger *logger = new QOpenGLDebugLogger(this);
+
+    logger->initialize(); // initializes in the current context, i.e. ctx
+
+    connect(logger, &QOpenGLDebugLogger::messageLogged, this, &GLView::handleLoggedMessage);
+    logger->startLogging();
 
     // set up shader
 
@@ -178,8 +209,8 @@ void GLView::initializeGL()
     m_program_lightmap_only_location = m_program->uniformLocation("lightmap_only");
     m_program_fullbright_location = m_program->uniformLocation("fullbright");
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
-    m_program_showtris_location = m_program->uniformLocation("showtris");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
+    m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
     m_program->release();
 
     m_program_wireframe->bind();
@@ -232,8 +263,11 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_lightmap_only_location, m_lighmapOnly);
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
-    m_program->setUniformValue(m_program_showtris_location, m_showTris);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
+
+    for (int i = 0; i < 256; i++) {
+        m_program->setUniformValue(m_program_style_scalars_location + i, 1.f);
+    }
 
     // opaque draws
     for (auto &draw : m_drawcalls) {
@@ -316,6 +350,17 @@ void GLView::setKeepOrigin(bool keeporigin)
     m_keepOrigin = keeporigin;
 }
 
+void GLView::setLightStyleIntensity(int style_id, int intensity)
+{
+    makeCurrent();
+    m_program->bind();
+    m_program->setUniformValue(m_program_style_scalars_location + style_id, intensity / 200.f);
+    m_program->release();
+    doneCurrent();
+
+    update();
+}
+
 void GLView::takeScreenshot(QString destPath, int w, int h)
 {
     // update aspect ratio
@@ -347,12 +392,10 @@ void GLView::takeScreenshot(QString destPath, int w, int h)
 }
 
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
-    const std::vector<entdict_t> &entities, const settings::common_settings &settings)
+    const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings)
 {
     img::load_textures(&bsp, settings);
 
-    // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, bspx, false, true);
     auto facenormals = BSPX_FaceNormals(bsp, bspx);
 
     // NOTE: according to https://doc.qt.io/qt-6/qopenglwidget.html#resource-initialization-and-cleanup
@@ -365,17 +408,32 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     m_vbo.allocate(0);
     m_indexBuffer.allocate(0);
 
-    // upload lightmap atlas
+    int32_t highest_depth = 0;
+
+    for (auto &style : lightmap.style_to_lightmap_atlas) {
+        highest_depth = max(highest_depth, style.first);
+    }
+
+    // upload lightmap atlases
     {
-        const auto &lm_tex = atlas.style_to_lightmap_atlas.at(0);
+        const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
 
         lightmap_texture =
-            std::make_unique<QOpenGLTexture>(QImage(reinterpret_cast<const uint8_t *>(lm_tex.pixels.data()),
-                lm_tex.width, lm_tex.height, QImage::Format_RGBA8888));
+            std::make_unique<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
+        lightmap_texture->setSize(lm_tex.width, lm_tex.height);
+        lightmap_texture->setLayers(highest_depth + 1);
 
         lightmap_texture->setAutoMipMapGenerationEnabled(false);
         lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
+
+        lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBAFormat);
+
+        lightmap_texture->allocateStorage();
+
+        for (auto &style : lightmap.style_to_lightmap_atlas) {
+            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(style.second.pixels.data()));
+        }
     }
 
     // this determines what can be batched together in a draw call
@@ -463,6 +521,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         qvec2f lightmap_uv;
         qvec3f normal;
         qvec3f flat_color;
+        uint32_t styles;
     };
     std::vector<vertex_t> verts;
     std::vector<uint32_t> indexBuffer;
@@ -493,7 +552,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             const size_t first_vertex_of_face = verts.size();
 
-            const auto lm_uvs = atlas.facenum_to_lightmap_uvs.at(fnum);
+            const auto lm_uvs = lightmap.facenum_to_lightmap_uvs.at(fnum);
 
             // output a vertex for each vertex of the face
             for (int j = 0; j < f->numedges; ++j) {
@@ -513,11 +572,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     vertex_normal = plane_normal;
                 }
 
-                verts.push_back({.pos = pos + model_offset,
+                verts.push_back({
+                    .pos = pos + model_offset,
                     .uv = uv,
                     .lightmap_uv = lightmap_uv,
                     .normal = vertex_normal,
-                    .flat_color = flat_color});
+                    .flat_color = flat_color,
+                    .styles = (uint32_t) (f->styles[0]) | (uint32_t) (f->styles[1] << 8) | (uint32_t) (f->styles[2] << 16) | (uint32_t) (f->styles[3] << 24)
+                });
             }
 
             // output the vertex indices for this face
@@ -570,6 +632,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     glEnableVertexAttribArray(4 /* attrib */);
     glVertexAttribPointer(
         4 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, flat_color));
+
+    // styles
+    glEnableVertexAttribArray(5 /* attrib */);
+    glVertexAttribIPointer(
+        5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
 
     doneCurrent();
 

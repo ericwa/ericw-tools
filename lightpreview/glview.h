@@ -25,6 +25,7 @@ See file, 'COPYING', for details.
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
+#include <QOpenGLDebugMessage>
 #include <QElapsedTimer>
 #include <QVector3D>
 #include <QMatrix4x4>
@@ -35,6 +36,7 @@ See file, 'COPYING', for details.
 #include <common/cmdlib.hh>
 #include <common/entdata.h>
 #include <common/bspfile.hh>
+#include <common/bspinfo.hh>
 
 enum class keys_t : uint32_t
 {
@@ -105,8 +107,8 @@ private:
     int m_program_lightmap_only_location = 0;
     int m_program_fullbright_location = 0;
     int m_program_drawnormals_location = 0;
-    int m_program_showtris_location = 0;
     int m_program_drawflat_location = 0;
+    int m_program_style_scalars_location = 0;
 
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;
@@ -116,7 +118,7 @@ public:
     ~GLView();
 
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
-        const std::vector<entdict_t> &entities, const settings::common_settings &settings);
+        const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
@@ -124,6 +126,8 @@ public:
     void setShowTris(bool showtris);
     void setDrawFlat(bool drawflat);
     void setKeepOrigin(bool keeporigin);
+    // intensity = 0 to 200
+    void setLightStyleIntensity(int style_id, int intensity);
     const bool &getKeepOrigin() const { return m_keepOrigin; }
 
     void takeScreenshot(QString destPath, int w, int h);
@@ -136,6 +140,7 @@ protected:
 private:
     void startMovementTimer();
     void stopMovementTimer();
+    void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
