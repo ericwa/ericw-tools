@@ -265,10 +265,6 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
 
-    for (int i = 0; i < 256; i++) {
-        m_program->setUniformValue(m_program_style_scalars_location + i, 1.f);
-    }
-
     // opaque draws
     for (auto &draw : m_drawcalls) {
         if (draw.opacity != 1.0f)
@@ -354,7 +350,7 @@ void GLView::setLightStyleIntensity(int style_id, int intensity)
 {
     makeCurrent();
     m_program->bind();
-    m_program->setUniformValue(m_program_style_scalars_location + style_id, intensity / 200.f);
+    m_program->setUniformValue(m_program_style_scalars_location + style_id, intensity / 100.f);
     m_program->release();
     doneCurrent();
 
@@ -637,6 +633,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     glEnableVertexAttribArray(5 /* attrib */);
     glVertexAttribIPointer(
         5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+
+    // initialize style values
+    m_program->bind();
+    for (int i = 0; i < 256; i++) {
+        m_program->setUniformValue(m_program_style_scalars_location + i, 1.f);
+    }
+    m_program->release();
 
     doneCurrent();
 
