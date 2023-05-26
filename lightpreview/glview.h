@@ -56,7 +56,7 @@ class GLView : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 private:
     uint32_t m_keysPressed;
     std::optional<time_point> m_lastFrame;
-    QPointF m_lastMouseDownPos;
+    std::optional<QPoint> m_lastMouseDownPos;
     /**
      * units / second
      */
@@ -141,12 +141,11 @@ private:
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 
 protected:
-    void mousePressEvent(QMouseEvent *event) override;
-    void mouseMoveEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
 private:
+    void applyMouseMotion();
     void applyFlyMovement(float duration);
 };

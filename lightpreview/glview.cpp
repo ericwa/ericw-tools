@@ -23,6 +23,7 @@ See file, 'COPYING', for details.
 #include <cassert>
 #include <tuple>
 
+#include <QApplication>
 #include <QImage>
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -43,7 +44,6 @@ See file, 'COPYING', for details.
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
       m_keysPressed(0),
-      m_lastMouseDownPos(0, 0),
       m_moveSpeed(1000),
       m_displayAspect(1),
       m_cameraOrigin(0, 0, 0),
@@ -237,6 +237,7 @@ void GLView::paintGL()
     m_lastFrame = now;
 
     // apply motion
+    applyMouseMotion();
     applyFlyMovement(duration_seconds);
 
     // draw
@@ -665,18 +666,21 @@ void GLView::resizeGL(int width, int height)
     m_displayAspect = static_cast<float>(width) / static_cast<float>(height);
 }
 
-void GLView::mousePressEvent(QMouseEvent *event)
+void GLView::applyMouseMotion()
 {
-    m_lastMouseDownPos = event->screenPos();
-}
-
-void GLView::mouseMoveEvent(QMouseEvent *event)
-{
-    if (!(event->buttons() & Qt::RightButton))
+    if (!(QApplication::mouseButtons() & Qt::RightButton)) {
+        m_lastMouseDownPos = std::nullopt;
         return;
+    }
 
-    QPointF delta = event->screenPos() - m_lastMouseDownPos;
-    m_lastMouseDownPos = event->screenPos();
+    QPoint current_pos = QCursor::pos();
+    QPointF delta;
+    if (m_lastMouseDownPos) {
+        delta = current_pos - *m_lastMouseDownPos;
+    } else {
+        delta = QPointF(0, 0);
+    }
+    m_lastMouseDownPos = current_pos;
 
     // handle mouse movement
     float pitchDegrees = delta.y() * -0.2;
