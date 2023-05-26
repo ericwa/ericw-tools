@@ -43,7 +43,6 @@ See file, 'COPYING', for details.
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
       m_keysPressed(0),
-      m_keymoveUpdateTimer(0),
       m_lastMouseDownPos(0, 0),
       m_moveSpeed(1000),
       m_displayAspect(1),
@@ -226,6 +225,20 @@ void GLView::initializeGL()
 
 void GLView::paintGL()
 {
+    // calculate frame time + update m_lastFrame
+    float duration_seconds;
+
+    const auto now = I_FloatTime();
+    if (m_lastFrame) {
+        duration_seconds = (now - *m_lastFrame).count();
+    } else {
+        duration_seconds = 0;
+    }
+    m_lastFrame = now;
+
+    // apply motion
+    applyFlyMovement(duration_seconds);
+
     // draw
     glClearColor(0.1, 0.1, 0.1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -303,6 +316,8 @@ void GLView::paintGL()
     }
 
     m_program->release();
+
+    update(); // schedule the next frame
 }
 
 void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
@@ -414,8 +429,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     {
         const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
 
-        lightmap_texture =
-            std::make_unique<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
+        lightmap_texture = std::make_unique<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
         lightmap_texture->setSize(lm_tex.width, lm_tex.height);
         lightmap_texture->setLayers(highest_depth + 1);
 
@@ -428,7 +442,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         lightmap_texture->allocateStorage();
 
         for (auto &style : lightmap.style_to_lightmap_atlas) {
-            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(style.second.pixels.data()));
+            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+                reinterpret_cast<const void *>(style.second.pixels.data()));
         }
     }
 
@@ -568,14 +583,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     vertex_normal = plane_normal;
                 }
 
-                verts.push_back({
-                    .pos = pos + model_offset,
+                verts.push_back({.pos = pos + model_offset,
                     .uv = uv,
                     .lightmap_uv = lightmap_uv,
                     .normal = vertex_normal,
                     .flat_color = flat_color,
-                    .styles = (uint32_t) (f->styles[0]) | (uint32_t) (f->styles[1] << 8) | (uint32_t) (f->styles[2] << 16) | (uint32_t) (f->styles[3] << 24)
-                });
+                    .styles = (uint32_t)(f->styles[0]) | (uint32_t)(f->styles[1] << 8) |
+                              (uint32_t)(f->styles[2] << 16) | (uint32_t)(f->styles[3] << 24)});
             }
 
             // output the vertex indices for this face
@@ -631,8 +645,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // styles
     glEnableVertexAttribArray(5 /* attrib */);
-    glVertexAttribIPointer(
-        5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+    glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
 
     // initialize style values
     m_program->bind();
@@ -675,8 +688,6 @@ void GLView::mouseMoveEvent(QMouseEvent *event)
 
     // now rotate m_cameraFwd and m_cameraUp by mouseRotation
     m_cameraFwd = mouseRotation * m_cameraFwd;
-
-    update();
 }
 
 static keys_t Qt_Key_To_keys_t(int key)
@@ -692,30 +703,11 @@ static keys_t Qt_Key_To_keys_t(int key)
     return keys_t::none;
 }
 
-void GLView::startMovementTimer()
-{
-    if (m_keymoveUpdateTimer)
-        return;
-
-    m_lastKeymoveFrame = I_FloatTime();
-    m_keymoveUpdateTimer = startTimer(1, Qt::PreciseTimer); // repaint timer, calls timerEvent()
-}
-
-void GLView::stopMovementTimer()
-{
-    if (m_keymoveUpdateTimer != 0) {
-        killTimer(m_keymoveUpdateTimer);
-        m_keymoveUpdateTimer = 0;
-    }
-}
-
 void GLView::keyPressEvent(QKeyEvent *event)
 {
     keys_t key = Qt_Key_To_keys_t(event->key());
 
     m_keysPressed |= static_cast<uint32_t>(key);
-
-    startMovementTimer();
 }
 
 void GLView::keyReleaseEvent(QKeyEvent *event)
@@ -723,9 +715,6 @@ void GLView::keyReleaseEvent(QKeyEvent *event)
     keys_t key = Qt_Key_To_keys_t(event->key());
 
     m_keysPressed &= ~static_cast<uint32_t>(key);
-
-    if (!m_keysPressed)
-        stopMovementTimer();
 }
 
 void GLView::wheelEvent(QWheelEvent *event)
@@ -739,16 +728,11 @@ void GLView::wheelEvent(QWheelEvent *event)
     m_moveSpeed = clamp(m_moveSpeed, 10.0f, 5000.0f);
 }
 
-void GLView::timerEvent(QTimerEvent *event)
+void GLView::applyFlyMovement(float duration_seconds)
 {
-    // update frame time
-    auto current_time = I_FloatTime();
-    auto duration = current_time - m_lastKeymoveFrame;
-    m_lastKeymoveFrame = current_time;
+    // qDebug() << "timer event: duration: " << duration_seconds;
 
-    // qDebug() << "timer event: duration: " << duration.count();
-
-    const float distance = m_moveSpeed * duration.count();
+    const float distance = m_moveSpeed * duration_seconds;
 
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))
         m_cameraOrigin += m_cameraFwd * distance;
@@ -762,6 +746,4 @@ void GLView::timerEvent(QTimerEvent *event)
         m_cameraOrigin -= QVector3D(0, 0, 1) * distance;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::fly_up))
         m_cameraOrigin += QVector3D(0, 0, 1) * distance;
-
-    update(); // schedule a repaint
 }

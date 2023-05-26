@@ -55,8 +55,7 @@ class GLView : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 {
 private:
     uint32_t m_keysPressed;
-    int m_keymoveUpdateTimer;
-    time_point m_lastKeymoveFrame;
+    std::optional<time_point> m_lastFrame;
     QPointF m_lastMouseDownPos;
     /**
      * units / second
@@ -118,7 +117,8 @@ public:
     ~GLView();
 
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
-        const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings);
+        const std::vector<entdict_t> &entities, const full_atlas_t &lightmap,
+        const settings::common_settings &settings);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
@@ -138,8 +138,6 @@ protected:
     void resizeGL(int width, int height) override;
 
 private:
-    void startMovementTimer();
-    void stopMovementTimer();
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 
 protected:
@@ -149,7 +147,6 @@ protected:
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
 
-protected:
-    /** animation timer */
-    void timerEvent(QTimerEvent *event) override;
+private:
+    void applyFlyMovement(float duration);
 };
