@@ -17,7 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-#include <cstdint>
+#include <bsputil/bsputil.hh>
 
 int main(int argc, char **argv)
 {
