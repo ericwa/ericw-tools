@@ -61,7 +61,7 @@ struct lumpinfo_t
     auto stream_data() { return std::tie(filepos, disksize, size, type, compression, pad1, pad2, name); }
 };
 
-static void ExportWad(std::ofstream &wadfile, mbsp_t *bsp)
+void ExportWad(std::ofstream &wadfile, const mbsp_t *bsp)
 {
     int filepos, numvalid;
     const auto &texdata = bsp->dtex;
@@ -564,7 +564,7 @@ map_file_t LoadMapOrEntFile(const fs::path &source)
     return map;
 }
 
-int main(int argc, char **argv)
+int bsputil_main(int argc, char **argv)
 {
     logging::preinitialize();
 
