@@ -765,7 +765,7 @@ int bsputil_main(int argc, char **argv)
             source.replace_extension(".wad");
             fmt::print("-> writing {}... ", source);
 
-            std::ofstream f(source);
+            std::ofstream f(source, std::ios_base::binary);
 
             if (!f)
                 Error("couldn't open {} for writing\n", source);
