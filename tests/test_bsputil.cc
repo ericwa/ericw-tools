@@ -4,6 +4,7 @@
 #include <common/decompile.hh>
 #include <common/bsputils.hh>
 #include <qbsp/map.hh>
+#include <bsputil/bsputil.hh>
 
 #include "testmaps.hh"
 #include "test_qbsp.hh"
@@ -44,6 +45,30 @@ TEST_SUITE("bsputil")
 
             auto *face2_texinfo = Face_Texinfo(&bsp2, face2);
             CHECK(face2_texinfo->vecs == face_texinfo->vecs);
+        }
+    }
+
+    TEST_CASE("extract-textures")
+    {
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_extract_textures.map");
+
+        // extract .bsp textures to test.wad
+        std::ofstream wadfile("test.wad", std::ios::binary);
+        ExportWad(wadfile, &bsp);
+
+        // reload .wad
+        fs::clear();
+        img::clear();
+
+        auto ar = fs::addArchive("test.wad");
+        REQUIRE(ar);
+
+        for (std::string texname : {"*swater4", "bolt14", "sky3", "brownlight"}) {
+            INFO(texname);
+            fs::data data = ar->load(texname);
+            REQUIRE(data);
+            auto loaded_tex = img::load_mip(texname, data, false, bspver_q1.game);
+            CHECK(loaded_tex);
         }
     }
 }
