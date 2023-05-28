@@ -1802,3 +1802,17 @@ TEST_CASE("q1_hull1_fail" * doctest::may_fail())
         CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], qvec3d{0, 0, 0}));
     }
 }
+
+TEST_CASE("q1_sky_window")
+{
+    INFO("faces partially covered by sky were getting wrongly merged and deleted");
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_sky_window.map");
+
+    {
+        INFO("faces around window");
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -252, -32))); // bottom
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -252, 160))); // top
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -288, 60))); // left
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -224, 60))); // right
+    }
+}
