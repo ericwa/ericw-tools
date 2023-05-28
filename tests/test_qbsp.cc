@@ -1114,8 +1114,7 @@ TEST_CASE("q1_cubes" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cubes.map");
 
-    // index 0 is reserved, and the first cube has 12 edges, the second can share one edge so only needs 11
-    CHECK(bsp.dedges.size() == 24);
+    CHECK(bsp.dedges.size() == 25);
 }
 
 /**

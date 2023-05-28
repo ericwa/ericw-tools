@@ -263,11 +263,15 @@ size_t EmitFaces(node_t *headnode)
 {
     logging::funcheader();
 
+    Q_assert(map.hashedges.empty());
+
     emit_faces_stats_t stats;
 
     size_t firstface = map.bsp.dfaces.size();
 
     EmitFaces_R(headnode, stats);
+
+    map.hashedges.clear();
 
     return firstface;
 }
