@@ -142,11 +142,16 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, e
     if (!face->contents.front.is_valid(qbsp_options.target_game, false))
         FError("Face with invalid contents");
 
-    // search for existing edges
-    if (auto it = map.hashedges.find(std::make_pair(v1, v2)); it != map.hashedges.end()) {
-        return it->second;
-    } else if (auto it = map.hashedges.find(std::make_pair(v2, v1)); it != map.hashedges.end()) {
-        return -it->second;
+    if (!qbsp_options.noedgereuse.value()) {
+        // search for existing edges
+        if (auto it = map.hashedges.find(std::make_pair(v2, v1)); it != map.hashedges.end()) {
+            const hashedge_t &existing = it->second;
+            // this content check is required for software renderers
+            // (see q1_liquid_software test case)
+            if (existing.face->contents.front.equals(qbsp_options.target_game, face->contents.front)) {
+                return -existing.edge_index;
+            }
+        }
     }
 
     /* emit an edge */
@@ -154,7 +159,7 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, e
 
     map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
 
-    map.add_hash_edge(v1, v2, i);
+    map.add_hash_edge(v1, v2, i, face);
 
     stats.unique_edges++;
 

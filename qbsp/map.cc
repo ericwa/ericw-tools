@@ -165,9 +165,9 @@ void mapdata_t::add_hash_vector(const qvec3d &point, const size_t &num)
     hashverts->hash.emplace(pareto::point<vec_t, 3>({point[0], point[1], point[2]}), num);
 }
 
-void mapdata_t::add_hash_edge(size_t v1, size_t v2, int64_t i)
+void mapdata_t::add_hash_edge(size_t v1, size_t v2, int64_t edge_index, const face_t *face)
 {
-    hashedges.emplace(std::make_pair(v1, v2), i);
+    hashedges.emplace(std::make_pair(v1, v2), hashedge_t{.v1 = v1, .v2 = v2, .edge_index = edge_index, .face = face});
 }
 
 const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
@@ -2545,7 +2545,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         brush.faces.emplace_back(std::move(face.value()));
     }
 
-    bool is_antiregion = brush.faces[0].texname.ends_with("antiregion"), is_region = !is_antiregion && brush.faces[0].texname.ends_with("region");
+    bool is_antiregion = brush.faces[0].texname.ends_with("antiregion"),
+         is_region = !is_antiregion && brush.faces[0].texname.ends_with("region");
 
     // check regionness
     if (is_antiregion) {
@@ -3313,7 +3314,7 @@ void ProcessMapBrushes()
 
         fs::path name = qbsp_options.bsp_path;
         name.replace_extension("expanded.map");
-        
+
         WriteMapBrushMap(name, map.world_entity().mapbrushes, hull);
     }
 }

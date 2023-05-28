@@ -1831,4 +1831,55 @@ TEST_CASE("q1_liquid_software")
 {
     INFO("map with just 1 liquid brush + a 'skip' platform, has render corruption on tyrquake");
     const auto [bsp, bspx, prt] = LoadTestmap("q1_liquid_software.map");
+
+    const qvec3d top_face_point{-56, -56, 8};
+    const qvec3d side_face_point{-56, -72, -8};
+
+    auto *top = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], top_face_point, {0, 0, 1});
+    auto *top_inwater = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], top_face_point, {0, 0, -1});
+
+    auto *side = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], side_face_point, {0, -1, 0});
+    auto *side_inwater = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], side_face_point, {0, 1, 0});
+
+    REQUIRE(top);
+    REQUIRE(top_inwater);
+    REQUIRE(side);
+    REQUIRE(side_inwater);
+
+    // gather edge set used in and out of water.
+    // recall that if edge 5 is from vert 12 to vert 13,
+    // edge -5 is from vert 13 to vert 12.
+
+    // for this test, we are converting directed to undirected
+    // because we want to make sure there's no reuse across in-water and
+    // out-of-water, which breaks software renderers.
+    std::set<int> outwater_undirected_edges;
+    std::set<int> inwater_undirected_edges;
+
+    auto add_face_edges_to_set = [](const mbsp_t &b, const mface_t &face, std::set<int> &set) {
+        for (int i = face.firstedge; i < (face.firstedge + face.numedges); ++i) {
+            int edge = b.dsurfedges.at(i);
+
+            // convert directed to undirected
+            if (edge < 0) {
+                edge = -edge;
+            }
+
+            set.insert(edge);
+        }
+    };
+
+    add_face_edges_to_set(bsp, *top, outwater_undirected_edges);
+    add_face_edges_to_set(bsp, *side, outwater_undirected_edges);
+
+    add_face_edges_to_set(bsp, *top_inwater, inwater_undirected_edges);
+    add_face_edges_to_set(bsp, *side_inwater, inwater_undirected_edges);
+
+    CHECK(7 == outwater_undirected_edges.size());
+    CHECK(7 == inwater_undirected_edges.size());
+
+    // make sure there's no reuse between out-of-water and in-water
+    for (int e : outwater_undirected_edges) {
+        CHECK(inwater_undirected_edges.find(e) == inwater_undirected_edges.end());
+    }
 }
