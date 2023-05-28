@@ -141,7 +141,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
-
+    connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
     setupMenu();
 }
 
@@ -334,10 +334,10 @@ class QLightStyleSlider : public QFrame
 public:
     int32_t style_id;
 
-    QLightStyleSlider(int32_t style_id, GLView *glView) :
-        QFrame(),
-        style_id(style_id),
-        glView(glView)
+    QLightStyleSlider(int32_t style_id, GLView *glView)
+        : QFrame(),
+          style_id(style_id),
+          glView(glView)
     {
         auto *style_layout = new QHBoxLayout();
 
@@ -345,11 +345,10 @@ public:
         style->setRange(0, 200);
         style->setValue(100);
         style->setSingleStep(10);
-        //style->setTickPosition(QSlider::TicksBothSides);
-        //style->setTickInterval(50);
+        // style->setTickPosition(QSlider::TicksBothSides);
+        // style->setTickInterval(50);
 
-        connect(style, QOverload<int>::of(&QSpinBox::valueChanged),
-            this, &QLightStyleSlider::setValue);
+        connect(style, QOverload<int>::of(&QSpinBox::valueChanged), this, &QLightStyleSlider::setValue);
 
         auto *style_label = new QLabel();
         style_label->setText(QString::asprintf("%i", style_id));
@@ -363,10 +362,7 @@ public:
     }
 
 private:
-    void setValue(int value)
-    {
-        glView->setLightStyleIntensity(style_id, value);
-    }
+    void setValue(int value) { glView->setLightStyleIntensity(style_id, value); }
 
     GLView *glView;
 };
@@ -388,13 +384,13 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
     fs::path fs_path = MakeFSPath(file);
 
-    bspdata_t d;
+    m_bspdata = {};
 
     settings::common_settings render_settings;
 
     if (fs_path.extension().compare(".bsp") == 0) {
 
-        LoadBSPFile(fs_path, &d);
+        LoadBSPFile(fs_path, &m_bspdata);
 
         auto opts = ParseArgs(light_options);
 
@@ -410,13 +406,13 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
         render_settings.initialize(argPtrs.size() - 1, argPtrs.data() + 1);
         render_settings.postinitialize(argPtrs.size(), argPtrs.data());
 
-        d.version->game->init_filesystem(fs_path, render_settings);
+        m_bspdata.version->game->init_filesystem(fs_path, render_settings);
 
-        ConvertBSPFormat(&d, &bspver_generic);
+        ConvertBSPFormat(&m_bspdata, &bspver_generic);
 
     } else {
-        d = QbspVisLight_Common(fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options), ParseArgs(light_options),
-            vis_checkbox->isChecked());
+        m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options),
+            ParseArgs(light_options), vis_checkbox->isChecked());
 
         // FIXME: move to a lightpreview_settings
         settings::common_settings settings;
@@ -424,17 +420,17 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
         // FIXME: copy the -path args from light
         settings.paths.copy_from(::light_options.paths);
 
-        d.loadversion->game->init_filesystem(file.toStdString(), settings);
+        m_bspdata.loadversion->game->init_filesystem(file.toStdString(), settings);
     }
 
-    const auto &bsp = std::get<mbsp_t>(d.bsp);
+    const auto &bsp = std::get<mbsp_t>(m_bspdata.bsp);
 
     auto ents = EntData_Parse(bsp);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, d.bspx.entries, false, true);
+    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, false, true);
 
-    glView->renderBSP(file, bsp, d.bspx.entries, ents, atlas, render_settings);
+    glView->renderBSP(file, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings);
 
     if (!is_reload && !glView->getKeepOrigin()) {
         for (auto &ent : ents) {
@@ -459,7 +455,7 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     }
 
     // set lightstyle data
-    while ( QWidget* w = lightstyles->parentWidget()->findChild<QWidget*>(QString(), Qt::FindDirectChildrenOnly) ) {
+    while (QWidget *w = lightstyles->parentWidget()->findChild<QWidget *>(QString(), Qt::FindDirectChildrenOnly)) {
         delete w;
     }
 
@@ -468,4 +464,16 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
         auto *style = new QLightStyleSlider(style_entry.first, glView);
         lightstyles->addWidget(style);
     }
+}
+
+void MainWindow::displayCameraPositionInfo()
+{
+    const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
+    if (!bsp)
+        return;
+
+    const qvec3f point = glView->cameraPosition();
+    const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
+
+    // TODO: display leaf info
 }

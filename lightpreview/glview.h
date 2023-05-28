@@ -53,6 +53,8 @@ struct mbsp_t;
 
 class GLView : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
 {
+    Q_OBJECT
+
 private:
     uint32_t m_keysPressed;
     std::optional<time_point> m_lastFrame;
@@ -148,4 +150,10 @@ protected:
 private:
     void applyMouseMotion();
     void applyFlyMovement(float duration);
+
+signals:
+    void cameraMoved();
+
+public:
+    qvec3f cameraPosition() const;
 };

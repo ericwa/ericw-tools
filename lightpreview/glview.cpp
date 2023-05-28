@@ -738,6 +738,8 @@ void GLView::applyFlyMovement(float duration_seconds)
 
     const float distance = m_moveSpeed * duration_seconds;
 
+    const auto prevOrigin = m_cameraOrigin;
+
     if (m_keysPressed & static_cast<uint32_t>(keys_t::up))
         m_cameraOrigin += m_cameraFwd * distance;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::down))
@@ -750,4 +752,13 @@ void GLView::applyFlyMovement(float duration_seconds)
         m_cameraOrigin -= QVector3D(0, 0, 1) * distance;
     if (m_keysPressed & static_cast<uint32_t>(keys_t::fly_up))
         m_cameraOrigin += QVector3D(0, 0, 1) * distance;
+
+    if (prevOrigin != m_cameraOrigin) {
+        emit cameraMoved();
+    }
+}
+
+qvec3f GLView::cameraPosition() const
+{
+    return qvec3f{m_cameraOrigin[0], m_cameraOrigin[1], m_cameraOrigin[2]};
 }
