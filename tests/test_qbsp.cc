@@ -1816,3 +1816,9 @@ TEST_CASE("q1_sky_window")
         CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -224, 60))); // right
     }
 }
+
+TEST_CASE("q1_liquid_software")
+{
+    INFO("map with just 1 liquid brush + a 'skip' platform, has render corruption on tyrquake");
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_liquid_software.map");
+}
