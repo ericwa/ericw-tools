@@ -473,24 +473,6 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
     f->portal = p;
     f->original_side = side->source;
 
-#if 0
-    bool make_face =
-        qbsp_options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
-    if (!make_face) {
-        // content type / game rules requested to skip generating a face on this side
-        return nullptr;
-    }
-
-    if (!p->nodes[pside]->contents.is_empty(qbsp_options.target_game)) {
-        bool our_contents_mirrorinside = qbsp_options.target_game->contents_are_mirrored(p->nodes[pside]->contents);
-        if (!our_contents_mirrorinside) {
-            if (side->plane_flipped != pside) {
-                return nullptr;
-            }
-        }
-    }
-#endif
-
     if (pside) {
         f->w = p->winding.flip();
     } else {
