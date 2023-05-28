@@ -211,7 +211,7 @@ static void WritePortalfile(node_t *headnode, portal_state_t &state)
     fs::path name = qbsp_options.bsp_path;
     name.replace_extension("prt");
 
-    std::ofstream portalFile(name, std::ios_base::out);
+    std::ofstream portalFile(name, std::ios_base::out); // .prt files are intentionally text mode
     if (!portalFile)
         FError("Failed to open {}: {}", name, strerror(errno));
 
@@ -353,7 +353,7 @@ void WriteDebugTreePortalFile(tree_t &tree, std::string_view filename_suffix)
     fs::path name = qbsp_options.bsp_path;
     name.replace_extension(std::string(filename_suffix) + ".prt");
 
-    std::ofstream portalFile(name, std::ios_base::binary | std::ios_base::out);
+    std::ofstream portalFile(name, std::ios_base::out); // .prt files are intentionally text mode
     if (!portalFile)
         FError("Failed to open {}: {}", name, strerror(errno));
 
@@ -381,7 +381,7 @@ void WriteDebugPortals(std::vector<portal_t *> portals, std::string_view filenam
     fs::path name = qbsp_options.bsp_path;
     name.replace_extension(std::string(filename_suffix) + ".prt");
 
-    std::ofstream portal_file(name, std::ios_base::binary | std::ios_base::out);
+    std::ofstream portal_file(name, std::ios_base::out); // .prt files are intentionally text mode
     if (!portal_file)
         FError("Failed to open {}: {}", name, strerror(errno));
 

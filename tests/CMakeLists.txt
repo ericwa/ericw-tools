@@ -29,7 +29,7 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 	message(STATUS "Found embree EMBREE_TBB_DLL: ${EMBREE_TBB_DLL}")
 endif()
 
-target_link_libraries(tests libqbsp liblight libvis common TBB::tbb TBB::tbbmalloc doctest::doctest fmt::fmt nanobench::nanobench)
+target_link_libraries(tests libqbsp liblight libvis libbsputil common TBB::tbb TBB::tbbmalloc doctest::doctest fmt::fmt nanobench::nanobench)
 
 target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_SUPER_FAST_ASSERTS)
 

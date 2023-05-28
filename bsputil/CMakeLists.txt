@@ -1,9 +1,13 @@
 set(BSPUTIL_SOURCES
 	bsputil.cc
+	../include/bsputil/bsputil.hh
 )
 
-add_executable(bsputil ${BSPUTIL_SOURCES})
-target_link_libraries(bsputil common TBB::tbb TBB::tbbmalloc fmt::fmt)
+add_library(libbsputil STATIC ${BSPUTIL_SOURCES})
+target_link_libraries(libbsputil common TBB::tbb TBB::tbbmalloc fmt::fmt)
+
+add_executable(bsputil main.cc)
+target_link_libraries(bsputil libbsputil)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET bsputil POST_BUILD
