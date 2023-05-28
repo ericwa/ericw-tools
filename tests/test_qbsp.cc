@@ -743,6 +743,16 @@ TEST_CASE("q1_bmodel_liquid" * doctest::test_suite("testmaps_q1"))
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, {2}, &bsp.dmodels[1], inside_water));
 }
 
+TEST_CASE("q1_liquid_mirrorinside_off" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_liquid_mirrorinside_off.map");
+    REQUIRE(prt.has_value());
+
+    // normally there would be 2 faces, but with _mirrorinside 0 we should get only the upwards-pointing one
+    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels.at(0), {-52, -56, 8}, {0, 0, 1}));
+    CHECK(!BSP_FindFaceAtPoint(&bsp, &bsp.dmodels.at(0), {-52, -56, 8}, {0, 0, -1}));
+}
+
 TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");

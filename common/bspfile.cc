@@ -669,6 +669,11 @@ public:
         }
 
         if (brushside_side == SIDE_BACK) {
+            // explicit override?
+            if (brushcontents.mirror_inside) {
+                return *brushcontents.mirror_inside;
+            }
+
             return bits_brush.mirror_inside || bits_brush.water || bits_brush.slime || bits_brush.lava;
         }
         return true;
