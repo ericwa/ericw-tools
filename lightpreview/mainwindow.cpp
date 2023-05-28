@@ -38,7 +38,7 @@ See file, 'COPYING', for details.
 #include <QRadioButton>
 #include <QTimer>
 #include <QScrollArea>
-#include <QSlider>
+#include <QSpinBox>
 #include <QFrame>
 #include <QLabel>
 
@@ -341,14 +341,14 @@ public:
     {
         auto *style_layout = new QHBoxLayout();
 
-        auto *style = new QSlider(Qt::Horizontal);
+        auto *style = new QSpinBox();
         style->setRange(0, 200);
         style->setValue(100);
-        style->setSingleStep(1);
-        style->setTickPosition(QSlider::TicksBothSides);
-        style->setTickInterval(50);
+        style->setSingleStep(10);
+        //style->setTickPosition(QSlider::TicksBothSides);
+        //style->setTickInterval(50);
 
-        connect(style, &QSlider::valueChanged,
+        connect(style, QOverload<int>::of(&QSpinBox::valueChanged),
             this, &QLightStyleSlider::setValue);
 
         auto *style_label = new QLabel();
@@ -459,15 +459,13 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     }
 
     // set lightstyle data
-    if (!is_reload) {
-        while ( QWidget* w = lightstyles->parentWidget()->findChild<QWidget*>(QString(), Qt::FindDirectChildrenOnly) ) {
-            delete w;
-        }
+    while ( QWidget* w = lightstyles->parentWidget()->findChild<QWidget*>(QString(), Qt::FindDirectChildrenOnly) ) {
+        delete w;
+    }
 
-        for (auto &style_entry : atlas.style_to_lightmap_atlas) {
+    for (auto &style_entry : atlas.style_to_lightmap_atlas) {
 
-            auto *style = new QLightStyleSlider(style_entry.first, glView);
-            lightstyles->addWidget(style);
-        }
+        auto *style = new QLightStyleSlider(style_entry.first, glView);
+        lightstyles->addWidget(style);
     }
 }
