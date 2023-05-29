@@ -171,8 +171,90 @@ void main() {
 }
 )";
 
+static const char *s_skyboxFragShader = R"(
+#version 330 core
+
+in vec3 uv;
+in vec2 lightmap_uv;
+in vec3 normal;
+flat in vec3 flat_color;
+flat in uint styles;
+
+out vec4 color;
+
+uniform samplerCube texture_sampler;
+uniform sampler2DArray lightmap_sampler;
+uniform bool lightmap_only;
+uniform bool fullbright;
+uniform bool drawnormals;
+uniform bool drawflat;
+uniform float style_scalars[256];
+
+void main() {
+    if (drawnormals) {
+        // remap -1..+1 to 0..1
+        color = vec4((normal + vec3(1.0)) / vec3(2.0), 1.0);
+    } else if (drawflat) {
+        color = vec4(flat_color, 1.0);
+    } else {
+        if (!fullbright && lightmap_only)
+        {
+            vec3 lmcolor = vec3(0.5);
+
+            for (uint i = 0u; i < 32u; i += 8u)
+            {
+                uint style = (styles >> i) & 0xFFu;
+
+                if (style == 0xFFu)
+                    break;
+
+                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, (float) style)).rgb * style_scalars[style];
+            }
+
+            // 2.0 for overbright
+            color = vec4(lmcolor * 2.0, 1.0);
+        }
+        else
+            color = vec4(texture(texture_sampler, uv).rgb, 1.0);
+    }
+}
+)";
+
+static const char *s_skyboxVertShader = R"(
+#version 330 core
+
+layout (location = 0) in vec3 position;
+layout (location = 1) in vec2 vertex_uv;
+layout (location = 2) in vec2 vertex_lightmap_uv;
+layout (location = 3) in vec3 vertex_normal;
+layout (location = 4) in vec3 vertex_flat_color;
+layout (location = 5) in uint vertex_styles;
+
+smooth out vec3 uv;
+out vec2 lightmap_uv;
+out vec3 normal;
+flat out vec3 flat_color;
+flat out uint styles;
+
+uniform mat4 MVP;
+uniform vec3 eye_origin;
+
+void main() {
+    gl_Position = MVP * vec4(position.x, position.y, position.z, 1.0);
+
+    uv = normalize(position - eye_origin);
+    lightmap_uv = vertex_lightmap_uv;
+    normal = vertex_normal;
+    flat_color = vertex_flat_color;
+    styles = vertex_styles;
+}
+)";
+
 void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 {
+    if (debugMessage.type() == QOpenGLDebugMessage::ErrorType)
+        __debugbreak();
+
     qDebug() << debugMessage.message();
 }
 
@@ -186,7 +268,7 @@ void GLView::initializeGL()
     logger->initialize(); // initializes in the current context, i.e. ctx
 
     connect(logger, &QOpenGLDebugLogger::messageLogged, this, &GLView::handleLoggedMessage);
-    logger->startLogging();
+    logger->startLogging(QOpenGLDebugLogger::SynchronousLogging);
 
     // set up shader
 
@@ -194,6 +276,11 @@ void GLView::initializeGL()
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader);
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader);
     assert(m_program->link());
+
+    m_skybox_program = new QOpenGLShaderProgram();
+    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_skyboxVertShader);
+    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_skyboxFragShader);
+    assert(m_skybox_program->link());
 
     m_program_wireframe = new QOpenGLShaderProgram();
     m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Wireframe);
@@ -211,6 +298,19 @@ void GLView::initializeGL()
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
     m_program->release();
+
+    m_skybox_program->bind();
+    m_skybox_program_mvp_location = m_skybox_program->uniformLocation("MVP");
+    m_skybox_program_eye_direction_location = m_skybox_program->uniformLocation("eye_origin");
+    m_skybox_program_texture_sampler_location = m_skybox_program->uniformLocation("texture_sampler");
+    m_skybox_program_lightmap_sampler_location = m_skybox_program->uniformLocation("lightmap_sampler");
+    m_skybox_program_opacity_location = m_skybox_program->uniformLocation("opacity");
+    m_skybox_program_lightmap_only_location = m_skybox_program->uniformLocation("lightmap_only");
+    m_skybox_program_fullbright_location = m_skybox_program->uniformLocation("fullbright");
+    m_skybox_program_drawnormals_location = m_skybox_program->uniformLocation("drawnormals");
+    m_skybox_program_drawflat_location = m_skybox_program->uniformLocation("drawflat");
+    m_skybox_program_style_scalars_location = m_skybox_program->uniformLocation("style_scalars");
+    m_skybox_program->release();
 
     m_program_wireframe->bind();
     m_program_wireframe_mvp_location = m_program_wireframe->uniformLocation("MVP");
@@ -257,6 +357,10 @@ void GLView::paintGL()
         m_program_wireframe->bind();
         m_program_wireframe->setUniformValue(m_program_wireframe_mvp_location, MVP);
 
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-0.8, 1.0);
+
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
@@ -265,9 +369,13 @@ void GLView::paintGL()
                 reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
         }
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glDisable(GL_POLYGON_OFFSET_LINE);
 
         m_program_wireframe->release();
     }
+
+    QOpenGLShaderProgram *active_program = nullptr;
 
     m_program->bind();
     m_program->setUniformValue(m_program_mvp_location, MVP);
@@ -279,10 +387,26 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
 
+    m_skybox_program->bind();
+    m_skybox_program->setUniformValue(m_skybox_program_mvp_location, MVP);
+    m_skybox_program->setUniformValue(m_skybox_program_eye_direction_location, m_cameraOrigin);
+    m_skybox_program->setUniformValue(m_skybox_program_texture_sampler_location, 0 /* texture unit */);
+    m_skybox_program->setUniformValue(m_skybox_program_lightmap_sampler_location, 1 /* texture unit */);
+    m_skybox_program->setUniformValue(m_skybox_program_opacity_location, 1.0f);
+    m_skybox_program->setUniformValue(m_skybox_program_lightmap_only_location, m_lighmapOnly);
+    m_skybox_program->setUniformValue(m_skybox_program_fullbright_location, m_fullbright);
+    m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
+    m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
+
     // opaque draws
     for (auto &draw : m_drawcalls) {
-        if (draw.opacity != 1.0f)
+        if (draw.key.opacity != 1.0f)
             continue;
+
+        if (active_program != draw.key.program) {
+            active_program = draw.key.program;
+            active_program->bind();
+        }
 
         draw.texture->bind(0 /* texture unit */);
         lightmap_texture->bind(1 /* texture unit */);
@@ -299,13 +423,22 @@ void GLView::paintGL()
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         for (auto &draw : m_drawcalls) {
-            if (draw.opacity == 1.0f)
+            if (draw.key.opacity == 1.0f)
                 continue;
+
+            if (active_program != draw.key.program) {
+                active_program = draw.key.program;
+                active_program->bind();
+            }
 
             draw.texture->bind(0 /* texture unit */);
             lightmap_texture->bind(1 /* texture unit */);
 
-            m_program->setUniformValue(m_program_opacity_location, draw.opacity);
+            if (active_program == m_program) {
+                m_program->setUniformValue(m_program_opacity_location, draw.key.opacity);
+            } else {
+                m_skybox_program->setUniformValue(m_skybox_program_opacity_location, draw.key.opacity);
+            }
 
             QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
@@ -417,7 +550,9 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     // clear old data
     lightmap_texture.reset();
     m_drawcalls.clear();
+    m_vbo.bind();
     m_vbo.allocate(0);
+    m_indexBuffer.bind();
     m_indexBuffer.allocate(0);
 
     int32_t highest_depth = 0;
@@ -430,16 +565,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     {
         const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
 
-        lightmap_texture = std::make_unique<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
+        lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
         lightmap_texture->setSize(lm_tex.width, lm_tex.height);
         lightmap_texture->setLayers(highest_depth + 1);
-
+        lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
         lightmap_texture->setAutoMipMapGenerationEnabled(false);
         lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
-
-        lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBAFormat);
-
         lightmap_texture->allocateStorage();
 
         for (auto &style : lightmap.style_to_lightmap_atlas) {
@@ -447,17 +579,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                 reinterpret_cast<const void *>(style.second.pixels.data()));
         }
     }
-
-    // this determines what can be batched together in a draw call
-    struct material_key
-    {
-        std::string texname;
-        float opacity;
-
-        auto as_tuple() const { return std::make_tuple(texname, opacity); }
-
-        bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
-    };
 
     struct face_payload
     {
@@ -467,6 +588,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // collect faces grouped by material_key
     std::map<material_key, std::vector<face_payload>> faces_by_material_key;
+
+    bool needs_skybox = false;
 
     // collect entity bmodels
     for (int mi = 0; mi < bsp.dmodels.size(); mi++) {
@@ -504,25 +627,76 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             if (!texinfo)
                 continue; // FIXME: render as checkerboard?
 
+            QOpenGLShaderProgram *program = m_program;
+
             // determine opacity
             float opacity = 1.0f;
+
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
 
-                if (texinfo->flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKY)) {
+                if (texinfo->flags.native & Q2_SURF_NODRAW) {
                     continue;
                 }
 
-                if (texinfo->flags.native & Q2_SURF_TRANS33) {
-                    opacity = 0.33f;
-                }
-                if (texinfo->flags.native & Q2_SURF_TRANS66) {
-                    opacity = 0.66f;
+                if (texinfo->flags.native & Q2_SURF_SKY) {
+                    program = m_skybox_program;
+                    needs_skybox = true;
+                } else {
+                    if (texinfo->flags.native & Q2_SURF_TRANS33) {
+                        opacity = 0.33f;
+                    }
+                    if (texinfo->flags.native & Q2_SURF_TRANS66) {
+                        opacity = 0.66f;
+                    }
                 }
             }
 
-            material_key k = {.texname = t, .opacity = opacity};
+            material_key k = {.program = program, .texname = t, .opacity = opacity};
             faces_by_material_key[k].push_back({.face = &f, .model_offset = origin});
         }
+    }
+
+    std::shared_ptr<QOpenGLTexture> skybox_texture;
+
+    if (needs_skybox) {
+        // load skybox
+        std::string skybox = "unit1_"; // TODO: game-specific defaults
+
+        if (entities[0].has("sky")) {
+            skybox = entities[0].get("sky");
+        }
+
+        auto up = img::load_texture(fmt::format("env/{}up", skybox), false, bsp.loadversion->game, settings, true);
+        auto down = img::load_texture(fmt::format("env/{}dn", skybox), false, bsp.loadversion->game, settings, true);
+        auto left = img::load_texture(fmt::format("env/{}lf", skybox), false, bsp.loadversion->game, settings, true);
+        auto right = img::load_texture(fmt::format("env/{}rt", skybox), false, bsp.loadversion->game, settings, true);
+        auto front = img::load_texture(fmt::format("env/{}ft", skybox), false, bsp.loadversion->game, settings, true);
+        auto back = img::load_texture(fmt::format("env/{}bk", skybox), false, bsp.loadversion->game, settings, true);
+
+        skybox_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::TargetCubeMap);
+
+        skybox_texture->setSize(std::get<0>(up)->width, std::get<0>(up)->height);
+        skybox_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+        skybox_texture->setAutoMipMapGenerationEnabled(true);
+        skybox_texture->setMagnificationFilter(QOpenGLTexture::Linear);
+        skybox_texture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+        skybox_texture->setMaximumAnisotropy(16);
+        skybox_texture->allocateStorage();
+
+        skybox_texture->setWrapMode(QOpenGLTexture::ClampToEdge);
+
+        skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeZ, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+            std::get<0>(up)->pixels.data(), nullptr);
+        skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveZ, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+            std::get<0>(down)->pixels.data(), nullptr);
+        skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+            std::get<0>(left)->pixels.data(), nullptr);
+        skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+            std::get<0>(right)->pixels.data(), nullptr);
+        skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+            std::get<0>(front)->pixels.data(), nullptr);
+        skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+            std::get<0>(back)->pixels.data(), nullptr);
     }
 
     // populate the vertex/index buffers
@@ -548,14 +722,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             continue;
         }
 
-        std::unique_ptr<QOpenGLTexture> qtexture =
-            std::make_unique<QOpenGLTexture>(QImage(reinterpret_cast<const uint8_t *>(texture->pixels.data()),
-                texture->width, texture->height, QImage::Format_RGBA8888));
-
-        qtexture->setMaximumAnisotropy(16);
-        qtexture->setAutoMipMapGenerationEnabled(true);
+        std::shared_ptr<QOpenGLTexture> qtexture;
 
         const size_t dc_first_index = indexBuffer.size();
+
+        if (k.program == m_skybox_program) {
+            qtexture = skybox_texture;
+        }
 
         for (const auto &[f, model_offset] : faces) {
             const int fnum = Face_GetNum(&bsp, f);
@@ -601,9 +774,29 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             }
         }
 
+        if (!qtexture) {
+            qtexture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2D);
+
+            qtexture->setSize(texture->width, texture->height);
+            qtexture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+
+            qtexture->allocateStorage();
+
+            // ????
+            // FIXME: debug why this doesn't work, so we can remove the QImage garbage
+            qtexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+                reinterpret_cast<const void *>(texture->pixels.data()));
+
+            qtexture->setMaximumAnisotropy(16);
+            qtexture->setAutoMipMapGenerationEnabled(true);
+
+            qtexture->setMagnificationFilter(QOpenGLTexture::Linear);
+            qtexture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+        }
+
         const size_t dc_index_count = indexBuffer.size() - dc_first_index;
 
-        drawcall_t dc = {.opacity = k.opacity,
+        drawcall_t dc = {.key = k,
             .texture = std::move(qtexture),
             .first_index = dc_first_index,
             .index_count = dc_index_count};

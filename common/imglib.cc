@@ -325,16 +325,17 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
 }
 
 std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(
-    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options)
+    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options,
+    bool no_prefix)
 {
-    fs::path prefix;
+    fs::path prefix {};
 
-    if (game->id == GAME_QUAKE_II) {
+    if (!no_prefix && game->id == GAME_QUAKE_II) {
         prefix = "textures";
     }
 
     for (auto &ext : img::extension_list) {
-        fs::path p = (prefix / name) += ext.suffix;
+        fs::path p = (no_prefix ? fs::path(name) : (prefix / name)) += ext.suffix;
 
         if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
             if (auto data = fs::load(pos)) {

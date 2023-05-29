@@ -114,7 +114,7 @@ constexpr struct
 
 // Attempt to load a texture from the specified name.
 std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(
-    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options);
+    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix = false);
 
 enum class meta_ext
 {
