@@ -115,7 +115,6 @@ struct contentflags_t
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
 
-    bool is_mirrored(const gamedef_t *game) const;
     contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value);
 
     inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
@@ -314,7 +313,6 @@ struct gamedef_t
     virtual bool contents_are_detail_wall(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;
     virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_mirrored(const contentflags_t &contents) const = 0;
     virtual bool contents_are_origin(const contentflags_t &contents) const = 0;
     virtual bool contents_are_clip(const contentflags_t &contents) const = 0;
     virtual bool contents_are_empty(const contentflags_t &contents) const = 0;

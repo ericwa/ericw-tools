@@ -142,11 +142,16 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, e
     if (!face->contents.front.is_valid(qbsp_options.target_game, false))
         FError("Face with invalid contents");
 
-    // search for existing edges
-    if (auto it = map.hashedges.find(std::make_pair(v1, v2)); it != map.hashedges.end()) {
-        return it->second;
-    } else if (auto it = map.hashedges.find(std::make_pair(v2, v1)); it != map.hashedges.end()) {
-        return -it->second;
+    if (!qbsp_options.noedgereuse.value()) {
+        // search for existing edges
+        if (auto it = map.hashedges.find(std::make_pair(v2, v1)); it != map.hashedges.end()) {
+            const hashedge_t &existing = it->second;
+            // this content check is required for software renderers
+            // (see q1_liquid_software test case)
+            if (existing.face->contents.front.equals(qbsp_options.target_game, face->contents.front)) {
+                return -existing.edge_index;
+            }
+        }
     }
 
     /* emit an edge */
@@ -154,7 +159,7 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, e
 
     map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
 
-    map.add_hash_edge(v1, v2, i);
+    map.add_hash_edge(v1, v2, i, face);
 
     stats.unique_edges++;
 
@@ -258,11 +263,15 @@ size_t EmitFaces(node_t *headnode)
 {
     logging::funcheader();
 
+    Q_assert(map.hashedges.empty());
+
     emit_faces_stats_t stats;
 
     size_t firstface = map.bsp.dfaces.size();
 
     EmitFaces_R(headnode, stats);
+
+    map.hashedges.clear();
 
     return firstface;
 }
@@ -472,24 +481,6 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
     f->planenum = (side->planenum & ~1) | (pside ? 1 : 0);
     f->portal = p;
     f->original_side = side->source;
-
-#if 0
-    bool make_face =
-        qbsp_options.target_game->directional_visible_contents(p->nodes[pside]->contents, p->nodes[!pside]->contents);
-    if (!make_face) {
-        // content type / game rules requested to skip generating a face on this side
-        return nullptr;
-    }
-
-    if (!p->nodes[pside]->contents.is_empty(qbsp_options.target_game)) {
-        bool our_contents_mirrorinside = qbsp_options.target_game->contents_are_mirrored(p->nodes[pside]->contents);
-        if (!our_contents_mirrorinside) {
-            if (side->plane_flipped != pside) {
-                return nullptr;
-            }
-        }
-    }
-#endif
 
     if (pside) {
         f->w = p->winding.flip();

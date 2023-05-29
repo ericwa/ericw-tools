@@ -494,18 +494,6 @@ public:
         return bits.detail && bits.mist;
     }
 
-    bool contents_are_mirrored(const contentflags_t &contents) const override
-    {
-        const auto bits = contentflags_to_bits(contents);
-        if (bits.mirror_inside)
-            return true;
-
-        const auto visible = bits.visible_contents();
-
-        // If the brush is non-solid, mirror faces for the inside view
-        return visible.water || visible.slime || visible.lava;
-    }
-
     bool contents_are_origin(const contentflags_t &contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|origin)
@@ -681,6 +669,11 @@ public:
         }
 
         if (brushside_side == SIDE_BACK) {
+            // explicit override?
+            if (brushcontents.mirror_inside) {
+                return *brushcontents.mirror_inside;
+            }
+
             return bits_brush.mirror_inside || bits_brush.water || bits_brush.slime || bits_brush.lava;
         }
         return true;
@@ -1127,19 +1120,6 @@ struct gamedef_q2_t : public gamedef_t
         int32_t mist2_type = (Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX);
 
         return ((contents.native & mist1_type) == mist1_type) || ((contents.native & mist2_type) == mist2_type);
-    }
-
-    bool contents_are_mirrored(const contentflags_t &contents) const override
-    {
-        // if we have mirrorinside set, go ahead
-        if (contents.mirror_inside.has_value())
-            return contents.mirror_inside.value();
-
-        // Q2 is a bit different here. in vanilla tools,
-        // every content except SOLID and WINDOW is implicitly mirrorinside.
-        // the only exception is that 4bsp has the unused AUX
-        // contents to default to not mirroring the insides.
-        return !(contents.native & (Q2_CONTENTS_SOLID | Q2_CONTENTS_AUX));
     }
 
     bool contents_are_origin(const contentflags_t &contents) const override
@@ -1867,11 +1847,6 @@ bool contentflags_t::is_detail_illusionary(const gamedef_t *game) const
     return game->contents_are_detail_illusionary(*this);
 }
 
-bool contentflags_t::is_mirrored(const gamedef_t *game) const
-{
-    return game->contents_are_mirrored(*this);
-}
-
 contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_inside_value)
 {
     mirror_inside = mirror_inside_value;
@@ -1943,9 +1918,8 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
 {
     std::string s = game->get_contents_display(*this);
 
-    if (contentflags_t{native}.is_mirrored(game) != is_mirrored(game)) {
-        s += fmt::format(
-            " | MIRROR_INSIDE[{}]", mirror_inside.has_value() ? (mirror_inside.value() ? "true" : "false") : "nullopt");
+    if (mirror_inside != std::nullopt) {
+        s += fmt::format(" | MIRROR_INSIDE[{}]", mirror_inside.value() ? "true" : "false");
     }
 
     if (contentflags_t{native}.will_clip_same_type(game) != will_clip_same_type(game)) {

@@ -22,6 +22,8 @@ See file, 'COPYING', for details.
 #include <QMainWindow>
 #include <QVBoxLayout>
 
+#include <common/bspfile.hh>
+
 class GLView;
 class QFileSystemWatcher;
 class QLineEdit;
@@ -34,6 +36,7 @@ class MainWindow : public QMainWindow
 private:
     QFileSystemWatcher *m_watcher = nullptr;
     QString m_mapFile;
+    bspdata_t m_bspdata;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -53,6 +56,7 @@ private:
     void reload();
     void loadFile(const QString &file);
     void loadFileInternal(const QString &file, bool is_reload);
+    void displayCameraPositionInfo();
 
 private:
     GLView *glView;

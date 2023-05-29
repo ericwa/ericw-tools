@@ -36,6 +36,10 @@ Options
 
    Don't perform face merging.
 
+.. option:: -noedgereuse
+
+   Don't reuse edges (may be useful for debugging software rendering).
+
 .. option:: -noclip
 
    Doesn't build clip hulls (only applicable for Q1-like BSP formats).

@@ -743,6 +743,16 @@ TEST_CASE("q1_bmodel_liquid" * doctest::test_suite("testmaps_q1"))
     CHECK(CONTENTS_EMPTY == BSP_FindContentsAtPoint(&bsp, {2}, &bsp.dmodels[1], inside_water));
 }
 
+TEST_CASE("q1_liquid_mirrorinside_off" * doctest::test_suite("testmaps_q1"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_liquid_mirrorinside_off.map");
+    REQUIRE(prt.has_value());
+
+    // normally there would be 2 faces, but with _mirrorinside 0 we should get only the upwards-pointing one
+    CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels.at(0), {-52, -56, 8}, {0, 0, 1}));
+    CHECK(!BSP_FindFaceAtPoint(&bsp, &bsp.dmodels.at(0), {-52, -56, 8}, {0, 0, -1}));
+}
+
 TEST_CASE("noclipfaces" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");
@@ -1104,8 +1114,7 @@ TEST_CASE("q1_cubes" * doctest::test_suite("testmaps_q1"))
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cubes.map");
 
-    // index 0 is reserved, and the first cube has 12 edges, the second can share one edge so only needs 11
-    CHECK(bsp.dedges.size() == 24);
+    CHECK(bsp.dedges.size() == 25);
 }
 
 /**
@@ -1800,5 +1809,76 @@ TEST_CASE("q1_hull1_fail" * doctest::may_fail())
         INFO("contents in void");
         CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[0], qvec3d{0, 0, 0}));
         CHECK(CONTENTS_SOLID == BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[0], qvec3d{0, 0, 0}));
+    }
+}
+
+TEST_CASE("q1_sky_window")
+{
+    INFO("faces partially covered by sky were getting wrongly merged and deleted");
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_sky_window.map");
+
+    {
+        INFO("faces around window");
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -252, -32))); // bottom
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -252, 160))); // top
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -288, 60))); // left
+        CHECK(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-184, -224, 60))); // right
+    }
+}
+
+TEST_CASE("q1_liquid_software")
+{
+    INFO("map with just 1 liquid brush + a 'skip' platform, has render corruption on tyrquake");
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_liquid_software.map");
+
+    const qvec3d top_face_point{-56, -56, 8};
+    const qvec3d side_face_point{-56, -72, -8};
+
+    auto *top = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], top_face_point, {0, 0, 1});
+    auto *top_inwater = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], top_face_point, {0, 0, -1});
+
+    auto *side = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], side_face_point, {0, -1, 0});
+    auto *side_inwater = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], side_face_point, {0, 1, 0});
+
+    REQUIRE(top);
+    REQUIRE(top_inwater);
+    REQUIRE(side);
+    REQUIRE(side_inwater);
+
+    // gather edge set used in and out of water.
+    // recall that if edge 5 is from vert 12 to vert 13,
+    // edge -5 is from vert 13 to vert 12.
+
+    // for this test, we are converting directed to undirected
+    // because we want to make sure there's no reuse across in-water and
+    // out-of-water, which breaks software renderers.
+    std::set<int> outwater_undirected_edges;
+    std::set<int> inwater_undirected_edges;
+
+    auto add_face_edges_to_set = [](const mbsp_t &b, const mface_t &face, std::set<int> &set) {
+        for (int i = face.firstedge; i < (face.firstedge + face.numedges); ++i) {
+            int edge = b.dsurfedges.at(i);
+
+            // convert directed to undirected
+            if (edge < 0) {
+                edge = -edge;
+            }
+
+            set.insert(edge);
+        }
+    };
+
+    add_face_edges_to_set(bsp, *top, outwater_undirected_edges);
+    add_face_edges_to_set(bsp, *side, outwater_undirected_edges);
+
+    add_face_edges_to_set(bsp, *top_inwater, inwater_undirected_edges);
+    add_face_edges_to_set(bsp, *side_inwater, inwater_undirected_edges);
+
+    CHECK(7 == outwater_undirected_edges.size());
+    CHECK(7 == inwater_undirected_edges.size());
+
+    // make sure there's no reuse between out-of-water and in-water
+    for (int e : outwater_undirected_edges) {
+        CHECK(inwater_undirected_edges.find(e) == inwater_undirected_edges.end());
     }
 }
