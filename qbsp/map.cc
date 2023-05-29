@@ -551,9 +551,13 @@ static bool IsNoExpandName(const char *name)
     return false;
 }
 
-static bool IsSpecialName(const char *name)
+/**
+ * "Special" refers to TEX_SPECIAL, which means "non-lightmapped" and
+ * therefore non-subdivided.
+ */
+static bool IsSpecialName(const char *name, bool allow_litwater)
 {
-    if (name[0] == '*' && !qbsp_options.splitturb.value())
+    if (name[0] == '*' && !allow_litwater)
         return true;
     if (!Q_strncasecmp(name, "sky", 3) && !qbsp_options.splitsky.value())
         return true;
@@ -626,6 +630,18 @@ static surfflags_t SurfFlagsForEntity(
     const int shadow = entity.epairs.get_int("_shadow");
     bool is_translucent = false;
 
+    // lit water: use worldspawn key by default, but allow overriding with bmodel keys
+    // TODO: use a setting_container for these things, rather than custom parsing
+    // TODO: support lit water opt-out in Q2 mode
+    bool allow_litwater = false;
+    if (entity.epairs.has("_litwater")) {
+        allow_litwater = (entity.epairs.get_int("_litwater") > 0);
+    } else if (entity.epairs.has("_splitturb")) {
+        allow_litwater = (entity.epairs.get_int("_splitturb") > 0);
+    } else {
+        allow_litwater = qbsp_options.splitturb.value();
+    }
+
     // These flags are pulled from surf flags in Q2.
     // TODO: the Q1 version of this block can now be moved into texinfo
     // loading by shoving them inside of texinfo.flags like
@@ -640,7 +656,7 @@ static surfflags_t SurfFlagsForEntity(
             flags.is_nodraw = true;
         if (IsHintName(texname))
             flags.is_hint = true;
-        if (IsSpecialName(texname))
+        if (IsSpecialName(texname, allow_litwater))
             flags.native |= TEX_SPECIAL;
     } else {
         flags.native = texinfo.flags.native;

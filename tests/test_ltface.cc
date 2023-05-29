@@ -740,3 +740,42 @@ TEST_CASE("q2_minlight_inherited + -noextendedsurfflags")
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[3], {0, 64, 0}, {208, -248, 16}, {0, 0, 1}, nullptr, &bspx);
     }
 }
+
+TEST_CASE("lit water")
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_litwater.map", {});
+
+    {
+        INFO("cube 1: lava has blue lightmap");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 10, 171}, {-288, 120, 128}, {0, 0, 1}, &lit);
+    }
+
+    {
+        INFO("cube 2: non-lightmapped via _splitturb 0 func_group key");
+        auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-160, 120, 128}, {0, 0, 1});
+        auto *ti = Face_Texinfo(&bsp, f);
+        CHECK(ti->flags.native == TEX_SPECIAL);
+    }
+
+    {
+        INFO("cube 3: lightmapped, but using minlight only via _lightignore and _minlight func_group keys");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {50, 50, 50}, {-32, 120, 128}, {0, 0, 1}, &lit);
+    }
+}
+
+TEST_CASE("lit water opt-in")
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_litwater_opt_in.map", {});
+
+    {
+        INFO("cube 1: lava has blue lightmap (opt-in via _litwater 1)");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 162}, {-288, 120, 128}, {0, 0, 1}, &lit);
+    }
+
+    {
+        INFO("cube 2: non-lightmapped");
+        auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-160, 120, 128}, {0, 0, 1});
+        auto *ti = Face_Texinfo(&bsp, f);
+        CHECK(ti->flags.native == TEX_SPECIAL);
+    }
+}
