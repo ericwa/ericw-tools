@@ -143,6 +143,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
     setupMenu();
+
+    // set up load timer
+    m_fileReloadTimer = std::make_unique<QTimer>();
+
+    m_fileReloadTimer->setSingleShot(true);
+    m_fileReloadTimer->connect(m_fileReloadTimer.get(), &QTimer::timeout, this, &MainWindow::fileReloadTimerExpired);
 }
 
 MainWindow::~MainWindow() { }
@@ -207,6 +213,25 @@ void MainWindow::takeScreenshot()
         glView->takeScreenshot(fileName, 3840, 2160);
 }
 
+void MainWindow::fileReloadTimerExpired()
+{
+    qint64 currentSize = QFileInfo(m_mapFile).size();
+
+    // it was rewritten...
+    if (currentSize != m_fileSize)
+    {
+        qDebug() << "size changed since last write, restarting timer";
+        m_fileReloadTimer->start(100);
+        return;
+    }
+
+    // good to go? maybe?
+    qDebug() << "size not changed, good to go";
+    loadFileInternal(m_mapFile, true);
+
+    m_fileSize = -1;
+}
+
 void MainWindow::loadFile(const QString &file)
 {
     qDebug() << "load " << file;
@@ -217,17 +242,19 @@ void MainWindow::loadFile(const QString &file)
         delete m_watcher;
     }
     m_watcher = new QFileSystemWatcher(this);
+    m_fileSize = -1;
 
     // start watching it
     qDebug() << "adding path: " << m_watcher->addPath(file);
+
     connect(m_watcher, &QFileSystemWatcher::fileChanged, this, [&](const QString &path) {
-        if (QFileInfo(path).size() == 0) {
-            // saving a map in TB produces 2 change notifications on Windows; the
-            // first truncates the file to 0 bytes, so ignore that.
-            return;
-        }
-        qDebug() << "got change notif for " << path;
-        loadFileInternal(path, true);
+        qDebug() << "got change notif for " << m_mapFile;
+
+        // check current files' size
+        m_fileSize = QFileInfo(m_mapFile).size();
+
+        // start timer
+        m_fileReloadTimer->start(25);
     });
 
     loadFileInternal(file, false);
@@ -370,6 +397,9 @@ private:
 void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 {
     qDebug() << "loadFileInternal " << file;
+
+    // just in case
+    m_fileReloadTimer->stop();
 
     // persist settings
     QSettings s;

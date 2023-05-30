@@ -35,8 +35,10 @@ class MainWindow : public QMainWindow
 
 private:
     QFileSystemWatcher *m_watcher = nullptr;
+    std::unique_ptr<QTimer> m_fileReloadTimer;
     QString m_mapFile;
     bspdata_t m_bspdata;
+    qint64 m_fileSize = -1;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -46,6 +48,7 @@ private:
     void setupMenu();
     void fileOpen();
     void takeScreenshot();
+    void fileReloadTimerExpired();
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;

@@ -76,6 +76,12 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
     // Create winding...
     winding_t winding = winding_t::from_winding_points(poly);
+    auto face_modelinfo = ModelInfoForFace(bsp, face - bsp->dfaces.data());
+
+    for (auto &pt : winding) {
+        pt += face_modelinfo->offset;
+    }
+
     winding.remove_colinear();
 
     // Get face normal and midpoint...
