@@ -102,19 +102,29 @@ if (embree_FOUND)
 	if(UNIX)
 		# HACK: preferred method is installing the symlink instead of the actual .so
 		get_target_property(TBB_SO_FILE_SYMLINK TBB::tbb IMPORTED_LOCATION_RELEASE)
-		get_filename_component(TBB_SO_FILE "${TBB_SO_FILE_SYMLINK}" REALPATH)
+		message(STATUS "TBB .so symlink: ${TBB_SO_FILE_SYMLINK}")
 
+		# just the name part of the symlink
+		get_filename_component(TBB_SO_FILE_SYMLINK_NAME "${TBB_SO_FILE_SYMLINK}" NAME)
+		message(STATUS "TBB .so symlink name: ${TBB_SO_FILE_SYMLINK_NAME}")
+
+		get_filename_component(TBB_SO_FILE "${TBB_SO_FILE_SYMLINK}" REALPATH)
 		message(STATUS "TBB .so file: ${TBB_SO_FILE}")
 
-		install(FILES ${TBB_SO_FILE} DESTINATION bin)
+		install(FILES ${TBB_SO_FILE} DESTINATION bin RENAME "${TBB_SO_FILE_SYMLINK_NAME}")
 
 		# tbbmalloc
 		get_target_property(TBBMALLOC_SO_FILE_SYMLINK TBB::tbbmalloc IMPORTED_LOCATION_RELEASE)
+		message(STATUS "TBBMALLOC .so symlink: ${TBBMALLOC_SO_FILE_SYMLINK}")
+
+		get_filename_component(TBBMALLOC_SO_FILE_SYMLINK_NAME "${TBBMALLOC_SO_FILE_SYMLINK}" NAME)
+		message(STATUS "TBBMALLOC .so symlink name: ${TBBMALLOC_SO_FILE_SYMLINK_NAME}")
+
 		get_filename_component(TBBMALLOC_SO_FILE "${TBBMALLOC_SO_FILE_SYMLINK}" REALPATH)
 
 		message(STATUS "TBBMALLOC .so file: ${TBBMALLOC_SO_FILE}")
 
-		install(FILES ${TBBMALLOC_SO_FILE} DESTINATION bin)
+		install(FILES ${TBBMALLOC_SO_FILE} DESTINATION bin RENAME "${TBBMALLOC_SO_FILE_SYMLINK_NAME}")
 	else()
 		# preferred method
 		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION bin)
