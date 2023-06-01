@@ -94,7 +94,7 @@ void print(flag logflag, const char *str)
         } else if (string_icontains(str, "warning")) {
             style = fmt::fg(fmt::terminal_color::yellow);
         } else if (bitflags<flag>(logflag) & flag::PERCENT) {
-            style = fmt::fg(fmt::terminal_color::blue);
+            style = fmt::fg(fmt::terminal_color::bright_black);
         } else if (bitflags<flag>(logflag) & flag::STAT) {
             style = fmt::fg(fmt::terminal_color::cyan);
         }
