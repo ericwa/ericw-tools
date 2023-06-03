@@ -28,6 +28,7 @@ class GLView;
 class QFileSystemWatcher;
 class QLineEdit;
 class QCheckBox;
+class QStringList;
 
 class MainWindow : public QMainWindow
 {
@@ -48,6 +49,7 @@ private:
     void createPropertiesSidebar();
     void createOutputLog();
     void createStatusBar();
+    void updateRecentsSubmenu(const QStringList &recents);
     void setupMenu();
     void fileOpen();
     void takeScreenshot();
@@ -75,4 +77,5 @@ private:
     QVBoxLayout *lightstyles = nullptr;
 
     QMenu *viewMenu = nullptr;
+    QMenu *openRecentMenu = nullptr;
 };
