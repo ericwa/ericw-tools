@@ -45,6 +45,9 @@ public:
     ~MainWindow();
 
 private:
+    void createPropertiesSidebar();
+    void createOutputLog();
+    void createStatusBar();
     void setupMenu();
     void fileOpen();
     void takeScreenshot();
@@ -62,12 +65,14 @@ private:
     void displayCameraPositionInfo();
 
 private:
-    GLView *glView;
+    GLView *glView = nullptr;
 
-    QCheckBox *vis_checkbox;
+    QCheckBox *vis_checkbox = nullptr;
 
-    QLineEdit *qbsp_options;
-    QLineEdit *vis_options;
-    QLineEdit *light_options;
-    QVBoxLayout *lightstyles;
+    QLineEdit *qbsp_options = nullptr;
+    QLineEdit *vis_options = nullptr;
+    QLineEdit *light_options = nullptr;
+    QVBoxLayout *lightstyles = nullptr;
+
+    QMenu *viewMenu = nullptr;
 };

@@ -20,6 +20,7 @@ See file, 'COPYING', for details.
 #include "mainwindow.h"
 
 #include <QCoreApplication>
+#include <QDockWidget>
 #include <QString>
 #include <QDragEnterEvent>
 #include <QMimeData>
@@ -41,6 +42,8 @@ See file, 'COPYING', for details.
 #include <QSpinBox>
 #include <QFrame>
 #include <QLabel>
+#include <QTextEdit>
+#include <QStatusBar>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -53,12 +56,27 @@ See file, 'COPYING', for details.
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    // create the menu first as it is used by other things (dock widgets)
+    setupMenu();
+
     resize(640, 480);
 
     // gl view
-    glView = new GLView();
+    glView = new GLView(this);
+    setCentralWidget(glView);
 
-    // properties form
+    setAcceptDrops(true);
+
+    createPropertiesSidebar();
+    createOutputLog();
+
+    createStatusBar();
+}
+
+void MainWindow::createPropertiesSidebar()
+{
+    QDockWidget *dock = new QDockWidget(tr("Properties"), this);
+
     auto *formLayout = new QFormLayout();
 
     vis_checkbox = new QCheckBox(tr("vis"));
@@ -114,16 +132,10 @@ MainWindow::MainWindow(QWidget *parent)
     auto *form = new QWidget();
     form->setLayout(formLayout);
 
-    // splitter
-
-    auto *splitter = new QSplitter();
-    splitter->addWidget(form);
-    splitter->addWidget(glView);
-    splitter->setStretchFactor(0, 0);
-    splitter->setStretchFactor(1, 1);
-
-    setCentralWidget(splitter);
-    setAcceptDrops(true);
+    // finish dock setup
+    dock->setWidget(form);
+    addDockWidget(Qt::LeftDockWidgetArea, dock);
+    viewMenu->addAction(dock->toggleViewAction());
 
     // load state persisted in settings
     QSettings s;
@@ -142,13 +154,29 @@ MainWindow::MainWindow(QWidget *parent)
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
-    setupMenu();
 
     // set up load timer
     m_fileReloadTimer = std::make_unique<QTimer>();
 
     m_fileReloadTimer->setSingleShot(true);
     m_fileReloadTimer->connect(m_fileReloadTimer.get(), &QTimer::timeout, this, &MainWindow::fileReloadTimerExpired);
+}
+
+void MainWindow::createOutputLog()
+{
+    QDockWidget *dock = new QDockWidget(tr("Output Log"), this);
+
+    auto *textEdit = new QTextEdit();
+
+    // finish dock widget setup
+    dock->setWidget(textEdit);
+    addDockWidget(Qt::BottomDockWidgetArea, dock);
+    viewMenu->addAction(dock->toggleViewAction());
+}
+
+void MainWindow::createStatusBar()
+{
+    statusBar();
 }
 
 MainWindow::~MainWindow() { }
@@ -166,6 +194,10 @@ void MainWindow::setupMenu()
 
     auto *exit = menu->addAction(tr("E&xit"), this, &QWidget::close);
     exit->setShortcut(QKeySequence::Quit);
+
+    // view menu
+
+    viewMenu = menuBar()->addMenu(tr("&View"));
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
@@ -218,8 +250,7 @@ void MainWindow::fileReloadTimerExpired()
     qint64 currentSize = QFileInfo(m_mapFile).size();
 
     // it was rewritten...
-    if (currentSize != m_fileSize)
-    {
+    if (currentSize != m_fileSize) {
         qDebug() << "size changed since last write, restarting timer";
         m_fileReloadTimer->start(100);
         return;
