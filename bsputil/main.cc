@@ -18,8 +18,13 @@
 */
 
 #include <bsputil/bsputil.hh>
+#include <common/log.hh>
 
 int main(int argc, char **argv)
 {
-    return bsputil_main(argc, argv);
+    try {
+        return bsputil_main(argc, argv);
+    } catch (const std::exception &e) {
+        exit_on_exception(e);
+    }
 }
