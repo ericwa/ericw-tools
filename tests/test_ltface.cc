@@ -779,3 +779,12 @@ TEST_CASE("lit water opt-in")
         CHECK(ti->flags.native == TEX_SPECIAL);
     }
 }
+
+TEST_CASE("q2_light_divzero")
+{
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_divzero.map", {"-world_units_per_luxel", "8"});
+
+    INFO("should not have a black spot in the center of the light face");
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {255, 127, 63}, {-992, 0, -480}, {0, 0, -1}, nullptr, &bspx);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {255, 127, 63}, {-984, 8, -480}, {0, 0, -1}, nullptr, &bspx);
+}

@@ -1957,14 +1957,17 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 qvec3f pos = vpl.points[c];
                 qvec3f dir = lightsurf_pos - pos;
                 float dist = qv::length(dir);
+                bool use_normal = true;
 
-                if (dist == 0.0f)
+                if (dist == 0.0f) {
                     dir = lightsurf_normal;
-                else
+                    use_normal = false;
+                } else {
                     dir /= dist;
+                }
 
                 const qvec3f indirect = GetSurfaceLighting(
-                    cfg, &vpl, dir, dist, lightsurf_normal, true, standard_scale, sky_scale, hotspot_clamp);
+                    cfg, &vpl, dir, dist, lightsurf_normal, use_normal, standard_scale, sky_scale, hotspot_clamp);
                 if (!qv::gate(indirect, surflight_gate)) { // Each point contributes very little to the final result
                     rs.pushRay(i, pos, dir, dist, &indirect);
                 }
