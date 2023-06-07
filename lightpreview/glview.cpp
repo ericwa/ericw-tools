@@ -252,6 +252,17 @@ void main() {
 }
 )";
 
+bool GLView::shouldLiveUpdate() const
+{
+    if (m_keysPressed)
+        return true;
+
+    if (QApplication::mouseButtons())
+        return true;
+
+    return false;
+}
+
 void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 {
     if (debugMessage.type() == QOpenGLDebugMessage::ErrorType)
@@ -453,7 +464,13 @@ void GLView::paintGL()
 
     m_program->release();
 
-    update(); // schedule the next frame
+    if (shouldLiveUpdate()) {
+        update(); // schedule the next frame
+    } else {
+        qDebug() << "pausing anims..";
+        m_lastFrame = std::nullopt;
+        m_lastMouseDownPos = std::nullopt;
+    }
 }
 
 void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
@@ -966,6 +983,11 @@ void GLView::wheelEvent(QWheelEvent *event)
 
     m_moveSpeed += delta;
     m_moveSpeed = clamp(m_moveSpeed, 10.0f, 5000.0f);
+}
+
+void GLView::mousePressEvent(QMouseEvent *event)
+{
+    update();
 }
 
 void GLView::applyFlyMovement(float duration_seconds)
