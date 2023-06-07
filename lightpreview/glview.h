@@ -99,6 +99,7 @@ private:
         bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
     };
 
+    std::shared_ptr<QOpenGLTexture> placeholder_texture;
     std::shared_ptr<QOpenGLTexture> lightmap_texture;
     struct drawcall_t
     {
