@@ -100,6 +100,7 @@ private:
         bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
     };
 
+    std::shared_ptr<QOpenGLTexture> placeholder_texture;
     std::shared_ptr<QOpenGLTexture> lightmap_texture;
     struct drawcall_t
     {
@@ -166,12 +167,14 @@ protected:
     void resizeGL(int width, int height) override;
 
 private:
+    bool shouldLiveUpdate() const;
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 
 protected:
     void keyPressEvent(QKeyEvent *event) override;
     void keyReleaseEvent(QKeyEvent *event) override;
     void wheelEvent(QWheelEvent *event) override;
+    void mousePressEvent(QMouseEvent *event) override;
 
 private:
     void applyMouseMotion();

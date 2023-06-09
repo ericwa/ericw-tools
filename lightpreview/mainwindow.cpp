@@ -20,6 +20,7 @@ See file, 'COPYING', for details.
 #include "mainwindow.h"
 
 #include <QCoreApplication>
+#include <QDockWidget>
 #include <QString>
 #include <QDragEnterEvent>
 #include <QMimeData>
@@ -41,6 +42,9 @@ See file, 'COPYING', for details.
 #include <QSpinBox>
 #include <QFrame>
 #include <QLabel>
+#include <QTextEdit>
+#include <QStatusBar>
+#include <QStringList>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -50,15 +54,73 @@ See file, 'COPYING', for details.
 
 #include "glview.h"
 
+// Recent files
+
+static constexpr auto RECENT_SETTINGS_KEY = "recent_files";
+static constexpr size_t MAX_RECENTS = 10;
+
+static void ClearRecents()
+{
+    QSettings s;
+    s.setValue(RECENT_SETTINGS_KEY, QStringList());
+}
+
+/**
+ * Updates the recent files settings by pushing the given file to the front
+ * and trimming the list to SETTINGS_MAX.
+ *
+ * @param file the file to push
+ * @return the new recent files list
+ */
+static QStringList AddRecent(const QString &file)
+{
+    QSettings s;
+    QStringList recents = s.value(RECENT_SETTINGS_KEY).toStringList();
+
+    recents.removeOne(file); // no-op if not present
+    recents.push_front(file);
+    while (recents.size() > MAX_RECENTS) {
+        recents.pop_back();
+    }
+
+    s.setValue(RECENT_SETTINGS_KEY, recents);
+
+    return recents;
+}
+
+static QStringList GetRecents()
+{
+    QSettings s;
+    QStringList recents = s.value(RECENT_SETTINGS_KEY).toStringList();
+    return recents;
+}
+
+// MainWindow
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
+    // create the menu first as it is used by other things (dock widgets)
+    setupMenu();
+
     resize(640, 480);
 
     // gl view
-    glView = new GLView();
+    glView = new GLView(this);
+    setCentralWidget(glView);
 
-    // properties form
+    setAcceptDrops(true);
+
+    createPropertiesSidebar();
+    createOutputLog();
+
+    createStatusBar();
+}
+
+void MainWindow::createPropertiesSidebar()
+{
+    QDockWidget *dock = new QDockWidget(tr("Properties"), this);
+
     auto *formLayout = new QFormLayout();
 
     vis_checkbox = new QCheckBox(tr("vis"));
@@ -114,16 +176,10 @@ MainWindow::MainWindow(QWidget *parent)
     auto *form = new QWidget();
     form->setLayout(formLayout);
 
-    // splitter
-
-    auto *splitter = new QSplitter();
-    splitter->addWidget(form);
-    splitter->addWidget(glView);
-    splitter->setStretchFactor(0, 0);
-    splitter->setStretchFactor(1, 1);
-
-    setCentralWidget(splitter);
-    setAcceptDrops(true);
+    // finish dock setup
+    dock->setWidget(form);
+    addDockWidget(Qt::LeftDockWidgetArea, dock);
+    viewMenu->addAction(dock->toggleViewAction());
 
     // load state persisted in settings
     QSettings s;
@@ -142,13 +198,50 @@ MainWindow::MainWindow(QWidget *parent)
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
-    setupMenu();
 
     // set up load timer
     m_fileReloadTimer = std::make_unique<QTimer>();
 
     m_fileReloadTimer->setSingleShot(true);
     m_fileReloadTimer->connect(m_fileReloadTimer.get(), &QTimer::timeout, this, &MainWindow::fileReloadTimerExpired);
+}
+
+void MainWindow::createOutputLog()
+{
+    QDockWidget *dock = new QDockWidget(tr("Output Log"), this);
+
+    auto *textEdit = new QTextEdit();
+
+    // finish dock widget setup
+    dock->setWidget(textEdit);
+    addDockWidget(Qt::BottomDockWidgetArea, dock);
+    viewMenu->addAction(dock->toggleViewAction());
+}
+
+void MainWindow::createStatusBar()
+{
+    statusBar();
+}
+
+/**
+ * Precondition: openRecentMenu is created.
+ *
+ * Clears and rebuilds the menu given the list of files that should be displayed in it.
+ */
+void MainWindow::updateRecentsSubmenu(const QStringList &recents)
+{
+    openRecentMenu->clear();
+
+    for (const QString &recent : recents) {
+        auto *action = openRecentMenu->addAction(recent);
+        connect(action, &QAction::triggered, this, [this, recent]() { loadFile(recent); });
+    }
+
+    openRecentMenu->addSeparator();
+    openRecentMenu->addAction(tr("Clear Recents"), this, [this]() {
+        ClearRecents();
+        this->updateRecentsSubmenu(GetRecents());
+    });
 }
 
 MainWindow::~MainWindow() { }
@@ -160,12 +253,21 @@ void MainWindow::setupMenu()
     auto *open = menu->addAction(tr("&Open"), this, &MainWindow::fileOpen);
     open->setShortcut(QKeySequence::Open);
 
-    // auto *openRecent = menu->addAction(tr("Open &Recent"));
+    openRecentMenu = menu->addMenu(tr("Open &Recent"));
+    updateRecentsSubmenu(GetRecents());
+
+    menu->addSeparator();
 
     auto *takeScreenshot = menu->addAction(tr("Save Screenshot..."), this, &MainWindow::takeScreenshot);
 
+    menu->addSeparator();
+
     auto *exit = menu->addAction(tr("E&xit"), this, &QWidget::close);
     exit->setShortcut(QKeySequence::Quit);
+
+    // view menu
+
+    viewMenu = menuBar()->addMenu(tr("&View"));
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
@@ -218,8 +320,7 @@ void MainWindow::fileReloadTimerExpired()
     qint64 currentSize = QFileInfo(m_mapFile).size();
 
     // it was rewritten...
-    if (currentSize != m_fileSize)
-    {
+    if (currentSize != m_fileSize) {
         qDebug() << "size changed since last write, restarting timer";
         m_fileReloadTimer->start(150);
         return;
@@ -235,6 +336,9 @@ void MainWindow::fileReloadTimerExpired()
 void MainWindow::loadFile(const QString &file)
 {
     qDebug() << "load " << file;
+
+    // update recents
+    updateRecentsSubmenu(AddRecent(file));
 
     m_mapFile = file;
 

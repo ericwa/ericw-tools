@@ -60,11 +60,13 @@ GLView::~GLView()
 
     delete m_program;
     delete m_program_wireframe;
+    delete m_skybox_program;
 
     m_vbo.destroy();
     m_indexBuffer.destroy();
     m_vao.destroy();
 
+    placeholder_texture.reset();
     lightmap_texture.reset();
     m_drawcalls.clear();
 
@@ -255,6 +257,17 @@ void main() {
     styles = vertex_styles;
 }
 )";
+
+bool GLView::shouldLiveUpdate() const
+{
+    if (m_keysPressed)
+        return true;
+
+    if (QApplication::mouseButtons())
+        return true;
+
+    return false;
+}
 
 void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 {
@@ -471,7 +484,13 @@ void GLView::paintGL()
 
     m_program->release();
 
-    update(); // schedule the next frame
+    if (shouldLiveUpdate()) {
+        update(); // schedule the next frame
+    } else {
+        qDebug() << "pausing anims..";
+        m_lastFrame = std::nullopt;
+        m_lastMouseDownPos = std::nullopt;
+    }
 }
 
 void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
@@ -568,6 +587,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     makeCurrent();
 
     // clear old data
+    placeholder_texture.reset();
     lightmap_texture.reset();
     m_drawcalls.clear();
     m_vbo.bind();
@@ -598,6 +618,39 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 reinterpret_cast<const void *>(style.second.pixels.data()));
         }
+    }
+
+    // upload placeholder texture
+    {
+        placeholder_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2D);
+        placeholder_texture->setSize(64, 64);
+        placeholder_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+        placeholder_texture->setAutoMipMapGenerationEnabled(true);
+        placeholder_texture->setMagnificationFilter(QOpenGLTexture::Linear);
+        placeholder_texture->setMinificationFilter(QOpenGLTexture::Linear);
+        placeholder_texture->allocateStorage();
+
+        uint8_t *data = new uint8_t[64 * 64 * 4];
+        for (int y = 0; y < 64; ++y) {
+            for (int x = 0; x < 64; ++x) {
+                int i = ((y * 64) + x) * 4;
+
+                int v;
+                if ((x > 32) == (y > 32)) {
+                    v = 64;
+                } else {
+                    v = 32;
+                }
+
+                data[i] = v; // R
+                data[i + 1] = v; // G
+                data[i + 2] = v; // B
+                data[i + 3] = 0xff; // A
+            }
+        }
+        placeholder_texture->setData(
+            0, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(data));
+        delete[] data;
     }
 
     struct face_payload
@@ -741,13 +794,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         // upload texture
         // FIXME: we should have a separate lightpreview_options
         auto *texture = img::find(k.texname);
+        std::shared_ptr<QOpenGLTexture> qtexture;
 
         if (!texture) {
             logging::print("warning, couldn't locate {}", k.texname);
-            continue;
+            qtexture = placeholder_texture;
         }
 
-        std::shared_ptr<QOpenGLTexture> qtexture;
+        if (!texture->width || !texture->height) {
+            logging::print("warning, empty texture {}", k.texname);
+            qtexture = placeholder_texture;
+        }
 
         const size_t dc_first_index = indexBuffer.size();
 
@@ -769,8 +826,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                 qvec3f pos = Face_PointAtIndex(&bsp, f, j);
                 qvec2f uv = Face_WorldToTexCoord(&bsp, f, pos);
 
-                uv[0] *= (1.0 / texture->width);
-                uv[1] *= (1.0 / texture->height);
+                if (qtexture) {
+                    uv[0] *= (1.0 / qtexture->width());
+                    uv[1] *= (1.0 / qtexture->height());
+                } else {
+                    uv[0] *= (1.0 / texture->width);
+                    uv[1] *= (1.0 / texture->height);
+                }
 
                 qvec2f lightmap_uv = lm_uvs.at(j);
 
@@ -809,8 +871,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             // ????
             // FIXME: debug why this doesn't work, so we can remove the QImage garbage
-            qtexture->setData(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
-                reinterpret_cast<const void *>(texture->pixels.data()));
+            qtexture->setData(
+                QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(texture->pixels.data()));
 
             qtexture->setMaximumAnisotropy(16);
             qtexture->setAutoMipMapGenerationEnabled(true);
@@ -821,10 +883,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         const size_t dc_index_count = indexBuffer.size() - dc_first_index;
 
-        drawcall_t dc = {.key = k,
-            .texture = std::move(qtexture),
-            .first_index = dc_first_index,
-            .index_count = dc_index_count};
+        drawcall_t dc = {
+            .key = k, .texture = std::move(qtexture), .first_index = dc_first_index, .index_count = dc_index_count};
         m_drawcalls.push_back(std::move(dc));
     }
 
@@ -948,6 +1008,11 @@ void GLView::wheelEvent(QWheelEvent *event)
 
     m_moveSpeed += delta;
     m_moveSpeed = clamp(m_moveSpeed, 10.0f, 5000.0f);
+}
+
+void GLView::mousePressEvent(QMouseEvent *event)
+{
+    update();
 }
 
 void GLView::applyFlyMovement(float duration_seconds)

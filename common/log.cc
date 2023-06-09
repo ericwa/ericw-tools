@@ -327,6 +327,18 @@ stat_tracker_t::~stat_tracker_t()
 }
 }; // namespace logging
 
+ericwtools_error::ericwtools_error(const char *what)
+    : std::runtime_error(what)
+{
+}
+
+[[noreturn]] void exit_on_exception(const std::exception &e)
+{
+    logging::print("************ ERROR ************\n{}\n", e.what());
+    logging::close();
+    exit(1);
+}
+
 /*
  * =================
  * Error
@@ -335,10 +347,8 @@ stat_tracker_t::~stat_tracker_t()
  */
 [[noreturn]] void Error(const char *error)
 {
-    logging::print("************ ERROR ************\n{}\n", error);
-    logging::close();
 #ifdef _DEBUG
     __debugbreak();
 #endif
-    exit(1);
+    throw ericwtools_error(error);
 }

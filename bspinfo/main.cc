@@ -85,40 +85,44 @@ settings::common_settings bspinfo_options;
 
 int main(int argc, char **argv)
 {
-    logging::preinitialize();
+    try {
+        logging::preinitialize();
 
-    fmt::print("---- bspinfo / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
-    if (argc == 1) {
-        printf("usage: bspinfo bspfile [bspfiles]\n");
-        exit(1);
+        fmt::print("---- bspinfo / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
+        if (argc == 1) {
+            printf("usage: bspinfo bspfile [bspfiles]\n");
+            exit(1);
+        }
+
+        for (int32_t i = 1; i < argc; i++) {
+            printf("---------------------\n");
+            fs::path source = DefaultExtension(argv[i], ".bsp");
+            fmt::print("{}\n", source);
+
+            bspdata_t bsp;
+            LoadBSPFile(source, &bsp);
+
+            bsp.version->game->init_filesystem(source, bspinfo_options);
+
+            PrintBSPFileSizes(&bsp);
+
+            // WriteBSPFile(fs::path(source).replace_extension("bsp.rewrite"), &bsp);
+
+            ConvertBSPFormat(&bsp, &bspver_generic);
+
+            serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), fs::path(source).replace_extension("bsp.json"));
+
+            PrintBSPTextureUsage(std::get<mbsp_t>(bsp.bsp));
+
+            FindInfiniteChains(std::get<mbsp_t>(bsp.bsp));
+
+            printf("---------------------\n");
+
+            fs::clear();
+        }
+
+        return 0;
+    } catch (const std::exception &e) {
+        exit_on_exception(e);
     }
-
-    for (int32_t i = 1; i < argc; i++) {
-        printf("---------------------\n");
-        fs::path source = DefaultExtension(argv[i], ".bsp");
-        fmt::print("{}\n", source);
-
-        bspdata_t bsp;
-        LoadBSPFile(source, &bsp);
-
-        bsp.version->game->init_filesystem(source, bspinfo_options);
-
-        PrintBSPFileSizes(&bsp);
-
-        // WriteBSPFile(fs::path(source).replace_extension("bsp.rewrite"), &bsp);
-
-        ConvertBSPFormat(&bsp, &bspver_generic);
-
-        serialize_bsp(bsp, std::get<mbsp_t>(bsp.bsp), fs::path(source).replace_extension("bsp.json"));
-
-        PrintBSPTextureUsage(std::get<mbsp_t>(bsp.bsp));
-
-        FindInfiniteChains(std::get<mbsp_t>(bsp.bsp));
-
-        printf("---------------------\n");
-
-        fs::clear();
-    }
-
-    return 0;
 }

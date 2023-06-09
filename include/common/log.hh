@@ -30,6 +30,7 @@
 #include <cstdarg>
 #include <list>
 #include <cmath> // for log10
+#include <stdexcept> // for std::runtime_error
 #include <fmt/core.h>
 #include <common/bitflags.hh>
 #include <common/fs.hh>
@@ -180,6 +181,20 @@ struct stat_tracker_t
 };
 }; // namespace logging
 
+class ericwtools_error : public std::runtime_error
+{
+public:
+    ericwtools_error(const char *what);
+};
+
+[[noreturn]] void exit_on_exception(const std::exception &e);
+
+/**
+ * Throws a ericwtools_error
+ *
+ * The command-line tools should exit with a nonzero exit status.
+ * lightpreview can catch this to avoid crashing the whole UI.
+ */
 [[noreturn]] void Error(const char *error);
 
 template<typename... Args>
