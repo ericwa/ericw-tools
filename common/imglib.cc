@@ -407,6 +407,8 @@ std::optional<texture_meta> load_wal_json_meta(
 
         texture_meta meta{};
 
+        meta.name = name;
+
         {
             fs::path wal = fs::path(name).replace_extension(".wal");
 
