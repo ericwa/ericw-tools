@@ -93,8 +93,9 @@ private:
         QOpenGLShaderProgram *program;
         std::string texname;
         float opacity = 1.f;
+        bool alpha_test = false;
 
-        auto as_tuple() const { return std::make_tuple(program, texname, opacity); }
+        auto as_tuple() const { return std::make_tuple(program, texname, opacity, alpha_test); }
 
         bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
     };
@@ -117,6 +118,7 @@ private:
     int m_program_texture_sampler_location = 0;
     int m_program_lightmap_sampler_location = 0;
     int m_program_opacity_location = 0;
+    int m_program_alpha_test_location = 0;
     int m_program_lightmap_only_location = 0;
     int m_program_fullbright_location = 0;
     int m_program_drawnormals_location = 0;

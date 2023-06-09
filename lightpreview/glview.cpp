@@ -107,6 +107,7 @@ out vec4 color;
 uniform sampler2D texture_sampler;
 uniform sampler2DArray lightmap_sampler;
 uniform float opacity;
+uniform bool alpha_test;
 uniform bool lightmap_only;
 uniform bool fullbright;
 uniform bool drawnormals;
@@ -121,6 +122,11 @@ void main() {
         color = vec4(flat_color, opacity);
     } else {
         vec3 texcolor = lightmap_only ? vec3(0.5) : texture(texture_sampler, uv).rgb;
+
+        if (!lightmap_only && alpha_test && texture(texture_sampler, uv).a < 0.1) {
+            discard;
+        }
+
         vec3 lmcolor = fullbright ? vec3(0.5) : vec3(0);
 
         if (!fullbright)
@@ -292,6 +298,7 @@ void GLView::initializeGL()
     m_program_texture_sampler_location = m_program->uniformLocation("texture_sampler");
     m_program_lightmap_sampler_location = m_program->uniformLocation("lightmap_sampler");
     m_program_opacity_location = m_program->uniformLocation("opacity");
+    m_program_alpha_test_location = m_program->uniformLocation("alpha_test");
     m_program_lightmap_only_location = m_program->uniformLocation("lightmap_only");
     m_program_fullbright_location = m_program->uniformLocation("fullbright");
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
@@ -382,6 +389,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_texture_sampler_location, 0 /* texture unit */);
     m_program->setUniformValue(m_program_lightmap_sampler_location, 1 /* texture unit */);
     m_program->setUniformValue(m_program_opacity_location, 1.0f);
+    m_program->setUniformValue(m_program_alpha_test_location, false);
     m_program->setUniformValue(m_program_lightmap_only_location, m_lighmapOnly);
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
@@ -408,6 +416,12 @@ void GLView::paintGL()
             active_program->bind();
         }
 
+        if (draw.key.alpha_test) {
+            m_program->setUniformValue(m_program_alpha_test_location, true);
+        } else {
+            m_program->setUniformValue(m_program_alpha_test_location, false);
+        }
+
         draw.texture->bind(0 /* texture unit */);
         lightmap_texture->bind(1 /* texture unit */);
 
@@ -429,6 +443,12 @@ void GLView::paintGL()
             if (active_program != draw.key.program) {
                 active_program = draw.key.program;
                 active_program->bind();
+            }
+
+            if (draw.key.alpha_test) {
+                m_program->setUniformValue(m_program_alpha_test_location, true);
+            } else {
+                m_program->setUniformValue(m_program_alpha_test_location, false);
             }
 
             draw.texture->bind(0 /* texture unit */);
@@ -631,6 +651,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             // determine opacity
             float opacity = 1.0f;
+            bool alpha_test = false;
 
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
 
@@ -648,10 +669,14 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     if (texinfo->flags.native & Q2_SURF_TRANS66) {
                         opacity = 0.66f;
                     }
+
+                    if (texinfo->flags.native & Q2_SURF_ALPHATEST) {
+                        alpha_test = true;
+                    }
                 }
             }
 
-            material_key k = {.program = program, .texname = t, .opacity = opacity};
+            material_key k = {.program = program, .texname = t, .opacity = opacity, .alpha_test = alpha_test};
             faces_by_material_key[k].push_back({.face = &f, .model_offset = origin});
         }
     }

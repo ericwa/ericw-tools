@@ -221,7 +221,7 @@ void MainWindow::fileReloadTimerExpired()
     if (currentSize != m_fileSize)
     {
         qDebug() << "size changed since last write, restarting timer";
-        m_fileReloadTimer->start(100);
+        m_fileReloadTimer->start(150);
         return;
     }
 
@@ -254,7 +254,7 @@ void MainWindow::loadFile(const QString &file)
         m_fileSize = QFileInfo(m_mapFile).size();
 
         // start timer
-        m_fileReloadTimer->start(25);
+        m_fileReloadTimer->start(150);
     });
 
     loadFileInternal(file, false);
