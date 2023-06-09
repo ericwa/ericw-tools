@@ -176,7 +176,7 @@ void main() {
 static const char *s_skyboxFragShader = R"(
 #version 330 core
 
-in vec3 uv;
+in vec3 fragment_world_pos;
 in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
@@ -191,6 +191,8 @@ uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
+
+uniform vec3 eye_origin;
 
 void main() {
     if (drawnormals) {
@@ -217,7 +219,11 @@ void main() {
             color = vec4(lmcolor * 2.0, 1.0);
         }
         else
-            color = vec4(texture(texture_sampler, uv).rgb, 1.0);
+        {
+            // cubemap case
+            vec3 dir = normalize(fragment_world_pos - eye_origin);
+            color = vec4(texture(texture_sampler, dir).rgb, 1.0);
+        }
     }
 }
 )";
@@ -232,7 +238,7 @@ layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
 layout (location = 5) in uint vertex_styles;
 
-smooth out vec3 uv;
+out vec3 fragment_world_pos;
 out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
@@ -242,9 +248,9 @@ uniform mat4 MVP;
 uniform vec3 eye_origin;
 
 void main() {
-    gl_Position = MVP * vec4(position.x, position.y, position.z, 1.0);
+    gl_Position = MVP * vec4(position, 1.0);
+    fragment_world_pos = position;
 
-    uv = normalize(position - eye_origin);
     lightmap_uv = vertex_lightmap_uv;
     normal = vertex_normal;
     flat_color = vertex_flat_color;
