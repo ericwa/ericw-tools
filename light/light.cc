@@ -936,6 +936,19 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
         });
     }
 
+    if (!light_options.nolighting.value()) {
+        logging::header("Post-Processing"); // mxd
+        logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
+            if (light_surfaces[i]) {
+#if defined(HAVE_EMBREE) && defined(__SSE2__)
+                _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+#endif
+
+                PostProcessLightFace(&bsp, *light_surfaces[i].get(), light_options);
+            }
+        });
+    }
+
     SaveLightmapSurfaces(&bsp);
 
     logging::print("Lighting Completed.\n\n");

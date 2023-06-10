@@ -3274,52 +3274,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
                 cfg.surflightskyscale.value(), 16.0f);
         }
 
-        float minlight = 0;
-        qvec3d minlight_color;
-
-        // first, check for global minlight; this only affects style 0
-        if (lightsurf.minlight > cfg.minlight.value()) {
-            minlight = lightsurf.minlight;
-            minlight_color = lightsurf.minlight_color;
-        } else {
-            minlight = cfg.minlight.value();
-            minlight_color = cfg.minlight_color.value();
-        }
-
-        if (minlight) {
-            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, 0);
-        }
-
-        if (auto value = IsSurfaceLitFace(bsp, face)) {
-            auto *entity = std::get<3>(value.value());
-            float surface_minlight_scale = entity ? entity->surflight_minlight_scale.value() : 64.f;
-            surface_minlight_scale *= lightsurf.surflight_minlight_scale;
-            minlight = std::get<0>(value.value()) * surface_minlight_scale;
-            minlight_color = std::get<2>(value.value());
-            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()));
-        }
-
         LightFace_LocalMin(bsp, face, &lightsurf, lightmaps);
-
-        if (!modelinfo->isWorld() &&
-            std::all_of(lightsurf.occluded.begin(), lightsurf.occluded.end(), [](bool v) { return v; })) {
-            LightFace_AutoMin(bsp, face, &lightsurf, lightmaps);
-        }
-
-        /* negative lights */
-        if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
-            for (const auto &entity : GetLights()) {
-                if (entity->getFormula() == LF_LOCALMIN)
-                    continue;
-                if (entity->nostaticlight.value())
-                    continue;
-                if (entity->light.value() < 0)
-                    LightFace_Entity(bsp, entity.get(), &lightsurf, lightmaps);
-            }
-            for (const sun_t &sun : GetSuns())
-                if (sun.sunlight < 0)
-                    LightFace_Sky(&sun, &lightsurf, lightmaps);
-        }
     }
 
     /* replace lightmaps with AO for debugging */
@@ -3334,14 +3289,11 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
     if (light_options.debugmode == debugmodes::debugneighbours)
         LightFace_DebugNeighbours(&lightsurf, lightmaps);
-
-    if (light_options.debugmode == debugmodes::mottle)
-        LightFace_DebugMottle(&lightsurf, lightmaps);
 }
 
 /*
  * ============
- * LightFace
+ * IndirectLightFace
  * ============
  */
 void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg)
@@ -3364,6 +3316,78 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
     }
 }
 
+
+/*
+ * ============
+ * PostProcessLightFace
+ * ============
+ */
+void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg)
+{
+    auto face = lightsurf.face;
+    const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
+
+    lightmapdict_t *lightmaps = &lightsurf.lightmapsByStyle;
+
+    if (light_options.debugmode == debugmodes::none) {
+
+        total_samplepoints += lightsurf.points.size();
+
+        const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+
+        float minlight = 0;
+        qvec3d minlight_color;
+
+        // first, check for global minlight; this only affects style 0
+        if (lightsurf.minlight > cfg.minlight.value()) {
+            minlight = lightsurf.minlight;
+            minlight_color = lightsurf.minlight_color;
+        } else {
+            minlight = cfg.minlight.value();
+            minlight_color = cfg.minlight_color.value();
+        }
+
+        if (minlight) {
+            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, 0);
+        }
+
+        if (auto value = IsSurfaceLitFace(bsp, face)) {
+            auto *entity = std::get<3>(value.value());
+            float surface_minlight_scale = entity ? entity->surflight_minlight_scale.value() : 64.f;
+            surface_minlight_scale *= lightsurf.surflight_minlight_scale;
+
+            if (surface_minlight_scale > 0) {
+                minlight = std::get<0>(value.value()) * surface_minlight_scale;
+                minlight_color = std::get<2>(value.value());
+                LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()));
+            }
+        }
+
+        if (!modelinfo->isWorld() &&
+            std::all_of(lightsurf.occluded.begin(), lightsurf.occluded.end(), [](bool v) { return v; })) {
+            LightFace_AutoMin(bsp, face, &lightsurf, lightmaps);
+        }
+
+        /* negative lights */
+        if (!(modelinfo->lightignore.value() || extended_flags.light_ignore)) {
+            for (const auto &entity : GetLights()) {
+                if (entity->getFormula() == LF_LOCALMIN)
+                    continue;
+                if (entity->nostaticlight.value())
+                    continue;
+                if (entity->light.value() < 0)
+                    LightFace_Entity(bsp, entity.get(), &lightsurf, lightmaps);
+            }
+            for (const sun_t &sun : GetSuns())
+                if (sun.sunlight < 0)
+                    LightFace_Sky(&sun, &lightsurf, lightmaps);
+        }
+    }
+
+
+    if (light_options.debugmode == debugmodes::mottle)
+        LightFace_DebugMottle(&lightsurf, lightmaps);
+}
 // lightgrid
 
 lightgrid_samples_t &lightgrid_samples_t::operator+=(const lightgrid_samples_t &other) noexcept
