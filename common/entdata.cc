@@ -20,6 +20,7 @@
 #include <common/entdata.h>
 
 #include <sstream>
+#include <cstdlib> // atoi()
 
 #include <common/bsputils.hh>
 #include <common/parser.hh>
@@ -50,32 +51,24 @@ const std::string &entdict_t::get(const std::string_view &key) const
 
 vec_t entdict_t::get_float(const std::string_view &key) const
 {
-    auto s = get(key);
+    const std::string &s = get(key);
 
     if (s.empty()) {
         return 0;
     }
 
-    try {
-        return std::stod(s);
-    } catch (std::exception &) {
-        return 0.0;
-    }
+    return atof(s.data());
 }
 
 int32_t entdict_t::get_int(const std::string_view &key) const
 {
-    auto s = get(key);
+    const std::string &s = get(key);
 
     if (s.empty()) {
         return 0;
     }
 
-    try {
-        return std::stoi(s);
-    } catch (std::exception &) {
-        return 0;
-    }
+    return atoi(s.data());
 }
 
 int32_t entdict_t::get_vector(const std::string_view &key, qvec3d &vec) const
