@@ -151,6 +151,8 @@ void MainWindow::createPropertiesSidebar()
 
     auto *keepposition = new QCheckBox(tr("Keep Camera Pos"));
 
+    nearest = new QCheckBox(tr("Nearest Filter"));
+
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
@@ -158,6 +160,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(rendermode_group);
     formLayout->addRow(showtris);
     formLayout->addRow(keepposition);
+    formLayout->addRow(nearest);
 
     lightstyles = new QVBoxLayout();
 
@@ -187,6 +190,10 @@ void MainWindow::createPropertiesSidebar()
     vis_checkbox->setChecked(s.value("vis_enabled").toBool());
     vis_options->setText(s.value("vis_options").toString());
     light_options->setText(s.value("light_options").toString());
+    nearest->setChecked(s.value("nearest").toBool());
+    if (nearest->isChecked()) {
+        glView->setMagFilter(QOpenGLTexture::Nearest);
+    }
 
     // setup event handlers
 
@@ -197,6 +204,8 @@ void MainWindow::createPropertiesSidebar()
     connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
+    connect(nearest, &QAbstractButton::toggled, this,
+        [=](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
 
     // set up load timer
@@ -210,10 +219,10 @@ void MainWindow::createOutputLog()
 {
     QDockWidget *dock = new QDockWidget(tr("Output Log"), this);
 
-    auto *textEdit = new QTextEdit();
+    m_outputTextEdit = new QTextEdit();
 
     // finish dock widget setup
-    dock->setWidget(textEdit);
+    dock->setWidget(m_outputTextEdit);
     addDockWidget(Qt::BottomDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 }
@@ -511,6 +520,7 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     s.setValue("vis_enabled", vis_checkbox->isChecked());
     s.setValue("vis_options", vis_options->text());
     s.setValue("light_options", light_options->text());
+    s.setValue("nearest", nearest->isChecked());
 
     // update title bar
     setWindowFilePath(file);
@@ -522,39 +532,44 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
     settings::common_settings render_settings;
 
-    if (fs_path.extension().compare(".bsp") == 0) {
+    try {
+        if (fs_path.extension().compare(".bsp") == 0) {
 
-        LoadBSPFile(fs_path, &m_bspdata);
+            LoadBSPFile(fs_path, &m_bspdata);
 
-        auto opts = ParseArgs(light_options);
+            auto opts = ParseArgs(light_options);
 
-        std::vector<const char *> argPtrs;
+            std::vector<const char *> argPtrs;
 
-        argPtrs.push_back("");
+            argPtrs.push_back("");
 
-        for (const std::string &arg : opts) {
-            argPtrs.push_back(arg.data());
+            for (const std::string &arg : opts) {
+                argPtrs.push_back(arg.data());
+            }
+
+            render_settings.preinitialize(argPtrs.size(), argPtrs.data());
+            render_settings.initialize(argPtrs.size() - 1, argPtrs.data() + 1);
+            render_settings.postinitialize(argPtrs.size(), argPtrs.data());
+
+            m_bspdata.version->game->init_filesystem(fs_path, render_settings);
+
+            ConvertBSPFormat(&m_bspdata, &bspver_generic);
+
+        } else {
+            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options),
+                ParseArgs(light_options), vis_checkbox->isChecked());
+
+            // FIXME: move to a lightpreview_settings
+            settings::common_settings settings;
+
+            // FIXME: copy the -path args from light
+            settings.paths.copy_from(::light_options.paths);
+
+            m_bspdata.loadversion->game->init_filesystem(file.toStdString(), settings);
         }
-
-        render_settings.preinitialize(argPtrs.size(), argPtrs.data());
-        render_settings.initialize(argPtrs.size() - 1, argPtrs.data() + 1);
-        render_settings.postinitialize(argPtrs.size(), argPtrs.data());
-
-        m_bspdata.version->game->init_filesystem(fs_path, render_settings);
-
-        ConvertBSPFormat(&m_bspdata, &bspver_generic);
-
-    } else {
-        m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options),
-            ParseArgs(light_options), vis_checkbox->isChecked());
-
-        // FIXME: move to a lightpreview_settings
-        settings::common_settings settings;
-
-        // FIXME: copy the -path args from light
-        settings.paths.copy_from(::light_options.paths);
-
-        m_bspdata.loadversion->game->init_filesystem(file.toStdString(), settings);
+    } catch (const settings::parse_exception &p) {
+        m_outputTextEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
+        return;
     }
 
     const auto &bsp = std::get<mbsp_t>(m_bspdata.bsp);
