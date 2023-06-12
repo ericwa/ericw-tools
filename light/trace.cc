@@ -62,7 +62,7 @@ qvec4b SampleTexture(
     qvec2d texcoord = WorldToTexCoord(point, tex);
 
     const uint32_t x = clamp_texcoord(texcoord[0] * texture->width_scale, texture->width);
-    const uint32_t y = clamp_texcoord(texcoord[1] * texture->height_scale, texture->width);
+    const uint32_t y = clamp_texcoord(texcoord[1] * texture->height_scale, texture->height);
 
     return texture->pixels[(texture->width * y) + x];
 }
