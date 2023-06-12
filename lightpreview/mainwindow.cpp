@@ -570,6 +570,9 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     } catch (const settings::parse_exception &p) {
         m_outputTextEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
         return;
+    } catch (const settings::quit_after_help_exception &p) {
+        m_outputTextEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
+        d return;
     }
 
     const auto &bsp = std::get<mbsp_t>(m_bspdata.bsp);
