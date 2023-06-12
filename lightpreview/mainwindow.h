@@ -29,6 +29,7 @@ class QFileSystemWatcher;
 class QLineEdit;
 class QCheckBox;
 class QStringList;
+class QTextEdit;
 
 class MainWindow : public QMainWindow
 {
@@ -70,6 +71,7 @@ private:
     GLView *glView = nullptr;
 
     QCheckBox *vis_checkbox = nullptr;
+    QCheckBox *nearest = nullptr;
 
     QLineEdit *qbsp_options = nullptr;
     QLineEdit *vis_options = nullptr;
@@ -78,4 +80,6 @@ private:
 
     QMenu *viewMenu = nullptr;
     QMenu *openRecentMenu = nullptr;
+
+    QTextEdit *m_outputTextEdit = nullptr;
 };

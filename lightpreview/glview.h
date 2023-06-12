@@ -82,6 +82,7 @@ private:
     bool m_showTris = false;
     bool m_drawFlat = false;
     bool m_keepOrigin = false;
+    QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -157,6 +158,7 @@ public:
     void setKeepOrigin(bool keeporigin);
     // intensity = 0 to 200
     void setLightStyleIntensity(int style_id, int intensity);
+    void setMagFilter(QOpenGLTexture::Filter filter);
     const bool &getKeepOrigin() const { return m_keepOrigin; }
 
     void takeScreenshot(QString destPath, int w, int h);
