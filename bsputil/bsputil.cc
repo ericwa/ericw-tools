@@ -603,8 +603,159 @@ int bsputil_main(int argc, char **argv)
         map_file = LoadMapOrEntFile(source);
     }
 
-    for (int32_t i = 0; i < argc - 1; i++) {
-        if (!strcmp(argv[i], "--replace-entities")) {
+    for (int32_t i = 1; i < argc - 1; i++) {
+        if (!strcmp(argv[i], "--scale")) {
+
+            i++;
+            if (i == argc - 1) {
+                Error("--scale requires two arguments");
+            }
+
+            fmt::print("scaling {} by {}\n", source, argv[i]);
+
+            double scalar = atof(argv[i]);
+
+            mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            // adjust entity origins
+            {
+                auto ents = EntData_Parse(bsp);
+
+                for (auto &ent : ents) {
+                    if (ent.has("origin")) {
+                        qvec3d origin;
+                        ent.get_vector("origin", origin);
+                        origin *= scalar;
+                        ent.set("origin", fmt::format("{} {} {}", origin[0], origin[1], origin[2]));
+                    }
+                }
+
+                bsp.dentdata = EntData_Write(ents);
+            }
+
+            // adjust vertices
+            for (auto &v : bsp.dvertexes) {
+                v *= scalar;
+            }
+
+            // adjust planes
+            for (auto &p : bsp.dplanes) {
+                p.dist *= scalar;
+            }
+
+            // adjust node/leaf/model bounds
+            for (auto &m : bsp.dmodels) {
+                m.origin *= scalar;
+                m.mins *= scalar;
+                m.maxs *= scalar;
+            }
+
+            for (auto &l : bsp.dleafs) {
+                l.mins *= scalar;
+                l.maxs *= scalar;
+            }
+
+            for (auto &m : bsp.dnodes) {
+                m.mins *= scalar;
+                m.maxs *= scalar;
+            }
+
+            auto scaleTexInfo = [&](mtexinfo_t &t)
+            {
+                // update texinfo
+
+                const qmat3x3d inversescaleM{// column-major...
+                    1 / scalar, 0.0, 0.0, 0.0, 1 / scalar, 0.0, 0.0, 0.0, 1 / scalar};
+
+                auto &texvecs = t.vecs;
+                texvecf newtexvecs;
+
+                for (int i = 0; i < 2; i++) {
+                    const qvec4f in = texvecs.row(i);
+                    const qvec3f in_first3(in);
+
+                    const qvec3f out_first3 = inversescaleM * in_first3;
+                    newtexvecs.set_row(i, {out_first3[0], out_first3[1], out_first3[2], in[3]});
+                }
+
+                texvecs = newtexvecs;
+            };
+
+            // adjust texinfo
+            for (auto &t : bsp.texinfo) {
+                scaleTexInfo(t);
+            }
+
+            // adjust decoupled LM
+            if (bspdata.bspx.entries.contains("DECOUPLED_LM")) {
+
+                auto &lump_bytes = bspdata.bspx.entries.at("DECOUPLED_LM");
+
+                auto istream = imemstream(lump_bytes.data(), lump_bytes.size());
+                auto ostream = omemstream(lump_bytes.data(), lump_bytes.size());
+
+                istream >> endianness<std::endian::little>;
+                ostream << endianness<std::endian::little>;
+
+                bspx_decoupled_lm_perface result;
+
+                for (auto &face : bsp.dfaces) {
+                    istream >= result;
+
+                    const qmat3x3d inversescaleM{// column-major...
+                        1 / scalar, 0.0, 0.0, 0.0, 1 / scalar, 0.0, 0.0, 0.0, 1 / scalar};
+
+                    auto &texvecs = result.world_to_lm_space;
+                    texvecf newtexvecs;
+
+                    for (int i = 0; i < 2; i++) {
+                        const qvec4f in = texvecs.row(i);
+                        const qvec3f in_first3(in);
+
+                        const qvec3f out_first3 = inversescaleM * in_first3;
+                        newtexvecs.set_row(i, {out_first3[0], out_first3[1], out_first3[2], in[3]});
+                    }
+
+                    texvecs = newtexvecs;
+
+                    ostream <= result;
+                }
+            }
+
+            // adjust lightgrid
+            if (bspdata.bspx.entries.contains("LIGHTGRID_OCTREE")) {
+
+                auto &lump_bytes = bspdata.bspx.entries.at("LIGHTGRID_OCTREE");
+
+                auto istream = imemstream(lump_bytes.data(), lump_bytes.size());
+                auto ostream = omemstream(lump_bytes.data(), lump_bytes.size());
+
+                istream >> endianness<std::endian::little>;
+                ostream << endianness<std::endian::little>;
+
+                {
+                    qvec3f grid_dist;
+                    istream >= grid_dist;
+                    grid_dist *= scalar;
+                    ostream <= grid_dist;
+                }
+
+                istream.seekg(sizeof(qvec3i), std::ios_base::cur);
+                ostream.seekp(sizeof(qvec3i), std::ios_base::cur);
+
+                {
+                    qvec3f grid_mins;
+                    istream >= grid_mins;
+                    grid_mins *= scalar;
+                    ostream <= grid_mins;
+                }
+            }
+
+            ConvertBSPFormat(&bspdata, bspdata.loadversion);
+
+            WriteBSPFile(source.replace_filename(source.stem().string() + "-scaled.bsp"), &bspdata);
+
+        } else if (!strcmp(argv[i], "--replace-entities")) {
             i++;
             if (i == argc - 1) {
                 Error("--replace-entities requires two arguments");

@@ -919,13 +919,11 @@ void EmitAreaPortals(node_t *headnode)
     map.bsp.dareas.emplace_back();
 
     // don't do anything else if we've leaked
-    if (map.leakfile) {
-        map.bsp.dareas.emplace_back();
-        return;
-    }
-
-    if (map.antiregions.size() || map.region) {
-        map.bsp.dareas.emplace_back();
+    if (map.leakfile || map.antiregions.size() || map.region) {
+        for (auto &e : map.entities) {
+            e.areaportalnum = 0;
+            e.epairs.remove("style");
+        }
         return;
     }
 
