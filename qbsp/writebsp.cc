@@ -197,7 +197,7 @@ static void ExportLeaf(node_t *node)
         dleaf.area = AREA_INVALID;
     } else {
         if (map.leakfile || map.region || map.antiregions.size()) {
-            dleaf.area = 0;
+            dleaf.area = 1;
         } else {
             dleaf.area = node->area;
         }
