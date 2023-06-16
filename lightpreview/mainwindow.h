@@ -72,6 +72,8 @@ private:
 
     QCheckBox *vis_checkbox = nullptr;
     QCheckBox *nearest = nullptr;
+    QCheckBox *bspx_decoupled_lm = nullptr;
+    QCheckBox *bspx_normals = nullptr;
 
     QLineEdit *qbsp_options = nullptr;
     QLineEdit *vis_options = nullptr;

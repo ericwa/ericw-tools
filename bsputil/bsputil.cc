@@ -627,6 +627,17 @@ int bsputil_main(int argc, char **argv)
                         ent.get_vector("origin", origin);
                         origin *= scalar;
                         ent.set("origin", fmt::format("{} {} {}", origin[0], origin[1], origin[2]));
+                    } else if (ent.has("lip")) {
+                        float lip = ent.get_float("lip");
+                        lip -= 2.0f;
+                        lip *= scalar;
+                        lip += 2.0f;
+                        ent.set("lip", fmt::format("{}", lip));
+                    } else if (ent.has("height")) {
+                        // FIXME: check this
+                        float height = ent.get_float("height");
+                        height *= scalar;
+                        ent.set("height", fmt::format("{}", height));
                     }
                 }
 

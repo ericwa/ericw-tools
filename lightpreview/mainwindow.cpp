@@ -153,6 +153,12 @@ void MainWindow::createPropertiesSidebar()
 
     nearest = new QCheckBox(tr("Nearest Filter"));
 
+    bspx_decoupled_lm = new QCheckBox(tr("BSPX: Decoupled Lightmap"));
+    bspx_decoupled_lm->setChecked(true);
+
+    bspx_normals = new QCheckBox(tr("BSPX: Face Normals"));
+    bspx_normals->setChecked(true);
+
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
@@ -161,6 +167,8 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(showtris);
     formLayout->addRow(keepposition);
     formLayout->addRow(nearest);
+    formLayout->addRow(bspx_decoupled_lm);
+    formLayout->addRow(bspx_normals);
 
     lightstyles = new QVBoxLayout();
 
@@ -580,9 +588,9 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     auto ents = EntData_Parse(bsp);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, false, true);
+    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, false, bspx_decoupled_lm->isChecked());
 
-    glView->renderBSP(file, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings);
+    glView->renderBSP(file, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
 
     if (!is_reload && !glView->getKeepOrigin()) {
         for (auto &ent : ents) {

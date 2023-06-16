@@ -148,7 +148,7 @@ public:
 
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap,
-        const settings::common_settings &settings);
+        const settings::common_settings &settings, bool use_bspx_normals);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);

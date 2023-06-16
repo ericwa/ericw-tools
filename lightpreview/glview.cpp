@@ -596,11 +596,15 @@ void GLView::takeScreenshot(QString destPath, int w, int h)
 }
 
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
-    const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings)
+    const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
+    bool use_bspx_normals)
 {
     img::load_textures(&bsp, settings);
 
-    auto facenormals = BSPX_FaceNormals(bsp, bspx);
+    std::optional<bspxfacenormals> facenormals;
+    
+    if (use_bspx_normals)
+        facenormals = BSPX_FaceNormals(bsp, bspx);
 
     // NOTE: according to https://doc.qt.io/qt-6/qopenglwidget.html#resource-initialization-and-cleanup
     // we can only do this after `initializeGL()` has run once.
