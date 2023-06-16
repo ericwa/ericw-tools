@@ -1754,16 +1754,46 @@ static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
-    const qvec3f center = (modelinfo->model->mins + modelinfo->model->maxs) / 2;
+    if (!modelinfo)
+        return;
+
+    /**
+     * if true, apply to all luxels, not just occluded ones
+     */
+    bool apply_to_all = false;
+
+    const bool any_occluded =
+        std::any_of(lightsurf->occluded.begin(), lightsurf->occluded.end(), [](bool v) { return v; });
+
+    if (!modelinfo->autominlight.is_changed()) {
+        // default: apply autominlight to occluded luxels only
+        if (!any_occluded)
+            return;
+    } else if (!modelinfo->autominlight.value()) {
+        // force off
+        return;
+    } else {
+        // force on
+        apply_to_all = true;
+    }
+
+    // we are going to apply at least some
+
+    qvec3f center = (modelinfo->model->mins + modelinfo->model->maxs) / 2;
+    if (!modelinfo->autominlight_target.value().empty()) {
+        for (auto &entity : GetEntdicts()) {
+            if (entity.get("targetname") == modelinfo->autominlight_target.value()) {
+                qvec3d point{};
+                entity.get_vector("origin", point);
+                center = point;
+                break;
+            }
+        }
+    }
+
     auto [grid_samples, occluded] = FixPointAndCalcLightgrid(bsp, center);
 
     if (!occluded) {
-        // clear occluded state, since we're going to fill it with a solid autominlight color
-        for (int i = 0; i < lightsurf->points.size(); i++) {
-            Q_assert(lightsurf->occluded[i]);
-            lightsurf->occluded[i] = false;
-        }
-
         // process each of the captured styles
         for (const auto &grid_sample : grid_samples.samples_by_style) {
             if (!grid_sample.used)
@@ -1771,12 +1801,20 @@ static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_
 
             lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, grid_sample.style, lightsurf);
 
-            // Overwrite each luxel with the new minlight value
+            // for each luxel (or only occluded luxels, depending on the setting),
+            // apply the minlight
             for (int i = 0; i < lightsurf->points.size(); i++) {
-                lightmap->samples[i].color = grid_sample.color;
+                if (apply_to_all || lightsurf->occluded[i]) {
+                    lightmap->samples[i].color = qv::max(qvec3f{grid_sample.color}, lightmap->samples[i].color);
+                }
             }
 
             Lightmap_Save(lightmaps, lightsurf, lightmap, grid_sample.style);
+        }
+
+        // clear occluded state, since we filled in all occluded samples with a color
+        for (int i = 0; i < lightsurf->points.size(); i++) {
+            lightsurf->occluded[i] = false;
         }
     }
 }
@@ -3316,7 +3354,6 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
     }
 }
 
-
 /*
  * ============
  * PostProcessLightFace
@@ -3363,8 +3400,7 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
             }
         }
 
-        if (!modelinfo->isWorld() &&
-            std::all_of(lightsurf.occluded.begin(), lightsurf.occluded.end(), [](bool v) { return v; })) {
+        if (!modelinfo->isWorld()) {
             LightFace_AutoMin(bsp, face, &lightsurf, lightmaps);
         }
 
@@ -3383,7 +3419,6 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
                     LightFace_Sky(&sun, &lightsurf, lightmaps);
         }
     }
-
 
     if (light_options.debugmode == debugmodes::mottle)
         LightFace_DebugMottle(&lightsurf, lightmaps);

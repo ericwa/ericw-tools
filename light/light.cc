@@ -149,7 +149,9 @@ modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
       lightignore{this, "lightignore", false},
       lightcolorscale{this, "lightcolorscale", 1},
       object_channel_mask{this, "object_channel_mask", CHANNEL_MASK_DEFAULT},
-      surflight_minlight_scale{this, "surflight_minlight_scale", 1.f}
+      surflight_minlight_scale{this, "surflight_minlight_scale", 1.f},
+      autominlight{this, "autominlight", false},
+      autominlight_target{this, "autominlight_target", ""}
 {
 }
 

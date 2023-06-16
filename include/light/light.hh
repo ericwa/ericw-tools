@@ -225,6 +225,8 @@ public:
     settings::setting_scalar lightcolorscale;
     settings::setting_int32 object_channel_mask;
     settings::setting_scalar surflight_minlight_scale;
+    settings::setting_bool autominlight;
+    settings::setting_string autominlight_target;
 
     float getResolvedPhongAngle() const;
     bool isWorld() const;
