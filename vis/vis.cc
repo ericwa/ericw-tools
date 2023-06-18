@@ -524,6 +524,7 @@ visstats_t CalcPortalVis(const mbsp_t *bsp)
         stats.c_portaltest, stats.c_portalpass);
     logging::print(logging::flag::VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", stats.c_vistest,
         stats.c_mighttest, stats.c_mightseeupdate);
+    logging::print(logging::flag::VERBOSE, "c_targetcheck: {}\n", stats.c_targetcheck);
 
     return stats;
 }

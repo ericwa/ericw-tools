@@ -2,6 +2,7 @@
 #include <vis/leafbits.hh>
 #include <common/log.hh>
 #include <common/parallel.hh>
+#include <bit> // for std::popcount
 
 /*
   ==============
@@ -122,6 +123,220 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 
 /*
   ==================
+  TargetChecks
+
+  Filter mightsee by clipping against all portals
+  ==================
+*/
+static unsigned
+TargetChecks(visstats_t &stats, const pstack_t* const head, const pstack_t* const prevstack, leafbits_t& prevportalbits, leafbits_t& portalbits)
+{
+    pstack_t stack;
+    visportal_t *p, *q;
+    qplane3d backplane;
+    int i, j, numchecks, numremain;
+
+    if (prevstack->pass == NULL) {
+        portalbits = std::move(prevportalbits);
+        return 0;
+    }
+
+    numchecks = 0;
+    numremain = 0;
+
+    stack.next = NULL;
+    stack.leaf = NULL;
+    stack.portal = NULL;
+    stack.numseparators[0] = 0;
+    stack.numseparators[1] = 0;
+
+    for (i = 0; i < STACK_WINDINGS; i++)
+        stack.windings_used[i] = false;
+
+    leafbits_t local(portalleafs);
+    local.clear();
+    stack.mightsee = &local;
+
+    // check all portals for flowing into other leafs
+    for (i = 0, p = portals.data(); i < numportals * 2; i++, p++) {
+
+        if ((*stack.mightsee)[p->leaf])
+            continue;           // target check already done and passed
+
+        if (!(*prevstack->mightsee)[p->leaf])
+            continue;           // can't possibly see it
+
+        if (!prevportalbits[i])
+            continue;           // can't possibly see it
+
+        // get plane of portal, point normal into the neighbor leaf
+        stack.portalplane = p->plane;
+        backplane = -p->plane;
+
+        if (qv::epsilonEqual(prevstack->portalplane.normal, backplane.normal, VIS_EQUAL_EPSILON))
+            continue;           // can't go out a coplanar face
+
+        numchecks++;
+
+        stack.portal = p;
+
+        /*
+         * Testing visibility of a target portal, from a source portal,
+         * looking through a pass portal.
+         *
+         *    source portal  =>  pass portal      =>  target portal
+         *    stack.source   =>  prevstack->pass  =>  stack.pass
+         *
+         * If we can see part of the target portal, we use that clipped portal
+         * as the pass portal into the next leaf.
+         */
+
+        /* Clip any part of the target portal behind the source portal */
+        stack.pass = ClipStackWinding(stats, p->winding.get(), stack, head->portalplane);
+        if (!stack.pass)
+            continue;
+
+        /* Clip any part of the target portal behind the pass portal */
+        stack.pass = ClipStackWinding(stats, stack.pass, stack, prevstack->portalplane);
+        if (!stack.pass)
+            continue;
+
+        /* Clip any part of the source portal in front of the target portal */
+        stack.source = ClipStackWinding(stats, prevstack->source, stack, backplane);
+        if (!stack.source) {
+            FreeStackWinding(stack.pass, stack);
+            continue;
+        }
+
+        /* TEST 0 :: source -> pass -> target */
+        if (vis_options.level.value() > 0) {
+            if (stack.numseparators[0]) {
+                for (j = 0; j < stack.numseparators[0]; j++) {
+                    stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[0][j]);
+                    if (!stack.pass)
+                        break;
+                }
+            } else {
+                /* Using prevstack source for separator cache correctness */
+                ClipToSeparators(stats, prevstack->source, head->portalplane, prevstack->pass, stack.pass, 0, stack);
+            }
+            if (!stack.pass) {
+                FreeStackWinding(stack.source, stack);
+                continue;
+            }
+        }
+
+        /* TEST 1 :: pass -> source -> target */
+        if (vis_options.level.value() > 1) {
+            if (stack.numseparators[1]) {
+                for (j = 0; j < stack.numseparators[1]; j++) {
+                    stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[1][j]);
+                    if (!stack.pass)
+                        break;
+                }
+            } else {
+                /* Using prevstack source for separator cache correctness */
+                ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, prevstack->source, stack.pass, 1, stack);
+            }
+            if (!stack.pass) {
+                FreeStackWinding(stack.source, stack);
+                continue;
+            }
+        }
+
+        /* TEST 2 :: target -> pass -> source */
+        if (vis_options.level.value() > 2) {
+            ClipToSeparators(stats, stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, stack);
+            if (!stack.source) {
+                FreeStackWinding(stack.pass, stack);
+                continue;
+            }
+        }
+
+        /* TEST 3 :: pass -> target -> source */
+        if (vis_options.level.value() > 3) {
+            ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, stack);
+            if (!stack.source) {
+                FreeStackWinding(stack.pass, stack);
+                continue;
+            }
+        }
+
+        // mark leaf visible
+        (*stack.mightsee)[p->leaf] = true;
+
+        // mark portal visible
+        portalbits[i] = true;
+        numremain++;
+
+        // inherit remaining portal visibilities
+        leaf_t *l = &leafs[p->leaf];
+        for (int k = 0; k < l->portals.size(); k++) {
+            q = l->portals[k];
+            j = (q - portals.data()) ^ 1; // another portal leading into the same leaf
+            if (i < j) // is it upcoming in iteration order?
+                portalbits[j] = bool(prevportalbits[j]);
+        }
+
+        FreeStackWinding(stack.source, stack);
+        FreeStackWinding(stack.pass, stack);
+    }
+
+    // transfer results back to prevstack
+    *prevstack->mightsee = std::move(local);
+
+    return numchecks;
+}
+
+
+/*
+  ==================
+  IterativeTargetChecks
+
+  Retrace the path and reduce mightsee by clipping the targets directly
+  ==================
+*/
+static unsigned
+IterativeTargetChecks(visstats_t &stats, pstack_t* const head)
+{
+    unsigned numchecks, numblocks;
+
+    numchecks = 0;
+    numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
+
+    leafbits_t portalbits(numportals*2); // in contradiction to the typename, I know
+    portalbits.setall();
+
+    for (pstack_t* stack = head; stack; stack = stack->next)
+    {
+        if (stack->did_targetchecks)
+            continue;
+
+        leafbits_t nextportalbits(numportals*2);
+        nextportalbits.clear();
+        numchecks += TargetChecks(stats, head, stack, portalbits, nextportalbits);
+        portalbits = std::move(nextportalbits);
+
+        if (stack->next)
+        {
+            pstack_t* next = stack->next;
+            uint32_t *nextsee = next->mightsee->data();
+            uint32_t *mightsee = stack->mightsee->data();
+            for (int i = 0; i < numblocks; i++)
+                nextsee[i] &= mightsee[i];
+        }
+
+        // mark done
+        stack->did_targetchecks = true;
+        stack->num_expected_targetchecks = 0;
+    }
+
+    return numchecks;
+}
+
+
+/*
+  ==================
   RecursiveLeafFlow
 
   Flood fill through the leafs
@@ -150,6 +365,17 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         thread->base->numcansee++;
     }
 
+    // check all target portals instead of just neighbor portals, if the time is right
+    if (prevstack.num_expected_targetchecks > 0 &&
+        thread->numsteps * vis_options.targetratio.value() >=
+        thread->numtargetchecks + prevstack.num_expected_targetchecks)
+    {
+        unsigned num_actual_targetchecks = IterativeTargetChecks(thread->stats, &thread->pstack_head);
+        thread->stats.c_targetcheck += num_actual_targetchecks;
+        thread->numtargetchecks += num_actual_targetchecks;
+        // prevstack.num_expected_targetchecks is zero now
+    }
+
     prevstack.next = &stack;
 
     stack.next = nullptr;
@@ -164,7 +390,6 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
     leafbits_t local(portalleafs);
     stack.mightsee = &local;
 
-    const auto might = stack.mightsee->data();
     const auto vis = thread->leafvis.data();
 
     // check all portals for flowing into other leafs
@@ -185,11 +410,14 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
             test = p->mightsee.data();
         }
 
+        const auto might = stack.mightsee->data(); // buffer of stack.mightsee can change between iterations
+        int nummightsee = 0;
         uint32_t more = 0;
         const int numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
         for (int j = 0; j < numblocks; j++) {
             might[j] = prevstack.mightsee->data()[j] & test[j];
             more |= (might[j] & ~vis[j]);
+            nummightsee += std::popcount(might[j]);
         }
 
         if (!more) {
@@ -197,6 +425,10 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
             thread->stats.c_portalskip++;
             continue;
         }
+
+        stack.did_targetchecks = false;
+        stack.num_expected_targetchecks = prevstack.num_expected_targetchecks + nummightsee;
+
         // get plane of portal, point normal into the neighbor leaf
         stack.portalplane = p->plane;
         const qplane3d backplane = -p->plane;
@@ -204,6 +436,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         if (qv::epsilonEqual(prevstack.portalplane.normal, backplane.normal, VIS_EQUAL_EPSILON))
             continue; // can't go out a coplanar face
 
+        thread->numsteps++;
         thread->stats.c_portalcheck++;
 
         stack.portal = p;
@@ -332,6 +565,8 @@ visstats_t PortalFlow(visportal_t *p)
     data.pstack_head.source = p->winding.get();
     data.pstack_head.portalplane = p->plane;
     data.pstack_head.mightsee = &p->mightsee;
+    data.numsteps = 0;
+    data.numtargetchecks = 0;
 
     RecursiveLeafFlow(p->leaf, &data, data.pstack_head);
 
