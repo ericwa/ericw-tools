@@ -94,6 +94,8 @@ public:
 
 using lightmapdict_t = std::vector<lightmap_t>;
 
+struct surfacelight_t;
+
 struct lightsurf_t
 {
     const settings::worldspawn_keys *cfg;
@@ -148,6 +150,9 @@ struct lightsurf_t
     raystream_intersection_t intersection_stream;
 
     lightmapdict_t lightmapsByStyle;
+
+    // surface light stuff
+    std::unique_ptr<surfacelight_t> vpl;
 };
 
 /* debug */

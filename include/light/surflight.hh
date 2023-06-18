@@ -27,33 +27,40 @@ struct surfacelight_t
 {
     qvec3d pos;
     qvec3f surfnormal;
-    /**
-     * disables use of the surfnormal. We set this to true on sky surface lights,
-     * to avoid black seams on geometry meeting the sky
-     */
-    bool omnidirectional;
-    std::vector<qvec3f> points;
-    std::vector<const mleaf_t *> leaves;
-
-    // Surface light settings...
-    float intensity; // Surface light strength for each point
-    float totalintensity; // Total surface light strength
-    qvec3d color; // Surface color
+    size_t points_before_culling;
 
     // Estimated visible AABB culling
     aabb3d bounds;
 
-    int32_t style;
-
-    // rescale faces to account for perpendicular lights
-    bool rescale;
     std::optional<vec_t> minlight_scale;
+
+    std::vector<qvec3f> points;
+    std::vector<const mleaf_t *> leaves;
+
+    // Surface light settings...
+    struct per_style_t
+    {
+        bool bounce = false; // whether this is a direct or indirect emission
+        /**
+        * disables use of the surfnormal. We set this to true on sky surface lights,
+        * to avoid black seams on geometry meeting the sky
+        */
+        bool omnidirectional = false;
+        // rescale faces to account for perpendicular lights
+        bool rescale = false;
+        int32_t style = 0; // style ID
+        float intensity = 0; // Surface light strength for each point
+        float totalintensity = 0; // Total surface light strength
+        qvec3d color; // Surface color
+    };
+
+    // Light data per style
+    std::vector<per_style_t> styles;
 };
 
 class light_t;
 
 void ResetSurflight();
-std::vector<surfacelight_t> &GetSurfaceLights();
 size_t GetSurflightPoints();
 std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);

@@ -38,20 +38,11 @@ using namespace std;
 using namespace polylib;
 
 static mutex surfacelights_lock;
-static std::vector<surfacelight_t> surfacelights;
-static std::map<int, std::vector<int>> surfacelightsByFacenum;
 static size_t total_surflight_points = 0;
 
 void ResetSurflight()
 {
-    surfacelights = {};
-    surfacelightsByFacenum = {};
     total_surflight_points = {};
-}
-
-std::vector<surfacelight_t> &GetSurfaceLights()
-{
-    return surfacelights;
 }
 
 size_t GetSurflightPoints()
@@ -64,6 +55,14 @@ int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const std::str
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
     std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
+    auto &surf_ptr = LightSurfaces()[face - bsp->dfaces.data()];
+
+    if (!surf_ptr) {
+        return;
+    }
+
+    auto &surf = *surf_ptr.get();
+
     // Create face points...
     auto poly = Face_Points(bsp, face);
     const float facearea = qv::PolyArea(poly.begin(), poly.end());
@@ -73,38 +72,6 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     // Avoid small, or zero-area faces
     if (facearea < 1)
         return;
-
-    // Create winding...
-    winding_t winding = winding_t::from_winding_points(poly);
-    auto face_modelinfo = ModelInfoForFace(bsp, face - bsp->dfaces.data());
-
-    for (auto &pt : winding) {
-        pt += face_modelinfo->offset;
-    }
-
-    winding.remove_colinear();
-
-    // Get face normal and midpoint...
-    qvec3d facenormal = Face_Normal(bsp, face);
-    qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
-
-    // Dice winding...
-    vector<qvec3f> points;
-    size_t points_before_culling = 0;
-    winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
-        ++points_before_culling;
-
-        qvec3f point = w.center() + facenormal;
-
-        // optimization - cull surface lights in the void
-        // also try to move them if they're slightly inside a wall
-        auto [fixed_point, success] = FixLightOnFace(bsp, point, false, 0.5f);
-        if (!success) {
-            return;
-        }
-
-        points.push_back(fixed_point);
-    });
 
     // Calculate emit color and intensity...
 
@@ -137,52 +104,80 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     if (intensity > 1.0f)
         texture_color.value() *= 1.0f / intensity;
 
-    // Sanity checks...
-    if (points.empty())
-        return;
+    if (!surf.vpl) {
+        auto &l = surf.vpl = std::make_unique<surfacelight_t>();
 
-    // Add surfacelight...
-    surfacelight_t l;
-    l.surfnormal = facenormal;
-    l.omnidirectional = !is_directional;
-    l.points = std::move(points);
-    if (extended_flags.surflight_targetname) {
-        l.style = LightStyleForTargetname(cfg, extended_flags.surflight_targetname.value());
-    } else if (extended_flags.surflight_style) {
-        l.style = extended_flags.surflight_style.value();
-    } else {
-        l.style = style;
-    }
-    l.rescale = extended_flags.surflight_rescale;
-    l.minlight_scale = extended_flags.surflight_minlight_scale;
+        // Create winding...
+        winding_t winding = winding_t::from_winding_points(poly);
+        auto face_modelinfo = ModelInfoForFace(bsp, face - bsp->dfaces.data());
 
-    // Init bbox...
-    if (light_options.visapprox.value() == visapprox_t::RAYS) {
-        l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
-    }
+        for (auto &pt : winding) {
+            pt += face_modelinfo->offset;
+        }
 
-    for (auto &pt : l.points) {
-        if (light_options.visapprox.value() == visapprox_t::VIS) {
-            l.leaves.push_back(Light_PointInLeaf(bsp, pt));
-        } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
-            l.bounds += EstimateVisibleBoundsAtPoint(pt);
+        winding.remove_colinear();
+
+        // Get face normal and midpoint...
+        l->surfnormal = Face_Normal(bsp, face);
+        l->pos = winding.center() + l->surfnormal; // Lift 1 unit
+
+        // Dice winding...
+        l->points_before_culling = 0;
+
+        winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
+            ++l->points_before_culling;
+
+            qvec3f point = w.center() + l->surfnormal;
+
+            // optimization - cull surface lights in the void
+            // also try to move them if they're slightly inside a wall
+            auto [fixed_point, success] = FixLightOnFace(bsp, point, false, 0.5f);
+            if (!success) {
+                return;
+            }
+
+            l->points.push_back(fixed_point);
+        });
+
+        l->minlight_scale = extended_flags.surflight_minlight_scale;
+
+        // Init bbox...
+        if (light_options.visapprox.value() == visapprox_t::RAYS) {
+            l->bounds = EstimateVisibleBoundsAtPoint(l->pos);
+        }
+
+        for (auto &pt : l->points) {
+            if (light_options.visapprox.value() == visapprox_t::VIS) {
+                l->leaves.push_back(Light_PointInLeaf(bsp, pt));
+            } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
+                l->bounds += EstimateVisibleBoundsAtPoint(pt);
+            }
         }
     }
 
-    l.pos = facemidpoint;
+    auto &l = surf.vpl;
+
+    // Sanity checks...
+    if (l->points.empty()) {
+        return;
+    }
+
+    // Add surfacelight...
+    auto &setting = l->styles.emplace_back();
+    setting.omnidirectional = !is_directional;
+    if (extended_flags.surflight_targetname) {
+        setting.style = LightStyleForTargetname(cfg, extended_flags.surflight_targetname.value());
+    } else if (extended_flags.surflight_style) {
+        setting.style = extended_flags.surflight_style.value();
+    } else {
+        setting.style = style;
+    }
+    setting.rescale = extended_flags.surflight_rescale;
 
     // Store surfacelight settings...
-    l.totalintensity = intensity * facearea;
-    l.intensity = l.totalintensity / points_before_culling;
-    l.color = texture_color.value();
-
-    // Store light...
-    unique_lock<mutex> lck{surfacelights_lock};
-    total_surflight_points += l.points.size();
-    surfacelights.push_back(l);
-
-    const int index = static_cast<int>(surfacelights.size()) - 1;
-    surfacelightsByFacenum[Face_GetNum(bsp, face)].push_back(index);
+    setting.totalintensity = intensity * facearea;
+    setting.intensity = setting.totalintensity / l->points_before_culling;
+    setting.color = texture_color.value();
 }
 
 std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
@@ -251,17 +246,6 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
     }
 }
 
-// No surflight_debug (yet?), so unused...
-const std::vector<int> &SurfaceLightsForFaceNum(int facenum)
-{
-    const auto &vec = surfacelightsByFacenum.find(facenum);
-    if (vec != surfacelightsByFacenum.end())
-        return vec->second;
-
-    static std::vector<int> empty;
-    return empty;
-}
-
 void // Quake 2 surface lights
 MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
@@ -270,7 +254,7 @@ MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *b
     logging::parallel_for(
         static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
 
-    if (surfacelights.size()) {
+    /*if (surfacelights.size()) {
         logging::print("{} surface lights ({} light points) in use.\n", surfacelights.size(), total_surflight_points);
-    }
+    }*/
 }

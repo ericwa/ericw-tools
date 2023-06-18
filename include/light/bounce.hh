@@ -33,5 +33,4 @@
 // public functions
 
 void ResetBounce();
-const std::vector<surfacelight_t> &BounceLights();
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
