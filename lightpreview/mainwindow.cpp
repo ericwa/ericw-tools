@@ -40,17 +40,21 @@ See file, 'COPYING', for details.
 #include <QTimer>
 #include <QScrollArea>
 #include <QSpinBox>
+#include <QScrollBar>
 #include <QFrame>
 #include <QLabel>
 #include <QTextEdit>
 #include <QStatusBar>
 #include <QStringList>
+#include <QThread>
+#include <QApplication>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
 #include <vis/vis.hh>
 #include <light/light.hh>
 #include <common/bspinfo.hh>
+#include <fmt/chrono.h>
 
 #include "glview.h"
 
@@ -93,6 +97,23 @@ static QStringList GetRecents()
     QSettings s;
     QStringList recents = s.value(RECENT_SETTINGS_KEY).toStringList();
     return recents;
+}
+
+// ETLogWidget
+ETLogWidget::ETLogWidget(QWidget *parent) :
+    QTabWidget(parent)
+{
+    for (size_t i = 0; i < std::size(logTabNames); i++) {
+        m_textEdits[i] = new QTextEdit();
+
+        auto *formLayout = new QFormLayout();
+        auto *form = new QWidget();
+        formLayout->addRow(m_textEdits[i]);
+        form->setLayout(formLayout);
+        setTabText(i, logTabNames[i]);
+        addTab(form, logTabNames[i]);
+        formLayout->setContentsMargins(0, 0, 0, 0);
+    }
 }
 
 // MainWindow
@@ -223,16 +244,74 @@ void MainWindow::createPropertiesSidebar()
     m_fileReloadTimer->connect(m_fileReloadTimer.get(), &QTimer::timeout, this, &MainWindow::fileReloadTimerExpired);
 }
 
+void MainWindow::logWidgetSetText(ETLogTab tab, const std::string &str)
+{
+    m_outputLogWidget->setTabText((int32_t) tab, str.c_str());
+}
+
+void MainWindow::lightpreview_percent_callback(std::optional<uint32_t> percent, std::optional<duration> elapsed)
+{
+    int32_t tabIndex = (int32_t) m_activeLogTab;
+
+    if (elapsed.has_value()) {
+        lightpreview_log_callback(logging::flag::PROGRESS, fmt::format("finished in: {:.3}\n", elapsed.value()).c_str());
+        QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, ETLogWidget::logTabNames[tabIndex]));
+    } else {
+        if (percent.has_value()) {
+            QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, fmt::format("{} [{:>3}%]", ETLogWidget::logTabNames[tabIndex], percent.value())));
+        } else {
+            QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, fmt::format("{} (...)", ETLogWidget::logTabNames[tabIndex])));
+        }
+    }
+}
+
+void MainWindow::lightpreview_log_callback(logging::flag flags, const char *str)
+{
+    if (bitflags(flags) & logging::flag::PERCENT)
+        return;
+
+    if (QApplication::instance()->thread() != QThread::currentThread())
+    {
+        QMetaObject::invokeMethod(this, std::bind([this, flags](const std::string &s) -> void
+            {
+                lightpreview_log_callback(flags, s.c_str());
+            }, std::string(str)));
+        return;
+    }
+
+    auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
+    const bool atBottom = textEdit->verticalScrollBar()->value() == textEdit->verticalScrollBar()->maximum();
+    QTextDocument* doc = textEdit->document();
+    QTextCursor cursor(doc);
+    cursor.movePosition(QTextCursor::End);
+    cursor.beginEditBlock();
+    cursor.insertBlock();
+    cursor.insertHtml(QString::asprintf("%s\n", str));
+    cursor.endEditBlock();
+
+    //scroll scrollarea to bottom if it was at bottom when we started
+    //(we don't want to force scrolling to bottom if user is looking at a
+    //higher position)
+    if (atBottom) {
+        QScrollBar* bar = textEdit->verticalScrollBar();
+        bar->setValue(bar->maximum());
+    }
+}
+
 void MainWindow::createOutputLog()
 {
-    QDockWidget *dock = new QDockWidget(tr("Output Log"), this);
+    QDockWidget *dock = new QDockWidget(tr("Tool Logs"), this);
 
-    m_outputTextEdit = new QTextEdit();
+    m_outputLogWidget = new ETLogWidget();
 
     // finish dock widget setup
-    dock->setWidget(m_outputTextEdit);
+    dock->setWidget(m_outputLogWidget);
+
     addDockWidget(Qt::BottomDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
+
+    logging::set_print_callback(std::bind(&MainWindow::lightpreview_log_callback, this, std::placeholders::_1, std::placeholders::_2));
+    logging::set_percent_callback(std::bind(&MainWindow::lightpreview_percent_callback, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void MainWindow::createStatusBar()
@@ -386,9 +465,13 @@ std::filesystem::path MakeFSPath(const QString &string)
     return std::filesystem::path{string.toStdU16String()};
 }
 
-static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
+bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
     std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
 {
+    auto resetActiveTabText = [&]() {
+        QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, ETLogWidget::logTabNames[(int32_t) m_activeLogTab]));
+    };
+
     auto bsp_path = name;
     bsp_path.replace_extension(".bsp");
 
@@ -401,12 +484,16 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
     args.push_back(name.string());
 
     // run qbsp
+    m_activeLogTab = ETLogTab::TAB_BSP;
 
     InitQBSP(args);
     ProcessFile();
 
+    resetActiveTabText();
+
     // run vis
     if (run_vis) {
+        m_activeLogTab = ETLogTab::TAB_VIS;
         std::vector<std::string> vis_args{
             "", // the exe path, which we're ignoring in this case
         };
@@ -417,8 +504,11 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
         vis_main(vis_args);
     }
 
+    resetActiveTabText();
+
     // run light
     {
+        m_activeLogTab = ETLogTab::TAB_LIGHT;
         std::vector<std::string> light_args{
             "", // the exe path, which we're ignoring in this case
         };
@@ -429,6 +519,10 @@ static bspdata_t QbspVisLight_Common(const std::filesystem::path &name, std::vec
 
         light_main(light_args);
     }
+
+    resetActiveTabText();
+
+    m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
 
     // serialize obj
     {
@@ -515,30 +609,12 @@ private:
     GLView *glView;
 };
 
-void MainWindow::loadFileInternal(const QString &file, bool is_reload)
+int MainWindow::compileMap(const QString &file, bool is_reload)
 {
-    qDebug() << "loadFileInternal " << file;
-
-    // just in case
-    m_fileReloadTimer->stop();
-
-    // persist settings
-    QSettings s;
-    s.setValue("qbsp_options", qbsp_options->text());
-    s.setValue("vis_enabled", vis_checkbox->isChecked());
-    s.setValue("vis_options", vis_options->text());
-    s.setValue("light_options", light_options->text());
-    s.setValue("nearest", nearest->isChecked());
-
-    // update title bar
-    setWindowFilePath(file);
-    setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
-
     fs::path fs_path = MakeFSPath(file);
 
     m_bspdata = {};
-
-    settings::common_settings render_settings;
+    render_settings.reset();
 
     try {
         if (fs_path.extension().compare(".bsp") == 0) {
@@ -576,13 +652,22 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
             m_bspdata.loadversion->game->init_filesystem(file.toStdString(), settings);
         }
     } catch (const settings::parse_exception &p) {
-        m_outputTextEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
-        return;
+        auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
+        textEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
+        m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
+        return 1;
     } catch (const settings::quit_after_help_exception &p) {
-        m_outputTextEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
-        return;
+        auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
+        textEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
+        m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
+        return 1;
     }
 
+    return 0;
+}
+
+void MainWindow::compileThreadExited()
+{
     const auto &bsp = std::get<mbsp_t>(m_bspdata.bsp);
 
     auto ents = EntData_Parse(bsp);
@@ -590,9 +675,9 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     // build lightmap atlas
     auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, false, bspx_decoupled_lm->isChecked());
 
-    glView->renderBSP(file, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
+    glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
 
-    if (!is_reload && !glView->getKeepOrigin()) {
+    if (!m_fileWasReload && !glView->getKeepOrigin()) {
         for (auto &ent : ents) {
             if (ent.get("classname") == "info_player_start") {
                 qvec3d origin;
@@ -624,6 +709,42 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
         auto *style = new QLightStyleSlider(style_entry.first, glView);
         lightstyles->addWidget(style);
     }
+
+    delete m_compileThread;
+    m_compileThread = nullptr;
+}
+
+void MainWindow::loadFileInternal(const QString &file, bool is_reload)
+{
+    // TODO
+    if (m_compileThread)
+        return;
+
+    qDebug() << "loadFileInternal " << file;
+
+    // just in case
+    m_fileReloadTimer->stop();
+    m_fileWasReload = is_reload;
+
+    // persist settings
+    QSettings s;
+    s.setValue("qbsp_options", qbsp_options->text());
+    s.setValue("vis_enabled", vis_checkbox->isChecked());
+    s.setValue("vis_options", vis_options->text());
+    s.setValue("light_options", light_options->text());
+    s.setValue("nearest", nearest->isChecked());
+
+    // update title bar
+    setWindowFilePath(file);
+    setWindowTitle(QFileInfo(file).fileName() + " - lightpreview");
+
+    for (auto &edit : m_outputLogWidget->textEdits()) {
+        edit->clear();
+    }
+
+    m_compileThread = QThread::create(std::bind(&MainWindow::compileMap, this, file, is_reload));
+    connect(m_compileThread, &QThread::finished, this, &MainWindow::compileThreadExited);
+    m_compileThread->start();
 }
 
 void MainWindow::displayCameraPositionInfo()

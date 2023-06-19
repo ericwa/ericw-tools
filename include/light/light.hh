@@ -253,6 +253,7 @@ enum class visapprox_t
 enum class emissivequality_t
 {
     LOW,
+    MEDIUM,
     HIGH
 };
 

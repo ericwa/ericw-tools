@@ -79,10 +79,22 @@ void close()
 }
 
 static std::mutex print_mutex;
+static print_callback_t active_print_callback;
+
+void set_print_callback(print_callback_t cb)
+{
+    active_print_callback = cb;
+}
 
 void print(flag logflag, const char *str)
 {
     if (!(mask & logflag)) {
+        return;
+    }
+
+    if (active_print_callback)
+    {
+        active_print_callback(logflag, str);
         return;
     }
 
@@ -157,6 +169,13 @@ void assert_(bool success, const char *expr, const char *file, int line)
     }
 }
 
+static percent_callback_t active_percent_callback;
+
+void set_percent_callback(percent_callback_t cb)
+{
+    active_percent_callback = cb;
+}
+
 void percent(uint64_t count, uint64_t max, bool displayElapsed)
 {
     bool expected = false;
@@ -188,9 +207,17 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
         is_timing = false;
         if (displayElapsed) {
             if (max == indeterminate) {
-                print(flag::PERCENT, "[done] time elapsed: {:.3}\n", elapsed);
+                if (active_percent_callback) {
+                    active_percent_callback(std::nullopt, elapsed);
+                } else {
+                    print(flag::PERCENT, "[done] time elapsed: {:.3}\n", elapsed);
+                }
             } else {
-                print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+                if (active_percent_callback) {
+                    active_percent_callback(100u, elapsed);
+                } else {
+                    print(flag::PERCENT, "[100%] time elapsed: {:.3}\n", elapsed);
+                }
             }
         }
         last_count = -1;
@@ -198,7 +225,11 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
         if (max != indeterminate) {
             uint32_t pct = static_cast<uint32_t>((static_cast<float>(count) / max) * 100);
             if (last_count != pct) {
-                print(flag::PERCENT, "[{:>3}%]\r", pct);
+                if (active_percent_callback) {
+                    active_percent_callback(pct, std::nullopt);
+                } else {
+                    print(flag::PERCENT, "[{:>3}%]\r", pct);
+                }
                 last_count = pct;
             }
         } else {
@@ -206,8 +237,12 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
 
             if (t - last_indeterminate_time > std::chrono::milliseconds(100)) {
                 constexpr const char *spinners[] = {".   ", " .  ", "  . ", "   ."};
-                last_count = (last_count + 1) >= std::size(spinners) ? 0 : (last_count + 1);
-                print(flag::PERCENT, "[{}]\r", spinners[last_count]);
+                if (active_percent_callback) {
+                    active_percent_callback(std::nullopt, std::nullopt);
+                } else {
+                    last_count = (last_count + 1) >= std::size(spinners) ? 0 : (last_count + 1);
+                    print(flag::PERCENT, "[{}]\r", spinners[last_count]);
+                }
                 last_indeterminate_time = t;
             }
         }

@@ -31,9 +31,12 @@
 #include <list>
 #include <cmath> // for log10
 #include <stdexcept> // for std::runtime_error
+#include <functional> // for std::function
+#include <optional> // for std::optional
 #include <fmt/core.h>
 #include <common/bitflags.hh>
 #include <common/fs.hh>
+#include <common/cmdlib.hh>
 
 // forward declaration
 namespace settings
@@ -89,6 +92,11 @@ inline void print(const char *formt, const Args &...args)
     print(flag::DEFAULT, fmt::format(fmt::runtime(formt), std::forward<const Args &>(args)...).c_str());
 }
 
+// set print callback
+using print_callback_t = std::function<void(flag logflag, const char *str)>;
+
+void set_print_callback(print_callback_t cb);
+
 void header(const char *name);
 
 // TODO: C++20 source_location
@@ -101,6 +109,11 @@ void header(const char *name);
 #endif
 
 void assert_(bool success, const char *expr, const char *file, int line);
+
+// set percent callback
+using percent_callback_t = std::function<void(std::optional<uint32_t> percent, std::optional<duration> elapsed)>;
+
+void set_percent_callback(percent_callback_t cb);
 
 // Display a percent timer. This also keeps track of how long the
 // current task is taking to execute. Note that only one of these

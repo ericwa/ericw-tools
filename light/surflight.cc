@@ -123,10 +123,32 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         // Dice winding...
         l->points_before_culling = 0;
 
-        if (light_options.emissivequality.value() == emissivequality_t::LOW) {
+        if (light_options.emissivequality.value() == emissivequality_t::LOW ||
+            light_options.emissivequality.value() == emissivequality_t::MEDIUM) {
             l->points = { l->pos };
             l->points_before_culling++;
             total_surflight_points++;
+
+            if (light_options.emissivequality.value() == emissivequality_t::MEDIUM) {
+
+                for (auto &pt : winding) {
+                    l->points_before_culling++;
+                    auto point = pt + l->surfnormal;
+                    auto diff = qv::normalize(l->pos - pt);
+
+                    point += diff;
+
+                    // optimization - cull surface lights in the void
+                    // also try to move them if they're slightly inside a wall
+                    auto [fixed_point, success] = FixLightOnFace(bsp, point, false, 0.5f);
+                    if (!success) {
+                        continue;
+                    }
+
+                    l->points.push_back(fixed_point);
+                    total_surflight_points++;
+                }
+            }
         } else {
             winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
                 ++l->points_before_culling;

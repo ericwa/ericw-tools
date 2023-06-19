@@ -31,6 +31,40 @@ class QCheckBox;
 class QStringList;
 class QTextEdit;
 
+enum class ETLogTab
+{
+    TAB_LIGHTPREVIEW,
+    TAB_BSP,
+    TAB_VIS,
+    TAB_LIGHT,
+
+    TAB_TOTAL
+};
+
+class ETLogWidget : public QTabWidget
+{
+    Q_OBJECT
+
+public:
+    static constexpr const char *logTabNames[(size_t) ETLogTab::TAB_TOTAL] = {
+        "lightpreview",
+        "bsp",
+        "vis",
+        "light"
+    };
+
+    explicit ETLogWidget(QWidget *parent = nullptr);
+    ~ETLogWidget() { }
+
+    QTextEdit *textEdit(ETLogTab i) { return m_textEdits[(size_t) i]; }
+    const QTextEdit *textEdit(ETLogTab i) const { return m_textEdits[(size_t) i]; }
+
+    auto &textEdits() { return m_textEdits; }
+
+private:
+    std::array<QTextEdit *, std::size(logTabNames)> m_textEdits;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -38,9 +72,13 @@ class MainWindow : public QMainWindow
 private:
     QFileSystemWatcher *m_watcher = nullptr;
     std::unique_ptr<QTimer> m_fileReloadTimer;
+    bool m_fileWasReload = false;
     QString m_mapFile;
     bspdata_t m_bspdata;
+    settings::common_settings render_settings;
     qint64 m_fileSize = -1;
+    ETLogTab m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
+    QThread *m_compileThread = nullptr;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
@@ -49,12 +87,19 @@ public:
 private:
     void createPropertiesSidebar();
     void createOutputLog();
+    void lightpreview_log_callback(logging::flag flags, const char *str);
+    void lightpreview_percent_callback(std::optional<uint32_t> percent, std::optional<duration> elapsed);
+    void logWidgetSetText(ETLogTab tab, const std::string &str);
     void createStatusBar();
     void updateRecentsSubmenu(const QStringList &recents);
     void setupMenu();
     void fileOpen();
     void takeScreenshot();
     void fileReloadTimerExpired();
+    int compileMap(const QString &file, bool is_reload);
+    void compileThreadExited();
+    bspdata_t QbspVisLight_Common(const fs::path &name, std::vector<std::string> extra_qbsp_args,
+        std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis);
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -83,5 +128,5 @@ private:
     QMenu *viewMenu = nullptr;
     QMenu *openRecentMenu = nullptr;
 
-    QTextEdit *m_outputTextEdit = nullptr;
+    ETLogWidget *m_outputLogWidget = nullptr;
 };
