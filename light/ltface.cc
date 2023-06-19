@@ -2843,10 +2843,14 @@ bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
 
     // Very specific hack: the only reason to lightmap sky faces in Q2 is to light mdl's floating over sky.
     // If lightgrid is in use, this reason is no longer relevant, so skip lightmapping.
+    // FIXME: ideally, restore this block to avoid allocating lightmaps for sky.
+    // but currently, this breaks sky emitting light.
+    /*
     if (light_options.lightgrid.value() && bsp->loadversion->game->id == GAME_QUAKE_II &&
         (texinfo->flags.native & Q2_SURF_SKY)) {
         return false;
     }
+    */
 
     return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
 }
