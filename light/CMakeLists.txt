@@ -1,3 +1,6 @@
+option(SKIP_TBB_INSTALL "Skip TBB Library Installation" OFF)
+option(SKIP_EMBREE_INSTALL "Skip Embree Library Installation" OFF)
+
 set(LIGHT_INCLUDES
 	../include/light/entities.hh
 	../include/light/light.hh
@@ -96,11 +99,17 @@ if (embree_FOUND)
 			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
 	endif()
 
-	install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+	if(NOT SKIP_EMBREE_INSTALL)
+		install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+	endif()
 
 	# install TBB
-	if(UNIX)
-		# HACK: preferred method is installing the symlink instead of the actual .so
+	if(SKIP_TBB_INSTALL)
+		message(STATUS "Skipping TBB Install")
+	elseif(UNIX)
+		# HACK: manually follow symlinks to ensure the underlying .so files
+		# get installed, not symlinks. The "preferred method" below is installing the symlink,
+		# which produces unusable release archives.
 		get_target_property(TBB_SO_FILE_SYMLINK TBB::tbb IMPORTED_LOCATION_RELEASE)
 		message(STATUS "TBB .so symlink: ${TBB_SO_FILE_SYMLINK}")
 
@@ -131,7 +140,7 @@ if (embree_FOUND)
 		install(FILES $<TARGET_FILE:TBB::tbbmalloc> DESTINATION bin)
 	endif()
 
-	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
+	if((NOT SKIP_EMBREE_INSTALL) AND (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND))
 		install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
 	endif()
 endif(embree_FOUND)
