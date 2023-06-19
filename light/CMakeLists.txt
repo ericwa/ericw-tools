@@ -107,7 +107,9 @@ if (embree_FOUND)
 	if(SKIP_TBB_INSTALL)
 		message(STATUS "Skipping TBB Install")
 	elseif(UNIX)
-		# HACK: preferred method is installing the symlink instead of the actual .so
+		# HACK: manually follow symlinks to ensure the underlying .so files
+		# get installed, not symlinks. The "preferred method" below is installing the symlink,
+		# which produces unusable release archives.
 		get_target_property(TBB_SO_FILE_SYMLINK TBB::tbb IMPORTED_LOCATION_RELEASE)
 		message(STATUS "TBB .so symlink: ${TBB_SO_FILE_SYMLINK}")
 
@@ -138,7 +140,7 @@ if (embree_FOUND)
 		install(FILES $<TARGET_FILE:TBB::tbbmalloc> DESTINATION bin)
 	endif()
 
-	if (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND)
+	if((NOT SKIP_EMBREE_INSTALL) AND (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND))
 		install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
 	endif()
 endif(embree_FOUND)
