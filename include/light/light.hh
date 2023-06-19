@@ -250,6 +250,12 @@ enum class visapprox_t
     RAYS
 };
 
+enum class emissivequality_t
+{
+    LOW,
+    HIGH
+};
+
 enum class lightgrid_format_t
 {
     OCTREE
@@ -386,7 +392,7 @@ public:
     setting_set radlights;
     setting_int32 lightmap_scale;
     setting_extra extra;
-    setting_bool fastbounce;
+    setting_enum<emissivequality_t> emissivequality;
     setting_enum<visapprox_t> visapprox;
     setting_func lit;
     setting_func lit2;

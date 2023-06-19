@@ -123,21 +123,27 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         // Dice winding...
         l->points_before_culling = 0;
 
-        winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
-            ++l->points_before_culling;
+        if (light_options.emissivequality.value() == emissivequality_t::LOW) {
+            l->points = { l->pos };
+            l->points_before_culling++;
+            total_surflight_points++;
+        } else {
+            winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
+                ++l->points_before_culling;
 
-            qvec3f point = w.center() + l->surfnormal;
+                qvec3f point = w.center() + l->surfnormal;
 
-            // optimization - cull surface lights in the void
-            // also try to move them if they're slightly inside a wall
-            auto [fixed_point, success] = FixLightOnFace(bsp, point, false, 0.5f);
-            if (!success) {
-                return;
-            }
+                // optimization - cull surface lights in the void
+                // also try to move them if they're slightly inside a wall
+                auto [fixed_point, success] = FixLightOnFace(bsp, point, false, 0.5f);
+                if (!success) {
+                    return;
+                }
 
-            l->points.push_back(fixed_point);
-            ++total_surflight_points;
-        });
+                l->points.push_back(fixed_point);
+                ++total_surflight_points;
+            });
+        }
 
         l->minlight_scale = extended_flags.surflight_minlight_scale;
 

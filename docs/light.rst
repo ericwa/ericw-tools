@@ -138,13 +138,17 @@ Performance
 
 .. option:: -surflight_subdivide [n]
 
-   Configure spacing of all surface lights. Default 128 units. Minimum
-   setting: 64 / max 2048. In the future I'd like to make this
+   Configure spacing of all surface lights. Default 16 units. Value must be between 1
+   and 8192. In the future I'd like to make this
    configurable per-surface-light.
 
-.. option:: -fastbounce
+.. option:: -emissivequality low | high
 
-   Use one bounce point in the middle of each face. For fast compilation.
+   For emissive surfaces (both direct light and bounced light), use a single
+   point in the middle of the face (low) or subdivide the face into multiple
+   points, which provides anti-aliased results and more shadows, at the cost
+   of compile time. When using "high", you can use `surflight_subdivide`
+   to control the point spacing for better anti-aliasing. Default is low.
 
 Output format options
 ---------------------

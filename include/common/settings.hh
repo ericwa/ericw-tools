@@ -319,7 +319,7 @@ template<typename T>
 class setting_enum : public setting_value<T>
 {
 private:
-    std::map<std::string, T, natural_less> _values;
+    std::map<std::string, T, natural_case_insensitive_less> _values;
 
 public:
     inline setting_enum(setting_container *dictionary, const nameset &names, T v,

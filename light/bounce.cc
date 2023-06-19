@@ -223,7 +223,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     qvec3d facenormal = faceplane.normal;
     qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
 
-    if (light_options.fastbounce.value()) {
+    if (light_options.emissivequality.value() == emissivequality_t::LOW) {
         vector<qvec3f> points{facemidpoint};
 
         for (auto &style : emitcolors) {

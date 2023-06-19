@@ -300,8 +300,8 @@ light_settings::light_settings()
           this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"},
       extra{
           this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"},
-      fastbounce{this, "fastbounce", false, &performance_group,
-          "use one bounce point in the middle of each face. for fast compilation."},
+      emissivequality{this, "emissivequality", emissivequality_t::LOW, { { "LOW", emissivequality_t::LOW }, { "HIGH", emissivequality_t::HIGH } }, &performance_group,
+          "low = one point in the center of the face, high = spread points out for antialiasing"},
       visapprox{this, "visapprox", visapprox_t::AUTO,
           {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
               {"rays", visapprox_t::RAYS}},

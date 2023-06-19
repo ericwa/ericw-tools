@@ -977,7 +977,12 @@ struct gamedef_q2_t : public gamedef_t
     }
 
     bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
-    {    // Q2RTX should light nodraw faces
+    {
+        /* don't save lightmaps for "trigger" texture even if light_nodraw is set */
+        if (std::string_view(texname).ends_with("/trigger"))
+            return false;
+        
+        // Q2RTX should light nodraw faces
         if (light_nodraw && (flags.native & Q2_SURF_NODRAW)) {
             return true;
         }
