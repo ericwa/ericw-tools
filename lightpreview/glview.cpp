@@ -277,8 +277,10 @@ bool GLView::shouldLiveUpdate() const
 
 void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 {
+#ifdef _DEBUG
     if (debugMessage.type() == QOpenGLDebugMessage::ErrorType)
         __debugbreak();
+#endif
 
     qDebug() << debugMessage.message();
 }
