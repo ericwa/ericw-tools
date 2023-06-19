@@ -1,3 +1,6 @@
+option(SKIP_TBB_INSTALL "Skip TBB Library Installation" OFF)
+option(SKIP_EMBREE_INSTALL "Skip Embree Library Installation" OFF)
+
 set(LIGHT_INCLUDES
 	../include/light/entities.hh
 	../include/light/light.hh
@@ -96,10 +99,14 @@ if (embree_FOUND)
 			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
 	endif()
 
-	install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+	if(NOT SKIP_EMBREE_INSTALL)
+		install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+	endif()
 
 	# install TBB
-	if(UNIX)
+	if(SKIP_TBB_INSTALL)
+		message(STATUS "Skipping TBB Install")
+	elseif(UNIX)
 		# HACK: preferred method is installing the symlink instead of the actual .so
 		get_target_property(TBB_SO_FILE_SYMLINK TBB::tbb IMPORTED_LOCATION_RELEASE)
 		message(STATUS "TBB .so symlink: ${TBB_SO_FILE_SYMLINK}")
