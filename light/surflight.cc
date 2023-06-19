@@ -57,7 +57,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 {
     auto &surf_ptr = LightSurfaces()[face - bsp->dfaces.data()];
 
-    if (!surf_ptr) {
+    if (!surf_ptr || !Face_IsEmissive(bsp, face)) {
         return;
     }
 

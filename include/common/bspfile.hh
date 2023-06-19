@@ -287,7 +287,10 @@ struct gamedef_t
 
     gamedef_t(const char *default_base_dir);
 
-    virtual bool surf_is_lightmapped(const surfflags_t &flags) const = 0;
+    // surface stores lightmap/luxel color data
+    virtual bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const = 0;
+    // surface can be emissive
+    virtual bool surf_is_emissive(const surfflags_t &flags, const char *texname) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
     virtual bool surfflags_are_valid(const surfflags_t &flags) const = 0;
     /**

@@ -51,6 +51,7 @@ void SetupDirt(settings::worldspawn_keys &cfg);
 std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup,
     const bspx_decoupled_lm_perface *facesup_decoupled, const settings::worldspawn_keys &cfg);
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face);
+bool Face_IsEmissive(const mbsp_t *bsp, const mface_t *face);
 void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);

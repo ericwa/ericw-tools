@@ -117,7 +117,7 @@ struct lightsurf_t
     qvec3d tnormal;
 
     /* 16 in vanilla. engines will hate you if this is not power-of-two-and-at-least-one */
-    float lightmapscale;
+    float lightmapscale = 0.f;
 
     faceextents_t extents, vanilla_extents;
 

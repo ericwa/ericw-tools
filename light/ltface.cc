@@ -589,150 +589,154 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     lightsurf->bsp = bsp;
     lightsurf->face = face;
 
-    /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
-     * lit water in mind. In that case receive light from both top and bottom.
-     * (lit will only be rendered in compatible engines, but degrades gracefully.)
-     */
-    lightsurf->twosided = Face_IsTranslucent(bsp, face);
+    if (Face_IsLightmapped(bsp, face)) {
+        /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
+         * lit water in mind. In that case receive light from both top and bottom.
+         * (lit will only be rendered in compatible engines, but degrades gracefully.)
+         */
+        lightsurf->twosided = Face_IsTranslucent(bsp, face);
 
-    // pick the larger of the two scales
-    lightsurf->lightmapscale =
-        (facesup && facesup->lmscale < modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
+        // pick the larger of the two scales
+        lightsurf->lightmapscale =
+            (facesup && facesup->lmscale < modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
 
-    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
-    lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
+        const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+        lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
 
-    // nodirt
-    if (modelinfo->dirt.is_changed()) {
-        lightsurf->nodirt = (modelinfo->dirt.value() == -1);
-    } else {
-        lightsurf->nodirt = extended_flags.no_dirt;
-    }
+        // nodirt
+        if (modelinfo->dirt.is_changed()) {
+            lightsurf->nodirt = (modelinfo->dirt.value() == -1);
+        } else {
+            lightsurf->nodirt = extended_flags.no_dirt;
+        }
 
-    // minlight
-    if (modelinfo->minlight.is_changed()) {
-        lightsurf->minlight = modelinfo->minlight.value();
-    } else if (extended_flags.minlight) {
-        lightsurf->minlight = *extended_flags.minlight;
-    } else {
-        lightsurf->minlight = light_options.minlight.value();
-    }
+        // minlight
+        if (modelinfo->minlight.is_changed()) {
+            lightsurf->minlight = modelinfo->minlight.value();
+        } else if (extended_flags.minlight) {
+            lightsurf->minlight = *extended_flags.minlight;
+        } else {
+            lightsurf->minlight = light_options.minlight.value();
+        }
 
-    // minlightMottle
-    if (modelinfo->minlightMottle.is_changed()) {
-        lightsurf->minlightMottle = modelinfo->minlightMottle.value();
-    } else if (light_options.minlightMottle.is_changed()) {
-        lightsurf->minlightMottle = light_options.minlightMottle.value();
-    } else {
-        // default value depends on game
+        // minlightMottle
+        if (modelinfo->minlightMottle.is_changed()) {
+            lightsurf->minlightMottle = modelinfo->minlightMottle.value();
+        } else if (light_options.minlightMottle.is_changed()) {
+            lightsurf->minlightMottle = light_options.minlightMottle.value();
+        } else {
+            // default value depends on game
+            if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                lightsurf->minlightMottle = true;
+            } else {
+                lightsurf->minlightMottle = false;
+            }
+        }
+
+        // Q2 uses a 0-1 range for minlight
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            lightsurf->minlightMottle = true;
-        } else {
-            lightsurf->minlightMottle = false;
+            lightsurf->minlight *= 128.f;
         }
-    }
 
-    // Q2 uses a 0-1 range for minlight
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        lightsurf->minlight *= 128.f;
-    }
-
-    // maxlight
-    if (modelinfo->maxlight.is_changed()) {
-        lightsurf->maxlight = modelinfo->maxlight.value();
-    } else {
-        lightsurf->maxlight = extended_flags.maxlight;
-    }
-
-    // lightcolorscale
-    if (modelinfo->lightcolorscale.is_changed()) {
-        lightsurf->lightcolorscale = modelinfo->lightcolorscale.value();
-    } else {
-        lightsurf->lightcolorscale = extended_flags.lightcolorscale;
-    }
-
-    // Q2 uses a 0-1 range for minlight
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        lightsurf->maxlight *= 128.f;
-    }
-
-    // minlight_color
-    if (modelinfo->minlight_color.is_changed()) {
-        lightsurf->minlight_color = modelinfo->minlight_color.value();
-    } else if (!qv::emptyExact(extended_flags.minlight_color)) {
-        lightsurf->minlight_color = extended_flags.minlight_color;
-    } else {
-        lightsurf->minlight_color = light_options.minlight_color.value();
-    }
-
-    /* never receive dirtmapping on lit liquids */
-    if (Face_IsTranslucent(bsp, face)) {
-        lightsurf->nodirt = true;
-    }
-
-    /* handle glass alpha */
-    if (modelinfo->alpha.value() < 1) {
-        /* skip culling of rays coming from the back side of the face */
-        lightsurf->twosided = true;
-    }
-
-    /* object channel mask */
-    if (extended_flags.object_channel_mask) {
-        lightsurf->object_channel_mask = *extended_flags.object_channel_mask;
-    } else {
-        lightsurf->object_channel_mask = modelinfo->object_channel_mask.value();
-    }
-
-    if (extended_flags.surflight_minlight_scale) {
-        lightsurf->surflight_minlight_scale = *extended_flags.surflight_minlight_scale;
-    } else {
-        lightsurf->surflight_minlight_scale = 1.0f;
-    }
-
-    /* Set up the plane, not including model offset */
-    qplane3d &plane = lightsurf->plane;
-    if (face->side) {
-        plane = -bsp->dplanes[face->planenum];
-    } else {
-        plane = bsp->dplanes[face->planenum];
-    }
-
-    const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-    lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
-    lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
-
-    /* Set up the surface points */
-    if (light_options.world_units_per_luxel.is_changed()) {
-        if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native & Q2_SURF_SKY)) {
-            lightsurf->extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
-        } else if (extended_flags.world_units_per_luxel) {
-            lightsurf->extents =
-                faceextents_t(*face, *bsp, world_units_per_luxel_t{}, *extended_flags.world_units_per_luxel);
+        // maxlight
+        if (modelinfo->maxlight.is_changed()) {
+            lightsurf->maxlight = modelinfo->maxlight.value();
         } else {
-            lightsurf->extents =
-                faceextents_t(*face, *bsp, world_units_per_luxel_t{}, light_options.world_units_per_luxel.value());
+            lightsurf->maxlight = extended_flags.maxlight;
         }
-    } else {
-        lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
+
+        // lightcolorscale
+        if (modelinfo->lightcolorscale.is_changed()) {
+            lightsurf->lightcolorscale = modelinfo->lightcolorscale.value();
+        } else {
+            lightsurf->lightcolorscale = extended_flags.lightcolorscale;
+        }
+
+        // Q2 uses a 0-1 range for minlight
+        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+            lightsurf->maxlight *= 128.f;
+        }
+
+        // minlight_color
+        if (modelinfo->minlight_color.is_changed()) {
+            lightsurf->minlight_color = modelinfo->minlight_color.value();
+        } else if (!qv::emptyExact(extended_flags.minlight_color)) {
+            lightsurf->minlight_color = extended_flags.minlight_color;
+        } else {
+            lightsurf->minlight_color = light_options.minlight_color.value();
+        }
+
+        /* never receive dirtmapping on lit liquids */
+        if (Face_IsTranslucent(bsp, face)) {
+            lightsurf->nodirt = true;
+        }
+
+        /* handle glass alpha */
+        if (modelinfo->alpha.value() < 1) {
+            /* skip culling of rays coming from the back side of the face */
+            lightsurf->twosided = true;
+        }
+
+        /* object channel mask */
+        if (extended_flags.object_channel_mask) {
+            lightsurf->object_channel_mask = *extended_flags.object_channel_mask;
+        } else {
+            lightsurf->object_channel_mask = modelinfo->object_channel_mask.value();
+        }
+
+        if (extended_flags.surflight_minlight_scale) {
+            lightsurf->surflight_minlight_scale = *extended_flags.surflight_minlight_scale;
+        } else {
+            lightsurf->surflight_minlight_scale = 1.0f;
+        }
+
+        /* Set up the plane, not including model offset */
+        qplane3d &plane = lightsurf->plane;
+        if (face->side) {
+            plane = -bsp->dplanes[face->planenum];
+        } else {
+            plane = bsp->dplanes[face->planenum];
+        }
+
+        const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
+        lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
+        lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
+
+        /* Set up the surface points */
+        if (light_options.world_units_per_luxel.is_changed()) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native & Q2_SURF_SKY)) {
+                lightsurf->extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
+            } else if (extended_flags.world_units_per_luxel) {
+                lightsurf->extents =
+                    faceextents_t(*face, *bsp, world_units_per_luxel_t{}, *extended_flags.world_units_per_luxel);
+            } else {
+                lightsurf->extents =
+                    faceextents_t(*face, *bsp, world_units_per_luxel_t{}, light_options.world_units_per_luxel.value());
+            }
+        } else {
+            lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
+        }
+        lightsurf->vanilla_extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
+
+        CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
+
+        /* Correct the plane for the model offset (must be done last,
+           calculation of face extents / points needs the uncorrected plane) */
+        qvec3d planepoint = (plane.normal * plane.dist) + modelinfo->offset;
+        plane.dist = qv::dot(plane.normal, planepoint);
+
+        /* Correct bounding sphere */
+        lightsurf->extents.origin += modelinfo->offset;
+        lightsurf->extents.bounds = lightsurf->extents.bounds.translate(modelinfo->offset);
+
+        lightsurf->intersection_stream.resize(lightsurf->samples.size());
+        lightsurf->occlusion_stream.resize(lightsurf->samples.size());
+
+        /* Setup vis data */
+        CalcPvs(bsp, lightsurf.get());
     }
-    lightsurf->vanilla_extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
 
-    CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
-
-    /* Correct the plane for the model offset (must be done last,
-       calculation of face extents / points needs the uncorrected plane) */
-    qvec3d planepoint = (plane.normal * plane.dist) + modelinfo->offset;
-    plane.dist = qv::dot(plane.normal, planepoint);
-
-    /* Correct bounding sphere */
-    lightsurf->extents.origin += modelinfo->offset;
-    lightsurf->extents.bounds = lightsurf->extents.bounds.translate(modelinfo->offset);
-
-    lightsurf->intersection_stream.resize(lightsurf->samples.size());
-    lightsurf->occlusion_stream.resize(lightsurf->samples.size());
-
-    /* Setup vis data */
-    CalcPvs(bsp, lightsurf.get());
+    // emissiveness is handled later and allocated only if necessary
 
     return lightsurf;
 }
@@ -802,8 +806,10 @@ static void Lightmap_ClearAll(lightmapdict_t *lightmaps)
  * otherwise emit a warning.
  */
 static void Lightmap_Save(
-    lightmapdict_t *lightmaps, const lightsurf_t *lightsurf, lightmap_t *lightmap, const int style)
+    const mbsp_t *bsp, lightmapdict_t *lightmaps, const lightsurf_t *lightsurf, lightmap_t *lightmap, const int style)
 {
+    Q_assert(Face_IsLightmapped(bsp, lightsurf->face));
+
     if (lightmap->style == INVALID_LIGHTSTYLE) {
         lightmap->style = style;
     }
@@ -1294,7 +1300,7 @@ static void LightFace_Entity(
         sample.color += rs.getPushedRayColor(j);
         sample.direction += rs.getPushedRayNormalContrib(j);
 
-        Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
+        Lightmap_Save(bsp, lightmaps, lightsurf, cached_lightmap, cached_style);
     }
 }
 
@@ -1360,7 +1366,7 @@ static void LightPoint_Entity(const mbsp_t *bsp, raystream_occlusion_t &rs, cons
  * LightFace_Sky
  * =============
  */
-static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
@@ -1467,7 +1473,7 @@ static void LightFace_Sky(const sun_t *sun, lightsurf_t *lightsurf, lightmapdict
         sample.direction += rs.getPushedRayNormalContrib(j);
         total_light_ray_hits++;
 
-        Lightmap_Save(lightmaps, lightsurf, cached_lightmap, cached_style);
+        Lightmap_Save(bsp, lightmaps, lightsurf, cached_lightmap, cached_style);
     }
 }
 
@@ -1672,7 +1678,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
     }
 
     if (hit) {
-        Lightmap_Save(lightmaps, lightsurf, lightmap, style);
+        Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, style);
     }
 }
 
@@ -1753,7 +1759,7 @@ static void LightFace_LocalMin(
         }
 
         if (hit) {
-            Lightmap_Save(lightmaps, lightsurf, lightmap, entity->style.value());
+            Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, entity->style.value());
         }
     }
 }
@@ -1818,7 +1824,7 @@ static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_
                 }
             }
 
-            Lightmap_Save(lightmaps, lightsurf, lightmap, grid_sample.style);
+            Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, grid_sample.style);
         }
 
         // clear occluded state, since we filled in all occluded samples with a color
@@ -1833,7 +1839,7 @@ static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_
  * LightFace_DirtDebug
  * =============
  */
-static void LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_DirtDebug(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     /* use a style 0 light map */
@@ -1846,7 +1852,7 @@ static void LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *li
         sample.color = {light};
     }
 
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
 }
 
 /*
@@ -1854,7 +1860,7 @@ static void LightFace_DirtDebug(const lightsurf_t *lightsurf, lightmapdict_t *li
  * LightFace_PhongDebug
  * =============
  */
-static void LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_PhongDebug(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -1870,10 +1876,10 @@ static void LightFace_PhongDebug(const lightsurf_t *lightsurf, lightmapdict_t *l
         }
     }
 
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
 }
 
-static void LightFace_DebugMottle(const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_DebugMottle(const mbsp_t *bsp, const lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     /* use a style 0 light map */
     lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, 0, lightsurf);
@@ -1887,7 +1893,7 @@ static void LightFace_DebugMottle(const lightsurf_t *lightsurf, lightmapdict_t *
         sample.color = qvec3f(minlight + Mottle(lightsurf->samples[i].point));
     }
 
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
 }
 
 // mxd. Surface light falloff. Returns color in [0,255]
@@ -2067,7 +2073,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
                 // If surface light contributed anything, save.
                 if (hit)
-                    Lightmap_Save(lightmaps, lightsurf, lightmap, lightmapstyle);
+                    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, lightmapstyle);
             }
         }
     }
@@ -2157,7 +2163,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
     }
 }
 
-static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_OccludedDebug(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     Q_assert(light_options.debugmode == debugmodes::debugoccluded);
 
@@ -2177,10 +2183,10 @@ static void LightFace_OccludedDebug(lightsurf_t *lightsurf, lightmapdict_t *ligh
         surf_sample.occluded = false;
     }
 
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
 }
 
-static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
+static void LightFace_DebugNeighbours(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
     Q_assert(light_options.debugmode == debugmodes::debugneighbours);
 
@@ -2219,7 +2225,7 @@ static void LightFace_DebugNeighbours(lightsurf_t *lightsurf, lightmapdict_t *li
         lightsurf->samples[i].occluded = false;
     }
 
-    Lightmap_Save(lightmaps, lightsurf, lightmap, 0);
+    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
 }
 
 /* Dirtmapping borrowed from q3map2, originally by RaP7oR */
@@ -2828,28 +2834,34 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
     return res;
 }
 
+// check if the given face can actually store luxel data
 bool Face_IsLightmapped(const mbsp_t *bsp, const mface_t *face)
 {
     const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
 
-    if (texinfo == nullptr)
+    if (texinfo == nullptr) {
         return false;
-
-    // Q2RTX should light nodraw faces
-    if (light_options.q2rtx.value() && bsp->loadversion->game->id == GAME_QUAKE_II &&
-        (texinfo->flags.native & Q2_SURF_NODRAW)) {
-        return true;
     }
 
-    // Very specific hack: the only reason to lightmap sky faces in Q2 is to light mdl's floating over sky.
-    // If lightgrid is in use, this reason is no longer relevant, so skip lightmapping.
-    // TEMP DISABLED
-    /*if (light_options.lightgrid.value() && bsp->loadversion->game->id == GAME_QUAKE_II &&
-        (texinfo->flags.native & Q2_SURF_SKY)) {
-        return false;
-    }*/
+    const char *texname = Face_TextureName(bsp, face);
 
-    return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags);
+    return bsp->loadversion->game->surf_is_lightmapped(texinfo->flags, texname,
+        light_options.q2rtx.value() && bsp->loadversion->game->id == GAME_QUAKE_II, // FIXME: move to own config option. -light_nodraw?
+        light_options.lightgrid.value());
+}
+
+// check if the given face can actually emit light
+bool Face_IsEmissive(const mbsp_t *bsp, const mface_t *face)
+{
+    const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);
+
+    if (texinfo == nullptr) {
+        return false;
+    }
+
+    const char *texname = Face_TextureName(bsp, face);
+
+    return bsp->loadversion->game->surf_is_emissive(texinfo->flags, texname);
 }
 
 /**
@@ -3222,8 +3234,6 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     {
         const char *texname = Face_TextureName(bsp, face);
         Q_assert(Face_IsLightmapped(bsp, face));
-        Q_assert(Q_strcasecmp(texname, "skip") != 0);
-        Q_assert(Q_strcasecmp(texname, "trigger") != 0);
     }
 
     for (int mapnum = 0; mapnum < numstyles; mapnum++) {
@@ -3287,18 +3297,10 @@ std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mfac
     if (face->numedges < 3)
         return nullptr;
 
-    if (!Face_IsLightmapped(bsp, face))
+    // if we don't have a lightmap or emissive, we're done
+    if (!Face_IsEmissive(bsp, face) && !Face_IsLightmapped(bsp, face)) {
         return nullptr;
-
-    const char *texname = Face_TextureName(bsp, face);
-
-    /* don't save lightmaps for "trigger" texture */
-    if (!Q_strcasecmp(texname, "trigger"))
-        return nullptr;
-
-    /* don't save lightmaps for "skip" texture */
-    if (!Q_strcasecmp(texname, "skip"))
-        return nullptr;
+    }
 
     return Lightsurf_Init(modelinfo, cfg, face, bsp, facesup, facesup_decoupled);
 }
@@ -3343,7 +3345,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
             }
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight > 0)
-                    LightFace_Sky(&sun, &lightsurf, lightmaps);
+                    LightFace_Sky(bsp, &sun, &lightsurf, lightmaps);
 
             // mxd. Add surface lights...
             // FIXME: negative surface lights
@@ -3356,16 +3358,16 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
 
     /* replace lightmaps with AO for debugging */
     if (light_options.debugmode == debugmodes::dirt)
-        LightFace_DirtDebug(&lightsurf, lightmaps);
+        LightFace_DirtDebug(bsp, &lightsurf, lightmaps);
 
     if (light_options.debugmode == debugmodes::phong)
-        LightFace_PhongDebug(&lightsurf, lightmaps);
+        LightFace_PhongDebug(bsp, &lightsurf, lightmaps);
 
     if (light_options.debugmode == debugmodes::debugoccluded)
-        LightFace_OccludedDebug(&lightsurf, lightmaps);
+        LightFace_OccludedDebug(bsp, &lightsurf, lightmaps);
 
     if (light_options.debugmode == debugmodes::debugneighbours)
-        LightFace_DebugNeighbours(&lightsurf, lightmaps);
+        LightFace_DebugNeighbours(bsp, &lightsurf, lightmaps);
 }
 
 /*
@@ -3457,12 +3459,12 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
             }
             for (const sun_t &sun : GetSuns())
                 if (sun.sunlight < 0)
-                    LightFace_Sky(&sun, &lightsurf, lightmaps);
+                    LightFace_Sky(bsp, &sun, &lightsurf, lightmaps);
         }
     }
 
     if (light_options.debugmode == debugmodes::mottle)
-        LightFace_DebugMottle(&lightsurf, lightmaps);
+        LightFace_DebugMottle(bsp, &lightsurf, lightmaps);
 }
 // lightgrid
 

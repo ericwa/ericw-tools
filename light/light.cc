@@ -709,7 +709,7 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto &surf = light_surfaces[i];
 
-        if (!surf) {
+        if (!surf || surf->samples.empty()) {
             return;
         }
 
@@ -920,7 +920,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     logging::header("Direct Lighting"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-        if (light_surfaces[i]) {
+        if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
             _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
@@ -934,7 +934,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
         logging::header("Indirect Lighting"); // mxd
         logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-            if (light_surfaces[i]) {
+            if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
                 _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
@@ -947,7 +947,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (!light_options.nolighting.value()) {
         logging::header("Post-Processing"); // mxd
         logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-            if (light_surfaces[i]) {
+            if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
                 _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif

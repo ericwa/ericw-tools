@@ -90,6 +90,10 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     qvec3d texture_color, int32_t style, const std::vector<qvec3f> &points, const winding_t &winding, const vec_t &area,
     const qvec3d &facenormal, const qvec3d &facemidpoint)
 {
+    if (!Face_IsEmissive(bsp, surf.face)) {
+        return;
+    }
+
     bouncelightpoints += points.size();
 
     // Calculate emit color and intensity...

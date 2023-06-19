@@ -348,7 +348,27 @@ public:
         this->id = ID;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
+    bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    {
+        /* don't save lightmaps for "trigger" texture */
+        if (!Q_strcasecmp(texname, "trigger"))
+            return false;
+
+        /* don't save lightmaps for "skip" texture */
+        if (!Q_strcasecmp(texname, "skip"))
+            return false;
+
+        return !(flags.native & TEX_SPECIAL);
+    }
+
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
+    {
+        /* don't save lightmaps for "trigger" texture */
+        if (!Q_strcasecmp(texname, "trigger"))
+            return false;
+
+        return true;
+    }
 
     bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & TEX_SPECIAL); }
 
@@ -956,9 +976,24 @@ struct gamedef_q2_t : public gamedef_t
         max_entity_key = 256;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags) const override
-    {
+    bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    {    // Q2RTX should light nodraw faces
+        if (light_nodraw && (flags.native & Q2_SURF_NODRAW)) {
+            return true;
+        }
+
+        // The only reason to lightmap sky faces in Q2 is to light models floating over sky.
+        // If lightgrid is in use, this reason is no longer relevant, so skip lightmapping.
+        if (lightgrid_enabled && (flags.native & Q2_SURF_SKY)) {
+            return false;
+        }
+
         return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
+    }
+
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
+    {
+        return true;
     }
 
     bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_SKY); }
