@@ -154,7 +154,7 @@ public:
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
 
     template<typename F>
-    [[nodiscard]] inline auto operator+(const qvec<F, N> &other) const
+    [[nodiscard]] constexpr inline auto operator+(const qvec<F, N> &other) const
     {
         qvec<decltype(T() + F()), N> v;
 
@@ -166,7 +166,7 @@ public:
     }
 
     template<typename F>
-    [[nodiscard]] inline auto operator-(const qvec<F, N> &other) const
+    [[nodiscard]] constexpr inline auto operator-(const qvec<F, N> &other) const
     {
         qvec<decltype(T() - F()), N> v;
 
@@ -178,7 +178,7 @@ public:
     }
 
     template<typename S>
-    [[nodiscard]] inline auto operator*(const S &scale) const
+    [[nodiscard]] constexpr inline auto operator*(const S &scale) const
     {
         qvec<decltype(T() * S()), N> v;
 
@@ -190,7 +190,7 @@ public:
     }
 
     template<typename F>
-    [[nodiscard]] inline auto operator*(const qvec<F, N> &scale) const
+    [[nodiscard]] constexpr inline auto operator*(const qvec<F, N> &scale) const
     {
         qvec<decltype(T() * F()), N> v;
 
@@ -202,7 +202,7 @@ public:
     }
 
     template<typename S>
-    [[nodiscard]] inline auto operator/(const S &scale) const
+    [[nodiscard]] constexpr inline auto operator/(const S &scale) const
     {
         qvec<decltype(T() / S()), N> v;
 
@@ -214,7 +214,7 @@ public:
     }
 
     template<typename F>
-    [[nodiscard]] inline auto operator/(const qvec<F, N> &scale) const
+    [[nodiscard]] constexpr inline auto operator/(const qvec<F, N> &scale) const
     {
         qvec<decltype(T() / F()), N> v;
 
@@ -225,7 +225,7 @@ public:
         return v;
     }
 
-    [[nodiscard]] inline auto operator-() const
+    [[nodiscard]] constexpr inline auto operator-() const
     {
         qvec<decltype(-T()), N> v;
 

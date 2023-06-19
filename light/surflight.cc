@@ -37,8 +37,7 @@ See file, 'COPYING', for details.
 using namespace std;
 using namespace polylib;
 
-static mutex surfacelights_lock;
-static size_t total_surflight_points = 0;
+static std::atomic_size_t total_surflight_points;
 
 void ResetSurflight()
 {
@@ -137,6 +136,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
             }
 
             l->points.push_back(fixed_point);
+            ++total_surflight_points;
         });
 
         l->minlight_scale = extended_flags.surflight_minlight_scale;
