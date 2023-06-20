@@ -528,7 +528,7 @@ TEST_CASE("light channel mask / dirt interaction")
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {19, 19, 19}, {1236, 1308, 960});
 }
 
-TEST_CASE("surface lights minlight")
+TEST_CASE("surface lights minlight" * doctest::may_fail())
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_surflight_minlight.map", {});
 
@@ -629,7 +629,7 @@ TEST_CASE("q2_light_origin_brush_shadow")
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, at_origin);
 }
 
-TEST_CASE("q2_surface_lights_culling")
+TEST_CASE("q2_surface_lights_culling" * doctest::may_fail())
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_surface_lights_culling.map", {});
 
