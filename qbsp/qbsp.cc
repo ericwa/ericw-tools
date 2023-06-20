@@ -1362,7 +1362,7 @@ static void BSPX_CreateBrushList(void)
         mapentity_t &ent = map.entities.at(entnum);
         size_t modelnum;
 
-        if (map.is_world_entity(ent)) {
+        if (map.is_world_entity(ent) || IsWorldBrushEntity(ent)) {
             modelnum = 0;
         } else {
             const std::string &mod = ent.epairs.get("model");
