@@ -20,7 +20,7 @@
 #include <common/log.hh>
 #include <vis/vis.hh>
 #include <common/bsputils.hh>
-
+#include <common/parallel.hh>
 /*
 
 Some textures (sky, water, slime, lava) are considered ambien sound emiters.
@@ -60,45 +60,51 @@ void CalcAmbientSounds(mbsp_t *bsp)
 {
     logging::funcheader();
 
-    const mface_t *surf;
-    const mtexinfo_t *info;
-    int i, j, k, l;
-    mleaf_t *leaf, *hit;
-    uint8_t *vis;
-    float d, maxd;
-    ambient_type_t ambient_type;
-    float dists[NUM_AMBIENTS];
-    float vol;
+    // fast path for -noambient
+    if (vis_options.noambientsky.value() && vis_options.noambientwater.value() && vis_options.noambientslime.value() &&
+        vis_options.noambientlava.value()) {
+        for (int i = 0; i < portalleafs_real; i++) {
+            mleaf_t *leaf = &bsp->dleafs[i + 1];
+            for (int j = 0; j < NUM_AMBIENTS; j++) {
+                leaf->ambient_level[j] = 0;
+            }
+        }
+        return;
+    }
 
-    for (i = 0; i < portalleafs_real; i++) {
-        leaf = &bsp->dleafs[i + 1];
+    logging::parallel_for(0, portalleafs_real, [&bsp](int i) {
+        mleaf_t *leaf = &bsp->dleafs[i + 1];
 
+        float dists[NUM_AMBIENTS];
+        
         //
         // clear ambients
         //
-        for (j = 0; j < NUM_AMBIENTS; j++)
+        for (int j = 0; j < NUM_AMBIENTS; j++)
             dists[j] = 1020;
 
+        uint8_t *vis;
         if (portalleafs != portalleafs_real) {
             vis = &uncompressed[leaf->cluster * leafbytes_real];
         } else {
             vis = &uncompressed[i * leafbytes_real];
         }
 
-        for (j = 0; j < portalleafs_real; j++) {
+        for (int j = 0; j < portalleafs_real; j++) {
             if (!(vis[j >> 3] & nth_bit(j & 7)))
                 continue;
 
             //
             // check this leaf for sound textures
             //
-            hit = &bsp->dleafs[j + 1];
+            mleaf_t *hit = &bsp->dleafs[j + 1];
 
-            for (k = 0; k < hit->nummarksurfaces; k++) {
-                surf = BSP_GetFace(bsp, bsp->dleaffaces[hit->firstmarksurface + k]);
-                info = &bsp->texinfo[surf->texinfo];
+            for (int k = 0; k < hit->nummarksurfaces; k++) {
+                const mface_t *surf = BSP_GetFace(bsp, bsp->dleaffaces[hit->firstmarksurface + k]);
+                const mtexinfo_t *info = &bsp->texinfo[surf->texinfo];
                 const auto &miptex = bsp->dtex.textures[info->miptex];
 
+                ambient_type_t ambient_type;
                 if (!Q_strncasecmp(miptex.name.data(), "sky", 3) && !vis_options.noambientsky.value())
                     ambient_type = AMBIENT_SKY;
                 else if (!Q_strncasecmp(miptex.name.data(), "*water", 6) && !vis_options.noambientwater.value())
@@ -114,8 +120,9 @@ void CalcAmbientSounds(mbsp_t *bsp)
 
                 // find distance from source leaf to polygon
                 aabb3d bounds = SurfaceBBox(bsp, surf);
-                maxd = 0;
-                for (l = 0; l < 3; l++) {
+                float maxd = 0;
+                for (int l = 0; l < 3; l++) {
+                    float d;
                     if (bounds.mins()[l] > leaf->maxs[l])
                         d = bounds.mins()[l] - leaf->maxs[l];
                     else if (bounds.maxs()[l] < leaf->mins[l])
@@ -132,7 +139,8 @@ void CalcAmbientSounds(mbsp_t *bsp)
             }
         }
 
-        for (j = 0; j < NUM_AMBIENTS; j++) {
+        for (int j = 0; j < NUM_AMBIENTS; j++) {
+            float vol;
             if (dists[j] < 100)
                 vol = 1.0;
             else {
@@ -142,7 +150,7 @@ void CalcAmbientSounds(mbsp_t *bsp)
             }
             leaf->ambient_level[j] = (uint8_t)(vol * 255);
         }
-    }
+    });
 }
 
 /*
