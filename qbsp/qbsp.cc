@@ -1266,13 +1266,13 @@ Generates a submodel's direct brush information to a separate file, so the engin
 hull sizes
 */
 
-static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const std::vector<mapbrush_t> &brushes)
+static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const std::vector<mapbrush_t *> &brushes)
 {
     bspxbrushes_permodel permodel{1, modelnum};
 
     for (auto &b : brushes) {
         permodel.numbrushes++;
-        for (auto &f : b.faces) {
+        for (auto &f : b->faces) {
             /*skip axial*/
             const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
@@ -1290,7 +1290,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const
     for (auto &b : brushes) {
         bspxbrushes_perbrush perbrush{};
 
-        for (auto &f : b.faces) {
+        for (auto &f : b->faces) {
             /*skip axial*/
             const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
@@ -1298,9 +1298,9 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const
             perbrush.numfaces++;
         }
 
-        perbrush.bounds = b.bounds;
+        perbrush.bounds = b->bounds;
 
-        const auto &contents = b.contents;
+        const auto &contents = b->contents;
 
         switch (contents.native) {
             // contents should match the engine.
@@ -1333,7 +1333,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const
 
         str <= perbrush;
 
-        for (auto &f : b.faces) {
+        for (auto &f : b->faces) {
             /*skip axial*/
             const auto &plane = f.get_plane();
             if (plane.get_type() < plane_type_t::PLANE_ANYX)
@@ -1362,7 +1362,11 @@ static void BSPX_CreateBrushList(void)
         mapentity_t &ent = map.entities.at(entnum);
         size_t modelnum;
 
-        if (map.is_world_entity(ent) || IsWorldBrushEntity(ent)) {
+        if (IsWorldBrushEntity(ent)) {
+            continue;
+        }
+
+        if (map.is_world_entity(ent)) {
             modelnum = 0;
         } else {
             const std::string &mod = ent.epairs.get("model");
@@ -1372,11 +1376,34 @@ static void BSPX_CreateBrushList(void)
             modelnum = std::stoi(mod.substr(1));
         }
 
-        if (ent.mapbrushes.empty()) {
-            continue; // non-bmodel entity
+        std::vector<mapbrush_t *> brushes;
+
+        brushes.reserve(ent.mapbrushes.size());
+
+        for (auto &b : ent.mapbrushes) {
+            brushes.push_back(&b);
         }
 
-        BSPX_Brushes_AddModel(&ctx, modelnum, ent.mapbrushes);
+        if (modelnum == 0) {
+
+            for (size_t e = 1; e < map.entities.size(); ++e) {
+                mapentity_t &bent = map.entities.at(e);
+
+                brushes.reserve(brushes.size() + ent.mapbrushes.size());
+
+                if (IsWorldBrushEntity(bent)) {
+
+                    for (auto &b : bent.mapbrushes) {
+                        brushes.push_back(&b);
+                    }
+                }
+            }
+
+        }
+
+        if (!brushes.empty()) {
+            BSPX_Brushes_AddModel(&ctx, modelnum, brushes);
+        }
     }
 
     BSPX_Brushes_Finalize(&ctx);
