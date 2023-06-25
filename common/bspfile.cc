@@ -24,6 +24,7 @@
 #include <common/imglib.hh>
 #include <common/log.hh>
 #include <common/settings.hh>
+#include <common/numeric_cast.hh>
 
 #include <cstdint>
 #include <limits.h>

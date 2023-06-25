@@ -32,6 +32,7 @@
 
 #include <common/log.hh>
 #include <common/bsputils.hh>
+#include <common/numeric_cast.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
 #include <common/parallel.hh>

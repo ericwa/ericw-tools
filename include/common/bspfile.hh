@@ -47,48 +47,6 @@ struct lump_t
     void stream_read(std::istream &s);
 };
 
-// helper functions to quickly numerically cast mins/maxs
-// and floor/ceil them in the case of float -> integral
-template<typename T, typename F>
-inline qvec<T, 3> aabb_mins_cast(const qvec<F, 3> &f, const char *overflow_message = "mins")
-{
-    if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
-        return {numeric_cast<T>(floor(f[0]), overflow_message), numeric_cast<T>(floor(f[1]), overflow_message),
-            numeric_cast<T>(floor(f[2]), overflow_message)};
-    else
-        return {numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message),
-            numeric_cast<T>(f[2], overflow_message)};
-}
-
-template<typename T, typename F>
-inline qvec<T, 3> aabb_maxs_cast(const qvec<F, 3> &f, const char *overflow_message = "maxs")
-{
-    if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
-        return {numeric_cast<T>(ceil(f[0]), overflow_message), numeric_cast<T>(ceil(f[1]), overflow_message),
-            numeric_cast<T>(ceil(f[2]), overflow_message)};
-    else
-        return {numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message),
-            numeric_cast<T>(f[2], overflow_message)};
-}
-
-// shortcut template to trim (& convert) std::arrays
-// between two lengths
-template<typename ADest, typename ASrc>
-constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src")
-{
-    ADest dest{};
-
-    for (size_t i = 0; i < std::min(dest.size(), src.size()); i++) {
-        if constexpr (std::is_arithmetic_v<typename ADest::value_type> &&
-                      std::is_arithmetic_v<typename ASrc::value_type>)
-            dest[i] = numeric_cast<typename ADest::value_type>(src[i], overflow_message);
-        else
-            dest[i] = static_cast<typename ADest::value_type>(src[i]);
-    }
-
-    return dest;
-}
-
 struct gamedef_t;
 
 struct contentflags_t
