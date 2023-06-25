@@ -23,6 +23,7 @@ See file, 'COPYING', for details.
 #include <QVBoxLayout>
 
 #include <common/bspfile.hh>
+#include <common/settings.hh>
 
 class GLView;
 class QFileSystemWatcher;

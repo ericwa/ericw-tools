@@ -29,6 +29,7 @@
 #include <common/decompile.hh>
 #include <common/mathlib.hh>
 #include <common/fs.hh>
+#include <common/settings.hh>
 
 #include <map>
 #include <set>

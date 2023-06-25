@@ -29,6 +29,7 @@
 #include <iterator>
 #include <string>
 #include <vector>
+#include <map>
 #include <unordered_map>
 
 const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp);

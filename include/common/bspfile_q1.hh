@@ -25,7 +25,9 @@
 #include <vector>
 #include <string>
 #include <variant>
-#include "qvec.hh"
+
+#include <common/qvec.hh>
+#include <common/bitflags.hh>
 
 constexpr int32_t BSPVERSION = 29;
 constexpr int32_t BSP2RMQVERSION = (('B' << 24) | ('S' << 16) | ('P' << 8) | '2');

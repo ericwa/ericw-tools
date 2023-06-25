@@ -3,6 +3,8 @@
 #include <common/imglib.hh>
 #include <common/entdata.h>
 #include <common/json.hh>
+#include <common/log.hh>
+#include <common/settings.hh>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../3rdparty/stb_image.h"

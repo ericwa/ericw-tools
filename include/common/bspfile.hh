@@ -26,12 +26,16 @@
 #include <vector>
 #include <unordered_map>
 #include <any>
+#include <optional>
 
-#include <common/cmdlib.hh>
-#include <common/log.hh>
+#include <common/fs.hh>
 #include <common/qvec.hh>
 #include <common/aabb.hh>
-#include <common/settings.hh>
+
+namespace settings
+{
+    class common_settings;
+}
 
 struct lump_t
 {
