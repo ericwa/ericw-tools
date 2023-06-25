@@ -551,7 +551,7 @@ static std::vector<std::string> ParseArgs(const QLineEdit *line_edit)
             result.push_back(str.toStdString());
         } else {
             // split by spaces
-            for (const auto &str2 : str.split(' ', QString::SkipEmptyParts)) {
+            for (const auto &str2 : str.split(' ', Qt::SkipEmptyParts)) {
                 qDebug() << "got sub token " << str2;
                 result.push_back(str2.toStdString());
             }
