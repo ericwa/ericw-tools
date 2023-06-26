@@ -410,7 +410,7 @@ static void CalcTreeBounds_r(node_t *node, logging::percent_clock &clock)
     }
 
     if (node->bounds.mins()[0] >= node->bounds.maxs()[0]) {
-        //logging::print("WARNING: {} without a volume\n", node->is_leaf ? "leaf" : "node");
+        // logging::print("WARNING: {} without a volume\n", node->is_leaf ? "leaf" : "node");
 
         // fixme-brushbsp: added this to work around leafs with no portals showing up in "qbspfeatures.map" among other
         // test maps. Not sure if correct or there's another underlying problem.
@@ -615,8 +615,8 @@ static void FloodAreas_r(node_t *node)
 
         // note the current area as bounding the portal
         if (entity->portalareas[1]) {
-            logging::print("WARNING: {}: areaportal touches > 2 areas\n  Entity Bounds: {} -> {}\n",
-                entity->location, entity->bounds.mins(), entity->bounds.maxs());
+            logging::print("WARNING: {}: areaportal touches > 2 areas\n  Entity Bounds: {} -> {}\n", entity->location,
+                entity->bounds.mins(), entity->bounds.maxs());
             return;
         }
 

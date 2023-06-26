@@ -100,8 +100,8 @@ static QStringList GetRecents()
 }
 
 // ETLogWidget
-ETLogWidget::ETLogWidget(QWidget *parent) :
-    QTabWidget(parent)
+ETLogWidget::ETLogWidget(QWidget *parent)
+    : QTabWidget(parent)
 {
     for (size_t i = 0; i < std::size(logTabNames); i++) {
         m_textEdits[i] = new QTextEdit();
@@ -246,21 +246,26 @@ void MainWindow::createPropertiesSidebar()
 
 void MainWindow::logWidgetSetText(ETLogTab tab, const std::string &str)
 {
-    m_outputLogWidget->setTabText((int32_t) tab, str.c_str());
+    m_outputLogWidget->setTabText((int32_t)tab, str.c_str());
 }
 
 void MainWindow::lightpreview_percent_callback(std::optional<uint32_t> percent, std::optional<duration> elapsed)
 {
-    int32_t tabIndex = (int32_t) m_activeLogTab;
+    int32_t tabIndex = (int32_t)m_activeLogTab;
 
     if (elapsed.has_value()) {
-        lightpreview_log_callback(logging::flag::PROGRESS, fmt::format("finished in: {:.3}\n", elapsed.value()).c_str());
-        QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, ETLogWidget::logTabNames[tabIndex]));
+        lightpreview_log_callback(
+            logging::flag::PROGRESS, fmt::format("finished in: {:.3}\n", elapsed.value()).c_str());
+        QMetaObject::invokeMethod(
+            this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, ETLogWidget::logTabNames[tabIndex]));
     } else {
         if (percent.has_value()) {
-            QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, fmt::format("{} [{:>3}%]", ETLogWidget::logTabNames[tabIndex], percent.value())));
+            QMetaObject::invokeMethod(
+                this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab,
+                          fmt::format("{} [{:>3}%]", ETLogWidget::logTabNames[tabIndex], percent.value())));
         } else {
-            QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, fmt::format("{} (...)", ETLogWidget::logTabNames[tabIndex])));
+            QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab,
+                                                fmt::format("{} (...)", ETLogWidget::logTabNames[tabIndex])));
         }
     }
 }
@@ -270,18 +275,16 @@ void MainWindow::lightpreview_log_callback(logging::flag flags, const char *str)
     if (bitflags(flags) & logging::flag::PERCENT)
         return;
 
-    if (QApplication::instance()->thread() != QThread::currentThread())
-    {
-        QMetaObject::invokeMethod(this, std::bind([this, flags](const std::string &s) -> void
-            {
-                lightpreview_log_callback(flags, s.c_str());
-            }, std::string(str)));
+    if (QApplication::instance()->thread() != QThread::currentThread()) {
+        QMetaObject::invokeMethod(this,
+            std::bind([this, flags](const std::string &s) -> void { lightpreview_log_callback(flags, s.c_str()); },
+                std::string(str)));
         return;
     }
 
     auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
     const bool atBottom = textEdit->verticalScrollBar()->value() == textEdit->verticalScrollBar()->maximum();
-    QTextDocument* doc = textEdit->document();
+    QTextDocument *doc = textEdit->document();
     QTextCursor cursor(doc);
     cursor.movePosition(QTextCursor::End);
     cursor.beginEditBlock();
@@ -289,11 +292,11 @@ void MainWindow::lightpreview_log_callback(logging::flag flags, const char *str)
     cursor.insertHtml(QString::asprintf("%s\n", str));
     cursor.endEditBlock();
 
-    //scroll scrollarea to bottom if it was at bottom when we started
+    // scroll scrollarea to bottom if it was at bottom when we started
     //(we don't want to force scrolling to bottom if user is looking at a
-    //higher position)
+    // higher position)
     if (atBottom) {
-        QScrollBar* bar = textEdit->verticalScrollBar();
+        QScrollBar *bar = textEdit->verticalScrollBar();
         bar->setValue(bar->maximum());
     }
 }
@@ -310,8 +313,10 @@ void MainWindow::createOutputLog()
     addDockWidget(Qt::BottomDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 
-    logging::set_print_callback(std::bind(&MainWindow::lightpreview_log_callback, this, std::placeholders::_1, std::placeholders::_2));
-    logging::set_percent_callback(std::bind(&MainWindow::lightpreview_percent_callback, this, std::placeholders::_1, std::placeholders::_2));
+    logging::set_print_callback(
+        std::bind(&MainWindow::lightpreview_log_callback, this, std::placeholders::_1, std::placeholders::_2));
+    logging::set_percent_callback(
+        std::bind(&MainWindow::lightpreview_percent_callback, this, std::placeholders::_1, std::placeholders::_2));
 }
 
 void MainWindow::createStatusBar()
@@ -469,7 +474,8 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
     std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
 {
     auto resetActiveTabText = [&]() {
-        QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab, ETLogWidget::logTabNames[(int32_t) m_activeLogTab]));
+        QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab,
+                                            ETLogWidget::logTabNames[(int32_t)m_activeLogTab]));
     };
 
     auto bsp_path = name;

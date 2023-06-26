@@ -352,7 +352,8 @@ public:
         this->id = ID;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
     {
         /* don't save lightmaps for "trigger" texture */
         if (!Q_strcasecmp(texname, "trigger"))
@@ -980,12 +981,13 @@ struct gamedef_q2_t : public gamedef_t
         max_entity_key = 256;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
     {
         /* don't save lightmaps for "trigger" texture even if light_nodraw is set */
         if (std::string_view(texname).ends_with("/trigger"))
             return false;
-        
+
         // Q2RTX should light nodraw faces
         if (light_nodraw && (flags.native & Q2_SURF_NODRAW)) {
             return true;
@@ -1000,10 +1002,7 @@ struct gamedef_q2_t : public gamedef_t
         return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
     }
 
-    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
-    {
-        return true;
-    }
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override { return true; }
 
     bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_SKY); }
 

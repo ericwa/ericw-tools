@@ -47,18 +47,13 @@ class ETLogWidget : public QTabWidget
     Q_OBJECT
 
 public:
-    static constexpr const char *logTabNames[(size_t) ETLogTab::TAB_TOTAL] = {
-        "lightpreview",
-        "bsp",
-        "vis",
-        "light"
-    };
+    static constexpr const char *logTabNames[(size_t)ETLogTab::TAB_TOTAL] = {"lightpreview", "bsp", "vis", "light"};
 
     explicit ETLogWidget(QWidget *parent = nullptr);
     ~ETLogWidget() { }
 
-    QTextEdit *textEdit(ETLogTab i) { return m_textEdits[(size_t) i]; }
-    const QTextEdit *textEdit(ETLogTab i) const { return m_textEdits[(size_t) i]; }
+    QTextEdit *textEdit(ETLogTab i) { return m_textEdits[(size_t)i]; }
+    const QTextEdit *textEdit(ETLogTab i) const { return m_textEdits[(size_t)i]; }
 
     auto &textEdits() { return m_textEdits; }
 

@@ -113,8 +113,8 @@ constexpr struct
     {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
 
 // Attempt to load a texture from the specified name.
-std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(
-    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix = false);
+std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
+    bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix = false);
 
 enum class meta_ext
 {

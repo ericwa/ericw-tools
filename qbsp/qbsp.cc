@@ -1398,7 +1398,6 @@ static void BSPX_CreateBrushList(void)
                     }
                 }
             }
-
         }
 
         if (!brushes.empty()) {
