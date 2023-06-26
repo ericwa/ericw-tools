@@ -2429,6 +2429,22 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
     reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
 }
 
+void texvecf::stream_read(std::istream &stream)
+{
+    for (size_t i = 0; i < 2; i++)
+        for (size_t x = 0; x < 4; x++) {
+            stream >= this->at(i, x);
+        }
+}
+
+void texvecf::stream_write(std::ostream &stream) const
+{
+    for (size_t i = 0; i < 2; i++)
+        for (size_t x = 0; x < 4; x++) {
+            stream <= this->at(i, x);
+        }
+}
+
 void bspdata_t::bspxentries::transfer(const char *xname, std::vector<uint8_t> &xdata)
 {
     entries.insert_or_assign(xname, std::move(xdata));

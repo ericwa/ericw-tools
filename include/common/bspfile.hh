@@ -371,10 +371,9 @@ struct fmt::formatter<bspversion_t>
     }
 };
 
-template<typename T>
-struct texvec : qmat<T, 2, 4>
+struct texvecf : qmat<float, 2, 4>
 {
-    using qmat<T, 2, 4>::qmat;
+    using qmat<float, 2, 4>::qmat;
 
     template<typename T2>
     constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos) const
@@ -392,30 +391,15 @@ struct texvec : qmat<T, 2, 4>
     // Not blit compatible because qmat is column-major but
     // texvecs are row-major
 
-    void stream_read(std::istream &stream)
-    {
-        for (size_t i = 0; i < 2; i++)
-            for (size_t x = 0; x < 4; x++) {
-                stream >= this->at(i, x);
-            }
-    }
-
-    void stream_write(std::ostream &stream) const
-    {
-        for (size_t i = 0; i < 2; i++)
-            for (size_t x = 0; x < 4; x++) {
-                stream <= this->at(i, x);
-            }
-    }
+    void stream_read(std::istream &stream);
+    void stream_write(std::ostream &stream) const;
 };
 
 // Fmt support
-template<class T>
-struct fmt::formatter<texvec<T>> : fmt::formatter<qmat<T, 2, 4>>
+template<>
+struct fmt::formatter<texvecf> : fmt::formatter<qmat<float, 2, 4>>
 {
 };
-
-using texvecf = texvec<float>;
 
 // type to store a hull index; max 256 hulls, zero is valid.
 using hull_index_t = std::optional<uint8_t>;

@@ -66,8 +66,7 @@ struct texdef_valve_t
     }
 
     // FIXME: merge with map.cc copy
-    template<typename T>
-    inline texdef_valve_t(const texvec<T> &in_vecs)
+    inline texdef_valve_t(const texvecf &in_vecs)
     {
         // From the valve -> bsp code,
         //        out->vecs[n].xyz = axis[n].xyz / scale[n];
