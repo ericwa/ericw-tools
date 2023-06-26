@@ -3161,8 +3161,17 @@ void ProcessMapBrushes()
                 brush.func_areaportal = areaportal;
                 brush.is_hint = MapBrush_IsHint(brush);
 
+                // _chop signals that a brush does not partake in the BSP chopping phase.
+                // this allows brushes embedded in others to be retained.
                 if (entity.epairs.has("_chop") && !entity.epairs.get_int("_chop")) {
                     brush.no_chop = true;
+                }
+
+                // brushes are sorted by their _chop_order; higher numbered brushes
+                // will "eat" lower numbered brushes. This effectively overrides the
+                // brush order of the map.
+                if (entity.epairs.has("_chop_order")) {
+                    brush.chop_index = entity.epairs.get_int("_chop_order");
                 }
 
                 // calculate brush bounds

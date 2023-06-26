@@ -108,6 +108,7 @@ public:
     mapentity_t *func_areaportal = nullptr;
     bool is_hint = false; // whether we are a hint brush or not (at least one side is "hint" or SURF_HINT)
     bool no_chop = false; // don't chop this
+    int32_t chop_index = 0; // chopping order; higher numbers chop lower numbers
 };
 
 struct lumpdata

@@ -1036,6 +1036,14 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     // always chop the other hulls to reduce brush tests
     if (qbsp_options.chop.value() || hullnum.value_or(0)) {
+        std::sort(brushes.begin(), brushes.end(), [](const bspbrush_t::ptr &a, const bspbrush_t::ptr &b) -> bool {
+            if (a->mapbrush->chop_index == b->mapbrush->chop_index) {
+                return a->mapbrush->line.line_number < b->mapbrush->line.line_number;
+            }
+
+            return a->mapbrush->chop_index < b->mapbrush->chop_index;
+        });
+
         ChopBrushes(brushes, qbsp_options.chopfragment.value());
     }
 
