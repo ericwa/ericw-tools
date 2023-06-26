@@ -273,7 +273,7 @@ static void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const
 
 void ErrorCallback(void *userptr, const RTCError code, const char *str)
 {
-    fmt::print("RTC Error {}: {}\n", code, str);
+    fmt::print("RTC Error {}: {}\n", static_cast<int>(code), str);
 }
 
 const triinfo &Embree_LookupTriangleInfo(unsigned int geomID, unsigned int primID)

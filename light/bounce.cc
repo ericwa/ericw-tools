@@ -222,7 +222,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     // Get face normal and midpoint...
     qvec3d facenormal = faceplane.normal;
     qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
-    
+
     vector<qvec3f> points;
 
     if (light_options.emissivequality.value() == emissivequality_t::LOW ||
@@ -241,8 +241,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     for (auto &style : emitcolors) {
-        MakeBounceLight(
-            bsp, cfg, surf, style.second, style.first, points, winding, area, facenormal, facemidpoint);
+        MakeBounceLight(bsp, cfg, surf, style.second, style.first, points, winding, area, facenormal, facemidpoint);
     }
 }
 
@@ -252,5 +251,5 @@ void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
     logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { MakeBounceLightsThread(cfg, bsp, face); });
 
-    //logging::print("{} bounce lights created, with {} points\n", bouncelights.size(), bouncelightpoints);
+    // logging::print("{} bounce lights created, with {} points\n", bouncelights.size(), bouncelightpoints);
 }

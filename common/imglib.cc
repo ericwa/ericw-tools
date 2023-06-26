@@ -3,6 +3,8 @@
 #include <common/imglib.hh>
 #include <common/entdata.h>
 #include <common/json.hh>
+#include <common/log.hh>
+#include <common/settings.hh>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../3rdparty/stb_image.h"
@@ -324,11 +326,10 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
     return avg /= n;
 }
 
-std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(
-    const std::string_view &name, bool meta_only, const gamedef_t *game, const settings::common_settings &options,
-    bool no_prefix)
+std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
+    bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix)
 {
-    fs::path prefix {};
+    fs::path prefix{};
 
     if (!no_prefix && game->id == GAME_QUAKE_II) {
         prefix = "textures";

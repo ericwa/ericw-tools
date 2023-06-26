@@ -32,6 +32,7 @@
 
 #include <common/log.hh>
 #include <common/bsputils.hh>
+#include <common/numeric_cast.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
 #include <common/parallel.hh>
@@ -300,7 +301,9 @@ light_settings::light_settings()
           this, "lightmap_scale", 0, &experimental_group, "force change lightmap scale; vanilla engines only allow 16"},
       extra{
           this, {"extra", "extra4"}, 1, &performance_group, "supersampling; 2x2 (extra) or 4x4 (extra4) respectively"},
-      emissivequality{this, "emissivequality", emissivequality_t::LOW, { { "LOW", emissivequality_t::LOW }, { "MEDIUM", emissivequality_t::MEDIUM }, { "HIGH", emissivequality_t::HIGH } }, &performance_group,
+      emissivequality{this, "emissivequality", emissivequality_t::LOW,
+          {{"LOW", emissivequality_t::LOW}, {"MEDIUM", emissivequality_t::MEDIUM}, {"HIGH", emissivequality_t::HIGH}},
+          &performance_group,
           "low = one point in the center of the face, med = center + all verts, high = spread points out for antialiasing"},
       visapprox{this, "visapprox", visapprox_t::AUTO,
           {{"auto", visapprox_t::AUTO}, {"none", visapprox_t::NONE}, {"vis", visapprox_t::VIS},
@@ -744,9 +747,7 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
 void ClearLightmapSurfaces(mbsp_t *bsp)
 {
     logging::funcheader();
-    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
-        light_surfaces[i].reset();
-    });
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) { light_surfaces[i].reset(); });
 }
 
 static void FindModelInfo(const mbsp_t *bsp)

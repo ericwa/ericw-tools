@@ -42,9 +42,9 @@ struct surfacelight_t
     {
         bool bounce = false; // whether this is a direct or indirect emission
         /**
-        * disables use of the surfnormal. We set this to true on sky surface lights,
-        * to avoid black seams on geometry meeting the sky
-        */
+         * disables use of the surfnormal. We set this to true on sky surface lights,
+         * to avoid black seams on geometry meeting the sky
+         */
         bool omnidirectional = false;
         // rescale faces to account for perpendicular lights
         bool rescale = false;

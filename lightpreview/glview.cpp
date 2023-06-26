@@ -604,7 +604,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     img::load_textures(&bsp, settings);
 
     std::optional<bspxfacenormals> facenormals;
-    
+
     if (use_bspx_normals)
         facenormals = BSPX_FaceNormals(bsp, bspx);
 

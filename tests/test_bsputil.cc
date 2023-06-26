@@ -6,6 +6,8 @@
 #include <qbsp/map.hh>
 #include <bsputil/bsputil.hh>
 
+#include <fstream>
+
 #include "testmaps.hh"
 #include "test_qbsp.hh"
 

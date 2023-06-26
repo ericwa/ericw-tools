@@ -24,7 +24,9 @@
 #include <iosfwd>
 #include <vector>
 #include <string>
-#include "qvec.hh"
+
+#include <common/qvec.hh>
+#include <common/bitflags.hh>
 
 constexpr int32_t Q2_BSPVERSION = 38;
 constexpr int32_t Q2_BSPIDENT = (('P' << 24) + ('S' << 16) + ('B' << 8) + 'I');

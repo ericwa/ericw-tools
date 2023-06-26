@@ -468,7 +468,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     for (auto &rect : rectangles) {
         ExportLightmapUVs(&bsp, rect);
     }
-    
+
     return result;
 }
 

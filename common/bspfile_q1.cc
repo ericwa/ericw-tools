@@ -19,6 +19,7 @@
 
 #include <common/bspfile.hh>
 #include <common/cmdlib.hh>
+#include <common/numeric_cast.hh>
 
 // dheader_t
 

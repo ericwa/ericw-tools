@@ -125,7 +125,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
 
         if (light_options.emissivequality.value() == emissivequality_t::LOW ||
             light_options.emissivequality.value() == emissivequality_t::MEDIUM) {
-            l->points = { l->pos };
+            l->points = {l->pos};
             l->points_before_culling++;
             total_surflight_points++;
 

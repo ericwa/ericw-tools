@@ -22,6 +22,10 @@
 #include <common/bspfile.hh>
 #include <common/fs.hh>
 #include <common/imglib.hh>
+#include <common/log.hh>
+#include <common/settings.hh>
+#include <common/numeric_cast.hh>
+
 #include <cstdint>
 #include <limits.h>
 
@@ -348,7 +352,8 @@ public:
         this->id = ID;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
     {
         /* don't save lightmaps for "trigger" texture */
         if (!Q_strcasecmp(texname, "trigger"))
@@ -976,12 +981,13 @@ struct gamedef_q2_t : public gamedef_t
         max_entity_key = 256;
     }
 
-    bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
     {
         /* don't save lightmaps for "trigger" texture even if light_nodraw is set */
         if (std::string_view(texname).ends_with("/trigger"))
             return false;
-        
+
         // Q2RTX should light nodraw faces
         if (light_nodraw && (flags.native & Q2_SURF_NODRAW)) {
             return true;
@@ -996,10 +1002,7 @@ struct gamedef_q2_t : public gamedef_t
         return !(flags.native & (Q2_SURF_NODRAW | Q2_SURF_SKIP));
     }
 
-    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
-    {
-        return true;
-    }
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override { return true; }
 
     bool surf_is_subdivided(const surfflags_t &flags) const override { return !(flags.native & Q2_SURF_SKY); }
 
@@ -2423,6 +2426,22 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
     reader.read(Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
     reader.read(Q2_LUMP_AREAS, bsp.dareas);
     reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
+}
+
+void texvecf::stream_read(std::istream &stream)
+{
+    for (size_t i = 0; i < 2; i++)
+        for (size_t x = 0; x < 4; x++) {
+            stream >= this->at(i, x);
+        }
+}
+
+void texvecf::stream_write(std::ostream &stream) const
+{
+    for (size_t i = 0; i < 2; i++)
+        for (size_t x = 0; x < 4; x++) {
+            stream <= this->at(i, x);
+        }
 }
 
 void bspdata_t::bspxentries::transfer(const char *xname, std::vector<uint8_t> &xdata)

@@ -21,6 +21,7 @@
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 #include <common/log.hh>
+#include <common/settings.hh>
 
 #include <fstream>
 #include <fmt/ostream.h>

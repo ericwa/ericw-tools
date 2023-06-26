@@ -92,8 +92,7 @@ void print(flag logflag, const char *str)
         return;
     }
 
-    if (active_print_callback)
-    {
+    if (active_print_callback) {
         active_print_callback(logflag, str);
         return;
     }

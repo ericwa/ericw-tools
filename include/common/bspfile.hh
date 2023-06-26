@@ -26,12 +26,16 @@
 #include <vector>
 #include <unordered_map>
 #include <any>
+#include <optional>
 
-#include <common/cmdlib.hh>
-#include <common/log.hh>
+#include <common/fs.hh>
 #include <common/qvec.hh>
 #include <common/aabb.hh>
-#include <common/settings.hh>
+
+namespace settings
+{
+class common_settings;
+}
 
 struct lump_t
 {
@@ -42,48 +46,6 @@ struct lump_t
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
 };
-
-// helper functions to quickly numerically cast mins/maxs
-// and floor/ceil them in the case of float -> integral
-template<typename T, typename F>
-inline qvec<T, 3> aabb_mins_cast(const qvec<F, 3> &f, const char *overflow_message = "mins")
-{
-    if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
-        return {numeric_cast<T>(floor(f[0]), overflow_message), numeric_cast<T>(floor(f[1]), overflow_message),
-            numeric_cast<T>(floor(f[2]), overflow_message)};
-    else
-        return {numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message),
-            numeric_cast<T>(f[2], overflow_message)};
-}
-
-template<typename T, typename F>
-inline qvec<T, 3> aabb_maxs_cast(const qvec<F, 3> &f, const char *overflow_message = "maxs")
-{
-    if constexpr (std::is_floating_point_v<F> && !std::is_floating_point_v<T>)
-        return {numeric_cast<T>(ceil(f[0]), overflow_message), numeric_cast<T>(ceil(f[1]), overflow_message),
-            numeric_cast<T>(ceil(f[2]), overflow_message)};
-    else
-        return {numeric_cast<T>(f[0], overflow_message), numeric_cast<T>(f[1], overflow_message),
-            numeric_cast<T>(f[2], overflow_message)};
-}
-
-// shortcut template to trim (& convert) std::arrays
-// between two lengths
-template<typename ADest, typename ASrc>
-constexpr ADest array_cast(const ASrc &src, const char *overflow_message = "src")
-{
-    ADest dest{};
-
-    for (size_t i = 0; i < std::min(dest.size(), src.size()); i++) {
-        if constexpr (std::is_arithmetic_v<typename ADest::value_type> &&
-                      std::is_arithmetic_v<typename ASrc::value_type>)
-            dest[i] = numeric_cast<typename ADest::value_type>(src[i], overflow_message);
-        else
-            dest[i] = static_cast<typename ADest::value_type>(src[i]);
-    }
-
-    return dest;
-}
 
 struct gamedef_t;
 
@@ -288,7 +250,8 @@ struct gamedef_t
     gamedef_t(const char *default_base_dir);
 
     // surface stores lightmap/luxel color data
-    virtual bool surf_is_lightmapped(const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const = 0;
+    virtual bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const = 0;
     // surface can be emissive
     virtual bool surf_is_emissive(const surfflags_t &flags, const char *texname) const = 0;
     virtual bool surf_is_subdivided(const surfflags_t &flags) const = 0;
@@ -409,10 +372,9 @@ struct fmt::formatter<bspversion_t>
     }
 };
 
-template<typename T>
-struct texvec : qmat<T, 2, 4>
+struct texvecf : qmat<float, 2, 4>
 {
-    using qmat<T, 2, 4>::qmat;
+    using qmat<float, 2, 4>::qmat;
 
     template<typename T2>
     constexpr qvec<T2, 2> uvs(const qvec<T2, 3> &pos) const
@@ -430,30 +392,15 @@ struct texvec : qmat<T, 2, 4>
     // Not blit compatible because qmat is column-major but
     // texvecs are row-major
 
-    void stream_read(std::istream &stream)
-    {
-        for (size_t i = 0; i < 2; i++)
-            for (size_t x = 0; x < 4; x++) {
-                stream >= this->at(i, x);
-            }
-    }
-
-    void stream_write(std::ostream &stream) const
-    {
-        for (size_t i = 0; i < 2; i++)
-            for (size_t x = 0; x < 4; x++) {
-                stream <= this->at(i, x);
-            }
-    }
+    void stream_read(std::istream &stream);
+    void stream_write(std::ostream &stream) const;
 };
 
 // Fmt support
-template<class T>
-struct fmt::formatter<texvec<T>> : fmt::formatter<qmat<T, 2, 4>>
+template<>
+struct fmt::formatter<texvecf> : fmt::formatter<qmat<float, 2, 4>>
 {
 };
-
-using texvecf = texvec<float>;
 
 // type to store a hull index; max 256 hulls, zero is valid.
 using hull_index_t = std::optional<uint8_t>;

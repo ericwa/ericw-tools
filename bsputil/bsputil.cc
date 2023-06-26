@@ -29,6 +29,7 @@
 #include <common/decompile.hh>
 #include <common/mathlib.hh>
 #include <common/fs.hh>
+#include <common/settings.hh>
 
 #include <map>
 #include <set>
@@ -671,8 +672,7 @@ int bsputil_main(int argc, char **argv)
                 m.maxs *= scalar;
             }
 
-            auto scaleTexInfo = [&](mtexinfo_t &t)
-            {
+            auto scaleTexInfo = [&](mtexinfo_t &t) {
                 // update texinfo
 
                 const qmat3x3d inversescaleM{// column-major...
