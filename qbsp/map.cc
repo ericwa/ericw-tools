@@ -2496,7 +2496,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
 
     // ericw -- brush primitives
     if (!parser.parse_token(PARSE_PEEK))
-        FError("{}: unexpected EOF after { beginning brush", parser.location);
+        FError("{}: unexpected EOF after {{ beginning brush", parser.location);
 
     if (parser.token == "(") {
         brush.format = brushformat_t::NORMAL;
@@ -2512,7 +2512,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
 
         // mandatory
         if (parser.token != "{")
-            FError("Brush primitives: expected second { at beginning of brush, got \"{}\"", parser.token);
+            FError("Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.token);
     }
     // ericw -- end brush primitives
 
@@ -2675,7 +2675,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         if (!parser.parse_token())
             FError("Brush primitives: unexpected EOF (no closing brace)");
         if (parser.token != "}")
-            FError("Brush primitives: Expected }, got: {}", parser.token);
+            FError("Brush primitives: Expected }}, got: {}", parser.token);
     }
     // ericw -- end brush primitives
 
@@ -2693,7 +2693,7 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &is
     }
 
     if (parser.token != "{") {
-        FError("{}: Invalid entity format, { not found", parser.location);
+        FError("{}: Invalid entity format, {{ not found", parser.location);
     }
 
     entity.mapbrushes.clear();

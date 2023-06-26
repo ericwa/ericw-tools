@@ -73,23 +73,30 @@ void close();
 // print to respective targets based on log flag
 void print(flag logflag, const char *str);
 
+// print to respective targets based on log flag
+void vprint(flag logflag, fmt::string_view format, fmt::format_args args);
+
 // print to default targets
 void print(const char *str);
 
+// print to default targets
+void vprint(fmt::string_view format, fmt::format_args args);
+
 // format print to specified targets
-template<typename... Args>
-inline void print(flag type, const char *fmt, const Args &...args)
+// see: https://fmt.dev/10.0.0/api.html#argument-lists
+template<typename... T>
+inline void print(flag type, fmt::format_string<T...> format, T &&...args)
 {
     if (mask & type) {
-        print(type, fmt::format(fmt::runtime(fmt), std::forward<const Args &>(args)...).c_str());
+        vprint(type, format, fmt::make_format_args(args...));
     }
 }
 
 // format print to default targets
-template<typename... Args>
-inline void print(const char *formt, const Args &...args)
+template<typename... T>
+inline void print(fmt::format_string<T...> format, T &&...args)
 {
-    print(flag::DEFAULT, fmt::format(fmt::runtime(formt), std::forward<const Args &>(args)...).c_str());
+    vprint(flag::DEFAULT, format, fmt::make_format_args(args...));
 }
 
 // set print callback
@@ -209,12 +216,12 @@ public:
  * lightpreview can catch this to avoid crashing the whole UI.
  */
 [[noreturn]] void Error(const char *error);
+[[noreturn]] void VError(fmt::string_view format, fmt::format_args args);
 
-template<typename... Args>
-[[noreturn]] inline void Error(const char *fmt, const Args &...args)
+template<typename... T>
+[[noreturn]] inline void Error(fmt::format_string<T...> format, T &&...args)
 {
-    auto formatted = fmt::format(fmt::runtime(fmt), std::forward<const Args &>(args)...);
-    Error(formatted.c_str());
+    VError(format, fmt::make_format_args(args...));
 }
 
 #define FError(fmt, ...) Error("{}: " fmt, __func__, ##__VA_ARGS__)

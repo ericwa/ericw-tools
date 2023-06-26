@@ -149,7 +149,7 @@ void entdict_t::parse(parser_base_t &parser)
     if (!parser.parse_token())
         return;
     if (parser.token != "{")
-        FError("found {} when expecting {", parser.token);
+        FError("found {} when expecting {{", parser.token);
 
     /* go through all the keys in this entity */
     while (1) {

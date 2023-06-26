@@ -140,9 +140,21 @@ void print(flag logflag, const char *str)
     print_mutex.unlock();
 }
 
+void vprint(flag logflag, fmt::string_view format, fmt::format_args args)
+{
+    // see https://fmt.dev/10.0.0/api.html#argument-lists
+
+    print(logflag, fmt::vformat(format, args).c_str());
+}
+
 void print(const char *str)
 {
     print(flag::DEFAULT, str);
+}
+
+void vprint(fmt::string_view format, fmt::format_args args)
+{
+    vprint(flag::DEFAULT, format, args);
 }
 
 static time_point start_time;
@@ -385,4 +397,10 @@ ericwtools_error::ericwtools_error(const char *what)
     __debugbreak();
 #endif
     throw ericwtools_error(error);
+}
+
+[[noreturn]] void VError(fmt::string_view format, fmt::format_args args)
+{
+    auto formatted = fmt::vformat(format, args);
+    Error(formatted.c_str());
 }

@@ -508,7 +508,7 @@ bool ParseEntity(parser_t &parser, map_entity_t &entity)
     }
 
     if (parser.token != "{") {
-        FError("{}: Invalid entity format, { not found", parser.location);
+        FError("{}: Invalid entity format, {{ not found", parser.location);
     }
 
     do {
