@@ -17,9 +17,10 @@
     See file, 'COPYING', for details.
 */
 
+#include <light/litfile.hh>
+
 #include <fstream>
 
-#include <light/litfile.hh>
 #include <light/light.hh>
 
 #include <common/bspfile.hh>

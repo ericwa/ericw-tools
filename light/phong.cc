@@ -18,10 +18,12 @@
     See file, 'COPYING', for details.
 */
 
+#include <light/phong.hh>
+
+#include <light/light.hh> // for extended_texinfo_flags
+
 #include <cstdint>
 #include <iostream>
-
-#include <light/phong.hh>
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>

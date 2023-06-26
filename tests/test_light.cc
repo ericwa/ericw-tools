@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <light/light.hh>
+#include <light/trace.hh> // for clamp_texcoord
 #include <light/entities.hh>
 
 #include <random>

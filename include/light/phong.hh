@@ -20,19 +20,14 @@
 
 #pragma once
 
-#include <common/cmdlib.hh>
-#include <common/mathlib.hh>
-#include <common/bsputils.hh>
-#include <common/bspfile.hh>
-#include <common/log.hh>
-
-#include <light/light.hh>
-
 #include <set>
 #include <map>
 #include <vector>
 
 #include <common/qvec.hh>
+
+struct mbsp_t;
+struct mface_t;
 
 struct neighbour_t
 {

@@ -18,14 +18,16 @@
     See file, 'COPYING', for details.
 */
 
+#include <light/bounce.hh>
+
 #include <cstdint>
-// #include <cstdio>
 #include <atomic>
 
 #include <light/light.hh>
-#include <light/bounce.hh>
+#include <light/entities.hh> // for EstimateVisibleBoundsAtPoint
 #include <light/ltface.hh>
 #include <light/surflight.hh>
+#include <light/trace.hh> // for Light_PointInLeaf
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>

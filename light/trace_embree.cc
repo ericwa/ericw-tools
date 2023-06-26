@@ -17,9 +17,11 @@
     See file, 'COPYING', for details.
 */
 
-#include <light/light.hh>
-#include <light/bounce.hh>
 #include <light/trace_embree.hh>
+
+#include <light/light.hh>
+#include <light/trace.hh> // for SampleTexture
+
 #include <common/bsputils.hh>
 #include <common/polylib.hh>
 #include <vector>

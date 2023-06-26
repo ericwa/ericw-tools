@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#include <light/lightgrid.hh>
+
 #include <cstdint>
 #include <iostream>
 #include <fstream>
@@ -28,7 +30,6 @@
 #include <fmt/chrono.h>
 
 #include <light/light.hh>
-#include <light/bounce.hh>
 #include <light/entities.hh>
 #include <light/ltface.hh>
 

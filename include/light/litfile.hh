@@ -19,7 +19,13 @@
 
 #pragma once
 
-#include <common/bspfile.hh>
+#include <array>
+#include <vector>
+
+#include <common/qvec.hh>
+#include <common/fs.hh>
+
+struct mbsp_t;
 
 constexpr int32_t LIT_VERSION = 1;
 

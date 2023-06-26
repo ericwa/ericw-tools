@@ -17,15 +17,18 @@
     See file, 'COPYING', for details.
 */
 
+#include <light/ltface.hh>
+
 #include <light/light.hh>
+#include <light/trace_embree.hh>
 #include <light/phong.hh>
-#include <light/bounce.hh>
 #include <light/surflight.hh> //mxd
 #include <light/entities.hh>
 #include <light/lightgrid.hh>
 #include <light/trace.hh>
-#include <light/ltface.hh>
+#include <light/litfile.hh> // for facesup_t
 
+#include <common/imglib.hh>
 #include <common/log.hh>
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
@@ -589,6 +592,8 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     lightsurf->modelinfo = modelinfo;
     lightsurf->bsp = bsp;
     lightsurf->face = face;
+    lightsurf->occlusion_stream = std::make_unique<raystream_occlusion_t>();
+    lightsurf->intersection_stream = std::make_unique<raystream_intersection_t>();
 
     if (Face_IsLightmapped(bsp, face)) {
         /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
@@ -730,8 +735,8 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         lightsurf->extents.origin += modelinfo->offset;
         lightsurf->extents.bounds = lightsurf->extents.bounds.translate(modelinfo->offset);
 
-        lightsurf->intersection_stream.resize(lightsurf->samples.size());
-        lightsurf->occlusion_stream.resize(lightsurf->samples.size());
+        lightsurf->intersection_stream->resize(lightsurf->samples.size());
+        lightsurf->occlusion_stream->resize(lightsurf->samples.size());
 
         /* Setup vis data */
         CalcPvs(bsp, lightsurf.get());
@@ -1225,7 +1230,7 @@ static void LightFace_Entity(
     /*
      * Check it for real
      */
-    raystream_occlusion_t &rs = lightsurf->occlusion_stream;
+    raystream_occlusion_t &rs = *lightsurf->occlusion_stream;
     rs.clearPushedRays();
 
     for (int i = 0; i < lightsurf->samples.size(); i++) {
@@ -1389,7 +1394,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
     }
 
     /* Check each point... */
-    raystream_intersection_t &rs = lightsurf->intersection_stream;
+    raystream_intersection_t &rs = *lightsurf->intersection_stream;
     rs.clearPushedRays();
 
     for (int i = 0; i < lightsurf->samples.size(); i++) {
@@ -1710,7 +1715,7 @@ static void LightFace_LocalMin(
             continue;
         }
 
-        raystream_occlusion_t &rs = lightsurf->occlusion_stream;
+        raystream_occlusion_t &rs = *lightsurf->occlusion_stream;
         rs.clearPushedRays();
 
         lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, entity->style.value(), lightsurf);
@@ -2001,7 +2006,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
             else if (SurfaceLight_SphereCull(&vpl, lightsurf, vpl_setting, surflight_gate, hotspot_clamp))
                 continue;
 
-            raystream_occlusion_t &rs = lightsurf->occlusion_stream;
+            raystream_occlusion_t &rs = *lightsurf->occlusion_stream;
 
             for (int c = 0; c < vpl.points.size(); c++) {
                 if (light_options.visapprox.value() == visapprox_t::VIS &&
@@ -2353,7 +2358,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
     }
 
     for (int j = 0; j < numDirtVectors; j++) {
-        raystream_intersection_t &rs = lightsurf->intersection_stream;
+        raystream_intersection_t &rs = *lightsurf->intersection_stream;
         rs.clearPushedRays();
 
         // fill in input buffers

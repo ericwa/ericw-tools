@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include <light/ltface.hh>
+#include <light/ltface.hh> // for lightgrid_samples_t
 
 struct bspdata_t;
 

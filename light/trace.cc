@@ -18,6 +18,8 @@
 */
 
 #include <light/trace.hh>
+
+#include <common/imglib.hh>
 #include <common/bsputils.hh>
 
 /*

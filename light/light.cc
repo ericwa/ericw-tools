@@ -17,18 +17,21 @@
     See file, 'COPYING', for details.
 */
 
+#include <light/light.hh>
+
 #include <cstdint>
 #include <iostream>
 #include <fmt/ostream.h>
 #include <fmt/chrono.h>
 
-#include <light/light.hh>
 #include <light/lightgrid.hh>
 #include <light/phong.hh>
 #include <light/bounce.hh>
 #include <light/surflight.hh> //mxd
 #include <light/entities.hh>
 #include <light/ltface.hh>
+#include <light/litfile.hh> // for facesup_t
+#include <light/trace_embree.hh>
 
 #include <common/log.hh>
 #include <common/bsputils.hh>

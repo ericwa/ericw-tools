@@ -20,15 +20,11 @@
 
 #pragma once
 
-#include <common/cmdlib.hh>
-#include <common/mathlib.hh>
-
-#include <vector>
-#include <map>
-
-#include <common/qvec.hh>
-#include <forward_list>
-#include "surflight.hh"
+namespace settings
+{
+class worldspawn_keys;
+}
+struct mbsp_t;
 
 // public functions
 

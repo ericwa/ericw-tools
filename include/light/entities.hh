@@ -19,15 +19,22 @@
 
 #pragma once
 
-#include <map>
 #include <string>
 #include <vector>
 
-#include <common/entdata.h>
-#include <common/mathlib.hh>
-#include <common/bspfile.hh>
-#include <common/imglib.hh>
-#include <light/light.hh>
+#include <common/aabb.hh>
+#include <common/settings.hh>
+#include <common/entdata.h> // for entdict_t
+#include <light/light.hh> // for sun_t
+
+struct mbsp_t;
+struct mface_t;
+struct mleaf_t;
+
+namespace img
+{
+struct texture;
+}
 
 constexpr vec_t DEFAULTLIGHTLEVEL = 300.0;
 

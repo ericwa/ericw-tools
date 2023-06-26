@@ -19,25 +19,23 @@
 
 #pragma once
 
-#include <common/cmdlib.hh>
-#include <common/mathlib.hh>
-#include <common/bspfile.hh>
-#include <common/log.hh>
-#include <common/threads.hh>
-#include <common/polylib.hh>
 #include <common/qvec.hh>
 
-#include <light/litfile.hh>
-#include <light/trace.hh>
-#include <light/entities.hh>
-
-#include <vector>
-#include <map>
-#include <string>
-#include <cassert>
-#include <limits>
-#include <sstream>
 #include <atomic>
+#include <memory>
+
+struct mface_t;
+struct mbsp_t;
+
+namespace settings
+{
+class worldspawn_keys;
+}
+struct lightsurf_t;
+struct bspx_decoupled_lm_perface;
+class faceextents_t;
+class light_t;
+struct facesup_t;
 
 extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;

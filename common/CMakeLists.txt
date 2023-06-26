@@ -20,6 +20,7 @@ add_library(common STATIC
     prtfile.cc
     debugger.natvis
     ../include/common/aabb.hh
+    ../include/common/aligned_allocator.hh
     ../include/common/bitflags.hh
     ../include/common/bspinfo.hh
     ../include/common/bspfile.hh
@@ -34,6 +35,7 @@ add_library(common STATIC
     ../include/common/iterators.hh
     ../include/common/log.hh
     ../include/common/mathlib.hh
+    ../include/common/numeric_cast.hh
     ../include/common/parser.hh
     ../include/common/polylib.hh
     ../include/common/qvec.hh

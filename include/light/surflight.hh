@@ -21,7 +21,19 @@ See file, 'COPYING', for details.
 #pragma once
 
 #include <vector>
+#include <optional>
 #include <tuple>
+
+#include <common/qvec.hh>
+#include <common/aabb.hh>
+
+struct mleaf_t;
+struct mface_t;
+struct mbsp_t;
+namespace settings
+{
+class worldspawn_keys;
+}
 
 struct surfacelight_t
 {

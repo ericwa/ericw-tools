@@ -19,18 +19,17 @@
 
 #pragma once
 
-#include <common/cmdlib.hh>
-#include <common/mathlib.hh>
-#include <common/bspfile.hh>
-#include <common/log.hh>
-#include <common/threads.hh>
-#include <common/polylib.hh>
+#include <common/aligned_allocator.hh>
+#include <common/qvec.hh>
+#include <common/log.hh> // for FError
+
 #include <vector>
+
+struct mbsp_t;
+class modelinfo_t;
 
 void ResetEmbree();
 void Embree_TraceInit(const mbsp_t *bsp);
-
-class modelinfo_t;
 
 class raystream_embree_common_t
 {
@@ -106,6 +105,14 @@ public:
 
 extern RTCScene scene;
 
+class light_t;
+struct mface_t;
+struct mtexinfo_t;
+namespace img
+{
+struct texture;
+}
+
 inline RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &dir, vec_t dist)
 {
     RTCRayHit ray;
@@ -170,6 +177,13 @@ struct sceneinfo
 extern sceneinfo skygeom; // sky. always occludes.
 extern sceneinfo solidgeom; // solids. always occludes.
 extern sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
+
+enum class hittype_t : uint8_t
+{
+    NONE = 0,
+    SOLID = 1,
+    SKY = 2
+};
 
 inline const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
 {

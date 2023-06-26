@@ -17,15 +17,20 @@
     See file, 'COPYING', for details.
 */
 
+#include <light/entities.hh>
+
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <common/imglib.hh> // for img::find
 #include <common/log.hh>
 #include <common/cmdlib.hh>
 #include <common/parser.hh>
 
+#include <light/litfile.hh>
+#include <light/trace.hh>
+#include <light/trace_embree.hh>
 #include <light/light.hh>
-#include <light/entities.hh>
 #include <common/bsputils.hh>
 #include <common/parallel.hh>
 

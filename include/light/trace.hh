@@ -19,35 +19,20 @@
 
 #pragma once
 
-#include <common/cmdlib.hh>
-#include <common/mathlib.hh>
-#include <common/bspfile.hh>
-#include <common/log.hh>
-#include <common/threads.hh>
-#include <common/polylib.hh>
-#include <common/imglib.hh>
+#include <common/qvec.hh>
 
-#include <vector>
-#include <map>
-#include <string>
-#include <cassert>
-#include <limits>
-#include <sstream>
-#include <utility> // for std::pair
-
-enum class hittype_t : uint8_t
+namespace img
 {
-    NONE = 0,
-    SOLID = 1,
-    SKY = 2
-};
+struct texture;
+}
+struct mtexinfo_t;
+struct mface_t;
+struct mbsp_t;
 
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
 qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp,
     const qvec3d &point); // mxd. Palette index -> RGBA
 
 class modelinfo_t;
-
+struct mleaf_t;
 const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3d &point);
-
-#include "trace_embree.hh"

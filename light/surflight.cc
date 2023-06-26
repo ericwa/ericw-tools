@@ -18,10 +18,13 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 See file, 'COPYING', for details.
 */
 
+#include <light/surflight.hh>
+
 #include <cassert>
 
+#include <light/entities.hh> // for FixLightOnFace
+#include <light/trace.hh> // for Light_PointInLeaf
 #include <light/light.hh>
-#include <light/surflight.hh>
 #include <light/ltface.hh>
 
 #include <common/polylib.hh>

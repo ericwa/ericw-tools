@@ -19,29 +19,17 @@
 
 #pragma once
 
-#include <common/cmdlib.hh>
-#include <common/mathlib.hh>
-#include <common/bspfile.hh>
-#include <common/log.hh>
-#include <common/threads.hh>
-#include <common/polylib.hh>
-#include <common/imglib.hh>
 #include <common/settings.hh>
-#include <common/bitflags.hh>
-
-#include <light/litfile.hh>
-#include <light/trace.hh>
-
-#include <vector>
-#include <map>
-#include <set>
-#include <string>
-#include <cassert>
-#include <limits>
-#include <sstream>
+#include <common/bsputils.hh> // for faceextents_t
 
 #include <common/qvec.hh>
-#include <common/bsputils.hh>
+
+namespace img
+{
+struct texture;
+}
+struct mbsp_t;
+struct mface_t;
 
 constexpr vec_t LIGHT_ON_EPSILON = 0.1;
 constexpr vec_t LIGHT_ANGLE_EPSILON = 0.01;
@@ -95,6 +83,8 @@ public:
 using lightmapdict_t = std::vector<lightmap_t>;
 
 struct surfacelight_t;
+class raystream_occlusion_t;
+class raystream_intersection_t;
 
 struct lightsurf_t
 {
@@ -149,8 +139,8 @@ struct lightsurf_t
     int height;
 
     // ray batch stuff
-    raystream_occlusion_t occlusion_stream;
-    raystream_intersection_t intersection_stream;
+    std::unique_ptr<raystream_occlusion_t> occlusion_stream;
+    std::unique_ptr<raystream_intersection_t> intersection_stream;
 
     lightmapdict_t lightmapsByStyle;
 
