@@ -64,6 +64,8 @@ struct surfacelight_t
         float intensity = 0; // Surface light strength for each point
         float totalintensity = 0; // Total surface light strength
         qvec3d color; // Surface color
+
+        bool operator==(const per_style_t &other) const;
     };
 
     // Light data per style

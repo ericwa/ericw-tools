@@ -1650,7 +1650,7 @@ static float Mottle(const qvec3d &position)
  * ============
  */
 static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &color, vec_t light,
-    lightsurf_t *lightsurf, lightmapdict_t *lightmaps, int32_t style)
+    lightsurf_t *lightsurf, lightmapdict_t *lightmaps, int32_t style, bool nomottle)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
@@ -1675,7 +1675,7 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3d &
             sample.color += color * (value / 255.0);
             hit = true;
         } else {
-            if (lightsurf->minlightMottle) {
+            if (lightsurf->minlightMottle && !nomottle) {
                 value += Mottle(surf_sample.point);
             }
             hit = Light_ClampMin(sample, value, color) || hit;
@@ -1998,6 +1998,17 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
         }
 
         auto &vpl = *surf_ptr->vpl.get();
+
+        // don't emit onto ourself
+        if (surf_ptr.get() == lightsurf)
+            continue;
+
+        // if we are emissive, don't emit from other faces with matching emissive settings
+        if (auto &our_vpl_ptr = lightsurf->vpl) {
+            if (our_vpl_ptr->styles == vpl.styles) {
+                continue;
+            }
+        }
 
         for (const auto &vpl_setting : surf_ptr->vpl->styles) {
 
@@ -3432,7 +3443,7 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
         }
 
         if (minlight) {
-            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, 0);
+            LightFace_Min(bsp, face, minlight_color, minlight, &lightsurf, lightmaps, 0, false);
         }
 
         if (lightsurf.vpl) {
@@ -3445,7 +3456,7 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
                     minlight = std::get<0>(value.value()) * surface_minlight_scale;
                     minlight_color = std::get<2>(value.value());
                     LightFace_Min(
-                        bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()));
+                        bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()), true);
                 }
             }
         }

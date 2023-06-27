@@ -34,6 +34,7 @@ See file, 'COPYING', for details.
 #include <vector>
 #include <map>
 #include <mutex>
+#include <tuple>
 
 #include <common/qvec.hh>
 
@@ -41,6 +42,17 @@ using namespace std;
 using namespace polylib;
 
 static std::atomic_size_t total_surflight_points;
+
+static auto as_tuple(const surfacelight_t::per_style_t &s)
+{
+    return std::make_tuple(
+        s.bounce, s.omnidirectional, s.rescale, s.style, /* s.intensity, s.totalintensity,*/ s.color);
+}
+
+bool surfacelight_t::per_style_t::operator==(const per_style_t &other) const
+{
+    return as_tuple(*this) == as_tuple(other);
+}
 
 void ResetSurflight()
 {
