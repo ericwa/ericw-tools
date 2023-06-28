@@ -3447,16 +3447,12 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
         }
 
         if (lightsurf.vpl) {
-            if (auto value = IsSurfaceLitFace(bsp, face)) {
-                auto *entity = std::get<3>(value.value());
-                float surface_minlight_scale = entity ? entity->surflight_minlight_scale.value() : 1.f;
-                surface_minlight_scale *= lightsurf.surflight_minlight_scale;
+            for (auto &style : lightsurf.vpl->styles) {
 
-                if (surface_minlight_scale > 0) {
-                    minlight = std::get<0>(value.value()) * surface_minlight_scale;
-                    minlight_color = std::get<2>(value.value());
+                if (!style.bounce && style.rawintensity > 0) {
+
                     LightFace_Min(
-                        bsp, face, minlight_color, minlight, &lightsurf, lightmaps, std::get<1>(value.value()), true);
+                        bsp, face, style.color, style.rawintensity * 255.f, &lightsurf, lightmaps, style.style, true);
                 }
             }
         }

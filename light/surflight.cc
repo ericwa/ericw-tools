@@ -218,6 +218,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     setting.rescale = extended_flags.surflight_rescale;
 
     // Store surfacelight settings...
+    setting.rawintensity = intensity;
     setting.totalintensity = intensity * facearea;
     setting.intensity = setting.totalintensity / l->points_before_culling;
     setting.color = texture_color.value();
