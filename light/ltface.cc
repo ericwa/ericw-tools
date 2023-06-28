@@ -3413,6 +3413,41 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
 }
 
 /*
+* ============
+* LightFace_Min
+* ============
+*/
+static void LightFace_SurfLight(const mbsp_t *bsp, const mface_t *face, const qvec3d &color, vec_t light,
+    lightsurf_t *lightsurf, lightmapdict_t *lightmaps, int32_t style)
+{
+    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
+
+    const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
+    if (extended_flags.no_minlight) {
+        return; /* this face is excluded from minlight */
+    }
+
+    /* Find the lightmap */
+    lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, style, lightsurf);
+
+    bool hit = false;
+    for (int i = 0; i < lightsurf->samples.size(); i++) {
+        const auto &surf_sample = lightsurf->samples[i];
+        lightsample_t &sample = lightmap->samples[i];
+
+        vec_t value = light;
+        if (cfg.minlight_dirt.value()) {
+            value *= Dirt_GetScaleFactor(cfg, surf_sample.occlusion, NULL, 0.0, lightsurf);
+        }
+
+        sample.color += color * value;
+    }
+
+    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, style);
+}
+
+
+/*
  * ============
  * PostProcessLightFace
  * ============
@@ -3451,8 +3486,8 @@ void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const setti
 
                 if (!style.bounce && style.rawintensity > 0) {
 
-                    LightFace_Min(
-                        bsp, face, style.color, style.rawintensity * 255.f, &lightsurf, lightmaps, style.style, true);
+                    LightFace_SurfLight(
+                        bsp, face, style.color, style.rawintensity, &lightsurf, lightmaps, style.style);
                 }
             }
         }
