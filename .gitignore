@@ -2,6 +2,7 @@ bin/
 cmakebuild/
 cmake-*/
 build*/
+time_compilation_build/
 CMakeFiles/
 *.xcodeproj
 .vscode/**
