@@ -30,7 +30,6 @@
 #include <utility>
 #include <optional>
 #include <fstream>
-#include <fmt/ostream.h>
 
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>
@@ -41,6 +40,7 @@
 #include <common/fs.hh>
 #include <common/imglib.hh>
 #include <common/qvec.hh>
+#include <common/ostream.hh>
 
 #include <pareto/spatial_map.h>
 
@@ -3051,10 +3051,10 @@ inline void WriteMapBrushMap(const fs::path &name, const std::vector<mapbrush_t>
     if (!f)
         FError("Can't write {}", name);
 
-    fmt::print(f, "{{\n\"classname\" \"worldspawn\"\n");
+    ewt::print(f, "{{\n\"classname\" \"worldspawn\"\n");
 
     for (auto &brush : list) {
-        fmt::print(f, "{{\n");
+        ewt::print(f, "{{\n");
         for (auto &face : brush.faces) {
 
             qvec3d corner = {};
@@ -3070,25 +3070,25 @@ inline void WriteMapBrushMap(const fs::path &name, const std::vector<mapbrush_t>
 
             winding_t w = BaseWindingForPlane<winding_t>(plane);
 
-            fmt::print(f, "( {} ) ", w[0]);
-            fmt::print(f, "( {} ) ", w[1]);
-            fmt::print(f, "( {} ) ", w[2]);
+            ewt::print(f, "( {} ) ", w[0]);
+            ewt::print(f, "( {} ) ", w[1]);
+            ewt::print(f, "( {} ) ", w[2]);
 
 #if 0
             if (face.visible) {
-                fmt::print(f, "skip 0 0 0 1 1\n");
+                ewt::print(f, "skip 0 0 0 1 1\n");
             } else {
-                fmt::print(f, "nonvisible 0 0 0 1 1\n");
+                ewt::print(f, "nonvisible 0 0 0 1 1\n");
             }
 #endif
 
-            fmt::print(f, "{} 0 0 0 1 1\n", face.texname);
+            ewt::print(f, "{} 0 0 0 1 1\n", face.texname);
         }
 
-        fmt::print(f, "}}\n");
+        ewt::print(f, "}}\n");
     }
 
-    fmt::print(f, "}}\n");
+    ewt::print(f, "}}\n");
 
     f.close();
 }
@@ -3455,9 +3455,9 @@ static void fprintDoubleAndSpc(std::ofstream &f, double v)
 {
     int rounded = rint(v);
     if (static_cast<double>(rounded) == v) {
-        fmt::print(f, "{} ", rounded);
+        ewt::print(f, "{} ", rounded);
     } else if (std::isfinite(v)) {
-        fmt::print(f, "{:0.17} ", v);
+        ewt::print(f, "{:0.17} ", v);
     } else {
         printf("WARNING: suppressing nan or infinity\n");
         f << "0 ";
@@ -3485,7 +3485,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             const texdef_quake_ed_t quakeed =
                 TexDef_BSPToQuakeEd(mapface.get_plane(), texture, texinfo.vecs, mapface.planepts);
 
-            fmt::print(f, "{} ", mapface.texname);
+            ewt::print(f, "{} ", mapface.texname);
             fprintDoubleAndSpc(f, quakeed.shift[0]);
             fprintDoubleAndSpc(f, quakeed.shift[1]);
             fprintDoubleAndSpc(f, quakeed.rotate);
@@ -3502,7 +3502,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
         case conversion_t::valve: {
             const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
 
-            fmt::print(f, "{} [ ", mapface.texname);
+            ewt::print(f, "{} [ ", mapface.texname);
             fprintDoubleAndSpc(f, valve.axis.at(0, 0));
             fprintDoubleAndSpc(f, valve.axis.at(0, 1));
             fprintDoubleAndSpc(f, valve.axis.at(0, 2));
@@ -3540,7 +3540,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, bp.at(1, 2));
 
             // N.B.: always print the Q2/Q3 flags
-            fmt::print(f, ") ) {} ", mapface.texname);
+            ewt::print(f, ") ) {} ", mapface.texname);
 
             if (mapface.raw_info.has_value()) {
                 f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " "
@@ -3578,7 +3578,7 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t &entity, const con
     f << "{\n";
 
     for (const auto &[key, value] : entity.epairs) {
-        fmt::print(f, "\"{}\" \"{}\"\n", key, value);
+        ewt::print(f, "\"{}\" \"{}\"\n", key, value);
     }
 
     for (auto &mapbrush : entity.mapbrushes) {
@@ -3771,35 +3771,35 @@ void WriteBspBrushMap(std::string_view filename_suffix, const bspbrush_t::contai
     if (!f)
         FError("Can't write {}", name);
 
-    fmt::print(f, "{{\n\"classname\" \"worldspawn\"\n");
+    ewt::print(f, "{{\n\"classname\" \"worldspawn\"\n");
 
     for (auto &brush : list) {
         if (!brush) {
             continue;
         }
-        fmt::print(f, "{{\n");
+        ewt::print(f, "{{\n");
         for (auto &face : brush->sides) {
             winding_t w = BaseWindingForPlane<winding_t>(face.get_plane());
 
-            fmt::print(f, "( {} ) ", w[0]);
-            fmt::print(f, "( {} ) ", w[1]);
-            fmt::print(f, "( {} ) ", w[2]);
+            ewt::print(f, "( {} ) ", w[0]);
+            ewt::print(f, "( {} ) ", w[1]);
+            ewt::print(f, "( {} ) ", w[2]);
 
 #if 0
             if (face.visible) {
-                fmt::print(f, "skip 0 0 0 1 1\n");
+                ewt::print(f, "skip 0 0 0 1 1\n");
             } else {
-                fmt::print(f, "nonvisible 0 0 0 1 1\n");
+                ewt::print(f, "nonvisible 0 0 0 1 1\n");
             }
 #endif
 
-            fmt::print(f, "{} 0 0 0 1 1\n", map.miptex[face.get_texinfo().miptex].name);
+            ewt::print(f, "{} 0 0 0 1 1\n", map.miptex[face.get_texinfo().miptex].name);
         }
 
-        fmt::print(f, "}}\n");
+        ewt::print(f, "}}\n");
     }
 
-    fmt::print(f, "}}\n");
+    ewt::print(f, "}}\n");
 
     f.close();
 }

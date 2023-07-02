@@ -26,8 +26,6 @@
 #include <algorithm>
 #include <string>
 #include <utility>
-#include <fmt/ostream.h>
-#include <fmt/chrono.h>
 
 #include <light/light.hh>
 #include <light/entities.hh>

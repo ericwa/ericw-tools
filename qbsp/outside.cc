@@ -28,13 +28,13 @@
 #include <qbsp/tree.hh>
 
 #include <common/log.hh>
+#include <common/ostream.hh>
 #include <climits>
 #include <vector>
 #include <set>
 #include <list>
 #include <unordered_set>
 #include <utility>
-#include <fmt/ostream.h>
 
 static bool LeafSealsMap(const node_t *node)
 {
@@ -251,7 +251,7 @@ void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d &point2
     vec_t dist = qv::normalizeInPlace(vector);
 
     while (dist > qbsp_options.leakdist.value()) {
-        fmt::print(leakfile, "{}\n", point1);
+        ewt::print(leakfile, "{}\n", point1);
         point1 += vector * qbsp_options.leakdist.value();
         dist -= qbsp_options.leakdist.value();
     }

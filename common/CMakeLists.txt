@@ -47,6 +47,7 @@ add_library(common STATIC
     ../include/common/settings.hh
     ../include/common/prtfile.hh
     ../include/common/vectorutils.hh
+    ../include/common/ostream.hh
 )
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json)

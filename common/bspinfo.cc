@@ -21,11 +21,11 @@
 #include <common/log.hh>
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
+#include <common/ostream.hh>
 
-#include <sstream>
 #include <fstream>
 #include <iomanip>
-#include <fmt/ostream.h>
+#include <fmt/core.h>
 #include <common/json.hh>
 #include "common/fs.hh"
 #include "common/imglib.hh"
@@ -37,13 +37,13 @@
 
 static std::string hex_string(const uint8_t *bytes, const size_t count)
 {
-    std::stringstream str;
+    std::string str;
 
     for (size_t i = 0; i < count; ++i) {
-        fmt::print(str, "{:x}", bytes[i]);
+        fmt::format_to(std::back_inserter(str), "{:x}", bytes[i]);
     }
 
-    return str.str();
+    return str;
 }
 
 /**
@@ -504,14 +504,14 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             const int vertnum = Face_VertexAtIndex(bsp, face, i);
             const qvec3f normal = bsp->dplanes[face->planenum].normal;
             const qvec3f &pos = bsp->dvertexes[vertnum];
-            fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
-            fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
+            ewt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
+            ewt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
 
             qvec2f tc = tcs[i];
 
             tc[1] = 1.0 - tc[1];
 
-            fmt::print(f, "vt {:.9} {:.9}\n", tc[0], tc[1]);
+            ewt::print(f, "vt {:.9} {:.9}\n", tc[0], tc[1]);
         }
 
         f << "f";
@@ -519,7 +519,7 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             // .obj vertexes start from 1
             // .obj faces are CCW, quake is CW, so reverse the order
             const int vertindex = vertcount + (face->numedges - 1 - i) + 1;
-            fmt::print(f, " {0}/{0}/{0}", vertindex);
+            ewt::print(f, " {0}/{0}/{0}", vertindex);
         }
         f << '\n';
 

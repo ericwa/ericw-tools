@@ -22,12 +22,12 @@
 
 #include <qbsp/qbsp.hh>
 #include <common/log.hh>
+#include <common/ostream.hh>
 #include <qbsp/brush.hh>
 #include <qbsp/map.hh>
 
 #include <unordered_set>
 #include <fstream>
-#include <fmt/ostream.h>
 #include <list>
 
 static std::ofstream InitObjFile(const std::string &filesuffix)
@@ -66,23 +66,23 @@ static void ExportObjFace(
     // export the vertices and uvs
     for (int i = 0; i < w.size(); i++) {
         const qvec3d &pos = w[i];
-        fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
+        ewt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
 
         qvec3d uv = texinfo.vecs.uvs(pos, width, height);
 
         // not sure why -v is needed, .obj uses (0, 0) in the top left apparently?
-        fmt::print(f, "vt {:.9} {:.9}\n", uv[0], -uv[1]);
+        ewt::print(f, "vt {:.9} {:.9}\n", uv[0], -uv[1]);
     }
 
     if (!mtlname.empty()) {
-        fmt::print(f, "usemtl {}\n", mtlname);
+        ewt::print(f, "usemtl {}\n", mtlname);
     }
     f << 'f';
     for (int i = 0; i < w.size(); i++) {
         // .obj vertexes start from 1
         // .obj faces are CCW, quake is CW, so reverse the order
         const int vertindex = *vertcount + (w.size() - 1 - i) + 1;
-        fmt::print(f, " {}/{}", vertindex, vertindex);
+        ewt::print(f, " {}/{}", vertindex, vertindex);
     }
     f << '\n';
 
@@ -92,9 +92,9 @@ static void ExportObjFace(
 static void WriteContentsMaterial(std::ofstream &mtlf, contentflags_t contents, float r, float g, float b)
 {
     // fixme-brushbsp
-    fmt::print(mtlf, "newmtl contents{}\n", contents.native);
+    ewt::print(mtlf, "newmtl contents{}\n", contents.native);
     mtlf << "Ka 0 0 0\n";
-    fmt::print(mtlf, "Kd {} {} {}\n", r, g, b);
+    ewt::print(mtlf, "Kd {} {} {}\n", r, g, b);
     mtlf << "Ks 0 0 0\n";
     mtlf << "illum 0\n";
 }

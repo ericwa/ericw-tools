@@ -30,6 +30,7 @@
 #include <common/mathlib.hh>
 #include <common/fs.hh>
 #include <common/settings.hh>
+#include <common/ostream.hh>
 
 #include <map>
 #include <set>
@@ -37,7 +38,6 @@
 #include <algorithm> // std::sort
 #include <string>
 #include <fstream>
-#include <fmt/ostream.h>
 
 /* FIXME - share header with qbsp, etc. */
 struct wadinfo_t
@@ -848,7 +848,7 @@ int bsputil_main(int argc, char **argv)
                 for (const auto &ent : ents.entities) {
                     strm << "{\n";
                     for (const auto &epair : ent.epairs) {
-                        fmt::print(strm, "\"{}\" \"{}\"\n", epair.first, epair.second);
+                        ewt::print(strm, "\"{}\" \"{}\"\n", epair.first, epair.second);
                     }
                     if (!ent.map_brushes.empty()) {
                         strm << ent.map_brushes;

@@ -19,13 +19,12 @@
 
 #include <common/entdata.h>
 
-#include <sstream>
 #include <cstdlib> // atoi()
 
 #include <common/bsputils.hh>
 #include <common/parser.hh>
 
-#include <fmt/ostream.h>
+#include <fmt/core.h>
 
 entdict_t::entdict_t(std::initializer_list<keyvalue_t> l)
     : keyvalues(l)

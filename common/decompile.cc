@@ -28,6 +28,7 @@
 #include <common/polylib.hh>
 #include <common/fs.hh>
 #include <common/log.hh>
+#include <common/ostream.hh>
 
 #include <fstream>
 #include <vector>
@@ -37,7 +38,6 @@
 #include <tuple>
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 
 #include "tbb/parallel_for.h"
 
@@ -152,10 +152,10 @@ struct compiled_brush_t
         }
 
         if (source) {
-            fmt::print(stream, "// generated from brush #{}\n", static_cast<ptrdiff_t>(source - bsp->dbrushes.data()));
+            ewt::print(stream, "// generated from brush #{}\n", static_cast<ptrdiff_t>(source - bsp->dbrushes.data()));
         }
 
-        fmt::print(stream, "{{\n");
+        ewt::print(stream, "{{\n");
 
         for (auto &side : sides) {
             planepoints p;
@@ -177,11 +177,11 @@ struct compiled_brush_t
             }
 
 #if 0
-            fmt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source -
+            ewt::print(stream, "// side #{}: {} {}\n", static_cast<ptrdiff_t>(side.source -
                 bsp->dbrushsides.data()), side.plane.normal, side.plane.dist);
 #endif
 
-            fmt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2],
+            ewt::print(stream, "( {} ) ( {} ) ( {} ) {} [ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", p[0], p[1], p[2],
                 side.texture_name, side.valve.axis.at(0, 0), side.valve.axis.at(0, 1), side.valve.axis.at(0, 2),
                 side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2),
                 side.valve.shift[1], 0.0, side.valve.scale[0], side.valve.scale[1]);
@@ -209,14 +209,14 @@ struct compiled_brush_t
                 if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) ==
                                      (contents.native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) &&
                                  meta->flags == side.flags.native && meta->value == side.value)) {
-                    fmt::print(stream, " {} {} {}", contents.native, side.flags.native, side.value);
+                    ewt::print(stream, " {} {} {}", contents.native, side.flags.native, side.value);
                 }
             }
 
-            fmt::print(stream, "\n");
+            ewt::print(stream, "\n");
         }
 
-        fmt::print(stream, "}}\n");
+        ewt::print(stream, "}}\n");
     }
 };
 
@@ -1099,7 +1099,7 @@ static void DecompileEntity(
     }
 
     // First, print the key/values for this entity
-    fmt::print(file, "{{\n");
+    ewt::print(file, "{{\n");
     for (const auto &keyValue : dict) {
         if (keyValue.first == "model" && !keyValue.second.empty() && keyValue.second[0] == '*') {
             // strip "model" "*NNN" key/values
@@ -1127,7 +1127,7 @@ static void DecompileEntity(
             continue;
         }
 
-        fmt::print(file, "\"{}\" \"{}\"\n", keyValue.first, keyValue.second);
+        ewt::print(file, "\"{}\" \"{}\"\n", keyValue.first, keyValue.second);
     }
 
     std::vector<std::vector<compiled_brush_t>> compiledBrushes;
@@ -1312,7 +1312,7 @@ static void DecompileEntity(
         }
     }
 
-    fmt::print(file, "}}\n");
+    ewt::print(file, "}}\n");
 }
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file)

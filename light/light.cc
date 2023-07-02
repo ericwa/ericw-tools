@@ -21,7 +21,6 @@
 
 #include <cstdint>
 #include <iostream>
-#include <fmt/ostream.h>
 #include <fmt/chrono.h>
 
 #include <light/lightgrid.hh>
@@ -39,6 +38,7 @@
 #include <common/fs.hh>
 #include <common/imglib.hh>
 #include <common/parallel.hh>
+#include <common/ostream.hh>
 
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
 #include <xmmintrin.h>
@@ -1206,8 +1206,8 @@ static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *fa
         const int vertnum = Face_VertexAtIndex(bsp, face, i);
         const qvec3f normal = GetSurfaceVertexNormal(bsp, face, i).normal;
         const qvec3f &pos = bsp->dvertexes[vertnum];
-        fmt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
-        fmt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
+        ewt::print(f, "v {:.9} {:.9} {:.9}\n", pos[0], pos[1], pos[2]);
+        ewt::print(f, "vn {:.9} {:.9} {:.9}\n", normal[0], normal[1], normal[2]);
     }
 
     f << "f";
@@ -1215,7 +1215,7 @@ static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *fa
         // .obj vertexes start from 1
         // .obj faces are CCW, quake is CW, so reverse the order
         const int vertindex = *vertcount + (face->numedges - 1 - i) + 1;
-        fmt::print(f, " {}//{}", vertindex, vertindex);
+        ewt::print(f, " {}//{}", vertindex, vertindex);
     }
     f << '\n';
 
