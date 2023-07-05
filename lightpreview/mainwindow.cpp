@@ -667,6 +667,11 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
         textEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
         m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
         return 1;
+    } catch (const std::exception &other) {
+        auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
+        textEdit->append(QString::fromUtf8(other.what()) + QString::fromLatin1("\n"));
+        m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
+        return 1;
     }
 
     return 0;
@@ -674,6 +679,17 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
 
 void MainWindow::compileThreadExited()
 {
+    // clear lightstyle widgets
+    while (QWidget *w = lightstyles->parentWidget()->findChild<QWidget *>(QString(), Qt::FindDirectChildrenOnly)) {
+        delete w;
+    }
+
+    delete m_compileThread;
+    m_compileThread = nullptr;
+    
+    if (!std::holds_alternative<mbsp_t>(m_bspdata.bsp)) {
+        return;
+    }
     const auto &bsp = std::get<mbsp_t>(m_bspdata.bsp);
 
     auto ents = EntData_Parse(bsp);
@@ -706,18 +722,11 @@ void MainWindow::compileThreadExited()
     }
 
     // set lightstyle data
-    while (QWidget *w = lightstyles->parentWidget()->findChild<QWidget *>(QString(), Qt::FindDirectChildrenOnly)) {
-        delete w;
-    }
-
     for (auto &style_entry : atlas.style_to_lightmap_atlas) {
 
         auto *style = new QLightStyleSlider(style_entry.first, glView);
         lightstyles->addWidget(style);
     }
-
-    delete m_compileThread;
-    m_compileThread = nullptr;
 }
 
 void MainWindow::loadFileInternal(const QString &file, bool is_reload)
