@@ -22,13 +22,13 @@
 #include <qbsp/prtfile.hh>
 
 #include <common/log.hh>
+#include <common/ostream.hh>
 #include <qbsp/map.hh>
 #include <qbsp/portals.hh>
 #include <qbsp/qbsp.hh>
 #include <qbsp/tree.hh>
 
 #include <fstream>
-#include <fmt/ostream.h>
 
 /*
 ==============================================================================
@@ -41,9 +41,9 @@ PORTAL FILE GENERATION
 static void WriteFloat(std::ofstream &portalFile, vec_t v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
-        fmt::print(portalFile, "{} ", (int)Q_rint(v));
+        ewt::print(portalFile, "{} ", (int)Q_rint(v));
     else
-        fmt::print(portalFile, "{} ", v);
+        ewt::print(portalFile, "{} ", v);
 }
 
 static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool clusters)
@@ -89,19 +89,19 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
          */
         plane2 = w->plane();
         if (qv::dot(p->plane.get_normal(), plane2.normal) < 1.0 - ANGLEEPSILON) {
-            fmt::print(portalFile, "{} {} {} ", w->size(), back, front);
+            ewt::print(portalFile, "{} {} {} ", w->size(), back, front);
         } else {
-            fmt::print(portalFile, "{} {} {} ", w->size(), front, back);
+            ewt::print(portalFile, "{} {} {} ", w->size(), front, back);
         }
 
         for (i = 0; i < w->size(); i++) {
-            fmt::print(portalFile, "(");
+            ewt::print(portalFile, "(");
             WriteFloat(portalFile, w->at(i)[0]);
             WriteFloat(portalFile, w->at(i)[1]);
             WriteFloat(portalFile, w->at(i)[2]);
-            fmt::print(portalFile, ") ");
+            ewt::print(portalFile, ") ");
         }
-        fmt::print(portalFile, "\n");
+        ewt::print(portalFile, "\n");
     }
 }
 
@@ -117,7 +117,7 @@ static int WritePTR2ClusterMapping_r(node_t *node, std::ofstream &portalFile, in
 
     /* If we're in the next cluster, start a new line */
     if (node->viscluster != viscluster) {
-        fmt::print(portalFile, "-1\n");
+        ewt::print(portalFile, "-1\n");
         viscluster++;
     }
 
@@ -125,7 +125,7 @@ static int WritePTR2ClusterMapping_r(node_t *node, std::ofstream &portalFile, in
     if (node->viscluster != viscluster)
         FError("Internal error: Detail cluster mismatch");
 
-    fmt::print(portalFile, "{} ", node->visleafnum);
+    ewt::print(portalFile, "{} ", node->visleafnum);
 
     return viscluster;
 }
@@ -218,37 +218,37 @@ static void WritePortalfile(node_t *headnode, portal_state_t &state)
     // q2 uses a PRT1 file, but with clusters.
     // (Since q2bsp natively supports clusters, we don't need PRT2.)
     if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-        fmt::print(portalFile, "PRT1\n");
-        fmt::print(portalFile, "{}\n", state.num_visclusters.count.load());
-        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
+        ewt::print(portalFile, "PRT1\n");
+        ewt::print(portalFile, "{}\n", state.num_visclusters.count.load());
+        ewt::print(portalFile, "{}\n", state.num_visportals.count.load());
         WritePortals_r(headnode, portalFile, true);
         return;
     }
 
     /* If no detail clusters, just use a normal PRT1 format */
     if (!state.uses_detail) {
-        fmt::print(portalFile, "PRT1\n");
-        fmt::print(portalFile, "{}\n", state.num_visleafs.count.load());
-        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
+        ewt::print(portalFile, "PRT1\n");
+        ewt::print(portalFile, "{}\n", state.num_visleafs.count.load());
+        ewt::print(portalFile, "{}\n", state.num_visportals.count.load());
         WritePortals_r(headnode, portalFile, false);
     } else if (qbsp_options.forceprt1.value()) {
         /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
-        fmt::print(portalFile, "PRT1\n");
-        fmt::print(portalFile, "{}\n", state.num_visclusters.count.load());
-        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
+        ewt::print(portalFile, "PRT1\n");
+        ewt::print(portalFile, "{}\n", state.num_visclusters.count.load());
+        ewt::print(portalFile, "{}\n", state.num_visportals.count.load());
         WritePortals_r(headnode, portalFile, true);
     } else {
         /* Write a PRT2 */
-        fmt::print(portalFile, "PRT2\n");
-        fmt::print(portalFile, "{}\n", state.num_visleafs.count.load());
-        fmt::print(portalFile, "{}\n", state.num_visclusters.count.load());
-        fmt::print(portalFile, "{}\n", state.num_visportals.count.load());
+        ewt::print(portalFile, "PRT2\n");
+        ewt::print(portalFile, "{}\n", state.num_visleafs.count.load());
+        ewt::print(portalFile, "{}\n", state.num_visclusters.count.load());
+        ewt::print(portalFile, "{}\n", state.num_visportals.count.load());
         WritePortals_r(headnode, portalFile, true);
         check = WritePTR2ClusterMapping_r(headnode, portalFile, 0);
         if (check != state.num_visclusters.count.load() - 1) {
             FError("Internal error: Detail cluster mismatch");
         }
-        fmt::print(portalFile, "-1\n");
+        ewt::print(portalFile, "-1\n");
     }
 }
 
@@ -293,12 +293,12 @@ static void WriteDebugPortal(const portal_t *p, std::ofstream &portalFile)
 {
     const winding_t *w = &p->winding;
 
-    fmt::print(portalFile, "{} {} {} ", w->size(), 0, 0);
+    ewt::print(portalFile, "{} {} {} ", w->size(), 0, 0);
 
     for (int i = 0; i < w->size(); i++) {
-        fmt::print(portalFile, "({} {} {}) ", w->at(i)[0], w->at(i)[1], w->at(i)[2]);
+        ewt::print(portalFile, "({} {} {}) ", w->at(i)[0], w->at(i)[1], w->at(i)[2]);
     }
-    fmt::print(portalFile, "\n");
+    ewt::print(portalFile, "\n");
 }
 
 static void WriteTreePortals_r(node_t *node, std::ofstream &portalFile)
@@ -357,9 +357,9 @@ void WriteDebugTreePortalFile(tree_t &tree, std::string_view filename_suffix)
     if (!portalFile)
         FError("Failed to open {}: {}", name, strerror(errno));
 
-    fmt::print(portalFile, "PRT1\n");
-    fmt::print(portalFile, "{}\n", 0);
-    fmt::print(portalFile, "{}\n", portal_count);
+    ewt::print(portalFile, "PRT1\n");
+    ewt::print(portalFile, "{}\n", 0);
+    ewt::print(portalFile, "{}\n", portal_count);
     WriteTreePortals_r(tree.headnode, portalFile);
 
     logging::print(logging::flag::STAT, "     {:8} tree portals written to {}\n", portal_count, name);
@@ -385,9 +385,9 @@ void WriteDebugPortals(std::vector<portal_t *> portals, std::string_view filenam
     if (!portal_file)
         FError("Failed to open {}: {}", name, strerror(errno));
 
-    fmt::print(portal_file, "PRT1\n");
-    fmt::print(portal_file, "{}\n", 0);
-    fmt::print(portal_file, "{}\n", portal_count);
+    ewt::print(portal_file, "PRT1\n");
+    ewt::print(portal_file, "{}\n", 0);
+    ewt::print(portal_file, "{}\n", portal_count);
     for (auto &p : portals) {
         if (p->winding) {
             WriteDebugPortal(p, portal_file);

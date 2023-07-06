@@ -24,7 +24,7 @@
 #include <common/settings.hh>
 
 #include <fstream>
-#include <fmt/ostream.h>
+
 #include <common/json.hh>
 #include "common/fs.hh"
 

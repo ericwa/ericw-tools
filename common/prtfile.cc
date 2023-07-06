@@ -22,9 +22,9 @@
 #include <common/log.hh>
 #include <common/fs.hh>
 #include <common/bspfile.hh>
+#include <common/ostream.hh>
 
 #include <fstream>
-#include <fmt/ostream.h>
 
 constexpr const char *PORTALFILE = "PRT1";
 constexpr const char *PORTALFILE2 = "PRT2";
@@ -175,11 +175,11 @@ prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion)
 
 static void WriteDebugPortal(const polylib::winding_t &w, std::ofstream &portalFile)
 {
-    fmt::print(portalFile, "{} {} {} ", w.size(), 0, 0);
+    ewt::print(portalFile, "{} {} {} ", w.size(), 0, 0);
     for (int i = 0; i < w.size(); i++) {
-        fmt::print(portalFile, "({} {} {}) ", w.at(i)[0], w.at(i)[1], w.at(i)[2]);
+        ewt::print(portalFile, "({} {} {}) ", w.at(i)[0], w.at(i)[1], w.at(i)[2]);
     }
-    fmt::print(portalFile, "\n");
+    ewt::print(portalFile, "\n");
 }
 
 void WriteDebugPortals(const std::vector<polylib::winding_t> &portals, fs::path name)
@@ -190,9 +190,9 @@ void WriteDebugPortals(const std::vector<polylib::winding_t> &portals, fs::path 
     if (!portal_file)
         FError("Failed to open {}: {}", name, strerror(errno));
 
-    fmt::print(portal_file, "PRT1\n");
-    fmt::print(portal_file, "{}\n", 0);
-    fmt::print(portal_file, "{}\n", portal_count);
+    ewt::print(portal_file, "PRT1\n");
+    ewt::print(portal_file, "{}\n", 0);
+    ewt::print(portal_file, "{}\n", portal_count);
     for (auto &p : portals) {
         WriteDebugPortal(p, portal_file);
     }

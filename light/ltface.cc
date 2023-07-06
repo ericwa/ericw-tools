@@ -32,13 +32,13 @@
 #include <common/log.hh>
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
+#include <common/ostream.hh>
 
 #include <atomic>
 #include <cassert>
 #include <cmath>
 #include <algorithm>
 #include <fstream>
-#include <fmt/ostream.h>
 
 using namespace std;
 
@@ -275,12 +275,12 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 
             f << "{\n";
             f << "\"classname\" \"light\"\n";
-            fmt::print(f, "\"origin\" \"{}\"\n", point);
-            fmt::print(f, "\"mangle\" \"{}\"\n", mangle);
-            fmt::print(f, "\"face\" \"{}\"\n", sample.realfacenum);
-            fmt::print(f, "\"occluded\" \"{}\"\n", sample.occluded);
-            fmt::print(f, "\"s\" \"{}\"\n", s);
-            fmt::print(f, "\"t\" \"{}\"\n", t);
+            ewt::print(f, "\"origin\" \"{}\"\n", point);
+            ewt::print(f, "\"mangle\" \"{}\"\n", mangle);
+            ewt::print(f, "\"face\" \"{}\"\n", sample.realfacenum);
+            ewt::print(f, "\"occluded\" \"{}\"\n", sample.occluded);
+            ewt::print(f, "\"s\" \"{}\"\n", s);
+            ewt::print(f, "\"t\" \"{}\"\n", t);
             f << "}\n";
         }
     }
@@ -2533,7 +2533,7 @@ static void WritePPM(const fs::path &fname, int width, int height, const uint8_t
     qfile_t file = SafeOpenWrite(fname);
 
     // see: http://netpbm.sourceforge.net/doc/ppm.html
-    fmt::print(file.get(), "P6 {} {} 255 ", width, height);
+    ewt::print(file.get(), "P6 {} {} 255 ", width, height);
     int bytes = width * height * 3;
     Q_assert(bytes == SafeWrite(file, rgbdata, bytes));
 }
