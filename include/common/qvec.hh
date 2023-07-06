@@ -984,6 +984,17 @@ public:
         }
         return res;
     }
+
+    [[nodiscard]] constexpr qmat<T, NCol, NRow> transpose() const
+    {
+        qmat<T, NCol, NRow> res;
+        for (size_t i = 0; i < NRow; i++) {
+            for (size_t j = 0; j < NCol; j++) {
+                res.at(j, i) = at(i, j);
+            }
+        }
+        return res;
+    }
 };
 
 // Fmt support
