@@ -133,6 +133,28 @@ enum class plane_type_t
     PLANE_ANYZ = 5,
 };
 
+template<typename T>
+inline plane_type_t calculate_plane_type(const qplane3<T> &p)
+{
+    for (size_t i = 0; i < 3; i++) {
+        if (p.normal[i] == 1.0 || p.normal[i] == -1.0) {
+            return (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
+        }
+    }
+
+    vec_t ax = fabs(p.normal[0]);
+    vec_t ay = fabs(p.normal[1]);
+    vec_t az = fabs(p.normal[2]);
+
+    if (ax >= ay && ax >= az) {
+        return plane_type_t::PLANE_ANYX;
+    } else if (ay >= ax && ay >= az) {
+        return plane_type_t::PLANE_ANYY;
+    } else {
+        return plane_type_t::PLANE_ANYZ;
+    }
+}
+
 // Fmt support
 template<>
 struct fmt::formatter<plane_type_t>

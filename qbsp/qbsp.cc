@@ -39,6 +39,7 @@
 #include <qbsp/outside.hh>
 #include <qbsp/tjunc.hh>
 #include <qbsp/tree.hh>
+#include <qbsp/csg.hh>
 
 #include <fmt/chrono.h>
 
@@ -287,23 +288,7 @@ const qbsp_plane_t &node_t::get_plane() const
 
 plane_type_t qbsp_plane_t::calculate_type(const qplane3d &p)
 {
-    for (size_t i = 0; i < 3; i++) {
-        if (p.normal[i] == 1.0 || p.normal[i] == -1.0) {
-            return (i == 0 ? plane_type_t::PLANE_X : i == 1 ? plane_type_t::PLANE_Y : plane_type_t::PLANE_Z);
-        }
-    }
-
-    vec_t ax = fabs(p.normal[0]);
-    vec_t ay = fabs(p.normal[1]);
-    vec_t az = fabs(p.normal[2]);
-
-    if (ax >= ay && ax >= az) {
-        return plane_type_t::PLANE_ANYX;
-    } else if (ay >= ax && ay >= az) {
-        return plane_type_t::PLANE_ANYY;
-    } else {
-        return plane_type_t::PLANE_ANYZ;
-    }
+    return calculate_plane_type(p);
 }
 
 qbsp_plane_t::qbsp_plane_t(const qplane3d &plane, bool flip) noexcept
@@ -1098,7 +1083,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     if (map.is_world_entity(entity)) {
         // debug output of bspbrushes
-        if (!hullnum.has_value() || hullnum.value() == 0) {
+        if (!hullnum.value_or(0)) {
             if (qbsp_options.debugbspbrushes.value()) {
                 bspbrush_t::container all_bspbrushes;
                 GatherBspbrushes_r(tree.headnode, all_bspbrushes);
@@ -1121,7 +1106,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
             BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
 
             // debug output of bspbrushes
-            if (!hullnum.has_value() || hullnum.value() == 0) {
+            if (!hullnum.value_or(0)) {
                 if (qbsp_options.debugbspbrushes.value()) {
                     bspbrush_t::container all_bspbrushes;
                     GatherBspbrushes_r(tree.headnode, all_bspbrushes);
@@ -1164,6 +1149,52 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
     // write out .prt for main hull
     if (!hullnum.value_or(0) && map.is_world_entity(entity) && (!map.leakfile || qbsp_options.keepprt.value())) {
         WritePortalFile(tree);
+    }
+
+    auto MakeFaceFromSide = [](node_t *node, mapface_t &side) -> std::unique_ptr<face_t>
+    {
+        if (!side.winding.size()) {
+            return nullptr;
+        }
+
+        auto f = std::make_unique<face_t>();
+
+        f->texinfo = side.texinfo;
+        f->planenum = side.planenum ^ 1;
+        f->portal = nullptr;
+        f->original_side = &side;
+
+        f->w = side.winding.clone();
+        f->contents = { side.contents, side.contents };
+
+        UpdateFaceSphere(f.get());
+
+        return f;
+    };
+
+    // super-detail
+    if (map.is_world_entity(entity)) {
+        if (!hullnum.value_or(0)) {
+            for (int i = 1; i < map.entities.size(); i++) {
+                mapentity_t &source = map.entities.at(i);
+
+                if (!source.epairs.get_int("_super_detail")) {
+                    continue;
+                }
+
+                for (auto &brush : source.mapbrushes) {
+                    for (auto &side : brush.faces) {
+                        {
+                            auto face = MakeFaceFromSide(tree.headnode, side);
+
+                            if (face) {
+                                tree.headnode->facelist.push_back(std::move(face));
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // needs to come after any face creation

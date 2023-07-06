@@ -732,6 +732,12 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             }
         }
 
+        if (!hullnum.value_or(0)) {
+            if (src.epairs.get_int("_super_detail")) {
+                continue;
+            }
+        }
+
         contentflags_t contents = mapbrush.contents;
 
         if (qbsp_options.nodetail.value()) {
@@ -766,7 +772,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             continue;
 
         /* turn solid brushes into detail, if we're in hull0 */
-        if (hullnum <= 0 && contents.is_any_solid(qbsp_options.target_game)) {
+        if (!hullnum.value_or(0) && contents.is_any_solid(qbsp_options.target_game)) {
             if (detail_illusionary) {
                 contents = qbsp_options.target_game->create_detail_illusionary_contents(contents);
             } else if (detail_fence) {

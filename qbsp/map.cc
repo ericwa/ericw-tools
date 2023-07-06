@@ -3281,9 +3281,11 @@ void ProcessMapBrushes()
             }
 
             // remove windings, we no longer need them
-            for (auto &brush : entity.mapbrushes) {
-                for (auto &f : brush.faces) {
-                    f.winding = {};
+            if (!entity.epairs.get_int("_super_detail")) {
+                for (auto &brush : entity.mapbrushes) {
+                    for (auto &f : brush.faces) {
+                        f.winding = {};
+                    }
                 }
             }
         }

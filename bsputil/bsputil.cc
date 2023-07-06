@@ -565,6 +565,214 @@ map_file_t LoadMapOrEntFile(const fs::path &source)
     return map;
 }
 
+struct planepoints : std::array<qvec3d, 3>
+{
+    qplane3d plane() const
+    {
+        /* calculate the normal/dist plane equation */
+        qvec3d ab = at(0) - at(1);
+        qvec3d cb = at(2) - at(1);
+        qvec3d normal = qv::normalize(qv::cross(ab, cb));
+        return {normal, qv::dot(at(1), normal)};
+    }
+};
+
+template<typename T>
+static planepoints NormalDistanceToThreePoints(const qplane3<T> &plane)
+{
+    std::tuple<qvec3d, qvec3d> tanBitan = qv::MakeTangentAndBitangentUnnormalized(plane.normal);
+
+    qvec3d point0 = plane.normal * plane.dist;
+
+    return {point0, point0 + std::get<1>(tanBitan), point0 + std::get<0>(tanBitan)};
+}
+
+#include <pareto/spatial_map.h>
+
+struct planelist_t
+{
+    // planes indices (into the `planes` vector)
+    pareto::spatial_map<vec_t, 4, size_t> plane_hash;
+    std::vector<dplane_t> planes;
+
+    // add the specified plane to the list
+    size_t add_plane(const dplane_t &plane)
+    {
+        planes.emplace_back(plane);
+        planes.emplace_back(-plane);
+
+        size_t positive_index = planes.size() - 2;
+        size_t negative_index = planes.size() - 1;
+
+        auto &positive = planes[positive_index];
+        auto &negative = planes[negative_index];
+
+        size_t result;
+
+        if (positive.normal[static_cast<int32_t>(positive.type) % 3] < 0.0) {
+            std::swap(positive, negative);
+            result = negative_index;
+        } else {
+            result = positive_index;
+        }
+
+        plane_hash.emplace(pareto::point<vec_t, 4>{positive.normal[0], positive.normal[1],
+            positive.normal[2], positive.dist},
+            positive_index);
+        plane_hash.emplace(pareto::point<vec_t, 4>{negative.normal[0], negative.normal[1],
+            negative.normal[2], negative.dist},
+            negative_index);
+
+        return result;
+    }
+
+    std::optional<size_t> find_plane_nonfatal(const dplane_t &plane)
+    {
+        constexpr vec_t HALF_NORMAL_EPSILON = NORMAL_EPSILON * 0.5;
+        constexpr vec_t HALF_DIST_EPSILON = DIST_EPSILON * 0.5;
+
+        if (auto it = plane_hash.find_intersection(
+            {plane.normal[0] - HALF_NORMAL_EPSILON, plane.normal[1] - HALF_NORMAL_EPSILON,
+            plane.normal[2] - HALF_NORMAL_EPSILON, plane.dist - HALF_DIST_EPSILON},
+            {plane.normal[0] + HALF_NORMAL_EPSILON, plane.normal[1] + HALF_NORMAL_EPSILON,
+            plane.normal[2] + HALF_NORMAL_EPSILON, plane.dist + HALF_DIST_EPSILON});
+            it != plane_hash.end()) {
+            return it->second;
+        }
+
+        return std::nullopt;
+    }
+
+    // find the specified plane in the list if it exists. throws
+    // if not.
+    size_t find_plane(const dplane_t &plane)
+    {
+        if (auto index = find_plane_nonfatal(plane)) {
+            return *index;
+        }
+
+        throw std::bad_function_call();
+    }
+
+    // find the specified plane in the list if it exists, or
+    // return a new one
+    size_t add_or_find_plane(const dplane_t &plane)
+    {
+        if (auto index = find_plane_nonfatal(plane)) {
+            return *index;
+        }
+
+        return add_plane(plane);
+    }
+};
+
+using vec3_t = qvec3d;
+
+void CrossProduct ( const vec3_t v1, const vec3_t v2, vec3_t &cross)
+{
+    cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
+    cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
+    cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
+}
+
+#define DotProduct(x,y)			(x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
+
+void VectorScale (vec3_t in, vec_t scale, vec3_t &out)
+{
+    out[0] = in[0]*scale;
+    out[1] = in[1]*scale;
+    out[2] = in[2]*scale;
+}
+
+#define VectorSubtract(a,b,c)	(c[0]=a[0]-b[0],c[1]=a[1]-b[1],c[2]=a[2]-b[2])
+#define VectorAdd(a,b,c)		(c[0]=a[0]+b[0],c[1]=a[1]+b[1],c[2]=a[2]+b[2])
+
+#define VectorCopy(a,b)			(b[0]=a[0],b[1]=a[1],b[2]=a[2])
+
+vec_t VectorNormalize (vec3_t &v)
+{
+    double   length, ilength;
+
+    length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
+    length = sqrt (length);     // FIXME
+
+    if (length)
+    {
+        ilength = 1/length;
+        v[0] *= ilength;
+        v[1] *= ilength;
+        v[2] *= ilength;
+    }
+
+    return length;
+
+}
+
+void CM_MirrorPlaneOnX(vec3_t &normal, double &dist)
+{
+    if (!normal[0])
+        return;
+
+    int32_t axis;
+
+    if (fabs(normal[0]) >= fabs(normal[1]) && fabs(normal[0]) >= fabs(normal[2]))
+        axis = 0;
+    else if (fabs(normal[1]) >= fabs(normal[0]) && fabs(normal[1]) >= fabs(normal[2]))
+        axis = 1;
+    else
+        axis = 2;
+
+    if (axis != qv::indexOfLargestMagnitudeComponent(normal))
+        __debugbreak();
+
+    vec3_t other_a { 0, 0, 0 };
+    vec3_t other_b { 0, 0, 0 };
+
+    other_a[(axis + 1) % 3] = 1.0;
+    other_b[(axis + 2) % 3] = 1.0;
+
+    vec3_t tangent, bitangent, c;
+
+    CrossProduct(normal, other_a, tangent);
+    CrossProduct(normal, other_b, bitangent);
+
+    CrossProduct(tangent, bitangent, c);
+
+    if (DotProduct(c, normal) < 0.0)
+    {
+        std::swap(tangent[0], bitangent[0]);
+        std::swap(tangent[1], bitangent[1]);
+        std::swap(tangent[2], bitangent[2]);
+    }
+
+    vec3_t pt0, pt1, pt2;
+
+    VectorScale(normal, dist, pt0);
+    VectorAdd(pt0, bitangent, pt1);
+    VectorAdd(pt0, tangent, pt2);
+
+    pt0[0] = -pt0[0];
+    pt1[0] = -pt1[0];
+    pt2[0] = -pt2[0];
+
+    std::swap(pt0[0], pt2[0]);
+    std::swap(pt0[1], pt2[1]);
+    std::swap(pt0[2], pt2[2]);
+
+    vec3_t ab, cb;
+    VectorSubtract(pt0, pt1, ab);
+    VectorSubtract(pt2, pt1, cb);
+
+    vec3_t out_normal;
+    CrossProduct(ab, cb, out_normal);
+    VectorNormalize(out_normal);
+
+    double out_dist = DotProduct(pt1, out_normal);
+
+    VectorCopy(out_normal, normal);
+    dist = out_dist;
+}
+
 int bsputil_main(int argc, char **argv)
 {
     logging::preinitialize();
@@ -609,12 +817,14 @@ int bsputil_main(int argc, char **argv)
 
             i++;
             if (i == argc - 1) {
-                Error("--scale requires two arguments");
+                Error("--scale requires three arguments; x y z");
             }
 
-            fmt::print("scaling {} by {}\n", source, argv[i]);
+            qvec3d scalar { atof(argv[i]), atof(argv[i + 1]), atof(argv[i + 2]) };
 
-            double scalar = atof(argv[i]);
+            i += 2;
+
+            fmt::print("scaling {} by {}\n", source, scalar);
 
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
 
@@ -628,16 +838,20 @@ int bsputil_main(int argc, char **argv)
                         ent.get_vector("origin", origin);
                         origin *= scalar;
                         ent.set("origin", fmt::format("{} {} {}", origin[0], origin[1], origin[2]));
-                    } else if (ent.has("lip")) {
+                    }
+                    
+                    if (ent.has("lip")) {
                         float lip = ent.get_float("lip");
                         lip -= 2.0f;
-                        lip *= scalar;
+                        lip *= scalar[2];
                         lip += 2.0f;
                         ent.set("lip", fmt::format("{}", lip));
-                    } else if (ent.has("height")) {
+                    }
+                    
+                    if (ent.has("height")) {
                         // FIXME: check this
                         float height = ent.get_float("height");
-                        height *= scalar;
+                        height *= scalar[2];
                         ent.set("height", fmt::format("{}", height));
                     }
                 }
@@ -650,33 +864,118 @@ int bsputil_main(int argc, char **argv)
                 v *= scalar;
             }
 
-            // adjust planes
-            for (auto &p : bsp.dplanes) {
-                p.dist *= scalar;
+            // flip edge lists if we need to
+            int32_t flip_faces = !!(scalar[0] < 0) + !!(scalar[1] < 0) + !!(scalar[2] < 0);
+
+            if (flip_faces & 1) {
+                for (auto &s : bsp.dfaces) {
+                    std::reverse(bsp.dsurfedges.data() + s.firstedge, bsp.dsurfedges.data() + (s.firstedge + s.numedges));
+                }
+            }
+
+            std::unordered_map<size_t, size_t> plane_remap;
+            auto old_planes = bsp.dplanes;
+
+            // rebuild planes
+            {
+                size_t i = 0;
+                planelist_t new_planes;
+
+                for (auto &p : bsp.dplanes) {
+                    auto pts = NormalDistanceToThreePoints(p);
+
+                    for (auto &pt : pts) {
+                        pt *= scalar;
+                    }
+
+                    if (flip_faces) {
+                        std::reverse(pts.begin(), pts.end());
+                    }
+
+                    auto scaled = dplane_t { pts.plane(), p.type };
+
+                    vec3_t n = p.normal;
+                    double d = p.dist;
+                    CM_MirrorPlaneOnX(n, d);
+
+                    qvec3f nf = n;
+                    float df = d;
+
+                    if (!qv::equalExact(nf, scaled.normal) || df != scaled.dist)
+                        __debugbreak();
+
+                    plane_remap[i] = new_planes.add_or_find_plane(scaled);
+                    i++;
+                }
+
+                // remap plane list
+                bsp.dplanes = std::move(new_planes.planes);
             }
 
             // adjust node/leaf/model bounds
             for (auto &m : bsp.dmodels) {
                 m.origin *= scalar;
-                m.mins *= scalar;
-                m.maxs *= scalar;
+
+                qvec3f scaled_mins = m.mins * scalar;
+                qvec3f scaled_maxs = m.maxs * scalar;
+
+                m.mins = qv::min(scaled_mins, scaled_maxs);
+                m.maxs = qv::max(scaled_mins, scaled_maxs);
             }
 
             for (auto &l : bsp.dleafs) {
-                l.mins *= scalar;
-                l.maxs *= scalar;
+                qvec3f scaled_mins = l.mins * scalar;
+                qvec3f scaled_maxs = l.maxs * scalar;
+
+                l.mins = qv::min(scaled_mins, scaled_maxs);
+                l.maxs = qv::max(scaled_mins, scaled_maxs);
+
+                for (auto &v : l.mins) {
+                    v = floor(v);
+                }
+                for (auto &v : l.maxs) {
+                    v = ceil(v);
+                }
             }
 
             for (auto &m : bsp.dnodes) {
-                m.mins *= scalar;
-                m.maxs *= scalar;
+                qvec3f scaled_mins = m.mins * scalar;
+                qvec3f scaled_maxs = m.maxs * scalar;
+
+                m.mins = qv::min(scaled_mins, scaled_maxs);
+                m.maxs = qv::max(scaled_mins, scaled_maxs);
+
+                for (auto &v : m.mins) {
+                    v = floor(v);
+                }
+                for (auto &v : m.maxs) {
+                    v = ceil(v);
+                }
+
+                m.planenum = plane_remap[m.planenum];
+
+                if (m.planenum & 1) {
+                    std::reverse(m.children.begin(), m.children.end());
+                    m.planenum &= ~1;
+                }
+            }
+
+            // remap planes on stuff
+            for (auto &v : bsp.dbrushsides) {
+                auto oldp = old_planes[v.planenum];
+                auto newp = bsp.dplanes[plane_remap[v.planenum]];
+                v.planenum = plane_remap[v.planenum];
+            }
+
+            for (auto &v : bsp.dfaces) {
+                v.planenum = plane_remap[v.planenum];
             }
 
             auto scaleTexInfo = [&](mtexinfo_t &t) {
                 // update texinfo
 
                 const qmat3x3d inversescaleM{// column-major...
-                    1 / scalar, 0.0, 0.0, 0.0, 1 / scalar, 0.0, 0.0, 0.0, 1 / scalar};
+                    1 / scalar[0], 0.0, 0.0, 0.0, 1 / scalar[1], 0.0, 0.0, 0.0, 1 / scalar[2]};
 
                 auto &texvecs = t.vecs;
                 texvecf newtexvecs;
@@ -714,7 +1013,7 @@ int bsputil_main(int argc, char **argv)
                     istream >= result;
 
                     const qmat3x3d inversescaleM{// column-major...
-                        1 / scalar, 0.0, 0.0, 0.0, 1 / scalar, 0.0, 0.0, 0.0, 1 / scalar};
+                        1 / scalar[0], 0.0, 0.0, 0.0, 1 / scalar[1], 0.0, 0.0, 0.0, 1 / scalar[2]};
 
                     auto &texvecs = result.world_to_lm_space;
                     texvecf newtexvecs;
@@ -744,21 +1043,22 @@ int bsputil_main(int argc, char **argv)
                 istream >> endianness<std::endian::little>;
                 ostream << endianness<std::endian::little>;
 
-                {
-                    qvec3f grid_dist;
-                    istream >= grid_dist;
-                    grid_dist *= scalar;
-                    ostream <= grid_dist;
-                }
+                qvec3f original_grid_dist;
+                istream >= original_grid_dist;
+                ostream <= qvec3f(original_grid_dist * scalar);
 
-                istream.seekg(sizeof(qvec3i), std::ios_base::cur);
+                qvec3i grid_size;
+                istream >= grid_size;
                 ostream.seekp(sizeof(qvec3i), std::ios_base::cur);
 
                 {
                     qvec3f grid_mins;
                     istream >= grid_mins;
-                    grid_mins *= scalar;
-                    ostream <= grid_mins;
+
+                    qvec3f scaled_mins = grid_mins * scalar;
+                    qvec3f scaled_maxs = (grid_mins + original_grid_dist * (grid_size - qvec3i{1, 1, 1})) * scalar;
+
+                    ostream <= qv::min(scaled_mins, scaled_maxs);
                 }
             }
 
