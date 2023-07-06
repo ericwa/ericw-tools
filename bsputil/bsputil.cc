@@ -666,113 +666,6 @@ struct planelist_t
     }
 };
 
-using vec3_t = qvec3d;
-
-void CrossProduct ( const vec3_t v1, const vec3_t v2, vec3_t &cross)
-{
-    cross[0] = v1[1]*v2[2] - v1[2]*v2[1];
-    cross[1] = v1[2]*v2[0] - v1[0]*v2[2];
-    cross[2] = v1[0]*v2[1] - v1[1]*v2[0];
-}
-
-#define DotProduct(x,y)			(x[0]*y[0]+x[1]*y[1]+x[2]*y[2])
-
-void VectorScale (vec3_t in, vec_t scale, vec3_t &out)
-{
-    out[0] = in[0]*scale;
-    out[1] = in[1]*scale;
-    out[2] = in[2]*scale;
-}
-
-#define VectorSubtract(a,b,c)	(c[0]=a[0]-b[0],c[1]=a[1]-b[1],c[2]=a[2]-b[2])
-#define VectorAdd(a,b,c)		(c[0]=a[0]+b[0],c[1]=a[1]+b[1],c[2]=a[2]+b[2])
-
-#define VectorCopy(a,b)			(b[0]=a[0],b[1]=a[1],b[2]=a[2])
-
-vec_t VectorNormalize (vec3_t &v)
-{
-    double   length, ilength;
-
-    length = v[0]*v[0] + v[1]*v[1] + v[2]*v[2];
-    length = sqrt (length);     // FIXME
-
-    if (length)
-    {
-        ilength = 1/length;
-        v[0] *= ilength;
-        v[1] *= ilength;
-        v[2] *= ilength;
-    }
-
-    return length;
-
-}
-
-void CM_MirrorPlaneOnX(vec3_t &normal, double &dist)
-{
-    if (!normal[0])
-        return;
-
-    int32_t axis;
-
-    if (fabs(normal[0]) >= fabs(normal[1]) && fabs(normal[0]) >= fabs(normal[2]))
-        axis = 0;
-    else if (fabs(normal[1]) >= fabs(normal[0]) && fabs(normal[1]) >= fabs(normal[2]))
-        axis = 1;
-    else
-        axis = 2;
-
-    if (axis != qv::indexOfLargestMagnitudeComponent(normal))
-        __debugbreak();
-
-    vec3_t other_a { 0, 0, 0 };
-    vec3_t other_b { 0, 0, 0 };
-
-    other_a[(axis + 1) % 3] = 1.0;
-    other_b[(axis + 2) % 3] = 1.0;
-
-    vec3_t tangent, bitangent, c;
-
-    CrossProduct(normal, other_a, tangent);
-    CrossProduct(normal, other_b, bitangent);
-
-    CrossProduct(tangent, bitangent, c);
-
-    if (DotProduct(c, normal) < 0.0)
-    {
-        std::swap(tangent[0], bitangent[0]);
-        std::swap(tangent[1], bitangent[1]);
-        std::swap(tangent[2], bitangent[2]);
-    }
-
-    vec3_t pt0, pt1, pt2;
-
-    VectorScale(normal, dist, pt0);
-    VectorAdd(pt0, bitangent, pt1);
-    VectorAdd(pt0, tangent, pt2);
-
-    pt0[0] = -pt0[0];
-    pt1[0] = -pt1[0];
-    pt2[0] = -pt2[0];
-
-    std::swap(pt0[0], pt2[0]);
-    std::swap(pt0[1], pt2[1]);
-    std::swap(pt0[2], pt2[2]);
-
-    vec3_t ab, cb;
-    VectorSubtract(pt0, pt1, ab);
-    VectorSubtract(pt2, pt1, cb);
-
-    vec3_t out_normal;
-    CrossProduct(ab, cb, out_normal);
-    VectorNormalize(out_normal);
-
-    double out_dist = DotProduct(pt1, out_normal);
-
-    VectorCopy(out_normal, normal);
-    dist = out_dist;
-}
-
 int bsputil_main(int argc, char **argv)
 {
     logging::preinitialize();
@@ -893,16 +786,6 @@ int bsputil_main(int argc, char **argv)
                     }
 
                     auto scaled = dplane_t { pts.plane(), p.type };
-
-                    vec3_t n = p.normal;
-                    double d = p.dist;
-                    CM_MirrorPlaneOnX(n, d);
-
-                    qvec3f nf = n;
-                    float df = d;
-
-                    if (!qv::equalExact(nf, scaled.normal) || df != scaled.dist)
-                        __debugbreak();
 
                     plane_remap[i] = new_planes.add_or_find_plane(scaled);
                     i++;
