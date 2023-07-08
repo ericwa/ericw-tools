@@ -1536,7 +1536,7 @@ static void LoadTextureData()
                 miptex.height = tex->meta.height;
 
                 // only mips can be embedded directly
-                if (!pos.archive->external && tex->meta.extension == img::ext::MIP) {
+                if (!qbsp_options.notextures.value() && !pos.archive->external && tex->meta.extension == img::ext::MIP) {
                     miptex.data = std::move(file.value());
                     continue;
                 }
