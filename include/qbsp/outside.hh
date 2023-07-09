@@ -32,7 +32,6 @@ struct tree_t;
 void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d &point2);
 
 bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes);
-std::vector<node_t *> FindOccupiedClusters(node_t *headnode);
 void MarkBrushSidesInvisible(bspbrush_t::container &brushes);
 
 void FillBrushEntity(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes);

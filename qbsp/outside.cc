@@ -111,33 +111,15 @@ static bool OutsideFill_Passable(const portal_t *p)
 
 /*
 ==================
-MarkClusterOutsideDistance_R
+FloodFillLeafsFromVoid
 
-Given that the cluster is reachable from the void, sets outside_distance
-to the given value on this cluster and all desdcent leafs (if it's a detail cluster).
-==================
-*/
-static void MarkClusterOutsideDistance_R(node_t *node, int outside_distance)
-{
-    node->outside_distance = outside_distance;
-
-    if (!node->is_leaf) {
-        MarkClusterOutsideDistance_R(node->children[0], outside_distance);
-        MarkClusterOutsideDistance_R(node->children[1], outside_distance);
-    }
-}
-
-/*
-==================
-FloodFillFromOutsideNode
-
-Sets outside_distance on clusters reachable from the void
+Sets outside_distance on leafs reachable from the void
 
 preconditions:
 - all leafs have outside_distance set to -1
 ==================
 */
-static void FloodFillClustersFromVoid(tree_t &tree)
+static void FloodFillLeafsFromVoid(tree_t &tree)
 {
     // breadth-first search
     std::list<std::pair<node_t *, int>> queue;
@@ -169,7 +151,8 @@ static void FloodFillClustersFromVoid(tree_t &tree)
 
         // visit node
         visited_nodes.insert(node);
-        MarkClusterOutsideDistance_R(node, outside_distance);
+        Q_assert(node->is_leaf);
+        node->outside_distance = outside_distance;
 
         // push neighbouring nodes onto the back of the queue
         int side;
@@ -328,12 +311,12 @@ static bool IsNofillEntity(const entdict_t &edict)
 
 /*
 ==================
-FindOccupiedLeafs
+MarkOccupiedLeafs
 
 sets node->occupant
 ==================
 */
-static void MarkOccupiedClusters(node_t *headnode, hull_index_t hullnum)
+static void MarkOccupiedLeafs(node_t *headnode, hull_index_t hullnum)
 {
     for (int i = 1; i < map.entities.size(); i++) {
         mapentity_t &entity = map.entities.at(i);
@@ -349,44 +332,44 @@ static void MarkOccupiedClusters(node_t *headnode, hull_index_t hullnum)
 
         /* find the leaf it's in. Skip opqaue leafs */
         bool prefer_sealing = !hullnum.has_value() || hullnum.value() == 0;
-        node_t *cluster = PointInLeaf(headnode, entity.origin, prefer_sealing);
+        node_t *leaf = PointInLeaf(headnode, entity.origin, prefer_sealing);
 
-        if (LeafSealsMap(cluster)) {
+        if (LeafSealsMap(leaf)) {
             continue;
         }
 
         /* did we already find an entity for this leaf? */
-        if (cluster->occupant != nullptr) {
+        if (leaf->occupant != nullptr) {
             continue;
         }
 
-        cluster->occupant = &entity;
+        leaf->occupant = &entity;
     }
 }
 
-static void FindOccupiedClusters_R(node_t *node, std::vector<node_t *> &result)
+static void FindOccupiedLeafs_R(node_t *node, std::vector<node_t *> &result)
 {
     if (node->occupant) {
         result.push_back(node);
     }
 
     if (!node->is_leaf) {
-        FindOccupiedClusters_R(node->children[0], result);
-        FindOccupiedClusters_R(node->children[1], result);
+        FindOccupiedLeafs_R(node->children[0], result);
+        FindOccupiedLeafs_R(node->children[1], result);
     }
 }
 
 /*
 ==================
-FindOccupiedClusters
+FindOccupiedLeafs
 
 Requires that FillOutside has run
 ==================
 */
-std::vector<node_t *> FindOccupiedClusters(node_t *headnode)
+static std::vector<node_t *> FindOccupiedLeafs(node_t *headnode)
 {
     std::vector<node_t *> result;
-    FindOccupiedClusters_R(headnode, result);
+    FindOccupiedLeafs_R(headnode, result);
     return result;
 }
 
@@ -424,13 +407,13 @@ static void MarkVisibleBrushSides_R(node_t *node)
     }
 
     if (LeafSealsMap(node)) {
-        // this cluster is opaque
+        // this leaf is opaque
         return;
     }
 
     Q_assert(!node->detail_separator);
 
-    // we also want to mark brush sides in the neighbouring cluster
+    // we also want to mark brush sides in the neighbouring leafs
     // as visible
 
     int side;
@@ -640,15 +623,15 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     ClearOccupied_r(node);
 
     // Sets leaf->occupant
-    MarkOccupiedClusters(node, hullnum);
-    const std::vector<node_t *> occupied_clusters = FindOccupiedClusters(node);
+    MarkOccupiedLeafs(node, hullnum);
+    const std::vector<node_t *> occupied_leafs = FindOccupiedLeafs(node);
 
-    for (auto *occupied_cluster : occupied_clusters) {
-        Q_assert(occupied_cluster->outside_distance == -1);
-        Q_assert(occupied_cluster->occupied == 0);
+    for (auto *occupied_leaf : occupied_leafs) {
+        Q_assert(occupied_leaf->outside_distance == -1);
+        Q_assert(occupied_leaf->occupied == 0);
     }
 
-    if (occupied_clusters.empty()) {
+    if (occupied_leafs.empty()) {
         logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum.value_or(0));
         return false;
     }
@@ -663,7 +646,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     }
 
     if (filltype == settings::filltype_t::INSIDE) {
-        BFSFloodFillFromOccupiedLeafs(occupied_clusters);
+        BFSFloodFillFromOccupiedLeafs(occupied_leafs);
 
         /* first check to see if an occupied leaf is hit */
         const int side = (tree.outside_node.portals->nodes[0] == &tree.outside_node);
@@ -678,13 +661,13 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
         //
         // We tried inside -> out and it leads to things like monster boxes getting inadvertently sealed,
         // or even whole sections of the map with no point entities - problems compounded by hull expansion.
-        FloodFillClustersFromVoid(tree);
+        FloodFillLeafsFromVoid(tree);
 
         // check for the occupied leaf closest to the void
         int best_leak_dist = INT_MAX;
         node_t *best_leak = nullptr;
 
-        for (node_t *leaf : occupied_clusters) {
+        for (node_t *leaf : occupied_leafs) {
             if (leaf->outside_distance == -1)
                 continue;
 
