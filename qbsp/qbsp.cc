@@ -1151,8 +1151,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         WritePortalFile(tree);
     }
 
-    auto MakeFaceFromSide = [](node_t *node, mapface_t &side) -> std::unique_ptr<face_t>
-    {
+    auto MakeFaceFromSide = [](node_t *node, mapface_t &side) -> std::unique_ptr<face_t> {
         if (!side.winding.size()) {
             return nullptr;
         }
@@ -1165,7 +1164,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         f->original_side = &side;
 
         f->w = side.winding.clone();
-        f->contents = { side.contents, side.contents };
+        f->contents = {side.contents, side.contents};
 
         UpdateFaceSphere(f.get());
 
@@ -1536,7 +1535,8 @@ static void LoadTextureData()
                 miptex.height = tex->meta.height;
 
                 // only mips can be embedded directly
-                if (!qbsp_options.notextures.value() && !pos.archive->external && tex->meta.extension == img::ext::MIP) {
+                if (!qbsp_options.notextures.value() && !pos.archive->external &&
+                    tex->meta.extension == img::ext::MIP) {
                     miptex.data = std::move(file.value());
                     continue;
                 }

@@ -616,11 +616,11 @@ struct planelist_t
             result = positive_index;
         }
 
-        plane_hash.emplace(pareto::point<vec_t, 4>{positive.normal[0], positive.normal[1],
-            positive.normal[2], positive.dist},
+        plane_hash.emplace(
+            pareto::point<vec_t, 4>{positive.normal[0], positive.normal[1], positive.normal[2], positive.dist},
             positive_index);
-        plane_hash.emplace(pareto::point<vec_t, 4>{negative.normal[0], negative.normal[1],
-            negative.normal[2], negative.dist},
+        plane_hash.emplace(
+            pareto::point<vec_t, 4>{negative.normal[0], negative.normal[1], negative.normal[2], negative.dist},
             negative_index);
 
         return result;
@@ -632,10 +632,10 @@ struct planelist_t
         constexpr vec_t HALF_DIST_EPSILON = DIST_EPSILON * 0.5;
 
         if (auto it = plane_hash.find_intersection(
-            {plane.normal[0] - HALF_NORMAL_EPSILON, plane.normal[1] - HALF_NORMAL_EPSILON,
-            plane.normal[2] - HALF_NORMAL_EPSILON, plane.dist - HALF_DIST_EPSILON},
-            {plane.normal[0] + HALF_NORMAL_EPSILON, plane.normal[1] + HALF_NORMAL_EPSILON,
-            plane.normal[2] + HALF_NORMAL_EPSILON, plane.dist + HALF_DIST_EPSILON});
+                {plane.normal[0] - HALF_NORMAL_EPSILON, plane.normal[1] - HALF_NORMAL_EPSILON,
+                    plane.normal[2] - HALF_NORMAL_EPSILON, plane.dist - HALF_DIST_EPSILON},
+                {plane.normal[0] + HALF_NORMAL_EPSILON, plane.normal[1] + HALF_NORMAL_EPSILON,
+                    plane.normal[2] + HALF_NORMAL_EPSILON, plane.dist + HALF_DIST_EPSILON});
             it != plane_hash.end()) {
             return it->second;
         }
@@ -713,7 +713,7 @@ int bsputil_main(int argc, char **argv)
                 Error("--scale requires three arguments; x y z");
             }
 
-            qvec3d scalar { atof(argv[i]), atof(argv[i + 1]), atof(argv[i + 2]) };
+            qvec3d scalar{atof(argv[i]), atof(argv[i + 1]), atof(argv[i + 2])};
 
             i += 2;
 
@@ -732,7 +732,7 @@ int bsputil_main(int argc, char **argv)
                         origin *= scalar;
                         ent.set("origin", fmt::format("{} {} {}", origin[0], origin[1], origin[2]));
                     }
-                    
+
                     if (ent.has("lip")) {
                         float lip = ent.get_float("lip");
                         lip -= 2.0f;
@@ -740,7 +740,7 @@ int bsputil_main(int argc, char **argv)
                         lip += 2.0f;
                         ent.set("lip", fmt::format("{}", lip));
                     }
-                    
+
                     if (ent.has("height")) {
                         // FIXME: check this
                         float height = ent.get_float("height");
@@ -762,7 +762,8 @@ int bsputil_main(int argc, char **argv)
 
             if (flip_faces & 1) {
                 for (auto &s : bsp.dfaces) {
-                    std::reverse(bsp.dsurfedges.data() + s.firstedge, bsp.dsurfedges.data() + (s.firstedge + s.numedges));
+                    std::reverse(
+                        bsp.dsurfedges.data() + s.firstedge, bsp.dsurfedges.data() + (s.firstedge + s.numedges));
                 }
             }
 
@@ -785,7 +786,7 @@ int bsputil_main(int argc, char **argv)
                         std::reverse(pts.begin(), pts.end());
                     }
 
-                    auto scaled = dplane_t { pts.plane(), p.type };
+                    auto scaled = dplane_t{pts.plane(), p.type};
 
                     plane_remap[i] = new_planes.add_or_find_plane(scaled);
                     i++;

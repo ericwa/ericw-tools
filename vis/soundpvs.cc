@@ -76,7 +76,7 @@ void CalcAmbientSounds(mbsp_t *bsp)
         mleaf_t *leaf = &bsp->dleafs[i + 1];
 
         float dists[NUM_AMBIENTS];
-        
+
         //
         // clear ambients
         //
