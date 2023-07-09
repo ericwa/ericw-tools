@@ -772,7 +772,7 @@ static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visit
             continue;
 
         // continue exploding
-        return FindAreaPortalExits_R(neighbour, visited, exits);
+        FindAreaPortalExits_R(neighbour, visited, exits);
     }
 }
 

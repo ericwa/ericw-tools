@@ -294,3 +294,21 @@ TEST_SUITE("common")
         CHECK(texture->height_scale == 1);
     }
 }
+
+TEST_SUITE("qmat")
+{
+    TEST_CASE("transpose")
+    {
+        // clang-format off
+        auto in = qmat<float, 2, 3>::row_major(
+            {1.0, 2.0, 3.0,
+             4.0, 5.0, 6.0});
+        auto exp = qmat<float, 3, 2>::row_major(
+            {1.0, 4.0,
+             2.0, 5.0,
+             3.0, 6.0});
+        // clang-format on
+
+        CHECK(in.transpose() == exp);
+    }
+}
