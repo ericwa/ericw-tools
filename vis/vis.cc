@@ -2,6 +2,7 @@
 
 #include <climits>
 #include <cstdint>
+#include <bit> // for std::countr_zero
 
 #include <vis/leafbits.hh>
 #include <vis/vis.hh>
@@ -10,22 +11,6 @@
 #include <common/fs.hh>
 #include <common/parallel.hh>
 #include <fmt/chrono.h>
-
-/* Use some GCC builtins */
-#if !defined(ffsl) && defined(__GNUC__)
-#define ffsl __builtin_ffsl
-#elif defined(_WIN32)
-#include <intrin.h>
-inline int ffsl(long int val)
-{
-    unsigned long indexout;
-    unsigned char res = _BitScanForward(&indexout, val);
-    if (!res)
-        return 0;
-    else
-        return indexout + 1;
-}
-#endif
 
 /*
  * If the portal file is "PRT2" format, then the leafs we are dealing with are
@@ -357,7 +342,7 @@ static void PortalCompleted(visportal_t *completed)
              * Update mightsee for any of the changed bits that survived
              */
             while (changed) {
-                bit = ffsl(changed) - 1;
+                bit = std::countr_zero(changed);
                 changed &= ~nth_bit(bit);
                 leafnum = (j << leafbits_t::shift) + bit;
                 UpdateMightsee(leafs[leafnum], myleaf);
