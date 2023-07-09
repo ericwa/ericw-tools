@@ -168,6 +168,9 @@ void MainWindow::createPropertiesSidebar()
     auto *rendermode_group = new QGroupBox(tr("Render mode"));
     rendermode_group->setLayout(rendermode_layout);
 
+    auto *drawportals = new QCheckBox(tr("Draw Portals (PRT)"));
+    auto *drawleak = new QCheckBox(tr("Draw Leak (PTS/LIN)"));
+
     auto *showtris = new QCheckBox(tr("Show Tris"));
 
     auto *keepposition = new QCheckBox(tr("Keep Camera Pos"));
@@ -185,6 +188,8 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(tr("light"), light_options);
     formLayout->addRow(reload_button);
     formLayout->addRow(rendermode_group);
+    formLayout->addRow(drawportals);
+    formLayout->addRow(drawleak);
     formLayout->addRow(showtris);
     formLayout->addRow(keepposition);
     formLayout->addRow(nearest);
@@ -232,6 +237,8 @@ void MainWindow::createPropertiesSidebar()
     connect(normals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawNormals(checked); });
     connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
+    connect(drawportals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawPortals(checked); });
+    connect(drawleak, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeak(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
     connect(nearest, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });

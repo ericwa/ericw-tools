@@ -39,6 +39,7 @@ See file, 'COPYING', for details.
 #include <common/bsputils.hh>
 #include <common/bspinfo.hh>
 #include <common/imglib.hh>
+#include <common/prtfile.hh>
 #include <light/light.hh>
 
 GLView::GLView(QWidget *parent)
@@ -49,7 +50,10 @@ GLView::GLView(QWidget *parent)
       m_cameraOrigin(0, 0, 0),
       m_cameraFwd(0, 1, 0),
       m_vao(),
-      m_indexBuffer(QOpenGLBuffer::IndexBuffer)
+      m_indexBuffer(QOpenGLBuffer::IndexBuffer),
+      m_leakVao(),
+      m_portalVao(),
+      m_portalIndexBuffer(QOpenGLBuffer::IndexBuffer)
 {
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
@@ -66,12 +70,42 @@ GLView::~GLView()
     m_indexBuffer.destroy();
     m_vao.destroy();
 
+    m_leakVao.destroy();
+    m_leakVbo.destroy();
+
+    m_portalVbo.destroy();
+    m_portalIndexBuffer.destroy();
+    m_portalVao.destroy();
+
     placeholder_texture.reset();
     lightmap_texture.reset();
     m_drawcalls.clear();
 
     doneCurrent();
 }
+
+static const char *s_fragShader_Simple = R"(
+#version 330 core
+uniform vec4 drawcolor;
+
+out vec4 color;
+
+void main() {
+    color = drawcolor;
+}
+)";
+
+static const char *s_vertShader_Simple = R"(
+#version 330 core
+
+layout (location = 0) in vec3 position;
+
+uniform mat4 MVP;
+
+void main() {
+    gl_Position = MVP * vec4(position, 1.0);
+}
+)";
 
 static const char *s_fragShader_Wireframe = R"(
 #version 330 core
@@ -309,6 +343,11 @@ void GLView::initializeGL()
     m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_skyboxFragShader);
     assert(m_skybox_program->link());
 
+    m_program_simple = new QOpenGLShaderProgram();
+    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Simple);
+    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Simple);
+    assert(m_program_simple->link());
+
     m_program_wireframe = new QOpenGLShaderProgram();
     m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Wireframe);
     m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Wireframe);
@@ -344,10 +383,18 @@ void GLView::initializeGL()
     m_program_wireframe_mvp_location = m_program_wireframe->uniformLocation("MVP");
     m_program_wireframe->release();
 
+    m_program_simple->bind();
+    m_program_simple_mvp_location = m_program_simple->uniformLocation("MVP");
+    m_program_simple_color_location = m_program_simple->uniformLocation("drawcolor");
+    m_program_simple->release();
+
     m_vao.create();
+    m_leakVao.create();
+    m_portalVao.create();
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+    glEnable(GL_LINE_SMOOTH);
     glFrontFace(GL_CW);
 }
 
@@ -492,6 +539,47 @@ void GLView::paintGL()
 
     m_program->release();
 
+    if (m_drawLeak && num_leak_points) {
+        m_program_simple->bind();
+        m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_leakVao);
+
+        glDrawArrays(GL_LINE_STRIP, 0, num_leak_points);
+
+        m_program_simple->release();
+    }
+
+    if (m_drawPortals && num_portal_indices) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+
+        m_program_simple->bind();
+        m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_portalVao);
+
+        glDisable(GL_CULL_FACE);
+
+        glEnable(GL_PRIMITIVE_RESTART);
+        glPrimitiveRestartIndex((GLuint) -1);
+
+        m_program_wireframe->setUniformValue(m_program_simple_color_location, 1.0f, 0.4f, 0.4f, 0.2f);
+        glDrawElements(GL_TRIANGLE_FAN, num_portal_indices, GL_UNSIGNED_INT, 0);
+        m_program_wireframe->setUniformValue(m_program_simple_color_location, 1.0f, 1.f, 1.f, 0.2f);
+        glDrawElements(GL_LINE_LOOP, num_portal_indices, GL_UNSIGNED_INT, 0);
+
+        glDisable(GL_PRIMITIVE_RESTART);
+
+        glEnable(GL_CULL_FACE);
+
+        m_program_simple->release();
+
+        glDisable(GL_BLEND);
+        glDepthMask(GL_TRUE);
+    }
+
     if (shouldLiveUpdate()) {
         update(); // schedule the next frame
     } else {
@@ -540,6 +628,16 @@ void GLView::setDrawFlat(bool drawflat)
 void GLView::setKeepOrigin(bool keeporigin)
 {
     m_keepOrigin = keeporigin;
+}
+
+void GLView::setDrawPortals(bool drawportals)
+{
+    m_drawPortals = drawportals;
+}
+
+void GLView::setDrawLeak(bool drawleak)
+{
+    m_drawLeak = drawleak;
 }
 
 void GLView::setLightStyleIntensity(int style_id, int intensity)
@@ -618,8 +716,16 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     m_drawcalls.clear();
     m_vbo.bind();
     m_vbo.allocate(0);
+    m_leakVbo.bind();
+    m_leakVbo.allocate(0);
     m_indexBuffer.bind();
     m_indexBuffer.allocate(0);
+    m_portalVbo.bind();
+    m_portalVbo.allocate(0);
+    m_portalIndexBuffer.bind();
+    m_portalIndexBuffer.allocate(0);
+    num_leak_points = 0;
+    num_portal_indices = 0;
 
     int32_t highest_depth = 0;
 
@@ -967,43 +1073,45 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         m_drawcalls.push_back(std::move(dc));
     }
 
-    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+    {
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
-    // upload index buffer
-    m_indexBuffer.create();
-    m_indexBuffer.bind();
-    m_indexBuffer.allocate(indexBuffer.data(), indexBuffer.size() * sizeof(indexBuffer[0]));
+        // upload index buffer
+        m_indexBuffer.create();
+        m_indexBuffer.bind();
+        m_indexBuffer.allocate(indexBuffer.data(), indexBuffer.size() * sizeof(indexBuffer[0]));
 
-    // upload vertex buffer
-    m_vbo.create();
-    m_vbo.bind();
-    m_vbo.allocate(verts.data(), verts.size() * sizeof(verts[0]));
+        // upload vertex buffer
+        m_vbo.create();
+        m_vbo.bind();
+        m_vbo.allocate(verts.data(), verts.size() * sizeof(verts[0]));
 
-    // positions
-    glEnableVertexAttribArray(0 /* attrib */);
-    glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, pos));
+        // positions
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, pos));
 
-    // texture uvs
-    glEnableVertexAttribArray(1 /* attrib */);
-    glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, uv));
+        // texture uvs
+        glEnableVertexAttribArray(1 /* attrib */);
+        glVertexAttribPointer(1 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, uv));
 
-    // lightmap uvs
-    glEnableVertexAttribArray(2 /* attrib */);
-    glVertexAttribPointer(
-        2 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, lightmap_uv));
+        // lightmap uvs
+        glEnableVertexAttribArray(2 /* attrib */);
+        glVertexAttribPointer(
+            2 /* attrib */, 2, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, lightmap_uv));
 
-    // normals
-    glEnableVertexAttribArray(3 /* attrib */);
-    glVertexAttribPointer(3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
+        // normals
+        glEnableVertexAttribArray(3 /* attrib */);
+        glVertexAttribPointer(3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
 
-    // flat shading color
-    glEnableVertexAttribArray(4 /* attrib */);
-    glVertexAttribPointer(
-        4 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, flat_color));
+        // flat shading color
+        glEnableVertexAttribArray(4 /* attrib */);
+        glVertexAttribPointer(
+            4 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, flat_color));
 
-    // styles
-    glEnableVertexAttribArray(5 /* attrib */);
-    glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+        // styles
+        glEnableVertexAttribArray(5 /* attrib */);
+        glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+    }
 
     // initialize style values
     m_program->bind();
@@ -1011,6 +1119,98 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         m_program->setUniformValue(m_program_style_scalars_location + i, 1.f);
     }
     m_program->release();
+
+    // load leak file
+    fs::path leakFile = fs::path(file.toStdString()).replace_extension(".pts");
+
+    if (!fs::exists(leakFile)) {
+        leakFile = fs::path(file.toStdString()).replace_extension(".lin");
+    }
+
+    // populate the vertex/index buffers
+    struct simple_vertex_t
+    {
+        qvec3f pos;
+    };
+
+    if (fs::exists(leakFile)) {
+        QOpenGLVertexArrayObject::Binder leakVaoBinder(&m_leakVao);
+
+        std::ifstream f(leakFile);
+        std::vector<simple_vertex_t> points;
+
+        while (!f.eof()) {
+            std::string line;
+            std::getline(f, line);
+
+            if (line.empty()) {
+                break;
+            }
+
+            auto s = QString::fromStdString(line);
+            auto split = s.split(' ');
+
+            double x = split[0].toDouble();
+            double y = split[1].toDouble();
+            double z = split[2].toDouble();
+
+            points.emplace_back(qvec3f{(float) x, (float) y, (float) z});
+
+            num_leak_points++;
+        }
+
+        // upload vertex buffer
+        m_leakVbo.create();
+        m_leakVbo.bind();
+        m_leakVbo.allocate(points.data(), points.size() * sizeof(points[0]));
+
+        // positions
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+    }
+
+    // load portal file
+    fs::path portalFile = fs::path(file.toStdString()).replace_extension(".prt");
+
+    if (fs::exists(portalFile)) {
+        QOpenGLVertexArrayObject::Binder portalVaoBinder(&m_portalVao);
+
+        auto prt = LoadPrtFile(portalFile, bsp.loadversion);
+        std::vector<GLuint> indices;
+        std::vector<simple_vertex_t> points;
+
+        size_t total_points = 0;
+        size_t total_indices = 0;
+        size_t current_index = 0;
+
+        for (auto &portal : prt.portals) {
+            total_points += portal.winding.size();
+            total_indices += portal.winding.size() + 1;
+
+            for (auto &pt : portal.winding) {
+                indices.push_back(current_index++);
+                points.emplace_back(pt);
+            }
+
+            indices.push_back((GLuint) -1);
+        }
+
+        // upload index buffer
+        m_portalIndexBuffer.create();
+        m_portalIndexBuffer.bind();
+        m_portalIndexBuffer.allocate(indices.data(), indices.size() * sizeof(indices[0]));
+
+        num_portal_indices = indices.size();
+
+        // upload vertex buffer
+        m_portalVbo.create();
+        m_portalVbo.bind();
+        m_portalVbo.allocate(points.data(), points.size() * sizeof(points[0]));
+
+        // positions
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+    }
 
     doneCurrent();
 

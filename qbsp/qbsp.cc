@@ -509,7 +509,7 @@ qbsp_settings::qbsp_settings()
       includeskip{this, "includeskip", false, &common_format_group,
           "don't cull skip faces from the list of renderable surfaces (Q2RTX)"},
       worldextent{this, "worldextent", 0.0, &debugging_group, "explicitly provide world extents; 0 will auto-detect"},
-      leakdist{this, "leakdist", 2, &debugging_group, "space between leakfile points"},
+      leakdist{this, "leakdist", 0, &debugging_group, "space between leakfile points (default 0: no inbetween points)"},
       forceprt1{
           this, "forceprt1", false, &debugging_group, "force a PRT1 output file even if PRT2 is required for vis"},
       tjunc{this, {"tjunc", "notjunc"}, tjunclevel_t::MWT,

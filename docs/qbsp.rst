@@ -215,7 +215,7 @@ Options
 
 .. option:: -leakdist [n]
 
-   Space between leakfile points (default 2)
+   Space between leakfile points (default 0, which does not write any inbetween points)
 
 .. option:: -subdivide [n]
 

@@ -247,13 +247,18 @@ WriteLeakTrail
 */
 void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d &point2)
 {
-    qvec3d vector = point2 - point1;
-    vec_t dist = qv::normalizeInPlace(vector);
+    if (qbsp_options.leakdist.value()) {
+        qvec3d vector = point2 - point1;
+        vec_t dist = qv::normalizeInPlace(vector);
 
-    while (dist > qbsp_options.leakdist.value()) {
+        while (dist > qbsp_options.leakdist.value()) {
+            ewt::print(leakfile, "{}\n", point1);
+            point1 += vector * qbsp_options.leakdist.value();
+            dist -= qbsp_options.leakdist.value();
+        }
+    } else {
         ewt::print(leakfile, "{}\n", point1);
-        point1 += vector * qbsp_options.leakdist.value();
-        dist -= qbsp_options.leakdist.value();
+        ewt::print(leakfile, "{}\n", point2);
     }
 }
 

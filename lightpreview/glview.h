@@ -82,11 +82,20 @@ private:
     bool m_showTris = false;
     bool m_drawFlat = false;
     bool m_keepOrigin = false;
+    bool m_drawPortals = false;
+    bool m_drawLeak = false;
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
     QOpenGLBuffer m_indexBuffer;
+
+    QOpenGLVertexArrayObject m_leakVao;
+    QOpenGLBuffer m_leakVbo;
+
+    QOpenGLVertexArrayObject m_portalVao;
+    QOpenGLBuffer m_portalVbo;
+    QOpenGLBuffer m_portalIndexBuffer;
 
     // this determines what can be batched together in a draw call
     struct material_key
@@ -111,9 +120,12 @@ private:
         size_t index_count = 0;
     };
     std::vector<drawcall_t> m_drawcalls;
+    size_t num_leak_points = 0;
+    size_t num_portal_indices = 0;
 
     QOpenGLShaderProgram *m_program = nullptr, *m_skybox_program = nullptr;
     QOpenGLShaderProgram *m_program_wireframe = nullptr;
+    QOpenGLShaderProgram *m_program_simple = nullptr;
 
     // uniform locations
     int m_program_mvp_location = 0;
@@ -142,6 +154,10 @@ private:
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;
 
+    // uniform locations
+    int m_program_simple_mvp_location = 0;
+    int m_program_simple_color_location = 0;
+
 public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
@@ -156,6 +172,8 @@ public:
     void setShowTris(bool showtris);
     void setDrawFlat(bool drawflat);
     void setKeepOrigin(bool keeporigin);
+    void setDrawPortals(bool drawportals);
+    void setDrawLeak(bool drawleak);
     // intensity = 0 to 200
     void setLightStyleIntensity(int style_id, int intensity);
     void setMagFilter(QOpenGLTexture::Filter filter);
