@@ -224,6 +224,7 @@ public:
     setting_set texturedefs;
     setting_numeric<vec_t> lmscale;
     setting_enum<filltype_t> filltype;
+    setting_bool filldetail;
     setting_invertible_bool allow_upgrade;
     setting_validator<setting_int32> maxedges;
     setting_numeric<vec_t> midsplitbrushfraction;

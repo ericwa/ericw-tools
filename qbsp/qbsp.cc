@@ -542,10 +542,12 @@ qbsp_settings::qbsp_settings()
           "path to a texture definition file, which can transform textures in the .map into other textures."},
       lmscale{this, "lmscale", 1.0, &common_format_group,
           "change global lmscale (force _lmscale key on all entities). outputs the LMSCALE BSPX lump."},
-      filltype{this, "filltype", filltype_t::AUTO,
+      filltype{this, "filltype", filltype_t::INSIDE,
           {{"auto", filltype_t::AUTO}, {"inside", filltype_t::INSIDE}, {"outside", filltype_t::OUTSIDE}},
           &common_format_group,
           "whether to fill the map from the outside in (lenient), from the inside out (aggressive), or to automatically decide based on the hull being used."},
+      filldetail{this, "filldetail", true, &common_format_group,
+          "whether to fill in empty spaces which are fully enclosed by detail solid"},
       allow_upgrade{this, "allowupgrade", true, &common_format_group,
           "allow formats to \"upgrade\" to compatible extended formats when a limit is exceeded (ie Quake BSP to BSP2)"},
       maxedges{[](setting_int32 &setting) { return setting.value() == 0 || setting.value() >= 3; }, this, "maxedges",
@@ -1052,6 +1054,9 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
             // assume non-world bmodels are simple
             MakeTreePortals(tree);
             if (FillOutside(tree, hullnum, brushes)) {
+                if (qbsp_options.filldetail.value())
+                    FillDetail(tree, hullnum, brushes);
+
                 // make a really good tree
                 tree.clear();
                 BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
@@ -1059,6 +1064,9 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
                 // fill again so PruneNodes works
                 MakeTreePortals(tree);
                 FillOutside(tree, hullnum, brushes);
+                if (qbsp_options.filldetail.value())
+                    FillDetail(tree, hullnum, brushes);
+
                 FreeTreePortals(tree);
                 PruneNodes(tree.headnode);
             }
@@ -1101,6 +1109,9 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         // we can skip using them as BSP splitters on the "really good tree"
         // (effectively expanding those brush sides outwards).
         if (!qbsp_options.nofill.value() && FillOutside(tree, hullnum, brushes)) {
+            if (qbsp_options.filldetail.value())
+                FillDetail(tree, hullnum, brushes);
+
             // make a really good tree
             tree.clear();
             BrushBSP(tree, entity, brushes, tree_split_t::PRECISE);
@@ -1124,6 +1135,9 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
             // fill again so PruneNodes works
             FillOutside(tree, hullnum, brushes);
+
+            if (qbsp_options.filldetail.value())
+                FillDetail(tree, hullnum, brushes);
         }
 
         // Area portals

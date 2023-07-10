@@ -35,3 +35,5 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
 void MarkBrushSidesInvisible(bspbrush_t::container &brushes);
 
 void FillBrushEntity(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes);
+
+void FillDetail(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes);

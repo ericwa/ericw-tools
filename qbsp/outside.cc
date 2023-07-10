@@ -43,6 +43,17 @@ static bool LeafSealsMap(const node_t *node)
     return qbsp_options.target_game->contents_seals_map(node->contents);
 }
 
+static bool LeafSealsForDetailFill(const node_t *node)
+{
+    Q_assert(node->is_leaf);
+
+    // NOTE: detail-solid is considered sealing for the detail fill,
+    // but not the regular fill (LeafSealsMap).
+
+    return qbsp_options.target_game->contents_are_any_solid(node->contents) ||
+           qbsp_options.target_game->contents_are_sky(node->contents);
+}
+
 /*
 ===========
 PointInLeaf
@@ -107,6 +118,16 @@ static bool OutsideFill_Passable(const portal_t *p)
     }
 
     return !LeafSealsMap(p->nodes[0]) && !LeafSealsMap(p->nodes[1]);
+}
+
+static bool DetailFill_Passable(const portal_t *p)
+{
+    if (!p->onnode) {
+        // portal to outside_node
+        return false;
+    }
+
+    return !LeafSealsForDetailFill(p->nodes[0]) && !LeafSealsForDetailFill(p->nodes[1]);
 }
 
 /*
@@ -406,7 +427,7 @@ static void MarkVisibleBrushSides_R(node_t *node)
         return;
     }
 
-    if (LeafSealsMap(node)) {
+    if (LeafSealsForDetailFill(node)) {
         // this leaf is opaque
         return;
     }
@@ -478,6 +499,35 @@ static void OutLeafsToSolid_R(node_t *node, settings::filltype_t filltype, outle
     stats.outleafs++;
 }
 
+struct detail_filled_leafs_stats_t : logging::stat_tracker_t
+{
+    stat &filledleafs = register_stat("detail filled leafs", true);
+};
+
+static void FillDetailEnclosedLeafsToDetailSolid_R(node_t *node, detail_filled_leafs_stats_t &stats)
+{
+    if (!node->is_leaf) {
+        FillDetailEnclosedLeafsToDetailSolid_R(node->children[0], stats);
+        FillDetailEnclosedLeafsToDetailSolid_R(node->children[1], stats);
+        return;
+    }
+
+    // skip leafs reachable from entities
+    if (node->occupied > 0) {
+        return;
+    }
+
+    // Don't fill sky, or count solids as outleafs
+    if (LeafSealsForDetailFill(node)) {
+        return;
+    }
+
+    // Finally, we can fill it in as detail solid.
+    node->contents =
+        qbsp_options.target_game->create_detail_solid_contents(qbsp_options.target_game->create_solid_contents());
+    stats.filledleafs++;
+}
+
 //=============================================================================
 
 #if 0
@@ -492,12 +542,17 @@ static void SetOccupied_R(node_t *node, int dist)
 }
 #endif
 
+using portal_passable_t = bool (*)(const portal_t *);
+
 /*
 ==================
 precondition: all leafs have occupied set to 0
+
+sets node->occupied to 1 or more to indicate the number of steps to a directly occupied leaf
 ==================
 */
-static void BFSFloodFillFromOccupiedLeafs(const std::vector<node_t *> &occupied_leafs)
+static void BFSFloodFillFromOccupiedLeafs(
+    const std::vector<node_t *> &occupied_leafs, const portal_passable_t &predicate)
 {
     std::list<std::pair<node_t *, int>> queue;
     for (node_t *leaf : occupied_leafs) {
@@ -521,7 +576,7 @@ static void BFSFloodFillFromOccupiedLeafs(const std::vector<node_t *> &occupied_
             for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
                 side = (portal->nodes[0] == node);
 
-                if (!OutsideFill_Passable(portal))
+                if (!predicate(portal))
                     continue;
 
                 node_t *neighbour = portal->nodes[side];
@@ -646,7 +701,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     }
 
     if (filltype == settings::filltype_t::INSIDE) {
-        BFSFloodFillFromOccupiedLeafs(occupied_leafs);
+        BFSFloodFillFromOccupiedLeafs(occupied_leafs, OutsideFill_Passable);
 
         /* first check to see if an occupied leaf is hit */
         const int side = (tree.outside_node.portals->nodes[0] == &tree.outside_node);
@@ -748,6 +803,41 @@ void FillBrushEntity(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &
 
     // Clear the outside filling state on all nodes
     ClearOccupied_r(tree.headnode);
+
+    MarkBrushSidesInvisible(brushes);
+
+    MarkVisibleBrushSides_R(tree.headnode);
+}
+
+/**
+ * Searches for empty pockets that are fully enclosed by solid or detail|solid and not reachable by entities
+ *
+ * Intended to be run after FillOutside, so we preserve the visibility flag on brush sides, but
+ * additionally mark some new brush sides as invisible.
+ */
+void FillDetail(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes)
+{
+    logging::funcheader();
+
+    // Clear the outside filling state on all leafs
+    ClearOccupied_r(tree.headnode);
+
+    // Sets leaf->occupant
+    MarkOccupiedLeafs(tree.headnode, hullnum);
+    const std::vector<node_t *> occupied_leafs = FindOccupiedLeafs(tree.headnode);
+
+    if (occupied_leafs.empty()) {
+        logging::print("WARNING: No entities in empty space -- no filling performed (hull {})\n", hullnum.value_or(0));
+        return;
+    }
+
+    BFSFloodFillFromOccupiedLeafs(occupied_leafs, DetailFill_Passable);
+
+    // change the leaf contents
+    detail_filled_leafs_stats_t stats;
+    FillDetailEnclosedLeafsToDetailSolid_R(tree.headnode, stats);
+
+    // See missing_face_simple.map for a test case with a brush that straddles between void and non-void
 
     MarkBrushSidesInvisible(brushes);
 
