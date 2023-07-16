@@ -232,7 +232,7 @@ std::optional<texture> load_mip(
             }
 
             if (valid_mip_palette) {
-                stream.seekg(header.offsets[3] + mip3_size + palette_size);
+                stream.seekg(header.offsets[3] + mip3_size);
 
                 uint16_t num_colors;
                 stream >= num_colors;
