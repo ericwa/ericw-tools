@@ -409,7 +409,13 @@ void MainWindow::showEvent(QShowEvent *event)
 
 void MainWindow::fileOpen()
 {
-    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), "", tr("Map (*.map);; BSP (*.bsp)"));
+    // open the file browser in the directory containing the currently open file, if there is one
+    QString currentDir;
+    if (!m_mapFile.isEmpty()) {
+        currentDir = QFileInfo(m_mapFile).absolutePath();
+    }
+
+    QString fileName = QFileDialog::getOpenFileName(this, tr("Open File"), currentDir, tr("Map (*.map);; BSP (*.bsp)"));
 
     if (!fileName.isEmpty())
         loadFile(fileName);
@@ -693,7 +699,7 @@ void MainWindow::compileThreadExited()
 
     delete m_compileThread;
     m_compileThread = nullptr;
-    
+
     if (!std::holds_alternative<mbsp_t>(m_bspdata.bsp)) {
         return;
     }
