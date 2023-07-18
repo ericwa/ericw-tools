@@ -1449,8 +1449,8 @@ TEST_CASE("q1_wad_mapname" * doctest::test_suite("testmaps_q1"))
     CHECK(GAME_QUAKE == bsp.loadversion->game->id);
 
     CHECK(bsp.dtex.textures.size() == 2);
-    CHECK(bsp.dtex.textures[0].name == "skip");
-    CHECK(bsp.dtex.textures[0].data.size() == sizeof(dmiptex_t)); // no texture data
+    CHECK(bsp.dtex.textures[0].name == ""); // skip
+    CHECK(bsp.dtex.textures[0].data.size() == 0); // no texture data
 
     CHECK(bsp.dtex.textures[1].name == "{trigger");
     CHECK(bsp.dtex.textures[1].data.size() > sizeof(dmiptex_t));
@@ -1763,7 +1763,7 @@ TEST_CASE("textures search relative to current directory")
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cwd_relative_wad.map");
     REQUIRE(2 == bsp.dtex.textures.size());
     // FIXME: we shouldn't really be writing skip
-    CHECK("skip" == bsp.dtex.textures[0].name);
+    CHECK("" == bsp.dtex.textures[0].name);
 
     // make sure the texture was written
     CHECK("orangestuff8" == bsp.dtex.textures[1].name);
