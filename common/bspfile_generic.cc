@@ -150,6 +150,7 @@ void dmiptexlump_t::stream_read(std::istream &stream, const lump_t &lump)
 
         // dummy texture?
         if (offset < 0) {
+            tex.null_texture = true;
             continue;
         }
 
@@ -159,12 +160,20 @@ void dmiptexlump_t::stream_read(std::istream &stream, const lump_t &lump)
         stream.seekg(lump.fileofs + offset);
 
         // calculate the length of the data used for the individual miptex.
-        int32_t next_offset;
+        int32_t next_offset = -1;
 
-        if (i == nummiptex - 1) {
+        // scan forward (skipping -1's) to find the next valid offset
+        for (int j = i + 1; j < nummiptex; ++j) {
+            // valid?
+            if (offsets[j] >= 0) {
+                next_offset = offsets[j];
+                break;
+            }
+        }
+        if (next_offset == -1) {
+            // the remainder of the texures are missing, so read to the end
+            // of the overall lump
             next_offset = lump.filelen;
-        } else {
-            next_offset = offsets[i + 1];
         }
 
         if (next_offset > offset) {

@@ -102,6 +102,10 @@ struct miptex_t
     std::string name;
     uint32_t width, height;
     std::vector<uint8_t> data;
+    /**
+     * set at read time if the offset is -1
+     */
+    bool null_texture = false;
 
     size_t stream_size() const;
 

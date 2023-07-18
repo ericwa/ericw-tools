@@ -1451,6 +1451,7 @@ TEST_CASE("q1_wad_mapname" * doctest::test_suite("testmaps_q1"))
     CHECK(bsp.dtex.textures.size() == 2);
     CHECK(bsp.dtex.textures[0].name == ""); // skip
     CHECK(bsp.dtex.textures[0].data.size() == 0); // no texture data
+    CHECK(bsp.dtex.textures[0].null_texture); // no texture data
 
     CHECK(bsp.dtex.textures[1].name == "{trigger");
     CHECK(bsp.dtex.textures[1].data.size() > sizeof(dmiptex_t));
@@ -1881,4 +1882,22 @@ TEST_CASE("q1_liquid_software")
     for (int e : outwater_undirected_edges) {
         CHECK(inwater_undirected_edges.find(e) == inwater_undirected_edges.end());
     }
+}
+
+TEST_CASE("q1_missing_texture")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_missing_texture.map");
+
+    REQUIRE(2 == bsp.dtex.textures.size());
+
+    // FIXME: we shouldn't really be writing skip
+    // (our test data includes an actual "skip" texture,
+    // so that gets included in the bsp.)
+    CHECK("skip" == bsp.dtex.textures[0].name);
+    CHECK(!bsp.dtex.textures[0].null_texture);
+    CHECK(64 == bsp.dtex.textures[0].width);
+    CHECK(64 == bsp.dtex.textures[0].height);
+
+    CHECK("" == bsp.dtex.textures[1].name);
+    CHECK(bsp.dtex.textures[1].null_texture);
 }
