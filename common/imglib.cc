@@ -220,7 +220,7 @@ std::optional<texture> load_mip(
         if (game->id == GAME_HALF_LIFE) {
             bool valid_mip_palette = true;
 
-            int32_t mip3_size = (header.width >> 3) + (header.height >> 3);
+            int32_t mip3_size = (header.width >> 3) * (header.height >> 3);
             size_t palette_size = sizeof(uint16_t) + (sizeof(qvec3b) * 256);
 
             if (header.offsets[3] <= 0) {

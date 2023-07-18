@@ -97,6 +97,10 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
         destdir = test_quake2_maps_dir;
     } else if (qbsp_options.target_game->id == GAME_QUAKE) {
         destdir = test_quake_maps_dir;
+    } else if (qbsp_options.target_game->id == GAME_HEXEN_II) {
+        destdir = test_hexen2_maps_dir;
+    } else if (qbsp_options.target_game->id == GAME_HALF_LIFE) {
+        destdir = test_halflife_maps_dir;
     }
 
     // copy .bsp to game's basedir/maps directory, for easy in-game testing
@@ -1900,4 +1904,20 @@ TEST_CASE("q1_missing_texture")
 
     CHECK("" == bsp.dtex.textures[1].name);
     CHECK(bsp.dtex.textures[1].null_texture);
+}
+
+TEST_CASE("hl_basic")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("hl_basic.map", {"-hlbsp"});
+    CHECK(prt);
+
+    REQUIRE(2 == bsp.dtex.textures.size());
+
+    // FIXME: we shouldn't really be writing skip
+    CHECK(bsp.dtex.textures[0].null_texture);
+
+    CHECK("hltest" == bsp.dtex.textures[1].name);
+    CHECK(!bsp.dtex.textures[1].null_texture);
+    CHECK(64 == bsp.dtex.textures[1].width);
+    CHECK(64 == bsp.dtex.textures[1].height);
 }
