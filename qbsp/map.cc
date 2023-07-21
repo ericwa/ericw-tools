@@ -374,12 +374,12 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
     }
 
     for (size_t i = 0; i < 3; i++) {
-        if (ob.bounds.mins()[0] <= -qbsp_options.worldextent.value() ||
-            ob.bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+        if (ob.bounds.mins()[i] <= -qbsp_options.worldextent.value() ||
+            ob.bounds.maxs()[i] >= qbsp_options.worldextent.value()) {
             logging::print("WARNING: {}: brush bounds out of range\n", ob.line);
         }
-        if (ob.bounds.mins()[0] >= qbsp_options.worldextent.value() ||
-            ob.bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+        if (ob.bounds.mins()[i] >= qbsp_options.worldextent.value() ||
+            ob.bounds.maxs()[i] <= -qbsp_options.worldextent.value()) {
             logging::print("WARNING: {}: no visible sides on brush\n", ob.line);
         }
     }

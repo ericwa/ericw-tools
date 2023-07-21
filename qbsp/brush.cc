@@ -934,16 +934,16 @@ bool bspbrush_t::update_bounds(bool warn_on_failures)
 
     for (size_t i = 0; i < 3; i++) {
         // todo: map_source_location in bspbrush_t
-        if (this->bounds.mins()[0] <= -qbsp_options.worldextent.value() ||
-            this->bounds.maxs()[0] >= qbsp_options.worldextent.value()) {
+        if (this->bounds.mins()[i] <= -qbsp_options.worldextent.value() ||
+            this->bounds.maxs()[i] >= qbsp_options.worldextent.value()) {
             if (warn_on_failures) {
                 logging::print(
                     "WARNING: {}: brush bounds out of range\n", mapbrush ? mapbrush->line : parser_source_location());
             }
             return false;
         }
-        if (this->bounds.mins()[0] >= qbsp_options.worldextent.value() ||
-            this->bounds.maxs()[0] <= -qbsp_options.worldextent.value()) {
+        if (this->bounds.mins()[i] >= qbsp_options.worldextent.value() ||
+            this->bounds.maxs()[i] <= -qbsp_options.worldextent.value()) {
             if (warn_on_failures) {
                 logging::print(
                     "WARNING: {}: no visible sides on brush\n", mapbrush ? mapbrush->line : parser_source_location());
