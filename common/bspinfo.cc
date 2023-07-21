@@ -765,6 +765,11 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
         json &textures = (j.emplace("textures", json::array())).first.value();
 
         for (auto &src_tex : bsp.dtex.textures) {
+            if (src_tex.null_texture) {
+                // use json null to indicate offset -1
+                textures.insert(textures.end(), json(nullptr));
+                continue;
+            }
             json &tex = textures.insert(textures.end(), json::object()).value();
 
             tex.push_back({"name", src_tex.name});
