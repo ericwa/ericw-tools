@@ -419,7 +419,7 @@ inline bool t_digit(char c)
     return c >= 48 && c <= 57;
 }
 
-inline bool t_lower(char c)
+inline char t_lower(char c)
 {
     return std::tolower(c);
 }
