@@ -1697,8 +1697,8 @@ void InitQBSP(int argc, const char **argv)
         remove(qbsp_options.bsp_path);
 
         // Probably not the best place to do this
-        logging::print("Input file: {}\n", qbsp_options.map_path);
-        logging::print("Output file: {}\n\n", qbsp_options.bsp_path);
+        logging::print("Input file: {}\n", fs::absolute(qbsp_options.map_path));
+        logging::print("Output file: {}\n\n", fs::absolute(qbsp_options.bsp_path));
 
         fs::path prtfile = qbsp_options.bsp_path;
         prtfile.replace_extension("prt");
