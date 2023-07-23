@@ -563,7 +563,7 @@ void GLView::paintGL()
         glDisable(GL_CULL_FACE);
 
         glEnable(GL_PRIMITIVE_RESTART);
-        glPrimitiveRestartIndex((GLuint) -1);
+        glPrimitiveRestartIndex((GLuint)-1);
 
         m_program_wireframe->setUniformValue(m_program_simple_color_location, 1.0f, 0.4f, 0.4f, 0.2f);
         glDrawElements(GL_TRIANGLE_FAN, num_portal_indices, GL_UNSIGNED_INT, 0);
@@ -1101,7 +1101,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // normals
         glEnableVertexAttribArray(3 /* attrib */);
-        glVertexAttribPointer(3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
+        glVertexAttribPointer(
+            3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
 
         // flat shading color
         glEnableVertexAttribArray(4 /* attrib */);
@@ -1110,7 +1111,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // styles
         glEnableVertexAttribArray(5 /* attrib */);
-        glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+        glVertexAttribIPointer(
+            5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
     }
 
     // initialize style values
@@ -1154,7 +1156,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             double y = split[1].toDouble();
             double z = split[2].toDouble();
 
-            points.emplace_back(qvec3f{(float) x, (float) y, (float) z});
+            points.emplace_back(qvec3f{(float)x, (float)y, (float)z});
 
             num_leak_points++;
         }
@@ -1166,7 +1168,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // positions
         glEnableVertexAttribArray(0 /* attrib */);
-        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+        glVertexAttribPointer(
+            0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
     }
 
     // load portal file
@@ -1192,7 +1195,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                 points.emplace_back(pt);
             }
 
-            indices.push_back((GLuint) -1);
+            indices.push_back((GLuint)-1);
         }
 
         // upload index buffer
@@ -1209,7 +1212,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // positions
         glEnableVertexAttribArray(0 /* attrib */);
-        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+        glVertexAttribPointer(
+            0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
     }
 
     doneCurrent();
