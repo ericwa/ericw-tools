@@ -427,29 +427,6 @@ void GLView::paintGL()
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
 
-    // wireframe
-    if (m_showTris) {
-        m_program_wireframe->bind();
-        m_program_wireframe->setUniformValue(m_program_wireframe_mvp_location, MVP);
-
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glEnable(GL_POLYGON_OFFSET_LINE);
-        glPolygonOffset(-0.8, 1.0);
-
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
-
-        for (auto &draw : m_drawcalls) {
-            glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
-                reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
-        }
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDisable(GL_POLYGON_OFFSET_FILL);
-        glDisable(GL_POLYGON_OFFSET_LINE);
-
-        m_program_wireframe->release();
-    }
-
     QOpenGLShaderProgram *active_program = nullptr;
 
     m_program->bind();
@@ -539,6 +516,33 @@ void GLView::paintGL()
 
     m_program->release();
 
+    // wireframe
+    if (m_showTris || m_showTrisSeeThrough) {
+        m_program_wireframe->bind();
+        m_program_wireframe->setUniformValue(m_program_wireframe_mvp_location, MVP);
+
+        if (m_showTrisSeeThrough)
+            glDisable(GL_DEPTH_TEST);
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-0.8, 1.0);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+
+        for (auto &draw : m_drawcalls) {
+            glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
+                reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
+        }
+        if (m_showTrisSeeThrough)
+            glEnable(GL_DEPTH_TEST);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+
+        m_program_wireframe->release();
+    }
+
     if (m_drawLeak && num_leak_points) {
         m_program_simple->bind();
         m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
@@ -616,6 +620,12 @@ void GLView::setDrawNormals(bool drawnormals)
 void GLView::setShowTris(bool showtris)
 {
     m_showTris = showtris;
+    update();
+}
+
+void GLView::setShowTrisSeeThrough(bool showtris)
+{
+    m_showTrisSeeThrough = showtris;
     update();
 }
 

@@ -80,6 +80,7 @@ private:
     bool m_fullbright = false;
     bool m_drawNormals = false;
     bool m_showTris = false;
+    bool m_showTrisSeeThrough = false;
     bool m_drawFlat = false;
     bool m_keepOrigin = false;
     bool m_drawPortals = false;
@@ -170,6 +171,7 @@ public:
     void setFullbright(bool fullbright);
     void setDrawNormals(bool drawnormals);
     void setShowTris(bool showtris);
+    void setShowTrisSeeThrough(bool showtris);
     void setDrawFlat(bool drawflat);
     void setKeepOrigin(bool keeporigin);
     void setDrawPortals(bool drawportals);
