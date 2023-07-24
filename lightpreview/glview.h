@@ -56,6 +56,9 @@ class GLView : public QOpenGLWidget, protected QOpenGLFunctions_3_3_Core
     Q_OBJECT
 
 private:
+    std::optional<mbsp_t> m_bsp;
+    std::unordered_map<int, std::vector<uint8_t>> m_decompressedVis;
+
     uint32_t m_keysPressed;
     std::optional<time_point> m_lastFrame;
     std::optional<QPoint> m_lastMouseDownPos;
@@ -63,6 +66,12 @@ private:
      * units / second
      */
     float m_moveSpeed;
+
+    // vis culling stuff
+    /**
+     * -1 indicates solid leaf or no visdata (render all)
+     */
+    int m_lastLeaf = -1;
 
     // camera stuff
     float m_displayAspect;
@@ -113,6 +122,14 @@ private:
 
     std::shared_ptr<QOpenGLTexture> placeholder_texture;
     std::shared_ptr<QOpenGLTexture> lightmap_texture;
+    /**
+     * 1D texture, one uint8 per face.
+     *
+     * 0 = render normally
+     * 1 = skip face
+     */
+    std::shared_ptr<QOpenGLTexture> face_visibility_texture;
+
     struct drawcall_t
     {
         material_key key;
@@ -128,10 +145,11 @@ private:
     QOpenGLShaderProgram *m_program_wireframe = nullptr;
     QOpenGLShaderProgram *m_program_simple = nullptr;
 
-    // uniform locations
+    // uniform locations (default program)
     int m_program_mvp_location = 0;
     int m_program_texture_sampler_location = 0;
     int m_program_lightmap_sampler_location = 0;
+    int m_program_face_visibility_sampler_location = 0;
     int m_program_opacity_location = 0;
     int m_program_alpha_test_location = 0;
     int m_program_lightmap_only_location = 0;
@@ -140,11 +158,12 @@ private:
     int m_program_drawflat_location = 0;
     int m_program_style_scalars_location = 0;
 
-    // uniform locations
+    // uniform locations (skybox program)
     int m_skybox_program_mvp_location = 0;
     int m_skybox_program_eye_direction_location = 0;
     int m_skybox_program_texture_sampler_location = 0;
     int m_skybox_program_lightmap_sampler_location = 0;
+    int m_skybox_program_face_visibility_sampler_location = 0;
     int m_skybox_program_opacity_location = 0;
     int m_skybox_program_lightmap_only_location = 0;
     int m_skybox_program_fullbright_location = 0;
@@ -154,8 +173,9 @@ private:
 
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;
+    int m_program_wireframe_face_visibility_sampler_location = 0;
 
-    // uniform locations
+    // uniform locations (simple program)
     int m_program_simple_mvp_location = 0;
     int m_program_simple_color_location = 0;
 
@@ -163,6 +183,11 @@ public:
     GLView(QWidget *parent = nullptr);
     ~GLView();
 
+private:
+    void setFaceVisibilityArray(uint8_t *data);
+    void setFaceVisibilityToAllVisible();
+
+public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
         bool use_bspx_normals);
@@ -189,6 +214,7 @@ protected:
     void resizeGL(int width, int height) override;
 
 private:
+    void updateFaceVisibility();
     bool shouldLiveUpdate() const;
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 
