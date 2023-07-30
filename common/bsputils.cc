@@ -719,6 +719,25 @@ std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp
     return result;
 }
 
+static void BSP_VisitAllLeafs_R(
+    const mbsp_t &bsp, const int nodenum, const std::function<void(const mleaf_t &)> &visitor)
+{
+    if (nodenum < 0) {
+        auto *leaf = BSP_GetLeafFromNodeNum(&bsp, nodenum);
+        visitor(*leaf);
+        return;
+    }
+
+    const bsp2_dnode_t &node = bsp.dnodes.at(nodenum);
+    BSP_VisitAllLeafs_R(bsp, node.children[0], visitor);
+    BSP_VisitAllLeafs_R(bsp, node.children[1], visitor);
+}
+
+void BSP_VisitAllLeafs(const mbsp_t &bsp, const dmodelh2_t &model, const std::function<void(const mleaf_t &)> &visitor)
+{
+    BSP_VisitAllLeafs_R(bsp, model.headnode[0], visitor);
+}
+
 bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num)
 {
     auto &lump_bytes = entries.at("DECOUPLED_LM");

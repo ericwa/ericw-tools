@@ -396,15 +396,21 @@ void GLView::updateFaceVisibility()
     std::vector<uint8_t> face_flags;
     face_flags.resize(face_visibility_width, 0);
 
-    // check all leafs
-    // FIXME: only world?
-
-    for (auto &leaf : bsp.dleafs) {
+    // visit all world leafs: if they're visible, mark the appropriate faces
+    BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
         if (leaf_sees(&leaf)) {
             for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
                 int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
                 face_flags[fnum] = 16;
             }
+        }
+    });
+
+    // set all bmodel faces to visible
+    for (int mi = 1; mi < bsp.dmodels.size(); ++mi) {
+        auto &model = bsp.dmodels[mi];
+        for (int fi = model.firstface; fi < (model.firstface + model.numfaces); ++fi) {
+            face_flags[fi] = 16;
         }
     }
 
