@@ -356,6 +356,10 @@ void GLView::updateFaceVisibility()
     int leafnum = leaf - bsp.dleafs.data();
     int clusternum = leaf->cluster;
 
+    if (!m_visCulling) {
+        clusternum = -1;
+    }
+
     if (m_lastLeaf == clusternum) {
         qDebug() << "reusing last frame visdata for leaf " << leafnum << " cluster " << clusternum;
         return;
@@ -367,7 +371,7 @@ void GLView::updateFaceVisibility()
     if (it == m_decompressedVis.end()) {
         qDebug() << "no visdata, must be in void";
 
-        m_lastLeaf = clusternum;
+        m_lastLeaf = -1;
         setFaceVisibilityToAllVisible();
 
         return;
@@ -758,6 +762,12 @@ void GLView::setShowTris(bool showtris)
 void GLView::setShowTrisSeeThrough(bool showtris)
 {
     m_showTrisSeeThrough = showtris;
+    update();
+}
+
+void GLView::setVisCulling(bool viscull)
+{
+    m_visCulling = viscull;
     update();
 }
 

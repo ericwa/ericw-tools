@@ -72,6 +72,7 @@ private:
      * -1 indicates solid leaf or no visdata (render all)
      */
     int m_lastLeaf = -1;
+    bool m_visCulling = true;
 
     // camera stuff
     float m_displayAspect;
@@ -197,6 +198,7 @@ public:
     void setDrawNormals(bool drawnormals);
     void setShowTris(bool showtris);
     void setShowTrisSeeThrough(bool showtris);
+    void setVisCulling(bool viscull);
     void setDrawFlat(bool drawflat);
     void setKeepOrigin(bool keeporigin);
     void setDrawPortals(bool drawportals);

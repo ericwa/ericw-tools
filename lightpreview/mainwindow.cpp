@@ -173,6 +173,8 @@ void MainWindow::createPropertiesSidebar()
 
     auto *showtris = new QCheckBox(tr("Show Tris"));
     auto *showtris_seethrough = new QCheckBox(tr("Show Tris (See Through)"));
+    auto *visculling = new QCheckBox(tr("Vis Culling"));
+    visculling->setChecked(true);
 
     auto *keepposition = new QCheckBox(tr("Keep Camera Pos"));
 
@@ -193,6 +195,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(drawleak);
     formLayout->addRow(showtris);
     formLayout->addRow(showtris_seethrough);
+    formLayout->addRow(visculling);
     formLayout->addRow(keepposition);
     formLayout->addRow(nearest);
     formLayout->addRow(bspx_decoupled_lm);
@@ -240,6 +243,7 @@ void MainWindow::createPropertiesSidebar()
     connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
     connect(showtris_seethrough, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setShowTrisSeeThrough(checked); });
+    connect(visculling, &QAbstractButton::toggled, this, [=](bool checked) { glView->setVisCulling(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
     connect(drawportals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawPortals(checked); });
     connect(drawleak, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeak(checked); });
