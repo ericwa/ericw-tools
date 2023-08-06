@@ -189,7 +189,7 @@ void main() {
                 if (style == 0xFFu)
                     break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, (float) style)).rgb * style_scalars[style];
+                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
         }
 
@@ -282,7 +282,7 @@ void main() {
                 if (style == 0xFFu)
                     break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, (float) style)).rgb * style_scalars[style];
+                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
 
             // 2.0 for overbright
