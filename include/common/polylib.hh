@@ -1239,8 +1239,8 @@ public:
     {
         double worldextent = 0;
         for (int i = 0; i < 3; ++i) {
-            worldextent = max(worldextent, abs(bbox.maxs()[i]));
-            worldextent = max(worldextent, abs(bbox.mins()[i]));
+            worldextent = std::max(worldextent, std::abs(bbox.maxs()[i]));
+            worldextent = std::max(worldextent, std::abs(bbox.mins()[i]));
         }
         worldextent += 1;
 
