@@ -366,7 +366,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
 
     // legacy engines support 18*18 max blocks (at 1:16 scale).
     // the 18*18 limit can be relaxed in certain engines, and doing so will generally give a performance boost.
-    subdiv = min(qbsp_options.subdivide.value(), 255 << lmshift);
+    subdiv = std::min(qbsp_options.subdivide.value(), 255 << lmshift);
 
     //      subdiv += 8;
 

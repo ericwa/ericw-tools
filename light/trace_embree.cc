@@ -694,7 +694,7 @@ static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float
     }
 
     // clamp opacity
-    opacity = clamp(opacity, 0.0f, 1.0f);
+    opacity = std::clamp(opacity, 0.0f, 1.0f);
 
     Q_assert(rayIndex < rs->_numrays);
 

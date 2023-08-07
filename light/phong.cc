@@ -434,7 +434,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
     // support on func_detail/func_group
     for (size_t i = 0; i < bsp->dmodels.size(); i++) {
         const modelinfo_t *info = ModelInfoForModel(bsp, i);
-        const uint8_t phongangle_byte = (uint8_t)clamp((int)rint(info->getResolvedPhongAngle()), 0, 255);
+        const uint8_t phongangle_byte = (uint8_t)std::clamp((int)rint(info->getResolvedPhongAngle()), 0, 255);
 
         if (!phongangle_byte)
             continue;
@@ -529,7 +529,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 const bool concave = f_plane.dist_above(f2_centroid) > 0.1;
                 const vec_t f_threshold = concave ? f_phong_angle_concave : f_phong_angle;
                 const vec_t f2_threshold = concave ? f2_phong_angle_concave : f2_phong_angle;
-                const vec_t min_threshold = min(f_threshold, f2_threshold);
+                const vec_t min_threshold = std::min(f_threshold, f2_threshold);
                 const vec_t cosmaxangle = cos(DEG2RAD(min_threshold));
 
                 if (f_phongValue != f2_phongValue) {

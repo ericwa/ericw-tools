@@ -159,8 +159,8 @@ public:
     {
         auto corners = m_corners;
         for (size_t i = 0; i < N; i++) {
-            corners[0][i] = min(corners[0][i], pt[i]);
-            corners[1][i] = max(corners[1][i], pt[i]);
+            corners[0][i] = std::min(corners[0][i], pt[i]);
+            corners[1][i] = std::max(corners[1][i], pt[i]);
         }
         return {corners[0], corners[1]};
     }
@@ -176,8 +176,8 @@ public:
     constexpr aabb &expand_in_place(const value_type &pt)
     {
         for (size_t i = 0; i < N; i++) {
-            m_corners[0][i] = min(m_corners[0][i], pt[i]);
-            m_corners[1][i] = max(m_corners[1][i], pt[i]);
+            m_corners[0][i] = std::min(m_corners[0][i], pt[i]);
+            m_corners[1][i] = std::max(m_corners[1][i], pt[i]);
         }
 
         return *this;
@@ -190,8 +190,8 @@ public:
     constexpr aabb &unionWith_in_place(const aabb &other)
     {
         for (size_t i = 0; i < N; i++) {
-            m_corners[0][i] = min({m_corners[0][i], other.mins()[i], other.maxs()[i]});
-            m_corners[1][i] = max({m_corners[1][i], other.mins()[i], other.maxs()[i]});
+            m_corners[0][i] = std::min({m_corners[0][i], other.mins()[i], other.maxs()[i]});
+            m_corners[1][i] = std::max({m_corners[1][i], other.mins()[i], other.maxs()[i]});
         }
 
         return *this;
@@ -201,8 +201,8 @@ public:
     {
         auto corners = m_corners;
         for (size_t i = 0; i < N; i++) {
-            corners[0][i] = max(corners[0][i], other.mins()[i]);
-            corners[1][i] = min(corners[1][i], other.maxs()[i]);
+            corners[0][i] = std::max(corners[0][i], other.mins()[i]);
+            corners[1][i] = std::min(corners[1][i], other.maxs()[i]);
             if (corners[0][i] > corners[1][i]) {
                 // empty intersection
                 return {};

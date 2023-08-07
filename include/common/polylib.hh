@@ -400,7 +400,7 @@ public:
         : winding_storage_hybrid_t(end - begin)
     {
         // copy the array range
-        std::copy_n(begin, min(count, N), array.begin());
+        std::copy_n(begin, std::min(count, N), array.begin());
 
         // copy the vector range, if required
         if (count > N) {
@@ -414,7 +414,7 @@ public:
         : winding_storage_hybrid_t(copy.size())
     {
         // copy array range
-        memcpy(&array.front(), &copy.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // copy vector range, if required
         if (count > N) {
@@ -429,7 +429,7 @@ public:
         count = move.count;
 
         // blit over array data
-        memcpy(&array.front(), &move.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // move vector data, if available
         if (count > N) {
@@ -445,7 +445,7 @@ public:
         count = copy.count;
 
         // copy array range
-        memcpy(&array.front(), &copy.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // copy vector range, if required
         if (count > N) {
@@ -463,7 +463,7 @@ public:
         count = move.count;
 
         // blit over array data
-        memcpy(&array.front(), &move.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // move vector data, if available
         if (count > N) {

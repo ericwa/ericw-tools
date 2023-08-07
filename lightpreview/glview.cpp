@@ -935,7 +935,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     int32_t highest_depth = 0;
 
     for (auto &style : lightmap.style_to_lightmap_atlas) {
-        highest_depth = max(highest_depth, style.first);
+        highest_depth = std::max(highest_depth, style.first);
     }
 
     // upload lightmap atlases
@@ -1506,7 +1506,7 @@ void GLView::wheelEvent(QWheelEvent *event)
     double delta = event->angleDelta().y();
 
     m_moveSpeed += delta;
-    m_moveSpeed = clamp(m_moveSpeed, 10.0f, 5000.0f);
+    m_moveSpeed = std::clamp(m_moveSpeed, 10.0f, 5000.0f);
 }
 
 void GLView::mousePressEvent(QMouseEvent *event)

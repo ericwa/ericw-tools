@@ -80,7 +80,7 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
 
     // get angle away from Z axis
     float cosangleFromUp = qv::dot(up, surfaceNormal);
-    cosangleFromUp = min(max(-1.0f, cosangleFromUp), 1.0f);
+    cosangleFromUp = std::min(std::max(-1.0f, cosangleFromUp), 1.0f);
     float radiansFromUp = acosf(cosangleFromUp);
 
     const qmat3x3d rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
@@ -496,7 +496,7 @@ qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f 
 /// Returns degrees of clockwise rotation from start to end, assuming `normal` is pointing towards the viewer
 float SignedDegreesBetweenUnitVectors(const qvec3f &start, const qvec3f &end, const qvec3f &normal)
 {
-    const float cosangle = max(-1.0f, min(1.0f, qv::dot(start, end)));
+    const float cosangle = std::max(-1.0f, std::min(1.0f, qv::dot(start, end)));
     const float unsigned_degrees = acos(cosangle) * (360.0 / (2.0 * Q_PI));
 
     // get a normal for the rotation plane using the right-hand rule

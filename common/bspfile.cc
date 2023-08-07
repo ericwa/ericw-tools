@@ -2543,7 +2543,7 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
     // detect BSPX
     /*bspx header is positioned exactly+4align at the end of the last lump position (regardless of order)*/
     for (i = 0, bspxofs = 0; i < lumps.size(); i++) {
-        bspxofs = max(bspxofs, static_cast<size_t>(lumps[i].fileofs + lumps[i].filelen));
+        bspxofs = std::max(bspxofs, static_cast<size_t>(lumps[i].fileofs + lumps[i].filelen));
     }
 
     bspxofs = (bspxofs + 3) & ~3;

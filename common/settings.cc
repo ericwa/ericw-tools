@@ -544,7 +544,7 @@ void setting_container::print_help()
         }
 
         for (auto setting : grouped.second) {
-            size_t numPadding = max(static_cast<size_t>(0), 28 - (setting->primary_name().size() + 4));
+            size_t numPadding = std::max(static_cast<size_t>(0), 28 - (setting->primary_name().size() + 4));
             fmt::print(
                 "  -{} {:{}}    {}\n", setting->primary_name(), setting->format(), numPadding, setting->description());
 

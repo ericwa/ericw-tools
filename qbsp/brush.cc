@@ -661,12 +661,12 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
         vec_t max = -std::numeric_limits<vec_t>::infinity(), min = std::numeric_limits<vec_t>::infinity();
 
         for (auto &v : brush.bounds.mins()) {
-            min = ::min(min, v);
-            max = ::max(max, v);
+            min = std::min(min, v);
+            max = std::max(max, v);
         }
         for (auto &v : brush.bounds.maxs()) {
-            min = ::min(min, v);
-            max = ::max(max, v);
+            min = std::min(min, v);
+            max = std::max(max, v);
         }
 
         vec_t delta = std::max(fabs(max), fabs(min));
