@@ -1029,7 +1029,7 @@ static side_t *SelectSplitPlane(
 
                 // give a value estimate for using this plane
 
-                int value = 5 * facing - 5 * splits - abs(front - back);
+                int value = 5 * facing - 5 * splits - std::abs(front - back);
                 //					value =  -5*splits;
                 //					value =  5*facing - 5*splits;
                 if (plane.get_type() < plane_type_t::PLANE_ANYX)

@@ -1877,7 +1877,7 @@ static void LightFace_PhongDebug(const mbsp_t *bsp, const lightsurf_t *lightsurf
         sample.color = lightsurf->samples[i].normal;
 
         for (auto &v : sample.color) {
-            v = abs(v) * 255;
+            v = std::abs(v) * 255;
         }
     }
 

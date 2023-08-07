@@ -908,7 +908,7 @@ public:
     {
         vec_t max_dist = 0.0;
         for (size_t i = 0; i < size(); i++) {
-            vec_t dist = abs(plane.distance_to(at(i)));
+            vec_t dist = std::abs(plane.distance_to(at(i)));
             if (dist > max_dist) {
                 max_dist = dist;
             }

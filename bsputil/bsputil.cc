@@ -277,7 +277,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
         const int edgenum = bsp->dsurfedges[i];
         if (!edgenum)
             fmt::print("warning: surfedge {} has zero value!\n", i);
-        if (abs(edgenum) >= bsp->dedges.size())
+        if (std::abs(edgenum) >= bsp->dedges.size())
             fmt::print("warning: surfedge {} is out of range (abs({}) >= {})\n", i, edgenum, bsp->dedges.size());
     }
 
