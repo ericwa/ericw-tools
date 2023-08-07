@@ -393,7 +393,7 @@ std::pair<bool, qvec3f> InterpolateNormal(
 
             const qvec3f bary = qv::Barycentric_FromPoint(point, p0, p1, p2);
 
-            if (!isfinite(bary[0]) || !isfinite(bary[1]) || !isfinite(bary[2]))
+            if (!std::isfinite(bary[0]) || !std::isfinite(bary[1]) || !std::isfinite(bary[2]))
                 continue;
 
             const qvec3f interpolatedNormal = qv::Barycentric_ToPoint(bary, n0, n1, n2);
