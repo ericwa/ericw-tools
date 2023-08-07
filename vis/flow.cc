@@ -388,29 +388,42 @@ static void BasePortalThread(size_t portalnum)
         if (d < -tw.radius)
             continue;
 
+        int cctp = 0;
         size_t j;
         for (j = 0; j < tw.size(); j++) {
             d = p.plane.distance_to(tw[j]);
-            if (d > -VIS_ON_EPSILON) // ericw -- changed from > ON_EPSILON for
-                                     // https://github.com/ericwa/ericw-tools/issues/261
+            cctp += d > -VIS_ON_EPSILON;
+            if (d > VIS_ON_EPSILON)
                 break;
         }
-        if (j == tw.size())
-            continue; // no points on front
+        if (j == tw.size()) {
+            if (cctp != tw.size())
+                continue; // no points on front
+        } else
+            cctp = 0;
 
         // Quick test - completely on front?
         d = tp.plane.distance_to(w.origin);
         if (d > w.radius)
             continue;
 
+        int ccp = 0;
         for (j = 0; j < w.size(); j++) {
             d = tp.plane.distance_to(w[j]);
-            if (d < VIS_ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
-                                    // https://github.com/ericwa/ericw-tools/issues/261
+            ccp += d < VIS_ON_EPSILON;
+            if (d < -VIS_ON_EPSILON)
                 break;
         }
-        if (j == w.size())
-            continue; // no points on back
+        if (j == w.size()) {
+            if (ccp != w.size())
+                continue; // no points on back
+        } else
+            ccp = 0;
+
+        // coplanarity check
+        if (cctp != 0 || ccp != 0)
+            if (qv::dot(p.plane.normal, tp.plane.normal) < -0.99)
+                continue;
 
         if (vis_options.visdist.value() > 0) {
             if (tp.winding->distFromPortal(p) > vis_options.visdist.value() ||
