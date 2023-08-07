@@ -27,7 +27,6 @@
 #include <vector>
 #include <climits>
 
-using namespace std;
 using namespace polylib;
 
 sceneinfo skygeom; // sky. always occludes.

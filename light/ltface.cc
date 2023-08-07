@@ -40,8 +40,6 @@
 #include <algorithm>
 #include <fstream>
 
-using namespace std;
-
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
@@ -240,7 +238,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
 
     // 2. Try snapping to poly
 
-    const pair<int, qvec3f> closest = ClosestPointOnPolyBoundary(points, point);
+    const std::pair<int, qvec3f> closest = ClosestPointOnPolyBoundary(points, point);
     float luxelSpaceDist;
     {
         auto desired_point_in_lmspace = faceextents.worldToLMCoord(point);

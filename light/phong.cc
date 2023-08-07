@@ -38,8 +38,6 @@
 #include <common/qvec.hh>
 #include <tbb/parallel_for_each.h>
 
-using namespace std;
-
 face_cache_t::face_cache_t(){};
 
 face_cache_t::face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
@@ -68,7 +66,7 @@ static neighbour_t FaceOverlapsEdge(const qvec3f &p0, const qvec3f &p1, const mb
 }
 
 static void FacesOverlappingEdge_r(
-    const qvec3f &p0, const qvec3f &p1, const mbsp_t *bsp, int nodenum, vector<neighbour_t> *result)
+    const qvec3f &p0, const qvec3f &p1, const mbsp_t *bsp, int nodenum, std::vector<neighbour_t> *result)
 {
     if (nodenum < 0) {
         // we don't do anything for leafs.
@@ -110,10 +108,10 @@ static void FacesOverlappingEdge_r(
  * Returns faces which have an edge that overlaps the given p0-p1 edge.
  * Uses hull 0.
  */
-inline vector<neighbour_t> FacesOverlappingEdge(
+inline std::vector<neighbour_t> FacesOverlappingEdge(
     const qvec3f &p0, const qvec3f &p1, const mbsp_t *bsp, const dmodelh2_t *model)
 {
-    vector<neighbour_t> result;
+    std::vector<neighbour_t> result;
     FacesOverlappingEdge_r(p0, p1, bsp, model->headnode[0], &result);
     return result;
 }
@@ -181,11 +179,11 @@ static float AngleBetweenPoints(const qvec3f &p1, const qvec3f &p2, const qvec3f
 
 static bool s_builtPhongCaches;
 static std::unordered_map<const mface_t *, std::vector<face_normal_t>> vertex_normals;
-static map<const mface_t *, set<const mface_t *>> smoothFaces;
-static map<int, vector<const mface_t *>> vertsToFaces;
-static map<int, vector<const mface_t *>> planesToFaces;
+static std::map<const mface_t *, std::set<const mface_t *>> smoothFaces;
+static std::map<int, std::vector<const mface_t *>> vertsToFaces;
+static std::map<int, std::vector<const mface_t *>> planesToFaces;
 static edgeToFaceMap_t EdgeToFaceMap;
-static vector<face_cache_t> FaceCache;
+static std::vector<face_cache_t> FaceCache;
 
 void ResetPhong()
 {
@@ -198,7 +196,7 @@ void ResetPhong()
     FaceCache = {};
 }
 
-vector<const mface_t *> FacesUsingVert(int vertnum)
+std::vector<const mface_t *> FacesUsingVert(int vertnum)
 {
     const auto &vertsToFaces_const = vertsToFaces;
 
@@ -223,7 +221,7 @@ bool FacesSmoothed(const mface_t *f1, const mface_t *f2)
     if (facesIt == smoothFaces.end())
         return false;
 
-    const set<const mface_t *> &faceSet = facesIt->second;
+    const std::set<const mface_t *> &faceSet = facesIt->second;
     if (faceSet.find(f2) == faceSet.end())
         return false;
 
@@ -295,7 +293,7 @@ const mface_t *Face_EdgeIndexSmoothed(const mbsp_t *bsp, const mface_t *f, const
     const int v0 = Face_VertexAtIndex(bsp, f, edgeindex);
     const int v1 = Face_VertexAtIndex(bsp, f, (edgeindex + 1) % f->numedges);
 
-    auto it = EdgeToFaceMap.find(make_pair(v1, v0));
+    auto it = EdgeToFaceMap.find(std::make_pair(v1, v0));
     if (it != EdgeToFaceMap.end()) {
         for (const mface_t *neighbour : it->second) {
             if (neighbour == f) {
@@ -355,7 +353,7 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
                 continue;
             }
 
-            const auto edge = make_pair(v0, v1);
+            const auto edge = std::make_pair(v0, v1);
             auto &edgeFacesRef = result[edge];
 
             if (find(begin(edgeFacesRef), end(edgeFacesRef), &f) != end(edgeFacesRef)) {
@@ -369,19 +367,19 @@ static edgeToFaceMap_t MakeEdgeToFaceMap(const mbsp_t *bsp)
     return result;
 }
 
-static vector<face_normal_t> Face_VertexNormals(const mbsp_t *bsp, const mface_t *face)
+static std::vector<face_normal_t> Face_VertexNormals(const mbsp_t *bsp, const mface_t *face)
 {
-    vector<face_normal_t> normals(face->numedges);
+    std::vector<face_normal_t> normals(face->numedges);
     tbb::parallel_for(0, face->numedges, [&](size_t i) { normals[i] = GetSurfaceVertexNormal(bsp, face, i); });
     return normals;
 }
 
 #include <common/parallel.hh>
 
-static vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
+static std::vector<face_cache_t> MakeFaceCache(const mbsp_t *bsp)
 {
     logging::funcheader();
-    vector<face_cache_t> result(bsp->dfaces.size());
+    std::vector<face_cache_t> result(bsp->dfaces.size());
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) {
         auto &face = bsp->dfaces[i];
         result[i] = face_cache_t(bsp, &bsp->dfaces[i], Face_VertexNormals(bsp, &face));

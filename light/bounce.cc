@@ -39,7 +39,6 @@
 #include <common/qvec.hh>
 #include <common/parallel.hh>
 
-using namespace std;
 using namespace polylib;
 
 static std::atomic_size_t bouncelightpoints;
@@ -225,7 +224,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     qvec3d facenormal = faceplane.normal;
     qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
 
-    vector<qvec3f> points;
+    std::vector<qvec3f> points;
 
     if (light_options.emissivequality.value() == emissivequality_t::LOW ||
         light_options.emissivequality.value() == emissivequality_t::MEDIUM) {

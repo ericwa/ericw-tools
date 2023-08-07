@@ -11,8 +11,6 @@
 
 #include <common/aabb.hh>
 
-using namespace std;
-
 TEST_SUITE("mathlib")
 {
 
@@ -37,7 +35,7 @@ TEST_SUITE("mathlib")
         REQUIRE(2 == SampleCDF(cdf, 1));
     }
 
-    static void checkBox(const vector<qvec4f> &edges, const vector<qvec3f> &poly)
+    static void checkBox(const std::vector<qvec4f> &edges, const std::vector<qvec3f> &poly)
     {
         CHECK(EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
         CHECK(EdgePlanes_PointInside(edges, qvec3f(64, 0, 0)));
@@ -53,7 +51,7 @@ TEST_SUITE("mathlib")
     TEST_CASE("EdgePlanesOfNonConvexPoly")
     {
         // hourglass, non-convex
-        const vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {0, 64, 0}, {64, 0, 0}};
+        const std::vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {0, 64, 0}, {64, 0, 0}};
 
         const auto edges = MakeInwardFacingEdgePlanes(poly);
         //    CHECK(vector<qvec4f>() == edges);
@@ -61,7 +59,7 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("SlightlyConcavePoly")
     {
-        const vector<qvec3f> poly{qvec3f(225.846161, -1744, 1774), qvec3f(248, -1744, 1798),
+        const std::vector<qvec3f> poly{qvec3f(225.846161, -1744, 1774), qvec3f(248, -1744, 1798),
             qvec3f(248, -1763.82605, 1799.65222), qvec3f(248, -1764, 1799.66663), qvec3f(248, -1892, 1810.33337),
             qvec3f(248, -1893.21741, 1810.43481), qvec3f(248, -1921.59998, 1812.80005), qvec3f(248, -1924, 1813),
             qvec3f(80, -1924, 1631), qvec3f(80, -1744, 1616)};
@@ -74,7 +72,7 @@ TEST_SUITE("mathlib")
     TEST_CASE("PointInPolygon")
     {
         // clockwise
-        const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
+        const std::vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
         const auto edges = MakeInwardFacingEdgePlanes(poly);
         checkBox(edges, poly);
@@ -83,7 +81,7 @@ TEST_SUITE("mathlib")
     TEST_CASE("PointInPolygon_DegenerateEdgeHandling")
     {
         // clockwise
-        const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {0, 64, 0}, // repeat of last point
+        const std::vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {0, 64, 0}, // repeat of last point
             {64, 64, 0}, {64, 0, 0}};
 
         const auto edges = MakeInwardFacingEdgePlanes(poly);
@@ -92,7 +90,7 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("PointInPolygon_DegenerateFaceHandling1")
     {
-        const vector<qvec3f> poly{};
+        const std::vector<qvec3f> poly{};
 
         const auto edges = MakeInwardFacingEdgePlanes(poly);
         CHECK_FALSE(EdgePlanes_PointInside(edges, qvec3f(0, 0, 0)));
@@ -101,7 +99,7 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("PointInPolygon_DegenerateFaceHandling2")
     {
-        const vector<qvec3f> poly{
+        const std::vector<qvec3f> poly{
             {0, 0, 0},
             {0, 0, 0},
             {0, 0, 0},
@@ -115,7 +113,7 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("PointInPolygon_DegenerateFaceHandling3")
     {
-        const vector<qvec3f> poly{
+        const std::vector<qvec3f> poly{
             {0, 0, 0},
             {10, 10, 10},
             {20, 20, 20},
@@ -130,7 +128,7 @@ TEST_SUITE("mathlib")
     TEST_CASE("PointInPolygon_ColinearPointHandling")
     {
         // clockwise
-        const vector<qvec3f> poly{{0, 0, 0}, {0, 32, 0}, // colinear
+        const std::vector<qvec3f> poly{{0, 0, 0}, {0, 32, 0}, // colinear
             {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
         const auto edges = MakeInwardFacingEdgePlanes(poly);
@@ -146,20 +144,20 @@ TEST_SUITE("mathlib")
     TEST_CASE("ClosestPointOnPolyBoundary")
     {
         // clockwise
-        const vector<qvec3f> poly{
+        const std::vector<qvec3f> poly{
             {0, 0, 0}, // edge 0 start, edge 3 end
             {0, 64, 0}, // edge 1 start, edge 0 end
             {64, 64, 0}, // edge 2 start, edge 1 end
             {64, 0, 0} // edge 3 start, edge 2 end
         };
 
-        CHECK(make_pair(0, qvec3f(0, 0, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(0, 0, 0)));
+        CHECK(std::make_pair(0, qvec3f(0, 0, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(0, 0, 0)));
 
         // Either edge 1 or 2 contain the point qvec3f(64,64,0), but we expect the first edge to be returned
-        CHECK(make_pair(1, qvec3f(64, 64, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(100, 100, 100)));
-        CHECK(make_pair(2, qvec3f(64, 32, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(100, 32, 0)));
+        CHECK(std::make_pair(1, qvec3f(64, 64, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(100, 100, 100)));
+        CHECK(std::make_pair(2, qvec3f(64, 32, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(100, 32, 0)));
 
-        CHECK(make_pair(0, qvec3f(0, 0, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
+        CHECK(std::make_pair(0, qvec3f(0, 0, 0)) == ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
     }
 
     TEST_CASE("PolygonCentroid_empty")
@@ -240,7 +238,7 @@ TEST_SUITE("mathlib")
         // clockwise
         const std::array<qvec3f, 3> tri{qvec3f{0, 0, 0}, {0, 64, 0}, {64, 0, 0}};
 
-        const auto triAsVec = vector<qvec3f>{tri.begin(), tri.end()};
+        const auto triAsVec = std::vector<qvec3f>{tri.begin(), tri.end()};
         const auto edges = MakeInwardFacingEdgePlanes(triAsVec);
         const auto plane = PolyPlane(triAsVec);
 
@@ -308,10 +306,10 @@ TEST_SUITE("mathlib")
         // |//   |
         // o-----o
 
-        const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {32, 64, 0}, // colinear
+        const std::vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {32, 64, 0}, // colinear
             {64, 64, 0}, {64, 0, 0}};
 
-        const vector<qvec3f> normals{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, // colinear
+        const std::vector<qvec3f> normals{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, // colinear
             {0, 0, 0}, {-1, 0, 0}};
 
         // First try all the known points
@@ -332,7 +330,7 @@ TEST_SUITE("mathlib")
         CHECK_FALSE(InterpolateNormal(poly, normals, qvec3f(-0.1, 0, 0)).first);
     }
 
-    static bool polysEqual(const vector<qvec3f> &p1, const vector<qvec3f> &p2)
+    static bool polysEqual(const std::vector<qvec3f> &p1, const std::vector<qvec3f> &p2)
     {
         if (p1.size() != p2.size())
             return false;
@@ -345,11 +343,11 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("ClipPoly1")
     {
-        const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
+        const std::vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-        const vector<qvec3f> frontRes{{0, 0, 0}, {0, 64, 0}, {32, 64, 0}, {32, 0, 0}};
+        const std::vector<qvec3f> frontRes{{0, 0, 0}, {0, 64, 0}, {32, 64, 0}, {32, 0, 0}};
 
-        const vector<qvec3f> backRes{{32, 64, 0}, {64, 64, 0}, {64, 0, 0}, {32, 0, 0}};
+        const std::vector<qvec3f> backRes{{32, 64, 0}, {64, 64, 0}, {64, 0, 0}, {32, 0, 0}};
 
         auto clipRes = ClipPoly(poly, qvec4f(-1, 0, 0, -32));
 
@@ -359,9 +357,9 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("ShrinkPoly1")
     {
-        const vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
+        const std::vector<qvec3f> poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
 
-        const vector<qvec3f> shrunkPoly{{1, 1, 0}, {1, 63, 0}, {63, 63, 0}, {63, 1, 0}};
+        const std::vector<qvec3f> shrunkPoly{{1, 1, 0}, {1, 63, 0}, {63, 63, 0}, {63, 1, 0}};
 
         const auto actualShrunk = ShrinkPoly(poly, 1.0f);
 
@@ -370,9 +368,9 @@ TEST_SUITE("mathlib")
 
     TEST_CASE("ShrinkPoly2")
     {
-        const vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {64, 0, 0}};
+        const std::vector<qvec3f> poly{{0, 0, 0}, {64, 64, 0}, {64, 0, 0}};
 
-        const vector<qvec3f> shrunkPoly{
+        const std::vector<qvec3f> shrunkPoly{
             {1.0f + sqrtf(2.0f), 1.0f, 0.0f},
             {63.0f, 63.0f - sqrtf(2.0f), 0.0f},
             {63, 1, 0},

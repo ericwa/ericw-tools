@@ -37,7 +37,6 @@ See file, 'COPYING', for details.
 
 #include <common/qvec.hh>
 
-using namespace std;
 using namespace polylib;
 
 static std::atomic_size_t total_surflight_points;
