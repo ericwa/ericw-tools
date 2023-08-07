@@ -230,14 +230,12 @@ struct decomp_plane_t : qplane3d
 
 // brush creation
 
-using namespace polylib;
-
 template<typename T>
 void RemoveRedundantPlanes(std::vector<T> &planes)
 {
     auto removed = std::remove_if(planes.begin(), planes.end(), [&planes](const T &plane) {
         // outward-facing plane
-        std::optional<polylib::winding_t> winding = winding_t::from_plane(plane, 10e6);
+        std::optional<polylib::winding_t> winding = polylib::winding_t::from_plane(plane, 10e6);
 
         // clip `winding` by all of the other planes, flipped
         for (const T &plane2 : planes) {
@@ -267,7 +265,7 @@ struct decomp_brush_face_t
      * The currently clipped section of the face.
      * May be nullopt to indicate it was clipped away.
      */
-    std::optional<winding_t> winding;
+    std::optional<polylib::winding_t> winding;
     /**
      * The face we were originally derived from
      */
@@ -292,13 +290,13 @@ public:
     }
 
     decomp_brush_face_t(const mbsp_t *bsp, const mface_t *face)
-        : winding(winding_t::from_face(bsp, face)),
+        : winding(polylib::winding_t::from_face(bsp, face)),
           original_face(face)
     {
         buildInwardFacingEdgePlanes();
     }
 
-    decomp_brush_face_t(std::optional<winding_t> &&windingToTakeOwnership, const mface_t *face)
+    decomp_brush_face_t(std::optional<polylib::winding_t> &&windingToTakeOwnership, const mface_t *face)
         : winding(std::move(windingToTakeOwnership)),
           original_face(face)
     {

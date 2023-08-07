@@ -28,8 +28,6 @@
 
 #include <common/qvec.hh>
 
-using namespace polylib;
-
 qmat3x3d RotateAboutX(double t)
 {
     // https://en.wikipedia.org/wiki/Rotation_matrix#Examples
@@ -412,7 +410,7 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> ClipPoly(const std::vector<q
     if (poly.empty())
         return make_pair(std::vector<qvec3f>(), std::vector<qvec3f>());
 
-    winding_t w = winding_t::from_winding_points(poly);
+    auto w = polylib::winding_t::from_winding_points(poly);
 
     auto clipped = w.clip({plane.xyz(), plane[3]});
 

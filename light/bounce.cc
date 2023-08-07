@@ -39,8 +39,6 @@
 #include <common/qvec.hh>
 #include <common/parallel.hh>
 
-using namespace polylib;
-
 static std::atomic_size_t bouncelightpoints;
 
 void ResetBounce()
@@ -88,8 +86,8 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 }
 
 static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, lightsurf_t &surf,
-    qvec3d texture_color, int32_t style, const std::vector<qvec3f> &points, const winding_t &winding, const vec_t &area,
-    const qvec3d &facenormal, const qvec3d &facemidpoint)
+    qvec3d texture_color, int32_t style, const std::vector<qvec3f> &points, const polylib::winding_t &winding,
+    const vec_t &area, const qvec3d &facenormal, const qvec3d &facemidpoint)
 {
     if (!Face_IsEmissive(bsp, surf.face)) {
         return;
@@ -168,7 +166,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return;
     }
 
-    winding_t winding = winding_t::from_face(bsp, &face);
+    auto winding = polylib::winding_t::from_face(bsp, &face);
     vec_t area = winding.area();
 
     if (area < 1.f) {
@@ -238,7 +236,7 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         }
     } else {
         winding.dice(cfg.bouncelightsubdivision.value(),
-            [&points, &faceplane](winding_t &w) { points.push_back(w.center() + faceplane.normal); });
+            [&points, &faceplane](polylib::winding_t &w) { points.push_back(w.center() + faceplane.normal); });
     }
 
     for (auto &style : emitcolors) {
