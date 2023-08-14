@@ -13,3 +13,12 @@ build_script:
 - cmd: powershell .\build-appveyor.ps1
 artifacts:
 - path: cmakebuild\*.zip
+deploy:
+  description: 'release description'
+  provider: GitHub
+  auth_token:
+    secure: 'kTa/cPIBtiixoSjXq1WoVD04ZFzbGhTPcPChAkh99Kf5Sqhy+kE8E3jUYe28nPDO'
+  draft: true
+  prerelease: false
+  on:
+    appveyor_repo_tag: true
