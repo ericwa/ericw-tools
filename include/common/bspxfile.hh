@@ -120,7 +120,7 @@ struct bspxfacenormals
     void stream_read(std::istream &s, const mbsp_t &bsp);
 };
 
-// DECOUPLED_LM BSPX lump (subject to change!)
+// DECOUPLED_LM BSPX lump
 struct bspx_decoupled_lm_perface
 {
     uint16_t lmwidth; // pixels
