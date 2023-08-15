@@ -522,7 +522,7 @@ static void SetupSkyDome(const settings::worldspawn_keys &cfg, vec_t upperLight,
 
     /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
     iterations = rint(sqrt((light_options.sunsamples.value() - 1) / 4)) + 1;
-    iterations = max(iterations, 2);
+    iterations = std::max(iterations, 2);
 
     /* dummy check */
     if (upperLight <= 0.0f && lowerLight <= 0.0f) {
@@ -971,7 +971,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                 const auto anglescale = entdict.find("_anglescale");
                 if (anglescale != entdict.end()) {
                     // Convert from 0..2 to 0..1 range...
-                    const vec_t val = min(1.0, max(0.0, entdict.get_float("_anglescale") * 0.5));
+                    const vec_t val = std::min(1.0, std::max(0.0, entdict.get_float("_anglescale") * 0.5));
                     entdict.set("_anglescale", std::to_string(val));
                 }
             }

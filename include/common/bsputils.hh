@@ -116,6 +116,8 @@ int LeafnumToVisleaf(int leafnum);
 void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend);
 std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp, bool trans_water = false);
 
+void BSP_VisitAllLeafs(const mbsp_t &bsp, const dmodelh2_t &model, const std::function<void(const mleaf_t &)> &visitor);
+
 bspx_decoupled_lm_perface BSPX_DecoupledLM(const bspxentries_t &entries, int face_num);
 std::optional<bspxfacenormals> BSPX_FaceNormals(const mbsp_t &bsp, const bspxentries_t &entries);
 

@@ -340,7 +340,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
                 continue;
             }
 
-            atl.tallest = max(atl.tallest, (size_t)rect.extents.height());
+            atl.tallest = std::max(atl.tallest, (size_t)rect.extents.height());
             rect.x = atl.current_x;
             rect.y = atl.current_y;
             rect.atlas = current_atlas;
@@ -363,8 +363,8 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             if (rect.atlas == i) {
                 rect.x += atlas_x;
                 rect.y += atlas_y;
-                trimmed_width = max(trimmed_width, rect.x + rect.extents.width());
-                trimmed_height = max(trimmed_height, rect.y + rect.extents.height());
+                trimmed_width = std::max(trimmed_width, rect.x + rect.extents.width());
+                trimmed_height = std::max(trimmed_height, rect.y + rect.extents.height());
             }
 #if 0
             for (size_t x = 0; x < rect.texture->width; x++) {

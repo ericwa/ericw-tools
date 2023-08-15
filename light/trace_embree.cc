@@ -27,9 +27,6 @@
 #include <vector>
 #include <climits>
 
-using namespace std;
-using namespace polylib;
-
 sceneinfo skygeom; // sky. always occludes.
 sceneinfo solidgeom; // solids. always occludes.
 sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
@@ -207,7 +204,8 @@ sceneinfo CreateGeometry(
     return s;
 }
 
-static void CreateGeometryFromWindings(RTCDevice g_device, RTCScene scene, const std::vector<winding_t> &windings)
+static void CreateGeometryFromWindings(
+    RTCDevice g_device, RTCScene scene, const std::vector<polylib::winding_t> &windings)
 {
     if (windings.empty())
         return;
@@ -475,13 +473,13 @@ qplane3d Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
 static void Leaf_MakeFaces(const mbsp_t *bsp, const modelinfo_t *modelinfo, const mleaf_t *leaf,
-    const std::vector<qplane3d> &planes, std::vector<winding_t> &result)
+    const std::vector<qplane3d> &planes, std::vector<polylib::winding_t> &result)
 {
     for (const qplane3d &plane : planes) {
         // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
         qplane3d faceplane = -plane;
 
-        std::optional<winding_t> winding = winding_t::from_plane(faceplane, 10e6);
+        std::optional<polylib::winding_t> winding = polylib::winding_t::from_plane(faceplane, 10e6);
 
         // clip `winding` by all of the other planes
         for (const qplane3d &plane2 : planes) {
@@ -505,7 +503,7 @@ static void Leaf_MakeFaces(const mbsp_t *bsp, const modelinfo_t *modelinfo, cons
 }
 
 void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int nodenum, std::vector<qplane3d> *planes,
-    std::vector<winding_t> &result)
+    std::vector<polylib::winding_t> &result)
 {
     if (nodenum < 0) {
         const int leafnum = -nodenum - 1;
@@ -532,7 +530,7 @@ void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int node
 }
 
 static void MakeFaces(
-    const mbsp_t *bsp, const modelinfo_t *modelinfo, const dmodelh2_t *model, std::vector<winding_t> &result)
+    const mbsp_t *bsp, const modelinfo_t *modelinfo, const dmodelh2_t *model, std::vector<polylib::winding_t> &result)
 {
     std::vector<qplane3d> planes;
     MakeFaces_r(bsp, modelinfo, model->headnode[0], &planes, result);
@@ -645,7 +643,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     }
 
     /* Special handling of skip-textured bmodels */
-    std::vector<winding_t> skipwindings;
+    std::vector<polylib::winding_t> skipwindings;
     for (const modelinfo_t *modelinfo : tracelist) {
         if (modelinfo->model->numfaces == 0) {
             MakeFaces(bsp, modelinfo, modelinfo->model, skipwindings);
@@ -696,7 +694,7 @@ static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float
     }
 
     // clamp opacity
-    opacity = clamp(opacity, 0.0f, 1.0f);
+    opacity = std::clamp(opacity, 0.0f, 1.0f);
 
     Q_assert(rayIndex < rs->_numrays);
 

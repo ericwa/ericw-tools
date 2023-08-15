@@ -79,6 +79,7 @@ GLView::~GLView()
 
     placeholder_texture.reset();
     lightmap_texture.reset();
+    face_visibility_texture.reset();
     m_drawcalls.clear();
 
     doneCurrent();
@@ -121,10 +122,24 @@ static const char *s_vertShader_Wireframe = R"(
 #version 330 core
 
 layout (location = 0) in vec3 position;
+layout (location = 6) in int face_index;
 
 uniform mat4 MVP;
+uniform usampler1D face_visibility_sampler;
+
+bool is_culled() {
+    int byte_index = face_index;
+
+    uint sampled = texelFetch(face_visibility_sampler, byte_index, 0).r;
+
+    return sampled != 16u;
+}
 
 void main() {
+    if (is_culled()) {
+        gl_Position = vec4(0.0);
+        return;
+    }
     gl_Position = MVP * vec4(position, 1.0);
 }
 )";
@@ -174,7 +189,7 @@ void main() {
                 if (style == 0xFFu)
                     break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, (float) style)).rgb * style_scalars[style];
+                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
         }
 
@@ -193,6 +208,7 @@ layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
 layout (location = 5) in uint vertex_styles;
+layout (location = 6) in int face_index;
 
 out vec2 uv;
 out vec2 lightmap_uv;
@@ -201,8 +217,22 @@ flat out vec3 flat_color;
 flat out uint styles;
 
 uniform mat4 MVP;
+uniform usampler1D face_visibility_sampler;
+
+bool is_culled() {
+    int byte_index = face_index;
+
+    uint sampled = texelFetch(face_visibility_sampler, byte_index, 0).r;
+
+    return sampled != 16u;
+}
 
 void main() {
+    if (is_culled()) {
+        gl_Position = vec4(0.0);
+        return;
+    }
+
     gl_Position = MVP * vec4(position.x, position.y, position.z, 1.0);
 
     uv = vertex_uv;
@@ -252,7 +282,7 @@ void main() {
                 if (style == 0xFFu)
                     break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, (float) style)).rgb * style_scalars[style];
+                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
 
             // 2.0 for overbright
@@ -277,6 +307,7 @@ layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
 layout (location = 5) in uint vertex_styles;
+layout (location = 6) in int face_index;
 
 out vec3 fragment_world_pos;
 out vec2 lightmap_uv;
@@ -286,8 +317,22 @@ flat out uint styles;
 
 uniform mat4 MVP;
 uniform vec3 eye_origin;
+uniform usampler1D face_visibility_sampler;
+
+bool is_culled() {
+    int byte_index = face_index;
+
+    uint sampled = texelFetch(face_visibility_sampler, byte_index, 0).r;
+
+    return sampled != 16u;
+}
 
 void main() {
+    if (is_culled()) {
+        gl_Position = vec4(0.0);
+        return;
+    }
+
     gl_Position = MVP * vec4(position, 1.0);
     fragment_world_pos = position;
 
@@ -297,6 +342,82 @@ void main() {
     styles = vertex_styles;
 }
 )";
+
+void GLView::updateFaceVisibility()
+{
+    if (!m_bsp)
+        return;
+
+    const mbsp_t &bsp = *m_bsp;
+    const auto &world = bsp.dmodels.at(0);
+
+    auto *leaf = BSP_FindLeafAtPoint(&bsp, &world, qvec3d{m_cameraOrigin.x(), m_cameraOrigin.y(), m_cameraOrigin.z()});
+
+    int leafnum = leaf - bsp.dleafs.data();
+    int clusternum = leaf->cluster;
+
+    if (!m_visCulling) {
+        clusternum = -1;
+    }
+
+    if (m_lastLeaf == clusternum) {
+        qDebug() << "reusing last frame visdata for leaf " << leafnum << " cluster " << clusternum;
+        return;
+    }
+
+    qDebug() << "looking up pvs for clusternum " << clusternum;
+
+    auto it = m_decompressedVis.find(clusternum);
+    if (it == m_decompressedVis.end()) {
+        qDebug() << "no visdata, must be in void";
+
+        m_lastLeaf = -1;
+        setFaceVisibilityToAllVisible();
+
+        return;
+    }
+
+    Q_assert(it != m_decompressedVis.end());
+
+    const auto &pvs = it->second;
+    qDebug() << "found bitvec of size " << pvs.size();
+
+    // check leaf visibility
+
+    auto leaf_sees = [&](const mleaf_t *b) -> bool {
+        if (b->cluster < 0)
+            return true;
+
+        return !!(pvs[b->cluster >> 3] & (1 << (b->cluster & 7)));
+    };
+
+    const int face_visibility_width = m_bsp->dfaces.size();
+
+    std::vector<uint8_t> face_flags;
+    face_flags.resize(face_visibility_width, 0);
+
+    // visit all world leafs: if they're visible, mark the appropriate faces
+    BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
+        if (leaf_sees(&leaf)) {
+            for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
+                int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
+                face_flags[fnum] = 16;
+            }
+        }
+    });
+
+    // set all bmodel faces to visible
+    for (int mi = 1; mi < bsp.dmodels.size(); ++mi) {
+        auto &model = bsp.dmodels[mi];
+        for (int fi = model.firstface; fi < (model.firstface + model.numfaces); ++fi) {
+            face_flags[fi] = 16;
+        }
+    }
+
+    setFaceVisibilityArray(face_flags.data());
+
+    m_lastLeaf = clusternum;
+}
 
 bool GLView::shouldLiveUpdate() const
 {
@@ -357,6 +478,7 @@ void GLView::initializeGL()
     m_program_mvp_location = m_program->uniformLocation("MVP");
     m_program_texture_sampler_location = m_program->uniformLocation("texture_sampler");
     m_program_lightmap_sampler_location = m_program->uniformLocation("lightmap_sampler");
+    m_program_face_visibility_sampler_location = m_program->uniformLocation("face_visibility_sampler");
     m_program_opacity_location = m_program->uniformLocation("opacity");
     m_program_alpha_test_location = m_program->uniformLocation("alpha_test");
     m_program_lightmap_only_location = m_program->uniformLocation("lightmap_only");
@@ -371,6 +493,7 @@ void GLView::initializeGL()
     m_skybox_program_eye_direction_location = m_skybox_program->uniformLocation("eye_origin");
     m_skybox_program_texture_sampler_location = m_skybox_program->uniformLocation("texture_sampler");
     m_skybox_program_lightmap_sampler_location = m_skybox_program->uniformLocation("lightmap_sampler");
+    m_skybox_program_face_visibility_sampler_location = m_skybox_program->uniformLocation("face_visibility_sampler");
     m_skybox_program_opacity_location = m_skybox_program->uniformLocation("opacity");
     m_skybox_program_lightmap_only_location = m_skybox_program->uniformLocation("lightmap_only");
     m_skybox_program_fullbright_location = m_skybox_program->uniformLocation("fullbright");
@@ -381,6 +504,8 @@ void GLView::initializeGL()
 
     m_program_wireframe->bind();
     m_program_wireframe_mvp_location = m_program_wireframe->uniformLocation("MVP");
+    m_program_wireframe_face_visibility_sampler_location =
+        m_program_wireframe->uniformLocation("face_visibility_sampler");
     m_program_wireframe->release();
 
     m_program_simple->bind();
@@ -415,6 +540,9 @@ void GLView::paintGL()
     applyMouseMotion();
     applyFlyMovement(duration_seconds);
 
+    // update vis culling if needed
+    updateFaceVisibility();
+
     // draw
     glClearColor(0.1, 0.1, 0.1, 1);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -427,35 +555,13 @@ void GLView::paintGL()
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
 
-    // wireframe
-    if (m_showTris) {
-        m_program_wireframe->bind();
-        m_program_wireframe->setUniformValue(m_program_wireframe_mvp_location, MVP);
-
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glEnable(GL_POLYGON_OFFSET_LINE);
-        glPolygonOffset(-0.8, 1.0);
-
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
-
-        for (auto &draw : m_drawcalls) {
-            glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
-                reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
-        }
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDisable(GL_POLYGON_OFFSET_FILL);
-        glDisable(GL_POLYGON_OFFSET_LINE);
-
-        m_program_wireframe->release();
-    }
-
     QOpenGLShaderProgram *active_program = nullptr;
 
     m_program->bind();
     m_program->setUniformValue(m_program_mvp_location, MVP);
     m_program->setUniformValue(m_program_texture_sampler_location, 0 /* texture unit */);
     m_program->setUniformValue(m_program_lightmap_sampler_location, 1 /* texture unit */);
+    m_program->setUniformValue(m_program_face_visibility_sampler_location, 2 /* texture unit */);
     m_program->setUniformValue(m_program_opacity_location, 1.0f);
     m_program->setUniformValue(m_program_alpha_test_location, false);
     m_program->setUniformValue(m_program_lightmap_only_location, m_lighmapOnly);
@@ -468,6 +574,7 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_eye_direction_location, m_cameraOrigin);
     m_skybox_program->setUniformValue(m_skybox_program_texture_sampler_location, 0 /* texture unit */);
     m_skybox_program->setUniformValue(m_skybox_program_lightmap_sampler_location, 1 /* texture unit */);
+    m_skybox_program->setUniformValue(m_skybox_program_face_visibility_sampler_location, 2 /* texture unit */);
     m_skybox_program->setUniformValue(m_skybox_program_opacity_location, 1.0f);
     m_skybox_program->setUniformValue(m_skybox_program_lightmap_only_location, m_lighmapOnly);
     m_skybox_program->setUniformValue(m_skybox_program_fullbright_location, m_fullbright);
@@ -492,6 +599,9 @@ void GLView::paintGL()
 
         draw.texture->bind(0 /* texture unit */);
         lightmap_texture->bind(1 /* texture unit */);
+        if (face_visibility_texture) {
+            face_visibility_texture->bind(2 /* texture unit */);
+        }
 
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
@@ -521,6 +631,9 @@ void GLView::paintGL()
 
             draw.texture->bind(0 /* texture unit */);
             lightmap_texture->bind(1 /* texture unit */);
+            if (face_visibility_texture) {
+                face_visibility_texture->bind(2 /* texture unit */);
+            }
 
             if (active_program == m_program) {
                 m_program->setUniformValue(m_program_opacity_location, draw.key.opacity);
@@ -538,6 +651,39 @@ void GLView::paintGL()
     }
 
     m_program->release();
+
+    // wireframe
+    if (m_showTris || m_showTrisSeeThrough) {
+        m_program_wireframe->bind();
+        m_program_wireframe->setUniformValue(m_program_wireframe_mvp_location, MVP);
+        m_program_wireframe->setUniformValue(
+            m_program_wireframe_face_visibility_sampler_location, 2 /* texture unit */);
+
+        if (face_visibility_texture) {
+            face_visibility_texture->bind(2 /* texture unit */);
+        }
+
+        if (m_showTrisSeeThrough)
+            glDisable(GL_DEPTH_TEST);
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-0.8, 1.0);
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+
+        for (auto &draw : m_drawcalls) {
+            glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
+                reinterpret_cast<void *>(draw.first_index * sizeof(uint32_t)));
+        }
+        if (m_showTrisSeeThrough)
+            glEnable(GL_DEPTH_TEST);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glDisable(GL_POLYGON_OFFSET_LINE);
+
+        m_program_wireframe->release();
+    }
 
     if (m_drawLeak && num_leak_points) {
         m_program_simple->bind();
@@ -563,7 +709,7 @@ void GLView::paintGL()
         glDisable(GL_CULL_FACE);
 
         glEnable(GL_PRIMITIVE_RESTART);
-        glPrimitiveRestartIndex((GLuint) -1);
+        glPrimitiveRestartIndex((GLuint)-1);
 
         m_program_wireframe->setUniformValue(m_program_simple_color_location, 1.0f, 0.4f, 0.4f, 0.2f);
         glDrawElements(GL_TRIANGLE_FAN, num_portal_indices, GL_UNSIGNED_INT, 0);
@@ -616,6 +762,18 @@ void GLView::setDrawNormals(bool drawnormals)
 void GLView::setShowTris(bool showtris)
 {
     m_showTris = showtris;
+    update();
+}
+
+void GLView::setShowTrisSeeThrough(bool showtris)
+{
+    m_showTrisSeeThrough = showtris;
+    update();
+}
+
+void GLView::setVisCulling(bool viscull)
+{
+    m_visCulling = viscull;
     update();
 }
 
@@ -695,10 +853,55 @@ void GLView::takeScreenshot(QString destPath, int w, int h)
     update();
 }
 
+void GLView::setFaceVisibilityArray(uint8_t *data)
+{
+    // one byte per face
+    int face_visibility_width = m_bsp->dfaces.size();
+
+    face_visibility_texture.reset();
+
+    face_visibility_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target1D);
+    face_visibility_texture->setSize(face_visibility_width);
+    face_visibility_texture->setFormat(QOpenGLTexture::R8U);
+    face_visibility_texture->setMagnificationFilter(QOpenGLTexture::Nearest);
+    face_visibility_texture->setMinificationFilter(QOpenGLTexture::Nearest);
+    face_visibility_texture->allocateStorage();
+
+    face_visibility_texture->setData(
+        0, QOpenGLTexture::Red_Integer, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(data));
+
+    logging::print("uploaded {} bytes face visibility texture", face_visibility_width);
+}
+
+void GLView::setFaceVisibilityToAllVisible()
+{
+    // one byte per face
+    int face_visibility_width = m_bsp->dfaces.size();
+
+    uint8_t *data = new uint8_t[face_visibility_width];
+    for (int x = 0; x < face_visibility_width; ++x) {
+        data[x] = 16;
+    }
+
+    setFaceVisibilityArray(data);
+
+    delete[] data;
+}
+
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
     const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
     bool use_bspx_normals)
 {
+    // copy the bsp for later use (FIXME: just store a pointer to MainWindow's?)
+    m_bsp = bsp;
+    if (bsp.dvis.bits.empty()) {
+        logging::print("no visdata\n");
+        m_decompressedVis.clear();
+    } else {
+        logging::print("decompressing visdata...\n");
+        m_decompressedVis = DecompressAllVis(&bsp, true);
+    }
+
     img::load_textures(&bsp, settings);
 
     std::optional<bspxfacenormals> facenormals;
@@ -713,6 +916,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     // clear old data
     placeholder_texture.reset();
     lightmap_texture.reset();
+    face_visibility_texture.reset();
     m_drawcalls.clear();
     m_vbo.bind();
     m_vbo.allocate(0);
@@ -726,11 +930,12 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     m_portalIndexBuffer.allocate(0);
     num_leak_points = 0;
     num_portal_indices = 0;
+    m_lastLeaf = -1;
 
     int32_t highest_depth = 0;
 
     for (auto &style : lightmap.style_to_lightmap_atlas) {
-        highest_depth = max(highest_depth, style.first);
+        highest_depth = std::max(highest_depth, style.first);
     }
 
     // upload lightmap atlases
@@ -783,6 +988,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         placeholder_texture->setData(
             0, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(data));
         delete[] data;
+    }
+
+    // upload face visibility
+    if (!bsp.dfaces.empty()) {
+        setFaceVisibilityToAllVisible();
     }
 
     struct face_payload
@@ -973,6 +1183,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         qvec3f normal;
         qvec3f flat_color;
         uint32_t styles;
+        int32_t face_index;
     };
     std::vector<vertex_t> verts;
     std::vector<uint32_t> indexBuffer;
@@ -1037,7 +1248,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     .normal = vertex_normal,
                     .flat_color = flat_color,
                     .styles = (uint32_t)(f->styles[0]) | (uint32_t)(f->styles[1] << 8) |
-                              (uint32_t)(f->styles[2] << 16) | (uint32_t)(f->styles[3] << 24)});
+                              (uint32_t)(f->styles[2] << 16) | (uint32_t)(f->styles[3] << 24),
+                    .face_index = fnum});
             }
 
             // output the vertex indices for this face
@@ -1101,7 +1313,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // normals
         glEnableVertexAttribArray(3 /* attrib */);
-        glVertexAttribPointer(3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
+        glVertexAttribPointer(
+            3 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(vertex_t), (void *)offsetof(vertex_t, normal));
 
         // flat shading color
         glEnableVertexAttribArray(4 /* attrib */);
@@ -1110,7 +1323,12 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // styles
         glEnableVertexAttribArray(5 /* attrib */);
-        glVertexAttribIPointer(5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+        glVertexAttribIPointer(
+            5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+
+        // face indices
+        glEnableVertexAttribArray(6 /* attrib */);
+        glVertexAttribIPointer(6 /* attrib */, 1, GL_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, face_index));
     }
 
     // initialize style values
@@ -1154,7 +1372,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             double y = split[1].toDouble();
             double z = split[2].toDouble();
 
-            points.emplace_back(qvec3f{(float) x, (float) y, (float) z});
+            points.emplace_back(qvec3f{(float)x, (float)y, (float)z});
 
             num_leak_points++;
         }
@@ -1166,7 +1384,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // positions
         glEnableVertexAttribArray(0 /* attrib */);
-        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+        glVertexAttribPointer(
+            0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
     }
 
     // load portal file
@@ -1192,7 +1411,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                 points.emplace_back(pt);
             }
 
-            indices.push_back((GLuint) -1);
+            indices.push_back((GLuint)-1);
         }
 
         // upload index buffer
@@ -1209,7 +1428,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         // positions
         glEnableVertexAttribArray(0 /* attrib */);
-        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+        glVertexAttribPointer(
+            0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
     }
 
     doneCurrent();
@@ -1286,7 +1506,7 @@ void GLView::wheelEvent(QWheelEvent *event)
     double delta = event->angleDelta().y();
 
     m_moveSpeed += delta;
-    m_moveSpeed = clamp(m_moveSpeed, 10.0f, 5000.0f);
+    m_moveSpeed = std::clamp(m_moveSpeed, 10.0f, 5000.0f);
 }
 
 void GLView::mousePressEvent(QMouseEvent *event)

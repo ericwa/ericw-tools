@@ -28,8 +28,6 @@
 
 #include <common/qvec.hh>
 
-using namespace polylib;
-
 qmat3x3d RotateAboutX(double t)
 {
     // https://en.wikipedia.org/wiki/Rotation_matrix#Examples
@@ -82,7 +80,7 @@ qmat3x3f RotateFromUpToSurfaceNormal(const qvec3f &surfaceNormal)
 
     // get angle away from Z axis
     float cosangleFromUp = qv::dot(up, surfaceNormal);
-    cosangleFromUp = min(max(-1.0f, cosangleFromUp), 1.0f);
+    cosangleFromUp = std::min(std::max(-1.0f, cosangleFromUp), 1.0f);
     float radiansFromUp = acosf(cosangleFromUp);
 
     const qmat3x3d rotations = RotateAboutZ(theta) * RotateAboutY(radiansFromUp);
@@ -170,8 +168,6 @@ float Lanczos2D(float x, float y, float a)
     return lanczos;
 }
 
-using namespace std;
-
 qvec3f FaceNormal(std::vector<qvec3f> points)
 {
     const int N = static_cast<int>(points.size());
@@ -211,22 +207,22 @@ std::pair<bool, qvec4f> MakeInwardFacingEdgePlane(const qvec3f &v0, const qvec3f
 {
     const float v0v1len = qv::length(v1 - v0);
     if (v0v1len < POINT_EQUAL_EPSILON)
-        return make_pair(false, qvec4f(0));
+        return std::make_pair(false, qvec4f(0));
 
     const qvec3f edgedir = (v1 - v0) / v0v1len;
     const qvec3f edgeplane_normal = qv::cross(edgedir, faceNormal);
     const float edgeplane_dist = qv::dot(edgeplane_normal, v0);
 
-    return make_pair(true, qvec4f(edgeplane_normal[0], edgeplane_normal[1], edgeplane_normal[2], edgeplane_dist));
+    return std::make_pair(true, qvec4f(edgeplane_normal[0], edgeplane_normal[1], edgeplane_normal[2], edgeplane_dist));
 }
 
-vector<qvec4f> MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
+std::vector<qvec4f> MakeInwardFacingEdgePlanes(const std::vector<qvec3f> &points)
 {
     const size_t N = points.size();
     if (N < 3)
         return {};
 
-    vector<qvec4f> result;
+    std::vector<qvec4f> result;
     result.reserve(points.size());
 
     const qvec3f faceNormal = FaceNormal(points);
@@ -261,7 +257,7 @@ float EdgePlanes_PointInsideDist(const std::vector<qvec4f> &edgeplanes, const qv
     return min; // "outermost" point
 }
 
-bool EdgePlanes_PointInside(const vector<qvec4f> &edgeplanes, const qvec3f &point)
+bool EdgePlanes_PointInside(const std::vector<qvec4f> &edgeplanes, const qvec3f &point)
 {
     if (edgeplanes.empty())
         return false;
@@ -354,7 +350,7 @@ std::pair<int, qvec3f> ClosestPointOnPolyBoundary(const std::vector<qvec3f> &pol
 
     Q_assert(bestI != -1);
 
-    return make_pair(bestI, bestPointOnPoly);
+    return std::make_pair(bestI, bestPointOnPoly);
 }
 
 std::pair<bool, qvec3f> InterpolateNormal(
@@ -374,7 +370,7 @@ std::pair<bool, qvec3f> InterpolateNormal(
     Q_assert(points.size() == normals.size());
 
     if (points.size() < 3)
-        return make_pair(false, qvec3f{});
+        return std::make_pair(false, qvec3f{});
 
     // Step through the triangles, being careful to handle zero-size ones
 
@@ -397,24 +393,24 @@ std::pair<bool, qvec3f> InterpolateNormal(
 
             const qvec3f bary = qv::Barycentric_FromPoint(point, p0, p1, p2);
 
-            if (!isfinite(bary[0]) || !isfinite(bary[1]) || !isfinite(bary[2]))
+            if (!std::isfinite(bary[0]) || !std::isfinite(bary[1]) || !std::isfinite(bary[2]))
                 continue;
 
             const qvec3f interpolatedNormal = qv::Barycentric_ToPoint(bary, n0, n1, n2);
-            return make_pair(true, interpolatedNormal);
+            return std::make_pair(true, interpolatedNormal);
         }
     }
 
-    return make_pair(false, qvec3f{});
+    return std::make_pair(false, qvec3f{});
 }
 
 /// Returns (front part, back part)
 std::pair<std::vector<qvec3f>, std::vector<qvec3f>> ClipPoly(const std::vector<qvec3f> &poly, const qvec4f &plane)
 {
     if (poly.empty())
-        return make_pair(vector<qvec3f>(), vector<qvec3f>());
+        return make_pair(std::vector<qvec3f>(), std::vector<qvec3f>());
 
-    winding_t w = winding_t::from_winding_points(poly);
+    auto w = polylib::winding_t::from_winding_points(poly);
 
     auto clipped = w.clip({plane.xyz(), plane[3]});
 
@@ -430,9 +426,9 @@ std::pair<std::vector<qvec3f>, std::vector<qvec3f>> ClipPoly(const std::vector<q
 
 std::vector<qvec3f> ShrinkPoly(const std::vector<qvec3f> &poly, const float amount)
 {
-    const vector<qvec4f> edgeplanes = MakeInwardFacingEdgePlanes(poly);
+    const std::vector<qvec4f> edgeplanes = MakeInwardFacingEdgePlanes(poly);
 
-    vector<qvec3f> clipped = poly;
+    std::vector<qvec3f> clipped = poly;
 
     for (const qvec4f &edge : edgeplanes) {
         const qvec4f shrunkEdgePlane(edge[0], edge[1], edge[2], edge[3] + amount);
@@ -500,7 +496,7 @@ qvec3f ClosestPointOnLineSegment(const qvec3f &v, const qvec3f &w, const qvec3f 
 /// Returns degrees of clockwise rotation from start to end, assuming `normal` is pointing towards the viewer
 float SignedDegreesBetweenUnitVectors(const qvec3f &start, const qvec3f &end, const qvec3f &normal)
 {
-    const float cosangle = max(-1.0f, min(1.0f, qv::dot(start, end)));
+    const float cosangle = std::max(-1.0f, std::min(1.0f, qv::dot(start, end)));
     const float unsigned_degrees = acos(cosangle) * (360.0 / (2.0 * Q_PI));
 
     // get a normal for the rotation plane using the right-hand rule

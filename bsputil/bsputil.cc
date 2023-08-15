@@ -153,7 +153,7 @@ static int Node_Height(const mbsp_t *bsp, const bsp2_dnode_t *node, std::map<con
         }
     }
 
-    const int height = max(child_heights[0], child_heights[1]) + 1;
+    const int height = std::max(child_heights[0], child_heights[1]) + 1;
     if (cache)
         (*cache)[node] = height;
     return height;
@@ -277,7 +277,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
         const int edgenum = bsp->dsurfedges[i];
         if (!edgenum)
             fmt::print("warning: surfedge {} has zero value!\n", i);
-        if (abs(edgenum) >= bsp->dedges.size())
+        if (std::abs(edgenum) >= bsp->dedges.size())
             fmt::print("warning: surfedge {} is out of range (abs({}) >= {})\n", i, edgenum, bsp->dedges.size());
     }
 

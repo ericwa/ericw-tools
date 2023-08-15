@@ -372,7 +372,7 @@ static aabb3f MakeCube(const aabb3f &input)
 {
     qvec3f centroid = input.centroid();
 
-    const float new_size = max(max(input.size()[0], input.size()[1]), input.size()[2]);
+    const float new_size = std::max(std::max(input.size()[0], input.size()[1]), input.size()[2]);
 
     return aabb3f(centroid - qvec3f(new_size / 2), centroid + qvec3f(new_size / 2));
 }
@@ -452,7 +452,7 @@ void LightGrid(bspdata_t *bspdata)
     data.num_styles = [&]() {
         int result = 0;
         for (auto &samples : data.grid_result) {
-            result = max(result, samples.used_styles());
+            result = std::max(result, samples.used_styles());
         }
         return result;
     }();

@@ -751,11 +751,11 @@ static surfflags_t SurfFlagsForEntity(
     }
 
     if (phongangle) {
-        flags.phong_angle = clamp(phongangle, 0.0, 360.0);
+        flags.phong_angle = std::clamp(phongangle, 0.0, 360.0);
     }
 
     const vec_t phong_angle_concave = entity.epairs.get_float("_phong_angle_concave");
-    flags.phong_angle_concave = clamp(phong_angle_concave, 0.0, 360.0);
+    flags.phong_angle_concave = std::clamp(phong_angle_concave, 0.0, 360.0);
 
     flags.phong_group = entity.epairs.get_int("_phong_group");
 
@@ -763,7 +763,7 @@ static surfflags_t SurfFlagsForEntity(
     if (entity.epairs.has("_minlight")) {
         const vec_t minlight = entity.epairs.get_float("_minlight");
         // handle -1 as an alias for 0 (same with other negative values).
-        flags.minlight = max(0., minlight);
+        flags.minlight = std::max(0., minlight);
     }
 
     // handle "_maxlight"
@@ -771,14 +771,14 @@ static surfflags_t SurfFlagsForEntity(
     if (maxlight > 0) {
         // CHECK: allow > 510 now that we're float? or is it not worth it since it will
         // be beyond max?
-        flags.maxlight = clamp(maxlight, 0.0, 510.0);
+        flags.maxlight = std::clamp(maxlight, 0.0, 510.0);
     }
 
     // handle "_lightcolorscale"
     if (entity.epairs.has("_lightcolorscale")) {
         const vec_t lightcolorscale = entity.epairs.get_float("_lightcolorscale");
         if (lightcolorscale != 1.0) {
-            flags.lightcolorscale = clamp(lightcolorscale, 0.0, 1.0);
+            flags.lightcolorscale = std::clamp(lightcolorscale, 0.0, 1.0);
         }
     }
 
@@ -810,7 +810,7 @@ static surfflags_t SurfFlagsForEntity(
         mincolor = qv::normalize_color_format(mincolor);
         if (!qv::epsilonEmpty(mincolor, QBSP_EQUAL_EPSILON)) {
             for (int32_t i = 0; i < 3; i++) {
-                flags.minlight_color[i] = clamp(mincolor[i], 0.0, 255.0);
+                flags.minlight_color[i] = std::clamp(mincolor[i], 0.0, 255.0);
             }
         }
     }
@@ -818,7 +818,7 @@ static surfflags_t SurfFlagsForEntity(
     // handle "_light_alpha"
     if (entity.epairs.has("_light_alpha")) {
         const vec_t lightalpha = entity.epairs.get_float("_light_alpha");
-        flags.light_alpha = clamp(lightalpha, 0.0, 1.0);
+        flags.light_alpha = std::clamp(lightalpha, 0.0, 1.0);
     }
 
     return flags;
@@ -1129,7 +1129,7 @@ float clockwiseDegreesBetween(qvec2f start, qvec2f end)
     start = qv::normalize(start);
     end = qv::normalize(end);
 
-    const float cosAngle = max(-1.0f, min(1.0f, qv::dot(start, end)));
+    const float cosAngle = std::max(-1.0f, std::min(1.0f, qv::dot(start, end)));
     const float unsigned_degrees = acos(cosAngle) * (360.0 / (2.0 * Q_PI));
 
     if (unsigned_degrees < ANGLEEPSILON)
@@ -3712,7 +3712,7 @@ inline vec_t GetBrushExtents(const mapbrush_t &hullbrush)
                 if (legal) {
 
                     for (auto &p : *vertex) {
-                        extents = max(extents, fabs(p));
+                        extents = std::max(extents, fabs(p));
                     }
                 }
             }
@@ -3735,7 +3735,7 @@ void CalculateWorldExtent(void)
 
     tbb::parallel_for_each(map.entities, [&](const mapentity_t &entity) {
         tbb::parallel_for_each(entity.mapbrushes, [&](const mapbrush_t &mapbrush) {
-            const vec_t brushExtents = max(extents.load(), GetBrushExtents(mapbrush));
+            const vec_t brushExtents = std::max(extents.load(), GetBrushExtents(mapbrush));
             vec_t currentExtents = extents;
             while (currentExtents < brushExtents && !extents.compare_exchange_weak(currentExtents, brushExtents))
                 ;
@@ -3746,7 +3746,7 @@ void CalculateWorldExtent(void)
 
     for (auto &hull : qbsp_options.target_game->get_hull_sizes()) {
         for (auto &v : hull.size()) {
-            hull_extents = max(hull_extents, fabs(v));
+            hull_extents = std::max(hull_extents, fabs(v));
         }
     }
 

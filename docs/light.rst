@@ -351,7 +351,7 @@ Experimental options
 
 .. option:: -lightgrid
 
-   Experimental LIGHTGRID bspx lump.
+   Generates a lightgrid and writes it to a bspx lump (LIGHTGRID_OCTREE).
 
 .. option:: -lightgrid_dist x y z
 
@@ -359,7 +359,7 @@ Experimental options
 
 .. option:: -lightgrid_format octree
 
-   Lightgrid BSPX lump to use.
+   Lightgrid BSPX lump to use. Currently there is only one supported format, octree.
 
 Model Entity Keys
 =================
@@ -685,6 +685,26 @@ func_detail/func_group as well, if qbsp from these tools is used.
    Set to -1 to prevent this model from bouncing light (i.e. prevents
    its brushes from emitting bounced light they receive from elsewhere.)
    Only has an effect if "_bounce" is enabled in worldspawn.
+
+.. bmodel-key:: "_autominlight" "n"
+
+   "Autominlight" is a feature for automatically choosing a suitable
+   minlight color for a bmodel entity (e.g. a func_door), by averaging
+   incoming light at the center of the bmodel bounding box.
+
+   Default behaviour is to apply autominlight on occluded luxels only (e.g., for a 
+   door that opens vertically upwards, it would apply to the bottom face of the
+   door, which is initially pressed against the ground).
+
+   A value of "-1" disables the feature (occluded luxels will be solid black),
+   and "1" enables it as a minlight color even on non-occluded luxels.
+
+.. bmodel-key:: "_autominlight_target" "name"
+
+   For autominlight, instead of using the center of the model bounds as the sample point,
+   searches for an entity with its "targetname" key set to "name", 
+   and use that entity's origin (typically you'd use an "info_null" for this).
+
 
 Light Entity Keys
 =================

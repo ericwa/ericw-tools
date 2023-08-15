@@ -64,7 +64,7 @@ public:
         // multiple arguments; copy up to min(N, `count`),
         // leave `count` -> N as zeroes
         else {
-            constexpr size_t copy_size = min(N, count);
+            constexpr size_t copy_size = std::min(N, count);
             size_t i = 0;
             ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
         }
@@ -106,7 +106,7 @@ public:
     template<size_t N2>
     constexpr qvec(const qvec<T, N2> &other)
     {
-        constexpr size_t minSize = min(N, N2);
+        constexpr size_t minSize = std::min(N, N2);
 
         // truncates if `other` is longer than `this`
         for (size_t i = 0; i < minSize; i++)
@@ -359,7 +359,7 @@ template<size_t N, class T>
 {
     T res = std::numeric_limits<T>::largest();
     for (auto &c : v) {
-        res = ::min(c, res);
+        res = std::min(c, res);
     }
     return res;
 }
@@ -369,7 +369,7 @@ template<size_t N, class T>
 {
     T res = std::numeric_limits<T>::lowest();
     for (auto &c : v) {
-        res = ::max(c, res);
+        res = std::max(c, res);
     }
     return res;
 }
@@ -389,7 +389,7 @@ template<size_t N, class T>
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
-        res[i] = ::min(v1[i], v2[i]);
+        res[i] = std::min(v1[i], v2[i]);
     }
     return res;
 }
@@ -399,7 +399,7 @@ template<size_t N, class T>
 {
     qvec<T, N> res;
     for (size_t i = 0; i < N; i++) {
-        res[i] = ::max(v1[i], v2[i]);
+        res[i] = std::max(v1[i], v2[i]);
     }
     return res;
 }
@@ -708,7 +708,7 @@ inline qvec<T, 3> mangle_from_vec(const qvec<T, 3> &v)
 
     // get angle away from Z axis
     T cosangleFromUp = qv::dot(up, v);
-    cosangleFromUp = ::min(::max(static_cast<T>(-1.0), cosangleFromUp), static_cast<T>(1.0));
+    cosangleFromUp = std::min(std::max(static_cast<T>(-1.0), cosangleFromUp), static_cast<T>(1.0));
     T radiansFromUp = acosf(cosangleFromUp);
 
     return qvec<T, 3>{theta, -(radiansFromUp - Q_PI / 2.0), 0} * static_cast<T>(180.0 / Q_PI);

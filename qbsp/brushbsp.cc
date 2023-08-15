@@ -816,8 +816,8 @@ inline void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
                 mid *= (dist1 / (dist1 - dist2));
                 mid += in_bounds[0][a];
 
-                split_mins = max(min(mid, split_mins), in_bounds.mins()[a]);
-                split_maxs = min(max(mid, split_maxs), in_bounds.maxs()[a]);
+                split_mins = std::max(std::min(mid, split_mins), in_bounds.mins()[a]);
+                split_maxs = std::min(std::max(mid, split_maxs), in_bounds.maxs()[a]);
             }
         }
         if (split.get_normal()[a] > 0) {
@@ -1029,7 +1029,7 @@ static side_t *SelectSplitPlane(
 
                 // give a value estimate for using this plane
 
-                int value = 5 * facing - 5 * splits - abs(front - back);
+                int value = 5 * facing - 5 * splits - std::abs(front - back);
                 //					value =  -5*splits;
                 //					value =  5*facing - 5*splits;
                 if (plane.get_type() < plane_type_t::PLANE_ANYX)

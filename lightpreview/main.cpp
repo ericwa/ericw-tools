@@ -35,6 +35,9 @@ int main(int argc, char *argv[])
     QSurfaceFormat fmt;
     fmt.setVersion(3, 3);
     fmt.setProfile(QSurfaceFormat::CoreProfile);
+#ifdef _DEBUG
+    fmt.setOption(QSurfaceFormat::DebugContext);
+#endif
     QSurfaceFormat::setDefaultFormat(fmt);
 
     MainWindow w;

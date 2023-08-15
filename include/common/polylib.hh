@@ -400,7 +400,7 @@ public:
         : winding_storage_hybrid_t(end - begin)
     {
         // copy the array range
-        std::copy_n(begin, min(count, N), array.begin());
+        std::copy_n(begin, std::min(count, N), array.begin());
 
         // copy the vector range, if required
         if (count > N) {
@@ -414,7 +414,7 @@ public:
         : winding_storage_hybrid_t(copy.size())
     {
         // copy array range
-        memcpy(&array.front(), &copy.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // copy vector range, if required
         if (count > N) {
@@ -429,7 +429,7 @@ public:
         count = move.count;
 
         // blit over array data
-        memcpy(&array.front(), &move.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // move vector data, if available
         if (count > N) {
@@ -445,7 +445,7 @@ public:
         count = copy.count;
 
         // copy array range
-        memcpy(&array.front(), &copy.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // copy vector range, if required
         if (count > N) {
@@ -463,7 +463,7 @@ public:
         count = move.count;
 
         // blit over array data
-        memcpy(&array.front(), &move.array.front(), min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(qvec3d));
 
         // move vector data, if available
         if (count > N) {
@@ -908,7 +908,7 @@ public:
     {
         vec_t max_dist = 0.0;
         for (size_t i = 0; i < size(); i++) {
-            vec_t dist = abs(plane.distance_to(at(i)));
+            vec_t dist = std::abs(plane.distance_to(at(i)));
             if (dist > max_dist) {
                 max_dist = dist;
             }
@@ -1239,8 +1239,8 @@ public:
     {
         double worldextent = 0;
         for (int i = 0; i < 3; ++i) {
-            worldextent = max(worldextent, abs(bbox.maxs()[i]));
-            worldextent = max(worldextent, abs(bbox.mins()[i]));
+            worldextent = std::max(worldextent, std::abs(bbox.maxs()[i]));
+            worldextent = std::max(worldextent, std::abs(bbox.mins()[i]));
         }
         worldextent += 1;
 

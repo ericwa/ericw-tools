@@ -37,9 +37,6 @@ See file, 'COPYING', for details.
 
 #include <common/qvec.hh>
 
-using namespace std;
-using namespace polylib;
-
 static std::atomic_size_t total_surflight_points;
 
 void ResetSurflight()
@@ -110,7 +107,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();
 
         // Create winding...
-        winding_t winding = winding_t::from_winding_points(poly);
+        auto winding = polylib::winding_t::from_winding_points(poly);
         auto face_modelinfo = ModelInfoForFace(bsp, face - bsp->dfaces.data());
 
         for (auto &pt : winding) {
@@ -153,7 +150,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
                 }
             }
         } else {
-            winding.dice(cfg.surflightsubdivision.value(), [&](winding_t &w) {
+            winding.dice(cfg.surflightsubdivision.value(), [&](polylib::winding_t &w) {
                 ++l->points_before_culling;
 
                 qvec3f point = w.center() + l->surfnormal;
@@ -247,7 +244,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
         if (info != nullptr) {
             if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
                 if (info->flags.native & Q2_SURF_LIGHT) {
-                    qvec3d wc = winding_t::from_face(bsp, face).center();
+                    qvec3d wc = polylib::winding_t::from_face(bsp, face).center();
                     logging::print(
                         "WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
                 }

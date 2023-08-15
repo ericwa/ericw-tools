@@ -32,6 +32,10 @@ Options
    Whether to fill the map from the outside in (lenient), from the inside out
    (aggressive), or to automatically decide based on the hull being used.
 
+.. option:: -filldetail [n]
+
+   Whether to fill enclosed pockets of empty space surrounded by solid detail. Default is 1 (enabled).
+
 .. option:: -nomerge
 
    Don't perform face merging.
@@ -350,6 +354,10 @@ Options
       using a `MWT <https://en.wikipedia.org/wiki/Minimum-weight_triangulation>`_
       first, only falling back to the prior two steps if it fails.
 
+
+.. option:: -noextendedsurfflags
+
+   Don't write .texinfo file, even if it would normally be needed (debug)
 
 .. option:: -omitdetail
 

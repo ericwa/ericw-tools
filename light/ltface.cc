@@ -40,8 +40,6 @@
 #include <algorithm>
 #include <fstream>
 
-using namespace std;
-
 std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
@@ -240,7 +238,7 @@ position_t CalcPointNormal(const mbsp_t *bsp, const mface_t *face, const qvec3f 
 
     // 2. Try snapping to poly
 
-    const pair<int, qvec3f> closest = ClosestPointOnPolyBoundary(points, point);
+    const std::pair<int, qvec3f> closest = ClosestPointOnPolyBoundary(points, point);
     float luxelSpaceDist;
     {
         auto desired_point_in_lmspace = faceextents.worldToLMCoord(point);
@@ -1413,7 +1411,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
             }
         }
 
-        angle = max(0.0, angle);
+        angle = std::max(0.0, angle);
 
         angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
         vec_t value = angle * sun->sunlight;
@@ -1505,7 +1503,7 @@ static void LightPoint_Sky(const mbsp_t *bsp, raystream_intersection_t &rs, cons
                 cube_normal[axis] = sign;
 
                 vec_t angle = qv::dot(incoming, cube_normal);
-                angle = max(0.0, angle);
+                angle = std::max(0.0, angle);
                 angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
 
                 float value = angle * sun->sunlight;
@@ -1877,7 +1875,7 @@ static void LightFace_PhongDebug(const mbsp_t *bsp, const lightsurf_t *lightsurf
         sample.color = lightsurf->samples[i].normal;
 
         for (auto &v : sample.color) {
-            v = abs(v) * 255;
+            v = std::abs(v) * 255;
         }
     }
 
@@ -1906,7 +1904,7 @@ constexpr qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, 
     const float &intensity, const qvec3d &color, const float &dist, const float &hotspot_clamp)
 {
     // Exponential falloff
-    const float d = max(dist, hotspot_clamp); // Clamp away hotspots, also avoid division by 0...
+    const float d = std::max(dist, hotspot_clamp); // Clamp away hotspots, also avoid division by 0...
     const float scaledintensity = intensity * surf_scale;
     const float scale = (1.0f / (d * d));
 
@@ -1944,7 +1942,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
         dotProductFactor = dp2;
     }
 
-    dotProductFactor = max(0.0f, dotProductFactor);
+    dotProductFactor = std::max(0.0f, dotProductFactor);
 
     // Get light contribution
     result = SurfaceLight_ColorAtDist(cfg, vpl_settings.omnidirectional ? sky_scale : standard_scale,
@@ -2386,7 +2384,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             const int i = rs.getPushedRayPointIndex(k);
             if (rs.getPushedRayHitType(k) == hittype_t::SOLID) {
                 vec_t dist = rs.getPushedRayHitDist(k);
-                lightsurf->samples[i].occlusion += min(cfg.dirtdepth.value(), dist);
+                lightsurf->samples[i].occlusion += std::min(cfg.dirtdepth.value(), dist);
             } else {
                 lightsurf->samples[i].occlusion += cfg.dirtdepth.value();
             }
@@ -2791,8 +2789,8 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
 
             for (int y0 = -radius; y0 <= radius; y0++) {
                 for (int x0 = -radius; x0 <= radius; x0++) {
-                    const int x1 = clamp(x + x0, 0, w - 1);
-                    const int y1 = clamp(y + y0, 0, h - 1);
+                    const int x1 = std::clamp(x + x0, 0, w - 1);
+                    const int y1 = std::clamp(y + y0, 0, h - 1);
 
                     // check if the kernel goes outside of the source image
 
@@ -2934,7 +2932,7 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
 
                     This must be max(), see LightNormalize in MarkV 1036.
                     */
-                    float light = max({color[0], color[1], color[2]});
+                    float light = std::max({color[0], color[1], color[2]});
                     if (light < 0)
                         light = 0;
                     if (light > 255)
@@ -2981,8 +2979,8 @@ static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *
 
     // samples the "decoupled" lightmap at an integer coordinate, with clamping
     auto tex = [&lightsurf, &fullres](int x, int y) -> qvec4f {
-        const int x_clamped = clamp(x, 0, lightsurf->width - 1);
-        const int y_clamped = clamp(y, 0, lightsurf->height - 1);
+        const int x_clamped = std::clamp(x, 0, lightsurf->width - 1);
+        const int y_clamped = std::clamp(y, 0, lightsurf->height - 1);
 
         const int sampleindex = (y_clamped * lightsurf->width) + x_clamped;
         assert(sampleindex >= 0);
@@ -3089,7 +3087,7 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         return;
     }
 
-    size_t maxfstyles = min((size_t)light_options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS);
+    size_t maxfstyles = std::min((size_t)light_options.facestyles.value(), facesup ? MAXLIGHTMAPSSUP : MAXLIGHTMAPS);
     int maxstyle = facesup ? INVALID_LIGHTSTYLE : INVALID_LIGHTSTYLE_OLD;
 
     // intermediate collection for sorting lightmaps
@@ -3537,8 +3535,8 @@ void lightgrid_samples_t::add(const qvec3d &color, int style)
 
 qvec3b lightgrid_sample_t::round_to_int() const
 {
-    return qvec3b{
-        clamp((int)round(color[0]), 0, 255), clamp((int)round(color[1]), 0, 255), clamp((int)round(color[2]), 0, 255)};
+    return qvec3b{std::clamp((int)round(color[0]), 0, 255), std::clamp((int)round(color[1]), 0, 255),
+        std::clamp((int)round(color[2]), 0, 255)};
 }
 
 float lightgrid_sample_t::brightness() const
