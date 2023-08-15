@@ -146,6 +146,7 @@ void MainWindow::createPropertiesSidebar()
 
     vis_checkbox = new QCheckBox(tr("vis"));
 
+    common_options = new QLineEdit();
     qbsp_options = new QLineEdit();
     vis_options = new QLineEdit();
     light_options = new QLineEdit();
@@ -183,6 +184,7 @@ void MainWindow::createPropertiesSidebar()
     bspx_normals = new QCheckBox(tr("BSPX: Face Normals"));
     bspx_normals->setChecked(true);
 
+    formLayout->addRow(tr("common"), common_options);
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
     formLayout->addRow(tr("light"), light_options);
@@ -220,6 +222,7 @@ void MainWindow::createPropertiesSidebar()
 
     // load state persisted in settings
     QSettings s;
+    common_options->setText(s.value("common_options").toString());
     qbsp_options->setText(s.value("qbsp_options").toString());
     vis_checkbox->setChecked(s.value("vis_enabled").toBool());
     vis_options->setText(s.value("vis_options").toString());
@@ -483,8 +486,8 @@ std::filesystem::path MakeFSPath(const QString &string)
     return std::filesystem::path{string.toStdU16String()};
 }
 
-bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
-    std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
+bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_common_args,
+    std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
 {
     auto resetActiveTabText = [&]() {
         QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab,
@@ -497,6 +500,9 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
     std::vector<std::string> args{
         "", // the exe path, which we're ignoring in this case
     };
+    for (auto &extra : extra_common_args) {
+        args.push_back(extra);
+    }
     for (auto &extra : extra_qbsp_args) {
         args.push_back(extra);
     }
@@ -516,6 +522,9 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
         std::vector<std::string> vis_args{
             "", // the exe path, which we're ignoring in this case
         };
+        for (auto &extra : extra_common_args) {
+            vis_args.push_back(extra);
+        }
         for (auto &extra : extra_vis_args) {
             vis_args.push_back(extra);
         }
@@ -531,6 +540,9 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
         std::vector<std::string> light_args{
             "", // the exe path, which we're ignoring in this case
         };
+        for (auto &extra : extra_common_args) {
+            light_args.push_back(extra);
+        }
         for (auto &arg : extra_light_args) {
             light_args.push_back(arg);
         }
@@ -659,7 +671,7 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
             ConvertBSPFormat(&m_bspdata, &bspver_generic);
 
         } else {
-            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(qbsp_options), ParseArgs(vis_options),
+            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options), ParseArgs(vis_options),
                 ParseArgs(light_options), vis_checkbox->isChecked());
 
             // FIXME: move to a lightpreview_settings
@@ -756,6 +768,7 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
     // persist settings
     QSettings s;
+    s.setValue("common_options", common_options->text());
     s.setValue("qbsp_options", qbsp_options->text());
     s.setValue("vis_enabled", vis_checkbox->isChecked());
     s.setValue("vis_options", vis_options->text());
