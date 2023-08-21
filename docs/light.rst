@@ -547,6 +547,12 @@ The following keys can be added to the *worldspawn* entity:
 
 .. worldspawn-key:: "_surflightscale" "n"
 
+   Scales the surface light emission from Q2 surface lights (excluding sky faces) by this amount.
+
+.. worldspawn-key:: "_surflightskyscale" "n"
+
+   Scales the surface light emission from Q2 sky faces by this amount.
+
 .. worldspawn-key:: "_surflightsubdivision" "n"
                     "_choplight" "n"
 
