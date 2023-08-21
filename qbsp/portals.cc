@@ -925,7 +925,10 @@ void EmitAreaPortals(node_t *headnode)
 
         for (auto &e : map.entities) {
             e.areaportalnum = 0;
-            e.epairs.remove("style");
+
+            if (e.epairs.get("classname") == "func_areaportal") {
+                e.epairs.remove("style");
+            }
         }
 
         return;
