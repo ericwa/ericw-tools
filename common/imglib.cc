@@ -537,6 +537,29 @@ if (texture) {
 tex.meta.averageColor = img::calculate_average(tex.pixels);
 */
 
+static qvec3b increase_saturation(const qvec3b &color)
+{
+    qvec3f color_float = qvec3f(color);
+    color_float /= 255.0f;
+
+    // square it to boost saturation
+    color_float *= color_float;
+
+    // multiply by 2, then scale back to avoid clipping if needed
+    color_float *= 2.0f;
+
+    float max_comp = qv::max(color_float);
+    if (max_comp > 1.0f) {
+        color_float /= max_comp;
+    }
+
+    qvec3b color_int;
+    for (int i = 0; i < 3; ++i) {
+        color_int[i] = static_cast<uint8_t>(std::clamp(color_float[i] * 255.0f, 0.0f, 255.0f));
+    }
+    return color_int;
+}
+
 // Load the specified texture from the BSP
 static void AddTextureName(
     const std::string_view &textureName, const mbsp_t *bsp, const settings::common_settings &options)
@@ -569,6 +592,11 @@ static void AddTextureName(
         tex.averageColor = *tex.meta.color_override;
     } else {
         tex.averageColor = img::calculate_average(tex.pixels);
+
+        if (options.tex_saturation_boost.value() > 0.0f) {
+            tex.averageColor =
+                mix(tex.averageColor, increase_saturation(tex.averageColor), options.tex_saturation_boost.value());
+        }
     }
 
     if (tex.meta.width && tex.meta.height) {
@@ -639,6 +667,11 @@ static void ConvertTextures(const mbsp_t *bsp, const settings::common_settings &
             tex.averageColor = *tex.meta.color_override;
         } else {
             tex.averageColor = img::calculate_average(tex.pixels);
+
+            if (options.tex_saturation_boost.value() > 0.0f) {
+                tex.averageColor =
+                    mix(tex.averageColor, increase_saturation(tex.averageColor), options.tex_saturation_boost.value());
+            }
         }
 
         if (tex.meta.width && tex.meta.height) {

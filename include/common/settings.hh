@@ -601,6 +601,7 @@ public:
     setting_set paths;
     setting_bool q2rtx;
     setting_invertible_bool defaultpaths;
+    setting_scalar tex_saturation_boost;
 
     common_settings();
 
