@@ -745,13 +745,9 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
             SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
             SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
         }
-    });
-}
 
-void ClearLightmapSurfaces(mbsp_t *bsp)
-{
-    logging::funcheader();
-    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) { light_surfaces[i].reset(); });
+        light_surfaces[i].reset();
+    });
 }
 
 static void FindModelInfo(const mbsp_t *bsp)
@@ -1548,12 +1544,8 @@ int light_main(int argc, const char **argv)
 
     // check vis approx type
     if (light_options.visapprox.value() == visapprox_t::AUTO) {
-        if (!bsp.dvis.bits.empty()) {
-            light_options.visapprox.set_value(visapprox_t::VIS, settings::source::DEFAULT);
-        } else {
             light_options.visapprox.set_value(visapprox_t::RAYS, settings::source::DEFAULT);
         }
-    }
 
     img::load_textures(&bsp, light_options);
 
@@ -1595,8 +1587,6 @@ int light_main(int argc, const char **argv)
         LightWorld(&bspdata, light_options.lightmap_scale.is_changed());
 
         LightGrid(&bspdata);
-
-        ClearLightmapSurfaces(&std::get<mbsp_t>(bspdata.bsp));
 
         // invalidate normals
         bspdata.bspx.entries.erase("FACENORMALS");

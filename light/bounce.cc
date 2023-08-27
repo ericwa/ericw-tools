@@ -39,10 +39,13 @@
 #include <common/qvec.hh>
 #include <common/parallel.hh>
 
+std::mutex bouncelights_lock;
+static std::vector<surfacelight_t> bouncelights;
 static std::atomic_size_t bouncelightpoints;
 
 void ResetBounce()
 {
+    bouncelights.clear();
     bouncelightpoints = 0;
 }
 
@@ -85,11 +88,11 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
     return true;
 }
 
-static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, lightsurf_t &surf,
+static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
     qvec3d texture_color, int32_t style, const std::vector<qvec3f> &points, const polylib::winding_t &winding,
     const vec_t &area, const qvec3d &facenormal, const qvec3d &facemidpoint)
 {
-    if (!Face_IsEmissive(bsp, surf.face)) {
+    if (!Face_IsEmissive(bsp, face)) {
         return;
     }
 
@@ -104,9 +107,6 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
         return;
     }
 
-    if (!surf.vpl) {
-        auto &l = surf.vpl = std::make_unique<surfacelight_t>();
-
         // Normalize color...
         if (intensity > 1.0) {
             texture_color *= 1.0 / intensity;
@@ -116,36 +116,41 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
         Q_assert(!points.empty());
 
         // Add surfacelight...
-        l->surfnormal = facenormal;
-        l->points = points;
+    surfacelight_t l;
+    l.surfnormal = facenormal;
+    l.omnidirectional = false;
+    l.points = points;
+    l.style = style;
 
         // Init bbox...
         if (light_options.visapprox.value() == visapprox_t::RAYS) {
-            l->bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
+        l.bounds = EstimateVisibleBoundsAtPoint(facemidpoint);
         }
 
-        for (auto &pt : l->points) {
+    for (auto &pt : l.points) {
             if (light_options.visapprox.value() == visapprox_t::VIS) {
-                l->leaves.push_back(Light_PointInLeaf(bsp, pt));
+            l.leaves.push_back(Light_PointInLeaf(bsp, pt));
             } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
-                l->bounds += EstimateVisibleBoundsAtPoint(pt);
+            l.bounds += EstimateVisibleBoundsAtPoint(pt);
             }
         }
 
-        l->pos = facemidpoint;
-    }
+    l.pos = facemidpoint;
 
     // Store surfacelight settings...
-    {
-        auto &l = surf.vpl;
-        auto &setting = l->styles.emplace_back();
-        setting.bounce = true;
-        setting.style = style;
-        setting.totalintensity = intensity * area;
-        setting.intensity = setting.totalintensity / l->points.size();
-        setting.color = texture_color;
+    l.totalintensity = intensity * area;
+    l.intensity = l.totalintensity / l.points.size();
+    l.color = texture_color;
+
+    // Store light...
+    std::unique_lock<std::mutex> lck{bouncelights_lock};
+    bouncelights.push_back(l);
     }
-}
+
+const std::vector<surfacelight_t> &BounceLights()
+    {
+    return bouncelights;
+    }
 
 static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face)
 {
@@ -240,7 +245,8 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     for (auto &style : emitcolors) {
-        MakeBounceLight(bsp, cfg, surf, style.second, style.first, points, winding, area, facenormal, facemidpoint);
+            MakeBounceLight(
+                bsp, cfg, &face, style.second, style.first, points, winding, area, facenormal, facemidpoint);
     }
 }
 
@@ -250,5 +256,5 @@ void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
     logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { MakeBounceLightsThread(cfg, bsp, face); });
 
-    // logging::print("{} bounce lights created, with {} points\n", bouncelights.size(), bouncelightpoints);
+    logging::print("{} bounce lights created, with {} points\n", bouncelights.size(), bouncelightpoints);
 }
