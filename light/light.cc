@@ -1544,8 +1544,12 @@ int light_main(int argc, const char **argv)
 
     // check vis approx type
     if (light_options.visapprox.value() == visapprox_t::AUTO) {
+        if (!bsp.dvis.bits.empty()) {
+            light_options.visapprox.set_value(visapprox_t::VIS, settings::source::DEFAULT);
+        } else {
             light_options.visapprox.set_value(visapprox_t::RAYS, settings::source::DEFAULT);
         }
+    }
 
     img::load_textures(&bsp, light_options);
 
