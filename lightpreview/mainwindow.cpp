@@ -187,6 +187,8 @@ void MainWindow::createPropertiesSidebar()
     bspx_normals = new QCheckBox(tr("BSPX: Face Normals"));
     bspx_normals->setChecked(true);
 
+    auto *draw_opaque = new QCheckBox(tr("Draw Translucency as Opaque"));
+
     formLayout->addRow(tr("common"), common_options);
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
@@ -202,6 +204,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(nearest);
     formLayout->addRow(bspx_decoupled_lm);
     formLayout->addRow(bspx_normals);
+    formLayout->addRow(draw_opaque);
 
     lightstyles = new QVBoxLayout();
 
@@ -253,6 +256,8 @@ void MainWindow::createPropertiesSidebar()
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
     connect(nearest, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });
+    connect(draw_opaque, &QAbstractButton::toggled, this,
+        [=](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
 
     // set up load timer

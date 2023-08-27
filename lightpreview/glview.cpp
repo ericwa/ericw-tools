@@ -581,9 +581,17 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
 
+    // resolves whether to render a particular drawcall as opaque
+    auto draw_as_opaque = [&](const drawcall_t &draw) -> bool {
+        if (m_drawTranslucencyAsOpaque)
+            return true;
+
+        return draw.key.opacity == 1.0f;
+    };
+
     // opaque draws
     for (auto &draw : m_drawcalls) {
-        if (draw.key.opacity != 1.0f)
+        if (!draw_as_opaque(draw))
             continue;
 
         if (active_program != draw.key.program) {
@@ -603,6 +611,12 @@ void GLView::paintGL()
             face_visibility_texture->bind(2 /* texture unit */);
         }
 
+        if (active_program == m_program) {
+            m_program->setUniformValue(m_program_opacity_location, 1.0f);
+        } else {
+            m_skybox_program->setUniformValue(m_skybox_program_opacity_location, 1.0f);
+        }
+
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
         glDrawElements(GL_TRIANGLES, draw.index_count, GL_UNSIGNED_INT,
@@ -615,7 +629,7 @@ void GLView::paintGL()
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         for (auto &draw : m_drawcalls) {
-            if (draw.key.opacity == 1.0f)
+            if (draw_as_opaque(draw))
                 continue;
 
             if (active_program != draw.key.program) {
@@ -820,6 +834,12 @@ void GLView::setMagFilter(QOpenGLTexture::Filter filter)
         dc.texture->setMagnificationFilter(m_filter);
     }
 
+    update();
+}
+
+void GLView::setDrawTranslucencyAsOpaque(bool drawopaque)
+{
+    m_drawTranslucencyAsOpaque = drawopaque;
     update();
 }
 
