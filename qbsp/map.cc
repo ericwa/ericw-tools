@@ -2942,6 +2942,8 @@ void ProcessExternalMapEntity(mapentity_t &entity)
             RotateMapFace(face, angles);
             TranslateMapFace(face, origin);
         }
+
+        CalculateBrushBounds(brush);
     }
 
     entity.epairs.set("classname", new_classname);
