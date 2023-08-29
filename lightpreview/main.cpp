@@ -31,6 +31,8 @@ int main(int argc, char *argv[])
     QCoreApplication::setApplicationName("lightpreview");
 
     QApplication a(argc, argv);
+    a.setStyle("fusion");
+    a.setPalette(QPalette(QColor(64, 64, 64)));
 
     QSurfaceFormat fmt;
     fmt.setVersion(3, 3);
