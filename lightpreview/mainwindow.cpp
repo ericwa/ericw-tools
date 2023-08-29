@@ -159,6 +159,18 @@ void MainWindow::createPropertiesSidebar()
     auto *normals = new QRadioButton(tr("Normals"));
     auto *drawflat = new QRadioButton(tr("Flat shading"));
 
+    lightmapped->setShortcut(QKeySequence("Alt+1"));
+    lightmap_only->setShortcut(QKeySequence("Alt+2"));
+    fullbright->setShortcut(QKeySequence("Alt+3"));
+    normals->setShortcut(QKeySequence("Alt+4"));
+    drawflat->setShortcut(QKeySequence("Alt+5"));
+
+    lightmapped->setToolTip("Lighmapped textures (Alt+1)");
+    lightmap_only->setToolTip("Lightmap only (Alt+2)");
+    fullbright->setToolTip("Textures without lightmap (Alt+3)");
+    normals->setToolTip("Visualize normals (Alt+4)");
+    drawflat->setToolTip("Flat-shaded polygons (Alt+5)");
+
     auto *rendermode_layout = new QVBoxLayout();
     rendermode_layout->addWidget(lightmapped);
     rendermode_layout->addWidget(lightmap_only);
@@ -500,7 +512,8 @@ std::filesystem::path MakeFSPath(const QString &string)
 }
 
 bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_common_args,
-    std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis)
+    std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args,
+    std::vector<std::string> extra_light_args, bool run_vis)
 {
     auto resetActiveTabText = [&]() {
         QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab,
@@ -684,8 +697,8 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
             ConvertBSPFormat(&m_bspdata, &bspver_generic);
 
         } else {
-            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options), ParseArgs(vis_options),
-                ParseArgs(light_options), vis_checkbox->isChecked());
+            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options),
+                ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
 
             // FIXME: move to a lightpreview_settings
             settings::common_settings settings;
