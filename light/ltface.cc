@@ -608,6 +608,11 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
         lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
 
+        // override the autodetected twosided setting?
+        if (extended_flags.light_twosided) {
+            lightsurf->twosided = *extended_flags.light_twosided;
+        }
+
         // nodirt
         if (modelinfo->dirt.is_changed()) {
             lightsurf->nodirt = (modelinfo->dirt.value() == -1);

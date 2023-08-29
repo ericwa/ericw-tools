@@ -184,6 +184,9 @@ struct surfflags_t
     // custom opacity
     std::optional<vec_t> light_alpha;
 
+    // two-sided lighting
+    std::optional<bool> light_twosided;
+
     // maxlight value for this face
     vec_t maxlight;
 

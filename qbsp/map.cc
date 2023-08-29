@@ -821,6 +821,11 @@ static surfflags_t SurfFlagsForEntity(
         flags.light_alpha = std::clamp(lightalpha, 0.0, 1.0);
     }
 
+    // handle "_light_twosided"
+    if (entity.epairs.has("_light_twosided")) {
+        flags.light_twosided = entity.epairs.get_int("_light_twosided");
+    }
+
     return flags;
 }
 

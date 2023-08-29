@@ -417,6 +417,9 @@ static void WriteExtendedTexinfoFlags(void)
         if (tx.flags.light_alpha) {
             t["light_alpha"] = *tx.flags.light_alpha;
         }
+        if (tx.flags.light_twosided) {
+            t["light_twosided"] = *tx.flags.light_twosided;
+        }
         if (tx.flags.lightcolorscale != 1.0) {
             t["lightcolorscale"] = tx.flags.lightcolorscale;
         }

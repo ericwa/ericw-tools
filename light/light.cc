@@ -1176,6 +1176,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("light_alpha")) {
             flags.light_alpha = val.at("light_alpha").get<vec_t>();
         }
+        if (val.contains("light_twosided")) {
+            flags.light_twosided = val.at("light_twosided").get<bool>();
+        }
         if (val.contains("lightcolorscale")) {
             flags.lightcolorscale = val.at("lightcolorscale").get<vec_t>();
         }
