@@ -2010,7 +2010,10 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                     float dist = qv::length(dir);
                     bool use_normal = true;
 
-                    if (dist == 0.0f) {
+                    if (lightsurf->twosided) {
+                        use_normal = false;
+                        dir /= dist;
+                    } else if (dist == 0.0f) {
                         dir = lightsurf_normal;
                         use_normal = false;
                     } else {
