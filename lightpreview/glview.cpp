@@ -1224,6 +1224,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             qtexture = placeholder_texture;
         }
 
+        if (texture->pixels.empty()) {
+            logging::print("warning, empty texture pixels {}", k.texname);
+            qtexture = placeholder_texture;
+        }
+
         const size_t dc_first_index = indexBuffer.size();
 
         if (k.program == m_skybox_program) {
