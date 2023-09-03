@@ -725,6 +725,17 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
         return 1;
     }
 
+    // try to load .lit
+    auto lit_path = fs_path;
+    lit_path.replace_extension(".lit");
+
+    try {
+        m_litdata = LoadLitFile(lit_path);
+    } catch (const std::runtime_error &error) {
+        logging::print("error loading lit: {}", error.what());
+        m_litdata = {};
+    }
+
     return 0;
 }
 
@@ -746,7 +757,7 @@ void MainWindow::compileThreadExited()
     auto ents = EntData_Parse(bsp);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, false, bspx_decoupled_lm->isChecked());
+    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, m_litdata, false, bspx_decoupled_lm->isChecked());
 
     glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
 
