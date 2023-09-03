@@ -709,16 +709,19 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
             m_bspdata.loadversion->game->init_filesystem(file.toStdString(), settings);
         }
     } catch (const settings::parse_exception &p) {
+        // FIXME: threading error: don't call Qt widgets code from background thread
         auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
         textEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
         m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
         return 1;
     } catch (const settings::quit_after_help_exception &p) {
+        // FIXME: threading error: don't call Qt widgets code from background thread
         auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
         textEdit->append(QString::fromUtf8(p.what()) + QString::fromLatin1("\n"));
         m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
         return 1;
     } catch (const std::exception &other) {
+        // FIXME: threading error: don't call Qt widgets code from background thread
         auto *textEdit = m_outputLogWidget->textEdit(m_activeLogTab);
         textEdit->append(QString::fromUtf8(other.what()) + QString::fromLatin1("\n"));
         m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
