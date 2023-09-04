@@ -745,9 +745,13 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
             SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
             SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
         }
-
-        light_surfaces[i].reset();
     });
+}
+
+void ClearLightmapSurfaces(mbsp_t *bsp)
+{
+    logging::funcheader();
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) { light_surfaces[i].reset(); });
 }
 
 static void FindModelInfo(const mbsp_t *bsp)
@@ -1594,6 +1598,8 @@ int light_main(int argc, const char **argv)
         LightWorld(&bspdata, light_options.lightmap_scale.is_changed());
 
         LightGrid(&bspdata);
+
+        ClearLightmapSurfaces(&std::get<mbsp_t>(bspdata.bsp));
 
         // invalidate normals
         bspdata.bspx.entries.erase("FACENORMALS");

@@ -143,6 +143,9 @@ struct lightsurf_t
     std::unique_ptr<raystream_intersection_t> intersection_stream;
 
     lightmapdict_t lightmapsByStyle;
+
+    // surface light stuff
+    std::unique_ptr<surfacelight_t> vpl;
 };
 
 /* debug */

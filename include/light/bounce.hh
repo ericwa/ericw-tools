@@ -29,5 +29,4 @@ struct mbsp_t;
 // public functions
 
 void ResetBounce();
-const std::vector<struct surfacelight_t> &BounceLights();
 void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
