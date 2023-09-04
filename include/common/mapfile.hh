@@ -79,7 +79,10 @@ struct texture_axis_t
     qvec3d snapped_normal;
 
     // use_new_axis = !qbsp_options.oldaxis.value()
-    constexpr texture_axis_t(const qplane3d &plane, bool use_new_axis = false)
+    constexpr texture_axis_t(const qplane3d &plane, bool use_new_axis = false) :
+        xv(), // gcc C++20 bug workaround
+        yv(),
+        snapped_normal()
     {
         constexpr qvec3d baseaxis[18] = {
             {0, 0, 1}, {1, 0, 0}, {0, -1, 0}, // floor
