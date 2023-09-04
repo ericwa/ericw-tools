@@ -19,10 +19,10 @@ See file, 'COPYING', for details.
 
 #include <cstdint>
 
-#include <common\entdata.h>
-#include <common\parser.hh>
-#include <common\log.hh>
-#include <common\mapfile.hh>
+#include <common/entdata.h>
+#include <common/parser.hh>
+#include <common/log.hh>
+#include <common/mapfile.hh>
 
 #ifdef USE_LUA
 extern "C"
