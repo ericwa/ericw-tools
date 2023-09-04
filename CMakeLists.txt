@@ -122,6 +122,7 @@ add_subdirectory(bsputil)
 add_subdirectory(light)
 add_subdirectory(qbsp)
 add_subdirectory(vis)
+add_subdirectory(maputil)
 
 option(DISABLE_TESTS "Disables Tests" OFF)
 option(DISABLE_DOCS "Disables Docs" OFF)

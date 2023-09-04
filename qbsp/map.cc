@@ -2731,9 +2731,7 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &is
                     }
                 } while (parser.token != "}");
             } else {
-                auto brush = ParseBrush(parser, entity, issue_stats);
-
-                if (brush.faces.size()) {
+                if (auto brush = ParseBrush(parser, entity, issue_stats); brush.faces.size()) {
                     entity.mapbrushes.push_back(std::move(brush));
                 }
             }

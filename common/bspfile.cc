@@ -973,7 +973,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 struct gamedef_q2_t : public gamedef_t
 {
     gamedef_q2_t()
-        : gamedef_t("BASEQ2")
+        : gamedef_t("baseq2")
     {
         this->id = GAME_QUAKE_II;
         has_rgb_lightmap = true;

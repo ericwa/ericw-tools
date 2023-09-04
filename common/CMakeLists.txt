@@ -18,6 +18,7 @@ add_library(common STATIC
     imglib.cc
     settings.cc
     prtfile.cc
+    mapfile.cc
     debugger.natvis
     ../include/common/aabb.hh
     ../include/common/aligned_allocator.hh
@@ -48,6 +49,7 @@ add_library(common STATIC
     ../include/common/prtfile.hh
     ../include/common/vectorutils.hh
     ../include/common/ostream.hh
+    ../include/common/mapfile.hh
 )
 
 target_link_libraries(common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbbmalloc fmt::fmt nlohmann_json::nlohmann_json pareto)

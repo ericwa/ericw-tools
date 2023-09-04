@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 #include <string_view>
+#include "fs.hh"
 
 enum : int32_t
 {

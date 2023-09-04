@@ -46,6 +46,18 @@ constexpr vec_t DIST_EPSILON = 0.0001;
 constexpr vec_t DEGREES_EPSILON = 0.001;
 constexpr vec_t DEFAULT_ON_EPSILON = 0.1;
 
+/*
+* The quality of the bsp output is highly sensitive to these epsilon values.
+* Notes:
+* - some calculations are sensitive to errors and need the various
+*   epsilons to be such that QBSP_EQUAL_EPSILON < CONTINUOUS_EPSILON.
+*     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
+*/
+constexpr vec_t ANGLEEPSILON = NORMAL_EPSILON;
+constexpr vec_t ZERO_EPSILON = DIST_EPSILON;
+constexpr vec_t QBSP_EQUAL_EPSILON = DIST_EPSILON;
+constexpr vec_t CONTINUOUS_EPSILON = 0.0005;
+
 enum planeside_t : int8_t
 {
     SIDE_FRONT,
