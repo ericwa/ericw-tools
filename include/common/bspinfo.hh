@@ -41,6 +41,6 @@ struct full_atlas_t
     std::map<int, img::texture> style_to_lightmap_atlas;
 };
 
-full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled);
+full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata, bool use_bspx, bool use_decoupled);
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name);

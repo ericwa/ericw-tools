@@ -235,7 +235,7 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
         (float)nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()])};
 }
 
-full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled)
+full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata, bool use_bspx, bool use_decoupled)
 {
     struct face_rect
     {
@@ -248,7 +248,19 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     };
 
     constexpr size_t atlas_size = 512;
-    const bool is_rgb = bsp.loadversion->game->has_rgb_lightmap;
+    const uint8_t *lightdata_source;
+    bool is_rgb;
+    bool is_lit;
+
+    if (!litdata.empty()) {
+        is_lit = true;
+        is_rgb = true;
+        lightdata_source = litdata.data();
+    } else {
+        is_lit = false;
+        is_rgb = bsp.loadversion->game->has_rgb_lightmap;
+        lightdata_source = bsp.dlightdata.data();
+    }
 
     struct atlas
     {
@@ -408,7 +420,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             }
 
             auto in_pixel =
-                bsp.dlightdata.begin() + rect.lightofs + (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
+                lightdata_source + ((is_lit ? 3 : 1) * rect.lightofs) + (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
 
             for (size_t y = 0; y < rect.extents.height(); y++) {
                 for (size_t x = 0; x < rect.extents.width(); x++) {
@@ -475,7 +487,8 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
 static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled,
     fs::path obj_path, fs::path lightmaps_path)
 {
-    const auto atlas = build_lightmap_atlas(bsp, bspx, use_bspx, use_decoupled);
+    // FIXME: pass in .lit
+    const auto atlas = build_lightmap_atlas(bsp, bspx, {}, use_bspx, use_decoupled);
 
     if (atlas.facenum_to_lightmap_uvs.empty()) {
         return;
