@@ -1397,7 +1397,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             double y = split[1].toDouble();
             double z = split[2].toDouble();
 
-            points.emplace_back(qvec3f{(float)x, (float)y, (float)z});
+            points.push_back(simple_vertex_t{qvec3f{(float)x, (float)y, (float)z}});
 
             num_leak_points++;
         }
@@ -1433,7 +1433,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             for (auto &pt : portal.winding) {
                 indices.push_back(current_index++);
-                points.emplace_back(pt);
+                points.push_back(simple_vertex_t{qvec3f{pt}});
             }
 
             indices.push_back((GLuint)-1);
