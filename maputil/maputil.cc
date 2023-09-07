@@ -19,10 +19,10 @@ See file, 'COPYING', for details.
 
 #include <cstdint>
 
-#include <common\entdata.h>
-#include <common\parser.hh>
-#include <common\log.hh>
-#include <common\mapfile.hh>
+#include <common/entdata.h>
+#include <common/parser.hh>
+#include <common/log.hh>
+#include <common/mapfile.hh>
 #include <common\settings.hh>
 #include <common\bsputils.hh>
 #include <common\json.hh>
