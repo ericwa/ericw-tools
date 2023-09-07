@@ -346,8 +346,8 @@ private:
     }
 
 public:
-    explicit gamedef_q1_like_t(const char *base_dir = "ID1")
-        : gamedef_t(base_dir)
+    explicit gamedef_q1_like_t(const char *friendly_name = "quake", const char *base_dir = "ID1")
+        : gamedef_t(friendly_name, base_dir)
     {
         this->id = ID;
     }
@@ -894,7 +894,7 @@ public:
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 {
     gamedef_h2_t()
-        : gamedef_q1_like_t("DATA1")
+        : gamedef_q1_like_t("hexen2", "DATA1")
     {
     }
 
@@ -950,7 +950,7 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
 struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 {
     gamedef_hl_t()
-        : gamedef_q1_like_t("VALVE")
+        : gamedef_q1_like_t("halflife", "VALVE")
     {
         has_rgb_lightmap = true;
     }
@@ -973,7 +973,7 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
 struct gamedef_q2_t : public gamedef_t
 {
     gamedef_q2_t()
-        : gamedef_t("baseq2")
+        : gamedef_t("quake2", "baseq2")
     {
         this->id = GAME_QUAKE_II;
         has_rgb_lightmap = true;
@@ -1660,6 +1660,17 @@ static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
 
+const std::initializer_list<const gamedef_t *> &gamedef_list()
+{
+    static constexpr std::initializer_list<const gamedef_t *> gamedefs {
+        &gamedef_q1,
+        &gamedef_h2,
+        &gamedef_hl,
+        &gamedef_q2
+    };
+    return gamedefs;
+}
+
 const bspversion_t bspver_generic{MBSPIDENT, std::nullopt, "mbsp", "generic BSP", {}};
 const bspversion_t bspver_q1{BSPVERSION, std::nullopt, "bsp29", "Quake BSP",
     {
@@ -1977,8 +1988,8 @@ std::string contentflags_t::to_string(const gamedef_t *game) const
     return s;
 }
 
-gamedef_t::gamedef_t(const char *default_base_dir)
-    : default_base_dir(default_base_dir)
+gamedef_t::gamedef_t(const char *friendly_name, const char *default_base_dir)
+    : friendly_name(friendly_name), default_base_dir(default_base_dir)
 {
 }
 

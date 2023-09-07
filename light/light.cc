@@ -193,6 +193,7 @@ worldspawn_keys::worldspawn_keys()
       bouncelightsubdivision{this, "bouncelightsubdivision", 64.0, 1.0, 8192.0, &worldspawn_group},
       surflightscale{this, "surflightscale", 1.0, &worldspawn_group},
       surflightskyscale{this, "surflightskyscale", 1.0, &worldspawn_group},
+      surflightskydist{this, "surflightskydist", 0.0, &worldspawn_group},
       surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.0f, 0.f, 510.f, &worldspawn_group},
       sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},

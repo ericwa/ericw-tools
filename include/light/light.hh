@@ -309,6 +309,7 @@ public:
     /* Q2 surface lights (mxd) */
     setting_scalar surflightscale;
     setting_scalar surflightskyscale;
+    setting_scalar surflightskydist;
     // "choplight" - arghrad3 name
     setting_scalar surflightsubdivision;
     setting_scalar surflight_minlight_scale;

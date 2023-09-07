@@ -53,9 +53,8 @@ struct texdef_quake_ed_t
     qvec2d scale;
 };
 
-struct texdef_valve_t : texdef_quake_ed_t
+struct texdef_valve_t : texdef_quake_ed_t, texdef_bp_t
 {
-    qmat<vec_t, 2, 3> axis;
 };
 
 struct texdef_etp_t : texdef_quake_ed_t
@@ -116,7 +115,6 @@ struct brush_side_t
 {
     // source location
     parser_source_location              location;
-    texcoord_style_t                    style;
 
     // raw texture name
     std::string                                                                  texture;
@@ -168,7 +166,7 @@ struct brush_side_t
 
     void write(std::ostream &stream);
 
-    void convert_to(texcoord_style_t style);
+    void convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options);
 };
 
 struct brush_t
@@ -181,7 +179,7 @@ struct brush_t
 
     void write(std::ostream &stream);
 
-    void convert_to(texcoord_style_t style);
+    void convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options);
 };
 
 struct map_entity_t
@@ -205,5 +203,5 @@ struct map_file_t
 
     void write(std::ostream &stream);
 
-    void convert_to(texcoord_style_t style);
+    void convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options);
 };

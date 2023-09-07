@@ -396,3 +396,5 @@ struct mbsp_t
 };
 
 extern const bspversion_t bspver_generic;
+
+const std::initializer_list<const gamedef_t *> &gamedef_list();

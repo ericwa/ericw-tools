@@ -1919,7 +1919,7 @@ constexpr qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, 
 // dir: vpl -> sample point direction
 // mxd. returns color in [0,255]
 inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t &vpl,
-    const surfacelight_t::per_style_t &vpl_settings, const qvec3f &dir, const float dist, const qvec3f &normal,
+    const surfacelight_t::per_style_t &vpl_settings, const qvec3f &dir, float dist, const qvec3f &normal,
     bool use_normal, const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp)
 {
     qvec3f result;
@@ -1948,6 +1948,10 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     }
 
     dotProductFactor = std::max(0.0f, dotProductFactor);
+
+    if (vpl_settings.omnidirectional) {
+        dist += cfg.surflightskydist.value();
+    }
 
     // Get light contribution
     result = SurfaceLight_ColorAtDist(cfg, vpl_settings.omnidirectional ? sky_scale : standard_scale,
