@@ -776,8 +776,6 @@ public:
     [[nodiscard]] constexpr bool operator==(const qplane3 &other) const { return as_tuple() == other.as_tuple(); }
     [[nodiscard]] constexpr bool operator!=(const qplane3 &other) const { return as_tuple() != other.as_tuple(); }
 
-    [[nodiscard]] inline T dist_above(const qvec<T, 3> &pt) const { return qv::dot(pt, normal) - dist; }
-
     [[nodiscard]] constexpr const qvec<T, 4> vec4() const { return qvec<T, 4>(normal[0], normal[1], normal[2], dist); }
 
     [[nodiscard]] constexpr qplane3 operator-() const { return {-normal, -dist}; }

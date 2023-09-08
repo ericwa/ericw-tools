@@ -526,7 +526,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
                 const vec_t cosangle = qv::dot(f_norm, f2_norm);
 
-                const bool concave = f_plane.dist_above(f2_centroid) > 0.1;
+                const bool concave = f_plane.distance_to(f2_centroid) > 0.1;
                 const vec_t f_threshold = concave ? f_phong_angle_concave : f_phong_angle;
                 const vec_t f2_threshold = concave ? f2_phong_angle_concave : f2_phong_angle;
                 const vec_t min_threshold = std::min(f_threshold, f2_threshold);

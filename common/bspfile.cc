@@ -1512,14 +1512,26 @@ public:
                         // pak0.pak/maps/source.map -> C:/Quake/ID1
                         gamedir = fs::canonical(paths.archive).parent_path();
                     } else {
-                        // maps/source.map -> C:/Quake/ID1/maps
+                        // maps/*/source.map -> C:/Quake/ID1/maps
                         // this is weak because the source may not exist yet
-                        gamedir = fs::weakly_canonical(source).parent_path();
+                        bool found_maps_folder = false;
+                        fs::path olddir = gamedir = source;
 
-                        if (!string_iequals(gamedir.filename().generic_string(), MAPS_FOLDER)) {
+                        while (!gamedir.empty()) {
+                            gamedir = fs::weakly_canonical(gamedir).parent_path();
+
+                            if (string_iequals(gamedir.filename().generic_string(), MAPS_FOLDER)) {
+                                found_maps_folder = true;
+                                break;
+                            }
+                        }
+
+                        if (!found_maps_folder) {
                             logging::print(
-                                "WARNING: '{}' is not directly inside '{}'; gamedir can't be automatically determined.\n",
+                                "WARNING: '{}' is not a child of '{}'; gamedir can't be automatically determined.\n",
                                 source, MAPS_FOLDER);
+
+                            gamedir = olddir;
                         }
 
                         // C:/Quake/ID1/maps -> C:/Quake/ID1

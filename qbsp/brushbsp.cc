@@ -205,7 +205,7 @@ static int BoxOnPlaneSide(const aabb3d &bounds, const qbsp_plane_t &plane)
 #if 0
 static int SphereOnPlaneSide(const qvec3d &sphere_origin, double sphere_radius, const qplane3d &plane)
 {
-    const double sphere_dist = plane.dist_above(sphere_origin);
+    const double sphere_dist = plane.distance_to(sphere_origin);
     if (sphere_dist > sphere_radius) {
         return PSIDE_FRONT;
     }
@@ -416,7 +416,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(
     vec_t d_back = 0; // for points below plane, greatest distance from plane (negative)
     for (auto &face : brush->sides) {
         for (const qvec3d &p : face.w) {
-            vec_t d = split.dist_above(p);
+            vec_t d = split.distance_to(p);
             if (d > 0 && d > d_front)
                 d_front = d;
             if (d < 0 && d < d_back)

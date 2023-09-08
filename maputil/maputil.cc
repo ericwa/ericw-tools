@@ -23,9 +23,10 @@ See file, 'COPYING', for details.
 #include <common/parser.hh>
 #include <common/log.hh>
 #include <common/mapfile.hh>
-#include <common\settings.hh>
-#include <common\bsputils.hh>
-#include <common\json.hh>
+#include <common/settings.hh>
+#include <common/imglib.hh>
+#include <common/bsputils.hh>
+#include <common/json.hh>
 
 #ifdef USE_LUA
 extern "C"
@@ -38,6 +39,8 @@ extern "C"
 
 // global map file state
 map_file_t map_file;
+const gamedef_t *current_game = nullptr;
+settings::common_settings common_options;
 
 map_file_t LoadMapOrEntFile(const fs::path &source)
 {
@@ -170,7 +173,8 @@ static void json_to_lua(lua_State *state, const json &value)
 
 static int l_load_json(lua_State *state)
 {
-    const char *path = lua_tostring(state, 1);  /* get argument */
+    const char *path = lua_tostring(state, -1);
+    lua_pop(state, 1);
 
     auto result = fs::load(path);
 
@@ -695,6 +699,33 @@ static int l_create_winding(lua_State *state)
     return 1;
 }
 
+static int l_load_texture_meta(lua_State *state)
+{
+    const char *path = lua_tostring(state, 1);  /* get argument */
+    lua_pop(state, 1);
+
+    if (!current_game) {
+        luaL_error(state, "need a game loaded with -game for this function");
+    }
+
+    auto result = std::get<0>(img::load_texture_meta(path, current_game, common_options)).value_or(img::texture_meta {});
+
+    lua_createtable(state, 0, 5);
+
+    lua_pushnumber(state, result.contents.native);
+    lua_setfield(state, -2, "contents");
+    lua_pushnumber(state, result.flags.native);
+    lua_setfield(state, -2, "flags");
+    lua_pushnumber(state, result.value);
+    lua_setfield(state, -2, "value");
+    lua_pushnumber(state, result.width);
+    lua_setfield(state, -2, "width");
+    lua_pushnumber(state, result.height);
+    lua_setfield(state, -2, "height");
+
+    return 1;
+}
+
 static void maputil_setup_globals(lua_State *state)
 {
     lua_pushcfunction(state, l_load_json);
@@ -705,6 +736,9 @@ static void maputil_setup_globals(lua_State *state)
 
     lua_pushcfunction(state, l_create_winding);
     lua_setglobal(state, "create_winding");
+
+    lua_pushcfunction(state, l_load_texture_meta);
+    lua_setglobal(state, "load_texture_meta");
 
     // constants
     lua_pushnumber(state, (int32_t) texcoord_style_t::quaked);
@@ -902,9 +936,6 @@ int maputil_main(int argc, char **argv)
 
     map_file = LoadMapOrEntFile(source);
 
-    const gamedef_t *current_game = nullptr;
-    settings::common_settings common_options;
-
     for (int32_t i = 2; i < argc - 1; i++) {
 
         const char *cmd = argv[i];
@@ -938,6 +969,8 @@ int maputil_main(int argc, char **argv)
             if (!current_game) {
                 FError("not sure what game {} is\n", gamename);
             }
+
+            current_game->init_filesystem(source, common_options);
 
         } else if (!strcmp(cmd, "--save")) {
             i++;
