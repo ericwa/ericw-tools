@@ -1004,9 +1004,11 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
             if (!entity->project_texture.value().empty()) {
                 auto texname = entity->project_texture.value();
                 entity->projectedmip = img::find(texname);
-                if (entity->projectedmip == nullptr) {
+                if (entity->projectedmip == nullptr ||
+                    entity->projectedmip->pixels.empty()) {
                     logging::print(
                         "WARNING: light has \"_project_texture\" \"{}\", but this texture was not found\n", texname);
+                    entity->projectedmip = nullptr;
                 }
 
                 if (!entity->projangle.is_changed()) { // mxd
