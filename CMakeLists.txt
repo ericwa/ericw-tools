@@ -126,7 +126,7 @@ add_subdirectory(maputil)
 
 option(DISABLE_TESTS "Disables Tests" OFF)
 option(DISABLE_DOCS "Disables Docs" OFF)
-option(ENABLE_LIGHTPREVIEW "Enable light preview tool" OFF)
+option(ENABLE_LIGHTPREVIEW "Enable light preview tool" ON)
 
 if (ENABLE_LIGHTPREVIEW)
 	add_subdirectory(lightpreview)

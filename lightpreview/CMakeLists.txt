@@ -4,6 +4,11 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
 find_package(Qt5Widgets)
+if(Qt5Widgets_FOUND)
+else()
+    message(WARNING "Qt5 not found, disabling lightpreview")
+    return()
+endif()
 
 add_executable(lightpreview
     main.cpp
