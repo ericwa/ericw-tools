@@ -678,7 +678,7 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
 
             LoadBSPFile(fs_path, &m_bspdata);
 
-            auto opts = ParseArgs(light_options);
+            auto opts = ParseArgs(common_options);
 
             std::vector<const char *> argPtrs;
 
