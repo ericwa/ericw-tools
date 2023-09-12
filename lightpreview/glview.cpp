@@ -960,6 +960,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // upload lightmap atlases
     {
+        // FIXME: empty map access if there are no lightmaps
         const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
 
         lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
