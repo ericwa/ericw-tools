@@ -1517,7 +1517,9 @@ public:
                         bool found_maps_folder = false;
                         fs::path olddir = gamedir = source;
 
-                        while (!gamedir.empty()) {
+                        // NOTE: parent_path() of C:/ is C:/ and this is considered non-empty
+                        // its relative_path() (the part after the drive letter) is empty, though
+                        while (!gamedir.relative_path().empty()) {
                             gamedir = fs::weakly_canonical(gamedir).parent_path();
 
                             if (string_iequals(gamedir.filename().generic_string(), MAPS_FOLDER)) {
