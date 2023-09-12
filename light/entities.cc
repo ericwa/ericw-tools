@@ -391,8 +391,10 @@ static void AddSun(const settings::worldspawn_keys &cfg, const qvec3d &sunvec, v
     sun.dirt = Dirt_ResolveFlag(cfg, dirtInt);
     sun.style = style;
     sun.suntexture = suntexture;
-    sun.suntexture_value = img::find(suntexture);
-
+    if (!suntexture.empty())
+        sun.suntexture_value = img::find(suntexture);
+    else
+        sun.suntexture_value = nullptr;
     // fmt::print( "sun is using vector {} {} {} light {} color {} {} {} anglescale {} dirt {} resolved to {}\n",
     //  sun->sunvec[0], sun->sunvec[1], sun->sunvec[2], sun->sunlight.light,
     //  sun->sunlight.color[0], sun->sunlight.color[1], sun->sunlight.color[2],
