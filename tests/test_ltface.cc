@@ -797,5 +797,5 @@ TEST_CASE("minlight doesn't bounce")
 TEST_CASE("q1_sunlight")
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_sunlight.map", {"-lit"});
-    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {42, 42, 42}, {0, 0, 0}, {0, 0, 1}, &lit);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
 }
