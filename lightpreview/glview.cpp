@@ -42,6 +42,13 @@ See file, 'COPYING', for details.
 #include <common/prtfile.hh>
 #include <light/light.hh>
 
+// given a width and height, returns the number of mips required
+// see https://registry.khronos.org/OpenGL/extensions/ARB/ARB_texture_non_power_of_two.txt
+static int GetMipLevelsForDimensions(int w, int h)
+{
+    return 1 + static_cast<int>(std::floor(std::log2(std::max(w, h))));
+}
+
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
       m_keysPressed(0),
@@ -1289,19 +1296,20 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         if (!qtexture) {
             qtexture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2D);
 
-            qtexture->setSize(texture->width, texture->height);
-            qtexture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+            int mipLevels = GetMipLevelsForDimensions(texture->width, texture->height);
 
-            qtexture->allocateStorage();
+            qtexture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+            qtexture->setSize(texture->width, texture->height);
+            qtexture->setMipLevels(mipLevels);
+
+            qtexture->allocateStorage(QOpenGLTexture::RGBA, QOpenGLTexture::UInt8);
+
+            qtexture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
+            qtexture->setMagnificationFilter(m_filter);
+            qtexture->setMaximumAnisotropy(16);
 
             qtexture->setData(
                 QOpenGLTexture::RGBA, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(texture->pixels.data()));
-
-            qtexture->setMaximumAnisotropy(16);
-            qtexture->setAutoMipMapGenerationEnabled(true);
-
-            qtexture->setMagnificationFilter(m_filter);
-            qtexture->setMinificationFilter(QOpenGLTexture::LinearMipMapLinear);
         }
 
         const size_t dc_index_count = indexBuffer.size() - dc_first_index;
