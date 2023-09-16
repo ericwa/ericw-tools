@@ -52,7 +52,7 @@ struct surfacelight_t
     // Surface light settings...
     struct per_style_t
     {
-        bool bounce = false; // whether this is a direct or indirect emission
+        std::optional<size_t> bounce_level = std::nullopt; // whether this is a direct or indirect emission
         /**
          * disables use of the surfnormal. We set this to true on sky surface lights,
          * to avoid black seams on geometry meeting the sky

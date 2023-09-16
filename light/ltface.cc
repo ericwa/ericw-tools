@@ -1982,7 +1982,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
 }
 
 static void // mxd
-LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, bool bounce,
+LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, std::optional<size_t> bounce_depth,
     const vec_t &standard_scale, const vec_t &sky_scale, const float &hotspot_clamp)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
@@ -2004,7 +2004,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
         for (const auto &vpl_setting : surf_ptr->vpl->styles) {
 
-            if (vpl_setting.bounce != bounce)
+            if (vpl_setting.bounce_level != bounce_depth)
                 continue;
             else if (SurfaceLight_SphereCull(&vpl, lightsurf, vpl_setting, surflight_gate, hotspot_clamp))
                 continue;
@@ -2113,7 +2113,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
 
             // 1 ray
             for (auto &vpl_settings : vpl.styles) {
-                if (vpl_settings.bounce != bounce)
+                if (vpl_settings.bounce_level.has_value() != bounce)
                     continue;
 
                 qvec3f pos = vpl.points[c];
@@ -3363,7 +3363,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
             // mxd. Add surface lights...
             // FIXME: negative surface lights
             LightFace_SurfaceLight(
-                bsp, &lightsurf, lightmaps, false, cfg.surflightscale.value(), cfg.surflightskyscale.value(), 16.0f);
+                bsp, &lightsurf, lightmaps, std::nullopt, cfg.surflightscale.value(), cfg.surflightskyscale.value(), 16.0f);
         }
 
         LightFace_LocalMin(bsp, face, &lightsurf, lightmaps);
@@ -3388,7 +3388,7 @@ void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::
  * IndirectLightFace
  * ============
  */
-void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg)
+void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg, size_t bounce_depth)
 {
     auto face = lightsurf.face;
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
@@ -3403,7 +3403,7 @@ void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings
             /* add bounce lighting */
             // note: scale here is just to keep it close-ish to the old code
             LightFace_SurfaceLight(
-                bsp, &lightsurf, lightmaps, true, cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f);
+                bsp, &lightsurf, lightmaps, bounce_depth, cfg.bouncescale.value() * 0.5, cfg.bouncescale.value(), 128.0f);
         }
     }
 }

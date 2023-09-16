@@ -80,7 +80,7 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 
 static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, lightsurf_t &surf,
     qvec3d texture_color, int32_t style, std::vector<qvec3f> &points,
-    const vec_t &area, const qvec3d &facenormal, const qvec3d &facemidpoint)
+    const vec_t &area, const qvec3d &facenormal, const qvec3d &facemidpoint, size_t depth)
 {
     if (!Face_IsEmissive(bsp, surf.face)) {
         return;
@@ -130,7 +130,7 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     {
         auto &l = surf.vpl;
         auto &setting = l->styles.emplace_back();
-        setting.bounce = true;
+        setting.bounce_level = depth;
         setting.style = style;
         setting.totalintensity = intensity * area;
         setting.intensity = setting.totalintensity / l->points.size();
@@ -138,7 +138,7 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     }
 }
 
-static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face)
+static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face, size_t depth)
 {
     if (!Face_ShouldBounce(bsp, &face)) {
         return false;
@@ -229,53 +229,19 @@ static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     for (auto &style : emitcolors) {
-        MakeBounceLight(bsp, cfg, surf, style.second, style.first, points, area, facenormal, facemidpoint);
+        MakeBounceLight(bsp, cfg, surf, style.second, style.first, points, area, facenormal, facemidpoint, depth);
     }
 
     return true;
 }
 
-static void ClearBounceLightsThread(const mbsp_t *bsp, const mface_t &face)
-{
-    if (!Face_ShouldBounce(bsp, &face)) {
-        return;
-    }
-
-    auto &surf_ptr = LightSurfaces()[&face - bsp->dfaces.data()];
-
-    if (!surf_ptr) {
-        return;
-    }
-
-    auto &surf = *surf_ptr.get();
-
-    // no bouncing yet
-    if (!surf.vpl) {
-        return;
-    }
-
-    // remove all styles that are bounce
-    auto &l = *surf.vpl;
-    auto removed = std::remove_if(l.styles.begin(), l.styles.end(), [](surfacelight_t::per_style_t &p) {
-        return p.bounce;
-    });
-    l.styles.erase(removed, l.styles.end());
-}
-
-bool MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
+bool MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, size_t depth)
 {
     logging::funcheader();
 
     std::atomic_bool any_to_bounce = false;
 
-    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { any_to_bounce = MakeBounceLightsThread(cfg, bsp, face) || any_to_bounce; });
+    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { any_to_bounce = MakeBounceLightsThread(cfg, bsp, face, depth) || any_to_bounce; });
 
     return any_to_bounce.load();
-}
-
-void ClearBounceLights(const mbsp_t *bsp)
-{
-    logging::funcheader();
-
-    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { ClearBounceLightsThread(bsp, face); });
 }

@@ -941,23 +941,20 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
         for (size_t i = 0; i < light_options.bounce.value(); i++) {
 
-            if (i != 0) {
-                ClearBounceLights(&bsp);
-            }
-
-            if (!MakeBounceLights(light_options, &bsp)) {
+            if (!MakeBounceLights(light_options, &bsp, i)) {
                 logging::header("No bounces; indirect lighting halted");
                 break;
             }
 
             logging::header(fmt::format("Indirect Lighting (pass {0})", i).c_str()); // mxd
-            logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-                if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
+
+            logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [i, &bsp](size_t f) {
+                if (light_surfaces[f] && Face_IsLightmapped(&bsp, &bsp.dfaces[f])) {
     #if defined(HAVE_EMBREE) && defined(__SSE2__)
                     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     #endif
 
-                    IndirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
+                    IndirectLightFace(&bsp, *light_surfaces[f].get(), light_options, i);
                 }
             });
         }
