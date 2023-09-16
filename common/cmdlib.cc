@@ -707,8 +707,8 @@ bool need_swap(std::ios_base &os)
 
 void *q_aligned_malloc(size_t align, size_t size)
 {
-#ifdef _mm_malloc
-    return _mm_malloc(size, align);
+#ifdef _WIN32
+    return _aligned_malloc(size, align);
 #elif __STDC_VERSION__ >= 201112L
     return aligned_alloc(align, size);
 #else
@@ -722,8 +722,8 @@ void *q_aligned_malloc(size_t align, size_t size)
 
 void q_aligned_free(void *ptr)
 {
-#ifdef _mm_malloc
-    _mm_free(ptr);
+#ifdef _WIN32
+    _aligned_free(ptr);
 #else
     free(ptr);
 #endif

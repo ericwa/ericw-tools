@@ -20,6 +20,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <cstring> // for memcpy()
 #include <string>
 #include <string_view>
