@@ -14,5 +14,6 @@ add_custom_command(TARGET bsputil POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:bsputil>"
 				   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:bsputil>"
 				   )
+copy_mingw_dlls(bsputil)
 
 install(TARGETS bsputil RUNTIME DESTINATION bin)

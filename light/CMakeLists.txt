@@ -145,5 +145,7 @@ if (embree_FOUND)
 	endif()
 endif(embree_FOUND)
 
+copy_mingw_dlls(light)
+
 install(TARGETS light RUNTIME DESTINATION bin)
 install(FILES ../gpl_v3.txt DESTINATION bin)

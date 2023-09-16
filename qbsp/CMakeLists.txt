@@ -44,3 +44,5 @@ install(TARGETS qbsp RUNTIME DESTINATION bin)
 add_custom_command(TARGET qbsp POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:qbsp>"
 				   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:qbsp>")
+
+copy_mingw_dlls(qbsp)
