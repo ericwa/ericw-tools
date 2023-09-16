@@ -634,12 +634,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         } else if (light_options.minlightMottle.is_changed()) {
             lightsurf->minlightMottle = light_options.minlightMottle.value();
         } else {
-            // default value depends on game
-            if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-                lightsurf->minlightMottle = true;
-            } else {
-                lightsurf->minlightMottle = false;
-            }
+            lightsurf->minlightMottle = false;
         }
 
         // Q2 uses a 0-1 range for minlight
@@ -758,6 +753,7 @@ static void Lightmap_AllocOrClear(lightmap_t *lightmap, const lightsurf_t *light
     } else if (lightmap->style != INVALID_LIGHTSTYLE) {
         /* clear only the data that is going to be merged to it. there's no point clearing more */
         std::fill_n(lightmap->samples.begin(), lightsurf->samples.size(), lightsample_t{});
+        lightmap->bounce_color = {};
     }
 }
 
@@ -799,13 +795,6 @@ static lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style,
     newLightmap.style = INVALID_LIGHTSTYLE;
     Lightmap_AllocOrClear(&newLightmap, lightsurf);
     return &newLightmap;
-}
-
-static void Lightmap_ClearAll(lightmapdict_t *lightmaps)
-{
-    for (auto &lm : *lightmaps) {
-        lm.style = INVALID_LIGHTSTYLE;
-    }
 }
 
 /*
@@ -1306,6 +1295,7 @@ static void LightFace_Entity(
         lightsample_t &sample = cached_lightmap->samples[i];
 
         sample.color += rs.getPushedRayColor(j);
+        cached_lightmap->bounce_color += rs.getPushedRayColor(j);
         sample.direction += rs.getPushedRayNormalContrib(j);
 
         Lightmap_Save(bsp, lightmaps, lightsurf, cached_lightmap, cached_style);
@@ -1478,6 +1468,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
         lightsample_t &sample = cached_lightmap->samples[i];
 
         sample.color += rs.getPushedRayColor(j);
+        cached_lightmap->bounce_color += rs.getPushedRayColor(j);
         sample.direction += rs.getPushedRayNormalContrib(j);
         total_light_ray_hits++;
 
@@ -1949,6 +1940,11 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
 
     dotProductFactor = std::max(0.0f, dotProductFactor);
 
+    // quick exit
+    if (!dotProductFactor) {
+        return {0};
+    }
+
     if (vpl_settings.omnidirectional) {
         dist += cfg.surflightskydist.value();
     }
@@ -2034,7 +2030,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
                     const qvec3f &pos = vpl.points[c];
                     qvec3f dir = lightsurf_pos - pos;
-                    float dist = qv::length(dir);
+                    float dist = std::max(0.01f, qv::length(dir));
                     bool use_normal = true;
 
                     if (lightsurf->twosided) {
@@ -2081,6 +2077,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
                     lightsample_t &sample = lightmap->samples[i];
                     sample.color += indirect;
+                    lightmap->bounce_color += indirect;
 
                     hit = true;
                     ++total_surflight_ray_hits;

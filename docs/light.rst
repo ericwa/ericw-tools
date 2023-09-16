@@ -282,7 +282,7 @@ Debug modes
 
 .. option:: -debugmottle
 
-   Save mottle pattern (used by Q2 minlight, unless opted out with :bmodel-key:`_minlight_mottle`)
+   Save mottle pattern (used by Q2 minlight, when opted in with :bmodel-key:`_minlight_mottle`)
    to lightmap.
 
 .. option:: -debugface x y z
@@ -531,7 +531,8 @@ The following keys can be added to the *worldspawn* entity:
 
 .. worldspawn-key:: "_bounce" "n"
 
-   1 enables bounce lighting, disabled by default.
+   Non-zero enables bounce lighting, disabled by default. The value is
+   the maximum number of bounces to perform.
 
 .. worldspawn-key:: "_bouncescale" "n"
 
@@ -596,7 +597,7 @@ func_detail/func_group as well, if qbsp from these tools is used.
                 "_minlightMottle" "n"
 
    Whether minlight should have a mottled pattern. Defaults
-   to 1 in Q2 mode and 0 otherwise.
+   to 0.
 
 .. bmodel-key:: "_minlight_exclude" "texname"
 

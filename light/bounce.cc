@@ -39,13 +39,6 @@
 #include <common/qvec.hh>
 #include <common/parallel.hh>
 
-static std::atomic_size_t bouncelightpoints;
-
-void ResetBounce()
-{
-    bouncelightpoints = 0;
-}
-
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
     // make bounce light, only if this face is shadow casting
@@ -145,30 +138,30 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     }
 }
 
-static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face)
+static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, const mface_t &face)
 {
     if (!Face_ShouldBounce(bsp, &face)) {
-        return;
+        return false;
     }
 
     auto &surf_ptr = LightSurfaces()[&face - bsp->dfaces.data()];
 
     if (!surf_ptr) {
-        return;
+        return false;
     }
 
     auto &surf = *surf_ptr.get();
 
     // no lights
     if (!surf.lightmapsByStyle.size()) {
-        return;
+        return false;
     }
 
     auto winding = polylib::winding_t::from_face(bsp, &face);
     vec_t area = winding.area();
 
     if (area < 1.f) {
-        return;
+        return false;
     }
 
     // Create winding...
@@ -181,27 +174,25 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     bool has_any_color = false;
 
-    for (const auto &lightmap : surf.lightmapsByStyle) {
+    for (auto &lightmap : surf.lightmapsByStyle) {
 
         if (lightmap.style && !cfg.bouncestyled.value()) {
             continue;
         }
 
-        for (auto &sample : lightmap.samples) {
-            sum[lightmap.style] += sample.color;
-        }
-    }
-
-    for (auto &sample : sum) {
-        if (!qv::emptyExact(sample.second)) {
-            sample.second /= sample_divisor;
+        if (!qv::emptyExact(lightmap.bounce_color)) {
+            sum[lightmap.style] = lightmap.bounce_color / sample_divisor;
             has_any_color = true;
         }
+
+        // clear bounced color from lightmap since we
+        // have "counted" it
+        lightmap.bounce_color = {};
     }
 
     // no bounced color, we can leave early
     if (!has_any_color) {
-        return;
+        return false;
     }
 
     // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
@@ -240,13 +231,51 @@ static void MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     for (auto &style : emitcolors) {
         MakeBounceLight(bsp, cfg, surf, style.second, style.first, points, area, facenormal, facemidpoint);
     }
+
+    return true;
 }
 
-void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
+static void ClearBounceLightsThread(const mbsp_t *bsp, const mface_t &face)
+{
+    if (!Face_ShouldBounce(bsp, &face)) {
+        return;
+    }
+
+    auto &surf_ptr = LightSurfaces()[&face - bsp->dfaces.data()];
+
+    if (!surf_ptr) {
+        return;
+    }
+
+    auto &surf = *surf_ptr.get();
+
+    // no bouncing yet
+    if (!surf.vpl) {
+        return;
+    }
+
+    // remove all styles that are bounce
+    auto &l = *surf.vpl;
+    auto removed = std::remove_if(l.styles.begin(), l.styles.end(), [](surfacelight_t::per_style_t &p) {
+        return p.bounce;
+    });
+    l.styles.erase(removed, l.styles.end());
+}
+
+bool MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 {
     logging::funcheader();
 
-    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { MakeBounceLightsThread(cfg, bsp, face); });
+    std::atomic_bool any_to_bounce = false;
 
-    // logging::print("{} bounce lights created, with {} points\n", bouncelights.size(), bouncelightpoints);
+    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { any_to_bounce = MakeBounceLightsThread(cfg, bsp, face) || any_to_bounce; });
+
+    return any_to_bounce.load();
+}
+
+void ClearBounceLights(const mbsp_t *bsp)
+{
+    logging::funcheader();
+
+    logging::parallel_for_each(bsp->dfaces, [&](const mface_t &face) { ClearBounceLightsThread(bsp, face); });
 }

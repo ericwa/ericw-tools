@@ -28,5 +28,5 @@ struct mbsp_t;
 
 // public functions
 
-void ResetBounce();
-void MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
+bool MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
+void ClearBounceLights(const mbsp_t *bsp);

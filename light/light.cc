@@ -186,7 +186,7 @@ worldspawn_keys::worldspawn_keys()
       minlight_dirt{this, "minlight_dirt", false, &worldspawn_group},
       phongallowed{this, "phong", true, &worldspawn_group},
       phongangle{this, "phong_angle", 0, &worldspawn_group},
-      bounce{this, "bounce", false, &worldspawn_group},
+      bounce{this, "bounce", 0, &worldspawn_group},
       bouncestyled{this, "bouncestyled", false, &worldspawn_group},
       bouncescale{this, "bouncescale", 1.0, 0.0, 100.0, &worldspawn_group},
       bouncecolorscale{this, "bouncecolorscale", 0.0, 0.0, 1.0, &worldspawn_group},
@@ -668,10 +668,12 @@ static void CacheTextures(const mbsp_t &bsp)
             face_textures[i] = {nullptr, {127}, {0.5}};
         } else {
             auto tex = img::find(name);
-            face_textures[i] = {tex, tex->averageColor,
+            auto &ext = extended_texinfo_flags[bsp.dfaces[i].texinfo];
+            auto avg = ext.surflight_color.value_or(tex->averageColor);
+            face_textures[i] = {tex, avg,
                 // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use
                 // texture color)
-                mix(qvec3d{127}, qvec3d(tex->averageColor), light_options.bouncecolorscale.value()) / 255.0};
+                mix(qvec3d{127}, qvec3d(avg), light_options.bouncecolorscale.value()) / 255.0};
         }
     }
 }
@@ -936,18 +938,29 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     });
 
     if (bouncerequired && !light_options.nolighting.value()) {
-        MakeBounceLights(light_options, &bsp);
 
-        logging::header("Indirect Lighting"); // mxd
-        logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-            if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
-#if defined(HAVE_EMBREE) && defined(__SSE2__)
-                _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-#endif
+        for (size_t i = 0; i < light_options.bounce.value(); i++) {
 
-                IndirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
+            if (i != 0) {
+                ClearBounceLights(&bsp);
             }
-        });
+
+            if (!MakeBounceLights(light_options, &bsp)) {
+                logging::header("No bounces; indirect lighting halted");
+                break;
+            }
+
+            logging::header(fmt::format("Indirect Lighting (pass {0})", i).c_str()); // mxd
+            logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
+                if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
+    #if defined(HAVE_EMBREE) && defined(__SSE2__)
+                    _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
+    #endif
+
+                    IndirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
+                }
+            });
+        }
     }
 
     if (!light_options.nolighting.value()) {
@@ -1470,7 +1483,6 @@ static void ResetLight()
 
 void light_reset()
 {
-    ResetBounce();
     ResetLightEntities();
     ResetLight();
     ResetLtFace();
@@ -1561,9 +1573,10 @@ int light_main(int argc, const char **argv)
 
     img::load_textures(&bsp, light_options);
 
+    LoadExtendedTexinfoFlags(source, &bsp);
+
     CacheTextures(bsp);
 
-    LoadExtendedTexinfoFlags(source, &bsp);
     LoadEntities(light_options, &bsp);
 
     light_options.postinitialize(argc, argv);

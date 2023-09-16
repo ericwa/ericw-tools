@@ -78,6 +78,7 @@ class lightmap_t
 public:
     int style;
     std::vector<lightsample_t> samples;
+    qvec3d bounce_color;
 };
 
 using lightmapdict_t = std::vector<lightmap_t>;
@@ -300,7 +301,7 @@ public:
     setting_scalar phongangle;
 
     /* bounce */
-    setting_bool bounce;
+    setting_int32 bounce;
     setting_bool bouncestyled;
     setting_scalar bouncescale;
     setting_scalar bouncecolorscale;
