@@ -14,7 +14,17 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
     const bool is_q2 = std::find(extra_qbsp_args.begin(), extra_qbsp_args.end(), "-q2bsp") != extra_qbsp_args.end();
     auto map_path = std::filesystem::path(testmaps_dir) / name;
 
-    auto bsp_path = fs::path(is_q2 ? test_quake2_maps_dir : test_quake_maps_dir) / name.filename();
+    auto bsp_dir = fs::path(is_q2 ? test_quake2_maps_dir : test_quake_maps_dir);
+    // Try to get an absolute path, so our output .bsp (for qbsp) and input .bsp paths (for vis/light) are
+    // absolute. Otherwise we risk light.exe picking up the wrong .bsp (especially if there are debug .bsp's in the
+    // testmaps folder).
+    if (bsp_dir.empty()) {
+        bsp_dir = fs::current_path();
+    } else {
+        bsp_dir = fs::weakly_canonical(bsp_dir);
+    }
+
+    auto bsp_path = bsp_dir / name.filename();
     bsp_path.replace_extension(".bsp");
 
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
