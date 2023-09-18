@@ -67,6 +67,10 @@ struct lightgrid_sample_t
     qvec3b round_to_int() const;
     float brightness() const;
 
+    /**
+     * - if !used, style and color are ignored for equality
+     * - if a color component is nan, nan is considered equal to nan for the purposes of this comparison
+     */
     bool operator==(const lightgrid_sample_t &other) const;
 };
 
