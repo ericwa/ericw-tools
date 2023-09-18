@@ -3580,6 +3580,11 @@ bool lightgrid_sample_t::operator==(const lightgrid_sample_t &other) const
     return true;
 }
 
+bool lightgrid_sample_t::operator!=(const lightgrid_sample_t &other) const
+{
+    return !(*this == other);
+}
+
 int lightgrid_samples_t::used_styles() const
 {
     int used = 0;

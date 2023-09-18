@@ -72,6 +72,7 @@ struct lightgrid_sample_t
      * - if a color component is nan, nan is considered equal to nan for the purposes of this comparison
      */
     bool operator==(const lightgrid_sample_t &other) const;
+    bool operator!=(const lightgrid_sample_t &other) const; //gcc9 workaround
 };
 
 struct lightgrid_samples_t
