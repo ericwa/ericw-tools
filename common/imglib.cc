@@ -372,7 +372,7 @@ std::optional<texture_meta> load_wal_json_meta(
     const std::string_view &name, const fs::data &file, const gamedef_t *game)
 {
     try {
-        auto json = json::parse(file->begin(), file->end());
+        auto json = parse_json(file->data(), file->data() + file->size());
 
         texture_meta meta{};
 
@@ -386,71 +386,70 @@ std::optional<texture_meta> load_wal_json_meta(
                     meta = *wal_meta;
         }
 
-        if (json.contains("width") && json["width"].is_number_integer()) {
-            meta.width = json["width"].get<int32_t>();
+        if (json.isMember("width") && json["width"].isInt()) {
+            meta.width = json["width"].as<int32_t>();
         }
 
-        if (json.contains("height") && json["height"].is_number_integer()) {
-            meta.height = json["height"].get<int32_t>();
+        if (json.isMember("height") && json["height"].isInt()) {
+            meta.height = json["height"].as<int32_t>();
         }
 
-        if (json.contains("value") && json["value"].is_number_integer()) {
-            meta.value = json["value"].get<int32_t>();
+        if (json.isMember("value") && json["value"].isInt()) {
+            meta.value = json["value"].as<int32_t>();
         }
 
-        if (json.contains("contents")) {
+        if (json.isMember("contents")) {
             auto &contents = json["contents"];
 
-            if (contents.is_number_integer()) {
-                meta.contents_native = contents.get<int32_t>();
-            } else if (contents.is_string()) {
-                meta.contents_native =
-                        game->contents_from_string(contents.get<std::string>());
-            } else if (contents.is_array()) {
+            if (contents.isInt()) {
+                meta.contents_native = contents.as<int32_t>();
+            } else if (contents.isString()) {
+                meta.contents_native = game->contents_from_string(contents.as<std::string>());
+            } else if (contents.isArray()) {
                 int native = 0;
                 for (auto &content : contents) {
-                    if (content.is_number_integer()) {
-                        native |= content.get<int32_t>();
-                    } else if (content.is_string()) {
-                        native |= game->contents_from_string(content.get<std::string>());
+                    if (content.isInt()) {
+                        native |= content.as<int32_t>();
+                    } else if (content.isString()) {
+                        native |= game->contents_from_string(content.as<std::string>());
                     }
                 }
                 meta.contents_native = native;
             }
         }
 
-        if (json.contains("flags")) {
+        if (json.isMember("flags")) {
             auto &flags = json["flags"];
 
-            if (flags.is_number_integer()) {
-                meta.flags.native = flags.get<int32_t>();
-            } else if (flags.is_string()) {
-                meta.flags.native = game->surfflags_from_string(flags.get<std::string>());
-            } else if (flags.is_array()) {
+            if (flags.isInt()) {
+                meta.flags.native = flags.as<int32_t>();
+            } else if (flags.isString()) {
+                meta.flags.native = game->surfflags_from_string(flags.as<std::string>());
+            } else if (flags.isArray()) {
                 for (auto &flag : flags) {
-                    if (flag.is_number_integer()) {
-                        meta.flags.native |= flag.get<int32_t>();
-                    } else if (flag.is_string()) {
-                        meta.flags.native |= game->surfflags_from_string(flag.get<std::string>());
+                    if (flag.isInt()) {
+                        meta.flags.native |= flag.as<int32_t>();
+                    } else if (flag.isString()) {
+                        meta.flags.native |= game->surfflags_from_string(flag.as<std::string>());
                     }
                 }
             }
         }
 
-        if (json.contains("animation") && json["animation"].is_string()) {
-            meta.animation = json["animation"].get<std::string>();
+        if (json.isMember("animation") && json["animation"].isString()) {
+            meta.animation = json["animation"].as<std::string>();
         }
 
-        if (json.contains("color")) {
+        if (json.isMember("color")) {
             auto &color = json["color"];
 
-            qvec3b color_vec = {color.at(0).get<int32_t>(), color.at(1).get<int32_t>(), color.at(2).get<int32_t>()};
+            qvec3b color_vec = {color[0].as<int32_t>(), color[1].as<int32_t>(), color[2].as<int32_t>()};
 
             meta.color_override = {color_vec};
         }
 
         return meta;
-    } catch (json::exception e) {
+    } catch (Json::Exception e) {
         logging::funcprint("{}, invalid JSON: {}\n", name, e.what());
         return std::nullopt;
     }

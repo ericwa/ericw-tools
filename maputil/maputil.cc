@@ -120,20 +120,21 @@ size_t lua_count_array(lua_State *state)
 }
 
 // pushes value onto stack
-static void json_to_lua(lua_State *state, const json &value)
+static void json_to_lua(lua_State *state, const Json::Value &value)
 {
     switch (value.type()) {
-    case json::value_t::object: {
+    case Json::ValueType::objectValue: {
         lua_newtable(state);
 
-        for (auto it = value.begin(); it != value.end(); ++it) {
-            lua_pushstring(state, it.key().c_str());
-            json_to_lua(state, it.value());
+        for (auto &key : value.getMemberNames()) {
+            const Json::Value &val = value[key];
+            lua_pushstring(state, key.c_str());
+            json_to_lua(state, val);
             lua_settable(state, -3);
         }
         return;
     }
-    case json::value_t::array: {
+    case Json::ValueType::arrayValue: {
         lua_newtable(state);
 
         size_t i = 1;
@@ -144,27 +145,27 @@ static void json_to_lua(lua_State *state, const json &value)
         }
         return;
     }
-    case json::value_t::string: {
-        lua_pushstring(state, value.get<std::string>().c_str());
+    case Json::ValueType::stringValue: {
+        lua_pushstring(state, value.asCString());
         return;
     }
-    case json::value_t::number_unsigned: {
-        lua_pushnumber(state, value.get<uint64_t>());
+    case Json::ValueType::uintValue: {
+        lua_pushnumber(state, value.asUInt64());
         return;
     }
-    case json::value_t::number_integer: {
-        lua_pushnumber(state, value.get<int64_t>());
+    case Json::ValueType::intValue: {
+        lua_pushnumber(state, value.asInt64());
         return;
     }
-    case json::value_t::number_float: {
-        lua_pushnumber(state, value.get<double>());
+    case Json::ValueType::realValue: {
+        lua_pushnumber(state, value.asDouble());
         return;
     }
-    case json::value_t::boolean: {
-        lua_pushboolean(state, value.get<bool>());
+    case Json::ValueType::booleanValue: {
+        lua_pushboolean(state, value.asBool());
         return;
     }
-    case json::value_t::null: {
+    case Json::ValueType::nullValue: {
         lua_pushnil(state);
         return;
     }
@@ -188,7 +189,7 @@ static int l_load_json(lua_State *state)
 
     try
     {
-        auto json = json::parse(result->begin(), result->end());
+        auto json = parse_json(result->data(), result->data() + result->size());
 
         json_to_lua(state, json);
     }
