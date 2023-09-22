@@ -524,6 +524,8 @@ static const char *DefaultTriggerTexture(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return "e1u1/trigger";
+    } else if (bsp->loadversion->game->id == GAME_HALF_LIFE) {
+        return "aaatrigger";
     } else {
         return "trigger";
     }

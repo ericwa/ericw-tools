@@ -196,6 +196,7 @@ worldspawn_keys::worldspawn_keys()
       surflightskydist{this, "surflightskydist", 0.0, &worldspawn_group},
       surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.0f, 0.f, 510.f, &worldspawn_group},
+      surflight_rescale{this, "surflight_rescale", true, &worldspawn_group},
       sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},
       sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group},
       sun2{this, "sun2", 0.0, &worldspawn_group},
@@ -1556,6 +1557,59 @@ int light_main(int argc, const char **argv)
         }
         if (!light_options.bouncestyled.is_changed()) {
             light_options.bouncestyled.set_value(true, settings::source::GAME_TARGET);
+        }
+    }
+
+    // if we're goldsrc, change some defaults to better match ZHLT/VHLT
+    if (bspdata.loadversion->game->id == GAME_HALF_LIFE) {
+        // ZHLT doesn't load textures in hlrad, but VHLT does, prefer that
+        if (!light_options.bouncecolorscale.is_changed()) {
+            light_options.bouncecolorscale.set_value(1.0, settings::source::GAME_TARGET);
+        }
+        // half-intensity bounces look more accurate to the original tools
+        if (!light_options.bouncescale.is_changed()) {
+            light_options.bouncescale.set_value(0.5f, settings::source::GAME_TARGET);
+        }
+        // 8 light bounces by default
+        if (!light_options.bounce.is_changed()) {
+            light_options.bounce.set_value(8, settings::source::GAME_TARGET);
+        }
+        // hlrad is qrad, so use radiosity surface lights
+        if (!light_options.surflight_radiosity.is_changed()) {
+            light_options.surflight_radiosity.set_value(SURFLIGHT_RAD, settings::source::GAME_TARGET);
+        }
+        // both toolsets bounce styled lights
+        if (!light_options.bouncestyled.is_changed()) {
+            light_options.bouncestyled.set_value(true, settings::source::GAME_TARGET);
+        }
+        // goldsrc expects lightmaps to be gamma corrected with a factor of 1.8
+        if (!light_options.lightmapgamma.is_changed()) {
+            light_options.lightmapgamma.set_value(1.8, settings::source::GAME_TARGET);
+        }
+        // 50 degree phong angle
+        if (!light_options.phongangle.is_changed()) {
+            light_options.phongangle.set_value(50.0, settings::source::GAME_TARGET);
+        }
+        // no halo around surface lights
+        if (!light_options.surflight_rescale.is_changed()) {
+            light_options.surflight_rescale.set_value(false, settings::source::GAME_TARGET);
+        }
+        // rough approximation to convert lights.rad values
+        if (!light_options.surflightscale.is_changed()) {
+            light_options.surflightscale.set_value(0.2, settings::source::GAME_TARGET);
+        }
+        if (!light_options.surflightskyscale.is_changed()) {
+            light_options.surflightskyscale.set_value(0.2, settings::source::GAME_TARGET);
+        }
+        // no range clipping
+        if (!light_options.rangescale.is_changed()) {
+            light_options.rangescale.set_value(1.0, settings::source::GAME_TARGET);
+        }
+        // goldsrc uses fixed point maths instead of floats for lightmap building,
+        // so VHLT clamps max lightmap intensity to 144, to prevent overblowing
+        // it's 72 because it's multiplied by 2 later
+        if (!light_options.maxlight.is_changed()) {
+            light_options.maxlight.set_value(72.0, settings::source::GAME_TARGET);
         }
     }
 

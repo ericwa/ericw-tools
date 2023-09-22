@@ -203,7 +203,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     if (extended_flags.surflight_rescale) {
         setting.rescale = extended_flags.surflight_rescale.value();
     } else {
-        setting.rescale = is_sky ? false : true;
+        setting.rescale = is_sky ? false : cfg.surflight_rescale.value();
     }
 
     // Store surfacelight settings...
