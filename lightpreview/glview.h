@@ -88,6 +88,7 @@ private:
     // render options
     bool m_lighmapOnly = false;
     bool m_fullbright = false;
+    bool m_overbright = false;
     bool m_drawNormals = false;
     bool m_showTris = false;
     bool m_showTrisSeeThrough = false;
@@ -156,6 +157,7 @@ private:
     int m_program_alpha_test_location = 0;
     int m_program_lightmap_only_location = 0;
     int m_program_fullbright_location = 0;
+    int m_program_overbright_location = 0;
     int m_program_drawnormals_location = 0;
     int m_program_drawflat_location = 0;
     int m_program_style_scalars_location = 0;
@@ -169,6 +171,7 @@ private:
     int m_skybox_program_opacity_location = 0;
     int m_skybox_program_lightmap_only_location = 0;
     int m_skybox_program_fullbright_location = 0;
+    int m_skybox_program_overbright_location = 0;
     int m_skybox_program_drawnormals_location = 0;
     int m_skybox_program_drawflat_location = 0;
     int m_skybox_program_style_scalars_location = 0;
@@ -196,6 +199,7 @@ public:
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
+    void setOverbright(bool overbright);
     void setDrawNormals(bool drawnormals);
     void setShowTris(bool showtris);
     void setShowTrisSeeThrough(bool showtris);

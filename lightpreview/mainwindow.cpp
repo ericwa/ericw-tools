@@ -192,6 +192,7 @@ void MainWindow::createPropertiesSidebar()
     auto *keepposition = new QCheckBox(tr("Keep Camera Pos"));
 
     nearest = new QCheckBox(tr("Nearest Filter"));
+    overbright = new QCheckBox(tr("Overbright"));
 
     bspx_decoupled_lm = new QCheckBox(tr("BSPX: Decoupled Lightmap"));
     bspx_decoupled_lm->setChecked(true);
@@ -214,6 +215,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(visculling);
     formLayout->addRow(keepposition);
     formLayout->addRow(nearest);
+    formLayout->addRow(overbright);
     formLayout->addRow(bspx_decoupled_lm);
     formLayout->addRow(bspx_normals);
     formLayout->addRow(draw_opaque);
@@ -248,8 +250,12 @@ void MainWindow::createPropertiesSidebar()
     vis_options->setText(s.value("vis_options").toString());
     light_options->setText(s.value("light_options").toString());
     nearest->setChecked(s.value("nearest").toBool());
+    overbright->setChecked(s.value("overbright", QVariant(true)).toBool());
     if (nearest->isChecked()) {
         glView->setMagFilter(QOpenGLTexture::Nearest);
+    }
+    if (overbright->isChecked()) {
+        glView->setOverbright(true);
     }
 
     // setup event handlers
@@ -268,6 +274,7 @@ void MainWindow::createPropertiesSidebar()
     connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
     connect(nearest, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });
+    connect(overbright, &QAbstractButton::toggled, this, [=](bool checked) { glView->setOverbright(checked); });
     connect(draw_opaque, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
@@ -814,6 +821,7 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
     s.setValue("vis_options", vis_options->text());
     s.setValue("light_options", light_options->text());
     s.setValue("nearest", nearest->isChecked());
+    s.setValue("overbright", overbright->isChecked());
 
     // update title bar
     setWindowFilePath(file);
