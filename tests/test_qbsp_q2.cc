@@ -268,9 +268,25 @@ TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2"))
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST_CASE("nodraw_detail_light" * doctest::test_suite("testmaps_q2"))
+TEST_CASE("q2_long_texture_name" * doctest::test_suite("testmaps_q2"))
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_detail_light.map", {"-includeskip"});
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_long_texture_name.map");
+
+    CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
+
+    auto *topface = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 16}, {0, 0, 1});
+    REQUIRE(nullptr != topface);
+
+    // this won't work in game, but we're mostly checking for lack of memory corruption
+    // (a warning is issued)
+    auto *texinfo = Face_Texinfo(&bsp, topface);
+    CHECK(std::string(texinfo->texture.data()) == "long_folder_name_test/long_text");
+    CHECK(texinfo->nexttexinfo == -1);
+}
+
+TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_light.map", {"-includeskip"});
 
     CHECK(GAME_QUAKE_II == bsp.loadversion->game->id);
 
