@@ -161,7 +161,7 @@ struct surfflags_t
     std::optional<std::string> surflight_targetname;
 
     // override the textures' surflight color
-    std::optional<qvec3b> surflight_color;
+    std::optional<qvec3f> surflight_color;
 
     // surface light rescaling
     std::optional<vec_t> surflight_minlight_scale;

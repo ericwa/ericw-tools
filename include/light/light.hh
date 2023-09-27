@@ -276,6 +276,7 @@ public:
     setting_scalar rangescale;
     setting_scalar global_anglescale;
     setting_scalar lightmapgamma;
+    setting_bool srgbpipeline;
     setting_bool addminlight;
     setting_scalar minlight;
     setting_scalar minlightMottle;
@@ -454,7 +455,7 @@ const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
  */
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
-const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
+const qvec3f &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
 const qvec3d &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
 void light_reset();
 int light_main(int argc, const char **argv);

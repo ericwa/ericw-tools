@@ -26,6 +26,7 @@
 #include <common/log.hh>
 #include <common/cmdlib.hh>
 #include <common/parser.hh>
+#include <common/color.hh>
 
 #include <light/litfile.hh>
 #include <light/trace.hh>
@@ -978,6 +979,27 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                 }
             }
 
+            // check to see if we have a Half-Life style _light key
+            if (bsp->loadversion->game->id == GAME_HALF_LIFE) {
+                // FIXME: ZHLT has a key for this, use that!
+                entdict.set("_delay", "inverse2");
+
+                const std::string &light_hl = entdict.get("_light");
+                if (!light_hl.empty()) {
+                    int color[4]{};
+                    int num_args = sscanf(light_hl.c_str(), "%d %d %d %d", &color[0], &color[1], &color[2], &color[3]);
+                    if (num_args == 1) {
+                        // only intensity
+                        entdict.set("_light", std::to_string(color[0]));
+                    } else if (num_args >= 3) {
+                        entdict.set("_color", fmt::format("{} {} {}", color[0], color[1], color[2]));
+                        if (num_args >= 4) {
+                            entdict.set("_light", std::to_string(color[3]));
+                        }
+                    }
+                }
+            }
+
             // Skip non-switchable lights if we're skipping world lighting
             if (light_options.nolighting.value() && entdict.get("style").empty() &&
                 entdict.get("switchshadstyle").empty()) {
@@ -1469,13 +1491,25 @@ bool ParseLightsFile(const fs::path &fname)
 
         entdict_t &d = radlights.emplace_back();
         d.set("_surface", parser.token);
+
+        // parse out the color
+        qvec3f color;
         parser.parse_token();
-        vec_t r = std::stod(parser.token);
+        color[0] = std::stoi(parser.token);
         parser.parse_token();
-        vec_t g = std::stod(parser.token);
+        color[1] = std::stoi(parser.token);
         parser.parse_token();
-        vec_t b = std::stod(parser.token);
-        d.set("_color", fmt::format("{} {} {}", r, g, b));
+        color[2] = std::stoi(parser.token);
+
+        // convert to 0-1
+        color /= 255.0f;
+        // convert to linear
+        color = color::srgb_to_linear(color);
+        // back to 0-255 !!!
+        color *= 255.0f;
+
+        d.set("_color", fmt::format("{} {} {}", color[0], color[1], color[2]));
+
         parser.parse_token();
         d.set("light", parser.token);
         // might be hdr rgbi values here

@@ -168,6 +168,7 @@ worldspawn_keys::worldspawn_keys()
       rangescale{this, "range", 0.5, 0.0, 100.0, &worldspawn_group},
       global_anglescale{this, {"anglescale", "anglesense"}, 0.5, 0.0, 1.0, &worldspawn_group},
       lightmapgamma{this, "gamma", 1.0, 0.0, 100.0, &worldspawn_group},
+      srgbpipeline{this, "srgbpipeline", false, &worldspawn_group},
       addminlight{this, "addmin", false, &worldspawn_group},
       minlight{this, {"light", "minlight"}, 0, &worldspawn_group},
       minlightMottle{this, {"minlight_mottle", "minlightMottle"}, false, &worldspawn_group},
@@ -637,7 +638,7 @@ const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum)
 struct face_texture_cache
 {
     const img::texture *image;
-    qvec3b averageColor;
+    qvec3f averageColor;
     qvec3d bounceColor;
 };
 
@@ -648,7 +649,7 @@ const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face)
     return face_textures[face - bsp->dfaces.data()].image;
 }
 
-const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
+const qvec3f &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
 {
     return face_textures[face - bsp->dfaces.data()].averageColor;
 }
@@ -666,7 +667,7 @@ static void CacheTextures(const mbsp_t &bsp)
         const char *name = Face_TextureName(&bsp, &bsp.dfaces[i]);
 
         if (!name || !*name) {
-            face_textures[i] = {nullptr, {127}, {0.5}};
+            face_textures[i] = {nullptr, {0.5}, {0.5}};
         } else {
             auto tex = img::find(name);
             auto &ext = extended_texinfo_flags[bsp.dfaces[i].texinfo];
@@ -674,7 +675,7 @@ static void CacheTextures(const mbsp_t &bsp)
             face_textures[i] = {tex, avg,
                 // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use
                 // texture color)
-                mix(qvec3d{127}, qvec3d(avg), light_options.bouncecolorscale.value()) / 255.0};
+                mix(qvec3f{0.5}, avg, light_options.bouncecolorscale.value())};
         }
     }
 }
@@ -1166,7 +1167,7 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
             flags.surflight_targetname = val.at("surflight_targetname").get<std::string>();
         }
         if (val.contains("surflight_color")) {
-            flags.surflight_color = val.at("surflight_color").get<qvec3b>();
+            flags.surflight_color = val.at("surflight_color").get<qvec3f>();
         }
         if (val.contains("surflight_minlight_scale")) {
             flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<vec_t>();
@@ -1562,33 +1563,36 @@ int light_main(int argc, const char **argv)
 
     // if we're goldsrc, change some defaults to better match ZHLT/VHLT
     if (bspdata.loadversion->game->id == GAME_HALF_LIFE) {
+        // use the SRGB correct pipeline
+        // technically goldsrc isn't srgb, but it's close enough to work
+        if (!light_options.srgbpipeline.is_changed()) {
+            light_options.srgbpipeline.set_value(true, settings::source::GAME_TARGET);
+        }
         // ZHLT doesn't load textures in hlrad, but VHLT does, prefer that
         if (!light_options.bouncecolorscale.is_changed()) {
             light_options.bouncecolorscale.set_value(1.0, settings::source::GAME_TARGET);
         }
         // half-intensity bounces look more accurate to the original tools
-        if (!light_options.bouncescale.is_changed()) {
-            light_options.bouncescale.set_value(0.5f, settings::source::GAME_TARGET);
-        }
+        // 0.7 matches VHLT, rationale being that HL textures are authored quite bright
+        // slart: opting to keep this off for now, since it looks nice at 1 :)
+        /*if (!light_options.bouncescale.is_changed()) {
+            light_options.bouncescale.set_value(0.7f, settings::source::GAME_TARGET);
+        }*/
         // 8 light bounces by default
         if (!light_options.bounce.is_changed()) {
             light_options.bounce.set_value(8, settings::source::GAME_TARGET);
-        }
-        // hlrad is qrad, so use radiosity surface lights
-        if (!light_options.surflight_radiosity.is_changed()) {
-            light_options.surflight_radiosity.set_value(SURFLIGHT_RAD, settings::source::GAME_TARGET);
         }
         // both toolsets bounce styled lights
         if (!light_options.bouncestyled.is_changed()) {
             light_options.bouncestyled.set_value(true, settings::source::GAME_TARGET);
         }
-        // goldsrc expects lightmaps to be gamma corrected with a factor of 1.8
-        if (!light_options.lightmapgamma.is_changed()) {
-            light_options.lightmapgamma.set_value(1.8, settings::source::GAME_TARGET);
-        }
         // 50 degree phong angle
         if (!light_options.phongangle.is_changed()) {
             light_options.phongangle.set_value(50.0, settings::source::GAME_TARGET);
+        }
+        // hlrad is qrad, so use radiosity surface lights
+        if (!light_options.surflight_radiosity.is_changed()) {
+            light_options.surflight_radiosity.set_value(SURFLIGHT_RAD, settings::source::GAME_TARGET);
         }
         // no halo around surface lights
         if (!light_options.surflight_rescale.is_changed()) {
@@ -1596,20 +1600,20 @@ int light_main(int argc, const char **argv)
         }
         // rough approximation to convert lights.rad values
         if (!light_options.surflightscale.is_changed()) {
-            light_options.surflightscale.set_value(0.2, settings::source::GAME_TARGET);
+            light_options.surflightscale.set_value(0.4, settings::source::GAME_TARGET);
         }
         if (!light_options.surflightskyscale.is_changed()) {
-            light_options.surflightskyscale.set_value(0.2, settings::source::GAME_TARGET);
+            light_options.surflightskyscale.set_value(0.4, settings::source::GAME_TARGET);
         }
         // no range clipping
         if (!light_options.rangescale.is_changed()) {
             light_options.rangescale.set_value(1.0, settings::source::GAME_TARGET);
         }
         // goldsrc uses fixed point maths instead of floats for lightmap building,
-        // so VHLT clamps max lightmap intensity to 144, to prevent overblowing
-        // it's 72 because it's multiplied by 2 later
+        // so VHLT clamps max lightmap intensity to 188, to prevent overblowing
+        // it's 94 because it's multiplied by 2 later
         if (!light_options.maxlight.is_changed()) {
-            light_options.maxlight.set_value(72.0, settings::source::GAME_TARGET);
+            light_options.maxlight.set_value(94, settings::source::GAME_TARGET);
         }
     }
 
