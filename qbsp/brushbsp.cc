@@ -762,6 +762,9 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
 
 inline bool CheckPlaneAgainstVolume(size_t planenum, const node_t *node)
 {
+    if (!node->volume)
+        return false;
+
     bool valid = CheckSplitBrush(node->volume, planenum);
 #ifdef PARANOID
     auto [front, back] = SplitBrush(node->volume, planenum, std::nullopt);
