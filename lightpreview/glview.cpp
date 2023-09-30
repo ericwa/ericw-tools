@@ -1060,9 +1060,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         for (int i = m.firstface; i < m.firstface + m.numfaces; ++i) {
             auto &f = bsp.dfaces[i];
             std::string t = Face_TextureName(&bsp, &f);
-            // FIXME: keep empty texture names?
-            if (t.empty())
-                continue;
             if (f.numedges < 3)
                 continue;
 
