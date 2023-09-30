@@ -200,6 +200,8 @@ void MainWindow::createPropertiesSidebar()
     bspx_normals->setChecked(true);
 
     auto *draw_opaque = new QCheckBox(tr("Draw Translucency as Opaque"));
+    auto *show_bmodels = new QCheckBox(tr("Show Bmodels"));
+    show_bmodels->setChecked(true);
 
     formLayout->addRow(tr("common"), common_options);
     formLayout->addRow(tr("qbsp"), qbsp_options);
@@ -217,6 +219,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(bspx_decoupled_lm);
     formLayout->addRow(bspx_normals);
     formLayout->addRow(draw_opaque);
+    formLayout->addRow(show_bmodels);
 
     lightstyles = new QVBoxLayout();
 
@@ -271,6 +274,8 @@ void MainWindow::createPropertiesSidebar()
     connect(draw_opaque, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
+    connect(show_bmodels, &QAbstractButton::toggled, this,
+        [=](bool checked) { glView->setShowBmodels(checked); });
 
     // set up load timer
     m_fileReloadTimer = std::make_unique<QTimer>();

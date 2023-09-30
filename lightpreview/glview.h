@@ -30,6 +30,7 @@ See file, 'COPYING', for details.
 #include <QVector3D>
 #include <QMatrix4x4>
 
+#include <optional>
 #include <vector>
 
 #include <common/qvec.hh>
@@ -68,10 +69,21 @@ private:
     float m_moveSpeed;
 
     // vis culling stuff
-    /**
-     * -1 indicates solid leaf or no visdata (render all)
-     */
-    int m_lastLeaf = -1;
+    struct face_visibility_key_t
+    {
+        bool show_bmodels;
+        // -1 indicates solid leaf or no visdata (render all world faces)
+        int leafnum;
+        int clusternum;
+
+        bool operator==(const face_visibility_key_t &other) const
+        {
+            return show_bmodels == other.show_bmodels && leafnum == other.leafnum && clusternum == other.clusternum;
+        }
+    };
+    face_visibility_key_t desiredFaceVisibility() const;
+
+    std::optional<face_visibility_key_t> m_uploaded_face_visibility;
     bool m_visCulling = true;
 
     // camera stuff
@@ -97,6 +109,7 @@ private:
     bool m_drawLeak = false;
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
     bool m_drawTranslucencyAsOpaque = false;
+    bool m_showBmodels = true;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -187,7 +200,6 @@ public:
 
 private:
     void setFaceVisibilityArray(uint8_t *data);
-    void setFaceVisibilityToAllVisible();
 
 public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
@@ -209,6 +221,7 @@ public:
     void setMagFilter(QOpenGLTexture::Filter filter);
     const bool &getKeepOrigin() const { return m_keepOrigin; }
     void setDrawTranslucencyAsOpaque(bool drawopaque);
+    void setShowBmodels(bool bmodels);
 
     void takeScreenshot(QString destPath, int w, int h);
 
