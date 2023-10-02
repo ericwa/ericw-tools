@@ -124,8 +124,6 @@ MainWindow::MainWindow(QWidget *parent)
     // create the menu first as it is used by other things (dock widgets)
     setupMenu();
 
-    resize(640, 480);
-
     // gl view
     glView = new GLView(this);
     setCentralWidget(glView);
@@ -136,6 +134,8 @@ MainWindow::MainWindow(QWidget *parent)
     createOutputLog();
 
     createStatusBar();
+
+    resize(1024, 768);
 }
 
 void MainWindow::createPropertiesSidebar()
