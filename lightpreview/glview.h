@@ -101,6 +101,7 @@ private:
     bool m_lighmapOnly = false;
     bool m_fullbright = false;
     bool m_drawNormals = false;
+    std::optional<int> m_drawLeafs;
     bool m_showTris = false;
     bool m_showTrisSeeThrough = false;
     bool m_drawFlat = false;
@@ -121,6 +122,14 @@ private:
     QOpenGLVertexArrayObject m_portalVao;
     QOpenGLBuffer m_portalVbo;
     QOpenGLBuffer m_portalIndexBuffer;
+
+    struct leaf_vao_t {
+        QOpenGLVertexArrayObject vao;
+        QOpenGLBuffer vbo;
+        QOpenGLBuffer indexBuffer;
+        int num_indices = 0;
+    };
+    std::array<leaf_vao_t, MAX_MAP_HULLS_H2> m_hullVaos;
 
     // this determines what can be batched together in a draw call
     struct material_key
@@ -206,9 +215,11 @@ public:
         const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
         bool use_bspx_normals);
     void setCamera(const qvec3d &origin, const qvec3d &fwd);
+    // FIXME: distinguish render modes from render options
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
     void setDrawNormals(bool drawnormals);
+    void setDrawLeafs(std::optional<int> hullnum);
     void setShowTris(bool showtris);
     void setShowTrisSeeThrough(bool showtris);
     void setVisCulling(bool viscull);

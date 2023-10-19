@@ -35,6 +35,7 @@ See file, 'COPYING', for details.
 #include <QStandardPaths>
 #include <QDateTime>
 
+#include <common/decompile.hh>
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
 #include <common/bspinfo.hh>
@@ -62,6 +63,10 @@ GLView::GLView(QWidget *parent)
       m_portalVao(),
       m_portalIndexBuffer(QOpenGLBuffer::IndexBuffer)
 {
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.indexBuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+    }
+
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
 
@@ -83,6 +88,12 @@ GLView::~GLView()
     m_portalVbo.destroy();
     m_portalIndexBuffer.destroy();
     m_portalVao.destroy();
+
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.vbo.destroy();
+        hullVao.indexBuffer.destroy();
+        hullVao.vao.destroy();
+    }
 
     placeholder_texture.reset();
     lightmap_texture.reset();
@@ -540,6 +551,9 @@ void GLView::initializeGL()
     m_vao.create();
     m_leakVao.create();
     m_portalVao.create();
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.vao.create();
+    }
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -615,6 +629,9 @@ void GLView::paintGL()
 
     // opaque draws
     for (auto &draw : m_drawcalls) {
+        if (m_drawLeafs)
+            break;
+
         if (!draw_as_opaque(draw))
             continue;
 
@@ -648,7 +665,7 @@ void GLView::paintGL()
     }
 
     // translucent draws
-    {
+    if (!m_drawLeafs) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -764,6 +781,22 @@ void GLView::paintGL()
         glDepthMask(GL_TRUE);
     }
 
+    if (m_drawLeafs) {
+        int hull = *m_drawLeafs;
+        leaf_vao_t &vaodata = m_hullVaos[hull];
+        if (vaodata.num_indices) {
+            m_program_simple->bind();
+            m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
+
+            QOpenGLVertexArrayObject::Binder vaoBinder(&vaodata.vao);
+
+            m_program_simple->setUniformValue(m_program_simple_color_location, 1.0f, 0.4f, 0.4f, 0.2f);
+            glDrawElements(GL_TRIANGLES, vaodata.num_indices, GL_UNSIGNED_INT, 0);
+
+            m_program_simple->release();
+        }
+    }
+
     if (shouldLiveUpdate()) {
         update(); // schedule the next frame
     } else {
@@ -794,6 +827,12 @@ void GLView::setFullbright(bool fullbright)
 void GLView::setDrawNormals(bool drawnormals)
 {
     m_drawNormals = drawnormals;
+    update();
+}
+
+void GLView::setDrawLeafs(std::optional<int> hullnum)
+{
+    m_drawLeafs = hullnum;
     update();
 }
 
@@ -967,6 +1006,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     m_portalVbo.allocate(0);
     m_portalIndexBuffer.bind();
     m_portalIndexBuffer.allocate(0);
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.vbo.bind();
+        hullVao.vbo.allocate(0);
+        hullVao.indexBuffer.bind();
+        hullVao.indexBuffer.allocate(0);
+    }
+
     num_leak_points = 0;
     num_portal_indices = 0;
     m_uploaded_face_visibility = std::nullopt;
@@ -1463,6 +1509,74 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         m_portalVbo.create();
         m_portalVbo.bind();
         m_portalVbo.allocate(points.data(), points.size() * sizeof(points[0]));
+
+        // positions
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(
+            0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+    }
+
+    // load decompiled hulls
+    // TODO: support decompiling bmodels other than the world
+
+    for (int hullnum = 0; ; ++hullnum) {
+        if (hullnum >= 1) {
+            // check if hullnum 1 or higher is valid for this bsp (hull0 is always present); it's slightly involved
+            if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+                break;
+            }
+            if (hullnum >= bsp.dmodels[0].headnode.size())
+                break;
+            // 0 is valid for hull 0, and hull 1 (where it refers to clipnode 0)
+            if (hullnum >= 2 && bsp.dmodels[0].headnode[hullnum] == 0)
+                break;
+            // must be valid...
+        }
+
+        // decompile the hull
+        auto leaf_visuals = VisualizeLeafs(bsp, 0, hullnum);
+
+        auto &vao = m_hullVaos[hullnum];
+
+        QOpenGLVertexArrayObject::Binder hullVaoBinder(&vao.vao);
+
+        std::vector<GLuint> indices;
+        std::vector<simple_vertex_t> points;
+
+        for (const auto &leaf : leaf_visuals) {
+            if (leaf.contents.is_empty(bsp.loadversion->game))
+                continue;
+
+            for (const auto &winding : leaf.windings) {
+                const size_t first_vertex_of_face = points.size();
+
+                // output a vertex for each vertex of the face
+                for (int j = 0; j < winding.size(); ++j) {
+                    points.push_back({.pos = winding[j]});
+                }
+
+                // output the vertex indices for this face
+                for (int j = 2; j < winding.size(); ++j) {
+                    indices.push_back(first_vertex_of_face);
+                    indices.push_back(first_vertex_of_face + j - 1);
+                    indices.push_back(first_vertex_of_face + j);
+                }
+            }
+        }
+
+        // upload index buffer
+        vao.indexBuffer.create();
+        vao.indexBuffer.bind();
+        vao.indexBuffer.allocate(indices.data(), indices.size() * sizeof(indices[0]));
+
+        vao.num_indices = indices.size();
+
+        logging::print("set up leaf vao for {} with {} indices vao indices {}", hullnum, vao.num_indices, indices.size());
+
+        // upload vertex buffer
+        vao.vbo.create();
+        vao.vbo.bind();
+        vao.vbo.allocate(points.data(), points.size() * sizeof(points[0]));
 
         // positions
         glEnableVertexAttribArray(0 /* attrib */);

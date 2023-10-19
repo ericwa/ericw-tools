@@ -1,5 +1,10 @@
 #pragma once
 
+#include <common/polylib.hh>
+#include <common/bspfile.hh>
+
+#include <optional>
+#include <vector>
 #include <iosfwd>
 
 struct mbsp_t;
@@ -24,3 +29,16 @@ struct decomp_options
 };
 
 void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstream &file);
+
+struct leaf_visualization_t
+{
+    std::vector<polylib::winding_t> windings;
+    contentflags_t contents;
+
+    /**
+     * Index of this leaf in bsp.dleafs. Only valid for hull0 leafs, not for clipnodes.
+     */
+    std::optional<int> leafnum;
+};
+
+std::vector<leaf_visualization_t> VisualizeLeafs(const mbsp_t &bsp, int modelnum, int hullnum);
