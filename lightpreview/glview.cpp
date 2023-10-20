@@ -790,8 +790,16 @@ void GLView::paintGL()
 
             QOpenGLVertexArrayObject::Binder vaoBinder(&vaodata.vao);
 
+            glEnable(GL_PRIMITIVE_RESTART);
+            glPrimitiveRestartIndex((GLuint)-1);
+
             m_program_simple->setUniformValue(m_program_simple_color_location, 1.0f, 0.4f, 0.4f, 0.2f);
-            glDrawElements(GL_TRIANGLES, vaodata.num_indices, GL_UNSIGNED_INT, 0);
+            glDrawElements(GL_TRIANGLE_FAN, vaodata.num_indices, GL_UNSIGNED_INT, 0);
+
+            m_program_simple->setUniformValue(m_program_simple_color_location, 1.0f, 1.f, 1.f, 0.2f);
+            glDrawElements(GL_LINE_LOOP, vaodata.num_indices, GL_UNSIGNED_INT, 0);
+            
+            glDisable(GL_PRIMITIVE_RESTART);
 
             m_program_simple->release();
         }
@@ -1548,19 +1556,15 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                 continue;
 
             for (const auto &winding : leaf.windings) {
-                const size_t first_vertex_of_face = points.size();
-
-                // output a vertex for each vertex of the face
+                // output a vertex + index for each vertex of the face
                 for (int j = 0; j < winding.size(); ++j) {
+                    indices.push_back(points.size());
                     points.push_back({.pos = winding[j]});
                 }
 
-                // output the vertex indices for this face
-                for (int j = 2; j < winding.size(); ++j) {
-                    indices.push_back(first_vertex_of_face);
-                    indices.push_back(first_vertex_of_face + j - 1);
-                    indices.push_back(first_vertex_of_face + j);
-                }
+                // use primitive restarts so we can draw the same
+                // vertex/index buffer as either line loop or triangle fans
+                indices.push_back((GLuint)-1);
             }
         }
 
