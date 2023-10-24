@@ -959,7 +959,7 @@ static std::vector<compiled_brush_t> DecompileLeafTaskLeafVisualization(
         compiled_brush_t brush;
         brush.source = task.brush;
         brush.brush_offset = brush_offset;
-        brush.contents = task.leaf ? contentflags_t(task.leaf->contents) : contentflags_t(task.contents.value());
+        brush.contents = task.leaf ? contentflags_t{task.leaf->contents} : contentflags_t{task.contents.value()};
 
         for (auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
