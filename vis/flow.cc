@@ -144,7 +144,7 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 */
 static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevstack)
 {
-    pstack_t stack{};
+    pstack_t stack;
     visportal_t *p;
     qplane3d backplane;
     leaf_t *leaf;
@@ -173,7 +173,14 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
 
     prevstack.next = &stack;
 
+    stack.next = nullptr;
     stack.leaf = leaf;
+    stack.portal = nullptr;
+    stack.numseparators[0] = 0;
+    stack.numseparators[1] = 0;
+
+    for (i = 0; i < STACK_WINDINGS; i++)
+        stack.windings_used[i] = false;
 
     leafbits_t local(portalleafs);
     stack.mightsee = &local;
@@ -237,7 +244,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
          */
 
         /* Clip any part of the target portal behind the source portal */
-        stack.pass = ClipStackWinding(&p->winding, stack, thread->pstack_head.portalplane);
+        stack.pass = ClipStackWinding(p->winding.get(), stack, thread->pstack_head.portalplane);
         if (!stack.pass)
             continue;
 
@@ -345,7 +352,7 @@ void PortalFlow(visportal_t *p)
     data.base = p;
 
     data.pstack_head.portal = p;
-    data.pstack_head.source = &p->winding;
+    data.pstack_head.source = p->winding.get();
     data.pstack_head.portalplane = p->plane;
     data.pstack_head.mightsee = &p->mightsee;
 
@@ -389,7 +396,7 @@ static void BasePortalThread(size_t portalnum)
     leafbits_t portalsee(numportals * 2);
 
     visportal_t &p = portals[portalnum];
-    viswinding_t &w = p.winding;
+    viswinding_t &w = *p.winding;
 
     p.mightsee.resize(portalleafs);
 
@@ -399,7 +406,7 @@ static void BasePortalThread(size_t portalnum)
         }
 
         visportal_t &tp = portals[i];
-        viswinding_t &tw = tp.winding;
+        viswinding_t &tw = *tp.winding;
 
         // Quick test - completely at the back?
         d = p.plane.distance_to(tw.origin);
@@ -430,8 +437,8 @@ static void BasePortalThread(size_t portalnum)
             continue; // no points on back
 
         if (vis_options.visdist.value() > 0) {
-            if (tp.winding.distFromPortal(p) > vis_options.visdist.value() ||
-                p.winding.distFromPortal(tp) > vis_options.visdist.value())
+            if (tp.winding->distFromPortal(p) > vis_options.visdist.value() ||
+                p.winding->distFromPortal(tp) > vis_options.visdist.value())
                 continue;
         }
 

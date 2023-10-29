@@ -52,11 +52,11 @@ TEST_CASE("ClipStackWinding") {
     pstack_t stack{};
 
     auto *w1 = AllocStackWinding(stack);
-    w1->resize(4);
-    (*w1)[0] = {0, 0, 0};
-    (*w1)[1] = {32, 0, 0};
-    (*w1)[2] = {32, 0, -32};
-    (*w1)[3] = {0, 0, -32};
+    w1->numpoints = 4;
+    w1->points[0] = {0, 0, 0};
+    w1->points[1] = {32, 0, 0};
+    w1->points[2] = {32, 0, -32};
+    w1->points[3] = {0, 0, -32};
     w1->set_winding_sphere();
 
     w1 = ClipStackWinding(w1, stack, qplane3d({-1, 0, 0}, -16));

@@ -71,13 +71,13 @@ fs::path portalfile, statefile, statetmpfile;
   AllocStackWinding
 
   Return a pointer to a free fixed winding on the stack
+  The memory is not initialized.
   ==================
 */
 viswinding_t *AllocStackWinding(pstack_t &stack)
 {
     for (size_t i = 0; i < STACK_WINDINGS; i++) {
         if (!stack.windings_used[i]) {
-            stack.windings[i].clear();
             stack.windings_used[i] = true;
             return &stack.windings[i];
         }
@@ -98,7 +98,10 @@ viswinding_t *AllocStackWinding(pstack_t &stack)
 void FreeStackWinding(viswinding_t *&w, pstack_t &stack)
 {
     if (w >= stack.windings && w <= &stack.windings[STACK_WINDINGS]) {
-        stack.windings_used[w - stack.windings] = false;
+        size_t i = w - stack.windings;
+        if (!stack.windings_used[i])
+            FError("winding already freed");
+        stack.windings_used[i] = false;
         w = nullptr;
     }
 }
@@ -165,6 +168,7 @@ viswinding_t *ClipStackWinding(viswinding_t *in, pstack_t &stack, const qplane3d
         return in;
 
     auto neww = AllocStackWinding(stack);
+    neww->numpoints = 0;
     neww->origin = in->origin;
     neww->radius = in->radius;
 
@@ -631,17 +635,15 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
     auto dest_portal_it = portals.begin();
 
-    for (auto source_portal_it = prtfile.portals.begin(); source_portal_it != prtfile.portals.end();
-         source_portal_it++) {
-        const auto &sourceportal = *source_portal_it;
+    for (const auto &sourceportal : prtfile.portals) {
         qplane3d plane;
 
         {
             auto &p = *dest_portal_it;
-            p.winding = viswinding_t{sourceportal.winding.begin(), sourceportal.winding.end()};
+            p.winding = viswinding_t::copy_polylib_winding(sourceportal.winding);
 
             // calc plane
-            plane = p.winding.plane();
+            plane = sourceportal.winding.plane();
 
             // create forward portal
             auto &l = leafs[sourceportal.leafnums[0]];
@@ -666,7 +668,8 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
             // Create a reverse winding
             const auto flipped = sourceportal.winding.flip();
-            p.winding = viswinding_t{flipped.begin(), flipped.end()};
+            p.winding = viswinding_t::copy_polylib_winding(flipped);
+
             p.plane = plane;
             p.leaf = sourceportal.leafnums[0];
             dest_portal_it++;

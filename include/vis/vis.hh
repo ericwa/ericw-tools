@@ -39,72 +39,86 @@ enum pstatus_t
     pstat_done
 };
 
-struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>
+/**
+ * 3D polygon with bounding sphere
+ *
+ * Can be used in 2 modes:
+ *
+ * - stack allocated. Only holds up to MAX_WINDING_FIXED points. No constructor, user is responsible for initializing
+ *   all fields
+ *
+ * - heap allocated, via new_heap_winding or copy_polylib_winding
+ */
+struct viswinding_t
 {
     qvec3d origin; // Bounding sphere for fast clipping tests
     vec_t radius; // Not updated, so won't shrink when clipping
 
-    inline viswinding_t()
-        : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>()
-    {
+    size_t numpoints;
+    qvec3d points[MAX_WINDING_FIXED];
+
+    // heap allocated mode
+
+    struct viswinding_deleter_t {
+        void operator()(viswinding_t *ptr) {
+            free(ptr);
+        }
+    };
+
+    using unique_ptr = std::unique_ptr<viswinding_t, viswinding_deleter_t>;
+
+    static inline unique_ptr new_heap_winding(int size) {
+        const size_t bytes = offsetof(viswinding_t, points) + sizeof(qvec3d) * size;
+
+        viswinding_t *result = static_cast<viswinding_t *>(malloc(bytes));
+        result->numpoints = size;
+
+        return unique_ptr(result,viswinding_deleter_t());
     }
 
-    // construct winding from range.
-    // iterators must have operator+ and operator-.
-    template<typename Iter, std::enable_if_t<is_iterator_v<Iter>, int> = 0>
-    inline viswinding_t(Iter begin, Iter end)
-        : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(begin, end)
-    {
-        set_winding_sphere();
+    template <class W>
+    static inline unique_ptr copy_polylib_winding(const W &other) {
+        auto result = new_heap_winding(other.size());
+
+        for (size_t i = 0; i < other.size(); ++i)
+            result->points[i] = other[i];
+
+        result->set_winding_sphere();
+        return result;
     }
 
-    // initializer list constructor
-    inline viswinding_t(std::initializer_list<qvec3d> l)
-        : polylib::winding_base_t<polylib::winding_storage_hybrid_t<MAX_WINDING_FIXED>>(l)
-    {
-        set_winding_sphere();
+    // getters
+
+    inline qvec3d const &at(size_t index) const {
+        return points[index];
+    }
+    inline qvec3d const &operator[](size_t index) const {
+        return points[index];
+    }
+    inline size_t size() const { return numpoints; }
+
+    inline void push_back(const qvec3d &v) {
+        points[numpoints++] = v;
     }
 
-    // copy constructor
-    inline viswinding_t(const viswinding_t &copy) = delete;
-
-    // move constructor
-    inline viswinding_t(viswinding_t &&move) noexcept
-        : winding_base_t(std::move(move)),
-          origin(move.origin),
-          radius(move.radius)
-    {
-    }
+    // utils
 
     // sets origin & radius
     inline void set_winding_sphere()
     {
         // set origin
         origin = {};
-        for (auto &point : *this)
-            origin += point;
+        for (size_t i = 0; i < numpoints; ++i)
+            origin += points[i];
         origin /= size();
 
         // set radius
         radius = 0;
-        for (auto &point : *this) {
+        for (size_t i = 0; i < numpoints; ++i) {
+            const auto &point = points[i];
             qvec3d dist = point - origin;
             radius = std::max(radius, qv::length(dist));
         }
-    }
-
-    // assignment copy
-    inline viswinding_t &operator=(const viswinding_t &copy) = delete;
-
-    // assignment move
-    inline viswinding_t &operator=(viswinding_t &&move) noexcept
-    {
-        origin = move.origin;
-        radius = move.radius;
-
-        winding_base_t::operator=(std::move(move));
-
-        return *this;
     }
 
     /*
@@ -115,11 +129,13 @@ struct viswinding_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<
     inline float distFromPortal(struct visportal_t &p);
 };
 
+static_assert(std::is_trivially_default_constructible_v<viswinding_t>);
+
 struct visportal_t
 {
     qplane3d plane; // normal pointing into neighbor
     int leaf; // neighbor
-    viswinding_t winding;
+    viswinding_t::unique_ptr winding;
     pstatus_t status;
     leafbits_t visbits, mightsee;
     int nummightsee;
@@ -176,6 +192,9 @@ struct pstack_t
     qplane3d separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
 };
+
+// important for perf as a ton of these are stack allocated, needs to be be just a pointer bump
+static_assert(std::is_trivially_default_constructible_v<pstack_t>);
 
 viswinding_t *AllocStackWinding(pstack_t &stack);
 void FreeStackWinding(viswinding_t *&w, pstack_t &stack);
