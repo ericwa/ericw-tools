@@ -494,6 +494,9 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
 
             // recursively load animated textures until we loop back to us
             while (true) {
+                if (wal->animation.empty())
+                    break;
+
                 // wal for next chain
                 wal = map.load_image_meta(wal->animation.c_str());
 
@@ -511,7 +514,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
                 last_i = next_i;
 
                 // looped back
-                if (!Q_strcasecmp(wal->animation.c_str(), name))
+                if (!Q_strcasecmp(wal->animation.c_str(), name) || last_i == next_i)
                     break;
             }
 
