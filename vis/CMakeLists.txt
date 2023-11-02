@@ -26,5 +26,6 @@ add_custom_command(TARGET vis POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:vis>"
 				   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:vis>"
 				   )
+copy_mingw_dlls(vis)
 
 install(TARGETS vis RUNTIME DESTINATION bin)

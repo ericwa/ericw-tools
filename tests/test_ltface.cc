@@ -1,6 +1,7 @@
 #include <doctest/doctest.h>
 
 #include <light/light.hh>
+#include <light/ltface.hh>
 #include <light/surflight.hh>
 #include <common/bspinfo.hh>
 #include <qbsp/qbsp.hh>
@@ -14,7 +15,17 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
     const bool is_q2 = std::find(extra_qbsp_args.begin(), extra_qbsp_args.end(), "-q2bsp") != extra_qbsp_args.end();
     auto map_path = std::filesystem::path(testmaps_dir) / name;
 
-    auto bsp_path = fs::path(is_q2 ? test_quake2_maps_dir : test_quake_maps_dir) / name.filename();
+    auto bsp_dir = fs::path(is_q2 ? test_quake2_maps_dir : test_quake_maps_dir);
+    // Try to get an absolute path, so our output .bsp (for qbsp) and input .bsp paths (for vis/light) are
+    // absolute. Otherwise we risk light.exe picking up the wrong .bsp (especially if there are debug .bsp's in the
+    // testmaps folder).
+    if (bsp_dir.empty()) {
+        bsp_dir = fs::current_path();
+    } else {
+        bsp_dir = fs::weakly_canonical(bsp_dir);
+    }
+
+    auto bsp_path = bsp_dir / name.filename();
     bsp_path.replace_extension(".bsp");
 
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
@@ -91,6 +102,48 @@ testresults_t QbspVisLight_Q2(
     const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
     return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+}
+
+TEST_CASE("lightgrid_sample_t equality")
+{
+    SUBCASE("style equality") {
+        lightgrid_sample_t a {.used = true, .style = 4, .color = {}};
+        lightgrid_sample_t b = a;
+        CHECK(a == b);
+
+        b.style = 6;
+        CHECK(a != b);
+    }
+
+    SUBCASE("color equality") {
+        lightgrid_sample_t a {.used = true, .style = 4, .color = {1,2,3}};
+        lightgrid_sample_t b = a;
+        CHECK(a == b);
+
+        b.color = {6,5,4};
+        CHECK(a != b);
+    }
+
+    SUBCASE("nan colors") {
+        lightgrid_sample_t a {.used = true, .style = 4, .color = {std::numeric_limits<double>::quiet_NaN(), 1.0, 1.0}};
+        lightgrid_sample_t b = a;
+        CHECK(a == b);
+
+        b.color = { 0,0,0};
+        CHECK(a != b);
+    }
+
+    SUBCASE("unused equality doesn't consider other attributes") {
+        lightgrid_sample_t a, b;
+        CHECK(!a.used);
+        CHECK(a == b);
+
+        b.style = 5;
+        CHECK(a == b);
+
+        b.color = {1, 0, 0};
+        CHECK(a == b);
+    }
 }
 
 TEST_CASE("-world_units_per_luxel, -lightgrid")

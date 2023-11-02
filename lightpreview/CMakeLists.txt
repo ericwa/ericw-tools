@@ -60,6 +60,7 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
     add_custom_command(TARGET lightpreview POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:lightpreview>")
 endif()
+copy_mingw_dlls(lightpreview)
 
 # Install Qt DLL's
 install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION bin)

@@ -27,5 +27,6 @@ add_custom_command(TARGET maputil POST_BUILD
                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:maputil>"
 				   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:maputil>"
 				   )
+copy_mingw_dlls(maputil)
 
 install(TARGETS maputil RUNTIME DESTINATION bin)

@@ -61,6 +61,41 @@ endif ()
 
 add_definitions(-DERICWTOOLS_VERSION="${GIT_DESCRIBE}")
 
+# MINGW stuff
+if(MINGW)
+	find_file(LIB_GCC_S_SEH_1_DLL NAMES "libgcc_s_seh-1.dll")
+	find_file(LIB_STDCPP_6_DLL NAMES "libstdc++-6.dll")
+	find_file(LIB_WINPTHREAD_1_DLL NAMES "libwinpthread-1.dll")
+
+	if(LIB_GCC_S_SEH_1_DLL)
+		install(FILES ${LIB_GCC_S_SEH_1_DLL} DESTINATION bin)
+	endif()
+	if(LIB_STDCPP_6_DLL)
+		install(FILES ${LIB_STDCPP_6_DLL} DESTINATION bin)
+	endif()
+	if(LIB_WINPTHREAD_1_DLL)
+		install(FILES ${LIB_WINPTHREAD_1_DLL} DESTINATION bin)
+	endif()
+endif()
+
+function(copy_mingw_dlls TARGETNAME)
+	if (LIB_GCC_S_SEH_1_DLL)
+		add_custom_command(TARGET ${TARGETNAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_GCC_S_SEH_1_DLL}" "$<TARGET_FILE_DIR:${TARGETNAME}>"
+		)
+	endif()
+	if (LIB_STDCPP_6_DLL)
+		add_custom_command(TARGET ${TARGETNAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_STDCPP_6_DLL}" "$<TARGET_FILE_DIR:${TARGETNAME}>"
+		)
+	endif()
+	if (LIB_WINPTHREAD_1_DLL)
+		add_custom_command(TARGET ${TARGETNAME} POST_BUILD
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${LIB_WINPTHREAD_1_DLL}" "$<TARGET_FILE_DIR:${TARGETNAME}>"
+		)
+	endif()
+endfunction()
+
 if (WIN32)
 	set("NO_ITERATOR_DEBUG" FALSE CACHE BOOL "Whether to use MSVC iterator debugging or not")
 

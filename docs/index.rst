@@ -13,6 +13,8 @@ Welcome to ericw-tools's documentation!
    light
    bspinfo
    bsputil
+   maputil
+   lightpreview
    changelog
 
 

@@ -3555,7 +3555,34 @@ float lightgrid_sample_t::brightness() const
 
 bool lightgrid_sample_t::operator==(const lightgrid_sample_t &other) const
 {
-    return used == other.used && style == other.style && color == other.color;
+    if (used != other.used)
+        return false;
+
+    if (!used) {
+        // if unused, style and color don't matter
+        return true;
+    }
+
+    if (style != other.style)
+        return false;
+
+    // color check requires special handling for nan
+    for (int i=0; i<3; ++i) {
+        if (std::isnan(color[i])) {
+            if (!std::isnan(other.color[i]))
+                return false;
+        } else {
+            if (color[i] != other.color[i])
+                return false;
+        }
+    }
+
+    return true;
+}
+
+bool lightgrid_sample_t::operator!=(const lightgrid_sample_t &other) const
+{
+    return !(*this == other);
 }
 
 int lightgrid_samples_t::used_styles() const

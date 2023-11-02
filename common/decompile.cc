@@ -803,7 +803,7 @@ static void DecompileLeaf(const std::vector<decomp_plane_t> &planestack, const m
 }
 
 static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
-    const mbsp_t *bsp, const leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+    const mbsp_t *bsp, const leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
 {
     compiled_brush_t brush;
     brush.source = task.brush;
@@ -826,7 +826,7 @@ static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
 }
 
 static std::vector<compiled_brush_t> DecompileLeafTask(
-    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
 {
     std::vector<decomp_brush_t> finalBrushes;
     if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
@@ -927,6 +927,45 @@ static std::vector<compiled_brush_t> DecompileLeafTask(
                     side.valve = finalSide.plane.normal;
                 }
             }
+        }
+
+        finalCompiledBrushes.push_back(std::move(brush));
+    }
+
+    return finalCompiledBrushes;
+}
+
+static std::vector<compiled_brush_t> DecompileLeafTaskLeafVisualization(
+    const mbsp_t *bsp, leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
+{
+    std::vector<decomp_brush_t> finalBrushes;
+
+    RemoveRedundantPlanes(task.allPlanes);
+
+    if (task.allPlanes.empty()) {
+        printf("warning, skipping empty brush\n");
+        return {};
+    }
+
+    // fmt::print("before: {} after {}\n", task.allPlanes.size(), reducedPlanes.size());
+
+    auto initialBrush = BuildInitialBrush_Q2(bsp, task, task.allPlanes);
+    // assert(initialBrush.checkPoints());
+
+    finalBrushes = {initialBrush};
+
+    std::vector<compiled_brush_t> finalCompiledBrushes;
+    for (decomp_brush_t &finalBrush : finalBrushes) {
+        compiled_brush_t brush;
+        brush.source = task.brush;
+        brush.brush_offset = brush_offset;
+        brush.contents = task.leaf ? contentflags_t{task.leaf->contents} : contentflags_t{task.contents.value()};
+
+        for (auto &finalSide : finalBrush.sides) {
+            compiled_brush_side_t &side = brush.sides.emplace_back();
+            side.plane = finalSide.plane;
+            side.winding = std::move(finalSide.winding);
+            side.source = finalSide.plane.source;
         }
 
         finalCompiledBrushes.push_back(std::move(brush));
@@ -1041,7 +1080,7 @@ static void AddMapBoundsToStack(std::vector<decomp_plane_t> &planestack, const m
 }
 
 static std::vector<compiled_brush_t> DecompileBrushTask(
-    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, std::optional<qvec3d> &brush_offset)
+    const mbsp_t *bsp, const decomp_options &options, leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
@@ -1321,4 +1360,62 @@ void DecompileBSP(const mbsp_t *bsp, const decomp_options &options, std::ofstrea
         // entity 0 is implicitly worldspawn (model 0)
         DecompileEntity(bsp, options, file, entdicts[i], i == 0);
     }
+}
+
+// MARK: - leaf visualization
+
+static std::vector<leaf_visualization_t> CompiledBrushesToLeafVisualization(std::vector<std::vector<compiled_brush_t>> in)
+{
+    std::vector<leaf_visualization_t> result;
+
+    for (auto &brush_list : in) {
+        for (auto &brush : brush_list) {
+            leaf_visualization_t output_leaf;
+
+            // move over windings
+            for (auto &in_side : brush.sides) {
+                if (in_side.winding) {
+                    output_leaf.windings.push_back(std::move(*in_side.winding));
+                }
+            }
+            output_leaf.contents = brush.contents;
+            // FIXME: copy over source leafnum
+
+            result.push_back(std::move(output_leaf));
+        }
+    }
+
+    return result;
+}
+
+std::vector<leaf_visualization_t> VisualizeLeafs(const mbsp_t &bsp, int modelnum, int hullnum)
+{
+    const dmodelh2_t *model = &bsp.dmodels[modelnum];
+
+    std::vector<std::vector<compiled_brush_t>> compiledBrushes;
+    std::vector<decomp_plane_t> stack;
+    std::vector<leaf_decompile_task> tasks;
+
+    if (hullnum > 0) {
+        // recursively visit the clipnodes to gather up a list of clipnode leafs to decompile
+
+        AddMapBoundsToStack(stack, &bsp, aabb3d(qvec3d(model->mins), qvec3d(model->maxs)));
+
+        DecompileClipNode(stack, &bsp, &bsp.dclipnodes[model->headnode[hullnum]], tasks);
+    } else {
+        // recursively visit the nodes to gather up a list of leafs to decompile
+        auto headnode = BSP_GetNode(&bsp, model->headnode[0]);
+
+        AddMapBoundsToStack(stack, &bsp, aabb3d(qvec3d(headnode->mins), qvec3d(headnode->maxs)));
+
+        DecompileNode(stack, &bsp, headnode, tasks);
+    }
+
+    // decompile the leafs in parallel
+    compiledBrushes.resize(tasks.size());
+    tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
+        compiledBrushes[i] = DecompileLeafTaskLeafVisualization(&bsp,  tasks[i], std::nullopt);
+    });
+
+    return CompiledBrushesToLeafVisualization(std::move(compiledBrushes));
 }

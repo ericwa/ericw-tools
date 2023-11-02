@@ -35,6 +35,7 @@ See file, 'COPYING', for details.
 #include <QStandardPaths>
 #include <QDateTime>
 
+#include <common/decompile.hh>
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
 #include <common/bspinfo.hh>
@@ -62,6 +63,10 @@ GLView::GLView(QWidget *parent)
       m_portalVao(),
       m_portalIndexBuffer(QOpenGLBuffer::IndexBuffer)
 {
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.indexBuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
+    }
+
     setFocusPolicy(Qt::StrongFocus); // allow keyboard focus
 }
 
@@ -83,6 +88,12 @@ GLView::~GLView()
     m_portalVbo.destroy();
     m_portalIndexBuffer.destroy();
     m_portalVao.destroy();
+
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.vbo.destroy();
+        hullVao.indexBuffer.destroy();
+        hullVao.vao.destroy();
+    }
 
     placeholder_texture.reset();
     lightmap_texture.reset();
@@ -350,6 +361,30 @@ void main() {
 }
 )";
 
+GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
+{
+    face_visibility_key_t result;
+    result.show_bmodels = m_showBmodels;
+
+    if (m_visCulling) {
+        const mbsp_t &bsp = *m_bsp;
+        const auto &world = bsp.dmodels.at(0);
+
+        auto *leaf =
+            BSP_FindLeafAtPoint(&bsp, &world, qvec3d{m_cameraOrigin.x(), m_cameraOrigin.y(), m_cameraOrigin.z()});
+
+        int leafnum = leaf - bsp.dleafs.data();
+        int clusternum = leaf->cluster;
+
+        result.leafnum = leafnum;
+        result.clusternum = clusternum;
+    } else {
+        result.leafnum = -1;
+        result.clusternum = -1;
+    }
+    return result;
+}
+
 void GLView::updateFaceVisibility()
 {
     if (!m_bsp)
@@ -358,72 +393,65 @@ void GLView::updateFaceVisibility()
     const mbsp_t &bsp = *m_bsp;
     const auto &world = bsp.dmodels.at(0);
 
-    auto *leaf = BSP_FindLeafAtPoint(&bsp, &world, qvec3d{m_cameraOrigin.x(), m_cameraOrigin.y(), m_cameraOrigin.z()});
+    const face_visibility_key_t desired = desiredFaceVisibility();
 
-    int leafnum = leaf - bsp.dleafs.data();
-    int clusternum = leaf->cluster;
-
-    if (!m_visCulling) {
-        clusternum = -1;
-    }
-
-    if (m_lastLeaf == clusternum) {
-        qDebug() << "reusing last frame visdata for leaf " << leafnum << " cluster " << clusternum;
+    if (m_uploaded_face_visibility &&
+        *m_uploaded_face_visibility == desired) {
+        qDebug() << "reusing last frame visdata";
         return;
     }
 
-    qDebug() << "looking up pvs for clusternum " << clusternum;
-
-    auto it = m_decompressedVis.find(clusternum);
-    if (it == m_decompressedVis.end()) {
-        qDebug() << "no visdata, must be in void";
-
-        m_lastLeaf = -1;
-        setFaceVisibilityToAllVisible();
-
-        return;
-    }
-
-    Q_assert(it != m_decompressedVis.end());
-
-    const auto &pvs = it->second;
-    qDebug() << "found bitvec of size " << pvs.size();
-
-    // check leaf visibility
-
-    auto leaf_sees = [&](const mleaf_t *b) -> bool {
-        if (b->cluster < 0)
-            return true;
-
-        return !!(pvs[b->cluster >> 3] & (1 << (b->cluster & 7)));
-    };
+    qDebug() << "looking up pvs for clusternum " << desired.clusternum;
 
     const int face_visibility_width = m_bsp->dfaces.size();
 
     std::vector<uint8_t> face_flags;
     face_flags.resize(face_visibility_width, 0);
 
-    // visit all world leafs: if they're visible, mark the appropriate faces
-    BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
-        if (leaf_sees(&leaf)) {
-            for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
-                int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
-                face_flags[fnum] = 16;
+    if (auto it = m_decompressedVis.find(desired.clusternum);
+        desired.leafnum != -1 && it != m_decompressedVis.end()) {
+
+        const auto &pvs = it->second;
+        qDebug() << "found bitvec of size " << pvs.size();
+
+        // check leaf visibility
+
+        auto leaf_sees = [&](const mleaf_t *b) -> bool {
+            if (b->cluster < 0)
+                return true;
+
+            return !!(pvs[b->cluster >> 3] & (1 << (b->cluster & 7)));
+        };
+
+        // visit all world leafs: if they're visible, mark the appropriate faces
+        BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
+            if (leaf_sees(&leaf)) {
+                for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
+                    int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
+                    face_flags[fnum] = 16;
+                }
             }
+        });
+    } else {
+        // mark all world faces
+        for (int fi = world.firstface; fi < (world.firstface + world.numfaces); ++fi) {
+            face_flags[fi] = 16;
         }
-    });
+    }
 
     // set all bmodel faces to visible
-    for (int mi = 1; mi < bsp.dmodels.size(); ++mi) {
-        auto &model = bsp.dmodels[mi];
-        for (int fi = model.firstface; fi < (model.firstface + model.numfaces); ++fi) {
-            face_flags[fi] = 16;
+    if (m_showBmodels) {
+        for (int mi = 1; mi < bsp.dmodels.size(); ++mi) {
+            auto &model = bsp.dmodels[mi];
+            for (int fi = model.firstface; fi < (model.firstface + model.numfaces); ++fi) {
+                face_flags[fi] = 16;
+            }
         }
     }
 
     setFaceVisibilityArray(face_flags.data());
 
-    m_lastLeaf = clusternum;
+    m_uploaded_face_visibility = desired;
 }
 
 bool GLView::shouldLiveUpdate() const
@@ -523,6 +551,9 @@ void GLView::initializeGL()
     m_vao.create();
     m_leakVao.create();
     m_portalVao.create();
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.vao.create();
+    }
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -598,6 +629,9 @@ void GLView::paintGL()
 
     // opaque draws
     for (auto &draw : m_drawcalls) {
+        if (m_drawLeafs)
+            break;
+
         if (!draw_as_opaque(draw))
             continue;
 
@@ -631,7 +665,7 @@ void GLView::paintGL()
     }
 
     // translucent draws
-    {
+    if (!m_drawLeafs) {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -747,6 +781,30 @@ void GLView::paintGL()
         glDepthMask(GL_TRUE);
     }
 
+    if (m_drawLeafs) {
+        int hull = *m_drawLeafs;
+        leaf_vao_t &vaodata = m_hullVaos[hull];
+        if (vaodata.num_indices) {
+            m_program_simple->bind();
+            m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
+
+            QOpenGLVertexArrayObject::Binder vaoBinder(&vaodata.vao);
+
+            glEnable(GL_PRIMITIVE_RESTART);
+            glPrimitiveRestartIndex((GLuint)-1);
+
+            m_program_simple->setUniformValue(m_program_simple_color_location, 1.0f, 0.4f, 0.4f, 0.2f);
+            glDrawElements(GL_TRIANGLE_FAN, vaodata.num_indices, GL_UNSIGNED_INT, 0);
+
+            m_program_simple->setUniformValue(m_program_simple_color_location, 1.0f, 1.f, 1.f, 0.2f);
+            glDrawElements(GL_LINE_LOOP, vaodata.num_indices, GL_UNSIGNED_INT, 0);
+            
+            glDisable(GL_PRIMITIVE_RESTART);
+
+            m_program_simple->release();
+        }
+    }
+
     if (shouldLiveUpdate()) {
         update(); // schedule the next frame
     } else {
@@ -777,6 +835,12 @@ void GLView::setFullbright(bool fullbright)
 void GLView::setDrawNormals(bool drawnormals)
 {
     m_drawNormals = drawnormals;
+    update();
+}
+
+void GLView::setDrawLeafs(std::optional<int> hullnum)
+{
+    m_drawLeafs = hullnum;
     update();
 }
 
@@ -812,11 +876,13 @@ void GLView::setKeepOrigin(bool keeporigin)
 void GLView::setDrawPortals(bool drawportals)
 {
     m_drawPortals = drawportals;
+    update();
 }
 
 void GLView::setDrawLeak(bool drawleak)
 {
     m_drawLeak = drawleak;
+    update();
 }
 
 void GLView::setLightStyleIntensity(int style_id, int intensity)
@@ -847,6 +913,14 @@ void GLView::setMagFilter(QOpenGLTexture::Filter filter)
 void GLView::setDrawTranslucencyAsOpaque(bool drawopaque)
 {
     m_drawTranslucencyAsOpaque = drawopaque;
+    update();
+}
+
+void GLView::setShowBmodels(bool bmodels)
+{
+    // force re-upload of face visibility
+    m_uploaded_face_visibility = std::nullopt;
+    m_showBmodels = bmodels;
     update();
 }
 
@@ -900,21 +974,6 @@ void GLView::setFaceVisibilityArray(uint8_t *data)
     logging::print("uploaded {} bytes face visibility texture", face_visibility_width);
 }
 
-void GLView::setFaceVisibilityToAllVisible()
-{
-    // one byte per face
-    int face_visibility_width = m_bsp->dfaces.size();
-
-    uint8_t *data = new uint8_t[face_visibility_width];
-    for (int x = 0; x < face_visibility_width; ++x) {
-        data[x] = 16;
-    }
-
-    setFaceVisibilityArray(data);
-
-    delete[] data;
-}
-
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
     const std::vector<entdict_t> &entities, const full_atlas_t &lightmap, const settings::common_settings &settings,
     bool use_bspx_normals)
@@ -955,9 +1014,16 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     m_portalVbo.allocate(0);
     m_portalIndexBuffer.bind();
     m_portalIndexBuffer.allocate(0);
+    for (auto &hullVao : m_hullVaos) {
+        hullVao.vbo.bind();
+        hullVao.vbo.allocate(0);
+        hullVao.indexBuffer.bind();
+        hullVao.indexBuffer.allocate(0);
+    }
+
     num_leak_points = 0;
     num_portal_indices = 0;
-    m_lastLeaf = -1;
+    m_uploaded_face_visibility = std::nullopt;
 
     int32_t highest_depth = 0;
 
@@ -1018,11 +1084,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         delete[] data;
     }
 
-    // upload face visibility
-    if (!bsp.dfaces.empty()) {
-        setFaceVisibilityToAllVisible();
-    }
-
     struct face_payload
     {
         const mface_t *face;
@@ -1060,9 +1121,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         for (int i = m.firstface; i < m.firstface + m.numfaces; ++i) {
             auto &f = bsp.dfaces[i];
             std::string t = Face_TextureName(&bsp, &f);
-            // FIXME: keep empty texture names?
-            if (t.empty())
-                continue;
             if (f.numedges < 3)
                 continue;
 
@@ -1459,6 +1517,70 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         m_portalVbo.create();
         m_portalVbo.bind();
         m_portalVbo.allocate(points.data(), points.size() * sizeof(points[0]));
+
+        // positions
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(
+            0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(simple_vertex_t), (void *)offsetof(simple_vertex_t, pos));
+    }
+
+    // load decompiled hulls
+    // TODO: support decompiling bmodels other than the world
+
+    for (int hullnum = 0; ; ++hullnum) {
+        if (hullnum >= 1) {
+            // check if hullnum 1 or higher is valid for this bsp (hull0 is always present); it's slightly involved
+            if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+                break;
+            }
+            if (hullnum >= bsp.dmodels[0].headnode.size())
+                break;
+            // 0 is valid for hull 0, and hull 1 (where it refers to clipnode 0)
+            if (hullnum >= 2 && bsp.dmodels[0].headnode[hullnum] == 0)
+                break;
+            // must be valid...
+        }
+
+        // decompile the hull
+        auto leaf_visuals = VisualizeLeafs(bsp, 0, hullnum);
+
+        auto &vao = m_hullVaos[hullnum];
+
+        QOpenGLVertexArrayObject::Binder hullVaoBinder(&vao.vao);
+
+        std::vector<GLuint> indices;
+        std::vector<simple_vertex_t> points;
+
+        for (const auto &leaf : leaf_visuals) {
+            if (leaf.contents.is_empty(bsp.loadversion->game))
+                continue;
+
+            for (const auto &winding : leaf.windings) {
+                // output a vertex + index for each vertex of the face
+                for (int j = 0; j < winding.size(); ++j) {
+                    indices.push_back(points.size());
+                    points.push_back({.pos = winding[j]});
+                }
+
+                // use primitive restarts so we can draw the same
+                // vertex/index buffer as either line loop or triangle fans
+                indices.push_back((GLuint)-1);
+            }
+        }
+
+        // upload index buffer
+        vao.indexBuffer.create();
+        vao.indexBuffer.bind();
+        vao.indexBuffer.allocate(indices.data(), indices.size() * sizeof(indices[0]));
+
+        vao.num_indices = indices.size();
+
+        logging::print("set up leaf vao for {} with {} indices vao indices {}", hullnum, vao.num_indices, indices.size());
+
+        // upload vertex buffer
+        vao.vbo.create();
+        vao.vbo.bind();
+        vao.vbo.allocate(points.data(), points.size() * sizeof(points[0]));
 
         // positions
         glEnableVertexAttribArray(0 /* attrib */);
