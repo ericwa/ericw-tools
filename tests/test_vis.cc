@@ -2,6 +2,7 @@
 #include <common/qvec.hh>
 
 #include <stdexcept>
+#include <vis/vis.hh>
 
 #include "test_qbsp.hh"
 #include "testutils.hh"
@@ -45,4 +46,25 @@ TEST_CASE("q2_detail_leak_test.map" * doctest::may_fail())
         CHECK(!leaf_sees(player_start_leaf, item_enviro_curve_leaf));
         CHECK(!leaf_sees(player_start_leaf, item_enviro_leaf));
     }
+}
+
+TEST_CASE("ClipStackWinding") {
+    pstack_t stack{};
+
+    auto *w1 = AllocStackWinding(stack);
+    w1->resize(4);
+    (*w1)[0] = {0, 0, 0};
+    (*w1)[1] = {32, 0, 0};
+    (*w1)[2] = {32, 0, -32};
+    (*w1)[3] = {0, 0, -32};
+    w1->set_winding_sphere();
+
+    w1 = ClipStackWinding(w1, stack, qplane3d({-1, 0, 0}, -16));
+    CHECK(w1->size() == 4);
+    CHECK((*w1)[0] == qvec3d(0, 0, 0));
+    CHECK((*w1)[1] == qvec3d(16, 0, 0));
+    CHECK((*w1)[2] == qvec3d(16, 0, -32));
+    CHECK((*w1)[3] == qvec3d(0, 0, -32));
+
+    FreeStackWinding(w1, stack);
 }

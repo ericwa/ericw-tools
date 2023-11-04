@@ -1,5 +1,6 @@
 #include <nanobench.h>
 #include <doctest/doctest.h>
+#include <vis/vis.hh>
 #include <common/qvec.hh>
 #include <common/polylib.hh>
 
@@ -77,4 +78,79 @@ TEST_CASE("SplitFace" * doctest::test_suite("benchmark"))
 
     // run with doctest assertions, to validate that they actually work
     test_polylib(true);
+}
+
+TEST_CASE("vis windings")
+{
+    ankerl::nanobench::Bench b;
+    b.run("create pstack_t", [&]() {
+        pstack_t stack{};
+        ankerl::nanobench::doNotOptimizeAway(stack);
+    });
+
+    b.run("create pstack_t + 1x AllocStackWinding", [&]() {
+        pstack_t stack{};
+
+        auto *w1 = AllocStackWinding(stack);
+        ankerl::nanobench::doNotOptimizeAway(*w1);
+
+        FreeStackWinding(w1, stack);
+
+        ankerl::nanobench::doNotOptimizeAway(stack);
+    });
+
+    b.run("create pstack_t + 2x AllocStackWinding", [&]() {
+        pstack_t stack{};
+
+        auto *w1 = AllocStackWinding(stack);
+        ankerl::nanobench::doNotOptimizeAway(*w1);
+
+        auto *w2 = AllocStackWinding(stack);
+        ankerl::nanobench::doNotOptimizeAway(*w2);
+
+        FreeStackWinding(w1, stack);
+        FreeStackWinding(w2, stack);
+
+        ankerl::nanobench::doNotOptimizeAway(stack);
+    });
+
+    b.run("setup + ClipStackWinding", [&]() {
+        pstack_t stack{};
+
+        auto *w1 = AllocStackWinding(stack);
+        w1->resize(4);
+        (*w1)[0] = {0, 0, 0};
+        (*w1)[1] = {32, 0, 0};
+        (*w1)[2] = {32, 0, -32};
+        (*w1)[3] = {0, 0, -32};
+        w1->set_winding_sphere();
+
+        w1 = ClipStackWinding(w1, stack, qplane3d({-1, 0, 0}, -16));
+        ankerl::nanobench::doNotOptimizeAway(*w1);
+
+        FreeStackWinding(w1, stack);
+        ankerl::nanobench::doNotOptimizeAway(stack);
+    });
+}
+
+TEST_CASE("vector math")
+{
+    ankerl::nanobench::Bench b;
+    ankerl::nanobench::Rng rng;
+
+    qvec3d vec0 {rng.uniform01(), rng.uniform01(), rng.uniform01()};
+    qvec3d vec1 {rng.uniform01(), rng.uniform01(), rng.uniform01()};
+
+    b.run("dot product", [&]() {
+        vec0[0] = qv::dot(vec0, vec1);
+    });
+    b.run("add", [&]() {
+        vec0 = vec0 + vec1;
+    });
+    b.run("subtract", [&]() {
+        vec0 = vec0 - vec1;
+    });
+
+    b.doNotOptimizeAway(vec0);
+    b.doNotOptimizeAway(vec1);
 }
