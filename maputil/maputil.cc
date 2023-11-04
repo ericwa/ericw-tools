@@ -168,6 +168,10 @@ static void json_to_lua(lua_State *state, const json &value)
         lua_pushnil(state);
         return;
     }
+    default: {
+        luaL_error(state, "invalid JSON object type\n");
+        return;
+    }
     }
 }
 
@@ -668,7 +672,7 @@ static int l_create_winding(lua_State *state)
                     found_face = true;
                 } else if (winding) {
                     qplane3d plane = pop_plane_from_side(state);
-                    winding = std::move(winding->clip_front(-plane, 0.0f));
+                    winding = winding->clip_front(-plane, 0.0f);
                 }
 
                 return true;

@@ -3370,7 +3370,7 @@ void LoadMapFile(void)
 
             parser_t parser(file, {qbsp_options.map_path.string()});
 
-            for (int i = 0;; i++) {
+            for (;;) {
                 mapentity_t &entity = map.entities.emplace_back();
 
                 if (!ParseEntity(parser, entity, issue_stats)) {
@@ -3394,7 +3394,7 @@ void LoadMapFile(void)
 
             parser_t parser(file, {qbsp_options.add.value()});
 
-            for (int i = 0;; i++) {
+            for (;;) {
                 mapentity_t &entity = map.entities.emplace_back();
 
                 if (!ParseEntity(parser, entity, issue_stats)) {

@@ -418,7 +418,7 @@ void MainWindow::setupMenu()
 
     menu->addSeparator();
 
-    auto *takeScreenshot = menu->addAction(tr("Save Screenshot..."), this, &MainWindow::takeScreenshot);
+    menu->addAction(tr("Save Screenshot..."), this, &MainWindow::takeScreenshot);
 
     menu->addSeparator();
 
@@ -859,7 +859,7 @@ void MainWindow::displayCameraPositionInfo()
         return;
 
     const qvec3f point = glView->cameraPosition();
-    const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
+    [[maybe_unused]] const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
 
     // TODO: display leaf info
 }

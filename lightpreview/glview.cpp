@@ -479,7 +479,6 @@ void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
 
-    QOpenGLContext *ctx = QOpenGLContext::currentContext();
     QOpenGLDebugLogger *logger = new QOpenGLDebugLogger(this);
 
     logger->initialize(); // initializes in the current context, i.e. ctx
@@ -1241,7 +1240,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     img::load_texture(fmt::format("env/{}ft", skybox), false, bsp.loadversion->game, settings, true);
                 front_img = QImage((const uchar *)std::get<0>(front)->pixels.data(), std::get<0>(front)->width,
                     std::get<0>(front)->height, QImage::Format_RGB32);
-                front_img = std::move(front_img.mirrored(true, false));
+                front_img = front_img.mirrored(true, false);
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 front_img.constBits(), nullptr);
@@ -1490,8 +1489,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         std::vector<GLuint> indices;
         std::vector<simple_vertex_t> points;
 
-        size_t total_points = 0;
-        size_t total_indices = 0;
+        [[maybe_unused]] size_t total_points = 0;
+        [[maybe_unused]] size_t total_indices = 0;
         size_t current_index = 0;
 
         for (auto &portal : prt.portals) {

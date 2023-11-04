@@ -493,7 +493,7 @@ static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t 
     }
 
     const int key = (bsp->loadversion->game->id == GAME_QUAKE_II) ? leaf->cluster : leaf->visofs;
-    if (auto it = UncompressedVis().find(leaf->cluster); it != UncompressedVis().end()) {
+    if (auto it = UncompressedVis().find(key); it != UncompressedVis().end()) {
         return &it->second;
     }
     return nullptr;
@@ -1765,7 +1765,6 @@ static void LightFace_LocalMin(
 
 static void LightFace_AutoMin(const mbsp_t *bsp, const mface_t *face, lightsurf_t *lightsurf, lightmapdict_t *lightmaps)
 {
-    const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
 
     if (!modelinfo)
@@ -3245,7 +3244,6 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
 
     // sanity check that we don't save a lightmap for a non-lightmapped face
     {
-        const char *texname = Face_TextureName(bsp, face);
         Q_assert(Face_IsLightmapped(bsp, face));
     }
 

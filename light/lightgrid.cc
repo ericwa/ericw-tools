@@ -158,9 +158,9 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     constexpr int MIN_NODE_DIMENSION = 4;
 
     // if set, it's an index in the leafs array
-    constexpr uint32_t FLAG_LEAF = 1 << 31;
-    constexpr uint32_t FLAG_OCCLUDED = 1 << 30;
-    constexpr uint32_t FLAGS = (FLAG_LEAF | FLAG_OCCLUDED);
+    [[maybe_unused]] constexpr uint32_t FLAG_LEAF = 1 << 31;
+    [[maybe_unused]] constexpr uint32_t FLAG_OCCLUDED = 1 << 30;
+    [[maybe_unused]] constexpr uint32_t FLAGS = (FLAG_LEAF | FLAG_OCCLUDED);
     // if neither flags are set, it's a node index
 
     struct octree_node
@@ -280,7 +280,6 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
             return {lightgrid_samples_t{}, true};
         }
         if (node_index & FLAG_LEAF) {
-            auto &leaf = octree_leafs.at(node_index & (~FLAG_LEAF));
             // in actuality, we'd pull the data from a 3D grid stored in the leaf.
             int i = data.get_grid_index(test_point[0], test_point[1], test_point[2]);
             return {data.grid_result[i], data.occlusion[i]};
@@ -290,6 +289,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
         return octree_lookup_r(node.children[i], test_point);
     };
 
+#if 0
     // self-check
     for (int z = 0; z < data.grid_size[2]; ++z) {
         for (int y = 0; y < data.grid_size[1]; ++y) {
@@ -308,6 +308,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
             }
         }
     }
+#endif
 
     // write out the binary data
     const qvec3f grid_dist = qvec3f{data.grid_dist};
@@ -366,24 +367,6 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     auto vec = StringToVector(str.str());
     logging::print("     {:8} bytes LIGHTGRID_OCTREE\n", vec.size());
     return vec;
-}
-
-static aabb3f MakeCube(const aabb3f &input)
-{
-    qvec3f centroid = input.centroid();
-
-    const float new_size = std::max(std::max(input.size()[0], input.size()[1]), input.size()[2]);
-
-    return aabb3f(centroid - qvec3f(new_size / 2), centroid + qvec3f(new_size / 2));
-}
-
-static qvec3i MakePOT(const qvec3i &input)
-{
-    float x = static_cast<float>(input[0]);
-    x = log2(x);
-    x = ceil(x);
-    x = exp2(x);
-    return qvec3i(static_cast<int>(x));
 }
 
 std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3d world_point)

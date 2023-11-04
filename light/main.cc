@@ -21,6 +21,8 @@
 #include <common/settings.hh>
 #include <common/log.hh>
 
+#include <iostream>
+
 int main(int argc, const char **argv)
 {
     logging::preinitialize();

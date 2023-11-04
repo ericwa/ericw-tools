@@ -131,7 +131,6 @@ sceneinfo CreateGeometry(
         add_vert(final_pos1);
         add_vert(final_pos2);
 
-        int tri_index = tris_temp.size();
         tris_temp.push_back({first_vert_index, first_vert_index + 1, first_vert_index + 2});
 
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
@@ -421,7 +420,6 @@ static void PerRay_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 {
     int *const valid = args->valid;
     RTCIntersectContext *const context = args->context;
-    struct RTCRayN *const ray = args->ray;
     struct RTCHitN *const potentialHit = args->hit;
     const unsigned int N = args->N;
 
@@ -436,13 +434,10 @@ static void PerRay_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
             continue;
         }
 
-        const unsigned &rayID = RTCRayN_id(ray, N, i);
         const unsigned &geomID = RTCHitN_geomID(potentialHit, N, i);
         const unsigned &primID = RTCHitN_primID(potentialHit, N, i);
 
         // unpack ray index
-        const unsigned rayIndex = rayID;
-
         const triinfo &hit_triinfo = Embree_LookupTriangleInfo(geomID, primID);
 
         if (!(hit_triinfo.channelmask & rsi->shadowmask)) {

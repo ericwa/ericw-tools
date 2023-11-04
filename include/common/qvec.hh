@@ -73,20 +73,26 @@ public:
 #pragma clang diagnostic pop
 #endif
 
+private:
+    template<typename FT, std::size_t... pack>
+    constexpr void copy_impl(const FT &from, std::index_sequence<pack...> packed)
+    {
+        ((v[pack] = from[pack]), ...);
+    }
+
+public:
     // copy from C-style array, exact lengths only
     template<typename T2>
     constexpr qvec(const T2 (&array)[N])
     {
-        for (size_t i = 0; i < N; i++)
-            v[i] = static_cast<T>(array[i]);
+        copy_impl(array, std::make_index_sequence<N>());
     }
 
     // copy from std::array, exact lengths only
     template<typename T2>
     constexpr qvec(const std::array<T2, N> &array)
     {
-        for (size_t i = 0; i < N; i++)
-            v[i] = static_cast<T>(array[i]);
+        copy_impl(array, std::make_index_sequence<N>());
     }
 
     /**
@@ -95,10 +101,22 @@ public:
     template<class T2>
     constexpr qvec(const qvec<T2, N> &other)
     {
-        for (size_t i = 0; i < N; i++)
-            v[i] = static_cast<T>(other[i]);
+        copy_impl(other, std::make_index_sequence<N>());
     }
 
+private:
+    template<typename FT, std::size_t... pack>
+    constexpr void copy_trunc_impl(const FT &from, std::index_sequence<pack...> packed)
+    {
+        ((
+            (pack < N) ?
+                (v[pack] = ((pack < from.size() ? (from[pack]) : 0)))
+            :
+                (false)
+         ), ...);
+    }
+
+public:
     /**
      * Casting from another vector type of the same type but
      * different length
@@ -106,17 +124,9 @@ public:
     template<size_t N2>
     constexpr qvec(const qvec<T, N2> &other)
     {
-        constexpr size_t minSize = std::min(N, N2);
-
         // truncates if `other` is longer than `this`
-        for (size_t i = 0; i < minSize; i++)
-            v[i] = other[i];
-
         // zero-fill if `other` is smaller than `this`
-        if constexpr (N2 < N) {
-            for (size_t i = minSize; i < N; i++)
-                v[i] = 0;
-        }
+        copy_trunc_impl(other, std::make_index_sequence<std::max(N, N2)>());
     }
 
     /**
@@ -152,86 +162,128 @@ public:
 
     [[nodiscard]] constexpr const T &operator[](const size_t idx) const { return at(idx); }
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
+    
+private:
+    template<typename O, typename FT, typename F, std::size_t... pack>
+    static constexpr void add_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
+    {
+        ((out[pack] = a[pack] + b[pack]), ...);
+    }
 
+public:
     template<typename F>
     [[nodiscard]] constexpr inline auto operator+(const qvec<F, N> &other) const
     {
         qvec<decltype(T() + F()), N> v;
 
-        for (size_t i = 0; i < N; i++) {
-            v[i] = at(i) + other[i];
-        }
+        add_impl(v, *this, other, std::make_index_sequence<N>());
 
         return v;
     }
+    
+private:
+    template<typename O, typename FT, typename F, std::size_t... pack>
+    static constexpr void sub_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
+    {
+        ((out[pack] = a[pack] - b[pack]), ...);
+    }
 
+public:
     template<typename F>
     [[nodiscard]] constexpr inline auto operator-(const qvec<F, N> &other) const
     {
         qvec<decltype(T() - F()), N> v;
 
-        for (size_t i = 0; i < N; i++) {
-            v[i] = at(i) - other[i];
-        }
+        sub_impl(v, *this, other, std::make_index_sequence<N>());
 
         return v;
     }
+    
+private:
+    template<typename O, typename FT, typename F, std::size_t... pack>
+    static constexpr void scale_v_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
+    {
+        ((out[pack] = a[pack] * b), ...);
+    }
 
+public:
     template<typename S>
     [[nodiscard]] constexpr inline auto operator*(const S &scale) const
     {
         qvec<decltype(T() * S()), N> v;
 
-        for (size_t i = 0; i < N; i++) {
-            v[i] = at(i) * scale;
-        }
+        scale_v_impl(v, *this, scale, std::make_index_sequence<N>());
 
         return v;
     }
+    
+private:
+    template<typename O, typename FT, typename F, std::size_t... pack>
+    static constexpr void scale_vf_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
+    {
+        ((out[pack] = a[pack] * b[pack]), ...);
+    }
 
+public:
     template<typename F>
     [[nodiscard]] constexpr inline auto operator*(const qvec<F, N> &scale) const
     {
         qvec<decltype(T() * F()), N> v;
 
-        for (size_t i = 0; i < N; i++) {
-            v[i] = at(i) * scale[i];
-        }
+        scale_vf_impl(v, *this, scale, std::make_index_sequence<N>());
 
         return v;
     }
+    
+private:
+    template<typename O, typename FT, typename F, std::size_t... pack>
+    static constexpr void div_v_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
+    {
+        ((out[pack] = a[pack] / b), ...);
+    }
 
+public:
     template<typename S>
     [[nodiscard]] constexpr inline auto operator/(const S &scale) const
     {
         qvec<decltype(T() / S()), N> v;
 
-        for (size_t i = 0; i < N; i++) {
-            v[i] = at(i) / scale;
-        }
+        div_v_impl(v, *this, scale, std::make_index_sequence<N>());
 
         return v;
     }
+    
+private:
+    template<typename O, typename FT, typename F, std::size_t... pack>
+    static constexpr void div_vf_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
+    {
+        ((out[pack] = a[pack] / b[pack]), ...);
+    }
 
+public:
     template<typename F>
     [[nodiscard]] constexpr inline auto operator/(const qvec<F, N> &scale) const
     {
         qvec<decltype(T() / F()), N> v;
-
-        for (size_t i = 0; i < N; i++) {
-            v[i] = at(i) / scale[i];
-        }
+        
+        div_vf_impl(v, *this, scale, std::make_index_sequence<N>());
 
         return v;
     }
+    
+private:
+    template<typename O, typename FT, std::size_t... pack>
+    static constexpr void inv_v_impl(O &out, const FT &a, std::index_sequence<pack...> packed)
+    {
+        ((out[pack] = -a[pack]), ...);
+    }
 
+public:
     [[nodiscard]] constexpr inline auto operator-() const
     {
         qvec<decltype(-T()), N> v;
-
-        for (size_t i = 0; i < N; i++) {
-            v[i] = -at(i);
-        }
+        
+        inv_v_impl(v, *this, std::make_index_sequence<N>());
 
         return v;
     }

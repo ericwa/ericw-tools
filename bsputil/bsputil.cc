@@ -550,7 +550,7 @@ map_file_t LoadMapOrEntFile(const fs::path &source)
 
     parser_t parser(file, {source.string()});
 
-    for (int i = 0;; i++) {
+    for (;;) {
         map_entity_t &entity = map.entities.emplace_back();
 
         if (!ParseEntity(parser, entity)) {
@@ -846,8 +846,6 @@ int bsputil_main(int argc, char **argv)
 
             // remap planes on stuff
             for (auto &v : bsp.dbrushsides) {
-                auto oldp = old_planes[v.planenum];
-                auto newp = bsp.dplanes[plane_remap[v.planenum]];
                 v.planenum = plane_remap[v.planenum];
             }
 
@@ -893,7 +891,7 @@ int bsputil_main(int argc, char **argv)
 
                 bspx_decoupled_lm_perface result;
 
-                for (auto &face : bsp.dfaces) {
+                for ([[maybe_unused]] auto &face : bsp.dfaces) {
                     istream >= result;
 
                     const qmat3x3d inversescaleM{// column-major...

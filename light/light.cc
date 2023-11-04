@@ -754,7 +754,7 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
 void ClearLightmapSurfaces(mbsp_t *bsp)
 {
     logging::funcheader();
-    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) { light_surfaces[i].reset(); });
+    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [](size_t i) { light_surfaces[i].reset(); });
 }
 
 static void FindModelInfo(const mbsp_t *bsp)

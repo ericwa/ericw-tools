@@ -124,10 +124,14 @@ parse_error:
     scale[1] = std::stod(parser.token);
 
     return {
-        shift,
-        rotate,
-        scale,
-        axis
+        {
+            shift,
+            rotate,
+            scale
+        },
+        {
+            axis
+        }
     };
 
 parse_error:
@@ -716,13 +720,6 @@ namespace convert_to_quaked
             in_vecs.at(0, 3), in_vecs.at(1, 3), static_cast<float>(-faceplane.dist), 1 // col 3
         };
         return T;
-    }
-
-    static qmat2x2f scale2x2(float xscale, float yscale)
-    {
-        qmat2x2f M{xscale, 0, // col 0
-            0, yscale}; // col1
-        return M;
     }
 
     static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qplane3d &faceplane, const qvec3f &point)

@@ -997,7 +997,6 @@ static side_t *SelectSplitPlane(
 
                 int front = 0;
                 int back = 0;
-                int both = 0;
                 int facing = 0;
                 int splits = 0;
                 int epsilonbrush = 0;
@@ -1026,8 +1025,6 @@ static side_t *SelectSplitPlane(
                         front++;
                     if (s & PSIDE_BACK)
                         back++;
-                    if (s == PSIDE_BOTH)
-                        both++;
                 }
 
                 // give a value estimate for using this plane
