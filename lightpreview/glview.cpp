@@ -374,10 +374,14 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
             BSP_FindLeafAtPoint(&bsp, &world, qvec3d{m_cameraOrigin.x(), m_cameraOrigin.y(), m_cameraOrigin.z()});
 
         int leafnum = leaf - bsp.dleafs.data();
-        int clusternum = leaf->cluster;
 
         result.leafnum = leafnum;
-        result.clusternum = clusternum;
+
+        if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+            result.clusternum = leaf->cluster;
+        } else {
+            result.clusternum = leaf->visofs;
+        }
     } else {
         result.leafnum = -1;
         result.clusternum = -1;
@@ -408,31 +412,37 @@ void GLView::updateFaceVisibility()
     std::vector<uint8_t> face_flags;
     face_flags.resize(face_visibility_width, 0);
 
-    if (auto it = m_decompressedVis.find(desired.clusternum);
-        desired.leafnum != -1 && it != m_decompressedVis.end()) {
+    bool in_solid = false;
 
-        const auto &pvs = it->second;
-        qDebug() << "found bitvec of size " << pvs.size();
+    if (desired.leafnum == -1)
+        in_solid = true;
+    if (desired.clusternum == -1)
+        in_solid = true;
+    if (desired.leafnum == 0 && bsp.loadversion->game->id != GAME_QUAKE_II)
+        in_solid = true;
 
-        // check leaf visibility
+    bool found_visdata = false;
 
-        auto leaf_sees = [&](const mleaf_t *b) -> bool {
-            if (b->cluster < 0)
-                return true;
+    if (!in_solid) {
+        if (auto it = m_decompressedVis.find(desired.clusternum); it != m_decompressedVis.end()) {
+            found_visdata = true;
 
-            return !!(pvs[b->cluster >> 3] & (1 << (b->cluster & 7)));
-        };
+            const auto &pvs = it->second;
+            qDebug() << "found bitvec of size " << pvs.size();
 
-        // visit all world leafs: if they're visible, mark the appropriate faces
-        BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
-            if (leaf_sees(&leaf)) {
-                for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
-                    int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
-                    face_flags[fnum] = 16;
+            // visit all world leafs: if they're visible, mark the appropriate faces
+            BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
+                if (Pvs_LeafVisible(&bsp, pvs, &leaf)) {
+                    for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
+                        int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
+                        face_flags[fnum] = 16;
+                    }
                 }
-            }
-        });
-    } else {
+            });
+        }
+    }
+
+    if (!found_visdata) {
         // mark all world faces
         for (int fi = world.firstface; fi < (world.firstface + world.numfaces); ++fi) {
             face_flags[fi] = 16;

@@ -619,6 +619,38 @@ int LeafnumToVisleaf(int leafnum)
     return leafnum - 1;
 }
 
+// returns true if pvs can see leaf
+bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *leaf)
+{
+    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        if (leaf->cluster < 0) {
+            return false;
+        }
+
+        if (leaf->cluster >= bsp->dvis.bit_offsets.size() ||
+            bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster) >= bsp->dvis.bits.size()) {
+            logging::print("Pvs_LeafVisible: invalid visofs for cluster {}\n", leaf->cluster);
+            return false;
+        }
+
+        return !!(pvs[leaf->cluster >> 3] & (1 << (leaf->cluster & 7)));
+    } else {
+        const int leafnum = (leaf - bsp->dleafs.data());
+        const int visleaf = LeafnumToVisleaf(leafnum);
+
+        if (leafnum == 0) {
+            // can't see into the shared solid leaf
+            return false;
+        }
+        if (visleaf < -1 || visleaf >= bsp->dmodels[0].visleafs) {
+            logging::print("WARNING: bad/empty vis data on leaf?");
+            return false;
+        }
+
+        return !!(pvs[visleaf >> 3] & (1 << (visleaf & 7)));
+    }
+}
+
 // from DarkPlaces (Mod_Q1BSP_DecompressVis)
 void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend)
 {

@@ -74,6 +74,8 @@ private:
         bool show_bmodels;
         // -1 indicates solid leaf or no visdata (render all world faces)
         int leafnum;
+        // Q2 bsp: cluster num
+        // other: visofs
         int clusternum;
 
         bool operator==(const face_visibility_key_t &other) const

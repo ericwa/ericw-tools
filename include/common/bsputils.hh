@@ -113,6 +113,7 @@ void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_ite
 size_t DecompressedVisSize(const mbsp_t *bsp);
 int VisleafToLeafnum(int visleaf);
 int LeafnumToVisleaf(int leafnum);
+bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *leaf);
 void DecompressVis(const uint8_t *in, const uint8_t *inend, uint8_t *out, uint8_t *outend);
 std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp, bool trans_water = false);
 

@@ -499,34 +499,6 @@ static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t 
     return nullptr;
 }
 
-// returns true if pvs can see leaf
-static bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *leaf)
-{
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        if (leaf->cluster < 0) {
-            return false;
-        }
-
-        if (leaf->cluster >= bsp->dvis.bit_offsets.size() ||
-            bsp->dvis.get_bit_offset(VIS_PVS, leaf->cluster) >= bsp->dvis.bits.size()) {
-            logging::print("Pvs_LeafVisible: invalid visofs for cluster {}\n", leaf->cluster);
-            return false;
-        }
-
-        return !!(pvs[leaf->cluster >> 3] & (1 << (leaf->cluster & 7)));
-    } else {
-        const int leafnum = (leaf - bsp->dleafs.data());
-        const int visleaf = leafnum - 1;
-
-        if (visleaf < 0 || visleaf >= bsp->dmodels[0].visleafs) {
-            logging::print("WARNING: bad/empty vis data on leaf?");
-            return false;
-        }
-
-        return !!(pvs[visleaf >> 3] & (1 << (visleaf & 7)));
-    }
-}
-
 static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
 {
     const int pvssize = DecompressedVisSize(bsp);
