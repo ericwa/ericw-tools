@@ -50,6 +50,7 @@ TEST_CASE("q2_detail_leak_test.map" * doctest::may_fail())
 
 TEST_CASE("ClipStackWinding") {
     pstack_t stack{};
+    visstats_t stats{};
 
     auto *w1 = AllocStackWinding(stack);
     w1->numpoints = 4;
@@ -59,7 +60,7 @@ TEST_CASE("ClipStackWinding") {
     w1->points[3] = {0, 0, -32};
     w1->set_winding_sphere();
 
-    w1 = ClipStackWinding(w1, stack, qplane3d({-1, 0, 0}, -16));
+    w1 = ClipStackWinding(stats, w1, stack, qplane3d({-1, 0, 0}, -16));
     CHECK(w1->size() == 4);
     CHECK((*w1)[0] == qvec3d(0, 0, 0));
     CHECK((*w1)[1] == qvec3d(16, 0, 0));

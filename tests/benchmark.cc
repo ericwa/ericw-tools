@@ -122,6 +122,7 @@ TEST_CASE("vis windings")
     });
 
     b.run("setup + ClipStackWinding", [&]() {
+        visstats_t stats;
         pstack_t stack;
         for (int i=0; i<3; ++i)
             stack.windings_used[i] = false;
@@ -134,7 +135,7 @@ TEST_CASE("vis windings")
         w1->points[3] = {0, 0, -32};
         w1->set_winding_sphere();
 
-        w1 = ClipStackWinding(w1, stack, qplane3d({-1, 0, 0}, -16));
+        w1 = ClipStackWinding(stats, w1, stack, qplane3d({-1, 0, 0}, -16));
         ankerl::nanobench::doNotOptimizeAway(*w1);
 
         FreeStackWinding(w1, stack);
