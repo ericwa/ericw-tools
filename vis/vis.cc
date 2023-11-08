@@ -3,6 +3,7 @@
 #include <climits>
 #include <cstdint>
 #include <bit> // for std::countr_zero
+#include <numeric> // for std::accumulate
 
 #include <vis/leafbits.hh>
 #include <vis/vis.hh>
@@ -23,11 +24,6 @@ int portalleafs_real; /* real no. of leafs after expanding PRT2 clusters. Not us
 
 std::vector<visportal_t> portals; // always numportals * 2; front and back
 std::vector<leaf_t> leafs;
-
-int c_portaltest, c_portalpass, c_portalcheck, c_mightseeupdate;
-int c_noclip = 0;
-
-bool showgetleaf = true;
 
 static std::vector<uint8_t> vismap;
 
@@ -116,7 +112,7 @@ void FreeStackWinding(viswinding_t *&w, pstack_t &stack)
   is returned.
   ==================
 */
-viswinding_t *ClipStackWinding(viswinding_t *in, pstack_t &stack, const qplane3d &split)
+viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &stack, const qplane3d &split)
 {
     vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
     int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
@@ -216,7 +212,7 @@ viswinding_t *ClipStackWinding(viswinding_t *in, pstack_t &stack, const qplane3d
 
 noclip:
     FreeStackWinding(neww, stack);
-    c_noclip++;
+    stats.c_noclip++;
     return in;
 }
 
@@ -271,7 +267,7 @@ visportal_t *GetNextPortal(void)
   Called with the lock held.
   =============
 */
-static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
+static void UpdateMightsee(visstats_t &stats, const leaf_t &source, const leaf_t &dest)
 {
     size_t leafnum = &dest - leafs.data();
     for (size_t i = 0; i < source.numportals; i++) {
@@ -282,7 +278,7 @@ static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
         if (p->mightsee[leafnum]) {
             p->mightsee[leafnum] = false;
             p->nummightsee--;
-            c_mightseeupdate++;
+            stats.c_mightseeupdate++;
         }
     }
 }
@@ -297,7 +293,7 @@ static void UpdateMightsee(const leaf_t &source, const leaf_t &dest)
   Called with the lock held.
   =============
 */
-static void PortalCompleted(visportal_t *completed)
+static void PortalCompleted(visstats_t &stats, visportal_t *completed)
 {
     int i, j, k, bit, numblocks;
     int leafnum;
@@ -349,7 +345,7 @@ static void PortalCompleted(visportal_t *completed)
                 bit = std::countr_zero(changed);
                 changed &= ~nth_bit(bit);
                 leafnum = (j << leafbits_t::shift) + bit;
-                UpdateMightsee(leafs[leafnum], myleaf);
+                UpdateMightsee(stats, leafs[leafnum], myleaf);
             }
         }
     }
@@ -365,7 +361,7 @@ static duration stateinterval;
   LeafThread
   ==============
 */
-void LeafThread(size_t)
+static visstats_t LeafThread()
 {
     visportal_t *p;
 
@@ -380,14 +376,16 @@ void LeafThread(size_t)
 
     p = GetNextPortal();
     if (!p)
-        return;
+        return {};
 
-    PortalFlow(p);
+    visstats_t stats = PortalFlow(p);
 
-    PortalCompleted(p);
+    PortalCompleted(stats, p);
 
     logging::print(logging::flag::VERBOSE, "portal:{:4}  mightsee:{:4}  cansee:{:4}\n", (ptrdiff_t)(p - portals.data()),
         p->nummightsee, p->numcansee);
+
+    return stats;
 }
 
 /*
@@ -503,7 +501,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
   CalcPortalVis
   ==================
 */
-void CalcPortalVis(const mbsp_t *bsp)
+visstats_t CalcPortalVis(const mbsp_t *bsp)
 {
     // fastvis just uses mightsee for a very loose bound
     if (vis_options.fast.value()) {
@@ -511,7 +509,7 @@ void CalcPortalVis(const mbsp_t *bsp)
             p.visbits = p.mightsee;
             p.status = pstat_done;
         }
-        return;
+        return {};
     }
 
     /*
@@ -525,14 +523,26 @@ void CalcPortalVis(const mbsp_t *bsp)
     }
 
     portalIndex = startcount;
-    logging::parallel_for(startcount, numportals * 2, LeafThread);
+
+    std::vector<visstats_t> stats_perportal;
+    stats_perportal.resize(numportals * 2);
+
+    logging::parallel_for(startcount, numportals * 2, [&](size_t i) {
+        stats_perportal[i] = LeafThread();
+    });
+
+    const visstats_t stats = std::accumulate(stats_perportal.begin(),
+        stats_perportal.end(),
+        visstats_t{});
 
     SaveVisState();
 
-    logging::print(logging::flag::VERBOSE, "portalcheck: {}  portaltest: {}  portalpass: {}\n", c_portalcheck,
-        c_portaltest, c_portalpass);
-    logging::print(logging::flag::VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", c_vistest,
-        c_mighttest, c_mightseeupdate);
+    logging::print(logging::flag::VERBOSE, "portalcheck: {}  portaltest: {}  portalpass: {}\n", stats.c_portalcheck,
+        stats.c_portaltest, stats.c_portalpass);
+    logging::print(logging::flag::VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", stats.c_vistest,
+        stats.c_mighttest, stats.c_mightseeupdate);
+
+    return stats;
 }
 
 /*
@@ -540,7 +550,7 @@ void CalcPortalVis(const mbsp_t *bsp)
   CalcVis
   ==================
 */
-void CalcVis(mbsp_t *bsp)
+visstats_t CalcVis(mbsp_t *bsp)
 {
     int i;
 
@@ -552,7 +562,7 @@ void CalcVis(mbsp_t *bsp)
     }
 
     logging::print("Calculating Full Vis:\n");
-    CalcPortalVis(bsp);
+    auto stats = CalcPortalVis(bsp);
 
     //
     // assemble the leaf vis lists by oring and compressing the portal lists
@@ -575,6 +585,8 @@ void CalcVis(mbsp_t *bsp)
 
         logging::print("average leafs visible: {}\n", avg);
     }
+
+    return stats;
 }
 
 // ===========================================================================
@@ -747,10 +759,10 @@ int vis_main(int argc, const char **argv)
             uncompressed.resize(portalleafs * leafbytes);
         }
 
-        CalcVis(&bsp);
+        auto stats = CalcVis(&bsp);
 
-        logging::print("c_noclip: {}\n", c_noclip);
-        logging::print("c_chains: {}\n", c_chains);
+        logging::print("c_noclip: {}\n", stats.c_noclip);
+        logging::print("c_chains: {}\n", stats.c_chains);
 
         bsp.dvis.bits = std::move(vismap);
         bsp.dvis.bits.shrink_to_fit();

@@ -196,15 +196,45 @@ struct pstack_t
 // important for perf as a ton of these are stack allocated, needs to be be just a pointer bump
 static_assert(std::is_trivially_default_constructible_v<pstack_t>);
 
+struct visstats_t
+{
+    int64_t c_portaltest = 0;
+    int64_t c_portalpass = 0;
+    int64_t c_portalcheck = 0;
+    int64_t c_mightseeupdate = 0;
+    int64_t c_noclip = 0;
+    int64_t c_vistest = 0;
+    int64_t c_mighttest = 0;
+    int64_t c_chains = 0;
+    int64_t c_leafskip = 0;
+    int64_t c_portalskip = 0;
+
+    visstats_t operator+(const visstats_t& other) const {
+        visstats_t result;
+        result.c_portaltest = this->c_portaltest + other.c_portaltest;
+        result.c_portalpass = this->c_portalpass + other.c_portalpass;
+        result.c_portalcheck = this->c_portalcheck + other.c_portalcheck;
+        result.c_mightseeupdate = this->c_mightseeupdate + other.c_mightseeupdate;
+        result.c_noclip = this->c_noclip + other.c_noclip;
+        result.c_vistest = this->c_vistest + other.c_vistest;
+        result.c_mighttest = this->c_mighttest + other.c_mighttest;
+        result.c_chains = this->c_chains + other.c_chains;
+        result.c_leafskip = this->c_leafskip + other.c_leafskip;
+        result.c_portalskip = this->c_portalskip + other.c_portalskip;
+        return result;
+    }
+};
+
 viswinding_t *AllocStackWinding(pstack_t &stack);
 void FreeStackWinding(viswinding_t *&w, pstack_t &stack);
-viswinding_t *ClipStackWinding(viswinding_t *in, pstack_t &stack, const qplane3d &split);
+viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &stack, const qplane3d &split);
 
 struct threaddata_t
 {
     leafbits_t &leafvis;
     visportal_t *base;
     pstack_t pstack_head;
+    visstats_t stats;
 };
 
 extern int numportals;
@@ -213,13 +243,6 @@ extern int portalleafs_real;
 
 extern std::vector<visportal_t> portals; // always numportals * 2; front and back
 extern std::vector<leaf_t> leafs;
-
-extern int c_noclip;
-extern int c_portaltest, c_portalpass, c_portalcheck;
-extern int c_vistest, c_mighttest;
-extern unsigned long c_chains;
-
-extern bool showgetleaf;
 
 extern std::vector<uint8_t> uncompressed;
 extern int leafbytes;
@@ -230,7 +253,7 @@ extern fs::path portalfile, statefile, statetmpfile;
 
 void BasePortalVis(void);
 
-void PortalFlow(visportal_t *p);
+visstats_t PortalFlow(visportal_t *p);
 
 void CalcAmbientSounds(mbsp_t *bsp);
 
