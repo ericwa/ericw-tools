@@ -364,16 +364,20 @@ template<class T, class T2>
         v1[1] * v2[2] - v1[2] * v2[1], v1[2] * v2[0] - v1[0] * v2[2], v1[0] * v2[1] - v1[1] * v2[0]};
 }
 
+template<typename T, typename U, std::size_t... pack>
+constexpr auto dot_impl(const T &v1, const U &v2, std::index_sequence<pack...> packed)
+{
+    return ((v1[pack] * v2[pack]) + ...);
+}
+
 template<typename T, typename U, typename L = std::common_type_t<typename T::value_type, typename U::value_type>>
 [[nodiscard]] constexpr L dot(const T &v1, const U &v2)
 {
     static_assert(std::size(T()) == std::size(U()), "Can't dot() with two differently-sized vectors");
 
-    L result = 0;
-    for (size_t i = 0; i < std::size(v1); i++) {
-        result += v1[i] * v2[i];
-    }
-    return result;
+    constexpr size_t N = std::size(T());
+
+    return dot_impl(v1, v2, std::make_index_sequence<N>());
 }
 
 template<size_t N, class T>
