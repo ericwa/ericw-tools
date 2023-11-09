@@ -29,6 +29,7 @@
 #include <ostream>
 #include <fmt/core.h>
 #include <tuple>
+#include <functional>
 #include "common/mathlib.hh"
 
 template<class T, size_t N>
@@ -43,7 +44,7 @@ protected:
 public:
     using value_type = T;
 
-    inline qvec() = default;
+    constexpr qvec() = default;
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -164,157 +165,117 @@ public:
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
     
 private:
-    template<typename O, typename FT, typename F, std::size_t... pack>
-    static constexpr void add_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
+    // OUT = op THIS[N]
+    template<class UnaryOperation, std::size_t... pack>
+    constexpr auto utransform_impl(UnaryOperation func, std::index_sequence<pack...>) const
     {
-        ((out[pack] = a[pack] + b[pack]), ...);
+        using R = decltype(-T());
+        return qvec<R, N> { func(at(pack))... };
+    }
+
+    // OUT = THIS[N] op IN
+    template<class BinaryOperation, typename InputType, std::size_t... pack>
+    constexpr auto transform_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
+    {
+        using R = decltype(func(T(), InputType()));
+        return qvec<R, N> { func(at(pack), b)... };
+    }
+    
+    // OUT = THIS[N] op IN[N]
+    template<class BinaryOperation, typename InputType, std::size_t... pack>
+    constexpr auto transformv_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
+    {
+        using R = decltype(func(T(), InputType()[0]));
+        return qvec<R, N> { func(at(pack), b[pack])... };
     }
 
 public:
+    template<class UnaryOperation>
+    constexpr auto utransform(UnaryOperation func) const
+    {
+        return utransform_impl(func, std::make_index_sequence<N>());
+    }
+
+    template<class BinaryOperation, typename InputType>
+    constexpr auto transform(BinaryOperation func, const InputType &b) const
+    {
+        return transform_impl(func, b, std::make_index_sequence<N>());
+    }
+
+    template<class BinaryOperation, typename InputType>
+    constexpr auto transformv(BinaryOperation func, const InputType &b) const
+    {
+        return transformv_impl(func, b, std::make_index_sequence<N>());
+    }
+
     template<typename F>
     [[nodiscard]] constexpr inline auto operator+(const qvec<F, N> &other) const
     {
-        qvec<decltype(T() + F()), N> v;
-
-        add_impl(v, *this, other, std::make_index_sequence<N>());
-
-        return v;
+        return transformv(std::plus(), other);
     }
     
-private:
-    template<typename O, typename FT, typename F, std::size_t... pack>
-    static constexpr void sub_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
-    {
-        ((out[pack] = a[pack] - b[pack]), ...);
-    }
-
-public:
     template<typename F>
     [[nodiscard]] constexpr inline auto operator-(const qvec<F, N> &other) const
     {
-        qvec<decltype(T() - F()), N> v;
-
-        sub_impl(v, *this, other, std::make_index_sequence<N>());
-
-        return v;
-    }
-    
-private:
-    template<typename O, typename FT, typename F, std::size_t... pack>
-    static constexpr void scale_v_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
-    {
-        ((out[pack] = a[pack] * b), ...);
+        return transformv(std::minus(), other);
     }
 
-public:
     template<typename S>
     [[nodiscard]] constexpr inline auto operator*(const S &scale) const
     {
-        qvec<decltype(T() * S()), N> v;
-
-        scale_v_impl(v, *this, scale, std::make_index_sequence<N>());
-
-        return v;
-    }
-    
-private:
-    template<typename O, typename FT, typename F, std::size_t... pack>
-    static constexpr void scale_vf_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
-    {
-        ((out[pack] = a[pack] * b[pack]), ...);
+        return transform(std::multiplies(), scale);
     }
 
-public:
     template<typename F>
     [[nodiscard]] constexpr inline auto operator*(const qvec<F, N> &scale) const
     {
-        qvec<decltype(T() * F()), N> v;
-
-        scale_vf_impl(v, *this, scale, std::make_index_sequence<N>());
-
-        return v;
-    }
-    
-private:
-    template<typename O, typename FT, typename F, std::size_t... pack>
-    static constexpr void div_v_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
-    {
-        ((out[pack] = a[pack] / b), ...);
+        return transformv(std::multiplies(), scale);
     }
 
-public:
     template<typename S>
     [[nodiscard]] constexpr inline auto operator/(const S &scale) const
     {
-        qvec<decltype(T() / S()), N> v;
-
-        div_v_impl(v, *this, scale, std::make_index_sequence<N>());
-
-        return v;
-    }
-    
-private:
-    template<typename O, typename FT, typename F, std::size_t... pack>
-    static constexpr void div_vf_impl(O &out, const FT &a, const F &b, std::index_sequence<pack...> packed)
-    {
-        ((out[pack] = a[pack] / b[pack]), ...);
+        return transform(std::divides(), scale);
     }
 
-public:
     template<typename F>
     [[nodiscard]] constexpr inline auto operator/(const qvec<F, N> &scale) const
     {
-        qvec<decltype(T() / F()), N> v;
-        
-        div_vf_impl(v, *this, scale, std::make_index_sequence<N>());
-
-        return v;
-    }
-    
-private:
-    template<typename O, typename FT, std::size_t... pack>
-    static constexpr void inv_v_impl(O &out, const FT &a, std::index_sequence<pack...> packed)
-    {
-        ((out[pack] = -a[pack]), ...);
+        return transformv(std::divides(), scale);
     }
 
-public:
     [[nodiscard]] constexpr inline auto operator-() const
     {
-        qvec<decltype(-T()), N> v;
-        
-        inv_v_impl(v, *this, std::make_index_sequence<N>());
-
-        return v;
+        return utransform(std::negate());
     }
 
     template<typename F>
-    inline qvec operator+=(const qvec<F, N> &other)
+    constexpr qvec operator+=(const qvec<F, N> &other)
     {
         return *this = *this + other;
     }
     template<typename F>
-    inline qvec operator-=(const qvec<F, N> &other)
+    constexpr qvec operator-=(const qvec<F, N> &other)
     {
         return *this = *this - other;
     }
     template<typename S>
-    inline qvec operator*=(const S &scale)
+    constexpr qvec operator*=(const S &scale)
     {
         return *this = *this * scale;
     }
     template<typename F>
-    inline qvec &operator*=(const qvec<F, N> &other)
+    constexpr qvec &operator*=(const qvec<F, N> &other)
     {
         return *this = *this * other;
     }
     template<typename S>
-    inline qvec operator/=(const S &scale)
+    constexpr qvec operator/=(const S &scale)
     {
         return *this = *this / scale;
     }
     template<typename F>
-    inline qvec operator/=(const qvec<F, N> &other)
+    constexpr qvec operator/=(const qvec<F, N> &other)
     {
         return *this = *this * other;
     }
