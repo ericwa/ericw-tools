@@ -18,7 +18,6 @@
 
     See file, 'COPYING', for details.
 */
-// qbsp.h
 
 #pragma once
 

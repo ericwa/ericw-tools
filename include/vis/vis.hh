@@ -17,7 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-// vis.h
+#pragma once
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
