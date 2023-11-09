@@ -27,7 +27,7 @@
 static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, const qplane3d src_pl, const viswinding_t *pass,
     viswinding_t *&target, unsigned int test, pstack_t &stack)
 {
-    int i, j, k, l;
+    size_t i, j, k, l;
     qplane3d sep;
     qvec3d v1, v2;
     vec_t d;
@@ -387,7 +387,7 @@ static void SimpleFlood(visportal_t &srcportal, int leafnum, const leafbits_t &p
 */
 static void BasePortalThread(size_t portalnum)
 {
-    int j;
+    size_t j;
     float d;
     leafbits_t portalsee(numportals * 2);
 

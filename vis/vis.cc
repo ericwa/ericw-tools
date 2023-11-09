@@ -117,7 +117,7 @@ viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &st
     vec_t dists[MAX_WINDING + 1];
     int sides[MAX_WINDING + 1];
     int counts[3];
-    int i, j;
+    size_t i, j;
 
     /* Fast test first */
     vec_t dot = split.distance_to(in->origin);
