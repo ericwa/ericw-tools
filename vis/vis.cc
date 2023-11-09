@@ -114,8 +114,8 @@ void FreeStackWinding(viswinding_t *&w, pstack_t &stack)
 */
 viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &stack, const qplane3d &split)
 {
-    vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
-    int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
+    vec_t dists[MAX_WINDING + 1];
+    int sides[MAX_WINDING + 1];
     int counts[3];
     int i, j;
 
