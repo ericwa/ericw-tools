@@ -1571,7 +1571,7 @@ static void LoadTextureData()
 
         header.width = miptex.width;
         header.height = miptex.height;
-        header.offsets = {-1, -1, -1, -1};
+        header.offsets = {0, 0, 0, 0};
 
         omemstream stream(miptex.data.data(), miptex.data.size());
         stream <= header;

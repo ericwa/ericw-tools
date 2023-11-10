@@ -121,6 +121,7 @@ void miptex_t::stream_read(std::istream &stream, size_t len)
     name = dtex.name.data();
     width = dtex.width;
     height = dtex.height;
+    offsets = dtex.offsets;
 }
 
 void miptex_t::stream_write(std::ostream &stream) const

@@ -329,6 +329,14 @@ Options
    avoids inclusion of third-party copyrighted images inside your maps,
    but is not backwards compatible but will work in FTEQW and QSS.
 
+   Note that the textures still need to be available to qbsp.
+
+   Technical details: ``LUMP_TEXTURES`` is still written, but each texture
+   within is the ``dmiptex_t`` header only (with no texture data following),
+   with ``offsets`` all set to 0.
+
+   This only has effect in Q1 family games.
+
 .. option:: -notjunc
 
    Alias for :option:`-tjunc none`

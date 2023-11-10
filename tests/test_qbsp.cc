@@ -1904,6 +1904,40 @@ TEST_CASE("q1_missing_texture")
 
     CHECK("" == bsp.dtex.textures[1].name);
     CHECK(bsp.dtex.textures[1].null_texture);
+
+    CHECK(6 == bsp.dfaces.size());
+}
+
+TEST_CASE("q1 notex")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_cube.map", {"-notex"});
+
+    REQUIRE(2 == bsp.dtex.textures.size());
+
+    {
+        // FIXME: we shouldn't really be writing skip
+        // (our test data includes an actual "skip" texture,
+        // so that gets included in the bsp.)
+        auto &t0 = bsp.dtex.textures[0];
+        CHECK("skip" == t0.name);
+        CHECK(!t0.null_texture);
+        CHECK(64 == t0.width);
+        CHECK(64 == t0.height);
+        CHECK(t0.data.size() == sizeof(dmiptex_t));
+        for (int i = 0; i < 4; ++i)
+            CHECK(t0.offsets[i] == 0);
+    }
+
+    {
+        auto &t1 = bsp.dtex.textures[1];
+        CHECK("orangestuff8" == t1.name);
+        CHECK(!t1.null_texture);
+        CHECK(64 == t1.width);
+        CHECK(64 == t1.height);
+        CHECK(t1.data.size() == sizeof(dmiptex_t));
+        for (int i = 0; i < 4; ++i)
+            CHECK(t1.offsets[i] == 0);
+    }
 }
 
 TEST_CASE("hl_basic")
