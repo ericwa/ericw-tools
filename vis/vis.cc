@@ -269,8 +269,7 @@ visportal_t *GetNextPortal(void)
 static void UpdateMightsee(visstats_t &stats, const leaf_t &source, const leaf_t &dest)
 {
     size_t leafnum = &dest - leafs.data();
-    for (size_t i = 0; i < source.numportals; i++) {
-        visportal_t *p = source.portals[i];
+    for (visportal_t *p : source.portals) {
         if (p->status != pstat_none) {
             continue;
         }
@@ -303,7 +302,7 @@ static void PortalCompleted(visstats_t &stats, visportal_t *completed)
      * mightsee during the full vis so far.
      */
     const leaf_t &myleaf = leafs[completed->leaf];
-    for (int i = 0; i < myleaf.numportals; i++) {
+    for (int i = 0; i < myleaf.portals.size(); i++) {
         const visportal_t *p = myleaf.portals[i];
         if (p->status != pstat_done)
             continue;
@@ -320,7 +319,7 @@ static void PortalCompleted(visstats_t &stats, visportal_t *completed)
              * If any of these changed bits are still visible from another
              * portal, we can't update yet.
              */
-            for (int k = 0; k < myleaf.numportals; k++) {
+            for (int k = 0; k < myleaf.portals.size(); k++) {
                 if (k == i)
                     continue;
                 const visportal_t *p2 = myleaf.portals[k];
@@ -398,8 +397,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
      */
     leaf_t *leaf = &leafs[clusternum];
     int numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
-    for (int i = 0; i < leaf->numportals; i++) {
-        const visportal_t *p = leaf->portals[i];
+    for (const visportal_t *p : leaf->portals) {
         if (p->status != pstat_done)
             FError("portal not done");
         for (int j = 0; j < numblocks; j++)
@@ -644,10 +642,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
             // create forward portal
             auto &l = leafs[sourceportal.leafnums[0]];
-            if (l.numportals == MAX_PORTALS_ON_LEAF)
-                FError("Leaf with too many portals");
-            l.portals[l.numportals] = &p;
-            l.numportals++;
+            l.portals.push_back(&p);
 
             p.plane = -plane;
             p.leaf = sourceportal.leafnums[1];
@@ -658,10 +653,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
             auto &p = *dest_portal_it;
             // create backwards portal
             auto &l = leafs[sourceportal.leafnums[1]];
-            if (l.numportals == MAX_PORTALS_ON_LEAF)
-                FError("Leaf with too many portals");
-            l.portals[l.numportals] = &p;
-            l.numportals++;
+            l.portals.push_back(&p);
 
             // Create a reverse winding
             const auto flipped = sourceportal.winding.flip();

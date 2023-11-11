@@ -153,13 +153,9 @@ inline float viswinding_t::distFromPortal(visportal_t &p)
     return mindist;
 }
 
-/* Increased MAX_PORTALS_ON_LEAF from 128 */
-constexpr size_t MAX_PORTALS_ON_LEAF = 512;
-
 struct leaf_t
 {
-    int numportals;
-    visportal_t *portals[MAX_PORTALS_ON_LEAF];
+    std::vector<visportal_t *> portals;
 };
 
 constexpr size_t MAX_SEPARATORS = MAX_WINDING;
