@@ -404,10 +404,8 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
             buffer.data()[j] |= p->visbits.data()[j];
     }
 
-    // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
-    // causes it to happen a lot.
-    // if (TestLeafBit(buffer, clusternum))
-    //    logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
+    if (buffer[clusternum])
+       logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
 
     buffer[clusternum] = true;
 

@@ -144,9 +144,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
      */
     err = CheckStack(leaf, thread);
     if (err) {
-        // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
-        // causes it to happen a lot.
-        // logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
+        logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
         return;
     }
 
