@@ -2,7 +2,6 @@
 #include <vis/leafbits.hh>
 #include <common/log.hh>
 #include <common/parallel.hh>
-#include <atomic>
 
 /*
   ==============
@@ -27,28 +26,21 @@
 static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, const qplane3d src_pl, const viswinding_t *pass,
     viswinding_t *&target, unsigned int test, pstack_t &stack)
 {
-    size_t i, j, k, l;
-    qplane3d sep;
-    qvec3d v1, v2;
-    vec_t d;
-    int count;
-    bool fliptest;
-    vec_t len_sq;
-
     // check all combinations
-    for (i = 0; i < source->size(); i++) {
-        l = (i + 1) % source->size();
-        v1 = source->at(l) - source->at(i);
+    for (size_t i = 0; i < source->size(); i++) {
+        const size_t l = (i + 1) % source->size();
+        const qvec3d v1 = source->at(l) - source->at(i);
 
         // find a vertex of pass that makes a plane that puts all of the
         // vertexes of pass on the front side and all of the vertexes of
         // source on the back side
-        for (j = 0; j < pass->size(); j++) {
+        for (size_t j = 0; j < pass->size(); j++) {
 
             // Which side of the source portal is this point?
             // This also tells us which side of the separating plane has
             //  the source portal.
-            d = src_pl.distance_to(pass->at(j));
+            bool fliptest;
+            vec_t d = src_pl.distance_to(pass->at(j));
             if (d < -VIS_ON_EPSILON)
                 fliptest = true;
             else if (d > VIS_ON_EPSILON)
@@ -57,9 +49,10 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
                 continue; // Point lies in source plane
 
             // Make a plane with the three points
-            v2 = pass->at(j) - source->at(i);
+            qplane3d sep;
+            const qvec3d v2 = pass->at(j) - source->at(i);
             sep.normal = qv::cross(v1, v2);
-            len_sq = qv::length2(sep.normal);
+            const vec_t len_sq = qv::length2(sep.normal);
 
             // If points don't make a valid plane, skip it.
             if (len_sq < VIS_ON_EPSILON)
@@ -78,8 +71,9 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
             // if all of the pass portal points are now on the positive side,
             // this is the separating plane
             //
-            count = 0;
-            for (k = 0; k < pass->size(); k++) {
+            int count = 0;
+            size_t k = 0;
+            for (; k < pass->size(); k++) {
                 if (k == j)
                     continue;
                 d = sep.distance_to(pass->at(k));
@@ -120,9 +114,7 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
 
 static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 {
-    pstack_t *p;
-
-    for (p = thread->pstack_head.next; p; p = p->next)
+    for (pstack_t *p = thread->pstack_head.next; p; p = p->next)
         if (p->leaf == leaf)
             return 1;
     return 0;
