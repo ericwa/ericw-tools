@@ -153,26 +153,12 @@ inline float viswinding_t::distFromPortal(visportal_t &p)
     return mindist;
 }
 
-struct sep_t
-{
-    sep_t *next;
-    qplane3d plane; // from portal is on positive side
-};
-
-struct passage_t
-{
-    passage_t *next;
-    int from, to; // leaf numbers
-    sep_t *planes;
-};
-
 /* Increased MAX_PORTALS_ON_LEAF from 128 */
 constexpr size_t MAX_PORTALS_ON_LEAF = 512;
 
 struct leaf_t
 {
     int numportals;
-    passage_t *passages;
     visportal_t *portals[MAX_PORTALS_ON_LEAF];
 };
 
