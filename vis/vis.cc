@@ -162,7 +162,7 @@ viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &st
     if (!counts[1])
         return in;
 
-    auto neww = AllocStackWinding(stack);
+    auto *neww = AllocStackWinding(stack);
     neww->numpoints = 0;
     neww->origin = in->origin;
     neww->radius = in->radius;

@@ -131,19 +131,15 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevstack)
 {
     pstack_t stack;
-    qplane3d backplane;
-    leaf_t *leaf;
-    int j, err, numblocks;
 
     ++thread->stats.c_chains;
 
-    leaf = &leafs[leafnum];
+    leaf_t *leaf = &leafs[leafnum];
 
     /*
      * Check we haven't recursed into a leaf already on the stack
      */
-    err = CheckStack(leaf, thread);
-    if (err) {
+    if (CheckStack(leaf, thread)) {
         logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
         return;
     }
@@ -168,8 +164,8 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
     leafbits_t local(portalleafs);
     stack.mightsee = &local;
 
-    auto might = stack.mightsee->data();
-    auto vis = thread->leafvis.data();
+    const auto might = stack.mightsee->data();
+    const auto vis = thread->leafvis.data();
 
     // check all portals for flowing into other leafs
     for (visportal_t *p : leaf->portals) {
@@ -190,8 +186,8 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         }
 
         uint32_t more = 0;
-        numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
-        for (j = 0; j < numblocks; j++) {
+        const int numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
+        for (int j = 0; j < numblocks; j++) {
             might[j] = prevstack.mightsee->data()[j] & test[j];
             more |= (might[j] & ~vis[j]);
         }
@@ -203,7 +199,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         }
         // get plane of portal, point normal into the neighbor leaf
         stack.portalplane = p->plane;
-        backplane = -p->plane;
+        const qplane3d backplane = -p->plane;
 
         if (qv::epsilonEqual(prevstack.portalplane.normal, backplane.normal, VIS_EQUAL_EPSILON))
             continue; // can't go out a coplanar face
@@ -211,7 +207,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         thread->stats.c_portalcheck++;
 
         stack.portal = p;
-        stack.next = NULL;
+        stack.next = nullptr;
 
         /*
          * Testing visibility of a target portal, from a source portal,
@@ -254,7 +250,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         /* TEST 0 :: source -> pass -> target */
         if (vis_options.level.value() > 0) {
             if (stack.numseparators[0]) {
-                for (j = 0; j < stack.numseparators[0]; j++) {
+                for (int j = 0; j < stack.numseparators[0]; j++) {
                     stack.pass = ClipStackWinding(thread->stats, stack.pass, stack, stack.separators[0][j]);
                     if (!stack.pass)
                         break;
@@ -273,7 +269,7 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         /* TEST 1 :: pass -> source -> target */
         if (vis_options.level.value() > 1) {
             if (stack.numseparators[1]) {
-                for (j = 0; j < stack.numseparators[1]; j++) {
+                for (int j = 0; j < stack.numseparators[1]; j++) {
                     stack.pass = ClipStackWinding(thread->stats, stack.pass, stack, stack.separators[1][j]);
                     if (!stack.pass)
                         break;
@@ -372,8 +368,6 @@ static void SimpleFlood(visportal_t &srcportal, int leafnum, const leafbits_t &p
 */
 static void BasePortalThread(size_t portalnum)
 {
-    size_t j;
-    float d;
     leafbits_t portalsee(numportals * 2);
 
     visportal_t &p = portals[portalnum];
@@ -390,10 +384,11 @@ static void BasePortalThread(size_t portalnum)
         viswinding_t &tw = *tp.winding;
 
         // Quick test - completely at the back?
-        d = p.plane.distance_to(tw.origin);
+        float d = p.plane.distance_to(tw.origin);
         if (d < -tw.radius)
             continue;
 
+        size_t j;
         for (j = 0; j < tw.size(); j++) {
             d = p.plane.distance_to(tw[j]);
             if (d > -VIS_ON_EPSILON) // ericw -- changed from > ON_EPSILON for
