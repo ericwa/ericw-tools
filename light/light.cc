@@ -60,10 +60,30 @@ bool dirt_in_use = false;
 
 // intermediate representation of lightmap surfaces
 static std::vector<std::unique_ptr<lightsurf_t>> light_surfaces;
+// light_surfaces filtered down to just the emissive ones
+static std::vector<lightsurf_t*> emissive_light_surfaces;
 
 std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces()
 {
     return light_surfaces;
+}
+
+std::vector<lightsurf_t*> &EmissiveLightSurfaces()
+{
+    return emissive_light_surfaces;
+}
+
+static void UpdateEmissiveLightSurfacesList()
+{
+    emissive_light_surfaces.clear();
+
+    for (const auto &surf_ptr : light_surfaces) {
+        if (!surf_ptr || !surf_ptr->vpl) {
+            // didn't emit anthing
+            continue;
+        }
+        emissive_light_surfaces.push_back(surf_ptr.get());
+    }
 }
 
 static std::vector<facesup_t> faces_sup; // lit2/bspx stuff
@@ -925,6 +945,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             light_options.debugmode == debugmodes::bouncelights); // mxd
 
     MakeRadiositySurfaceLights(light_options, &bsp);
+    UpdateEmissiveLightSurfacesList();
 
     logging::header("Direct Lighting"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
@@ -945,6 +966,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
                 logging::header("No bounces; indirect lighting halted");
                 break;
             }
+            UpdateEmissiveLightSurfacesList();
 
             logging::header(fmt::format("Indirect Lighting (pass {0})", i).c_str()); // mxd
 

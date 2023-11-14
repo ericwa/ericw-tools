@@ -1964,13 +1964,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
         return;
     }
 
-    for (const auto &surf_ptr : LightSurfaces()) {
-
-        if (!surf_ptr || !surf_ptr->vpl) {
-            // didn't emit anthing
-            continue;
-        }
-
+    for (const auto &surf_ptr : EmissiveLightSurfaces()) {
         auto &vpl = *surf_ptr->vpl.get();
 
         for (const auto &vpl_setting : surf_ptr->vpl->styles) {
@@ -2070,11 +2064,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
     const settings::worldspawn_keys &cfg = light_options;
     const float surflight_gate = 0.01f;
 
-    for (const auto &surf : LightSurfaces()) {
-        if (!surf || !surf->vpl) {
-            continue;
-        }
-
+    for (const auto &surf : EmissiveLightSurfaces()) {
         const surfacelight_t &vpl = *surf->vpl;
 
         for (int c = 0; c < vpl.points.size(); c++) {
