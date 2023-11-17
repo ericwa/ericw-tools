@@ -1071,7 +1071,7 @@ void map_entity_t::parse_brush(parser_t &parser)
 
     brush_t brush;
 
-    if (parser.token == "(") {
+    if (parser.token == "(" || parser.token == "}") {
         brush.base_format = texcoord_style_t::quaked;
     } else {
         parser.parse_token();
