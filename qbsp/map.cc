@@ -2507,7 +2507,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
     if (!parser.parse_token(PARSE_PEEK))
         FError("{}: unexpected EOF after {{ beginning brush", parser.location);
 
-    if (parser.token == "(") {
+    if (parser.token == "(" || parser.token == "}") {
         brush.format = brushformat_t::NORMAL;
     } else {
         parser.parse_token();
