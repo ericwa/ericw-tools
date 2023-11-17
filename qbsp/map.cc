@@ -2570,8 +2570,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         brush.faces.emplace_back(std::move(face.value()));
     }
 
-    bool is_antiregion = brush.faces[0].texname.ends_with("antiregion"),
-         is_region = !is_antiregion && brush.faces[0].texname.ends_with("region");
+    bool is_antiregion = !brush.faces.empty() && brush.faces[0].texname.ends_with("antiregion"),
+         is_region = !is_antiregion && !brush.faces.empty() && brush.faces[0].texname.ends_with("region");
 
     // check regionness
     if (is_antiregion) {
