@@ -2516,12 +2516,12 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         // optional
         if (parser.token == "brushDef") {
             if (!parser.parse_token())
-                FError("Brush primitives: unexpected EOF (nothing after brushDef)");
+                FError("{}: Brush primitives: unexpected EOF (nothing after brushDef)", parser.location);
         }
 
         // mandatory
         if (parser.token != "{")
-            FError("Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.token);
+            FError("{}: Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.location, parser.token);
     }
     // ericw -- end brush primitives
 
