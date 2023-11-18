@@ -324,6 +324,43 @@ TEST_CASE("duplicatePlanes" * doctest::test_suite("qbsp"))
     CHECK(6 == brush->sides.size());
 }
 
+TEST_CASE("empty brush" * doctest::test_suite("qbsp"))
+{
+    INFO("the empty brush should be discarded");
+    const char *map_with_empty_brush = R"(
+// entity 0
+{
+"mapversion" "220"
+"classname" "worldspawn"
+// brush 0
+{
+( 80 -64 -16 ) ( 80 -63 -16 ) ( 80 -64 -15 ) __TB_empty [ 0 -1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 80 -64 -16 ) ( 80 -64 -15 ) ( 81 -64 -16 ) __TB_empty [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 80 -64 -16 ) ( 81 -64 -16 ) ( 80 -63 -16 ) __TB_empty [ -1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 208 64 16 ) ( 208 65 16 ) ( 209 64 16 ) __TB_empty [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 208 64 16 ) ( 209 64 16 ) ( 208 64 17 ) __TB_empty [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 208 64 16 ) ( 208 64 17 ) ( 208 65 16 ) __TB_empty [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+}
+{
+}
+// brush 1
+{
+( -64 -64 -16 ) ( -64 -63 -16 ) ( -64 -64 -15 ) __TB_empty [ 0 -1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -64 -64 -16 ) ( -64 -64 -15 ) ( -63 -64 -16 ) __TB_empty [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -64 -64 -16 ) ( -63 -64 -16 ) ( -64 -63 -16 ) __TB_empty [ -1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 64 64 16 ) ( 64 65 16 ) ( 65 64 16 ) __TB_empty [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 64 64 16 ) ( 65 64 16 ) ( 64 64 17 ) __TB_empty [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 64 64 16 ) ( 64 64 17 ) ( 64 65 16 ) __TB_empty [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+}
+}
+    )";
+
+    mapentity_t &worldspawn = LoadMap(map_with_empty_brush);
+    REQUIRE(2 == worldspawn.mapbrushes.size());
+    REQUIRE(6 == worldspawn.mapbrushes[0].faces.size());
+    REQUIRE(6 == worldspawn.mapbrushes[1].faces.size());
+}
+
 /**
  * Test that this skip face gets auto-corrected.
  */
