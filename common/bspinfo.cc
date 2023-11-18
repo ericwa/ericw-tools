@@ -49,7 +49,7 @@ static std::string hex_string(const uint8_t *bytes, const size_t count)
 /**
  * returns a JSON array of models
  */
-static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
+json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
 {
     json j = json::array();
 

@@ -3104,6 +3104,11 @@ void ProcessMapBrushes()
 {
     logging::funcheader();
 
+    // load external maps (needs to be before world extents are calculated)
+    for (auto &source : map.entities) {
+        ProcessExternalMapEntity(source);
+    }
+
     // calculate extents, if required
     if (!qbsp_options.worldextent.value()) {
         CalculateWorldExtent();

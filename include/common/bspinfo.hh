@@ -24,6 +24,8 @@
 #include "common/imglib.hh"
 #include "common/qvec.hh"
 
+#include <nlohmann/json_fwd.hpp>
+
 #include <map>
 #include <vector>
 
@@ -44,3 +46,5 @@ struct full_atlas_t
 full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata, bool use_bspx, bool use_decoupled);
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name);
+
+nlohmann::json serialize_bspxbrushlist(const std::vector<uint8_t> &lump);
