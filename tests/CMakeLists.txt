@@ -17,7 +17,6 @@ add_executable(tests
 		benchmark.cc
 		test_bsputil.cc)
 
-find_package(embree 3.0 REQUIRED)
 INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
 
 # HACK: Windows embree .dll's from https://github.com/embree/embree/releases ship with a tbb12.dll

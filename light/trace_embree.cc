@@ -289,14 +289,13 @@ inline qvec3f Embree_RayEndpoint(RTCRayN *ray, const qvec3f &dir, size_t N, size
     return org + (dir * tfar);
 }
 
-static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor);
-static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style);
+static void AddGlassToRay(ray_source_info *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor);
+static void AddDynamicOccluderToRay(ray_source_info *context, unsigned rayIndex, int style);
 
 // called to evaluate transparency
 static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 {
     int *const valid = args->valid;
-    RTCIntersectContext *const context = args->context;
     struct RTCRayN *const ray = args->ray;
     struct RTCHitN *const potentialHit = args->hit;
     const unsigned int N = args->N;
@@ -304,7 +303,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
     const int VALID = -1;
     const int INVALID = 0;
 
-    const ray_source_info *rsi = static_cast<const ray_source_info *>(context);
+    ray_source_info *rsi = static_cast<ray_source_info *>(args->context);
 
     for (size_t i = 0; i < N; i++) {
         if (valid[i] != VALID) {
@@ -359,7 +358,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 
             const int style = hit_triinfo.switchshadstyle;
 
-            AddDynamicOccluderToRay(context, rayIndex, style);
+            AddDynamicOccluderToRay(rsi, rayIndex, style);
 
             // reject hit
             valid[i] = INVALID;
@@ -391,7 +390,7 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
                 // only pick up the color of the glass on the _exiting_ side of the glass.
                 // (we currently trace "backwards", from surface point --> light source)
                 if (raySurfaceCosAngle < 0) {
-                    AddGlassToRay(context, rayIndex, alpha, sample.xyz() * (1.0 / 255.0));
+                    AddGlassToRay(rsi, rayIndex, alpha, sample.xyz() * (1.0 / 255.0));
                 }
 
                 // reject hit
@@ -419,14 +418,13 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 static void PerRay_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 {
     int *const valid = args->valid;
-    RTCIntersectContext *const context = args->context;
     struct RTCHitN *const potentialHit = args->hit;
     const unsigned int N = args->N;
 
     const int VALID = -1;
     const int INVALID = 0;
 
-    auto *rsi = static_cast<const ray_source_info *>(context);
+    auto *rsi = static_cast<ray_source_info *>(args->context);
 
     for (size_t i = 0; i < N; i++) {
         if (valid[i] != VALID) {
@@ -656,9 +654,16 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::funcprint("Embree version: {}.{}.{}\n", ver_maj, ver_min, ver_pat);
 
     scene = rtcNewScene(device);
+#ifdef HAVE_EMBREE4
+    // necessary for RTCOccludedArguments::filter and RTCIntersectArguments::filter
+    // to work, which we use (see: ray_source_info::setup_intersection_arguments() and
+    // ray_source_info::setup_occluded_arguments())
+    rtcSetSceneFlags(scene, RTC_SCENE_FLAG_FILTER_FUNCTION_IN_ARGUMENTS);
+#else
     // we're using RTCIntersectContext::filter so it's required that we set
     // RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION
     rtcSetSceneFlags(scene, RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION);
+#endif
     rtcSetSceneBuildQuality(scene, RTC_BUILD_QUALITY_HIGH);
     skygeom = CreateGeometry(bsp, device, scene, skyfaces);
     solidgeom = CreateGeometry(bsp, device, scene, solidfaces);
@@ -677,9 +682,8 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::print("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
-static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor)
+static void AddGlassToRay(ray_source_info *ctx, unsigned rayIndex, float opacity, const qvec3d &glasscolor)
 {
-    ray_source_info *ctx = static_cast<ray_source_info *>(context);
     raystream_embree_common_t *rs = ctx->raystream;
 
     if (rs == nullptr) {
@@ -698,9 +702,8 @@ static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float
     rs->_ray_glass_opacity[rayIndex] = opacity;
 }
 
-static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style)
+static void AddDynamicOccluderToRay(ray_source_info *ctx, unsigned rayIndex, int style)
 {
-    ray_source_info *ctx = static_cast<ray_source_info *>(context);
     raystream_embree_common_t *rs = ctx->raystream;
 
     if (rs != nullptr) {
@@ -713,12 +716,51 @@ ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const mo
       self(self_),
       shadowmask(shadowmask_)
 {
+#ifdef HAVE_EMBREE4
+    rtcInitRayQueryContext(this);
+#else
     rtcInitIntersectContext(this);
-
     flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
 
     if (shadowmask != CHANNEL_MASK_DEFAULT) {
         // non-default shadow mask means we have to use the slow path
         filter = PerRay_FilterFuncN;
     }
+#endif
 }
+
+#ifdef HAVE_EMBREE4
+RTCIntersectArguments ray_source_info::setup_intersection_arguments()
+{
+    RTCIntersectArguments result;
+
+    rtcInitIntersectArguments(&result);
+    if (shadowmask != CHANNEL_MASK_DEFAULT) {
+        // non-default shadow mask means we have to use the slow path
+        result.filter = PerRay_FilterFuncN;
+        result.flags = static_cast<RTCRayQueryFlags>(result.flags |
+                RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
+    }
+
+    result.context = this;
+
+    return result;
+}
+
+RTCOccludedArguments ray_source_info::setup_occluded_arguments()
+{
+    RTCOccludedArguments result;
+
+    rtcInitOccludedArguments(&result);
+    if (shadowmask != CHANNEL_MASK_DEFAULT) {
+        // non-default shadow mask means we have to use the slow path
+        result.filter = PerRay_FilterFuncN;
+        result.flags = static_cast<RTCRayQueryFlags>(result.flags |
+                                                     RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
+    }
+
+    result.context = this;
+
+    return result;
+}
+#endif
