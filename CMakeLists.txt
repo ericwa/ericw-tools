@@ -145,8 +145,15 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 find_package(TBB REQUIRED)
 
-find_package(embree REQUIRED)
-if (embree_VERSION_MAJOR EQUAL 4)
+set(embree_DIR_BAK ${embree_DIR})
+
+find_package(embree 3)
+if (NOT embree_FOUND)
+	# find_package clears embree_DIR, so restore it in case we provided
+	# that on the command line to specify the embree4 location
+	set(embree_DIR ${embree_DIR_BAK})
+
+	find_package(embree 4 REQUIRED)
 	add_compile_definitions(HAVE_EMBREE4)
 endif()
 
