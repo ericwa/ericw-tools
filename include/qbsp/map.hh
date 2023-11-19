@@ -111,13 +111,6 @@ public:
     int32_t chop_index = 0; // chopping order; higher numbers chop lower numbers
 };
 
-struct lumpdata
-{
-    int count;
-    int index;
-    void *data;
-};
-
 enum class rotation_t
 {
     none,
