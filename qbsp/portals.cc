@@ -204,9 +204,9 @@ static std::optional<winding_t> BaseWindingForNode(const node_t *node)
     for (auto *np = node->parent; np && w;) {
 
         if (np->children[0] == node) {
-            w = w->clip_front(np->get_plane(), BASE_WINDING_EPSILON, false);
+            w = w->clip_front(np->get_plane().get_plane(), BASE_WINDING_EPSILON, false);
         } else {
-            w = w->clip_back(np->get_plane(), BASE_WINDING_EPSILON, false);
+            w = w->clip_back(np->get_plane().get_plane(), BASE_WINDING_EPSILON, false);
         }
 
         node = np;

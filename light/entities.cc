@@ -1278,14 +1278,11 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
     const light_t *surflight_template, const mbsp_t *bsp, int numverts, const qvec3d *verts)
 {
     qvec3d midpoint = qv::PolyCentroid(verts, verts + numverts);
-    qplane3d plane = bsp->dplanes[face->planenum];
+    qplane3f plane = Face_Plane(bsp, face);
 
     /* Nudge 2 units (by default) along face normal */
-    if (face->side) {
-        plane = -plane;
-    }
-
     vec_t offset = surflight_template->epairs->get_float("_surface_offset");
+
     if (offset == 0)
         offset = 2.0;
 

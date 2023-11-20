@@ -466,7 +466,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         auto *f_texinfo = Face_Texinfo(bsp, &f);
         const auto f_points = Face_Points(bsp, &f);
         const qvec3d f_norm = Face_Normal(bsp, &f);
-        const qplane3d f_plane = Face_Plane(bsp, &f);
+        const qplane3f f_plane = Face_Plane(bsp, &f);
 
         // any face normal within this many degrees can be smoothed with this face
         vec_t f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;

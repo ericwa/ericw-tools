@@ -667,7 +667,7 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         }
 
         /* Set up the plane, not including model offset */
-        qplane3d &plane = lightsurf->plane;
+        qplane3f &plane = lightsurf->plane;
         if (face->side) {
             plane = -bsp->dplanes[face->planenum];
         } else {
@@ -1158,7 +1158,7 @@ static void LightFace_Entity(
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    const qplane3d *plane = &lightsurf->plane;
+    const qplane3f &plane = lightsurf->plane;
 
     /* vis cull */
     if (light_options.visapprox.value() == visapprox_t::VIS &&
@@ -1168,7 +1168,7 @@ static void LightFace_Entity(
         return;
     }
 
-    const vec_t planedist = plane->distance_to(entity->origin.value());
+    const vec_t planedist = plane.distance_to(entity->origin.value());
 
     /* don't bother with lights behind the surface.
 
@@ -1340,7 +1340,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const modelinfo_t *modelinfo = lightsurf->modelinfo;
-    const qplane3d *plane = &lightsurf->plane;
+    const qplane3f &plane = lightsurf->plane;
 
     // FIXME: Normalized sun vector should be stored in the sun_t. Also clarify which way the vector points (towards or
     // away..)
@@ -1348,7 +1348,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
     qvec3d incoming = qv::normalize(sun->sunvec);
 
     /* Don't bother if surface facing away from sun */
-    const vec_t dp = qv::dot(incoming, plane->normal);
+    const vec_t dp = qv::dot(incoming, plane.normal);
     if (dp < -LIGHT_ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
         return;
     }

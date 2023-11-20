@@ -743,7 +743,8 @@ public:
         return {normal, qv::dot(at(0), normal)};
     }
 
-    static winding_base_t from_plane(const qplane3d &plane, const vec_t &worldextent)
+    template<typename TPlane>
+    static winding_base_t from_plane(const qplane3<TPlane> &plane, const vec_t &worldextent)
     {
         /* find the major axis */
         vec_t max = -VECT_MAX;
@@ -863,8 +864,9 @@ public:
     }
 
     // dists/sides can be null, or must have (size() + 1) reserved
+    template<typename TPlane>
     inline std::array<size_t, SIDE_TOTAL> calc_sides(
-        const qplane3d &plane, vec_t *dists, planeside_t *sides, const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
+        const qplane3<TPlane> &plane, vec_t *dists, planeside_t *sides, const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         std::array<size_t, SIDE_TOTAL> counts{};
 
@@ -997,8 +999,9 @@ public:
     Cheaper than clip(...)[SIDE_FRONT]
     ==================
     */
+    template<typename TPlane>
     std::optional<winding_base_t> clip_front(
-        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3<TPlane> &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
     {
         vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));

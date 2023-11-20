@@ -772,7 +772,7 @@ public:
 
     // convert from plane of a different type
     template<typename T2>
-    constexpr qplane3(const qplane3<T2> &plane)
+    explicit constexpr qplane3(const qplane3<T2> &plane)
         : qplane3(plane.normal, static_cast<T2>(plane.dist))
     {
     }
@@ -874,7 +874,7 @@ public:
      * Casting from another matrix type of the same size
      */
     template<class T2>
-    constexpr qmat(const qmat<T2, NRow, NCol> &other)
+    explicit constexpr qmat(const qmat<T2, NRow, NCol> &other)
     {
         for (size_t i = 0; i < NRow * NCol; i++)
             this->m_values[i] = static_cast<T>(other.m_values[i]);

@@ -786,7 +786,7 @@ int bsputil_main(int argc, char **argv)
                         std::reverse(pts.begin(), pts.end());
                     }
 
-                    auto scaled = dplane_t{pts.plane(), p.type};
+                    dplane_t scaled{qplane3f(pts.plane()), p.type};
 
                     plane_remap[i] = new_planes.add_or_find_plane(scaled);
                     i++;

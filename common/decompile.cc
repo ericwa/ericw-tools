@@ -982,7 +982,7 @@ decomp_plane_t MakeDecompPlane(const mbsp_t *bsp, const bsp2_dnode_t *node, cons
     const dplane_t &dplane = *BSP_GetPlane(bsp, node->planenum);
 
     return {// flip the plane if we went down the front side, since we want the outward-facing plane
-        front ? -dplane : dplane, node};
+        qplane3d(front ? -dplane : dplane), node};
 }
 
 decomp_plane_t MakeClipDecompPlane(const mbsp_t *bsp, const bsp2_dclipnode_t *clipnode, const bool front)
@@ -990,7 +990,7 @@ decomp_plane_t MakeClipDecompPlane(const mbsp_t *bsp, const bsp2_dclipnode_t *cl
     const dplane_t &dplane = *BSP_GetPlane(bsp, clipnode->planenum);
 
     return {// flip the plane if we went down the front side, since we want the outward-facing plane
-        front ? -dplane : dplane, nullptr, nullptr, clipnode};
+        qplane3d(front ? -dplane : dplane), nullptr, nullptr, clipnode};
 }
 
 /**
@@ -1084,7 +1084,7 @@ static std::vector<compiled_brush_t> DecompileBrushTask(
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
-        decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t{{bsp->dplanes[side->planenum]}});
+        decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t{qplane3d{bsp->dplanes[side->planenum]}});
         plane.source = side;
     }
 

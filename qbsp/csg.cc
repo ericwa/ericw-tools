@@ -230,7 +230,7 @@ static void ClipInside(
         bool spurious_onplane = false;
         {
             std::array<size_t, SIDE_TOTAL> counts =
-                face.w.calc_sides(splitplane, nullptr, nullptr, qbsp_options.epsilon.value());
+                face.w.calc_sides(splitplane.get_plane(), nullptr, nullptr, qbsp_options.epsilon.value());
 
             if (counts[SIDE_ON] && !counts[SIDE_FRONT] && !counts[SIDE_BACK]) {
                 spurious_onplane = true;
@@ -241,8 +241,8 @@ static void ClipInside(
 
         /* Handle exactly on-plane faces (ignoring direction) */
         if ((face.planenum ^ 1) == (clipface.planenum ^ 1) || spurious_onplane) {
-            const qplane3d faceplane = face.get_plane();
-            const qplane3d clipfaceplane = clipface.get_plane();
+            const qplane3d &faceplane = face.get_plane();
+            const qplane3d &clipfaceplane = clipface.get_plane();
             const vec_t dp = qv::dot(faceplane.normal, clipfaceplane.normal);
             const bool opposite = (dp < 0);
 

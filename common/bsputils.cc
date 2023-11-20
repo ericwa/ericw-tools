@@ -125,10 +125,10 @@ qvec3d Face_Normal(const mbsp_t *bsp, const mface_t *f)
     return Face_Plane(bsp, f).normal;
 }
 
-qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f)
+qplane3f Face_Plane(const mbsp_t *bsp, const mface_t *f)
 {
     Q_assert(f->planenum >= 0 && f->planenum < bsp->dplanes.size());
-    qplane3d result = bsp->dplanes[f->planenum];
+    qplane3f result = bsp->dplanes[f->planenum];
 
     if (f->side) {
         return -result;
@@ -289,7 +289,7 @@ static std::vector<qplane3d> Face_AllocInwardFacingEdgePlanes(const mbsp_t *bsp,
     std::vector<qplane3d> out;
     out.reserve(face->numedges);
 
-    const qplane3d faceplane = Face_Plane(bsp, face);
+    const qplane3f faceplane = Face_Plane(bsp, face);
     for (int i = 0; i < face->numedges; i++) {
         const qvec3f &v0 = GetSurfaceVertexPoint(bsp, face, i);
         const qvec3f &v1 = GetSurfaceVertexPoint(bsp, face, (i + 1) % face->numedges);
@@ -836,7 +836,7 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
         Q_assert_unreachable();
         return qmat4x4f();
     }
-    const qplane3d plane = Face_Plane(bsp, f);
+    const qplane3f plane = Face_Plane(bsp, f);
 
     //           [s]
     // T * vec = [t]
@@ -844,10 +844,10 @@ qmat4x4f WorldToTexSpace(const mbsp_t *bsp, const mface_t *f)
     //           [?]
 
     qmat4x4f T{
-        tex->vecs.at(0, 0), tex->vecs.at(1, 0), static_cast<float>(plane.normal[0]), 0, // col 0
-        tex->vecs.at(0, 1), tex->vecs.at(1, 1), static_cast<float>(plane.normal[1]), 0, // col 1
-        tex->vecs.at(0, 2), tex->vecs.at(1, 2), static_cast<float>(plane.normal[2]), 0, // col 2
-        tex->vecs.at(0, 3), tex->vecs.at(1, 3), static_cast<float>(-plane.dist), 1 // col 3
+        tex->vecs.at(0, 0), tex->vecs.at(1, 0), plane.normal[0], 0, // col 0
+        tex->vecs.at(0, 1), tex->vecs.at(1, 1), plane.normal[1], 0, // col 1
+        tex->vecs.at(0, 2), tex->vecs.at(1, 2), plane.normal[2], 0, // col 2
+        tex->vecs.at(0, 3), tex->vecs.at(1, 3), -plane.dist, 1 // col 3
     };
     return T;
 }
@@ -891,7 +891,7 @@ faceextents_t::faceextents_t(const mface_t &face, const mbsp_t &bsp, float light
         lm_extents[i] = static_cast<int>(tex_bounds[1][i] - tex_bounds[0][i]);
 
         if (lm_extents[i] >= MAXDIMENSION * (16.0 / lightmapshift)) {
-            const qplane3d plane = Face_Plane(&bsp, &face);
+            const qplane3f plane = Face_Plane(&bsp, &face);
             const qvec3f &point = Face_PointAtIndex(&bsp, &face, 0); // grab first vert
             const char *texname = Face_TextureName(&bsp, &face);
 

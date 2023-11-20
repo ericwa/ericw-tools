@@ -103,7 +103,7 @@ struct lightsurf_t
     bool twosided;
     int32_t object_channel_mask;
 
-    qplane3d plane;
+    qplane3f plane;
     qvec3d snormal;
     qvec3d tnormal;
 

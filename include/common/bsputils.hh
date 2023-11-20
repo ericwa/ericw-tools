@@ -46,7 +46,7 @@ mface_t *BSP_GetFace(mbsp_t *bsp, int fnum);
 
 int Face_VertexAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
 const qvec3f &Face_PointAtIndex(const mbsp_t *bsp, const mface_t *f, int v);
-qplane3d Face_Plane(const mbsp_t *bsp, const mface_t *f);
+qplane3f Face_Plane(const mbsp_t *bsp, const mface_t *f);
 const mtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face);
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face);

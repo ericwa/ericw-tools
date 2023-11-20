@@ -453,9 +453,9 @@ static void PerRay_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 
 // building faces for skip-textured bmodels
 
-qplane3d Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
+qplane3f Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
 {
-    qplane3d plane = bsp->dplanes[node->planenum];
+    qplane3f plane = bsp->dplanes[node->planenum];
 
     if (side) {
         return -plane;
@@ -468,16 +468,16 @@ qplane3d Node_Plane(const mbsp_t *bsp, const bsp2_dnode_t *node, bool side)
  * `planes` all of the node planes that bound this leaf, facing inward.
  */
 static void Leaf_MakeFaces(const mbsp_t *bsp, const modelinfo_t *modelinfo, const mleaf_t *leaf,
-    const std::vector<qplane3d> &planes, std::vector<polylib::winding_t> &result)
+    const std::vector<qplane3f> &planes, std::vector<polylib::winding_t> &result)
 {
-    for (const qplane3d &plane : planes) {
+    for (const qplane3f &plane : planes) {
         // flip the inward-facing split plane to get the outward-facing plane of the face we're constructing
-        qplane3d faceplane = -plane;
+        qplane3f faceplane = -plane;
 
         std::optional<polylib::winding_t> winding = polylib::winding_t::from_plane(faceplane, 10e6);
 
         // clip `winding` by all of the other planes
-        for (const qplane3d &plane2 : planes) {
+        for (const qplane3f &plane2 : planes) {
             if (&plane2 == &plane)
                 continue;
 
@@ -497,7 +497,7 @@ static void Leaf_MakeFaces(const mbsp_t *bsp, const modelinfo_t *modelinfo, cons
     }
 }
 
-void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int nodenum, std::vector<qplane3d> *planes,
+void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int nodenum, std::vector<qplane3f> *planes,
     std::vector<polylib::winding_t> &result)
 {
     if (nodenum < 0) {
@@ -527,7 +527,7 @@ void MakeFaces_r(const mbsp_t *bsp, const modelinfo_t *modelinfo, const int node
 static void MakeFaces(
     const mbsp_t *bsp, const modelinfo_t *modelinfo, const dmodelh2_t *model, std::vector<polylib::winding_t> &result)
 {
-    std::vector<qplane3d> planes;
+    std::vector<qplane3f> planes;
     MakeFaces_r(bsp, modelinfo, model->headnode[0], &planes, result);
     Q_assert(planes.empty());
 }

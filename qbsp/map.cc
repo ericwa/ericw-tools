@@ -361,7 +361,7 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
                 continue;
             }
             const auto &plane = map.get_plane(ob.faces[j].planenum ^ 1);
-            w = w->clip_front(plane, 0); // CLIP_EPSILON);
+            w = w->clip_front(plane.get_plane(), 0); // CLIP_EPSILON);
         }
 
         if (w) {
