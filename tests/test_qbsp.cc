@@ -1696,6 +1696,7 @@ TEST_CASE("q1_hull1_content_types" * doctest::test_suite("testmaps_q1"))
         {{448, -64, 0},
             {CONTENTS_EMPTY, new_leaf, CONTENTS_EMPTY}}, // func_detail_illusionary + _mirrorinside is empty in hull1
         {{512, 0, 0}, {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}}, // func_detail_wall is solid in hull1
+        {{576, 0, 0}, {CONTENTS_EMPTY, new_leaf, CONTENTS_SOLID}}, // clip is empty in hull0, solid in hull1
     };
 
     for (const auto &[point, expected_types] : expected) {
@@ -2007,4 +2008,43 @@ TEST_CASE("wrbrushes + misc_external_map")
     auto &brush = model.brushes.at(0);
     REQUIRE(brush.bounds.maxs() == qvec3f{64,64,16});
     REQUIRE(brush.bounds.mins() == qvec3f{-64,-64,-16});
+}
+
+TEST_CASE("wrbrushes content types")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_hull1_content_types.map", {"-wrbrushes"});
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
+    REQUIRE(lump.models.size() == 1);
+
+    auto &model = lump.models.at(0);
+    REQUIRE(model.numfaces == 0); // all faces are axial
+    REQUIRE(model.modelnum == 0);
+
+    const std::vector<int> expected {
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_WATER,
+        CONTENTS_SLIME,
+        CONTENTS_LAVA,
+        CONTENTS_SOLID,
+        CONTENTS_SKY,
+        BSPXBRUSHES_CONTENTS_CLIP,
+        CONTENTS_SOLID, // detail solid in source map
+        CONTENTS_SOLID, // detail fence in source map
+        CONTENTS_SOLID, // FIXME: detail illusionary brush should be omitted
+        CONTENTS_SOLID, // detail fence in source map
+        CONTENTS_SOLID, // FIXME: detail illusionary brush should be omitted
+        CONTENTS_SOLID // detail wall in source map
+    };
+    REQUIRE(model.brushes.size() == expected.size());
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        INFO("brush ", i);
+        CHECK(expected[i] == model.brushes[i].contents);
+    }
 }

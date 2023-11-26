@@ -104,6 +104,8 @@ enum q1_contents_t : int32_t
     CONTENTS_MIN = CONTENTS_SKY
 };
 
+constexpr static int BSPXBRUSHES_CONTENTS_CLIP = -8;
+
 struct bsp29_dnode_t
 {
     int32_t planenum;

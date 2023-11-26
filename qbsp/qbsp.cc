@@ -1324,7 +1324,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
                 if (contents.is_clip(qbsp_options.target_game)) {
-                    perbrush.contents = -8;
+                    perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     perbrush.contents = contents.native;
                 }
@@ -1334,7 +1334,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
             //                      break;
             default: {
                 if (contents.is_clip(qbsp_options.target_game)) {
-                    perbrush.contents = -8;
+                    perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
                         contents.to_string(qbsp_options.target_game));
