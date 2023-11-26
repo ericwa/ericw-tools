@@ -1393,12 +1393,20 @@ static void BSPX_CreateBrushList()
         }
 
         if (modelnum == 0) {
+            // add brushes from world brush entities (func_group, etc.) to the worldspawn model
             for (size_t e = 1; e < map.entities.size(); ++e) {
                 mapentity_t &bent = map.entities.at(e);
 
                 brushes.reserve(brushes.size() + ent.mapbrushes.size());
 
                 if (IsWorldBrushEntity(bent)) {
+                    // skip illusionary entities
+                    const std::string &classname = bent.epairs.get("classname");
+                    if (!Q_strcasecmp(classname, "func_detail_illusionary"))
+                        continue;
+                    if (!Q_strcasecmp(classname, "func_illusionary_visblocker"))
+                        continue;
+
                     for (auto &b : bent.mapbrushes) {
                         brushes.push_back(&b);
                     }

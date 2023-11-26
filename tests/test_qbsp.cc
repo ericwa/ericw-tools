@@ -2036,9 +2036,9 @@ TEST_CASE("wrbrushes content types")
         BSPXBRUSHES_CONTENTS_CLIP,
         CONTENTS_SOLID, // detail solid in source map
         CONTENTS_SOLID, // detail fence in source map
-        CONTENTS_SOLID, // FIXME: detail illusionary brush should be omitted
+        // detail illusionary brush should be omitted
         CONTENTS_SOLID, // detail fence in source map
-        CONTENTS_SOLID, // FIXME: detail illusionary brush should be omitted
+        // detail illusionary brush should be omitted
         CONTENTS_SOLID // detail wall in source map
     };
     REQUIRE(model.brushes.size() == expected.size());
@@ -2047,4 +2047,27 @@ TEST_CASE("wrbrushes content types")
         INFO("brush ", i);
         CHECK(expected[i] == model.brushes[i].contents);
     }
+}
+
+TEST_CASE("read bspx brushes")
+{
+    auto bsp_path = std::filesystem::path(testmaps_dir) / "compiled" / "q1_cube.bsp";
+
+    bspdata_t bspdata;
+    LoadBSPFile(bsp_path, &bspdata);
+    bspdata.version->game->init_filesystem(bsp_path, qbsp_options);
+    ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspdata.bspx.entries.at("BRUSHLIST"));
+    REQUIRE(lump.models.size() == 1);
+
+    CHECK(lump.models[0].modelnum == 0);
+    CHECK(lump.models[0].numfaces == 0);
+    CHECK(lump.models[0].ver == 1);
+    REQUIRE(lump.models[0].brushes.size() == 1);
+
+    auto &brush = lump.models[0].brushes[0];
+    CHECK(brush.bounds == aabb3f{qvec3f{32, -240, 80}, qvec3f{80, -144, 112}});
+    CHECK(brush.contents == CONTENTS_SOLID);
+    CHECK(brush.faces.size() == 0);
 }

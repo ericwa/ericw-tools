@@ -55,7 +55,7 @@ void bspx_lump_t::stream_read(std::istream &s)
 void bspxbrushes_perbrush::stream_write(std::ostream &s) const {
     s <= bounds;
     s <= contents;
-    s <= static_cast<int32_t>(faces.size());
+    s <= static_cast<uint16_t>(faces.size());
 
     for (auto &face : faces) {
         s <= face;
@@ -67,7 +67,7 @@ void bspxbrushes_perbrush::stream_read(std::istream &s)
     s >= bounds;
     s >= contents;
 
-    int32_t numfaces = 0;
+    uint16_t numfaces = 0;
     s >= numfaces;
 
     faces.resize(numfaces);
