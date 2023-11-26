@@ -145,6 +145,8 @@ void MainWindow::createPropertiesSidebar()
     auto *formLayout = new QFormLayout();
 
     vis_checkbox = new QCheckBox(tr("vis"));
+    light_checkbox = new QCheckBox(tr("light"));
+    light_checkbox->setChecked(true);
 
     common_options = new QLineEdit();
     qbsp_options = new QLineEdit();
@@ -219,7 +221,7 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(tr("common"), common_options);
     formLayout->addRow(tr("qbsp"), qbsp_options);
     formLayout->addRow(vis_checkbox, vis_options);
-    formLayout->addRow(tr("light"), light_options);
+    formLayout->addRow(light_checkbox, light_options);
     formLayout->addRow(reload_button);
     formLayout->addRow(rendermode_group);
     formLayout->addRow(drawportals);
@@ -537,7 +539,7 @@ std::filesystem::path MakeFSPath(const QString &string)
 
 bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_common_args,
     std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args,
-    std::vector<std::string> extra_light_args, bool run_vis)
+    std::vector<std::string> extra_light_args, bool run_vis, bool run_light)
 {
     auto resetActiveTabText = [&]() {
         QMetaObject::invokeMethod(this, std::bind(&MainWindow::logWidgetSetText, this, m_activeLogTab,
@@ -585,7 +587,7 @@ bspdata_t MainWindow::QbspVisLight_Common(const std::filesystem::path &name, std
     resetActiveTabText();
 
     // run light
-    {
+    if (run_light) {
         m_activeLogTab = ETLogTab::TAB_LIGHT;
         std::vector<std::string> light_args{
             "", // the exe path, which we're ignoring in this case
@@ -722,7 +724,7 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
 
         } else {
             m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options),
-                ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked());
+                ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked(), light_checkbox->isChecked());
 
             // FIXME: move to a lightpreview_settings
             settings::common_settings settings;

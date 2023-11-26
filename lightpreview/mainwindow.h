@@ -96,7 +96,7 @@ private:
     int compileMap(const QString &file, bool is_reload);
     void compileThreadExited();
     bspdata_t QbspVisLight_Common(const fs::path &name, std::vector<std::string> extra_common_args,
-        std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis);
+        std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis, bool run_light);
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
@@ -113,6 +113,7 @@ private:
     GLView *glView = nullptr;
 
     QCheckBox *vis_checkbox = nullptr;
+    QCheckBox *light_checkbox = nullptr;
     QCheckBox *nearest = nullptr;
     QCheckBox *bspx_decoupled_lm = nullptr;
     QCheckBox *bspx_normals = nullptr;
