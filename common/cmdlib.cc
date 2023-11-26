@@ -728,3 +728,9 @@ void q_aligned_free(void *ptr)
     free(ptr);
 #endif
 }
+
+std::vector<uint8_t> StringToVector(const std::string &str)
+{
+    std::vector<uint8_t> result(str.begin(), str.end());
+    return result;
+}

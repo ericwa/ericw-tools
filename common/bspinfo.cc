@@ -49,43 +49,32 @@ static std::string hex_string(const uint8_t *bytes, const size_t count)
 /**
  * returns a JSON array of models
  */
-json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
+static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
 {
     json j = json::array();
 
     imemstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
 
     p >> endianness<std::endian::little>;
+    bspxbrushes structured;
+    p >= structured;
 
-    while (true) {
-        bspxbrushes_permodel src_model;
-        p >= src_model;
-
-        if (!p) {
-            break;
-        }
-
+    for (const bspxbrushes_permodel &src_model : structured.models) {
         json &model = j.insert(j.end(), json::object()).value();
         model["ver"] = src_model.ver;
         model["modelnum"] = src_model.modelnum;
-        model["numbrushes"] = src_model.numbrushes;
+        model["numbrushes"] = src_model.brushes.size();
         model["numfaces"] = src_model.numfaces;
         json &brushes = (model.emplace("brushes", json::array())).first.value();
 
-        for (int32_t i = 0; i < src_model.numbrushes; ++i) {
-            bspxbrushes_perbrush src_brush;
-            p >= src_brush;
-
+        for (const bspxbrushes_perbrush &src_brush : src_model.brushes) {
             json &brush = brushes.insert(brushes.end(), json::object()).value();
             brush.push_back({"mins", src_brush.bounds.mins()});
             brush.push_back({"maxs", src_brush.bounds.maxs()});
             brush.push_back({"contents", src_brush.contents});
             json &faces = (brush.emplace("faces", json::array())).first.value();
 
-            for (int32_t j = 0; j < src_brush.numfaces; ++j) {
-                bspxbrushes_perface src_face;
-                p >= std::tie(src_face.normal, src_face.dist);
-
+            for (const bspxbrushes_perface &src_face : src_brush.faces) {
                 json &face = faces.insert(faces.end(), json::object()).value();
                 face.push_back({"normal", src_face.normal});
                 face.push_back({"dist", src_face.dist});

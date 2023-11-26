@@ -67,7 +67,6 @@ mapentity_t &LoadMapPath(const std::filesystem::path &name)
 }
 
 #include <common/bspinfo.hh>
-#include <nlohmann/json.hpp>
 
 std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     const std::filesystem::path &name, std::vector<std::string> extra_args)
@@ -1998,21 +1997,14 @@ TEST_CASE("wrbrushes + misc_external_map")
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_external_map_base.map", {"-wrbrushes"});
 
-    auto models_json = serialize_bspxbrushlist(bspx.at("BRUSHLIST"));
-    logging::print("{}\n", to_string(models_json));
+    bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
 
-    REQUIRE(models_json.size() == 1);
+    REQUIRE(lump.models.size() == 1);
 
-    auto &model_json = models_json.at(0);
-    REQUIRE(model_json.at("brushes").size() == 1);
+    auto &model = lump.models.at(0);
+    REQUIRE(model.brushes.size() == 1);
 
-    auto &brush_json = model_json.at("brushes").at(0);
-    REQUIRE(brush_json.at("maxs") == nlohmann::json::array({nlohmann::json::number_float_t(64),
-                                                            nlohmann::json::number_float_t(64),
-                                                            nlohmann::json::number_float_t(16)
-        }));
-    REQUIRE(brush_json.at("mins") == nlohmann::json::array({nlohmann::json::number_float_t(-64),
-                                                            nlohmann::json::number_float_t(-64),
-                                                            nlohmann::json::number_float_t(-16)
-                                                           }));
+    auto &brush = model.brushes.at(0);
+    REQUIRE(brush.bounds.maxs() == qvec3f{64,64,16});
+    REQUIRE(brush.bounds.mins() == qvec3f{-64,-64,-16});
 }

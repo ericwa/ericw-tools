@@ -53,11 +53,26 @@ struct bspx_lump_t
 };
 
 // BRUSHLIST BSPX lump
+using bspxbrushes_perface = qplane3f;
+
+struct bspxbrushes_perbrush
+{
+    aabb3f bounds;
+    int16_t contents;
+    // non-axial faces only
+    std::vector<bspxbrushes_perface> faces;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
+};
+
 struct bspxbrushes_permodel
 {
     int32_t ver;
     int32_t modelnum;
-    int32_t numbrushes;
+    std::vector<bspxbrushes_perbrush> brushes;
+    // ignored when writing
     int32_t numfaces;
 
     // serialize for streams
@@ -65,18 +80,13 @@ struct bspxbrushes_permodel
     void stream_read(std::istream &s);
 };
 
-struct bspxbrushes_perbrush
-{
-    aabb3f bounds;
-    int16_t contents;
-    uint16_t numfaces;
+struct bspxbrushes {
+    std::vector<bspxbrushes_permodel> models;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
     void stream_read(std::istream &s);
 };
-
-using bspxbrushes_perface = qplane3f;
 
 struct bspxfacenormals_per_vert
 {
