@@ -279,7 +279,7 @@ public:
         this, "phsonly", false, &vis_advanced_group, "re-calculate the PHS of a Quake II BSP without touching the PVS"};
     setting_invertible_bool autoclean{
         this, "autoclean", true, &vis_output_group, "remove any extra files on successful completion"};
-    setting_scalar targetratio{this, "targetchecks", 0.0, 0.0, 9999.0, &performance_group,
+    setting_scalar targetratio{this, "targetchecks", 0.5, 0.0, 9999.0, &performance_group,
         "target ratio of target checks to regular checks (0.0 = no target checks, 1.0 = equal amounts of regular and target checks)"};
 
     fs::path sourceMap;
