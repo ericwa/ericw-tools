@@ -366,7 +366,8 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
     }
 
     // check all target portals instead of just neighbor portals, if the time is right
-    if (prevstack.num_expected_targetchecks > 0 &&
+    if (vis_options.targetratio.value() > 0.0 &&
+        prevstack.num_expected_targetchecks > 0 &&
         thread->numsteps * vis_options.targetratio.value() >=
         thread->numtargetchecks + prevstack.num_expected_targetchecks)
     {
@@ -411,13 +412,11 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         }
 
         const auto might = stack.mightsee->data(); // buffer of stack.mightsee can change between iterations
-        int nummightsee = 0;
         uint32_t more = 0;
         const int numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
         for (int j = 0; j < numblocks; j++) {
             might[j] = prevstack.mightsee->data()[j] & test[j];
             more |= (might[j] & ~vis[j]);
-            nummightsee += std::popcount(might[j]);
         }
 
         if (!more) {
@@ -427,7 +426,16 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
         }
 
         stack.did_targetchecks = false;
-        stack.num_expected_targetchecks = prevstack.num_expected_targetchecks + nummightsee;
+        stack.num_expected_targetchecks = 0;
+
+        // calculate num_expected_targetchecks only if we're using it, since it's somewhat expensive to compute
+        if (vis_options.targetratio.value() > 0.0) {
+            int nummightsee = 0;
+            for (int j = 0; j < numblocks; j++) {
+                nummightsee += std::popcount(might[j]);
+            }
+            stack.num_expected_targetchecks = prevstack.num_expected_targetchecks + nummightsee;
+        }
 
         // get plane of portal, point normal into the neighbor leaf
         stack.portalplane = p->plane;
