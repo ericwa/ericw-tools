@@ -33,6 +33,27 @@ const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, cons
     return nullptr;
 }
 
+void CheckFaceNormal(const mbsp_t *bsp, const mface_t *face)
+{
+    qvec3d face_normal_from_plane = Face_Normal(bsp, face);
+
+    auto winding = Face_Winding(bsp, face);
+    winding.remove_colinear();
+    if (winding.size() < 3)
+        return;
+
+    auto winding_plane = winding.plane();
+
+    CHECK(qv::dot(face_normal_from_plane, winding_plane.normal) > 0.0);
+}
+
+void CheckBsp(const mbsp_t *bsp)
+{
+    for (const mface_t &face : bsp->dfaces) {
+        CheckFaceNormal(bsp, &face);
+    }
+}
+
 mapentity_t &LoadMap(const char *map, size_t length)
 {
     ::map.reset();
@@ -120,6 +141,8 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     bspdata.version->game->init_filesystem(qbsp_options.bsp_path, qbsp_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    CheckBsp(&std::get<mbsp_t>(bspdata.bsp));
 
     // write to .json for inspection
     serialize_bsp(
