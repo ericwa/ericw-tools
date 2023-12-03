@@ -7,7 +7,7 @@
 #include "test_qbsp.hh"
 #include "testutils.hh"
 
-TEST_CASE("q2_detail_leak_test.map" * doctest::may_fail())
+TEST_CASE("q2_detail_leak_test.map")
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_detail_leak_test.map", {}, runvis_t::yes);
     const auto vis = DecompressAllVis(&bsp);
