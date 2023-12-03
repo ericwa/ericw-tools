@@ -121,6 +121,70 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
     return 0;
 }
 
+enum class vistest_action {
+    action_continue,
+    action_pass
+};
+
+static vistest_action VisTests(visstats_t &stats, pstack_t &stack, const pstack_t* const head, const pstack_t* const prevstack)
+{
+    /* TEST 0 :: source -> pass -> target */
+    if (vis_options.level.value() > 0) {
+        if (stack.numseparators[0]) {
+            for (int j = 0; j < stack.numseparators[0]; j++) {
+                stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[0][j]);
+                if (!stack.pass)
+                    break;
+            }
+        } else {
+            /* Using prevstack source for separator cache correctness */
+            ClipToSeparators(stats, prevstack->source, head->portalplane, prevstack->pass, stack.pass, 0, stack);
+        }
+        if (!stack.pass) {
+            FreeStackWinding(stack.source, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    /* TEST 1 :: pass -> source -> target */
+    if (vis_options.level.value() > 1) {
+        if (stack.numseparators[1]) {
+            for (int j = 0; j < stack.numseparators[1]; j++) {
+                stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[1][j]);
+                if (!stack.pass)
+                    break;
+            }
+        } else {
+            /* Using prevstack source for separator cache correctness */
+            ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, prevstack->source, stack.pass, 1, stack);
+        }
+        if (!stack.pass) {
+            FreeStackWinding(stack.source, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    /* TEST 2 :: target -> pass -> source */
+    if (vis_options.level.value() > 2) {
+        ClipToSeparators(stats, stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, stack);
+        if (!stack.source) {
+            FreeStackWinding(stack.pass, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    /* TEST 3 :: pass -> target -> source */
+    if (vis_options.level.value() > 3) {
+        ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, stack);
+        if (!stack.source) {
+            FreeStackWinding(stack.pass, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    return vistest_action::action_pass;
+}
+
 /*
   ==================
   TargetChecks
@@ -208,59 +272,8 @@ TargetChecks(visstats_t &stats, const pstack_t* const head, const pstack_t* cons
             continue;
         }
 
-        /* TEST 0 :: source -> pass -> target */
-        if (vis_options.level.value() > 0) {
-            if (stack.numseparators[0]) {
-                for (j = 0; j < stack.numseparators[0]; j++) {
-                    stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[0][j]);
-                    if (!stack.pass)
-                        break;
-                }
-            } else {
-                /* Using prevstack source for separator cache correctness */
-                ClipToSeparators(stats, prevstack->source, head->portalplane, prevstack->pass, stack.pass, 0, stack);
-            }
-            if (!stack.pass) {
-                FreeStackWinding(stack.source, stack);
-                continue;
-            }
-        }
-
-        /* TEST 1 :: pass -> source -> target */
-        if (vis_options.level.value() > 1) {
-            if (stack.numseparators[1]) {
-                for (j = 0; j < stack.numseparators[1]; j++) {
-                    stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[1][j]);
-                    if (!stack.pass)
-                        break;
-                }
-            } else {
-                /* Using prevstack source for separator cache correctness */
-                ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, prevstack->source, stack.pass, 1, stack);
-            }
-            if (!stack.pass) {
-                FreeStackWinding(stack.source, stack);
-                continue;
-            }
-        }
-
-        /* TEST 2 :: target -> pass -> source */
-        if (vis_options.level.value() > 2) {
-            ClipToSeparators(stats, stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, stack);
-            if (!stack.source) {
-                FreeStackWinding(stack.pass, stack);
-                continue;
-            }
-        }
-
-        /* TEST 3 :: pass -> target -> source */
-        if (vis_options.level.value() > 3) {
-            ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, stack);
-            if (!stack.source) {
-                FreeStackWinding(stack.pass, stack);
-                continue;
-            }
-        }
+        if (VisTests(stats, stack, head, prevstack) == vistest_action::action_continue)
+            continue;
 
         // mark leaf visible
         (*stack.mightsee)[p->leaf] = true;
@@ -488,60 +501,8 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
 
         thread->stats.c_portaltest++;
 
-        /* TEST 0 :: source -> pass -> target */
-        if (vis_options.level.value() > 0) {
-            if (stack.numseparators[0]) {
-                for (int j = 0; j < stack.numseparators[0]; j++) {
-                    stack.pass = ClipStackWinding(thread->stats, stack.pass, stack, stack.separators[0][j]);
-                    if (!stack.pass)
-                        break;
-                }
-            } else {
-                /* Using prevstack source for separator cache correctness */
-                ClipToSeparators(
-                    thread->stats, prevstack.source, thread->pstack_head.portalplane, prevstack.pass, stack.pass, 0, stack);
-            }
-            if (!stack.pass) {
-                FreeStackWinding(stack.source, stack);
-                continue;
-            }
-        }
-
-        /* TEST 1 :: pass -> source -> target */
-        if (vis_options.level.value() > 1) {
-            if (stack.numseparators[1]) {
-                for (int j = 0; j < stack.numseparators[1]; j++) {
-                    stack.pass = ClipStackWinding(thread->stats, stack.pass, stack, stack.separators[1][j]);
-                    if (!stack.pass)
-                        break;
-                }
-            } else {
-                /* Using prevstack source for separator cache correctness */
-                ClipToSeparators(thread->stats, prevstack.pass, prevstack.portalplane, prevstack.source, stack.pass, 1, stack);
-            }
-            if (!stack.pass) {
-                FreeStackWinding(stack.source, stack);
-                continue;
-            }
-        }
-
-        /* TEST 2 :: target -> pass -> source */
-        if (vis_options.level.value() > 2) {
-            ClipToSeparators(thread->stats, stack.pass, stack.portalplane, prevstack.pass, stack.source, 2, stack);
-            if (!stack.source) {
-                FreeStackWinding(stack.pass, stack);
-                continue;
-            }
-        }
-
-        /* TEST 3 :: pass -> target -> source */
-        if (vis_options.level.value() > 3) {
-            ClipToSeparators(thread->stats, prevstack.pass, prevstack.portalplane, stack.pass, stack.source, 3, stack);
-            if (!stack.source) {
-                FreeStackWinding(stack.pass, stack);
-                continue;
-            }
-        }
+        if (VisTests(thread->stats, stack, &thread->pstack_head, &prevstack) == vistest_action::action_continue)
+            continue;
 
         thread->stats.c_portalpass++;
 
