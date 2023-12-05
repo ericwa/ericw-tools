@@ -5,6 +5,7 @@
 #include <common/json.hh>
 #include <common/log.hh>
 #include <common/settings.hh>
+#include <common/color.hh>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "../3rdparty/stb_image.h"
@@ -310,20 +311,22 @@ void clear()
     textures.clear();
 }
 
-qvec3b calculate_average(const std::vector<qvec4b> &pixels)
+qvec3f calculate_average(const std::vector<qvec4b> &pixels)
 {
-    qvec3d avg{};
+    qvec3f avg{};
     size_t n = 0;
 
     for (auto &pixel : pixels) {
         // FIXME: is this valid for transparent averages?
         if (pixel[3] >= 127) {
-            avg += pixel.xyz();
+            avg[0] += color::srgb_to_linear(pixel[0] / 255.0f);
+            avg[1] += color::srgb_to_linear(pixel[1] / 255.0f);
+            avg[2] += color::srgb_to_linear(pixel[2] / 255.0f);
             n++;
         }
     }
 
-    return avg /= n;
+    return avg / n;
 }
 
 std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
@@ -473,7 +476,10 @@ std::optional<texture_meta> load_wal_json_meta(
         if (json.contains("color")) {
             auto &color = json["color"];
 
-            qvec3b color_vec = {color.at(0).get<int32_t>(), color.at(1).get<int32_t>(), color.at(2).get<int32_t>()};
+            // specified in 0-255 SRGB, convert to 0-1 linear
+            qvec3f color_vec = {color.at(0).get<int32_t>(), color.at(1).get<int32_t>(), color.at(2).get<int32_t>()};
+            color_vec /= 255.0f;
+            color_vec = color::srgb_to_linear(color_vec);
 
             meta.color_override = {color_vec};
         }
@@ -537,27 +543,20 @@ if (texture) {
 tex.meta.averageColor = img::calculate_average(tex.pixels);
 */
 
-static qvec3b increase_saturation(const qvec3b &color)
+static qvec3f increase_saturation(qvec3f color)
 {
-    qvec3f color_float = qvec3f(color);
-    color_float /= 255.0f;
-
     // square it to boost saturation
-    color_float *= color_float;
+    color *= color;
 
     // multiply by 2, then scale back to avoid clipping if needed
-    color_float *= 2.0f;
+    color *= 2.0f;
 
-    float max_comp = qv::max(color_float);
+    float max_comp = qv::max(color);
     if (max_comp > 1.0f) {
-        color_float /= max_comp;
+        color /= max_comp;
     }
 
-    qvec3b color_int;
-    for (int i = 0; i < 3; ++i) {
-        color_int[i] = static_cast<uint8_t>(std::clamp(color_float[i] * 255.0f, 0.0f, 255.0f));
-    }
-    return color_int;
+    return color;
 }
 
 // Load the specified texture from the BSP

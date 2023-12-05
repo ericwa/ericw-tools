@@ -33,6 +33,7 @@
 #include <common/bsputils.hh>
 #include <common/qvec.hh>
 #include <common/ostream.hh>
+#include <common/color.hh>
 
 #include <atomic>
 #include <cassert>
@@ -2401,9 +2402,16 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
             /* Scale and handle gamma adjustment */
             color *= cfg.rangescale.value();
 
-            if (cfg.lightmapgamma.value() != 1.0) {
+            // apply gamma correction
+            if (cfg.srgbpipeline.value()) {
                 for (auto &c : color) {
-                    c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+                    c = color::linear_to_srgb(c / 255.0f) * 255.0f;
+                }
+            } else {
+                if (cfg.lightmapgamma.value() != 1.0) {
+                    for (auto &c : color) {
+                        c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+                    }
                 }
             }
 
@@ -2443,11 +2451,19 @@ static void LightPoint_ScaleAndClamp(qvec3d &color)
     /* Scale and handle gamma adjustment */
     color *= cfg.rangescale.value();
 
-    if (cfg.lightmapgamma.value() != 1.0) {
+    // apply gamma correction
+    if (cfg.srgbpipeline.value()) {
         for (auto &c : color) {
-            c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+            c = color::linear_to_srgb(c / 255.0) * 255.0;
+        }
+    } else {
+        if (cfg.lightmapgamma.value() != 1.0) {
+            for (auto &c : color) {
+                c = pow(c / 255.0, 1.0 / cfg.lightmapgamma.value()) * 255.0;
+            }
         }
     }
+
 
     // clamp
     // FIXME: should this be a brightness clamp?

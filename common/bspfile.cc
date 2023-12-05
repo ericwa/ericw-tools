@@ -955,6 +955,29 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         has_rgb_lightmap = true;
     }
 
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    {
+        /* don't save lightmaps for "aaatrigger" texture */
+        if (!Q_strcasecmp(texname, "aaatrigger"))
+            return false;
+
+        /* don't save lightmaps for "skip" texture */
+        if (!Q_strcasecmp(texname, "skip"))
+            return false;
+
+        return !(flags.native & TEX_SPECIAL);
+    }
+
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override
+    {
+        /* don't save lightmaps for "aaatrigger" texture */
+        if (!Q_strcasecmp(texname, "aaatrigger"))
+            return false;
+
+        return true;
+    }
+
     const std::initializer_list<aabb3d> &get_hull_sizes() const override
     {
         static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},

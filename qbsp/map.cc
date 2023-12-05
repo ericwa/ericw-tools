@@ -542,6 +542,8 @@ static bool IsSkipName(const char *name)
         return true;
     if (!Q_strcasecmp(name, "null")) // zhlt compat
         return true;
+    if (!Q_strcasecmp(name, "aaatrigger")) // vhlt compat
+        return true;
     if (!Q_strcasecmp(name, "__TB_empty"))
         return true;
     return false;
@@ -689,10 +691,9 @@ static surfflags_t SurfFlagsForEntity(
         // FIXME: get_color, to match settings
         if (entity.epairs.has("_surflight_color") && entity.epairs.get_vector("_surflight_color", color) == 3) {
             if (color[0] <= 1 && color[1] <= 1 && color[2] <= 1) {
-                flags.surflight_color =
-                    qvec3b{(uint8_t)(color[0] * 255), (uint8_t)(color[1] * 255), (uint8_t)(color[2] * 255)};
+                flags.surflight_color = qvec3f(color);
             } else {
-                flags.surflight_color = qvec3b{(uint8_t)(color[0]), (uint8_t)(color[1]), (uint8_t)(color[2])};
+                flags.surflight_color = qvec3f(color) / 255.0;
             }
         }
     }

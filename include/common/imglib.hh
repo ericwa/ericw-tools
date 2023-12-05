@@ -53,7 +53,7 @@ struct texture_meta
 
     // so .json metadata can set an emissive color when we don't have
     // texture data. Also useful to override the emissive color
-    std::optional<qvec3b> color_override;
+    std::optional<qvec3f> color_override;
 
     // Q2/WAL only
     surfflags_t flags{};
@@ -79,7 +79,7 @@ struct texture
 
     // This member is only set before insertion into the table
     // and not calculated by individual load functions.
-    qvec3b averageColor{0};
+    qvec3f averageColor{0};
 };
 
 extern std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
@@ -87,7 +87,7 @@ extern std::unordered_map<std::string, texture, case_insensitive_hash, case_inse
 // clears the texture cache
 void clear();
 
-qvec3b calculate_average(const std::vector<qvec4b> &pixels);
+qvec3f calculate_average(const std::vector<qvec4b> &pixels);
 
 const texture *find(const std::string_view &str);
 

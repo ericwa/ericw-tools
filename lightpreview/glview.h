@@ -102,6 +102,7 @@ private:
     // render options
     bool m_lighmapOnly = false;
     bool m_fullbright = false;
+    bool m_overbright = false;
     bool m_drawNormals = false;
     std::optional<int> m_drawLeafs;
     bool m_showTris = false;
@@ -181,6 +182,7 @@ private:
     int m_program_alpha_test_location = 0;
     int m_program_lightmap_only_location = 0;
     int m_program_fullbright_location = 0;
+    int m_program_overbright_location = 0;
     int m_program_drawnormals_location = 0;
     int m_program_drawflat_location = 0;
     int m_program_style_scalars_location = 0;
@@ -194,6 +196,7 @@ private:
     int m_skybox_program_opacity_location = 0;
     int m_skybox_program_lightmap_only_location = 0;
     int m_skybox_program_fullbright_location = 0;
+    int m_skybox_program_overbright_location = 0;
     int m_skybox_program_drawnormals_location = 0;
     int m_skybox_program_drawflat_location = 0;
     int m_skybox_program_style_scalars_location = 0;
@@ -221,6 +224,7 @@ public:
     // FIXME: distinguish render modes from render options
     void setLighmapOnly(bool lighmapOnly);
     void setFullbright(bool fullbright);
+    void setOverbright(bool overbright);
     void setDrawNormals(bool drawnormals);
     void setDrawLeafs(std::optional<int> hullnum);
     void setShowTris(bool showtris);

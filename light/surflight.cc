@@ -83,16 +83,31 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
                 // FIXME: this only handles the "_sky_surface"  "red green blue" format.
                 //        There are other more complex variants we could handle documented in the link above.
                 // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-                texture_color = cfg.sky_surface.value() * 255.0;
+                texture_color = cfg.sky_surface.value();
             } else {
-                texture_color = qvec3f(Face_LookupTextureColor(bsp, face));
+                texture_color = Face_LookupTextureColor(bsp, face);
             }
         }
     }
 
-    texture_color.value() /= 255.0;
-    texture_color.value() *= light_value; // Scale by light value
+    // Scale by light value
+    texture_color.value() *= light_value;
 
+    // WIP intensity code
+#if 0
+    // Calculate intensity...
+    float intensity =
+        texture_color.value()[0] +
+        texture_color.value()[1] +
+        texture_color.value()[2];
+
+    if (intensity == 0.0f) {
+        return;
+    }
+
+    // Normalize color...
+    qv::normalizeInPlace(texture_color.value());
+#else
     // Calculate intensity...
     float intensity = qv::max(texture_color.value());
 
@@ -102,6 +117,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     // Normalize color...
     if (intensity > 1.0f)
         texture_color.value() *= 1.0f / intensity;
+#endif
 
     if (!surf.vpl) {
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();
@@ -203,12 +219,20 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     if (extended_flags.surflight_rescale) {
         setting.rescale = extended_flags.surflight_rescale.value();
     } else {
-        setting.rescale = is_sky ? false : true;
+        setting.rescale = cfg.surflight_rescale.is_changed() ? cfg.surflight_rescale.value() : !is_sky;
     }
 
     // Store surfacelight settings...
-    setting.totalintensity = intensity * facearea;
-    setting.intensity = setting.totalintensity / l->points_before_culling;
+    if (bsp->loadversion->game->id == GAME_HALF_LIFE) {
+        // Use this heuristic from VHLT for scaling texture lights
+        constexpr float DIRECT_SCALE = 1.0 / Q_PI;
+        setting.totalintensity = (intensity * facearea) * DIRECT_SCALE;
+        setting.intensity = setting.totalintensity / l->points_before_culling;
+    } else {
+        setting.totalintensity = intensity * facearea;
+        setting.intensity = setting.totalintensity / l->points_before_culling;
+    }
+
     setting.color = texture_color.value();
 }
 
@@ -266,7 +290,9 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
             std::optional<qvec3f> texture_color;
 
             if (surflight->color.is_changed()) {
-                texture_color = surflight->color.value();
+                // the surface light color is stored in 0-255 due to internal color mayhem
+                // convert it to 0-1 (FIXME)
+                texture_color = surflight->color.value() / 255.0f;
             }
 
             MakeSurfaceLight(bsp, cfg, face, texture_color,

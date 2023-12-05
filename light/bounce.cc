@@ -88,7 +88,21 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
 
     // Calculate emit color and intensity...
 
+    // WIP intensity code
+#if 0
     // Calculate intensity...
+    vec_t intensity =
+        texture_color[0] +
+        texture_color[1] +
+        texture_color[2];
+
+    if (intensity <= 0.0) {
+        return;
+    }
+
+    // Normalize color...
+    qv::normalizeInPlace(texture_color);
+#else
     vec_t intensity = qv::max(texture_color);
 
     if (intensity <= 0.0) {
@@ -99,6 +113,7 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     if (intensity > 1.0) {
         texture_color *= 1.0 / intensity;
     }
+#endif
 
     if (!surf.vpl) {
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();

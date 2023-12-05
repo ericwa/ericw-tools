@@ -853,13 +853,16 @@ static bool IsTrigger(const mapentity_t &entity)
         return false;
     }
 
-    size_t trigger_pos = tex.rfind("trigger");
+    const char *trigger_name =
+        map.bsp.loadversion->game->id == GAME_HALF_LIFE ? "aaatrigger" : "trigger";
+
+    size_t trigger_pos = tex.rfind(trigger_name);
 
     if (trigger_pos == std::string::npos) {
         return false;
     }
 
-    return trigger_pos == (tex.size() - strlen("trigger"));
+    return trigger_pos == (tex.size() - strlen(trigger_name));
 }
 
 static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
