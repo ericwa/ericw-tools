@@ -1169,6 +1169,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                         alpha_test = true;
                     }
                 }
+            } else if (bsp.loadversion->game->id == GAME_QUAKE) {
+                if (t.starts_with('{')) {
+                    alpha_test = true;
+                }
             }
 
             material_key k = {.program = program, .texname = t, .opacity = opacity, .alpha_test = alpha_test};
