@@ -46,7 +46,7 @@ public:
     vec_t get_float(const std::string_view &key) const;
     int32_t get_int(const std::string_view &key) const;
     // returns number of vector components read
-    int32_t get_vector(const std::string_view &key, qvec3d &out) const;
+    int32_t get_vector(const std::string_view &key, qvec3f &out) const;
     void set(const std::string_view &key, const std::string_view &value);
     void remove(const std::string_view &key);
     void rename(const std::string_view &from, const std::string_view &to);

@@ -637,7 +637,7 @@ struct face_texture_cache
 {
     const img::texture *image;
     qvec3b averageColor;
-    qvec3d bounceColor;
+    qvec3f bounceColor;
 };
 
 static std::vector<face_texture_cache> face_textures;
@@ -652,7 +652,7 @@ const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face)
     return face_textures[face - bsp->dfaces.data()].averageColor;
 }
 
-const qvec3d &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face)
+const qvec3f &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face)
 {
     return face_textures[face - bsp->dfaces.data()].bounceColor;
 }
@@ -673,7 +673,7 @@ static void CacheTextures(const mbsp_t &bsp)
             face_textures[i] = {tex, avg,
                 // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use
                 // texture color)
-                mix(qvec3d{127}, qvec3d(avg), light_options.bouncecolorscale.value()) / 255.0};
+                mix(qvec3f{127}, qvec3f(avg), light_options.bouncecolorscale.value()) / 255.0};
         }
     }
 }
@@ -1296,7 +1296,7 @@ static void FindDebugFace(const mbsp_t *bsp)
 }
 
 // returns the vert nearest the given point
-static int Vertex_NearestPoint(const mbsp_t *bsp, const qvec3d &point)
+static int Vertex_NearestPoint(const mbsp_t *bsp, const qvec3f &point)
 {
     int nearest_vert = -1;
     float nearest_dist = std::numeric_limits<vec_t>::infinity();
@@ -1664,6 +1664,7 @@ int light_main(int argc, const char **argv)
 
     auto end = I_FloatTime();
     logging::print("{:.3} seconds elapsed\n", (end - start));
+#if 0
     logging::print("\n");
     logging::print("stats:\n");
     logging::print("{} lights tested, {} hits per sample point\n",
@@ -1675,6 +1676,7 @@ int light_main(int argc, const char **argv)
     logging::print("{} bounce lights tested, {} hits per sample point\n",
         static_cast<double>(total_bounce_rays) / static_cast<double>(total_samplepoints),
         static_cast<double>(total_bounce_ray_hits) / static_cast<double>(total_samplepoints));
+#endif
     logging::print("{} empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
     logging::close();
 

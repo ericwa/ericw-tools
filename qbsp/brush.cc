@@ -243,7 +243,7 @@ qvec3d FixRotateOrigin(mapentity_t &entity)
         target = FindTargetEntity(search);
     }
 
-    qvec3d offset;
+    qvec3f offset;
 
     if (target) {
         target->epairs.get_vector("origin", offset);

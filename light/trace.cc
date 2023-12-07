@@ -29,7 +29,7 @@ Light_PointInLeaf
 from hmap2
 ==============
 */
-const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3d &point)
+const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3f &point)
 {
     int num = 0;
 
@@ -55,7 +55,7 @@ uint32_t clamp_texcoord(vec_t in, uint32_t width)
 }
 
 qvec4b SampleTexture(
-    const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3d &point)
+    const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp, const qvec3f &point)
 {
     if (texture == nullptr || !texture->width) {
         return {};

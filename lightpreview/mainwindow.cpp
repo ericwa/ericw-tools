@@ -791,10 +791,10 @@ void MainWindow::compileThreadExited()
     if (!m_fileWasReload && !glView->getKeepOrigin()) {
         for (auto &ent : ents) {
             if (ent.get("classname") == "info_player_start") {
-                qvec3d origin;
+                qvec3f origin;
                 ent.get_vector("origin", origin);
 
-                qvec3d angles{};
+                qvec3f angles{};
 
                 if (ent.has("angles")) {
                     ent.get_vector("angles", angles);

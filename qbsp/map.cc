@@ -511,11 +511,12 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
                 // fetch animation chain
                 int next_i = FindMiptex(wal->name.data(), animation_info, internal, false);
                 map.miptex[last_i].animation_miptex = next_i;
-                last_i = next_i;
 
                 // looped back
-                if (!Q_strcasecmp(wal->animation.c_str(), name) || last_i == next_i)
+                if (!Q_strcasecmp(wal->name.c_str(), name) || last_i == next_i)
                     break;
+
+                last_i = next_i;
             }
 
             // link back to the start
@@ -685,7 +686,7 @@ static surfflags_t SurfFlagsForEntity(
         flags.surflight_rescale = entity.epairs.get_int("_surflight_rescale") == 1;
     }
     {
-        qvec3d color;
+        qvec3f color;
         // FIXME: get_color, to match settings
         if (entity.epairs.has("_surflight_color") && entity.epairs.get_vector("_surflight_color", color) == 3) {
             if (color[0] <= 1 && color[1] <= 1 && color[2] <= 1) {
@@ -804,17 +805,17 @@ static surfflags_t SurfFlagsForEntity(
 
     // handle "_mincolor"
     {
-        qvec3d mincolor{};
+        qvec3f mincolor{};
 
         entity.epairs.get_vector("_mincolor", mincolor);
-        if (qv::epsilonEmpty(mincolor, QBSP_EQUAL_EPSILON)) {
+        if (qv::epsilonEmpty(mincolor, (float) QBSP_EQUAL_EPSILON)) {
             entity.epairs.get_vector("_minlight_color", mincolor);
         }
 
         mincolor = qv::normalize_color_format(mincolor);
-        if (!qv::epsilonEmpty(mincolor, QBSP_EQUAL_EPSILON)) {
+        if (!qv::epsilonEmpty(mincolor, (float) QBSP_EQUAL_EPSILON)) {
             for (int32_t i = 0; i < 3; i++) {
-                flags.minlight_color[i] = std::clamp(mincolor[i], 0.0, 255.0);
+                flags.minlight_color[i] = std::clamp(mincolor[i], 0.0f, 255.0f);
             }
         }
     }
@@ -2922,17 +2923,17 @@ void ProcessExternalMapEntity(mapentity_t &entity)
     // copy the brushes into the target
     entity.mapbrushes = std::move(external_worldspawn.mapbrushes);
 
-    qvec3d origin;
+    qvec3f origin;
     entity.epairs.get_vector("origin", origin);
 
-    qvec3d angles;
+    qvec3f angles;
     entity.epairs.get_vector("_external_map_angles", angles);
 
-    if (qv::epsilonEmpty(angles, QBSP_EQUAL_EPSILON)) {
+    if (qv::epsilonEmpty(angles, (float) QBSP_EQUAL_EPSILON)) {
         angles[1] = entity.epairs.get_float("_external_map_angle");
     }
 
-    qvec3d scale;
+    qvec3f scale;
     int ncomps = entity.epairs.get_vector("_external_map_scale", scale);
 
     if (ncomps < 3) {
@@ -3278,8 +3279,8 @@ void ProcessMapBrushes()
 
                 // scale point entity origin
                 if (entity.epairs.find("origin") != entity.epairs.end()) {
-                    qvec3d origin;
-                    if (3 == entity.epairs.get_vector("origin", origin)) {
+                    qvec3f origin;
+                    if (entity.epairs.get_vector("origin", origin) == 3) {
                         origin *= qbsp_options.scale.value();
 
                         entity.epairs.set("origin", qv::to_string(origin));

@@ -37,7 +37,7 @@ class worldspawn_keys;
 
 struct surfacelight_t
 {
-    qvec3d pos;
+    qvec3f pos;
     qvec3f surfnormal;
     size_t points_before_culling;
 
@@ -63,7 +63,7 @@ struct surfacelight_t
         int32_t style = 0; // style ID
         float intensity = 0; // Surface light strength for each point
         float totalintensity = 0; // Total surface light strength
-        qvec3d color; // Surface color
+        qvec3f color; // Surface color
     };
 
     // Light data per style
@@ -74,6 +74,6 @@ class light_t;
 
 void ResetSurflight();
 size_t GetSurflightPoints();
-std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
+std::optional<std::tuple<int32_t, int32_t, qvec3f, light_t *>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face);
 const std::vector<int> &SurfaceLightsForFaceNum(int facenum);
 void MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);

@@ -48,7 +48,7 @@ static aabb3f LightGridBounds(const mbsp_t &bsp)
     // see if `_lightgrid_hint` entities are in use
     for (auto &entity : GetEntdicts()) {
         if (entity.get_int("_lightgrid_hint")) {
-            qvec3d point{};
+            qvec3f point{};
             entity.get_vector("origin", point);
             result += point;
         }
@@ -369,7 +369,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     return vec;
 }
 
-std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3d world_point)
+std::tuple<lightgrid_samples_t, bool> FixPointAndCalcLightgrid(const mbsp_t *bsp, qvec3f world_point)
 {
     bool occluded = Light_PointInWorld(bsp, world_point);
     if (occluded) {
@@ -420,7 +420,7 @@ void LightGrid(bspdata_t *bspdata)
         const int y = (sample_index / data.grid_size[0]) % data.grid_size[1];
         const int x = sample_index % data.grid_size[0];
 
-        qvec3d world_point = data.grid_mins + (qvec3d{x, y, z} * data.grid_dist);
+        qvec3f world_point = data.grid_mins + (qvec3f{x, y, z} * data.grid_dist);
 
         bool occluded;
         lightgrid_samples_t samples;

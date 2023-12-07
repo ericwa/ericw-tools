@@ -79,8 +79,8 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 }
 
 static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, lightsurf_t &surf,
-    qvec3d texture_color, int32_t style, std::vector<qvec3f> &points,
-    const vec_t &area, const qvec3d &facenormal, const qvec3d &facemidpoint, size_t depth)
+    qvec3f texture_color, int32_t style, std::vector<qvec3f> &points,
+    const vec_t &area, const qvec3f &facenormal, const qvec3f &facemidpoint, size_t depth)
 {
     if (!Face_IsEmissive(bsp, surf.face)) {
         return;
@@ -169,7 +169,7 @@ static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
 
     // grab the average color across the whole set of lightmaps for this face.
     // this doesn't change regardless of the above settings.
-    std::unordered_map<int, qvec3d> sum;
+    std::unordered_map<int, qvec3f> sum;
     vec_t sample_divisor = surf.lightmapsByStyle.front().samples.size();
 
     bool has_any_color = false;
@@ -196,10 +196,10 @@ static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     // lerp between gray and the texture color according to `bouncecolorscale` (0 = use gray, 1 = use texture color)
-    const qvec3d &blendedcolor = Face_LookupTextureBounceColor(bsp, &face);
+    const qvec3f &blendedcolor = Face_LookupTextureBounceColor(bsp, &face);
 
     // final colors to emit
-    std::unordered_map<int, qvec3d> emitcolors;
+    std::unordered_map<int, qvec3f> emitcolors;
 
     for (const auto &styleColor : sum) {
         emitcolors[styleColor.first] = styleColor.second * blendedcolor;
@@ -208,8 +208,8 @@ static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     qplane3d faceplane = winding.plane();
 
     // Get face normal and midpoint...
-    qvec3d facenormal = faceplane.normal;
-    qvec3d facemidpoint = winding.center() + facenormal; // Lift 1 unit
+    qvec3f facenormal = faceplane.normal;
+    qvec3f facemidpoint = winding.center() + facenormal; // Lift 1 unit
 
     std::vector<qvec3f> points;
 

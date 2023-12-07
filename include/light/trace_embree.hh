@@ -37,7 +37,7 @@ public:
     std::vector<float> _rays_maxdist;
     std::vector<int> _point_indices;
     std::vector<qvec3f> _ray_colors;
-    std::vector<qvec3d> _ray_normalcontribs;
+    std::vector<qvec3f> _ray_normalcontribs;
 
     std::vector<bool> _ray_hit_glass;
     std::vector<qvec3f> _ray_glass_color;
@@ -49,8 +49,8 @@ public:
     // straight through).
     std::vector<int> _ray_dynamic_styles;
 
-    int _numrays = 0;
-    int _maxrays = 0;
+    size_t _numrays = 0;
+    size_t _maxrays = 0;
 
 public:
     inline raystream_embree_common_t() = default;
@@ -70,11 +70,11 @@ public:
         _ray_dynamic_styles.resize(size);
     }
 
-    constexpr size_t numPushedRays() { return _numrays; }
+    constexpr const size_t &numPushedRays() const { return _numrays; }
 
-    inline int &getPushedRayPointIndex(size_t j) { return _point_indices[j]; }
+    inline const int &getPushedRayPointIndex(size_t j) const { return _point_indices[j]; }
 
-    inline qvec3f getPushedRayColor(size_t j)
+    inline qvec3f getPushedRayColor(size_t j) const
     {
         qvec3f result = _ray_colors[j];
 
@@ -93,9 +93,9 @@ public:
         return result;
     }
 
-    inline qvec3d &getPushedRayNormalContrib(size_t j) { return _ray_normalcontribs[j]; }
+    inline const qvec3f &getPushedRayNormalContrib(size_t j) const { return _ray_normalcontribs[j]; }
 
-    inline int &getPushedRayDynamicStyle(size_t j) { return _ray_dynamic_styles[j]; }
+    inline const int &getPushedRayDynamicStyle(size_t j) const { return _ray_dynamic_styles[j]; }
 
     inline void clearPushedRays() { _numrays = 0; }
 };
@@ -113,7 +113,7 @@ namespace img
 struct texture;
 }
 
-inline RTCRayHit SetupRay(unsigned rayindex, const qvec3d &start, const qvec3d &dir, vec_t dist)
+inline RTCRayHit SetupRay(unsigned rayindex, const qvec3f &start, const qvec3f &dir, float dist)
 {
     RTCRayHit ray;
     ray.ray.org_x = start[0];
@@ -214,8 +214,8 @@ public:
         raystream_embree_common_t::resize(size);
     }
 
-    inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3f *color = nullptr,
-        const qvec3d *normalcontrib = nullptr)
+    inline void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const qvec3f *color = nullptr,
+        const qvec3f *normalcontrib = nullptr)
     {
         const RTCRayHit rayHit = SetupRay(_numrays, origin, dir, dist);
         _rays[_numrays] = rayHit;
@@ -241,11 +241,11 @@ public:
         rtcIntersect1M(scene, &ctx2, _rays.data(), _numrays, sizeof(_rays[0]));
     }
 
-    inline qvec3d getPushedRayDir(size_t j) { return {_rays[j].ray.dir_x, _rays[j].ray.dir_y, _rays[j].ray.dir_z}; }
+    inline const qvec3f &getPushedRayDir(size_t j) const { return *((qvec3f *)&_rays[j].ray.dir_x); }
 
-    inline float getPushedRayHitDist(size_t j) { return _rays[j].ray.tfar; }
+    inline const float &getPushedRayHitDist(size_t j) const { return _rays[j].ray.tfar; }
 
-    inline hittype_t getPushedRayHitType(size_t j)
+    inline hittype_t getPushedRayHitType(size_t j) const
     {
         const unsigned id = _rays[j].hit.geomID;
         if (id == RTC_INVALID_GEOMETRY_ID) {
@@ -257,7 +257,7 @@ public:
         }
     }
 
-    inline const triinfo *getPushedRayHitFaceInfo(size_t j)
+    inline const triinfo *getPushedRayHitFaceInfo(size_t j) const
     {
         const RTCRayHit &ray = _rays[j];
 
@@ -289,8 +289,8 @@ public:
         raystream_embree_common_t::resize(size);
     }
 
-    inline void pushRay(int i, const qvec3d &origin, const qvec3d &dir, float dist, const qvec3f *color = nullptr,
-        const qvec3d *normalcontrib = nullptr)
+    inline void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const qvec3f *color = nullptr,
+        const qvec3f *normalcontrib = nullptr)
     {
         _rays[_numrays] = SetupRay(_numrays, origin, dir, dist).ray;
         _rays_maxdist[_numrays] = dist;
@@ -315,7 +315,7 @@ public:
         rtcOccluded1M(scene, &ctx2, _rays.data(), _numrays, sizeof(_rays[0]));
     }
 
-    inline bool getPushedRayOccluded(size_t j) { return (_rays[j].tfar < 0.0f); }
+    inline bool getPushedRayOccluded(size_t j) const { return (_rays[j].tfar < 0.0f); }
 
-    inline qvec3d getPushedRayDir(size_t j) { return {_rays[j].dir_x, _rays[j].dir_y, _rays[j].dir_z}; }
+    inline const qvec3f &getPushedRayDir(size_t j) const { return *((qvec3f *)&_rays[j].dir_x); }
 };

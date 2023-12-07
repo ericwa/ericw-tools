@@ -212,14 +212,14 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     setting.color = texture_color.value();
 }
 
-std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
+std::optional<std::tuple<int32_t, int32_t, qvec3f, light_t *>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         // first, check if it's a Q2 surface
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
 
         if (info != nullptr && (info->flags.native & Q2_SURF_LIGHT) && info->value > 0) {
-            return std::make_tuple(info->value, 0, qvec3d(Face_LookupTextureColor(bsp, face)), nullptr);
+            return std::make_tuple(info->value, 0, qvec3f(Face_LookupTextureColor(bsp, face)), nullptr);
         }
     }
 
@@ -227,7 +227,7 @@ std::optional<std::tuple<int32_t, int32_t, qvec3d, light_t *>> IsSurfaceLitFace(
         if (FaceMatchesSurfaceLightTemplate(
                 bsp, face, ModelInfoForFace(bsp, face - bsp->dfaces.data()), *surflight, SURFLIGHT_RAD)) {
             return std::make_tuple(surflight->light.value(), surflight->style.value(),
-                surflight->color.is_changed() ? surflight->color.value() : qvec3d(Face_LookupTextureColor(bsp, face)),
+                surflight->color.is_changed() ? surflight->color.value() : qvec3f(Face_LookupTextureColor(bsp, face)),
                 surflight.get());
         }
     }
@@ -248,7 +248,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
         if (info != nullptr) {
             if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
                 if (info->flags.native & Q2_SURF_LIGHT) {
-                    qvec3d wc = polylib::winding_t::from_face(bsp, face).center();
+                    qvec3f wc = polylib::winding_t::from_face(bsp, face).center();
                     logging::print(
                         "WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
                 }
@@ -286,7 +286,5 @@ MakeRadiositySurfaceLights(const settings::worldspawn_keys &cfg, const mbsp_t *b
     logging::parallel_for(
         static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) { MakeSurfaceLightsThread(bsp, cfg, i); });
 
-    /*if (surfacelights.size()) {
-        logging::print("{} surface lights ({} light points) in use.\n", surfacelights.size(), total_surflight_points);
-    }*/
+    logging::print("{} surface light points in use.\n", total_surflight_points.load());
 }

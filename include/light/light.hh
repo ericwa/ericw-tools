@@ -31,17 +31,17 @@ struct texture;
 struct mbsp_t;
 struct mface_t;
 
-constexpr vec_t LIGHT_ON_EPSILON = 0.1;
-constexpr vec_t LIGHT_ANGLE_EPSILON = 0.01;
-constexpr vec_t LIGHT_EQUAL_EPSILON = 0.001;
+constexpr float LIGHT_ON_EPSILON = 0.1f;
+constexpr float LIGHT_ANGLE_EPSILON = 0.01f;
+constexpr float LIGHT_EQUAL_EPSILON = 0.001f;
 
 // FIXME: use maximum dimension of level
-constexpr vec_t MAX_SKY_DIST = 1000000;
+constexpr float MAX_SKY_DIST = 1000000;
 
 struct lightsample_t
 {
     qvec3f color;
-    qvec3d direction;
+    qvec3f direction;
 };
 
 // CHECK: isn't average a bad algorithm for color brightness?
@@ -57,9 +57,9 @@ constexpr float LightSample_Brightness(const T &color)
 class sun_t
 {
 public:
-    qvec3d sunvec;
+    qvec3f sunvec;
     vec_t sunlight;
-    qvec3d sunlight_color;
+    qvec3f sunlight_color;
     bool dirt;
     float anglescale;
     int style;
@@ -78,7 +78,7 @@ class lightmap_t
 public:
     int style;
     std::vector<lightsample_t> samples;
-    qvec3d bounce_color;
+    qvec3f bounce_color;
 };
 
 using lightmapdict_t = std::vector<lightmap_t>;
@@ -96,7 +96,7 @@ struct lightsurf_t
     /* these take precedence the values in modelinfo */
     vec_t minlight, maxlight, lightcolorscale = 1.0;
     vec_t surflight_minlight_scale = 1.0;
-    qvec3d minlight_color;
+    qvec3f minlight_color;
     bool nodirt, minlightMottle;
     bool curved; /*normals are interpolated for smooth lighting*/
     /* for lit water. receive light from either front or back. */
@@ -104,8 +104,8 @@ struct lightsurf_t
     int32_t object_channel_mask;
 
     qplane3f plane;
-    qvec3d snormal;
-    qvec3d tnormal;
+    qvec3f snormal;
+    qvec3f tnormal;
 
     /* 16 in vanilla. engines will hate you if this is not power-of-two-and-at-least-one */
     float lightmapscale = 0.f;
@@ -115,8 +115,8 @@ struct lightsurf_t
     // width * height sample points in world space
     struct sample_data_t
     {
-        qvec3d point;
-        qvec3d normal;
+        qvec3f point;
+        qvec3f normal;
         bool occluded;
         int32_t realfacenum;
         /*
@@ -187,7 +187,7 @@ extern int numDirtVectors;
 
 extern bool dirt_in_use; // should any dirtmapping take place? set in SetupDirt
 
-constexpr qvec3d vec3_white{255};
+constexpr qvec3f vec3_white{255};
 
 extern int dump_facenum;
 extern int dump_vertnum;
@@ -203,7 +203,7 @@ public:
     const mbsp_t *bsp;
     const dmodelh2_t *model;
     float lightmapscale;
-    qvec3d offset;
+    qvec3f offset;
 
     settings::setting_scalar minlight;
     // zero will apply no clamping; use lightignore instead to do that.
@@ -454,7 +454,7 @@ const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
 const modelinfo_t *ModelInfoForFace(const mbsp_t *bsp, int facenum);
 const img::texture *Face_Texture(const mbsp_t *bsp, const mface_t *face);
 const qvec3b &Face_LookupTextureColor(const mbsp_t *bsp, const mface_t *face);
-const qvec3d &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
+const qvec3f &Face_LookupTextureBounceColor(const mbsp_t *bsp, const mface_t *face);
 void light_reset();
 int light_main(int argc, const char **argv);
 int light_main(const std::vector<std::string> &args);

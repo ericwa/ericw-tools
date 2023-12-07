@@ -37,9 +37,11 @@ class faceextents_t;
 class light_t;
 struct facesup_t;
 
+#if 0
 extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_samplepoints;
 extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 extern std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
+#endif
 extern std::atomic<uint32_t> fully_transparent_lightmaps;
 
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
@@ -62,7 +64,7 @@ struct lightgrid_sample_t
 {
     bool used = false;
     int style = 0;
-    qvec3d color{};
+    qvec3f color{};
 
     qvec3b round_to_int() const;
     float brightness() const;
@@ -82,11 +84,11 @@ struct lightgrid_samples_t
     lightgrid_samples_t &operator+=(const lightgrid_samples_t &other) noexcept;
     lightgrid_samples_t &operator/=(float scale) noexcept;
 
-    void add(const qvec3d &color, int style);
+    void add(const qvec3f &color, int style);
     int used_styles() const;
 
     bool operator==(const lightgrid_samples_t &other) const;
 };
 
-lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3d &world_point);
+lightgrid_samples_t CalcLightgridAtPoint(const mbsp_t *bsp, const qvec3f &world_point);
 void ResetLtFace();

@@ -289,7 +289,7 @@ inline qvec3f Embree_RayEndpoint(RTCRayN *ray, const qvec3f &dir, size_t N, size
     return org + (dir * tfar);
 }
 
-static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor);
+static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3f &glasscolor);
 static void AddDynamicOccluderToRay(RTCIntersectContext *context, unsigned rayIndex, int style);
 
 // called to evaluate transparency
@@ -677,7 +677,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
     logging::print("\t{} shadow-casting skip faces\n", skipwindings.size());
 }
 
-static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3d &glasscolor)
+static void AddGlassToRay(RTCIntersectContext *context, unsigned rayIndex, float opacity, const qvec3f &glasscolor)
 {
     ray_source_info *ctx = static_cast<ray_source_info *>(context);
     raystream_embree_common_t *rs = ctx->raystream;

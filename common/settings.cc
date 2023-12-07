@@ -384,25 +384,25 @@ std::string setting_set::string_value() const
 
 // setting_vec3
 
-qvec3d setting_vec3::transform_vec3_value(const qvec3d &val) const
+qvec3f setting_vec3::transform_vec3_value(const qvec3f &val) const
 {
     return val;
 }
 
-setting_vec3::setting_vec3(setting_container *dictionary, const nameset &names, vec_t a, vec_t b, vec_t c,
+setting_vec3::setting_vec3(setting_container *dictionary, const nameset &names, float a, float b, float c,
     const setting_group *group, const char *description)
     : setting_value(dictionary, names, transform_vec3_value({a, b, c}), group, description)
 {
 }
 
-void setting_vec3::set_value(const qvec3d &f, source new_source)
+void setting_vec3::set_value(const qvec3f &f, source new_source)
 {
     setting_value::set_value(transform_vec3_value(f), new_source);
 }
 
 bool setting_vec3::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    qvec3d vec;
+    qvec3f vec;
 
     for (int i = 0; i < 3; i++) {
         if (!parser.parse_token()) {
@@ -433,14 +433,14 @@ std::string setting_vec3::format() const
 
 // setting_mangle
 
-qvec3d setting_mangle::transform_vec3_value(const qvec3d &val) const
+qvec3f setting_mangle::transform_vec3_value(const qvec3f &val) const
 {
     return qv::vec_from_mangle(val);
 }
 
 bool setting_mangle::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    qvec3d vec{};
+    qvec3f vec{};
 
     for (int i = 0; i < 3; i++) {
         if (!parser.parse_token(PARSE_PEEK)) {
@@ -463,7 +463,7 @@ bool setting_mangle::parse(const std::string &setting_name, parser_base_t &parse
 
 // setting_color
 
-qvec3d setting_color::transform_vec3_value(const qvec3d &val) const
+qvec3f setting_color::transform_vec3_value(const qvec3f &val) const
 {
     return qv::normalize_color_format(val);
 }

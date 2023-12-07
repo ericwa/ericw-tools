@@ -312,7 +312,7 @@ public:
     std::string format() const override { return "n"; }
 };
 
-using setting_scalar = setting_numeric<vec_t>;
+using setting_scalar = setting_numeric<float>;
 using setting_int32 = setting_numeric<int32_t>;
 
 template<typename T>
@@ -426,16 +426,16 @@ public:
     std::string string_value() const override;
 };
 
-class setting_vec3 : public setting_value<qvec3d>
+class setting_vec3 : public setting_value<qvec3f>
 {
 protected:
-    virtual qvec3d transform_vec3_value(const qvec3d &val) const;
+    virtual qvec3f transform_vec3_value(const qvec3f &val) const;
 
 public:
-    setting_vec3(setting_container *dictionary, const nameset &names, vec_t a, vec_t b, vec_t c,
+    setting_vec3(setting_container *dictionary, const nameset &names, float a, float b, float c,
         const setting_group *group = nullptr, const char *description = "");
 
-    void set_value(const qvec3d &f, source new_source) override;
+    void set_value(const qvec3f &f, source new_source) override;
     bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
     std::string string_value() const override;
     std::string format() const override;
@@ -444,7 +444,7 @@ public:
 class setting_mangle : public setting_vec3
 {
 protected:
-    qvec3d transform_vec3_value(const qvec3d &val) const override;
+    qvec3f transform_vec3_value(const qvec3f &val) const override;
 
 public:
     using setting_vec3::setting_vec3;
@@ -456,7 +456,7 @@ public:
 class setting_color : public setting_vec3
 {
 protected:
-    qvec3d transform_vec3_value(const qvec3d &val) const override;
+    qvec3f transform_vec3_value(const qvec3f &val) const override;
 
 public:
     using setting_vec3::setting_vec3;

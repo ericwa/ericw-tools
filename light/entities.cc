@@ -86,7 +86,7 @@ static void MakeSurfaceLights(const mbsp_t *bsp);
 // light_t
 light_t::light_t()
     : light{this, "light", DEFAULTLIGHTLEVEL},
-      atten{this, "wait", 1.0, 0.0, std::numeric_limits<vec_t>::max()},
+      atten{this, "wait", 1.0f, 0.0f, std::numeric_limits<float>::max()},
       formula{this, "delay", LF_LINEAR,
           {{"linear", LF_LINEAR}, {"inverse", LF_INVERSE}, {"inverse2", LF_INVERSE2}, {"infinite", LF_INFINITE},
               {"localmin", LF_LOCALMIN}, {"inverse2a", LF_INVERSE2A}}},
@@ -107,7 +107,7 @@ light_t::light_t()
       sun{this, "sun", false},
       sunlight2{this, "sunlight2", 0},
       sunlight3{this, "sunlight3", 0},
-      falloff{this, "falloff", 0.0, 0.0, std::numeric_limits<vec_t>::max()},
+      falloff{this, "falloff", 0.0, 0.0, std::numeric_limits<float>::max()},
       bleed{this, "bleed", false},
       origin{this, "origin", 0, 0, 0},
       color{this, "color", 255.0, 255.0, 255.0},
@@ -139,7 +139,7 @@ void light_t::initAABB()
     bounds = origin.value();
 }
 
-void light_t::expandAABB(const qvec3d &pt)
+void light_t::expandAABB(const qvec3f &pt)
 {
     bounds += pt;
 }
@@ -260,7 +260,7 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
     for (auto &entity : all_lights) {
         vec_t targetdist = 0.0; // mxd
         if (entity->targetent) {
-            qvec3d targetOrigin;
+            qvec3f targetOrigin;
             entity->targetent->get_vector("origin", targetOrigin);
             entity->spotvec = targetOrigin - entity->origin.value();
             targetdist = qv::normalizeInPlace(entity->spotvec); // mxd
@@ -376,7 +376,7 @@ static bool Dirt_ResolveFlag(const settings::worldspawn_keys &cfg, int dirtInt)
  * AddSun
  * =============
  */
-static void AddSun(const settings::worldspawn_keys &cfg, const qvec3d &sunvec, vec_t light, const qvec3d &color,
+static void AddSun(const settings::worldspawn_keys &cfg, const qvec3f &sunvec, vec_t light, const qvec3f &color,
     int dirtInt, vec_t sun_anglescale, const int style, const std::string &suntexture)
 {
     if (light == 0.0f)
@@ -413,7 +413,7 @@ static void AddSun(const settings::worldspawn_keys &cfg, const qvec3d &sunvec, v
  * From q3map2
  * =============
  */
-static void SetupSun(const settings::worldspawn_keys &cfg, vec_t light, const qvec3d &color, const qvec3d &sunvec_in,
+static void SetupSun(const settings::worldspawn_keys &cfg, vec_t light, const qvec3f &color, const qvec3f &sunvec_in,
     const vec_t sun_anglescale, const vec_t sun_deviance, const int sunlight_dirt, const int style,
     const std::string &suntexture)
 {
@@ -422,7 +422,7 @@ static void SetupSun(const settings::worldspawn_keys &cfg, vec_t light, const qv
     vec_t sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
     vec_t sun_deviance_sq = sun_deviance * sun_deviance; // mxd
 
-    qvec3d sunvec = qv::normalize(sunvec_in);
+    qvec3f sunvec = qv::normalize(sunvec_in);
 
     // fmt::print( "input sunvec {} {} {}. deviance is {}, {} samples\n",sunvec[0],sunvec[1], sunvec[2], sun_deviance,
     // sun_num_samples);
@@ -431,7 +431,7 @@ static void SetupSun(const settings::worldspawn_keys &cfg, vec_t light, const qv
     light /= sun_num_samples;
 
     for (i = 0; i < sun_num_samples; i++) {
-        qvec3d direction;
+        qvec3f direction;
 
         /* calculate sun direction */
         if (i == 0) {
@@ -468,9 +468,9 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
         // mxd. Arghrad-style sun setup
         if (entity->sun.value() && entity->light.value() > 0) {
             // Set sun vector
-            qvec3d sunvec;
+            qvec3f sunvec;
             if (entity->targetent) {
-                qvec3d target_pos;
+                qvec3f target_pos;
                 entity->targetent->get_vector("origin", target_pos);
                 sunvec = target_pos - entity->origin.value();
             } else if (qv::length2(entity->mangle.value()) > 0) {
@@ -510,9 +510,9 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
  * FIXME: this is becoming a mess
  * =============
  */
-static void SetupSkyDome(const settings::worldspawn_keys &cfg, vec_t upperLight, const qvec3d &upperColor,
+static void SetupSkyDome(const settings::worldspawn_keys &cfg, vec_t upperLight, const qvec3f &upperColor,
     const int upperDirt, const vec_t upperAnglescale, const int upperStyle, const std::string &upperSuntexture,
-    vec_t lowerLight, const qvec3d &lowerColor, const int lowerDirt, const vec_t lowerAnglescale, const int lowerStyle,
+    vec_t lowerLight, const qvec3f &lowerColor, const int lowerDirt, const vec_t lowerAnglescale, const int lowerStyle,
     const std::string &lowerSuntexture)
 {
     int i, j, numSuns;
@@ -520,7 +520,7 @@ static void SetupSkyDome(const settings::worldspawn_keys &cfg, vec_t upperLight,
     int iterations;
     vec_t angle, elevation;
     vec_t angleStep, elevationStep;
-    qvec3d direction;
+    qvec3f direction;
 
     /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
     iterations = rint(sqrt((light_options.sunsamples.value() - 1) / 4)) + 1;
@@ -669,7 +669,7 @@ static void JitterEntity(const light_t &entity)
         light2->generated = true; // don't write generated light to bsp
 
         /* jitter it */
-        qvec3d neworigin = {(entity.origin.value())[0] + (Random() * 2.0f - 1.0f) * entity.deviance.value(),
+        qvec3f neworigin = {(entity.origin.value())[0] + (Random() * 2.0f - 1.0f) * entity.deviance.value(),
             (entity.origin.value())[1] + (Random() * 2.0f - 1.0f) * entity.deviance.value(),
             (entity.origin.value())[2] + (Random() * 2.0f - 1.0f) * entity.deviance.value()};
         light2->origin.set_value(neworigin, settings::source::MAP);
@@ -692,10 +692,11 @@ static void JitterEntities()
     }
 }
 
-void Matrix4x4_CM_Projection_Inf(std::array<vec_t, 16> &proj, vec_t fovx, vec_t fovy, vec_t neard)
+template<typename T>
+void Matrix4x4_CM_Projection_Inf(std::array<T, 16> &proj, T fovx, T fovy, T neard)
 {
-    vec_t xmin, xmax, ymin, ymax;
-    constexpr vec_t nudge = 1;
+    T xmin, xmax, ymin, ymax;
+    constexpr T nudge = 1;
 
     // proj
     ymax = neard * tan(fovy * Q_PI / 360.0);
@@ -729,10 +730,12 @@ void Matrix4x4_CM_Projection_Inf(std::array<vec_t, 16> &proj, vec_t fovx, vec_t 
     proj[11] = -1;
     proj[15] = 0;
 }
-std::array<vec_t, 16> &Matrix4x4_CM_NewRotation(std::array<vec_t, 16> &ret, vec_t a, vec_t x, vec_t y, vec_t z)
+
+template<typename T>
+std::array<T, 16> &Matrix4x4_CM_NewRotation(std::array<T, 16> &ret, T a, T x, T y, T z)
 {
-    vec_t c = cos(a * Q_PI / 180.0);
-    vec_t s = sin(a * Q_PI / 180.0);
+    T c = cos(a * Q_PI / 180.0);
+    T s = sin(a * Q_PI / 180.0);
 
     ret[0] = x * x * (1 - c) + c;
     ret[4] = x * y * (1 - c) - z * s;
@@ -755,7 +758,9 @@ std::array<vec_t, 16> &Matrix4x4_CM_NewRotation(std::array<vec_t, 16> &ret, vec_
     ret[15] = 1;
     return ret;
 }
-std::array<vec_t, 16> &Matrix4x4_CM_NewTranslation(std::array<vec_t, 16> &ret, vec_t x, vec_t y, vec_t z)
+
+template<typename T>
+std::array<T, 16> &Matrix4x4_CM_NewTranslation(std::array<T, 16> &ret, T x, T y, T z)
 {
     ret[0] = 1;
     ret[4] = 0;
@@ -778,7 +783,9 @@ std::array<vec_t, 16> &Matrix4x4_CM_NewTranslation(std::array<vec_t, 16> &ret, v
     ret[15] = 1;
     return ret;
 }
-void Matrix4_Multiply(const std::array<vec_t, 16> &a, const std::array<vec_t, 16> &b, std::array<vec_t, 16> &out)
+
+template<typename T>
+void Matrix4_Multiply(const std::array<T, 16> &a, const std::array<T, 16> &b, std::array<T, 16> &out)
 {
     out[0] = a[0] * b[0] + a[4] * b[1] + a[8] * b[2] + a[12] * b[3];
     out[1] = a[1] * b[0] + a[5] * b[1] + a[9] * b[2] + a[13] * b[3];
@@ -800,10 +807,12 @@ void Matrix4_Multiply(const std::array<vec_t, 16> &a, const std::array<vec_t, 16
     out[14] = a[2] * b[12] + a[6] * b[13] + a[10] * b[14] + a[14] * b[15];
     out[15] = a[3] * b[12] + a[7] * b[13] + a[11] * b[14] + a[15] * b[15];
 }
-void Matrix4x4_CM_ModelViewMatrix(std::array<vec_t, 16> &modelview, const qvec3d &viewangles, const qvec3d &vieworg)
+
+template<typename T>
+void Matrix4x4_CM_ModelViewMatrix(std::array<T, 16> &modelview, const qvec<T, 3> &viewangles, const qvec<T, 3> &vieworg)
 {
-    std::array<vec_t, 16> t2;
-    std::array<vec_t, 16> tempmat;
+    std::array<T, 16> t2;
+    std::array<T, 16> tempmat;
     // load identity.
     modelview = {};
 #if FULLYGL
@@ -824,26 +833,27 @@ void Matrix4x4_CM_ModelViewMatrix(std::array<vec_t, 16> &modelview, const qvec3d
     // figure out the current modelview matrix
 
     // I would if some of these, but then I'd still need a couple of copys
-    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[2], 1, 0, 0), tempmat); // roll
-    Matrix4_Multiply(tempmat, Matrix4x4_CM_NewRotation(t2, viewangles[1], 0, 1, 0), modelview); // pitch
-    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[0], 0, 0, 1), tempmat); // yaw
+    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[2], 1.0f, 0.0f, 0.0f), tempmat); // roll
+    Matrix4_Multiply(tempmat, Matrix4x4_CM_NewRotation(t2, viewangles[1], 0.0f, 1.0f, 0.0f), modelview); // pitch
+    Matrix4_Multiply(modelview, Matrix4x4_CM_NewRotation(t2, -viewangles[0], 0.0f, 0.0f, 1.0f), tempmat); // yaw
 
     Matrix4_Multiply(
         tempmat, Matrix4x4_CM_NewTranslation(t2, -vieworg[0], -vieworg[1], -vieworg[2]), modelview); // put Z going up
 }
 
+template<typename T>
 static void Matrix4x4_CM_MakeModelViewProj(
-    const qvec3d &viewangles, const qvec3d &vieworg, vec_t fovx, vec_t fovy, std::array<vec_t, 16> &modelviewproj)
+    const qvec<T, 3> &viewangles, const qvec<T, 3> &vieworg, T fovx, T fovy, std::array<T, 16> &modelviewproj)
 {
-    std::array<vec_t, 16> modelview;
-    std::array<vec_t, 16> proj;
+    std::array<T, 16> modelview;
+    std::array<T, 16> proj;
 
     Matrix4x4_CM_ModelViewMatrix(modelview, viewangles, vieworg);
-    Matrix4x4_CM_Projection_Inf(proj, fovx, fovy, 4);
+    Matrix4x4_CM_Projection_Inf(proj, fovx, fovy, 4.0f);
     Matrix4_Multiply(proj, modelview, modelviewproj);
 }
 
-inline vec_t CalcFov(vec_t fov_x, vec_t width, vec_t height)
+inline float CalcFov(float fov_x, float width, float height)
 {
     if (fov_x < 1 || fov_x > 179)
         FError("Unsupported fov: {}. Expected a value in [1..179] range.", fov_x);
@@ -1015,9 +1025,9 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 
                 if (!entity->projangle.is_changed()) { // mxd
                     // Copy from angles
-                    qvec3d angles;
+                    qvec3f angles;
                     entdict.get_vector("angles", angles);
-                    qvec3d mangle{angles[1], -angles[0], angles[2]}; // -pitch yaw roll -> yaw pitch roll
+                    qvec3f mangle{angles[1], -angles[0], angles[2]}; // -pitch yaw roll -> yaw pitch roll
                     entity->projangle.set_value(mangle, settings::source::MAP);
 
                     entity->spotlight = true;
@@ -1045,7 +1055,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
     logging::print("{} entities read, {} are lights.\n", entdicts.size(), all_lights.size());
 }
 
-std::tuple<qvec3d, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, bool warn, float max_dist)
+std::tuple<qvec3f, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3f &point, bool warn, float max_dist)
 {
     // FIXME: Check all shadow casters
     if (!Light_PointInWorld(bsp, point)) {
@@ -1053,7 +1063,7 @@ std::tuple<qvec3d, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, 
     }
 
     for (int i = 0; i < 6; i++) {
-        qvec3d testpoint = point;
+        qvec3f testpoint = point;
 
         int axis = i / 2;
         bool add = i % 2;
@@ -1095,7 +1105,7 @@ static void SetupLightLeafnums(const mbsp_t *bsp)
 
 // from http://mathworld.wolfram.com/SpherePointPicking.html
 // eqns 6,7,8
-inline qvec3d UniformPointOnSphere(vec_t u1, vec_t u2)
+inline qvec3f UniformPointOnSphere(vec_t u1, vec_t u2)
 {
     Q_assert(u1 >= 0 && u1 <= 1);
     Q_assert(u2 >= 0 && u2 <= 1);
@@ -1105,7 +1115,7 @@ inline qvec3d UniformPointOnSphere(vec_t u1, vec_t u2)
 
     const vec_t s = sqrt(1.0 - (u * u));
 
-    qvec3d dir{s * cos(theta), s * sin(theta), u};
+    qvec3f dir{s * cos(theta), s * sin(theta), u};
 
     for (auto &v : dir) {
         Q_assert(v >= -1.001);
@@ -1115,14 +1125,14 @@ inline qvec3d UniformPointOnSphere(vec_t u1, vec_t u2)
     return dir;
 }
 
-aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
+aabb3f EstimateVisibleBoundsAtPoint(const qvec3f &point)
 {
     constexpr size_t N = 32;
     constexpr size_t N2 = N * N;
 
     raystream_intersection_t rs{N2};
 
-    aabb3d bounds = point;
+    aabb3f bounds = point;
 
     for (size_t x = 0; x < N; x++) {
         for (size_t y = 0; y < N; y++) {
@@ -1136,17 +1146,15 @@ aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point)
     rs.tracePushedRaysIntersection(nullptr, CHANNEL_MASK_DEFAULT);
 
     for (int i = 0; i < N2; i++) {
-        const vec_t &dist = rs.getPushedRayHitDist(i);
-        const qvec3d &dir = rs.getPushedRayDir(i);
+        const float &dist = rs.getPushedRayHitDist(i);
+        const qvec3f &dir = rs.getPushedRayDir(i);
 
         // get the intersection point
-        qvec3d stop = point + (dir * dist);
-
-        bounds += stop;
+        bounds += point + (dir * dist);
     }
 
     // grow it by 25% in each direction
-    return bounds.grow(bounds.size() * 0.25);
+    return bounds.grow(bounds.size() * 0.25f);
 
     /*
     logging::print("light at {} {} {} has mins {} {} {} maxs {} {} {}\n",
@@ -1242,7 +1250,7 @@ const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates()
     return surfacelight_templates;
 }
 
-static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3d &pos)
+static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3f &pos)
 {
     Q_assert(entity->epairs != nullptr);
 
@@ -1253,7 +1261,7 @@ static void SurfLights_WriteEntityToFile(light_t *entity, const qvec3d &pos)
     surflights_dump_file << EntData_Write({epairs});
 }
 
-static void CreateSurfaceLight(const qvec3d &origin, const qvec3d &normal, const light_t *surflight_template)
+static void CreateSurfaceLight(const qvec3f &origin, const qvec3f &normal, const light_t *surflight_template)
 {
     auto &entity = all_lights.emplace_back(DuplicateEntity(*surflight_template));
 
@@ -1275,9 +1283,9 @@ static void CreateSurfaceLight(const qvec3d &origin, const qvec3d &normal, const
 }
 
 static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const modelinfo_t *face_modelinfo,
-    const light_t *surflight_template, const mbsp_t *bsp, int numverts, const qvec3d *verts)
+    const light_t *surflight_template, const mbsp_t *bsp, int numverts, const qvec3f *verts)
 {
-    qvec3d midpoint = qv::PolyCentroid(verts, verts + numverts);
+    qvec3f midpoint = qv::PolyCentroid(verts, verts + numverts);
     qplane3f plane = Face_Plane(bsp, face);
 
     /* Nudge 2 units (by default) along face normal */
@@ -1294,7 +1302,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
     CreateSurfaceLight(midpoint, plane.normal, surflight_template);
 }
 
-static aabb3d BoundPoly(int numverts, qvec3d *verts)
+static aabb3d BoundPoly(int numverts, qvec3f *verts)
 {
     aabb3d bounds;
 
@@ -1339,11 +1347,11 @@ bool FaceMatchesSurfaceLightTemplate(
  ================
  */
 static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp, int numverts,
-    qvec3d *verts, vec_t subdivide_size)
+    qvec3f *verts, vec_t subdivide_size)
 {
     int i, j;
     vec_t m;
-    qvec3d front[64], back[64];
+    qvec3f front[64], back[64];
     int f, b;
     vec_t dist[64];
     vec_t frac;
@@ -1365,7 +1373,7 @@ static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modeli
 
         // cut it
         {
-            vec_t *v = &verts->at(i);
+            float *v = &verts->at(i);
             for (j = 0; j < numverts; j++, v += 3)
                 dist[j] = *v - m;
 
@@ -1378,7 +1386,7 @@ static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modeli
         }
 
         f = b = 0;
-        qvec3d *v = verts;
+        qvec3f *v = verts;
         for (j = 0; j < numverts; j++, v++) {
             if (dist[j] >= 0) {
                 front[f] = *v;
@@ -1421,7 +1429,7 @@ static void GL_SubdivideSurface(const mface_t *face, const modelinfo_t *face_mod
     int i;
     // TODO: is numedges ever > 64? should we use a winding_t here for
     // simplicity?
-    qvec3d verts[64];
+    qvec3f verts[64];
 
     for (i = 0; i < face->numedges; i++) {
         int edgenum = bsp->dsurfedges[face->firstedge + i];

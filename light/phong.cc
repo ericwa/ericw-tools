@@ -465,7 +465,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         // Q1 phong angle stuff
         auto *f_texinfo = Face_Texinfo(bsp, &f);
         const auto f_points = Face_Points(bsp, &f);
-        const qvec3d f_norm = Face_Normal(bsp, &f);
+        const qvec3f f_norm = Face_Normal(bsp, &f);
         const qplane3f f_plane = Face_Plane(bsp, &f);
 
         // any face normal within this many degrees can be smoothed with this face
@@ -522,7 +522,7 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
                 const auto f2_points = Face_Points(bsp, f2);
                 const qvec3f f2_centroid = qv::PolyCentroid(f2_points.begin(), f2_points.end());
-                const qvec3d f2_norm = Face_Normal(bsp, f2);
+                const qvec3f f2_norm = Face_Normal(bsp, f2);
 
                 const vec_t cosangle = qv::dot(f_norm, f2_norm);
 

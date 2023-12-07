@@ -128,7 +128,7 @@ enum class rotation_t
 class mapentity_t
 {
 public:
-    qvec3d origin{};
+    qvec3f origin{};
     rotation_t rotation;
 
     std::vector<mapbrush_t> mapbrushes;

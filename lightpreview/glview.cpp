@@ -1106,7 +1106,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // collect entity bmodels
     for (int mi = 0; mi < bsp.dmodels.size(); mi++) {
-        qvec3d origin{};
+        qvec3f origin{};
 
         if (mi != 0) {
             // find matching entity

@@ -36,13 +36,13 @@ namespace img
 struct texture;
 }
 
-constexpr vec_t DEFAULTLIGHTLEVEL = 300.0;
+constexpr float DEFAULTLIGHTLEVEL = 300.0;
 
 /*
  * Light attenuation formalae
  * (relative to distance 'x' from the light source)
  */
-constexpr vec_t LF_SCALE = 128;
+constexpr float LF_SCALE = 128;
 enum light_formula_t
 {
     LF_LINEAR = 0, /* Linear (x) (DEFAULT) */
@@ -61,11 +61,11 @@ class light_t : public settings::setting_container
 {
 public:
     bool spotlight = false;
-    qvec3d spotvec{}; // computed
+    qvec3f spotvec{}; // computed
     float spotfalloff = 0;
     float spotfalloff2 = 0;
     const img::texture *projectedmip = nullptr; /*projected texture*/ // mxd. miptex_t -> rgba_miptex_t
-    std::array<vec_t, 16> projectionmatrix{}; /*matrix used to project the specified texture. already contains origin.*/
+    std::array<float, 16> projectionmatrix{}; /*matrix used to project the specified texture. already contains origin.*/
 
     const entdict_t *epairs = nullptr;
 
@@ -75,7 +75,7 @@ public:
 
     const mleaf_t *leaf;
 
-    aabb3d bounds;
+    aabb3f bounds;
 
     settings::setting_scalar light;
     settings::setting_scalar atten;
@@ -117,7 +117,7 @@ public:
     std::string classname() const;
     const light_formula_t &getFormula() const;
     void initAABB();
-    void expandAABB(const qvec3d &pt);
+    void expandAABB(const qvec3f &pt);
 };
 
 /*
@@ -153,9 +153,9 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
 void SetupLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp);
 bool ParseLightsFile(const fs::path &fname);
 void WriteEntitiesToString(const settings::worldspawn_keys &cfg, mbsp_t *bsp);
-aabb3d EstimateVisibleBoundsAtPoint(const qvec3d &point);
+aabb3f EstimateVisibleBoundsAtPoint(const qvec3f &point);
 
 bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict);
 
 entdict_t &WorldEnt();
-std::tuple<qvec3d, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3d &point, bool warn = true, float max_dist = 2.f);
+std::tuple<qvec3f, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3f &point, bool warn = true, float max_dist = 2.f);

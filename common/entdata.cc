@@ -70,7 +70,7 @@ int32_t entdict_t::get_int(const std::string_view &key) const
     return atoi(s.data());
 }
 
-int32_t entdict_t::get_vector(const std::string_view &key, qvec3d &vec) const
+int32_t entdict_t::get_vector(const std::string_view &key, qvec3f &vec) const
 {
     std::string value = get(key);
 
@@ -80,7 +80,7 @@ int32_t entdict_t::get_vector(const std::string_view &key, qvec3d &vec) const
     }
 
     vec = {};
-    return sscanf(value.data(), "%lf %lf %lf", &vec[0], &vec[1], &vec[2]);
+    return sscanf(value.data(), "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
 void entdict_t::set(const std::string_view &key, const std::string_view &value)

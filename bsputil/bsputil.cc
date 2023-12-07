@@ -727,7 +727,7 @@ int bsputil_main(int argc, char **argv)
 
                 for (auto &ent : ents) {
                     if (ent.has("origin")) {
-                        qvec3d origin;
+                        qvec3f origin;
                         ent.get_vector("origin", origin);
                         origin *= scalar;
                         ent.set("origin", fmt::format("{} {} {}", origin[0], origin[1], origin[2]));

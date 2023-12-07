@@ -31,8 +31,8 @@ struct mbsp_t;
 
 uint32_t clamp_texcoord(vec_t in, uint32_t width);
 qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp,
-    const qvec3d &point); // mxd. Palette index -> RGBA
+    const qvec3f &point); // mxd. Palette index -> RGBA
 
 class modelinfo_t;
 struct mleaf_t;
-const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3d &point);
+const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3f &point);
