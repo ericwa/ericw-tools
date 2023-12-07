@@ -98,6 +98,7 @@ GLView::~GLView()
     placeholder_texture.reset();
     lightmap_texture.reset();
     face_visibility_texture.reset();
+    face_visibility_buffer.reset();
     m_drawcalls.clear();
 
     doneCurrent();
@@ -143,12 +144,12 @@ layout (location = 0) in vec3 position;
 layout (location = 6) in int face_index;
 
 uniform mat4 MVP;
-uniform usampler1D face_visibility_sampler;
+uniform usamplerBuffer face_visibility_sampler;
 
 bool is_culled() {
     int byte_index = face_index;
 
-    uint sampled = texelFetch(face_visibility_sampler, byte_index, 0).r;
+    uint sampled = texelFetch(face_visibility_sampler, byte_index).r;
 
     return sampled != 16u;
 }
@@ -235,12 +236,12 @@ flat out vec3 flat_color;
 flat out uint styles;
 
 uniform mat4 MVP;
-uniform usampler1D face_visibility_sampler;
+uniform usamplerBuffer face_visibility_sampler;
 
 bool is_culled() {
     int byte_index = face_index;
 
-    uint sampled = texelFetch(face_visibility_sampler, byte_index, 0).r;
+    uint sampled = texelFetch(face_visibility_sampler, byte_index).r;
 
     return sampled != 16u;
 }
@@ -335,12 +336,12 @@ flat out uint styles;
 
 uniform mat4 MVP;
 uniform vec3 eye_origin;
-uniform usampler1D face_visibility_sampler;
+uniform usamplerBuffer face_visibility_sampler;
 
 bool is_culled() {
     int byte_index = face_index;
 
-    uint sampled = texelFetch(face_visibility_sampler, byte_index, 0).r;
+    uint sampled = texelFetch(face_visibility_sampler, byte_index).r;
 
     return sampled != 16u;
 }
@@ -401,7 +402,7 @@ void GLView::updateFaceVisibility()
 
     if (m_uploaded_face_visibility &&
         *m_uploaded_face_visibility == desired) {
-        qDebug() << "reusing last frame visdata";
+        //qDebug() << "reusing last frame visdata";
         return;
     }
 
@@ -477,12 +478,12 @@ bool GLView::shouldLiveUpdate() const
 
 void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 {
+    qDebug() << debugMessage.message();
+
 #ifdef _DEBUG
     if (debugMessage.type() == QOpenGLDebugMessage::ErrorType)
         __debugbreak();
 #endif
-
-    qDebug() << debugMessage.message();
 }
 
 void GLView::initializeGL()
@@ -969,16 +970,19 @@ void GLView::setFaceVisibilityArray(uint8_t *data)
     int face_visibility_width = m_bsp->dfaces.size();
 
     face_visibility_texture.reset();
+    face_visibility_buffer.reset();
 
-    face_visibility_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target1D);
-    face_visibility_texture->setSize(face_visibility_width);
-    face_visibility_texture->setFormat(QOpenGLTexture::R8U);
-    face_visibility_texture->setMagnificationFilter(QOpenGLTexture::Nearest);
-    face_visibility_texture->setMinificationFilter(QOpenGLTexture::Nearest);
-    face_visibility_texture->allocateStorage();
+    face_visibility_buffer = std::make_shared<QOpenGLBuffer>();
+    face_visibility_buffer->create();
+    face_visibility_buffer->bind();
+    face_visibility_buffer->allocate(data, face_visibility_width);
+    face_visibility_buffer->release();
 
-    face_visibility_texture->setData(
-        0, QOpenGLTexture::Red_Integer, QOpenGLTexture::UInt8, reinterpret_cast<const void *>(data));
+    face_visibility_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::TargetBuffer);
+    face_visibility_texture->create();
+    face_visibility_texture->bind();
+    glTexBuffer(GL_TEXTURE_BUFFER, GL_R8UI, face_visibility_buffer->bufferId());
+    face_visibility_texture->release();
 
     logging::print("uploaded {} bytes face visibility texture", face_visibility_width);
 }
@@ -1012,6 +1016,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     placeholder_texture.reset();
     lightmap_texture.reset();
     face_visibility_texture.reset();
+    face_visibility_buffer.reset();
     m_drawcalls.clear();
     m_vbo.bind();
     m_vbo.allocate(0);
@@ -1551,7 +1556,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         }
 
         // decompile the hull
-        auto leaf_visuals = VisualizeLeafs(bsp, 0, hullnum);
+        std::vector<leaf_visualization_t> leaf_visuals = {}; // VisualizeLeafs(bsp, 0, hullnum);
 
         auto &vao = m_hullVaos[hullnum];
 

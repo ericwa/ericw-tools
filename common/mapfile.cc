@@ -1071,7 +1071,7 @@ void map_entity_t::parse_brush(parser_t &parser)
 
     brush_t brush;
 
-    if (parser.token == "(") {
+    if (parser.token == "(" || parser.token == "}") {
         brush.base_format = texcoord_style_t::quaked;
     } else {
         parser.parse_token();
@@ -1080,13 +1080,13 @@ void map_entity_t::parse_brush(parser_t &parser)
         // optional
         if (parser.token == "brushDef") {
             if (!parser.parse_token()) {
-                FError("Brush primitives: unexpected EOF (nothing after brushDef)");
+                FError("{}: Brush primitives: unexpected EOF (nothing after brushDef)", parser.location);
             }
         }
 
         // mandatory
         if (parser.token != "{") {
-            FError("Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.token);
+            FError("{}: Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.location, parser.token);
         }
     }
     // ericw -- end brush primitives
@@ -1110,7 +1110,7 @@ void map_entity_t::parse_brush(parser_t &parser)
         if (!parser.parse_token()) {
             FError("Brush primitives: unexpected EOF (no closing brace)");
         } else if (parser.token != "}") {
-            FError("Brush primitives: Expected }}, got: {}", parser.token);
+            FError("{}: Brush primitives: Expected }}, got: {}", parser.location, parser.token);
         }
     }
     // ericw -- end brush primitives

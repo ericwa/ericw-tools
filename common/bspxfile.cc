@@ -50,28 +50,97 @@ void bspx_lump_t::stream_read(std::istream &s)
     s >= std::tie(lumpname, fileofs, filelen);
 }
 
-// bspxbrushes_permodel
-
-void bspxbrushes_permodel::stream_write(std::ostream &s) const
-{
-    s <= std::tie(ver, modelnum, numbrushes, numfaces);
-}
-
-void bspxbrushes_permodel::stream_read(std::istream &s)
-{
-    s >= std::tie(ver, modelnum, numbrushes, numfaces);
-}
-
 // bspxbrushes_perbrush
 
-void bspxbrushes_perbrush::stream_write(std::ostream &s) const
-{
-    s <= std::tie(bounds, contents, numfaces);
+void bspxbrushes_perbrush::stream_write(std::ostream &s) const {
+    s <= bounds;
+    s <= contents;
+    s <= static_cast<uint16_t>(faces.size());
+
+    for (auto &face : faces) {
+        s <= face;
+    }
 }
 
 void bspxbrushes_perbrush::stream_read(std::istream &s)
 {
-    s >= std::tie(bounds, contents, numfaces);
+    s >= bounds;
+    s >= contents;
+
+    uint16_t numfaces = 0;
+    s >= numfaces;
+
+    faces.resize(numfaces);
+
+    for (auto &face : faces) {
+        s >= face;
+    }
+}
+
+// bspxbrushes_permodel
+
+void bspxbrushes_permodel::stream_write(std::ostream &s) const
+{
+    s <= ver;
+    s <= modelnum;
+    s <= static_cast<int32_t>(brushes.size());
+    // count faces (ignore numfaces)
+    int32_t faces = 0;
+    for (auto &brush : brushes) {
+        faces += static_cast<int32_t>(brush.faces.size());
+    }
+    s <= faces;
+
+    // next serialize all of the brushes
+    for (auto &brush : brushes) {
+        s <= brush;
+    }
+}
+
+void bspxbrushes_permodel::stream_read(std::istream &s)
+{
+    s >= ver;
+    if (!s) {
+        // we need to handle end-of-stream due to the bspx lump containing an unknown number
+        // of bspxbrushes_permodel objects
+        return;
+    }
+
+    s >= modelnum;
+
+    int32_t numbrushes;
+    s >= numbrushes;
+    s >= numfaces;
+
+    brushes.resize(numbrushes);
+    for (auto &brush : brushes) {
+        s >= brush;
+    }
+}
+
+// bspxbrushes
+
+void bspxbrushes::stream_write(std::ostream &s) const
+{
+    for (auto &model : models) {
+        s <= model;
+    }
+}
+
+void bspxbrushes::stream_read(std::istream &s)
+{
+    models.clear();
+
+    while (true) {
+        bspxbrushes_permodel model;
+        s >= model;
+
+        if (!s) {
+            break;
+        }
+
+        models.push_back(std::move(model));
+    }
 }
 
 // bspxfacenormals_per_vert

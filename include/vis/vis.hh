@@ -17,7 +17,7 @@
     See file, 'COPYING', for details.
 */
 
-// vis.h
+#pragma once
 
 #include <common/cmdlib.hh>
 #include <common/mathlib.hh>
@@ -153,27 +153,9 @@ inline float viswinding_t::distFromPortal(visportal_t &p)
     return mindist;
 }
 
-struct sep_t
-{
-    sep_t *next;
-    qplane3d plane; // from portal is on positive side
-};
-
-struct passage_t
-{
-    passage_t *next;
-    int from, to; // leaf numbers
-    sep_t *planes;
-};
-
-/* Increased MAX_PORTALS_ON_LEAF from 128 */
-constexpr size_t MAX_PORTALS_ON_LEAF = 512;
-
 struct leaf_t
 {
-    int numportals;
-    passage_t *passages;
-    visportal_t *portals[MAX_PORTALS_ON_LEAF];
+    std::vector<visportal_t *> portals;
 };
 
 constexpr size_t MAX_SEPARATORS = MAX_WINDING;
@@ -191,6 +173,8 @@ struct pstack_t
     leafbits_t *mightsee; // bit string
     qplane3d separators[2][MAX_SEPARATORS]; /* Separator cache */
     int numseparators[2];
+    char did_targetchecks;
+    unsigned num_expected_targetchecks;
 };
 
 // important for perf as a ton of these are stack allocated, needs to be be just a pointer bump
@@ -208,6 +192,7 @@ struct visstats_t
     int64_t c_chains = 0;
     int64_t c_leafskip = 0;
     int64_t c_portalskip = 0;
+    int64_t c_targetcheck = 0;
 
     visstats_t operator+(const visstats_t& other) const {
         visstats_t result;
@@ -221,6 +206,7 @@ struct visstats_t
         result.c_chains = this->c_chains + other.c_chains;
         result.c_leafskip = this->c_leafskip + other.c_leafskip;
         result.c_portalskip = this->c_portalskip + other.c_portalskip;
+        result.c_targetcheck = this->c_targetcheck + other.c_targetcheck;
         return result;
     }
 };
@@ -235,6 +221,8 @@ struct threaddata_t
     visportal_t *base;
     pstack_t pstack_head;
     visstats_t stats;
+    unsigned numsteps;
+    unsigned numtargetchecks;
 };
 
 extern int numportals;
@@ -291,6 +279,8 @@ public:
         this, "phsonly", false, &vis_advanced_group, "re-calculate the PHS of a Quake II BSP without touching the PVS"};
     setting_invertible_bool autoclean{
         this, "autoclean", true, &vis_output_group, "remove any extra files on successful completion"};
+    setting_scalar targetratio{this, "targetchecks", 0.5, 0.0, 9999.0, &performance_group,
+        "target ratio of target checks to regular checks (0.0 = no target checks, 1.0 = equal amounts of regular and target checks)"};
 
     fs::path sourceMap;
 

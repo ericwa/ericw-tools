@@ -1299,56 +1299,17 @@ static void UpdateEntLump(void)
 }
 
 /*
-Actually writes out the final bspx BRUSHLIST lump
-This lump replaces the clipnodes stuff for custom collision sizes.
-*/
-void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx)
-{
-    // Actually written in WriteBSPFile()
-    map.exported_bspxbrushes = std::move(ctx->lumpdata);
-}
-void BSPX_Brushes_Init(struct bspxbrushes_s *ctx)
-{
-    ctx->lumpdata.clear();
-}
-
-/*
 WriteBrushes
 Generates a submodel's direct brush information to a separate file, so the engine doesn't need to depend upon specific
 hull sizes
 */
 
-static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const std::vector<mapbrush_t *> &brushes)
+static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vector<mapbrush_t *> &brushes)
 {
-    bspxbrushes_permodel permodel{1, modelnum};
+    bspxbrushes_permodel permodel{.ver = 1, .modelnum = modelnum};
 
     for (auto &b : brushes) {
-        permodel.numbrushes++;
-        for (auto &f : b->faces) {
-            /*skip axial*/
-            const auto &plane = f.get_plane();
-            if (plane.get_type() < plane_type_t::PLANE_ANYX)
-                continue;
-            permodel.numfaces++;
-        }
-    }
-
-    std::ostringstream str(std::ios_base::out | std::ios_base::binary);
-
-    str << endianness<std::endian::little>;
-
-    str <= permodel;
-
-    for (auto &b : brushes) {
-        bspxbrushes_perbrush perbrush{};
-
-        for (auto &f : b->faces) {
-            /*skip axial*/
-            const auto &plane = f.get_plane();
-            if (plane.get_type() < plane_type_t::PLANE_ANYX)
-                continue;
-            perbrush.numfaces++;
-        }
+        bspxbrushes_perbrush &perbrush = permodel.brushes.emplace_back();
 
         perbrush.bounds = b->bounds;
 
@@ -1363,7 +1324,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const
             case CONTENTS_LAVA:
             case CONTENTS_SKY:
                 if (contents.is_clip(qbsp_options.target_game)) {
-                    perbrush.contents = -8;
+                    perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     perbrush.contents = contents.native;
                 }
@@ -1373,7 +1334,7 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const
             //                      break;
             default: {
                 if (contents.is_clip(qbsp_options.target_game)) {
-                    perbrush.contents = -8;
+                    perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
                         contents.to_string(qbsp_options.target_game));
@@ -1383,8 +1344,6 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const
             }
         }
 
-        str <= perbrush;
-
         for (auto &f : b->faces) {
             /*skip axial*/
             const auto &plane = f.get_plane();
@@ -1392,23 +1351,20 @@ static void BSPX_Brushes_AddModel(struct bspxbrushes_s *ctx, int modelnum, const
                 continue;
 
             bspxbrushes_perface perface = qplane3f(plane.get_normal(), plane.get_dist());
-            str <= std::tie(perface.normal, perface.dist);
+            perbrush.faces.push_back(perface);
         }
     }
 
-    std::string data = str.str();
-    ctx->lumpdata.insert(ctx->lumpdata.end(), (uint8_t *)data.data(), ((uint8_t *)data.data()) + data.size());
+    return permodel;
 }
 
 /* for generating BRUSHLIST bspx lump */
-static void BSPX_CreateBrushList(void)
+static void BSPX_CreateBrushList()
 {
-    struct bspxbrushes_s ctx;
+    bspxbrushes ctx;
 
     if (!qbsp_options.wrbrushes.value())
         return;
-
-    BSPX_Brushes_Init(&ctx);
 
     for (size_t entnum = 0; entnum < map.entities.size(); ++entnum) {
         mapentity_t &ent = map.entities.at(entnum);
@@ -1437,13 +1393,19 @@ static void BSPX_CreateBrushList(void)
         }
 
         if (modelnum == 0) {
-
+            // add brushes from world brush entities (func_group, etc.) to the worldspawn model
             for (size_t e = 1; e < map.entities.size(); ++e) {
                 mapentity_t &bent = map.entities.at(e);
 
                 brushes.reserve(brushes.size() + ent.mapbrushes.size());
 
                 if (IsWorldBrushEntity(bent)) {
+                    // skip illusionary entities
+                    const std::string &classname = bent.epairs.get("classname");
+                    if (!Q_strcasecmp(classname, "func_detail_illusionary"))
+                        continue;
+                    if (!Q_strcasecmp(classname, "func_illusionary_visblocker"))
+                        continue;
 
                     for (auto &b : bent.mapbrushes) {
                         brushes.push_back(&b);
@@ -1453,11 +1415,15 @@ static void BSPX_CreateBrushList(void)
         }
 
         if (!brushes.empty()) {
-            BSPX_Brushes_AddModel(&ctx, modelnum, brushes);
+            ctx.models.push_back(BSPX_Brushes_AddModel(modelnum, brushes));
         }
     }
 
-    BSPX_Brushes_Finalize(&ctx);
+    // Actually written in WriteBSPFile()
+    std::ostringstream str(std::ios_base::out | std::ios_base::binary);
+    str << endianness<std::endian::little>;
+    str <= ctx;
+    map.exported_bspxbrushes = StringToVector(str.str());
 }
 
 /*
@@ -1571,7 +1537,7 @@ static void LoadTextureData()
 
         header.width = miptex.width;
         header.height = miptex.height;
-        header.offsets = {-1, -1, -1, -1};
+        header.offsets = {0, 0, 0, 0};
 
         omemstream stream(miptex.data.data(), miptex.data.size());
         stream <= header;

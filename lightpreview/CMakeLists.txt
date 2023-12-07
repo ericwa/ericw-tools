@@ -19,7 +19,6 @@ add_executable(lightpreview
 
 set_target_properties(lightpreview PROPERTIES WIN32_EXECUTABLE YES)
 
-find_package(embree 3.0 REQUIRED)
 INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
 
 # HACK: Windows embree .dll's from https://github.com/embree/embree/releases ship with a tbb12.dll

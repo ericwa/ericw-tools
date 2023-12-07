@@ -145,6 +145,18 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.15)
 
 find_package(TBB REQUIRED)
 
+set(embree_DIR_BAK ${embree_DIR})
+
+find_package(embree 3)
+if (NOT embree_FOUND)
+	# find_package clears embree_DIR, so restore it in case we provided
+	# that on the command line to specify the embree4 location
+	set(embree_DIR ${embree_DIR_BAK})
+
+	find_package(embree 4 REQUIRED)
+	add_compile_definitions(HAVE_EMBREE4)
+endif()
+
 set(TEST_QUAKE_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake maps to this directory (useful for testing in game)")
 set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Quake 2 maps to this directory (useful for testing in game)")
 set(TEST_HEXEN2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Hexen 2 maps to this directory (useful for testing in game)")

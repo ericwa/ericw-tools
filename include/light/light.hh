@@ -439,6 +439,7 @@ const std::unordered_map<int, std::vector<uint8_t>> &UncompressedVis();
 bool IsOutputtingSupplementaryData();
 
 std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces();
+std::vector<lightsurf_t*> &EmissiveLightSurfaces();
 
 extern std::vector<surfflags_t> extended_texinfo_flags;
 

@@ -2,7 +2,7 @@
 #include <vis/leafbits.hh>
 #include <common/log.hh>
 #include <common/parallel.hh>
-#include <atomic>
+#include <bit> // for std::popcount
 
 /*
   ==============
@@ -27,28 +27,21 @@
 static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, const qplane3d src_pl, const viswinding_t *pass,
     viswinding_t *&target, unsigned int test, pstack_t &stack)
 {
-    int i, j, k, l;
-    qplane3d sep;
-    qvec3d v1, v2;
-    vec_t d;
-    int count;
-    bool fliptest;
-    vec_t len_sq;
-
     // check all combinations
-    for (i = 0; i < source->size(); i++) {
-        l = (i + 1) % source->size();
-        v1 = source->at(l) - source->at(i);
+    for (size_t i = 0; i < source->size(); i++) {
+        const size_t l = (i + 1) % source->size();
+        const qvec3d v1 = source->at(l) - source->at(i);
 
         // find a vertex of pass that makes a plane that puts all of the
         // vertexes of pass on the front side and all of the vertexes of
         // source on the back side
-        for (j = 0; j < pass->size(); j++) {
+        for (size_t j = 0; j < pass->size(); j++) {
 
             // Which side of the source portal is this point?
             // This also tells us which side of the separating plane has
             //  the source portal.
-            d = src_pl.distance_to(pass->at(j));
+            bool fliptest;
+            vec_t d = src_pl.distance_to(pass->at(j));
             if (d < -VIS_ON_EPSILON)
                 fliptest = true;
             else if (d > VIS_ON_EPSILON)
@@ -57,9 +50,10 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
                 continue; // Point lies in source plane
 
             // Make a plane with the three points
-            v2 = pass->at(j) - source->at(i);
+            qplane3d sep;
+            const qvec3d v2 = pass->at(j) - source->at(i);
             sep.normal = qv::cross(v1, v2);
-            len_sq = qv::length2(sep.normal);
+            const vec_t len_sq = qv::length2(sep.normal);
 
             // If points don't make a valid plane, skip it.
             if (len_sq < VIS_ON_EPSILON)
@@ -78,8 +72,9 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
             // if all of the pass portal points are now on the positive side,
             // this is the separating plane
             //
-            count = 0;
-            for (k = 0; k < pass->size(); k++) {
+            int count = 0;
+            size_t k = 0;
+            for (; k < pass->size(); k++) {
                 if (k == j)
                     continue;
                 d = sep.distance_to(pass->at(k));
@@ -120,13 +115,238 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
 
 static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 {
-    pstack_t *p;
-
-    for (p = thread->pstack_head.next; p; p = p->next)
+    for (pstack_t *p = thread->pstack_head.next; p; p = p->next)
         if (p->leaf == leaf)
             return 1;
     return 0;
 }
+
+enum class vistest_action {
+    action_continue,
+    action_pass
+};
+
+static vistest_action VisTests(visstats_t &stats, pstack_t &stack, const pstack_t* const head, const pstack_t* const prevstack)
+{
+    /* TEST 0 :: source -> pass -> target */
+    if (vis_options.level.value() > 0) {
+        if (stack.numseparators[0]) {
+            for (int j = 0; j < stack.numseparators[0]; j++) {
+                stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[0][j]);
+                if (!stack.pass)
+                    break;
+            }
+        } else {
+            /* Using prevstack source for separator cache correctness */
+            ClipToSeparators(stats, prevstack->source, head->portalplane, prevstack->pass, stack.pass, 0, stack);
+        }
+        if (!stack.pass) {
+            FreeStackWinding(stack.source, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    /* TEST 1 :: pass -> source -> target */
+    if (vis_options.level.value() > 1) {
+        if (stack.numseparators[1]) {
+            for (int j = 0; j < stack.numseparators[1]; j++) {
+                stack.pass = ClipStackWinding(stats, stack.pass, stack, stack.separators[1][j]);
+                if (!stack.pass)
+                    break;
+            }
+        } else {
+            /* Using prevstack source for separator cache correctness */
+            ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, prevstack->source, stack.pass, 1, stack);
+        }
+        if (!stack.pass) {
+            FreeStackWinding(stack.source, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    /* TEST 2 :: target -> pass -> source */
+    if (vis_options.level.value() > 2) {
+        ClipToSeparators(stats, stack.pass, stack.portalplane, prevstack->pass, stack.source, 2, stack);
+        if (!stack.source) {
+            FreeStackWinding(stack.pass, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    /* TEST 3 :: pass -> target -> source */
+    if (vis_options.level.value() > 3) {
+        ClipToSeparators(stats, prevstack->pass, prevstack->portalplane, stack.pass, stack.source, 3, stack);
+        if (!stack.source) {
+            FreeStackWinding(stack.pass, stack);
+            return vistest_action::action_continue;
+        }
+    }
+
+    return vistest_action::action_pass;
+}
+
+/*
+  ==================
+  TargetChecks
+
+  Filter mightsee by clipping against all portals
+  ==================
+*/
+static unsigned
+TargetChecks(visstats_t &stats, const pstack_t* const head, const pstack_t* const prevstack, leafbits_t& prevportalbits, leafbits_t& portalbits)
+{
+    pstack_t stack;
+    visportal_t *p, *q;
+    qplane3d backplane;
+    int i, j, numchecks, numremain;
+
+    if (prevstack->pass == NULL) {
+        portalbits = std::move(prevportalbits);
+        return 0;
+    }
+
+    numchecks = 0;
+    numremain = 0;
+
+    stack.next = NULL;
+    stack.leaf = NULL;
+    stack.portal = NULL;
+    stack.numseparators[0] = 0;
+    stack.numseparators[1] = 0;
+
+    for (i = 0; i < STACK_WINDINGS; i++)
+        stack.windings_used[i] = false;
+
+    leafbits_t local(portalleafs);
+    local.clear();
+    stack.mightsee = &local;
+
+    // check all portals for flowing into other leafs
+    for (i = 0, p = portals.data(); i < numportals * 2; i++, p++) {
+
+        if ((*stack.mightsee)[p->leaf])
+            continue;           // target check already done and passed
+
+        if (!(*prevstack->mightsee)[p->leaf])
+            continue;           // can't possibly see it
+
+        if (!prevportalbits[i])
+            continue;           // can't possibly see it
+
+        // get plane of portal, point normal into the neighbor leaf
+        stack.portalplane = p->plane;
+        backplane = -p->plane;
+
+        if (qv::epsilonEqual(prevstack->portalplane.normal, backplane.normal, VIS_EQUAL_EPSILON))
+            continue;           // can't go out a coplanar face
+
+        numchecks++;
+
+        stack.portal = p;
+
+        /*
+         * Testing visibility of a target portal, from a source portal,
+         * looking through a pass portal.
+         *
+         *    source portal  =>  pass portal      =>  target portal
+         *    stack.source   =>  prevstack->pass  =>  stack.pass
+         *
+         * If we can see part of the target portal, we use that clipped portal
+         * as the pass portal into the next leaf.
+         */
+
+        /* Clip any part of the target portal behind the source portal */
+        stack.pass = ClipStackWinding(stats, p->winding.get(), stack, head->portalplane);
+        if (!stack.pass)
+            continue;
+
+        /* Clip any part of the target portal behind the pass portal */
+        stack.pass = ClipStackWinding(stats, stack.pass, stack, prevstack->portalplane);
+        if (!stack.pass)
+            continue;
+
+        /* Clip any part of the source portal in front of the target portal */
+        stack.source = ClipStackWinding(stats, prevstack->source, stack, backplane);
+        if (!stack.source) {
+            FreeStackWinding(stack.pass, stack);
+            continue;
+        }
+
+        if (VisTests(stats, stack, head, prevstack) == vistest_action::action_continue)
+            continue;
+
+        // mark leaf visible
+        (*stack.mightsee)[p->leaf] = true;
+
+        // mark portal visible
+        portalbits[i] = true;
+        numremain++;
+
+        // inherit remaining portal visibilities
+        leaf_t *l = &leafs[p->leaf];
+        for (int k = 0; k < l->portals.size(); k++) {
+            q = l->portals[k];
+            j = (q - portals.data()) ^ 1; // another portal leading into the same leaf
+            if (i < j) // is it upcoming in iteration order?
+                portalbits[j] = bool(prevportalbits[j]);
+        }
+
+        FreeStackWinding(stack.source, stack);
+        FreeStackWinding(stack.pass, stack);
+    }
+
+    // transfer results back to prevstack
+    *prevstack->mightsee = std::move(local);
+
+    return numchecks;
+}
+
+
+/*
+  ==================
+  IterativeTargetChecks
+
+  Retrace the path and reduce mightsee by clipping the targets directly
+  ==================
+*/
+static unsigned
+IterativeTargetChecks(visstats_t &stats, pstack_t* const head)
+{
+    unsigned numchecks, numblocks;
+
+    numchecks = 0;
+    numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
+
+    leafbits_t portalbits(numportals*2); // in contradiction to the typename, I know
+    portalbits.setall();
+
+    for (pstack_t* stack = head; stack; stack = stack->next)
+    {
+        if (stack->did_targetchecks)
+            continue;
+
+        leafbits_t nextportalbits(numportals*2);
+        nextportalbits.clear();
+        numchecks += TargetChecks(stats, head, stack, portalbits, nextportalbits);
+        portalbits = std::move(nextportalbits);
+
+        if (stack->next)
+        {
+            pstack_t* next = stack->next;
+            uint32_t *nextsee = next->mightsee->data();
+            uint32_t *mightsee = stack->mightsee->data();
+            for (int i = 0; i < numblocks; i++)
+                nextsee[i] &= mightsee[i];
+        }
+
+        // mark done
+        stack->did_targetchecks = true;
+        stack->num_expected_targetchecks = 0;
+    }
+
+    return numchecks;
+}
+
 
 /*
   ==================
@@ -139,23 +359,16 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
 static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevstack)
 {
     pstack_t stack;
-    visportal_t *p;
-    qplane3d backplane;
-    leaf_t *leaf;
-    int i, j, err, numblocks;
 
     ++thread->stats.c_chains;
 
-    leaf = &leafs[leafnum];
+    leaf_t *leaf = &leafs[leafnum];
 
     /*
      * Check we haven't recursed into a leaf already on the stack
      */
-    err = CheckStack(leaf, thread);
-    if (err) {
-        // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
-        // causes it to happen a lot.
-        // logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
+    if (CheckStack(leaf, thread)) {
+        logging::funcprint("WARNING: recursion on leaf {}\n", leafnum);
         return;
     }
 
@@ -163,6 +376,18 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
     if (!thread->leafvis[leafnum]) {
         thread->leafvis[leafnum] = true;
         thread->base->numcansee++;
+    }
+
+    // check all target portals instead of just neighbor portals, if the time is right
+    if (vis_options.targetratio.value() > 0.0 &&
+        prevstack.num_expected_targetchecks > 0 &&
+        thread->numsteps * vis_options.targetratio.value() >=
+        thread->numtargetchecks + prevstack.num_expected_targetchecks)
+    {
+        unsigned num_actual_targetchecks = IterativeTargetChecks(thread->stats, &thread->pstack_head);
+        thread->stats.c_targetcheck += num_actual_targetchecks;
+        thread->numtargetchecks += num_actual_targetchecks;
+        // prevstack.num_expected_targetchecks is zero now
     }
 
     prevstack.next = &stack;
@@ -173,19 +398,16 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
     stack.numseparators[0] = 0;
     stack.numseparators[1] = 0;
 
-    for (i = 0; i < STACK_WINDINGS; i++)
+    for (int i = 0; i < STACK_WINDINGS; i++)
         stack.windings_used[i] = false;
 
     leafbits_t local(portalleafs);
     stack.mightsee = &local;
 
-    auto might = stack.mightsee->data();
-    auto vis = thread->leafvis.data();
+    const auto vis = thread->leafvis.data();
 
     // check all portals for flowing into other leafs
-    for (i = 0; i < leaf->numportals; i++) {
-        p = leaf->portals[i];
-
+    for (visportal_t *p : leaf->portals) {
         if (!(*prevstack.mightsee)[p->leaf]) {
             thread->stats.c_leafskip++;
             continue; // can't possibly see it
@@ -202,9 +424,10 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
             test = p->mightsee.data();
         }
 
+        const auto might = stack.mightsee->data(); // buffer of stack.mightsee can change between iterations
         uint32_t more = 0;
-        numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
-        for (j = 0; j < numblocks; j++) {
+        const int numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
+        for (int j = 0; j < numblocks; j++) {
             might[j] = prevstack.mightsee->data()[j] & test[j];
             more |= (might[j] & ~vis[j]);
         }
@@ -214,17 +437,31 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
             thread->stats.c_portalskip++;
             continue;
         }
+
+        stack.did_targetchecks = false;
+        stack.num_expected_targetchecks = 0;
+
+        // calculate num_expected_targetchecks only if we're using it, since it's somewhat expensive to compute
+        if (vis_options.targetratio.value() > 0.0) {
+            int nummightsee = 0;
+            for (int j = 0; j < numblocks; j++) {
+                nummightsee += std::popcount(might[j]);
+            }
+            stack.num_expected_targetchecks = prevstack.num_expected_targetchecks + nummightsee;
+        }
+
         // get plane of portal, point normal into the neighbor leaf
         stack.portalplane = p->plane;
-        backplane = -p->plane;
+        const qplane3d backplane = -p->plane;
 
         if (qv::epsilonEqual(prevstack.portalplane.normal, backplane.normal, VIS_EQUAL_EPSILON))
             continue; // can't go out a coplanar face
 
+        thread->numsteps++;
         thread->stats.c_portalcheck++;
 
         stack.portal = p;
-        stack.next = NULL;
+        stack.next = nullptr;
 
         /*
          * Testing visibility of a target portal, from a source portal,
@@ -264,60 +501,8 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
 
         thread->stats.c_portaltest++;
 
-        /* TEST 0 :: source -> pass -> target */
-        if (vis_options.level.value() > 0) {
-            if (stack.numseparators[0]) {
-                for (j = 0; j < stack.numseparators[0]; j++) {
-                    stack.pass = ClipStackWinding(thread->stats, stack.pass, stack, stack.separators[0][j]);
-                    if (!stack.pass)
-                        break;
-                }
-            } else {
-                /* Using prevstack source for separator cache correctness */
-                ClipToSeparators(
-                    thread->stats, prevstack.source, thread->pstack_head.portalplane, prevstack.pass, stack.pass, 0, stack);
-            }
-            if (!stack.pass) {
-                FreeStackWinding(stack.source, stack);
-                continue;
-            }
-        }
-
-        /* TEST 1 :: pass -> source -> target */
-        if (vis_options.level.value() > 1) {
-            if (stack.numseparators[1]) {
-                for (j = 0; j < stack.numseparators[1]; j++) {
-                    stack.pass = ClipStackWinding(thread->stats, stack.pass, stack, stack.separators[1][j]);
-                    if (!stack.pass)
-                        break;
-                }
-            } else {
-                /* Using prevstack source for separator cache correctness */
-                ClipToSeparators(thread->stats, prevstack.pass, prevstack.portalplane, prevstack.source, stack.pass, 1, stack);
-            }
-            if (!stack.pass) {
-                FreeStackWinding(stack.source, stack);
-                continue;
-            }
-        }
-
-        /* TEST 2 :: target -> pass -> source */
-        if (vis_options.level.value() > 2) {
-            ClipToSeparators(thread->stats, stack.pass, stack.portalplane, prevstack.pass, stack.source, 2, stack);
-            if (!stack.source) {
-                FreeStackWinding(stack.pass, stack);
-                continue;
-            }
-        }
-
-        /* TEST 3 :: pass -> target -> source */
-        if (vis_options.level.value() > 3) {
-            ClipToSeparators(thread->stats, prevstack.pass, prevstack.portalplane, stack.pass, stack.source, 3, stack);
-            if (!stack.source) {
-                FreeStackWinding(stack.pass, stack);
-                continue;
-            }
-        }
+        if (VisTests(thread->stats, stack, &thread->pstack_head, &prevstack) == vistest_action::action_continue)
+            continue;
 
         thread->stats.c_portalpass++;
 
@@ -349,6 +534,8 @@ visstats_t PortalFlow(visportal_t *p)
     data.pstack_head.source = p->winding.get();
     data.pstack_head.portalplane = p->plane;
     data.pstack_head.mightsee = &p->mightsee;
+    data.numsteps = 0;
+    data.numtargetchecks = 0;
 
     RecursiveLeafFlow(p->leaf, &data, data.pstack_head);
 
@@ -371,9 +558,7 @@ static void SimpleFlood(visportal_t &srcportal, int leafnum, const leafbits_t &p
     srcportal.nummightsee++;
 
     leaf_t &leaf = leafs[leafnum];
-    for (size_t i = 0; i < leaf.numportals; i++) {
-        const visportal_t *p = leaf.portals[i];
-
+    for (const visportal_t *p : leaf.portals) {
         if (portalsee[p - portals.data()]) {
             SimpleFlood(srcportal, p->leaf, portalsee);
         }
@@ -387,8 +572,6 @@ static void SimpleFlood(visportal_t &srcportal, int leafnum, const leafbits_t &p
 */
 static void BasePortalThread(size_t portalnum)
 {
-    int j;
-    float d;
     leafbits_t portalsee(numportals * 2);
 
     visportal_t &p = portals[portalnum];
@@ -405,32 +588,46 @@ static void BasePortalThread(size_t portalnum)
         viswinding_t &tw = *tp.winding;
 
         // Quick test - completely at the back?
-        d = p.plane.distance_to(tw.origin);
+        float d = p.plane.distance_to(tw.origin);
         if (d < -tw.radius)
             continue;
 
+        int cctp = 0;
+        size_t j;
         for (j = 0; j < tw.size(); j++) {
             d = p.plane.distance_to(tw[j]);
-            if (d > -VIS_ON_EPSILON) // ericw -- changed from > ON_EPSILON for
-                                     // https://github.com/ericwa/ericw-tools/issues/261
+            cctp += d > -VIS_ON_EPSILON;
+            if (d > VIS_ON_EPSILON)
                 break;
         }
-        if (j == tw.size())
-            continue; // no points on front
+        if (j == tw.size()) {
+            if (cctp != tw.size())
+                continue; // no points on front
+        } else
+            cctp = 0;
 
         // Quick test - completely on front?
         d = tp.plane.distance_to(w.origin);
         if (d > w.radius)
             continue;
 
+        int ccp = 0;
         for (j = 0; j < w.size(); j++) {
             d = tp.plane.distance_to(w[j]);
-            if (d < VIS_ON_EPSILON) // ericw -- changed from < -ON_EPSILON for
-                                    // https://github.com/ericwa/ericw-tools/issues/261
+            ccp += d < VIS_ON_EPSILON;
+            if (d < -VIS_ON_EPSILON)
                 break;
         }
-        if (j == w.size())
-            continue; // no points on back
+        if (j == w.size()) {
+            if (ccp != w.size())
+                continue; // no points on back
+        } else
+            ccp = 0;
+
+        // coplanarity check
+        if (cctp != 0 || ccp != 0)
+            if (qv::dot(p.plane.normal, tp.plane.normal) < -0.99)
+                continue;
 
         if (vis_options.visdist.value() > 0) {
             if (tp.winding->distFromPortal(p) > vis_options.visdist.value() ||

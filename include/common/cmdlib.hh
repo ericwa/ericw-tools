@@ -570,3 +570,16 @@ struct omemsizestream : virtual omemsizebuf, std::ostream
 void CRC_Init(uint16_t &crcvalue);
 void CRC_ProcessByte(uint16_t &crcvalue, uint8_t data);
 uint16_t CRC_Block(const uint8_t *start, int count);
+
+std::vector<uint8_t> StringToVector(const std::string &str);
+
+template <class T>
+T deserialize(const std::vector<uint8_t> &bytes)
+{
+    auto stream = imemstream(bytes.data(), bytes.size());
+    stream >> endianness<std::endian::little>;
+
+    T result;
+    stream >= result;
+    return result;
+}

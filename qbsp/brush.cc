@@ -888,9 +888,6 @@ void Brush_LoadEntity(mapentity_t &entity, hull_index_t hullnum, bspbrush_t::con
         for (int i = 1; i < map.entities.size(); i++) {
             mapentity_t &source = map.entities.at(i);
 
-            /* Load external .map and change the classname, if needed */
-            ProcessExternalMapEntity(source);
-
             ProcessAreaPortal(source);
 
             if (IsWorldBrushEntity(source) || IsNonRemoveWorldBrushEntity(source)) {

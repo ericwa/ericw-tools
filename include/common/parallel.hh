@@ -18,6 +18,8 @@
     See file, 'COPYING', for details.
 */
 
+#pragma once
+
 #include "common/log.hh"
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_for_each.h>

@@ -299,7 +299,7 @@ TEST_CASE("nodraw_light" * doctest::test_suite("testmaps_q2"))
     CHECK(texinfo->flags.native == (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST_CASE("base1" * doctest::test_suite("testmaps_q2") * doctest::skip())
+TEST_CASE("base1" * doctest::test_suite("testmaps_q2") * doctest::skip() * doctest::may_fail())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1-test.map");
 

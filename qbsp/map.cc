@@ -2508,7 +2508,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
     if (!parser.parse_token(PARSE_PEEK))
         FError("{}: unexpected EOF after {{ beginning brush", parser.location);
 
-    if (parser.token == "(") {
+    if (parser.token == "(" || parser.token == "}") {
         brush.format = brushformat_t::NORMAL;
     } else {
         parser.parse_token();
@@ -2517,12 +2517,12 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         // optional
         if (parser.token == "brushDef") {
             if (!parser.parse_token())
-                FError("Brush primitives: unexpected EOF (nothing after brushDef)");
+                FError("{}: Brush primitives: unexpected EOF (nothing after brushDef)", parser.location);
         }
 
         // mandatory
         if (parser.token != "{")
-            FError("Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.token);
+            FError("{}: Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.location, parser.token);
     }
     // ericw -- end brush primitives
 
@@ -2571,8 +2571,8 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         brush.faces.emplace_back(std::move(face.value()));
     }
 
-    bool is_antiregion = brush.faces[0].texname.ends_with("antiregion"),
-         is_region = !is_antiregion && brush.faces[0].texname.ends_with("region");
+    bool is_antiregion = !brush.faces.empty() && brush.faces[0].texname.ends_with("antiregion"),
+         is_region = !is_antiregion && !brush.faces.empty() && brush.faces[0].texname.ends_with("region");
 
     // check regionness
     if (is_antiregion) {
@@ -3104,6 +3104,11 @@ inline void WriteMapBrushMap(const fs::path &name, const std::vector<mapbrush_t>
 void ProcessMapBrushes()
 {
     logging::funcheader();
+
+    // load external maps (needs to be before world extents are calculated)
+    for (auto &source : map.entities) {
+        ProcessExternalMapEntity(source);
+    }
 
     // calculate extents, if required
     if (!qbsp_options.worldextent.value()) {

@@ -61,27 +61,27 @@ map_file_t LoadMapOrEntFile(const fs::path &source)
     return map;
 }
 
-constexpr const char *usage = "\
-usage: maputil [operations...]\
-\
---script \"<path to Lua script file\"\
-  execute the given Lua script.\
-valid operations:\
---query \"<Lua expression>\"\
-  perform a query on entities and print out matching results.\
-  see docs for more details on globals.\
-  note that query has the same access as script\
-  but is more suitable for small read-only operations.\
---strip_extended_info\
-  removes extended Quake II/III information on faces.\
---convert <quake | valve | etp | bp>\
-  convert the current map to the given format.\
---save \"<output path>\"\
-  save the current map to the given output path.\
---game <quake | quake2 | hexen2 | halflife>\
-  set the current game; used for certain conversions\
-  or operations.\
-";
+constexpr const char *usage = R"(
+usage: maputil [operations...]
+
+--script "<path to Lua script file>"
+  execute the given Lua script.
+valid operations:
+--query "<Lua expression>"
+  perform a query on entities and print out matching results.
+  see docs for more details on globals.
+  note that query has the same access as script
+  but is more suitable for small read-only operations.
+--strip_extended_info
+  removes extended Quake II/III information on faces.
+--convert <quake | valve | etp | bp>
+  convert the current map to the given format.
+--save "<output path>"
+  save the current map to the given output path.
+--game <quake | quake2 | hexen2 | halflife>
+  set the current game; used for certain conversions
+  or operations.
+)";
 
 #ifdef USE_LUA
 using array_iterate_callback = std::function<bool(lua_State *state, size_t index)>;

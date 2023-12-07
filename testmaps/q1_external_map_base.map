@@ -1,0 +1,15 @@
+// Game: Quake
+// Format: Valve
+// entity 0
+{
+"mapversion" "220"
+"classname" "worldspawn"
+}
+// entity 1
+{
+"classname" "misc_external_map"
+"origin" "0 0 0"
+"_external_map" "q1_external_map_included.map"
+"_external_map_classname" "func_group"
+"_external_map_angle" "180"
+}

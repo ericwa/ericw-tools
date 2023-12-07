@@ -1,16 +1,16 @@
-// vis.c
+#include <vis/vis.hh>
+
+#include <vis/leafbits.hh>
+#include <common/log.hh>
+#include <common/bsputils.hh>
+#include <common/fs.hh>
+#include <common/parallel.hh>
 
 #include <climits>
 #include <cstdint>
 #include <bit> // for std::countr_zero
 #include <numeric> // for std::accumulate
 
-#include <vis/leafbits.hh>
-#include <vis/vis.hh>
-#include <common/log.hh>
-#include <common/bsputils.hh>
-#include <common/fs.hh>
-#include <common/parallel.hh>
 #include <fmt/chrono.h>
 
 /*
@@ -114,10 +114,9 @@ void FreeStackWinding(viswinding_t *&w, pstack_t &stack)
 */
 viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &stack, const qplane3d &split)
 {
-    vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (in->size() + 1));
-    int *sides = (int *)alloca(sizeof(int) * (in->size() + 1));
-    int counts[3];
-    int i, j;
+    vec_t dists[MAX_WINDING + 1];
+    int sides[MAX_WINDING + 1];
+    size_t i;
 
     /* Fast test first */
     vec_t dot = split.distance_to(in->origin);
@@ -131,7 +130,7 @@ viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &st
     if (in->size() > MAX_WINDING)
         FError("in->numpoints > MAX_WINDING ({} > {})", in->size(), MAX_WINDING);
 
-    counts[0] = counts[1] = counts[2] = 0;
+    int counts[3] = {0, 0, 0};
 
     /* determine sides for each point */
     for (i = 0; i < in->size(); i++) {
@@ -163,7 +162,7 @@ viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &st
     if (!counts[1])
         return in;
 
-    auto neww = AllocStackWinding(stack);
+    auto *neww = AllocStackWinding(stack);
     neww->numpoints = 0;
     neww->origin = in->origin;
     neww->radius = in->radius;
@@ -191,7 +190,7 @@ viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &st
         const qvec3d &p2 = (*in)[(i + 1) % in->size()];
         qvec3d mid;
         vec_t fraction = dists[i] / (dists[i] - dists[i + 1]);
-        for (j = 0; j < 3; j++) {
+        for (size_t j = 0; j < 3; j++) {
             /* avoid round off error when possible */
             if (split.normal[j] == 1)
                 mid[j] = split.dist;
@@ -270,8 +269,7 @@ visportal_t *GetNextPortal(void)
 static void UpdateMightsee(visstats_t &stats, const leaf_t &source, const leaf_t &dest)
 {
     size_t leafnum = &dest - leafs.data();
-    for (size_t i = 0; i < source.numportals; i++) {
-        visportal_t *p = source.portals[i];
+    for (visportal_t *p : source.portals) {
         if (p->status != pstat_none) {
             continue;
         }
@@ -295,11 +293,6 @@ static void UpdateMightsee(visstats_t &stats, const leaf_t &source, const leaf_t
 */
 static void PortalCompleted(visstats_t &stats, visportal_t *completed)
 {
-    int i, j, k, bit, numblocks;
-    int leafnum;
-    const visportal_t *p, *p2;
-    uint32_t changed;
-
     portal_mutex.lock();
 
     completed->status = pstat_done;
@@ -309,16 +302,16 @@ static void PortalCompleted(visstats_t &stats, visportal_t *completed)
      * mightsee during the full vis so far.
      */
     const leaf_t &myleaf = leafs[completed->leaf];
-    for (i = 0; i < myleaf.numportals; i++) {
-        p = myleaf.portals[i];
+    for (int i = 0; i < myleaf.portals.size(); i++) {
+        const visportal_t *p = myleaf.portals[i];
         if (p->status != pstat_done)
             continue;
 
         auto might = p->mightsee.data();
         auto vis = p->visbits.data();
-        numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
-        for (j = 0; j < numblocks; j++) {
-            changed = might[j] & ~vis[j];
+        int numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
+        for (int j = 0; j < numblocks; j++) {
+            uint32_t changed = might[j] & ~vis[j];
             if (!changed)
                 continue;
 
@@ -326,10 +319,10 @@ static void PortalCompleted(visstats_t &stats, visportal_t *completed)
              * If any of these changed bits are still visible from another
              * portal, we can't update yet.
              */
-            for (k = 0; k < myleaf.numportals; k++) {
+            for (int k = 0; k < myleaf.portals.size(); k++) {
                 if (k == i)
                     continue;
-                p2 = myleaf.portals[k];
+                const visportal_t *p2 = myleaf.portals[k];
                 if (p2->status == pstat_done)
                     changed &= ~p2->visbits.data()[j];
                 else
@@ -342,9 +335,9 @@ static void PortalCompleted(visstats_t &stats, visportal_t *completed)
              * Update mightsee for any of the changed bits that survived
              */
             while (changed) {
-                bit = std::countr_zero(changed);
+                int bit = std::countr_zero(changed);
                 changed &= ~nth_bit(bit);
-                leafnum = (j << leafbits_t::shift) + bit;
+                int leafnum = (j << leafbits_t::shift) + bit;
                 UpdateMightsee(stats, leafs[leafnum], myleaf);
             }
         }
@@ -363,8 +356,6 @@ static duration stateinterval;
 */
 static visstats_t LeafThread()
 {
-    visportal_t *p;
-
     portal_mutex.lock();
     /* Save state if sufficient time has elapsed */
     auto now = I_FloatTime();
@@ -374,7 +365,7 @@ static visstats_t LeafThread()
     }
     portal_mutex.unlock();
 
-    p = GetNextPortal();
+    visportal_t *p = GetNextPortal();
     if (!p)
         return {};
 
@@ -401,40 +392,32 @@ static std::vector<uint8_t> compressed;
 
 static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 {
-    leaf_t *leaf;
-    uint8_t *outbuffer;
-    int i, j;
-    int numvis, numblocks;
-    const visportal_t *p;
-
     /*
      * Collect visible bits from all portals into buffer
      */
-    leaf = &leafs[clusternum];
-    numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
-    for (i = 0; i < leaf->numportals; i++) {
-        p = leaf->portals[i];
+    leaf_t *leaf = &leafs[clusternum];
+    int numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
+    for (const visportal_t *p : leaf->portals) {
         if (p->status != pstat_done)
             FError("portal not done");
-        for (j = 0; j < numblocks; j++)
+        for (int j = 0; j < numblocks; j++)
             buffer.data()[j] |= p->visbits.data()[j];
     }
 
-    // ericw -- this seems harmless and the fix for https://github.com/ericwa/ericw-tools/issues/261
-    // causes it to happen a lot.
-    // if (TestLeafBit(buffer, clusternum))
-    //    logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
+    if (buffer[clusternum])
+       logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
 
     buffer[clusternum] = true;
 
     /*
      * Now expand the clusters into the full leaf visibility map
      */
-    numvis = 0;
+    int numvis = 0;
 
+    uint8_t *outbuffer;
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         outbuffer = uncompressed.data() + clusternum * leafbytes;
-        for (i = 0; i < portalleafs; i++) {
+        for (int i = 0; i < portalleafs; i++) {
             if (buffer[i]) {
                 outbuffer[i >> 3] |= nth_bit(i & 7);
                 numvis++;
@@ -442,7 +425,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         }
     } else {
         outbuffer = uncompressed.data() + clusternum * leafbytes_real;
-        for (i = 0; i < portalleafs_real; i++) {
+        for (int i = 0; i < portalleafs_real; i++) {
             if (buffer[bsp->dleafs[i + 1].cluster]) {
                 outbuffer[i >> 3] |= nth_bit(i & 7);
                 numvis++;
@@ -463,7 +446,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
         // FIXME: not sure what this is supposed to be?
         totalvis += numvis;
     } else {
-        for (i = 0; i < portalleafs_real; i++) {
+        for (int i = 0; i < portalleafs_real; i++) {
             if (bsp->dleafs[i + 1].cluster == clusternum) {
                 totalvis += numvis;
             }
@@ -486,7 +469,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
 
     // Set pointers
     if (bsp->loadversion->game->id != GAME_QUAKE_II) {
-        for (i = 0; i < portalleafs_real; i++) {
+        for (int i = 0; i < portalleafs_real; i++) {
             if (bsp->dleafs[i + 1].cluster == clusternum) {
                 bsp->dleafs[i + 1].visofs = visofs;
             }
@@ -541,6 +524,7 @@ visstats_t CalcPortalVis(const mbsp_t *bsp)
         stats.c_portaltest, stats.c_portalpass);
     logging::print(logging::flag::VERBOSE, "c_vistest: {}  c_mighttest: {}  c_mightseeupdate {}\n", stats.c_vistest,
         stats.c_mighttest, stats.c_mightseeupdate);
+    logging::print(logging::flag::VERBOSE, "c_targetcheck: {}\n", stats.c_targetcheck);
 
     return stats;
 }
@@ -552,8 +536,6 @@ visstats_t CalcPortalVis(const mbsp_t *bsp)
 */
 visstats_t CalcVis(mbsp_t *bsp)
 {
-    int i;
-
     if (LoadVisState()) {
         logging::print("Loaded previous state. Resuming progress...\n");
     } else {
@@ -569,7 +551,7 @@ visstats_t CalcVis(mbsp_t *bsp)
     //
     logging::print("Expanding clusters...\n");
     leafbits_t buffer(portalleafs);
-    for (i = 0; i < portalleafs; i++) {
+    for (int i = 0; i < portalleafs; i++) {
         ClusterFlow(i, buffer, bsp);
         buffer.clear();
     }
@@ -659,10 +641,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
             // create forward portal
             auto &l = leafs[sourceportal.leafnums[0]];
-            if (l.numportals == MAX_PORTALS_ON_LEAF)
-                FError("Leaf with too many portals");
-            l.portals[l.numportals] = &p;
-            l.numportals++;
+            l.portals.push_back(&p);
 
             p.plane = -plane;
             p.leaf = sourceportal.leafnums[1];
@@ -673,10 +652,7 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
             auto &p = *dest_portal_it;
             // create backwards portal
             auto &l = leafs[sourceportal.leafnums[1]];
-            if (l.numportals == MAX_PORTALS_ON_LEAF)
-                FError("Leaf with too many portals");
-            l.portals[l.numportals] = &p;
-            l.numportals++;
+            l.portals.push_back(&p);
 
             // Create a reverse winding
             const auto flipped = sourceportal.winding.flip();

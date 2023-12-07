@@ -23,6 +23,8 @@
 #include <unistd.h>
 #endif
 
+#include "common/imglib.hh"
+
 #include <common/cmdlib.hh>
 #include <common/bspfile.hh>
 #include <common/bsputils.hh>
@@ -38,6 +40,9 @@
 #include <algorithm> // std::sort
 #include <string>
 #include <fstream>
+
+// TODO
+settings::common_settings bsputil_options;
 
 /* FIXME - share header with qbsp, etc. */
 struct wadinfo_t
@@ -102,6 +107,31 @@ void ExportWad(std::ofstream &wadfile, const mbsp_t *bsp)
     for (auto &miptex : texdata.textures) {
         if (miptex.data.size() > sizeof(dmiptex_t)) {
             miptex.stream_write(wadfile);
+        }
+    }
+}
+
+static void ReplaceTexturesFromWad(mbsp_t &bsp)
+{
+    auto &texdata = bsp.dtex;
+
+    for (miptex_t &tex : texdata.textures) {
+        logging::print("bsp texture: {}\n", tex.name);
+
+        // see if this texture in the .bsp is in the wad?
+        if (auto [wadtex_opt, _0, mipdata] = img::load_texture(tex.name, false, bsp.loadversion->game, bsputil_options); wadtex_opt) {
+            const img::texture &wadtex = *wadtex_opt;
+
+            if  (tex.width != wadtex.width || tex.height != wadtex.height) {
+                logging::print("    size {}x{} in bsp does not match replacement texture {}x{}\n",
+                    tex.width, tex.height, wadtex.width, wadtex.height);
+                continue;
+            }
+
+            // update the bsp miptex
+            tex.null_texture = false;
+            tex.data = *mipdata;
+            logging::print("    replaced with {} from wad\n", wadtex.meta.name);
         }
     }
 }
@@ -466,9 +496,6 @@ static void FindLeaf(const mbsp_t *bsp, const qvec3d &pos)
         contentflags_t{leaf->contents}.to_string(bsp->loadversion->game));
 }
 
-// TODO
-settings::common_settings bsputil_options;
-
 // map file stuff
 struct map_entity_t
 {
@@ -675,7 +702,8 @@ int bsputil_main(int argc, char **argv)
     fmt::print("---- bsputil / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
     if (argc == 1) {
         printf(
-            "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
+            "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--replace-textures f]\n"
+            "[--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
             "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--findleaf x y z] [--settexinfo facenum texinfonum]\n"
             "[--decompile] [--decompile-geomonly] [--decompile-hull n]\n"
             "[--extract-bspx-lump lump_name output_file_name]\n"
@@ -1115,6 +1143,25 @@ int bsputil_main(int argc, char **argv)
                 Error("couldn't open {} for writing\n", source);
 
             ExportWad(f, &bsp);
+
+            printf("done.\n");
+        } else if (!strcmp(argv[i], "--replace-textures")) {
+            if (i + 1 >= argc) {
+                Error("--replace-textures requires 1 argument");
+            }
+
+            fs::path wad_source = argv[i + 1];
+
+            if (auto wad = fs::addArchive(wad_source, false)) {
+                logging::print("loaded wad file: {}\n", wad_source);
+
+                mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+                ReplaceTexturesFromWad(bsp);
+                ConvertBSPFormat(&bspdata, bspdata.loadversion);
+                WriteBSPFile(source, &bspdata);
+            } else {
+                Error("couldn't load .wad file {}\n", wad_source);
+            }
 
             printf("done.\n");
         } else if (!strcmp(argv[i], "--check")) {

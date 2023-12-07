@@ -106,6 +106,10 @@ struct miptex_t
      * set at read time if the offset is -1
      */
     bool null_texture = false;
+    /**
+     * exposed for testing -notex
+     */
+    std::array<int32_t, MIPLEVELS> offsets;
 
     size_t stream_size() const;
 

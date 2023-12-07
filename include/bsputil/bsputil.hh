@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#pragma once
+
 #include <iosfwd>
 
 struct mbsp_t;

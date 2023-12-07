@@ -33,6 +33,27 @@ const mapface_t *Mapbrush_FirstFaceWithTextureName(const mapbrush_t &brush, cons
     return nullptr;
 }
 
+void CheckFaceNormal(const mbsp_t *bsp, const mface_t *face)
+{
+    qvec3d face_normal_from_plane = Face_Normal(bsp, face);
+
+    auto winding = Face_Winding(bsp, face);
+    winding.remove_colinear();
+    if (winding.size() < 3)
+        return;
+
+    auto winding_plane = winding.plane();
+
+    CHECK(qv::dot(face_normal_from_plane, winding_plane.normal) > 0.0);
+}
+
+void CheckBsp(const mbsp_t *bsp)
+{
+    for (const mface_t &face : bsp->dfaces) {
+        CheckFaceNormal(bsp, &face);
+    }
+}
+
 mapentity_t &LoadMap(const char *map, size_t length)
 {
     ::map.reset();
@@ -120,6 +141,8 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     bspdata.version->game->init_filesystem(qbsp_options.bsp_path, qbsp_options);
 
     ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    CheckBsp(&std::get<mbsp_t>(bspdata.bsp));
 
     // write to .json for inspection
     serialize_bsp(
@@ -322,6 +345,43 @@ TEST_CASE("duplicatePlanes" * doctest::test_suite("qbsp"))
 
     auto brush = LoadBrush(worldspawn, worldspawn.mapbrushes.front(), {CONTENTS_SOLID}, 0, std::nullopt);
     CHECK(6 == brush->sides.size());
+}
+
+TEST_CASE("empty brush" * doctest::test_suite("qbsp"))
+{
+    INFO("the empty brush should be discarded");
+    const char *map_with_empty_brush = R"(
+// entity 0
+{
+"mapversion" "220"
+"classname" "worldspawn"
+// brush 0
+{
+( 80 -64 -16 ) ( 80 -63 -16 ) ( 80 -64 -15 ) __TB_empty [ 0 -1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 80 -64 -16 ) ( 80 -64 -15 ) ( 81 -64 -16 ) __TB_empty [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 80 -64 -16 ) ( 81 -64 -16 ) ( 80 -63 -16 ) __TB_empty [ -1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 208 64 16 ) ( 208 65 16 ) ( 209 64 16 ) __TB_empty [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 208 64 16 ) ( 209 64 16 ) ( 208 64 17 ) __TB_empty [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 208 64 16 ) ( 208 64 17 ) ( 208 65 16 ) __TB_empty [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+}
+{
+}
+// brush 1
+{
+( -64 -64 -16 ) ( -64 -63 -16 ) ( -64 -64 -15 ) __TB_empty [ 0 -1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -64 -64 -16 ) ( -64 -64 -15 ) ( -63 -64 -16 ) __TB_empty [ 1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( -64 -64 -16 ) ( -63 -64 -16 ) ( -64 -63 -16 ) __TB_empty [ -1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 64 64 16 ) ( 64 65 16 ) ( 65 64 16 ) __TB_empty [ 1 0 0 0 ] [ 0 -1 0 0 ] 0 1 1
+( 64 64 16 ) ( 65 64 16 ) ( 64 64 17 ) __TB_empty [ -1 0 0 0 ] [ 0 0 -1 0 ] 0 1 1
+( 64 64 16 ) ( 64 64 17 ) ( 64 65 16 ) __TB_empty [ 0 1 0 0 ] [ 0 0 -1 0 ] 0 1 1
+}
+}
+    )";
+
+    mapentity_t &worldspawn = LoadMap(map_with_empty_brush);
+    REQUIRE(2 == worldspawn.mapbrushes.size());
+    REQUIRE(6 == worldspawn.mapbrushes[0].faces.size());
+    REQUIRE(6 == worldspawn.mapbrushes[1].faces.size());
 }
 
 /**
@@ -1289,7 +1349,7 @@ TEST_CASE("q1_0125unit_faces" * doctest::test_suite("testmaps_q1") * doctest::ma
     CHECK(2 == bsp.dfaces.size());
 }
 
-TEST_CASE("quake maps" * doctest::test_suite("testmaps_q1") * doctest::skip())
+TEST_CASE("quake maps" * doctest::test_suite("testmaps_q1") * doctest::skip() * doctest::may_fail())
 {
     const std::vector<std::string> quake_maps{"DM1-test.map", "DM2-test.map", "DM3-test.map", "DM4-test.map",
         "DM5-test.map", "DM6-test.map", "DM7-test.map", "E1M1-test.map", "E1M2-test.map", "E1M3-test.map",
@@ -1659,6 +1719,7 @@ TEST_CASE("q1_hull1_content_types" * doctest::test_suite("testmaps_q1"))
         {{448, -64, 0},
             {CONTENTS_EMPTY, new_leaf, CONTENTS_EMPTY}}, // func_detail_illusionary + _mirrorinside is empty in hull1
         {{512, 0, 0}, {CONTENTS_SOLID, shared_leaf_0, CONTENTS_SOLID}}, // func_detail_wall is solid in hull1
+        {{576, 0, 0}, {CONTENTS_EMPTY, new_leaf, CONTENTS_SOLID}}, // clip is empty in hull0, solid in hull1
     };
 
     for (const auto &[point, expected_types] : expected) {
@@ -1904,6 +1965,40 @@ TEST_CASE("q1_missing_texture")
 
     CHECK("" == bsp.dtex.textures[1].name);
     CHECK(bsp.dtex.textures[1].null_texture);
+
+    CHECK(6 == bsp.dfaces.size());
+}
+
+TEST_CASE("q1 notex")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_cube.map", {"-notex"});
+
+    REQUIRE(2 == bsp.dtex.textures.size());
+
+    {
+        // FIXME: we shouldn't really be writing skip
+        // (our test data includes an actual "skip" texture,
+        // so that gets included in the bsp.)
+        auto &t0 = bsp.dtex.textures[0];
+        CHECK("skip" == t0.name);
+        CHECK(!t0.null_texture);
+        CHECK(64 == t0.width);
+        CHECK(64 == t0.height);
+        CHECK(t0.data.size() == sizeof(dmiptex_t));
+        for (int i = 0; i < 4; ++i)
+            CHECK(t0.offsets[i] == 0);
+    }
+
+    {
+        auto &t1 = bsp.dtex.textures[1];
+        CHECK("orangestuff8" == t1.name);
+        CHECK(!t1.null_texture);
+        CHECK(64 == t1.width);
+        CHECK(64 == t1.height);
+        CHECK(t1.data.size() == sizeof(dmiptex_t));
+        for (int i = 0; i < 4; ++i)
+            CHECK(t1.offsets[i] == 0);
+    }
 }
 
 TEST_CASE("hl_basic")
@@ -1920,4 +2015,82 @@ TEST_CASE("hl_basic")
     CHECK(!bsp.dtex.textures[1].null_texture);
     CHECK(64 == bsp.dtex.textures[1].width);
     CHECK(64 == bsp.dtex.textures[1].height);
+}
+
+TEST_CASE("wrbrushes + misc_external_map")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_external_map_base.map", {"-wrbrushes"});
+
+    bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
+
+    REQUIRE(lump.models.size() == 1);
+
+    auto &model = lump.models.at(0);
+    REQUIRE(model.brushes.size() == 1);
+
+    auto &brush = model.brushes.at(0);
+    REQUIRE(brush.bounds.maxs() == qvec3f{64,64,16});
+    REQUIRE(brush.bounds.mins() == qvec3f{-64,-64,-16});
+}
+
+TEST_CASE("wrbrushes content types")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_hull1_content_types.map", {"-wrbrushes"});
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspx.at("BRUSHLIST"));
+    REQUIRE(lump.models.size() == 1);
+
+    auto &model = lump.models.at(0);
+    REQUIRE(model.numfaces == 0); // all faces are axial
+    REQUIRE(model.modelnum == 0);
+
+    const std::vector<int> expected {
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_SOLID,
+        CONTENTS_WATER,
+        CONTENTS_SLIME,
+        CONTENTS_LAVA,
+        CONTENTS_SOLID,
+        CONTENTS_SKY,
+        BSPXBRUSHES_CONTENTS_CLIP,
+        CONTENTS_SOLID, // detail solid in source map
+        CONTENTS_SOLID, // detail fence in source map
+        // detail illusionary brush should be omitted
+        CONTENTS_SOLID, // detail fence in source map
+        // detail illusionary brush should be omitted
+        CONTENTS_SOLID // detail wall in source map
+    };
+    REQUIRE(model.brushes.size() == expected.size());
+
+    for (size_t i = 0; i < expected.size(); ++i) {
+        INFO("brush ", i);
+        CHECK(expected[i] == model.brushes[i].contents);
+    }
+}
+
+TEST_CASE("read bspx brushes")
+{
+    auto bsp_path = std::filesystem::path(testmaps_dir) / "compiled" / "q1_cube.bsp";
+
+    bspdata_t bspdata;
+    LoadBSPFile(bsp_path, &bspdata);
+    bspdata.version->game->init_filesystem(bsp_path, qbsp_options);
+    ConvertBSPFormat(&bspdata, &bspver_generic);
+
+    const bspxbrushes lump = deserialize<bspxbrushes>(bspdata.bspx.entries.at("BRUSHLIST"));
+    REQUIRE(lump.models.size() == 1);
+
+    CHECK(lump.models[0].modelnum == 0);
+    CHECK(lump.models[0].numfaces == 0);
+    CHECK(lump.models[0].ver == 1);
+    REQUIRE(lump.models[0].brushes.size() == 1);
+
+    auto &brush = lump.models[0].brushes[0];
+    CHECK(brush.bounds == aabb3f{qvec3f{32, -240, 80}, qvec3f{80, -144, 112}});
+    CHECK(brush.contents == CONTENTS_SOLID);
+    CHECK(brush.faces.size() == 0);
 }

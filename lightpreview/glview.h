@@ -155,6 +155,7 @@ private:
      * 1 = skip face
      */
     std::shared_ptr<QOpenGLTexture> face_visibility_texture;
+    std::shared_ptr<QOpenGLBuffer> face_visibility_buffer;
 
     struct drawcall_t
     {

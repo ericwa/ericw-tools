@@ -111,13 +111,6 @@ public:
     int32_t chop_index = 0; // chopping order; higher numbers chop lower numbers
 };
 
-struct lumpdata
-{
-    int count;
-    int index;
-    void *data;
-};
-
 enum class rotation_t
 {
     none,
@@ -345,14 +338,6 @@ size_t EmitFaces(node_t *headnode);
 void EmitVertices(node_t *headnode);
 void ExportClipNodes(mapentity_t &entity, node_t *headnode, hull_index_t::value_type hullnum);
 void ExportDrawNodes(mapentity_t &entity, node_t *headnode, int firstface);
-
-struct bspxbrushes_s
-{
-    std::vector<uint8_t> lumpdata;
-};
-void BSPX_Brushes_Finalize(struct bspxbrushes_s *ctx);
-void BSPX_Brushes_Init(struct bspxbrushes_s *ctx);
-
 void WriteBspBrushMap(std::string_view filename_suffix, const bspbrush_t::container &list);
 
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec);

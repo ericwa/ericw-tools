@@ -34,12 +34,7 @@
 #include <common/prtfile.hh>
 #include <common/parallel.hh>
 #include <common/qvec.hh>
-
-static std::vector<uint8_t> StringToVector(const std::string &str)
-{
-    std::vector<uint8_t> result(str.begin(), str.end());
-    return result;
-}
+#include <common/cmdlib.hh>
 
 static aabb3f LightGridBounds(const mbsp_t &bsp)
 {

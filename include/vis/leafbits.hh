@@ -81,6 +81,7 @@ public:
     inline void resize(size_t new_size) { *this = leafbits_t(new_size); }
 
     inline void clear() { memset(bits.get(), 0, byte_size()); }
+    inline void setall() { memset(bits.get(), 0xff, byte_size()); }
 
     inline uint32_t *data() { return bits.get(); }
     inline const uint32_t *data() const { return bits.get(); }
