@@ -86,7 +86,7 @@ TEST_SUITE("settings")
         const char *arguments[] = {"qbsp.exe", "-scale", "1.54334E-34"};
         token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
         settings.parse(p);
-        REQUIRE(scalarSetting.value() == 1.54334E-34);
+        REQUIRE(scalarSetting.value() == 1.54334E-34f);
     }
 
     TEST_CASE("scalarEOF")
@@ -331,7 +331,7 @@ TEST_SUITE("settings")
 
         scalarSetting1.reset();
         CHECK(settings::source::DEFAULT == scalarSetting1.get_source());
-        CHECK(12.34 == scalarSetting1.value());
+        CHECK(12.34f == scalarSetting1.value());
     }
 
     TEST_CASE("resetContainer")
@@ -345,7 +345,7 @@ TEST_SUITE("settings")
         settings.reset();
 
         CHECK(settings::source::DEFAULT == vec3Setting1.get_source());
-        CHECK(qvec3d(3, 4, 5) == vec3Setting1.value());
+        CHECK(qvec3f(3, 4, 5) == vec3Setting1.value());
 
         CHECK(settings::source::DEFAULT == stringSetting1.get_source());
         CHECK("abc" == stringSetting1.value());
