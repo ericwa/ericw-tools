@@ -56,12 +56,16 @@ GLView::GLView(QWidget *parent)
       m_moveSpeed(1000),
       m_displayAspect(1),
       m_cameraOrigin(0, 0, 0),
+      m_cullOrigin(0, 0, 0),
       m_cameraFwd(0, 1, 0),
       m_vao(),
       m_indexBuffer(QOpenGLBuffer::IndexBuffer),
       m_leakVao(),
       m_portalVao(),
-      m_portalIndexBuffer(QOpenGLBuffer::IndexBuffer)
+      m_portalIndexBuffer(QOpenGLBuffer::IndexBuffer),
+      m_frustumVao(),
+      m_frustumFacesIndexBuffer(QOpenGLBuffer::IndexBuffer),
+      m_frustumEdgesIndexBuffer(QOpenGLBuffer::IndexBuffer)
 {
     for (auto &hullVao : m_hullVaos) {
         hullVao.indexBuffer = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer);
@@ -88,6 +92,11 @@ GLView::~GLView()
     m_portalVbo.destroy();
     m_portalIndexBuffer.destroy();
     m_portalVao.destroy();
+
+    m_frustumVbo.destroy();
+    m_frustumFacesIndexBuffer.destroy();
+    m_frustumEdgesIndexBuffer.destroy();
+    m_frustumVao.destroy();
 
     for (auto &hullVao : m_hullVaos) {
         hullVao.vbo.destroy();
@@ -370,9 +379,10 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
     if (m_visCulling) {
         const mbsp_t &bsp = *m_bsp;
         const auto &world = bsp.dmodels.at(0);
+        const auto &origin = m_keepCullOrigin ? m_cullOrigin : m_cameraOrigin;
 
         auto *leaf =
-            BSP_FindLeafAtPoint(&bsp, &world, qvec3d{m_cameraOrigin.x(), m_cameraOrigin.y(), m_cameraOrigin.z()});
+            BSP_FindLeafAtPoint(&bsp, &world, qvec3d{origin.x(), origin.y(), origin.z()});
 
         int leafnum = leaf - bsp.dleafs.data();
 
@@ -390,7 +400,26 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
     return result;
 }
 
-void GLView::updateFaceVisibility()
+bool GLView::isVolumeInFrustum(const std::array<QVector4D, 4>& frustum, const qvec3f& mins, const qvec3f& maxs) {
+    for (auto &plane : frustum) {
+        // Select the p-vertex (positive vertex) - the vertex of the bounding
+        // box most aligned with the plane normal
+        const auto p = qvec3f(
+            plane.x() > 0 ? maxs[0] : mins[0],
+            plane.y() > 0 ? maxs[1] : mins[1],
+            plane.z() > 0 ? maxs[2] : mins[2]
+        );
+
+        // Check if the p-vertex is outside the plane
+        if (plane.x() * p[0] + plane.y() * p[1] + plane.z() * p[2] + plane.w() < 0) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
 {
     if (!m_bsp)
         return;
@@ -403,7 +432,7 @@ void GLView::updateFaceVisibility()
     if (m_uploaded_face_visibility &&
         *m_uploaded_face_visibility == desired) {
         //qDebug() << "reusing last frame visdata";
-        return;
+        //return;
     }
 
     qDebug() << "looking up pvs for clusternum " << desired.clusternum;
@@ -433,7 +462,7 @@ void GLView::updateFaceVisibility()
 
             // visit all world leafs: if they're visible, mark the appropriate faces
             BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
-                if (Pvs_LeafVisible(&bsp, pvs, &leaf)) {
+                if (Pvs_LeafVisible(&bsp, pvs, &leaf) && isVolumeInFrustum(frustum, leaf.mins, leaf.maxs)) {
                     for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
                         int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
                         face_flags[fnum] = 16;
@@ -571,6 +600,20 @@ void GLView::initializeGL()
     glFrontFace(GL_CW);
 }
 
+std::array<QVector4D, 4> GLView::getFrustumPlanes(const QMatrix4x4& MVP)
+{
+    return {
+        // left
+        (MVP.row(3) + MVP.row(0)).normalized(),
+        // right
+        (MVP.row(3) - MVP.row(0)).normalized(),
+        // top
+        (MVP.row(3) - MVP.row(1)).normalized(),
+        // bottom
+        (MVP.row(3) + MVP.row(1)).normalized(),
+    };
+}
+
 void GLView::paintGL()
 {
     // calculate frame time + update m_lastFrame
@@ -588,13 +631,6 @@ void GLView::paintGL()
     applyMouseMotion();
     applyFlyMovement(duration_seconds);
 
-    // update vis culling if needed
-    updateFaceVisibility();
-
-    // draw
-    glClearColor(0.1, 0.1, 0.1, 1);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     QMatrix4x4 modelMatrix;
     QMatrix4x4 viewMatrix;
     QMatrix4x4 projectionMatrix;
@@ -602,6 +638,16 @@ void GLView::paintGL()
     viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
+
+    const auto frustum = m_keepCullOrigin && m_keepCullFrustum ?
+        getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix) : getFrustumPlanes(MVP);
+
+    // update vis culling if needed
+    updateFaceVisibility(frustum);
+
+    // draw
+    glClearColor(0.1, 0.1, 0.1, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     QOpenGLShaderProgram *active_program = nullptr;
 
@@ -750,6 +796,40 @@ void GLView::paintGL()
         m_program_wireframe->release();
     }
 
+    if (m_visCulling && m_keepCullOrigin) {
+        const QMatrix4x4 cullMVP = projectionMatrix * viewMatrix * m_cullModelMatrix;
+
+        m_program_simple->bind();
+        m_program_simple->setUniformValue(m_program_simple_mvp_location, cullMVP);
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_frustumVao);
+
+        glEnable(GL_PRIMITIVE_RESTART);
+        glPrimitiveRestartIndex((GLuint)-1);
+
+        m_frustumEdgesIndexBuffer.bind();
+        m_program_simple->setUniformValue(m_program_simple_color_location, QVector4D{1.0, 1.0, 1.0, 1.0});
+        glDrawElements(GL_LINE_LOOP, 30, GL_UNSIGNED_INT, 0);
+        m_frustumEdgesIndexBuffer.release();
+
+        glDisable(GL_PRIMITIVE_RESTART);
+
+        glDisable(GL_CULL_FACE);
+        glEnable(GL_BLEND);
+
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+        m_frustumFacesIndexBuffer.bind();
+        m_program_simple->setUniformValue(m_program_simple_color_location, QVector4D{1.0, 1.0, 1.0, 0.05});
+        glDrawElements(GL_TRIANGLES, 24, GL_UNSIGNED_INT, 0);
+        m_frustumFacesIndexBuffer.release();
+
+        glDisable(GL_BLEND);
+        glEnable(GL_CULL_FACE);
+
+        m_program_simple->release();
+    }
+
     if (m_drawLeak && num_leak_points) {
         m_program_simple->bind();
         m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
@@ -872,6 +952,33 @@ void GLView::setVisCulling(bool viscull)
     update();
 }
 
+void GLView::setKeepCullFrustum(bool keepcullfrustum)
+{
+    m_keepCullFrustum = keepcullfrustum;
+    update();
+}
+
+void GLView::setKeepCullOrigin(bool keepcullorigin)
+{
+    m_keepCullOrigin = keepcullorigin;
+    if (keepcullorigin) {
+        m_cullOrigin = m_cameraOrigin;
+
+        QMatrix4x4 rotation, position;
+
+        m_cullViewMatrix.setToIdentity();
+        m_cullViewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
+
+        rotation = m_cullViewMatrix.inverted();
+        rotation.setColumn(3, QVector4D(0, 0, 0, 1));
+
+        position.translate(m_cameraOrigin);
+
+        m_cullModelMatrix = position * rotation;
+    }
+    update();
+}
+
 void GLView::setDrawFlat(bool drawflat)
 {
     m_drawFlat = drawflat;
@@ -983,8 +1090,36 @@ void GLView::setFaceVisibilityArray(uint8_t *data)
     face_visibility_texture->bind();
     glTexBuffer(GL_TEXTURE_BUFFER, GL_R8UI, face_visibility_buffer->bufferId());
     face_visibility_texture->release();
+}
 
-    //logging::print("uploaded {} bytes face visibility texture", face_visibility_width);
+std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect) {
+    QMatrix4x4 projectionMatrix;
+    projectionMatrix.perspective(90, displayAspect, 1.0f, 8192.0f);
+
+    const QMatrix4x4 invProjectionMatrix = projectionMatrix.inverted();
+
+    const std::vector ndcCorners = {
+        QVector4D(-1.0f, -1.0f, -1.0f, 1.0f), // 0: near bottom left
+        QVector4D( 1.0f, -1.0f, -1.0f, 1.0f), // 1: near bottom right
+        QVector4D (1.0f,  1.0f, -1.0f, 1.0f), // 2: near top right
+        QVector4D(-1.0f,  1.0f, -1.0f, 1.0f), // 3: near top left
+
+        QVector4D(-1.0f, -1.0f,  1.0f, 1.0f), // far bottom left
+        QVector4D( 1.0f, -1.0f,  1.0f, 1.0f), // far bottom right
+        QVector4D( 1.0f,  1.0f,  1.0f, 1.0f), // far top left
+        QVector4D(-1.0f,  1.0f,  1.0f, 1.0f)  // far top right
+    };
+
+    std::vector<QVector3D> corners(8);
+
+    // Transform to world space
+    for (int i = 0; i < 8; i++) {
+        QVector4D worldSpaceCorner = invProjectionMatrix * ndcCorners[i];
+        worldSpaceCorner /= worldSpaceCorner.w(); // Perspective divide
+        corners[i] = worldSpaceCorner.toVector3D();
+    }
+
+    return corners;
 }
 
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
@@ -1034,6 +1169,13 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         hullVao.indexBuffer.bind();
         hullVao.indexBuffer.allocate(0);
     }
+
+    m_frustumVbo.bind();
+    m_frustumVbo.allocate(0);
+    m_frustumFacesIndexBuffer.bind();
+    m_frustumFacesIndexBuffer.allocate(0);
+    m_frustumEdgesIndexBuffer.bind();
+    m_frustumEdgesIndexBuffer.allocate(0);
 
     num_leak_points = 0;
     num_portal_indices = 0;
@@ -1457,6 +1599,55 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         qvec3f pos;
     };
 
+    {
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_frustumVao);
+
+        auto corners = getFrustumCorners(m_displayAspect);
+
+        m_frustumVbo.create();
+        m_frustumVbo.bind();
+        m_frustumVbo.allocate(corners.data(), corners.size() * sizeof(QVector3D));
+
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(QVector3D), 0);
+
+        // Near Plane:         Far Plane:
+        // 3----2              7----6
+        // |    |              |    |
+        // |    |              |    |
+        // 0----1              4----5
+        GLuint faceIndices[] = {
+            // Left face
+            0, 4, 7, 0, 7, 3,
+            // Right face
+            1, 2, 6, 1, 6, 5,
+            // Top face
+            2, 3, 7, 2, 7, 6,
+            // Bottom face
+            0, 1, 5, 0, 5, 4
+        };
+
+        GLuint edgeIndices[] = {
+            // Front face
+            0, 1, 1, 2, 2, 3, 3, 0, (GLuint)-1,
+            // Back face
+            4, 5, 5, 6, 6, 7, 7, 4, (GLuint)-1,
+            // Connecting edges
+            0, 4, (GLuint)-1,
+            1, 5, (GLuint)-1,
+            2, 6, (GLuint)-1,
+            3, 7, (GLuint)-1
+        };
+
+        m_frustumFacesIndexBuffer.create();
+        m_frustumFacesIndexBuffer.bind();
+        m_frustumFacesIndexBuffer.allocate(faceIndices, sizeof(faceIndices));
+
+        m_frustumEdgesIndexBuffer.create();
+        m_frustumEdgesIndexBuffer.bind();
+        m_frustumEdgesIndexBuffer.allocate(edgeIndices, sizeof(edgeIndices));
+    }
+
     if (fs::exists(leakFile)) {
         QOpenGLVertexArrayObject::Binder leakVaoBinder(&m_leakVao);
 
@@ -1608,9 +1799,20 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     update();
 }
 
+void GLView::updateFrustumVBO()
+{
+    if (m_frustumVbo.isCreated()) {
+        const std::vector<QVector3D> corners = getFrustumCorners(m_displayAspect);
+        m_frustumVbo.bind();
+        glBufferData(GL_ARRAY_BUFFER, sizeof(QVector3D) * corners.size(), corners.data(), GL_DYNAMIC_DRAW);
+        m_frustumVbo.release();
+    }
+}
+
 void GLView::resizeGL(int width, int height)
 {
     m_displayAspect = static_cast<float>(width) / static_cast<float>(height);
+    updateFrustumVBO();
 }
 
 void GLView::applyMouseMotion()

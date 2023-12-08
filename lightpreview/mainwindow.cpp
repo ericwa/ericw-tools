@@ -205,6 +205,8 @@ void MainWindow::createPropertiesSidebar()
     visculling->setChecked(true);
 
     auto *keepposition = new QCheckBox(tr("Keep Camera Pos"));
+    auto *keepcullfrustum = new QCheckBox(tr("Keep Cull Frustum"));
+    auto *keepcullposition = new QCheckBox(tr("Keep Cull Pos"));
 
     nearest = new QCheckBox(tr("Nearest Filter"));
 
@@ -229,6 +231,8 @@ void MainWindow::createPropertiesSidebar()
     formLayout->addRow(showtris);
     formLayout->addRow(showtris_seethrough);
     formLayout->addRow(visculling);
+    formLayout->addRow(keepcullposition);
+    formLayout->addRow(keepcullfrustum);
     formLayout->addRow(keepposition);
     formLayout->addRow(nearest);
     formLayout->addRow(bspx_decoupled_lm);
@@ -266,6 +270,9 @@ void MainWindow::createPropertiesSidebar()
     common_options->setText(s.value("common_options").toString());
     qbsp_options->setText(s.value("qbsp_options").toString());
     vis_checkbox->setChecked(s.value("vis_enabled").toBool());
+    keepcullposition->setEnabled(vis_checkbox->isChecked());
+    keepcullfrustum->setEnabled(keepcullposition->isChecked());
+    keepcullfrustum->setChecked(true);
     vis_options->setText(s.value("vis_options").toString());
     light_options->setText(s.value("light_options").toString());
     nearest->setChecked(s.value("nearest").toBool());
@@ -282,7 +289,16 @@ void MainWindow::createPropertiesSidebar()
     connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
     connect(showtris_seethrough, &QAbstractButton::toggled, this,
         [=](bool checked) { glView->setShowTrisSeeThrough(checked); });
-    connect(visculling, &QAbstractButton::toggled, this, [=](bool checked) { glView->setVisCulling(checked); });
+    connect(visculling, &QAbstractButton::toggled, this, [=](bool checked) {
+        glView->setVisCulling(checked);
+        keepcullposition->setEnabled(checked);
+        keepcullfrustum->setEnabled(keepcullposition->isEnabled());
+    });
+    connect(keepcullposition, &QAbstractButton::toggled, this, [=](bool checked) {
+        glView->setKeepCullOrigin(checked);
+        keepcullfrustum->setEnabled(checked);
+    });
+    connect(keepcullfrustum, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepCullFrustum(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
     connect(hull0, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{0} : std::nullopt); });
     connect(hull1, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{1} : std::nullopt); });
