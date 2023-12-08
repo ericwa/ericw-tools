@@ -46,7 +46,7 @@ TEST_SUITE("settings")
         const char *arguments[] = {"qbsp.exe", "-scale", "1.25"};
         token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
         settings.parse(p);
-        REQUIRE(scalarSetting.value() == 1.25);
+        REQUIRE(scalarSetting.value() == 1.25f);
     }
 
     TEST_CASE("scalarNegative")
@@ -56,7 +56,7 @@ TEST_SUITE("settings")
         const char *arguments[] = {"qbsp.exe", "-scale", "-0.25"};
         token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
         settings.parse(p);
-        REQUIRE(scalarSetting.value() == -0.25);
+        REQUIRE(scalarSetting.value() == -0.25f);
     }
 
     TEST_CASE("scalarInfinity")
@@ -66,7 +66,7 @@ TEST_SUITE("settings")
         const char *arguments[] = {"qbsp.exe", "-scale", "INFINITY"};
         token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
         settings.parse(p);
-        REQUIRE(scalarSetting.value() == std::numeric_limits<vec_t>::infinity());
+        REQUIRE(scalarSetting.value() == std::numeric_limits<float>::infinity());
     }
 
     TEST_CASE("scalarNAN")
@@ -115,7 +115,7 @@ TEST_SUITE("settings")
         const char *arguments[] = {"qbsp.exe", "-origin", "1", "2", "3"};
         token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
         settings.parse(p);
-        REQUIRE(scalarSetting.value() == (qvec3d{1, 2, 3}));
+        REQUIRE(scalarSetting.value() == (qvec3f{1, 2, 3}));
     }
 
     TEST_CASE("vec3Complex")
@@ -125,8 +125,8 @@ TEST_SUITE("settings")
         const char *arguments[] = {"qbsp.exe", "-origin", "-12.5", "-INFINITY", "NAN"};
         token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
         settings.parse(p);
-        REQUIRE(scalarSetting.value()[0] == -12.5);
-        REQUIRE(scalarSetting.value()[1] == -std::numeric_limits<vec_t>::infinity());
+        REQUIRE(scalarSetting.value()[0] == -12.5f);
+        REQUIRE(scalarSetting.value()[1] == -std::numeric_limits<float>::infinity());
         REQUIRE(std::isnan(scalarSetting.value()[2]));
     }
 
@@ -327,7 +327,7 @@ TEST_SUITE("settings")
 
         scalarSetting1.set_value(-2, settings::source::MAP);
         CHECK(settings::source::MAP == scalarSetting1.get_source());
-        CHECK(-2 == scalarSetting1.value());
+        CHECK(-2.0f == scalarSetting1.value());
 
         scalarSetting1.reset();
         CHECK(settings::source::DEFAULT == scalarSetting1.get_source());
