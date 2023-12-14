@@ -1644,11 +1644,17 @@ void GLView::applyMouseMotion()
 static keys_t Qt_Key_To_keys_t(int key)
 {
     switch (key) {
+        case Qt::Key_Up:
         case Qt::Key_W: return keys_t::up;
+        case Qt::Key_Left:
         case Qt::Key_A: return keys_t::left;
+        case Qt::Key_Down:
         case Qt::Key_S: return keys_t::down;
+        case Qt::Key_Right:
         case Qt::Key_D: return keys_t::right;
+        case Qt::Key_PageDown:
         case Qt::Key_Q: return keys_t::fly_down;
+        case Qt::Key_PageUp:
         case Qt::Key_E: return keys_t::fly_up;
     }
     return keys_t::none;
