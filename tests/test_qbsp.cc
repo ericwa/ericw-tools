@@ -1969,6 +1969,28 @@ TEST_CASE("q1_missing_texture")
     CHECK(6 == bsp.dfaces.size());
 }
 
+TEST_CASE("q1_missing_texture, -missing_textures_as_zero_size")
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_missing_texture.map", {"-missing_textures_as_zero_size"});
+
+    REQUIRE(2 == bsp.dtex.textures.size());
+
+    // FIXME: we shouldn't really be writing skip
+    // (our test data includes an actual "skip" texture,
+    // so that gets included in the bsp.)
+    CHECK("skip" == bsp.dtex.textures[0].name);
+    CHECK(!bsp.dtex.textures[0].null_texture);
+    CHECK(64 == bsp.dtex.textures[0].width);
+    CHECK(64 == bsp.dtex.textures[0].height);
+
+    CHECK("somemissingtext" == bsp.dtex.textures[1].name);
+    CHECK(!bsp.dtex.textures[1].null_texture);
+    CHECK(0 == bsp.dtex.textures[1].width);
+    CHECK(0 == bsp.dtex.textures[1].height);
+
+    CHECK(6 == bsp.dfaces.size());
+}
+
 TEST_CASE("q1 notex")
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_cube.map", {"-notex"});

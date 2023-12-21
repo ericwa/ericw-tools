@@ -479,6 +479,8 @@ qbsp_settings::qbsp_settings()
       transsky{this, "transsky", false, &map_development_group, "compute portal information for transparent sky"},
       notextures{this, "notex", false, &common_format_group,
           "write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights"},
+      missing_textures_as_zero_size{this, "missing_textures_as_zero_size", false, &common_format_group,
+          "write missing textures as 0x0"},
       convertmapformat{this, "convert", conversion_t::none,
           {{"quake", conversion_t::quake}, {"quake2", conversion_t::quake2}, {"valve", conversion_t::valve},
               {"bp", conversion_t::bp}},
@@ -1538,6 +1540,15 @@ static void LoadTextureData()
         header.width = miptex.width;
         header.height = miptex.height;
         header.offsets = {0, 0, 0, 0};
+
+        if (!miptex.name[0])
+            miptex.null_texture = true;
+
+        if (!qbsp_options.missing_textures_as_zero_size.value()) {
+            if (miptex.width == 0 || miptex.height == 0) {
+                miptex.null_texture = true;
+            }
+        }
 
         omemstream stream(miptex.data.data(), miptex.data.size());
         stream <= header;

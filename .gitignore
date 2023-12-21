@@ -28,7 +28,8 @@ testmaps/quake_map_source/*.prt
 testmaps/quake_map_source/*.pts
 testmaps/quake_map_source/*.vis
 testmaps/quake_map_source/*.texinfo
-testmaps/quake_map_source/*.bsp.json
+testmaps/quake_map_source/*.json
+testmaps/quake_map_source/*.obj
 **/autosave
 CMakeSettings.json
 sphinx-venv

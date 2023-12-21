@@ -1511,6 +1511,15 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
 
             logging::print("Creating surface lights for texture \"{}\" from template at ({})\n", tex,
                 entity->epairs->get("origin"));
+
+            // Warning if no faces exist matching the texture
+            const bool found_face = std::any_of(bsp->dfaces.begin(), bsp->dfaces.end(), [&](const mface_t &face) -> bool {
+                return !Q_strcasecmp(Face_TextureName(bsp, &face), entity->epairs->get("_surface"));
+            });
+            if (!found_face) {
+                logging::print("WARNING: no faces found with texture {} (qbsp may have been run with .wad's missing?)\n",
+                    entity->epairs->get("_surface"));
+            }
         }
     }
 

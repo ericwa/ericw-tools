@@ -187,6 +187,7 @@ public:
     setting_invertible_bool transwater;
     setting_bool transsky;
     setting_bool notextures;
+    setting_bool missing_textures_as_zero_size;
     setting_enum<conversion_t> convertmapformat;
     setting_invertible_bool oldaxis;
     setting_bool forcegoodtree;

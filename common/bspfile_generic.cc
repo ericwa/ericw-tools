@@ -195,7 +195,7 @@ void dmiptexlump_t::stream_write(std::ostream &stream) const
 
     // write out the miptex offsets
     for (auto &texture : textures) {
-        if (!texture.name[0] || texture.width == 0 || texture.height == 0) {
+        if (texture.null_texture) {
             // dummy texture
             stream <= static_cast<int32_t>(-1);
             continue;
@@ -213,7 +213,7 @@ void dmiptexlump_t::stream_write(std::ostream &stream) const
     }
 
     for (auto &texture : textures) {
-        if (texture.name[0] && texture.width && texture.height) {
+        if (!texture.null_texture) {
             // fix up the padding to match the above conditions
             if (stream.tellp() % 4) {
                 constexpr const char pad[4]{};
