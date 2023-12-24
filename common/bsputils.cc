@@ -262,7 +262,7 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const qve
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+    const double dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist > 0.1)
         return Light_PointInSolid_r(bsp, node->children[0], point);
@@ -325,7 +325,7 @@ static void BSP_FindFaceAtPoint_r(const mbsp_t *bsp, const int nodenum, const qv
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+    const double dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist > 0.1) {
         BSP_FindFaceAtPoint_r(bsp, node->children[0], point, wantedNormal, result);
@@ -393,7 +393,7 @@ static const bsp2_dnode_t *BSP_FindNodeAtPoint_r(
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+    const double dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist > 0.1)
         return BSP_FindNodeAtPoint_r(bsp, node->children[0], point, wantedNormal);
@@ -427,7 +427,7 @@ static const mleaf_t *BSP_FindLeafAtPoint_r(const mbsp_t *bsp, const int nodenum
     }
 
     const bsp2_dnode_t *node = &bsp->dnodes[nodenum];
-    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+    const double dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist >= 0) {
         return BSP_FindLeafAtPoint_r(bsp, node->children[0], point);
@@ -454,7 +454,7 @@ static clipnode_info_t BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int pa
     }
 
     const auto *node = &bsp->dclipnodes.at(clipnodenum);
-    const vec_t dist = bsp->dplanes[node->planenum].distance_to_fast(point);
+    const double dist = bsp->dplanes[node->planenum].distance_to_fast(point);
 
     if (dist >= 0) {
         return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_FRONT, node->children[SIDE_FRONT], point);

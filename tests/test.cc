@@ -62,7 +62,7 @@ TEST_SUITE("settings")
     TEST_CASE("scalarInfinity")
     {
         settings::setting_container settings;
-        settings::setting_scalar scalarSetting(&settings, "scale", 1.0, 0.0, std::numeric_limits<vec_t>::infinity());
+        settings::setting_scalar scalarSetting(&settings, "scale", 1.0, 0.0, std::numeric_limits<double>::infinity());
         const char *arguments[] = {"qbsp.exe", "-scale", "INFINITY"};
         token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
         settings.parse(p);

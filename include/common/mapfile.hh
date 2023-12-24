@@ -42,13 +42,13 @@ enum class texcoord_style_t
 // values in the .map
 struct texdef_bp_t
 {
-    qmat<vec_t, 2, 3> axis;
+    qmat<double, 2, 3> axis;
 };
 
 struct texdef_quake_ed_t
 {
     qvec2d shift;
-    vec_t rotate;
+    double rotate;
     qvec2d scale;
 };
 
@@ -91,11 +91,11 @@ struct texture_axis_t
             {0, -1, 0}, {1, 0, 0}, {0, 0, -1} // north wall
         };
 
-        vec_t best = 0;
+        double best = 0;
         size_t bestaxis = 0;
 
         for (size_t i = 0; i < 6; i++) {
-            vec_t dot = qv::dot(plane.normal, baseaxis[i * 3]);
+            double dot = qv::dot(plane.normal, baseaxis[i * 3]);
 
             if (dot > best || (dot == best && use_new_axis)) {
                 best = dot;

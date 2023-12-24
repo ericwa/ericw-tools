@@ -58,7 +58,7 @@ class sun_t
 {
 public:
     qvec3f sunvec;
-    vec_t sunlight;
+    double sunlight;
     qvec3f sunlight_color;
     bool dirt;
     float anglescale;
@@ -94,8 +94,8 @@ struct lightsurf_t
     const mbsp_t *bsp;
     const mface_t *face;
     /* these take precedence the values in modelinfo */
-    vec_t minlight, maxlight, lightcolorscale = 1.0;
-    vec_t surflight_minlight_scale = 1.0;
+    double minlight, maxlight, lightcolorscale = 1.0;
+    double surflight_minlight_scale = 1.0;
     qvec3f minlight_color;
     bool nodirt, minlightMottle;
     bool curved; /*normals are interpolated for smooth lighting*/
@@ -197,7 +197,7 @@ constexpr int CHANNEL_MASK_DEFAULT = 1;
 class modelinfo_t : public settings::setting_container
 {
 public:
-    static constexpr vec_t DEFAULT_PHONG_ANGLE = 89.0;
+    static constexpr double DEFAULT_PHONG_ANGLE = 89.0;
 
 public:
     const mbsp_t *bsp;

@@ -29,7 +29,7 @@ struct mtexinfo_t;
 struct mface_t;
 struct mbsp_t;
 
-uint32_t clamp_texcoord(vec_t in, uint32_t width);
+uint32_t clamp_texcoord(double in, uint32_t width);
 qvec4b SampleTexture(const mface_t *face, const mtexinfo_t *tex, const img::texture *texture, const mbsp_t *bsp,
     const qvec3f &point); // mxd. Palette index -> RGBA
 

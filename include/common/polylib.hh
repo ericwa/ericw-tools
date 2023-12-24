@@ -23,7 +23,7 @@ namespace polylib
 
 constexpr size_t MAX_POINTS_ON_WINDING = 96;
 
-constexpr vec_t DEFAULT_BOGUS_RANGE = 65536.0;
+constexpr double DEFAULT_BOGUS_RANGE = 65536.0;
 
 using winding_edges_t = std::vector<qplane3d>;
 
@@ -674,9 +674,9 @@ public:
 
     // non-storage functions
 
-    vec_t area() const
+    double area() const
     {
-        vec_t total = 0;
+        double total = 0;
 
         for (size_t i = 2; i < size(); i++) {
             qvec3d d1 = at(i - 1) - at(0);
@@ -744,13 +744,13 @@ public:
     }
 
     template<typename TPlane>
-    static winding_base_t from_plane(const qplane3<TPlane> &plane, const vec_t &worldextent)
+    static winding_base_t from_plane(const qplane3<TPlane> &plane, const double &worldextent)
     {
         /* find the major axis */
-        vec_t max = -VECT_MAX;
+        double max = -VECT_MAX;
         int32_t x = -1;
         for (size_t i = 0; i < 3; i++) {
-            vec_t v = fabs(plane.normal[i]);
+            double v = fabs(plane.normal[i]);
 
             if (v > max) {
                 x = i;
@@ -770,7 +770,7 @@ public:
             case 2: vup[0] = 1; break;
         }
 
-        vec_t v = qv::dot(vup, plane.normal);
+        double v = qv::dot(vup, plane.normal);
         vup += plane.normal * -v;
         vup = qv::normalize(vup);
 
@@ -791,12 +791,12 @@ public:
         return w;
     }
 
-    void check(const vec_t &bogus_range = DEFAULT_BOGUS_RANGE, const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
+    void check(const double &bogus_range = DEFAULT_BOGUS_RANGE, const double &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         if (size() < 3)
             FError("{} points", size());
 
-        vec_t a = area();
+        double a = area();
         if (a < 1)
             FError("{} area", a);
 
@@ -811,7 +811,7 @@ public:
                     FError("BOGUS_RANGE: {}", p1[j]);
 
             /* check the point is on the face plane */
-            vec_t d = face.distance_to(p1);
+            double d = face.distance_to(p1);
             if (d < -on_epsilon || d > on_epsilon)
                 FError("point off plane");
 
@@ -823,7 +823,7 @@ public:
                 FError("degenerate edge");
 
             qvec3d edgenormal = qv::normalize(qv::cross(face.normal, dir));
-            vec_t edgedist = qv::dot(p1, edgenormal) + on_epsilon;
+            double edgedist = qv::dot(p1, edgenormal) + on_epsilon;
 
             /* all other points must be on front side */
             for (size_t j = 0; j < size(); j++) {
@@ -866,7 +866,7 @@ public:
     // dists/sides can be null, or must have (size() + 1) reserved
     template<typename TPlane>
     inline std::array<size_t, SIDE_TOTAL> calc_sides(
-        const qplane3<TPlane> &plane, vec_t *dists, planeside_t *sides, const vec_t &on_epsilon = DEFAULT_ON_EPSILON) const
+        const qplane3<TPlane> &plane, double *dists, planeside_t *sides, const double &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         std::array<size_t, SIDE_TOTAL> counts{};
 
@@ -874,7 +874,7 @@ public:
         size_t i;
 
         for (i = 0; i < size(); i++) {
-            vec_t dot = plane.distance_to(at(i));
+            double dot = plane.distance_to(at(i));
 
             if (dists) {
                 dists[i] = dot;
@@ -906,11 +906,11 @@ public:
         return counts;
     }
 
-    vec_t max_dist_off_plane(const qplane3d &plane)
+    double max_dist_off_plane(const qplane3d &plane)
     {
-        vec_t max_dist = 0.0;
+        double max_dist = 0.0;
         for (size_t i = 0; i < size(); i++) {
-            vec_t dist = std::abs(plane.distance_to(at(i)));
+            double dist = std::abs(plane.distance_to(at(i)));
             if (dist > max_dist) {
                 max_dist = dist;
             }
@@ -929,9 +929,9 @@ public:
     */
     template<typename TStor = TStorage>
     twosided<std::optional<winding_base_t<TStor>>> clip(
-        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+        const qplane3d &plane, const double &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
-        vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
+        double *dists = (double *)alloca(sizeof(double) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
 
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
@@ -969,7 +969,7 @@ public:
             /* generate a split point */
             const qvec3d &p2 = at((i + 1) % size());
 
-            vec_t dot = dists[i] / (dists[i] - dists[i + 1]);
+            double dot = dists[i] / (dists[i] - dists[i + 1]);
             qvec3d mid;
 
             for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
@@ -1001,9 +1001,9 @@ public:
     */
     template<typename TPlane>
     std::optional<winding_base_t> clip_front(
-        const qplane3<TPlane> &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3<TPlane> &plane, const double &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
     {
-        vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
+        double *dists = (double *)alloca(sizeof(double) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
 
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
@@ -1035,7 +1035,7 @@ public:
             /* generate a split point */
             const qvec3d &p2 = at((i + 1) % size());
 
-            vec_t dot = dists[i] / (dists[i] - dists[i + 1]);
+            double dot = dists[i] / (dists[i] - dists[i + 1]);
             qvec3d mid;
 
             for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
@@ -1065,9 +1065,9 @@ public:
     ==================
     */
     std::optional<winding_base_t> clip_back(
-        const qplane3d &plane, const vec_t &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3d &plane, const double &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
     {
-        vec_t *dists = (vec_t *)alloca(sizeof(vec_t) * (size() + 1));
+        double *dists = (double *)alloca(sizeof(double) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
 
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
@@ -1099,7 +1099,7 @@ public:
             /* generate a split point */
             const qvec3d &p2 = at((i + 1) % size());
 
-            vec_t dot = dists[i] / (dists[i] - dists[i + 1]);
+            double dot = dists[i] / (dists[i] - dists[i + 1]);
             qvec3d mid;
 
             for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
@@ -1119,7 +1119,7 @@ public:
 
     // SaveFn is a callable of type `winding_base_t & -> void`
     template<typename SaveFn>
-    void dice(vec_t subdiv, SaveFn &&save_fn)
+    void dice(double subdiv, SaveFn &&save_fn)
     {
         if (!size())
             return;
@@ -1202,7 +1202,7 @@ public:
         return result;
     }
 
-    bool directional_equal(const winding_base_t &w, const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool directional_equal(const winding_base_t &w, const double &equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         if (this->size() != w.size()) {
             return false;
@@ -1233,7 +1233,7 @@ public:
         return false;
     }
 
-    bool undirectional_equal(const winding_base_t &w, const vec_t &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool undirectional_equal(const winding_base_t &w, const double &equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         return directional_equal(w, equal_epsilon) || directional_equal(w.flip(), equal_epsilon);
     }

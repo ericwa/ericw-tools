@@ -197,7 +197,7 @@ setting_debugexpand::setting_debugexpand(
 
 bool setting_debugexpand::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    std::array<vec_t, 6> values;
+    std::array<double, 6> values;
     size_t i = 0;
 
     try {
@@ -320,11 +320,11 @@ qbsp_plane_t &qbsp_plane_t::operator=(const qplane3d &plane) noexcept
 {
     return type;
 }
-[[nodiscard]] const vec_t &qbsp_plane_t::get_dist() const
+[[nodiscard]] const double &qbsp_plane_t::get_dist() const
 {
     return plane.dist;
 }
-[[nodiscard]] vec_t &qbsp_plane_t::get_dist()
+[[nodiscard]] double &qbsp_plane_t::get_dist()
 {
     return plane.dist;
 }
@@ -376,9 +376,9 @@ bool qbsp_plane_t::normalize(bool flip) noexcept
         }
     }
 
-    vec_t ax = fabs(plane.normal[0]);
-    vec_t ay = fabs(plane.normal[1]);
-    vec_t az = fabs(plane.normal[2]);
+    double ax = fabs(plane.normal[0]);
+    double ay = fabs(plane.normal[1]);
+    double az = fabs(plane.normal[2]);
 
     size_t nearest;
 
@@ -403,7 +403,7 @@ bool qbsp_plane_t::normalize(bool flip) noexcept
 
 namespace qv
 {
-[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, vec_t normalEpsilon, vec_t distEpsilon)
+[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, double normalEpsilon, double distEpsilon)
 {
     // axial planes will never match on normal, so we can skip that check entirely
     if (p1.get_type() < plane_type_t::PLANE_ANYX && p2.get_type() < plane_type_t::PLANE_ANYX) {

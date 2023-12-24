@@ -32,20 +32,18 @@ constexpr auto avg(T &&...args)
     return (args + ...) / sizeof...(args);
 }
 
-using vec_t = double;
-
-constexpr vec_t VECT_MAX = std::numeric_limits<vec_t>::max();
+constexpr double VECT_MAX = std::numeric_limits<double>::max();
 
 /*
  * The quality of the bsp output is highly sensitive to these epsilon values.
  */
-constexpr vec_t ZERO_TRI_AREA_EPSILON = 0.0001;
-constexpr vec_t POINT_EQUAL_EPSILON = 0.05;
+constexpr double ZERO_TRI_AREA_EPSILON = 0.0001;
+constexpr double POINT_EQUAL_EPSILON = 0.05;
 
-constexpr vec_t NORMAL_EPSILON = 0.000001;
-constexpr vec_t DIST_EPSILON = 0.0001;
-constexpr vec_t DEGREES_EPSILON = 0.001;
-constexpr vec_t DEFAULT_ON_EPSILON = 0.1;
+constexpr double NORMAL_EPSILON = 0.000001;
+constexpr double DIST_EPSILON = 0.0001;
+constexpr double DEGREES_EPSILON = 0.001;
+constexpr double DEFAULT_ON_EPSILON = 0.1;
 
 /*
 * The quality of the bsp output is highly sensitive to these epsilon values.
@@ -54,10 +52,10 @@ constexpr vec_t DEFAULT_ON_EPSILON = 0.1;
 *   epsilons to be such that QBSP_EQUAL_EPSILON < CONTINUOUS_EPSILON.
 *     ( TODO: re-check if CONTINUOUS_EPSILON is still directly related )
 */
-constexpr vec_t ANGLEEPSILON = NORMAL_EPSILON;
-constexpr vec_t ZERO_EPSILON = DIST_EPSILON;
-constexpr vec_t QBSP_EQUAL_EPSILON = DIST_EPSILON;
-constexpr vec_t CONTINUOUS_EPSILON = 0.0005;
+constexpr double ANGLEEPSILON = NORMAL_EPSILON;
+constexpr double ZERO_EPSILON = DIST_EPSILON;
+constexpr double QBSP_EQUAL_EPSILON = DIST_EPSILON;
+constexpr double CONTINUOUS_EPSILON = 0.0005;
 
 enum planeside_t : int8_t
 {
@@ -69,9 +67,9 @@ enum planeside_t : int8_t
     SIDE_CROSS = -2
 };
 
-constexpr vec_t Q_PI = 3.14159265358979323846;
+constexpr double Q_PI = 3.14159265358979323846;
 
-constexpr vec_t DEG2RAD(vec_t a)
+constexpr double DEG2RAD(double a)
 {
     return a * ((2 * Q_PI) / 360.0);
 }
@@ -87,7 +85,7 @@ inline T Q_rint(T in)
    returns a pseudorandom number between 0 and 1
  */
 
-vec_t Random();
+double Random();
 
 // noramlizes the given pdf so it sums to 1, then converts to a cdf
 std::vector<float> MakeCDF(const std::vector<float> &pdf);

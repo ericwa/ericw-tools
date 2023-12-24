@@ -53,11 +53,11 @@ struct tjunc_stats_t : logging::stat_tracker_t
     stat &faceoverflows = register_stat("faces added by splitting large faces");
 };
 
-static std::optional<vec_t> PointOnEdge(
+static std::optional<double> PointOnEdge(
     const qvec3d &p, const qvec3d &edge_start, const qvec3d &edge_dir, float start = 0, float end = 1)
 {
     qvec3d delta = p - edge_start;
-    vec_t dist = qv::dot(delta, edge_dir);
+    double dist = qv::dot(delta, edge_dir);
 
     // check if off an end
     if (dist <= start || dist >= end) {
@@ -66,7 +66,7 @@ static std::optional<vec_t> PointOnEdge(
 
     qvec3d exact = edge_start + (edge_dir * dist);
     qvec3d off = p - exact;
-    vec_t error = qv::length(off);
+    double error = qv::length(off);
 
     // brushbsp-fixme: this was 0.5 in Q2, check?
     if (fabs(error) > DEFAULT_ON_EPSILON) {
@@ -84,7 +84,7 @@ TestEdge
 Can be recursively reentered
 ==========
 */
-static void TestEdge(vec_t start, vec_t end, size_t p1, size_t p2, size_t startvert,
+static void TestEdge(double start, double end, size_t p1, size_t p2, size_t startvert,
     const std::vector<size_t> &edge_verts, const qvec3d &edge_start, const qvec3d &edge_dir,
     std::vector<size_t> &superface, tjunc_stats_t &stats)
 {
@@ -248,8 +248,8 @@ static void SplitFaceIntoFragments(
 
 static float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 {
-    vec_t num = (b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1]) + (b[2] - a[2]) * (c[2] - a[2]);
-    vec_t den = sqrt(pow((b[0] - a[0]), 2) + pow((b[1] - a[1]), 2) + pow((b[2] - a[2]), 2)) *
+    double num = (b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1]) + (b[2] - a[2]) * (c[2] - a[2]);
+    double den = sqrt(pow((b[0] - a[0]), 2) + pow((b[1] - a[1]), 2) + pow((b[2] - a[2]), 2)) *
                 sqrt(pow((c[0] - a[0]), 2) + pow((c[1] - a[1]), 2) + pow((c[2] - a[2]), 2));
 
     return acos(num / den) * (180.0 / 3.141592653589793238463);
@@ -258,7 +258,7 @@ static float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 // Check whether the given input triangle would be valid
 // on the given face and not have any other points
 // intersecting it.
-static bool TriangleIsValid(size_t v0, size_t v1, size_t v2, vec_t angle_epsilon)
+static bool TriangleIsValid(size_t v0, size_t v1, size_t v2, double angle_epsilon)
 {
     if (AngleOfTriangle(map.bsp.dvertexes[v0], map.bsp.dvertexes[v1], map.bsp.dvertexes[v2]) < angle_epsilon ||
         AngleOfTriangle(map.bsp.dvertexes[v1], map.bsp.dvertexes[v2], map.bsp.dvertexes[v0]) < angle_epsilon ||
@@ -299,7 +299,7 @@ static std::vector<size_t> CreateSuperFace(node_t *headnode, face_t *f, tjunc_st
         edge_verts.clear();
         FindEdgeVerts_FaceBounds(headnode, f, edge_start, e2, edge_verts);
 
-        vec_t len;
+        double len;
         qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
 
         TestEdge(0, len, v1, v2, 0, edge_verts, edge_start, edge_dir, superface, stats);
@@ -482,7 +482,7 @@ static std::vector<qvectri> minimum_weight_triangulation(
     // create a table for storing the solutions to subproblems
     // `T[i][j]` stores the weight of the minimum-weight triangulation
     // of the polygon below edge `ij`
-    std::vector<vec_t> T(n * n);
+    std::vector<double> T(n * n);
     std::vector<std::optional<size_t>> K(n * n);
 
     // fill the table diagonally using the recurrence relation
@@ -493,21 +493,21 @@ static std::vector<qvectri> minimum_weight_triangulation(
                 continue;
             }
 
-            T[i + (j * n)] = std::numeric_limits<vec_t>::max();
+            T[i + (j * n)] = std::numeric_limits<double>::max();
 
             // consider all possible triangles `ikj` within the polygon
             for (size_t k = i + 1; k <= j - 1; k++) {
                 // The weight of triangulation is the length of its perimeter
-                vec_t weight;
+                double weight;
 
                 if (!TriangleIsValid(indices[i], indices[j], indices[k], 0.01)) {
-                    weight = std::nexttoward(std::numeric_limits<vec_t>::max(), 0.0);
+                    weight = std::nexttoward(std::numeric_limits<double>::max(), 0.0);
                 } else {
                     weight = (qv::distance(vertices[i], vertices[j]) + qv::distance(vertices[j], vertices[k]) +
                                  qv::distance(vertices[k], vertices[i])) +
                              T[i + (k * n)] + T[k + (j * n)];
                 }
-                vec_t &t_weight = T[i + (j * n)];
+                double &t_weight = T[i + (j * n)];
 
                 // choose vertex `k` that leads to the minimum total weight
                 if (weight < t_weight) {

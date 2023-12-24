@@ -38,7 +38,7 @@ PORTAL FILE GENERATION
 ==============================================================================
 */
 
-static void WriteFloat(std::ofstream &portalFile, vec_t v)
+static void WriteFloat(std::ofstream &portalFile, double v)
 {
     if (fabs(v - Q_rint(v)) < ZERO_EPSILON)
         ewt::print(portalFile, "{} ", (int)Q_rint(v));

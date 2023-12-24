@@ -33,7 +33,7 @@
 
 static void PrintBSPTextureUsage(const mbsp_t &bsp)
 {
-    std::unordered_map<std::string, vec_t> areas;
+    std::unordered_map<std::string, double> areas;
 
     for (auto &face : bsp.dfaces) {
         const char *name = Face_TextureName(&bsp, &face);
@@ -44,12 +44,12 @@ static void PrintBSPTextureUsage(const mbsp_t &bsp)
 
         auto points = Face_Points(&bsp, &face);
         polylib::winding_t w(points.begin(), points.end());
-        vec_t area = w.area();
+        double area = w.area();
 
         areas[name] += area;
     }
 
-    std::vector<std::tuple<std::string, vec_t>> areasVec;
+    std::vector<std::tuple<std::string, double>> areasVec;
 
     for (auto &area : areas) {
         areasVec.push_back(std::make_tuple(area.first, area.second));

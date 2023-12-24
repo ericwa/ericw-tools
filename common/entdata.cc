@@ -48,7 +48,7 @@ const std::string &entdict_t::get(const std::string_view &key) const
     return empty;
 }
 
-vec_t entdict_t::get_float(const std::string_view &key) const
+double entdict_t::get_float(const std::string_view &key) const
 {
     const std::string &s = get(key);
 

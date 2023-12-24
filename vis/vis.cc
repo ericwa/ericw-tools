@@ -114,12 +114,12 @@ void FreeStackWinding(viswinding_t *&w, pstack_t &stack)
 */
 viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &stack, const qplane3d &split)
 {
-    vec_t dists[MAX_WINDING + 1];
+    double dists[MAX_WINDING + 1];
     int sides[MAX_WINDING + 1];
     size_t i;
 
     /* Fast test first */
-    vec_t dot = split.distance_to(in->origin);
+    double dot = split.distance_to(in->origin);
     if (dot < -in->radius) {
         FreeStackWinding(in, stack);
         return nullptr;
@@ -189,7 +189,7 @@ viswinding_t *ClipStackWinding(visstats_t &stats, viswinding_t *in, pstack_t &st
         /* generate a split point */
         const qvec3d &p2 = (*in)[(i + 1) % in->size()];
         qvec3d mid;
-        vec_t fraction = dists[i] / (dists[i] - dists[i + 1]);
+        double fraction = dists[i] / (dists[i] - dists[i + 1]);
         for (size_t j = 0; j < 3; j++) {
             /* avoid round off error when possible */
             if (split.normal[j] == 1)

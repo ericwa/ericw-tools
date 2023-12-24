@@ -258,7 +258,7 @@ bool EntDict_CheckNoEmptyValues(const mbsp_t *bsp, const entdict_t &entdict)
 static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &cfg)
 {
     for (auto &entity : all_lights) {
-        vec_t targetdist = 0.0; // mxd
+        double targetdist = 0.0; // mxd
         if (entity->targetent) {
             qvec3f targetOrigin;
             entity->targetent->get_vector("origin", targetOrigin);
@@ -267,7 +267,7 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
             entity->spotlight = true;
         }
         if (entity->spotlight) {
-            vec_t base_angle = 0.0; // spotlight cone "diameter" in degrees
+            double base_angle = 0.0; // spotlight cone "diameter" in degrees
 
             if (entity->cone.is_changed()) {
                 // q2 style: "_cone" key specifies cone radius in degrees
@@ -288,14 +288,14 @@ static void SetupSpotlights(const mbsp_t *bsp, const settings::worldspawn_keys &
 
             entity->spotfalloff = -cos(base_angle / 2 * Q_PI / 180);
 
-            vec_t angle2 = entity->spotangle2.value();
+            double angle2 = entity->spotangle2.value();
             if (angle2 <= 0 || angle2 > base_angle)
                 angle2 = base_angle;
             entity->spotfalloff2 = -cos(angle2 / 2 * Q_PI / 180);
 
             // mxd. Apply autofalloff?
             if (targetdist > 0.0f && entity->falloff.value() == 0 && cfg.spotlightautofalloff.value()) {
-                const vec_t coneradius = targetdist * tan(base_angle / 2 * Q_PI / 180);
+                const double coneradius = targetdist * tan(base_angle / 2 * Q_PI / 180);
                 entity->falloff.set_value(targetdist + coneradius, settings::source::MAP);
             }
         }
@@ -376,8 +376,8 @@ static bool Dirt_ResolveFlag(const settings::worldspawn_keys &cfg, int dirtInt)
  * AddSun
  * =============
  */
-static void AddSun(const settings::worldspawn_keys &cfg, const qvec3f &sunvec, vec_t light, const qvec3f &color,
-    int dirtInt, vec_t sun_anglescale, const int style, const std::string &suntexture)
+static void AddSun(const settings::worldspawn_keys &cfg, const qvec3f &sunvec, double light, const qvec3f &color,
+    int dirtInt, double sun_anglescale, const int style, const std::string &suntexture)
 {
     if (light == 0.0f)
         return;
@@ -413,14 +413,14 @@ static void AddSun(const settings::worldspawn_keys &cfg, const qvec3f &sunvec, v
  * From q3map2
  * =============
  */
-static void SetupSun(const settings::worldspawn_keys &cfg, vec_t light, const qvec3f &color, const qvec3f &sunvec_in,
-    const vec_t sun_anglescale, const vec_t sun_deviance, const int sunlight_dirt, const int style,
+static void SetupSun(const settings::worldspawn_keys &cfg, double light, const qvec3f &color, const qvec3f &sunvec_in,
+    const double sun_anglescale, const double sun_deviance, const int sunlight_dirt, const int style,
     const std::string &suntexture)
 {
     int i;
     int sun_num_samples = (sun_deviance == 0 ? 1 : light_options.sunsamples.value()); // mxd
-    vec_t sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
-    vec_t sun_deviance_sq = sun_deviance * sun_deviance; // mxd
+    double sun_deviance_rad = DEG2RAD(sun_deviance); // mxd
+    double sun_deviance_sq = sun_deviance * sun_deviance; // mxd
 
     qvec3f sunvec = qv::normalize(sunvec_in);
 
@@ -437,10 +437,10 @@ static void SetupSun(const settings::worldspawn_keys &cfg, vec_t light, const qv
         if (i == 0) {
             direction = sunvec;
         } else {
-            vec_t da, de;
-            vec_t d = sqrt(sunvec[0] * sunvec[0] + sunvec[1] * sunvec[1]);
-            vec_t angle = atan2(sunvec[1], sunvec[0]);
-            vec_t elevation = atan2(sunvec[2], d);
+            double da, de;
+            double d = sqrt(sunvec[0] * sunvec[0] + sunvec[1] * sunvec[1]);
+            double angle = atan2(sunvec[1], sunvec[0]);
+            double elevation = atan2(sunvec[2], d);
 
             /* jitter the angles (loop to keep random sample within sun->deviance steridians) */
             do {
@@ -510,16 +510,16 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
  * FIXME: this is becoming a mess
  * =============
  */
-static void SetupSkyDome(const settings::worldspawn_keys &cfg, vec_t upperLight, const qvec3f &upperColor,
-    const int upperDirt, const vec_t upperAnglescale, const int upperStyle, const std::string &upperSuntexture,
-    vec_t lowerLight, const qvec3f &lowerColor, const int lowerDirt, const vec_t lowerAnglescale, const int lowerStyle,
+static void SetupSkyDome(const settings::worldspawn_keys &cfg, double upperLight, const qvec3f &upperColor,
+    const int upperDirt, const double upperAnglescale, const int upperStyle, const std::string &upperSuntexture,
+    double lowerLight, const qvec3f &lowerColor, const int lowerDirt, const double lowerAnglescale, const int lowerStyle,
     const std::string &lowerSuntexture)
 {
     int i, j, numSuns;
     int angleSteps, elevationSteps;
     int iterations;
-    vec_t angle, elevation;
-    vec_t angleStep, elevationStep;
+    double angle, elevation;
+    double angleStep, elevationStep;
     qvec3f direction;
 
     /* pick a value for 'iterations' so that 'numSuns' will be close to 'sunsamples' */
@@ -541,8 +541,8 @@ static void SetupSkyDome(const settings::worldspawn_keys &cfg, vec_t upperLight,
     /* calc individual sun brightness */
     numSuns = angleSteps * elevationSteps + 1;
 
-    const vec_t sunlight2value = upperLight / numSuns;
-    const vec_t sunlight3value = lowerLight / numSuns;
+    const double sunlight2value = upperLight / numSuns;
+    const double sunlight3value = lowerLight / numSuns;
 
     /* iterate elevation */
     elevation = elevationStep * 0.5f;
@@ -858,11 +858,11 @@ inline float CalcFov(float fov_x, float width, float height)
     if (fov_x < 1 || fov_x > 179)
         FError("Unsupported fov: {}. Expected a value in [1..179] range.", fov_x);
 
-    vec_t x = fov_x / 360 * Q_PI;
+    double x = fov_x / 360 * Q_PI;
     x = tan(x);
     x = width / x;
 
-    vec_t a = atan(height / x);
+    double a = atan(height / x);
 
     a = a * 360 / Q_PI;
 
@@ -983,7 +983,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                 const auto anglescale = entdict.find("_anglescale");
                 if (anglescale != entdict.end()) {
                     // Convert from 0..2 to 0..1 range...
-                    const vec_t val = std::min(1.0, std::max(0.0, entdict.get_float("_anglescale") * 0.5));
+                    const double val = std::min(1.0, std::max(0.0, entdict.get_float("_anglescale") * 0.5));
                     entdict.set("_anglescale", std::to_string(val));
                 }
             }
@@ -1105,15 +1105,15 @@ static void SetupLightLeafnums(const mbsp_t *bsp)
 
 // from http://mathworld.wolfram.com/SpherePointPicking.html
 // eqns 6,7,8
-inline qvec3f UniformPointOnSphere(vec_t u1, vec_t u2)
+inline qvec3f UniformPointOnSphere(double u1, double u2)
 {
     Q_assert(u1 >= 0 && u1 <= 1);
     Q_assert(u2 >= 0 && u2 <= 1);
 
-    const vec_t theta = u1 * 2.0 * Q_PI;
-    const vec_t u = (2.0 * u2) - 1.0;
+    const double theta = u1 * 2.0 * Q_PI;
+    const double u = (2.0 * u2) - 1.0;
 
-    const vec_t s = sqrt(1.0 - (u * u));
+    const double s = sqrt(1.0 - (u * u));
 
     qvec3f dir{s * cos(theta), s * sin(theta), u};
 
@@ -1136,8 +1136,8 @@ aabb3f EstimateVisibleBoundsAtPoint(const qvec3f &point)
 
     for (size_t x = 0; x < N; x++) {
         for (size_t y = 0; y < N; y++) {
-            const vec_t u1 = static_cast<vec_t>(x) / static_cast<vec_t>(N - 1);
-            const vec_t u2 = static_cast<vec_t>(y) / static_cast<vec_t>(N - 1);
+            const double u1 = static_cast<double>(x) / static_cast<double>(N - 1);
+            const double u2 = static_cast<double>(y) / static_cast<double>(N - 1);
 
             rs.pushRay(0, point, UniformPointOnSphere(u1, u2), 65536.0);
         }
@@ -1293,7 +1293,7 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
     qplane3f plane = Face_Plane(bsp, face);
 
     /* Nudge 2 units (by default) along face normal */
-    vec_t offset = surflight_template->epairs->get_float("_surface_offset");
+    double offset = surflight_template->epairs->get_float("_surface_offset");
 
     if (offset == 0)
         offset = 2.0;
@@ -1351,14 +1351,14 @@ bool FaceMatchesSurfaceLightTemplate(
  ================
  */
 static void SubdividePolygon(const mface_t *face, const modelinfo_t *face_modelinfo, const mbsp_t *bsp, int numverts,
-    qvec3f *verts, vec_t subdivide_size)
+    qvec3f *verts, double subdivide_size)
 {
     int i, j;
-    vec_t m;
+    double m;
     qvec3f front[64], back[64];
     int f, b;
-    vec_t dist[64];
-    vec_t frac;
+    double dist[64];
+    double frac;
     // glpoly_t        *poly;
     // float   s, t;
 
@@ -1479,11 +1479,11 @@ bool ParseLightsFile(const fs::path &fname)
         entdict_t &d = radlights.emplace_back();
         d.set("_surface", parser.token);
         parser.parse_token();
-        vec_t r = std::stod(parser.token);
+        double r = std::stod(parser.token);
         parser.parse_token();
-        vec_t g = std::stod(parser.token);
+        double g = std::stod(parser.token);
         parser.parse_token();
-        vec_t b = std::stod(parser.token);
+        double b = std::stod(parser.token);
         d.set("_color", fmt::format("{} {} {}", r, g, b));
         parser.parse_token();
         d.set("light", parser.token);

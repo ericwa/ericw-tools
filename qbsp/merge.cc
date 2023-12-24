@@ -65,7 +65,7 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
     qvec3d p1, p2, p3, p4, back;
     int i, j, k, l;
     qvec3d normal, delta;
-    vec_t dot;
+    double dot;
     bool keep1, keep2;
 
     if (!f1->w.size() || !f2->w.size() || f1->planenum != f2->planenum || f1->texinfo != f2->texinfo ||

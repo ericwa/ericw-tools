@@ -650,7 +650,7 @@ static int l_create_winding(lua_State *state)
     // -1 = extents
     bool found_face = false;
 
-    vec_t extents = lua_tonumber(state, -1);
+    double extents = lua_tonumber(state, -1);
     lua_pop(state, 1);
 
     lua_pushvalue(state, -2);

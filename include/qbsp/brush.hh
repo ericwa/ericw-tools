@@ -92,7 +92,7 @@ struct bspbrush_t
 
     bspbrush_t clone() const;
 
-    bool contains_point(const qvec3d &point, vec_t epsilon = 0.0) const;
+    bool contains_point(const qvec3d &point, double epsilon = 0.0) const;
 };
 
 std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, const contentflags_t &contents,

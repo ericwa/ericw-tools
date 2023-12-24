@@ -243,7 +243,7 @@ static void ClipInside(
         if ((face.planenum ^ 1) == (clipface.planenum ^ 1) || spurious_onplane) {
             const qplane3d &faceplane = face.get_plane();
             const qplane3d &clipfaceplane = clipface.get_plane();
-            const vec_t dp = qv::dot(faceplane.normal, clipfaceplane.normal);
+            const double dp = qv::dot(faceplane.normal, clipfaceplane.normal);
             const bool opposite = (dp < 0);
 
             if (opposite || precedence) {

@@ -80,7 +80,7 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 
 static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, lightsurf_t &surf,
     qvec3f texture_color, int32_t style, std::vector<qvec3f> &points,
-    const vec_t &area, const qvec3f &facenormal, const qvec3f &facemidpoint, size_t depth)
+    const double &area, const qvec3f &facenormal, const qvec3f &facemidpoint, size_t depth)
 {
     if (!Face_IsEmissive(bsp, surf.face)) {
         return;
@@ -89,7 +89,7 @@ static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &
     // Calculate emit color and intensity...
 
     // Calculate intensity...
-    vec_t intensity = qv::max(texture_color);
+    double intensity = qv::max(texture_color);
 
     if (intensity <= 0.0) {
         return;
@@ -158,7 +158,7 @@ static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     }
 
     auto winding = polylib::winding_t::from_face(bsp, &face);
-    vec_t area = winding.area();
+    double area = winding.area();
 
     if (area < 1.f) {
         return false;
@@ -170,7 +170,7 @@ static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
     // grab the average color across the whole set of lightmaps for this face.
     // this doesn't change regardless of the above settings.
     std::unordered_map<int, qvec3f> sum;
-    vec_t sample_divisor = surf.lightmapsByStyle.front().samples.size();
+    double sample_divisor = surf.lightmapsByStyle.front().samples.size();
 
     bool has_any_color = false;
 

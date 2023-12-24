@@ -76,7 +76,7 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point, bool prefer_sealin
         return node;
     }
 
-    vec_t dist = node->get_plane().distance_to(point);
+    double dist = node->get_plane().distance_to(point);
 
     if (dist > 0) {
         // point is on the front of the node plane
@@ -253,7 +253,7 @@ void WriteLeakTrail(std::ofstream &leakfile, qvec3d point1, const qvec3d &point2
 {
     if (qbsp_options.leakdist.value()) {
         qvec3d vector = point2 - point1;
-        vec_t dist = qv::normalizeInPlace(vector);
+        double dist = qv::normalizeInPlace(vector);
 
         while (dist > qbsp_options.leakdist.value()) {
             ewt::print(leakfile, "{}\n", point1);

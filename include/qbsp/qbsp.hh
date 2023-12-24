@@ -222,12 +222,12 @@ public:
     setting_bool notriggermodels;
     setting_set aliasdefs;
     setting_set texturedefs;
-    setting_numeric<vec_t> lmscale;
+    setting_numeric<double> lmscale;
     setting_enum<filltype_t> filltype;
     setting_bool filldetail;
     setting_invertible_bool allow_upgrade;
     setting_validator<setting_int32> maxedges;
-    setting_numeric<vec_t> midsplitbrushfraction;
+    setting_numeric<double> midsplitbrushfraction;
     setting_string add;
     setting_scalar scale;
     setting_bool loghulls;
@@ -302,7 +302,7 @@ struct face_t
     std::vector<node_t *> markleafs; // populated at the same time as markfaces; reverse mapping to that
 
     qvec3d origin;
-    vec_t radius;
+    double radius;
 
     portal_t *portal;
     mapface_t *original_side;
@@ -336,8 +336,8 @@ public:
     [[nodiscard]] qbsp_plane_t operator-() const;
 
     [[nodiscard]] const plane_type_t &get_type() const;
-    [[nodiscard]] const vec_t &get_dist() const;
-    [[nodiscard]] vec_t &get_dist();
+    [[nodiscard]] const double &get_dist() const;
+    [[nodiscard]] double &get_dist();
     [[nodiscard]] const qvec3d &get_normal() const;
     bool set_normal(const qvec3d &vec, bool flip = false);
     bool set_plane(const qplane3d &plane, bool flip = false);
@@ -374,8 +374,8 @@ namespace qv
 {
 // faster version of epsilonEqual for BSP planes
 // which have a bit more info in them
-[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, vec_t normalEpsilon = NORMAL_EPSILON,
-    vec_t distEpsilon = DIST_EPSILON);
+[[nodiscard]] bool epsilonEqual(const qbsp_plane_t &p1, const qbsp_plane_t &p2, double normalEpsilon = NORMAL_EPSILON,
+    double distEpsilon = DIST_EPSILON);
 }; // namespace qv
 
 template<typename T>

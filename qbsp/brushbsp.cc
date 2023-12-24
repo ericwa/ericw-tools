@@ -115,7 +115,7 @@ BrushVolume
 ==================
 */
 template<typename T>
-static vec_t BrushVolume(T begin, T end)
+static double BrushVolume(T begin, T end)
 {
     // grab the first valid point as the corner
 
@@ -135,7 +135,7 @@ static vec_t BrushVolume(T begin, T end)
 
     // make tetrahedrons to all other faces
 
-    vec_t volume = 0;
+    double volume = 0;
     for (auto it = begin; it != end; it++) {
         auto &face = *it;
 
@@ -144,8 +144,8 @@ static vec_t BrushVolume(T begin, T end)
         }
 
         auto &plane = face.get_plane();
-        vec_t d = -(qv::dot(corner, plane.get_normal()) - plane.get_dist());
-        vec_t area = face.w.area();
+        double d = -(qv::dot(corner, plane.get_normal()) - plane.get_dist());
+        double area = face.w.area();
         volume += d * area;
     }
 
@@ -153,7 +153,7 @@ static vec_t BrushVolume(T begin, T end)
     return volume;
 }
 
-vec_t BrushVolume(const bspbrush_t &brush)
+double BrushVolume(const bspbrush_t &brush)
 {
     return BrushVolume(brush.sides.begin(), brush.sides.end());
 }
@@ -289,8 +289,8 @@ static int TestBrushToPlanenum(
 
     if (numsplits && hintsplit && epsilonbrush) {
         // if both sides, count the visible faces split
-        vec_t d_front = 0;
-        vec_t d_back = 0;
+        double d_front = 0;
+        double d_back = 0;
 
         for (const side_t &side : brush.sides) {
             if (side.onnode)
@@ -377,11 +377,11 @@ BrushMostlyOnSide
 */
 planeside_t BrushMostlyOnSide(const bspbrush_t &brush, const qplane3d &plane)
 {
-    vec_t max = 0;
+    double max = 0;
     planeside_t side = SIDE_FRONT;
     for (auto &face : brush.sides) {
         for (size_t j = 0; j < face.w.size(); j++) {
-            vec_t d = qv::dot(face.w[j], plane.normal) - plane.dist;
+            double d = qv::dot(face.w[j], plane.normal) - plane.dist;
             if (d > max) {
                 max = d;
                 side = SIDE_FRONT;
@@ -412,11 +412,11 @@ static twosided<bspbrush_t::ptr> SplitBrush(
     twosided<bspbrush_t::ptr> result;
 
     // check all points
-    vec_t d_front = 0; // for points above plane, greatest distance from plane (positive)
-    vec_t d_back = 0; // for points below plane, greatest distance from plane (negative)
+    double d_front = 0; // for points above plane, greatest distance from plane (positive)
+    double d_back = 0; // for points below plane, greatest distance from plane (negative)
     for (auto &face : brush->sides) {
         for (const qvec3d &p : face.w) {
-            vec_t d = split.distance_to(p);
+            double d = split.distance_to(p);
             if (d > 0 && d > d_front)
                 d_front = d;
             if (d < 0 && d < d_back)
@@ -561,7 +561,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(
     }
 
     for (int i = 0; i < 2; i++) {
-        vec_t v1 = BrushVolume(*result[i]);
+        double v1 = BrushVolume(*result[i]);
         if (v1 < qbsp_options.microvolume.value()) {
             result[i] = nullptr;
             if (stats) {
@@ -647,12 +647,12 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     const qplane3d &split = map.planes[planenum];
 
     // check all points
-    vec_t d_front = 0;
-    vec_t d_back = 0;
+    double d_front = 0;
+    double d_back = 0;
 
     for (auto &face : brush->sides) {
         for (int j = 0; j < face.w.size(); j++) {
-            vec_t d = qv::dot(face.w[j], split.normal) - split.dist;
+            double d = qv::dot(face.w[j], split.normal) - split.dist;
             if (d > 0 && d > d_front)
                 d_front = d;
             if (d < 0 && d < d_back)
@@ -751,7 +751,7 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     }
 
     for (int i = 0; i < 2; i++) {
-        vec_t v1 = BrushVolume(temporary_brushes[i].sides, temporary_brushes[i].sides + temporary_brushes[i].num_sides);
+        double v1 = BrushVolume(temporary_brushes[i].sides, temporary_brushes[i].sides + temporary_brushes[i].num_sides);
         if (v1 < qbsp_options.microvolume.value()) {
             return false;
         }
@@ -782,7 +782,7 @@ inline bool CheckPlaneAgainstVolume(size_t planenum, const node_t *node)
 inline void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aabb3d &front_bounds, aabb3d &back_bounds)
 {
     int a, b, c, i, j;
-    vec_t dist1, dist2, mid, split_mins, split_maxs;
+    double dist1, dist2, mid, split_mins, split_maxs;
     qvec3d corner;
 
     front_bounds = back_bounds = in_bounds;
@@ -833,7 +833,7 @@ inline void DivideBounds(const aabb3d &in_bounds, const qbsp_plane_t &split, aab
     }
 }
 
-inline vec_t SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
+inline double SplitPlaneMetric(const qbsp_plane_t &p, const aabb3d &bounds)
 {
     aabb3d f, b;
 
@@ -853,10 +853,10 @@ The clipping hull BSP doesn't worry about avoiding splits
 */
 static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, const node_t *node)
 {
-    vec_t bestaxialmetric = VECT_MAX;
+    double bestaxialmetric = VECT_MAX;
     side_t *bestaxialplane = nullptr;
 
-    vec_t bestanymetric = VECT_MAX;
+    double bestanymetric = VECT_MAX;
     side_t *bestanyplane = nullptr;
 
     for (auto &brush : brushes) {
@@ -878,7 +878,7 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
 #endif
 
             /* calculate the split metric, smaller values are better */
-            const vec_t metric = SplitPlaneMetric(plane, node->bounds);
+            const double metric = SplitPlaneMetric(plane, node->bounds);
 
             if (metric < bestanymetric) {
                 bestanymetric = metric;
@@ -929,7 +929,7 @@ static side_t *SelectSplitPlane(
             } else {
                 // old way (ericw-tools 0.15.2+)
                 if (qbsp_options.maxnodesize.value() >= 64) {
-                    const vec_t maxnodesize = qbsp_options.maxnodesize.value() - qbsp_options.epsilon.value();
+                    const double maxnodesize = qbsp_options.maxnodesize.value() - qbsp_options.epsilon.value();
 
                     if ((node->bounds.maxs()[0] - node->bounds.mins()[0]) > maxnodesize ||
                         (node->bounds.maxs()[1] - node->bounds.mins()[1]) > maxnodesize ||

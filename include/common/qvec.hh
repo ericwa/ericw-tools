@@ -1056,7 +1056,7 @@ namespace qv
 // returns the normalized direction from `start` to `stop` in the `dir` param
 // returns the distance from `start` to `stop`
 template<typename Tstart, typename Tstop, typename Tdir>
-inline vec_t GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
+inline double GetDir(const Tstart &start, const Tstop &stop, Tdir &dir)
 {
     return qv::normalizeInPlace(dir = (stop - start));
 }
@@ -1172,7 +1172,7 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
 }
 
 bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1,
-    const vec_t &on_epsilon = DEFAULT_ON_EPSILON);
+    const double &on_epsilon = DEFAULT_ON_EPSILON);
 
 template<typename T>
 struct twosided

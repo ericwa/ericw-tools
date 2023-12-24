@@ -147,7 +147,7 @@ static void PrintModelInfo(const mbsp_t *bsp)
 /*
  * Quick hack to check verticies of faces lie on the correct plane
  */
-constexpr vec_t PLANE_ON_EPSILON = 0.01;
+constexpr double PLANE_ON_EPSILON = 0.01;
 
 static void CheckBSPFacesPlanar(const mbsp_t *bsp)
 {
@@ -619,7 +619,7 @@ static planepoints NormalDistanceToThreePoints(const qplane3<T> &plane)
 struct planelist_t
 {
     // planes indices (into the `planes` vector)
-    pareto::spatial_map<vec_t, 4, size_t> plane_hash;
+    pareto::spatial_map<double, 4, size_t> plane_hash;
     std::vector<dplane_t> planes;
 
     // add the specified plane to the list
@@ -644,10 +644,10 @@ struct planelist_t
         }
 
         plane_hash.emplace(
-            pareto::point<vec_t, 4>{positive.normal[0], positive.normal[1], positive.normal[2], positive.dist},
+            pareto::point<double, 4>{positive.normal[0], positive.normal[1], positive.normal[2], positive.dist},
             positive_index);
         plane_hash.emplace(
-            pareto::point<vec_t, 4>{negative.normal[0], negative.normal[1], negative.normal[2], negative.dist},
+            pareto::point<double, 4>{negative.normal[0], negative.normal[1], negative.normal[2], negative.dist},
             negative_index);
 
         return result;
@@ -655,8 +655,8 @@ struct planelist_t
 
     std::optional<size_t> find_plane_nonfatal(const dplane_t &plane)
     {
-        constexpr vec_t HALF_NORMAL_EPSILON = NORMAL_EPSILON * 0.5;
-        constexpr vec_t HALF_DIST_EPSILON = DIST_EPSILON * 0.5;
+        constexpr double HALF_NORMAL_EPSILON = NORMAL_EPSILON * 0.5;
+        constexpr double HALF_DIST_EPSILON = DIST_EPSILON * 0.5;
 
         if (auto it = plane_hash.find_intersection(
                 {plane.normal[0] - HALF_NORMAL_EPSILON, plane.normal[1] - HALF_NORMAL_EPSILON,

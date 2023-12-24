@@ -340,12 +340,12 @@ piece off and insert the remainder in the next link
 */
 static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> f, makefaces_stats_t &stats)
 {
-    vec_t mins, maxs;
-    vec_t v;
+    double mins, maxs;
+    double v;
     int axis;
     qplane3d plane;
-    vec_t subdiv;
-    vec_t extent;
+    double subdiv;
+    double extent;
     int lmshift;
 
     /* special (non-surface cached) faces don't need subdivision */

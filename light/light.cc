@@ -1190,34 +1190,34 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
             flags.surflight_color = val.at("surflight_color").get<qvec3b>();
         }
         if (val.contains("surflight_minlight_scale")) {
-            flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<vec_t>();
+            flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<double>();
         }
         if (val.contains("phong_angle")) {
-            flags.phong_angle = val.at("phong_angle").get<vec_t>();
+            flags.phong_angle = val.at("phong_angle").get<double>();
         }
         if (val.contains("phong_angle_concave")) {
-            flags.phong_angle_concave = val.at("phong_angle_concave").get<vec_t>();
+            flags.phong_angle_concave = val.at("phong_angle_concave").get<double>();
         }
         if (val.contains("phong_group")) {
             flags.phong_group = val.at("phong_group").get<int>();
         }
         if (val.contains("minlight")) {
-            flags.minlight = val.at("minlight").get<vec_t>();
+            flags.minlight = val.at("minlight").get<double>();
         }
         if (val.contains("maxlight")) {
-            flags.maxlight = val.at("maxlight").get<vec_t>();
+            flags.maxlight = val.at("maxlight").get<double>();
         }
         if (val.contains("minlight_color")) {
             flags.minlight_color = val.at("minlight_color").get<qvec3b>();
         }
         if (val.contains("light_alpha")) {
-            flags.light_alpha = val.at("light_alpha").get<vec_t>();
+            flags.light_alpha = val.at("light_alpha").get<double>();
         }
         if (val.contains("light_twosided")) {
             flags.light_twosided = val.at("light_twosided").get<bool>();
         }
         if (val.contains("lightcolorscale")) {
-            flags.lightcolorscale = val.at("lightcolorscale").get<vec_t>();
+            flags.lightcolorscale = val.at("lightcolorscale").get<double>();
         }
         if (val.contains("surflight_group")) {
             flags.surflight_group = val.at("surflight_group").get<int32_t>();
@@ -1321,7 +1321,7 @@ static void FindDebugFace(const mbsp_t *bsp)
 static int Vertex_NearestPoint(const mbsp_t *bsp, const qvec3f &point)
 {
     int nearest_vert = -1;
-    float nearest_dist = std::numeric_limits<vec_t>::infinity();
+    float nearest_dist = std::numeric_limits<double>::infinity();
 
     for (int i = 0; i < bsp->dvertexes.size(); i++) {
         const qvec3f &vertex = bsp->dvertexes[i];

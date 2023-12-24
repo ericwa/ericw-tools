@@ -144,7 +144,7 @@ void CalcAmbientSounds(mbsp_t *bsp)
             if (dists[j] < 100)
                 vol = 1.0;
             else {
-                vol = (vec_t)(1.0 - dists[2] * 0.002);
+                vol = (double)(1.0 - dists[2] * 0.002);
                 if (vol < 0)
                     vol = 0;
             }

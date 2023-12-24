@@ -278,8 +278,8 @@ struct fmt::formatter<aabb<T, Dim>> : formatter<qvec<T, Dim>>
     }
 };
 
-using aabb3d = aabb<vec_t, 3>;
-using aabb2d = aabb<vec_t, 2>;
+using aabb3d = aabb<double, 3>;
+using aabb2d = aabb<double, 2>;
 
 using aabb3f = aabb<float, 3>;
 using aabb2f = aabb<float, 2>;

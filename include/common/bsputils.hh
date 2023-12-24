@@ -151,7 +151,7 @@ public:
     qmat4x4f worldToLMMatrix;
 
     qvec3d origin;
-    vec_t radius;
+    double radius;
     aabb3d bounds;
 
     faceextents_t() = default;

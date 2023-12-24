@@ -45,7 +45,7 @@
 
 struct texdef_valve_t
 {
-    qmat<vec_t, 2, 3> axis{};
+    qmat<double, 2, 3> axis{};
     qvec2d scale{1.0};
     qvec2d shift{};
 
@@ -74,7 +74,7 @@ struct texdef_valve_t
 
         for (int i = 0; i < 2; i++) {
             qvec3d xyz = in_vecs.row(i).xyz();
-            const vec_t length = qv::normalizeInPlace(xyz);
+            const double length = qv::normalizeInPlace(xyz);
             // avoid division by 0
             if (length != 0.0) {
                 scale[i] = 1.0 / length;
@@ -1290,7 +1290,7 @@ static void DecompileEntity(
 
                 // check all of the other sides, find the one with the nearest opposite plane
                 qvec3d normal_to_check = -side.plane.normal;
-                vec_t closest_dot = -DBL_MAX;
+                double closest_dot = -DBL_MAX;
                 compiled_brush_side_t *closest = nullptr;
 
                 for (auto &side2 : brush.sides) {
@@ -1302,7 +1302,7 @@ static void DecompileEntity(
                         continue;
                     }
 
-                    vec_t d = qv::dot(normal_to_check, side2.plane.normal);
+                    double d = qv::dot(normal_to_check, side2.plane.normal);
 
                     if (!closest || d > closest_dot) {
                         closest_dot = d;

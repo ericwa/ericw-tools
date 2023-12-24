@@ -193,8 +193,8 @@ BaseWindingForNode
 Creates a winding from the given node plane, clipped by all parent nodes.
 ================
 */
-constexpr vec_t BASE_WINDING_EPSILON = 0.001;
-constexpr vec_t SPLIT_WINDING_EPSILON = 0.001;
+constexpr double BASE_WINDING_EPSILON = 0.001;
+constexpr double SPLIT_WINDING_EPSILON = 0.001;
 
 static std::optional<winding_t> BaseWindingForNode(const node_t *node)
 {

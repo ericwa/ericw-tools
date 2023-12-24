@@ -150,9 +150,9 @@ inline plane_type_t calculate_plane_type(const qplane3<T> &p)
         }
     }
 
-    vec_t ax = fabs(p.normal[0]);
-    vec_t ay = fabs(p.normal[1]);
-    vec_t az = fabs(p.normal[2]);
+    double ax = fabs(p.normal[0]);
+    double ay = fabs(p.normal[1]);
+    double az = fabs(p.normal[2]);
 
     if (ax >= ay && ax >= az) {
         return plane_type_t::PLANE_ANYX;

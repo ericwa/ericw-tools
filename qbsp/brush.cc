@@ -106,7 +106,7 @@ bspbrush_t bspbrush_t::clone() const
     return result;
 }
 
-bool bspbrush_t::contains_point(const qvec3d &point, vec_t epsilon) const
+bool bspbrush_t::contains_point(const qvec3d &point, double epsilon) const
 {
     for (auto &side : sides) {
         if (side.get_plane().distance_to(point) > epsilon) {
@@ -163,7 +163,7 @@ static void CheckFace(
 
         /* check the point is on the face plane */
         {
-            vec_t dist = face->get_plane().distance_to(p1);
+            double dist = face->get_plane().distance_to(p1);
             if (fabs(dist) > qbsp_options.epsilon.value()) {
                 logging::print("WARNING: {}: Point ({:.3} {:.3} {:.3}) off plane by {:2.4}\n", sourceface.line, p1[0],
                     p1[1], p1[2], dist);
@@ -172,7 +172,7 @@ static void CheckFace(
 
         /* check the edge isn't degenerate */
         qvec3d edgevec = p2 - p1;
-        vec_t length = qv::length(edgevec);
+        double length = qv::length(edgevec);
         if (length < qbsp_options.epsilon.value()) {
             logging::print("WARNING: {}: Healing degenerate edge ({}) at ({:.3f} {:.3} {:.3})\n", sourceface.line,
                 length, p1[0], p1[1], p1[2]);
@@ -184,14 +184,14 @@ static void CheckFace(
         }
 
         qvec3d edgenormal = qv::normalize(qv::cross(facenormal, edgevec));
-        vec_t edgedist = qv::dot(p1, edgenormal);
+        double edgedist = qv::dot(p1, edgenormal);
         edgedist += qbsp_options.epsilon.value();
 
         /* all other points must be on front side */
         for (size_t j = 0; j < face->w.size(); j++) {
             if (j == i)
                 continue;
-            vec_t dist = qv::dot(face->w[j], edgenormal);
+            double dist = qv::dot(face->w[j], edgenormal);
             if (dist > edgedist) {
                 logging::print("WARNING: {}: Found a non-convex face (error size {}, point: {})\n", sourceface.line,
                     dist - edgedist, face->w[j]);
@@ -376,7 +376,7 @@ static bool TestAddPlane(hullbrush_t &hullbrush, const qbsp_plane_t &plane)
     bool points_back = false;
 
     for (size_t i = 0; i < hullbrush.corners.size(); i++) {
-        vec_t d = qv::dot(hullbrush.corners[i], plane.get_normal()) - plane.get_dist();
+        double d = qv::dot(hullbrush.corners[i], plane.get_normal()) - plane.get_dist();
 
         if (d < -qbsp_options.epsilon.value()) {
             if (points_front) {
@@ -456,7 +456,7 @@ static bool AddHullEdge(hullbrush_t &hullbrush, const qvec3d &p1, const qvec3d &
         qplane3d plane;
         plane.normal = qv::cross(planevec, edgevec);
 
-        vec_t length = qv::normalizeInPlace(plane.normal);
+        double length = qv::normalizeInPlace(plane.normal);
 
         /* If this edge is almost parallel to the hull edge, skip it. */
         if (length < ANGLEEPSILON) {
@@ -518,7 +518,7 @@ static void ExpandBrush(hullbrush_t &hullbrush, const aabb3d &hull_size)
             // add the plane
             qplane3d plane;
             plane.normal = {};
-            plane.normal[x] = (vec_t)s;
+            plane.normal[x] = (double)s;
             if (s == -1) {
                 plane.dist = -hullbrush.brush.bounds.mins()[x] + -hull_size[0][x];
             } else {
@@ -658,7 +658,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
                               qbsp_options.target_game->id != GAME_HEXEN_II; // never do this in Hexen 2
 
     if (shouldExpand) {
-        vec_t max = -std::numeric_limits<vec_t>::infinity(), min = std::numeric_limits<vec_t>::infinity();
+        double max = -std::numeric_limits<double>::infinity(), min = std::numeric_limits<double>::infinity();
 
         for (auto &v : brush.bounds.mins()) {
             min = std::min(min, v);
@@ -669,7 +669,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
             max = std::max(max, v);
         }
 
-        vec_t delta = std::max(fabs(max), fabs(min));
+        double delta = std::max(fabs(max), fabs(min));
         brush.bounds = {-delta, delta};
     }
 

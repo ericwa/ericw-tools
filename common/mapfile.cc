@@ -52,7 +52,7 @@ void brush_side_t::validate_texture_projection()
 
 /*static*/ texdef_bp_t brush_side_t::parse_bp(parser_t &parser)
 {
-    qmat<vec_t, 2, 3> texMat;
+    qmat<double, 2, 3> texMat;
 
     parser.parse_token(PARSE_SAMELINE);
 
@@ -92,9 +92,9 @@ parse_error:
 
 /*static*/ texdef_valve_t brush_side_t::parse_valve_220(parser_t &parser)
 {
-    qmat<vec_t, 2, 3> axis;
+    qmat<double, 2, 3> axis;
     qvec2d shift, scale;
-    vec_t rotate;
+    double rotate;
 
     for (size_t i = 0; i < 2; i++) {
         parser.parse_token(PARSE_SAMELINE);
@@ -141,7 +141,7 @@ parse_error:
 /*static*/ texdef_quake_ed_t brush_side_t::parse_quake_ed(parser_t &parser)
 {
     qvec2d shift, scale;
-    vec_t rotate;
+    double rotate;
 
     parser.parse_token(PARSE_SAMELINE);
     shift[0] = std::stod(parser.token);
@@ -216,9 +216,9 @@ void brush_side_t::set_texinfo(const texdef_quake_ed_t &texdef)
     };
 
     /* Rotate axis */
-    vec_t ang = texdef.rotate / 180.0 * Q_PI;
-    vec_t sinv = sin(ang);
-    vec_t cosv = cos(ang);
+    double ang = texdef.rotate / 180.0 * Q_PI;
+    double sinv = sin(ang);
+    double cosv = cos(ang);
 
     size_t sv, tv;
 
@@ -239,8 +239,8 @@ void brush_side_t::set_texinfo(const texdef_quake_ed_t &texdef)
     }
 
     for (size_t i = 0; i < 2; i++) {
-        vec_t ns = cosv * vectors[i][sv] - sinv * vectors[i][tv];
-        vec_t nt = sinv * vectors[i][sv] + cosv * vectors[i][tv];
+        double ns = cosv * vectors[i][sv] - sinv * vectors[i][tv];
+        double nt = sinv * vectors[i][sv] + cosv * vectors[i][tv];
         vectors[i][sv] = ns;
         vectors[i][tv] = nt;
     }
@@ -327,10 +327,10 @@ void brush_side_t::set_texinfo(const texdef_etp_t &texdef)
     vectors[0] *= 1.0 / 128.0;
     vectors[1] *= 1.0 / 128.0;
 
-    vec_t a = qv::dot(vectors[0], vectors[0]);
-    vec_t b = qv::dot(vectors[0], vectors[1]);
-    vec_t c = b; /* qv::dot(vectors[1], vectors[0]); */
-    vec_t d = qv::dot(vectors[1], vectors[1]);
+    double a = qv::dot(vectors[0], vectors[0]);
+    double b = qv::dot(vectors[0], vectors[1]);
+    double c = b; /* qv::dot(vectors[1], vectors[0]); */
+    double d = qv::dot(vectors[1], vectors[1]);
 
     /*
     * Want to solve for out->vecs:
@@ -341,7 +341,7 @@ void brush_side_t::set_texinfo(const texdef_etp_t &texdef)
     * => | out->vecs[0] | = __ 1.0__  | d  -b | | vecs[0] |
     *    | out->vecs[1] |   a*d - b*c | -c  a | | vecs[1] |
     */
-    vec_t determinant = a * d - b * c;
+    double determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
         logging::print("WARNING: {}: Face with degenerate QuArK-style texture axes\n", location);
         for (size_t i = 0; i < 3; i++) {
@@ -376,7 +376,7 @@ rotation by (0,RotY,RotZ) assigns X to normal
 */
 inline std::tuple<qvec3d, qvec3d> compute_axis_base(const qvec3d &normal_unsanitized)
 {
-    vec_t RotY, RotZ;
+    double RotY, RotZ;
     qvec3d normal = normal_unsanitized;
 
     /* do some cleaning */
@@ -863,7 +863,7 @@ namespace convert_to_valve
 
         for (size_t i = 0; i < 2; i++) {
             qvec3d axis = in_vecs.row(i).xyz();
-            const vec_t length = qv::normalizeInPlace(axis);
+            const double length = qv::normalizeInPlace(axis);
             // avoid division by 0
             if (length != 0.0) {
                 res.scale[i] = 1.0 / length;
@@ -972,9 +972,9 @@ void brush_t::parse_brush_face(parser_t &parser, texcoord_style_t base_format)
     qvec3d ab = side.planepts[0] - side.planepts[1];
     qvec3d cb = side.planepts[2] - side.planepts[1];
 
-    vec_t length;
+    double length;
     qvec3d normal = qv::normalize(qv::cross(ab, cb), length);
-    vec_t dist = qv::dot(side.planepts[1], normal);
+    double dist = qv::dot(side.planepts[1], normal);
 
     side.plane = { normal, dist };
 
@@ -999,7 +999,7 @@ void brush_t::parse_brush_face(parser_t &parser, texcoord_style_t base_format)
     // (it uses 32 bit precision in CalcSurfaceExtents)
     for (size_t i = 0; i < 2; i++) {
         for (size_t j = 0; j < 4; j++) {
-            vec_t r = Q_rint(side.vecs.at(i, j));
+            double r = Q_rint(side.vecs.at(i, j));
             if (fabs(side.vecs.at(i, j) - r) < ZERO_EPSILON) {
                 side.vecs.at(i, j) = r;
             }

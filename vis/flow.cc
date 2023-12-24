@@ -41,7 +41,7 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
             // This also tells us which side of the separating plane has
             //  the source portal.
             bool fliptest;
-            vec_t d = src_pl.distance_to(pass->at(j));
+            double d = src_pl.distance_to(pass->at(j));
             if (d < -VIS_ON_EPSILON)
                 fliptest = true;
             else if (d > VIS_ON_EPSILON)
@@ -53,7 +53,7 @@ static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, cons
             qplane3d sep;
             const qvec3d v2 = pass->at(j) - source->at(i);
             sep.normal = qv::cross(v1, v2);
-            const vec_t len_sq = qv::length2(sep.normal);
+            const double len_sq = qv::length2(sep.normal);
 
             // If points don't make a valid plane, skip it.
             if (len_sq < VIS_ON_EPSILON)

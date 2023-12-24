@@ -26,8 +26,8 @@
 #include <common/prtfile.hh>
 #include <vis/leafbits.hh>
 
-constexpr vec_t VIS_ON_EPSILON = 0.1;
-constexpr vec_t VIS_EQUAL_EPSILON = 0.001;
+constexpr double VIS_ON_EPSILON = 0.1;
+constexpr double VIS_EQUAL_EPSILON = 0.001;
 
 constexpr size_t MAX_WINDING_FIXED = 24;
 constexpr size_t MAX_WINDING = 64;
@@ -52,7 +52,7 @@ enum pstatus_t
 struct viswinding_t
 {
     qvec3d origin; // Bounding sphere for fast clipping tests
-    vec_t radius; // Not updated, so won't shrink when clipping
+    double radius; // Not updated, so won't shrink when clipping
 
     size_t numpoints;
     qvec3d points[MAX_WINDING_FIXED];
@@ -144,7 +144,7 @@ struct visportal_t
 
 inline float viswinding_t::distFromPortal(visportal_t &p)
 {
-    vec_t mindist = 1e20;
+    double mindist = 1e20;
 
     for (size_t i = 0; i < size(); ++i) {
         mindist = std::min(mindist, fabs(p.plane.distance_to(at(i))));

@@ -43,7 +43,7 @@ public:
     entdict_t(parser_base_t &parser);
 
     const std::string &get(const std::string_view &key) const;
-    vec_t get_float(const std::string_view &key) const;
+    double get_float(const std::string_view &key) const;
     int32_t get_int(const std::string_view &key) const;
     // returns number of vector components read
     int32_t get_vector(const std::string_view &key, qvec3f &out) const;
