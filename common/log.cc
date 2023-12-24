@@ -94,7 +94,6 @@ void print(flag logflag, const char *str)
 
     if (active_print_callback) {
         active_print_callback(logflag, str);
-        return;
     }
 
     fmt::text_style style;
