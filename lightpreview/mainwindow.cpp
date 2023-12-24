@@ -241,20 +241,23 @@ void MainWindow::createPropertiesSidebar()
     auto *lightstyles_group = new QGroupBox(tr("Lightstyles"));
     lightstyles_group->setLayout(lightstyles);
 
-    auto *scrollArea = new QScrollArea();
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setWidget(lightstyles_group);
-    scrollArea->setBackgroundRole(QPalette::Window);
-    scrollArea->setFrameShadow(QFrame::Plain);
-    scrollArea->setFrameShape(QFrame::NoFrame);
+    formLayout->addRow(lightstyles_group);
 
-    formLayout->addRow(scrollArea);
-
+    // wrap formLayout in a scroll area
     auto *form = new QWidget();
     form->setLayout(formLayout);
 
+    auto *scrollArea = new QScrollArea();
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setWidget(form);
+    scrollArea->setBackgroundRole(QPalette::Window);
+    scrollArea->setFrameShadow(QFrame::Plain);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scrollArea->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Expanding);
+
     // finish dock setup
-    dock->setWidget(form);
+    dock->setWidget(scrollArea);
     addDockWidget(Qt::LeftDockWidgetArea, dock);
     viewMenu->addAction(dock->toggleViewAction());
 
