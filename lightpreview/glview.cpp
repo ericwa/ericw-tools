@@ -984,7 +984,7 @@ void GLView::setFaceVisibilityArray(uint8_t *data)
     glTexBuffer(GL_TEXTURE_BUFFER, GL_R8UI, face_visibility_buffer->bufferId());
     face_visibility_texture->release();
 
-    logging::print("uploaded {} bytes face visibility texture", face_visibility_width);
+    //logging::print("uploaded {} bytes face visibility texture", face_visibility_width);
 }
 
 void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
