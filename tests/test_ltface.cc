@@ -852,3 +852,26 @@ TEST_CASE("q1_sunlight")
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_sunlight.map", {"-lit"});
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
 }
+
+TEST_CASE("q1_light_bounce_litwater without the water")
+{
+    auto [bsp, bspx] = QbspVisLight_Common("q1_light_bounce_litwater.map", {"-omitdetail"}, {"-lit", "-bounce", "4"}, runvis_t::no);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {118, 118, 118}, {128, 12, 156}, {-1, 0, 0});
+}
+
+TEST_CASE("q1_light_bounce_litwater")
+{
+    INFO("adding a water plane should not affect the amount of light bounced on to the walls");
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_bounce_litwater.map", {"-lit", "-bounce", "4"});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {118, 118, 118}, {128, 12, 156}, {-1, 0, 0});
+}
+
+TEST_CASE("q1_light_bounce_noshadow")
+{
+    INFO("make sure light doesn't both pass through and bounce off of a face with _shadow -1");
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_bounce_noshadow.map", {"-lit", "-bounce", "4"});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {118, 118, 118}, {128, 12, 156}, {-1, 0, 0});
+}
+

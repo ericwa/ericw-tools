@@ -28,6 +28,7 @@
 #include <light/ltface.hh>
 #include <light/surflight.hh>
 #include <light/trace.hh> // for Light_PointInLeaf
+#include <light/trace_embree.hh> // for ShadowCastingSolidFacesSet
 
 #include <common/polylib.hh>
 #include <common/bsputils.hh>
@@ -42,10 +43,13 @@
 static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 {
     // make bounce light, only if this face is shadow casting
-    const modelinfo_t *mi = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
-    if (!mi || !mi->shadow.boolValue()) {
+
+    // NOTE: this should be the same set of faces that are unconditionally shadow casting
+    // (so exclude fences, water, etc.) which is why we're currently fetching it from the embree
+    // code, because the condition is quite complex and we don't want to try to repeat it here.
+    auto &face_set = ShadowCastingSolidFacesSet();
+    if (face_set.find(face) == face_set.end())
         return false;
-    }
 
     if (!Face_IsLightmapped(bsp, face)) {
         return false;
@@ -64,14 +68,6 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 
     // don't bounce *from* emission surfaces
     if (IsSurfaceLitFace(bsp, face)) {
-        return false;
-    }
-
-    // don't bounce from faces on non-default object channels
-    if (mi->object_channel_mask.value() != CHANNEL_MASK_DEFAULT) {
-        return false;
-    }
-    if (ext_info.object_channel_mask.value_or(CHANNEL_MASK_DEFAULT) != CHANNEL_MASK_DEFAULT) {
         return false;
     }
 

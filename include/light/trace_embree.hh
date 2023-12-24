@@ -24,12 +24,15 @@
 #include <common/log.hh> // for FError
 
 #include <vector>
+#include <set>
 
 struct mbsp_t;
 class modelinfo_t;
+struct mface_t;
 
 void ResetEmbree();
 void Embree_TraceInit(const mbsp_t *bsp);
+const std::set<const mface_t *> &ShadowCastingSolidFacesSet();
 
 class raystream_embree_common_t
 {

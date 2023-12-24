@@ -26,10 +26,14 @@
 #include <common/polylib.hh>
 #include <vector>
 #include <climits>
+#include <set>
 
 sceneinfo skygeom; // sky. always occludes.
 sceneinfo solidgeom; // solids. always occludes.
 sceneinfo filtergeom; // conditional occluders.. needs to run ray intersection filter
+
+// set of faces in `solidgeom`,
+std::set<const mface_t *> shadow_casting_solid_faces;
 
 static RTCDevice device;
 RTCScene scene;
@@ -41,6 +45,7 @@ void ResetEmbree()
     skygeom = {};
     solidgeom = {};
     filtergeom = {};
+    shadow_casting_solid_faces = {};
 
     if (scene) {
         rtcReleaseScene(scene);
@@ -54,6 +59,12 @@ void ResetEmbree()
 
     bsp_static = nullptr;
 }
+
+const std::set<const mface_t *> &ShadowCastingSolidFacesSet()
+{
+    return shadow_casting_solid_faces;
+}
+
 
 /**
  * Returns 1.0 unless a custom alpha value is set.
@@ -674,6 +685,11 @@ void Embree_TraceInit(const mbsp_t *bsp)
     rtcSetGeometryOccludedFilterFunction(rtcGetGeometry(scene, filtergeom.geomID), Embree_FilterFuncN);
 
     rtcCommitScene(scene);
+
+    // keep a backup of solidfaces
+    for (const mface_t *face : solidfaces) {
+        shadow_casting_solid_faces.insert(face);
+    }
 
     logging::funcprint("\n");
     logging::print("\t{} sky faces\n", skyfaces.size());
