@@ -1286,6 +1286,10 @@ static void CreateSurfaceLightOnFaceSubdivision(const mface_t *face, const model
     const light_t *surflight_template, const mbsp_t *bsp, int numverts, const qvec3f *verts)
 {
     qvec3f midpoint = qv::PolyCentroid(verts, verts + numverts);
+    for (int i = 0; i < 3; ++i)
+        if (std::isnan(midpoint[i]))
+            return;
+
     qplane3f plane = Face_Plane(bsp, face);
 
     /* Nudge 2 units (by default) along face normal */
