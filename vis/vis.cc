@@ -677,9 +677,39 @@ static void LoadPortals(const fs::path &name, mbsp_t *bsp)
 
 void vis_reset()
 {
-    // FIXME: clear other data
+    numportals = 0;
+    portalleafs = 0;
+    portalleafs_real = 0;
+
+    portals.clear();
+    leafs.clear();
+
+    vismap.clear();
+
+    originalvismapsize = 0;
+
+    uncompressed.clear();
+
+    leafbytes = 0;
+    leaflongs = 0;
+    leafbytes_real = 0;
 
     vis_options.reset();
+
+    portalfile = fs::path();
+    statefile = fs::path();
+    statetmpfile = fs::path();
+
+    portalIndex = 0;
+
+    starttime = time_point();
+    endtime = time_point();
+    statetime = time_point();
+
+    stateinterval = duration();
+
+    totalvis = 0;
+    compressed.clear();
 }
 
 int vis_main(int argc, const char **argv)
