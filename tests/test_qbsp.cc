@@ -2116,3 +2116,9 @@ TEST_CASE("read bspx brushes")
     CHECK(brush.contents == CONTENTS_SOLID);
     CHECK(brush.faces.size() == 0);
 }
+
+TEST_CASE("lq e3m4.map" * doctest::may_fail())
+{
+    const auto [bsp, bspx, prt] = LoadTestmap("LibreQuake/lq1/maps/src/e3/e3m4.map");
+    CHECK(prt);
+}
