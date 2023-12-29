@@ -80,6 +80,7 @@ void FreeTreePortals(tree_t &tree)
     tbb::parallel_for_each(tree.portals, [](std::unique_ptr<portal_t> &portal) { portal.reset(); });
 
     tree.portals.clear();
+    tree.portaltype = portaltype_t::NONE;
 }
 
 //============================================================================

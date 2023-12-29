@@ -23,7 +23,7 @@
 
 #include <qbsp/qbsp.hh>
 #include <qbsp/brush.hh>
-
+#include <qbsp/portals.hh>
 #include <common/qvec.hh>
 
 #include <memory>
@@ -44,6 +44,9 @@ struct tree_t
 
     // here for ownership/memory management - not intended to be iterated directly
     std::vector<std::unique_ptr<portal_t>> portals;
+
+    // which kind of portals (cluster portals or leaf portals) are currently built?
+    portaltype_t portaltype = portaltype_t::NONE;
 
     // here for ownership/memory management - not intended to be iterated directly
     //

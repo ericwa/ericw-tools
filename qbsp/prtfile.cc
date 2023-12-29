@@ -273,6 +273,8 @@ void WritePortalFile(tree_t &tree)
         auto buildportals = MakeTreePortals_r(tree.headnode, portaltype_t::VIS, {}, stats, clock);
 
         MakePortalsFromBuildportals(tree, buildportals);
+
+        tree.portaltype = portaltype_t::VIS;
     }
 
     portal_state_t state{};

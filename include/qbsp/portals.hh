@@ -71,6 +71,7 @@ bool Portal_VisFlood(const portal_t *p);
 bool Portal_EntityFlood(const portal_t *p, int32_t s);
 enum class portaltype_t
 {
+    NONE,
     TREE,
     VIS
 };

@@ -552,6 +552,7 @@ void MakeTreePortals(tree_t &tree)
     } stats;
 
     stats.portals.count = tree.portals.size();
+    tree.portaltype = portaltype_t::TREE;
 }
 
 /*
