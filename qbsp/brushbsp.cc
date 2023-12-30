@@ -859,40 +859,66 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
     double bestanymetric = VECT_MAX;
     side_t *bestanyplane = nullptr;
 
-    for (auto &brush : brushes) {
-        for (auto &side : brush->sides) {
-            if (side.bevel) {
-                continue; // never use a bevel as a spliter
-            }
-            if (side.onnode) {
-                continue; // allready a node splitter
-            }
+    // the search order goes: (changed from q2 tools - see q2_detail_leak_test.map for the issue
+    // with the vanilla q2 tools method):
+    //
+    //   0. visible-structural
+    //   1. nonvisible-structural,
+    //   2. visible-detail
+    //   3. nonvisible-detail.
+    //
+    // If any valid plane is available in a pass, no further
+    // passes will be tried.
+    constexpr int numpasses = 4;
+    for (int pass = 0; pass < numpasses; pass++) {
+        for (auto &brush: brushes) {
+            // FIXME: these conditions need to be kept in sync with SelectSplitPlane
+            // ideally, should be deduplicated somehow
+            if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
+                continue;
+            for (auto &side: brush->sides) {
+                if (side.bevel)
+                    continue; // never use a bevel as a spliter
+                if (!side.w)
+                    continue; // nothing visible, so it can't split
+                if (side.onnode)
+                    continue; // allready a node splitter
+                if (side.get_texinfo().flags.is_hintskip)
+                    continue; // skip surfaces are never chosen
+                if (side.is_visible() != (pass == 0 || pass == 2))
+                    continue; // only check visible faces on pass 0/2
 
-            size_t positive_planenum = side.planenum & ~1;
-            const qbsp_plane_t &plane = side.get_positive_plane();
+                size_t positive_planenum = side.planenum & ~1;
+                const qbsp_plane_t &plane = side.get_positive_plane();
 
 #if CHECK_PLANE_AGAINST_VOLUME
-            if (!CheckPlaneAgainstVolume(positive_planenum, node)) {
-                continue; // would produce a tiny volume
-            }
+                if (!CheckPlaneAgainstVolume(positive_planenum, node)) {
+                    continue; // would produce a tiny volume
+                }
 #endif
 
-            /* calculate the split metric, smaller values are better */
-            const double metric = SplitPlaneMetric(plane, node->bounds);
+                /* calculate the split metric, smaller values are better */
+                const double metric = SplitPlaneMetric(plane, node->bounds);
 
-            if (metric < bestanymetric) {
-                bestanymetric = metric;
-                bestanyplane = &side;
-            }
+                if (metric < bestanymetric) {
+                    bestanymetric = metric;
+                    bestanyplane = &side;
+                }
 
-            /* check for axis aligned surfaces */
-            if (plane.get_type() < plane_type_t::PLANE_ANYX) {
-                if (metric < bestaxialmetric) {
-                    bestaxialmetric = metric;
-                    bestaxialplane = &side;
+                /* check for axis aligned surfaces */
+                if (plane.get_type() < plane_type_t::PLANE_ANYX) {
+                    if (metric < bestaxialmetric) {
+                        bestaxialmetric = metric;
+                        bestaxialplane = &side;
+                    }
                 }
             }
         }
+
+        // if we found a good plane, don't bother trying any
+        // other passes
+        if (bestaxialplane || bestanyplane)
+            break;
     }
 
     // prefer the axial split
@@ -969,6 +995,8 @@ static side_t *SelectSplitPlane(
     constexpr int numpasses = 4;
     for (int pass = 0; pass < numpasses; pass++) {
         for (auto &brush : brushes) {
+            // FIXME: these conditions need to be kept in sync with ChooseMidPlaneFromList
+            // ideally, should be deduplicated somehow
             if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
                 continue;
             for (auto &side : brush->sides) {
