@@ -85,7 +85,6 @@ private:
     };
     face_visibility_key_t desiredFaceVisibility() const;
 
-    std::optional<face_visibility_key_t> m_uploaded_face_visibility;
     bool m_visCulling = true;
 
     // camera stuff

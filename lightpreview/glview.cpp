@@ -429,12 +429,6 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
 
     const face_visibility_key_t desired = desiredFaceVisibility();
 
-    if (m_uploaded_face_visibility &&
-        *m_uploaded_face_visibility == desired) {
-        //qDebug() << "reusing last frame visdata";
-        //return;
-    }
-
     qDebug() << "looking up pvs for clusternum " << desired.clusternum;
 
     const int face_visibility_width = m_bsp->dfaces.size();
@@ -490,8 +484,6 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
     }
 
     setFaceVisibilityArray(face_flags.data());
-
-    m_uploaded_face_visibility = desired;
 }
 
 bool GLView::shouldLiveUpdate() const
@@ -1036,7 +1028,6 @@ void GLView::setDrawTranslucencyAsOpaque(bool drawopaque)
 void GLView::setShowBmodels(bool bmodels)
 {
     // force re-upload of face visibility
-    m_uploaded_face_visibility = std::nullopt;
     m_showBmodels = bmodels;
     update();
 }
@@ -1179,7 +1170,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     num_leak_points = 0;
     num_portal_indices = 0;
-    m_uploaded_face_visibility = std::nullopt;
 
     int32_t highest_depth = 0;
 
