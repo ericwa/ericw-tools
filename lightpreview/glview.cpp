@@ -429,7 +429,7 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
 
     const face_visibility_key_t desired = desiredFaceVisibility();
 
-    qDebug() << "looking up pvs for clusternum " << desired.clusternum;
+    // qDebug() << "looking up pvs for clusternum " << desired.clusternum;
 
     const int face_visibility_width = m_bsp->dfaces.size();
 
@@ -452,7 +452,7 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
             found_visdata = true;
 
             const auto &pvs = it->second;
-            qDebug() << "found bitvec of size " << pvs.size();
+            // qDebug() << "found bitvec of size " << pvs.size();
 
             // visit all world leafs: if they're visible, mark the appropriate faces
             BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
@@ -634,7 +634,7 @@ void GLView::paintGL()
     const auto frustum = m_keepCullOrigin && m_keepCullFrustum ?
         getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix) : getFrustumPlanes(MVP);
 
-    // update vis culling if needed
+    // update vis culling texture every frame
     updateFaceVisibility(frustum);
 
     // draw
