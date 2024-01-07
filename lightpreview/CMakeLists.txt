@@ -62,11 +62,13 @@ endif()
 copy_mingw_dlls(lightpreview)
 
 # Install Qt DLL's
-install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION bin)
-install(FILES $<TARGET_FILE:Qt5::Gui> DESTINATION bin)
-install(FILES $<TARGET_FILE:Qt5::Core> DESTINATION bin)
-if (WIN32)
-    install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION bin/platforms)
+if (WIN32 OR APPLE)
+    install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION bin)
+    install(FILES $<TARGET_FILE:Qt5::Gui> DESTINATION bin)
+    install(FILES $<TARGET_FILE:Qt5::Core> DESTINATION bin)
+    if (WIN32)
+        install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION bin/platforms)
+    endif ()
 endif ()
 
 install(TARGETS lightpreview RUNTIME DESTINATION bin)
