@@ -45,5 +45,5 @@ fi
 
 # check rpath
 readelf -d ./light/light
-unzip -X ericw-tools-*.zip
+unzip -X *-Linux.zip
 readelf -d ./ericw-tools-*/bin/light
