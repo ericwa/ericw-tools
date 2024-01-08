@@ -48,7 +48,7 @@ jobs:
       uses: jurplel/install-qt-action@v3
       with:
         version: 5.15.2
-        modules: qtdbus
+        modules: dbus
     - name: 'macOS: Build the artifact'
       if: startsWith(matrix.os, 'macos-')
       run: ./build-osx.sh
