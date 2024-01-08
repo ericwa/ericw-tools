@@ -61,6 +61,12 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 endif()
 copy_mingw_dlls(lightpreview)
 
+# so the executable will search for dylib's in the same directory as the executable
+if(APPLE)
+    add_custom_command(TARGET lightpreview POST_BUILD
+        COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:lightpreview> || true\")
+endif()
+
 # Install Qt DLL's
 if (WIN32)
     install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION bin)
@@ -82,15 +88,18 @@ function(apple_install_lib SRC_TARGET_NAME DEST_PATH)
     get_filename_component(SO_FILE "${SO_FILE_SYMLINK}" REALPATH)
 
     message(STATUS "${SRC_TARGET_NAME} .so file: ${SO_FILE}, renaming to: ${SO_FILE_SYMLINK_NAME} and installing in: ${DEST_PATH}")
-    
+
     install(FILES ${SO_FILE} DESTINATION "${DEST_PATH}" RENAME "${SO_FILE_SYMLINK_NAME}")
 endfunction()
 
 if (APPLE)
-    apple_install_lib(Qt5::Widgets "bin/QtWidgets.framework/Versions/5/QtWidgets")
-    apple_install_lib(Qt5::Gui "bin/QtGui.framework/Versions/5/QtGui")
-    apple_install_lib(Qt5::Core "bin/QtCore.framework/Versions/5/QtCore")
+    apple_install_lib(Qt5::Widgets "bin/QtWidgets.framework/Versions/5")
+    apple_install_lib(Qt5::Gui "bin/QtGui.framework/Versions/5")
+    apple_install_lib(Qt5::Core "bin/QtCore.framework/Versions/5")
     apple_install_lib(Qt5::QCocoaIntegrationPlugin "bin/platforms")
+    # these are required by QCocoaIntegrationPlugin
+    apple_install_lib(Qt5::PrintSupport "bin/QtPrintSupport.framework/Versions/5")
+    apple_install_lib(Qt5::DBus "bin/QtDBus.framework/Versions/5")
 endif ()
 
 install(TARGETS lightpreview RUNTIME DESTINATION bin)
