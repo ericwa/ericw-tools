@@ -97,7 +97,7 @@ endfunction()
 
 if (APPLE)
     apple_install_lib(TBB::tbb "$<TARGET_FILE_DIR:lightpreview>")
-	apple_install_lib(TBB::tbbmalloc "$<TARGET_FILE_DIR:lightpreview>")
+    apple_install_lib(TBB::tbbmalloc "$<TARGET_FILE_DIR:lightpreview>")
     apple_install_lib(embree "$<TARGET_FILE_DIR:lightpreview>")
 
     # TODO: this should be replaced with macdeployqt
