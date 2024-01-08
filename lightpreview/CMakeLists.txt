@@ -18,6 +18,7 @@ add_executable(lightpreview
     glview.h)
 
 set_target_properties(lightpreview PROPERTIES WIN32_EXECUTABLE YES)
+set_target_properties(lightpreview PROPERTIES MACOSX_BUNDLE TRUE)
 
 INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS})
 
@@ -42,24 +43,26 @@ target_link_libraries(lightpreview
 
 # from: http://stackoverflow.com/questions/40564443/copying-qt-dlls-to-executable-directory-on-windows-using-cmake
 # Copy Qt DLL's to bin directory for debugging
-add_custom_command(
-    TARGET lightpreview POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:lightpreview>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:lightpreview>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:lightpreview>
-)
+if (WIN32)
+    add_custom_command(
+        TARGET lightpreview POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:lightpreview>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:lightpreview>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:lightpreview>
+    )
 
-# HACK: copy .dll dependencies
-add_custom_command(TARGET lightpreview POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:lightpreview>"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:lightpreview>"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:lightpreview>"
-        )
-if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
+    # HACK: copy .dll dependencies
     add_custom_command(TARGET lightpreview POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:lightpreview>")
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:embree>"   "$<TARGET_FILE_DIR:lightpreview>"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbb>" "$<TARGET_FILE_DIR:lightpreview>"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:lightpreview>"
+            )
+    if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
+        add_custom_command(TARGET lightpreview POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:lightpreview>")
+    endif()
+    copy_mingw_dlls(lightpreview)
 endif()
-copy_mingw_dlls(lightpreview)
 
 # so the executable will search for dylib's in the same directory as the executable
 if(APPLE)
@@ -93,16 +96,21 @@ function(apple_install_lib SRC_TARGET_NAME DEST_PATH)
 endfunction()
 
 if (APPLE)
-    apple_install_lib(Qt5::Widgets "bin/QtWidgets.framework/Versions/5")
-    apple_install_lib(Qt5::Gui "bin/QtGui.framework/Versions/5")
-    apple_install_lib(Qt5::Core "bin/QtCore.framework/Versions/5")
-    apple_install_lib(Qt5::QCocoaIntegrationPlugin "bin/platforms")
+    apple_install_lib(TBB::tbb "$<TARGET_FILE_DIR:lightpreview>")
+	apple_install_lib(TBB::tbbmalloc "$<TARGET_FILE_DIR:lightpreview>")
+    apple_install_lib(embree "$<TARGET_FILE_DIR:lightpreview>")
+
+    # TODO: this should be replaced with macdeployqt
+    apple_install_lib(Qt5::Widgets "$<TARGET_FILE_DIR:lightpreview>/QtWidgets.framework/Versions/5")
+    apple_install_lib(Qt5::Gui "$<TARGET_FILE_DIR:lightpreview>/QtGui.framework/Versions/5")
+    apple_install_lib(Qt5::Core "$<TARGET_FILE_DIR:lightpreview>/QtCore.framework/Versions/5")
+    apple_install_lib(Qt5::QCocoaIntegrationPlugin "$<TARGET_FILE_DIR:lightpreview>/platforms")
 
     # these are required by QCocoaIntegrationPlugin
     find_package(Qt5DBus REQUIRED)
     find_package(Qt5PrintSupport REQUIRED)
-    apple_install_lib(Qt5::PrintSupport "bin/QtPrintSupport.framework/Versions/5")
-    apple_install_lib(Qt5::DBus "bin/QtDBus.framework/Versions/5")
+    apple_install_lib(Qt5::PrintSupport "$<TARGET_FILE_DIR:lightpreview>/QtPrintSupport.framework/Versions/5")
+    apple_install_lib(Qt5::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/5")
 endif ()
 
-install(TARGETS lightpreview RUNTIME DESTINATION bin)
+install(TARGETS lightpreview RUNTIME DESTINATION bin BUNDLE DESTINATION bin)
