@@ -46,3 +46,4 @@ add_custom_command(TARGET qbsp POST_BUILD
 				   COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:TBB::tbbmalloc>" "$<TARGET_FILE_DIR:qbsp>")
 
 copy_mingw_dlls(qbsp)
+add_loader_path_to_rpath(qbsp)

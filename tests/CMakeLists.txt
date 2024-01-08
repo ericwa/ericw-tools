@@ -43,5 +43,6 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 					   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:tests>")
 endif()
 copy_mingw_dlls(tests)
+add_loader_path_to_rpath(tests)
 
 add_definitions(-DHAVE_EMBREE)

@@ -61,14 +61,10 @@ if (WIN32)
         add_custom_command(TARGET lightpreview POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:lightpreview>")
     endif()
-    copy_mingw_dlls(lightpreview)
 endif()
 
-# so the executable will search for dylib's in the same directory as the executable
-if(APPLE)
-    add_custom_command(TARGET lightpreview POST_BUILD
-        COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:lightpreview> || true\")
-endif()
+copy_mingw_dlls(lightpreview)
+add_loader_path_to_rpath(lightpreview)
 
 # Install Qt DLL's
 if (WIN32)
