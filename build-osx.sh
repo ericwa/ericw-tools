@@ -1,8 +1,5 @@
 #!/bin/bash
 
-# for sha256sum, used by the tests
-brew install coreutils
-
 python3 -m pip install -r docs/requirements.txt --force-reinstall
 
 BUILD_DIR=build-osx
