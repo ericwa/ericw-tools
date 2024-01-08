@@ -38,8 +38,7 @@ if [ "$USE_ASAN" == "YES" ]; then
 else
   cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
 fi
-make -j8 || exit 1
-cpack || exit 1
+make -j8 package || exit 1
 
 # print shared libraries used
 otool -L ./light/light
