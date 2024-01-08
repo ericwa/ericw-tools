@@ -5,8 +5,8 @@ on:
   - pull_request
 
 jobs:
-  build:
-    name: Build the artifact
+  build-and-upload:
+    name: Build & upload the artifact
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -36,12 +36,18 @@ jobs:
     - name: 'Linux: Build the artifact'
       if: startsWith(matrix.os, 'ubuntu-')
       run: ./build-linux-64.sh
+    - name: 'Linux: Prepare the artifact'
+      if: ${{ startsWith(matrix.os, 'ubuntu-') }}
+      run: |
+        unzip build-linux/*-Linux.zip
+        mv build-linux/*-Linux/ ericw-tools-linux
     - name: 'Linux: Upload the artifact'
       if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
       with:
+        path: ericw-tools-linux/
         name: ericw-tools-${{ github.sha }}-linux
-        path: build-linux/*-Linux.zip
+        if-no-files-found: error
 
     - name: 'macOS: Install Qt5'
       if: ${{ startsWith(matrix.os, 'macos-') }}
@@ -51,12 +57,18 @@ jobs:
     - name: 'macOS: Build the artifact'
       if: startsWith(matrix.os, 'macos-')
       run: ./build-osx.sh
+    - name: 'macOS: Prepare the artifact'
+      if: ${{ startsWith(matrix.os, 'ubuntu-') }}
+      run: |
+        unzip build-macos/*-Darwin.zip
+        mv build-macos/*-Darwin/ ericw-tools-macos
     - name: 'macOS: Upload the artifact'
       if: ${{ startsWith(matrix.os, 'macos-') && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
       with:
+        path: ericw-tools-macos/
         name: ericw-tools-${{ github.sha }}-macos
-        path: build-osx/*-Darwin.zip
+        if-no-files-found: error
 
     - name: 'Windows: Setup MSVC environment'
       if: startsWith(matrix.os, 'windows-')
@@ -70,12 +82,21 @@ jobs:
     - name: 'Windows: Build the artifact'
       if: startsWith(matrix.os, 'windows-')
       run: .\build-windows.ps1
+    - name: 'Windows: Prepare the artifact'
+      if: ${{ startsWith(matrix.os, 'windows-') }}
+      run: |
+        7z x build-windows\*-win64.zip -o"ericw-tools-windows-temp\" -y
+        New-Item -ItemType Directory -Path ericw-tools-windows
+        Get-ChildItem -Path ericw-tools-windows-temp\ericw-tools-* -Recurse | 
+        Move-Item -Destination ericw-tools-windows
+      shell: pwsh
     - name: 'Windows: Upload the artifact'
       if: ${{ startsWith(matrix.os, 'windows-') && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
       with:
+        path: ericw-tools-windows/
         name: ericw-tools-${{ github.sha }}-windows
-        path: build-windows/*-win64.zip
+        if-no-files-found: error
 
     - name: Create GitHub Release and upload builds
       if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.use-asan == 'NO' }}
