@@ -62,13 +62,35 @@ endif()
 copy_mingw_dlls(lightpreview)
 
 # Install Qt DLL's
-if (WIN32 OR APPLE)
+if (WIN32)
     install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION bin)
     install(FILES $<TARGET_FILE:Qt5::Gui> DESTINATION bin)
     install(FILES $<TARGET_FILE:Qt5::Core> DESTINATION bin)
-    if (WIN32)
-        install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION bin/platforms)
-    endif ()
+    install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION bin/platforms)
+endif ()
+
+function(apple_install_lib SRC_TARGET_NAME DEST_PATH)
+    # SRC_TARGET_NAME - a target name, e.g. Qt5::Widgets
+    # DEST_PATH - destination path to install the library to
+    
+    get_target_property(SO_FILE_SYMLINK ${SRC_TARGET_NAME} IMPORTED_LOCATION_RELEASE)
+    message(STATUS "${SRC_TARGET_NAME} .so symlink: ${SO_FILE_SYMLINK}")
+
+    get_filename_component(SO_FILE_SYMLINK_NAME "${SO_FILE_SYMLINK}" NAME)
+    message(STATUS "${SRC_TARGET_NAME} .so symlink name: ${SO_FILE_SYMLINK_NAME}")
+
+    get_filename_component(SO_FILE "${SO_FILE_SYMLINK}" REALPATH)
+
+    message(STATUS "${SRC_TARGET_NAME} .so file: ${SO_FILE}, renaming to: ${SO_FILE_SYMLINK_NAME} and installing in: ${DEST_PATH}")
+    
+    install(FILES ${SO_FILE} DESTINATION "${DEST_PATH}" RENAME "${SO_FILE_SYMLINK_NAME}")
+endfunction()
+
+if (APPLE)
+    apple_install_lib(Qt5::Widgets "bin/QtWidgets.framework/Versions/5/QtWidgets")
+    apple_install_lib(Qt5::Gui "bin/QtGui.framework/Versions/5/QtGui")
+    apple_install_lib(Qt5::Core "bin/QtCore.framework/Versions/5/QtCore")
+    apple_install_lib(Qt5::QCocoaIntegrationPlugin "bin/platforms")
 endif ()
 
 install(TARGETS lightpreview RUNTIME DESTINATION bin)
