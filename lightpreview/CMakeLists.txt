@@ -93,6 +93,9 @@ function(apple_install_lib SRC_TARGET_NAME DEST_PATH)
 endfunction()
 
 if (APPLE)
+    # required by QCocoaIntegrationPlugin
+    find_package(Qt5DBus REQUIRED)
+
     apple_install_lib(Qt5::Widgets "bin/QtWidgets.framework/Versions/5")
     apple_install_lib(Qt5::Gui "bin/QtGui.framework/Versions/5")
     apple_install_lib(Qt5::Core "bin/QtCore.framework/Versions/5")
