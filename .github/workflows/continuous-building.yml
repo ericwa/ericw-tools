@@ -97,15 +97,3 @@ jobs:
         path: ericw-tools-windows/
         name: ericw-tools-${{ github.sha }}-windows
         if-no-files-found: error
-
-    - name: Create GitHub Release and upload builds
-      if: ${{ startsWith(github.ref, 'refs/tags/') && matrix.use-asan == 'NO' }}
-      uses: softprops/action-gh-release@v1
-      with:
-        draft: true
-        files: |
-          build-osx/ericw-tools-*.zip
-          build-linux/ericw-tools-*.zip
-          build-windows/ericw-tools-*.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
