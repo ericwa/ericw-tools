@@ -40,7 +40,7 @@ jobs:
       if: ${{ startsWith(matrix.os, 'ubuntu-') }}
       run: |
         unzip build-linux/*-Linux.zip
-        mv build-linux/*-Linux/ ericw-tools-linux
+        mv ericw-tools-*/*-Linux/ ericw-tools-linux
     - name: 'Linux: Upload the artifact'
       if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
@@ -58,10 +58,10 @@ jobs:
       if: startsWith(matrix.os, 'macos-')
       run: ./build-osx.sh
     - name: 'macOS: Prepare the artifact'
-      if: ${{ startsWith(matrix.os, 'ubuntu-') }}
+      if: ${{ startsWith(matrix.os, 'macos-') }}
       run: |
-        unzip build-macos/*-Darwin.zip
-        mv build-macos/*-Darwin/ ericw-tools-macos
+        unzip build-osx/*-Darwin.zip
+        mv ericw-tools-*/*-Darwin/ ericw-tools-macos
     - name: 'macOS: Upload the artifact'
       if: ${{ startsWith(matrix.os, 'macos-') && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
@@ -87,7 +87,7 @@ jobs:
       run: |
         7z x build-windows\*-win64.zip -o"ericw-tools-windows-temp\" -y
         New-Item -ItemType Directory -Path ericw-tools-windows
-        Get-ChildItem -Path ericw-tools-windows-temp\ericw-tools-* -Recurse | 
+        Get-ChildItem -Path ericw-tools-windows-temp\ericw-tools-*\*-win64 -Recurse | 
         Move-Item -Destination ericw-tools-windows
       shell: pwsh
     - name: 'Windows: Upload the artifact'
