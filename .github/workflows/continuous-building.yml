@@ -1,0 +1,99 @@
+name: Continuous Building
+
+on:
+  - push
+  - pull_request
+
+jobs:
+  build-and-upload:
+    name: Build & upload the artifact
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: 
+          - ubuntu-22.04
+          - macos-12
+          - windows-2022
+        use-asan: 
+          - YES
+          - NO
+        exclude:
+          - os: windows-2022
+            use-asan: YES
+    env:
+      USE_ASAN: ${{ matrix.use-asan }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: 'Linux: Install Qt5'
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: |
+        sudo apt update
+        sudo apt install qtbase5-dev libqt5svg5-dev
+    - name: 'Linux: Build the artifact'
+      if: startsWith(matrix.os, 'ubuntu-')
+      run: ./build-linux-64.sh
+    - name: 'Linux: Prepare the artifact'
+      if: ${{ startsWith(matrix.os, 'ubuntu-') }}
+      run: |
+        unzip build-linux/*-Linux.zip
+        mv ericw-tools-*/*-Linux/ ericw-tools-linux
+    - name: 'Linux: Upload the artifact'
+      if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' }}
+      uses: actions/upload-artifact@v4
+      with:
+        path: ericw-tools-linux/
+        name: ericw-tools-${{ github.sha }}-linux
+        if-no-files-found: error
+
+    - name: 'macOS: Install Qt5'
+      if: ${{ startsWith(matrix.os, 'macos-') }}
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: 5.15.2
+    - name: 'macOS: Build the artifact'
+      if: startsWith(matrix.os, 'macos-')
+      run: ./build-osx.sh
+    - name: 'macOS: Prepare the artifact'
+      if: ${{ startsWith(matrix.os, 'macos-') }}
+      run: |
+        unzip build-osx/*-Darwin.zip
+        mv ericw-tools-*/*-Darwin/ ericw-tools-macos
+    - name: 'macOS: Upload the artifact'
+      if: ${{ startsWith(matrix.os, 'macos-') && matrix.use-asan == 'NO' }}
+      uses: actions/upload-artifact@v4
+      with:
+        path: ericw-tools-macos/
+        name: ericw-tools-${{ github.sha }}-macos
+        if-no-files-found: error
+
+    - name: 'Windows: Setup MSVC environment'
+      if: startsWith(matrix.os, 'windows-')
+      uses: ilammy/msvc-dev-cmd@v1
+    - name: 'Windows: Install Qt5'
+      if: ${{ startsWith(matrix.os, 'windows-') }}
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: 5.15.2
+        arch: win64_msvc2019_64
+    - name: 'Windows: Build the artifact'
+      if: startsWith(matrix.os, 'windows-')
+      run: .\build-windows.ps1
+    - name: 'Windows: Prepare the artifact'
+      if: ${{ startsWith(matrix.os, 'windows-') }}
+      run: |
+        7z x build-windows\*-win64.zip -o"ericw-tools-windows-temp\" -y
+        New-Item -ItemType Directory -Path ericw-tools-windows
+        Get-ChildItem -Path ericw-tools-windows-temp\ericw-tools-*\*-win64 -Recurse | 
+        Move-Item -Destination ericw-tools-windows
+      shell: pwsh
+    - name: 'Windows: Upload the artifact'
+      if: ${{ startsWith(matrix.os, 'windows-') && matrix.use-asan == 'NO' }}
+      uses: actions/upload-artifact@v4
+      with:
+        path: ericw-tools-windows/
+        name: ericw-tools-${{ github.sha }}-windows
+        if-no-files-found: error

@@ -91,12 +91,6 @@ if (embree_FOUND)
 				           COMMAND ${CMAKE_COMMAND} -E copy_if_different "${EMBREE_TBB_DLL}" "$<TARGET_FILE_DIR:light>")
 	endif()
 
-	# so the executable will search for dylib's in the same directory as the executable
-	if(APPLE)
-		add_custom_command(TARGET light POST_BUILD
-			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:light> || true\")
-	endif()
-
 	if(NOT SKIP_EMBREE_INSTALL)
 		install(FILES $<TARGET_FILE:embree> DESTINATION bin)
 	endif()
@@ -144,6 +138,7 @@ if (embree_FOUND)
 endif(embree_FOUND)
 
 copy_mingw_dlls(light)
+add_loader_path_to_rpath(light)
 
 install(TARGETS light RUNTIME DESTINATION bin)
 install(FILES ../gpl_v3.txt DESTINATION bin)

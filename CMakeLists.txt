@@ -96,6 +96,14 @@ function(copy_mingw_dlls TARGETNAME)
 	endif()
 endfunction()
 
+# so the executable will search for dylib's in the same directory as the executable
+function(add_loader_path_to_rpath TARGETNAME)
+	if(APPLE)
+		add_custom_command(TARGET ${TARGETNAME} POST_BUILD
+			COMMAND bash ARGS -c \"install_name_tool -add_rpath @loader_path $<TARGET_FILE:${TARGETNAME}> || true\")
+	endif()
+endfunction()
+
 if (WIN32)
 	set("NO_ITERATOR_DEBUG" FALSE CACHE BOOL "Whether to use MSVC iterator debugging or not")
 

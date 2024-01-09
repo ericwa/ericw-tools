@@ -25,7 +25,7 @@ TBB_CMAKE_DIR="$(pwd)/oneapi-tbb-2021.3.0/lib/cmake"
 
 # check USE_ASAN environment variable (see cmake.yml)
 if [ "$USE_ASAN" == "YES" ]; then
-  cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR" -DERICWTOOLS_ASAN=YES
+  cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR" -DENABLE_LIGHTPREVIEW=YES -DERICWTOOLS_ASAN=YES
 else
   cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="$EMBREE_CMAKE_DIR;$TBB_CMAKE_DIR"
 fi
@@ -33,8 +33,7 @@ fi
 # not yet free of memory leaks, so don't abort on leak detection
 export ASAN_OPTIONS=detect_leaks=false
 
-make -j8 VERBOSE=1 || exit 1
-cpack || exit 1
+make -j8 VERBOSE=1 package || exit 1
 
 # run tests
 if [ "$USE_ASAN" != "YES" ]; then
@@ -45,5 +44,3 @@ fi
 
 # check rpath
 readelf -d ./light/light
-unzip -X ericw-tools-*.zip
-readelf -d ./ericw-tools-*/bin/light
