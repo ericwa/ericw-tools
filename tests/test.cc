@@ -107,7 +107,64 @@ TEST_SUITE("settings")
         REQUIRE_THROWS_AS(settings.parse(p), settings::parse_exception);
     }
 
-    // test scalars
+    // test int32 with implicit default
+    TEST_CASE("int32CanOmitArgumentDefault")
+    {
+        settings::setting_container settings;
+        settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
+                                        settings::can_omit_argument_tag(), 1);
+        REQUIRE(setting.value() == 0);
+    }
+
+    TEST_CASE("int32CanOmitArgumentSimple")
+    {
+        settings::setting_container settings;
+        settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
+                                              settings::can_omit_argument_tag(), 1);
+        const char *arguments[] = {"qbsp.exe", "-bounce", "2"};
+        token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
+        settings.parse(p);
+        REQUIRE(setting.value() == 2);
+    }
+
+    TEST_CASE("int32CanOmitArgumentWithFollingSetting")
+    {
+        settings::setting_container settings;
+        settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
+                                        settings::can_omit_argument_tag(), 1);
+        settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
+        const char *arguments[] = {"qbsp.exe", "-bounce", "-scale", "0.25"};
+        token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
+        settings.parse(p);
+        REQUIRE(setting.value() == 1);
+        REQUIRE(scalarSetting.value() == 0.25);
+    }
+
+    TEST_CASE("int32CanOmitArgumentEOF")
+    {
+        settings::setting_container settings;
+        settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
+                                        settings::can_omit_argument_tag(), 1);
+        settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
+        const char *arguments[] = {"qbsp.exe", "-bounce"};
+        token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
+        settings.parse(p);
+        REQUIRE(setting.value() == 1);
+    }
+
+    TEST_CASE("int32CanOmitArgumentRemainder")
+    {
+        settings::setting_container settings;
+        settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
+                                        settings::can_omit_argument_tag(), 1);
+        settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
+        const char *arguments[] = {"qbsp.exe", "-bounce", "remainder"};
+        token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
+        auto remainder = settings.parse(p);
+        REQUIRE(remainder == std::vector<std::string>{"remainder"});\
+    }
+
+    // test vec3
     TEST_CASE("vec3Simple")
     {
         settings::setting_container settings;

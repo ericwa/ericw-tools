@@ -242,6 +242,8 @@ public:
     std::string format() const override;
 };
 
+class can_omit_argument_tag {};
+
 template<typename T>
 class setting_numeric : public setting_value<T>
 {
@@ -249,7 +251,8 @@ class setting_numeric : public setting_value<T>
 
 protected:
     T _min, _max;
-
+    bool _can_omit_argument = false;
+    T _omitted_argument_value = static_cast<T>(0);
 public:
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
         const setting_group *group = nullptr, const char *description = "")
@@ -270,6 +273,15 @@ public:
     {
     }
 
+    inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
+                           can_omit_argument_tag tag, T omitted_argument_value,
+                           const setting_group *group = nullptr, const char *description = "")
+        : setting_numeric(dictionary, names, v, minval, maxval, group, description)
+    {
+        _can_omit_argument = true;
+        _omitted_argument_value = omitted_argument_value;
+    }
+
     void set_value(const T &f, source new_source) override
     {
         if (f < _min) {
@@ -286,25 +298,30 @@ public:
 
     bool parse(const std::string &setting_name, parser_base_t &parser, source source) override
     {
-        if (!parser.parse_token()) {
-            return false;
-        }
+        if (parser.parse_token(PARSE_PEEK)) {
+            try {
+                T f;
 
-        try {
-            T f;
-
-            if constexpr (std::is_floating_point_v<T>) {
-                f = std::stod(parser.token);
-            } else {
-                f = static_cast<T>(std::stoull(parser.token));
+                if constexpr (std::is_floating_point_v<T>) {
+                    f = std::stod(parser.token);
+                } else {
+                    f = static_cast<T>(std::stoull(parser.token));
+                }
+                // if no exception was thrown then we parsed a float/int here successfully
+                Q_assert(parser.parse_token());
+                this->set_value(f, source);
+                return true;
+            } catch (std::exception &) {
+                // fall through...
             }
-
-            this->set_value(f, source);
-
-            return true;
-        } catch (std::exception &) {
-            return false;
         }
+
+        // either there is nothing to parse, or it failed to parse as a float/int
+        if (_can_omit_argument) {
+            this->set_value(_omitted_argument_value, source);
+            return true;
+        }
+        return false;
     }
 
     std::string string_value() const override { return std::to_string(this->_value); }

@@ -206,7 +206,7 @@ worldspawn_keys::worldspawn_keys()
       minlight_dirt{this, "minlight_dirt", false, &worldspawn_group},
       phongallowed{this, "phong", true, &worldspawn_group},
       phongangle{this, "phong_angle", 0, &worldspawn_group},
-      bounce{this, "bounce", 0, &worldspawn_group},
+      bounce{this, "bounce", 0, 0, 100, settings::can_omit_argument_tag(), 1, &worldspawn_group},
       bouncestyled{this, "bouncestyled", false, &worldspawn_group},
       bouncescale{this, "bouncescale", 1.0, 0.0, 100.0, &worldspawn_group},
       bouncecolorscale{this, "bouncecolorscale", 0.0, 0.0, 1.0, &worldspawn_group},
