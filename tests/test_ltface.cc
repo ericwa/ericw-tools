@@ -875,3 +875,20 @@ TEST_CASE("q1_light_bounce_noshadow")
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {118, 118, 118}, {128, 12, 156}, {-1, 0, 0});
 }
 
+TEST_CASE("q2_light_black")
+{
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_black.map", {});
+
+    const qvec3d point {1056, 1300, 972};
+
+    INFO("ensure completely black lightmaps are written out as style 0 in Q2 mode");
+
+    const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point, {-1, 0, 0});
+    REQUIRE(face);
+    CHECK(face->styles[0] == 0);
+    CHECK(face->styles[1] == 255);
+    CHECK(face->styles[2] == 255);
+    CHECK(face->styles[3] == 255);
+
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, point, {-1, 0, 0});
+}
