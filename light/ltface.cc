@@ -1976,7 +1976,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
     const double &standard_scale, const double &sky_scale, const float &hotspot_clamp)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    const float surflight_gate = 0.01f;
+    const float surflight_gate = light_options.emissivequality.value() == emissivequality_t::HIGH ? 0 : 0.01f;
 
     // check lighting channels (currently surface lights are always on CHANNEL_MASK_DEFAULT)
     if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
