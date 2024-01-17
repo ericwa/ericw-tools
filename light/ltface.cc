@@ -2085,7 +2085,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
     lightgrid_samples_t &result)
 {
     const settings::worldspawn_keys &cfg = light_options;
-    const float surflight_gate = 0.01f;
+    const float surflight_gate = light_options.emissivequality.value() == emissivequality_t::HIGH ? 0 : 0.01f;
 
     for (const auto &surf : EmissiveLightSurfaces()) {
         const surfacelight_t &vpl = *surf->vpl;
