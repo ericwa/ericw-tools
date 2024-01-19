@@ -1995,13 +1995,13 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
             raystream_occlusion_t &rs = *lightsurf->occlusion_stream;
 
+            rs.clearPushedRays();
+
             for (int c = 0; c < vpl.points.size(); c++) {
                 if (light_options.visapprox.value() == visapprox_t::VIS &&
                     VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
                     continue;
                 }
-
-                rs.clearPushedRays();
 
                 for (int i = 0; i < lightsurf->samples.size(); i++) {
                     const auto &sample = lightsurf->samples[i];
@@ -2033,48 +2033,49 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                         rs.pushRay(i, pos, dir, dist, &indirect);
                     }
                 }
-
-                if (!rs.numPushedRays())
-                    continue;
-                
-#if 0
-                total_surflight_rays += rs.numPushedRays();
-#endif
-                rs.tracePushedRaysOcclusion(lightsurf->modelinfo, CHANNEL_MASK_DEFAULT);
-
-                const int lightmapstyle = vpl_setting.style;
-                lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, lightmapstyle, lightsurf);
-
-                bool hit = false;
-                const int numrays = rs.numPushedRays();
-                for (int j = 0; j < numrays; j++) {
-                    if (rs.getPushedRayOccluded(j))
-                        continue;
-
-                    const int i = rs.getPushedRayPointIndex(j);
-                    qvec3f indirect = rs.getPushedRayColor(j);
-
-                    //Q_assert(!std::isnan(indirect[0]));
-
-                    // Use dirt scaling on the surface lighting.
-                    const double dirtscale =
-                        Dirt_GetScaleFactor(cfg, lightsurf->samples[i].occlusion, nullptr, 0.0, lightsurf);
-                    indirect *= dirtscale;
-
-                    lightsample_t &sample = lightmap->samples[i];
-                    sample.color += indirect;
-                    lightmap->bounce_color += indirect;
-
-                    hit = true;
-#if 0
-                    ++total_surflight_ray_hits;
-#endif
-                }
-
-                // If surface light contributed anything, save.
-                if (hit)
-                    Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, lightmapstyle);
             }
+
+            if (!rs.numPushedRays())
+                continue;
+
+            rs.tracePushedRaysOcclusion(lightsurf->modelinfo, CHANNEL_MASK_DEFAULT);
+
+#if 0
+            total_surflight_rays += rs.numPushedRays();
+#endif
+
+            const int lightmapstyle = vpl_setting.style;
+            lightmap_t *lightmap = Lightmap_ForStyle(lightmaps, lightmapstyle, lightsurf);
+
+            bool hit = false;
+            const int numrays = rs.numPushedRays();
+            for (int j = 0; j < numrays; j++) {
+                if (rs.getPushedRayOccluded(j))
+                    continue;
+
+                const int i = rs.getPushedRayPointIndex(j);
+                qvec3f indirect = rs.getPushedRayColor(j);
+
+                //Q_assert(!std::isnan(indirect[0]));
+
+                // Use dirt scaling on the surface lighting.
+                const double dirtscale =
+                    Dirt_GetScaleFactor(cfg, lightsurf->samples[i].occlusion, nullptr, 0.0, lightsurf);
+                indirect *= dirtscale;
+
+                lightsample_t &sample = lightmap->samples[i];
+                sample.color += indirect;
+                lightmap->bounce_color += indirect;
+
+                hit = true;
+#if 0
+                ++total_surflight_ray_hits;
+#endif
+            }
+
+            // If surface light contributed anything, save.
+            if (hit)
+                Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, lightmapstyle);
         }
     }
 }
