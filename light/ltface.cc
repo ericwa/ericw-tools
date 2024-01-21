@@ -1251,7 +1251,9 @@ static void LightFace_Entity(
         total_light_ray_hits++;
 #endif
 
-        int i = rs.getPushedRayPointIndex(j);
+        const ray_io &ray = rs.getRay(j);
+
+        int i = ray.index;
 
         // check if we hit a dynamic shadow caster (only applies to style 0 lights)
         //
@@ -1266,7 +1268,7 @@ static void LightFace_Entity(
         // (if any), and handle it here.
         int desired_style = entity->style.value();
         if (desired_style == 0) {
-            desired_style = rs.getPushedRayDynamicStyle(j);
+            desired_style = ray.dynamic_style;
         }
 
         // if necessary, switch which lightmap we are writing to.
@@ -1279,7 +1281,7 @@ static void LightFace_Entity(
 
         sample.color += rs.getPushedRayColor(j);
         cached_lightmap->bounce_color += rs.getPushedRayColor(j);
-        sample.direction += rs.getPushedRayNormalContrib(j);
+        sample.direction += ray.normalcontrib;
 
         Lightmap_Save(bsp, lightmaps, lightsurf, cached_lightmap, cached_style);
     }
@@ -1435,13 +1437,14 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
                 continue;
             }
         }
-
-        const int i = rs.getPushedRayPointIndex(j);
+        
+        const ray_io &ray = rs.getRay(j);
+        const int i = ray.index;
 
         // check if we hit a dynamic shadow caster
         int desired_style = sun->style;
         if (desired_style == 0) {
-            desired_style = rs.getPushedRayDynamicStyle(j);
+            desired_style = ray.dynamic_style;
         }
 
         // if necessary, switch which lightmap we are writing to.
@@ -1454,7 +1457,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
 
         sample.color += rs.getPushedRayColor(j);
         cached_lightmap->bounce_color += rs.getPushedRayColor(j);
-        sample.direction += rs.getPushedRayNormalContrib(j);
+        sample.direction += ray.normalcontrib;
 #if 0
         total_light_ray_hits++;
 #endif
@@ -1729,8 +1732,9 @@ static void LightFace_LocalMin(
             if (rs.getPushedRayOccluded(j)) {
                 continue;
             }
-
-            int i = rs.getPushedRayPointIndex(j);
+            
+            const ray_io &ray = rs.getRay(j);
+            int i = ray.index;
             double value = entity->light.value();
             lightsample_t &sample = lightmap->samples[i];
 
@@ -1957,6 +1961,8 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
     if (light_options.visapprox.value() == visapprox_t::RAYS &&
         vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
         return true;
+    } else if (!bouncelight_gate) {
+        return false;
     }
 
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
@@ -2052,8 +2058,9 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
             for (int j = 0; j < numrays; j++) {
                 if (rs.getPushedRayOccluded(j))
                     continue;
-
-                const int i = rs.getPushedRayPointIndex(j);
+                
+                const ray_io &ray = rs.getRay(j);
+                const int i = ray.index;
                 qvec3f indirect = rs.getPushedRayColor(j);
 
                 //Q_assert(!std::isnan(indirect[0]));
@@ -2375,7 +2382,8 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
 
         // accumulate hitdists
         for (int k = 0; k < rs.numPushedRays(); k++) {
-            const int i = rs.getPushedRayPointIndex(k);
+            const ray_io &ray = rs.getRay(k);
+            const int i = ray.index;
             if (rs.getPushedRayHitType(k) == hittype_t::SOLID) {
                 const float &dist = rs.getPushedRayHitDist(k);
                 lightsurf->samples[i].occlusion += std::min(cfg.dirtdepth.value(), dist);

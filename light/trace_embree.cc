@@ -700,7 +700,7 @@ void Embree_TraceInit(const mbsp_t *bsp)
 
 static void AddGlassToRay(ray_source_info *ctx, unsigned rayIndex, float opacity, const qvec3f &glasscolor)
 {
-    raystream_embree_common_t *rs = ctx->raystream;
+    raystream_embree_base_t *rs = ctx->raystream;
 
     if (rs == nullptr) {
         // FIXME: remove this.. once all ray casts use raystreams
@@ -711,26 +711,29 @@ static void AddGlassToRay(ray_source_info *ctx, unsigned rayIndex, float opacity
     // clamp opacity
     opacity = std::clamp(opacity, 0.0f, 1.0f);
 
-    Q_assert(rayIndex < rs->_numrays);
+    Q_assert(rayIndex < rs->numPushedRays());
 
-    rs->_ray_hit_glass[rayIndex] = true;
-    rs->_ray_glass_color[rayIndex] = glasscolor;
-    rs->_ray_glass_opacity[rayIndex] = opacity;
+    ray_io &ray = rs->getRay(rayIndex);
+
+    ray.hit_glass = true;
+    ray.glass_color = glasscolor;
+    ray.glass_opacity = opacity;
 }
 
 static void AddDynamicOccluderToRay(ray_source_info *ctx, unsigned rayIndex, int style)
 {
-    raystream_embree_common_t *rs = ctx->raystream;
+    raystream_embree_base_t *rs = ctx->raystream;
 
     if (rs != nullptr) {
-        rs->_ray_dynamic_styles[rayIndex] = style;
+        ray_io &ray = rs->getRay(rayIndex);
+        ray.dynamic_style = style;
     }
 }
 
-ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_)
-    : raystream(raystream_),
-      self(self_),
-      shadowmask(shadowmask_)
+ray_source_info::ray_source_info(raystream_embree_base_t *raystream_, const modelinfo_t *self_, int shadowmask_) :
+    raystream(raystream_),
+    self(self_),
+    shadowmask(shadowmask_)
 {
 #ifdef HAVE_EMBREE4
     rtcInitRayQueryContext(this);
