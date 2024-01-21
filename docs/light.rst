@@ -559,8 +559,8 @@ The following keys can be added to the *worldspawn* entity:
 
 .. worldspawn-key:: "_bouncestyled" "n"
 
-   1 makes styled lights bounce (e.g. flickering or switchable lights),
-   default is 0, they do not bounce.
+   1 allows styled lights to bounce (e.g. flickering or switchable lights).
+   Default is 1.
 
 .. worldspawn-key:: "_spotlightautofalloff" "n"
 
