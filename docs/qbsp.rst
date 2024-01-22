@@ -337,6 +337,16 @@ Options
 
    This only has effect in Q1 family games.
 
+.. option:: -missing_textures_as_zero_size
+
+   Writes missing textures (i.e. ones that qbsp can't find) as 0x0 placeholders.
+
+   This is not backwards compatible and will produce .bsp's that crash
+   unsupporting engines. However, it can be useful when you want to run
+   qbsp + light on a map that you are missing the corresponding .wad for.
+
+   This only has effect in Q1 family games.
+
 .. option:: -notjunc
 
    Alias for :option:`-tjunc none`
