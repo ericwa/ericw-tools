@@ -807,7 +807,8 @@ TEST_CASE("q2_detail_fence" * doctest::test_suite("testmaps_q2"))
 
 TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");
+    const auto [b, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");
+    const mbsp_t &bsp = b; // workaround clang not allowing capturing bindings in lambdas
     auto *game = bsp.loadversion->game;
 
     CHECK(GAME_QUAKE_II == game->id);
