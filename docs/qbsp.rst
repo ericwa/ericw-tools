@@ -120,7 +120,8 @@ Options
 
 .. option:: -transwater
 
-   Computes portal information for transparent water (default)
+   In Q1 mode, compiles maps for transparent water (lets vis see through liquids). Enabled by default.
+   Has no effect in Q2 mode, because this is controlled by the mapper in Q2.
 
 .. option:: -notranswater
 
