@@ -293,16 +293,16 @@ static std::vector<size_t> CreateSuperFace(node_t *headnode, face_t *f, tjunc_st
         auto v1 = f->original_vertices[i];
         auto v2 = f->original_vertices[(i + 1) % f->original_vertices.size()];
 
-        qvec3d edge_start = map.bsp.dvertexes[v1];
-        qvec3d e2 = map.bsp.dvertexes[v2];
+        qvec3d v1_pos = map.bsp.dvertexes[v1];
+        qvec3d v2_pos = map.bsp.dvertexes[v2];
 
         edge_verts.clear();
-        FindEdgeVerts_FaceBounds(headnode, f, edge_start, e2, edge_verts);
+        FindEdgeVerts_FaceBounds(headnode, f, v1_pos, v2_pos, edge_verts);
 
         double len;
-        qvec3d edge_dir = qv::normalize(e2 - edge_start, len);
+        qvec3d edge_dir = qv::normalize(v2_pos - v1_pos, len);
 
-        TestEdge(0, len, v1, v2, 0, edge_verts, edge_start, edge_dir, superface, stats);
+        TestEdge(0, len, v1, v2, 0, edge_verts, v1_pos, edge_dir, superface, stats);
     }
 
     return superface;
