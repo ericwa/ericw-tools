@@ -804,3 +804,162 @@ TEST_CASE("q2_detail_fence" * doctest::test_suite("testmaps_q2"))
         }
     }
 }
+
+TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");
+    auto *game = bsp.loadversion->game;
+
+    CHECK(GAME_QUAKE_II == game->id);
+
+    const qvec3d face_midpoint_origin {-24, 0, 24};
+    const qvec3d face_midpoint_to_tjunc {8, 0, 8};
+    const qvec3d z_delta_to_next_face {0, 0, 64};
+    const qvec3d x_delta_to_next_face {-64, 0, 0};
+
+    enum index_t : int {
+        INDEX_DETAIL_WALL = 0,
+        INDEX_SOLID,
+        INDEX_SOLID_DETAIL,
+        INDEX_TRANSPARENT_WATER,
+        INDEX_OPAQUE_WATER,
+        INDEX_OPAQUE_MIST,
+        INDEX_TRANSPARENT_WINDOW,
+        INDEX_OPAQUE_AUX,
+        INDEX_SKY,
+    };
+
+    auto has_tjunc = [&](index_t horizontal, index_t vertical) -> bool {
+        const qvec3d face_midpoint = face_midpoint_origin
+                + (x_delta_to_next_face * static_cast<int>(horizontal))
+                + (z_delta_to_next_face * static_cast<int>(vertical));
+
+        auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_midpoint);
+
+        const qvec3f tjunc_location = qvec3f(face_midpoint + face_midpoint_to_tjunc);
+
+        for (int i = 0; i < f->numedges; ++i) {
+            if (Face_PointAtIndex(&bsp, f, i) == tjunc_location) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    {
+        INFO("INDEX_DETAIL_WALL horizontal - only welds with itself");
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WATER));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_WATER));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WINDOW));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_AUX));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_SOLID horizontal - welds with anything opaque except detail_wall");
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WATER));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_WATER));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WINDOW));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_AUX));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_SOLID_DETAIL horizontal - same as INDEX_SOLID");
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WATER));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_WATER));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WINDOW));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_AUX));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_TRANSPARENT_WATER horizontal - only welds with itself");
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_DETAIL_WALL));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID_DETAIL));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WATER));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_WATER));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WINDOW));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_AUX));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_OPAQUE_WATER horizontal - same as INDEX_SOLID");
+        CHECK(!has_tjunc(INDEX_OPAQUE_WATER, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WATER));
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_WATER));
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WINDOW));
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_AUX));
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_OPAQUE_MIST horizontal - same as INDEX_SOLID");
+        CHECK(!has_tjunc(INDEX_OPAQUE_MIST, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WATER));
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_WATER));
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WINDOW));
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_AUX));
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_TRANSPARENT_WINDOW horizontal - only welds with itself");
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_DETAIL_WALL));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_WATER));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_MIST));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WINDOW));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_AUX));
+        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_OPAQUE_AUX horizontal - same as INDEX_SOLID");
+        CHECK(!has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WATER));
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_WATER));
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WINDOW));
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_AUX));
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_SKY horizontal - same as INDEX_SOLID");
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WATER));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_OPAQUE_WATER));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_OPAQUE_MIST));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WINDOW));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_OPAQUE_AUX));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_SKY));
+    }
+}
