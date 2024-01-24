@@ -165,6 +165,11 @@ const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face)
     return &miptex;
 }
 
+std::string_view Face_TextureNameView(const mbsp_t *bsp, const mface_t *face)
+{
+    return std::string_view(Face_TextureName(bsp, face));
+}
+
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face)
 {
     const mtexinfo_t *texinfo = Face_Texinfo(bsp, face);

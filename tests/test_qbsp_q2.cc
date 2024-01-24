@@ -805,6 +805,29 @@ TEST_CASE("q2_detail_fence" * doctest::test_suite("testmaps_q2"))
     }
 }
 
+TEST_CASE("q2_mist_transwater" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_transwater.map", {"-tjunc", "none"});
+
+    const qvec3d top_of_water = {-216, -16, 352};
+
+    auto up_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, 1});
+    auto down_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, -1});
+
+    REQUIRE(1 == up_faces.size());
+    REQUIRE(1 == down_faces.size());
+
+    // water has a higher priority (lower content bits are stronger), so it should cut a hole in the mist
+    CHECK(Face_TextureNameView(&bsp, up_faces[0]) == "e1u1/water6");
+    CHECK(Face_TextureNameView(&bsp, down_faces[0]) == "e1u1/water6");
+
+    const auto top_of_water_up = winding_t{{-232,-32,352}, {-232,0, 352}, {-200,0, 352}, {-200,-32,352}};
+    const auto top_of_water_dn = top_of_water_up.flip();
+
+    CHECK(Face_Winding(&bsp, up_faces[0]).directional_equal(top_of_water_up));
+    CHECK(Face_Winding(&bsp, down_faces[0]).directional_equal(top_of_water_dn));
+}
+
 TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
 {
     const auto [b, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");

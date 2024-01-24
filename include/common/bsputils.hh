@@ -31,6 +31,7 @@
 #include <vector>
 #include <map>
 #include <unordered_map>
+#include <string_view>
 
 const dmodelh2_t *BSP_GetWorldModel(const mbsp_t *bsp);
 int Face_GetNum(const mbsp_t *bsp, const mface_t *f);
@@ -50,6 +51,8 @@ qplane3f Face_Plane(const mbsp_t *bsp, const mface_t *f);
 const mtexinfo_t *Face_Texinfo(const mbsp_t *bsp, const mface_t *face);
 const miptex_t *Face_Miptex(const mbsp_t *bsp, const mface_t *face);
 const char *Face_TextureName(const mbsp_t *bsp, const mface_t *face);
+std::string_view Face_TextureNameView(const mbsp_t *bsp, const mface_t *face);
+
 const qvec3f &GetSurfaceVertexPoint(const mbsp_t *bsp, const mface_t *f, int v);
 bool ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, int contents_or_surf_flags); // mxd
 bool Face_IsTranslucent(const mbsp_t *bsp, const mface_t *face); // mxd
