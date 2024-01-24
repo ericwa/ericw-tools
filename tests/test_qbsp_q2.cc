@@ -632,6 +632,46 @@ TEST_CASE("q2_mirrorinside" * doctest::test_suite("testmaps_q2"))
     }
 }
 
+TEST_CASE("q2_alphatest_window" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_alphatest_window.map");
+
+    INFO("alphatest + window implies detail and translucent");
+    auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
+
+    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+}
+
+TEST_CASE("q2_alphatest_solid" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_alphatest_solid.map");
+
+    INFO("alphatest + solid implies window, detail and translucent");
+    auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
+
+    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+}
+
+TEST_CASE("q2_trans33_window" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_trans33_window.map");
+
+    INFO("trans33 + window implies detail and translucent");
+    auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
+
+    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+}
+
+TEST_CASE("q2_trans33_solid" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_trans33_solid.map");
+
+    INFO("trans33 + solid implies window, detail and translucent");
+    auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
+
+    CHECK(leaf->contents == (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
+}
+
 /**
  * Ensure that leaked maps still get areas assigned properly
  * (empty leafs should get area 1, solid leafs area 0)

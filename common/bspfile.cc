@@ -1427,9 +1427,9 @@ struct gamedef_q2_t : public gamedef_t
             surf_contents.native |= Q2_CONTENTS_SOLID;
         }
 
-        // if we have TRANS33 or TRANS66, we have to be marked as WINDOW,
+        // if we have TRANS33 or TRANS66 or ALPHATEST, we have to be marked as WINDOW,
         // so unset SOLID, give us WINDOW, and give us TRANSLUCENT
-        if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66)) {
+        if (flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_ALPHATEST)) {
             surf_contents.native |= Q2_CONTENTS_TRANSLUCENT;
 
             if (surf_contents.native & Q2_CONTENTS_SOLID) {

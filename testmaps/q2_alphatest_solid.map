@@ -1,0 +1,22 @@
+// Game: Quake 2
+// Format: Quake2
+// entity 0
+{
+"classname" "worldspawn"
+"_tb_textures" "textures/tomc"
+// brush 0
+{
+( -48 0 0 ) ( -48 1 0 ) ( -48 0 1 ) tomc/tc_tomb_roots_a -80 -80 0 1 1 0 33554432 0
+( -32 -48 0 ) ( -32 -48 1 ) ( -31 -48 0 ) tomc/tc_tomb_roots_a -80 -80 0 1 1 0 33554432 0
+( -32 0 -16 ) ( -31 0 -16 ) ( -32 1 -16 ) tomc/tc_tomb_roots_a -80 80 0 1 1 0 33554432 0
+( 16 80 16 ) ( 16 81 16 ) ( 17 80 16 ) tomc/tc_tomb_roots_a -80 80 0 1 1 0 33554432 0
+( 16 80 16 ) ( 17 80 16 ) ( 16 80 17 ) tomc/tc_tomb_roots_a -80 -80 0 1 1 0 33554432 0
+( 48 80 16 ) ( 48 80 17 ) ( 48 81 16 ) tomc/tc_tomb_roots_a -80 -80 0 1 1 0 33554432 0
+}
+}
+// entity 1
+{
+"classname" "info_player_start"
+"origin" "8 16 56"
+"angle" "90"
+}

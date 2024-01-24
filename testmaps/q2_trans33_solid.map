@@ -1,0 +1,22 @@
+// Game: Quake 2
+// Format: Quake2
+// entity 0
+{
+"classname" "worldspawn"
+"_tb_textures" "textures/e1u1"
+// brush 0
+{
+( -48 0 0 ) ( -48 1 0 ) ( -48 0 1 ) e1u1/wndow1_1 -80 -80 0 1 1 1 16 0
+( -32 -48 0 ) ( -32 -48 1 ) ( -31 -48 0 ) e1u1/wndow1_1 -80 -80 0 1 1 1 16 0
+( -32 0 -16 ) ( -31 0 -16 ) ( -32 1 -16 ) e1u1/wndow1_1 -80 80 0 1 1 1 16 0
+( 16 80 16 ) ( 16 81 16 ) ( 17 80 16 ) e1u1/wndow1_1 -80 80 0 1 1 1 16 0
+( 16 80 16 ) ( 17 80 16 ) ( 16 80 17 ) e1u1/wndow1_1 -80 -80 0 1 1 1 16 0
+( 48 80 16 ) ( 48 80 17 ) ( 48 81 16 ) e1u1/wndow1_1 -80 -80 0 1 1 1 16 0
+}
+}
+// entity 1
+{
+"classname" "info_player_start"
+"origin" "8 16 56"
+"angle" "90"
+}
