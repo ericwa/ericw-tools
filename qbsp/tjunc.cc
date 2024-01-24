@@ -143,21 +143,46 @@ static void FindEdgeVerts_BruteForce(
  * tjunc fixes. func_detail_wall is meant to act like a separate mesh,
  * so it shouldn't interact with solid.
  */
+
+static bool Welds(const contentflags_t &a, const contentflags_t &b)
+{
+    // FIXME: no clipping same type?
+
+    // all types weld with themselves
+    if (a.types_equal(b, qbsp_options.target_game))
+        return true;
+
+    // detail wall only welds with detail wall
+    if (qbsp_options.target_game->contents_are_detail_wall(a)
+        || qbsp_options.target_game->contents_are_detail_wall(b))
+        return false;
+
+    // no need to weld translucent to opaque
+    // (because they could have void behind them due to visblocking.
+    // e.g. opaque water meeting solid)
+    if (!qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value())
+        && qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value()))
+        return false;
+    if (!qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value())
+        && qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value()))
+        return false;
+
+    // never weld with backfaces
+    if (qbsp_options.target_game->contents_are_empty(a)
+        || qbsp_options.target_game->contents_are_empty(b))
+        return false;
+
+    // otherwise, weld
+    return true;
+}
+
 static bool HasTJuncInteraction(const face_t *f1, const face_t *f2)
 {
     // FIXME: handle func_detail_fence, func_detail_illusionary,
     // liquids? make sure a combination of solid + func_detail_wall
     // is treated as solid?
 
-    if (f1->contents.back.is_detail_wall(qbsp_options.target_game) &&
-        !f2->contents.back.is_detail_wall(qbsp_options.target_game))
-        return false;
-
-    if (f2->contents.back.is_detail_wall(qbsp_options.target_game) &&
-        !f1->contents.back.is_detail_wall(qbsp_options.target_game))
-        return false;
-
-    return true;
+    return Welds(f1->contents.back, f2->contents.back);
 }
 
 /*

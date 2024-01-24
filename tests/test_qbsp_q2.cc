@@ -868,7 +868,7 @@ TEST_CASE("q2_mist_transwater" * doctest::test_suite("testmaps_q2"))
     CHECK(Face_Winding(&bsp, down_faces[0]).directional_equal(top_of_water_dn));
 }
 
-TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2"))
 {
     const auto [b, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");
     const mbsp_t &bsp = b; // workaround clang not allowing capturing bindings in lambdas
@@ -911,16 +911,20 @@ TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2") * doctest::may_
     };
 
     {
-        INFO("INDEX_DETAIL_WALL horizontal - only welds with itself");
+        INFO("INDEX_DETAIL_WALL horizontal");
         CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
+        // this one is tricky - the solid cuts a hole in the top
+        // that hole (the detail_wall faces) are what weld with the side
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
+        // same as INDEX_DETAIL_WALL, INDEX_SOLID
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
         CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WATER));
         CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_WATER));
         CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_MIST));
         CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WINDOW));
         CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_AUX));
-        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
+        // same as INDEX_DETAIL_WALL, INDEX_SOLID
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
     }
 
     {
@@ -950,66 +954,83 @@ TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2") * doctest::may_
     }
 
     {
-        INFO("INDEX_TRANSPARENT_WATER horizontal - only welds with itself");
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_DETAIL_WALL));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID_DETAIL));
+        INFO("INDEX_TRANSPARENT_WATER horizontal");
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID_DETAIL));
         CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WATER));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_WATER));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_WATER));
+        // water is stronger than mist, so cuts away the bottom face of the mist
+        // the top face of the water then doesn't need to weld because
         CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WINDOW));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_AUX));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SKY));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WINDOW));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_AUX));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_OPAQUE_WATER horizontal - same as INDEX_SOLID");
-        CHECK(!has_tjunc(INDEX_OPAQUE_WATER, INDEX_DETAIL_WALL));
+        INFO("INDEX_OPAQUE_WATER horizontal");
+        // detail wall is stronger than water, so cuts a hole and the water then welds with itself
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_DETAIL_WALL));
         CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID));
         CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WATER));
+        // welds because opaque water and translucent don't get a face between them
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WATER));
         CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_WATER));
         CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WINDOW));
+        // window is stronger and cuts a hole in the water
+        CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WINDOW));
+        // same with aux
         CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_AUX));
         CHECK( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_OPAQUE_MIST horizontal - same as INDEX_SOLID");
-        CHECK(!has_tjunc(INDEX_OPAQUE_MIST, INDEX_DETAIL_WALL));
+        INFO("INDEX_OPAQUE_MIST horizontal");
+        // detail wall is stronger, cuts mist
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_DETAIL_WALL));
         CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID));
         CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WATER));
+        // water is stronger, cuts mist
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WATER));
         CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_WATER));
         CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WINDOW));
+        // window is stronger, cuts mist
+        CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WINDOW));
         CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_AUX));
         CHECK( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_TRANSPARENT_WINDOW horizontal - only welds with itself");
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_DETAIL_WALL));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
+        INFO("INDEX_TRANSPARENT_WINDOW horizontal");
+        // detail wall is stronger than window, cuts a hole in the window, so window
+        // tjuncs with itself
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_DETAIL_WALL));
+        // solid cuts a hole in the window
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
+        // translucent window and translucent water weld
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
         CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_WATER));
         CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_MIST));
         CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WINDOW));
+        // note, aux is lower priority than window, so bottom face of aux gets cut away
         CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_AUX));
-        CHECK(!has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SKY));
+        // sky cuts hole in window
+        CHECK( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SKY));
     }
 
     {
-        INFO("INDEX_OPAQUE_AUX horizontal - same as INDEX_SOLID");
-        CHECK(!has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
+        INFO("INDEX_OPAQUE_AUX horizontal");
+        // detail_wall is higher priority, cuts a hole in aux, which welds with itself
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
         CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID));
         CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID_DETAIL));
         CHECK(!has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WATER));
         CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_WATER));
         CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_MIST));
-        CHECK(!has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WINDOW));
+        // window is stronger, cuts a hole which causes aux to weld
+        CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WINDOW));
         CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_AUX));
         CHECK( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SKY));
     }

@@ -174,6 +174,7 @@ public:
     setting_int32 subdivide;
     setting_bool nofill;
     setting_bool nomerge;
+    setting_bool mergeacrosswater;
     setting_bool noedgereuse;
     setting_bool noclip;
     setting_bool noskip;

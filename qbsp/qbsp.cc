@@ -463,6 +463,7 @@ qbsp_settings::qbsp_settings()
           "change the subdivide threshold, in luxels. 0 will disable subdivision entirely"},
       nofill{this, "nofill", false, &debugging_group, "don't perform outside filling"},
       nomerge{this, "nomerge", false, &debugging_group, "don't perform face merging"},
+      mergeacrosswater{this, "mergeacrosswater", false, &common_format_group, "merge faces that cross above and below water"},
       noedgereuse{this, "noedgereuse", false, &debugging_group, "don't reuse edges (for debugging software rendering)"},
       noclip{this, "noclip", false, &common_format_group, "don't write clip nodes (Q1-like BSP formats)"},
       noskip{this, "noskip", false, &debugging_group, "don't remove faces with the 'skip' texture"},

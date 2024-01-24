@@ -7,7 +7,7 @@ maputil - utiltiy for working with Quake MAP files
 Synopsis
 ========
 
-**bsputil** [OPTION]... MAPFILE
+**maputil** MAPFILE [OPTION]...
 
 Options
 =======

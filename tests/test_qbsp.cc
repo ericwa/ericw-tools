@@ -2122,3 +2122,195 @@ TEST_CASE("lq e3m4.map" * doctest::may_fail())
     const auto [bsp, bspx, prt] = LoadTestmap("LibreQuake/lq1/maps/src/e3/e3m4.map");
     CHECK(prt);
 }
+
+TEST_CASE("q1_tjunc_matrix")
+{
+    // TODO: test opaque water in q1 mode
+    const auto [b, bspx, prt] = LoadTestmap("q1_tjunc_matrix.map", {"-mergeacrosswater"});
+    const mbsp_t &bsp = b; // workaround clang not allowing capturing bindings in lambdas
+    auto *game = bsp.loadversion->game;
+
+    CHECK(GAME_QUAKE == game->id);
+
+    const qvec3d face_midpoint_origin {-24, 0, 24};
+    const qvec3d face_midpoint_to_tjunc {8, 0, 8};
+    const qvec3d z_delta_to_next_face {0, 0, 64};
+    const qvec3d x_delta_to_next_face {-64, 0, 0};
+
+    enum index_t : int {
+        INDEX_SOLID = 0,
+        INDEX_SOLID_DETAIL,
+        INDEX_DETAIL_WALL,
+        INDEX_DETAIL_FENCE,
+        INDEX_DETAIL_FENCE_MIRRORINSIDE,
+        INDEX_DETAIL_ILLUSIONARY,
+        INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES,
+        INDEX_WATER,
+        INDEX_SKY
+    };
+
+    auto has_tjunc = [&](index_t horizontal, index_t vertical) -> bool {
+        const qvec3d face_midpoint = face_midpoint_origin
+                                     + (x_delta_to_next_face * static_cast<int>(horizontal))
+                                     + (z_delta_to_next_face * static_cast<int>(vertical));
+
+        auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_midpoint);
+
+        const qvec3f tjunc_location = qvec3f(face_midpoint + face_midpoint_to_tjunc);
+
+        for (int i = 0; i < f->numedges; ++i) {
+            if (Face_PointAtIndex(&bsp, f, i) == tjunc_location) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    {
+        INFO("INDEX_SOLID horizontal - welds with anything opaque except detail_wall");
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_WALL));
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_FENCE));
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY));
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        // "-mergeacrosswater" is needed to prevent a weld between transparent water and solid
+        CHECK(!has_tjunc(INDEX_SOLID, INDEX_WATER));
+        CHECK( has_tjunc(INDEX_SOLID, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_SOLID_DETAIL horizontal - welds with anything opaque except detail_wall");
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_WALL));
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_FENCE));
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_ILLUSIONARY));
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        // see INDEX_SOLID, INDEX_WATER explanation
+        CHECK(!has_tjunc(INDEX_SOLID_DETAIL, INDEX_WATER));
+        CHECK( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_DETAIL_WALL horizontal");
+        // solid cuts a hole in detail_wall
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
+        // solid detail cuts a hole in detail_wall
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_FENCE));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_ILLUSIONARY));
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        // see INDEX_SOLID, INDEX_WATER explanation
+        CHECK(!has_tjunc(INDEX_DETAIL_WALL, INDEX_WATER));
+        // sky cuts a hole in detail_wall
+        CHECK( has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_DETAIL_FENCE horizontal");
+        // solid cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_SOLID));
+        // solid detail cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_SOLID_DETAIL));
+        // detail wall cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_FENCE));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_ILLUSIONARY));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        // weld because both are translucent
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_WATER));
+        // sky cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_DETAIL_FENCE_MIRRORINSIDE horizontal");
+        // solid cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SOLID));
+        // solid detail cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SOLID_DETAIL));
+        // detail wall cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_FENCE));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_ILLUSIONARY));
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        // weld because both are translucent
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_WATER));
+        // sky cuts a hole in fence
+        CHECK( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_DETAIL_ILLUSIONARY horizontal");
+        // solid cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SOLID));
+        // solid detail cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SOLID_DETAIL));
+        // detail wall cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_WALL));
+        // fence and illusionary are both translucent, so weld
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_FENCE));
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_ILLUSIONARY));
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        // weld because both are translucent
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_WATER));
+        // sky cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES horizontal");
+        // solid cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SOLID));
+        // solid detail cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SOLID_DETAIL));
+        // detail wall cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_WALL));
+        // fence and illusionary are both translucent, so weld
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_FENCE));
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_ILLUSIONARY));
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        // weld because both are translucent
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_WATER));
+        // sky cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_WATER horizontal");
+        // solid cuts a hole in water
+        CHECK( has_tjunc(INDEX_WATER, INDEX_SOLID));
+        // solid detail cuts a hole in illusionary
+        CHECK( has_tjunc(INDEX_WATER, INDEX_SOLID_DETAIL));
+        // detail wall cuts a hole in water
+        CHECK( has_tjunc(INDEX_WATER, INDEX_DETAIL_WALL));
+        CHECK( has_tjunc(INDEX_WATER, INDEX_DETAIL_FENCE));
+        CHECK( has_tjunc(INDEX_WATER, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK( has_tjunc(INDEX_WATER, INDEX_DETAIL_ILLUSIONARY));
+        CHECK( has_tjunc(INDEX_WATER, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        CHECK( has_tjunc(INDEX_WATER, INDEX_WATER));
+        CHECK( has_tjunc(INDEX_WATER, INDEX_SKY));
+    }
+
+    {
+        INFO("INDEX_SKY horizontal");
+        CHECK( has_tjunc(INDEX_SKY, INDEX_SOLID));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_DETAIL_WALL));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_DETAIL_FENCE));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_DETAIL_ILLUSIONARY));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        CHECK(!has_tjunc(INDEX_SKY, INDEX_WATER));
+        CHECK( has_tjunc(INDEX_SKY, INDEX_SKY));
+    }
+}

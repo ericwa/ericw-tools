@@ -628,6 +628,22 @@ public:
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
+    bool contents_are_opaque(const contentflags_t &contents, bool transwater) const override
+    {
+        auto bits = contentflags_to_bits(contents).visible_contents();
+
+        if (bits.solid) return true;
+        else if (bits.sky) return true;
+        else if (bits.wall) return true;
+        else if (bits.fence) return false;
+        else if (bits.lava) return !transwater;
+        else if (bits.slime) return !transwater;
+        else if (bits.water) return !transwater;
+        else if (bits.mist) return false;
+
+        return false;
+    }
+
     contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
     {
         /*
@@ -1308,6 +1324,22 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_seals_map(const contentflags_t &contents) const override
     {
         return contents_are_solid(contents) || contents_are_sky(contents);
+    }
+
+    bool contents_are_opaque(const contentflags_t &contents, bool transwater) const override
+    {
+        int32_t c = contents.native;
+
+        if (!this->visible_contents(c))
+            return false;
+
+        // it's visible..
+
+        if (c & Q2_CONTENTS_TRANSLUCENT) {
+            return false;
+        }
+
+        return true;
     }
 
     contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
