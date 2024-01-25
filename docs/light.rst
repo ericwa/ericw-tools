@@ -855,6 +855,11 @@ with the first five letters "light". E.g. "light", "light_globe",
    direction of light pointing along the surface normal. In other words,
    it automatically sets "mangle" on each of the generated lights.
 
+.. light-key:: "_surface_radiosity" "n"
+
+   Whether to use Q1-style surface subdivision (0) or Q2-style 
+   surface radiosity on this light specifically.
+
 .. light-key:: "_project_texture" "texture"
 
    Specifies that a light should project this texture. The texture must
