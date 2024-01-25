@@ -845,15 +845,25 @@ with the first five letters "light". E.g. "light", "light_globe",
 
 .. light-key:: "_surface_offset" "n"
 
-   Controls the offset lights are placed above surfaces for "_surface".
+   Controls the offset lights are placed above surfaces for :light-key:`_surface`.
    Default 2.
 
 .. light-key:: "_surface_spotlight" "n"
 
-   For a surface light template (i.e. a light with "_surface" set),
+   For a surface light template (i.e. a light with :light-key:`_surface` set),
    setting this to "1" makes each instance into a spotlight, with the
    direction of light pointing along the surface normal. In other words,
    it automatically sets "mangle" on each of the generated lights.
+
+.. light-key:: "_surface_radiosity" "n"
+
+   Whether to use Q1-style surface subdivision (0) or Q2-style 
+   surface radiosity (1) on this light specifically.
+
+   Use in conjunction with :light-key:`_surface`.
+
+   The default can be changed for all surface lights in a map with 
+   worldspawn key :worldspawn-key:`_surflight_radiosity`.
 
 .. light-key:: "_project_texture" "texture"
 
