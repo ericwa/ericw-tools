@@ -858,9 +858,12 @@ with the first five letters "light". E.g. "light", "light_globe",
 .. light-key:: "_surface_radiosity" "n"
 
    Whether to use Q1-style surface subdivision (0) or Q2-style 
-   surface radiosity on this light specifically.
+   surface radiosity (1) on this light specifically.
 
    Use in conjunction with :light-key:`_surface`.
+
+   The default can be changed for all surface lights in a map with 
+   worldspawn key :worldspawn-key:`_surflight_radiosity`.
 
 .. light-key:: "_project_texture" "texture"
 
