@@ -192,8 +192,8 @@ static void EmitFaceFragment(face_t *face, face_fragment_t *fragment, emit_faces
 {
     // this can't really happen, but just in case it ever does..
     // (I use this in testing to find faces of interest)
-    if (!fragment->output_vertices.size()) {
-        logging::print("WARNING: zero-point triangle attempted to be emitted\n");
+    if (fragment->output_vertices.size() < 3) {
+        logging::print("WARNING: {}-point face attempted to be emitted\n", fragment->output_vertices.size());
         return;
     }
 
