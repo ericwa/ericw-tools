@@ -2126,7 +2126,7 @@ TEST_CASE("lq e3m4.map" * doctest::may_fail())
 TEST_CASE("q1_tjunc_matrix")
 {
     // TODO: test opaque water in q1 mode
-    const auto [b, bspx, prt] = LoadTestmap("q1_tjunc_matrix.map", {"-mergeacrosswater"});
+    const auto [b, bspx, prt] = LoadTestmap("q1_tjunc_matrix.map");
     const mbsp_t &bsp = b; // workaround clang not allowing capturing bindings in lambdas
     auto *game = bsp.loadversion->game;
 
@@ -2175,7 +2175,6 @@ TEST_CASE("q1_tjunc_matrix")
         CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_FENCE_MIRRORINSIDE));
         CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY));
         CHECK(!has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
-        // "-mergeacrosswater" is needed to prevent a weld between transparent water and solid
         CHECK(!has_tjunc(INDEX_SOLID, INDEX_WATER));
         CHECK( has_tjunc(INDEX_SOLID, INDEX_SKY));
     }
