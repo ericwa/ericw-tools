@@ -578,13 +578,22 @@ The following keys can be added to the *worldspawn* entity:
 
 .. worldspawn-key:: "_compilerstyle_max" "n"
 
+.. worldspawn-key:: "_surflight_minlight_scale" "n"
+
+   Scale factor for automatic minlight on an emissive face, derived from the
+   light color being emitted.
+
+   This is intended to prevent, e.g., a light fixture texture which is configured
+   as a surface light, from being completely black.
+
+   Default 1.0, can set to 0.0 to disable minlight.
+
 Model Entity Keys
 -----------------
 
 The following keys can be used on any entity with a brush model.
-"_minlight", "_mincolor", "_dirt", "_phong", "_phong_angle",
-"_phong_angle_concave", "_shadow", "_bounce" are supported on
-func_detail/func_group as well, if qbsp from these tools is used.
+
+If used on func_detail* or func_group, a full qbsp pass need to be run.
 
 .. bmodel-key:: "_minlight" "n"
 
@@ -600,6 +609,8 @@ func_detail/func_group as well, if qbsp from these tools is used.
    to 0.
 
 .. bmodel-key:: "_minlight_exclude" "texname"
+                "_minlight_exclude2" "texname"
+                "_minlight_exclude3" "texname"
 
    Faces with the given texture are excluded from receiving minlight on
    this brush model.
@@ -680,12 +691,69 @@ func_detail/func_group as well, if qbsp from these tools is used.
    1 degree apart, almost a flat plane.) If it's 0 or unset, the same
    value as "_phong_angle" is used.
 
+.. bmodel-key:: "_phong_group" "n"
+
+   Integer specifying a "smoothing group ID" for phong shading. Default 0,
+   faces with a _phong_group will only smooth with faces with a matching
+   _phong_group.
+
+   Equivalent to the Q2 .map format's "value" field.
+
 .. bmodel-key:: "_lightignore" "n"
 
    1 makes a model receive minlight only, ignoring all lights /
    sunlight. Could be useful on rotators / trains.
 
    .. seealso:: `Lighting Channels`_ for a more powerful version of this
+
+.. bmodel-key:: "_light_twosided" "n"
+
+   Set to 1 to enable receiving light from either side.
+
+   Default is 0 execept on liquids (Q1 :texture:`*`, Q2 contents LAVA/SLIME/WATER),
+   where it defaults to 1.
+
+.. bmodel-key:: "_light_alpha" "n"
+
+   Float, range 0-1. Allows customizing the opacity of this face when it's acting
+   as "stained glass".
+
+   .. todo::
+
+      Document default, and which conditions cause a face to be "stained glass"
+
+.. bmodel-key:: "_litwater" "n"
+                "_splitturb" "n"
+
+   Overrides the worldspawn/command line option :option:`qbsp -litwater` for these specific brushes.
+
+.. bmodel-key:: "_surflight_rescale" "n"
+
+   Integer, 0 or 1.
+
+   If 1, rescales any surface light emitted by these brushes to emit 50% light
+   at 90 degrees from the surface normal. Otherwise, use a more natural angle falloff
+   of 0% at 90 degrees.
+
+   Default is 0 on sky faces, otherwise 1.
+
+.. bmodel-key:: "_surflight_color" "r g b"
+
+   Customize the emissive color of a surface light.
+
+   Default is to use the average texture color.
+
+.. bmodel-key:: "_surflight_style" "n"
+
+   Override the surface light lightstyle number for light emitted from these brushes.
+
+.. bmodel-key:: "_surflight_targetname" "name"
+
+   Override the surface light targetname for light emitted from these brushes.
+
+.. bmodel-key:: "_surflight_minlight_scale" "n"
+
+   Overrides the worldspawn setting :worldspawn-key:`_surflight_minlight_scale`
 
 .. bmodel-key:: "_bounce" "n"
    
@@ -712,6 +780,23 @@ func_detail/func_group as well, if qbsp from these tools is used.
    searches for an entity with its "targetname" key set to "name", 
    and use that entity's origin (typically you'd use an "info_null" for this).
 
+.. bmodel-key:: "_world_units_per_luxel" "n"
+
+   When :option:`-world_units_per_luxel` is in use, customizes the lightmap scale
+   on this entity.
+
+.. bmodel-key:: "_surflight_group" "n"
+
+   Integer. Default 0.
+
+   Can be set to a nonzero value to make these brushes emit as surface lights
+   only from a light template with a matching :light-key:`_surflight_group` value.
+
+.. bmodel-key:: "_lightcolorscale" "n"
+
+   Saturation control as a postprocessing step on these specific faces' lightmaps.
+
+   Default 1.0, 0.0 is fully desaturated to greyscale.
 
 Light Entity Keys
 =================
@@ -843,6 +928,9 @@ with the first five letters "light". E.g. "light", "light_globe",
    spaced about 128 units (though possibly closer due to bsp splitting)
    apart and positioned 2 units above the surfaces.
 
+   To restrict this surface light config to a subset of brushes with
+   the "texturename" texture applied, see the :light-key:`_surflight_group` key.
+
 .. light-key:: "_surface_offset" "n"
 
    Controls the offset lights are placed above surfaces for :light-key:`_surface`.
@@ -864,6 +952,16 @@ with the first five letters "light". E.g. "light", "light_globe",
 
    The default can be changed for all surface lights in a map with 
    worldspawn key :worldspawn-key:`_surflight_radiosity`.
+
+.. light-key:: "_surflight_group" "n"
+
+   Integer, default 0.
+
+   For use with :light-key:`_surface` lights.
+
+   Can be set to a nonzero value to restrict
+   this surface light template to only emit from brushes with a matching
+   :bmodel-key:`_surflight_group` value.
 
 .. light-key:: "_project_texture" "texture"
 
