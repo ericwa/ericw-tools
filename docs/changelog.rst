@@ -2,6 +2,47 @@
 Changelog
 =========
 
+2.0.0-alpha6
+============
+
+This is the sixth alpha release of our 2.0.0 "dev builds".
+
+The old stable v0.18.2-rc1 release still has more optimized output for Q1 and faster/less memory use for
+qbsp/light, but we're working on regressions and welcome feedback as we work towards a stable 2.0.0 build.
+
+Behaviour changes since alpha5:
+
+- light: fix "-emissivequality high" having incorrect brightness due to a bad gate setting.
+  This will cause different output from 2.0.0-alpha1 through alpha5 when emissives / bounce are in use.
+
+- qbsp: change so liquids don't cause splits in perpendicular walls, by default.
+  You can opt back into the old behaviour with "-nomergeacrossliquids" (or setting "_nomergeacrossliquids" "1"
+  as a worldspawn key/value). This will be necessary for maps targetting water caustics (e.g. ezQuake),
+  otherwise the water caustics effect will extend out of the water.
+
+Fixes since alpha5:
+
+- fix macOS builds which were broken since alpha1
+- lightpreview: package in macOS + Linux builds (@jonathanlinat)
+- light: fix -bounce not being recognized as a shortcut for -bounce 1
+- qbsp: make Q2_SURF_ALPHATEST imply TRANSLUCENT + DETAIL
+- qbsp: never write 0, 1, or 2-vertex faces
+- qbsp: improve tjunc logic to avoid excessive welding (Previously in the alpha builds, and a regression from
+  0.18.1, func_detail_wall was welding to structural.)
+
+  The new idea is, translucent things (e.g. translucent water, func_detail_fence, etc.) weld to other translucent
+  things, and opaque things (func_detail, worldpsawn, etc.) weld to each other. func_detail_wall is special and
+  only welds to itself.
+
+Enhancements since alpha5:
+
+- docs: fill in a lot of missing documentation
+
+Other notes:
+
+- VS runtime for the Windows builds: https://aka.ms/vs/17/release/vc_redist.x64.exe
+- Documentation is now at: https://ericw-tools.readthedocs.io
+
 Upcoming
 ========
 
