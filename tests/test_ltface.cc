@@ -892,3 +892,45 @@ TEST_CASE("q2_light_black")
 
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, point, {-1, 0, 0});
 }
+
+TEST_CASE("q1_light_black")
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_black.map", {"-lit"});
+
+    {
+        const qvec3d point{1056, 1300, 972};
+
+        INFO("ensure completely black lightmaps are written out as style 255 / lightofs -1 in Q1 mode");
+
+        const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point, {-1, 0, 0});
+        REQUIRE(face);
+        CHECK(face->styles[0] == 255);
+        CHECK(face->styles[1] == 255);
+        CHECK(face->styles[2] == 255);
+        CHECK(face->styles[3] == 255);
+        CHECK(face->lightofs == -1);
+
+        // this is consistent with original tools, see:
+        // https://github.com/id-Software/Quake-Tools/blob/master/qutils/LIGHT/LTFACE.C#L542
+    }
+    {
+        INFO("ensure lit water receiving no light is also written out as style 255 / lightofs -1");
+
+        const qvec3d point{568, 1288, 976};
+
+        const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point, {0, 0, 1});
+        REQUIRE(face);
+        auto *texinfo = Face_Texinfo(&bsp, face);
+        REQUIRE(texinfo);
+
+        CHECK(texinfo->flags.native == 0); // i.e. TEX_SPECIAL is not set because it's lit water
+        CHECK(face->styles[0] == 255);
+        CHECK(face->styles[1] == 255);
+        CHECK(face->styles[2] == 255);
+        CHECK(face->styles[3] == 255);
+        CHECK(face->lightofs == -1);
+
+        // Note, this liquid face is rendering as fullbright (incorrect) in: QS 0.96.0 and Ironwail 0.7.0
+        // and rendering as solid black (correct) in vkQuake 1.30.1, FTEQW Mar 1 2022
+    }
+}
