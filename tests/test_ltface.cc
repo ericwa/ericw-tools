@@ -13,9 +13,18 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
     std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
     const bool is_q2 = std::find(extra_qbsp_args.begin(), extra_qbsp_args.end(), "-q2bsp") != extra_qbsp_args.end();
+    const bool is_hl = std::find(extra_qbsp_args.begin(), extra_qbsp_args.end(), "-hlbsp") != extra_qbsp_args.end();
+
     auto map_path = std::filesystem::path(testmaps_dir) / name;
 
-    auto bsp_dir = fs::path(is_q2 ? test_quake2_maps_dir : test_quake_maps_dir);
+    fs::path bsp_dir;
+    if (is_q2) {
+        bsp_dir = fs::path(test_quake2_maps_dir);
+    } else if (is_hl) {
+        bsp_dir = fs::path(test_halflife_maps_dir);
+    } else {
+        bsp_dir = fs::path(test_quake_maps_dir);
+    }
     // Try to get an absolute path, so our output .bsp (for qbsp) and input .bsp paths (for vis/light) are
     // absolute. Otherwise we risk light.exe picking up the wrong .bsp (especially if there are debug .bsp's in the
     // testmaps folder).
@@ -102,6 +111,12 @@ testresults_t QbspVisLight_Q2(
     const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
     return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+}
+
+testresults_t QbspVisLight_HL(
+        const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
+{
+    return QbspVisLight_Common(name, {"-hlbsp"}, extra_light_args, run_vis);
 }
 
 TEST_CASE("lightgrid_sample_t equality")
@@ -932,5 +947,26 @@ TEST_CASE("q1_light_black")
 
         // Note, this liquid face is rendering as fullbright (incorrect) in: QS 0.96.0 and Ironwail 0.7.0
         // and rendering as solid black (correct) in vkQuake 1.30.1, FTEQW Mar 1 2022
+    }
+}
+
+TEST_CASE("hl_light_black")
+{
+    auto [bsp, bspx] = QbspVisLight_HL("hl_light_black.map", {});
+
+    {
+        const qvec3d point{1056, 1300, 972};
+
+        INFO("ensure completely black lightmaps are written out as style 255 / lightofs -1 in HL mode");
+
+        const mface_t *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point, {-1, 0, 0});
+        REQUIRE(face);
+        CHECK(face->styles[0] == 255);
+        CHECK(face->styles[1] == 255);
+        CHECK(face->styles[2] == 255);
+        CHECK(face->styles[3] == 255);
+        CHECK(face->lightofs == -1);
+
+        // confirmed that this renders as expected (black lightmaps) in the Dec 2023 HL build
     }
 }
