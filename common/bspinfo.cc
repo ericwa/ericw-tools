@@ -474,7 +474,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
 }
 
 static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bspx, bool use_bspx, bool use_decoupled,
-    fs::path obj_path, fs::path lightmaps_path)
+    fs::path obj_path, const fs::path &lightmaps_path_base)
 {
     // FIXME: pass in .lit
     const auto atlas = build_lightmap_atlas(bsp, bspx, {}, use_bspx, use_decoupled);
@@ -483,9 +483,13 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
         return;
     }
 
+    // e.g. mapname.bsp.lm
+    const std::string stem = lightmaps_path_base.stem().string();
+
     // write .png's, one per style
     for (const auto &[i, full_atlas] : atlas.style_to_lightmap_atlas) {
-        lightmaps_path.replace_filename(lightmaps_path.stem().string() + "_" + std::to_string(i) + ".png");
+        auto lightmaps_path = lightmaps_path_base;
+        lightmaps_path.replace_filename(stem + "_" + std::to_string(i) + ".png");
         std::ofstream strm(lightmaps_path, std::ofstream::out | std::ofstream::binary);
         stbi_write_png_to_func(
             [](void *context, void *data, int size) {
