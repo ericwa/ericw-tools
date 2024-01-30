@@ -826,4 +826,6 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
         fs::path(name).replace_extension(".lm.png"));
 
     std::ofstream(name, std::fstream::out | std::fstream::trunc) << std::setw(4) << j;
+
+    logging::print("wrote {}\n", name);
 }

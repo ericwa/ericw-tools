@@ -7,19 +7,24 @@ bspinfo - print basic information about a Quake BSP file
 Synopsis
 ========
 
-**bspinfo** BSPFILE
+**bspinfo** BSPFILE [BSPFILES]
 
 Description
 ===========
 
-**bspinfo** will print a very basic summary of the internal data in
-*BSPFILE*. The BSP version number is printed, followed by one line for
-each of the data types inside, giving the count and data size in bytes
-of each data type.
+**bspinfo** will print various info about each .bsp file:
 
-If the filename *BSPFILE* does not have a .bsp extension, **bsputil**
-will look for a .bsp file by stripping the file extension from BSPFILE
-(if any) and appending ".bsp".
+- BSP type
+- list of BSP lumps, the number of objects, and the total size in bytes
+- list of BSPX lumps and their sizes in bytes
+
+For the purpose of previewing lightmaps in Blender, it will also pack the lightmaps into an atlas and output
+the following:
+
+- ``mapname.bsp.geometry.obj`` containing the BSP faces plus the lightmap UV's
+- ``mapname.bsp.lm_0.png``, ``mapname.bsp.lm_1.png``, etc., containing a lightmap atlas per used style number
+
+For debugging, the bsp is also converted into a JSON representation and written to ``mapname.bsp.json``.
 
 Author
 ======
