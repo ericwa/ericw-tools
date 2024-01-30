@@ -138,6 +138,7 @@ static void ReplaceTexturesFromWad(mbsp_t &bsp)
 
 static void PrintModelInfo(const mbsp_t *bsp)
 {
+    // TODO: remove, bspinfo .json export is more useful
     for (size_t i = 0; i < bsp->dmodels.size(); i++) {
         const dmodelh2_t *dmodel = &bsp->dmodels[i];
         logging::print("model {:3}: {:5} faces (firstface = {})\n", i, dmodel->numfaces, dmodel->firstface);
@@ -702,8 +703,8 @@ int bsputil_main(int argc, char **argv)
     fmt::print("---- bsputil / ericw-tools {} ----\n", ERICWTOOLS_VERSION);
     if (argc == 1) {
         printf(
-            "usage: bsputil [--replace-entities] [--extract-entities] [--extract-textures] [--replace-textures f]\n"
-            "[--convert bsp29|bsp2|bsp2rmq|q2bsp] [--check] [--modelinfo]\n"
+            "usage: bsputil [--scale x y z] [--replace-entities] [--extract-entities] [--extract-textures] [--replace-textures f]\n"
+            "[--convert bsp29|bsp2|bsp2rmq|hexen2|hexen2bsp2|hexen2bsp2rmq|hl|q2bsp|qbism] [--check] [--modelinfo]\n"
             "[--check] [--compare otherbsp] [--findfaces x y z nx ny nz] [--findleaf x y z] [--settexinfo facenum texinfonum]\n"
             "[--decompile] [--decompile-geomonly] [--decompile-hull n]\n"
             "[--extract-bspx-lump lump_name output_file_name]\n"
@@ -1067,6 +1068,7 @@ int bsputil_main(int argc, char **argv)
                 }
             }
         } else if (!strcmp(argv[i], "--compare")) {
+            // TODO: remove, this was an early attempt at a testing framework before our current one
             i++;
             if (i == argc - 1) {
                 Error("--compare requires two arguments");
