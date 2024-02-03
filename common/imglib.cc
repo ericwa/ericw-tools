@@ -359,47 +359,7 @@ std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs
     return std::nullopt;
 }
 
-/*
-    JSON meta format, meant to supplant .wal's metadata for external texture use.
-    All of the values are optional.
-    {
-        // valid instances of "contents"; either:
-        // - a case-insensitive string containing the textual representation
-        //   of the content type
-        // - a number
-        // - an array of the two above, which will be OR'd together
-        "contents": [ "SOLID", 8 ],
-        "contents": 24,
-        "contents": "SOLID",
-
-        // valid instances of "flags"; either:
-        // - a case-insensitive string containing the textual representation
-        //   of the surface flags
-        // - a number
-        // - an array of the two above, which will be OR'd together
-        "flags": [ "SKY", 16 ],
-        "flags": 24,
-        "flags": "SKY",
-
-        // "value" must be an integer
-        "value": 1234,
-
-        // "animation" must be the name of the next texture in
-        // the chain.
-        "animation": "e1u1/comp2",
-
-        // width/height are allowed to be supplied in order to
-        // have the editor treat the surface as if its dimensions
-        // are these rather than the ones pulled in from the image
-        // itself. they must be integers.
-        "width": 64,
-        "height": 64,
-
-        // color to use for lighting bounces. if specified, this
-        // is used instead of averaging the pixels of the image.
-        "color": [255, 128, 64]
-    }
-*/
+// see .wal_json section in qbsp.rst for format documentation
 std::optional<texture_meta> load_wal_json_meta(
     const std::string_view &name, const fs::data &file, const gamedef_t *game)
 {

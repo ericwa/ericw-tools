@@ -845,6 +845,66 @@ compatible with:
 -  Brush Primitives produce by Radiant editors (normally a Quake 3
    format)
 
+Metadata formats
+----------------
+
+.wal_json
+=========
+
+For Q2 mapping, .wal textures contain metadata specifying the texture's content flags, surface flags, and "value",
+which are used if the mapper doesn't override them in the .map file. For example, a lava texture can default to
+emitting light, having a lava content type, and having a surface warp effect.
+
+The final values get baked into the .bsp and so game engine doesn't need the metadata for anything.
+
+For increased flexibility, we support a JSON metadata format, which can override the .wal's metadata or provide
+it when using image format like .tga instead of .wal.
+
+To use a .wal_json file, place it in the same directory where the .wal would be, e.g.
+``baseq2/textures/e1u1/water.wal_json`` would correspond to: ``baseq2/textures/e1u1/water.png``.
+
+All of the values are optional.
+
+.. code:: json
+
+   {
+       // valid instances of "contents"; either:
+       // - a case-insensitive string containing the textual representation
+       //   of the content type
+       // - a number
+       // - an array of the two above, which will be OR'd together
+       "contents": [ "SOLID", 8 ],
+       "contents": 24,
+       "contents": "SOLID",
+
+       // valid instances of "flags"; either:
+       // - a case-insensitive string containing the textual representation
+       //   of the surface flags
+       // - a number
+       // - an array of the two above, which will be OR'd together
+       "flags": [ "SKY", 16 ],
+       "flags": 24,
+       "flags": "SKY",
+
+       // "value" must be an integer
+       "value": 1234,
+
+       // "animation" must be the name of the next texture in
+       // the chain.
+       "animation": "e1u1/comp2",
+
+       // width/height are allowed to be supplied in order to
+       // have the editor treat the surface as if its dimensions
+       // are these rather than the ones pulled in from the image
+       // itself. they must be integers.
+       "width": 64,
+       "height": 64,
+
+       // color to use for lighting bounces. if specified, this
+       // is used instead of averaging the pixels of the image.
+       "color": [255, 128, 64]
+   }
+
 Author
 ------
 
