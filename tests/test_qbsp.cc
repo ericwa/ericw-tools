@@ -1349,37 +1349,6 @@ TEST_CASE("q1_0125unit_faces" * doctest::test_suite("testmaps_q1") * doctest::ma
     CHECK(2 == bsp.dfaces.size());
 }
 
-TEST_CASE("quake maps" * doctest::test_suite("testmaps_q1") * doctest::skip() * doctest::may_fail())
-{
-    const std::vector<std::string> quake_maps{"DM1-test.map", "DM2-test.map", "DM3-test.map", "DM4-test.map",
-        "DM5-test.map", "DM6-test.map", "DM7-test.map", "E1M1-test.map", "E1M2-test.map", "E1M3-test.map",
-        "E1M4-test.map", "E1M5-test.map", "E1M6-test.map", "E1M7-test.map", "E1M8-test.map", "E2M1-test.map",
-        "E2M2-test.map", "E2M3-test.map", "E2M4-test.map", "E2M5-test.map", "E2M6-test.map", "E2M7-test.map",
-        "E3M1-test.map", "E3M2-test.map", "E3M3-test.map", "E3M4-test.map", "E3M5-test.map", "E3M6-test.map",
-        "E3M7-test.map", "E4M1-test.map", "E4M2-test.map", "E4M3-test.map", "E4M4-test.map", "E4M5-test.map",
-        "E4M6-test.map", "E4M7-test.map", "E4M8-test.map", "END-test.map"};
-
-    for (const auto &map : quake_maps) {
-        SUBCASE(map.c_str())
-        {
-            const auto [bsp, bspx, prt] = LoadTestmapQ1("quake_map_source/" + map);
-
-            CHECK(GAME_QUAKE == bsp.loadversion->game->id);
-            CHECK(prt);
-            CheckFilled(bsp);
-        }
-    }
-}
-
-TEST_CASE("chop" * doctest::test_suite("testmaps_q1") * doctest::skip())
-{
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("quake_map_source/DM1-test.map", {"-chop", "-debugchop"});
-
-    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
-    CHECK(prt);
-    CheckFilled(bsp);
-}
-
 TEST_CASE("mountain" * doctest::test_suite("testmaps_q1") * doctest::skip() * doctest::may_fail())
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_mountain.map");
