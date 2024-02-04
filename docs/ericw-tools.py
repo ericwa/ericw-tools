@@ -55,6 +55,36 @@ def setup(app: Sphinx):
             parse_node=parse_epair,
         )
     app.add_object_type(
+        directivename='spotlight-key',
+        rolename='spotlight-key',
+        indextemplate='pair: %s; spotlight entity key',
+        parse_node=parse_epair,
+    )
+    app.add_object_type(
+        directivename='surflight-key',
+        rolename='surflight-key',
+        indextemplate='pair: %s; surface light entity key',
+        parse_node=parse_epair,
+    )
+    app.add_object_type(
+        directivename='projlight-key',
+        rolename='projlight-key',
+        indextemplate='pair: %s; projected texture light entity key',
+        parse_node=parse_epair,
+    )
+    app.add_object_type(
+        directivename='skylight-key',
+        rolename='skylight-key',
+        indextemplate='pair: %s; skylight entity key',
+        parse_node=parse_epair,
+    )
+    app.add_object_type(
+        directivename='sunlight-key',
+        rolename='sunlight-key',
+        indextemplate='pair: %s; sunlight entity key',
+        parse_node=parse_epair,
+    )
+    app.add_object_type(
             directivename='classname',
             rolename='classname',
             indextemplate='pair: %s; classname',

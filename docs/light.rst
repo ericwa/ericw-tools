@@ -790,7 +790,7 @@ If used on func_detail* or func_group, a full qbsp pass need to be run.
    Integer. Default 0.
 
    Can be set to a nonzero value to make these brushes emit as surface lights
-   only from a light template with a matching :light-key:`_surflight_group` value.
+   only from a light template with a matching :surflight-key:`_surflight_group` value.
 
 .. bmodel-key:: "_lightcolorscale" "n"
 
@@ -804,6 +804,9 @@ Light Entity Keys
 Light entity keys can be used in any entity with a classname starting
 with the first five letters "light". E.g. "light", "light_globe",
 "light_flame_small_yellow", etc.
+
+Point Lights
+------------
 
 .. light-key:: "light" "n"
 
@@ -821,7 +824,7 @@ with the first five letters "light". E.g. "light", "light_globe",
 
    Select an attenuation formaula for the light:
 
-   ::
+   .. code:: none
 
       0 => Linear attenuation (default)
       1 => 1/x attenuation
@@ -849,30 +852,6 @@ with the first five letters "light". E.g. "light", "light_globe",
    Specify red(r), green(g) and blue(b) components for the colour of the
    light. RGB component values are between 0 and 255 (between 0 and 1 is
    also accepted). Default is white light ("255 255 255").
-
-.. light-key:: "target" "name"
-
-   Turns the light into a spotlight, with the direction of light being
-   towards another entity with it's "targetname" key set to "name".
-
-.. light-key:: "mangle" "yaw pitch roll"
-
-   Turns the light into a spotlight and specifies the direction of light
-   using yaw, pitch and roll in degrees. Yaw specifies the angle around
-   the Z-axis from 0 to 359 degrees and pitch specifies the angle from
-   90 (straight up) to -90 (straight down). Roll has no effect, so use
-   any value (e.g. 0). Often easier than the "target" method.
-
-.. light-key:: "angle" "n"
-
-   Specifies the angle in degrees for a spotlight cone. Default 40.
-
-.. light-key:: "_softangle" "n"
-
-   Specifies the angle in degrees for an inner spotlight cone (must be
-   less than the "angle" cone. Creates a softer transition between the
-   full brightness of the inner cone to the edge of the outer cone.
-   Default 0 (disabled).
 
 .. light-key:: "targetname" "name"
 
@@ -921,7 +900,49 @@ with the first five letters "light". E.g. "light", "light_globe",
    Number of lights to use for "_deviance". Default 16 (only used if
    "_deviance" is set).
 
-.. light-key:: "_surface" "texturename"
+.. light-key:: "_bouncescale" "n"
+
+   Scales the amount of light that is contributed by bounces. Default is
+   1.0, 0.0 disables bounce lighting for this light.
+
+.. light-key:: "_nostaticlight" "n"
+
+   Set to 1 to make the light compiler ignore this entity (prevents it
+   from casting any light). e.g. could be useful with rtlights.
+
+Spotlights
+----------
+
+Supports all keys from `Point Lights`_ in addition to the following:
+
+.. spotlight-key:: "target" "name"
+
+   Turns the light into a spotlight, with the direction of light being
+   towards another entity with it's "targetname" key set to "name".
+
+.. spotlight-key:: "mangle" "yaw pitch roll"
+
+   Turns the light into a spotlight and specifies the direction of light
+   using yaw, pitch and roll in degrees. Yaw specifies the angle around
+   the Z-axis from 0 to 359 degrees and pitch specifies the angle from
+   90 (straight up) to -90 (straight down). Roll has no effect, so use
+   any value (e.g. 0). Often easier than the "target" method.
+
+.. spotlight-key:: "angle" "n"
+
+   Specifies the angle in degrees for a spotlight cone. Default 40.
+
+.. spotlight-key:: "_softangle" "n"
+
+   Specifies the angle in degrees for an inner spotlight cone (must be
+   less than the "angle" cone. Creates a softer transition between the
+   full brightness of the inner cone to the edge of the outer cone.
+   Default 0 (disabled).
+
+Surface Lights
+--------------
+
+.. surflight-key:: "_surface" "texturename"
 
    Makes surfaces with the given texture name emit light, by using this
    light as a template which is copied across those surfaces. Lights are
@@ -929,118 +950,160 @@ with the first five letters "light". E.g. "light", "light_globe",
    apart and positioned 2 units above the surfaces.
 
    To restrict this surface light config to a subset of brushes with
-   the "texturename" texture applied, see the :light-key:`_surflight_group` key.
+   the "texturename" texture applied, see the :surflight-key:`_surflight_group` key.
 
-.. light-key:: "_surface_offset" "n"
+.. surflight-key:: "_surface_offset" "n"
 
-   Controls the offset lights are placed above surfaces for :light-key:`_surface`.
+   Controls the offset lights are placed above surfaces for :surflight-key:`_surface`.
    Default 2.
 
-.. light-key:: "_surface_spotlight" "n"
+.. surflight-key:: "_surface_spotlight" "n"
 
-   For a surface light template (i.e. a light with :light-key:`_surface` set),
+   For a surface light template (i.e. a light with :surflight-key:`_surface` set),
    setting this to "1" makes each instance into a spotlight, with the
    direction of light pointing along the surface normal. In other words,
    it automatically sets "mangle" on each of the generated lights.
 
-.. light-key:: "_surface_radiosity" "n"
+.. surflight-key:: "_surface_radiosity" "n"
 
-   Whether to use Q1-style surface subdivision (0) or Q2-style 
+   Whether to use Q1-style surface subdivision (0) or Q2-style
    surface radiosity (1) on this light specifically.
 
-   Use in conjunction with :light-key:`_surface`.
+   Use in conjunction with :surflight-key:`_surface`.
 
-   The default can be changed for all surface lights in a map with 
+   The default can be changed for all surface lights in a map with
    worldspawn key :worldspawn-key:`_surflight_radiosity`.
 
-.. light-key:: "_surflight_group" "n"
+.. surflight-key:: "_surflight_group" "n"
 
    Integer, default 0.
 
-   For use with :light-key:`_surface` lights.
+   For use with :surflight-key:`_surface` lights.
 
    Can be set to a nonzero value to restrict
    this surface light template to only emit from brushes with a matching
    :bmodel-key:`_surflight_group` value.
 
-.. light-key:: "_project_texture" "texture"
+
+Projected Texture Lights
+------------------------
+
+.. projlight-key:: "_project_texture" "texture"
 
    Specifies that a light should project this texture. The texture must
    be used in the map somewhere.
 
-.. light-key:: "_project_mangle" "yaw pitch roll"
+   .. todo:: This is a qbsp limitation which could be fixed
+
+.. projlight-key:: "_project_mangle" "yaw pitch roll"
 
    Specifies the yaw/pitch/roll angles for a texture projection
    (overriding mangle).
 
-.. light-key:: "_project_fov" "n"
+.. projlight-key:: "_project_fov" "n"
 
    Specifies the fov angle for a texture projection. Default 90.
 
-.. light-key:: "_bouncescale" "n"
 
-   Scales the amount of light that is contributed by bounces. Default is
-   1.0, 0.0 disables bounce lighting for this light.
+Sun Light
+---------
 
-.. light-key:: "_sun" "n"
+Also called directional light. Emitted from sky faces.
+
+.. sunlight-key:: "_sun" "n"
 
    Set to 1 to make this entity a sun, as an alternative to using the
-   sunlight worldspawn keys. If the light targets an info_null entity,
+   sunlight worldspawn keys.
+
+.. sunlight-key:: "target" "t"
+
+   If the light targets an info_null entity,
    the direction towards that entity sets sun direction. The light
    itself is disabled, so it can be placed anywhere in the map.
 
-   The following light properties correspond to these sunlight settings:
+.. sunlight-key:: "mangle" "yaw pitch roll"
 
-   ::
+   Alternate way of specifying sunlight direction.
 
-      light       => _sunlight
-      mangle      => _sunlight_mangle
-      deviance    => _sunlight_penumbra
-      _color      => _sunlight_color
-      _dirt       => _sunlight_dirt
-      _anglescale => _anglescale
-      style       => flicker style for styled sunlight
-      targetname  => targetname for switchable sunlight
-      _suntexture => this sunlight is only emitted from faces with this texture name
+   Equivalent to worldspawn key :worldspawn-key:`_sunlight_mangle`.
 
-.. light-key:: "_sunlight2" "n"
+.. sunlight-key:: "light" "n"
+
+   Equivalent to worldspawn key :worldspawn-key:`_sunlight`.
+
+.. sunlight-key:: "color" "r g b"
+
+   Equivalent to worldspawn key :worldspawn-key:`_sunlight_color`.
+
+.. sunlight-key:: "deviance" "n"
+
+   Equivalent to worldspawn key :worldspawn-key:`_sunlight_penumbra`.
+
+.. sunlight-key:: "_dirt" "n"
+
+   Equivalent to worldspawn key :worldspawn-key:`_sunlight_dirt`.
+
+.. sunlight-key:: "_anglescale" "n"
+
+   Equivalent to worldspawn key :worldspawn-key:`_anglescale`.
+
+.. sunlight-key:: "style" "n"
+
+   Flicker style for styled sunlight.
+
+.. sunlight-key:: "targetname" "name"
+
+   Targetname for switchable sunlight.
+
+.. sunlight-key:: "_suntexture" "texname"
+
+   This sunlight is only emitted from faces with this texture name. Default is to be emitted from all sky textures.
+
+
+Sky Light
+---------
+
+Hemisphere shaped light emitted from sky faces.
+
+.. skylight-key:: "_sunlight2" "n"
 
    Set to 1 to make this entity control the upper dome lighting emitted
    from sky faces, as an alternative to the worldspawn key :worldspawn-key:`_sunlight2`.
    The light entity itself is disabled, so it can be placed anywhere in
    the map.
 
-   The following light properties correspond to these sunlight settings:
+.. skylight-key:: "_sunlight3" "n"
 
-   light
-      _sunlight2
+   Same as :skylight-key:`_sunlight2`, but makes this sky light come from the lower hemisphere.
 
-   _color
-      _sunlight2_color
+.. skylight-key:: "light" "n"
 
-   _dirt
-      _sunlight2_dirt
+   Sets the dome light brightness. Equivalent to worldspawn key :worldspawn-key:`_sunlight2`.
 
-   _anglescale
-      _anglescale
+.. skylight-key:: "_color" "r g b"
 
-   style
-      flicker style for styled dome light
+   Sets the dome light color. Equivalent to worldspawn key :worldspawn-key:`_sunlight2_color`.
 
-   targetname
-      targetname for switchable sunlight
+.. skylight-key:: "_dirt" "n"
 
-   _suntexture
-      this sunlight is only emitted from faces with this texture name
+   Equivalent to worldspawn key :worldspawn-key:`_sunlight2_dirt`.
 
-.. light-key:: "_sunlight3" "n"
+.. skylight-key:: "_anglescale" "n"
 
-   Same as :light-key:`_sunlight2`, but for the lower hemisphere.
+   Equivalent to worldspawn key :worldspawn-key:`_anglescale`.
 
-.. light-key:: "_nostaticlight" "n"
+.. skylight-key:: "style" "n"
 
-   Set to 1 to make the light compiler ignore this entity (prevents it
-   from casting any light). e.g. could be useful with rtlights.
+   Flicker style for styled sky light.
+
+.. skylight-key:: "targetname" "name"
+
+   Targetname for switchable skylight.
+
+.. skylight-key:: "_suntexture" "texname"
+
+   This sky light is only emitted from faces with this texture name. Default is to be emitted from all sky textures.
+
 
 Lighting Channels
 =================
