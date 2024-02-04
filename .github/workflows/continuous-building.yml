@@ -118,6 +118,6 @@ jobs:
       with:
         draft: true
         files: |
-          build-windows\*-win64.zip
+          build-windows/*-win64.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
