@@ -104,17 +104,20 @@ std::optional<texture> load_stb(
     const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // list of supported extensions and their loaders
-constexpr struct
+struct extension_info_t
 {
     const char *suffix;
     ext id;
     decltype(load_wal) *loader;
-} extension_list[] = {{".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb}, {".tga", ext::TGA, load_stb},
+};
+
+constexpr extension_info_t extension_list[] = {{".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb}, {".tga", ext::TGA, load_stb},
     {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
 
 // Attempt to load a texture from the specified name.
 std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
-    bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix = false);
+    bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix = false,
+    bool mip_only = false);
 
 enum class meta_ext
 {

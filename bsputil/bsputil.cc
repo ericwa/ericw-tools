@@ -119,7 +119,7 @@ static void ReplaceTexturesFromWad(mbsp_t &bsp)
         logging::print("bsp texture: {}\n", tex.name);
 
         // see if this texture in the .bsp is in the wad?
-        if (auto [wadtex_opt, _0, mipdata] = img::load_texture(tex.name, false, bsp.loadversion->game, bsputil_options); wadtex_opt) {
+        if (auto [wadtex_opt, _0, mipdata] = img::load_texture(tex.name, false, bsp.loadversion->game, bsputil_options, false, true); wadtex_opt) {
             const img::texture &wadtex = *wadtex_opt;
 
             if  (tex.width != wadtex.width || tex.height != wadtex.height) {

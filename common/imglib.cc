@@ -327,7 +327,7 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
 }
 
 std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
-    bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix)
+    bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix, bool mip_only)
 {
     fs::path prefix{};
 
@@ -335,7 +335,15 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
         prefix = "textures";
     }
 
-    for (auto &ext : img::extension_list) {
+    std::vector<extension_info_t> exts;
+
+    if (mip_only) {
+        exts = std::vector<extension_info_t>{{"", ext::MIP, load_mip}};
+    } else {
+        exts = std::vector<extension_info_t>(std::begin(img::extension_list), std::end(img::extension_list));
+    }
+
+    for (auto &ext : exts) {
         fs::path p = (no_prefix ? fs::path(name) : (prefix / name)) += ext.suffix;
 
         if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {

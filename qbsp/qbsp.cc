@@ -1504,7 +1504,7 @@ static void LoadTextureData()
         miptex.name = map.miptex[i].name;
 
         {
-            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, qbsp_options.target_game, qbsp_options);
+            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, qbsp_options.target_game, qbsp_options, false, true);
 
             if (!tex) {
                 if (pos.archive) {

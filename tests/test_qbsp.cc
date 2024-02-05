@@ -1472,6 +1472,48 @@ TEST_CASE("q1_wad_external" * doctest::test_suite("testmaps_q1"))
     CHECK(bsp.dtex.textures[3].data.size() == sizeof(dmiptex_t));
 }
 
+TEST_CASE("q1_loose_textures_ignored" * doctest::test_suite("testmaps_q1"))
+{
+    INFO("q1 should only load textures from .wad's. loose textures should not be included.");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_loose_textures_ignored/q1_loose_textures_ignored.map");
+
+    CHECK(GAME_QUAKE == bsp.loadversion->game->id);
+
+    REQUIRE(bsp.dtex.textures.size() == 4);
+
+    // FIXME: we shouldn't really write out skip
+    const miptex_t &skip = bsp.dtex.textures[0];
+    CHECK(skip.name == "skip");
+    CHECK(!skip.null_texture);
+    CHECK(skip.width == 64);
+    CHECK(skip.height == 64);
+    CHECK(skip.data.size() > sizeof(dmiptex_t));
+
+    // the .map directory contains a "orangestuff8.png" which is 16x16.
+    // make sure it's not picked up (https://github.com/ericwa/ericw-tools/issues/404).
+    const miptex_t &orangestuff8 = bsp.dtex.textures[1];
+    CHECK(orangestuff8.name == "orangestuff8");
+    CHECK(!orangestuff8.null_texture);
+    CHECK(orangestuff8.width == 64);
+    CHECK(orangestuff8.height == 64);
+    CHECK(orangestuff8.data.size() > sizeof(dmiptex_t));
+
+    const miptex_t &zwater1 = bsp.dtex.textures[2];
+    CHECK(zwater1.name == "*zwater1");
+    CHECK(!zwater1.null_texture);
+    CHECK(zwater1.width == 64);
+    CHECK(zwater1.height == 64);
+    CHECK(zwater1.data.size() > sizeof(dmiptex_t));
+
+    const miptex_t &brown_brick = bsp.dtex.textures[3];
+    CHECK(brown_brick.name == "brown_brick");
+    CHECK(!brown_brick.null_texture);
+    CHECK(brown_brick.width == 128);
+    CHECK(brown_brick.height == 128);
+    CHECK(brown_brick.data.size() > sizeof(dmiptex_t));
+}
+
 /**
  * Test that we automatically try to load X.wad when compiling X.map
  **/
