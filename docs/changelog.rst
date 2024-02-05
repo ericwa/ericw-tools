@@ -10,15 +10,15 @@ This is the sixth alpha release of our 2.0.0 "dev builds".
 The old stable v0.18.2-rc1 release still has more optimized output for Q1 and faster/less memory use for
 qbsp/light, but we're working on regressions and welcome feedback as we work towards a stable 2.0.0 build.
 
-Behaviour changes since alpha5:
+Changes since alpha5:
 
 - light: fix "-emissivequality high" having incorrect brightness due to a bad gate setting.
   This will cause different output from 2.0.0-alpha1 through alpha5 when emissives / bounce are in use.
-
 - qbsp: change so liquids don't cause splits in perpendicular walls, by default.
   You can opt back into the old behaviour with "-nomergeacrossliquids" (or setting "_nomergeacrossliquids" "1"
   as a worldspawn key/value). This will be necessary for maps targetting water caustics (e.g. ezQuake),
   otherwise the water caustics effect will extend out of the water.
+- packaging: get rid of the "bin" subfolder in the releases
 
 Fixes since alpha5:
 
@@ -33,6 +33,7 @@ Fixes since alpha5:
   The new idea is, translucent things (e.g. translucent water, func_detail_fence, etc.) weld to other translucent
   things, and opaque things (func_detail, worldpsawn, etc.) weld to each other. func_detail_wall is special and
   only welds to itself.
+- qbsp: fix .tga/.jpg/.png files with the same names as .wad textures causing corrupt .bsp textures
 
 Enhancements since alpha5:
 
