@@ -68,10 +68,10 @@ add_loader_path_to_rpath(lightpreview)
 
 # Install Qt DLL's
 if (WIN32)
-    install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION bin)
-    install(FILES $<TARGET_FILE:Qt5::Gui> DESTINATION bin)
-    install(FILES $<TARGET_FILE:Qt5::Core> DESTINATION bin)
-    install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION bin/platforms)
+    install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION .)
+    install(FILES $<TARGET_FILE:Qt5::Gui> DESTINATION .)
+    install(FILES $<TARGET_FILE:Qt5::Core> DESTINATION .)
+    install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION platforms)
 endif ()
 
 function(apple_install_lib SRC_TARGET_NAME DEST_PATH)
@@ -109,4 +109,4 @@ if (APPLE)
     apple_install_lib(Qt5::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/5")
 endif ()
 
-install(TARGETS lightpreview RUNTIME DESTINATION bin BUNDLE DESTINATION bin)
+install(TARGETS lightpreview RUNTIME DESTINATION . BUNDLE DESTINATION .)

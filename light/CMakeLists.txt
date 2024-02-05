@@ -92,7 +92,7 @@ if (embree_FOUND)
 	endif()
 
 	if(NOT SKIP_EMBREE_INSTALL)
-		install(FILES $<TARGET_FILE:embree> DESTINATION bin)
+		install(FILES $<TARGET_FILE:embree> DESTINATION .)
 	endif()
 
 	# install TBB
@@ -112,7 +112,7 @@ if (embree_FOUND)
 		get_filename_component(TBB_SO_FILE "${TBB_SO_FILE_SYMLINK}" REALPATH)
 		message(STATUS "TBB .so file: ${TBB_SO_FILE}")
 
-		install(FILES ${TBB_SO_FILE} DESTINATION bin RENAME "${TBB_SO_FILE_SYMLINK_NAME}")
+		install(FILES ${TBB_SO_FILE} DESTINATION . RENAME "${TBB_SO_FILE_SYMLINK_NAME}")
 
 		# tbbmalloc
 		get_target_property(TBBMALLOC_SO_FILE_SYMLINK TBB::tbbmalloc IMPORTED_LOCATION_RELEASE)
@@ -125,20 +125,20 @@ if (embree_FOUND)
 
 		message(STATUS "TBBMALLOC .so file: ${TBBMALLOC_SO_FILE}")
 
-		install(FILES ${TBBMALLOC_SO_FILE} DESTINATION bin RENAME "${TBBMALLOC_SO_FILE_SYMLINK_NAME}")
+		install(FILES ${TBBMALLOC_SO_FILE} DESTINATION . RENAME "${TBBMALLOC_SO_FILE_SYMLINK_NAME}")
 	else()
 		# preferred method
-		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION bin)
-		install(FILES $<TARGET_FILE:TBB::tbbmalloc> DESTINATION bin)
+		install(FILES $<TARGET_FILE:TBB::tbb> DESTINATION .)
+		install(FILES $<TARGET_FILE:TBB::tbbmalloc> DESTINATION .)
 	endif()
 
 	if((NOT SKIP_EMBREE_INSTALL) AND (NOT EMBREE_LICENSE STREQUAL EMBREE_LICENSE-NOTFOUND))
-		install(FILES ${EMBREE_LICENSE} DESTINATION bin RENAME LICENSE-embree.txt)
+		install(FILES ${EMBREE_LICENSE} DESTINATION . RENAME LICENSE-embree.txt)
 	endif()
 endif(embree_FOUND)
 
 copy_mingw_dlls(light)
 add_loader_path_to_rpath(light)
 
-install(TARGETS light RUNTIME DESTINATION bin)
-install(FILES ../gpl_v3.txt DESTINATION bin)
+install(TARGETS light RUNTIME DESTINATION .)
+install(FILES ../gpl_v3.txt DESTINATION .)

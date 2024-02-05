@@ -38,7 +38,7 @@ target_link_libraries(libqbsp common ${CMAKE_THREAD_LIBS_INIT} TBB::tbb TBB::tbb
 add_executable(qbsp main.cc)
 target_link_libraries(qbsp libqbsp)
 
-install(TARGETS qbsp RUNTIME DESTINATION bin)
+install(TARGETS qbsp RUNTIME DESTINATION .)
 
 # HACK: copy .dll dependencies
 add_custom_command(TARGET qbsp POST_BUILD

@@ -17,4 +17,4 @@ add_custom_command(TARGET bsputil POST_BUILD
 copy_mingw_dlls(bsputil)
 add_loader_path_to_rpath(bsputil)
 
-install(TARGETS bsputil RUNTIME DESTINATION bin)
+install(TARGETS bsputil RUNTIME DESTINATION .)

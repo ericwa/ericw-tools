@@ -68,13 +68,13 @@ if(MINGW)
 	find_file(LIB_WINPTHREAD_1_DLL NAMES "libwinpthread-1.dll")
 
 	if(LIB_GCC_S_SEH_1_DLL)
-		install(FILES ${LIB_GCC_S_SEH_1_DLL} DESTINATION bin)
+		install(FILES ${LIB_GCC_S_SEH_1_DLL} DESTINATION .)
 	endif()
 	if(LIB_STDCPP_6_DLL)
-		install(FILES ${LIB_STDCPP_6_DLL} DESTINATION bin)
+		install(FILES ${LIB_STDCPP_6_DLL} DESTINATION .)
 	endif()
 	if(LIB_WINPTHREAD_1_DLL)
-		install(FILES ${LIB_WINPTHREAD_1_DLL} DESTINATION bin)
+		install(FILES ${LIB_WINPTHREAD_1_DLL} DESTINATION .)
 	endif()
 endif()
 
@@ -202,7 +202,7 @@ if(NOT DISABLE_DOCS)
 	add_subdirectory(docs)
 endif ()
 
-install(FILES README.md DESTINATION bin)
+install(FILES README.md DESTINATION .)
 
 #CPack configuration
 
