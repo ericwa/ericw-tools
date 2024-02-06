@@ -868,6 +868,15 @@ TEST_CASE("q1_sunlight")
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {49, 49, 49}, {0, 0, 0}, {0, 0, 1}, &lit);
 }
 
+TEST_CASE("q1_light_suntexture")
+{
+    INFO("different _sun 1 entities can emit from specific texture names using _suntexture");
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_suntexture.map", {});
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {35, 0, 0}, {504, 1288, 944}, {0, 0, 1}, &lit);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 142}, {1000, 1288, 944}, {0, 0, 1}, &lit);
+}
+
 TEST_CASE("q1_light_bounce_litwater without the water")
 {
     auto [bsp, bspx] = QbspVisLight_Common("q1_light_bounce_litwater.map", {"-omitdetail"}, {"-lit", "-bounce", "4"}, runvis_t::no);

@@ -1031,7 +1031,7 @@ Also called directional light. Emitted from sky faces.
 
    Equivalent to worldspawn key :worldspawn-key:`_sunlight`.
 
-.. sunlight-key:: "color" "r g b"
+.. sunlight-key:: "_color" "r g b"
 
    Equivalent to worldspawn key :worldspawn-key:`_sunlight_color`.
 
