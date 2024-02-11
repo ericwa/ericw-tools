@@ -20,6 +20,7 @@
 #include <map>
 #include <doctest/doctest.h>
 #include "testutils.hh"
+#include "test_main.hh"
 
 // FIXME: Clear global data (planes, etc) between each test
 
@@ -99,7 +100,14 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
     std::vector<std::string> args{"", // the exe path, which we're ignoring in this case
-        "-noverbose", "-path", wal_metadata_path.string()};
+        "-path", wal_metadata_path.string()};
+
+    if (!tests_verbose) {
+        args.push_back("-noverbose");
+    } else {
+        args.push_back("-nopercent");
+    }
+
     for (auto &arg : extra_args) {
         args.push_back(arg);
     }

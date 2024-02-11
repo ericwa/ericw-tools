@@ -8,6 +8,7 @@
 #include <testmaps.hh>
 #include <vis/vis.hh>
 #include "test_qbsp.hh"
+#include "test_main.hh"
 
 static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std::vector<std::string> extra_qbsp_args,
     std::vector<std::string> extra_light_args, runvis_t run_vis)
@@ -40,7 +41,13 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
     std::vector<std::string> args{"", // the exe path, which we're ignoring in this case
-        "-noverbose"};
+        };
+
+    if (!tests_verbose) {
+        args.push_back("-noverbose");
+    } else {
+        args.push_back("-nopercent");
+    }
     for (auto &extra : extra_qbsp_args) {
         args.push_back(extra);
     }
