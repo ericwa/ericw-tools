@@ -2473,6 +2473,13 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     base_contents.illusionary_visblocker =
         string_iequals(entity.epairs.get("classname"), "func_illusionary_visblocker");
 
+    // non-Q2: -transwater implies liquids are detail
+    if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
+        if (base_contents.is_liquid(qbsp_options.target_game)) {
+            base_contents = qbsp_options.target_game->set_detail(base_contents);
+        }
+    }
+
     return base_contents;
 }
 

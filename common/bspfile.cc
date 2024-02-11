@@ -109,7 +109,7 @@ private:
     // todo: this should be the only state inside a contentflags_t in q1 mode.
     struct q1_contentflags_bits
     {
-        using bitset_t = std::bitset<14>;
+        using bitset_t = std::bitset<15>;
 
         // visible contents
         bool solid = false;
@@ -129,6 +129,7 @@ private:
         // content flags
         bool detail = false;
         bool mirror_inside = false;
+        bool mirror_inside_set = false; // whether to use mirror_inside (if false, use content default)
         bool suppress_clipping_same_type = false;
 
         constexpr size_t last_visible_contents() const { return 7; }
@@ -148,7 +149,8 @@ private:
             result[10] = illusionary_visblocker;
             result[11] = detail;
             result[12] = mirror_inside;
-            result[13] = suppress_clipping_same_type;
+            result[13] = mirror_inside_set;
+            result[14] = suppress_clipping_same_type;
             return result;
         }
 
@@ -167,12 +169,13 @@ private:
               illusionary_visblocker(bitset[10]),
               detail(bitset[11]),
               mirror_inside(bitset[12]),
-              suppress_clipping_same_type(bitset[13])
+              mirror_inside_set(bitset[13]),
+              suppress_clipping_same_type(bitset[14])
         {
         }
 
         static constexpr const char *bitflag_names[] = {"SOLID", "SKY", "WALL", "FENCE", "LAVA", "SLIME", "WATER",
-            "MIST", "ORIGIN", "CLIP", "ILLUSIONARY_VISBLOCKER", "DETAIL", "MIRROR_INSIDE",
+            "MIST", "ORIGIN", "CLIP", "ILLUSIONARY_VISBLOCKER", "DETAIL", "MIRROR_INSIDE", "MIRROR_INSIDE_SET",
             "SUPPRESS_CLIPPING_SAME_TYPE"};
 
         constexpr bool operator[](size_t index) const
@@ -191,7 +194,8 @@ private:
                 case 10: return illusionary_visblocker;
                 case 11: return detail;
                 case 12: return mirror_inside;
-                case 13: return suppress_clipping_same_type;
+                case 13: return mirror_inside_set;
+                case 14: return suppress_clipping_same_type;
                 default: throw std::out_of_range("index");
             }
         }
@@ -212,7 +216,8 @@ private:
                 case 10: return illusionary_visblocker;
                 case 11: return detail;
                 case 12: return mirror_inside;
-                case 13: return suppress_clipping_same_type;
+                case 13: return mirror_inside_set;
+                case 14: return suppress_clipping_same_type;
                 default: throw std::out_of_range("index");
             }
         }
@@ -270,6 +275,7 @@ private:
             // clear flags
             this_test.detail = false;
             this_test.mirror_inside = false;
+            this_test.mirror_inside_set = false;
             this_test.suppress_clipping_same_type = false;
 
             q1_contentflags_bits empty_test;
@@ -300,6 +306,7 @@ private:
         result.detail = data.is_detail;
 
         result.illusionary_visblocker = contents.illusionary_visblocker;
+        result.mirror_inside_set = contents.mirror_inside.has_value();
         result.mirror_inside = contents.mirror_inside.value_or(false);
         result.suppress_clipping_same_type = !contents.clips_same_type.value_or(true);
 
@@ -339,7 +346,11 @@ private:
         }
 
         result.illusionary_visblocker = bits.illusionary_visblocker;
-        result.mirror_inside = bits.mirror_inside;
+        if (bits.mirror_inside_set) {
+            result.mirror_inside = bits.mirror_inside;
+        } else {
+            result.mirror_inside = std::nullopt;
+        }
         result.clips_same_type = !bits.suppress_clipping_same_type;
 
         return result;
@@ -468,6 +479,13 @@ public:
     {
         auto bits = contentflags_to_bits(original);
         bits.detail = false;
+        return contentflags_from_bits(bits);
+    }
+
+    contentflags_t set_detail(const contentflags_t &original) const override
+    {
+        auto bits = contentflags_to_bits(original);
+        bits.detail = true;
         return contentflags_from_bits(bits);
     }
 
@@ -1123,6 +1141,13 @@ struct gamedef_q2_t : public gamedef_t
     {
         contentflags_t result = original;
         result.native &= ~Q2_CONTENTS_DETAIL;
+        return result;
+    }
+
+    contentflags_t set_detail(const contentflags_t &original) const override
+    {
+        contentflags_t result = original;
+        result.native |= Q2_CONTENTS_DETAIL;
         return result;
     }
 

@@ -2324,3 +2324,46 @@ TEST_CASE("q1_tjunc_matrix")
         CHECK( has_tjunc(INDEX_SKY, INDEX_SKY));
     }
 }
+
+TEST_CASE("q1_liquid_is_detail" * doctest::test_suite("testmaps_q1"))
+{
+    const auto portal_underwater = prtfile_winding_t{{-168, -384, 32}, {-168, -320, 32}, {-168, -320, -32}, {-168, -384, -32}};
+    const auto portal_above = portal_underwater.translate({0, 320, 128});
+
+    SUBCASE("transparent water") {
+        // by default, we're compiling with transparent water
+        // this implies water is detail
+
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_liquid_is_detail.map");
+
+        REQUIRE(prt.has_value());
+        REQUIRE(2 == prt->portals.size());
+
+        CHECK(((PortalMatcher(prt->portals[0].winding, portal_underwater) && PortalMatcher(prt->portals[1].winding, portal_above)) ||
+               (PortalMatcher(prt->portals[0].winding, portal_above) && PortalMatcher(prt->portals[1].winding, portal_underwater))));
+
+        // only 3 clusters: room with water, side corridors
+        CHECK(prt->portalleafs == 3);
+
+        // above water, in water, plus 2 side rooms.
+        // note
+        CHECK(prt->portalleafs_real == 4);
+    }
+
+    SUBCASE("opaque water") {
+        const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_liquid_is_detail.map", {"-notranswater"});
+
+        REQUIRE(prt.has_value());
+        REQUIRE(2 == prt->portals.size());
+
+        // same portals as transparent water case
+        // (since the water is opqaue, it doesn't get a portal)
+        CHECK(((PortalMatcher(prt->portals[0].winding, portal_underwater) && PortalMatcher(prt->portals[1].winding, portal_above)) ||
+               (PortalMatcher(prt->portals[0].winding, portal_above) && PortalMatcher(prt->portals[1].winding, portal_underwater))));
+
+        // 4 clusters this time:
+        // above water, in water, plus 2 side rooms.
+        CHECK(prt->portalleafs == 4);
+        CHECK(prt->portalleafs_real == 4);
+    }
+}
