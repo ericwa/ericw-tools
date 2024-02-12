@@ -67,3 +67,8 @@
 "classname" "info_player_start"
 "origin" "-88 -64 120"
 }
+// entity 2
+{
+"classname" "info_null"
+"origin" "-40 -48 152"
+}

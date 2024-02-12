@@ -697,6 +697,10 @@ public:
         auto bits_a = contentflags_to_bits(a);
         auto bits_b = contentflags_to_bits(b);
 
+        // aviods spamming "sides not found" warning on Q1 maps with sky
+        if ((bits_a.solid || bits_a.sky) && (bits_b.solid || bits_b.sky))
+            return create_empty_contents();
+
         q1_contentflags_bits result;
 
         if (bits_a.suppress_clipping_same_type || bits_b.suppress_clipping_same_type) {

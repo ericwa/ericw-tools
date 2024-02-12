@@ -727,6 +727,8 @@ TEST_CASE("simple_worldspawn_sky" * doctest::test_suite("testmaps_q1"))
 
     CHECK(prt->portals.size() == 0);
     // FIXME: unsure what the expected number of visclusters is, does sky get one?
+
+    CHECK(12 == bsp.dclipnodes.size());
 }
 
 TEST_CASE("water_detail_illusionary" * doctest::test_suite("testmaps_q1"))
