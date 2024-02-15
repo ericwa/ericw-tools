@@ -283,39 +283,39 @@ void MainWindow::createPropertiesSidebar()
     // setup event handlers
 
     connect(reload_button, &QAbstractButton::clicked, this, &MainWindow::reload);
-    connect(lightmap_only, &QAbstractButton::toggled, this, [=](bool checked) { glView->setLighmapOnly(checked); });
-    connect(fullbright, &QAbstractButton::toggled, this, [=](bool checked) { glView->setFullbright(checked); });
-    connect(normals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawNormals(checked); });
-    connect(showtris, &QAbstractButton::toggled, this, [=](bool checked) { glView->setShowTris(checked); });
+    connect(lightmap_only, &QAbstractButton::toggled, this, [this](bool checked) { glView->setLighmapOnly(checked); });
+    connect(fullbright, &QAbstractButton::toggled, this, [this](bool checked) { glView->setFullbright(checked); });
+    connect(normals, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawNormals(checked); });
+    connect(showtris, &QAbstractButton::toggled, this, [this](bool checked) { glView->setShowTris(checked); });
     connect(showtris_seethrough, &QAbstractButton::toggled, this,
-        [=](bool checked) { glView->setShowTrisSeeThrough(checked); });
-    connect(visculling, &QAbstractButton::toggled, this, [=](bool checked) {
+        [this](bool checked) { glView->setShowTrisSeeThrough(checked); });
+    connect(visculling, &QAbstractButton::toggled, this, [this, keepcullposition, keepcullfrustum](bool checked) {
         glView->setVisCulling(checked);
         keepcullposition->setEnabled(checked);
         keepcullfrustum->setEnabled(keepcullposition->isEnabled());
     });
-    connect(keepcullposition, &QAbstractButton::toggled, this, [=](bool checked) {
+    connect(keepcullposition, &QAbstractButton::toggled, this, [this, keepcullfrustum](bool checked) {
         glView->setKeepCullOrigin(checked);
         keepcullfrustum->setEnabled(checked);
     });
-    connect(keepcullfrustum, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepCullFrustum(checked); });
-    connect(drawflat, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawFlat(checked); });
-    connect(hull0, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{0} : std::nullopt); });
-    connect(hull1, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{1} : std::nullopt); });
-    connect(hull2, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{2} : std::nullopt); });
-    connect(hull3, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{3} : std::nullopt); });
-    connect(hull4, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{4} : std::nullopt); });
-    connect(hull5, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{5} : std::nullopt); });
-    connect(drawportals, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawPortals(checked); });
-    connect(drawleak, &QAbstractButton::toggled, this, [=](bool checked) { glView->setDrawLeak(checked); });
-    connect(keepposition, &QAbstractButton::toggled, this, [=](bool checked) { glView->setKeepOrigin(checked); });
+    connect(keepcullfrustum, &QAbstractButton::toggled, this, [this](bool checked) { glView->setKeepCullFrustum(checked); });
+    connect(drawflat, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawFlat(checked); });
+    connect(hull0, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{0} : std::nullopt); });
+    connect(hull1, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{1} : std::nullopt); });
+    connect(hull2, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{2} : std::nullopt); });
+    connect(hull3, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{3} : std::nullopt); });
+    connect(hull4, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{4} : std::nullopt); });
+    connect(hull5, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{5} : std::nullopt); });
+    connect(drawportals, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawPortals(checked); });
+    connect(drawleak, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeak(checked); });
+    connect(keepposition, &QAbstractButton::toggled, this, [this](bool checked) { glView->setKeepOrigin(checked); });
     connect(nearest, &QAbstractButton::toggled, this,
-        [=](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });
+        [this](bool checked) { glView->setMagFilter(checked ? QOpenGLTexture::Nearest : QOpenGLTexture::Linear); });
     connect(draw_opaque, &QAbstractButton::toggled, this,
-        [=](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
+        [this](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
     connect(show_bmodels, &QAbstractButton::toggled, this,
-        [=](bool checked) { glView->setShowBmodels(checked); });
+        [this](bool checked) { glView->setShowBmodels(checked); });
 
     // set up load timer
     m_fileReloadTimer = std::make_unique<QTimer>();
@@ -476,7 +476,7 @@ void MainWindow::showEvent(QShowEvent *event)
     // FIXME: support more command-line options?
     auto args = QCoreApplication::arguments();
     if (args.size() == 2) {
-        QTimer::singleShot(0, this, [=] { loadFile(args.at(1)); });
+        QTimer::singleShot(0, this, [this, args] { loadFile(args.at(1)); });
     }
 }
 

@@ -40,6 +40,7 @@
 #include <algorithm> // std::sort
 #include <string>
 #include <fstream>
+#include <fmt/ostream.h>
 
 // TODO
 settings::common_settings bsputil_options;
@@ -709,7 +710,8 @@ int bsputil_main(int argc, char **argv)
             "[--decompile] [--decompile-geomonly] [--decompile-hull n]\n"
             "[--extract-bspx-lump lump_name output_file_name]\n"
             "[--insert-bspx-lump lump_name input_file_name]\n"
-            "[--remove-bspx-lump lump_name] bspfile/mapfile\n");
+            "[--remove-bspx-lump lump_name]\n"
+            "[--svg] bspfile/mapfile\n");
         exit(1);
     }
 
@@ -735,7 +737,205 @@ int bsputil_main(int argc, char **argv)
     }
 
     for (int32_t i = 1; i < argc - 1; i++) {
-        if (!strcmp(argv[i], "--scale")) {
+        if (!strcmp(argv[i], "--svg")) {
+
+            fs::path svg = fs::path(source).replace_extension(".svg");
+            std::ofstream f(svg, std::ios_base::out);
+
+            f << R"(<?xml version="1.0" encoding="UTF-8"?>)" << std::endl;
+            f << R"(<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">)" << std::endl;
+
+            auto &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            img::load_textures(&bsp, {});
+
+            struct rendered_faces_t
+            {
+                std::vector<const mface_t *>    faces;
+                qvec3f                          origin;
+                aabb3f                          bounds;
+            };
+
+            std::vector<rendered_faces_t> faces;
+            aabb3f total_bounds;
+            size_t total_faces = 0;
+            auto ents = EntData_Parse(bsp);
+
+            auto addSubModel = [&bsp, &faces, &total_bounds, &total_faces](int32_t index, qvec3f origin) {
+                auto &model = bsp.dmodels[index];
+                rendered_faces_t f {
+                    {},
+                    origin
+                };
+
+                std::vector<size_t> face_ids;
+                face_ids.reserve(model.numfaces);
+
+                for (size_t i = model.firstface; i < model.firstface + model.numfaces; i++)
+                {
+                    auto &face = bsp.dfaces[i];
+
+                    if (face.texinfo == -1)
+                        continue;
+
+                    auto &texinfo = bsp.texinfo[face.texinfo];
+
+                    if (texinfo.flags.is_nodraw)
+                        continue;
+                    // TODO
+                    //else if (texinfo.flags.native & Q2_SURF_SKY)
+                    //    continue;
+                    else if (!Q_strcasecmp(Face_TextureName(&bsp, &face), "trigger"))
+                        continue;
+
+                    auto norm = Face_Normal(&bsp, &face);
+
+                    if (qv::dot(qvec3d(0, 0, 1), norm) <= DEFAULT_ON_EPSILON)
+                        continue;
+
+                    face_ids.push_back(i);
+                }
+
+                std::sort(face_ids.begin(), face_ids.end(), [&bsp](size_t a, size_t b) {
+                    float za = std::numeric_limits<float>::lowest();
+                    float zb = za;
+                    auto &facea = bsp.dfaces[a];
+                    auto &faceb = bsp.dfaces[b];
+                
+                    for (size_t e = 0; e < facea.numedges; e++)
+                        za = std::max(za, Face_PointAtIndex(&bsp, &facea, e)[2]);
+                
+                    for (size_t e = 0; e < faceb.numedges; e++)
+                        zb = std::max(zb, Face_PointAtIndex(&bsp, &faceb, e)[2]);
+
+                    return za < zb;
+                });
+
+                for (auto &face_index : face_ids)
+                {
+                    const auto &face = bsp.dfaces[face_index];
+                    f.faces.push_back(&face);
+
+                    for (auto pt : Face_Points(&bsp, &face))
+                        f.bounds += f.origin + pt;
+                }
+
+                if (f.faces.empty())
+                    return;
+
+                total_bounds += f.bounds;
+                total_faces += f.faces.size();
+                faces.emplace_back(std::move(f));
+            };
+
+            addSubModel(0, {});
+
+            for (auto &entity : ents)
+            {
+                if (!entity.has("model"))
+                    continue;
+
+                qvec3f origin {};
+                int32_t model = atoi(entity.get("model").substr(1).c_str());
+
+                if (entity.has("origin"))
+                    entity.get_vector("origin", origin);
+
+                addSubModel(model, origin);
+            }
+
+            total_bounds = total_bounds.grow(32);
+
+            float xo = total_bounds.mins()[0];
+            float yo = total_bounds.mins()[1];
+            float zo = total_bounds.mins()[2];
+            
+            float xs = total_bounds.maxs()[0] - xo;
+            float ys = total_bounds.maxs()[1] - yo;
+            float zs = total_bounds.maxs()[2] - zo;
+
+            fmt::print(f, R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{}" height="{}">)", xs, ys);
+            f << std::endl;
+
+            f << R"(<defs><g id="bsp">)" << std::endl;
+
+            struct face_id_t
+            {
+                size_t          model;
+                size_t          face;
+            };
+            std::vector<face_id_t> face_ids;
+            face_ids.reserve(total_faces);
+
+            for (size_t i = 0; i < faces.size(); i++)
+                for (size_t f = 0; f < faces[i].faces.size(); f++)
+                    face_ids.emplace_back(i, f);
+
+            std::sort(face_ids.begin(), face_ids.end(), [&bsp, &faces, yo](face_id_t a, face_id_t b) {
+                float za = yo;
+                float zb = yo;
+                auto facea = faces[a.model].faces[a.face];
+                auto faceb = faces[b.model].faces[b.face];
+                
+                for (size_t e = 0; e < facea->numedges; e++)
+                    za = std::max(za, Face_PointAtIndex(&bsp, facea, e)[2] + faces[a.model].origin[2]);
+                
+                for (size_t e = 0; e < faceb->numedges; e++)
+                    zb = std::max(zb, Face_PointAtIndex(&bsp, faceb, e)[2] + faces[b.model].origin[2]);
+
+                return za < zb;
+            });
+
+            float low_z = total_bounds.maxs()[2], high_z = total_bounds.mins()[2];
+
+            for (auto &face_index : face_ids)
+            {
+                auto face = faces[face_index.model].faces[face_index.face];
+
+                for (auto &pt : Face_Points(&bsp, face))
+                {
+                    low_z = std::min(low_z, pt[2] + faces[face_index.model].origin[2]);
+                    high_z = std::max(high_z, pt[2] + faces[face_index.model].origin[2]);
+                }
+            }
+
+            for (auto &face_index : face_ids)
+            {
+                auto face = faces[face_index.model].faces[face_index.face];
+                auto pts = Face_Points(&bsp, face);
+                std::string pts_str;
+                float nz = xo;
+
+                for (auto &pt : pts)
+                {
+                    std::format_to(std::back_inserter(pts_str), "{},{} ", (pt[0] + faces[face_index.model].origin[0]) - xo, ys - ((pt[1] + faces[face_index.model].origin[1]) - yo));
+                    nz = std::max(nz, pt[2] + faces[face_index.model].origin[2]);
+                }
+
+                float z_scale = (nz - low_z) / (high_z - low_z);
+                float d = (0.5 + (z_scale * 0.5));
+                qvec3b color { 255, 255, 255 };
+
+                const char *tex = Face_TextureName(&bsp, face);
+
+                if (tex)
+                {
+                    if (auto texptr = img::find(tex))
+                        color = texptr->averageColor;
+                }
+
+                fmt::print(f, R"svg(<polygon points="{}" fill="rgb({}, {}, {})" />)svg", pts_str, color[0] * d, color[1] * d, color[2] * d);
+                f << std::endl;
+            }
+
+            f << R"(</g></defs>)" << std::endl;
+            
+            f << R"(<use href="#bsp" fill="none" stroke="black" stroke-width="15" stroke-miterlimit="0" />)" << std::endl;
+            f << R"(<use href="#bsp" fill="white" stroke="black" stroke-width="1" />)" << std::endl;
+
+            f << R"(</svg>)" << std::endl;
+
+        } else if (!strcmp(argv[i], "--scale")) {
 
             i++;
             if (i == argc - 1) {
