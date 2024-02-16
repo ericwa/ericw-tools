@@ -869,7 +869,7 @@ int bsputil_main(int argc, char **argv)
 
             for (size_t i = 0; i < faces.size(); i++)
                 for (size_t f = 0; f < faces[i].faces.size(); f++)
-                    face_ids.emplace_back(i, f);
+                    face_ids.push_back(face_id_t{i, f});
 
             std::sort(face_ids.begin(), face_ids.end(), [&bsp, &faces, yo](face_id_t a, face_id_t b) {
                 float za = yo;
