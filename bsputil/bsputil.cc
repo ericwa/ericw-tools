@@ -908,7 +908,7 @@ int bsputil_main(int argc, char **argv)
 
                 for (auto &pt : pts)
                 {
-                    std::format_to(std::back_inserter(pts_str), "{},{} ", (pt[0] + faces[face_index.model].origin[0]) - xo, ys - ((pt[1] + faces[face_index.model].origin[1]) - yo));
+                    fmt::format_to(std::back_inserter(pts_str), "{},{} ", (pt[0] + faces[face_index.model].origin[0]) - xo, ys - ((pt[1] + faces[face_index.model].origin[1]) - yo));
                     nz = std::max(nz, pt[2] + faces[face_index.model].origin[2]);
                 }
 
