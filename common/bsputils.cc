@@ -212,11 +212,12 @@ static int TextureName_Contents(const char *texname)
     return CONTENTS_SOLID;
 }
 
+// FIXME: name is misleading since we return true for opaque Q2 liquids
 bool // mxd
 ContentsOrSurfaceFlags_IsTranslucent(const mbsp_t *bsp, const int contents_or_surf_flags)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II)
-        return (contents_or_surf_flags & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66));
+        return (contents_or_surf_flags & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66 | Q2_SURF_WARP));
     else
         return contents_or_surf_flags == CONTENTS_WATER || contents_or_surf_flags == CONTENTS_LAVA ||
                contents_or_surf_flags == CONTENTS_SLIME;

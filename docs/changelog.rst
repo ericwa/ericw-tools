@@ -5,6 +5,12 @@ Changelog
 2.0.0-alpha7 (unreleased)
 =========================
 
+Changes
+-------
+
+- light: q2: opaque lit liquids receive light from both sides by default (specifically if they have the "warp" surf
+  flag)
+
 Features
 --------
 

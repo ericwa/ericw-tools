@@ -441,6 +441,15 @@ TEST_CASE("q2_light_translucency")
 
         CheckFaceLuxels(bsp, *in_shadow, [](qvec3b sample) { CHECK(sample == qvec3b(0)); });
     }
+
+    {
+        INFO("opaque liquids are lit twosided");
+
+        const qvec3d point {-616, 592, 224};
+
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {150, 150, 150}, point, {0, 0, 1});
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {150, 150, 150}, point, {0, 0, -1});
+    }
 }
 
 TEST_CASE("-visapprox vis with opaque liquids")
