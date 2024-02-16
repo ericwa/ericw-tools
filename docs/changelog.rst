@@ -2,6 +2,25 @@
 Changelog
 =========
 
+2.0.0-alpha7 (unreleased)
+=========================
+
+Features
+--------
+
+- bsputil: gained ``--svg`` export
+
+Bug fixes
+---------
+
+- qbsp: fix "sides not found" warning spam on Q1 maps with sky
+
+Enhancements
+------------
+
+- qbsp: liquids are automatically detail (according to ``-transwater``).
+
+
 2.0.0-alpha6
 ============
 

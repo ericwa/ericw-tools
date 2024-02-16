@@ -135,6 +135,10 @@ Options
 
    Removes *LUMPNAME* from *BSPFILE*.
 
+.. option:: --svg
+
+   Writes a top-down SVG rendering of *BSPFILE*.
+
 Author
 ======
 
