@@ -48,6 +48,7 @@ See file, 'COPYING', for details.
 #include <QStringList>
 #include <QThread>
 #include <QApplication>
+#include <QDesktopServices>
 
 #include <common/bspfile.hh>
 #include <qbsp/qbsp.hh>
@@ -55,6 +56,7 @@ See file, 'COPYING', for details.
 #include <light/light.hh>
 #include <common/bspinfo.hh>
 #include <fmt/chrono.h>
+#include <QMessageBox>
 
 #include "glview.h"
 
@@ -427,6 +429,13 @@ void MainWindow::updateRecentsSubmenu(const QStringList &recents)
 
 MainWindow::~MainWindow() { }
 
+static void OpenHelpFile(const QString &file) {
+    QString fileString = QCoreApplication::applicationDirPath() + QStringLiteral("/doc/") + file;
+    QUrl fileUrl = QUrl::fromLocalFile(fileString);
+
+    QDesktopServices::openUrl(fileUrl);
+};
+
 void MainWindow::setupMenu()
 {
     auto *menu = menuBar()->addMenu(tr("&File"));
@@ -449,6 +458,18 @@ void MainWindow::setupMenu()
     // view menu
 
     viewMenu = menuBar()->addMenu(tr("&View"));
+
+    // help menu
+
+    auto *helpMenu = menuBar()->addMenu(tr("&Help"));
+
+    helpMenu->addAction(tr("&Lightpreview Documentation"), this, [this](){
+        OpenHelpFile("lightpreview.html");
+    });
+    helpMenu->addAction(tr("&About"), this, [this](){
+        QMessageBox::about(this, tr("About lightpreview"),
+                           tr("ericw-tools " ERICWTOOLS_VERSION));
+    });
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
