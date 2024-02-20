@@ -1454,7 +1454,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         for (const auto &[f, model_offset] : faces) {
             const int fnum = Face_GetNum(&bsp, f);
             const auto plane_normal = Face_Normal(&bsp, f);
-            const qvec3f flat_color = qvec3f{Random(), Random(), Random()};
+            qvec3f flat_color = qvec3f{Random(), Random(), Random()};
+            // remap to [0.5, 1] for better contrast against cracks through to the void
+            flat_color /= 2.0f;
+            flat_color += qvec3f(0.5f, 0.5f, 0.5f);
 
             const size_t first_vertex_of_face = verts.size();
 
