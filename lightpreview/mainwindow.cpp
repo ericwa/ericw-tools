@@ -19,6 +19,7 @@ See file, 'COPYING', for details.
 
 #include "mainwindow.h"
 
+#include <QClipboard>
 #include <QCoreApplication>
 #include <QDockWidget>
 #include <QString>
@@ -454,6 +455,18 @@ void MainWindow::setupMenu()
 
     auto *exit = menu->addAction(tr("E&xit"), this, &QWidget::close);
     exit->setShortcut(QKeySequence::Quit);
+
+    // edit menu
+
+    auto *editMenu = menuBar()->addMenu(tr("&Edit"));
+    editMenu->addAction(tr("&Copy Camera Position"), this, [this](){
+        qvec3f pos = this->glView->cameraPosition();
+
+        std::string cpp_str = fmt::format("{}", pos);
+
+        QClipboard *clipboard = QGuiApplication::clipboard();
+        clipboard->setText(QString::fromStdString(cpp_str));
+    });
 
     // view menu
 
