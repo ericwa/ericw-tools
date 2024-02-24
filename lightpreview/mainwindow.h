@@ -31,6 +31,7 @@ class QLineEdit;
 class QCheckBox;
 class QStringList;
 class QTextEdit;
+class StatsPanel;
 
 enum class ETLogTab
 {
@@ -84,6 +85,7 @@ public:
 private:
     void createPropertiesSidebar();
     void createOutputLog();
+    void createStatsSidebar();
     void lightpreview_log_callback(logging::flag flags, const char *str);
     void lightpreview_percent_callback(std::optional<uint32_t> percent, std::optional<duration> elapsed);
     void logWidgetSetText(ETLogTab tab, const std::string &str);
@@ -111,6 +113,7 @@ private:
 
 private:
     GLView *glView = nullptr;
+    StatsPanel *stats_panel = nullptr;
 
     QCheckBox *vis_checkbox = nullptr;
     QCheckBox *light_checkbox = nullptr;

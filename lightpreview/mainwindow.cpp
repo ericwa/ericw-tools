@@ -60,6 +60,7 @@ See file, 'COPYING', for details.
 #include <QMessageBox>
 
 #include "glview.h"
+#include "stats.h"
 
 // Recent files
 
@@ -135,6 +136,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     createPropertiesSidebar();
     createOutputLog();
+    createStatsSidebar();
 
     createStatusBar();
 
@@ -325,6 +327,18 @@ void MainWindow::createPropertiesSidebar()
 
     m_fileReloadTimer->setSingleShot(true);
     m_fileReloadTimer->connect(m_fileReloadTimer.get(), &QTimer::timeout, this, &MainWindow::fileReloadTimerExpired);
+}
+
+void MainWindow::createStatsSidebar()
+{
+    QDockWidget *dock = new QDockWidget(tr("Stats"), this);
+
+    stats_panel = new StatsPanel();
+
+    // finish dock setup
+    dock->setWidget(stats_panel);
+    addDockWidget(Qt::RightDockWidgetArea, dock);
+    viewMenu->addAction(dock->toggleViewAction());
 }
 
 void MainWindow::logWidgetSetText(ETLogTab tab, const std::string &str)
@@ -871,6 +885,8 @@ void MainWindow::compileThreadExited()
         auto *style = new QLightStyleSlider(style_entry.first, glView);
         lightstyles->addWidget(style);
     }
+
+    stats_panel->updateWithBSP(&bsp);
 }
 
 void MainWindow::loadFileInternal(const QString &file, bool is_reload)
