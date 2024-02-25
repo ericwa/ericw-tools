@@ -51,8 +51,8 @@ struct mapface_t
     // but it is also here for quicker lookups.
     std::string texname{};
 
-    // faces can technically have different contents on each side;
-    // in Q1's case, consider `*waterskip` on one and `skip` on another.
+    // brushes can technically have different contents on each side;
+    // in Q1's case, consider `*water` on one and `brick` on another.
     // in Q2's case, contents are per-face (probably since brushes didn't have
     // any data on them other than faces), but only the first valid contents
     // end up being used. This stores the per-side contents, but be careful
