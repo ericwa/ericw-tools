@@ -36,8 +36,15 @@ void StatsPanel::addStat(const QString &str, int value)
     m_table->setRowCount(currentRow + 1);
 
     // populate it
-    m_table->setItem(currentRow, 0, new QTableWidgetItem(str));
-    m_table->setItem(currentRow, 1, new QTableWidgetItem(QString("%1").arg(value)));
+    auto *labelItem = new QTableWidgetItem(str);
+    labelItem->setFlags(labelItem->flags() & (~Qt::ItemIsEditable));
+    m_table->setItem(currentRow, 0, labelItem);
+
+    QLocale locale(QLocale::English, QLocale::UnitedStates);
+
+    auto *valueItem = new QTableWidgetItem(locale.toString(value));
+    valueItem->setFlags(valueItem->flags() & (~Qt::ItemIsEditable));
+    m_table->setItem(currentRow, 1, valueItem);
 }
 
 void StatsPanel::updateWithBSP(const mbsp_t *bsp)
