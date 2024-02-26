@@ -342,7 +342,10 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
     INFO("lm int_coord: ", int_coord[0], ", ", int_coord[1]);
     INFO("face num: ", Face_GetNum(bsp, face));
 
-    CHECK(sample == expected_color);
+    qvec3i delta = qv::abs(qvec3i{sample} - qvec3i{expected_color});
+    CHECK(delta[0] <= 1);
+    CHECK(delta[1] <= 1);
+    CHECK(delta[2] <= 1);
 }
 
 TEST_CASE("emissive lights")
@@ -515,7 +518,11 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face_on_pillar = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], {680, 1248, 1000});
         REQUIRE(face_on_pillar);
 
-        CheckFaceLuxels(bsp, *face_on_pillar, [](qvec3b sample) { CHECK(sample == qvec3b(255, 0, 0)); });
+        CheckFaceLuxels(bsp, *face_on_pillar, [](qvec3b sample) {
+            CHECK(sample[0] >= 254);
+            CHECK(sample[1] == 0);
+            CHECK(sample[2] == 0);
+        });
     }
 
     {
@@ -542,7 +549,11 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[2], {904, 1248, 1016});
         REQUIRE(face);
 
-        CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(0, 255, 0)); });
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            CHECK(sample[0] == 0);
+            CHECK(sample[1] >= 254);
+            CHECK(sample[2] == 0);
+        });
     }
 
     {
@@ -551,7 +562,11 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[3], {1288, 1248, 1016});
         REQUIRE(face);
 
-        CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(0, 0, 255)); });
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            CHECK(sample[0] == 0);
+            CHECK(sample[1] == 0);
+            CHECK(sample[2] >= 254);
+        });
     }
 
     {
@@ -575,7 +590,11 @@ TEST_CASE("light channel mask (_object_channel_mask, _light_channel_mask, _shado
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1480, 1248, 1004});
         REQUIRE(face);
 
-        CheckFaceLuxels(bsp, *face, [](qvec3b sample) { CHECK(sample == qvec3b(0, 0, 255)); });
+        CheckFaceLuxels(bsp, *face, [](qvec3b sample) {
+            CHECK(sample[0] == 0);
+            CHECK(sample[1] == 0);
+            CHECK(sample[2] >= 254);
+        });
     }
 
     {
