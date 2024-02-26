@@ -412,7 +412,7 @@ TEST_SUITE("settings")
 
 #include "common/polylib.hh"
 
-struct winding_check_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<4>>
+struct winding_check_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 4>>
 {
 public:
     inline size_t vector_size() { return storage.vector_size(); }
@@ -475,7 +475,7 @@ TEST_SUITE("winding_base_t")
 
         // check that constructors work
         {
-            polylib::winding_base_t<polylib::winding_storage_hybrid_t<4>> winding_other(winding.begin(), winding.end());
+            polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 4>> winding_other(winding.begin(), winding.end());
 
             {
                 auto it = winding_other.begin();
@@ -494,7 +494,7 @@ TEST_SUITE("winding_base_t")
         }
 
         {
-            polylib::winding_base_t<polylib::winding_storage_hybrid_t<4>> winding_other(
+            polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 4>> winding_other(
                 {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {3, 3, 3}, {4, 4, 4}});
 
             {
@@ -514,7 +514,7 @@ TEST_SUITE("winding_base_t")
         }
 
         {
-            polylib::winding_base_t<polylib::winding_storage_hybrid_t<4>> winding_other(std::move(winding));
+            polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 4>> winding_other(std::move(winding));
 
             CHECK(winding.size() == 0);
             CHECK(winding.begin() == winding.end());

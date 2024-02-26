@@ -83,14 +83,14 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
                 // FIXME: this only handles the "_sky_surface"  "red green blue" format.
                 //        There are other more complex variants we could handle documented in the link above.
                 // FIXME: we require value to be nonzero, see the check above - not sure if this matches arghrad
-                texture_color = cfg.sky_surface.value() * 255.0;
+                texture_color = cfg.sky_surface.value() * 255.0f;
             } else {
                 texture_color = qvec3f(Face_LookupTextureColor(bsp, face));
             }
         }
     }
 
-    texture_color.value() /= 255.0;
+    texture_color.value() /= 255.0f;
     texture_color.value() *= light_value; // Scale by light value
 
     // Calculate intensity...
@@ -107,7 +107,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         auto &l = surf.vpl = std::make_unique<surfacelight_t>();
 
         // Create winding...
-        auto winding = polylib::winding_t::from_winding_points(poly);
+        auto winding = polylib::winding3f_t::from_winding_points(poly);
         auto face_modelinfo = ModelInfoForFace(bsp, face - bsp->dfaces.data());
 
         for (auto &pt : winding) {
@@ -150,7 +150,7 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
                 }
             }
         } else {
-            winding.dice(cfg.surflightsubdivision.value(), [&](polylib::winding_t &w) {
+            winding.dice(cfg.surflightsubdivision.value(), [&](polylib::winding3f_t &w) {
                 ++l->points_before_culling;
 
                 qvec3f point = w.center() + l->surfnormal;
@@ -248,7 +248,7 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
         if (info != nullptr) {
             if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
                 if (info->flags.native & Q2_SURF_LIGHT) {
-                    qvec3f wc = polylib::winding_t::from_face(bsp, face).center();
+                    qvec3f wc = polylib::winding3f_t::from_face(bsp, face).center();
                     logging::print(
                         "WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
                 }

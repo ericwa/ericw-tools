@@ -1190,34 +1190,34 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
             flags.surflight_color = val.at("surflight_color").get<qvec3b>();
         }
         if (val.contains("surflight_minlight_scale")) {
-            flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<double>();
+            flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<float>();
         }
         if (val.contains("phong_angle")) {
-            flags.phong_angle = val.at("phong_angle").get<double>();
+            flags.phong_angle = val.at("phong_angle").get<float>();
         }
         if (val.contains("phong_angle_concave")) {
-            flags.phong_angle_concave = val.at("phong_angle_concave").get<double>();
+            flags.phong_angle_concave = val.at("phong_angle_concave").get<float>();
         }
         if (val.contains("phong_group")) {
             flags.phong_group = val.at("phong_group").get<int>();
         }
         if (val.contains("minlight")) {
-            flags.minlight = val.at("minlight").get<double>();
+            flags.minlight = val.at("minlight").get<float>();
         }
         if (val.contains("maxlight")) {
-            flags.maxlight = val.at("maxlight").get<double>();
+            flags.maxlight = val.at("maxlight").get<float>();
         }
         if (val.contains("minlight_color")) {
             flags.minlight_color = val.at("minlight_color").get<qvec3b>();
         }
         if (val.contains("light_alpha")) {
-            flags.light_alpha = val.at("light_alpha").get<double>();
+            flags.light_alpha = val.at("light_alpha").get<float>();
         }
         if (val.contains("light_twosided")) {
             flags.light_twosided = val.at("light_twosided").get<bool>();
         }
         if (val.contains("lightcolorscale")) {
-            flags.lightcolorscale = val.at("lightcolorscale").get<double>();
+            flags.lightcolorscale = val.at("lightcolorscale").get<float>();
         }
         if (val.contains("surflight_group")) {
             flags.surflight_group = val.at("surflight_group").get<int32_t>();
@@ -1321,7 +1321,7 @@ static void FindDebugFace(const mbsp_t *bsp)
 static int Vertex_NearestPoint(const mbsp_t *bsp, const qvec3f &point)
 {
     int nearest_vert = -1;
-    float nearest_dist = std::numeric_limits<double>::infinity();
+    float nearest_dist = std::numeric_limits<float>::infinity();
 
     for (int i = 0; i < bsp->dvertexes.size(); i++) {
         const qvec3f &vertex = bsp->dvertexes[i];
@@ -1690,14 +1690,14 @@ int light_main(int argc, const char **argv)
     logging::print("\n");
     logging::print("stats:\n");
     logging::print("{} lights tested, {} hits per sample point\n",
-        static_cast<double>(total_light_rays) / static_cast<double>(total_samplepoints),
-        static_cast<double>(total_light_ray_hits) / static_cast<double>(total_samplepoints));
+        static_cast<float>(total_light_rays) / static_cast<float>(total_samplepoints),
+        static_cast<float>(total_light_ray_hits) / static_cast<float>(total_samplepoints));
     logging::print("{} surface lights tested, {} hits per sample point\n",
-        static_cast<double>(total_surflight_rays) / static_cast<double>(total_samplepoints),
-        static_cast<double>(total_surflight_ray_hits) / static_cast<double>(total_samplepoints)); // mxd
+        static_cast<float>(total_surflight_rays) / static_cast<float>(total_samplepoints),
+        static_cast<float>(total_surflight_ray_hits) / static_cast<float>(total_samplepoints)); // mxd
     logging::print("{} bounce lights tested, {} hits per sample point\n",
-        static_cast<double>(total_bounce_rays) / static_cast<double>(total_samplepoints),
-        static_cast<double>(total_bounce_ray_hits) / static_cast<double>(total_samplepoints));
+        static_cast<float>(total_bounce_rays) / static_cast<float>(total_samplepoints),
+        static_cast<float>(total_bounce_ray_hits) / static_cast<float>(total_samplepoints));
 #endif
     logging::print("{} empty lightmaps\n", static_cast<int>(fully_transparent_lightmaps));
     logging::close();

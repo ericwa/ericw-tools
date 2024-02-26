@@ -42,9 +42,9 @@ struct surfacelight_t
     size_t points_before_culling;
 
     // Estimated visible AABB culling
-    aabb3d bounds;
+    aabb3f bounds;
 
-    std::optional<double> minlight_scale;
+    std::optional<float> minlight_scale;
 
     std::vector<qvec3f> points;
     std::vector<const mleaf_t *> leaves;

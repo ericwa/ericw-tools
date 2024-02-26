@@ -582,7 +582,7 @@ inline void CheckPlaneAgainstParents(size_t planenum, node_t *node)
     }
 }
 
-using stack_winding_storage_t = polylib::winding_storage_hybrid_t<polylib::STACK_POINTS_ON_WINDING>;
+using stack_winding_storage_t = polylib::winding_storage_hybrid_t<double, polylib::STACK_POINTS_ON_WINDING>;
 using stack_winding_t = polylib::winding_base_t<stack_winding_storage_t>;
 
 struct stack_side_t

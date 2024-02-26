@@ -657,7 +657,7 @@ static int l_create_winding(lua_State *state)
     qplane3d side_plane = pop_plane_from_side(state);
     lua_pop(state, 1);
 
-    using winding_t = polylib::winding_base_t<polylib::winding_storage_hybrid_t<16>>;
+    using winding_t = polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 16>>;
     std::optional<winding_t> winding = winding_t::from_plane(side_plane, extents);
 
     // loop through sides on brush

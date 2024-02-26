@@ -164,34 +164,34 @@ struct surfflags_t
     std::optional<qvec3b> surflight_color;
 
     // surface light rescaling
-    std::optional<double> surflight_minlight_scale;
+    std::optional<float> surflight_minlight_scale;
 
     // if non zero, enables phong shading and gives the angle threshold to use
-    double phong_angle;
+    float phong_angle;
 
     // if non zero, overrides _phong_angle for concave joints
-    double phong_angle_concave;
+    float phong_angle_concave;
 
     // _phong_group key, equivalent q2 map format's use of the "value" field
     int phong_group;
 
     // minlight value for this face. empty = inherit from worldspawn.
-    std::optional<double> minlight;
+    std::optional<float> minlight;
 
     // red minlight colors for this face
     qvec3b minlight_color;
 
     // custom opacity
-    std::optional<double> light_alpha;
+    std::optional<float> light_alpha;
 
     // two-sided lighting
     std::optional<bool> light_twosided;
 
     // maxlight value for this face
-    double maxlight;
+    float maxlight;
 
     // light color scale
-    double lightcolorscale = 1.0;
+    float lightcolorscale = 1.0;
 
     // surface light group
     int32_t surflight_group;

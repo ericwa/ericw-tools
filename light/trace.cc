@@ -43,12 +43,12 @@ const mleaf_t *Light_PointInLeaf(const mbsp_t *bsp, const qvec3f &point)
  * Given a float texture coordinate, returns a pixel index to sample in [0, width-1].
  * This assumes the texture repeats and nearest filtering
  */
-uint32_t clamp_texcoord(double in, uint32_t width)
+uint32_t clamp_texcoord(float in, uint32_t width)
 {
     if (in >= 0.0f) {
         return (uint32_t)in % width;
     } else {
-        double in_abs = ceil(fabs(in));
+        float in_abs = ceil(fabs(in));
         uint32_t in_abs_mod = (uint32_t)in_abs % width;
         return (width - in_abs_mod) % width;
     }

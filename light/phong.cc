@@ -76,8 +76,8 @@ static void FacesOverlappingEdge_r(
 
     const bsp2_dnode_t *node = BSP_GetNode(bsp, nodenum);
     const dplane_t *plane = BSP_GetPlane(bsp, node->planenum);
-    const double p0dist = plane->distance_to_fast(p0);
-    const double p1dist = plane->distance_to_fast(p1);
+    const float p0dist = plane->distance_to_fast(p0);
+    const float p1dist = plane->distance_to_fast(p1);
 
     if (fabs(p0dist) < 0.1 && fabs(p1dist) < 0.1) {
         // check all faces on this node.
@@ -469,12 +469,12 @@ void CalculateVertexNormals(const mbsp_t *bsp)
         const qplane3f f_plane = Face_Plane(bsp, &f);
 
         // any face normal within this many degrees can be smoothed with this face
-        double f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
+        float f_phong_angle = extended_texinfo_flags[f.texinfo].phong_angle;
         if (f_phong_angle == 0 && f_phongValue != 0) {
             // if Q2 style phong is requested, but Q1 is not in use, set the default phong angle
             f_phong_angle = modelinfo_t::DEFAULT_PHONG_ANGLE;
         }
-        double f_phong_angle_concave = extended_texinfo_flags[f.texinfo].phong_angle_concave;
+        float f_phong_angle_concave = extended_texinfo_flags[f.texinfo].phong_angle_concave;
         if (f_phong_angle_concave == 0) {
             f_phong_angle_concave = f_phong_angle;
         }
@@ -495,12 +495,12 @@ void CalculateVertexNormals(const mbsp_t *bsp)
 
                 // FIXME: factor out and share with above?
                 const int f2_phongValue = Q2_FacePhongValue(bsp, f2);
-                double f2_phong_angle = extended_texinfo_flags[f2->texinfo].phong_angle;
+                float f2_phong_angle = extended_texinfo_flags[f2->texinfo].phong_angle;
                 if (f2_phong_angle == 0 && f2_phongValue != 0) {
                     // if Q2 style phong is requested, but Q1 is not in use, set the default phong angle
                     f2_phong_angle = modelinfo_t::DEFAULT_PHONG_ANGLE;
                 }
-                double f2_phong_angle_concave = extended_texinfo_flags[f2->texinfo].phong_angle_concave;
+                float f2_phong_angle_concave = extended_texinfo_flags[f2->texinfo].phong_angle_concave;
                 if (f2_phong_angle_concave == 0) {
                     f2_phong_angle_concave = f2_phong_angle;
                 }
@@ -524,13 +524,13 @@ void CalculateVertexNormals(const mbsp_t *bsp)
                 const qvec3f f2_centroid = qv::PolyCentroid(f2_points.begin(), f2_points.end());
                 const qvec3f f2_norm = Face_Normal(bsp, f2);
 
-                const double cosangle = qv::dot(f_norm, f2_norm);
+                const float cosangle = qv::dot(f_norm, f2_norm);
 
                 const bool concave = f_plane.distance_to(f2_centroid) > 0.1;
-                const double f_threshold = concave ? f_phong_angle_concave : f_phong_angle;
-                const double f2_threshold = concave ? f2_phong_angle_concave : f2_phong_angle;
-                const double min_threshold = std::min(f_threshold, f2_threshold);
-                const double cosmaxangle = cos(DEG2RAD(min_threshold));
+                const float f_threshold = concave ? f_phong_angle_concave : f_phong_angle;
+                const float f2_threshold = concave ? f2_phong_angle_concave : f2_phong_angle;
+                const float min_threshold = std::min(f_threshold, f2_threshold);
+                const float cosmaxangle = cos(DEG2RAD(min_threshold));
 
                 if (f_phongValue != f2_phongValue) {
                     // mismatched smoothing groups never phong

@@ -41,11 +41,14 @@ inline bool PointInWindingEdges(const winding_edges_t &wi, const qvec3d &point)
 
 // Stack storage; uses stack allocation. Throws if it can't insert
 // a new member.
-template<size_t N>
+template<class T, size_t N>
 struct winding_storage_stack_t
 {
+public:
+    using float_type = T;
+    using vec3_type = qvec<T, 3>;
 protected:
-    using array_type = std::array<qvec3d, N>;
+    using array_type = std::array<vec3_type, N>;
     array_type array;
 
 public:
@@ -119,7 +122,7 @@ public:
 
     inline size_t size() const { return count; }
 
-    inline qvec3d &at(const size_t &index)
+    inline vec3_type &at(const size_t &index)
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -129,7 +132,7 @@ public:
         return array[index];
     }
 
-    inline const qvec3d &at(const size_t &index) const
+    inline const vec3_type &at(const size_t &index) const
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -140,10 +143,10 @@ public:
     }
 
     // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index) { return array[index]; }
+    inline vec3_type &operator[](const size_t &index) { return array[index]; }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const { return array[index]; }
+    inline const vec3_type &operator[](const size_t &index) const { return array[index]; }
 
     using const_iterator = typename array_type::const_iterator;
 
@@ -157,7 +160,7 @@ public:
 
     inline iterator end() { return array.begin() + count; }
 
-    inline qvec3d &emplace_back(const qvec3d &vec)
+    inline vec3_type &emplace_back(const vec3_type &vec)
     {
         count++;
 
@@ -183,10 +186,14 @@ public:
 };
 
 // Heap storage; uses a vector.
+template<class T>
 struct winding_storage_heap_t
 {
+public:
+    using float_type = T;
+    using vec3_type = qvec<T, 3>;
 protected:
-    std::vector<qvec3d, tbb::scalable_allocator<qvec3d>> values{};
+    std::vector<vec3_type, tbb::scalable_allocator<vec3_type>> values{};
 
 public:
     // default constructor does nothing
@@ -243,15 +250,15 @@ public:
 
     inline size_t size() const { return values.size(); }
 
-    inline qvec3d &at(const size_t &index) { return values[index]; }
+    inline vec3_type &at(const size_t &index) { return values[index]; }
 
-    inline const qvec3d &at(const size_t &index) const { return values[index]; }
-
-    // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index) { return values[index]; }
+    inline const vec3_type &at(const size_t &index) const { return values[index]; }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const { return values[index]; }
+    inline vec3_type &operator[](const size_t &index) { return values[index]; }
+
+    // un-bounds-checked
+    inline const vec3_type &operator[](const size_t &index) const { return values[index]; }
 
     inline const auto begin() const { return values.begin(); }
 
@@ -261,7 +268,7 @@ public:
 
     inline auto end() { return values.end(); }
 
-    inline qvec3d &emplace_back(const qvec3d &vec) { return values.emplace_back(vec); }
+    inline vec3_type &emplace_back(const vec3_type &vec) { return values.emplace_back(vec); }
 
     inline void resize(const size_t &new_size) { values.resize(new_size); }
 
@@ -272,12 +279,15 @@ public:
 
 // Hybrid storage; uses stack allocation for the first N
 // points, and uses a dynamic vector for storage after that.
-template<size_t N>
+template<class T, size_t N>
 struct winding_storage_hybrid_t
 {
+public:
+    using float_type = T;
+    using vec3_type = qvec<T, 3>;
 protected:
-    using array_type = std::array<qvec3d, N>;
-    using vector_type = std::vector<qvec3d>;
+    using array_type = std::array<vec3_type, N>;
+    using vector_type = std::vector<vec3_type>;
     using variant_type = std::variant<array_type, vector_type>;
     array_type array;
     vector_type vector;
@@ -303,7 +313,7 @@ public:
 
     public:
         using iterator_category = std::random_access_iterator_tag;
-        using value_type = typename std::conditional_t<is_const, const qvec3d, qvec3d>;
+        using value_type = typename std::conditional_t<is_const, const vec3_type, vec3_type>;
         using difference_type = ptrdiff_t;
         using pointer = value_type *;
         using reference = value_type &;
@@ -414,11 +424,11 @@ public:
         : winding_storage_hybrid_t(copy.size())
     {
         // copy array range
-        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(vec3_type));
 
         // copy vector range, if required
         if (count > N) {
-            memcpy(&vector.front(), &copy.vector.front(), (count - N) * sizeof(qvec3d));
+            memcpy(&vector.front(), &copy.vector.front(), (count - N) * sizeof(vec3_type));
         }
     }
 
@@ -429,7 +439,7 @@ public:
         count = move.count;
 
         // blit over array data
-        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(vec3_type));
 
         // move vector data, if available
         if (count > N) {
@@ -445,13 +455,13 @@ public:
         count = copy.count;
 
         // copy array range
-        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &copy.array.front(), std::min(count, N) * sizeof(vec3_type));
 
         // copy vector range, if required
         if (count > N) {
             vector.reserve(count);
             vector.resize(count - N);
-            memcpy(&vector.front(), &copy.vector.front(), (count - N) * sizeof(qvec3d));
+            memcpy(&vector.front(), &copy.vector.front(), (count - N) * sizeof(vec3_type));
         }
 
         return *this;
@@ -463,7 +473,7 @@ public:
         count = move.count;
 
         // blit over array data
-        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(qvec3d));
+        memcpy(&array.front(), &move.array.front(), std::min(count, N) * sizeof(vec3_type));
 
         // move vector data, if available
         if (count > N) {
@@ -479,7 +489,7 @@ public:
 
     inline size_t vector_size() const { return vector.size(); }
 
-    inline qvec3d &at(const size_t &index)
+    inline vec3_type &at(const size_t &index)
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -493,7 +503,7 @@ public:
         return array[index];
     }
 
-    inline const qvec3d &at(const size_t &index) const
+    inline const vec3_type &at(const size_t &index) const
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -508,7 +518,7 @@ public:
     }
 
     // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index)
+    inline vec3_type &operator[](const size_t &index)
     {
         if (index >= N) {
             return vector[index - N];
@@ -518,7 +528,7 @@ public:
     }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const
+    inline const vec3_type &operator[](const size_t &index) const
     {
         if (index >= N) {
             return vector[index - N];
@@ -539,7 +549,7 @@ public:
 
     inline iterator end() { return iterator(count, this); }
 
-    inline qvec3d &emplace_back(const qvec3d &vec)
+    inline vec3_type &emplace_back(const vec3_type &vec)
     {
         count++;
 
@@ -570,6 +580,9 @@ public:
 template<typename TStorage>
 struct winding_base_t
 {
+public:
+    using float_type = typename TStorage::float_type;
+    using vec3_type = typename TStorage::vec3_type;
 protected:
     TStorage storage;
 
@@ -594,7 +607,7 @@ public:
     }
 
     // initializer list constructor
-    inline winding_base_t(std::initializer_list<qvec3d> l)
+    inline winding_base_t(std::initializer_list<vec3_type> l)
         : storage(l.begin(), l.end())
     {
     }
@@ -624,15 +637,15 @@ public:
 
     inline size_t size() const { return storage.size(); }
 
-    inline qvec3d &at(const size_t &index) { return storage.at(index); }
+    inline vec3_type &at(const size_t &index) { return storage.at(index); }
 
-    inline const qvec3d &at(const size_t &index) const { return storage.at(index); }
-
-    // un-bounds-checked
-    inline qvec3d &operator[](const size_t &index) { return storage[index]; }
+    inline const vec3_type &at(const size_t &index) const { return storage.at(index); }
 
     // un-bounds-checked
-    inline const qvec3d &operator[](const size_t &index) const { return storage[index]; }
+    inline vec3_type &operator[](const size_t &index) { return storage[index]; }
+
+    // un-bounds-checked
+    inline const vec3_type &operator[](const size_t &index) const { return storage[index]; }
 
     inline const auto begin() const { return storage.begin(); }
 
@@ -643,12 +656,12 @@ public:
     inline auto end() { return storage.end(); }
 
     template<typename... Args>
-    inline qvec3d &emplace_back(Args &&...vec)
+    inline vec3_type &emplace_back(Args &&...vec)
     {
-        return storage.emplace_back(qvec3d(std::forward<Args>(vec)...));
+        return storage.emplace_back(vec3_type(std::forward<Args>(vec)...));
     }
 
-    inline void push_back(const qvec3d &vec) { storage.emplace_back(vec); }
+    inline void push_back(const vec3_type &vec) { storage.emplace_back(vec); }
 
     inline void resize(const size_t &new_size) { storage.resize(new_size); }
 
@@ -674,22 +687,22 @@ public:
 
     // non-storage functions
 
-    double area() const
+    float_type area() const
     {
-        double total = 0;
+        float_type total = 0;
 
         for (size_t i = 2; i < size(); i++) {
-            qvec3d d1 = at(i - 1) - at(0);
-            qvec3d d2 = at(i) - at(0);
+            vec3_type d1 = at(i - 1) - at(0);
+            vec3_type d2 = at(i) - at(0);
             total += 0.5 * qv::length(qv::cross(d1, d2));
         }
 
         return total;
     }
 
-    qvec3d center() const
+    vec3_type center() const
     {
-        qvec3d center{};
+        vec3_type center{};
 
         for (auto &point : *this)
             center += point;
@@ -722,8 +735,8 @@ public:
         for (size_t i = 0; i < size(); i++) {
             size_t j = (i + 1) % size();
             size_t k = (i + size() - 1) % size();
-            qvec3d v1 = qv::normalize(at(j) - at(i));
-            qvec3d v2 = qv::normalize(at(i) - at(k));
+            vec3_type v1 = qv::normalize(at(j) - at(i));
+            vec3_type v2 = qv::normalize(at(i) - at(k));
 
             if (qv::dot(v1, v2) < 1.0 - DIST_EPSILON)
                 temp.push_back(at(i));
@@ -736,21 +749,21 @@ public:
 
     qplane3d plane() const
     {
-        qvec3d v1 = at(0) - at(1);
-        qvec3d v2 = at(2) - at(1);
-        qvec3d normal = qv::normalize(qv::cross(v1, v2));
+        vec3_type v1 = at(0) - at(1);
+        vec3_type v2 = at(2) - at(1);
+        vec3_type normal = qv::normalize(qv::cross(v1, v2));
 
         return {normal, qv::dot(at(0), normal)};
     }
 
     template<typename TPlane>
-    static winding_base_t from_plane(const qplane3<TPlane> &plane, const double &worldextent)
+    static winding_base_t from_plane(const qplane3<TPlane> &plane, const float_type &worldextent)
     {
         /* find the major axis */
-        double max = -VECT_MAX;
+        float_type max = -std::numeric_limits<float_type>::max();
         int32_t x = -1;
         for (size_t i = 0; i < 3; i++) {
-            double v = fabs(plane.normal[i]);
+            float_type v = std::abs(plane.normal[i]);
 
             if (v > max) {
                 x = i;
@@ -762,7 +775,7 @@ public:
             FError("no axis found");
         }
 
-        qvec3d vup{};
+        vec3_type vup{};
 
         switch (x) {
             case 0:
@@ -770,12 +783,12 @@ public:
             case 2: vup[0] = 1; break;
         }
 
-        double v = qv::dot(vup, plane.normal);
+        float_type v = qv::dot(vup, plane.normal);
         vup += plane.normal * -v;
         vup = qv::normalize(vup);
 
-        qvec3d org = plane.normal * plane.dist;
-        qvec3d vright = qv::cross(vup, plane.normal);
+        vec3_type org = plane.normal * plane.dist;
+        vec3_type vright = qv::cross(vup, plane.normal);
 
         vup *= worldextent;
         vright *= worldextent;
@@ -791,19 +804,19 @@ public:
         return w;
     }
 
-    void check(const double &bogus_range = DEFAULT_BOGUS_RANGE, const double &on_epsilon = DEFAULT_ON_EPSILON) const
+    void check(const float_type &bogus_range = DEFAULT_BOGUS_RANGE, const float_type &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         if (size() < 3)
             FError("{} points", size());
 
-        double a = area();
+        float_type a = area();
         if (a < 1)
             FError("{} area", a);
 
         qplane3d face = plane();
 
         for (size_t i = 0; i < size(); i++) {
-            const qvec3d &p1 = at(i);
+            const vec3_type &p1 = at(i);
             size_t j = 0;
 
             for (; j < 3; j++)
@@ -811,19 +824,19 @@ public:
                     FError("BOGUS_RANGE: {}", p1[j]);
 
             /* check the point is on the face plane */
-            double d = face.distance_to(p1);
+            float_type d = face.distance_to(p1);
             if (d < -on_epsilon || d > on_epsilon)
                 FError("point off plane");
 
             /* check the edge isn't degenerate */
-            const qvec3d &p2 = at((i + 1) % size());
-            qvec3d dir = p2 - p1;
+            const vec3_type &p2 = at((i + 1) % size());
+            vec3_type dir = p2 - p1;
 
             if (qv::length(dir) < on_epsilon)
                 FError("degenerate edge");
 
-            qvec3d edgenormal = qv::normalize(qv::cross(face.normal, dir));
-            double edgedist = qv::dot(p1, edgenormal) + on_epsilon;
+            vec3_type edgenormal = qv::normalize(qv::cross(face.normal, dir));
+            float_type edgedist = qv::dot(p1, edgenormal) + on_epsilon;
 
             /* all other points must be on front side */
             for (size_t j = 0; j < size(); j++) {
@@ -851,11 +864,11 @@ public:
         result.reserve(size());
 
         for (size_t i = 0; i < size(); i++) {
-            const qvec3d &v0 = at(i);
-            const qvec3d &v1 = at((i + 1) % size());
+            const vec3_type &v0 = at(i);
+            const vec3_type &v1 = at((i + 1) % size());
 
-            qvec3d edgevec = qv::normalize(v1 - v0);
-            qvec3d normal = qv::cross(edgevec, p.normal);
+            vec3_type edgevec = qv::normalize(v1 - v0);
+            vec3_type normal = qv::cross(edgevec, p.normal);
 
             result.emplace_back(normal, qv::dot(normal, v0));
         }
@@ -866,7 +879,7 @@ public:
     // dists/sides can be null, or must have (size() + 1) reserved
     template<typename TPlane>
     inline std::array<size_t, SIDE_TOTAL> calc_sides(
-        const qplane3<TPlane> &plane, double *dists, planeside_t *sides, const double &on_epsilon = DEFAULT_ON_EPSILON) const
+        const qplane3<TPlane> &plane, float_type *dists, planeside_t *sides, const float_type &on_epsilon = DEFAULT_ON_EPSILON) const
     {
         std::array<size_t, SIDE_TOTAL> counts{};
 
@@ -874,7 +887,7 @@ public:
         size_t i;
 
         for (i = 0; i < size(); i++) {
-            double dot = plane.distance_to(at(i));
+            float_type dot = plane.distance_to(at(i));
 
             if (dists) {
                 dists[i] = dot;
@@ -906,11 +919,11 @@ public:
         return counts;
     }
 
-    double max_dist_off_plane(const qplane3d &plane)
+    float_type max_dist_off_plane(const qplane3d &plane)
     {
-        double max_dist = 0.0;
+        float_type max_dist = 0.0;
         for (size_t i = 0; i < size(); i++) {
-            double dist = std::abs(plane.distance_to(at(i)));
+            float_type dist = std::abs(plane.distance_to(at(i)));
             if (dist > max_dist) {
                 max_dist = dist;
             }
@@ -929,9 +942,9 @@ public:
     */
     template<typename TStor = TStorage>
     twosided<std::optional<winding_base_t<TStor>>> clip(
-        const qplane3d &plane, const double &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
     {
-        double *dists = (double *)alloca(sizeof(double) * (size() + 1));
+        float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
 
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
@@ -951,7 +964,7 @@ public:
         }
 
         for (size_t i = 0; i < size(); i++) {
-            const qvec3d &p1 = at(i);
+            const vec3_type &p1 = at(i);
 
             if (sides[i] == SIDE_ON) {
                 results[SIDE_FRONT].push_back(p1);
@@ -967,10 +980,10 @@ public:
                 continue;
 
             /* generate a split point */
-            const qvec3d &p2 = at((i + 1) % size());
+            const vec3_type &p2 = at((i + 1) % size());
 
-            double dot = dists[i] / (dists[i] - dists[i + 1]);
-            qvec3d mid;
+            float_type dot = dists[i] / (dists[i] - dists[i + 1]);
+            vec3_type mid;
 
             for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
                 if (plane.normal[j] == 1)
@@ -1001,9 +1014,9 @@ public:
     */
     template<typename TPlane>
     std::optional<winding_base_t> clip_front(
-        const qplane3<TPlane> &plane, const double &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3<TPlane> &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
     {
-        double *dists = (double *)alloca(sizeof(double) * (size() + 1));
+        float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
 
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
@@ -1020,7 +1033,7 @@ public:
         result.reserve(size() + 4);
 
         for (size_t i = 0; i < size(); i++) {
-            const qvec3d &p1 = at(i);
+            const vec3_type &p1 = at(i);
 
             if (sides[i] == SIDE_ON) {
                 result.push_back(p1);
@@ -1033,10 +1046,10 @@ public:
                 continue;
 
             /* generate a split point */
-            const qvec3d &p2 = at((i + 1) % size());
+            const vec3_type &p2 = at((i + 1) % size());
 
-            double dot = dists[i] / (dists[i] - dists[i + 1]);
-            qvec3d mid;
+            float_type dot = dists[i] / (dists[i] - dists[i + 1]);
+            vec3_type mid;
 
             for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
                 if (plane.normal[j] == 1)
@@ -1065,9 +1078,9 @@ public:
     ==================
     */
     std::optional<winding_base_t> clip_back(
-        const qplane3d &plane, const double &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
     {
-        double *dists = (double *)alloca(sizeof(double) * (size() + 1));
+        float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
 
         std::array<size_t, SIDE_TOTAL> counts = calc_sides(plane, dists, sides, on_epsilon);
@@ -1084,7 +1097,7 @@ public:
         result.reserve(size() + 4);
 
         for (size_t i = 0; i < size(); i++) {
-            const qvec3d &p1 = at(i);
+            const vec3_type &p1 = at(i);
 
             if (sides[i] == SIDE_ON) {
                 result.push_back(p1);
@@ -1097,10 +1110,10 @@ public:
                 continue;
 
             /* generate a split point */
-            const qvec3d &p2 = at((i + 1) % size());
+            const vec3_type &p2 = at((i + 1) % size());
 
-            double dot = dists[i] / (dists[i] - dists[i + 1]);
-            qvec3d mid;
+            float_type dot = dists[i] / (dists[i] - dists[i + 1]);
+            vec3_type mid;
 
             for (size_t j = 0; j < 3; j++) { /* avoid round off error when possible */
                 if (plane.normal[j] == 1)
@@ -1119,7 +1132,7 @@ public:
 
     // SaveFn is a callable of type `winding_base_t & -> void`
     template<typename SaveFn>
-    void dice(double subdiv, SaveFn &&save_fn)
+    void dice(float_type subdiv, SaveFn &&save_fn)
     {
         if (!size())
             return;
@@ -1191,18 +1204,18 @@ public:
         return result;
     }
 
-    winding_base_t translate(const qvec3d &offset) const
+    winding_base_t translate(const vec3_type &offset) const
     {
         winding_base_t result = this->clone();
 
-        for (qvec3d &p : result) {
+        for (vec3_type &p : result) {
             p += offset;
         }
 
         return result;
     }
 
-    bool directional_equal(const winding_base_t &w, const double &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool directional_equal(const winding_base_t &w, const float_type &equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         if (this->size() != w.size()) {
             return false;
@@ -1216,8 +1229,8 @@ public:
 
             // index in `w` to compare
             for (int j = 0; j < this_size; ++j) {
-                const qvec3d &our_point = (*this)[(i + j) % this_size];
-                const qvec3d &their_point = w[j];
+                const vec3_type &our_point = (*this)[(i + j) % this_size];
+                const vec3_type &their_point = w[j];
 
                 if (!qv::epsilonEqual(our_point, their_point, equal_epsilon)) {
                     all_equal = false;
@@ -1233,14 +1246,14 @@ public:
         return false;
     }
 
-    bool undirectional_equal(const winding_base_t &w, const double &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool undirectional_equal(const winding_base_t &w, const float_type &equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         return directional_equal(w, equal_epsilon) || directional_equal(w.flip(), equal_epsilon);
     }
 
     static std::array<winding_base_t, 6> aabb_windings(const aabb3d &bbox)
     {
-        double worldextent = 0;
+        float_type worldextent = 0;
         for (int i = 0; i < 3; ++i) {
             worldextent = std::max(worldextent, std::abs(bbox.maxs()[i]));
             worldextent = std::max(worldextent, std::abs(bbox.mins()[i]));
@@ -1270,6 +1283,6 @@ public:
 // the default amount of points to keep on stack
 constexpr size_t STACK_POINTS_ON_WINDING = MAX_POINTS_ON_WINDING / 4;
 
-using winding_t = winding_base_t<winding_storage_heap_t>;
-
+using winding_t = winding_base_t<winding_storage_heap_t<double>>;
+using winding3f_t = winding_base_t<winding_storage_heap_t<float>>;
 }; // namespace polylib

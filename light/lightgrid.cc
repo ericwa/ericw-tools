@@ -242,7 +242,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
             auto leaf_world_mins = data.grid_index_to_world(leaf.mins);
             auto leaf_world_maxs = data.grid_index_to_world(leaf.mins + leaf.size - qvec3i(1, 1, 1));
 
-            aabb3d bounds(leaf_world_mins, leaf_world_maxs);
+            aabb3f bounds(leaf_world_mins, leaf_world_maxs);
 
             auto bounds_windings = polylib::winding_t::aabb_windings(bounds);
             for (auto &w : bounds_windings) {

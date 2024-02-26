@@ -437,8 +437,8 @@ static void CalcPoints(
             const int i = t * surf->width + s;
             auto &sample = surf->samples[i];
 
-            const double us = starts + s * st_step;
-            const double ut = startt + t * st_step;
+            const float us = starts + s * st_step;
+            const float ut = startt + t * st_step;
 
             sample.point =
                 surf->extents.LMCoordToWorld(qvec2f(us, ut)) + surf->plane.normal; // one unit in front of face
@@ -794,7 +794,7 @@ static void Lightmap_Save(
  */
 
 // returns the light contribution at a given distance, without regard for angle
-double GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, double dist)
+float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, float dist)
 {
     const float light = entity->light.value();
 
@@ -813,7 +813,7 @@ double GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity
     if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
         return light;
 
-    double value = cfg.scaledist.value() * entity->atten.value() * dist;
+    float value = cfg.scaledist.value() * entity->atten.value() * dist;
 
     switch (entity->getFormula()) {
         case LF_INVERSE: return light / (value / LF_SCALE);
@@ -979,13 +979,13 @@ static void GetLightContrib(const settings::worldspawn_keys &cfg, const light_t 
     *dist_out = dist;
 }
 
-constexpr double SQR(double x)
+constexpr float SQR(float x)
 {
     return x * x;
 }
 
 // CHECK: naming? why clamp*min*?
-constexpr bool Light_ClampMin(lightsample_t &sample, const double light, const qvec3f &color)
+constexpr bool Light_ClampMin(lightsample_t &sample, const float light, const qvec3f &color)
 {
     bool changed = false;
 
@@ -1001,7 +1001,7 @@ constexpr bool Light_ClampMin(lightsample_t &sample, const double light, const q
     return changed;
 }
 
-constexpr double fraction(const double &min, const double &val, const double &max)
+constexpr float fraction(const float &min, const float &val, const float &max)
 {
     if (val >= max)
         return 1.0;
@@ -1018,11 +1018,11 @@ constexpr double fraction(const double &min, const double &val, const double &ma
  * returns scale factor for dirt/ambient occlusion
  * ============
  */
-inline double Dirt_GetScaleFactor(const settings::worldspawn_keys &cfg, double occlusion, const light_t *entity,
-    const double entitydist, const lightsurf_t *surf)
+inline float Dirt_GetScaleFactor(const settings::worldspawn_keys &cfg, float occlusion, const light_t *entity,
+    const float entitydist, const lightsurf_t *surf)
 {
-    double light_dirtgain = cfg.dirtgain.value();
-    double light_dirtscale = cfg.dirtscale.value();
+    float light_dirtgain = cfg.dirtgain.value();
+    float light_dirtscale = cfg.dirtscale.value();
     bool usedirt;
 
     /* is dirt processing disabled entirely? */
@@ -1111,7 +1111,7 @@ inline bool CullLight(const light_t *entity, const lightsurf_t *lightsurf)
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
 
     if (light_options.visapprox.value() == visapprox_t::RAYS &&
-        entity->bounds.disjoint(lightsurf->extents.bounds, 0.001) &&
+        entity->bounds.disjoint(lightsurf->extents.bounds, 0.001f) &&
         entity->light_channel_mask.value() == CHANNEL_MASK_DEFAULT &&
         entity->shadow_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
         // EstimateVisibleBoundsAtPoint uses CHANNEL_MASK_DEFAULT
@@ -1175,7 +1175,7 @@ static void LightFace_Entity(
         return;
     }
 
-    const double planedist = plane.distance_to(entity->origin.value());
+    const float planedist = plane.distance_to(entity->origin.value());
 
     /* don't bother with lights behind the surface.
 
@@ -1361,7 +1361,7 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
     qvec3f incoming = qv::normalize(sun->sunvec);
 
     /* Don't bother if surface facing away from sun */
-    const double dp = qv::dot(incoming, plane.normal);
+    const float dp = qv::dot(incoming, plane.normal);
     if (dp < -LIGHT_ANGLE_EPSILON && !lightsurf->curved && !lightsurf->twosided) {
         return;
     }
@@ -1384,23 +1384,23 @@ static void LightFace_Sky(const mbsp_t *bsp, const sun_t *sun, lightsurf_t *ligh
         const qvec3f &surfpoint = sample.point;
         const qvec3f &surfnorm = sample.normal;
 
-        double angle = qv::dot(incoming, surfnorm);
+        float angle = qv::dot(incoming, surfnorm);
         if (lightsurf->twosided) {
             if (angle < 0) {
                 angle = -angle;
             }
         }
 
-        angle = std::max(0.0, angle);
+        angle = std::max(0.0f, angle);
 
-        angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
-        double value = angle * sun->sunlight;
+        angle = (1.0f - sun->anglescale) + sun->anglescale * angle;
+        float value = angle * sun->sunlight;
 
         if (sun->dirt) {
-            value *= Dirt_GetScaleFactor(cfg, sample.occlusion, NULL, 0.0, lightsurf);
+            value *= Dirt_GetScaleFactor(cfg, sample.occlusion, NULL, 0.0f, lightsurf);
         }
 
-        qvec3f color = sun->sunlight_color * (value / 255.0);
+        qvec3f color = sun->sunlight_color * (value / 255.0f);
 
         /* Quick distance check first */
         if (fabs(LightSample_Brightness(color)) <= light_options.gate.value()) {
@@ -1488,12 +1488,12 @@ static void LightPoint_Sky(const mbsp_t *bsp, raystream_intersection_t &rs, cons
                 qvec3f cube_normal{};
                 cube_normal[axis] = sign;
 
-                double angle = qv::dot(incoming, cube_normal);
-                angle = std::max(0.0, angle);
-                angle = (1.0 - sun->anglescale) + sun->anglescale * angle;
+                float angle = qv::dot(incoming, cube_normal);
+                angle = std::max(0.0f, angle);
+                angle = (1.0f - sun->anglescale) + sun->anglescale * angle;
 
                 float value = angle * sun->sunlight;
-                cube_color = sun->sunlight_color * (value / 255.0);
+                cube_color = sun->sunlight_color * (value / 255.0f);
 
 #ifdef LIGHTPOINT_TAKE_MAX
                 if (qv::length2(cube_color) > qv::length2(color)) {
@@ -1633,7 +1633,7 @@ static float Mottle(const qvec3f &position)
  * LightFace_Min
  * ============
  */
-static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3f &color, double light,
+static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3f &color, float light,
     lightsurf_t *lightsurf, lightmapdict_t *lightmaps, int32_t style)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
@@ -1651,12 +1651,12 @@ static void LightFace_Min(const mbsp_t *bsp, const mface_t *face, const qvec3f &
         const auto &surf_sample = lightsurf->samples[i];
         lightsample_t &sample = lightmap->samples[i];
 
-        double value = light;
+        float value = light;
         if (cfg.minlight_dirt.value()) {
-            value *= Dirt_GetScaleFactor(cfg, surf_sample.occlusion, NULL, 0.0, lightsurf);
+            value *= Dirt_GetScaleFactor(cfg, surf_sample.occlusion, NULL, 0.0f, lightsurf);
         }
         if (cfg.addminlight.value()) {
-            sample.color += color * (value / 255.0);
+            sample.color += color * (value / 255.0f);
             hit = true;
         } else {
             if (lightsurf->minlightMottle) {
@@ -1715,7 +1715,7 @@ static void LightFace_LocalMin(
             const qvec3f &surfpoint = surf_sample.point;
             if (cfg.addminlight.value() || LightSample_Brightness(sample.color) < entity->light.value()) {
                 qvec3f surfpointToLightDir;
-                const double surfpointToLightDist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir);
+                const float surfpointToLightDist = GetDir(surfpoint, entity->origin.value(), surfpointToLightDir);
 
                 rs.pushRay(i, surfpoint, surfpointToLightDir, surfpointToLightDist);
             }
@@ -1735,13 +1735,13 @@ static void LightFace_LocalMin(
             
             const ray_io &ray = rs.getRay(j);
             int i = ray.index;
-            double value = entity->light.value();
+            float value = entity->light.value();
             lightsample_t &sample = lightmap->samples[i];
 
             value *= Dirt_GetScaleFactor(
                 cfg, lightsurf->samples[i].occlusion, entity.get(), 0.0 /* TODO: pass distance */, lightsurf);
             if (cfg.addminlight.value()) {
-                sample.color += entity->color.value() * (value / 255.0);
+                sample.color += entity->color.value() * (value / 255.0f);
                 hit = true;
             } else {
                 hit = Light_ClampMin(sample, value, entity->color.value()) || hit;
@@ -1841,7 +1841,7 @@ static void LightFace_DirtDebug(const mbsp_t *bsp, const lightsurf_t *lightsurf,
     /* Overwrite each point with the dirt value for that sample... */
     for (int i = 0; i < lightsurf->samples.size(); i++) {
         lightsample_t &sample = lightmap->samples[i];
-        const float light = 255 * Dirt_GetScaleFactor(cfg, lightsurf->samples[i].occlusion, nullptr, 0.0, lightsurf);
+        const float light = 255 * Dirt_GetScaleFactor(cfg, lightsurf->samples[i].occlusion, nullptr, 0.0f, lightsurf);
         sample.color = {light};
     }
 
@@ -1905,7 +1905,7 @@ constexpr qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, 
 // mxd. returns color in [0,255]
 inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t &vpl,
     const surfacelight_t::per_style_t &vpl_settings, const qvec3f &dir, float dist, const qvec3f &normal,
-    bool use_normal, const double &standard_scale, const double &sky_scale, const float &hotspot_clamp)
+    bool use_normal, const float &standard_scale, const float &sky_scale, const float &hotspot_clamp)
 {
     qvec3f result;
     float dotProductFactor = 1.0f;
@@ -1956,10 +1956,10 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
-    const surfacelight_t::per_style_t &vpl_settings, const double &bouncelight_gate, const float &hotspot_clamp)
+    const surfacelight_t::per_style_t &vpl_settings, const float &bouncelight_gate, const float &hotspot_clamp)
 {
     if (light_options.visapprox.value() == visapprox_t::RAYS &&
-        vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001)) {
+        vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001f)) {
         return true;
     } else if (!bouncelight_gate) {
         return false;
@@ -1979,10 +1979,10 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
 
 static void // mxd
 LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, std::optional<size_t> bounce_depth,
-    const double &standard_scale, const double &sky_scale, const float &hotspot_clamp)
+    const float &standard_scale, const float &sky_scale, const float &hotspot_clamp)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
-    const float surflight_gate = light_options.emissivequality.value() == emissivequality_t::HIGH ? 0 : 0.01f;
+    const float surflight_gate = light_options.emissivequality.value() == emissivequality_t::HIGH ? 0.0f : 0.01f;
 
     // check lighting channels (currently surface lights are always on CHANNEL_MASK_DEFAULT)
     if (!(lightsurf->object_channel_mask & CHANNEL_MASK_DEFAULT)) {
@@ -2066,7 +2066,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 //Q_assert(!std::isnan(indirect[0]));
 
                 // Use dirt scaling on the surface lighting.
-                const double dirtscale =
+                const float dirtscale =
                     Dirt_GetScaleFactor(cfg, lightsurf->samples[i].occlusion, nullptr, 0.0, lightsurf);
                 indirect *= dirtscale;
 
@@ -2089,7 +2089,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
 static void // mxd
 LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, raystream_occlusion_t &rs, bool bounce,
-    const double &standard_scale, const double &sky_scale, const float &hotspot_clamp, const qvec3f &surfpoint,
+    const float &standard_scale, const float &sky_scale, const float &hotspot_clamp, const qvec3f &surfpoint,
     lightgrid_samples_t &result)
 {
     const settings::worldspawn_keys &cfg = light_options;
@@ -2137,7 +2137,7 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
                             indirect = cube_color;
                         }
 #else
-                        indirect += cube_color / 6.0;
+                        indirect += cube_color / 6.0f;
 #endif
                     }
                 }
@@ -2415,9 +2415,9 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
 
             // before any other scaling, apply maxlight
             if (lightsurf->maxlight || cfg.maxlight.value()) {
-                double maxcolor = qv::max(color);
+                float maxcolor = qv::max(color);
                 // FIXME: for colored lighting, this doesn't seem to generate the right values...
-                double maxval = (lightsurf->maxlight ? lightsurf->maxlight : cfg.maxlight.value()) * 2.0;
+                float maxval = (lightsurf->maxlight ? lightsurf->maxlight : cfg.maxlight.value()) * 2.0f;
 
                 if (maxcolor > maxval) {
                     color *= (maxval / maxcolor);
@@ -2425,7 +2425,7 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
             }
 
             // color scaling
-            if (lightsurf->lightcolorscale != 1.0) {
+            if (lightsurf->lightcolorscale != 1.0f) {
                 qvec3f grayscale{qv::max(color)};
                 color = mix(grayscale, color, lightsurf->lightcolorscale);
             }
@@ -2433,18 +2433,18 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
             /* Scale and handle gamma adjustment */
             color *= cfg.rangescale.value();
 
-            if (cfg.lightmapgamma.value() != 1.0) {
+            if (cfg.lightmapgamma.value() != 1.0f) {
                 for (auto &c : color) {
-                    c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+                    c = pow(c / 255.0f, 1.0f / cfg.lightmapgamma.value()) * 255.0f;
                 }
             }
 
             // clamp
             // FIXME: should this be a brightness clamp?
-            double maxcolor = qv::max(color);
+            float maxcolor = qv::max(color);
 
-            if (maxcolor > 255.0) {
-                color *= (255.0 / maxcolor);
+            if (maxcolor > 255.0f) {
+                color *= (255.0f / maxcolor);
             }
         }
     }
@@ -2463,9 +2463,9 @@ static void LightPoint_ScaleAndClamp(qvec3f &color)
 
     // before any other scaling, apply maxlight
     if (cfg.maxlight.value()) {
-        double maxcolor = qv::max(color);
+        float maxcolor = qv::max(color);
         // FIXME: for colored lighting, this doesn't seem to generate the right values...
-        double maxval = cfg.maxlight.value() * 2.0;
+        float maxval = cfg.maxlight.value() * 2.0f;
 
         if (maxcolor > maxval) {
             color *= (maxval / maxcolor);
@@ -2475,18 +2475,18 @@ static void LightPoint_ScaleAndClamp(qvec3f &color)
     /* Scale and handle gamma adjustment */
     color *= cfg.rangescale.value();
 
-    if (cfg.lightmapgamma.value() != 1.0) {
+    if (cfg.lightmapgamma.value() != 1.0f) {
         for (auto &c : color) {
-            c = pow(c / 255.0f, 1.0 / cfg.lightmapgamma.value()) * 255.0f;
+            c = pow(c / 255.0f, 1.0f / cfg.lightmapgamma.value()) * 255.0f;
         }
     }
 
     // clamp
     // FIXME: should this be a brightness clamp?
-    double maxcolor = qv::max(color);
+    float maxcolor = qv::max(color);
 
-    if (maxcolor > 255.0) {
-        color *= (255.0 / maxcolor);
+    if (maxcolor > 255.0f) {
+        color *= (255.0f / maxcolor);
     }
 }
 
