@@ -279,4 +279,5 @@ signals:
 
 public:
     qvec3f cameraPosition() const;
+    qvec3f cameraForward() const;
 };

@@ -900,6 +900,7 @@ void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
 {
     m_cameraOrigin = {(float)origin[0], (float)origin[1], (float)origin[2]};
     m_cameraFwd = {(float)fwd[0], (float)fwd[1], (float)fwd[2]};
+    update();
 }
 
 void GLView::setLighmapOnly(bool lighmapOnly)
@@ -1918,4 +1919,9 @@ void GLView::applyFlyMovement(float duration_seconds)
 qvec3f GLView::cameraPosition() const
 {
     return qvec3f{m_cameraOrigin[0], m_cameraOrigin[1], m_cameraOrigin[2]};
+}
+
+qvec3f GLView::cameraForward() const
+{
+    return qvec3f{m_cameraFwd[0], m_cameraFwd[1], m_cameraFwd[2]};
 }

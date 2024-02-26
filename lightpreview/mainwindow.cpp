@@ -103,6 +103,81 @@ static QStringList GetRecents()
     return recents;
 }
 
+// Camera Bookmarks
+
+static constexpr auto CAMERA_BOOKMARKS_SETTINGS_KEY = "camera_bookmarks";
+static constexpr size_t MAX_CAMERA_BOOKMARKS = 10;
+
+struct camera_bookmark_t {
+    qvec3f origin;
+    qvec3f forward;
+};
+
+static void ClearCameraBookmarks()
+{
+    QSettings s;
+    s.setValue(CAMERA_BOOKMARKS_SETTINGS_KEY, QStringList());
+}
+
+static QString CameraBookmarkToQString(const camera_bookmark_t &b) {
+    return QString("%1 %2 %3 %4 %5 %6")
+        .arg(b.origin[0])
+        .arg(b.origin[1])
+        .arg(b.origin[2])
+        .arg(b.forward[0])
+        .arg(b.forward[1])
+        .arg(b.forward[2]);
+}
+
+static std::optional<camera_bookmark_t> CameraBookmarkFromQString(const QString &string) {
+    QStringList parts = string.split(' ', Qt::SkipEmptyParts);
+    if (parts.length() != 6)
+        return std::nullopt;
+
+    camera_bookmark_t result;
+    result.origin[0] = parts[0].toFloat();
+    result.origin[1] = parts[1].toFloat();
+    result.origin[2] = parts[2].toFloat();
+
+    result.forward[0] = parts[3].toFloat();
+    result.forward[1] = parts[4].toFloat();
+    result.forward[2] = parts[5].toFloat();
+
+    return {result};
+}
+
+/**
+ * Updates the recent camera bookmarks settings by pushing the given camera pos to the front
+ * and trimming the list to MAX_CAMERA_BOOKMARKS.
+ */
+static void AddCameraBookmark(const camera_bookmark_t &b)
+{
+    QSettings s;
+    QStringList qt_strings = s.value(CAMERA_BOOKMARKS_SETTINGS_KEY).toStringList();
+
+    qt_strings.push_front(CameraBookmarkToQString(b));
+
+    while (qt_strings.size() > MAX_CAMERA_BOOKMARKS) {
+        qt_strings.pop_back();
+    }
+
+    s.setValue(CAMERA_BOOKMARKS_SETTINGS_KEY, qt_strings);
+}
+
+static std::vector<camera_bookmark_t> GetCameraBookmarks()
+{
+    QSettings s;
+    QStringList qt_strings = s.value(CAMERA_BOOKMARKS_SETTINGS_KEY).toStringList();
+
+    std::vector<camera_bookmark_t> result;
+    for (const QString &qt_string : qt_strings) {
+        if (auto parsed = CameraBookmarkFromQString(qt_string); parsed) {
+            result.push_back(*parsed);
+        }
+    }
+    return result;
+}
+
 // ETLogWidget
 ETLogWidget::ETLogWidget(QWidget *parent)
     : QTabWidget(parent)
@@ -442,6 +517,34 @@ void MainWindow::updateRecentsSubmenu(const QStringList &recents)
     });
 }
 
+void MainWindow::updateCameraBookmarksSubmenu() {
+    cameraBookmarksMenu->clear();
+
+    cameraBookmarksMenu->addAction(tr("Bookmark Current Camera Position"), this, [this]() {
+        camera_bookmark_t b {
+            .origin = this->glView->cameraPosition(),
+            .forward = this->glView->cameraForward()
+        };
+        AddCameraBookmark(b);
+        this->updateCameraBookmarksSubmenu();
+    });
+    cameraBookmarksMenu->addSeparator();
+
+    auto bookmarks = GetCameraBookmarks();
+    for (const auto &bookmark : bookmarks) {
+        auto *action = cameraBookmarksMenu->addAction(CameraBookmarkToQString(bookmark));
+        connect(action, &QAction::triggered, this, [this, bookmark]() {
+            this->glView->setCamera(bookmark.origin, bookmark.forward);
+        });
+    }
+
+    cameraBookmarksMenu->addSeparator();
+    cameraBookmarksMenu->addAction(tr("Clear Camera Bookmarks"), this, [this]() {
+        ClearCameraBookmarks();
+        this->updateCameraBookmarksSubmenu();
+    });
+}
+
 MainWindow::~MainWindow() { }
 
 static void OpenHelpFile(const QString &file) {
@@ -485,6 +588,8 @@ void MainWindow::setupMenu()
     // view menu
 
     viewMenu = menuBar()->addMenu(tr("&View"));
+    cameraBookmarksMenu = viewMenu->addMenu(tr("Camera Bookmarks"));
+    updateCameraBookmarksSubmenu();
 
     // help menu
 

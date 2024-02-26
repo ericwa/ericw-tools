@@ -91,6 +91,7 @@ private:
     void logWidgetSetText(ETLogTab tab, const std::string &str);
     void createStatusBar();
     void updateRecentsSubmenu(const QStringList &recents);
+    void updateCameraBookmarksSubmenu();
     void setupMenu();
     void fileOpen();
     void takeScreenshot();
@@ -128,6 +129,7 @@ private:
     QVBoxLayout *lightstyles = nullptr;
 
     QMenu *viewMenu = nullptr;
+    QMenu *cameraBookmarksMenu = nullptr;
     QMenu *openRecentMenu = nullptr;
 
     ETLogWidget *m_outputLogWidget = nullptr;
