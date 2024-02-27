@@ -445,7 +445,7 @@ extern std::vector<surfflags_t> extended_texinfo_flags;
 
 // public functions
 
-void FixupGlobalSettings(void);
+void FixupGlobalSettings();
 void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size);
 void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs);
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);

@@ -231,7 +231,7 @@ static std::atomic_int64_t portalIndex;
   the earlier information.
   =============
 */
-visportal_t *GetNextPortal(void)
+visportal_t *GetNextPortal()
 {
     visportal_t *ret = nullptr;
     uint32_t min = INT_MAX;

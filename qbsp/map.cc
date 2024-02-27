@@ -3366,7 +3366,7 @@ void ProcessMapBrushes()
     }
 }
 
-void LoadMapFile(void)
+void LoadMapFile()
 {
     logging::funcheader();
 
@@ -3609,7 +3609,7 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t &entity, const con
     f << "}\n";
 }
 
-void ConvertMapFile(void)
+void ConvertMapFile()
 {
     logging::funcheader();
 

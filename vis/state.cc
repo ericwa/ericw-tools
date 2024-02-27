@@ -131,7 +131,7 @@ static void CopyLeafBits(leafbits_t &dst, const uint8_t *src, size_t numleafs)
     }
 }
 
-void SaveVisState(void)
+void SaveVisState()
 {
     int vis_len, might_len;
     dvisstate_t state;
@@ -187,14 +187,14 @@ void SaveVisState(void)
         FError("error renaming state file ({})", ec.message());
 }
 
-void CleanVisState(void)
+void CleanVisState()
 {
     if (fs::exists(statefile)) {
         fs::remove(statefile);
     }
 }
 
-bool LoadVisState(void)
+bool LoadVisState()
 {
     fs::file_time_type prt_time, state_time;
     int numbytes;

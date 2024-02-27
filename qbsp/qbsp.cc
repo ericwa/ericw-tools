@@ -1246,7 +1246,7 @@ UpdateEntLump
 
 =================
 */
-static void UpdateEntLump(void)
+static void UpdateEntLump()
 {
     logging::print(logging::flag::STAT, "     Updating entities lump...\n");
 
@@ -1473,7 +1473,7 @@ static void CreateSingleHull(hull_index_t hullnum)
 CreateHulls
 =================
 */
-static void CreateHulls(void)
+static void CreateHulls()
 {
     /* create the hulls sequentially */
     auto &hulls = qbsp_options.target_game->get_hull_sizes();

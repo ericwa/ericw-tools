@@ -24,6 +24,6 @@
 size_t ExportMapTexinfo(size_t texinfonum);
 size_t ExportMapPlane(size_t planenum);
 
-void BeginBSPFile(void);
-void FinishBSPFile(void);
+void BeginBSPFile();
+void FinishBSPFile();
 void UpdateBSPFileEntitiesLump();

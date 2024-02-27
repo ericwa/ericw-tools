@@ -316,7 +316,7 @@ void ExportDrawNodes(mapentity_t &entity, node_t *headnode, int firstface)
 BeginBSPFile
 ==================
 */
-void BeginBSPFile(void)
+void BeginBSPFile()
 {
     // First edge must remain unused because 0 can't be negated
     map.bsp.dedges.emplace_back();
@@ -333,7 +333,7 @@ void BeginBSPFile(void)
  * Writes extended texinfo flags to a file so they can be read by the light tool.
  * Used for phong shading and other lighting settings on func_detail.
  */
-static void WriteExtendedTexinfoFlags(void)
+static void WriteExtendedTexinfoFlags()
 {
     auto file = fs::path(qbsp_options.bsp_path).replace_extension("texinfo.json");
     bool needwrite = false;
@@ -528,7 +528,7 @@ static void WriteBSPFile()
 FinishBSPFile
 ==================
 */
-void FinishBSPFile(void)
+void FinishBSPFile()
 {
     logging::funcheader();
 

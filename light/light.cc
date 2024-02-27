@@ -1409,7 +1409,7 @@ static void PrintLight(const light_t &light)
     logging::print("\n");
 }
 
-static void PrintLights(void)
+static void PrintLights()
 {
     logging::print("===PrintLights===\n");
 

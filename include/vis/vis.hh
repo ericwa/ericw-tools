@@ -239,7 +239,7 @@ extern int leaflongs;
 
 extern fs::path portalfile, statefile, statetmpfile;
 
-void BasePortalVis(void);
+void BasePortalVis();
 
 visstats_t PortalFlow(visportal_t *p);
 
@@ -249,9 +249,9 @@ void CalcPHS(mbsp_t *bsp);
 
 extern time_point starttime, endtime, statetime;
 
-void SaveVisState(void);
-bool LoadVisState(void);
-void CleanVisState(void);
+void SaveVisState();
+bool LoadVisState();
+void CleanVisState();
 
 #include <common/settings.hh>
 #include <common/fs.hh>

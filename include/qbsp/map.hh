@@ -276,7 +276,7 @@ struct mapdata_t
 
 extern mapdata_t map;
 
-void CalculateWorldExtent(void);
+void CalculateWorldExtent();
 
 struct texture_def_issues_t : logging::stat_tracker_t
 {
@@ -308,8 +308,8 @@ void ProcessExternalMapEntity(mapentity_t &entity);
 void ProcessAreaPortal(mapentity_t &entity);
 bool IsWorldBrushEntity(const mapentity_t &entity);
 bool IsNonRemoveWorldBrushEntity(const mapentity_t &entity);
-void LoadMapFile(void);
-void ConvertMapFile(void);
+void LoadMapFile();
+void ConvertMapFile();
 void ProcessMapBrushes();
 
 struct quark_tx_info_t

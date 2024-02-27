@@ -649,7 +649,7 @@ static void BasePortalThread(size_t portalnum)
   BasePortalVis
   ==============
 */
-void BasePortalVis(void)
+void BasePortalVis()
 {
     logging::parallel_for(0, numportals * 2, BasePortalThread);
 }

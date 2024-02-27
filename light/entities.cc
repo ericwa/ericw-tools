@@ -208,7 +208,7 @@ std::string TargetnameForLightStyle(int style)
  * entdicts should not be modified after this (saves pointers to elements)
  * ==================
  */
-static void MatchTargets(void)
+static void MatchTargets()
 {
     for (auto &entity : all_lights) {
         const std::string &targetstr = entity->epairs->get("target");
@@ -1175,7 +1175,7 @@ inline void EstimateLightAABB(const std::unique_ptr<light_t> &light)
     light->bounds = EstimateVisibleBoundsAtPoint(light->origin.value());
 }
 
-void EstimateLightVisibility(void)
+void EstimateLightVisibility()
 {
     logging::funcheader();
 
