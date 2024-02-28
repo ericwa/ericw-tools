@@ -38,11 +38,12 @@
 contentflags_t ClusterContents(const node_t *node)
 {
     /* Pass the leaf contents up the stack */
-    if (node->is_leaf)
-        return node->contents;
+    if (auto *leafdata = node->get_leafdata())
+        return leafdata->contents;
 
+    auto *nodedata = node->get_nodedata();
     return qbsp_options.target_game->cluster_contents(
-        ClusterContents(node->children[0]), ClusterContents(node->children[1]));
+        ClusterContents(nodedata->children[0]), ClusterContents(nodedata->children[1]));
 }
 
 /*
@@ -84,13 +85,13 @@ Flowing from side s to side !s
 */
 bool Portal_EntityFlood(const portal_t *p, int32_t s)
 {
-    if (!p->nodes[0]->is_leaf || !p->nodes[1]->is_leaf) {
+    if (!p->nodes[0]->is_leaf() || !p->nodes[1]->is_leaf()) {
         FError("Portal_EntityFlood: not a leaf");
     }
 
     // can never cross to a solid
-    if (p->nodes[0]->contents.is_solid(qbsp_options.target_game) ||
-        p->nodes[1]->contents.is_solid(qbsp_options.target_game)) {
+    if (p->nodes[0]->get_leafdata()->contents.is_solid(qbsp_options.target_game) ||
+        p->nodes[1]->get_leafdata()->contents.is_solid(qbsp_options.target_game)) {
         return false;
     }
 
@@ -133,9 +134,9 @@ std::list<buildportal_t> MakeHeadnodePortals(tree_t &tree)
     // pad with some space so there will never be null volume leafs
     aabb3d bounds = tree.bounds.grow(SIDESPACE);
 
-    tree.outside_node.is_leaf = true;
-    tree.outside_node.contents = qbsp_options.target_game->create_solid_contents();
-    tree.outside_node.portals = NULL;
+    tree.outside_node.make_leaf();
+    tree.outside_node.get_leafdata()->contents = qbsp_options.target_game->create_solid_contents();
+    tree.outside_node.portals = nullptr;
 
     // create 6 portals forming a cube around the bounds of the map.
     // these portals will have `outside_node` on one side, and headnode on the other.
@@ -198,15 +199,15 @@ constexpr double SPLIT_WINDING_EPSILON = 0.001;
 
 static std::optional<winding_t> BaseWindingForNode(const node_t *node)
 {
-    std::optional<winding_t> w = BaseWindingForPlane<winding_t>(node->get_plane());
+    std::optional<winding_t> w = BaseWindingForPlane<winding_t>(node->get_nodedata()->get_plane());
 
     // clip by all the parents
     for (auto *np = node->parent; np && w;) {
 
-        if (np->children[0] == node) {
-            w = w->clip_front(np->get_plane().get_plane(), BASE_WINDING_EPSILON, false);
+        if (np->get_nodedata()->children[0] == node) {
+            w = w->clip_front(np->get_nodedata()->get_plane().get_plane(), BASE_WINDING_EPSILON, false);
         } else {
-            w = w->clip_back(np->get_plane().get_plane(), BASE_WINDING_EPSILON, false);
+            w = w->clip_back(np->get_nodedata()->get_plane().get_plane(), BASE_WINDING_EPSILON, false);
         }
 
         node = np;
@@ -258,11 +259,13 @@ static std::optional<buildportal_t> MakeNodePortal(
         return std::nullopt;
     }
 
+    auto *nodedata = node->get_nodedata();
+
     buildportal_t new_portal{};
-    new_portal.plane = node->get_plane();
+    new_portal.plane = nodedata->get_plane();
     new_portal.onnode = node;
     new_portal.winding = std::move(*w);
-    new_portal.nodes = node->children;
+    new_portal.nodes = nodedata->children;
     return std::move(new_portal);
 }
 
@@ -277,9 +280,11 @@ children have portals instead of node.
 static twosided<std::list<buildportal_t>> SplitNodePortals(
     const node_t *node, std::list<buildportal_t> boundary_portals, portalstats_t &stats)
 {
-    const auto &plane = node->get_plane();
-    node_t *f = node->children[0];
-    node_t *b = node->children[1];
+    auto *nodedata = node->get_nodedata();
+
+    const auto &plane = nodedata->get_plane();
+    node_t *f = nodedata->children[0];
+    node_t *b = nodedata->children[1];
 
     twosided<std::list<buildportal_t>> result;
 
@@ -397,16 +402,18 @@ inline void CalcNodeBounds(node_t *node)
 
 static void CalcTreeBounds_r(node_t *node, logging::percent_clock &clock)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         clock();
         CalcNodeBounds(node);
     } else {
+        auto *nodedata = node->get_nodedata();
+
         tbb::task_group g;
-        g.run([&]() { CalcTreeBounds_r(node->children[0], clock); });
-        g.run([&]() { CalcTreeBounds_r(node->children[1], clock); });
+        g.run([&]() { CalcTreeBounds_r(nodedata->children[0], clock); });
+        g.run([&]() { CalcTreeBounds_r(nodedata->children[1], clock); });
         g.wait();
 
-        node->bounds = node->children[0]->bounds + node->children[1]->bounds;
+        node->bounds = nodedata->children[0]->bounds + nodedata->children[1]->bounds;
     }
 
     if (node->bounds.mins()[0] >= node->bounds.maxs()[0]) {
@@ -419,7 +426,7 @@ static void CalcTreeBounds_r(node_t *node, logging::percent_clock &clock)
 
     for (auto &v : node->bounds.mins()) {
         if (fabs(v) > qbsp_options.worldextent.value()) {
-            logging::print("WARNING: {} with unbounded volume\n", node->is_leaf ? "leaf" : "node");
+            logging::print("WARNING: {} with unbounded volume\n", node->is_leaf() ? "leaf" : "node");
             break;
         }
     }
@@ -441,16 +448,17 @@ static std::list<buildportal_t> ClipNodePortalsToTree_r(
     if (portals.empty()) {
         return portals;
     }
-    if (node->is_leaf || (type == portaltype_t::VIS && node->detail_separator)) {
+    if (node->is_leaf() || (type == portaltype_t::VIS && node->get_nodedata()->detail_separator)) {
         return portals;
     }
+    auto *nodedata = node->get_nodedata();
 
     auto boundary_portals_split = SplitNodePortals(node, std::move(portals), stats);
 
     auto front_fragments =
-        ClipNodePortalsToTree_r(node->children[0], type, std::move(boundary_portals_split.front), stats);
+        ClipNodePortalsToTree_r(nodedata->children[0], type, std::move(boundary_portals_split.front), stats);
     auto back_fragments =
-        ClipNodePortalsToTree_r(node->children[1], type, std::move(boundary_portals_split.back), stats);
+        ClipNodePortalsToTree_r(nodedata->children[1], type, std::move(boundary_portals_split.back), stats);
 
     std::list<buildportal_t> merged_result = std::move(front_fragments);
     merged_result.splice(merged_result.end(), back_fragments);
@@ -469,7 +477,7 @@ std::list<buildportal_t> MakeTreePortals_r(node_t *node, portaltype_t type, std:
 {
     clock();
 
-    if (node->is_leaf || (type == portaltype_t::VIS && node->detail_separator)) {
+    if (node->is_leaf() || (type == portaltype_t::VIS && node->get_nodedata()->detail_separator)) {
         return boundary_portals;
     }
 
@@ -483,14 +491,16 @@ std::list<buildportal_t> MakeTreePortals_r(node_t *node, portaltype_t type, std:
 
     std::list<buildportal_t> result_portals_front, result_portals_back;
 
+    auto *nodedata = node->get_nodedata();
+
     tbb::task_group g;
     g.run([&]() {
         result_portals_front =
-            MakeTreePortals_r(node->children[0], type, std::move(boundary_portals_split.front), stats, clock);
+            MakeTreePortals_r(nodedata->children[0], type, std::move(boundary_portals_split.front), stats, clock);
     });
     g.run([&]() {
         result_portals_back =
-            MakeTreePortals_r(node->children[1], type, std::move(boundary_portals_split.back), stats, clock);
+            MakeTreePortals_r(nodedata->children[1], type, std::move(boundary_portals_split.back), stats, clock);
     });
     g.wait();
 
@@ -504,9 +514,9 @@ std::list<buildportal_t> MakeTreePortals_r(node_t *node, portaltype_t type, std:
         // these portal fragments have node->children[1] on one side, and the leaf nodes from
         // node->children[0] on the other side
         std::list<buildportal_t> half_clipped =
-            ClipNodePortalsToTree_r(node->children[0], type, make_list(std::move(*nodeportal)), stats);
+            ClipNodePortalsToTree_r(nodedata->children[0], type, make_list(std::move(*nodeportal)), stats);
 
-        result_portals_onnode = ClipNodePortalsToTree_r(node->children[1], type, std::move(half_clipped), stats);
+        result_portals_onnode = ClipNodePortalsToTree_r(nodedata->children[1], type, std::move(half_clipped), stats);
     }
 
     // all done, merge together the lists and return
@@ -565,25 +575,27 @@ FLOOD AREAS
 
 static void ApplyArea_r(node_t *node)
 {
-    node->area = map.c_areas;
-
-    if (!node->is_leaf) {
-        ApplyArea_r(node->children[0]);
-        ApplyArea_r(node->children[1]);
+    if (auto *nodedata = node->get_nodedata()) {
+        ApplyArea_r(nodedata->children[0]);
+        ApplyArea_r(nodedata->children[1]);
+        return;
     }
+
+    node->get_leafdata()->area = map.c_areas;
 }
 
 static mapentity_t *AreanodeEntityForLeaf(node_t *node)
 {
     // if detail cluster, search the children recursively
-    if (!node->is_leaf) {
-        if (auto *child0result = AreanodeEntityForLeaf(node->children[0]); child0result) {
+    if (auto *nodedata = node->get_nodedata()) {
+        if (auto *child0result = AreanodeEntityForLeaf(nodedata->children[0]); child0result) {
             return child0result;
         }
-        return AreanodeEntityForLeaf(node->children[1]);
+        return AreanodeEntityForLeaf(nodedata->children[1]);
     }
 
-    for (auto &brush : node->original_brushes) {
+    auto *leafdata = node->get_leafdata();
+    for (auto &brush : leafdata->original_brushes) {
         if (brush->mapbrush->func_areaportal) {
             return brush->mapbrush->func_areaportal;
         }
@@ -598,7 +610,10 @@ FloodAreas_r
 */
 static void FloodAreas_r(node_t *node)
 {
-    if ((node->is_leaf || node->detail_separator) && (ClusterContents(node).native & Q2_CONTENTS_AREAPORTAL)) {
+    auto *leafdata = node->get_leafdata();
+    Q_assert(leafdata);
+
+    if (leafdata->contents.native & Q2_CONTENTS_AREAPORTAL) {
         // grab the func_areanode entity
         mapentity_t *entity = AreanodeEntityForLeaf(node);
 
@@ -629,15 +644,18 @@ static void FloodAreas_r(node_t *node)
         return;
     }
 
-    if (node->area)
+    if (leafdata->area)
         return; // already got it
 
-    node->area = map.c_areas;
+    leafdata->area = map.c_areas;
 
     // propagate area assignment to descendants if we're a cluster
-    if (!node->is_leaf) {
+    // (unnecessary because we did a full tree portalization)
+#if 0
+    if (!node->is_leaf()) {
         ApplyArea_r(node);
     }
+#endif
 
     int32_t s;
 
@@ -664,24 +682,26 @@ area set, flood fill out from there
 */
 static void FindAreas_r(node_t *node)
 {
-    if (!node->is_leaf) {
-        FindAreas_r(node->children[0]);
-        FindAreas_r(node->children[1]);
+    if (auto *nodedata = node->get_nodedata()) {
+        FindAreas_r(nodedata->children[0]);
+        FindAreas_r(nodedata->children[1]);
         return;
     }
 
-    if (node->area)
+    auto *leafdata = node->get_leafdata();
+
+    if (leafdata->area)
         return; // already got it
 
-    if (node->contents.is_any_solid(qbsp_options.target_game))
+    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
         return;
 
-    if (!node->occupied)
+    if (!leafdata->occupied)
         return; // not reachable from an entity
 
     // area portals are always only flooded into, never
     // out of
-    if (node->contents.native & Q2_CONTENTS_AREAPORTAL)
+    if (leafdata->contents.native & Q2_CONTENTS_AREAPORTAL)
         return;
 
     map.c_areas++;
@@ -746,7 +766,7 @@ using exit_t = std::tuple<portal_t *, node_t *>;
 
 static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visited, std::vector<exit_t> &exits)
 {
-    Q_assert(n->is_leaf);
+    Q_assert(n->is_leaf());
 
     visited.insert(n);
 
@@ -761,15 +781,15 @@ static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visit
             continue;
 
         // is this an exit?
-        if (!(neighbour->contents.native & Q2_CONTENTS_AREAPORTAL) &&
-            !neighbour->contents.is_solid(qbsp_options.target_game)) {
+        if (!(neighbour->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL) &&
+            !neighbour->get_leafdata()->contents.is_solid(qbsp_options.target_game)) {
             exits.emplace_back(p, neighbour);
             continue;
         }
 
         // valid edge to explore?
         // if this isn't an exit, don't leave AREAPORTAL
-        if (!(neighbour->contents.native & Q2_CONTENTS_AREAPORTAL))
+        if (!(neighbour->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL))
             continue;
 
         // continue exploding
@@ -819,8 +839,8 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
                 return false;
 
             // don't go back into an areaportal
-            if ((p->nodes[0]->contents.native & Q2_CONTENTS_AREAPORTAL) ||
-                (p->nodes[1]->contents.native & Q2_CONTENTS_AREAPORTAL))
+            if ((p->nodes[0]->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL) ||
+                (p->nodes[1]->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL))
                 return false;
 
             return true;
@@ -870,16 +890,18 @@ area set, flood fill out from there
 */
 static void SetAreaPortalAreas_r(node_t *node)
 {
-    if (!node->is_leaf) {
-        SetAreaPortalAreas_r(node->children[0]);
-        SetAreaPortalAreas_r(node->children[1]);
+    if (auto *nodedata = node->get_nodedata()) {
+        SetAreaPortalAreas_r(nodedata->children[0]);
+        SetAreaPortalAreas_r(nodedata->children[1]);
         return;
     }
 
-    if (node->contents.native != Q2_CONTENTS_AREAPORTAL)
+    auto *leafdata = node->get_leafdata();
+
+    if (leafdata->contents.native != Q2_CONTENTS_AREAPORTAL)
         return;
 
-    if (node->area)
+    if (leafdata->area)
         return; // already set
 
     // grab the func_areanode entity
@@ -890,7 +912,7 @@ static void SetAreaPortalAreas_r(node_t *node)
         return;
     }
 
-    node->area = entity->portalareas[0];
+    leafdata->area = entity->portalareas[0];
     if (!entity->portalareas[1]) {
         if (!entity->wrote_doesnt_touch_two_areas_warning) {
             entity->wrote_doesnt_touch_two_areas_warning = true;
@@ -912,8 +934,10 @@ Mark each leaf with an area, bounded by CONTENTS_AREAPORTAL and
 emit them.
 =============
 */
-void EmitAreaPortals(node_t *headnode)
+void EmitAreaPortals(tree_t &tree)
 {
+    Q_assert(tree.portaltype == portaltype_t::TREE);
+
     logging::funcheader();
 
     map.bsp.dareaportals.emplace_back();
@@ -935,8 +959,8 @@ void EmitAreaPortals(node_t *headnode)
         return;
     }
 
-    FindAreas_r(headnode);
-    SetAreaPortalAreas_r(headnode);
+    FindAreas_r(tree.headnode);
+    SetAreaPortalAreas_r(tree.headnode);
 
     for (size_t i = 1; i <= map.c_areas; i++) {
         darea_t &area = map.bsp.dareas.emplace_back();
@@ -999,7 +1023,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
 
     // if either is "_noclipfaces" then we don't require a content change
     contentflags_t viscontents =
-        qbsp_options.target_game->portal_visible_contents(p->nodes[0]->contents, p->nodes[1]->contents);
+        qbsp_options.target_game->portal_visible_contents(p->nodes[0]->get_leafdata()->contents, p->nodes[1]->get_leafdata()->contents);
     if (viscontents.is_empty(qbsp_options.target_game))
         return;
 
@@ -1007,7 +1031,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
     side_t *bestside[2] = {nullptr, nullptr};
     side_t *exactside[2] = {nullptr, nullptr};
     float bestdot = 0;
-    const qbsp_plane_t &p1 = p->onnode->get_plane();
+    const qbsp_plane_t &p1 = p->onnode->get_nodedata()->get_plane();
 
     // check brushes on both sides of the portal
     for (int j = 0; j < 2; j++) {
@@ -1015,7 +1039,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
 
         // iterate the n->original_brushes vector in reverse order, so later brushes
         // in the map file order are prioritized
-        for (auto it = n->original_brushes.rbegin(); it != n->original_brushes.rend(); ++it) {
+        for (auto it = n->get_leafdata()->original_brushes.rbegin(); it != n->get_leafdata()->original_brushes.rend(); ++it) {
             auto *brush = *it;
             const bool generate_outside_face =
                 qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_FRONT);
@@ -1034,7 +1058,7 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
                     continue;
                 }
 
-                if ((side.planenum & ~1) == p->onnode->planenum) {
+                if ((side.planenum & ~1) == p->onnode->get_nodedata()->planenum) {
                     // exact match (undirectional)
 
                     // because the brush is on j of the positive plane, the brushside must be facing away from j
@@ -1107,14 +1131,16 @@ MarkVisibleSides_r
 */
 static void MarkVisibleSides_r(node_t *node, visible_faces_stats_t &stats)
 {
-    if (!node->is_leaf) {
-        MarkVisibleSides_r(node->children[0], stats);
-        MarkVisibleSides_r(node->children[1], stats);
+    if (auto *nodedata = node->get_nodedata()) {
+        MarkVisibleSides_r(nodedata->children[0], stats);
+        MarkVisibleSides_r(nodedata->children[1], stats);
         return;
     }
 
+    auto *leafdata = node->get_leafdata();
+
     // empty leafs are never boundary leafs
-    if (node->contents.is_empty(qbsp_options.target_game))
+    if (leafdata->contents.is_empty(qbsp_options.target_game))
         return;
 
     // see if there is a visible face

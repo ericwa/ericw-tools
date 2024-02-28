@@ -393,15 +393,7 @@ struct bspbrush_t;
 struct side_t;
 class mapbrush_t;
 
-struct node_t
-{
-    // both leafs and nodes
-    aabb3d bounds; // bounding volume, not just points inside
-    node_t *parent;
-    // this is also a bounding volume like `bounds`
-    bspbrush_t::ptr volume; // one for each leaf/node
-    bool is_leaf = false;
-
+struct nodedata_t {
     // information for decision nodes
     size_t planenum; // decision node only
 
@@ -412,24 +404,62 @@ struct node_t
     twosided<node_t *>
         children; // children[0] = front side, children[1] = back side of plane. only valid for decision nodes
     std::list<std::unique_ptr<face_t>> facelist; // decision nodes only, list for both sides
+    bool detail_separator; // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs,
+                           // are detail.
+};
 
+struct leafdata_t {
     // information for leafs
     contentflags_t contents; // leaf nodes (0 for decision nodes)
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
-    portal_t *portals;
-    int visleafnum; // -1 = solid
-    int viscluster; // detail cluster for faster vis
     int outside_distance; // -1 = can't reach outside, 0 = first void node, >0 = distance from void, in number of
                           // portals used to write leak lines that take the shortest path to the void
     int occupied; // 0=can't reach entity, 1 = has entity, >1 = distance from leaf with entity
     mapentity_t *occupant; // example occupant, for leak hunting
-    bool detail_separator; // for vis portal generation. true if ALL faces on node, and on all descendant nodes/leafs,
-                           // are detail.
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
     int32_t area;
     std::vector<bspbrush_t *> original_brushes;
     bspbrush_t::container bsp_brushes;
+};
+
+struct node_t
+{
+    // both leafs and nodes
+    aabb3d bounds; // bounding volume, not just points inside
+    node_t *parent;
+    // this is also a bounding volume like `bounds`
+    bspbrush_t::ptr volume; // one for each leaf/node
+    std::variant<nodedata_t, leafdata_t> data;
+
+    // data for portals and detail separator nodes
+    portal_t *portals;
+    int visleafnum; // -1 = solid
+    int viscluster; // detail cluster for faster vis
+
+    bool is_leaf() const {
+        return data.index() == 1;
+    }
+
+    nodedata_t *get_nodedata() {
+        return std::get_if<0>(&data);
+    }
+    const nodedata_t *get_nodedata() const {
+        return std::get_if<0>(&data);
+    }
+
+    leafdata_t *get_leafdata() {
+        return std::get_if<1>(&data);
+    }
+    const leafdata_t *get_leafdata() const {
+        return std::get_if<1>(&data);
+    }
+
+    // defaults to node
+    leafdata_t *make_leaf() {
+        data = leafdata_t{};
+        return get_leafdata();
+    }
 };
 
 void InitQBSP(int argc, const char **argv);

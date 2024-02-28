@@ -38,20 +38,22 @@
 
 static bool LeafSealsMap(const node_t *node)
 {
-    Q_assert(node->is_leaf);
+    auto *leafdata = node->get_leafdata();
+    Q_assert(leafdata);
 
-    return qbsp_options.target_game->contents_seals_map(node->contents);
+    return qbsp_options.target_game->contents_seals_map(leafdata->contents);
 }
 
 static bool LeafSealsForDetailFill(const node_t *node)
 {
-    Q_assert(node->is_leaf);
+    auto *leafdata = node->get_leafdata();
+    Q_assert(leafdata);
 
     // NOTE: detail-solid is considered sealing for the detail fill,
     // but not the regular fill (LeafSealsMap).
 
-    return qbsp_options.target_game->contents_are_any_solid(node->contents) ||
-           qbsp_options.target_game->contents_are_sky(node->contents);
+    return qbsp_options.target_game->contents_are_any_solid(leafdata->contents) ||
+           qbsp_options.target_game->contents_are_sky(leafdata->contents);
 }
 
 /*
@@ -72,23 +74,25 @@ room to not get filled in as solid.
 */
 static node_t *PointInLeaf(node_t *node, const qvec3d &point, bool prefer_sealing)
 {
-    if (node->is_leaf) {
+    auto *nodedata = node->get_nodedata();
+
+    if (!nodedata) { // leaf?
         return node;
     }
 
-    double dist = node->get_plane().distance_to(point);
+    double dist = nodedata->get_plane().distance_to(point);
 
     if (dist > 0) {
         // point is on the front of the node plane
-        return PointInLeaf(node->children[0], point, prefer_sealing);
+        return PointInLeaf(nodedata->children[0], point, prefer_sealing);
     } else if (dist < 0) {
         // point is on the back of the node plane
-        return PointInLeaf(node->children[1], point, prefer_sealing);
+        return PointInLeaf(nodedata->children[1], point, prefer_sealing);
     } else {
         // point is exactly on the node plane
 
-        node_t *front = PointInLeaf(node->children[0], point, prefer_sealing);
-        node_t *back = PointInLeaf(node->children[1], point, prefer_sealing);
+        node_t *front = PointInLeaf(nodedata->children[0], point, prefer_sealing);
+        node_t *back = PointInLeaf(nodedata->children[1], point, prefer_sealing);
 
         if (prefer_sealing == LeafSealsMap(front)) {
             return front;
@@ -99,15 +103,16 @@ static node_t *PointInLeaf(node_t *node, const qvec3d &point, bool prefer_sealin
 
 static void ClearOccupied_r(node_t *node)
 {
-    // we need to clear this on leaf nodes.. just clear it on everything
-    node->outside_distance = -1;
-    node->occupied = 0;
-    node->occupant = nullptr;
-
-    if (!node->is_leaf) {
-        ClearOccupied_r(node->children[0]);
-        ClearOccupied_r(node->children[1]);
+    if (auto *nodedata = node->get_nodedata()) {
+        ClearOccupied_r(nodedata->children[0]);
+        ClearOccupied_r(nodedata->children[1]);
+        return;
     }
+
+    auto *leafdata = node->get_leafdata();
+    leafdata->outside_distance = -1;
+    leafdata->occupied = 0;
+    leafdata->occupant = nullptr;
 }
 
 static bool OutsideFill_Passable(const portal_t *p)
@@ -172,8 +177,9 @@ static void FloodFillLeafsFromVoid(tree_t &tree)
 
         // visit node
         visited_nodes.insert(node);
-        Q_assert(node->is_leaf);
-        node->outside_distance = outside_distance;
+        auto *leafdata = node->get_leafdata();
+        Q_assert(leafdata);
+        leafdata->outside_distance = outside_distance;
 
         // push neighbouring nodes onto the back of the queue
         int side;
@@ -198,22 +204,22 @@ Given an occupied leaf, returns a list of porals leading to the void
 */
 static std::vector<portal_t *> FindPortalsToVoid(node_t *occupied_leaf)
 {
-    Q_assert(occupied_leaf->occupant != nullptr);
-    Q_assert(occupied_leaf->outside_distance >= 0);
+    Q_assert(occupied_leaf->get_leafdata()->occupant != nullptr);
+    Q_assert(occupied_leaf->get_leafdata()->outside_distance >= 0);
 
     std::vector<portal_t *> result;
 
     node_t *node = occupied_leaf;
     while (1) {
         // exit?
-        if (node->outside_distance == 0)
+        if (node->get_leafdata()->outside_distance == 0)
             break; // this is the void leaf where we started the flood fill in FloodFillFromVoid()
 
         // find the next node...
 
         node_t *bestneighbour = nullptr;
         portal_t *bestportal = nullptr;
-        int bestdist = node->outside_distance;
+        int bestdist = node->get_leafdata()->outside_distance;
 
         int side;
         for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
@@ -224,17 +230,17 @@ static std::vector<portal_t *> FindPortalsToVoid(node_t *occupied_leaf)
 
             node_t *neighbour = portal->nodes[side];
             Q_assert(neighbour != node);
-            Q_assert(neighbour->outside_distance >= 0);
+            Q_assert(neighbour->get_leafdata()->outside_distance >= 0);
 
-            if (neighbour->outside_distance < bestdist) {
+            if (neighbour->get_leafdata()->outside_distance < bestdist) {
                 bestneighbour = neighbour;
                 bestportal = portal;
-                bestdist = neighbour->outside_distance;
+                bestdist = neighbour->get_leafdata()->outside_distance;
             }
         }
 
         Q_assert(bestneighbour != nullptr);
-        Q_assert(bestdist < node->outside_distance);
+        Q_assert(bestdist < node->get_leafdata()->outside_distance);
 
         // go through bestportal
         result.push_back(bestportal);
@@ -354,29 +360,32 @@ static void MarkOccupiedLeafs(node_t *headnode, hull_index_t hullnum)
         /* find the leaf it's in. Skip opqaue leafs */
         bool prefer_sealing = !hullnum.has_value() || hullnum.value() == 0;
         node_t *leaf = PointInLeaf(headnode, entity.origin, prefer_sealing);
+        auto *leafdata = leaf->get_leafdata();
 
         if (LeafSealsMap(leaf)) {
             continue;
         }
 
         /* did we already find an entity for this leaf? */
-        if (leaf->occupant != nullptr) {
+        if (leafdata->occupant != nullptr) {
             continue;
         }
 
-        leaf->occupant = &entity;
+        leafdata->occupant = &entity;
     }
 }
 
 static void FindOccupiedLeafs_R(node_t *node, std::vector<node_t *> &result)
 {
-    if (node->occupant) {
-        result.push_back(node);
+    if (auto *nodedata = node->get_nodedata()) {
+        FindOccupiedLeafs_R(nodedata->children[0], result);
+        FindOccupiedLeafs_R(nodedata->children[1], result);
+        return;
     }
 
-    if (!node->is_leaf) {
-        FindOccupiedLeafs_R(node->children[0], result);
-        FindOccupiedLeafs_R(node->children[1], result);
+    auto *leafdata = node->get_leafdata();
+    if (leafdata->occupant) {
+        result.push_back(node);
     }
 }
 
@@ -421,9 +430,9 @@ Set f->touchesOccupiedLeaf=true on faces that are touching occupied leafs
 static void MarkVisibleBrushSides_R(node_t *node)
 {
     // descent to leafs
-    if (!node->is_leaf) {
-        MarkVisibleBrushSides_R(node->children[0]);
-        MarkVisibleBrushSides_R(node->children[1]);
+    if (auto *nodedata = node->get_nodedata()) {
+        MarkVisibleBrushSides_R(nodedata->children[0]);
+        MarkVisibleBrushSides_R(nodedata->children[1]);
         return;
     }
 
@@ -431,8 +440,6 @@ static void MarkVisibleBrushSides_R(node_t *node)
         // this leaf is opaque
         return;
     }
-
-    Q_assert(!node->detail_separator);
 
     // we also want to mark brush sides in the neighbouring leafs
     // as visible
@@ -443,10 +450,10 @@ static void MarkVisibleBrushSides_R(node_t *node)
 
         node_t *neighbour_leaf = portal->nodes[side];
 
-        if (neighbour_leaf->is_leaf) {
+        if (neighbour_leaf->is_leaf()) {
             // optimized case: just mark the brush sides in the neighbouring
             // leaf that are coplanar
-            for (auto *brush : neighbour_leaf->original_brushes) {
+            for (auto *brush : neighbour_leaf->get_leafdata()->original_brushes) {
                 for (auto &side : brush->sides) {
                     // fixme-brushbsp: should this be get_plane() ?
                     // fixme-brushbsp: planenum
@@ -472,30 +479,32 @@ struct outleafs_stats_t : logging::stat_tracker_t
 
 static void OutLeafsToSolid_R(node_t *node, settings::filltype_t filltype, outleafs_stats_t &stats)
 {
-    if (!node->is_leaf) {
-        OutLeafsToSolid_R(node->children[0], filltype, stats);
-        OutLeafsToSolid_R(node->children[1], filltype, stats);
+    if (auto *nodedata = node->get_nodedata()) {
+        OutLeafsToSolid_R(nodedata->children[0], filltype, stats);
+        OutLeafsToSolid_R(nodedata->children[1], filltype, stats);
         return;
     }
 
+    auto *leafdata = node->get_leafdata();
+
     // skip leafs reachable from entities
     if (filltype == settings::filltype_t::INSIDE) {
-        if (node->occupied > 0) {
+        if (leafdata->occupied > 0) {
             return;
         }
     } else {
-        if (node->outside_distance == -1) {
+        if (leafdata->outside_distance == -1) {
             return;
         }
     }
 
     // Don't fill sky, or count solids as outleafs
-    if (qbsp_options.target_game->contents_seals_map(node->contents)) {
+    if (qbsp_options.target_game->contents_seals_map(leafdata->contents)) {
         return;
     }
 
     // Finally, we can fill it in as void.
-    node->contents = qbsp_options.target_game->create_solid_contents();
+    leafdata->contents = qbsp_options.target_game->create_solid_contents();
     stats.outleafs++;
 }
 
@@ -506,14 +515,16 @@ struct detail_filled_leafs_stats_t : logging::stat_tracker_t
 
 static void FillDetailEnclosedLeafsToDetailSolid_R(node_t *node, detail_filled_leafs_stats_t &stats)
 {
-    if (!node->is_leaf) {
-        FillDetailEnclosedLeafsToDetailSolid_R(node->children[0], stats);
-        FillDetailEnclosedLeafsToDetailSolid_R(node->children[1], stats);
+    if (auto *nodedata = node->get_nodedata()) {
+        FillDetailEnclosedLeafsToDetailSolid_R(nodedata->children[0], stats);
+        FillDetailEnclosedLeafsToDetailSolid_R(nodedata->children[1], stats);
         return;
     }
 
+    auto *leafdata = node->get_leafdata();
+
     // skip leafs reachable from entities
-    if (node->occupied > 0) {
+    if (leafdata->occupied > 0) {
         return;
     }
 
@@ -523,7 +534,7 @@ static void FillDetailEnclosedLeafsToDetailSolid_R(node_t *node, detail_filled_l
     }
 
     // Finally, we can fill it in as detail solid.
-    node->contents =
+    leafdata->contents =
         qbsp_options.target_game->create_detail_solid_contents(qbsp_options.target_game->create_solid_contents());
     stats.filledleafs++;
 }
@@ -533,7 +544,7 @@ static void FillDetailEnclosedLeafsToDetailSolid_R(node_t *node, detail_filled_l
 #if 0
 static void SetOccupied_R(node_t *node, int dist)
 {
-    if (!node->is_leaf) {
+    if (!node->is_leaf()) {
         SetOccupied_R(node->children[0], dist);
         SetOccupied_R(node->children[1], dist);
     }
@@ -566,10 +577,9 @@ static void BFSFloodFillFromOccupiedLeafs(
         node_t *node = pair.first;
         const int dist = pair.second;
 
-        if (node->occupied == 0) {
+        if (node->get_leafdata()->occupied == 0) {
             // we haven't visited this node yet
-            Q_assert(!node->detail_separator);
-            node->occupied = dist;
+            node->get_leafdata()->occupied = dist;
 
             // push neighbouring nodes onto the back of the queue
             int side;
@@ -590,19 +600,19 @@ static std::vector<portal_t *> MakeLeakLine(node_t *outleaf, mapentity_t *&leake
 {
     std::vector<portal_t *> result;
 
-    Q_assert(outleaf->occupied > 0);
+    Q_assert(outleaf->get_leafdata()->occupied > 0);
 
     node_t *node = outleaf;
     while (1) {
         // exit?
-        if (node->occupied == 1)
+        if (node->get_leafdata()->occupied == 1)
             break; // this node contains an entity
 
         // find the next node...
 
         node_t *bestneighbour = nullptr;
         portal_t *bestportal = nullptr;
-        int bestoccupied = node->occupied;
+        int bestoccupied = node->get_leafdata()->occupied;
 
         int side;
         for (portal_t *portal = node->portals; portal; portal = portal->next[!side]) {
@@ -613,27 +623,27 @@ static std::vector<portal_t *> MakeLeakLine(node_t *outleaf, mapentity_t *&leake
 
             node_t *neighbour = portal->nodes[side];
             Q_assert(neighbour != node);
-            Q_assert(neighbour->occupied > 0);
+            Q_assert(neighbour->get_leafdata()->occupied > 0);
 
-            if (neighbour->occupied < bestoccupied) {
+            if (neighbour->get_leafdata()->occupied < bestoccupied) {
                 bestneighbour = neighbour;
                 bestportal = portal;
-                bestoccupied = neighbour->occupied;
+                bestoccupied = neighbour->get_leafdata()->occupied;
             }
         }
 
         Q_assert(bestneighbour != nullptr);
-        Q_assert(bestoccupied < node->occupied);
+        Q_assert(bestoccupied < node->get_leafdata()->occupied);
 
         // go through bestportal
         result.push_back(bestportal);
         node = bestneighbour;
     }
 
-    Q_assert(node->occupant != nullptr);
-    Q_assert(node->occupied == 1);
+    Q_assert(node->get_leafdata()->occupant != nullptr);
+    Q_assert(node->get_leafdata()->occupied == 1);
 
-    leakentity = node->occupant;
+    leakentity = node->get_leafdata()->occupant;
     return result;
 }
 
@@ -669,6 +679,8 @@ Special cases: structural fully covered by detail still needs to be marked "visi
 */
 bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brushes)
 {
+    Q_assert(tree.portaltype == portaltype_t::TREE);
+
     node_t *node = tree.headnode;
 
     logging::funcheader();
@@ -682,8 +694,8 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
     const std::vector<node_t *> occupied_leafs = FindOccupiedLeafs(node);
 
     for (auto *occupied_leaf : occupied_leafs) {
-        Q_assert(occupied_leaf->outside_distance == -1);
-        Q_assert(occupied_leaf->occupied == 0);
+        Q_assert(occupied_leaf->get_leafdata()->outside_distance == -1);
+        Q_assert(occupied_leaf->get_leafdata()->occupied == 0);
     }
 
     if (occupied_leafs.empty()) {
@@ -707,7 +719,7 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
         const int side = (tree.outside_node.portals->nodes[0] == &tree.outside_node);
         node_t *fillnode = tree.outside_node.portals->nodes[side];
 
-        if (fillnode->occupied > 0) {
+        if (fillnode->get_leafdata()->occupied > 0) {
             leakline = MakeLeakLine(fillnode, leakentity);
             std::reverse(leakline.begin(), leakline.end());
         }
@@ -723,17 +735,18 @@ bool FillOutside(tree_t &tree, hull_index_t hullnum, bspbrush_t::container &brus
         node_t *best_leak = nullptr;
 
         for (node_t *leaf : occupied_leafs) {
-            if (leaf->outside_distance == -1)
+            auto *leafdata = leaf->get_leafdata();
+            if (leafdata->outside_distance == -1)
                 continue;
 
-            if (leaf->outside_distance < best_leak_dist) {
-                best_leak_dist = leaf->outside_distance;
+            if (leafdata->outside_distance < best_leak_dist) {
+                best_leak_dist = leafdata->outside_distance;
                 best_leak = leaf;
             }
         }
 
         if (best_leak) {
-            leakentity = best_leak->occupant;
+            leakentity = best_leak->get_leafdata()->occupant;
             Q_assert(leakentity != nullptr);
             leakline = FindPortalsToVoid(best_leak);
         }

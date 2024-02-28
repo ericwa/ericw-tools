@@ -58,7 +58,10 @@ static bool ShouldOmitFace(face_t *f)
 
     // omit faces fully covered by detail wall
     if (!f->markleafs.empty() && std::all_of(f->markleafs.begin(), f->markleafs.end(),
-                                     [](auto *l) { return l->contents.is_detail_wall(qbsp_options.target_game); })) {
+                                     [](node_t *l) {
+        auto *leafdata = l->get_leafdata();
+        return leafdata->contents.is_detail_wall(qbsp_options.target_game);
+    })) {
         return true;
     }
 
@@ -67,7 +70,8 @@ static bool ShouldOmitFace(face_t *f)
 
 static void MergeNodeFaces(node_t *node, makefaces_stats_t &stats)
 {
-    node->facelist = MergeFaceList(std::move(node->facelist), stats.c_merge);
+    auto *nodedata = node->get_nodedata();
+    nodedata->facelist = MergeFaceList(std::move(nodedata->facelist), stats.c_merge);
 }
 
 /*
@@ -105,16 +109,17 @@ static void EmitFaceVertices(face_t *f)
 
 static void EmitVertices_R(node_t *node)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         return;
     }
 
-    for (auto &f : node->facelist) {
+    auto *nodedata = node->get_nodedata();
+    for (auto &f : nodedata->facelist) {
         EmitFaceVertices(f.get());
     }
 
-    EmitVertices_R(node->children[0]);
-    EmitVertices_R(node->children[1]);
+    EmitVertices_R(nodedata->children[0]);
+    EmitVertices_R(nodedata->children[1]);
 }
 
 void EmitVertices(node_t *headnode)
@@ -234,13 +239,14 @@ MakeFaceEdges_r
 */
 static void EmitFaces_R(node_t *node, emit_faces_stats_t &stats)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         return;
     }
 
-    node->firstface = static_cast<int>(map.bsp.dfaces.size());
+    auto *nodedata = node->get_nodedata();
+    nodedata->firstface = static_cast<int>(map.bsp.dfaces.size());
 
-    for (auto &face : node->facelist) {
+    for (auto &face : nodedata->facelist) {
         // emit a region
         for (auto &fragment : face->fragments) {
             EmitEdges(face.get(), &fragment, stats);
@@ -248,10 +254,10 @@ static void EmitFaces_R(node_t *node, emit_faces_stats_t &stats)
         }
     }
 
-    node->numfaces = static_cast<int>(map.bsp.dfaces.size()) - node->firstface;
+    nodedata->numfaces = static_cast<int>(map.bsp.dfaces.size()) - nodedata->firstface;
 
-    EmitFaces_R(node->children[0], stats);
-    EmitFaces_R(node->children[1], stats);
+    EmitFaces_R(nodedata->children[0], stats);
+    EmitFaces_R(nodedata->children[1], stats);
 }
 
 /*
@@ -287,20 +293,21 @@ Adds the given face to the markfaces lists of all descendant leafs of `node`.
 */
 static void AddMarksurfaces_r(face_t *face, std::unique_ptr<face_t> face_copy, node_t *node)
 {
-    if (node->is_leaf) {
-        node->markfaces.push_back(face);
+    if (auto *leafdata = node->get_leafdata()) {
+        leafdata->markfaces.push_back(face);
         face->markleafs.push_back(node);
         return;
     }
 
-    const qplane3d &splitplane = node->get_plane();
+    auto *nodedata = node->get_nodedata();
+    const qplane3d &splitplane = nodedata->get_plane();
 
     auto [frontFragment, backFragment] = SplitFace(std::move(face_copy), splitplane);
     if (frontFragment) {
-        AddMarksurfaces_r(face, std::move(frontFragment), node->children[0]);
+        AddMarksurfaces_r(face, std::move(frontFragment), nodedata->children[0]);
     }
     if (backFragment) {
-        AddMarksurfaces_r(face, std::move(backFragment), node->children[1]);
+        AddMarksurfaces_r(face, std::move(backFragment), nodedata->children[1]);
     }
 }
 
@@ -313,21 +320,23 @@ Populates the `markfaces` vectors of all leafs
 */
 void MakeMarkFaces(node_t *node)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         return;
     }
 
+    auto *nodedata = node->get_nodedata();
+
     // for the faces on this splitting node..
-    for (auto &face : node->facelist) {
+    for (auto &face : nodedata->facelist) {
         // add this face to all descendant leafs it touches
 
         // make a copy we can clip
-        AddMarksurfaces_r(face.get(), CopyFace(face.get()), node->children[face->planenum & 1]);
+        AddMarksurfaces_r(face.get(), CopyFace(face.get()), nodedata->children[face->planenum & 1]);
     }
 
     // process child nodes recursively
-    MakeMarkFaces(node->children[0]);
-    MakeMarkFaces(node->children[1]);
+    MakeMarkFaces(nodedata->children[0]);
+    MakeMarkFaces(nodedata->children[1]);
 }
 
 /*
@@ -449,12 +458,14 @@ static void SubdivideNodeFaces(node_t *node, makefaces_stats_t &stats)
 {
     std::list<std::unique_ptr<face_t>> result;
 
+    auto *nodedata = node->get_nodedata();
+
     // subdivide each face and push the results onto subdivided
-    for (auto &face : node->facelist) {
+    for (auto &face : nodedata->facelist) {
         result.splice(result.end(), SubdivideFace(std::move(face), stats));
     }
 
-    node->facelist = std::move(result);
+    nodedata->facelist = std::move(result);
 }
 
 /*
@@ -488,7 +499,8 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
         f->w = p->winding.clone();
     }
 
-    f->contents = {.front = p->nodes[pside]->contents, .back = p->nodes[!pside]->contents};
+    f->contents = {.front = p->nodes[pside]->get_leafdata()->contents,
+                   .back = p->nodes[!pside]->get_leafdata()->contents};
 
     UpdateFaceSphere(f.get());
 
@@ -511,9 +523,9 @@ mark the side that originally created it
 static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
 {
     // recurse down to leafs
-    if (!node->is_leaf) {
-        MakeFaces_r(node->children[0], stats);
-        MakeFaces_r(node->children[1], stats);
+    if (auto *nodedata = node->get_nodedata()) {
+        MakeFaces_r(nodedata->children[0], stats);
+        MakeFaces_r(nodedata->children[1], stats);
 
         // merge together all visible faces on the node
         if (!qbsp_options.nomerge.value())
@@ -524,8 +536,10 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
         return;
     }
 
+    auto *leafdata = node->get_leafdata();
+
     // solid leafs never have visible faces
-    if (node->contents.is_any_solid(qbsp_options.target_game))
+    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
         return;
 
     // see which portals are valid
@@ -541,7 +555,7 @@ static void MakeFaces_r(node_t *node, makefaces_stats_t &stats)
 
         if (f) {
             stats.c_nodefaces++;
-            p->onnode->facelist.push_back(std::move(f));
+            p->onnode->get_nodedata()->facelist.push_back(std::move(f));
         }
     }
 }

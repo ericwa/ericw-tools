@@ -53,13 +53,14 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
     int i, front, back;
     qplane3d plane2;
 
-    if (!node->is_leaf && !node->detail_separator) {
-        WritePortals_r(node->children[0], portalFile, clusters);
-        WritePortals_r(node->children[1], portalFile, clusters);
+    if (auto *nodedata = node->get_nodedata(); nodedata && !nodedata->detail_separator) {
+        WritePortals_r(nodedata->children[0], portalFile, clusters);
+        WritePortals_r(nodedata->children[1], portalFile, clusters);
         return;
     }
     // at this point, `node` may be a leaf or a cluster
-    if (node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game))
+    if (auto *leafdata = node->get_leafdata();
+        leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game))
         return;
 
     for (p = node->portals; p; p = next) {
@@ -107,12 +108,14 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
 
 static int WritePTR2ClusterMapping_r(node_t *node, std::ofstream &portalFile, int viscluster)
 {
-    if (!node->is_leaf) {
-        viscluster = WritePTR2ClusterMapping_r(node->children[0], portalFile, viscluster);
-        viscluster = WritePTR2ClusterMapping_r(node->children[1], portalFile, viscluster);
+    if (auto *nodedata = node->get_nodedata()) {
+        viscluster = WritePTR2ClusterMapping_r(nodedata->children[0], portalFile, viscluster);
+        viscluster = WritePTR2ClusterMapping_r(nodedata->children[1], portalFile, viscluster);
         return viscluster;
     }
-    if (node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game))
+
+    auto *leafdata = node->get_leafdata();
+    if (leafdata->contents.is_any_solid(qbsp_options.target_game))
         return viscluster;
 
     /* If we're in the next cluster, start a new line */
@@ -166,21 +169,19 @@ NumberLeafs_r
 static void NumberLeafs_r(node_t *node, portal_state_t &state, int cluster)
 {
     /* decision node */
-    if (!node->is_leaf) {
-        node->visleafnum = -99;
-        node->viscluster = -99;
-        if (cluster < 0 && node->detail_separator) {
+    if (auto *nodedata = node->get_nodedata()) {
+        if (cluster < 0 && nodedata->detail_separator) {
             state.uses_detail = true;
             cluster = state.num_visclusters++;
             node->viscluster = cluster;
             CountPortals(node, state);
         }
-        NumberLeafs_r(node->children[0], state, cluster);
-        NumberLeafs_r(node->children[1], state, cluster);
+        NumberLeafs_r(nodedata->children[0], state, cluster);
+        NumberLeafs_r(nodedata->children[1], state, cluster);
         return;
     }
 
-    if (node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game)) {
+    if (auto *leafdata = node->get_leafdata(); leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game)) {
         /* solid block, viewpoint never inside */
         node->visleafnum = -1;
         node->viscluster = -1;
@@ -305,9 +306,9 @@ static void WriteDebugPortal(const portal_t *p, std::ofstream &portalFile)
 
 static void WriteTreePortals_r(node_t *node, std::ofstream &portalFile)
 {
-    if (!node->is_leaf) {
-        WriteTreePortals_r(node->children[0], portalFile);
-        WriteTreePortals_r(node->children[1], portalFile);
+    if (auto *nodedata = node->get_nodedata()) {
+        WriteTreePortals_r(nodedata->children[0], portalFile);
+        WriteTreePortals_r(nodedata->children[1], portalFile);
         return;
     }
 
@@ -323,9 +324,9 @@ static void WriteTreePortals_r(node_t *node, std::ofstream &portalFile)
 
 static void CountTreePortals_r(node_t *node, size_t &count)
 {
-    if (!node->is_leaf) {
-        CountTreePortals_r(node->children[0], count);
-        CountTreePortals_r(node->children[1], count);
+    if (auto *nodedata = node->get_nodedata()) {
+        CountTreePortals_r(nodedata->children[0], count);
+        CountTreePortals_r(nodedata->children[1], count);
         return;
     }
 

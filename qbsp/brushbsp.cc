@@ -347,21 +347,22 @@ Called in parallel.
 */
 static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t &stats)
 {
-    leafnode->facelist.clear();
-    leafnode->is_leaf = true;
+    leafnode->make_leaf();
 
-    leafnode->contents = qbsp_options.target_game->create_empty_contents();
+    auto *leafdata = leafnode->get_leafdata();
+
+    leafdata->contents = qbsp_options.target_game->create_empty_contents();
     for (auto &brush : brushes) {
-        leafnode->contents = qbsp_options.target_game->combine_contents(leafnode->contents, brush->contents);
+        leafdata->contents = qbsp_options.target_game->combine_contents(leafdata->contents, brush->contents);
     }
     for (auto &brush : brushes) {
-        leafnode->original_brushes.push_back(brush->original_brush());
+        leafdata->original_brushes.push_back(brush->original_brush());
     }
 
-    qbsp_options.target_game->count_contents_in_stats(leafnode->contents, *stats.leafstats);
+    qbsp_options.target_game->count_contents_in_stats(leafdata->contents, *stats.leafstats);
 
     if (qbsp_options.debugleak.value() || qbsp_options.debugbspbrushes.value()) {
-        leafnode->bsp_brushes = brushes;
+        leafdata->bsp_brushes = brushes;
     } else {
         leafnode->volume.reset();
     }
@@ -576,7 +577,7 @@ static twosided<bspbrush_t::ptr> SplitBrush(
 inline void CheckPlaneAgainstParents(size_t planenum, node_t *node)
 {
     for (node_t *p = node->parent; p; p = p->parent) {
-        if (p->planenum == planenum) {
+        if (p->get_nodedata()->planenum == planenum) {
             Error("Tried parent");
         }
     }
@@ -1085,7 +1086,7 @@ static side_t *SelectSplitPlane(
         // other passes
         if (bestside) {
             if (pass >= 2)
-                node->detail_separator = true; // not needed for vis
+                node->get_nodedata()->detail_separator = true; // not needed for vis
             break;
         }
     }
@@ -1180,7 +1181,7 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
         // this is a leaf node
         clock();
 
-        node->is_leaf = true;
+        node->make_leaf();
 
         stats.c_leafs++;
         LeafNode(node, std::move(brushes), stats);
@@ -1197,22 +1198,23 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
     size_t bestplane = bestside->planenum & ~1;
     Q_assert(!(bestplane & 1));
 
-    node->planenum = bestplane;
+    nodedata_t *nodedata = node->get_nodedata();
+    nodedata->planenum = bestplane;
 
     auto &plane = map.get_plane(bestplane);
     auto children = SplitBrushList(std::move(brushes), bestplane, stats);
 
     // allocate children before recursing
     for (int i = 0; i < 2; i++) {
-        auto &newnode = node->children[i] = tree.create_node();
+        auto &newnode = nodedata->children[i] = tree.create_node();
         newnode->parent = node;
         newnode->bounds = node->bounds;
     }
 
     for (int i = 0; i < 3; i++) {
         if (plane.get_normal()[i] == 1.0) {
-            node->children[0]->bounds[0][i] = plane.get_dist();
-            node->children[1]->bounds[1][i] = plane.get_dist();
+            nodedata->children[0]->bounds[0][i] = plane.get_dist();
+            nodedata->children[1]->bounds[1][i] = plane.get_dist();
             break;
         }
     }
@@ -1221,14 +1223,14 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
     if (node->volume) {
         auto children_volumes = SplitBrush(std::move(node->volume), bestplane, stats);
         node->volume = nullptr;
-        node->children[0]->volume = std::move(children_volumes[0]);
-        node->children[1]->volume = std::move(children_volumes[1]);
+        nodedata->children[0]->volume = std::move(children_volumes[0]);
+        nodedata->children[1]->volume = std::move(children_volumes[1]);
     }
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(tree, level + 1, node->children[0], std::move(children[0]), split_type, stats, clock); });
-    g.run([&]() { BuildTree_r(tree, level + 1, node->children[1], std::move(children[1]), split_type, stats, clock); });
+    g.run([&]() { BuildTree_r(tree, level + 1, nodedata->children[0], std::move(children[0]), split_type, stats, clock); });
+    g.run([&]() { BuildTree_r(tree, level + 1, nodedata->children[1], std::move(children[1]), split_type, stats, clock); });
     g.wait();
 }
 
@@ -1258,17 +1260,20 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
          */
         auto headnode = tree.create_node();
         headnode->bounds = entity.bounds;
+
+        auto *nodedata = headnode->get_nodedata();
+
         // The choice of plane is mostly unimportant, but having it at (0, 0, 0) affects
         // the node bounds calculation.
-        headnode->planenum = 0;
-        headnode->children[0] = tree.create_node();
-        headnode->children[0]->is_leaf = true;
-        headnode->children[0]->contents = qbsp_options.target_game->create_empty_contents();
-        headnode->children[0]->parent = headnode;
-        headnode->children[1] = tree.create_node();
-        headnode->children[1]->is_leaf = true;
-        headnode->children[1]->contents = qbsp_options.target_game->create_empty_contents();
-        headnode->children[1]->parent = headnode;
+        nodedata->planenum = 0;
+        nodedata->children[0] = tree.create_node();
+        nodedata->children[0]->make_leaf();
+        nodedata->children[0]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[0]->parent = headnode;
+        nodedata->children[1] = tree.create_node();
+        nodedata->children[1]->make_leaf();
+        nodedata->children[1]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[1]->parent = headnode;
 
         tree.bounds = headnode->bounds;
         tree.headnode = headnode;

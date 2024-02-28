@@ -196,13 +196,14 @@ for vertex checking.
 static void FindEdgeVerts_FaceBounds_R(
     const node_t *node, const face_t *f, const aabb3d &aabb, std::vector<size_t> &verts)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         return;
     } else if (node->bounds.disjoint(aabb, 0.0)) {
         return;
     }
 
-    for (auto &face : node->facelist) {
+    auto *nodedata = node->get_nodedata();
+    for (auto &face : nodedata->facelist) {
         if (!HasTJuncInteraction(f, face.get()))
             continue;
         for (auto &v : face->original_vertices) {
@@ -212,8 +213,8 @@ static void FindEdgeVerts_FaceBounds_R(
         }
     }
 
-    FindEdgeVerts_FaceBounds_R(node->children[0], f, aabb, verts);
-    FindEdgeVerts_FaceBounds_R(node->children[1], f, aabb, verts);
+    FindEdgeVerts_FaceBounds_R(nodedata->children[0], f, aabb, verts);
+    FindEdgeVerts_FaceBounds_R(nodedata->children[1], f, aabb, verts);
 }
 
 /*
@@ -888,19 +889,21 @@ FixEdges_r
 */
 static void FindFaces_r(node_t *node, std::unordered_set<face_t *> &faces)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         return;
     }
 
-    for (auto &f : node->facelist) {
+    auto *nodedata = node->get_nodedata();
+
+    for (auto &f : nodedata->facelist) {
         // might have been omitted, so `original_vertices` will be empty
         if (f->original_vertices.size()) {
             faces.insert(f.get());
         }
     }
 
-    FindFaces_r(node->children[0], faces);
-    FindFaces_r(node->children[1], faces);
+    FindFaces_r(nodedata->children[0], faces);
+    FindFaces_r(nodedata->children[1], faces);
 }
 
 /*

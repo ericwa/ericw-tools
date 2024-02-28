@@ -60,9 +60,9 @@ FreeTreePortals_r
 */
 static void ClearNodePortals_r(node_t *node)
 {
-    if (!node->is_leaf) {
-        ClearNodePortals_r(node->children[0]);
-        ClearNodePortals_r(node->children[1]);
+    if (auto *nodedata = node->get_nodedata()) {
+        ClearNodePortals_r(nodedata->children[0]);
+        ClearNodePortals_r(nodedata->children[1]);
     }
 
     node->portals = nullptr;
@@ -87,29 +87,22 @@ void FreeTreePortals(tree_t &tree)
 
 static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
 {
+    auto *nodedata = node->get_nodedata();
+
     // merge the children's brush lists
-    size_t base = node->children[0]->original_brushes.size() > node->children[1]->original_brushes.size() ? 0 : 1;
-    node->original_brushes = std::move(node->children[base]->original_brushes);
-    node->original_brushes.insert(node->original_brushes.end(), node->children[base ^ 1]->original_brushes.begin(),
-        node->children[base ^ 1]->original_brushes.end());
+    size_t base = nodedata->children[0]->get_leafdata()->original_brushes.size() > nodedata->children[1]->get_leafdata()->original_brushes.size() ? 0 : 1;
+    std::vector<bspbrush_t *> original_brushes = std::move(nodedata->children[base]->get_leafdata()->original_brushes);
+    original_brushes.insert(original_brushes.end(), nodedata->children[base ^ 1]->get_leafdata()->original_brushes.begin(),
+                            nodedata->children[base ^ 1]->get_leafdata()->original_brushes.end());
 
-    std::sort(node->original_brushes.begin(), node->original_brushes.end(),
+    std::sort(original_brushes.begin(), original_brushes.end(),
         [](const bspbrush_t *a, const bspbrush_t *b) { return a->mapbrush < b->mapbrush; });
-    auto unique = std::unique(node->original_brushes.begin(), node->original_brushes.end());
-    node->original_brushes.erase(unique, node->original_brushes.end());
+    auto unique = std::unique(original_brushes.begin(), original_brushes.end());
+    original_brushes.erase(unique, original_brushes.end());
 
-    node->is_leaf = true;
-
-    for (auto &child : node->children) {
-        *child = {}; // clear everything in the node
-        child = nullptr;
-    }
-
-    node->facelist.clear();
-
-    node->contents = contents;
-
-    Q_assert(node->markfaces.empty());
+    auto *leafdata = node->make_leaf();
+    leafdata->contents = contents;
+    leafdata->original_brushes = original_brushes;
 }
 
 struct prune_stats_t : logging::stat_tracker_t
@@ -119,26 +112,29 @@ struct prune_stats_t : logging::stat_tracker_t
 
 static bool IsAnySolidLeaf(const node_t *node)
 {
-    return node->is_leaf && node->contents.is_any_solid(qbsp_options.target_game);
+    auto *leafdata = node->get_leafdata();
+    return leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game);
 }
 
 static void PruneNodes_R(node_t *node, prune_stats_t &stats)
 {
-    if (node->is_leaf) {
+    if (auto *leafdata = node->get_leafdata()) {
         // remap any contents
-        if (qbsp_options.target_game->id != GAME_QUAKE_II && node->contents.is_detail_wall(qbsp_options.target_game)) {
-            node->contents = qbsp_options.target_game->create_solid_contents();
+        if (qbsp_options.target_game->id != GAME_QUAKE_II && leafdata->contents.is_detail_wall(qbsp_options.target_game)) {
+            leafdata->contents = qbsp_options.target_game->create_solid_contents();
         }
         return;
     }
 
+    auto *nodedata = node->get_nodedata();
+
     tbb::task_group g;
-    g.run([&]() { PruneNodes_R(node->children[0], stats); });
-    g.run([&]() { PruneNodes_R(node->children[1], stats); });
+    g.run([&]() { PruneNodes_R(nodedata->children[0], stats); });
+    g.run([&]() { PruneNodes_R(nodedata->children[1], stats); });
     g.wait();
 
     // fixme-brushbsp: is it correct to strip off detail flags here?
-    if (IsAnySolidLeaf(node->children[0]) && IsAnySolidLeaf(node->children[1])) {
+    if (IsAnySolidLeaf(nodedata->children[0]) && IsAnySolidLeaf(nodedata->children[1])) {
         // This discards any faces on-node. Should be safe (?)
         ConvertNodeToLeaf(node, qbsp_options.target_game->create_solid_contents());
         stats.nodes_pruned++;

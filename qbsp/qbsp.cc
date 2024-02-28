@@ -281,7 +281,7 @@ const qbsp_plane_t &face_t::get_positive_plane() const
     return map.get_plane(planenum & ~1);
 }
 
-const qbsp_plane_t &node_t::get_plane() const
+const qbsp_plane_t &nodedata_t::get_plane() const
 {
     return map.get_plane(planenum);
 }
@@ -799,13 +799,14 @@ struct brush_list_stats_t : logging::stat_tracker_t
 
 static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_list_stats_t &stats)
 {
-    if (node->is_leaf) {
-        if (node->contents.native) {
-            if (node->original_brushes.size()) {
-                node->numleafbrushes = node->original_brushes.size();
-                stats.total_leaf_brushes += node->numleafbrushes;
-                node->firstleafbrush = map.bsp.dleafbrushes.size();
-                for (auto &b : node->original_brushes) {
+    if (node->is_leaf()) {
+        auto *leafdata = node->get_leafdata();
+        if (leafdata->contents.native) {
+            if (leafdata->original_brushes.size()) {
+                leafdata->numleafbrushes = leafdata->original_brushes.size();
+                stats.total_leaf_brushes += leafdata->numleafbrushes;
+                leafdata->firstleafbrush = map.bsp.dleafbrushes.size();
+                for (auto &b : leafdata->original_brushes) {
 
                     if (!b->mapbrush->outputnumber.has_value()) {
                         b->mapbrush->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
@@ -835,8 +836,9 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
         return;
     }
 
-    ExportBrushList_r(entity, node->children[0], stats);
-    ExportBrushList_r(entity, node->children[1], stats);
+    auto *nodedata = node->get_nodedata();
+    ExportBrushList_r(entity, nodedata->children[0], stats);
+    ExportBrushList_r(entity, nodedata->children[1], stats);
 }
 
 static void ExportBrushList(mapentity_t &entity, node_t *node)
@@ -867,12 +869,14 @@ static bool IsTrigger(const mapentity_t &entity)
 
 static void CountLeafs_r(node_t *node, content_stats_base_t &stats)
 {
-    if (node->is_leaf) {
-        qbsp_options.target_game->count_contents_in_stats(node->contents, stats);
+    if (auto *leafdata = node->get_leafdata()) {
+        qbsp_options.target_game->count_contents_in_stats(leafdata->contents, stats);
         return;
     }
-    CountLeafs_r(node->children[0], stats);
-    CountLeafs_r(node->children[1], stats);
+
+    auto *nodedata = node->get_nodedata();
+    CountLeafs_r(nodedata->children[0], stats);
+    CountLeafs_r(nodedata->children[1], stats);
 }
 
 static int NodeHeight(node_t *node)
@@ -885,12 +889,13 @@ static int NodeHeight(node_t *node)
 
 static void CountLeafHeights_r(node_t *node, std::vector<int> &heights)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         heights.push_back(NodeHeight(node));
         return;
     }
-    CountLeafHeights_r(node->children[0], heights);
-    CountLeafHeights_r(node->children[1], heights);
+    auto *nodedata = node->get_nodedata();
+    CountLeafHeights_r(nodedata->children[0], heights);
+    CountLeafHeights_r(nodedata->children[1], heights);
 }
 
 void CountLeafs(node_t *headnode)
@@ -919,28 +924,30 @@ void CountLeafs(node_t *headnode)
 
 static void GatherBspbrushes_r(node_t *node, bspbrush_t::container &container)
 {
-    if (node->is_leaf) {
-        for (auto &brush : node->bsp_brushes) {
+    if (auto *leafdata = node->get_leafdata()) {
+        for (auto &brush : leafdata->bsp_brushes) {
             container.push_back(brush);
         }
         return;
     }
 
-    GatherBspbrushes_r(node->children[0], container);
-    GatherBspbrushes_r(node->children[1], container);
+    auto *nodedata = node->get_nodedata();
+    GatherBspbrushes_r(nodedata->children[0], container);
+    GatherBspbrushes_r(nodedata->children[1], container);
 }
 
 static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
 {
-    if (node->is_leaf) {
-        if (!node->contents.is_empty(qbsp_options.target_game)) {
+    if (auto *leafdata = node->get_leafdata()) {
+        if (!leafdata->contents.is_empty(qbsp_options.target_game)) {
             container.push_back(node->volume);
         }
         return;
     }
 
-    GatherLeafVolumes_r(node->children[0], container);
-    GatherLeafVolumes_r(node->children[1], container);
+    auto *nodedata = node->get_nodedata();
+    GatherLeafVolumes_r(nodedata->children[0], container);
+    GatherLeafVolumes_r(nodedata->children[1], container);
 }
 
 /*
@@ -1145,7 +1152,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
         // Area portals
         if (qbsp_options.target_game->id == GAME_QUAKE_II) {
-            EmitAreaPortals(tree.headnode);
+            EmitAreaPortals(tree);
         }
     } else {
         FillBrushEntity(tree, hullnum, brushes);
@@ -1204,7 +1211,7 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
                             auto face = MakeFaceFromSide(tree.headnode, side);
 
                             if (face) {
-                                tree.headnode->facelist.push_back(std::move(face));
+                                tree.headnode->get_nodedata()->facelist.push_back(std::move(face));
                             }
                         }
                     }

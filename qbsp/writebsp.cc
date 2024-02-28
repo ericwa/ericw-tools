@@ -113,20 +113,22 @@ ExportClipNodes
 */
 static size_t ExportClipNodes(node_t *node)
 {
-    if (node->is_leaf) {
-        return node->contents.native;
+    if (auto *leafdata = node->get_leafdata()) {
+        return leafdata->contents.native;
     }
+
+    auto *nodedata = node->get_nodedata();
 
     /* emit a clipnode */
     const size_t nodenum = map.bsp.dclipnodes.size();
     map.bsp.dclipnodes.emplace_back();
 
-    const int child0 = ExportClipNodes(node->children[0]);
-    const int child1 = ExportClipNodes(node->children[1]);
+    const int child0 = ExportClipNodes(nodedata->children[0]);
+    const int child1 = ExportClipNodes(nodedata->children[1]);
 
     // Careful not to modify the vector while using this clipnode pointer
     bsp2_dclipnode_t &clipnode = map.bsp.dclipnodes[nodenum];
-    clipnode.planenum = ExportMapPlane(node->planenum);
+    clipnode.planenum = ExportMapPlane(nodedata->planenum);
     clipnode.children[0] = child0;
     clipnode.children[1] = child1;
 
@@ -160,10 +162,11 @@ ExportLeaf
 */
 static void ExportLeaf(node_t *node)
 {
+    leafdata_t *leafdata = node->get_leafdata();
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
     const contentflags_t remapped =
-        qbsp_options.target_game->contents_remap_for_export(node->contents, gamedef_t::remap_type_t::leaf);
+        qbsp_options.target_game->contents_remap_for_export(leafdata->contents, gamedef_t::remap_type_t::leaf);
 
     if (!remapped.is_valid(qbsp_options.target_game, false)) {
         FError("Internal error: On leaf {}, tried to save invalid contents type {}", map.bsp.dleafs.size() - 1,
@@ -187,7 +190,7 @@ static void ExportLeaf(node_t *node)
     // write the marksurfaces
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
-    for (auto &face : node->markfaces) {
+    for (auto &face : leafdata->markfaces) {
         if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw) {
 
             // TODO: move to game specific
@@ -211,13 +214,13 @@ static void ExportLeaf(node_t *node)
         if (map.leakfile || map.region || map.antiregions.size()) {
             dleaf.area = 1;
         } else {
-            dleaf.area = node->area;
+            dleaf.area = leafdata->area;
         }
     }
 
     dleaf.cluster = node->viscluster;
-    dleaf.firstleafbrush = node->firstleafbrush;
-    dleaf.numleafbrushes = node->numleafbrushes;
+    dleaf.firstleafbrush = leafdata->firstleafbrush;
+    dleaf.numleafbrushes = leafdata->numleafbrushes;
 }
 
 // only used for Q1
@@ -236,27 +239,30 @@ static void ExportDrawNodes(node_t *node)
     dnode->mins = qv::floor(node->bounds.mins());
     dnode->maxs = qv::ceil(node->bounds.maxs());
 
-    dnode->planenum = ExportMapPlane(node->planenum);
-    dnode->firstface = node->firstface;
-    dnode->numfaces = node->numfaces;
+    auto *nodedata = node->get_nodedata();
+    dnode->planenum = ExportMapPlane(nodedata->planenum);
+    dnode->firstface = nodedata->firstface;
+    dnode->numfaces = nodedata->numfaces;
 
     // recursively output the other nodes
     for (size_t i = 0; i < 2; i++) {
-        if (node->children[i]->is_leaf) {
+        if (auto *children_i_leafdata = nodedata->children[i]->get_leafdata()) {
+            // children[i] is a leaf
             // In Q2, all leaves must have their own ID even if they share solidity.
             if (qbsp_options.target_game->id != GAME_QUAKE_II &&
-                node->children[i]->contents.is_any_solid(qbsp_options.target_game)) {
+                    children_i_leafdata->contents.is_any_solid(qbsp_options.target_game)) {
                 dnode->children[i] = PLANENUM_LEAF;
             } else {
                 int32_t nextLeafIndex = static_cast<int32_t>(map.bsp.dleafs.size());
                 const int32_t childnum = -(nextLeafIndex + 1);
                 dnode->children[i] = childnum;
-                ExportLeaf(node->children[i]);
+                ExportLeaf(nodedata->children[i]);
             }
         } else {
+            // children[i] is a node
             const int32_t childnum = static_cast<int32_t>(map.bsp.dnodes.size());
             dnode->children[i] = childnum;
-            ExportDrawNodes(node->children[i]);
+            ExportDrawNodes(nodedata->children[i]);
 
             // Important: our dnode pointer may be invalid after the recursive call, if the vector got resized.
             // So re-set the pointer.
@@ -287,7 +293,7 @@ void ExportDrawNodes(mapentity_t &entity, node_t *headnode, int firstface)
 
     const size_t mapleafsAtStart = map.bsp.dleafs.size();
 
-    if (headnode->is_leaf) {
+    if (headnode->is_leaf()) {
         ExportLeaf(headnode);
     } else {
         ExportDrawNodes(headnode);

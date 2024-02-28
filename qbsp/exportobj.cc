@@ -141,16 +141,17 @@ void ExportObj_Brushes(const std::string &filesuffix, const bspbrush_t::containe
 
 static void ExportObj_Nodes_r(const node_t *node, std::vector<const face_t *> *dest)
 {
-    if (node->is_leaf) {
+    if (node->is_leaf()) {
         return;
     }
+    auto *nodedata = node->get_nodedata();
 
-    for (auto &face : node->facelist) {
+    for (auto &face : nodedata->facelist) {
         dest->push_back(face.get());
     }
 
-    ExportObj_Nodes_r(node->children[0], dest);
-    ExportObj_Nodes_r(node->children[1], dest);
+    ExportObj_Nodes_r(nodedata->children[0], dest);
+    ExportObj_Nodes_r(nodedata->children[1], dest);
 }
 
 void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes)
@@ -162,13 +163,15 @@ void ExportObj_Nodes(const std::string &filesuffix, const node_t *nodes)
 
 static void ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<const face_t *> *dest)
 {
-    if (!node->is_leaf) {
-        ExportObj_Marksurfaces_r(node->children[0], dest);
-        ExportObj_Marksurfaces_r(node->children[1], dest);
+    if (auto *nodedata = node->get_nodedata()) {
+        ExportObj_Marksurfaces_r(nodedata->children[0], dest);
+        ExportObj_Marksurfaces_r(nodedata->children[1], dest);
         return;
     }
 
-    for (auto &face : node->markfaces) {
+    auto *leafdata = node->get_leafdata();
+
+    for (auto &face : leafdata->markfaces) {
         if (!face->get_texinfo().flags.is_nodraw) {
             dest->insert(face);
         }
