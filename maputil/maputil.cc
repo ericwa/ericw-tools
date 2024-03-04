@@ -358,7 +358,7 @@ static void maputil_make_brush_side(lua_State *state, const brush_side_t &side)
     if (side.extended_info) {
         // set info
         lua_createtable(state, 0, 3);
-        lua_pushnumber(state, side.extended_info->contents.native);
+        lua_pushnumber(state, side.extended_info->contents);
         lua_setfield(state, -2, "contents");
         lua_pushnumber(state, side.extended_info->value);
         lua_setfield(state, -2, "value");
@@ -538,7 +538,7 @@ static void maputil_copy_side(lua_State *state, brush_side_t &side)
         texinfo_quake2_t q2;
 
         lua_getfield(state, -1, "contents");
-        q2.contents.native = lua_tonumber(state, -1);
+        q2.contents = lua_tonumber(state, -1);
         lua_pop(state, 1);
 
         lua_getfield(state, -1, "value");
@@ -716,7 +716,7 @@ static int l_load_texture_meta(lua_State *state)
 
     lua_createtable(state, 0, 5);
 
-    lua_pushnumber(state, result.contents.native);
+    lua_pushnumber(state, result.contents_native);
     lua_setfield(state, -2, "contents");
     lua_pushnumber(state, result.flags.native);
     lua_setfield(state, -2, "flags");

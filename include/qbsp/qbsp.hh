@@ -72,7 +72,7 @@ enum class conversion_t
 // used by Q2 format; used by various systems.
 struct extended_texinfo_t
 {
-    contentflags_t contents = {0};
+    uint32_t contents_native = 0;
     surfflags_t flags = {0};
     int value = 0;
     std::string animation;
@@ -410,7 +410,6 @@ struct nodedata_t {
 
 struct leafdata_t {
     // information for leafs
-    contentflags_t contents; // leaf nodes (0 for decision nodes)
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     int outside_distance; // -1 = can't reach outside, 0 = first void node, >0 = distance from void, in number of
                           // portals used to write leak lines that take the shortest path to the void
@@ -419,6 +418,7 @@ struct leafdata_t {
     uint32_t firstleafbrush; // Q2
     uint32_t numleafbrushes;
     int32_t area;
+    contentflags_t contents; // leaf nodes (0 for decision nodes)
     std::vector<bspbrush_t *> original_brushes;
     bspbrush_t::container bsp_brushes;
 };

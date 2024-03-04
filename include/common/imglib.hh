@@ -57,7 +57,7 @@ struct texture_meta
 
     // Q2/WAL only
     surfflags_t flags{};
-    contentflags_t contents{};
+    uint32_t contents_native = 0;
     int32_t value = 0;
     std::string animation;
 };

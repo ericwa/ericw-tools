@@ -191,7 +191,7 @@ void brush_side_t::parse_extended_texinfo(parser_t &parser)
         if (parser.parse_token(PARSE_OPTIONAL)) {
             texinfo_quake2_t q2_info;
 
-            q2_info.contents = {std::stoi(parser.token)};
+            q2_info.contents = std::stoi(parser.token);
 
             if (parser.parse_token(PARSE_OPTIONAL)) {
                 q2_info.flags.native = std::stoi(parser.token);
@@ -482,7 +482,7 @@ parse_error:
 void brush_side_t::write_extended_info(std::ostream &stream)
 {
     if (extended_info) {
-        ewt::print(stream, " {} {} {}", extended_info->contents.native, extended_info->flags.native, extended_info->value);
+        ewt::print(stream, " {} {} {}", extended_info->contents, extended_info->flags.native, extended_info->value);
     }
 }
 

@@ -66,7 +66,8 @@ bool Portal_VisFlood(const portal_t *p)
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
     /* Can't see through func_illusionary_visblocker */
-    if (contents0.illusionary_visblocker || contents1.illusionary_visblocker)
+    if ((contents0.flags & EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER)
+    || (contents1.flags & EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER))
         return false;
 
     // Check per-game visibility
@@ -613,7 +614,7 @@ static void FloodAreas_r(node_t *node)
     auto *leafdata = node->get_leafdata();
     Q_assert(leafdata);
 
-    if (leafdata->contents.native & Q2_CONTENTS_AREAPORTAL) {
+    if (leafdata->contents.flags & EWT_INVISCONTENTS_AREAPORTAL) {
         // grab the func_areanode entity
         mapentity_t *entity = AreanodeEntityForLeaf(node);
 
@@ -701,7 +702,7 @@ static void FindAreas_r(node_t *node)
 
     // area portals are always only flooded into, never
     // out of
-    if (leafdata->contents.native & Q2_CONTENTS_AREAPORTAL)
+    if (leafdata->contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
         return;
 
     map.c_areas++;
@@ -781,7 +782,7 @@ static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visit
             continue;
 
         // is this an exit?
-        if (!(neighbour->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL) &&
+        if (!(neighbour->get_leafdata()->contents.flags & EWT_INVISCONTENTS_AREAPORTAL) &&
             !neighbour->get_leafdata()->contents.is_solid(qbsp_options.target_game)) {
             exits.emplace_back(p, neighbour);
             continue;
@@ -789,7 +790,7 @@ static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visit
 
         // valid edge to explore?
         // if this isn't an exit, don't leave AREAPORTAL
-        if (!(neighbour->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL))
+        if (!(neighbour->get_leafdata()->contents.flags & EWT_INVISCONTENTS_AREAPORTAL))
             continue;
 
         // continue exploding
@@ -839,8 +840,8 @@ static void DebugAreaPortalBothSidesLeak(node_t *node)
                 return false;
 
             // don't go back into an areaportal
-            if ((p->nodes[0]->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL) ||
-                (p->nodes[1]->get_leafdata()->contents.native & Q2_CONTENTS_AREAPORTAL))
+            if ((p->nodes[0]->get_leafdata()->contents.flags & EWT_INVISCONTENTS_AREAPORTAL) ||
+                (p->nodes[1]->get_leafdata()->contents.flags & EWT_INVISCONTENTS_AREAPORTAL))
                 return false;
 
             return true;
@@ -898,7 +899,7 @@ static void SetAreaPortalAreas_r(node_t *node)
 
     auto *leafdata = node->get_leafdata();
 
-    if (leafdata->contents.native != Q2_CONTENTS_AREAPORTAL)
+    if (leafdata->contents.flags != EWT_INVISCONTENTS_AREAPORTAL)
         return;
 
     if (leafdata->area)

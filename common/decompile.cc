@@ -186,7 +186,9 @@ struct compiled_brush_t
                 side.valve.shift[0], side.valve.axis.at(1, 0), side.valve.axis.at(1, 1), side.valve.axis.at(1, 2),
                 side.valve.shift[1], 0.0, side.valve.scale[0], side.valve.scale[1]);
 
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (contents.native || side.flags.native || side.value)) {
+            int native = bsp->loadversion->game->contents_to_native(contents);
+
+            if (bsp->loadversion->game->id == GAME_QUAKE_II && (native || side.flags.native || side.value)) {
                 wal_metadata_t *meta = nullptr;
 
                 auto it = wals.find(side.texture_name);
@@ -207,9 +209,9 @@ struct compiled_brush_t
                 }
 
                 if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) ==
-                                     (contents.native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) &&
+                                     (native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) &&
                                  meta->flags == side.flags.native && meta->value == side.value)) {
-                    ewt::print(stream, " {} {} {}", contents.native, side.flags.native, side.value);
+                    ewt::print(stream, " {} {} {}", native, side.flags.native, side.value);
                 }
             }
 
@@ -549,8 +551,10 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
 
 static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentflags_t &contents)
 {
+    int native = bsp->loadversion->game->contents_to_native(contents);
+
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-        int visible = contents.native & Q2_ALL_VISIBLE_CONTENTS;
+        int visible = native & Q2_ALL_VISIBLE_CONTENTS;
 
         if (visible & Q2_CONTENTS_WATER) {
             return "e1u1/water4";
@@ -558,17 +562,17 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentfla
             return "e1u1/sewer1";
         } else if (visible & Q2_CONTENTS_LAVA) {
             return "e1u1/brlava";
-        } else if (contents.native & Q2_CONTENTS_PLAYERCLIP) {
+        } else if (native & Q2_CONTENTS_PLAYERCLIP) {
             return "e1u1/clip";
-        } else if (contents.native & Q2_CONTENTS_MONSTERCLIP) {
+        } else if (native & Q2_CONTENTS_MONSTERCLIP) {
             return "e1u1/clip_mon";
-        } else if (contents.native & Q2_CONTENTS_AREAPORTAL) {
+        } else if (native & Q2_CONTENTS_AREAPORTAL) {
             return "e1u1/trigger";
         }
 
         return "e1u1/skip";
     } else {
-        switch (contents.native) {
+        switch (native) {
             case CONTENTS_WATER: return "*waterskip";
             case CONTENTS_SLIME: return "*slimeskip";
             case CONTENTS_LAVA: return "*lavaskip";
@@ -585,9 +589,10 @@ static void OverrideTextureForContents(
     compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, const contentflags_t &contents)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        int native = bsp->loadversion->game->contents_to_native(contents);
 
-        if (contents.native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
-            if (!(contents.native & Q2_CONTENTS_PLAYERCLIP)) {
+        if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
+            if (!(native & Q2_CONTENTS_PLAYERCLIP)) {
                 side.texture_name = "e1u1/clip_mon";
             } else {
                 side.texture_name = "e1u1/clip";
@@ -808,7 +813,9 @@ static std::vector<compiled_brush_t> DecompileLeafTaskGeometryOnly(
     compiled_brush_t brush;
     brush.source = task.brush;
     brush.brush_offset = brush_offset;
-    brush.contents = {task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()};
+    brush.contents = bsp->loadversion->game->create_contents_from_native(
+            task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()
+            );
 
     brush.sides.reserve(task.allPlanes.size());
 
@@ -868,7 +875,7 @@ static std::vector<compiled_brush_t> DecompileLeafTask(
         compiled_brush_t brush;
         brush.source = task.brush;
         brush.brush_offset = brush_offset;
-        brush.contents = {task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value()};
+        brush.contents = bsp->loadversion->game->create_contents_from_native(task.brush ? task.brush->contents : task.leaf ? task.leaf->contents : task.contents.value());
 
         for (auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
@@ -876,7 +883,7 @@ static std::vector<compiled_brush_t> DecompileLeafTask(
             side.winding = std::move(finalSide.winding);
             side.source = finalSide.plane.source;
 
-            if (brush.contents.native == 0) {
+            if (bsp->loadversion->game->contents_to_native(brush.contents) == 0) {
                 // hint brush
                 side.texture_name = "e1u1/hint";
 
@@ -959,7 +966,9 @@ static std::vector<compiled_brush_t> DecompileLeafTaskLeafVisualization(
         compiled_brush_t brush;
         brush.source = task.brush;
         brush.brush_offset = brush_offset;
-        brush.contents = task.leaf ? contentflags_t{task.leaf->contents} : contentflags_t{task.contents.value()};
+        brush.contents = bsp->loadversion->game->create_contents_from_native(
+                task.leaf ? task.leaf->contents : task.contents.value()
+                );
 
         for (auto &finalSide : finalBrush.sides) {
             compiled_brush_side_t &side = brush.sides.emplace_back();
@@ -1324,7 +1333,7 @@ static void DecompileEntity(
         std::vector<compiled_brush_t> &brushlist = compiledBrushes.emplace_back();
         compiled_brush_t &brush = brushlist.emplace_back();
         brush.brush_offset = brush_offset;
-        brush.contents = {Q2_CONTENTS_ORIGIN};
+        brush.contents = contentflags_t::make(EWT_INVISCONTENTS_ORIGIN);
 
         constexpr qplane3d planes[] = {
             {{-1, 0, 0}, 8},

@@ -27,21 +27,22 @@ TEST_SUITE("common")
         const auto detail_fence = game_q1->create_detail_fence_contents(solid);
         const auto detail_illusionary = game_q1->create_detail_illusionary_contents(solid);
 
-        const std::array test_contents{contentflags_t{CONTENTS_EMPTY}, contentflags_t{CONTENTS_SOLID},
-            contentflags_t{CONTENTS_WATER}, contentflags_t{CONTENTS_SLIME}, contentflags_t{CONTENTS_LAVA},
-            contentflags_t{CONTENTS_SKY},
-
-            detail_solid, detail_wall, detail_fence, detail_illusionary};
+        const std::array test_contents{game_q1->create_contents_from_native(CONTENTS_EMPTY),
+                                       game_q1->create_contents_from_native(CONTENTS_SOLID),
+                                       game_q1->create_contents_from_native(CONTENTS_WATER),
+                                       game_q1->create_contents_from_native(CONTENTS_SLIME),
+                                       game_q1->create_contents_from_native(CONTENTS_LAVA),
+                                       game_q1->create_contents_from_native(CONTENTS_SKY),
+                                       detail_solid, detail_wall, detail_fence, detail_illusionary};
 
         SUBCASE("solid combined with others")
         {
-            CHECK(solid.native == CONTENTS_SOLID);
-            CHECK(!solid.game_data.has_value());
+            CHECK(game_q1->contents_to_native(solid) == CONTENTS_SOLID);
 
             for (const auto &c : test_contents) {
                 auto combined = game_q1->combine_contents(solid, c);
 
-                CHECK(combined.native == CONTENTS_SOLID);
+                CHECK(game_q1->contents_to_native(combined) == CONTENTS_SOLID);
                 CHECK(combined.is_solid(game_q1));
 
                 CHECK(!combined.is_any_detail(game_q1));
@@ -50,15 +51,15 @@ TEST_SUITE("common")
 
         SUBCASE("detail_illusionary plus water")
         {
-            auto combined = game_q1->combine_contents(detail_illusionary, contentflags_t{CONTENTS_WATER});
+            auto combined = game_q1->combine_contents(detail_illusionary, game_q1->create_contents_from_native(CONTENTS_WATER));
 
-            CHECK(combined.native == CONTENTS_WATER);
+            CHECK(game_q1->contents_to_native(combined) == CONTENTS_WATER);
             CHECK(combined.is_detail_illusionary(game_q1));
         }
 
         SUBCASE("detail_solid plus water")
         {
-            auto combined = game_q1->combine_contents(detail_solid, contentflags_t{CONTENTS_WATER});
+            auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
 
             CHECK(combined.is_any_solid(game_q1));
             CHECK(combined.is_detail_solid(game_q1));
@@ -68,7 +69,7 @@ TEST_SUITE("common")
 
         SUBCASE("detail_solid plus sky")
         {
-            auto combined = game_q1->combine_contents(detail_solid, contentflags_t{CONTENTS_SKY});
+            auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
 
             CHECK(!combined.is_detail_solid(game_q1));
             CHECK(combined.is_sky(game_q1));
@@ -123,7 +124,7 @@ TEST_SUITE("common")
     {
         auto *game = bspver_q2.game;
 
-        auto origin = game->face_get_contents("", {}, {Q2_CONTENTS_ORIGIN});
+        auto origin = game->face_get_contents("", {}, game->create_contents_from_native(Q2_CONTENTS_ORIGIN));
 
         CHECK(origin.is_origin(game));
         CHECK(!origin.is_empty(game));
@@ -219,24 +220,30 @@ TEST_SUITE("common")
 
     TEST_CASE("q2 contents")
     {
-        const std::array test_contents{contentflags_t{Q2_CONTENTS_EMPTY}, contentflags_t{Q2_CONTENTS_SOLID},
-            contentflags_t{Q2_CONTENTS_WINDOW}, contentflags_t{Q2_CONTENTS_AUX}, contentflags_t{Q2_CONTENTS_LAVA},
-            contentflags_t{Q2_CONTENTS_SLIME}, contentflags_t{Q2_CONTENTS_WATER}, contentflags_t{Q2_CONTENTS_MIST},
-
-            contentflags_t{Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID},
-            contentflags_t{Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW},
-            contentflags_t{Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX}, contentflags_t{Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA},
-            contentflags_t{Q2_CONTENTS_DETAIL | Q2_CONTENTS_SLIME},
-            contentflags_t{Q2_CONTENTS_DETAIL | Q2_CONTENTS_WATER},
-            contentflags_t{Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST}};
-
         auto *game_q2 = bspver_q2.game;
+
+        const std::array test_contents{
+                game_q2->create_contents_from_native(Q2_CONTENTS_EMPTY),
+                game_q2->create_contents_from_native(Q2_CONTENTS_SOLID),
+                game_q2->create_contents_from_native(Q2_CONTENTS_WINDOW),
+                game_q2->create_contents_from_native(Q2_CONTENTS_AUX),
+                game_q2->create_contents_from_native(Q2_CONTENTS_LAVA),
+                game_q2->create_contents_from_native(Q2_CONTENTS_SLIME),
+                game_q2->create_contents_from_native(Q2_CONTENTS_WATER),
+                game_q2->create_contents_from_native(Q2_CONTENTS_MIST),
+                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID),
+                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW),
+                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX),
+                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA),
+                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_SLIME),
+                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_WATER),
+                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST)
+        };
 
         SUBCASE("solid combined with others")
         {
             auto solid = game_q2->create_solid_contents();
-            CHECK(solid.native == Q2_CONTENTS_SOLID);
-            CHECK(!solid.game_data.has_value());
+            CHECK(game_q2->contents_to_native(solid) == Q2_CONTENTS_SOLID);
 
             for (const auto &c : test_contents) {
                 // solid is treated specially in Q2 and wipes out any other content
@@ -244,27 +251,57 @@ TEST_SUITE("common")
                 auto combined = game_q2->contents_remap_for_export(
                     game_q2->combine_contents(solid, c), gamedef_t::remap_type_t::leaf);
 
-                CHECK(combined.native == Q2_CONTENTS_SOLID);
-                CHECK(!combined.game_data.has_value());
+                CHECK(game_q2->contents_to_native(combined) == Q2_CONTENTS_SOLID);
                 CHECK(combined.is_solid(game_q2));
             }
         }
 
         SUBCASE("water combined with others")
         {
-            contentflags_t water{Q2_CONTENTS_WATER};
+            contentflags_t water = game_q2->create_contents_from_native(Q2_CONTENTS_WATER);
 
             for (const auto &c : test_contents) {
                 auto combined = game_q2->combine_contents(water, c);
-                CHECK(!combined.game_data.has_value());
 
                 SUBCASE(fmt::format("water combined with {}", c.to_string(game_q2)).c_str())
                 {
-                    if (!(c.native & Q2_CONTENTS_SOLID)) {
-                        CHECK(combined.native == (Q2_CONTENTS_WATER | c.native));
+                    if (!(game_q2->contents_to_native(c) & Q2_CONTENTS_SOLID)) {
+                        CHECK(game_q2->contents_to_native(combined) == (Q2_CONTENTS_WATER | game_q2->contents_to_native(c)));
                     }
                 }
             }
+        }
+    }
+
+    TEST_CASE("q1 contents roundtrip")
+    {
+        auto *game_q1 = bspver_q1.game;
+
+        for (int i = CONTENTS_EMPTY; i >= CONTENTS_MIN; --i) {
+            contentflags_t test_internal = game_q1->create_contents_from_native(i);
+
+            uint32_t test_out = game_q1->contents_to_native(test_internal);
+
+            INFO("contents " << i);
+            CHECK(test_out == i);
+        }
+    }
+
+    TEST_CASE("q2 contents roundtrip")
+    {
+        auto *game_q2 = bspver_q2.game;
+
+        CHECK(game_q2->contents_to_native(game_q2->create_contents_from_native(0)) == 0);
+
+        for (int i = 0; i <= 31; ++i) {
+            uint32_t test_in = nth_bit<uint32_t>(i);
+
+            contentflags_t test_internal = game_q2->create_contents_from_native(test_in);
+
+            uint32_t test_out = game_q2->contents_to_native(test_internal);
+
+            INFO("contents bit " << i);
+            CHECK(test_out == test_in);
         }
     }
 

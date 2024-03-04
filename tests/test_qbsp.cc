@@ -106,6 +106,7 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
         args.push_back("-noverbose");
     } else {
         args.push_back("-nopercent");
+        args.push_back("-loghulls");
     }
 
     for (auto &arg : extra_args) {
@@ -351,7 +352,9 @@ TEST_CASE("duplicatePlanes" * doctest::test_suite("qbsp"))
     REQUIRE(1 == worldspawn.mapbrushes.size());
     CHECK(6 == worldspawn.mapbrushes.front().faces.size());
 
-    auto brush = LoadBrush(worldspawn, worldspawn.mapbrushes.front(), {CONTENTS_SOLID}, 0, std::nullopt);
+    auto *game = bspver_q1.game;
+
+    auto brush = LoadBrush(worldspawn, worldspawn.mapbrushes.front(), game->create_contents_from_native(CONTENTS_SOLID), 0, std::nullopt);
     CHECK(6 == brush->sides.size());
 }
 
@@ -1413,13 +1416,15 @@ TEST_CASE("q1_sealing" * doctest::test_suite("testmaps_q1"))
 
 TEST_CASE("q1_csg" * doctest::test_suite("testmaps_q1"))
 {
+    auto *game = bspver_q1.game;
+
     auto &entity = LoadMapPath("q1_csg.map");
 
     REQUIRE(entity.mapbrushes.size() == 2);
 
     bspbrush_t::container bspbrushes;
     for (int i = 0; i < 2; ++i) {
-        auto b = LoadBrush(entity, entity.mapbrushes[i], {CONTENTS_SOLID}, 0, std::nullopt);
+        auto b = LoadBrush(entity, entity.mapbrushes[i], game->create_contents_from_native(CONTENTS_SOLID), 0, std::nullopt);
 
         CHECK(6 == b->sides.size());
 

@@ -47,6 +47,7 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
         args.push_back("-noverbose");
     } else {
         args.push_back("-nopercent");
+        args.push_back("-loghulls");
     }
     for (auto &extra : extra_qbsp_args) {
         args.push_back(extra);

@@ -840,8 +840,8 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
 
         // fixme-brushbsp: function calls above can override the values below
         // so we have to re-set them to be sure they stay what the mapper intended..
-        contents.set_mirrored(mapbrush.contents.mirror_inside);
-        contents.set_clips_same_type(mapbrush.contents.clips_same_type);
+        contents.set_mirrored(mapbrush.contents.mirror_inside());
+        contents.set_clips_same_type(mapbrush.contents.clips_same_type());
 
         auto brush = LoadBrush(src, mapbrush, contents, hullnum, num_clipped);
 

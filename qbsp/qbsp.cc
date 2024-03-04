@@ -632,7 +632,9 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
         }
 
         if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
-            texinfo = extended_texinfo_t{{std::stoi(parser.token)}};
+            uint32_t native = std::stoul(parser.token);
+
+            texinfo = extended_texinfo_t{.contents_native = native};
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
                 texinfo->flags.native = std::stoi(parser.token);
@@ -803,7 +805,9 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
 {
     if (node->is_leaf()) {
         auto *leafdata = node->get_leafdata();
-        if (leafdata->contents.native) {
+        int native = qbsp_options.target_game->contents_to_native(
+                qbsp_options.target_game->contents_remap_for_export(leafdata->contents, gamedef_t::remap_type_t::leaf));
+        if (native) {
             if (leafdata->original_brushes.size()) {
                 leafdata->numleafbrushes = leafdata->original_brushes.size();
                 stats.total_leaf_brushes += leafdata->numleafbrushes;
@@ -813,12 +817,13 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
                     if (!b->mapbrush->outputnumber.has_value()) {
                         b->mapbrush->outputnumber = {static_cast<uint32_t>(map.bsp.dbrushes.size())};
 
+                        int brushcontents = qbsp_options.target_game->contents_to_native(qbsp_options.target_game
+                                ->contents_remap_for_export(b->contents, gamedef_t::remap_type_t::brush));
+
                         dbrush_t &brush = map.bsp.dbrushes.emplace_back(
                             dbrush_t{.firstside = static_cast<int32_t>(map.bsp.dbrushsides.size()),
                                 .numsides = 0,
-                                .contents = qbsp_options.target_game
-                                                ->contents_remap_for_export(b->contents, gamedef_t::remap_type_t::brush)
-                                                .native});
+                                .contents = brushcontents});
 
                         for (auto &side : b->mapbrush->faces) {
 
@@ -1348,8 +1353,9 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
         perbrush.bounds = b->bounds;
 
         const auto &contents = b->contents;
+        const int native = qbsp_options.target_game->contents_to_native(contents);
 
-        switch (contents.native) {
+        switch (native) {
             // contents should match the engine.
             case CONTENTS_EMPTY: // really an error, but whatever
             case CONTENTS_SOLID: // these are okay
@@ -1360,7 +1366,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
                 if (contents.is_clip(qbsp_options.target_game)) {
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
-                    perbrush.contents = contents.native;
+                    perbrush.contents = native;
                 }
                 break;
             //              case CONTENTS_LADDER:

@@ -495,7 +495,7 @@ static void FindLeaf(const mbsp_t *bsp, const qvec3d &pos)
     const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], pos);
 
     fmt::print("leaf {}: contents {} ({})\n", (leaf - bsp->dleafs.data()), leaf->contents,
-        contentflags_t{leaf->contents}.to_string(bsp->loadversion->game));
+               bsp->loadversion->game->create_contents_from_native(leaf->contents).to_string(bsp->loadversion->game));
 }
 
 // map file stuff

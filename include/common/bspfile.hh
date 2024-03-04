@@ -28,6 +28,7 @@
 #include <any>
 #include <optional>
 
+#include <common/bitflags.hh>
 #include <common/fs.hh>
 #include <common/qvec.hh>
 #include <common/aabb.hh>
@@ -47,26 +48,94 @@ struct lump_t
     void stream_read(std::istream &s);
 };
 
+using contents_int_t = uint64_t;
+
+/**
+ * Superset of Q1- and Q2- features, plus EWT extensions.
+ */
+enum contents_t : contents_int_t {
+    EWT_VISCONTENTS_EMPTY = 0,
+    EWT_VISCONTENTS_SOLID = nth_bit<uint64_t>(0), // an eye is never valid in a solid
+    EWT_VISCONTENTS_SKY = nth_bit<uint64_t>(1),
+    EWT_VISCONTENTS_DETAIL_WALL = nth_bit<uint64_t>(2),
+    EWT_VISCONTENTS_WINDOW = nth_bit<uint64_t>(3), // translucent, but not watery (detail fence)
+    EWT_VISCONTENTS_AUX = nth_bit<uint64_t>(4),
+    EWT_VISCONTENTS_LAVA = nth_bit<uint64_t>(5),
+    EWT_VISCONTENTS_SLIME = nth_bit<uint64_t>(6),
+    EWT_VISCONTENTS_WATER = nth_bit<uint64_t>(7),
+    EWT_VISCONTENTS_MIST = nth_bit<uint64_t>(8),
+
+    EWT_LAST_VISIBLE_CONTENTS_INDEX = 8,
+    EWT_LAST_VISIBLE_CONTENTS = EWT_VISCONTENTS_MIST,
+
+    EWT_ALL_LIQUIDS =
+    EWT_VISCONTENTS_LAVA |
+    EWT_VISCONTENTS_SLIME |
+    EWT_VISCONTENTS_WATER,
+
+    EWT_ALL_VISIBLE_CONTENTS =
+    EWT_VISCONTENTS_SOLID |
+    EWT_VISCONTENTS_SKY |
+    EWT_VISCONTENTS_DETAIL_WALL |
+    EWT_VISCONTENTS_WINDOW |
+    EWT_VISCONTENTS_AUX |
+    EWT_VISCONTENTS_LAVA |
+    EWT_VISCONTENTS_SLIME |
+    EWT_VISCONTENTS_WATER |
+    EWT_VISCONTENTS_MIST,
+
+    EWT_INVISCONTENTS_ORIGIN = nth_bit<uint64_t>(9), // removed before bsping an entity
+    // Q1 clip
+    EWT_INVISCONTENTS_PLAYERCLIP = nth_bit<uint64_t>(10),
+    EWT_INVISCONTENTS_MONSTERCLIP = nth_bit<uint64_t>(11),
+    EWT_INVISCONTENTS_AREAPORTAL = nth_bit<uint64_t>(12),
+    EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER = nth_bit<uint64_t>(13),
+
+    EWT_ALL_INVISCONTENTS =
+    EWT_INVISCONTENTS_ORIGIN |
+    EWT_INVISCONTENTS_PLAYERCLIP |
+    EWT_INVISCONTENTS_MONSTERCLIP |
+    EWT_INVISCONTENTS_AREAPORTAL |
+    EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER,
+
+    EWT_CFLAG_DETAIL = nth_bit<uint64_t>(14), // brushes to be added after vis leafs
+    EWT_CFLAG_MIRROR_INSIDE = nth_bit<uint64_t>(15),
+    EWT_CFLAG_MIRROR_INSIDE_SET = nth_bit<uint64_t>(16),
+    EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE = nth_bit<uint64_t>(17),
+
+    EWT_CFLAG_CURRENT_0 = nth_bit<uint64_t>(18),
+    EWT_CFLAG_CURRENT_90 = nth_bit<uint64_t>(19),
+    EWT_CFLAG_CURRENT_180 = nth_bit<uint64_t>(20),
+    EWT_CFLAG_CURRENT_270 = nth_bit<uint64_t>(21),
+    EWT_CFLAG_CURRENT_UP = nth_bit<uint64_t>(22),
+    EWT_CFLAG_CURRENT_DOWN = nth_bit<uint64_t>(23),
+    EWT_CFLAG_TRANSLUCENT = nth_bit<uint64_t>(24), // auto set if any surface has trans,
+    EWT_CFLAG_LADDER = nth_bit<uint64_t>(25),
+    EWT_CFLAG_MONSTER = nth_bit<uint64_t>(26), // disallowed in maps, only for gamecode use
+    EWT_CFLAG_DEADMONSTER = nth_bit<uint64_t>(27), // disallowed in maps, only for gamecode use
+
+// unused Q2 contents bits - just present here so we can roundtrip all 32-bit Q2 contents
+    EWT_CFLAG_Q2_UNUSED_7 = nth_bit<uint64_t>(28),
+    EWT_CFLAG_Q2_UNUSED_8 = nth_bit<uint64_t>(29),
+    EWT_CFLAG_Q2_UNUSED_9 = nth_bit<uint64_t>(30),
+    EWT_CFLAG_Q2_UNUSED_10 = nth_bit<uint64_t>(31),
+    EWT_CFLAG_Q2_UNUSED_11 = nth_bit<uint64_t>(32),
+    EWT_CFLAG_Q2_UNUSED_12 = nth_bit<uint64_t>(33),
+    EWT_CFLAG_Q2_UNUSED_13 = nth_bit<uint64_t>(34),
+    EWT_CFLAG_Q2_UNUSED_14 = nth_bit<uint64_t>(35),
+    EWT_CFLAG_Q2_UNUSED_30 = nth_bit<uint64_t>(36),
+    EWT_CFLAG_Q2_UNUSED_31 = nth_bit<uint64_t>(37)
+};
+
 struct gamedef_t;
 
 struct contentflags_t
 {
-    // native flags value; what's written to the BSP basically
-    int32_t native = 0;
+    contents_t flags;
 
-    // extra data supplied by the game
-    std::any game_data;
-
-    // the value set directly from `_mirrorinside` on the brush, if available.
-    // don't check this directly, use `is_mirror_inside` to allow the game to decide.
-    std::optional<bool> mirror_inside = std::nullopt;
-
-    // don't clip the same content type. mostly intended for CONTENTS_DETAIL_ILLUSIONARY.
-    // don't check this directly, use `will_clip_same_type` to allow the game to decide.
-    std::optional<bool> clips_same_type = std::nullopt;
-
-    // always blocks vis, even if it normally wouldn't
-    bool illusionary_visblocker = false;
+    static contentflags_t make(contents_int_t f) {
+        return contentflags_t{.flags = static_cast<contents_t>(f)};
+    }
 
     bool equals(const gamedef_t *game, const contentflags_t &other) const;
 
@@ -77,10 +146,22 @@ struct contentflags_t
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
 
+    std::optional<bool> mirror_inside() const {
+        if (flags & EWT_CFLAG_MIRROR_INSIDE_SET) {
+            return {(flags & EWT_CFLAG_MIRROR_INSIDE) != 0};
+        }
+        return std::nullopt;
+    }
     contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value);
 
     inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
     bool will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const;
+    std::optional<bool> clips_same_type() const {
+        if (flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) {
+            return {false};
+        }
+        return std::nullopt;
+    }
     contentflags_t &set_clips_same_type(const std::optional<bool> &clips_same_type_value);
 
     bool is_empty(const gamedef_t *game) const;
@@ -112,6 +193,26 @@ struct contentflags_t
     bool chops(const gamedef_t *game) const;
 
     std::string to_string(const gamedef_t *game) const;
+
+    // returns the bit index (starting from 0) of the strongest visible content type
+    // set, or -1 if no visible content bits are set (i.e. EWT_VISCONTENTS_EMPTY)
+    int visible_contents_index() const {
+        for (uint32_t index = 0; nth_bit(index) <= EWT_LAST_VISIBLE_CONTENTS; ++index) {
+            if (flags & nth_bit(index)) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    // returns the strongest EWT_VISCONTENTS_ bit, discarding all other flags
+    contentflags_t visible_contents() const {
+        int index = visible_contents_index();
+        if (index >= 0) {
+            return contentflags_t::make(static_cast<contents_t>(nth_bit(index)));
+        }
+        return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
+    }
 };
 
 struct surfflags_t
@@ -270,6 +371,8 @@ struct gamedef_t
     virtual int32_t surfflags_from_string(const std::string_view &str) const = 0;
     // FIXME: fix so that we don't have to pass a name here
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
+    virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
+    virtual int32_t contents_to_native(const contentflags_t &contents) const = 0;
     virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
     virtual contentflags_t create_empty_contents() const = 0;
     virtual contentflags_t create_solid_contents() const = 0;

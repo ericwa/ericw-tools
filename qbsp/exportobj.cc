@@ -92,7 +92,7 @@ static void ExportObjFace(
 static void WriteContentsMaterial(std::ofstream &mtlf, contentflags_t contents, float r, float g, float b)
 {
     // fixme-brushbsp
-    ewt::print(mtlf, "newmtl contents{}\n", contents.native);
+    ewt::print(mtlf, "newmtl contents{}\n", qbsp_options.target_game->contents_to_native(contents));
     mtlf << "Ka 0 0 0\n";
     ewt::print(mtlf, "Kd {} {} {}\n", r, g, b);
     mtlf << "Ks 0 0 0\n";
@@ -105,14 +105,15 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
     std::ofstream mtlfile = InitMtlFile(filesuffix);
 
     WriteContentsMaterial(mtlfile, {}, 0, 0, 0);
-    WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY}, 0, 1, 0);
-    WriteContentsMaterial(mtlfile, {CONTENTS_SOLID}, 0.2, 0.2, 0.2);
-
-    WriteContentsMaterial(mtlfile, {CONTENTS_WATER}, 0.0, 0.0, 0.2);
-    WriteContentsMaterial(mtlfile, {CONTENTS_SLIME}, 0.0, 0.2, 0.0);
-    WriteContentsMaterial(mtlfile, {CONTENTS_LAVA}, 0.2, 0.0, 0.0);
-
-    WriteContentsMaterial(mtlfile, {CONTENTS_SKY}, 0.8, 0.8, 1.0);
+    // fixme-brushbsp
+//    WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY}, 0, 1, 0);
+//    WriteContentsMaterial(mtlfile, {CONTENTS_SOLID}, 0.2, 0.2, 0.2);
+//
+//    WriteContentsMaterial(mtlfile, {CONTENTS_WATER}, 0.0, 0.0, 0.2);
+//    WriteContentsMaterial(mtlfile, {CONTENTS_SLIME}, 0.0, 0.2, 0.0);
+//    WriteContentsMaterial(mtlfile, {CONTENTS_LAVA}, 0.2, 0.0, 0.0);
+//
+//    WriteContentsMaterial(mtlfile, {CONTENTS_SKY}, 0.8, 0.8, 1.0);
     // fixme-brushbsp
     // WriteContentsMaterial(mtlfile, {CONTENTS_SOLID, CFLAGS_CLIP}, 1, 0.8, 0.8);
     // WriteContentsMaterial(mtlfile, {CONTENTS_EMPTY, CFLAGS_HINT}, 1, 1, 1);
@@ -121,7 +122,7 @@ void ExportObj_Faces(const std::string &filesuffix, const std::vector<const face
 
     int vertcount = 0;
     for (const face_t *face : faces) {
-        std::string mtlname = fmt::format("contents{}\n", face->contents.back.native);
+        std::string mtlname = fmt::format("contents{}\n", qbsp_options.target_game->contents_to_native(face->contents.back));
 
         ExportObjFace(objfile, mtlname, face->w, face->get_texinfo(), &vertcount);
     }

@@ -64,7 +64,7 @@ struct texdef_etp_t : texdef_quake_ed_t
 // extra Q2 info
 struct texinfo_quake2_t
 {
-    contentflags_t contents;
+    int contents;
     surfflags_t flags;
     int value;
 };

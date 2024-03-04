@@ -17,12 +17,16 @@ int main(int argc, char **argv)
 
     for (int i = 1; i < argc; ++i) {
         // parse "-threads 1"
-        if (!strcmp("-threads", argv[i]) && (i + 1) < argc) {
+        if (!strcmp("-threads", argv[i]) || !strcmp("--threads", argv[i])) {
+            if (!(i + 1 < argc)) {
+                logging::print("--threads requires an argument\n");
+                exit(1);
+            }
             configureTBB(atoi(argv[i + 1]), false);
             continue;
         }
         // parse "-verbose"
-        if (!strcmp("-verbose", argv[i])) {
+        if (!strcmp("-verbose", argv[i]) || !strcmp("--verbose", argv[i])) {
             tests_verbose = true;
             continue;
         }

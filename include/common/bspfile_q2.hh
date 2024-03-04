@@ -108,6 +108,16 @@ enum q2_contents_t : int32_t
     Q2_CONTENTS_SLIME = nth_bit(4),
     Q2_CONTENTS_WATER = nth_bit(5),
     Q2_CONTENTS_MIST = nth_bit(6),
+
+    Q2_CONTENTS_UNUSED_7 = nth_bit(7),
+    Q2_CONTENTS_UNUSED_8 = nth_bit(8),
+    Q2_CONTENTS_UNUSED_9 = nth_bit(9),
+    Q2_CONTENTS_UNUSED_10 = nth_bit(10),
+    Q2_CONTENTS_UNUSED_11 = nth_bit(11),
+    Q2_CONTENTS_UNUSED_12 = nth_bit(12),
+    Q2_CONTENTS_UNUSED_13 = nth_bit(13),
+    Q2_CONTENTS_UNUSED_14 = nth_bit(14),
+
     Q2_LAST_VISIBLE_CONTENTS = Q2_CONTENTS_MIST,
     Q2_ALL_VISIBLE_CONTENTS = Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_AUX | Q2_CONTENTS_LAVA |
                               Q2_CONTENTS_SLIME | Q2_CONTENTS_WATER | Q2_CONTENTS_MIST,
@@ -137,8 +147,8 @@ enum q2_contents_t : int32_t
     Q2_CONTENTS_TRANSLUCENT = nth_bit(28), // auto set if any surface has trans
     Q2_CONTENTS_LADDER = nth_bit(29),
 
-    // HACK: using Q2_CONTENTS_MONSTER for func_detail_wall
-    Q2_ALL_VISIBLE_CONTENTS_PLUS_MONSTER = Q2_ALL_VISIBLE_CONTENTS | Q2_CONTENTS_MONSTER,
+    Q2_CONTENTS_UNUSED_30 = nth_bit(30),
+    Q2_CONTENTS_UNUSED_31 = nth_bit(31)
 };
 
 struct q2_dnode_t

@@ -114,7 +114,7 @@ ExportClipNodes
 static size_t ExportClipNodes(node_t *node)
 {
     if (auto *leafdata = node->get_leafdata()) {
-        return leafdata->contents.native;
+        return qbsp_options.target_game->contents_to_native(leafdata->contents);
     }
 
     auto *nodedata = node->get_nodedata();
@@ -173,7 +173,7 @@ static void ExportLeaf(node_t *node)
             remapped.to_string(qbsp_options.target_game));
     }
 
-    dleaf.contents = remapped.native;
+    dleaf.contents = qbsp_options.target_game->contents_to_native(remapped);
 
     if (node->bounds.maxs()[0] < node->bounds.mins()[0]) {
         throw std::runtime_error("leaf bounds was unassigned");
@@ -330,7 +330,7 @@ void BeginBSPFile()
 
     // Leave room for leaf 0 (must be solid)
     auto &solid_leaf = map.bsp.dleafs.emplace_back();
-    solid_leaf.contents = qbsp_options.target_game->create_solid_contents().native;
+    solid_leaf.contents = qbsp_options.target_game->contents_to_native(qbsp_options.target_game->create_solid_contents());
     solid_leaf.cluster = CLUSTER_INVALID;
     Q_assert(map.bsp.dleafs.size() == 1);
 }

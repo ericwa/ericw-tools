@@ -462,7 +462,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         auto wal = map.load_image_meta(name);
 
         if (wal && !internal && !extended_info.has_value()) {
-            extended_info = extended_texinfo_t{wal->contents, wal->flags, wal->value, wal->animation};
+            extended_info = extended_texinfo_t{wal->contents_native, wal->flags, wal->value, wal->animation};
         }
 
         if (!extended_info.has_value()) {
@@ -906,7 +906,8 @@ static quark_tx_info_t ParseExtendedTX(parser_t &parser)
     } else {
         // Parse extra Quake 2 surface info
         if (parser.parse_token(PARSE_OPTIONAL)) {
-            result.info = extended_texinfo_t{{std::stoi(parser.token)}};
+            uint32_t native = std::stoul(parser.token);
+            result.info = extended_texinfo_t{.contents_native = native};
 
             if (parser.parse_token(PARSE_OPTIONAL)) {
                 result.info->flags.native = std::stoi(parser.token);
@@ -1781,20 +1782,20 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
         // first one first
         if (auto &wal = map.load_image_meta(mapface.texname.c_str())) {
             if (!extinfo.info) {
-                extinfo.info = extended_texinfo_t{wal->contents, wal->flags, wal->value};
+                extinfo.info = extended_texinfo_t{wal->contents_native, wal->flags, wal->value};
             }
             extinfo.info->animation = wal->animation;
         } else if (!extinfo.info) {
             extinfo.info = extended_texinfo_t{};
         }
 
-        if (extinfo.info->contents.native & Q2_CONTENTS_TRANSLUCENT) {
+        if (extinfo.info->contents_native & Q2_CONTENTS_TRANSLUCENT) {
             // remove TRANSLUCENT; it's only meant to be set by the compiler
-            extinfo.info->contents.native &= ~Q2_CONTENTS_TRANSLUCENT;
+            extinfo.info->contents_native &= ~Q2_CONTENTS_TRANSLUCENT;
 
             // but give us detail if we lack trans. this is likely what they intended
             if (!(extinfo.info->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
-                extinfo.info->contents.native |= Q2_CONTENTS_DETAIL;
+                extinfo.info->contents_native |= Q2_CONTENTS_DETAIL;
 
                 if (qbsp_options.verbose.value()) {
                     logging::print("WARNING: {}: swapped TRANSLUCENT for DETAIL\n", mapface.line);
@@ -1817,23 +1818,25 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
 
         // Mixing visible contents on the input brush is illegal
         {
-            const int32_t visible_contents = extinfo.info->contents.native & Q2_ALL_VISIBLE_CONTENTS;
+            const int32_t visible_contents = extinfo.info->contents_native & Q2_ALL_VISIBLE_CONTENTS;
 
             // TODO: Move to bspfile.hh API
             for (int32_t i = Q2_CONTENTS_SOLID; i <= Q2_LAST_VISIBLE_CONTENTS; i <<= 1) {
                 if (visible_contents & i) {
                     if (visible_contents != i) {
                         FError("{}: Mixed visible contents: {}", mapface.line,
-                            extinfo.info->contents.to_string(qbsp_options.target_game));
+                               qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native)
+                                .to_string(qbsp_options.target_game));
                     }
                 }
             }
         }
 
         // Other Q2 hard errors
-        if (extinfo.info->contents.native & (Q2_CONTENTS_MONSTER | Q2_CONTENTS_DEADMONSTER)) {
+        if (extinfo.info->contents_native & (Q2_CONTENTS_MONSTER | Q2_CONTENTS_DEADMONSTER)) {
             FError(
-                "{}: Illegal contents: {}", mapface.line, extinfo.info->contents.to_string(qbsp_options.target_game));
+                "{}: Illegal contents: {}", mapface.line, qbsp_options.target_game->create_contents_from_native(
+                        extinfo.info->contents_native).to_string(qbsp_options.target_game));
         }
 
         // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
@@ -1841,8 +1844,8 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
         const bool wants_phong = !(extinfo.info->flags.native & Q2_SURF_LIGHT) && (extinfo.info->value != 0);
         // Technically this is not the 100% correct check for mirrored, but we don't have the full brush
         // contents set up at this point. Correct would be to call `portal_generates_face()`.
-        bool mirrored = (extinfo.info->contents.native != 0) &&
-                        !(extinfo.info->contents.native &
+        bool mirrored = (extinfo.info->contents_native != 0) &&
+                        !(extinfo.info->contents_native &
                             (Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_AUX));
 
         if (entity.epairs.has("_mirrorinside") && !entity.epairs.get_int("_mirrorinside")) {
@@ -1855,7 +1858,10 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
     }
 
     tx->miptex = FindMiptex(mapface.texname.c_str(), extinfo.info);
-    mapface.contents = {extinfo.info->contents};
+    if (extinfo.info->contents_native != 0)
+        mapface.contents = qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native);
+    else
+        mapface.contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     tx->flags = {extinfo.info->flags};
     tx->value = extinfo.info->value;
 
@@ -2485,8 +2491,9 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         base_contents.set_clips_same_type(std::nullopt);
     }
 
-    base_contents.illusionary_visblocker =
-        string_iequals(entity.epairs.get("classname"), "func_illusionary_visblocker");
+    if (string_iequals(entity.epairs.get("classname"), "func_illusionary_visblocker")) {
+        base_contents = contentflags_t::make(base_contents.flags | EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER);
+    }
 
     // non-Q2: -transwater implies liquids are detail
     if (qbsp_options.target_game->id != GAME_QUAKE_II && qbsp_options.transwater.value()) {
@@ -2996,10 +3003,10 @@ void ProcessAreaPortal(mapentity_t &entity)
     }
 
     for (auto &brush : entity.mapbrushes) {
-        brush.contents.native = Q2_CONTENTS_AREAPORTAL;
+        brush.contents = contentflags_t::make(EWT_INVISCONTENTS_AREAPORTAL);
 
         for (auto &face : brush.faces) {
-            face.contents.native = brush.contents.native;
+            face.contents = brush.contents;
             face.texinfo = map.skip_texinfo;
         }
     }
@@ -3530,7 +3537,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, quakeed.scale[1]);
 
             if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " "
+                f << mapface.raw_info->contents_native << " " << mapface.raw_info->flags.native << " "
                   << mapface.raw_info->value;
             }
 
@@ -3554,7 +3561,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             fprintDoubleAndSpc(f, valve.scale[1]);
 
             if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " "
+                f << mapface.raw_info->contents_native << " " << mapface.raw_info->flags.native << " "
                   << mapface.raw_info->value;
             }
 
@@ -3580,7 +3587,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             ewt::print(f, ") ) {} ", mapface.texname);
 
             if (mapface.raw_info.has_value()) {
-                f << mapface.raw_info->contents.native << " " << mapface.raw_info->flags.native << " "
+                f << mapface.raw_info->contents_native << " " << mapface.raw_info->flags.native << " "
                   << mapface.raw_info->value;
             } else {
                 f << "0 0 0";

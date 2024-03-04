@@ -145,7 +145,7 @@ std::optional<texture> load_wal(
     tex.meta.name = name;
     tex.meta.width = tex.width = mt.width;
     tex.meta.height = tex.height = mt.height;
-    tex.meta.contents = {mt.contents};
+    tex.meta.contents_native = mt.contents;
     tex.meta.flags = {mt.flags};
     tex.meta.value = mt.value;
     tex.meta.animation = mt.animname.data();
@@ -402,17 +402,20 @@ std::optional<texture_meta> load_wal_json_meta(
             auto &contents = json["contents"];
 
             if (contents.is_number_integer()) {
-                meta.contents.native = contents.get<int32_t>();
+                meta.contents_native = contents.get<int32_t>();
             } else if (contents.is_string()) {
-                meta.contents.native = game->contents_from_string(contents.get<std::string>());
+                meta.contents_native =
+                        game->contents_from_string(contents.get<std::string>());
             } else if (contents.is_array()) {
+                int native = 0;
                 for (auto &content : contents) {
                     if (content.is_number_integer()) {
-                        meta.contents.native |= content.get<int32_t>();
+                        native |= content.get<int32_t>();
                     } else if (content.is_string()) {
-                        meta.contents.native |= game->contents_from_string(content.get<std::string>());
+                        native |= game->contents_from_string(content.get<std::string>());
                     }
                 }
+                meta.contents_native = native;
             }
         }
 

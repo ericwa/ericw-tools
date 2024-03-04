@@ -490,7 +490,8 @@ static bool Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf, uint8_t *out)
 
 static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t *leaf)
 {
-    if (bsp->loadversion->game->contents_are_liquid({leaf->contents})) {
+    if (bsp->loadversion->game->contents_are_liquid(
+            bsp->loadversion->game->create_contents_from_native(leaf->contents))) {
         // the liquid case is because leaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that
         // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.
@@ -540,7 +541,8 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
         /* copy the pvs for this leaf into pointpvs */
         Mod_LeafPvs(bsp, leaf, pointpvs);
 
-        if (bsp->loadversion->game->contents_are_liquid({leaf->contents})) {
+        if (bsp->loadversion->game->contents_are_liquid(
+                bsp->loadversion->game->create_contents_from_native(leaf->contents))) {
             // hack for when the sample point might be in an opaque liquid, blocking vis,
             // but we typically want light to pass through these.
             // see also VisCullEntity() which handles the case when the light emitter is in liquid.
@@ -1154,9 +1156,11 @@ static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, co
         return false;
     }
 
-    if (bsp->loadversion->game->contents_are_solid({entleaf->contents}) ||
-        bsp->loadversion->game->contents_are_sky({entleaf->contents}) ||
-        bsp->loadversion->game->contents_are_liquid({entleaf->contents})) {
+    auto contents = bsp->loadversion->game->create_contents_from_native(entleaf->contents);
+
+    if (bsp->loadversion->game->contents_are_solid(contents) ||
+        bsp->loadversion->game->contents_are_sky(contents) ||
+        bsp->loadversion->game->contents_are_liquid(contents)) {
         // the liquid case is because entleaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that
         // there's no visibility across the opaque liquid. so, skip culling and do the raytracing.
