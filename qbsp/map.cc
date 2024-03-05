@@ -41,6 +41,7 @@
 #include <common/imglib.hh>
 #include <common/qvec.hh>
 #include <common/ostream.hh>
+#include <common/mapfile.hh>
 
 #include <pareto/spatial_map.h>
 
@@ -314,30 +315,24 @@ void mapdata_t::reset()
     *this = mapdata_t{};
 }
 
-struct texdef_valve_t
+struct old_texdef_valve_t
 {
     qmat<double, 2, 3> axis{};
     qvec2d scale{};
     qvec2d shift{};
 };
 
-struct texdef_quake_ed_t
+struct old_texdef_quake_ed_t
 {
     double rotate = 0;
     qvec2d scale{};
     qvec2d shift{};
 };
 
-struct texdef_quake_ed_noshift_t
+struct old_texdef_quake_ed_noshift_t
 {
     double rotate = 0;
     qvec2d scale{};
-};
-
-struct texdef_etp_t
-{
-    std::array<qvec3d, 3> planepoints{};
-    bool tx2 = false;
 };
 
 /*
@@ -387,9 +382,9 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
 
 using texdef_brush_primitives_t = qmat<double, 2, 3>;
 
-static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
+static old_texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
 static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point);
-static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
+static old_texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
 static void SetTexinfo_QuakeEd_New(
     const qbsp_plane_t &plane, const qvec2d &shift, double rotate, const qvec2d &scale, texvecf &out_vecs);
 
@@ -584,7 +579,7 @@ FindTexinfo
 Returns a global texinfo number
 ===============
 */
-int FindTexinfo(const maptexinfo_t &texinfo)
+int FindTexinfo(const maptexinfo_t &texinfo, const qplane3d &plane, bool add)
 {
     // NaN's will break mtexinfo_lookup, since they're being used as a std::map key and don't compare properly with <.
     // They should have been stripped out already in ValidateTextureProjection.
@@ -600,6 +595,10 @@ int FindTexinfo(const maptexinfo_t &texinfo)
         return it->second;
     }
 
+    if (!add) {
+        return -1;
+    }
+
     /* Allocate a new texinfo at the end of the array */
     const int num_texinfo = static_cast<int>(map.mtexinfos.size());
     map.mtexinfos.emplace_back(texinfo);
@@ -612,9 +611,16 @@ int FindTexinfo(const maptexinfo_t &texinfo)
     if (map.miptex[texinfo.miptex].animation_miptex.has_value()) {
         maptexinfo_t anim_next = texinfo;
 
+#if 0
+        brush_side_t temp;
+        temp.plane = plane;
+        temp.set_texinfo(texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+        anim_next.vecs = temp.vecs;
+#endif
+
         anim_next.miptex = map.miptex[texinfo.miptex].animation_miptex.value();
 
-        map.mtexinfos[num_texinfo].next = FindTexinfo(anim_next);
+        map.mtexinfos[num_texinfo].next = FindTexinfo(anim_next, plane);
     }
 
     return num_texinfo;
@@ -959,7 +965,7 @@ static float extractRotation(qmat2x2f m)
     return rotation;
 }
 
-static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plane_t &faceplane, const qvec3f &point)
+static qvec2f evalTexDefAtPoint(const old_texdef_quake_ed_t &texdef, const qbsp_plane_t &faceplane, const qvec3f &point)
 {
     texvecf temp;
     SetTexinfo_QuakeEd_New(faceplane, texdef.shift, texdef.rotate, texdef.scale, temp);
@@ -969,9 +975,9 @@ static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qbsp_plan
     return uv;
 }
 
-static texdef_quake_ed_t addShift(const texdef_quake_ed_noshift_t &texdef, const qvec2f shift)
+static old_texdef_quake_ed_t addShift(const old_texdef_quake_ed_noshift_t &texdef, const qvec2f shift)
 {
-    texdef_quake_ed_t res2;
+    old_texdef_quake_ed_t res2;
     res2.rotate = texdef.rotate;
     res2.scale[0] = texdef.scale[0];
     res2.scale[1] = texdef.scale[1];
@@ -1005,7 +1011,7 @@ qvec2f normalizeShift(const std::optional<img::texture_meta> &texture, const qve
 }
 
 /// `texture` is optional. If given, the "shift" values can be normalized
-static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane,
+static old_texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane,
     const std::optional<img::texture_meta> &texture, const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
 {
     // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
@@ -1082,7 +1088,7 @@ static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane,
         //        checkEq(uv02_test, p0p2_uv, 0.01);
     }
 
-    const texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, faceplane, false);
+    const old_texdef_quake_ed_noshift_t res = Reverse_QuakeEd(texPlaneToUV, faceplane, false);
 
     // figure out shift based on facepoints[0]
     const qvec3f testpoint = facepoints[0];
@@ -1093,7 +1099,7 @@ static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qbsp_plane_t &faceplane,
     // sometime we have very large shift values, normalize them to be smaller
     shift = normalizeShift(texture, shift);
 
-    const texdef_quake_ed_t res2 = addShift(res, shift);
+    const old_texdef_quake_ed_t res2 = addShift(res, shift);
     return res2;
 }
 
@@ -1159,7 +1165,7 @@ float clockwiseDegreesBetween(qvec2f start, qvec2f end)
     return unsigned_degrees;
 }
 
-static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX)
+static old_texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX)
 {
     // Check for shear, because we might tweak M to remove it
     {
@@ -1264,7 +1270,7 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
             if (fabs(M.at(0, 0) - Mguess.at(0, 0)) < 0.001 && fabs(M.at(1, 0) - Mguess.at(1, 0)) < 0.001 &&
                 fabs(M.at(0, 1) - Mguess.at(0, 1)) < 0.001 && fabs(M.at(1, 1) - Mguess.at(1, 1)) < 0.001) {
 
-                texdef_quake_ed_noshift_t reversed;
+                old_texdef_quake_ed_noshift_t reversed;
                 reversed.rotate = angleGuess;
                 reversed.scale[0] = xScaleSgn / absXscale;
                 reversed.scale[1] = yScaleSgn / absYscale;
@@ -1278,7 +1284,7 @@ static texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t 
 
     // printf("Warning, Reverse_QuakeEd failed\n");
 
-    texdef_quake_ed_noshift_t fail;
+    old_texdef_quake_ed_noshift_t fail;
     return fail;
 }
 
@@ -1308,7 +1314,7 @@ static void SetTexinfo_QuakeEd_New(
 
     if (false) {
         // Self-test for Reverse_QuakeEd
-        texdef_quake_ed_noshift_t reversed = Reverse_QuakeEd(M, plane, false);
+        old_texdef_quake_ed_noshift_t reversed = Reverse_QuakeEd(M, plane, false);
 
         // normalize
         if (!EqualDegrees(reversed.rotate, rotate)) {
@@ -1407,7 +1413,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
 
     if (false) {
         // Self-test of TexDef_BSPToQuakeEd
-        texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(plane, std::nullopt, out->vecs, planepts);
+        old_texdef_quake_ed_t reversed = TexDef_BSPToQuakeEd(plane, std::nullopt, out->vecs, planepts);
 
         if (!EqualDegrees(reversed.rotate, rotate)) {
             reversed.rotate += 180;
@@ -1430,7 +1436,7 @@ static void SetTexinfo_QuakeEd(const qbsp_plane_t &plane, const std::array<qvec3
 }
 
 static void SetTexinfo_QuArK(
-    parser_t &parser, const std::array<qvec3d, 3> &planepts, texcoord_style_t style, maptexinfo_t *out)
+    parser_t &parser, const std::array<qvec3d, 3> &planepts, old_texcoord_style_t style, maptexinfo_t *out)
 {
     int i;
     qvec3d vecs[2];
@@ -1702,7 +1708,7 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
     double rotate;
     qmat<double, 2, 3> texMat, axis;
     qvec2d shift, scale;
-    texcoord_style_t tx_type;
+    old_texcoord_style_t tx_type;
 
     quark_tx_info_t extinfo;
 
@@ -1910,7 +1916,7 @@ void mapface_t::set_texvecs(const texvecf &vecs)
     maptexinfo_t texInfoNew = get_texinfo();
     texInfoNew.outputnum = std::nullopt;
     texInfoNew.vecs = vecs;
-    this->texinfo = FindTexinfo(texInfoNew);
+    this->texinfo = FindTexinfo(texInfoNew, this->get_plane());
 }
 
 const qbsp_plane_t &mapface_t::get_plane() const
@@ -2003,7 +2009,7 @@ static std::optional<mapface_t> ParseBrushFace(
     ValidateTextureProjection(face, &tx, issue_stats);
 
     tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
-    face.texinfo = FindTexinfo(tx);
+    face.texinfo = FindTexinfo(tx, face.get_plane());
 
     return face;
 }
@@ -2682,7 +2688,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
                     face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
                 auto copy = face.get_texinfo();
                 copy.flags.is_hintskip = true;
-                face.texinfo = FindTexinfo(copy);
+                face.texinfo = FindTexinfo(copy, face.get_plane());
             }
         }
     }
@@ -3264,7 +3270,7 @@ void ProcessMapBrushes()
                             texInfoNew.vecs.at(0, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(0).xyz());
                             texInfoNew.vecs.at(1, 3) += qv::dot(entity.origin, texInfoNew.vecs.row(1).xyz());
 
-                            f.texinfo = FindTexinfo(texInfoNew);
+                            f.texinfo = FindTexinfo(texInfoNew, f.get_plane());
                         }
 
                         qplane3d plane = f.get_plane();
@@ -3444,9 +3450,9 @@ void LoadMapFile()
     logging::print(logging::flag::STAT, "\n");
 }
 
-static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
+static old_texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
 {
-    texdef_valve_t res;
+    old_texdef_valve_t res;
 
     // From the valve -> bsp code,
     //
@@ -3504,7 +3510,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
     switch (format) {
         case conversion_t::quake:
         case conversion_t::quake2: {
-            const texdef_quake_ed_t quakeed =
+            const old_texdef_quake_ed_t quakeed =
                 TexDef_BSPToQuakeEd(mapface.get_plane(), texture, texinfo.vecs, mapface.planepts);
 
             ewt::print(f, "{} ", mapface.texname);
@@ -3522,7 +3528,7 @@ static void ConvertMapFace(std::ofstream &f, const mapface_t &mapface, const con
             break;
         }
         case conversion_t::valve: {
-            const texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
+            const old_texdef_valve_t valve = TexDef_BSPToValve(texinfo.vecs);
 
             ewt::print(f, "{} [ ", mapface.texname);
             fprintDoubleAndSpc(f, valve.axis.at(0, 0));

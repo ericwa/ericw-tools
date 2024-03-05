@@ -595,7 +595,7 @@ void MainWindow::setupMenu()
 
     auto *helpMenu = menuBar()->addMenu(tr("&Help"));
 
-    helpMenu->addAction(tr("&Lightpreview Documentation"), this, [this](){
+    helpMenu->addAction(tr("&Lightpreview Documentation"), this, [](){
         OpenHelpFile("lightpreview.html");
     });
     helpMenu->addAction(tr("&About"), this, [this](){

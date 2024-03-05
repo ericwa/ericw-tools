@@ -40,6 +40,7 @@
 #include <qbsp/tjunc.hh>
 #include <qbsp/tree.hh>
 #include <qbsp/csg.hh>
+#include <common/mapfile.hh>
 
 #include <fmt/chrono.h>
 
@@ -795,6 +796,7 @@ struct brush_list_stats_t : logging::stat_tracker_t
     stat &total_brushes = register_stat("total brushes");
     stat &total_brush_sides = register_stat("total brush sides");
     stat &total_leaf_brushes = register_stat("total leaf brushes");
+    stat &total_optimized_faces = register_stat("optimized brush side texinfos");
 };
 
 static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_list_stats_t &stats)
@@ -819,8 +821,30 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
                                                 .native});
 
                         for (auto &side : b->mapbrush->faces) {
+
+                            maptexinfo_t &texinfo = map.mtexinfos[side.texinfo];
+                            int texinfo_id = side.texinfo;
+
+                            if (!texinfo.outputnum.has_value()) {
+                                // optimize BSP by using existing world-aligned texinfo
+                                // if they exist
+                                maptexinfo_t copy = texinfo;
+                                brush_side_t temp;
+                                temp.plane = side.get_plane();
+                                temp.set_texinfo(texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+                                copy.vecs = temp.vecs;
+
+                                texinfo_id = FindTexinfo(copy, temp.plane, false);
+
+                                if (texinfo_id == -1) {
+                                    texinfo_id = side.texinfo;
+                                } else if (texinfo_id != side.texinfo) {
+                                    stats.total_optimized_faces++;
+                                }
+                            }
+
                             map.bsp.dbrushsides.push_back(
-                                {(uint32_t)ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(side.texinfo)});
+                                {(uint32_t)ExportMapPlane(side.planenum), (int32_t)ExportMapTexinfo(texinfo_id)});
                             brush.numsides++;
                             stats.total_brush_sides++;
                         }
@@ -1651,7 +1675,7 @@ static int MakeSkipTexinfo()
     mt.miptex = FindMiptex("skip", true);
     mt.flags.is_nodraw = true;
 
-    return FindTexinfo(mt);
+    return FindTexinfo(mt, qplane3d{});
 }
 
 /*

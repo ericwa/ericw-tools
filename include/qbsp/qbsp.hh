@@ -50,7 +50,7 @@
 #include <common/fs.hh>
 #include <qbsp/brush.hh>
 
-enum texcoord_style_t
+enum old_texcoord_style_t
 {
     TX_QUAKED = 0,
     TX_QUARK_TYPE1 = 1,

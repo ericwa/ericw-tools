@@ -848,11 +848,11 @@ int bsputil_main(int argc, char **argv)
 
             float xo = total_bounds.mins()[0];
             float yo = total_bounds.mins()[1];
-            float zo = total_bounds.mins()[2];
+            //float zo = total_bounds.mins()[2];
             
             float xs = total_bounds.maxs()[0] - xo;
             float ys = total_bounds.maxs()[1] - yo;
-            float zs = total_bounds.maxs()[2] - zo;
+            //float zs = total_bounds.maxs()[2] - zo;
 
             fmt::print(f, R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{}" height="{}">)", xs, ys);
             f << std::endl;

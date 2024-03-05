@@ -323,7 +323,7 @@ struct quark_tx_info_t
 int FindMiptex(
     const char *name, std::optional<extended_texinfo_t> &extended_info, bool internal = false, bool recursive = true);
 int FindMiptex(const char *name, bool internal = false, bool recursive = true);
-int FindTexinfo(const maptexinfo_t &texinfo);
+int FindTexinfo(const maptexinfo_t &texinfo, const qplane3d &plane, bool add = true);
 
 void PrintEntity(const mapentity_t &entity);
 
