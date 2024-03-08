@@ -611,10 +611,12 @@ int FindTexinfo(const maptexinfo_t &texinfo, const qplane3d &plane, bool add)
     if (map.miptex[texinfo.miptex].animation_miptex.has_value()) {
         maptexinfo_t anim_next = texinfo;
 
+#if 0
         brush_side_t temp;
         temp.plane = plane;
         temp.set_texinfo(texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
         anim_next.vecs = temp.vecs;
+#endif
 
         anim_next.miptex = map.miptex[texinfo.miptex].animation_miptex.value();
 
@@ -1993,20 +1995,29 @@ static std::optional<mapface_t> ParseBrushFace(
         return std::nullopt;
     }
 
-    // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
-    // to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
-    // (it uses 32 bit precision in CalcSurfaceExtents)
-    for (i = 0; i < 2; i++) {
-        for (j = 0; j < 4; j++) {
-            double r = Q_rint(tx.vecs.at(i, j));
-            if (fabs(tx.vecs.at(i, j) - r) < ZERO_EPSILON)
-                tx.vecs.at(i, j) = r;
+    tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
+
+    // to save on texinfo, reset all invisible sides to default texvecs
+    if (tx.flags.is_nodraw || tx.flags.is_hintskip || tx.flags.is_hint) {
+        brush_side_t temp;
+        temp.plane = face.get_plane();
+        temp.set_texinfo(texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+        tx.vecs = temp.vecs;
+    } else {
+        // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
+        // to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
+        // (it uses 32 bit precision in CalcSurfaceExtents)
+        for (i = 0; i < 2; i++) {
+            for (j = 0; j < 4; j++) {
+                double r = Q_rint(tx.vecs.at(i, j));
+                if (fabs(tx.vecs.at(i, j) - r) < ZERO_EPSILON)
+                    tx.vecs.at(i, j) = r;
+            }
         }
+
+        ValidateTextureProjection(face, &tx, issue_stats);
     }
 
-    ValidateTextureProjection(face, &tx, issue_stats);
-
-    tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
     face.texinfo = FindTexinfo(tx, face.get_plane());
 
     return face;
