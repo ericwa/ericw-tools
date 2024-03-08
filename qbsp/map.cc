@@ -611,12 +611,10 @@ int FindTexinfo(const maptexinfo_t &texinfo, const qplane3d &plane, bool add)
     if (map.miptex[texinfo.miptex].animation_miptex.has_value()) {
         maptexinfo_t anim_next = texinfo;
 
-#if 0
         brush_side_t temp;
         temp.plane = plane;
         temp.set_texinfo(texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
         anim_next.vecs = temp.vecs;
-#endif
 
         anim_next.miptex = map.miptex[texinfo.miptex].animation_miptex.value();
 
