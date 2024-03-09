@@ -1048,3 +1048,48 @@ TEST_CASE("q2_tjunc_matrix" * doctest::test_suite("testmaps_q2"))
         CHECK( has_tjunc(INDEX_SKY, INDEX_SKY));
     }
 }
+
+TEST_CASE("q2_unknown_contents" * doctest::test_suite("testmaps_q2"))
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_unknown_contents.map");
+
+    {
+        INFO("leaf with contents 1<<10 which is not a valid contents");
+
+        auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
+
+        // FIXME: should the unknown contents get converted to SOLID in the leaf?
+        CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+
+        CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
+        // FIXME: should the unknown contents have SOLID added in the brush?
+        CHECK((Q2_CONTENTS_SOLID | 1024)==
+              Leaf_Brushes(&bsp, leaf).at(0)->contents);
+    }
+
+    {
+        INFO("leaf with contents 1<<30 which is not a valid contents");
+
+        auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {64, 0, 0});
+
+        // FIXME: should the unknown contents get converted to SOLID in the leaf?
+        CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+
+        CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
+        // FIXME: should the unknown contents have SOLID added in the brush?
+        CHECK((Q2_CONTENTS_SOLID | nth_bit(30))==
+              Leaf_Brushes(&bsp, leaf).at(0)->contents);
+    }
+
+    {
+        INFO("face with contents 1<<10 which is not a valid surrflags");
+
+        auto *top_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {128, 0, 16}, {0, 0, 1});
+        REQUIRE(top_face);
+
+        auto *texinfo = BSP_GetTexinfo(&bsp, top_face->texinfo);
+        REQUIRE(texinfo);
+
+        CHECK(texinfo->flags.native == 1024);
+    }
+}
