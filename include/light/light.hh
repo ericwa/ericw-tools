@@ -139,10 +139,6 @@ struct lightsurf_t
     // output height * extra
     int height;
 
-    // ray batch stuff
-    std::unique_ptr<raystream_occlusion_t> occlusion_stream;
-    std::unique_ptr<raystream_intersection_t> intersection_stream;
-
     lightmapdict_t lightmapsByStyle;
 
     // surface light stuff

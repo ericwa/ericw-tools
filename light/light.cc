@@ -953,7 +953,6 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
             _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
-
             DirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
         }
     });
