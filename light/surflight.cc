@@ -23,7 +23,6 @@ See file, 'COPYING', for details.
 #include <cassert>
 
 #include <light/entities.hh> // for FixLightOnFace
-#include <light/trace.hh> // for Light_PointInLeaf
 #include <light/light.hh>
 #include <light/ltface.hh>
 
@@ -172,12 +171,8 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
         // Init bbox...
         if (light_options.visapprox.value() == visapprox_t::RAYS) {
             l->bounds = EstimateVisibleBoundsAtPoint(l->pos);
-        }
 
-        for (auto &pt : l->points) {
-            if (light_options.visapprox.value() == visapprox_t::VIS) {
-                l->leaves.push_back(Light_PointInLeaf(bsp, pt));
-            } else if (light_options.visapprox.value() == visapprox_t::RAYS) {
+            for (auto &pt : l->points) {
                 l->bounds += EstimateVisibleBoundsAtPoint(pt);
             }
         }

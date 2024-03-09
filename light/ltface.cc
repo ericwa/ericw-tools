@@ -506,29 +506,37 @@ static const std::vector<uint8_t> *Mod_LeafPvs(const mbsp_t *bsp, const mleaf_t 
 
 static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
 {
-    const int pvssize = DecompressedVisSize(bsp);
-    const mleaf_t *lastleaf = nullptr;
-
-    // set defaults
-    lightsurf->pvs.clear();
-
     if (!bsp->dvis.bits.size()) {
         return;
     }
+    
+    const int pvssize = DecompressedVisSize(bsp);
 
     // set lightsurf->pvs
     uint8_t *pointpvs = (uint8_t *)alloca(pvssize);
     lightsurf->pvs.resize(pvssize);
 
-    for (auto &sample : lightsurf->samples) {
-        const mleaf_t *leaf = Light_PointInLeaf(bsp, sample.point);
+    if (lightsurf->modelinfo->isWorld()) {
+        size_t face_index = lightsurf->face - bsp->dfaces.data();
 
-        /* most/all of the surface points are probably in the same leaf */
-        if (leaf == lastleaf)
-            continue;
+        for (auto &leaf : bsp->dleafs) {
+            for (size_t surf = 0; surf < leaf.nummarksurfaces; surf++) {
+                if (bsp->dleaffaces[leaf.firstmarksurface + surf] == face_index) {
+                    lightsurf->leaves.push_back(&leaf);
+                }
+            }
+        }
+    } else {
+        for (auto &sample : lightsurf->samples) {
+            const mleaf_t *leaf = Light_PointInLeaf(bsp, sample.point);
 
-        lastleaf = leaf;
+            if (std::find(lightsurf->leaves.begin(), lightsurf->leaves.end(), leaf) == lightsurf->leaves.end()) {
+                lightsurf->leaves.push_back(leaf);
+            }
+        }
+    }
 
+    for (auto &leaf : lightsurf->leaves) {
         /* copy the pvs for this leaf into pointpvs */
         Mod_LeafPvs(bsp, leaf, pointpvs);
 
@@ -547,6 +555,8 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
             lightsurf->pvs[j] |= pointpvs[j];
         }
     }
+
+    lightsurf->leaves.shrink_to_fit();
 }
 
 static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo, const settings::worldspawn_keys &cfg,
@@ -1978,6 +1988,20 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
     return qv::gate(color, (float)bouncelight_gate);
 }
 
+static bool
+SurfaceLight_VisCull(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, const lightsurf_t *lightsurf_b)
+{
+    if (pvs && light_options.visapprox.value() == visapprox_t::VIS) {
+        for (auto &leaf : lightsurf_b->leaves) {
+            if (VisCullEntity(bsp, *pvs, leaf)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 static void // mxd
 LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, std::optional<size_t> bounce_depth,
     const float &standard_scale, const float &sky_scale, const float &hotspot_clamp)
@@ -1999,17 +2023,14 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
                 continue;
             else if (SurfaceLight_SphereCull(&vpl, lightsurf, vpl_setting, surflight_gate, hotspot_clamp))
                 continue;
+            else if (SurfaceLight_VisCull(bsp, &lightsurf->pvs, surf_ptr))
+                continue;
 
             raystream_occlusion_t &rs = occlusion_stream;
 
             rs.clearPushedRays();
 
             for (int c = 0; c < vpl.points.size(); c++) {
-                if (light_options.visapprox.value() == visapprox_t::VIS &&
-                    VisCullEntity(bsp, lightsurf->pvs, vpl.leaves[c])) {
-                    continue;
-                }
-
                 for (int i = 0; i < lightsurf->samples.size(); i++) {
                     const auto &sample = lightsurf->samples[i];
 
@@ -2099,11 +2120,11 @@ LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, rays
     for (const auto &surf : EmissiveLightSurfaces()) {
         const surfacelight_t &vpl = *surf->vpl;
 
-        for (int c = 0; c < vpl.points.size(); c++) {
-            if (light_options.visapprox.value() == visapprox_t::VIS && pvs && VisCullEntity(bsp, *pvs, vpl.leaves[c])) {
-                continue;
-            }
+        if (SurfaceLight_VisCull(bsp, pvs, surf)) {
+            continue;
+        }
 
+        for (int c = 0; c < vpl.points.size(); c++) {
             // 1 ray
             for (auto &vpl_settings : vpl.styles) {
                 if (vpl_settings.bounce_level.has_value() != bounce)

@@ -133,6 +133,7 @@ struct lightsurf_t
      the pvs at each of the sample points
      */
     std::vector<uint8_t> pvs;
+    std::vector<const mleaf_t *> leaves;
 
     // output width * extra
     int width;

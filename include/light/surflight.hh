@@ -47,7 +47,6 @@ struct surfacelight_t
     std::optional<float> minlight_scale;
 
     std::vector<qvec3f> points;
-    std::vector<const mleaf_t *> leaves;
 
     // Surface light settings...
     struct per_style_t
