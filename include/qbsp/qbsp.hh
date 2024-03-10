@@ -186,7 +186,6 @@ public:
     setting_bool splitturb;
     setting_redirect splitspecial;
     setting_invertible_bool transwater;
-    setting_bool transsky;
     setting_bool notextures;
     setting_bool missing_textures_as_zero_size;
     setting_enum<conversion_t> convertmapformat;

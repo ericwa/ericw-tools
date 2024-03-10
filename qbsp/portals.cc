@@ -72,7 +72,7 @@ bool Portal_VisFlood(const portal_t *p)
 
     // Check per-game visibility
     return qbsp_options.target_game->portal_can_see_through(
-        contents0, contents1, qbsp_options.transwater.value(), qbsp_options.transsky.value());
+        contents0, contents1, qbsp_options.transwater.value());
 }
 
 /*

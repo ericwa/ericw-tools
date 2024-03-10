@@ -509,10 +509,10 @@ TEST_SUITE("mathlib")
  */
 TEST_CASE("options_reset1" * doctest::test_suite("testmaps_q1"))
 {
-    LoadTestmap("qbsp_simple_sealed.map", {"-transsky"});
+    LoadTestmap("qbsp_simple_sealed.map", {"-noskip"});
 
     CHECK_FALSE(qbsp_options.forcegoodtree.value());
-    CHECK(qbsp_options.transsky.value());
+    CHECK(qbsp_options.noskip.value());
 }
 
 TEST_CASE("options_reset2" * doctest::test_suite("testmaps_q1"))
@@ -520,7 +520,7 @@ TEST_CASE("options_reset2" * doctest::test_suite("testmaps_q1"))
     LoadTestmap("qbsp_simple_sealed.map", {"-forcegoodtree"});
 
     CHECK(qbsp_options.forcegoodtree.value());
-    CHECK_FALSE(qbsp_options.transsky.value());
+    CHECK_FALSE(qbsp_options.noskip.value());
 }
 
 /**

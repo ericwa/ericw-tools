@@ -400,7 +400,7 @@ struct gamedef_t
     virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(const std::string_view &str) const = 0;
     virtual bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const = 0;
+        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater) const = 0;
     virtual bool contents_seals_map(const contentflags_t &contents) const = 0;
     virtual bool contents_are_opaque(const contentflags_t &contents, bool transwater) const = 0;
     enum class remap_type_t

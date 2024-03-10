@@ -478,7 +478,6 @@ qbsp_settings::qbsp_settings()
       splitspecial{this, "splitspecial", {&splitsky, &splitturb}, &debugging_group,
           "doesn't combine sky and water faces into one large face (splitturb + splitsky)"},
       transwater{this, "transwater", true, &common_format_group, "compute portal information for transparent water"},
-      transsky{this, "transsky", false, &map_development_group, "compute portal information for transparent sky"},
       notextures{this, "notex", false, &common_format_group,
           "write only placeholder textures to depend upon replacements, keep file sizes down, or to skirt copyrights"},
       missing_textures_as_zero_size{this, "missing_textures_as_zero_size", false, &common_format_group,

@@ -419,7 +419,7 @@ public:
     }
 
     bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater, bool transsky) const override
+        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater) const override
     {
         contents_int_t bits_a = contents0.flags;
         contents_int_t bits_b = contents1.flags;
@@ -1171,7 +1171,7 @@ struct gamedef_q2_t : public gamedef_t
     }
 
     bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool, bool) const override
+        const contentflags_t &contents0, const contentflags_t &contents1, bool) const override
     {
         contents_int_t c0 = contents0.flags, c1 = contents1.flags;
 

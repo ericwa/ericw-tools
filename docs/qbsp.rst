@@ -135,10 +135,6 @@ Options
 
    Computes portal information for opaque water
 
-.. option:: -transsky
-
-   Computes portal information for transparent sky
-
 .. option:: -oldaxis
 
    Use the original QBSP texture alignment algorithm. Enabled by default.
