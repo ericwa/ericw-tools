@@ -559,7 +559,7 @@ static void CalcPvs(const mbsp_t *bsp, lightsurf_t *lightsurf)
     lightsurf->leaves.shrink_to_fit();
 }
 
-static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo, const settings::worldspawn_keys &cfg,
+static lightsurf_t Lightsurf_Init(const modelinfo_t *modelinfo, const settings::worldspawn_keys &cfg,
     const mface_t *face, const mbsp_t *bsp, const facesup_t *facesup,
     const bspx_decoupled_lm_perface *facesup_decoupled)
 {
@@ -569,118 +569,118 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
     if (std::isnan(spaceToWorld.at(0, 0))) {
         logging::print("Bad texture axes on face:\n");
         PrintFaceInfo(face, bsp);
-        return nullptr;
+        return {};
     }
 
-    auto lightsurf = std::make_unique<lightsurf_t>();
-    lightsurf->cfg = &cfg;
-    lightsurf->modelinfo = modelinfo;
-    lightsurf->bsp = bsp;
-    lightsurf->face = face;
+    lightsurf_t lightsurf;
+    lightsurf.cfg = &cfg;
+    lightsurf.modelinfo = modelinfo;
+    lightsurf.bsp = bsp;
+    lightsurf.face = face;
 
     if (Face_IsLightmapped(bsp, face)) {
         /* if liquid doesn't have the TEX_SPECIAL flag set, the map was qbsp'ed with
          * lit water in mind. In that case receive light from both top and bottom.
          * (lit will only be rendered in compatible engines, but degrades gracefully.)
          */
-        lightsurf->twosided = Face_IsTranslucent(bsp, face);
+        lightsurf.twosided = Face_IsTranslucent(bsp, face);
 
         // pick the larger of the two scales
-        lightsurf->lightmapscale =
+        lightsurf.lightmapscale =
             (facesup && facesup->lmscale < modelinfo->lightmapscale) ? facesup->lmscale : modelinfo->lightmapscale;
 
         const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
-        lightsurf->curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
+        lightsurf.curved = extended_flags.phong_angle != 0 || Q2_FacePhongValue(bsp, face);
 
         // override the autodetected twosided setting?
         if (extended_flags.light_twosided) {
-            lightsurf->twosided = *extended_flags.light_twosided;
+            lightsurf.twosided = *extended_flags.light_twosided;
         }
 
         // nodirt
         if (modelinfo->dirt.is_changed()) {
-            lightsurf->nodirt = (modelinfo->dirt.value() == -1);
+            lightsurf.nodirt = (modelinfo->dirt.value() == -1);
         } else {
-            lightsurf->nodirt = extended_flags.no_dirt;
+            lightsurf.nodirt = extended_flags.no_dirt;
         }
 
         // minlight
         if (modelinfo->minlight.is_changed()) {
-            lightsurf->minlight = modelinfo->minlight.value();
+            lightsurf.minlight = modelinfo->minlight.value();
         } else if (extended_flags.minlight) {
-            lightsurf->minlight = *extended_flags.minlight;
+            lightsurf.minlight = *extended_flags.minlight;
         } else {
-            lightsurf->minlight = light_options.minlight.value();
+            lightsurf.minlight = light_options.minlight.value();
         }
 
         // minlightMottle
         if (modelinfo->minlightMottle.is_changed()) {
-            lightsurf->minlightMottle = modelinfo->minlightMottle.value();
+            lightsurf.minlightMottle = modelinfo->minlightMottle.value();
         } else if (light_options.minlightMottle.is_changed()) {
-            lightsurf->minlightMottle = light_options.minlightMottle.value();
+            lightsurf.minlightMottle = light_options.minlightMottle.value();
         } else {
-            lightsurf->minlightMottle = false;
+            lightsurf.minlightMottle = false;
         }
 
         // Q2 uses a 0-1 range for minlight
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            lightsurf->minlight *= 128.f;
+            lightsurf.minlight *= 128.f;
         }
 
         // maxlight
         if (modelinfo->maxlight.is_changed()) {
-            lightsurf->maxlight = modelinfo->maxlight.value();
+            lightsurf.maxlight = modelinfo->maxlight.value();
         } else {
-            lightsurf->maxlight = extended_flags.maxlight;
+            lightsurf.maxlight = extended_flags.maxlight;
         }
 
         // lightcolorscale
         if (modelinfo->lightcolorscale.is_changed()) {
-            lightsurf->lightcolorscale = modelinfo->lightcolorscale.value();
+            lightsurf.lightcolorscale = modelinfo->lightcolorscale.value();
         } else {
-            lightsurf->lightcolorscale = extended_flags.lightcolorscale;
+            lightsurf.lightcolorscale = extended_flags.lightcolorscale;
         }
 
         // Q2 uses a 0-1 range for minlight
         if (bsp->loadversion->game->id == GAME_QUAKE_II) {
-            lightsurf->maxlight *= 128.f;
+            lightsurf.maxlight *= 128.f;
         }
 
         // minlight_color
         if (modelinfo->minlight_color.is_changed()) {
-            lightsurf->minlight_color = modelinfo->minlight_color.value();
+            lightsurf.minlight_color = modelinfo->minlight_color.value();
         } else if (!qv::emptyExact(extended_flags.minlight_color)) {
-            lightsurf->minlight_color = extended_flags.minlight_color;
+            lightsurf.minlight_color = extended_flags.minlight_color;
         } else {
-            lightsurf->minlight_color = light_options.minlight_color.value();
+            lightsurf.minlight_color = light_options.minlight_color.value();
         }
 
         /* never receive dirtmapping on lit liquids */
         if (Face_IsTranslucent(bsp, face)) {
-            lightsurf->nodirt = true;
+            lightsurf.nodirt = true;
         }
 
         /* handle glass alpha */
         if (modelinfo->alpha.value() < 1) {
             /* skip culling of rays coming from the back side of the face */
-            lightsurf->twosided = true;
+            lightsurf.twosided = true;
         }
 
         /* object channel mask */
         if (extended_flags.object_channel_mask) {
-            lightsurf->object_channel_mask = *extended_flags.object_channel_mask;
+            lightsurf.object_channel_mask = *extended_flags.object_channel_mask;
         } else {
-            lightsurf->object_channel_mask = modelinfo->object_channel_mask.value();
+            lightsurf.object_channel_mask = modelinfo->object_channel_mask.value();
         }
 
         if (extended_flags.surflight_minlight_scale) {
-            lightsurf->surflight_minlight_scale = *extended_flags.surflight_minlight_scale;
+            lightsurf.surflight_minlight_scale = *extended_flags.surflight_minlight_scale;
         } else {
-            lightsurf->surflight_minlight_scale = 1.0f;
+            lightsurf.surflight_minlight_scale = 1.0f;
         }
 
         /* Set up the plane, not including model offset */
-        qplane3f &plane = lightsurf->plane;
+        qplane3f &plane = lightsurf.plane;
         if (face->side) {
             plane = -bsp->dplanes[face->planenum];
         } else {
@@ -688,26 +688,26 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         }
 
         const mtexinfo_t *tex = &bsp->texinfo[face->texinfo];
-        lightsurf->snormal = qv::normalize(tex->vecs.row(0).xyz());
-        lightsurf->tnormal = -qv::normalize(tex->vecs.row(1).xyz());
+        lightsurf.snormal = qv::normalize(tex->vecs.row(0).xyz());
+        lightsurf.tnormal = -qv::normalize(tex->vecs.row(1).xyz());
 
         /* Set up the surface points */
         if (light_options.world_units_per_luxel.is_changed()) {
             if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native & Q2_SURF_SKY)) {
-                lightsurf->extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
+                lightsurf.extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
             } else if (extended_flags.world_units_per_luxel) {
-                lightsurf->extents =
+                lightsurf.extents =
                     faceextents_t(*face, *bsp, world_units_per_luxel_t{}, *extended_flags.world_units_per_luxel);
             } else {
-                lightsurf->extents =
+                lightsurf.extents =
                     faceextents_t(*face, *bsp, world_units_per_luxel_t{}, light_options.world_units_per_luxel.value());
             }
         } else {
-            lightsurf->extents = faceextents_t(*face, *bsp, lightsurf->lightmapscale);
+            lightsurf.extents = faceextents_t(*face, *bsp, lightsurf.lightmapscale);
         }
-        lightsurf->vanilla_extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
+        lightsurf.vanilla_extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
 
-        CalcPoints(modelinfo, modelinfo->offset, lightsurf.get(), bsp, face);
+        CalcPoints(modelinfo, modelinfo->offset, &lightsurf, bsp, face);
 
         /* Correct the plane for the model offset (must be done last,
            calculation of face extents / points needs the uncorrected plane) */
@@ -715,14 +715,14 @@ static std::unique_ptr<lightsurf_t> Lightsurf_Init(const modelinfo_t *modelinfo,
         plane.dist = qv::dot(plane.normal, planepoint);
 
         /* Correct bounding sphere */
-        lightsurf->extents.origin += modelinfo->offset;
-        lightsurf->extents.bounds = lightsurf->extents.bounds.translate(modelinfo->offset);
+        lightsurf.extents.origin += modelinfo->offset;
+        lightsurf.extents.bounds = lightsurf.extents.bounds.translate(modelinfo->offset);
 
-        intersection_stream.resize(lightsurf->samples.size());
-        occlusion_stream.resize(lightsurf->samples.size());
+        intersection_stream.resize(lightsurf.samples.size());
+        occlusion_stream.resize(lightsurf.samples.size());
 
         /* Setup vis data */
-        CalcPvs(bsp, lightsurf.get());
+        CalcPvs(bsp, &lightsurf);
     }
 
     // emissiveness is handled later and allocated only if necessary
@@ -3311,22 +3311,22 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     }
 }
 
-std::unique_ptr<lightsurf_t> CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup,
+lightsurf_t CreateLightmapSurface(const mbsp_t *bsp, const mface_t *face, const facesup_t *facesup,
     const bspx_decoupled_lm_perface *facesup_decoupled, const settings::worldspawn_keys &cfg)
 {
     /* Find the correct model offset */
     const modelinfo_t *modelinfo = ModelInfoForFace(bsp, Face_GetNum(bsp, face));
     if (modelinfo == nullptr) {
-        return nullptr;
+        return {};
     }
 
     /* don't bother with degenerate faces */
     if (face->numedges < 3)
-        return nullptr;
+        return {};
 
     // if we don't have a lightmap or emissive, we're done
     if (!Face_IsEmissive(bsp, face) && !Face_IsLightmapped(bsp, face)) {
-        return nullptr;
+        return {};
     }
 
     return Lightsurf_Init(modelinfo, cfg, face, bsp, facesup, facesup_decoupled);

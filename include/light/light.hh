@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <span>
+
 #include <common/settings.hh>
 #include <common/bsputils.hh> // for faceextents_t
 
@@ -435,7 +437,7 @@ const std::unordered_map<int, std::vector<uint8_t>> &UncompressedVis();
 
 bool IsOutputtingSupplementaryData();
 
-std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces();
+std::span<lightsurf_t, std::dynamic_extent> &LightSurfaces();
 std::vector<lightsurf_t*> &EmissiveLightSurfaces();
 
 extern std::vector<surfflags_t> extended_texinfo_flags;

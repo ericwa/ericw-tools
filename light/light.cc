@@ -59,13 +59,15 @@
 bool dirt_in_use = false;
 
 // intermediate representation of lightmap surfaces
-static std::vector<std::unique_ptr<lightsurf_t>> light_surfaces;
+static std::unique_ptr<lightsurf_t[]> light_surfaces;
+static std::span<lightsurf_t> light_surfaces_span;
+
 // light_surfaces filtered down to just the emissive ones
 static std::vector<lightsurf_t*> emissive_light_surfaces;
 
-std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces()
+std::span<lightsurf_t, std::dynamic_extent> &LightSurfaces()
 {
-    return light_surfaces;
+    return light_surfaces_span;
 }
 
 std::vector<lightsurf_t*> &EmissiveLightSurfaces()
@@ -77,12 +79,10 @@ static void UpdateEmissiveLightSurfacesList()
 {
     emissive_light_surfaces.clear();
 
-    for (const auto &surf_ptr : light_surfaces) {
-        if (!surf_ptr || !surf_ptr->vpl) {
-            // didn't emit anthing
-            continue;
+    for (auto &surf_ptr : light_surfaces_span) {
+        if (surf_ptr.vpl) {
+            emissive_light_surfaces.push_back(&surf_ptr);
         }
-        emissive_light_surfaces.push_back(surf_ptr.get());
     }
 }
 
@@ -700,7 +700,8 @@ static void CacheTextures(const mbsp_t &bsp)
 
 static void CreateLightmapSurfaces(mbsp_t *bsp)
 {
-    light_surfaces.resize(bsp->dfaces.size());
+    light_surfaces = std::make_unique<lightsurf_t[]>(bsp->dfaces.size());
+    light_surfaces_span = { light_surfaces.get(), light_surfaces.get() + bsp->dfaces.size() };
     logging::funcheader();
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
@@ -739,42 +740,43 @@ static void SaveLightmapSurfaces(mbsp_t *bsp)
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto &surf = light_surfaces[i];
 
-        if (!surf || surf->samples.empty()) {
+        if (surf.samples.empty()) {
             return;
         }
 
-        FinishLightmapSurface(bsp, surf.get());
+        FinishLightmapSurface(bsp, &surf);
 
         auto f = &bsp->dfaces[i];
         const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
 
         if (!facesup_decoupled_global.empty()) {
             SaveLightmapSurface(
-                bsp, f, nullptr, &facesup_decoupled_global[i], surf.get(), surf->extents, surf->extents);
+                bsp, f, nullptr, &facesup_decoupled_global[i], &surf, surf.extents, surf.extents);
         } else if (faces_sup.empty()) {
-            SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->extents);
+            SaveLightmapSurface(bsp, f, nullptr, nullptr, &surf, surf.extents, surf.extents);
         } else if (light_options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
             if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
                 f->lightofs = faces_sup[i].lightofs;
             } else {
                 f->lightofs = -1;
             }
-            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, &surf, surf.extents, surf.extents);
             for (int j = 0; j < MAXLIGHTMAPS; j++) {
                 f->styles[j] =
                     faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
             }
         } else {
-            SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
-            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
+            SaveLightmapSurface(bsp, f, nullptr, nullptr, &surf, surf.extents, surf.vanilla_extents);
+            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, &surf, surf.extents, surf.extents);
         }
     });
 }
 
-void ClearLightmapSurfaces(mbsp_t *bsp)
+static void ClearLightmapSurfaces()
 {
     logging::funcheader();
-    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [](size_t i) { light_surfaces[i].reset(); });
+    light_surfaces.reset();
+    light_surfaces_span = {};
 }
 
 static void FindModelInfo(const mbsp_t *bsp)
@@ -868,7 +870,7 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
-    light_surfaces.clear();
+    ClearLightmapSurfaces();
     filebase.clear();
     lit_filebase.clear();
     lux_filebase.clear();
@@ -949,11 +951,11 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     logging::header("Direct Lighting"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-        if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
+        if (Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
             _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
-            DirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
+            DirectLightFace(&bsp, light_surfaces[i], light_options);
         }
     });
 
@@ -970,12 +972,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             logging::header(fmt::format("Indirect Lighting (pass {0})", i).c_str()); // mxd
 
             logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [i, &bsp](size_t f) {
-                if (light_surfaces[f] && Face_IsLightmapped(&bsp, &bsp.dfaces[f])) {
+                if (Face_IsLightmapped(&bsp, &bsp.dfaces[f])) {
     #if defined(HAVE_EMBREE) && defined(__SSE2__)
                     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     #endif
 
-                    IndirectLightFace(&bsp, *light_surfaces[f].get(), light_options, i);
+                    IndirectLightFace(&bsp, light_surfaces[f], light_options, i);
                 }
             });
         }
@@ -984,12 +986,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (!light_options.nolighting.value()) {
         logging::header("Post-Processing"); // mxd
         logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-            if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
+            if (Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
                 _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
 
-                PostProcessLightFace(&bsp, *light_surfaces[i].get(), light_options);
+                PostProcessLightFace(&bsp, light_surfaces[i], light_options);
             }
         });
     }
@@ -1470,7 +1472,7 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 static void ResetLight()
 {
     dirt_in_use = false;
-    light_surfaces.clear();
+    ClearLightmapSurfaces();
     faces_sup.clear();
     facesup_decoupled_global.clear();
 
@@ -1631,7 +1633,7 @@ int light_main(int argc, const char **argv)
 
         LightGrid(&bspdata);
 
-        ClearLightmapSurfaces(&std::get<mbsp_t>(bspdata.bsp));
+        ClearLightmapSurfaces();
 
         // invalidate normals
         bspdata.bspx.entries.erase("FACENORMALS");
