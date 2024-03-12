@@ -28,6 +28,7 @@
 
 #include <common/qvec.hh>
 #include <common/bitflags.hh>
+#include <common/bspfile_common.hh>
 
 constexpr int32_t BSPVERSION = 29;
 constexpr int32_t BSP2RMQVERSION = (('B' << 24) | ('S' << 16) | ('P' << 8) | '2');

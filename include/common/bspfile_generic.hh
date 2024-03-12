@@ -30,6 +30,8 @@
 #include <memory>
 #include "qvec.hh"
 
+#include <common/bspfile_common.hh>
+
 constexpr int32_t MBSPIDENT = -1;
 
 constexpr size_t MAX_MAP_HULLS_H2 = 8;

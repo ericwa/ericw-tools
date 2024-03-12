@@ -1,6 +1,7 @@
 add_library(common STATIC
     bspinfo.cc
     bspfile.cc
+    bspfile_common.cc
     bspfile_generic.cc
     bspfile_q1.cc
     bspfile_q2.cc
@@ -25,6 +26,7 @@ add_library(common STATIC
     ../include/common/bitflags.hh
     ../include/common/bspinfo.hh
     ../include/common/bspfile.hh
+    ../include/common/bspfile_common.hh
     ../include/common/bspfile_generic.hh
     ../include/common/bspfile_q1.hh
     ../include/common/bspfile_q2.hh

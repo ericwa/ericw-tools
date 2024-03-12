@@ -34,16 +34,6 @@
 #include <atomic>
 #include <mutex>
 
-void lump_t::stream_write(std::ostream &s) const
-{
-    s <= std::tie(fileofs, filelen);
-}
-
-void lump_t::stream_read(std::istream &s)
-{
-    s >= std::tie(fileofs, filelen);
-}
-
 static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
 {
     Q_assert((bytes.size() % 3) == 0);
@@ -1745,166 +1735,6 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
     },
     &gamedef_q2};
 
-static auto as_tuple(const surfflags_t &flags)
-{
-    return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow,
-        flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
-        flags.surflight_rescale, flags.surflight_style, flags.surflight_color, flags.surflight_minlight_scale,
-        flags.surflight_targetname, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
-        flags.minlight_color, flags.light_alpha, flags.light_twosided, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
-        flags.world_units_per_luxel, flags.object_channel_mask);
-}
-
-bool surfflags_t::needs_write() const
-{
-    return as_tuple(*this) != as_tuple(surfflags_t());
-}
-
-bool surfflags_t::operator<(const surfflags_t &other) const
-{
-    return as_tuple(*this) < as_tuple(other);
-}
-
-bool surfflags_t::operator>(const surfflags_t &other) const
-{
-    return as_tuple(*this) > as_tuple(other);
-}
-
-bool surfflags_t::is_valid(const gamedef_t *game) const
-{
-    return game->surfflags_are_valid(*this);
-}
-
-bool contentflags_t::equals(const gamedef_t *game, const contentflags_t &other) const
-{
-    return flags == other.flags;
-}
-
-bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
-{
-    return game->contents_are_type_equal(*this, other);
-}
-
-bool contentflags_t::is_any_detail(const gamedef_t *game) const
-{
-    return game->contents_are_any_detail(*this);
-}
-
-bool contentflags_t::is_detail_solid(const gamedef_t *game) const
-{
-    return game->contents_are_detail_solid(*this);
-}
-
-bool contentflags_t::is_detail_wall(const gamedef_t *game) const
-{
-    return game->contents_are_detail_wall(*this);
-}
-
-bool contentflags_t::is_detail_fence(const gamedef_t *game) const
-{
-    return game->contents_are_detail_fence(*this);
-}
-
-bool contentflags_t::is_detail_illusionary(const gamedef_t *game) const
-{
-    return game->contents_are_detail_illusionary(*this);
-}
-
-contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_inside_value)
-{
-    if (mirror_inside_value.has_value()) {
-        if (*mirror_inside_value) {
-            // set to true
-            flags = static_cast<contents_t>(flags | EWT_CFLAG_MIRROR_INSIDE_SET | EWT_CFLAG_MIRROR_INSIDE);
-        } else {
-            // set to false
-            flags = static_cast<contents_t>(flags | EWT_CFLAG_MIRROR_INSIDE_SET);
-            flags = static_cast<contents_t>(flags & ~(EWT_CFLAG_MIRROR_INSIDE));
-        }
-    } else {
-        // unset
-        flags = static_cast<contents_t>(flags & ~(EWT_CFLAG_MIRROR_INSIDE_SET | EWT_CFLAG_MIRROR_INSIDE));
-    }
-    return *this;
-}
-
-bool contentflags_t::will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const
-{
-    return game->contents_clip_same_type(*this, other);
-}
-
-contentflags_t &contentflags_t::set_clips_same_type(const std::optional<bool> &clips_same_type_value)
-{
-    if (clips_same_type_value) {
-        if (!*clips_same_type_value) {
-            *this = contentflags_t::make(flags | EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE);
-        }
-    }
-    return *this;
-}
-
-bool contentflags_t::is_empty(const gamedef_t *game) const
-{
-    return game->contents_are_empty(*this);
-}
-
-bool contentflags_t::is_any_solid(const gamedef_t *game) const
-{
-    return game->contents_are_any_solid(*this);
-}
-
-bool contentflags_t::is_solid(const gamedef_t *game) const
-{
-    return game->contents_are_solid(*this);
-}
-
-bool contentflags_t::is_sky(const gamedef_t *game) const
-{
-    return game->contents_are_sky(*this);
-}
-
-bool contentflags_t::is_liquid(const gamedef_t *game) const
-{
-    return game->contents_are_liquid(*this);
-}
-
-bool contentflags_t::is_valid(const gamedef_t *game, bool strict) const
-{
-    return game->contents_are_valid(*this, strict);
-}
-
-bool contentflags_t::is_clip(const gamedef_t *game) const
-{
-    return game->contents_are_clip(*this);
-}
-
-bool contentflags_t::is_origin(const gamedef_t *game) const
-{
-    return game->contents_are_origin(*this);
-}
-
-void contentflags_t::make_valid(const gamedef_t *game)
-{
-    game->contents_make_valid(*this);
-}
-
-bool contentflags_t::is_fence(const gamedef_t *game) const
-{
-    return is_detail_fence(game) || is_detail_illusionary(game);
-}
-
-std::string contentflags_t::to_string(const gamedef_t *game) const
-{
-    std::string s = game->get_contents_display(*this);
-
-    return s;
-}
-
-gamedef_t::gamedef_t(const char *friendly_name, const char *default_base_dir)
-    : friendly_name(friendly_name), default_base_dir(default_base_dir)
-{
-}
-
 static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {
     for (const bspversion_t *bspver : bspversions) {
@@ -2349,22 +2179,6 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
     reader.read(Q2_LUMP_BRUSHSIDES, bsp.dbrushsides);
     reader.read(Q2_LUMP_AREAS, bsp.dareas);
     reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
-}
-
-void texvecf::stream_read(std::istream &stream)
-{
-    for (size_t i = 0; i < 2; i++)
-        for (size_t x = 0; x < 4; x++) {
-            stream >= this->at(i, x);
-        }
-}
-
-void texvecf::stream_write(std::ostream &stream) const
-{
-    for (size_t i = 0; i < 2; i++)
-        for (size_t x = 0; x < 4; x++) {
-            stream <= this->at(i, x);
-        }
 }
 
 void bspdata_t::bspxentries::transfer(const char *xname, std::vector<uint8_t> &xdata)
