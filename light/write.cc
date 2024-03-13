@@ -795,6 +795,10 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     const int output_width = output_extents.width();
     const int output_height = output_extents.height();
 
+    if (id.sorted.empty()) {
+        return; // no styles to write
+    }
+
     Q_assert(id.lightofs >= 0);
 
     /* update face info (either core data or supplementary stuff) */
