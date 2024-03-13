@@ -1073,11 +1073,16 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
 
     logging::print("Lighting Completed.\n\n");
 
+    if (light_options.write_litfile == lightfile::lit2) {
+        WriteLitFile(bsp, faces_sup, source, 2, lit_filebase, lux_filebase);
+        return; // run away before any files are written
+    }
+
     // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
     // NOTE: bsp.lightdatasize is already valid in the -litonly case
     if (!light_options.litonly.value()) {
         if (bsp->loadversion->game->has_rgb_lightmap) {
-            bsp->dlightdata = std::move(lit_filebase);
+            bsp->dlightdata = lit_filebase; // not moved, because it's used below too
         } else {
             bsp->dlightdata = std::move(filebase);
         }
@@ -1085,11 +1090,6 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
 
     bspdata->bspx.entries.erase("RGBLIGHTING");
     bspdata->bspx.entries.erase("LIGHTINGDIR");
-
-    if (light_options.write_litfile == lightfile::lit2) {
-        WriteLitFile(bsp, faces_sup, source, 2, lit_filebase, lux_filebase);
-        return; // run away before any files are written
-    }
 
     /*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
     if (light_options.write_litfile & lightfile::external) {
