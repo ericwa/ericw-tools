@@ -42,7 +42,7 @@ extern std::atomic<uint32_t> total_light_rays, total_light_ray_hits, total_sampl
 extern std::atomic<uint32_t> total_bounce_rays, total_bounce_ray_hits;
 extern std::atomic<uint32_t> total_surflight_rays, total_surflight_ray_hits; // mxd
 #endif
-extern std::atomic<uint32_t> fully_transparent_lightmaps;
+extern std::atomic<uint32_t> fully_transparent_lightmaps; // write.cc
 
 void PrintFaceInfo(const mface_t *face, const mbsp_t *bsp);
 // FIXME: remove light param. add normal param and dir params.
@@ -55,10 +55,6 @@ bool Face_IsEmissive(const mbsp_t *bsp, const mface_t *face);
 void DirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
 void IndirectLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg, size_t bounce_depth);
 void PostProcessLightFace(const mbsp_t *bsp, lightsurf_t &lightsurf, const settings::worldspawn_keys &cfg);
-void FinishLightmapSurface(const mbsp_t *bsp, lightsurf_t *lightsurf);
-void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
-    bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
-    const faceextents_t &output_extents);
 
 struct lightgrid_sample_t
 {

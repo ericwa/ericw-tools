@@ -27,7 +27,7 @@
 #include <common/cmdlib.hh>
 #include <common/parser.hh>
 
-#include <light/litfile.hh>
+#include <light/write.hh>
 #include <light/trace.hh>
 #include <light/trace_embree.hh>
 #include <light/light.hh>

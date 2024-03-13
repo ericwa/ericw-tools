@@ -429,24 +429,20 @@ public:
 
 extern settings::light_settings light_options;
 
-extern std::vector<uint8_t> filebase;
-extern std::vector<uint8_t> lit_filebase;
-extern std::vector<uint8_t> lux_filebase;
-
 const std::unordered_map<int, std::vector<uint8_t>> &UncompressedVis();
 
 bool IsOutputtingSupplementaryData();
 
-std::span<lightsurf_t, std::dynamic_extent> &LightSurfaces();
+std::span<lightsurf_t> &LightSurfaces();
 std::vector<lightsurf_t*> &EmissiveLightSurfaces();
 
 extern std::vector<surfflags_t> extended_texinfo_flags;
 
+lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t *lightsurf);
+
 // public functions
 
 void FixupGlobalSettings();
-void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size);
-void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs);
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum);
 /**
  * returns nullptr for "skip" faces
