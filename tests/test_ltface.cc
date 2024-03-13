@@ -278,13 +278,7 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
         // count used pixels per style
         auto lm_info = BSPX_DecoupledLM(bspx, Face_GetNum(&bsp, &face));
         const faceextents_t extents(face, bsp, lm_info.lmwidth, lm_info.lmheight, lm_info.world_to_lm_space);
-        int samples_per_face = extents.numsamples() * face_used_styles;
-
-        // round up to multiple of 4
-        if (samples_per_face % 4) {
-            samples_per_face += (4 - (samples_per_face % 4));
-        }
-
+        int samples_per_face = align_value<4>(extents.numsamples() * face_used_styles);
         int bytes_per_face = 3 * samples_per_face;
         expected_dlightdata_bytes += bytes_per_face;
     }

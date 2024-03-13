@@ -108,8 +108,7 @@ void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, cons
  */
 static inline int GetFileSpace(std::atomic_size_t &offset, size_t size)
 {
-    // if size isn't a multiple of 4, round up to the next multiple of 4
-    size_t v = offset.fetch_add(size + (4 - (size % 4)));
+    size_t v = offset.fetch_add(align_value<4>(size));
 
     // early check
     if (v > std::numeric_limits<int>::max())

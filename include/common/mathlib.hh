@@ -32,6 +32,17 @@ constexpr auto avg(T &&...args)
     return (args + ...) / sizeof...(args);
 }
 
+template<size_t step, typename T, typename = std::enable_if_t<std::is_integral_v<T>>>
+constexpr T align_value(T value)
+{
+    // round up to multiple of 4
+    if (value % step) {
+        return value + (step - (value % step));
+    }
+
+    return value;
+}
+
 constexpr double VECT_MAX = std::numeric_limits<double>::max();
 
 /*
