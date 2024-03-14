@@ -26,6 +26,7 @@
 #include <common/fs.hh>
 
 struct mbsp_t;
+struct bspdata_t;
 
 constexpr int32_t LIT_VERSION = 1;
 
@@ -66,5 +67,7 @@ struct facesup_t
     twosided<uint16_t> extent;
 };
 
-void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version);
-void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version);
+void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version, const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase);
+void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, const std::vector<uint8_t> &lux_filebase);
+
+void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source);

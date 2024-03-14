@@ -29,7 +29,7 @@
 #include <light/surflight.hh> //mxd
 #include <light/entities.hh>
 #include <light/ltface.hh>
-#include <light/litfile.hh> // for facesup_t
+#include <light/write.hh> // for facesup_t
 #include <light/trace_embree.hh>
 
 #include <common/log.hh>
@@ -59,13 +59,15 @@
 bool dirt_in_use = false;
 
 // intermediate representation of lightmap surfaces
-static std::vector<std::unique_ptr<lightsurf_t>> light_surfaces;
+static std::unique_ptr<lightsurf_t[]> light_surfaces;
+static std::span<lightsurf_t> light_surfaces_span;
+
 // light_surfaces filtered down to just the emissive ones
 static std::vector<lightsurf_t*> emissive_light_surfaces;
 
-std::vector<std::unique_ptr<lightsurf_t>> &LightSurfaces()
+std::span<lightsurf_t> &LightSurfaces()
 {
-    return light_surfaces;
+    return light_surfaces_span;
 }
 
 std::vector<lightsurf_t*> &EmissiveLightSurfaces()
@@ -77,43 +79,20 @@ static void UpdateEmissiveLightSurfacesList()
 {
     emissive_light_surfaces.clear();
 
-    for (const auto &surf_ptr : light_surfaces) {
-        if (!surf_ptr || !surf_ptr->vpl) {
-            // didn't emit anthing
-            continue;
+    for (auto &surf_ptr : light_surfaces_span) {
+        if (surf_ptr.vpl) {
+            emissive_light_surfaces.push_back(&surf_ptr);
         }
-        emissive_light_surfaces.push_back(surf_ptr.get());
     }
 }
 
-static std::vector<facesup_t> faces_sup; // lit2/bspx stuff
-static std::vector<bspx_decoupled_lm_perface> facesup_decoupled_global;
+std::vector<facesup_t> faces_sup; // lit2/bspx stuff
+std::vector<bspx_decoupled_lm_perface> facesup_decoupled_global;
 
 bool IsOutputtingSupplementaryData()
 {
     return !faces_sup.empty();
 }
-
-/// start of lightmap data
-std::vector<uint8_t> filebase;
-/// offset of start of free space after data (should be kept a multiple of 4)
-static int file_p;
-/// offset of end of free space for lightmap data
-static int file_end;
-
-/// start of litfile data
-std::vector<uint8_t> lit_filebase;
-/// offset of start of free space after litfile data (should be kept a multiple of 12)
-static int lit_file_p;
-/// offset of end of space for litfile data
-static int lit_file_end;
-
-/// start of luxfile data
-std::vector<uint8_t> lux_filebase;
-/// offset of start of free space after luxfile data (should be kept a multiple of 12)
-static int lux_file_p;
-/// offset of end of space for luxfile data
-static int lux_file_end;
 
 static std::unordered_map<int, std::vector<uint8_t>> all_uncompressed_vis;
 
@@ -554,82 +533,6 @@ void FixupGlobalSettings()
     }
 }
 
-static std::mutex light_mutex;
-
-/*
- * Return space for the lightmap and colourmap at the same time so it can
- * be done in a thread-safe manner.
- *
- * size is the number of greyscale pixels = number of bytes to allocate
- * and return in *lightdata
- */
-void GetFileSpace(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int size)
-{
-    light_mutex.lock();
-
-    *lightdata = *colordata = *deluxdata = nullptr;
-
-    if (!filebase.empty()) {
-        *lightdata = filebase.data() + file_p;
-    }
-    if (!lit_filebase.empty()) {
-        *colordata = lit_filebase.data() + lit_file_p;
-    }
-    if (!lux_filebase.empty()) {
-        *deluxdata = lux_filebase.data() + lux_file_p;
-    }
-
-    // if size isn't a multiple of 4, round up to the next multiple of 4
-    if ((size % 4) != 0) {
-        size += (4 - (size % 4));
-    }
-
-    // increment the next writing offsets, aligning them to 4 uint8_t boundaries (file_p)
-    // and 12-uint8_t boundaries (lit_file_p/lux_file_p)
-    if (!filebase.empty()) {
-        file_p += size;
-    }
-    if (!lit_filebase.empty()) {
-        lit_file_p += 3 * size;
-    }
-    if (!lux_filebase.empty()) {
-        lux_file_p += 3 * size;
-    }
-
-    light_mutex.unlock();
-
-    if (file_p > file_end)
-        FError("overrun");
-
-    if (lit_file_p > lit_file_end)
-        FError("overrun");
-}
-
-/**
- * Special version of GetFileSpace for when we're relighting a .bsp and can't modify it.
- * In this case the offsets are already known.
- */
-void GetFileSpace_PreserveOffsetInBsp(uint8_t **lightdata, uint8_t **colordata, uint8_t **deluxdata, int lightofs)
-{
-    Q_assert(lightofs >= 0);
-
-    *lightdata = *colordata = *deluxdata = nullptr;
-
-    if (!filebase.empty()) {
-        *lightdata = filebase.data() + lightofs;
-    }
-
-    if (colordata && !lit_filebase.empty()) {
-        *colordata = lit_filebase.data() + (lightofs * 3);
-    }
-
-    if (deluxdata && !lux_filebase.empty()) {
-        *deluxdata = lux_filebase.data() + (lightofs * 3);
-    }
-
-    // NOTE: file_p et. al. are not updated, since we're not dynamically allocating the lightmaps
-}
-
 const modelinfo_t *ModelInfoForModel(const mbsp_t *bsp, int modelnum)
 {
     return modelinfo.at(modelnum);
@@ -700,7 +603,8 @@ static void CacheTextures(const mbsp_t &bsp)
 
 static void CreateLightmapSurfaces(mbsp_t *bsp)
 {
-    light_surfaces.resize(bsp->dfaces.size());
+    light_surfaces = std::make_unique<lightsurf_t[]>(bsp->dfaces.size());
+    light_surfaces_span = { light_surfaces.get(), light_surfaces.get() + bsp->dfaces.size() };
     logging::funcheader();
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
@@ -733,48 +637,11 @@ static void CreateLightmapSurfaces(mbsp_t *bsp)
     });
 }
 
-static void SaveLightmapSurfaces(mbsp_t *bsp)
+static void ClearLightmapSurfaces()
 {
     logging::funcheader();
-    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
-        auto &surf = light_surfaces[i];
-
-        if (!surf || surf->samples.empty()) {
-            return;
-        }
-
-        FinishLightmapSurface(bsp, surf.get());
-
-        auto f = &bsp->dfaces[i];
-        const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
-
-        if (!facesup_decoupled_global.empty()) {
-            SaveLightmapSurface(
-                bsp, f, nullptr, &facesup_decoupled_global[i], surf.get(), surf->extents, surf->extents);
-        } else if (faces_sup.empty()) {
-            SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->extents);
-        } else if (light_options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
-            if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
-                f->lightofs = faces_sup[i].lightofs;
-            } else {
-                f->lightofs = -1;
-            }
-            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
-            for (int j = 0; j < MAXLIGHTMAPS; j++) {
-                f->styles[j] =
-                    faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
-            }
-        } else {
-            SaveLightmapSurface(bsp, f, nullptr, nullptr, surf.get(), surf->extents, surf->vanilla_extents);
-            SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, surf.get(), surf->extents, surf->extents);
-        }
-    });
-}
-
-void ClearLightmapSurfaces(mbsp_t *bsp)
-{
-    logging::funcheader();
-    logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [](size_t i) { light_surfaces[i].reset(); });
+    light_surfaces.reset();
+    light_surfaces_span = {};
 }
 
 static void FindModelInfo(const mbsp_t *bsp)
@@ -852,47 +719,18 @@ static void FindModelInfo(const mbsp_t *bsp)
     Q_assert(modelinfo.size() == bsp->dmodels.size());
 }
 
-// FIXME: in theory can't we calculate the exact amount of
-// storage required? we'd have to expand it by 4 to account for
-// lightstyles though
-static constexpr size_t MAX_MAP_LIGHTING = 0x8000000;
-
 /*
  * =============
  *  LightWorld
  * =============
  */
-static void LightWorld(bspdata_t *bspdata, bool forcedscale)
+static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedscale)
 {
     logging::funcheader();
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata->bsp);
 
-    light_surfaces.clear();
-    filebase.clear();
-    lit_filebase.clear();
-    lux_filebase.clear();
-
-    if (!bsp.loadversion->game->has_rgb_lightmap) {
-        /* greyscale data stored in a separate buffer */
-        filebase.resize(MAX_MAP_LIGHTING);
-        file_p = 0;
-        file_end = MAX_MAP_LIGHTING;
-    }
-
-    if (bsp.loadversion->game->has_rgb_lightmap || light_options.write_litfile) {
-        /* litfile data stored in a separate buffer */
-        lit_filebase.resize(MAX_MAP_LIGHTING * 3);
-        lit_file_p = 0;
-        lit_file_end = (MAX_MAP_LIGHTING * 3);
-    }
-
-    if (light_options.write_luxfile) {
-        /* lux data stored in a separate buffer */
-        lux_filebase.resize(MAX_MAP_LIGHTING * 3);
-        lux_file_p = 0;
-        lux_file_end = (MAX_MAP_LIGHTING * 3);
-    }
+    ClearLightmapSurfaces();
 
     if (forcedscale) {
         bspdata->bspx.entries.erase("LMSHIFT");
@@ -949,11 +787,11 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
 
     logging::header("Direct Lighting"); // mxd
     logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-        if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
+        if (Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
             _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
-            DirectLightFace(&bsp, *light_surfaces[i].get(), light_options);
+            DirectLightFace(&bsp, light_surfaces[i], light_options);
         }
     });
 
@@ -970,12 +808,12 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
             logging::header(fmt::format("Indirect Lighting (pass {0})", i).c_str()); // mxd
 
             logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [i, &bsp](size_t f) {
-                if (light_surfaces[f] && Face_IsLightmapped(&bsp, &bsp.dfaces[f])) {
+                if (Face_IsLightmapped(&bsp, &bsp.dfaces[f])) {
     #if defined(HAVE_EMBREE) && defined(__SSE2__)
                     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
     #endif
 
-                    IndirectLightFace(&bsp, *light_surfaces[f].get(), light_options, i);
+                    IndirectLightFace(&bsp, light_surfaces[f], light_options, i);
                 }
             });
         }
@@ -984,33 +822,17 @@ static void LightWorld(bspdata_t *bspdata, bool forcedscale)
     if (!light_options.nolighting.value()) {
         logging::header("Post-Processing"); // mxd
         logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [&bsp](size_t i) {
-            if (light_surfaces[i] && Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
+            if (Face_IsLightmapped(&bsp, &bsp.dfaces[i])) {
 #if defined(HAVE_EMBREE) && defined(__SSE2__)
                 _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
 #endif
 
-                PostProcessLightFace(&bsp, *light_surfaces[i].get(), light_options);
+                PostProcessLightFace(&bsp, light_surfaces[i], light_options);
             }
         });
     }
 
-    SaveLightmapSurfaces(&bsp);
-
-    logging::print("Lighting Completed.\n\n");
-
-    // Transfer greyscale lightmap (or color lightmap for Q2/HL) to the bsp and update lightdatasize
-    if (!light_options.litonly.value()) {
-        if (bsp.loadversion->game->has_rgb_lightmap) {
-            bsp.dlightdata.resize(lit_file_p);
-            memcpy(bsp.dlightdata.data(), lit_filebase.data(), bsp.dlightdata.size());
-        } else {
-            bsp.dlightdata.resize(file_p);
-            memcpy(bsp.dlightdata.data(), filebase.data(), bsp.dlightdata.size());
-        }
-    } else {
-        // NOTE: bsp.lightdatasize is already valid in the -litonly case
-    }
-    logging::print("lightdatasize: {}\n", bsp.dlightdata.size());
+    SaveLightmapSurfaces(bspdata, source);
 
     // kill this stuff if its somehow found.
     bspdata->bspx.entries.erase("LMSTYLE16");
@@ -1470,21 +1292,9 @@ static inline void WriteNormals(const mbsp_t &bsp, bspdata_t &bspdata)
 static void ResetLight()
 {
     dirt_in_use = false;
-    light_surfaces.clear();
+    ClearLightmapSurfaces();
     faces_sup.clear();
     facesup_decoupled_global.clear();
-
-    filebase.clear();
-    file_p = 0;
-    file_end = 0;
-
-    lit_filebase.clear();
-    lit_file_p = 0;
-    lit_file_end = 0;
-
-    lux_filebase.clear();
-    lux_file_p = 0;
-    lux_file_end = 0;
 
     all_uncompressed_vis.clear();
     modelinfo.clear();
@@ -1627,11 +1437,11 @@ int light_main(int argc, const char **argv)
 
         SetupDirt(light_options);
 
-        LightWorld(&bspdata, light_options.lightmap_scale.is_changed());
+        LightWorld(&bspdata, source, light_options.lightmap_scale.is_changed());
 
         LightGrid(&bspdata);
 
-        ClearLightmapSurfaces(&std::get<mbsp_t>(bspdata.bsp));
+        ClearLightmapSurfaces();
 
         // invalidate normals
         bspdata.bspx.entries.erase("FACENORMALS");
@@ -1640,29 +1450,8 @@ int light_main(int argc, const char **argv)
             WriteNormals(bsp, bspdata);
         }
 
-        /*invalidate any bspx lighting info early*/
-        bspdata.bspx.entries.erase("RGBLIGHTING");
-        bspdata.bspx.entries.erase("LIGHTINGDIR");
-
         if (light_options.write_litfile == lightfile::lit2) {
-            WriteLitFile(&bsp, faces_sup, source, 2);
             return 0; // run away before any files are written
-        }
-
-        /*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
-        if (light_options.write_litfile & lightfile::external) {
-            WriteLitFile(&bsp, faces_sup, source, LIT_VERSION);
-        }
-        if (light_options.write_litfile & lightfile::bspx) {
-            lit_filebase.resize(bsp.dlightdata.size() * 3);
-            bspdata.bspx.transfer("RGBLIGHTING", lit_filebase);
-        }
-        if (light_options.write_luxfile & lightfile::external) {
-            WriteLuxFile(&bsp, source, LIT_VERSION);
-        }
-        if (light_options.write_luxfile & lightfile::bspx) {
-            lux_filebase.resize(bsp.dlightdata.size() * 3);
-            bspdata.bspx.transfer("LIGHTINGDIR", lux_filebase);
         }
     }
 

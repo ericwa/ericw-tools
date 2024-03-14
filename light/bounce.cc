@@ -136,13 +136,7 @@ static bool MakeBounceLightsThread(const settings::worldspawn_keys &cfg, const m
         return false;
     }
 
-    auto &surf_ptr = LightSurfaces()[&face - bsp->dfaces.data()];
-
-    if (!surf_ptr) {
-        return false;
-    }
-
-    auto &surf = *surf_ptr.get();
+    auto &surf = LightSurfaces()[&face - bsp->dfaces.data()];
 
     // no lights
     if (!surf.lightmapsByStyle.size()) {

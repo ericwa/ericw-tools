@@ -10,11 +10,10 @@ set(LIGHT_INCLUDES
 	../include/light/surflight.hh
 	../include/light/ltface.hh
 	../include/light/trace.hh
-	../include/light/litfile.hh)
+	../include/light/write.hh)
 
 set(LIGHT_SOURCES
 	entities.cc
-	litfile.cc
 	ltface.cc
 	trace.cc
 	light.cc
@@ -22,6 +21,7 @@ set(LIGHT_SOURCES
 	phong.cc
 	bounce.cc
 	surflight.cc
+	write.cc
 	${LIGHT_INCLUDES})
 
 if (embree_FOUND)

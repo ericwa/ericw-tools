@@ -53,13 +53,11 @@ int LightStyleForTargetname(const settings::worldspawn_keys &cfg, const std::str
 static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, const mface_t *face,
     std::optional<qvec3f> texture_color, bool is_directional, bool is_sky, int32_t style, int32_t light_value)
 {
-    auto &surf_ptr = LightSurfaces()[face - bsp->dfaces.data()];
-
-    if (!surf_ptr || !Face_IsEmissive(bsp, face)) {
+    if (!Face_IsEmissive(bsp, face)) {
         return;
     }
 
-    auto &surf = *surf_ptr.get();
+    auto &surf = LightSurfaces()[face - bsp->dfaces.data()];
 
     // Create face points...
     auto poly = Face_Points(bsp, face);
