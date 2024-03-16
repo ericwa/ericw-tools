@@ -991,7 +991,7 @@ void MainWindow::compileThreadExited()
         lightstyles->addWidget(style);
     }
 
-    stats_panel->updateWithBSP(&bsp);
+    stats_panel->updateWithBSP(&bsp, m_bspdata.bspx.entries);
 }
 
 void MainWindow::loadFileInternal(const QString &file, bool is_reload)

@@ -47,7 +47,7 @@ void StatsPanel::addStat(const QString &str, int value)
     m_table->setItem(currentRow, 1, valueItem);
 }
 
-void StatsPanel::updateWithBSP(const mbsp_t *bsp)
+void StatsPanel::updateWithBSP(const mbsp_t *bsp, const bspxentries_t &entries)
 {
     m_table->setRowCount(0);
 
@@ -79,4 +79,9 @@ void StatsPanel::updateWithBSP(const mbsp_t *bsp)
     addStat(QStringLiteral("visdata bytes"), bsp->dvis.bits.size());
     addStat(QStringLiteral("lightdata bytes"), bsp->dlightdata.size());
     addStat(QStringLiteral("entdata bytes"), bsp->dentdata.size());
+
+    // bspx lumps
+    for (const auto &[lumpname, data] : entries) {
+        addStat(QStringLiteral("%1 bytes").arg(lumpname.c_str()), data.size());
+    }
 }

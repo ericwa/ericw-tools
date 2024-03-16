@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QWidget>
+#include <common/bspfile.hh>
 
 struct mbsp_t;
 class QTableWidget;
@@ -16,5 +17,5 @@ private:
     void addStat(const QString &str, int value);
 
 public:
-    void updateWithBSP(const mbsp_t *bsp);
+    void updateWithBSP(const mbsp_t *bsp, const bspxentries_t &entries);
 };
