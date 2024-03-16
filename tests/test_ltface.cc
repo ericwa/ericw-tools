@@ -84,6 +84,13 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
         light_args.push_back(bsp_path.string());
 
         light_main(light_args);
+
+        // ensure a .lit is never created in q2
+        if (is_q2) {
+            auto lit_check_path = bsp_path;
+            lit_check_path.replace_extension(".lit");
+            CHECK(!fs::exists(lit_check_path));
+        }
     }
 
     // serialize obj
@@ -336,6 +343,7 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
     INFO("lm coord: ", coord[0], ", ", coord[1]);
     INFO("lm int_coord: ", int_coord[0], ", ", int_coord[1]);
     INFO("face num: ", Face_GetNum(bsp, face));
+    INFO("actual sample: ", sample[0], " ", sample[1], " ", sample[2]);
 
     qvec3i delta = qv::abs(qvec3i{sample} - qvec3i{expected_color});
     CHECK(delta[0] <= 1);
@@ -390,6 +398,21 @@ TEST_CASE("q2_dirt")
     REQUIRE(face_under_lava);
 
     CheckFaceLuxels(bsp, *face_under_lava, [](qvec3b sample) { CHECK(sample == qvec3b(96)); });
+}
+
+TEST_CASE("q2_dirtdebug")
+{
+    INFO("dirtdebug works in q2");
+
+    auto [bsp, bspx] = QbspVisLight_Q2("q2_dirt.map", {"-dirtdebug"});
+
+    auto *face_under_lava = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {104, 112, 48});
+    REQUIRE(face_under_lava);
+
+    CheckFaceLuxels(bsp, *face_under_lava, [](qvec3b sample) { CHECK(sample == qvec3b(255)); });
+
+    // check floor in the corner
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {-124, 300, 32});
 }
 
 TEST_CASE("q2_light_translucency")

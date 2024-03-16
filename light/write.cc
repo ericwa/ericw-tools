@@ -1094,19 +1094,22 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
     bspdata->bspx.entries.erase("RGBLIGHTING");
     bspdata->bspx.entries.erase("LIGHTINGDIR");
 
-    /*fixme: add a new per-surface offset+lmscale lump for compat/versitility?*/
-    if (light_options.write_litfile & lightfile::external) {
-        WriteLitFile(bsp, faces_sup, source, LIT_VERSION, lit_filebase, lux_filebase);
-    }
-    if (light_options.write_litfile & lightfile::bspx) {
-        lit_filebase.resize(bsp->dlightdata.size() * 3);
-        bspdata->bspx.transfer("RGBLIGHTING", lit_filebase);
-    }
-    if (light_options.write_luxfile & lightfile::external) {
-        WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
-    }
-    if (light_options.write_luxfile & lightfile::bspx) {
-        lux_filebase.resize(bsp->dlightdata.size() * 3);
-        bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
+    // lit/lux files (or their BSPX equivalents) - only write in games that lack RGB lightmaps.
+    // (technically we could allow .lux in Q2 mode, but no engines support it.)
+    if (!bsp->loadversion->game->has_rgb_lightmap) {
+        if (light_options.write_litfile & lightfile::external) {
+            WriteLitFile(bsp, faces_sup, source, LIT_VERSION, lit_filebase, lux_filebase);
+        }
+        if (light_options.write_litfile & lightfile::bspx) {
+            lit_filebase.resize(bsp->dlightdata.size() * 3);
+            bspdata->bspx.transfer("RGBLIGHTING", lit_filebase);
+        }
+        if (light_options.write_luxfile & lightfile::external) {
+            WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
+        }
+        if (light_options.write_luxfile & lightfile::bspx) {
+            lux_filebase.resize(bsp->dlightdata.size() * 3);
+            bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
+        }
     }
 }
