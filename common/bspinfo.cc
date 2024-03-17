@@ -63,7 +63,7 @@ static Json::Value serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
         auto &model = j.append(Json::Value(Json::objectValue));
         model["ver"] = src_model.ver;
         model["modelnum"] = src_model.modelnum;
-        model["numbrushes"] = Json::Value(src_model.brushes.size());
+        model["numbrushes"] = static_cast<Json::UInt64>(src_model.brushes.size());
         model["numfaces"] = src_model.numfaces;
         auto &brushes = (model["brushes"] = Json::Value(Json::arrayValue));
 
