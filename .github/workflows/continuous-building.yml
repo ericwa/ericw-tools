@@ -31,7 +31,6 @@ jobs:
         vcpkgDirectory: '${{ github.workspace }}/vcpkg'
         vcpkgGitCommitId: cf4ebef2294e164875ce17d7937f44d3e3ea156e
         runVcpkgInstall: true
-        runVcpkgFormatString: '[`install`, `jsoncpp`]'
 
     - uses: actions/checkout@v4
       with:
