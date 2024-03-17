@@ -2,24 +2,29 @@
 Changelog
 =========
 
-2.0.0-alpha7 (unreleased)
-=========================
+2.0.0-alpha7
+============
 
 Changes
 -------
 
 - light: q2: opaque lit liquids receive light from both sides by default (specifically if they have the "warp" surf
   flag)
+- qbsp: remove broken ``-transsky`` feature
 
 Features
 --------
 
 - bsputil: gained ``--svg`` export
+- lightpreview: add camera bookmarks, stats panel with BSP lump sizes
 
 Bug fixes
 ---------
 
 - qbsp: fix "sides not found" warning spam on Q1 maps with sky
+- light: fix ``-dirtdebug`` causing a .lit file to be generated in Q2 mode
+- lightpreview: fix ``-dirtdebug`` broken in Q2 mode (due to the above bug)
+- light: reduce excess memory use
 
 Enhancements
 ------------
