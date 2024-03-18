@@ -2005,9 +2005,9 @@ static std::optional<mapface_t> ParseBrushFace(
 
     // to save on texinfo, reset all invisible sides to default texvecs
     if (tx.flags.is_nodraw || tx.flags.is_hintskip || tx.flags.is_hint) {
-        brush_side_t temp;
+        mapfile::brush_side_t temp;
         temp.plane = face.get_plane();
-        temp.set_texinfo(texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+        temp.set_texinfo(mapfile::texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
         tx.vecs = temp.vecs;
     } else {
         // ericw -- round texture vector values that are within ZERO_EPSILON of integers,

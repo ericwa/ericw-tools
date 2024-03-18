@@ -29,6 +29,10 @@ See file, 'COPYING', for details.
 #include <variant>
 #include <optional>
 
+// this file declares some names that clash with names elsewhere in the project and lead to ODR violations
+// (e.g. texdef_valve_t). For now just wrap everything in a namespace to avoid issues.
+namespace mapfile {
+
 // main brush style; technically these can be mixed
 enum class texcoord_style_t
 {
@@ -204,3 +208,5 @@ struct map_file_t
 
     void convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options);
 };
+
+} // namespace mapfile
