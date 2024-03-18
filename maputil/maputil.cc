@@ -37,6 +37,8 @@ extern "C"
 }
 #endif
 
+using namespace mapfile;
+
 // global map file state
 map_file_t map_file;
 const gamedef_t *current_game = nullptr;
