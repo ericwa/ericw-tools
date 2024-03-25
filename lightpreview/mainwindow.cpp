@@ -493,7 +493,8 @@ void MainWindow::createOutputLog()
 
 void MainWindow::createStatusBar()
 {
-    statusBar();
+    m_cameraStatus = new QLabel();
+    statusBar()->addWidget(m_cameraStatus);
 }
 
 /**
@@ -1030,12 +1031,23 @@ void MainWindow::loadFileInternal(const QString &file, bool is_reload)
 
 void MainWindow::displayCameraPositionInfo()
 {
-    const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
-    if (!bsp)
-        return;
-
     const qvec3f point = glView->cameraPosition();
-    [[maybe_unused]] const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
+    const qvec3f forward = glView->cameraForward();
 
-    // TODO: display leaf info
+    std::string leaf_type;
+    {
+        const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
+        if (!bsp)
+            return;
+
+        const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
+        if (leaf) {
+            auto *game = bsp->loadversion->game;
+            leaf_type = game->create_contents_from_native(leaf->contents).to_string(game);
+        }
+    }
+
+    std::string cpp_str = fmt::format("pos ({}) forward ({}) contents ({})", point, forward, leaf_type);
+
+    m_cameraStatus->setText(QString::fromStdString(cpp_str));
 }

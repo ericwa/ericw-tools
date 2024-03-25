@@ -32,6 +32,7 @@ class QCheckBox;
 class QStringList;
 class QTextEdit;
 class StatsPanel;
+class QLabel;
 
 enum class ETLogTab
 {
@@ -77,6 +78,7 @@ private:
     qint64 m_fileSize = -1;
     ETLogTab m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;
     QThread *m_compileThread = nullptr;
+    QLabel *m_cameraStatus = nullptr;
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
