@@ -49,9 +49,9 @@ static std::string hex_string(const uint8_t *bytes, const size_t count)
 /**
  * returns a JSON array of models
  */
-static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
+static Json::Value serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
 {
-    json j = json::array();
+    Json::Value j = Json::Value(Json::arrayValue);
 
     imemstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
 
@@ -60,24 +60,24 @@ static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
     p >= structured;
 
     for (const bspxbrushes_permodel &src_model : structured.models) {
-        json &model = j.insert(j.end(), json::object()).value();
+        auto &model = j.append(Json::Value(Json::objectValue));
         model["ver"] = src_model.ver;
         model["modelnum"] = src_model.modelnum;
-        model["numbrushes"] = src_model.brushes.size();
+        model["numbrushes"] = static_cast<Json::UInt64>(src_model.brushes.size());
         model["numfaces"] = src_model.numfaces;
-        json &brushes = (model.emplace("brushes", json::array())).first.value();
+        auto &brushes = (model["brushes"] = Json::Value(Json::arrayValue));
 
         for (const bspxbrushes_perbrush &src_brush : src_model.brushes) {
-            json &brush = brushes.insert(brushes.end(), json::object()).value();
-            brush.push_back({"mins", src_brush.bounds.mins()});
-            brush.push_back({"maxs", src_brush.bounds.maxs()});
-            brush.push_back({"contents", src_brush.contents});
-            json &faces = (brush.emplace("faces", json::array())).first.value();
+            auto &brush = brushes.append(Json::Value(Json::objectValue));
+            brush["mins"] = to_json(src_brush.bounds.mins());
+            brush["maxs"] = to_json(src_brush.bounds.maxs());
+            brush["contents"] = src_brush.contents;
+            auto &faces = (brush["faces"] = Json::Value(Json::arrayValue));
 
             for (const bspxbrushes_perface &src_face : src_brush.faces) {
-                json &face = faces.insert(faces.end(), json::object()).value();
-                face.push_back({"normal", src_face.normal});
-                face.push_back({"dist", src_face.dist});
+                auto &face = faces.append(Json::Value(Json::objectValue));
+                face["normal"] = to_json(src_face.normal);
+                face["dist"] = src_face.dist;
             }
         }
     }
@@ -85,9 +85,9 @@ static json serialize_bspxbrushlist(const std::vector<uint8_t> &lump)
     return j;
 }
 
-static json serialize_bspx_decoupled_lm(const std::vector<uint8_t> &lump)
+static Json::Value serialize_bspx_decoupled_lm(const std::vector<uint8_t> &lump)
 {
-    json j = json::array();
+    auto j = Json::Value(Json::arrayValue);
 
     imemstream p(lump.data(), lump.size(), std::ios_base::in | std::ios_base::binary);
 
@@ -101,12 +101,14 @@ static json serialize_bspx_decoupled_lm(const std::vector<uint8_t> &lump)
             break;
         }
 
-        json &model = j.insert(j.end(), json::object()).value();
+        auto &model = j.append(Json::objectValue);
         model["lmwidth"] = src_face.lmwidth;
         model["lmheight"] = src_face.lmheight;
         model["offset"] = src_face.offset;
-        model["world_to_lm_space"] =
-            json::array({src_face.world_to_lm_space.row(0), src_face.world_to_lm_space.row(1)});
+        model["world_to_lm_space"] = json_array({
+            to_json(src_face.world_to_lm_space.row(0)),
+            to_json(src_face.world_to_lm_space.row(1))
+        });
     }
 
     return j;
@@ -548,35 +550,36 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name)
 {
-    json j = json::object();
+    auto j = Json::Value(Json::objectValue);
 
     if (!bsp.dmodels.empty()) {
-        json &models = (j.emplace("models", json::array())).first.value();
+        auto &models = (j["models"] = Json::Value(Json::arrayValue));
 
         for (auto &src_model : bsp.dmodels) {
-            json &model = models.insert(models.end(), json::object()).value();
+            auto &model = models.append(Json::Value(Json::objectValue));
 
-            model.push_back({"mins", src_model.mins});
-            model.push_back({"maxs", src_model.maxs});
-            model.push_back({"origin", src_model.origin});
-            model.push_back({"headnode", src_model.headnode});
-            model.push_back({"visleafs", src_model.visleafs});
-            model.push_back({"firstface", src_model.firstface});
-            model.push_back({"numfaces", src_model.numfaces});
+            model["mins"] = to_json(src_model.mins);
+            model["maxs"] = to_json(src_model.maxs);
+            model["origin"] = to_json(src_model.origin);
+            model["headnode"] = to_json(src_model.headnode);
+            model["visleafs"] = src_model.visleafs;
+            model["firstface"] = src_model.firstface;
+            model["numfaces"] = src_model.numfaces;
         }
     }
 
     if (bsp.dvis.bits.size()) {
 
         if (bsp.dvis.bit_offsets.size()) {
-            json &visdata = (j.emplace("visdata", json::object())).first.value();
+            auto &visdata = j["visdata"];
+            visdata = Json::Value(Json::objectValue);
 
-            json &pvs = (visdata.emplace("pvs", json::array())).first.value();
-            json &phs = (visdata.emplace("pvs", json::array())).first.value();
+            auto &pvs = (visdata["pvs"] = Json::Value(Json::arrayValue));
+            auto &phs = (visdata["pvs"] = Json::Value(Json::arrayValue));
 
             for (auto &offset : bsp.dvis.bit_offsets) {
-                pvs.push_back(offset[VIS_PVS]);
-                phs.push_back(offset[VIS_PHS]);
+                pvs.append(offset[VIS_PVS]);
+                phs.append(offset[VIS_PHS]);
             }
 
             visdata["bits"] = hex_string(bsp.dvis.bits.data(), bsp.dvis.bits.size());
@@ -594,207 +597,207 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
     }
 
     if (!bsp.dleafs.empty()) {
-        json &leafs = (j.emplace("leafs", json::array())).first.value();
+        auto &leafs = (j["leafs"] = Json::Value(Json::arrayValue));
 
         for (auto &src_leaf : bsp.dleafs) {
-            json &leaf = leafs.insert(leafs.end(), json::object()).value();
+            auto &leaf = leafs.append(Json::Value(Json::objectValue));
 
-            leaf.push_back({"contents", src_leaf.contents});
-            leaf.push_back({"visofs", src_leaf.visofs});
-            leaf.push_back({"mins", src_leaf.mins});
-            leaf.push_back({"maxs", src_leaf.maxs});
-            leaf.push_back({"firstmarksurface", src_leaf.firstmarksurface});
-            leaf.push_back({"nummarksurfaces", src_leaf.nummarksurfaces});
-            leaf.push_back({"ambient_level", src_leaf.ambient_level});
-            leaf.push_back({"cluster", src_leaf.cluster});
-            leaf.push_back({"area", src_leaf.area});
-            leaf.push_back({"firstleafbrush", src_leaf.firstleafbrush});
-            leaf.push_back({"numleafbrushes", src_leaf.numleafbrushes});
+            leaf["contents"] = src_leaf.contents;
+            leaf["visofs"] = src_leaf.visofs;
+            leaf["mins"] = to_json(src_leaf.mins);
+            leaf["maxs"] = to_json(src_leaf.maxs);
+            leaf["firstmarksurface"] = src_leaf.firstmarksurface;
+            leaf["nummarksurfaces"] = src_leaf.nummarksurfaces;
+            leaf["ambient_level"] = to_json(src_leaf.ambient_level);
+            leaf["cluster"] = src_leaf.cluster;
+            leaf["area"] = src_leaf.area;
+            leaf["firstleafbrush"] = src_leaf.firstleafbrush;
+            leaf["numleafbrushes"] = src_leaf.numleafbrushes;
         }
     }
 
     if (!bsp.dplanes.empty()) {
-        json &planes = (j.emplace("planes", json::array())).first.value();
+        auto &planes = (j["planes"] = Json::Value(Json::arrayValue));
 
         for (auto &src_plane : bsp.dplanes) {
-            json &plane = planes.insert(planes.end(), json::object()).value();
+            auto &plane = planes.append(Json::Value(Json::objectValue));
 
-            plane.push_back({"normal", src_plane.normal});
-            plane.push_back({"dist", src_plane.dist});
-            plane.push_back({"type", src_plane.type});
+            plane["normal"] = to_json(src_plane.normal);
+            plane["dist"] = src_plane.dist;
+            plane["type"] = src_plane.type;
         }
     }
 
     if (!bsp.dvertexes.empty()) {
-        json &vertexes = (j.emplace("vertexes", json::array())).first.value();
+        auto &vertexes = (j["vertexes"] = Json::Value(Json::arrayValue));
 
         for (auto &src_vertex : bsp.dvertexes) {
-            vertexes.insert(vertexes.end(), src_vertex);
+            vertexes.append(to_json(src_vertex));
         }
     }
 
     if (!bsp.dnodes.empty()) {
-        json &nodes = (j.emplace("nodes", json::array())).first.value();
+        auto &nodes = (j["nodes"] = Json::Value(Json::arrayValue));
 
         for (auto &src_node : bsp.dnodes) {
-            json &node = nodes.insert(nodes.end(), json::object()).value();
+            auto &node = nodes.append(Json::Value(Json::objectValue));
 
-            node.push_back({"planenum", src_node.planenum});
-            node.push_back({"children", src_node.children});
-            node.push_back({"mins", src_node.mins});
-            node.push_back({"maxs", src_node.maxs});
-            node.push_back({"firstface", src_node.firstface});
-            node.push_back({"numfaces", src_node.numfaces});
+            node["planenum"] = src_node.planenum;
+            node["children"] = to_json(src_node.children);
+            node["mins"] = to_json(src_node.mins);
+            node["maxs"] = to_json(src_node.maxs);
+            node["firstface"] = src_node.firstface;
+            node["numfaces"] = src_node.numfaces;
 
             // human-readable plane
             auto &plane = bsp.dplanes.at(src_node.planenum);
-            node.push_back({"plane", json::array({plane.normal[0], plane.normal[1], plane.normal[2], plane.dist})});
+            node["plane"] = json_array({plane.normal[0], plane.normal[1], plane.normal[2], plane.dist});
         }
     }
 
     if (!bsp.texinfo.empty()) {
-        json &texinfos = (j.emplace("texinfo", json::array())).first.value();
+        auto &texinfos = (j["texinfo"] = Json::Value(Json::arrayValue));
 
         for (auto &src_texinfo : bsp.texinfo) {
-            json &texinfo = texinfos.insert(texinfos.end(), json::object()).value();
+            auto &texinfo = texinfos.append(Json::Value(Json::objectValue));
 
-            texinfo.push_back({"vecs", json::array({json::array({src_texinfo.vecs.at(0, 0), src_texinfo.vecs.at(0, 1),
+            texinfo["vecs"] = json_array({json_array({src_texinfo.vecs.at(0, 0), src_texinfo.vecs.at(0, 1),
                                                         src_texinfo.vecs.at(0, 2), src_texinfo.vecs.at(0, 3)}),
-                                           json::array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1),
-                                               src_texinfo.vecs.at(1, 2), src_texinfo.vecs.at(1, 3)})})});
-            texinfo.push_back({"flags", src_texinfo.flags.native});
-            texinfo.push_back({"miptex", src_texinfo.miptex});
-            texinfo.push_back({"value", src_texinfo.value});
-            texinfo.push_back({"texture", std::string(src_texinfo.texture.data())});
-            texinfo.push_back({"nexttexinfo", src_texinfo.nexttexinfo});
+                json_array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1),
+                                               src_texinfo.vecs.at(1, 2), src_texinfo.vecs.at(1, 3)})});
+            texinfo["flags"] = src_texinfo.flags.native;
+            texinfo["miptex"] = src_texinfo.miptex;
+            texinfo["value"] = src_texinfo.value;
+            texinfo["texture"] = std::string(src_texinfo.texture.data());
+            texinfo["nexttexinfo"] = src_texinfo.nexttexinfo;
         }
     }
 
     if (!bsp.dfaces.empty()) {
-        json &faces = (j.emplace("faces", json::array())).first.value();
+        auto &faces = (j["faces"] = Json::Value(Json::arrayValue));
 
         for (auto &src_face : bsp.dfaces) {
-            json &face = faces.insert(faces.end(), json::object()).value();
+            auto &face = faces.append(Json::Value(Json::objectValue));
 
-            face.push_back({"planenum", src_face.planenum});
-            face.push_back({"side", src_face.side});
-            face.push_back({"firstedge", src_face.firstedge});
-            face.push_back({"numedges", src_face.numedges});
-            face.push_back({"texinfo", src_face.texinfo});
-            face.push_back({"styles", src_face.styles});
-            face.push_back({"lightofs", src_face.lightofs});
+            face["planenum"] = src_face.planenum;
+            face["side"] = src_face.side;
+            face["firstedge"] = src_face.firstedge;
+            face["numedges"] = src_face.numedges;
+            face["texinfo"] = src_face.texinfo;
+            face["styles"] = to_json(src_face.styles);
+            face["lightofs"] = src_face.lightofs;
 
             // for readibility, also output the actual vertices
-            auto verts = json::array();
+            auto verts = Json::Value(Json::arrayValue);
             for (int32_t k = 0; k < src_face.numedges; ++k) {
                 auto se = bsp.dsurfedges[src_face.firstedge + k];
                 uint32_t v = (se < 0) ? bsp.dedges[-se][1] : bsp.dedges[se][0];
-                verts.push_back(bsp.dvertexes[v]);
+                verts.append(to_json(bsp.dvertexes[v]));
             }
-            face.push_back({"vertices", verts});
+            face["vertices"] = verts;
 
 #if 0
             if (auto lm = get_lightmap_face(bsp, src_face, false)) {
-                face.push_back({"lightmap", serialize_image(lm)});
+                face["lightmap", serialize_image(lm)});
             }
 #endif
         }
     }
 
     if (!bsp.dclipnodes.empty()) {
-        json &clipnodes = (j.emplace("clipnodes", json::array())).first.value();
+        auto &clipnodes = (j["clipnodes"] = Json::Value(Json::arrayValue));
 
         for (auto &src_clipnodes : bsp.dclipnodes) {
-            json &clipnode = clipnodes.insert(clipnodes.end(), json::object()).value();
+            auto &clipnode = clipnodes.append(Json::Value(Json::objectValue));
 
-            clipnode.push_back({"planenum", src_clipnodes.planenum});
-            clipnode.push_back({"children", src_clipnodes.children});
+            clipnode["planenum"] = src_clipnodes.planenum;
+            clipnode["children"] = to_json(src_clipnodes.children);
         }
     }
 
     if (!bsp.dedges.empty()) {
-        json &edges = (j.emplace("edges", json::array())).first.value();
+        auto &edges = (j["edges"] = Json::Value(Json::arrayValue));
 
         for (auto &src_edge : bsp.dedges) {
-            edges.insert(edges.end(), src_edge);
+            edges.append(to_json(src_edge));
         }
     }
 
     if (!bsp.dleaffaces.empty()) {
-        json &leaffaces = (j.emplace("leaffaces", json::array())).first.value();
+        auto &leaffaces = (j["leaffaces"] = Json::Value(Json::arrayValue));
 
         for (auto &src_leafface : bsp.dleaffaces) {
-            leaffaces.insert(leaffaces.end(), src_leafface);
+            leaffaces.append(src_leafface);
         }
     }
 
     if (!bsp.dsurfedges.empty()) {
-        json &surfedges = (j.emplace("surfedges", json::array())).first.value();
+        auto &surfedges = (j["surfedges"] = Json::Value(Json::arrayValue));
 
         for (auto &src_surfedges : bsp.dsurfedges) {
-            surfedges.insert(surfedges.end(), src_surfedges);
+            surfedges.append(src_surfedges);
         }
     }
 
     if (!bsp.dbrushsides.empty()) {
-        json &brushsides = (j.emplace("brushsides", json::array())).first.value();
+        auto &brushsides = (j["brushsides"] = Json::Value(Json::arrayValue));
 
         for (auto &src_brushside : bsp.dbrushsides) {
-            json &brushside = brushsides.insert(brushsides.end(), json::object()).value();
+            auto &brushside = brushsides.append(Json::Value(Json::objectValue));
 
-            brushside.push_back({"planenum", src_brushside.planenum});
-            brushside.push_back({"texinfo", src_brushside.texinfo});
+            brushside["planenum"] = src_brushside.planenum;
+            brushside["texinfo"] = src_brushside.texinfo;
         }
     }
 
     if (!bsp.dbrushes.empty()) {
-        json &brushes = (j.emplace("brushes", json::array())).first.value();
+        auto &brushes = (j["brushes"] = Json::Value(Json::arrayValue));
 
         for (auto &src_brush : bsp.dbrushes) {
-            json &brush = brushes.insert(brushes.end(), json::object()).value();
+            auto &brush = brushes.append(Json::Value(Json::objectValue));
 
-            brush.push_back({"firstside", src_brush.firstside});
-            brush.push_back({"numsides", src_brush.numsides});
-            brush.push_back({"contents", src_brush.contents});
+            brush["firstside"] = src_brush.firstside;
+            brush["numsides"] = src_brush.numsides;
+            brush["contents"] = src_brush.contents;
         }
     }
 
     if (!bsp.dleafbrushes.empty()) {
-        json &leafbrushes = (j.emplace("leafbrushes", json::array())).first.value();
+        auto &leafbrushes = (j["leafbrushes"] = Json::Value(Json::arrayValue));
 
         for (auto &src_leafbrush : bsp.dleafbrushes) {
-            leafbrushes.push_back(src_leafbrush);
+            leafbrushes.append(src_leafbrush);
         }
     }
 
     if (bsp.dtex.textures.size()) {
-        json &textures = (j.emplace("textures", json::array())).first.value();
+        auto &textures = (j["textures"] = Json::Value(Json::arrayValue));
 
         for (auto &src_tex : bsp.dtex.textures) {
             if (src_tex.null_texture) {
                 // use json null to indicate offset -1
-                textures.insert(textures.end(), json(nullptr));
+                textures.append(Json::Value(Json::nullValue));
                 continue;
             }
-            json &tex = textures.insert(textures.end(), json::object()).value();
+            auto &tex = textures.append(Json::Value(Json::objectValue));
 
-            tex.push_back({"name", src_tex.name});
-            tex.push_back({"width", src_tex.width});
-            tex.push_back({"height", src_tex.height});
+            tex["name"] = src_tex.name;
+            tex["width"] = src_tex.width;
+            tex["height"] = src_tex.height;
 
             if (src_tex.data.size() > sizeof(dmiptex_t)) {
-                json &mips = tex["mips"] = json::array();
-                mips.emplace_back(
+                auto &mips = tex["mips"] = Json::Value(Json::arrayValue);
+                mips.append(
                     serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
             }
         }
     }
 
     if (!bspdata.bspx.entries.empty()) {
-        json &bspxentries = (j.emplace("bspxentries", json::array())).first.value();
+        auto &bspxentries = (j["bspxentries"] = Json::Value(Json::arrayValue));
 
         for (auto &lump : bspdata.bspx.entries) {
-            json &entry = bspxentries.insert(bspxentries.end(), json::object()).value();
+            auto &entry = bspxentries.append(Json::Value(Json::objectValue));
             entry["lumpname"] = lump.first;
 
             if (lump.first == "BRUSHLIST") {

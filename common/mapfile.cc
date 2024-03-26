@@ -4,6 +4,8 @@
 #include <common/imglib.hh>
 #include <utility>
 
+namespace mapfile {
+
 /*static*/ bool brush_side_t::is_valid_texture_projection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
 {
     // TODO: This doesn't match how light does it (TexSpaceToWorld)
@@ -1200,3 +1202,5 @@ void map_file_t::convert_to(texcoord_style_t style, const gamedef_t *game, const
         }
     }
 }
+
+} // namespace mapfile

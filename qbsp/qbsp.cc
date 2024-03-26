@@ -833,9 +833,9 @@ static void ExportBrushList_r(const mapentity_t &entity, node_t *node, brush_lis
                                 // optimize BSP by using existing world-aligned texinfo
                                 // if they exist
                                 maptexinfo_t copy = texinfo;
-                                brush_side_t temp;
+                                mapfile::brush_side_t temp;
                                 temp.plane = side.get_plane();
-                                temp.set_texinfo(texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+                                temp.set_texinfo(mapfile::texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
                                 copy.vecs = temp.vecs;
 
                                 texinfo_id = FindTexinfo(copy, temp.plane, false);

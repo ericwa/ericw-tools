@@ -21,25 +21,73 @@
 
 // JSON & formatters for our types
 
-#include <nlohmann/json.hpp>
+#include <json/json.h>
 #include <common/qvec.hh>
 
-using nlohmann::json;
-
 template<typename T, size_t N>
-void to_json(json &j, const qvec<T, N> &p)
+Json::Value to_json(const qvec<T, N> &p)
 {
-    j = json::array();
+    auto j = Json::Value(Json::arrayValue);
 
     for (auto &v : p) {
-        j.push_back(v);
+        j.append(v);
     }
+
+    return j;
+}
+
+template<typename T>
+Json::Value to_json(const std::vector<T> &vec)
+{
+    auto j = Json::Value(Json::arrayValue);
+
+    for (auto &v : vec) {
+        j.append(v);
+    }
+
+    return j;
+}
+
+template<class T, size_t N>
+Json::Value to_json(const std::array<T, N> &arr)
+{
+    auto j = Json::Value(Json::arrayValue);
+
+    for (auto &v : arr) {
+        j.append(v);
+    }
+
+    return j;
+}
+
+template<class T>
+Json::Value json_array(std::initializer_list<T> args)
+{
+    auto j = Json::Value(Json::arrayValue);
+
+    for (auto &v : args) {
+        j.append(v);
+    }
+
+    return j;
 }
 
 template<typename T, size_t N>
-void from_json(const json &j, qvec<T, N> &p)
+qvec<T, N> from_json(const Json::Value &j)
 {
-    for (size_t i = 0; i < N; i++) {
-        p[i] = j[i].get<T>();
+    qvec<T, N> p;
+    for (unsigned int i = 0; i < N; i++) {
+        p[i] = j[i].as<T>();
     }
+    return p;
+}
+
+static Json::Value parse_json(const uint8_t *begin, const uint8_t *end)
+{
+    Json::Value result;
+    Json::CharReaderBuilder rbuilder;
+    auto reader = std::unique_ptr<Json::CharReader>(rbuilder.newCharReader());
+    reader->parse(reinterpret_cast<const char*>(begin),
+        reinterpret_cast<const char*>(end), &result, nullptr);
+    return result;
 }

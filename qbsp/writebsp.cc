@@ -32,7 +32,6 @@
 #include <fstream>
 
 #include <stdexcept>
-using nlohmann::json;
 
 /**
  * Returns the output plane number
@@ -364,13 +363,13 @@ static void WriteExtendedTexinfoFlags()
     std::sort(texinfos_sorted.begin(), texinfos_sorted.end(),
         [](const maptexinfo_t &a, const maptexinfo_t &b) { return a.outputnum < b.outputnum; });
 
-    json texinfofile = json::object();
+    auto texinfofile = Json::Value(Json::objectValue);
 
     for (const auto &tx : texinfos_sorted) {
         if (!tx.outputnum.has_value() || !tx.flags.needs_write())
             continue;
 
-        json t = json::object();
+        auto t = Json::Value(Json::objectValue);
 
         if (tx.flags.is_nodraw) {
             t["is_nodraw"] = tx.flags.is_nodraw;
@@ -409,7 +408,7 @@ static void WriteExtendedTexinfoFlags()
             t["surflight_targetname"] = tx.flags.surflight_targetname.value();
         }
         if (tx.flags.surflight_color.has_value()) {
-            t["surflight_color"] = tx.flags.surflight_color.value();
+            t["surflight_color"] = to_json(tx.flags.surflight_color.value());
         }
         if (tx.flags.surflight_minlight_scale.has_value()) {
             t["surflight_minlight_scale"] = tx.flags.surflight_minlight_scale.value();
@@ -430,7 +429,7 @@ static void WriteExtendedTexinfoFlags()
             t["maxlight"] = tx.flags.maxlight;
         }
         if (!qv::emptyExact(tx.flags.minlight_color)) {
-            t["minlight_color"] = tx.flags.minlight_color;
+            t["minlight_color"] = to_json(tx.flags.minlight_color);
         }
         if (tx.flags.light_alpha) {
             t["light_alpha"] = *tx.flags.light_alpha;

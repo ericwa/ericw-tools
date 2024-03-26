@@ -23,10 +23,18 @@ jobs:
             use-asan: YES
     env:
       USE_ASAN: ${{ matrix.use-asan }}
+      VCPKG_CMAKE_FILE: '${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake'
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+
+    - name: 'Install vcpkg + the packages specified in vcpkg.json'
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+        vcpkgGitCommitId: cf4ebef2294e164875ce17d7937f44d3e3ea156e
+        runVcpkgInstall: true
 
     - name: 'Linux: Install Qt5'
       if: startsWith(matrix.os, 'ubuntu-')

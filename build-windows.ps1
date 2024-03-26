@@ -20,7 +20,7 @@ choco install ninja
 mkdir build-windows
 cd build-windows
 
-cmake .. -GNinja -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_BUILD_TYPE=Release -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5Widgets"
+cmake .. -DCMAKE_TOOLCHAIN_FILE="$Env:VCPKG_CMAKE_FILE" -GNinja -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_BUILD_TYPE=Release -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5Widgets"
 
 ninja package
 if ( $? -eq $false ) {
