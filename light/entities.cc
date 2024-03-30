@@ -474,7 +474,7 @@ static void SetupSuns(const settings::worldspawn_keys &cfg)
                 entity->targetent->get_vector("origin", target_pos);
                 sunvec = target_pos - entity->origin.value();
             } else if (qv::length2(entity->mangle.value()) > 0) {
-                sunvec = entity->mangle.value();
+                sunvec = qv::vec_from_mangle(entity->mangle.value());
             } else { // Use { 0, 0, 0 } as sun target...
                 logging::print("WARNING: sun missing target, entity origin used.\n");
                 sunvec = -entity->origin.value();

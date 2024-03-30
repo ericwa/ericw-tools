@@ -716,14 +716,20 @@ TEST_CASE("q2_light_sunlight_default_mangle")
 
 TEST_CASE("q2_light_sun")
 {
-    auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sun.map", {});
+    const std::vector<std::string> maps{"q2_light_sun.map", "q2_light_sun_mangle.map"};
 
-    INFO("sun entity shines at target");
-    const qvec3d shadow_pos{1084, 1284, 944};
-    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, shadow_pos);
+    for (const auto &map : maps) {
+        SUBCASE(map.c_str()) {
+            auto [bsp, bspx] = QbspVisLight_Q2(map, {});
 
-    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{128, 0, 0});
-    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{-128, 0, 0});
+            INFO("sun entity shines at target (q2_light_sun.map) or uses given mangle (q2_light_sun_mangle.map)");
+            const qvec3d shadow_pos{1084, 1284, 944};
+            CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, shadow_pos);
+
+            CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{128, 0, 0});
+            CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {220, 0, 0}, shadow_pos + qvec3d{-128, 0, 0});
+        }
+    }
 }
 
 TEST_CASE("q2_light_origin_brush_shadow")
