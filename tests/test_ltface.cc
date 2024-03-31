@@ -936,6 +936,19 @@ TEST_CASE("q1_light_suntexture")
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 142}, {1000, 1288, 944}, {0, 0, 1}, &lit);
 }
 
+TEST_CASE("q1_light_sun_artifact")
+{
+    INFO("sun rays can hit cracks if RTC_SCENE_FLAG_ROBUST is not used");
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_sun_artifact.map", {"-lit"});
+
+    for (const auto &face : bsp.dfaces) {
+        if (Face_Normal(&bsp, &face) == qvec3d(0, 0, 1)) {
+            CheckFaceLuxels(bsp, face, [](qvec3b sample) { CHECK(sample == qvec3b(128, 0, 0)); }, &lit);
+        }
+    }
+}
+
 TEST_CASE("q1_light_bounce_litwater without the water")
 {
     auto [bsp, bspx] = QbspVisLight_Common("q1_light_bounce_litwater.map", {"-omitdetail"}, {"-lit", "-bounce", "4"}, runvis_t::no);
