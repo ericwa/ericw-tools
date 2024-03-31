@@ -674,6 +674,9 @@ void Embree_TraceInit(const mbsp_t *bsp)
     // we're using RTCIntersectContext::filter so it's required that we set
     // RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION
     rtcSetSceneFlags(scene, RTC_SCENE_FLAG_CONTEXT_FILTER_FUNCTION);
+    // without this, sunlight rays can hit a crack between sky faces
+    // (see q1_light_sun_artifact test)
+    rtcSetSceneFlags(scene, RTC_SCENE_FLAG_ROBUST);
 #endif
     rtcSetSceneBuildQuality(scene, RTC_BUILD_QUALITY_HIGH);
     skygeom = CreateGeometry(bsp, device, scene, skyfaces);
