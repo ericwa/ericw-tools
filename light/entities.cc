@@ -320,6 +320,13 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
         entity->falloff.set_value(0.0f, settings::source::MAP);
     }
 
+    if (entity->getFormula() < 0 || entity->getFormula() >= LF_COUNT) {
+        logging::print("WARNING: unknown delay {} on {} at [{}]\n",
+                       static_cast<int>(entity->getFormula()), entity->classname(), entity->origin.value());
+        entity->formula.set_value(LF_LINEAR, settings::source::MAP);
+        entity->light.set_value(0.0f, settings::source::MAP);
+    }
+
     /* set up deviance and samples defaults */
     if (entity->deviance.value() > 0 && entity->samples.value() == 0) {
         entity->samples.set_value(16, settings::source::MAP);
