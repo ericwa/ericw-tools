@@ -1639,13 +1639,14 @@ ProcessFile
 */
 void ProcessFile()
 {
-    // load brushes and entities
-    LoadMapFile();
-
     if (qbsp_options.convertmapformat.value() != conversion_t::none) {
         ConvertMapFile();
         return;
     }
+
+    // load brushes and entities
+    LoadMapFile();
+
     if (qbsp_options.onlyents.value()) {
         UpdateEntLump();
         return;

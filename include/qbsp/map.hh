@@ -87,19 +87,12 @@ struct mapface_t
     const qbsp_plane_t &get_positive_plane() const;
 };
 
-enum class brushformat_t
-{
-    NORMAL,
-    BRUSH_PRIMITIVES
-};
-
 class mapentity_t;
 
 class mapbrush_t
 {
 public:
     std::vector<mapface_t> faces;
-    brushformat_t format = brushformat_t::NORMAL;
     aabb3d bounds{};
     std::optional<uint32_t> outputnumber; /* only set for original brushes */
     parser_source_location line;
@@ -302,7 +295,10 @@ struct texture_def_issues_t : logging::stat_tracker_t
         true);
 };
 
-bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issues_stats);
+namespace mapfile {
+    struct map_entity_t;
+}
+void ParseEntity(const mapfile::map_entity_t &in_entity, mapentity_t &entity, texture_def_issues_t &issue_stats);
 
 void ProcessExternalMapEntity(mapentity_t &entity);
 void ProcessAreaPortal(mapentity_t &entity);
@@ -314,9 +310,6 @@ void ProcessMapBrushes();
 
 struct quark_tx_info_t
 {
-    bool quark_tx1 = false;
-    bool quark_tx2 = false;
-
     std::optional<extended_texinfo_t> info;
 };
 

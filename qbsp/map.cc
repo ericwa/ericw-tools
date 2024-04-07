@@ -315,26 +315,6 @@ void mapdata_t::reset()
     *this = mapdata_t{};
 }
 
-struct old_texdef_valve_t
-{
-    qmat<double, 2, 3> axis{};
-    qvec2d scale{};
-    qvec2d shift{};
-};
-
-struct old_texdef_quake_ed_t
-{
-    double rotate = 0;
-    qvec2d scale{};
-    qvec2d shift{};
-};
-
-struct old_texdef_quake_ed_noshift_t
-{
-    double rotate = 0;
-    qvec2d scale{};
-};
-
 /*
 ================
 CalculateBrushBounds
@@ -379,14 +359,6 @@ inline void CalculateBrushBounds(mapbrush_t &ob)
         }
     }
 }
-
-using texdef_brush_primitives_t = qmat<double, 2, 3>;
-
-static old_texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs);
-static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point);
-static old_texdef_quake_ed_noshift_t Reverse_QuakeEd(qmat2x2f M, const qbsp_plane_t &plane, bool preserveX);
-static void SetTexinfo_QuakeEd_New(
-    const qbsp_plane_t &plane, const qvec2d &shift, double rotate, const qvec2d &scale, texvecf &out_vecs);
 
 static void AddAnimTex(const char *name)
 {
@@ -840,6 +812,7 @@ static surfflags_t SurfFlagsForEntity(
     return flags;
 }
 
+#if 0
 static void ParseEpair(parser_t &parser, mapentity_t &entity)
 {
     std::string key = parser.token;
@@ -1552,47 +1525,6 @@ static void ComputeAxisBase(const qvec3d &normal_unsanitized, qvec3d &texX, qvec
     texY[2] = -cos(RotY);
 }
 
-static void SetTexinfo_BrushPrimitives(
-    const qmat<double, 2, 3> &texMat, const qvec3d &faceNormal, int texWidth, int texHeight, texvecf &vecs)
-{
-    qvec3d texX, texY;
-
-    ComputeAxisBase(faceNormal, texX, texY);
-
-    /*
-     derivation of the conversion below:
-
-     classic BSP texture vecs to texture coordinates:
-
-       u = (dot(vert, out->vecs[0]) + out->vecs[3]) / texWidth
-
-     brush primitives: (starting with q3map2 code, then rearranging it to look like the classic formula)
-
-       u = (texMat[0][0] * dot(vert, texX)) + (texMat[0][1] * dot(vert, texY)) + texMat[0][2]
-
-     factor out vert:
-
-       u = (vert[0] * (texX[0] * texMat[0][0] + texY[0] * texMat[0][1]))
-          + (vert[1] * (texX[1] * texMat[0][0] + texY[1] * texMat[0][1]))
-          + (vert[2] * (texX[2] * texMat[0][0] + texY[2] * texMat[0][1]))
-          + texMat[0][2];
-
-     multiplying that by 1 = (texWidth / texWidth) gives us something in the same shape as the classic formula,
-     so we can get out->vecs.
-
-     */
-
-    vecs.at(0, 0) = texWidth * ((texX[0] * texMat.at(0, 0)) + (texY[0] * texMat.at(0, 1)));
-    vecs.at(0, 1) = texWidth * ((texX[1] * texMat.at(0, 0)) + (texY[1] * texMat.at(0, 1)));
-    vecs.at(0, 2) = texWidth * ((texX[2] * texMat.at(0, 0)) + (texY[2] * texMat.at(0, 1)));
-    vecs.at(0, 3) = texWidth * texMat.at(0, 2);
-
-    vecs.at(1, 0) = texHeight * ((texX[0] * texMat.at(1, 0)) + (texY[0] * texMat.at(1, 1)));
-    vecs.at(1, 1) = texHeight * ((texX[1] * texMat.at(1, 0)) + (texY[1] * texMat.at(1, 1)));
-    vecs.at(1, 2) = texHeight * ((texX[2] * texMat.at(1, 0)) + (texY[2] * texMat.at(1, 1)));
-    vecs.at(1, 3) = texHeight * texMat.at(1, 2);
-}
-
 // From FaceToBrushPrimitFace in GtkRadiant
 static texdef_brush_primitives_t TexDef_BSPToBrushPrimitives(
     const qplane3d &plane, const int texSize[2], const texvecf &in_vecs)
@@ -1702,17 +1634,26 @@ static void ParseBrushPrimTX(parser_t &parser, qmat<double, 2, 3> &texMat)
 parse_error:
     FError("{}: couldn't parse Brush Primitives texture info", parser.location);
 }
+#endif
 
-static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface_t &mapface, const mapbrush_t &brush,
+static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side_t &input_side, mapface_t &mapface, const mapbrush_t &brush,
     maptexinfo_t *tx, std::array<qvec3d, 3> &planepts, const qplane3d &plane, texture_def_issues_t &issue_stats)
 {
-    double rotate;
-    qmat<double, 2, 3> texMat, axis;
-    qvec2d shift, scale;
-    old_texcoord_style_t tx_type;
-
     quark_tx_info_t extinfo;
+    mapface.texname = input_side.texture;
 
+    // copy in Q2 attributes if present
+    if (input_side.extended_info) {
+        extinfo.info = {extended_texinfo_t{}};
+
+        extinfo.info->contents_native = input_side.extended_info->contents;
+        extinfo.info->flags = input_side.extended_info->flags;
+        extinfo.info->value = input_side.extended_info->value;
+
+        mapface.raw_info = extinfo.info;
+    }
+
+#if 0
     if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
         ParseBrushPrimTX(parser, texMat);
         tx_type = TX_BRUSHPRIM;
@@ -1762,6 +1703,7 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
     } else {
         FError("{}: Bad brush format", parser.location);
     }
+#endif
 
     // if we have texture defs, see if we should remap this one
     if (auto it = qbsp_options.loaded_texture_defs.find(mapface.texname);
@@ -1872,6 +1814,9 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
             old_contents.to_string(qbsp_options.target_game), mapface.contents.to_string(qbsp_options.target_game));
     }
 
+    tx->vecs = input_side.vecs;
+
+#if 0
     switch (tx_type) {
         case TX_QUARK_TYPE1:
         case TX_QUARK_TYPE2: SetTexinfo_QuArK(parser, planepts, tx_type, tx); break;
@@ -1887,6 +1832,7 @@ static void ParseTextureDef(const mapentity_t &entity, parser_t &parser, mapface
         case TX_QUAKED:
         default: SetTexinfo_QuakeEd(plane, planepts, shift, rotate, scale, tx); break;
     }
+#endif
 }
 
 bool mapface_t::set_planepts(const std::array<qvec3d, 3> &pts)
@@ -1935,6 +1881,7 @@ const qbsp_plane_t &mapface_t::get_positive_plane() const
     return map.get_plane(planenum & ~1);
 }
 
+#if 0
 bool IsValidTextureProjection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
 {
     // TODO: This doesn't match how light does it (TexSpaceToWorld)
@@ -1978,26 +1925,22 @@ static void ValidateTextureProjection(mapface_t &mapface, maptexinfo_t *tx, text
         Q_assert(IsValidTextureProjection(mapface, tx));
     }
 }
+#endif
 
 static std::optional<mapface_t> ParseBrushFace(
-    parser_t &parser, const mapbrush_t &brush, const mapentity_t &entity, texture_def_issues_t &issue_stats)
+    const mapfile::brush_side_t &input_side, const mapbrush_t &brush, const mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
-    std::array<qvec3d, 3> planepts;
-    bool normal_ok;
     maptexinfo_t tx;
-    int i, j;
     mapface_t face;
 
-    face.line = parser.location;
+    face.line = input_side.location;
 
-    ParsePlaneDef(parser, planepts);
+    const bool normal_ok = face.set_planepts(input_side.planepts);
 
-    normal_ok = face.set_planepts(planepts);
-
-    ParseTextureDef(entity, parser, face, brush, &tx, face.planepts, face.get_plane(), issue_stats);
+    ParseTextureDef(entity, input_side, face, brush, &tx, face.planepts, face.get_plane(), issue_stats);
 
     if (!normal_ok) {
-        logging::print("WARNING: {}: Brush plane with no normal\n", parser.location);
+        logging::print("WARNING: {}: Brush plane with no normal\n", input_side.location);
         return std::nullopt;
     }
 
@@ -2009,19 +1952,6 @@ static std::optional<mapface_t> ParseBrushFace(
         temp.plane = face.get_plane();
         temp.set_texinfo(mapfile::texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
         tx.vecs = temp.vecs;
-    } else {
-        // ericw -- round texture vector values that are within ZERO_EPSILON of integers,
-        // to attempt to attempt to work around corrupted lightmap sizes in DarkPlaces
-        // (it uses 32 bit precision in CalcSurfaceExtents)
-        for (i = 0; i < 2; i++) {
-            for (j = 0; j < 4; j++) {
-                double r = Q_rint(tx.vecs.at(i, j));
-                if (fabs(tx.vecs.at(i, j) - r) < ZERO_EPSILON)
-                    tx.vecs.at(i, j) = r;
-            }
-        }
-
-        ValidateTextureProjection(face, &tx, issue_stats);
     }
 
     face.texinfo = FindTexinfo(tx, face.get_plane());
@@ -2510,7 +2440,6 @@ static mapbrush_t CloneBrush(const mapbrush_t &input, bool faces = false)
     mapbrush_t brush;
 
     brush.contents = input.contents;
-    brush.format = input.format;
     brush.line = input.line;
 
     if (faces) {
@@ -2529,45 +2458,16 @@ static mapbrush_t CloneBrush(const mapbrush_t &input, bool faces = false)
     return brush;
 }
 
-static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issue_stats)
+static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
     mapbrush_t brush;
 
-    // ericw -- brush primitives
-    if (!parser.parse_token(PARSE_PEEK))
-        FError("{}: unexpected EOF after {{ beginning brush", parser.location);
-
-    if (parser.token == "(" || parser.token == "}") {
-        brush.format = brushformat_t::NORMAL;
-    } else {
-        parser.parse_token();
-        brush.format = brushformat_t::BRUSH_PRIMITIVES;
-
-        // optional
-        if (parser.token == "brushDef") {
-            if (!parser.parse_token())
-                FError("{}: Brush primitives: unexpected EOF (nothing after brushDef)", parser.location);
-        }
-
-        // mandatory
-        if (parser.token != "{")
-            FError("{}: Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.location, parser.token);
-    }
-    // ericw -- end brush primitives
+    brush.line = in.location;
 
     bool is_hint = false;
 
-    while (parser.parse_token()) {
-
-        // set linenum after first parsed token
-        if (!brush.line) {
-            brush.line = parser.location;
-        }
-
-        if (parser.token == "}")
-            break;
-
-        std::optional<mapface_t> face = ParseBrushFace(parser, brush, entity, issue_stats);
+    for (const auto &in_face : in.faces) {
+        std::optional<mapface_t> face = ParseBrushFace(in_face, brush, entity, issue_stats);
 
         if (!face) {
             continue;
@@ -2577,13 +2477,13 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         bool discardFace = false;
         for (auto &check : brush.faces) {
             if (qv::epsilonEqual(check.get_plane(), face->get_plane())) {
-                logging::print("{}: Brush with duplicate plane\n", parser.location);
+                logging::print("{}: Brush with duplicate plane\n", in_face.location);
                 discardFace = true;
                 continue;
             }
             if (qv::epsilonEqual(-check.get_plane(), face->get_plane())) {
                 /* FIXME - this is actually an invalid brush */
-                logging::print("{}: Brush with duplicate plane\n", parser.location);
+                logging::print("{}: Brush with duplicate plane\n", in_face.location);
                 continue;
             }
         }
@@ -2625,13 +2525,13 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
     // check for region/antiregion brushes
     if (is_antiregion) {
         if (!map.is_world_entity(entity)) {
-            FError("Region brush at {} isn't part of the world entity", parser.token);
+            FError("Region brush at {} isn't part of the world entity", in.location);
         }
 
         map.antiregions.push_back(CloneBrush(brush, true));
     } else if (is_region) {
         if (!map.is_world_entity(entity)) {
-            FError("Region brush at {} isn't part of the world entity", parser.token);
+            FError("Region brush at {} isn't part of the world entity", in.location);
         }
 
         // construct region brushes
@@ -2690,7 +2590,7 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         if (!map.region) {
             map.region = std::move(brush);
         } else {
-            FError("Multiple region brushes detected; newest at {}", parser.token);
+            FError("Multiple region brushes detected; newest at {}", in.location);
         }
 
         return brush;
@@ -2709,70 +2609,35 @@ static mapbrush_t ParseBrush(parser_t &parser, mapentity_t &entity, texture_def_
         }
     }
 
-    // ericw -- brush primitives - there should be another closing }
-    if (brush.format == brushformat_t::BRUSH_PRIMITIVES) {
-        if (!parser.parse_token())
-            FError("Brush primitives: unexpected EOF (no closing brace)");
-        if (parser.token != "}")
-            FError("Brush primitives: Expected }}, got: {}", parser.token);
-    }
-    // ericw -- end brush primitives
-
     brush.contents = Brush_GetContents(entity, brush);
 
     return brush;
 }
 
-bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &issue_stats)
+void ParseEntity(const mapfile::map_entity_t &in_entity, mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
-    entity.location = parser.location;
+    entity.location = in_entity.location;
+    entity.epairs = in_entity.epairs;
 
-    if (!parser.parse_token()) {
-        return false;
+    // cache origin key
+    if (in_entity.epairs.has("origin")) {
+        in_entity.epairs.get_vector("origin", entity.origin);
     }
-
-    if (parser.token != "{") {
-        FError("{}: Invalid entity format, {{ not found", parser.location);
-    }
-
-    entity.mapbrushes.clear();
-
+    
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
-    bool omit = false;
+    bool omit = in_entity.epairs.get_int("_omitbrushes");
 
-    bool first_brush = false;
+    if (!omit) {
+        for (const mapfile::brush_t &in_brush : in_entity.brushes) {
+            // once we run into the first brush, set up textures state.
+            EnsureTexturesLoaded();
 
-    do {
-        if (!parser.parse_token())
-            FError("Unexpected EOF (no closing brace)");
-        if (parser.token == "}")
-            break;
-        else if (parser.token == "{") {
-            if (!first_brush) {
-                // once we run into the first brush, set up textures state.
-                EnsureTexturesLoaded();
-                first_brush = true;
-
-                omit = entity.epairs.get_int("_omitbrushes");
+            if (auto brush = ParseBrush(in_brush, entity, issue_stats); brush.faces.size()) {
+                entity.mapbrushes.push_back(std::move(brush));
             }
-
-            if (omit) {
-                // skip until a } since we don't care to load brushes on this entity
-                do {
-                    if (!parser.parse_token()) {
-                        FError("Unexpected EOF (no closing brace)");
-                    }
-                } while (parser.token != "}");
-            } else {
-                if (auto brush = ParseBrush(parser, entity, issue_stats); brush.faces.size()) {
-                    entity.mapbrushes.push_back(std::move(brush));
-                }
-            }
-        } else {
-            ParseEpair(parser, entity);
         }
-    } while (1);
+    }
 
     // replace aliases
     auto alias_it = qbsp_options.loaded_entity_defs.find(entity.epairs.get("classname"));
@@ -2784,8 +2649,6 @@ bool ParseEntity(parser_t &parser, mapentity_t &entity, texture_def_issues_t &is
             }
         }
     }
-
-    return true;
 }
 
 static void ScaleMapFace(mapface_t &face, const qvec3d &scale)
@@ -2895,27 +2758,25 @@ static mapentity_t LoadExternalMap(const std::string &filename)
         FError("Couldn't load external map file \"{}\".\n", filename);
     }
 
-    parser_t parser(file, {filename});
+    auto in_map = mapfile::parse(std::string_view(reinterpret_cast<const char*>(file->data()), file->size()), parser_source_location{filename});
     texture_def_issues_t issue_stats;
 
     // parse the worldspawn
-    if (!ParseEntity(parser, dest, issue_stats)) {
-        FError("'{}': Couldn't parse worldspawn entity\n", filename);
-    }
+    ParseEntity(in_map.entities.at(0), dest, issue_stats);
+
     const std::string &classname = dest.epairs.get("classname");
     if (Q_strcasecmp("worldspawn", classname)) {
         FError("'{}': Expected first entity to be worldspawn, got: '{}'\n", filename, classname);
     }
 
     // parse any subsequent entities, move any brushes to worldspawn
-    mapentity_t dummy{};
-    while (ParseEntity(parser, dummy, issue_stats)) {
+    for (size_t i = 1; i < map.entities.size(); ++i) {
+        mapentity_t dummy{};
+        ParseEntity(in_map.entities[i], dummy, issue_stats);
+
         // move the brushes to the worldspawn
         dest.mapbrushes.insert(dest.mapbrushes.end(), std::make_move_iterator(dummy.mapbrushes.begin()),
             std::make_move_iterator(dummy.mapbrushes.end()));
-
-        // clear for the next loop iteration
-        dummy = mapentity_t();
     }
 
     if (!dest.mapbrushes.size()) {
@@ -3405,17 +3266,14 @@ void LoadMapFile()
 
             parser_t parser(file, {qbsp_options.map_path.string()});
 
-            for (;;) {
+            mapfile::map_file_t parsed_map;
+            parsed_map.parse(parser);
+
+            for (const mapfile::map_entity_t &in_entity : parsed_map.entities) {
                 mapentity_t &entity = map.entities.emplace_back();
 
-                if (!ParseEntity(parser, entity, issue_stats)) {
-                    break;
-                }
+                ParseEntity(in_entity, entity, issue_stats);
             }
-
-            // Remove dummy entity inserted above
-            assert(!map.entities.back().epairs.size());
-            map.entities.pop_back();
         }
 
         // -add function
@@ -3428,13 +3286,13 @@ void LoadMapFile()
             }
 
             parser_t parser(file, {qbsp_options.add.value()});
+            auto input_map = mapfile::map_file_t{};
+            input_map.parse(parser);
 
-            for (;;) {
+            for (const auto &in_entity : input_map.entities) {
                 mapentity_t &entity = map.entities.emplace_back();
 
-                if (!ParseEntity(parser, entity, issue_stats)) {
-                    break;
-                }
+                ParseEntity(in_entity, entity,issue_stats);
 
                 if (entity.epairs.get("classname") == "worldspawn") {
                     // The easiest way to get the additional map's worldspawn brushes
@@ -3442,9 +3300,6 @@ void LoadMapFile()
                     entity.epairs.set("classname", "func_group");
                 }
             }
-            // Remove dummy entity inserted above
-            assert(!map.entities.back().epairs.size());
-            map.entities.pop_back();
         }
     }
 
@@ -3466,6 +3321,7 @@ void LoadMapFile()
     logging::print(logging::flag::STAT, "\n");
 }
 
+#if 0
 static old_texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
 {
     old_texdef_valve_t res;
@@ -3630,11 +3486,26 @@ static void ConvertEntity(std::ofstream &f, const mapentity_t &entity, const con
     }
     f << "}\n";
 }
+#endif
 
 void ConvertMapFile()
 {
     logging::funcheader();
 
+    auto file = fs::load(qbsp_options.map_path);
+
+    if (!file) {
+        FError("Couldn't load map file \"{}\".\n", qbsp_options.map_path);
+        return;
+    }
+
+    // parse the map
+    parser_t parser(file, {qbsp_options.map_path.string()});
+
+    mapfile::map_file_t parsed_map;
+    parsed_map.parse(parser);
+
+    // choose output filename
     std::string append;
 
     switch (qbsp_options.convertmapformat.value()) {
@@ -3648,14 +3519,38 @@ void ConvertMapFile()
     fs::path filename = qbsp_options.bsp_path;
     filename.replace_filename(qbsp_options.bsp_path.stem().string() + append).replace_extension(".map");
 
+    // do conversion
+    conversion_t target = qbsp_options.convertmapformat.value();
+    switch (target) {
+        case conversion_t::quake:
+            parsed_map.convert_to(mapfile::texcoord_style_t::quaked, qbsp_options.target_game, qbsp_options);
+            break;
+        case conversion_t::quake2:
+            parsed_map.convert_to(mapfile::texcoord_style_t::quaked, qbsp_options.target_game, qbsp_options);
+            break;
+        case conversion_t::valve:
+            parsed_map.convert_to(mapfile::texcoord_style_t::valve_220, qbsp_options.target_game, qbsp_options);
+            break;
+        case conversion_t::bp:
+            parsed_map.convert_to(mapfile::texcoord_style_t::brush_primitives, qbsp_options.target_game, qbsp_options);
+            break;
+        default: FError("Internal error: unknown conversion_t\n");
+    }
+
+    // clear q2 attributes
+    // FIXME: should have a way to convert to Q2 Valve
+    if (target != conversion_t::quake2)
+        for (mapfile::map_entity_t &ent : parsed_map.entities)
+            for (mapfile::brush_t &brush : ent.brushes)
+                for (mapfile::brush_side_t &side : brush.faces)
+                    side.extended_info = std::nullopt;
+
+    // write out
     std::ofstream f(filename);
 
     if (!f)
         FError("Couldn't open file\n");
-
-    for (const mapentity_t &entity : map.entities) {
-        ConvertEntity(f, entity, qbsp_options.convertmapformat.value());
-    }
+    parsed_map.write(f);
 
     logging::print("Conversion saved to {}\n", filename);
 }

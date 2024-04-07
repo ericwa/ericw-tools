@@ -28,6 +28,7 @@ See file, 'COPYING', for details.
 #include <string>
 #include <variant>
 #include <optional>
+#include <string_view>
 
 // this file declares some names that clash with names elsewhere in the project and lead to ODR violations
 // (e.g. texdef_valve_t). For now just wrap everything in a namespace to avoid issues.
@@ -208,5 +209,7 @@ struct map_file_t
 
     void convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options);
 };
+
+map_file_t parse(const std::string_view &view, parser_source_location base_location);
 
 } // namespace mapfile

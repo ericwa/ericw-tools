@@ -414,14 +414,45 @@ inline std::tuple<qvec3d, qvec3d> compute_axis_base(const qvec3d &normal_unsanit
 
 void brush_side_t::set_texinfo(const texdef_bp_t &texdef)
 {
-#if 0
-    const auto &texture = map.load_image_meta(mapface.texname.c_str());
-    const int32_t width = texture ? texture->width : 64;
-    const int32_t height = texture ? texture->height : 64;
+    // FIXME:
+    const int32_t texWidth = 64;
+    const int32_t texHeight = 64;
 
-    SetTexinfo_BrushPrimitives(texMat, plane.normal, width, height, tx->vecs);
-#endif
-    FError("todo BP");
+    const auto [texX, texY] = compute_axis_base(plane.normal);
+    const auto texMat = texdef.axis;
+
+    /*
+     derivation of the conversion below:
+
+     classic BSP texture vecs to texture coordinates:
+
+       u = (dot(vert, out->vecs[0]) + out->vecs[3]) / texWidth
+
+     brush primitives: (starting with q3map2 code, then rearranging it to look like the classic formula)
+
+       u = (texMat[0][0] * dot(vert, texX)) + (texMat[0][1] * dot(vert, texY)) + texMat[0][2]
+
+     factor out vert:
+
+       u = (vert[0] * (texX[0] * texMat[0][0] + texY[0] * texMat[0][1]))
+          + (vert[1] * (texX[1] * texMat[0][0] + texY[1] * texMat[0][1]))
+          + (vert[2] * (texX[2] * texMat[0][0] + texY[2] * texMat[0][1]))
+          + texMat[0][2];
+
+     multiplying that by 1 = (texWidth / texWidth) gives us something in the same shape as the classic formula,
+     so we can get out->vecs.
+
+     */
+
+    vecs.at(0, 0) = texWidth * ((texX[0] * texMat.at(0, 0)) + (texY[0] * texMat.at(0, 1)));
+    vecs.at(0, 1) = texWidth * ((texX[1] * texMat.at(0, 0)) + (texY[1] * texMat.at(0, 1)));
+    vecs.at(0, 2) = texWidth * ((texX[2] * texMat.at(0, 0)) + (texY[2] * texMat.at(0, 1)));
+    vecs.at(0, 3) = texWidth * texMat.at(0, 2);
+
+    vecs.at(1, 0) = texHeight * ((texX[0] * texMat.at(1, 0)) + (texY[0] * texMat.at(1, 1)));
+    vecs.at(1, 1) = texHeight * ((texX[1] * texMat.at(1, 0)) + (texY[1] * texMat.at(1, 1)));
+    vecs.at(1, 2) = texHeight * ((texX[2] * texMat.at(1, 0)) + (texY[2] * texMat.at(1, 1)));
+    vecs.at(1, 3) = texHeight * texMat.at(1, 2);
 }
 
 void brush_side_t::parse_texture_def(parser_t &parser, texcoord_style_t base_format)
@@ -1201,6 +1232,15 @@ void map_file_t::convert_to(texcoord_style_t style, const gamedef_t *game, const
             brush.convert_to(style, game, options);
         }
     }
+}
+
+map_file_t parse(const std::string_view &view, parser_source_location base_location)
+{
+    parser_t parser(view, base_location);
+
+    map_file_t result;
+    result.parse(parser);
+    return result;
 }
 
 } // namespace mapfile

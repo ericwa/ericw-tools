@@ -8,6 +8,7 @@
 #include <common/fs.hh>
 #include <common/bsputils.hh>
 #include <common/decompile.hh>
+#include <common/mapfile.hh>
 #include <common/prtfile.hh>
 #include <common/qvec.hh>
 #include <common/log.hh>
@@ -63,13 +64,13 @@ mapentity_t &LoadMap(const char *map, size_t length)
     qbsp_options.target_version = &bspver_q1;
     qbsp_options.target_game = qbsp_options.target_version->game;
 
-    parser_t parser(map, length, {doctest::getContextOptions()->currentTest->m_name});
-
-    mapentity_t &entity = ::map.entities.emplace_back();
-    texture_def_issues_t issue_stats;
+    parser_source_location base_location {doctest::getContextOptions()->currentTest->m_name};
+    mapfile::map_file_t m = mapfile::parse(std::string_view(map, length), base_location);
 
     // FIXME: adds the brush to the global map...
-    Q_assert(ParseEntity(parser, entity, issue_stats));
+    texture_def_issues_t issue_stats;
+    mapentity_t &entity = ::map.entities.emplace_back();
+    ParseEntity(m.entities.at(0), entity, issue_stats);
 
     CalculateWorldExtent();
 
@@ -416,13 +417,16 @@ TEST_CASE("InvalidTextureProjection" * doctest::test_suite("qbsp"))
     }
     )";
 
-    mapentity_t &worldspawn = LoadMap(map);
-    Q_assert(1 == worldspawn.mapbrushes.size());
+    mapfile::map_file_t m;
+    parser_t p(map, parser_source_location());
+    m.parse(p);
 
-    const mapface_t *face = &worldspawn.mapbrushes.front().faces[5];
-    REQUIRE("skip" == face->texname);
-    const auto texvecs = face->get_texvecs();
-    CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
+    REQUIRE(1 == m.entities[0].brushes.size());
+
+    const auto *face = &m.entities[0].brushes.front().faces[5];
+    REQUIRE("skip" == face->texture);
+
+    CHECK(face->is_valid_texture_projection());
 }
 
 /**
@@ -446,13 +450,16 @@ TEST_CASE("InvalidTextureProjection2" * doctest::test_suite("qbsp"))
     }
     )";
 
-    mapentity_t &worldspawn = LoadMap(map);
-    Q_assert(1 == worldspawn.mapbrushes.size());
+    mapfile::map_file_t m;
+    parser_t p(map, parser_source_location());
+    m.parse(p);
 
-    const mapface_t *face = &worldspawn.mapbrushes.front().faces[5];
-    REQUIRE("skip" == face->texname);
-    const auto texvecs = face->get_texvecs();
-    CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
+    REQUIRE(1 == m.entities[0].brushes.size());
+
+    const auto *face = &m.entities[0].brushes.front().faces[5];
+    REQUIRE("skip" == face->texture);
+
+    CHECK(face->is_valid_texture_projection());
 }
 
 /**
@@ -477,13 +484,16 @@ TEST_CASE("InvalidTextureProjection3" * doctest::test_suite("qbsp"))
     }
     )";
 
-    mapentity_t &worldspawn = LoadMap(map);
-    Q_assert(1 == worldspawn.mapbrushes.size());
+    mapfile::map_file_t m;
+    parser_t p(map, parser_source_location());
+    m.parse(p);
 
-    const mapface_t *face = &worldspawn.mapbrushes.front().faces[3];
-    REQUIRE("*lava1" == face->texname);
-    const auto texvecs = face->get_texvecs();
-    CHECK(IsValidTextureProjection(face->get_plane().get_normal(), texvecs.row(0), texvecs.row(1)));
+    REQUIRE(1 == m.entities[0].brushes.size());
+
+    const auto *face = &m.entities[0].brushes.front().faces[3];
+    REQUIRE("*lava1" == face->texture);
+
+    CHECK(face->is_valid_texture_projection());
 }
 
 TEST_SUITE("mathlib")
