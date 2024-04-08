@@ -1830,7 +1830,7 @@ static mapentity_t LoadExternalMap(const std::string &filename)
     }
 
     // parse any subsequent entities, move any brushes to worldspawn
-    for (size_t i = 1; i < map.entities.size(); ++i) {
+    for (size_t i = 1; i < in_map.entities.size(); ++i) {
         mapentity_t dummy{};
         ParseEntity(in_map.entities[i], dummy, issue_stats);
 
