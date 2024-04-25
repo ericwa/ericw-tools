@@ -1211,15 +1211,10 @@ struct gamedef_q2_t : public gamedef_t
     contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
     {
         if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL) {
-            return create_solid_contents();
-        }
-        // Solid wipes out any other contents
-        // Previously, this was done in LeafNode but we've changed to detail-solid being
-        // non-sealing.
-        if (type == remap_type_t::leaf) {
-            if (contents.flags & EWT_VISCONTENTS_SOLID) {
-                return create_solid_contents();
-            }
+            contents_int_t result = contents.flags;
+            result &= (~EWT_VISCONTENTS_DETAIL_WALL);
+            result |= EWT_VISCONTENTS_SOLID;
+            return contentflags_t::make(result);
         }
 
         return contents;
@@ -1227,13 +1222,14 @@ struct gamedef_q2_t : public gamedef_t
 
     contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
     {
-        // structural solid (but not detail solid) eats any other contents
-        if (contents_are_solid(a) || contents_are_solid(b)) {
-            return create_solid_contents();
-        }
+        contents_int_t bits_a = a.flags;
+        contents_int_t bits_b = b.flags;
 
-        auto bits_a = a.flags;
-        auto bits_b = b.flags;
+        // structural solid eats detail flags
+        if (contents_are_solid(a) || contents_are_solid(b)) {
+            bits_a &= ~EWT_CFLAG_DETAIL;
+            bits_b &= ~EWT_CFLAG_DETAIL;
+        }
 
         return contentflags_t::make(bits_a | bits_b);
     }

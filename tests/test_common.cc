@@ -222,37 +222,44 @@ TEST_SUITE("common")
     {
         auto *game_q2 = bspver_q2.game;
 
-        const std::array test_contents{
-                game_q2->create_contents_from_native(Q2_CONTENTS_EMPTY),
-                game_q2->create_contents_from_native(Q2_CONTENTS_SOLID),
-                game_q2->create_contents_from_native(Q2_CONTENTS_WINDOW),
-                game_q2->create_contents_from_native(Q2_CONTENTS_AUX),
-                game_q2->create_contents_from_native(Q2_CONTENTS_LAVA),
-                game_q2->create_contents_from_native(Q2_CONTENTS_SLIME),
-                game_q2->create_contents_from_native(Q2_CONTENTS_WATER),
-                game_q2->create_contents_from_native(Q2_CONTENTS_MIST),
-                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID),
-                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW),
-                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX),
-                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA),
-                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_SLIME),
-                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_WATER),
-                game_q2->create_contents_from_native(Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST)
+        struct before_after_t {
+            int32_t before;
+            int32_t after;
         };
 
         SUBCASE("solid combined with others")
         {
+            const std::vector<before_after_t> before_after_adding_solid {
+                    {Q2_CONTENTS_EMPTY, Q2_CONTENTS_SOLID},
+                    {Q2_CONTENTS_SOLID, Q2_CONTENTS_SOLID},
+                    {Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER, Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER},
+                    {Q2_CONTENTS_WINDOW, Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW},
+                    {Q2_CONTENTS_AUX, Q2_CONTENTS_SOLID | Q2_CONTENTS_AUX},
+                    {Q2_CONTENTS_LAVA, Q2_CONTENTS_SOLID | Q2_CONTENTS_LAVA},
+                    {Q2_CONTENTS_SLIME, Q2_CONTENTS_SOLID | Q2_CONTENTS_SLIME},
+                    {Q2_CONTENTS_WATER, Q2_CONTENTS_SOLID | Q2_CONTENTS_WATER},
+                    {Q2_CONTENTS_MIST, Q2_CONTENTS_SOLID | Q2_CONTENTS_MIST},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID, Q2_CONTENTS_SOLID}, // detail flag gets erased
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW, Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW}, // detail flag gets erased
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX, Q2_CONTENTS_SOLID |Q2_CONTENTS_AUX}, // detail flag gets erased
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA, Q2_CONTENTS_SOLID |Q2_CONTENTS_LAVA}, // detail flag gets erased
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_SLIME, Q2_CONTENTS_SOLID |Q2_CONTENTS_SLIME}, // detail flag gets erased
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_WATER, Q2_CONTENTS_SOLID | Q2_CONTENTS_WATER}, // detail flag gets erased
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST, Q2_CONTENTS_SOLID | Q2_CONTENTS_MIST} // detail flag gets erased
+            };
+
             auto solid = game_q2->create_solid_contents();
             CHECK(game_q2->contents_to_native(solid) == Q2_CONTENTS_SOLID);
 
-            for (const auto &c : test_contents) {
-                // solid is treated specially in Q2 and wipes out any other content
-                // flags when combined
-                auto combined = game_q2->contents_remap_for_export(
-                    game_q2->combine_contents(solid, c), gamedef_t::remap_type_t::leaf);
+            for (const auto &[before, after] : before_after_adding_solid) {
 
-                CHECK(game_q2->contents_to_native(combined) == Q2_CONTENTS_SOLID);
+                auto combined = game_q2->contents_remap_for_export(
+                        game_q2->combine_contents(game_q2->create_contents_from_native(before),
+                                                  solid), gamedef_t::remap_type_t::leaf);
+
+                CHECK(game_q2->contents_to_native(combined) == after);
                 CHECK(combined.is_solid(game_q2));
+                CHECK(!combined.is_any_detail(game_q2));
             }
         }
 
@@ -260,14 +267,30 @@ TEST_SUITE("common")
         {
             contentflags_t water = game_q2->create_contents_from_native(Q2_CONTENTS_WATER);
 
-            for (const auto &c : test_contents) {
-                auto combined = game_q2->combine_contents(water, c);
+            const std::vector<before_after_t> before_after_adding_water {
+                    {Q2_CONTENTS_EMPTY, Q2_CONTENTS_WATER},
+                    {Q2_CONTENTS_SOLID, Q2_CONTENTS_WATER | Q2_CONTENTS_SOLID},
+                    {Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER, Q2_CONTENTS_WATER | Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER},
+                    {Q2_CONTENTS_WINDOW, Q2_CONTENTS_WATER | Q2_CONTENTS_WINDOW},
+                    {Q2_CONTENTS_AUX, Q2_CONTENTS_WATER | Q2_CONTENTS_AUX},
+                    {Q2_CONTENTS_LAVA, Q2_CONTENTS_WATER | Q2_CONTENTS_LAVA},
+                    {Q2_CONTENTS_SLIME, Q2_CONTENTS_WATER | Q2_CONTENTS_SLIME},
+                    {Q2_CONTENTS_WATER, Q2_CONTENTS_WATER},
+                    {Q2_CONTENTS_MIST, Q2_CONTENTS_WATER | Q2_CONTENTS_MIST},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_SOLID},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_AUX},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_SLIME, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_SLIME},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_WATER, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL},
+                    {Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST, Q2_CONTENTS_WATER | Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST}
+            };
+            for (const auto &[before, after] : before_after_adding_water) {
+                auto combined = game_q2->combine_contents(game_q2->create_contents_from_native(before), water);
 
-                SUBCASE(fmt::format("water combined with {}", c.to_string(game_q2)).c_str())
+                SUBCASE(fmt::format("water combined with {}", game_q2->create_contents_from_native(before).to_string(game_q2)).c_str())
                 {
-                    if (!(game_q2->contents_to_native(c) & Q2_CONTENTS_SOLID)) {
-                        CHECK(game_q2->contents_to_native(combined) == (Q2_CONTENTS_WATER | game_q2->contents_to_native(c)));
-                    }
+                    CHECK(game_q2->contents_to_native(combined) == after);
                 }
             }
         }

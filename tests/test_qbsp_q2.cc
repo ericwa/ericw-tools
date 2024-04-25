@@ -48,12 +48,11 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
     for (size_t i = 1; i < bsp.dleafs.size(); ++i) {
         ++counts_by_contents[bsp.dleafs[i].contents];
     }
-    CHECK(2 == counts_by_contents.size()); // number of types
+    CHECK(3 == counts_by_contents.size()); // number of types
 
-    CHECK(counts_by_contents.find(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) ==
-          counts_by_contents.end()); // the detail bit gets cleared
+    CHECK(1 == counts_by_contents.at(Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL)); // detail leafs
     CHECK(8 == counts_by_contents.at(0)); // empty leafs
-    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) >= 8);
+    CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) >= 6);
     CHECK(counts_by_contents.at(Q2_CONTENTS_SOLID) <= 12);
 
     // clusters:
@@ -84,7 +83,7 @@ TEST_CASE("detail" * doctest::test_suite("testmaps_q2"))
 
     // check for correct contents
     auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_button);
-    CHECK(Q2_CONTENTS_SOLID == detail_leaf->contents);
+    CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == detail_leaf->contents);
     CHECK(-1 == detail_leaf->cluster);
     CHECK(0 == detail_leaf->area); // solid leafs get the invalid area 0
 
@@ -541,7 +540,7 @@ TEST_CASE("q2_detail_overlapping_solid_sealing" * doctest::test_suite("testmaps_
 
     // check leaf contents
     CHECK(Q2_CONTENTS_EMPTY == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
-    CHECK(Q2_CONTENTS_SOLID == BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
+    CHECK((Q2_CONTENTS_SOLID & BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents) == Q2_CONTENTS_SOLID);
 }
 
 /**
@@ -719,8 +718,10 @@ TEST_CASE("q2_ladder" * doctest::test_suite("testmaps_q2"))
 
     auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], point_in_ladder);
 
-    // the brush lacked a visible contents, so it became solid. solid leafs wipe out any other content bits
-    CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+    // the brush lacked a visible contents, so it became solid.
+    // ladder and detail flags are preseved now.
+    // (previously we were wiping them out and just writing out leafs as Q2_CONTENTS_SOLID).
+    CHECK(leaf->contents == (Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL));
 
     CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
     CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL) == Leaf_Brushes(&bsp, leaf).at(0)->contents);
@@ -774,13 +775,13 @@ TEST_CASE("q2_detail_wall" * doctest::test_suite("testmaps_q2"))
                 INFO("check leaf / brush contents");
 
                 CAPTURE(game->create_contents_from_native(detail_wall_leaf->contents).to_string(game));
-                CHECK(Q2_CONTENTS_SOLID == detail_wall_leaf->contents);
+                CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == detail_wall_leaf->contents);
 
                 REQUIRE(1 == Leaf_Brushes(&bsp, detail_wall_leaf).size());
                 auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
 
                 CAPTURE(game->create_contents_from_native(brush->contents).to_string(game));
-                CHECK(Q2_CONTENTS_SOLID == brush->contents);
+                CHECK((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL) == brush->contents);
             }
 
             {
@@ -1059,7 +1060,7 @@ TEST_CASE("q2_unknown_contents" * doctest::test_suite("testmaps_q2"))
         auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0});
 
         // FIXME: should the unknown contents get converted to SOLID in the leaf?
-        CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+        CHECK(leaf->contents == (Q2_CONTENTS_SOLID | 1024));
 
         CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
         // FIXME: should the unknown contents have SOLID added in the brush?
@@ -1073,7 +1074,7 @@ TEST_CASE("q2_unknown_contents" * doctest::test_suite("testmaps_q2"))
         auto *leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {64, 0, 0});
 
         // FIXME: should the unknown contents get converted to SOLID in the leaf?
-        CHECK(leaf->contents == (Q2_CONTENTS_SOLID));
+        CHECK(leaf->contents == (Q2_CONTENTS_SOLID | nth_bit(30)));
 
         CHECK(1 == Leaf_Brushes(&bsp, leaf).size());
         // FIXME: should the unknown contents have SOLID added in the brush?
