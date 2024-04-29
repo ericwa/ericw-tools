@@ -2453,14 +2453,6 @@ static void LightPoint_ScaleAndClamp(qvec3f &color)
             c = pow(c / 255.0f, 1.0f / cfg.lightmapgamma.value()) * 255.0f;
         }
     }
-
-    // clamp
-    // FIXME: should this be a brightness clamp?
-    float maxcolor = qv::max(color);
-
-    if (maxcolor > 255.0f) {
-        color *= (255.0f / maxcolor);
-    }
 }
 
 static void LightPoint_ScaleAndClamp(lightgrid_samples_t &result)

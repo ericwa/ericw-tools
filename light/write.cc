@@ -48,7 +48,8 @@ void litheader_t::v2_t::stream_read(std::istream &s)
     s >= std::tie(numsurfs, lmsamples);
 }
 
-void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version, const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase)
+void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version,
+    const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase, const std::vector<uint8_t> &hdr_filebase)
 {
     litheader_t header;
 
@@ -80,8 +81,13 @@ void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, cons
         }
         litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
         litfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
-    } else
-        litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
+    } else {
+        if (version == LIT_VERSION_E5BGR9) {
+            litfile.write((const char *)hdr_filebase.data(), bsp->dlightdata.size() * 4);
+        } else {
+            litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
+        }
+    }
 }
 
 void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, const std::vector<uint8_t> &lux_filebase)
@@ -365,14 +371,41 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
     return res;
 }
 
+static unsigned int HDR_PackResult(qvec4f rgba)
+{
+#define HDR_ONE 128.0f // logical value for 1.0 lighting (quake's overbrights give 255).
+    // we want 0-1-like values. except that we can oversample and express smaller values too.
+    float r = rgba[0] / HDR_ONE;
+    float g = rgba[1] / HDR_ONE;
+    float b = rgba[2] / HDR_ONE;
+
+    int e = 0;
+    float m = std::max(std::max(r, g), b);
+    float scale;
+
+    if (m >= 0.5f) { // positive exponent
+        while (m >= (1 << (e)) && e < 30 - 15) // don't do nans.
+            e++;
+    } else { // negative exponent...
+        while (m < 1 / (1 << -e) && e > -15) // don't do nans.
+            e--;
+    }
+
+    scale = powf(2, (float)e - 9);
+
+    return ((e + 15) << 27) | (std::min((int)std::lround(b / scale + 0.5f), 0x1ff) << 18) |
+           (std::min((int)std::lround(g / scale + 0.5f), 0x1ff) << 9) |
+           (std::min((int)std::lround(r / scale + 0.5f), 0x1ff) << 0);
+}
+
 /**
  * - Writes (actual_width * actual_height) bytes to `out`
  * - Writes (actual_width * actual_height * 3) bytes to `lit`
  * - Writes (actual_width * actual_height * 3) bytes to `lux`
  */
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux,
-    const faceextents_t &output_extents)
+    const lightmap_t *lm, const int actual_width, const int actual_height,
+    uint8_t *out, uint8_t *lit, uint8_t *lux, uint8_t *hdr, const faceextents_t &output_extents)
 {
     const int oversampled_width = actual_width * light_options.extra.value();
     const int oversampled_height = actual_height * light_options.extra.value();
@@ -413,7 +446,23 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
             const int sampleindex = (input_sample_t * actual_width) + input_sample_s;
 
             if (lit || out) {
-                const qvec4f &color = output_color.at(sampleindex);
+                qvec4f color = output_color.at(sampleindex);
+
+                if (hdr) {
+                    unsigned int c = HDR_PackResult(color);
+                    *hdr++ = c & 0xFF;
+                    *hdr++ = (c >> 8) & 0xFF;
+                    *hdr++ = (c >> 16) & 0xFF;
+                    *hdr++ = (c >> 24) & 0xFF;
+                }
+
+                // clamp
+                // FIXME: should this be a brightness clamp?
+                const float maxcolor = qv::max(color);
+
+                if (maxcolor > 255.0f) {
+                    color *= (255.0f / maxcolor);
+                }
 
                 if (lit) {
                     *lit++ = color[0];
@@ -465,7 +514,8 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
  * - Writes (output_width * output_height * 3) bytes to `lux`
  */
 static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int output_width, const int output_height, uint8_t *out, uint8_t *lit, uint8_t *lux)
+    const lightmap_t *lm, const int output_width, const int output_height,
+    uint8_t *out, uint8_t *lit, uint8_t *lux, uint8_t *hdr)
 {
     // this is the lightmap data in the "decoupled" coordinate system
     std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
@@ -501,10 +551,26 @@ static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *
             const float coord_frac_y = decoupled_lm_coord[1] - coord_floor_y;
 
             // 2D bilinear interpolation
-            const qvec4f color =
+            qvec4f color =
                 mix(mix(tex(coord_floor_x, coord_floor_y), tex(coord_floor_x + 1, coord_floor_y), coord_frac_x),
                     mix(tex(coord_floor_x, coord_floor_y + 1), tex(coord_floor_x + 1, coord_floor_y + 1), coord_frac_x),
                     coord_frac_y);
+
+            if (hdr) {
+                unsigned int c = HDR_PackResult(color);
+                *hdr++ = c & 0xFF;
+                *hdr++ = (c >> 8) & 0xFF;
+                *hdr++ = (c >> 16) & 0xFF;
+                *hdr++ = (c >> 24) & 0xFF;
+            }
+
+            // clamp
+            // FIXME: should this be a brightness clamp?
+            const float maxcolor = qv::max(color);
+
+            if (maxcolor > 255.0f) {
+                color *= (255.0f / maxcolor);
+            }
 
             if (lit || out) {
                 if (lit) {
@@ -567,14 +633,6 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
                     c = pow(c / 255.0f, 1.0f / cfg.lightmapgamma.value()) * 255.0f;
                 }
             }
-
-            // clamp
-            // FIXME: should this be a brightness clamp?
-            float maxcolor = qv::max(color);
-
-            if (maxcolor > 255.0f) {
-                color *= (255.0f / maxcolor);
-            }
         }
     }
 }
@@ -607,9 +665,9 @@ static float Lightmap_MaxBrightness(const lightmap_t *lm, const lightsurf_t *lig
     return maxb;
 }
 
-static void SaveLitOnlyLightmapSurface(const mbsp_t *bsp, mface_t *face,
-    lightsurf_t *lightsurf, const faceextents_t &extents,
-    const faceextents_t &output_extents, std::vector<uint8_t> &filebase, std::vector<uint8_t> &lit_filebase, std::vector<uint8_t> &lux_filebase)
+static void SaveLitOnlyLightmapSurface(const mbsp_t *bsp, mface_t *face, lightsurf_t *lightsurf,
+    const faceextents_t &extents, const faceextents_t &output_extents, std::vector<uint8_t> &filebase,
+    std::vector<uint8_t> &lit_filebase, std::vector<uint8_t> &lux_filebase, std::vector<uint8_t> &hdr_filebase)
 {
     lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
     const int actual_width = extents.width();
@@ -625,7 +683,7 @@ static void SaveLitOnlyLightmapSurface(const mbsp_t *bsp, mface_t *face,
         return;
     }
 
-    uint8_t *out = nullptr, *lit = nullptr, *lux = nullptr;
+    uint8_t *out = nullptr, *lit = nullptr, *lux = nullptr, *hdr = nullptr;
 
     Q_assert(face->lightofs >= 0);
 
@@ -641,6 +699,10 @@ static void SaveLitOnlyLightmapSurface(const mbsp_t *bsp, mface_t *face,
         lux = lux_filebase.data() + (face->lightofs * 3);
     }
 
+    if (!hdr_filebase.empty()) {
+        hdr = hdr_filebase.data() + (face->lightofs * 4);
+    }
+
     // NOTE: file_p et. al. are not updated, since we're not dynamically allocating the lightmaps
 
     for (int mapnum = 0; mapnum < MAXLIGHTMAPS; mapnum++) {
@@ -654,7 +716,7 @@ static void SaveLitOnlyLightmapSurface(const mbsp_t *bsp, mface_t *face,
         for (const lightmap_t &lm : lightmaps) {
             if (lm.style == style) {
                 WriteSingleLightmap(
-                    bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux, output_extents);
+                    bsp, face, lightsurf, &lm, actual_width, actual_height, out, lit, lux, hdr, output_extents);
                 break;
             }
         }
@@ -668,6 +730,9 @@ static void SaveLitOnlyLightmapSurface(const mbsp_t *bsp, mface_t *face,
         }
         if (lux) {
             lux += (size * 3);
+        }
+        if (hdr) {
+            hdr += (size * 4);
         }
     }
 }
@@ -718,9 +783,10 @@ int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup
             continue;
         }
 
-        // skip lightmaps where all samples have brightness below 1
-        if (bsp->loadversion->game->id != GAME_QUAKE_II) { // HACK: don't do this on Q2. seems if all styles are 0xff,
-                                                           // the face is drawn fullbright instead of black (Q1)
+        // skip lightmaps where all samples have brightness below 1 unless rendering float lightmaps
+        // HACK: don't do this on Q2. seems if all styles are 0xff,
+        //       the face is drawn fullbright instead of black (Q1)
+        if (bsp->loadversion->game->id != GAME_QUAKE_II && !(light_options.write_litfile & lightfile::hdr)) {
             const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
             if (maxb < 1)
                 continue;
@@ -787,9 +853,8 @@ int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup
 
 void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     bspx_decoupled_lm_perface *facesup_decoupled, lightsurf_t *lightsurf, const faceextents_t &extents,
-    const faceextents_t &output_extents,
-    std::vector<uint8_t> &filebase, std::vector<uint8_t> &lit_filebase, std::vector<uint8_t> &lux_filebase,
-    lightmap_intermediate_data_t &id)
+    const faceextents_t &output_extents, std::vector<uint8_t> &filebase, std::vector<uint8_t> &lit_filebase,
+    std::vector<uint8_t> &lux_filebase, std::vector<uint8_t> &hdr_filebase, lightmap_intermediate_data_t &id)
 {
     const int output_width = output_extents.width();
     const int output_height = output_extents.height();
@@ -830,7 +895,7 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         }
     }
 
-    uint8_t *out = nullptr, *lit = nullptr, *lux = nullptr;
+    uint8_t *out = nullptr, *lit = nullptr, *lux = nullptr, *hdr = nullptr;
 
     if (!filebase.empty()) {
         out = filebase.data() + id.lightofs;
@@ -842,6 +907,10 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
 
     if (!lux_filebase.empty()) {
         lux = lux_filebase.data() + (id.lightofs * 3);
+    }
+
+    if (!hdr_filebase.empty()) {
+        hdr = hdr_filebase.data() + (id.lightofs * 4);
     }
 
     int lightofs;
@@ -881,10 +950,14 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         Q_assert((lux - lux_filebase.data()) + (size * 3 * id.sorted.size()) <= lux_filebase.size());
     }
 
+    if (hdr) {
+        Q_assert((hdr - hdr_filebase.data()) + (size * 4 * id.sorted.size()) <= hdr_filebase.size());
+    }
+
     for (int mapnum = 0; mapnum < id.sorted.size(); mapnum++) {
         const lightmap_t *lm = id.sorted.at(mapnum);
 
-        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux, output_extents);
+        WriteSingleLightmap(bsp, face, lightsurf, lm, actual_width, actual_height, out, lit, lux, hdr, output_extents);
 
         if (out) {
             out += size;
@@ -894,6 +967,9 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
         }
         if (lux) {
             lux += (size * 3);
+        }
+        if (hdr) {
+            hdr += (size * 4);
         }
     }
 
@@ -915,6 +991,10 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
             lux = lux_filebase.data() + (id.vanilla_lightofs * 3);
         }
 
+        if (!hdr_filebase.empty()) {
+            hdr = hdr_filebase.data() + (id.vanilla_lightofs * 4);
+        }
+
         // Q2/HL native colored lightmaps
         if (bsp->loadversion->game->has_rgb_lightmap) {
             lightofs = lit - lit_filebase.data();
@@ -927,7 +1007,7 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
             const lightmap_t *lm = id.sorted.at(mapnum);
 
             WriteSingleLightmap_FromDecoupled(bsp, face, lightsurf, lm, lightsurf->vanilla_extents.width(),
-                lightsurf->vanilla_extents.height(), out, lit, lux);
+                lightsurf->vanilla_extents.height(), out, lit, lux, hdr);
 
             if (out) {
                 out += vanilla_size;
@@ -937,6 +1017,9 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
             }
             if (lux) {
                 lux += (vanilla_size * 3);
+            }
+            if (hdr) {
+                hdr += (vanilla_size * 4);
             }
         }
     }
@@ -952,7 +1035,7 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
     fully_transparent_lightmaps = 0;
 
     // lightmap data storage
-    std::vector<uint8_t> filebase, lit_filebase, lux_filebase;
+    std::vector<uint8_t> filebase, lit_filebase, lux_filebase, hdr_filebase;
 
     if (light_options.litonly.value()) {
 
@@ -971,7 +1054,11 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
         if (light_options.write_luxfile) {
             lux_filebase.resize(filebase.size() * 3);
         }
-        
+
+        if (light_options.write_litfile & lightfile::hdr) {
+            hdr_filebase.resize(filebase.size() * 4);
+        }
+
         logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) {
             auto &surf = LightSurfaces()[i];
 
@@ -983,7 +1070,8 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
 
             auto f = &bsp->dfaces[i];
 
-            SaveLitOnlyLightmapSurface(bsp, f, &surf, surf.extents, surf.extents, filebase, lit_filebase, lux_filebase);
+            SaveLitOnlyLightmapSurface(
+                bsp, f, &surf, surf.extents, surf.extents, filebase, lit_filebase, lux_filebase, hdr_filebase);
         });
     } else {
         std::atomic_size_t lightmap_size = 0;
@@ -1039,7 +1127,12 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
             lux_filebase.resize(lightmap_size * 3);
         }
 
-        logging::print(logging::flag::STAT, "lightmap size (total): {}\n", filebase.size() + lit_filebase.size() + lux_filebase.size());
+        if (light_options.write_litfile & lightfile::hdr) {
+            hdr_filebase.resize(lightmap_size * 4);
+        }
+
+        logging::print(logging::flag::STAT, "lightmap size (total): {}\n",
+            filebase.size() + lit_filebase.size() + lux_filebase.size() + hdr_filebase.size());
 
         logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) {
             auto &surf = LightSurfaces()[i];
@@ -1052,24 +1145,28 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
             const modelinfo_t *face_modelinfo = ModelInfoForFace(bsp, i);
 
             if (!facesup_decoupled_global.empty()) {
-                SaveLightmapSurface(
-                    bsp, f, nullptr, &facesup_decoupled_global[i], &surf, surf.extents, surf.extents, filebase, lit_filebase, lux_filebase, intermediate_data[i]);
+                SaveLightmapSurface(bsp, f, nullptr, &facesup_decoupled_global[i], &surf, surf.extents, surf.extents,
+                    filebase, lit_filebase, lux_filebase, hdr_filebase, intermediate_data[i]);
             } else if (faces_sup.empty()) {
-                SaveLightmapSurface(bsp, f, nullptr, nullptr, &surf, surf.extents, surf.extents, filebase, lit_filebase, lux_filebase, intermediate_data[i]);
+                SaveLightmapSurface(bsp, f, nullptr, nullptr, &surf, surf.extents, surf.extents, filebase, lit_filebase,
+                    lux_filebase, hdr_filebase, intermediate_data[i]);
             } else if (light_options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
                 if (faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
                     f->lightofs = faces_sup[i].lightofs;
                 } else {
                     f->lightofs = -1;
                 }
-                SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, &surf, surf.extents, surf.extents, filebase, lit_filebase, lux_filebase, intermediate_data[i]);
+                SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, &surf, surf.extents, surf.extents, filebase,
+                    lit_filebase, lux_filebase, hdr_filebase, intermediate_data[i]);
                 for (int j = 0; j < MAXLIGHTMAPS; j++) {
                     f->styles[j] =
                         faces_sup[i].styles[j] == INVALID_LIGHTSTYLE ? INVALID_LIGHTSTYLE_OLD : faces_sup[i].styles[j];
                 }
             } else {
-                SaveLightmapSurface(bsp, f, nullptr, nullptr, &surf, surf.extents, surf.vanilla_extents, filebase, lit_filebase, lux_filebase, intermediate_data[i]);
-                SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, &surf, surf.extents, surf.extents, filebase, lit_filebase, lux_filebase, intermediate_data[i]);
+                SaveLightmapSurface(bsp, f, nullptr, nullptr, &surf, surf.extents, surf.vanilla_extents, filebase,
+                    lit_filebase, lux_filebase, hdr_filebase, intermediate_data[i]);
+                SaveLightmapSurface(bsp, f, &faces_sup[i], nullptr, &surf, surf.extents, surf.extents, filebase,
+                    lit_filebase, lux_filebase, hdr_filebase, intermediate_data[i]);
             }
         });
     }
@@ -1077,7 +1174,7 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
     logging::print("Lighting Completed.\n\n");
 
     if (light_options.write_litfile == lightfile::lit2) {
-        WriteLitFile(bsp, faces_sup, source, 2, lit_filebase, lux_filebase);
+        WriteLitFile(bsp, faces_sup, source, 2, lit_filebase, lux_filebase, hdr_filebase);
         return; // run away before any files are written
     }
 
@@ -1093,12 +1190,14 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
 
     bspdata->bspx.entries.erase("RGBLIGHTING");
     bspdata->bspx.entries.erase("LIGHTINGDIR");
+    bspdata->bspx.entries.erase("LIGHTING_E5BGR9");
 
     // lit/lux files (or their BSPX equivalents) - only write in games that lack RGB lightmaps.
     // (technically we could allow .lux in Q2 mode, but no engines support it.)
     if (!bsp->loadversion->game->has_rgb_lightmap) {
         if (light_options.write_litfile & lightfile::external) {
-            WriteLitFile(bsp, faces_sup, source, LIT_VERSION, lit_filebase, lux_filebase);
+            int version = light_options.write_litfile & lightfile::hdr ? LIT_VERSION_E5BGR9 : LIT_VERSION;
+            WriteLitFile(bsp, faces_sup, source, version, lit_filebase, lux_filebase, hdr_filebase);
         }
         if (light_options.write_litfile & lightfile::bspx) {
             lit_filebase.resize(bsp->dlightdata.size() * 3);
@@ -1110,6 +1209,10 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
         if (light_options.write_luxfile & lightfile::bspx) {
             lux_filebase.resize(bsp->dlightdata.size() * 3);
             bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
+        }
+        if (light_options.write_litfile & lightfile::bspxhdr) {
+            hdr_filebase.resize(bsp->dlightdata.size() * 4);
+            bspdata->bspx.transfer("LIGHTING_E5BGR9", hdr_filebase);
         }
     }
 }

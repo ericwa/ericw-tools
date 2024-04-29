@@ -333,6 +333,18 @@ light_settings::light_settings()
               write_luxfile = lightfile::bspx;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
+      hdr{this, "hdr",
+          [&](source) {
+              write_litfile |= lightfile::external;
+              write_litfile |= lightfile::hdr;
+          },
+          &experimental_group, "write .lit file with e5bgr9 data"},
+      bspxhdr{this, "bspxhdr",
+          [&](source) {
+              write_litfile |= lightfile::hdr;
+              write_litfile |= lightfile::bspxhdr;
+          },
+          &experimental_group, "writes e5bgr9 data into the bsp itself"},
       world_units_per_luxel{
           this, "world_units_per_luxel", 0, 0, 1024, &output_group, "enables output of DECOUPLED_LM BSPX lump"},
       litonly{this, "litonly", false, &output_group, "only write .lit file, don't modify BSP"},
