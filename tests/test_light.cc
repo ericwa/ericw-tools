@@ -3,7 +3,6 @@
 #include <light/light.hh>
 #include <light/trace.hh> // for clamp_texcoord
 #include <light/entities.hh>
-#include <light/write.hh>
 
 #include <random>
 #include <algorithm> // for std::sort
@@ -11,6 +10,7 @@
 #include <common/qvec.hh>
 
 #include <common/aabb.hh>
+#include <common/litfile.hh>
 
 TEST_SUITE("mathlib")
 {

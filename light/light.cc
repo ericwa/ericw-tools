@@ -336,15 +336,17 @@ light_settings::light_settings()
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
       hdr{this, "hdr",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               write_litfile |= lightfile::external;
               write_litfile |= lightfile::hdr;
+              return true;
           },
           &experimental_group, "write .lit file with e5bgr9 data"},
       bspxhdr{this, "bspxhdr",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               write_litfile |= lightfile::hdr;
               write_litfile |= lightfile::bspxhdr;
+              return true;
           },
           &experimental_group, "writes e5bgr9 data into the bsp itself"},
       world_units_per_luxel{

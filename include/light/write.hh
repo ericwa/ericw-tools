@@ -28,34 +28,6 @@
 struct mbsp_t;
 struct bspdata_t;
 
-constexpr int32_t LIT_VERSION = 1;
-constexpr int32_t LIT_VERSION_E5BGR9 = (0x00010000 | LIT_VERSION);
-
-struct litheader_t
-{
-    struct v1_t
-    {
-        std::array<char, 4> ident = {'Q', 'L', 'I', 'T'};
-        int version;
-
-        // serialize for streams
-        void stream_write(std::ostream &s) const;
-        void stream_read(std::istream &s);
-    };
-    struct v2_t
-    {
-        int numsurfs;
-        int lmsamples;
-
-        // serialize for streams
-        void stream_write(std::ostream &s) const;
-        void stream_read(std::istream &s);
-    };
-
-    v1_t v1;
-    v2_t v2;
-};
-
 constexpr size_t MAXLIGHTMAPSSUP = 16;
 constexpr uint16_t INVALID_LIGHTSTYLE = 0xffffu;
 
@@ -73,5 +45,4 @@ void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, cons
 
 void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source);
 
-uint32_t HDR_PackE5BRG9(qvec3f rgb);
-qvec3f HDR_UnpackE5BRG9(uint32_t packed);
+
