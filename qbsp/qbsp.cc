@@ -456,7 +456,7 @@ qbsp_settings::qbsp_settings()
       qbism{this, "qbism", false, &game_target_group, "target Qbism's extended Quake II BSP format"},
       bsp2{this, "bsp2", false, &game_target_group, "target Quake's extended BSP2 format"},
       bsp2rmq{this, "2psb", false, &game_target_group, "target Quake's extended 2PSB format (RMQ compatible)"},
-      nosubdivide{this, "nosubdivide", [&](source src) { subdivide.set_value(0, src); }, &common_format_group,
+      nosubdivide{this, "nosubdivide", [&](const std::string &, parser_base_t &, source src) { subdivide.set_value(0, src); return true; }, &common_format_group,
           "disable subdivision"},
       software{this, "software", true, &common_format_group,
           "change settings to allow for (or make adjustments to optimize for the lack of) software support"},
@@ -583,8 +583,7 @@ void qbsp_settings::initialize(int argc, const char **argv)
     }
 
     try {
-        token_parser_t p(argc - 1, argv + 1, {"command line"});
-        auto remainder = parse(p);
+        common_settings::initialize(argc - 1, argv + 1);
 
         if (remainder.size() <= 0 || remainder.size() > 2) {
             print_help();
@@ -1694,8 +1693,10 @@ void InitQBSP(int argc, const char **argv)
     // In case we're launched more than once, in testqbsp
     map.reset();
     qbsp_options.reset();
-
-    qbsp_options.run(argc, argv);
+    
+    qbsp_options.preinitialize(argc, argv);
+    qbsp_options.initialize(argc, argv);
+    qbsp_options.postinitialize(argc, argv);
 
     qbsp_options.map_path.replace_extension("map");
 
@@ -1705,6 +1706,8 @@ void InitQBSP(int argc, const char **argv)
 
     /* Start logging to <bspname>.log */
     logging::init(fs::path(qbsp_options.bsp_path).replace_extension("log"), qbsp_options);
+
+    qbsp_options.print_summary();
 
     // Remove already existing files
     if (!qbsp_options.onlyents.value() && qbsp_options.convertmapformat.value() == conversion_t::none) {

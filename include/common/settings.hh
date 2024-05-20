@@ -104,7 +104,7 @@ protected:
     bool change_source(source new_source);
 
 public:
-    ~setting_base() = default;
+    virtual ~setting_base() = default;
 
     // copy constructor is deleted. the trick we use with:
     //
@@ -143,11 +143,13 @@ public:
 // be careful because this won't show up in summary.
 class setting_func : public setting_base
 {
+    using func_type = std::function<bool(const std::string &, parser_base_t &, source)>;
+
 protected:
-    std::function<void(source)> _func;
+    func_type _func;
 
 public:
-    setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
+    setting_func(setting_container *dictionary, const nameset &names, func_type func,
         const setting_group *group = nullptr, const char *description = "");
     bool copy_from(const setting_base &other) override;
     void reset() override;
@@ -619,6 +621,8 @@ public:
     setting_bool q2rtx;
     setting_invertible_bool defaultpaths;
     setting_scalar tex_saturation_boost;
+    setting_string logfile;
+    setting_bool logappend;
 
     common_settings();
 
@@ -631,7 +635,8 @@ public:
     // after parsing has concluded, handle the side effects
     virtual void postinitialize(int argc, const char **argv);
 
-    // run all three steps
-    void run(int argc, const char **argv);
+    // left-over settings that weren't parsed (everything
+    // after the last setting)
+    std::vector<std::string> remainder;
 };
 }; // namespace settings

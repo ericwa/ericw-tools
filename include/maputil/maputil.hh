@@ -19,4 +19,4 @@ See file, 'COPYING', for details.
 
 #pragma once
 
-int maputil_main(int argc, char **argv);
+int maputil_main(int argc, const char **argv);

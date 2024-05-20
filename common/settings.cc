@@ -80,7 +80,7 @@ bool setting_base::change_source(source new_source)
 
 // setting_func
 
-setting_func::setting_func(setting_container *dictionary, const nameset &names, std::function<void(source)> func,
+setting_func::setting_func(setting_container *dictionary, const nameset &names, func_type func,
     const setting_group *group, const char *description)
     : setting_base(dictionary, names, group, description),
       _func(func)
@@ -96,8 +96,7 @@ void setting_func::reset() { }
 
 bool setting_func::parse(const std::string &setting_name, parser_base_t &parser, source source)
 {
-    _func(source);
-    return true;
+    return _func(setting_name, parser, source);
 }
 
 std::string setting_func::string_value() const
@@ -598,7 +597,7 @@ void setting_container::print_rst_documentation()
     for (auto &[group, settings] : grouped()) {
         if (group == nullptr || group->type == expected_source::commandline) {
             if (group == nullptr) {
-                print_rst_heading("Uncategeorized", '-');
+                print_rst_heading("Uncategorized", '-');
             } else {
                 print_rst_heading(group->name, '-');
             }
@@ -681,8 +680,7 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
 
         if (parser.token == "help" || parser.token == "h" || parser.token == "?") {
             print_help();
-        }
-        if (parser.token == "rst") {
+        } else if (parser.token == "rst") {
             print_rst_documentation();
         }
 
@@ -742,7 +740,9 @@ common_settings::common_settings()
       defaultpaths{this, "defaultpaths", true, &game_group,
           "whether the compiler should attempt to automatically derive game/base paths for games that support it"},
       tex_saturation_boost{this, "tex_saturation_boost", 0.0f, 0.0f, 1.0f, &game_group,
-          "increase texture saturation to match original Q2 tools"}
+          "increase texture saturation to match original Q2 tools"},
+    logfile{this, "logfile", "auto", "\"path\"", &logging_group, "File to output logging data to. If unchanged, it is set by the tool."},
+    logappend{this, "logappend", false, &logging_group, "Whether to append to log file or replace"}
 {
 }
 
@@ -760,13 +760,11 @@ void common_settings::preinitialize(int argc, const char **argv)
 void common_settings::initialize(int argc, const char **argv)
 {
     token_parser_t p(argc, argv, {"command line"});
-    parse(p);
+    remainder = parse(p);
 }
 
 void common_settings::postinitialize(int argc, const char **argv)
 {
-    print_summary();
-
     configureTBB(threads.value(), lowpriority.value());
 
     if (verbose.value()) {
@@ -788,12 +786,5 @@ void common_settings::postinitialize(int argc, const char **argv)
     if (nocolor.value()) {
         logging::enable_color_codes = false;
     }
-}
-
-void common_settings::run(int argc, const char **argv)
-{
-    preinitialize(argc, argv);
-    initialize(argc, argv);
-    postinitialize(argc, argv);
 }
 } // namespace settings

@@ -51,7 +51,7 @@ enum class flag : uint8_t
     NONE = 0, // none of the below (still prints though)
     DEFAULT = nth_bit(0), // prints everywhere
     VERBOSE = nth_bit(1), // prints everywhere, if enabled
-    PROGRESS = nth_bit(2), // prints only to stdout
+    PROGRESS = nth_bit(2), // prints only to stdout, if enabled
     PERCENT = nth_bit(3), // prints everywhere, if enabled
     STAT = nth_bit(4), // prints everywhere, if enabled
     CLOCK_ELAPSED = nth_bit(5), // overrides displayElapsed if disabled
@@ -65,7 +65,7 @@ extern bool enable_color_codes;
 void preinitialize();
 
 // initialize logging subsystem
-void init(const fs::path &filename, const settings::common_settings &settings);
+void init(std::optional<fs::path> filename, const settings::common_settings &settings);
 
 // shutdown logging subsystem
 void close();

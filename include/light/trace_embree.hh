@@ -51,6 +51,7 @@ const std::set<const mface_t *> &ShadowCastingSolidFacesSet();
 
 struct ray_io
 {
+    RTCRayHit   ray;
     float   maxdist;
     int     index;
     qvec3f  color;
@@ -67,15 +68,30 @@ struct ray_io
     int     dynamic_style = 0;
 };
 
-class raystream_embree_base_t
+class raystream_embree_common_t
 {
-public:
-    inline raystream_embree_base_t() = default;
-    virtual ~raystream_embree_base_t() = default;
+protected:
+    aligned_vector<ray_io> _rays;
 
-    virtual constexpr const size_t numPushedRays() const = 0;
-    virtual constexpr ray_io &getRay(size_t index) = 0;
-    virtual constexpr const ray_io &getRay(size_t index) const = 0;
+public:
+    inline raystream_embree_common_t() = default;
+    inline raystream_embree_common_t(size_t capacity)
+    {
+        _rays.reserve(capacity);
+    }
+    virtual ~raystream_embree_common_t() = default;
+
+    void resize(size_t size)
+    {
+        _rays.resize(size);
+    }
+
+    ray_io &getRay(size_t index) { return _rays[index]; }
+    const ray_io &getRay(size_t index) const { return _rays[index]; };
+
+    const size_t numPushedRays() const { return _rays.size(); }
+
+    void clearPushedRays() { _rays.clear(); }
 
     inline qvec3f getPushedRayColor(size_t j) const
     {
@@ -96,33 +112,6 @@ public:
 
         return result;
     }
-};
-
-template<typename TRay = ray_io>
-class raystream_embree_common_t : public raystream_embree_base_t
-{
-protected:
-    aligned_vector<TRay> _rays;
-
-public:
-    inline raystream_embree_common_t() = default;
-    inline raystream_embree_common_t(size_t capacity)
-    {
-        _rays.reserve(capacity);
-    }
-    virtual ~raystream_embree_common_t() = default;
-
-    constexpr void resize(size_t size)
-    {
-        _rays.resize(size);
-    }
-
-    constexpr ray_io &getRay(size_t index) override { return _rays[index]; }
-    constexpr const ray_io &getRay(size_t index) const override { return _rays[index]; };
-
-    constexpr const size_t numPushedRays() const override { return _rays.size(); }
-
-    constexpr void clearPushedRays() { _rays.clear(); }
 
 protected:
     static inline RTCRayHit SetupRay(unsigned int rayindex, const qvec3f &start, const qvec3f &dir, float dist)
@@ -159,11 +148,11 @@ struct ray_source_info : public
     RTCIntersectContext
 #endif
 {
-    raystream_embree_base_t *raystream; // may be null if this ray is not from a ray stream
+    raystream_embree_common_t *raystream; // may be null if this ray is not from a ray stream
     const modelinfo_t *self;
     int shadowmask;
 
-    ray_source_info(raystream_embree_base_t *raystream_, const modelinfo_t *self_, int shadowmask_);
+    ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_);
 #ifdef HAVE_EMBREE4
     RTCIntersectArguments setup_intersection_arguments();
     RTCOccludedArguments setup_occluded_arguments();
@@ -220,22 +209,7 @@ inline const sceneinfo &Embree_SceneinfoForGeomID(unsigned int geomID)
     }
 }
 
-struct ray_io_intersection : public ray_io
-{
-    RTCRayHit   ray;
-
-    constexpr ray_io_intersection() = default;
-    constexpr ray_io_intersection(const ray_io_intersection &) = default;
-    constexpr ray_io_intersection(ray_io_intersection &&) = default;
-
-    constexpr ray_io_intersection(ray_io &&io, const RTCRayHit &ray) :
-        ray_io(io),
-        ray(ray)
-    {
-    }
-};
-
-class raystream_intersection_t : public raystream_embree_common_t<ray_io_intersection>
+class raystream_intersection_t : public raystream_embree_common_t
 {
 public:
     using raystream_embree_common_t::raystream_embree_common_t;
@@ -246,12 +220,12 @@ public:
         const RTCRayHit rayHit = SetupRay(_rays.size(), origin, dir, dist);
         _rays.emplace_back(
             ray_io {
+                .ray = rayHit,
                 .maxdist = dist,
                 .index = i,
                 .color = color ? *color : qvec3f{},
                 .normalcontrib = normalcontrib ? *normalcontrib : qvec3f{}
-            },
-            rayHit
+            }
         );
     }
 
@@ -303,22 +277,7 @@ public:
     }
 };
 
-struct ray_io_occlusion : public ray_io
-{
-    RTCRay   ray;
-
-    constexpr ray_io_occlusion() = default;
-    constexpr ray_io_occlusion(const ray_io_occlusion &) = default;
-    constexpr ray_io_occlusion(ray_io_occlusion &&) = default;
-
-    constexpr ray_io_occlusion(ray_io &&io, const RTCRay &ray) :
-        ray_io(io),
-        ray(ray)
-    {
-    }
-};
-
-class raystream_occlusion_t : public raystream_embree_common_t<ray_io_occlusion>
+class raystream_occlusion_t : public raystream_embree_common_t
 {
 public:
     using raystream_embree_common_t::raystream_embree_common_t;
@@ -329,12 +288,12 @@ public:
         const RTCRay ray = SetupRay(_rays.size(), origin, dir, dist).ray;
         _rays.emplace_back(
             ray_io {
+                .ray = { ray },
                 .maxdist = dist,
                 .index = i,
                 .color = color ? *color : qvec3f{},
                 .normalcontrib = normalcontrib ? *normalcontrib : qvec3f{}
-            },
-            ray
+            }
         );
     }
 
@@ -349,11 +308,11 @@ public:
         for (int i = 0; i < _numrays; ++i)
             rtcOccluded1(scene, &_rays[i], &embree4_args);
 #else
-        rtcOccluded1M(scene, &ctx2, &_rays.data()->ray, _rays.size(), sizeof(_rays[0]));
+        rtcOccluded1M(scene, &ctx2, &_rays.data()->ray.ray, _rays.size(), sizeof(_rays[0]));
 #endif
     }
 
-    inline bool getPushedRayOccluded(size_t j) const { return (_rays[j].ray.tfar < 0.0f); }
+    inline bool getPushedRayOccluded(size_t j) const { return (_rays[j].ray.ray.tfar < 0.0f); }
 
-    inline const qvec3f &getPushedRayDir(size_t j) const { return *((qvec3f *)&_rays[j].ray.dir_x); }
+    inline const qvec3f &getPushedRayDir(size_t j) const { return *((qvec3f *)&_rays[j].ray.ray.dir_x); }
 };
