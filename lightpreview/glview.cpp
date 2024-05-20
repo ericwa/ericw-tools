@@ -192,6 +192,7 @@ uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
+uniform float brightness;
 
 void main() {
     if (drawnormals) {
@@ -222,7 +223,7 @@ void main() {
         }
 
         // 2.0 for overbright
-        color = vec4(texcolor * lmcolor * 2.0, opacity);
+        color = vec4(texcolor * lmcolor * 2.0, opacity) * pow(2.0, brightness);
     }
 }
 )";
@@ -289,6 +290,7 @@ uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
+uniform float brightness;
 
 uniform vec3 eye_origin;
 
@@ -322,6 +324,7 @@ void main() {
             vec3 dir = normalize(fragment_world_pos - eye_origin);
             color = vec4(texture(texture_sampler, dir).rgb, 1.0);
         }
+        color = color * pow(2.0, brightness);
     }
 }
 )";
@@ -552,6 +555,7 @@ void GLView::initializeGL()
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
+    m_program_brightness_location = m_program->uniformLocation("brightness");
     m_program->release();
 
     m_skybox_program->bind();
@@ -566,6 +570,7 @@ void GLView::initializeGL()
     m_skybox_program_drawnormals_location = m_skybox_program->uniformLocation("drawnormals");
     m_skybox_program_drawflat_location = m_skybox_program->uniformLocation("drawflat");
     m_skybox_program_style_scalars_location = m_skybox_program->uniformLocation("style_scalars");
+    m_skybox_program_brightness_location = m_skybox_program->uniformLocation("brightness");
     m_skybox_program->release();
 
     m_program_wireframe->bind();
@@ -654,6 +659,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
+    m_program->setUniformValue(m_program_brightness_location, m_brightness);
 
     m_skybox_program->bind();
     m_skybox_program->setUniformValue(m_skybox_program_mvp_location, MVP);
@@ -666,6 +672,7 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_fullbright_location, m_fullbright);
     m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
+    m_skybox_program->setUniformValue(m_skybox_program_brightness_location, m_brightness);
 
     // resolves whether to render a particular drawcall as opaque
     auto draw_as_opaque = [&](const drawcall_t &draw) -> bool {
@@ -1030,6 +1037,12 @@ void GLView::setShowBmodels(bool bmodels)
 {
     // force re-upload of face visibility
     m_showBmodels = bmodels;
+    update();
+}
+
+void GLView::setBrightness(float brightness)
+{
+    m_brightness = brightness;
     update();
 }
 

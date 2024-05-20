@@ -117,6 +117,7 @@ private:
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
     bool m_drawTranslucencyAsOpaque = false;
     bool m_showBmodels = true;
+    float m_brightness = 0.0f;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -193,6 +194,7 @@ private:
     int m_program_drawnormals_location = 0;
     int m_program_drawflat_location = 0;
     int m_program_style_scalars_location = 0;
+    int m_program_brightness_location = 0;
 
     // uniform locations (skybox program)
     int m_skybox_program_mvp_location = 0;
@@ -206,6 +208,7 @@ private:
     int m_skybox_program_drawnormals_location = 0;
     int m_skybox_program_drawflat_location = 0;
     int m_skybox_program_style_scalars_location = 0;
+    int m_skybox_program_brightness_location = 0;
 
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;
@@ -250,6 +253,7 @@ public:
     const bool &getKeepOrigin() const { return m_keepOrigin; }
     void setDrawTranslucencyAsOpaque(bool drawopaque);
     void setShowBmodels(bool bmodels);
+    void setBrightness(float brightness);
 
     void takeScreenshot(QString destPath, int w, int h);
 
