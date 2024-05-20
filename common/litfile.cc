@@ -79,11 +79,11 @@ uint32_t HDR_PackE5BRG9(qvec3f rgb)
     const int prelim_exponent = std::max(-B - 1, (int)std::floor(std::log2(max_comp))) + 1 + B;
 
     // refined shared exponent
-    const int max_s = (int)std::floor((max_comp / std::powf(2, prelim_exponent - B - N)) + 0.5f);
+    const int max_s = (int)std::floor((max_comp / std::pow(2.0f, prelim_exponent - B - N)) + 0.5f);
 
     int refined_exponent = std::clamp((max_s < (1 << N)) ? prelim_exponent : prelim_exponent + 1, 0, 0x1f);
 
-    const float scale = std::powf(2, refined_exponent - B - N);
+    const float scale = std::pow(2.0f, refined_exponent - B - N);
 
     int r_integer = std::clamp((int)std::floor((r / scale) + 0.5), 0, 0x1ff);
     int g_integer = std::clamp((int)std::floor((g / scale) + 0.5), 0, 0x1ff);
@@ -120,7 +120,7 @@ qvec3f HDR_UnpackE5BRG9(uint32_t packed)
     const uint32_t green_int = (packed >> 9) & 0x1ff;
     const uint32_t red_int =  packed & 0x1ff;
 
-    const float multiplier = pow(2.0f, static_cast<float>(exponent));
+    const float multiplier = std::pow(2.0f, static_cast<float>(exponent));
 
     return qvec3f(red_int, green_int, blue_int) * multiplier;
 }
