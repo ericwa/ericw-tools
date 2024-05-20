@@ -933,7 +933,12 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
     lit_path.replace_extension(".lit");
 
     try {
-        m_litdata = LoadLitFile(lit_path);
+        auto lit_variant = LoadLitFile(lit_path);
+
+        if (auto* lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
+            m_litdata = std::move(lit1_ptr->rgbdata);
+        }
+        // FIXME: handle hdr variant
     } catch (const std::runtime_error &error) {
         logging::print("error loading lit: {}", error.what());
         m_litdata = {};

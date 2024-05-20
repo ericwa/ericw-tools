@@ -126,7 +126,7 @@ qvec3f HDR_UnpackE5BRG9(uint32_t packed)
     return qvec3f(red_int, green_int, blue_int) * multiplier;
 }
 
-std::vector<uint8_t> LoadLitFile(const fs::path &path)
+std::variant<lit1_t, lit_hdr> LoadLitFile(const fs::path &path)
 {
     std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -139,16 +139,23 @@ std::vector<uint8_t> LoadLitFile(const fs::path &path)
 
     int version;
     stream >= version;
-    if (version != 1) {
-        throw std::runtime_error("invalid lit version");
+    if (version == LIT_VERSION) {
+        std::vector<uint8_t> litdata;
+        while (stream.good()) {
+            uint8_t b;
+            stream >= b;
+            litdata.push_back(b);
+        }
+        return {lit1_t{.rgbdata = std::move(litdata)}};
+    } else if (version == LIT_VERSION_E5BGR9) {
+        std::vector<uint32_t> litdata;
+        while (stream.good()) {
+            uint32_t sample;
+            stream >= sample;
+            litdata.push_back(sample);
+        }
+        return {lit_hdr{.samples = std::move(litdata)}};
     }
 
-    std::vector<uint8_t> litdata;
-    while (stream.good()) {
-        uint8_t b;
-        stream >= b;
-        litdata.push_back(b);
-    }
-
-    return litdata;
+    throw std::runtime_error("invalid lit version");
 }

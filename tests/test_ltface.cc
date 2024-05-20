@@ -118,9 +118,17 @@ testresults_lit_t QbspVisLight_Q1(
     auto lit_path = fs::path(test_quake_maps_dir) / name.filename();
     lit_path.replace_extension(".lit");
 
-    std::vector<uint8_t> litdata = LoadLitFile(lit_path);
+    auto lit_variant = LoadLitFile(lit_path);
+    std::vector<uint8_t> lit_bytes;
 
-    return testresults_lit_t{.bsp = res.bsp, .bspx = res.bspx, .lit = litdata};
+    if (auto* lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
+        lit_bytes = std::move(lit1_ptr->rgbdata);
+    }
+    // FIXME: handle hdr variant
+
+    return testresults_lit_t{.bsp = std::move(res.bsp),
+                             .bspx = std::move(res.bspx),
+                             .lit = std::move(lit_bytes)};
 }
 
 testresults_t QbspVisLight_Q2(
