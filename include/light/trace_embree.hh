@@ -81,17 +81,17 @@ public:
     }
     virtual ~raystream_embree_common_t() = default;
 
-    constexpr void resize(size_t size)
+    void resize(size_t size)
     {
         _rays.resize(size);
     }
 
-    constexpr ray_io &getRay(size_t index) { return _rays[index]; }
-    constexpr const ray_io &getRay(size_t index) const { return _rays[index]; };
+    ray_io &getRay(size_t index) { return _rays[index]; }
+    const ray_io &getRay(size_t index) const { return _rays[index]; };
 
-    constexpr const size_t numPushedRays() const { return _rays.size(); }
+    const size_t numPushedRays() const { return _rays.size(); }
 
-    constexpr void clearPushedRays() { _rays.clear(); }
+    void clearPushedRays() { _rays.clear(); }
 
     inline qvec3f getPushedRayColor(size_t j) const
     {
