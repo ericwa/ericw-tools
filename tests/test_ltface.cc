@@ -4,6 +4,7 @@
 #include <light/ltface.hh>
 #include <light/surflight.hh>
 #include <common/bspinfo.hh>
+#include <common/litfile.hh>
 #include <qbsp/qbsp.hh>
 #include <testmaps.hh>
 #include <vis/vis.hh>

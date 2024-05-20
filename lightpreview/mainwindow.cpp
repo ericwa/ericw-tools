@@ -52,6 +52,7 @@ See file, 'COPYING', for details.
 #include <QDesktopServices>
 
 #include <common/bspfile.hh>
+#include <common/litfile.hh>
 #include <qbsp/qbsp.hh>
 #include <vis/vis.hh>
 #include <light/light.hh>

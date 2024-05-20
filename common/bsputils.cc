@@ -1121,33 +1121,6 @@ qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const facee
     }
 }
 
-std::vector<uint8_t> LoadLitFile(const fs::path &path)
-{
-    std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
-    stream >> endianness<std::endian::little>;
-
-    std::array<char, 4> ident;
-    stream >= ident;
-    if (ident != std::array<char, 4>{'Q', 'L', 'I', 'T'}) {
-        throw std::runtime_error("invalid lit ident");
-    }
-
-    int version;
-    stream >= version;
-    if (version != 1) {
-        throw std::runtime_error("invalid lit version");
-    }
-
-    std::vector<uint8_t> litdata;
-    while (stream.good()) {
-        uint8_t b;
-        stream >= b;
-        litdata.push_back(b);
-    }
-
-    return litdata;
-}
-
 static void AddLeafs(const mbsp_t *bsp, int nodenum, std::map<int, std::vector<int>> &cluster_to_leafnums)
 {
     if (nodenum < 0) {

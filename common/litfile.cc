@@ -21,6 +21,7 @@
 #include <common/cmdlib.hh>
 
 #include <algorithm>
+#include <fstream>
 
 // litheader_t::v1_t
 
@@ -123,4 +124,31 @@ qvec3f HDR_UnpackE5BRG9(uint32_t packed)
     const float multiplier = std::pow(2.0f, static_cast<float>(exponent));
 
     return qvec3f(red_int, green_int, blue_int) * multiplier;
+}
+
+std::vector<uint8_t> LoadLitFile(const fs::path &path)
+{
+    std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
+    stream >> endianness<std::endian::little>;
+
+    std::array<char, 4> ident;
+    stream >= ident;
+    if (ident != std::array<char, 4>{'Q', 'L', 'I', 'T'}) {
+        throw std::runtime_error("invalid lit ident");
+    }
+
+    int version;
+    stream >= version;
+    if (version != 1) {
+        throw std::runtime_error("invalid lit version");
+    }
+
+    std::vector<uint8_t> litdata;
+    while (stream.good()) {
+        uint8_t b;
+        stream >= b;
+        litdata.push_back(b);
+    }
+
+    return litdata;
 }

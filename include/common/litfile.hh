@@ -18,9 +18,11 @@
 */
 
 #include <common/qvec.hh>
+#include <common/fs.hh>
 
 #include <array>
 #include <iostream>
+#include <vector>
 
 constexpr int32_t LIT_VERSION = 1;
 constexpr int32_t LIT_VERSION_E5BGR9 = (0x00010000 | LIT_VERSION);
@@ -52,3 +54,5 @@ struct litheader_t
 
 uint32_t HDR_PackE5BRG9(qvec3f rgb);
 qvec3f HDR_UnpackE5BRG9(uint32_t packed);
+
+std::vector<uint8_t> LoadLitFile(const fs::path &path);
