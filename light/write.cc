@@ -371,31 +371,85 @@ static std::vector<qvec4f> BoxBlurImage(const std::vector<qvec4f> &input, int w,
     return res;
 }
 
-static unsigned int HDR_PackResult(qvec4f rgba)
+static constexpr float HDR_ONE = 128.0f; // logical value for 1.0 lighting (quake's overbrights give 255).
+
+/**
+ * Packs a float3 into a 32-bit integer.
+ *
+ * Follows the OpenGL 4.6 Core spec, section 8.5.2 Encoding of Special Internal Formats.
+ *
+ * See HDR_UnpackE5BRG9 for the format description.
+ */
+uint32_t HDR_PackE5BRG9(qvec3f rgb)
 {
-#define HDR_ONE 128.0f // logical value for 1.0 lighting (quake's overbrights give 255).
-    // we want 0-1-like values. except that we can oversample and express smaller values too.
-    float r = rgba[0] / HDR_ONE;
-    float g = rgba[1] / HDR_ONE;
-    float b = rgba[2] / HDR_ONE;
+    constexpr int N = 9; // bits per component
+    constexpr int B = 15; // exponent bias
+    constexpr int Emax = 31; // max allowed exponent bias value
 
-    int e = 0;
-    float m = std::max(std::max(r, g), b);
-    float scale;
+    // slightly under 2^16
+    constexpr float max_representable = \
+        (static_cast<float>((1 << N) - 1) / static_cast<float>(1 << N)) * \
+                static_cast<float>(1 << (Emax - B));
 
-    if (m >= 0.5f) { // positive exponent
-        while (m >= (1 << (e)) && e < 30 - 15) // don't do nans.
-            e++;
-    } else { // negative exponent...
-        while (m < 1 / (1 << -e) && e > -15) // don't do nans.
-            e--;
-    }
+    // clamp inputs
+    const float r = std::max(0.0f, std::min(rgb[0], max_representable));
+    const float g = std::max(0.0f, std::min(rgb[1], max_representable));
+    const float b = std::max(0.0f, std::min(rgb[2], max_representable));
 
-    scale = powf(2, (float)e - 9);
+    const float max_comp = std::max(std::max(r, g), b);
 
-    return ((e + 15) << 27) | (std::min((int)std::lround(b / scale + 0.5f), 0x1ff) << 18) |
-           (std::min((int)std::lround(g / scale + 0.5f), 0x1ff) << 9) |
-           (std::min((int)std::lround(r / scale + 0.5f), 0x1ff) << 0);
+    // avoid division by 0 below if the input is (0, 0, 0)
+    if (max_comp == 0.0f)
+        return 0;
+
+    // preliminary shared exponent
+    const int prelim_exponent = std::max(-B - 1, (int)std::floor(std::log2(max_comp))) + 1 + B;
+
+    // refined shared exponent
+    const int max_s = (int)std::floor((max_comp / std::powf(2, prelim_exponent - B - N)) + 0.5f);
+
+    int refined_exponent = std::clamp((max_s < (1 << N)) ? prelim_exponent : prelim_exponent + 1, 0, 0x1f);
+
+    const float scale = std::powf(2, refined_exponent - B - N);
+
+    int r_integer = std::clamp((int)std::floor((r / scale) + 0.5), 0, 0x1ff);
+    int g_integer = std::clamp((int)std::floor((g / scale) + 0.5), 0, 0x1ff);
+    int b_integer = std::clamp((int)std::floor((b / scale) + 0.5), 0, 0x1ff);
+
+    return (refined_exponent << 27) | (b_integer << 18) | (g_integer << 9) | (r_integer << 0);
+}
+
+/**
+ * Takes a e5bgr9 value as used in the LIGHTING_E5BGR9 lump and unpacks it into a float3
+ * in the order (red, green, blue).
+ *
+ * The packed format is, from highest-order to lowest-order bits:
+ *
+ * - top 5 bits: biased_exponent in [0, 31]
+ * - next 9 bits: blue_int in [0, 511]
+ * - next 9 bits: green_int in [0, 511]
+ * - bottom 9 bits: red_int in [0, 511]
+ *
+ * the conversion to floating point goes like:
+ *
+ * blue_float = 2^(biased_exponent - 24) * blue_int
+ *
+ * this is following OpenGL 4.6 Core spec, section 8.25 Shared Exponent Texture Color Conversion
+ */
+qvec3f HDR_UnpackE5BRG9(uint32_t packed)
+{
+    // grab the top 5 bits. this is a value in [0, 31].
+    const uint32_t biased_exponent = packed >> 27;
+    // the actual exponent gets remapped to the range [-24, 7].
+    const int exponent = static_cast<int>(biased_exponent) - 24;
+
+    const uint32_t blue_int = (packed >> 18) & 0x1ff;
+    const uint32_t green_int = (packed >> 9) & 0x1ff;
+    const uint32_t red_int =  packed & 0x1ff;
+
+    const float multiplier = pow(2.0f, static_cast<float>(exponent));
+
+    return qvec3f(red_int, green_int, blue_int) * multiplier;
 }
 
 /**
@@ -449,7 +503,8 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
                 qvec4f color = output_color.at(sampleindex);
 
                 if (hdr) {
-                    unsigned int c = HDR_PackResult(color);
+                    uint32_t c = HDR_PackE5BRG9(color / HDR_ONE);
+                    // Write uint32 in little-endian
                     *hdr++ = c & 0xFF;
                     *hdr++ = (c >> 8) & 0xFF;
                     *hdr++ = (c >> 16) & 0xFF;
@@ -557,7 +612,8 @@ static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *
                     coord_frac_y);
 
             if (hdr) {
-                unsigned int c = HDR_PackResult(color);
+                uint32_t c = HDR_PackE5BRG9(color / HDR_ONE);
+                // Write uint32 in little-endian
                 *hdr++ = c & 0xFF;
                 *hdr++ = (c >> 8) & 0xFF;
                 *hdr++ = (c >> 16) & 0xFF;

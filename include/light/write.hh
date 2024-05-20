@@ -72,3 +72,6 @@ void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, cons
 void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, const std::vector<uint8_t> &lux_filebase);
 
 void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source);
+
+uint32_t HDR_PackE5BRG9(qvec3f rgb);
+qvec3f HDR_UnpackE5BRG9(uint32_t packed);
