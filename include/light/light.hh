@@ -422,8 +422,11 @@ public:
 
     void set_parameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;
-    void postinitialize(int argc, const char **argv) override;
     void reset() override;
+
+    // nb: split out because we want to print the summary later
+    // since light loads stuff from worldspawn
+    void light_postinitialize(int argc, const char **argv);
 };
 }; // namespace settings
 

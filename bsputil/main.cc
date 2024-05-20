@@ -20,7 +20,7 @@
 #include <bsputil/bsputil.hh>
 #include <common/log.hh>
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
     try {
         return bsputil_main(argc, argv);

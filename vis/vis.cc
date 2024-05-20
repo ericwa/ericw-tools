@@ -43,10 +43,9 @@ setting_group vis_advanced_group{"Advanced", 300, expected_source::commandline};
 void vis_settings::initialize(int argc, const char **argv)
 {
     try {
-        token_parser_t p(argc - 1, argv + 1, {"command line"});
-        auto remainder = parse(p);
+        common_settings::initialize(argc - 1, argv + 1);
 
-        if (remainder.size() <= 0 || remainder.size() > 1) {
+        if (remainder.size() <= 0 || remainder.size() > 2) {
             print_help();
         }
 
@@ -719,7 +718,9 @@ int vis_main(int argc, const char **argv)
     bspdata_t bspdata;
     const bspversion_t *loadversion;
 
-    vis_options.run(argc, argv);
+    vis_options.preinitialize(argc, argv);
+    vis_options.initialize(argc, argv);
+    vis_options.postinitialize(argc, argv);
 
     vis_options.sourceMap.replace_extension("bsp");
 
@@ -727,6 +728,8 @@ int vis_main(int argc, const char **argv)
                       .replace_filename(vis_options.sourceMap.stem().string() + "-vis")
                       .replace_extension("log"),
         vis_options);
+
+    vis_options.print_summary();
 
     stateinterval = std::chrono::minutes(5); /* 5 minutes */
     starttime = statetime = I_FloatTime();

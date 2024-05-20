@@ -24,4 +24,4 @@
 struct mbsp_t;
 
 void ExportWad(std::ofstream &wadfile, const mbsp_t *bsp);
-int bsputil_main(int argc, char **argv);
+int bsputil_main(int argc, const char **argv);

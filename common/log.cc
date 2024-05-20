@@ -63,17 +63,40 @@ void preinitialize()
 #endif
 }
 
-void init(const fs::path &filename, const settings::common_settings &settings)
+void init(std::optional<fs::path> filename, const settings::common_settings &settings)
 {
-    if (settings.log.value()) {
-        logfile.open(filename);
+    if (!settings.log.value()) {
+        return;
+    }
+
+    if (settings.logfile.is_changed()) {
+        filename = settings.logfile.value();
+    }
+
+    if (!filename.has_value()) {
+        return;
+    }
+
+    fs::path p = fs::absolute(filename.value());
+
+    if (logfile) {
+        logfile.close();
+    }
+
+    logfile.open(p, settings.logappend.value() ? std::ios_base::app : std::ios_base::trunc);
+    
+    if (logfile) {
+        print(flag::PROGRESS, "logging to {} ({})\n", p.string(), settings.logappend.value() ? "append" : "truncate");
         fmt::print(logfile, "---- {} / ericw-tools {} ----\n", settings.program_name, ERICWTOOLS_VERSION);
+    } else {
+        print(flag::PROGRESS, "WARNING: can't log to {}\n", p.string());
     }
 }
 
 void close()
 {
     if (logfile) {
+        fmt::print(logfile, "\n\n");
         logfile.close();
     }
 }
@@ -114,7 +137,7 @@ void print(flag logflag, const char *str)
 
     if (logflag != flag::PERCENT) {
         // log file, if open
-        if (logfile) {
+        if (logfile && logflag != flag::PROGRESS) {
             logfile << str;
             logfile.flush();
         }

@@ -313,24 +313,26 @@ light_settings::light_settings()
               {"rays", visapprox_t::RAYS}},
           &debug_group,
           "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"},
-      lit{this, "lit", [&](source) { write_litfile |= lightfile::external; }, &output_group, "write .lit file"},
-      lit2{this, "lit2", [&](source) { write_litfile = lightfile::lit2; }, &experimental_group, "write .lit2 file"},
-      bspxlit{this, "bspxlit", [&](source) { write_litfile |= lightfile::bspx; }, &experimental_group,
+      lit{this, "lit", [&](const std::string &, parser_base_t &, source) { write_litfile |= lightfile::external; return true; }, &output_group, "write .lit file"},
+      lit2{this, "lit2", [&](const std::string &, parser_base_t &, source) { write_litfile = lightfile::lit2; return true; }, &experimental_group, "write .lit2 file"},
+      bspxlit{this, "bspxlit", [&](const std::string &, parser_base_t &, source) { write_litfile |= lightfile::bspx; return true; }, &experimental_group,
           "writes rgb data into the bsp itself"},
-      lux{this, "lux", [&](source) { write_luxfile |= lightfile::external; }, &experimental_group, "write .lux file"},
-      bspxlux{this, "bspxlux", [&](source) { write_luxfile |= lightfile::bspx; }, &experimental_group,
+      lux{this, "lux", [&](const std::string &, parser_base_t &, source) { write_luxfile |= lightfile::external; return true; }, &experimental_group, "write .lux file"},
+      bspxlux{this, "bspxlux", [&](const std::string &, parser_base_t &, source) { write_luxfile |= lightfile::bspx; return true; }, &experimental_group,
           "writes lux data into the bsp itself"},
       bspxonly{this, "bspxonly",
-          [&](source source) {
+          [&](const std::string &, parser_base_t &, source src) {
               write_litfile = lightfile::bspx;
               write_luxfile = lightfile::bspx;
-              novanilla.set_value(true, source);
+              novanilla.set_value(true, src);
+              return true;
           },
           &experimental_group, "writes both rgb and directions data *only* into the bsp itself"},
       bspx{this, "bspx",
-          [&](source source) {
+          [&](const std::string &, parser_base_t &, source) {
               write_litfile = lightfile::bspx;
               write_luxfile = lightfile::bspx;
+              return true;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
       world_units_per_luxel{
@@ -349,58 +351,66 @@ light_settings::light_settings()
           &experimental_group, "lightgrid BSPX lump to use"},
 
       dirtdebug{this, {"dirtdebug", "debugdirt"},
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::dirt;
+              return true;
           },
           &debug_group, "only save the AO values to the lightmap"},
 
       bouncedebug{this, "bouncedebug",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::bounce;
+              return true;
           },
           &debug_group, "only save bounced lighting to the lightmap"},
 
       bouncelightsdebug{this, "bouncelightsdebug",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::bouncelights;
+              return true;
           },
           &debug_group, "only save bounced emitters lighting to the lightmap"},
 
       phongdebug{this, "phongdebug",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::phong;
+              return true;
           },
           &debug_group, "only save phong normals to the lightmap"},
 
       phongdebug_obj{this, "phongdebug_obj",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::phong_obj;
+              return true;
           },
           &debug_group, "save map as .obj with phonged normals"},
 
       debugoccluded{this, "debugoccluded",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::debugoccluded;
+              return true;
           },
           &debug_group, "save light occlusion data to lightmap"},
 
       debugneighbours{this, "debugneighbours",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::debugneighbours;
+              return true;
           },
           &debug_group, "save neighboring faces data to lightmap (requires -debugface)"},
 
       debugmottle{this, "debugmottle",
-          [&](source) {
+          [&](const std::string &, parser_base_t &, source) {
               CheckNoDebugModeSet();
               debugmode = debugmodes::mottle;
+              return true;
           },
           &debug_group, "save mottle pattern to lightmap"}
 {
@@ -416,8 +426,7 @@ void light_settings::set_parameters(int argc, const char **argv)
 void light_settings::initialize(int argc, const char **argv)
 {
     try {
-        token_parser_t p(argc - 1, argv + 1, {"command line"});
-        auto remainder = parse(p);
+        common_settings::initialize(argc - 1, argv + 1);
 
         if (remainder.size() <= 0 || remainder.size() > 1) {
             print_help();
@@ -430,7 +439,7 @@ void light_settings::initialize(int argc, const char **argv)
     }
 }
 
-void light_settings::postinitialize(int argc, const char **argv)
+void light_settings::light_postinitialize(int argc, const char **argv)
 {
     if (gate.value() > 1) {
         logging::print("WARNING: -gate value greater than 1 may cause artifacts\n");
@@ -493,8 +502,6 @@ void light_settings::postinitialize(int argc, const char **argv)
     if (light_options.facestyles.value() > MAXLIGHTMAPS && !light_options.compilerstyle_max.is_changed()) {
         light_options.compilerstyle_max.set_value(INVALID_LIGHTSTYLE, settings::source::COMMANDLINE);
     }
-
-    common_settings::postinitialize(argc, argv);
 }
 
 void light_settings::reset()
@@ -1335,6 +1342,7 @@ int light_main(int argc, const char **argv)
 
     light_options.preinitialize(argc, argv);
     light_options.initialize(argc, argv);
+    light_options.postinitialize(argc, argv);
 
     auto start = I_FloatTime();
     fs::path source = light_options.sourceMap;
@@ -1407,7 +1415,8 @@ int light_main(int argc, const char **argv)
 
     LoadEntities(light_options, &bsp);
 
-    light_options.postinitialize(argc, argv);
+    light_options.light_postinitialize(argc, argv);
+    light_options.print_summary();
 
     all_uncompressed_vis = DecompressAllVis(&bsp, true);
     FindModelInfo(&bsp);

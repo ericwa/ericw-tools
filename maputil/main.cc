@@ -20,7 +20,7 @@ See file, 'COPYING', for details.
 #include <maputil/maputil.hh>
 #include <common/log.hh>
 
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
     try {
         return maputil_main(argc, argv);
