@@ -36,7 +36,7 @@ pygments==2.17.2
     # via
     #   furo
     #   sphinx
-requests==2.31.0
+requests==2.32.0
     # via sphinx
 six==1.16.0
     # via livereload
