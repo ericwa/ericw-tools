@@ -955,16 +955,21 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
     auto lit_path = fs_path;
     lit_path.replace_extension(".lit");
 
+    m_hdr_litdata = {};
+    m_litdata = {};
+
     try {
         auto lit_variant = LoadLitFile(lit_path);
 
         if (auto* lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
             m_litdata = std::move(lit1_ptr->rgbdata);
+        } else if (auto* lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
+            m_hdr_litdata = std::move(lit_hdr_ptr->samples);
         }
-        // FIXME: handle hdr variant
     } catch (const std::runtime_error &error) {
         logging::print("error loading lit: {}", error.what());
         m_litdata = {};
+        m_hdr_litdata = {};
     }
 
     return 0;
@@ -988,7 +993,7 @@ void MainWindow::compileThreadExited()
     auto ents = EntData_Parse(bsp);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, m_litdata, false, bspx_decoupled_lm->isChecked());
+    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, m_litdata, m_hdr_litdata, false, bspx_decoupled_lm->isChecked());
 
     glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
 

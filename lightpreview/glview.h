@@ -158,6 +158,7 @@ private:
 
     std::shared_ptr<QOpenGLTexture> placeholder_texture;
     std::shared_ptr<QOpenGLTexture> lightmap_texture;
+    bool m_is_hdr_lightmap = false;
     /**
      * 1D texture, one uint8 per face.
      *
@@ -195,6 +196,7 @@ private:
     int m_program_drawflat_location = 0;
     int m_program_style_scalars_location = 0;
     int m_program_brightness_location = 0;
+    int m_program_lightmap_scale_location = 0;
 
     // uniform locations (skybox program)
     int m_skybox_program_mvp_location = 0;
@@ -209,6 +211,7 @@ private:
     int m_skybox_program_drawflat_location = 0;
     int m_skybox_program_style_scalars_location = 0;
     int m_skybox_program_brightness_location = 0;
+    int m_skybox_program_lightmap_scale_location = 0;
 
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;

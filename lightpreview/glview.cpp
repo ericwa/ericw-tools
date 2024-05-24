@@ -193,6 +193,7 @@ uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
 uniform float brightness;
+uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
 
 void main() {
     if (drawnormals) {
@@ -222,8 +223,11 @@ void main() {
             }
         }
 
-        // 2.0 for overbright
-        color = vec4(texcolor * lmcolor * 2.0, opacity) * pow(2.0, brightness);
+        // if we're using SDR lightmaps (0-255 components mapped to 0..1 by OpenGL,
+        // lightmap_scale == 2.0 to remap 0..1 to 0..2).
+        //
+        // HDR lightmaps are used as-is with lightmap_scale == 1.
+        color = vec4(texcolor * lmcolor * lightmap_scale, opacity) * pow(2.0, brightness);
     }
 }
 )";
@@ -315,8 +319,8 @@ void main() {
                 lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
 
-            // 2.0 for overbright
-            color = vec4(lmcolor * 2.0, 1.0);
+            // see lightmap_scale documentation above
+            color = vec4(lmcolor * lightmap_scale, 1.0);
         }
         else
         {
@@ -556,6 +560,7 @@ void GLView::initializeGL()
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
     m_program_brightness_location = m_program->uniformLocation("brightness");
+    m_program_lightmap_scale_location = m_program->uniformLocation("lightmap_scale");
     m_program->release();
 
     m_skybox_program->bind();
@@ -571,6 +576,7 @@ void GLView::initializeGL()
     m_skybox_program_drawflat_location = m_skybox_program->uniformLocation("drawflat");
     m_skybox_program_style_scalars_location = m_skybox_program->uniformLocation("style_scalars");
     m_skybox_program_brightness_location = m_skybox_program->uniformLocation("brightness");
+    m_skybox_program_lightmap_scale_location = m_skybox_program->uniformLocation("lightmap_scale");
     m_skybox_program->release();
 
     m_program_wireframe->bind();
@@ -660,6 +666,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
     m_program->setUniformValue(m_program_brightness_location, m_brightness);
+    m_program->setUniformValue(m_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
 
     m_skybox_program->bind();
     m_skybox_program->setUniformValue(m_skybox_program_mvp_location, MVP);
@@ -673,6 +680,7 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
     m_skybox_program->setUniformValue(m_skybox_program_brightness_location, m_brightness);
+    m_skybox_program->setUniformValue(m_skybox_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
 
     // resolves whether to render a particular drawcall as opaque
     auto draw_as_opaque = [&](const drawcall_t &draw) -> bool {
@@ -1196,18 +1204,34 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         // FIXME: empty map access if there are no lightmaps
         const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
 
+        m_is_hdr_lightmap = false;
+        for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
+            if (!style_atlas.e5brg9_samples.empty()) {
+                m_is_hdr_lightmap = true;
+                break;
+            }
+        }
+
         lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
         lightmap_texture->setSize(lm_tex.width, lm_tex.height);
         lightmap_texture->setLayers(highest_depth + 1);
-        lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+        if (m_is_hdr_lightmap)
+            lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGB9E5);
+        else
+            lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
         lightmap_texture->setAutoMipMapGenerationEnabled(false);
         lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->allocateStorage();
 
-        for (auto &style : lightmap.style_to_lightmap_atlas) {
-            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
-                reinterpret_cast<const void *>(style.second.pixels.data()));
+        for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
+            if (m_is_hdr_lightmap) {
+                lightmap_texture->setData(0, style_index, QOpenGLTexture::RGB, QOpenGLTexture::UInt32_RGB9_E5,
+                                          reinterpret_cast<const void *>(style_atlas.e5brg9_samples.data()));
+            } else {
+                lightmap_texture->setData(0, style_index, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+                                          reinterpret_cast<const void *>(style_atlas.rgba8_samples.data()));
+            }
         }
     }
 
