@@ -63,7 +63,8 @@
 // entity 1
 {
 "classname" "info_player_start"
-"origin" "-292 0 156"
+"origin" "-292 0 72"
+"angle" "90"
 }
 // entity 2
 {
@@ -72,4 +73,13 @@
 "light" "15"
 "delay" "2"
 "_color" "0.75 0.65 0.44"
+}
+// entity 3
+{
+"classname" "light"
+"origin" "88 -176 260"
+"light" "15"
+"delay" "2"
+"_color" "0 1 0.7"
+"style" "5"
 }

@@ -252,7 +252,7 @@ TEST_CASE("emissive cube artifacts")
 
         auto lm_coord = extents.worldToLMCoord(pos);
 
-        auto sample = LM_Sample(&bsp, nullptr, extents, lm_info.offset, lm_coord);
+        auto sample = LM_Sample(&bsp, floor, nullptr, extents, lm_info.offset, lm_coord);
         CHECK(sample[0] >= previous_sample[0]);
 
         // logging::print("world: {} lm_coord: {} sample: {} lm size: {}x{}\n", pos, lm_coord, sample, lm_info.lmwidth,
@@ -306,7 +306,7 @@ static void CheckFaceLuxels(
 
     for (int x = 0; x < extents.width(); ++x) {
         for (int y = 0; y < extents.height(); ++y) {
-            const qvec3b sample = LM_Sample(&bsp, lit, extents, face.lightofs, {x, y});
+            const qvec3b sample = LM_Sample(&bsp, &face, lit, extents, face.lightofs, {x, y});
             INFO("sample ", x, ", ", y);
             lambda(sample);
         }
@@ -341,7 +341,7 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
     const auto coord = extents.worldToLMCoord(point);
     const auto int_coord = qvec2i(round(coord[0]), round(coord[1]));
 
-    const qvec3b sample = LM_Sample(bsp, lit, extents, offset, int_coord);
+    const qvec3b sample = LM_Sample(bsp, face, lit, extents, offset, int_coord);
     INFO("world point: ", point);
     INFO("lm coord: ", coord[0], ", ", coord[1]);
     INFO("lm int_coord: ", int_coord[0], ", ", int_coord[1]);
@@ -378,7 +378,7 @@ static void CheckFaceLuxelAtPoint_HDR(const mbsp_t *bsp, const dmodelh2_t *model
     const auto coord = extents.worldToLMCoord(point);
     const auto int_coord = qvec2i(round(coord[0]), round(coord[1]));
 
-    const qvec3f sample = LM_Sample_HDR(bsp, extents, offset, int_coord, lit, bspx);
+    const qvec3f sample = LM_Sample_HDR(bsp, face, extents, offset, int_coord, lit, bspx);
     INFO("world point: ", point);
     INFO("lm coord: ", coord[0], ", ", coord[1]);
     INFO("lm int_coord: ", int_coord[0], ", ", int_coord[1]);

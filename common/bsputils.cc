@@ -1085,10 +1085,23 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
 }
 
 /**
- * Samples the lightmap at an integer coordinate
- * FIXME: this doesn't deal with styles at all
+ * Returns an offset, in samples, from the start of the face's lightmaps to the location of the given style data.
+ * Returns -1 if the face doesn't have lightmaps for that style.
  */
-qvec3b LM_Sample(const mbsp_t *bsp, const lit_variant_t *lit, const faceextents_t &faceextents,
+static int StyleOffset(int style, const mface_t *face, const faceextents_t &faceextents)
+{
+    for (int i = 0; i < face->styles.size(); ++i) {
+        if (face->styles[i] == style) {
+            return i * faceextents.width() * faceextents.height();
+        }
+    }
+    return -1;
+}
+
+/**
+ * Samples the lightmap at an integer coordinate in style 0
+ */
+qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *lit, const faceextents_t &faceextents,
     int byte_offset_of_face, qvec2i coord)
 {
     if (byte_offset_of_face == -1) {
@@ -1100,7 +1113,12 @@ qvec3b LM_Sample(const mbsp_t *bsp, const lit_variant_t *lit, const faceextents_
     Q_assert(coord[0] < faceextents.width());
     Q_assert(coord[1] < faceextents.height());
 
-    int pixel = coord[0] + (coord[1] * faceextents.width());
+    int style_offset = StyleOffset(0, face, faceextents);
+    if (style_offset == -1) {
+        return {0, 0, 0};
+    }
+
+    int pixel = style_offset + coord[0] + (coord[1] * faceextents.width());
 
     assert(byte_offset_of_face >= 0);
 
@@ -1124,7 +1142,7 @@ qvec3b LM_Sample(const mbsp_t *bsp, const lit_variant_t *lit, const faceextents_
     }
 }
 
-qvec3f LM_Sample_HDR(const mbsp_t *bsp,
+qvec3f LM_Sample_HDR(const mbsp_t *bsp, const mface_t *face,
                      const faceextents_t &faceextents,
                      int byte_offset_of_face, qvec2i coord,
                      const lit_variant_t *lit, const bspxentries_t *bspx)
@@ -1138,7 +1156,12 @@ qvec3f LM_Sample_HDR(const mbsp_t *bsp,
     Q_assert(coord[0] < faceextents.width());
     Q_assert(coord[1] < faceextents.height());
 
-    int pixel = coord[0] + (coord[1] * faceextents.width());
+    int style_offset = StyleOffset(0, face, faceextents);
+    if (style_offset == -1) {
+        return {0, 0, 0};
+    }
+
+    int pixel = style_offset + coord[0] + (coord[1] * faceextents.width());
 
     assert(byte_offset_of_face >= 0);
 

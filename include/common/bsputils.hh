@@ -175,10 +175,11 @@ public:
     qvec3f LMCoordToWorld(qvec2f lm) const;
 };
 
-qvec3b LM_Sample(const mbsp_t *bsp, const lit_variant_t *lit, const faceextents_t &faceextents,
+qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *lit, const faceextents_t &faceextents,
     int byte_offset_of_face, qvec2i coord);
 
 qvec3f LM_Sample_HDR(const mbsp_t *bsp,
+                     const mface_t *face,
                      const faceextents_t &faceextents,
                      int byte_offset_of_face, qvec2i coord,
                      const lit_variant_t *lit = nullptr, const bspxentries_t *bspx = nullptr);
