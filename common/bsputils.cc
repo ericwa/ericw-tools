@@ -1124,6 +1124,40 @@ qvec3b LM_Sample(const mbsp_t *bsp, const lit_variant_t *lit, const faceextents_
     }
 }
 
+qvec3f LM_Sample_HDR(const mbsp_t *bsp,
+                     const faceextents_t &faceextents,
+                     int byte_offset_of_face, qvec2i coord,
+                     const lit_variant_t *lit, const bspxentries_t *bspx)
+{
+    if (byte_offset_of_face == -1) {
+        return {0, 0, 0};
+    }
+
+    Q_assert(coord[0] >= 0);
+    Q_assert(coord[1] >= 0);
+    Q_assert(coord[0] < faceextents.width());
+    Q_assert(coord[1] < faceextents.height());
+
+    int pixel = coord[0] + (coord[1] * faceextents.width());
+
+    assert(byte_offset_of_face >= 0);
+
+    const uint32_t *packed_samples = nullptr;
+    if (lit && std::holds_alternative<lit_hdr>(*lit)) {
+        packed_samples = std::get_if<lit_hdr>(lit)->samples.data();
+    } else if (bspx) {
+        if (auto it = bspx->find("LIGHTING_E5BGR9"); it != bspx->end()) {
+            // FIXME: alignment ignored
+            packed_samples = reinterpret_cast<const uint32_t *>(it->second.data());
+        }
+    }
+
+    if (!packed_samples)
+        throw std::runtime_error("LM_Sample_HDR requires either an HDR .lit file or BSPX lump");
+
+    return HDR_UnpackE5BRG9(packed_samples[byte_offset_of_face + pixel]);
+}
+
 static void AddLeafs(const mbsp_t *bsp, int nodenum, std::map<int, std::vector<int>> &cluster_to_leafnums)
 {
     if (nodenum < 0) {

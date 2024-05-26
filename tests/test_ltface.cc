@@ -354,6 +354,43 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
     CHECK(delta[2] <= 1);
 }
 
+static void CheckFaceLuxelAtPoint_HDR(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3f &expected_color,
+                                      const qvec3f &allowed_delta,
+                                      const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const lit_variant_t *lit = nullptr,
+                                      const bspxentries_t *bspx = nullptr)
+{
+    auto *face = BSP_FindFaceAtPoint(bsp, model, point, normal);
+    REQUIRE(face);
+
+    faceextents_t extents;
+    int offset;
+
+    if (bspx && bspx->find("DECOUPLED_LM") != bspx->end()) {
+        auto lm_info = BSPX_DecoupledLM(*bspx, Face_GetNum(bsp, face));
+        extents = faceextents_t(*face, *bsp, lm_info.lmwidth, lm_info.lmheight, lm_info.world_to_lm_space);
+        offset = lm_info.offset;
+    } else {
+        // vanilla lightmap
+        extents = faceextents_t(*face, *bsp, LMSCALE_DEFAULT);
+        offset = face->lightofs;
+    }
+
+    const auto coord = extents.worldToLMCoord(point);
+    const auto int_coord = qvec2i(round(coord[0]), round(coord[1]));
+
+    const qvec3f sample = LM_Sample_HDR(bsp, extents, offset, int_coord, lit, bspx);
+    INFO("world point: ", point);
+    INFO("lm coord: ", coord[0], ", ", coord[1]);
+    INFO("lm int_coord: ", int_coord[0], ", ", int_coord[1]);
+    INFO("face num: ", Face_GetNum(bsp, face));
+    INFO("actual sample: ", sample[0], " ", sample[1], " ", sample[2]);
+
+    qvec3f delta = qv::abs(sample - expected_color);
+    CHECK(delta[0] <= allowed_delta[0]);
+    CHECK(delta[1] <= allowed_delta[1]);
+    CHECK(delta[2] <= allowed_delta[2]);
+}
+
 TEST_CASE("emissive lights")
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_flush.map", {});
@@ -1063,5 +1100,45 @@ TEST_CASE("hl_light_black")
         CHECK(face->lightofs == -1);
 
         // confirmed that this renders as expected (black lightmaps) in the Dec 2023 HL build
+    }
+}
+
+TEST_CASE("q1 hdr")
+{
+    // center of the room on the floor.
+    // in the non-HDR lightmap this is pure black (0, 0, 0), but in the HDR one it's still receiving a bit of light
+    const qvec3f testpoint = {0, 0, 48};
+    const qvec3f testnormal = {0, 0, 1};
+    const qvec3f expected_hdr_color = {0.00215912, 0.0018692, 0.00126648};
+
+    SUBCASE("lit")
+    {
+        auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_hdrtest.map", {"-hdr"});
+
+        CHECK(bspx.empty());
+        CHECK(std::holds_alternative<lit_hdr>(lit));
+
+        // check hdr .lit file
+        CheckFaceLuxelAtPoint_HDR(&bsp, &bsp.dmodels[0], expected_hdr_color, {1e-5, 1e-5, 1e-5}, testpoint, testnormal,
+                                  &lit, &bspx);
+
+        // check internal lightmap - greyscale, since Q1
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
+    }
+
+    SUBCASE("bspx")
+    {
+        auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_hdrtest.map", {"-bspxhdr"});
+
+        CHECK(bspx.size() == 1);
+        CHECK(bspx.find("LIGHTING_E5BGR9") != bspx.end());
+        CHECK(std::holds_alternative<lit_none>(lit));
+
+        // check hdr BSPX lump
+        CheckFaceLuxelAtPoint_HDR(&bsp, &bsp.dmodels[0], expected_hdr_color, {1e-5, 1e-5, 1e-5}, testpoint, testnormal,
+                                  &lit, &bspx);
+
+        // check internal lightmap - greyscale, since Q1
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
     }
 }

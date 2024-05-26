@@ -68,6 +68,8 @@ struct lit_hdr {
     std::vector<uint32_t> samples;
 };
 
-using lit_variant_t = std::variant<lit1_t, lit_hdr>;
+struct lit_none {};
+
+using lit_variant_t = std::variant<lit1_t, lit_hdr, lit_none>;
 
 lit_variant_t LoadLitFile(const fs::path &path);

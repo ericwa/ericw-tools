@@ -126,9 +126,13 @@ qvec3f HDR_UnpackE5BRG9(uint32_t packed)
     return qvec3f(red_int, green_int, blue_int) * multiplier;
 }
 
-std::variant<lit1_t, lit_hdr> LoadLitFile(const fs::path &path)
+lit_variant_t LoadLitFile(const fs::path &path)
 {
     std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
+    if (!stream.good()) {
+        return { lit_none() };
+    }
+
     stream >> endianness<std::endian::little>;
 
     std::array<char, 4> ident;
