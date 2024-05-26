@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#pragma once
+
 #include <common/qvec.hh>
 #include <common/fs.hh>
 
@@ -66,4 +68,6 @@ struct lit_hdr {
     std::vector<uint32_t> samples;
 };
 
-std::variant<lit1_t, lit_hdr> LoadLitFile(const fs::path &path);
+using lit_variant_t = std::variant<lit1_t, lit_hdr>;
+
+lit_variant_t LoadLitFile(const fs::path &path);

@@ -25,6 +25,7 @@
 #include <common/qvec.hh>
 #include <common/aabb.hh>
 #include <common/polylib.hh>
+#include <common/litfile.hh>
 
 #include <iterator>
 #include <string>
@@ -174,7 +175,7 @@ public:
     qvec3f LMCoordToWorld(qvec2f lm) const;
 };
 
-qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents,
+qvec3b LM_Sample(const mbsp_t *bsp, const lit_variant_t *lit, const faceextents_t &faceextents,
     int byte_offset_of_face, qvec2i coord);
 
 std::map<int, std::vector<int>> ClusterToLeafnumsMap(const mbsp_t *bsp);

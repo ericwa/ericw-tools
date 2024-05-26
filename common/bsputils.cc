@@ -1088,7 +1088,7 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
  * Samples the lightmap at an integer coordinate
  * FIXME: this doesn't deal with styles at all
  */
-qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents,
+qvec3b LM_Sample(const mbsp_t *bsp, const lit_variant_t *lit, const faceextents_t &faceextents,
     int byte_offset_of_face, qvec2i coord)
 {
     if (byte_offset_of_face == -1) {
@@ -1107,7 +1107,10 @@ qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const facee
     const uint8_t *data = bsp->dlightdata.data();
 
     if (lit) {
-        const uint8_t *lit_data = lit->data();
+        if (!std::holds_alternative<lit1_t>(*lit))
+            throw std::runtime_error("not implemented");
+
+        const uint8_t *lit_data = std::get_if<lit1_t>(lit)->rgbdata.data();
 
         return qvec3f{lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 0],
             lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 1],

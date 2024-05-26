@@ -119,16 +119,10 @@ testresults_lit_t QbspVisLight_Q1(
     lit_path.replace_extension(".lit");
 
     auto lit_variant = LoadLitFile(lit_path);
-    std::vector<uint8_t> lit_bytes;
-
-    if (auto* lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
-        lit_bytes = std::move(lit1_ptr->rgbdata);
-    }
-    // FIXME: handle hdr variant
 
     return testresults_lit_t{.bsp = std::move(res.bsp),
                              .bspx = std::move(res.bspx),
-                             .lit = std::move(lit_bytes)};
+                             .lit = std::move(lit_variant)};
 }
 
 testresults_t QbspVisLight_Q2(
@@ -304,7 +298,7 @@ TEST_CASE("-novanilla + -world_units_per_luxel")
 
 template<class L>
 static void CheckFaceLuxels(
-    const mbsp_t &bsp, const mface_t &face, L &&lambda, const std::vector<uint8_t> *lit = nullptr)
+    const mbsp_t &bsp, const mface_t &face, L &&lambda, const lit_variant_t *lit = nullptr)
 {
     // FIXME: assumes no DECOUPLED_LM lump
 
@@ -325,7 +319,7 @@ static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
 }
 
 static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3b &expected_color,
-    const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const std::vector<uint8_t> *lit = nullptr,
+    const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const lit_variant_t *lit = nullptr,
     const bspxentries_t *bspx = nullptr)
 {
     auto *face = BSP_FindFaceAtPoint(bsp, model, point, normal);
