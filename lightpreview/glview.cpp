@@ -34,6 +34,7 @@ See file, 'COPYING', for details.
 #include <QOpenGLDebugLogger>
 #include <QStandardPaths>
 #include <QDateTime>
+#include <QMessageBox>
 
 #include <common/decompile.hh>
 #include <common/bspfile.hh>
@@ -515,6 +516,28 @@ void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 #endif
 }
 
+void GLView::error(const QString &context, const QString &context2, const QString &log)
+{
+    QMessageBox errorMessage(
+            QMessageBox::Critical,
+            tr("GLSL Error"), tr("%1: %2:\n\n%3").arg(context).arg(context2).arg(log), QMessageBox::Ok, this);
+    
+    errorMessage.exec();
+}
+
+void GLView::setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag)
+{
+    if (!dest->addShaderFromSourceCode(QOpenGLShader::Vertex, vert)) {
+        error(context, "vertex shader",dest->log());
+    }
+    if (!dest->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
+        error(context, "fragment shader",dest->log());
+    }
+    if (!dest->link()) {
+        error(context, "link",dest->log());
+    }
+}
+
 void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -529,24 +552,16 @@ void GLView::initializeGL()
     // set up shader
 
     m_program = new QOpenGLShaderProgram();
-    m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader);
-    m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader);
-    assert(m_program->link());
+    setupProgram("m_program", m_program, s_vertShader, s_fragShader);
 
     m_skybox_program = new QOpenGLShaderProgram();
-    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_skyboxVertShader);
-    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_skyboxFragShader);
-    assert(m_skybox_program->link());
+    setupProgram("m_skybox_program", m_skybox_program, s_skyboxVertShader,s_skyboxFragShader);
 
     m_program_simple = new QOpenGLShaderProgram();
-    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Simple);
-    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Simple);
-    assert(m_program_simple->link());
+    setupProgram("m_program_simple", m_program_simple, s_vertShader_Simple, s_fragShader_Simple);
 
     m_program_wireframe = new QOpenGLShaderProgram();
-    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Wireframe);
-    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Wireframe);
-    assert(m_program_wireframe->link());
+    setupProgram("m_program_wireframe", m_program_wireframe, s_vertShader_Wireframe, s_fragShader_Wireframe);
 
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");

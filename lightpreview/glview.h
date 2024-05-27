@@ -260,6 +260,9 @@ public:
 
     void takeScreenshot(QString destPath, int w, int h);
 
+private:
+    void error(const QString &context, const QString &context2, const QString &log);
+    void setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag);
 protected:
     void initializeGL() override;
     void paintGL() override;
