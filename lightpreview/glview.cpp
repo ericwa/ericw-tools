@@ -34,6 +34,7 @@ See file, 'COPYING', for details.
 #include <QOpenGLDebugLogger>
 #include <QStandardPaths>
 #include <QDateTime>
+#include <QMessageBox>
 
 #include <common/decompile.hh>
 #include <common/bspfile.hh>
@@ -192,6 +193,8 @@ uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
+uniform float brightness;
+uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
 
 void main() {
     if (drawnormals) {
@@ -221,8 +224,11 @@ void main() {
             }
         }
 
-        // 2.0 for overbright
-        color = vec4(texcolor * lmcolor * 2.0, opacity);
+        // if we're using SDR lightmaps (0-255 components mapped to 0..1 by OpenGL,
+        // lightmap_scale == 2.0 to remap 0..1 to 0..2).
+        //
+        // HDR lightmaps are used as-is with lightmap_scale == 1.
+        color = vec4(texcolor * lmcolor * lightmap_scale, opacity) * pow(2.0, brightness);
     }
 }
 )";
@@ -289,6 +295,8 @@ uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
+uniform float brightness;
+uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
 
 uniform vec3 eye_origin;
 
@@ -313,8 +321,8 @@ void main() {
                 lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
             }
 
-            // 2.0 for overbright
-            color = vec4(lmcolor * 2.0, 1.0);
+            // see lightmap_scale documentation above
+            color = vec4(lmcolor * lightmap_scale, 1.0);
         }
         else
         {
@@ -322,6 +330,7 @@ void main() {
             vec3 dir = normalize(fragment_world_pos - eye_origin);
             color = vec4(texture(texture_sampler, dir).rgb, 1.0);
         }
+        color = color * pow(2.0, brightness);
     }
 }
 )";
@@ -507,6 +516,28 @@ void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 #endif
 }
 
+void GLView::error(const QString &context, const QString &context2, const QString &log)
+{
+    QMessageBox errorMessage(
+            QMessageBox::Critical,
+            tr("GLSL Error"), tr("%1: %2:\n\n%3").arg(context).arg(context2).arg(log), QMessageBox::Ok, this);
+    
+    errorMessage.exec();
+}
+
+void GLView::setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag)
+{
+    if (!dest->addShaderFromSourceCode(QOpenGLShader::Vertex, vert)) {
+        error(context, "vertex shader",dest->log());
+    }
+    if (!dest->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
+        error(context, "fragment shader",dest->log());
+    }
+    if (!dest->link()) {
+        error(context, "link",dest->log());
+    }
+}
+
 void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
@@ -521,24 +552,16 @@ void GLView::initializeGL()
     // set up shader
 
     m_program = new QOpenGLShaderProgram();
-    m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader);
-    m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader);
-    assert(m_program->link());
+    setupProgram("m_program", m_program, s_vertShader, s_fragShader);
 
     m_skybox_program = new QOpenGLShaderProgram();
-    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Vertex, s_skyboxVertShader);
-    m_skybox_program->addShaderFromSourceCode(QOpenGLShader::Fragment, s_skyboxFragShader);
-    assert(m_skybox_program->link());
+    setupProgram("m_skybox_program", m_skybox_program, s_skyboxVertShader,s_skyboxFragShader);
 
     m_program_simple = new QOpenGLShaderProgram();
-    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Simple);
-    m_program_simple->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Simple);
-    assert(m_program_simple->link());
+    setupProgram("m_program_simple", m_program_simple, s_vertShader_Simple, s_fragShader_Simple);
 
     m_program_wireframe = new QOpenGLShaderProgram();
-    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Vertex, s_vertShader_Wireframe);
-    m_program_wireframe->addShaderFromSourceCode(QOpenGLShader::Fragment, s_fragShader_Wireframe);
-    assert(m_program_wireframe->link());
+    setupProgram("m_program_wireframe", m_program_wireframe, s_vertShader_Wireframe, s_fragShader_Wireframe);
 
     m_program->bind();
     m_program_mvp_location = m_program->uniformLocation("MVP");
@@ -552,6 +575,8 @@ void GLView::initializeGL()
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
+    m_program_brightness_location = m_program->uniformLocation("brightness");
+    m_program_lightmap_scale_location = m_program->uniformLocation("lightmap_scale");
     m_program->release();
 
     m_skybox_program->bind();
@@ -566,6 +591,8 @@ void GLView::initializeGL()
     m_skybox_program_drawnormals_location = m_skybox_program->uniformLocation("drawnormals");
     m_skybox_program_drawflat_location = m_skybox_program->uniformLocation("drawflat");
     m_skybox_program_style_scalars_location = m_skybox_program->uniformLocation("style_scalars");
+    m_skybox_program_brightness_location = m_skybox_program->uniformLocation("brightness");
+    m_skybox_program_lightmap_scale_location = m_skybox_program->uniformLocation("lightmap_scale");
     m_skybox_program->release();
 
     m_program_wireframe->bind();
@@ -654,6 +681,8 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
+    m_program->setUniformValue(m_program_brightness_location, m_brightness);
+    m_program->setUniformValue(m_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
 
     m_skybox_program->bind();
     m_skybox_program->setUniformValue(m_skybox_program_mvp_location, MVP);
@@ -666,6 +695,8 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_fullbright_location, m_fullbright);
     m_skybox_program->setUniformValue(m_skybox_program_drawnormals_location, m_drawNormals);
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
+    m_skybox_program->setUniformValue(m_skybox_program_brightness_location, m_brightness);
+    m_skybox_program->setUniformValue(m_skybox_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
 
     // resolves whether to render a particular drawcall as opaque
     auto draw_as_opaque = [&](const drawcall_t &draw) -> bool {
@@ -1033,6 +1064,12 @@ void GLView::setShowBmodels(bool bmodels)
     update();
 }
 
+void GLView::setBrightness(float brightness)
+{
+    m_brightness = brightness;
+    update();
+}
+
 void GLView::takeScreenshot(QString destPath, int w, int h)
 {
     // update aspect ratio
@@ -1183,18 +1220,34 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         // FIXME: empty map access if there are no lightmaps
         const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
 
+        m_is_hdr_lightmap = false;
+        for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
+            if (!style_atlas.e5brg9_samples.empty()) {
+                m_is_hdr_lightmap = true;
+                break;
+            }
+        }
+
         lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
         lightmap_texture->setSize(lm_tex.width, lm_tex.height);
         lightmap_texture->setLayers(highest_depth + 1);
-        lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
+        if (m_is_hdr_lightmap)
+            lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGB9E5);
+        else
+            lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGBA8_UNorm);
         lightmap_texture->setAutoMipMapGenerationEnabled(false);
         lightmap_texture->setMagnificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->setMinificationFilter(QOpenGLTexture::Linear);
         lightmap_texture->allocateStorage();
 
-        for (auto &style : lightmap.style_to_lightmap_atlas) {
-            lightmap_texture->setData(0, style.first, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
-                reinterpret_cast<const void *>(style.second.pixels.data()));
+        for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
+            if (m_is_hdr_lightmap) {
+                lightmap_texture->setData(0, style_index, QOpenGLTexture::RGB, QOpenGLTexture::UInt32_RGB9_E5,
+                                          reinterpret_cast<const void *>(style_atlas.e5brg9_samples.data()));
+            } else {
+                lightmap_texture->setData(0, style_index, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
+                                          reinterpret_cast<const void *>(style_atlas.rgba8_samples.data()));
+            }
         }
     }
 

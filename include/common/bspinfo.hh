@@ -31,6 +31,15 @@ struct bspdata_t;
 struct mbsp_t;
 struct mface_t;
 
+struct single_style_atlas_t
+{
+    int width = 0, height = 0;
+
+    // only one of these will be populated
+    std::vector<qvec4b> rgba8_samples;
+    std::vector<uint32_t> e5brg9_samples;
+};
+
 struct full_atlas_t
 {
     /**
@@ -38,9 +47,10 @@ struct full_atlas_t
      */
     std::map<int, std::vector<qvec2f>> facenum_to_lightmap_uvs;
 
-    std::map<int, img::texture> style_to_lightmap_atlas;
+    std::map<int, single_style_atlas_t> style_to_lightmap_atlas;
 };
 
-full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata, bool use_bspx, bool use_decoupled);
+full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata,
+                                  const std::vector<uint32_t> &hdr_litdata, bool use_bspx, bool use_decoupled);
 
 void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &name);

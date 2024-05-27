@@ -29,10 +29,10 @@
 #include <common/json.hh>
 #include "common/fs.hh"
 #include "common/imglib.hh"
+#include "common/litfile.hh"
 
 #define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#define STBI_WRITE_NO_STDIO
 #include "../3rdparty/stb_image_write.h"
 
 static std::string hex_string(const uint8_t *bytes, const size_t count)
@@ -224,24 +224,40 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
         (float)nth_bit(reinterpret_cast<const char *>(bspx.at("LMSHIFT").data())[&face - bsp.dfaces.data()])};
 }
 
-full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata, bool use_bspx, bool use_decoupled)
+full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata,
+                                  const std::vector<uint32_t> &hdr_litdata, bool use_bspx, bool use_decoupled)
 {
     struct face_rect
     {
         const mface_t *face;
         faceextents_t extents;
         int32_t lightofs;
-        std::optional<img::texture> texture = std::nullopt;
+
+        // lightmap data for this face
+        int width = 0, height = 0;
+        std::vector<qvec4b> rgba8_samples;
+        std::vector<uint32_t> e5brg9_samples;
+
         size_t atlas = 0;
         size_t x = 0, y = 0;
     };
 
     constexpr size_t atlas_size = 512;
-    const uint8_t *lightdata_source;
-    bool is_rgb;
-    bool is_lit;
 
-    if (!litdata.empty()) {
+    bool is_hdr = false;
+    const uint32_t *hdr_lightdata_source = nullptr; // 1 packed uint32 (e5brg9) per sample
+    const uint8_t *lightdata_source = nullptr; // either greyscale (1 byte per sample) or rgb (3 bytes per sample)
+    bool is_rgb = false;
+    bool is_lit = false;
+
+    if (!hdr_litdata.empty()) {
+        hdr_lightdata_source = hdr_litdata.data();
+        is_hdr = true;
+    } else if (auto it = bspx.find("LIGHTING_E5BGR9"); it != bspx.end()) {
+        // FIXME: alignment ignored
+        hdr_lightdata_source = reinterpret_cast<const uint32_t *>(it->second.data());
+        is_hdr = true;
+    } else if (!litdata.empty()) {
         is_lit = true;
         is_rgb = true;
         lightdata_source = litdata.data();
@@ -352,7 +368,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     }
 
     // calculate final atlas texture size
-    img::texture full_atlas;
+    single_style_atlas_t full_atlas;
     size_t sqrt_count = ceil(sqrt(atlasses.size()));
     size_t trimmed_width = 0, trimmed_height = 0;
 
@@ -379,9 +395,12 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         }
     }
 
-    full_atlas.width = full_atlas.meta.width = trimmed_width;
-    full_atlas.height = full_atlas.meta.height = trimmed_height;
-    full_atlas.pixels.resize(full_atlas.width * full_atlas.height);
+    full_atlas.width = trimmed_width;
+    full_atlas.height = trimmed_height;
+    if (is_hdr)
+        full_atlas.e5brg9_samples.resize(full_atlas.width * full_atlas.height);
+    else
+        full_atlas.rgba8_samples.resize(full_atlas.width * full_atlas.height);
 
     full_atlas_t result;
 
@@ -408,23 +427,42 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
                 continue;
             }
 
-            auto in_pixel =
-                lightdata_source + ((is_lit ? 3 : 1) * rect.lightofs) + (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
+            if (!is_hdr) {
+                auto in_pixel =
+                        lightdata_source + ((is_lit ? 3 : 1) * rect.lightofs) +
+                        (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
 
-            for (size_t y = 0; y < rect.extents.height(); y++) {
-                for (size_t x = 0; x < rect.extents.width(); x++) {
-                    size_t ox = rect.x + x;
-                    size_t oy = rect.y + y;
+                for (size_t y = 0; y < rect.extents.height(); y++) {
+                    for (size_t x = 0; x < rect.extents.width(); x++) {
+                        size_t ox = rect.x + x;
+                        size_t oy = rect.y + y;
 
-                    auto &out_pixel = full_atlas.pixels[(oy * full_atlas.width) + ox];
-                    out_pixel[3] = 255;
+                        auto &out_pixel = full_atlas.rgba8_samples[(oy * full_atlas.width) + ox];
+                        out_pixel[3] = 255;
 
-                    if (is_rgb) {
-                        out_pixel[0] = *in_pixel++;
-                        out_pixel[1] = *in_pixel++;
-                        out_pixel[2] = *in_pixel++;
-                    } else {
-                        out_pixel[0] = out_pixel[1] = out_pixel[2] = *in_pixel++;
+                        if (is_rgb) {
+                            out_pixel[0] = *in_pixel++;
+                            out_pixel[1] = *in_pixel++;
+                            out_pixel[2] = *in_pixel++;
+                        } else {
+                            out_pixel[0] = out_pixel[1] = out_pixel[2] = *in_pixel++;
+                        }
+                    }
+                }
+            } else {
+                // hdr
+
+                auto in_pixel =
+                        hdr_lightdata_source + rect.lightofs +
+                        (rect.extents.numsamples() * style_index);
+
+                for (size_t y = 0; y < rect.extents.height(); y++) {
+                    for (size_t x = 0; x < rect.extents.width(); x++) {
+                        size_t ox = rect.x + x;
+                        size_t oy = rect.y + y;
+
+                        auto &out_pixel = full_atlas.e5brg9_samples[(oy * full_atlas.width) + ox];
+                        out_pixel = *in_pixel++;
                     }
                 }
             }
@@ -439,7 +477,11 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         // copy out the atlas texture
         result.style_to_lightmap_atlas[i] = full_atlas;
 
-        memset(full_atlas.pixels.data(), 0, sizeof(*full_atlas.pixels.data()) * full_atlas.pixels.size());
+        if (!full_atlas.rgba8_samples.empty())
+            memset(full_atlas.rgba8_samples.data(), 0, full_atlas.rgba8_samples.size());
+
+        if (!full_atlas.e5brg9_samples.empty())
+            memset(full_atlas.e5brg9_samples.data(), 0, full_atlas.e5brg9_samples.size() * 4);
     }
 
     auto ExportLightmapUVs = [&full_atlas, &result](const mbsp_t *bsp, const face_rect &face) {
@@ -477,7 +519,8 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
     fs::path obj_path, const fs::path &lightmaps_path_base)
 {
     // FIXME: pass in .lit
-    const auto atlas = build_lightmap_atlas(bsp, bspx, {}, use_bspx, use_decoupled);
+    // FIXME: pass in hdr .lit
+    const auto atlas = build_lightmap_atlas(bsp, bspx, {}, {}, use_bspx, use_decoupled);
 
     if (atlas.facenum_to_lightmap_uvs.empty()) {
         return;
@@ -486,17 +529,40 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
     // e.g. mapname.bsp.lm
     const std::string stem = lightmaps_path_base.stem().string();
 
-    // write .png's, one per style
+    // write .png's (or .hdr's, if e5bgr9 lightmaps), one per style
     for (const auto &[i, full_atlas] : atlas.style_to_lightmap_atlas) {
+        const bool is_hdr = !full_atlas.e5brg9_samples.empty();
         auto lightmaps_path = lightmaps_path_base;
-        lightmaps_path.replace_filename(stem + "_" + std::to_string(i) + ".png");
+        std::string extension = is_hdr ? ".hdr" : ".png";
+        lightmaps_path.replace_filename(stem + "_" + std::to_string(i) + extension);
+
         std::ofstream strm(lightmaps_path, std::ofstream::out | std::ofstream::binary);
-        stbi_write_png_to_func(
-            [](void *context, void *data, int size) {
-                std::ofstream &strm = *((std::ofstream *)context);
-                strm.write((const char *)data, size);
-            },
-            &strm, full_atlas.width, full_atlas.height, 4, full_atlas.pixels.data(), full_atlas.width * 4);
+
+        if (is_hdr) {
+            std::vector<float> temp; // rgb components
+
+            // unpack from e5bgr9 to 3x float
+            for (uint32_t sample : full_atlas.e5brg9_samples) {
+                qvec3f rgb = HDR_UnpackE5BRG9(sample);
+                temp.push_back(rgb[0]);
+                temp.push_back(rgb[1]);
+                temp.push_back(rgb[2]);
+            }
+
+            stbi_write_hdr_to_func(
+                    [](void *context, void *data, int size) {
+                        std::ofstream &strm = *((std::ofstream *) context);
+                        strm.write((const char *) data, size);
+                    },
+                    &strm, full_atlas.width, full_atlas.height, 3, temp.data());
+        } else {
+            stbi_write_png_to_func(
+                    [](void *context, void *data, int size) {
+                        std::ofstream &strm = *((std::ofstream *) context);
+                        strm.write((const char *) data, size);
+                    },
+                    &strm, full_atlas.width, full_atlas.height, 4, full_atlas.rgba8_samples.data(), full_atlas.width * 4);
+        }
         logging::print("wrote {}\n", lightmaps_path);
     }
 

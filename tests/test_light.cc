@@ -10,6 +10,7 @@
 #include <common/qvec.hh>
 
 #include <common/aabb.hh>
+#include <common/litfile.hh>
 
 TEST_SUITE("mathlib")
 {
@@ -1020,5 +1021,51 @@ TEST_SUITE("settings")
         parser_t p("inverse2", {});
         CHECK(light.formula.parse(light.formula.primary_name(), p, settings::source::MAP));
         CHECK(LF_INVERSE2 == light.formula.value());
+    }
+}
+
+
+
+TEST_SUITE("light formats")
+{
+    TEST_CASE("e5bgr9 pack (511, 1, 0)")
+    {
+        uint32_t packed = HDR_PackE5BRG9(qvec3f{511.0f, 1.0f, 0.0f});
+
+        //                  e          | b         | g        | r
+        uint32_t expected = (24 << 27) | (0 << 18) | (1 << 9) | (511 << 0);
+        CHECK(packed == expected);
+
+        qvec3f roundtripped = HDR_UnpackE5BRG9(expected);
+        CHECK(roundtripped[0] == 511);
+        CHECK(roundtripped[1] == 1);
+        CHECK(roundtripped[2] == 0);
+    }
+
+    TEST_CASE("e5bgr9 pack (1'000'000, 0, 0)")
+    {
+        uint32_t packed = HDR_PackE5BRG9(qvec3f{1'000'000.0f, 0.0f, 0.0f});
+
+        //                  e            | b         | g        | r
+        uint32_t expected = (0x1f << 27) | (0 << 18) | (0 << 9) | (0x1ff << 0);
+        CHECK(packed == expected);
+
+        qvec3f roundtripped = HDR_UnpackE5BRG9(packed);
+        CHECK(roundtripped[0] == 65408.0f);
+        CHECK(roundtripped[1] == 0.0f);
+        CHECK(roundtripped[2] == 0.0f);
+    }
+
+    TEST_CASE("e5bgr9 pack (0.1, 0.01, 0.001)")
+    {
+        qvec3f in = qvec3f{0.1, 0.01, 0.001};
+        uint32_t packed = HDR_PackE5BRG9(in);
+
+        qvec3f roundtripped = HDR_UnpackE5BRG9(packed);
+        qvec3f error = qv::abs(in - roundtripped);
+
+        CHECK(error[0] < 0.000098);
+        CHECK(error[1] < 0.00001);
+        CHECK(error[2] < 0.000025);
     }
 }

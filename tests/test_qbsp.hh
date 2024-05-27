@@ -1,8 +1,11 @@
 #include <common/bspfile.hh>
 #include <common/prtfile.hh>
+#include <common/litfile.hh>
+
 #include <string>
 #include <vector>
 #include <map>
+#include <variant>
 
 class mapbrush_t;
 struct mapface_t;
@@ -39,7 +42,7 @@ struct testresults_lit_t
 {
     mbsp_t bsp;
     bspxentries_t bspx;
-    std::vector<uint8_t> lit;
+    lit_variant_t lit;
 };
 
 enum class runvis_t

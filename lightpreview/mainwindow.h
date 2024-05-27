@@ -74,6 +74,7 @@ private:
     QString m_mapFile;
     bspdata_t m_bspdata;
     std::vector<uint8_t> m_litdata;
+    std::vector<uint32_t> m_hdr_litdata;
     settings::common_settings render_settings;
     qint64 m_fileSize = -1;
     ETLogTab m_activeLogTab = ETLogTab::TAB_LIGHTPREVIEW;

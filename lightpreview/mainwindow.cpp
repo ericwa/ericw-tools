@@ -32,6 +32,7 @@ See file, 'COPYING', for details.
 #include <QSplitter>
 #include <QCheckBox>
 #include <QPushButton>
+#include <QSlider>
 #include <QSettings>
 #include <QMenu>
 #include <QMenuBar>
@@ -52,6 +53,7 @@ See file, 'COPYING', for details.
 #include <QDesktopServices>
 
 #include <common/bspfile.hh>
+#include <common/litfile.hh>
 #include <qbsp/qbsp.hh>
 #include <vis/vis.hh>
 #include <light/light.hh>
@@ -327,6 +329,20 @@ void MainWindow::createPropertiesSidebar()
 
     formLayout->addRow(lightstyles_group);
 
+    // brightness slider
+    auto *brightnessSlider = new QSlider(Qt::Horizontal);
+    brightnessSlider->setMinimum(-100);
+    brightnessSlider->setMaximum(100);
+    brightnessSlider->setSliderPosition(0);
+
+    auto *brightnessLabel = new QLabel(QString("0.0"));
+    auto *brightnessLayout = new QHBoxLayout();
+    auto *brightnessReset = new QPushButton(tr("Reset"));
+    brightnessLayout->addWidget(brightnessSlider, 1);
+    brightnessLayout->addWidget(brightnessLabel, 0);
+    brightnessLayout->addWidget(brightnessReset, 0);
+    formLayout->addRow(tr("Exposure"), brightnessLayout);
+
     // wrap formLayout in a scroll area
     auto *form = new QWidget();
     form->setLayout(formLayout);
@@ -396,6 +412,14 @@ void MainWindow::createPropertiesSidebar()
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
     connect(show_bmodels, &QAbstractButton::toggled, this,
         [this](bool checked) { glView->setShowBmodels(checked); });
+    connect(brightnessSlider, &QAbstractSlider::valueChanged, this, [this,brightnessLabel](int value){
+        float brightness = value / 10.0f;
+        brightnessLabel->setText(QString::fromLatin1("%1").arg(brightness, 0, 'f', 2));
+        glView->setBrightness(brightness);
+    });
+    connect(brightnessReset, &QAbstractButton::pressed, this, [this, brightnessSlider](){
+        brightnessSlider->setValue(0);
+    });
 
     // set up load timer
     m_fileReloadTimer = std::make_unique<QTimer>();
@@ -931,11 +955,21 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
     auto lit_path = fs_path;
     lit_path.replace_extension(".lit");
 
+    m_hdr_litdata = {};
+    m_litdata = {};
+
     try {
-        m_litdata = LoadLitFile(lit_path);
+        auto lit_variant = LoadLitFile(lit_path);
+
+        if (auto* lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
+            m_litdata = std::move(lit1_ptr->rgbdata);
+        } else if (auto* lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
+            m_hdr_litdata = std::move(lit_hdr_ptr->samples);
+        }
     } catch (const std::runtime_error &error) {
         logging::print("error loading lit: {}", error.what());
         m_litdata = {};
+        m_hdr_litdata = {};
     }
 
     return 0;
@@ -959,7 +993,7 @@ void MainWindow::compileThreadExited()
     auto ents = EntData_Parse(bsp);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, m_litdata, false, bspx_decoupled_lm->isChecked());
+    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, m_litdata, m_hdr_litdata, false, bspx_decoupled_lm->isChecked());
 
     glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
 

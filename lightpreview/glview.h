@@ -117,6 +117,7 @@ private:
     QOpenGLTexture::Filter m_filter = QOpenGLTexture::Linear;
     bool m_drawTranslucencyAsOpaque = false;
     bool m_showBmodels = true;
+    float m_brightness = 0.0f;
 
     QOpenGLVertexArrayObject m_vao;
     QOpenGLBuffer m_vbo;
@@ -157,6 +158,7 @@ private:
 
     std::shared_ptr<QOpenGLTexture> placeholder_texture;
     std::shared_ptr<QOpenGLTexture> lightmap_texture;
+    bool m_is_hdr_lightmap = false;
     /**
      * 1D texture, one uint8 per face.
      *
@@ -193,6 +195,8 @@ private:
     int m_program_drawnormals_location = 0;
     int m_program_drawflat_location = 0;
     int m_program_style_scalars_location = 0;
+    int m_program_brightness_location = 0;
+    int m_program_lightmap_scale_location = 0;
 
     // uniform locations (skybox program)
     int m_skybox_program_mvp_location = 0;
@@ -206,6 +210,8 @@ private:
     int m_skybox_program_drawnormals_location = 0;
     int m_skybox_program_drawflat_location = 0;
     int m_skybox_program_style_scalars_location = 0;
+    int m_skybox_program_brightness_location = 0;
+    int m_skybox_program_lightmap_scale_location = 0;
 
     // uniform locations (wireframe program)
     int m_program_wireframe_mvp_location = 0;
@@ -250,9 +256,13 @@ public:
     const bool &getKeepOrigin() const { return m_keepOrigin; }
     void setDrawTranslucencyAsOpaque(bool drawopaque);
     void setShowBmodels(bool bmodels);
+    void setBrightness(float brightness);
 
     void takeScreenshot(QString destPath, int w, int h);
 
+private:
+    void error(const QString &context, const QString &context2, const QString &log);
+    void setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag);
 protected:
     void initializeGL() override;
     void paintGL() override;

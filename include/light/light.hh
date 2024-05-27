@@ -171,7 +171,9 @@ enum class lightfile
     external = 1,
     bspx = 2,
     both = external | bspx,
-    lit2 = 4
+    lit2 = 4,
+    hdr = 8,
+    bspxhdr = 16,
 };
 
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
@@ -393,6 +395,8 @@ public:
     setting_func bspxlux;
     setting_func bspxonly;
     setting_func bspx;
+    setting_func hdr;
+    setting_func bspxhdr;
     setting_scalar world_units_per_luxel;
     setting_bool litonly;
     setting_bool nolights;

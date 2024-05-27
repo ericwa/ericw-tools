@@ -1085,10 +1085,23 @@ qvec3f faceextents_t::LMCoordToWorld(qvec2f lm) const
 }
 
 /**
- * Samples the lightmap at an integer coordinate
- * FIXME: this doesn't deal with styles at all
+ * Returns an offset, in samples, from the start of the face's lightmaps to the location of the given style data.
+ * Returns -1 if the face doesn't have lightmaps for that style.
  */
-qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const faceextents_t &faceextents,
+static int StyleOffset(int style, const mface_t *face, const faceextents_t &faceextents)
+{
+    for (int i = 0; i < face->styles.size(); ++i) {
+        if (face->styles[i] == style) {
+            return i * faceextents.width() * faceextents.height();
+        }
+    }
+    return -1;
+}
+
+/**
+ * Samples the lightmap at an integer coordinate in style 0
+ */
+qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *lit, const faceextents_t &faceextents,
     int byte_offset_of_face, qvec2i coord)
 {
     if (byte_offset_of_face == -1) {
@@ -1100,14 +1113,22 @@ qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const facee
     Q_assert(coord[0] < faceextents.width());
     Q_assert(coord[1] < faceextents.height());
 
-    int pixel = coord[0] + (coord[1] * faceextents.width());
+    int style_offset = StyleOffset(0, face, faceextents);
+    if (style_offset == -1) {
+        return {0, 0, 0};
+    }
+
+    int pixel = style_offset + coord[0] + (coord[1] * faceextents.width());
 
     assert(byte_offset_of_face >= 0);
 
     const uint8_t *data = bsp->dlightdata.data();
 
     if (lit) {
-        const uint8_t *lit_data = lit->data();
+        if (!std::holds_alternative<lit1_t>(*lit))
+            throw std::runtime_error("not implemented");
+
+        const uint8_t *lit_data = std::get_if<lit1_t>(lit)->rgbdata.data();
 
         return qvec3f{lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 0],
             lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 1],
@@ -1121,31 +1142,43 @@ qvec3b LM_Sample(const mbsp_t *bsp, const std::vector<uint8_t> *lit, const facee
     }
 }
 
-std::vector<uint8_t> LoadLitFile(const fs::path &path)
+qvec3f LM_Sample_HDR(const mbsp_t *bsp, const mface_t *face,
+                     const faceextents_t &faceextents,
+                     int byte_offset_of_face, qvec2i coord,
+                     const lit_variant_t *lit, const bspxentries_t *bspx)
 {
-    std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
-    stream >> endianness<std::endian::little>;
-
-    std::array<char, 4> ident;
-    stream >= ident;
-    if (ident != std::array<char, 4>{'Q', 'L', 'I', 'T'}) {
-        throw std::runtime_error("invalid lit ident");
+    if (byte_offset_of_face == -1) {
+        return {0, 0, 0};
     }
 
-    int version;
-    stream >= version;
-    if (version != 1) {
-        throw std::runtime_error("invalid lit version");
+    Q_assert(coord[0] >= 0);
+    Q_assert(coord[1] >= 0);
+    Q_assert(coord[0] < faceextents.width());
+    Q_assert(coord[1] < faceextents.height());
+
+    int style_offset = StyleOffset(0, face, faceextents);
+    if (style_offset == -1) {
+        return {0, 0, 0};
     }
 
-    std::vector<uint8_t> litdata;
-    while (stream.good()) {
-        uint8_t b;
-        stream >= b;
-        litdata.push_back(b);
+    int pixel = style_offset + coord[0] + (coord[1] * faceextents.width());
+
+    assert(byte_offset_of_face >= 0);
+
+    const uint32_t *packed_samples = nullptr;
+    if (lit && std::holds_alternative<lit_hdr>(*lit)) {
+        packed_samples = std::get_if<lit_hdr>(lit)->samples.data();
+    } else if (bspx) {
+        if (auto it = bspx->find("LIGHTING_E5BGR9"); it != bspx->end()) {
+            // FIXME: alignment ignored
+            packed_samples = reinterpret_cast<const uint32_t *>(it->second.data());
+        }
     }
 
-    return litdata;
+    if (!packed_samples)
+        throw std::runtime_error("LM_Sample_HDR requires either an HDR .lit file or BSPX lump");
+
+    return HDR_UnpackE5BRG9(packed_samples[byte_offset_of_face + pixel]);
 }
 
 static void AddLeafs(const mbsp_t *bsp, int nodenum, std::map<int, std::vector<int>> &cluster_to_leafnums)

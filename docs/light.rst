@@ -331,6 +331,14 @@ Experimental options
 
    Writes both rgb and directions data *only* into the bsp itself.
 
+.. option:: -hdr
+
+   Write .lit file with e5bgr9 data.
+
+.. option:: -bspxhdr
+
+   Writes e5bgr9 data into the bsp itself.
+
 .. option:: -novanilla
 
    Fallback scaled lighting will be omitted. Standard grey lighting will
