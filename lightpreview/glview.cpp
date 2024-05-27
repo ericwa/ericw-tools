@@ -295,6 +295,7 @@ uniform bool drawnormals;
 uniform bool drawflat;
 uniform float style_scalars[256];
 uniform float brightness;
+uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
 
 uniform vec3 eye_origin;
 
