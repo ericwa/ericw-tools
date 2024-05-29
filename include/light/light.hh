@@ -415,6 +415,7 @@ public:
     setting_func debugoccluded;
     setting_func debugneighbours;
     setting_func debugmottle;
+    setting_bool debug_lightgrid_octree;
 
     light_settings();
 

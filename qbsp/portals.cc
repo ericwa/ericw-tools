@@ -1179,7 +1179,7 @@ void MarkVisibleSides(tree_t &tree, bspbrush_t::container &brushes)
     // set visible flags on the sides that are used by portals
     MarkVisibleSides_r(tree.headnode, stats);
 
-    if (!stats.missing_portal_sides.empty()) {
+    if (!stats.missing_portal_sides.empty() && qbsp_options.debug_missing_portal_sides.value()) {
         fs::path name = qbsp_options.bsp_path;
         name.replace_extension("missing_portal_sides.prt");
         WriteDebugPortals(stats.missing_portal_sides, name);

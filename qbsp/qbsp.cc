@@ -562,7 +562,8 @@ qbsp_settings::qbsp_settings()
       scale{this, "scale", 1.0, &map_development_group,
           "scales the map brushes and point entity origins by a give factor"},
       loghulls{this, {"loghulls"}, false, &logging_group, "print log output for collision hulls"},
-      logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"}
+      logbmodels{this, {"logbmodels"}, false, &logging_group, "print log output for bmodels"},
+      debug_missing_portal_sides{this, {"debug_missing_portal_sides"}, false, &logging_group, "output debug .prt files for missing portal sides"}
 {
 }
 

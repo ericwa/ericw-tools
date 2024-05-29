@@ -426,7 +426,9 @@ light_settings::light_settings()
               debugmode = debugmodes::mottle;
               return true;
           },
-          &debug_group, "save mottle pattern to lightmap"}
+          &debug_group, "save mottle pattern to lightmap"},
+
+      debug_lightgrid_octree{this, "debug_lightgrid_octree", false, &debug_group, "write .octree.prt file for light grid"}
 {
 }
 

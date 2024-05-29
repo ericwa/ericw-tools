@@ -235,7 +235,7 @@ static std::vector<uint8_t> MakeOctreeLump(const mbsp_t &bsp, const lightgrid_ra
     const uint32_t root_node = build_octree(qvec3i{0, 0, 0}, data.grid_size, 0);
 
     // visualize the leafs
-    {
+    if (light_options.debug_lightgrid_octree.value()) {
         std::vector<polylib::winding_t> windings;
 
         for (auto &leaf : octree_leafs) {
