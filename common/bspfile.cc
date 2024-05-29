@@ -1184,7 +1184,7 @@ struct gamedef_q2_t : public gamedef_t
         if (!(c0 ^ c1))
             return true;
 
-        return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) != 0);
+        return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
     }
 
     bool contents_seals_map(const contentflags_t &contents) const override
