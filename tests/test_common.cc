@@ -328,6 +328,14 @@ TEST_SUITE("common")
         }
     }
 
+    TEST_CASE("q2 portal_can_see_through")
+    {
+        auto *game_q2 = bspver_q2.game;
+
+        CHECK(game_q2->portal_can_see_through(contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL),
+                                        contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP), false));
+    }
+
     TEST_CASE("imglib png loader")
     {
         auto *game = bspver_q2.game;
