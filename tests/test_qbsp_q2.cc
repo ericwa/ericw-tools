@@ -1094,3 +1094,21 @@ TEST_CASE("q2_unknown_contents" * doctest::test_suite("testmaps_q2"))
         CHECK(texinfo->flags.native == 1024);
     }
 }
+
+TEST_CASE("q2_noclipfaces_nodraw" * doctest::test_suite("testmaps_q2") * doctest::may_fail())
+{
+    INFO("when _noclipfaces has a choice of faces, don't use the nodraw one");
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_noclipfaces_nodraw.map");
+
+    const qvec3d top_of_water = {0, 0, 0};
+
+    auto up_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, 1});
+    auto down_faces = BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], top_of_water, {0, 0, -1});
+
+    REQUIRE(1 == up_faces.size());
+    REQUIRE(1 == down_faces.size());
+
+    CHECK(Face_TextureNameView(&bsp, up_faces[0]) == "e1u1/water1_8");
+    CHECK(Face_TextureNameView(&bsp, down_faces[0]) == "e1u1/water1_8");
+}

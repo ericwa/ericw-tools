@@ -2,6 +2,30 @@
 Changelog
 =========
 
+2.0.0-alpha8
+============
+
+Changes
+-------
+
+- light: invalid "delay" settings are now a warning rather than a fatal error
+- qbsp: q2: write out true leaf contents even if CONTENTS_SOLID is set. Previous
+  behaviour (including original qbsp3 compiler) was that CONTENTS_SOLID would
+  clear any other set contents bits in leafs (but not in brushes.) (#420)
+
+Features
+--------
+
+- lightpreview: show leaf contents in status bar
+- light: LIGHTING_E5BGR9 + HDR .lit support (from @dsvensson and @Shpoike)
+
+Bug fixes
+---------
+
+- light: fix "mangle" on _sun 1 entities (#266)
+- light: fix sunlight artifacts (21b3b696)
+- qbsp: q2: fix areaportals which were broken in 2.0.0-alpha7 (70a08013)
+
 2.0.0-alpha7
 ============
 
