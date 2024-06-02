@@ -440,7 +440,7 @@ static std::list<std::vector<size_t>> compress_triangles_into_fans(
         // just add the rest directly.
         if (fan.size() == 1) {
             for (auto &tri : triangles) {
-                tris_compiled.emplace_back(std::vector<size_t>{vertices[tri[0]], vertices[tri[1]], vertices[tri[2]]});
+                tris_compiled.push_back(std::vector<size_t>{vertices[tri[0]], vertices[tri[1]], vertices[tri[2]]});
             }
 
             triangles.clear();
@@ -564,7 +564,7 @@ static std::vector<qvectri> minimum_weight_triangulation(
 
         qvectri tri{edge[0], edge[1], c.value()};
         std::sort(tri.begin(), tri.end());
-        triangles.emplace_back(tri);
+        triangles.push_back(tri);
 
         edge_queue.emplace(edge[0], c.value());
         edge_queue.emplace(c.value(), edge[1]);
@@ -710,7 +710,7 @@ static std::list<std::vector<size_t>> RetopologizeFace(const face_t *f, const st
                     break;
                 }
 
-                tri.emplace_back(input[x]);
+                tri.push_back(input[x]);
                 x = (x + 1) % input.size();
                 first = false;
             }
@@ -766,7 +766,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
 {
     // we were asked not to bother fixing any of the faces.
     if (qbsp_options.tjunc.value() == settings::tjunclevel_t::NONE) {
-        f->fragments.emplace_back(face_fragment_t{f->original_vertices});
+        f->fragments.push_back(face_fragment_t{f->original_vertices});
         return;
     }
 
@@ -778,7 +778,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
         return;
     } else if (superface.size() == 3) {
         // no need to adjust this either
-        f->fragments.emplace_back(face_fragment_t{f->original_vertices});
+        f->fragments.push_back(face_fragment_t{f->original_vertices});
         return;
     }
 
@@ -854,7 +854,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
     // the other techniques all failed, or we asked to not
     // try them. just move the superface in directly.
     if (!faces.size()) {
-        faces.emplace_back(std::move(superface));
+        faces.push_back(std::move(superface));
     }
 
     Q_assert(faces.size());
@@ -872,7 +872,7 @@ static void FixFaceEdges(node_t *headnode, face_t *f, tjunc_stats_t &stats)
     f->fragments.reserve(faces.size());
 
     for (auto &face : faces) {
-        f->fragments.emplace_back(face_fragment_t{std::move(face)});
+        f->fragments.push_back(face_fragment_t{std::move(face)});
     }
 
     for (auto &frag : f->fragments) {

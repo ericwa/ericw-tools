@@ -1771,9 +1771,9 @@ inline void CopyArray(std::vector<F> &from, std::vector<T> &to)
 
     for (auto &v : from) {
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
-            to.emplace_back(numeric_cast<T>(v));
+            to.push_back(numeric_cast<T>(v));
         else
-            to.emplace_back(v);
+            to.push_back(v);
     }
 }
 
@@ -1794,9 +1794,9 @@ inline void CopyArray(std::vector<std::array<F, N>> &from, std::vector<std::arra
 
     for (auto &v : from) {
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
-            to.emplace_back(array_cast<std::array<T, N>>(v));
+            to.push_back(array_cast<std::array<T, N>>(v));
         else
-            to.emplace_back(v);
+            to.push_back(v);
     }
 }
 

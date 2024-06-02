@@ -68,6 +68,11 @@ struct ray_io
     int     dynamic_style = 0;
 };
 
+struct alignas(16) aligned_vec3
+{
+    float x, y, z, w;
+};
+
 class raystream_embree_common_t
 {
 protected:
@@ -114,18 +119,18 @@ public:
     }
 
 protected:
-    static inline RTCRayHit SetupRay(unsigned int rayindex, const qvec3f &start, const qvec3f &dir, float dist)
+    static inline RTCRayHit SetupRay(unsigned int rayindex, const aligned_vec3 &start, const aligned_vec3 &dir, float dist)
     {
         RTCRayHit ray;
-        ray.ray.org_x = start[0];
-        ray.ray.org_y = start[1];
-        ray.ray.org_z = start[2];
-        ray.ray.tnear = 0.f;
+        ray.ray.org_x = start.x;
+        ray.ray.org_y = start.y;
+        ray.ray.org_z = start.z;
+        ray.ray.tnear = start.w;
 
-        ray.ray.dir_x = dir[0]; // can be un-normalized
-        ray.ray.dir_y = dir[1];
-        ray.ray.dir_z = dir[2];
-        ray.ray.time = 0.f; // not using
+        ray.ray.dir_x = dir.x; // can be un-normalized
+        ray.ray.dir_y = dir.y;
+        ray.ray.dir_z = dir.z;
+        ray.ray.time = dir.w; // not using
 
         ray.ray.tfar = dist;
         ray.ray.mask = 1; // we're not using, but needs to be set if embree is compiled with masks
@@ -217,8 +222,8 @@ public:
     inline void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const qvec3f *color = nullptr,
         const qvec3f *normalcontrib = nullptr)
     {
-        const RTCRayHit rayHit = SetupRay(_rays.size(), origin, dir, dist);
-        _rays.emplace_back(
+        const RTCRayHit rayHit = SetupRay(_rays.size(), { origin[0], origin[1], origin[2], 0.f }, { dir[0], dir[1], dir[2], 0.f }, dist);
+        _rays.push_back(
             ray_io {
                 .ray = rayHit,
                 .maxdist = dist,
@@ -285,8 +290,8 @@ public:
     inline void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const qvec3f *color = nullptr,
         const qvec3f *normalcontrib = nullptr)
     {
-        const RTCRay ray = SetupRay(_rays.size(), origin, dir, dist).ray;
-        _rays.emplace_back(
+        const RTCRay ray = SetupRay(_rays.size(), { origin[0], origin[1], origin[2], 0.f }, { dir[0], dir[1], dir[2], 0.f }, dist).ray;
+        _rays.push_back(
             ray_io {
                 .ray = { ray },
                 .maxdist = dist,

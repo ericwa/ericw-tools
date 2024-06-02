@@ -573,7 +573,7 @@ int FindTexinfo(const maptexinfo_t &texinfo, const qplane3d &plane, bool add)
 
     /* Allocate a new texinfo at the end of the array */
     const int num_texinfo = static_cast<int>(map.mtexinfos.size());
-    map.mtexinfos.emplace_back(texinfo);
+    map.mtexinfos.push_back(texinfo);
     map.mtexinfo_lookup[texinfo] = num_texinfo;
 
     // catch broken < implementations in maptexinfo_t
@@ -686,6 +686,13 @@ static surfflags_t SurfFlagsForEntity(
     else if (!entity.epairs.has("_surflight_minlight_scale") &&
              map.world_entity().epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = map.world_entity().epairs.get_float("_surflight_minlight_scale");
+
+    if (entity.epairs.has("_surflight_atten"))
+        flags.surflight_atten = entity.epairs.get_float("_surflight_atten");
+    // Paril: inherit _surflight_atten from worldspawn if unset
+    else if (!entity.epairs.has("_surflight_atten") &&
+             map.world_entity().epairs.has("_surflight_atten"))
+        flags.surflight_atten = map.world_entity().epairs.get_float("_surflight_atten");
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
     for (int i = 0; i <= 9; i++) {
@@ -1616,7 +1623,7 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
                     new_side.planenum = map.add_or_find_plane(
                         {new_side.get_plane().get_normal(), new_side.get_plane().get_dist() + 16.f});
 
-                    new_brush.faces.emplace_back(std::move(new_side));
+                    new_brush.faces.push_back(std::move(new_side));
                     // the inverted side is special
                 } else if (side.get_plane().get_normal() == -new_brush_side.get_plane().get_normal()) {
 
@@ -1629,7 +1636,7 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
                     flipped_side.planenum = map.add_or_find_plane(
                         {-new_brush_side.get_plane().get_normal(), -new_brush_side.get_plane().get_dist()});
 
-                    new_brush.faces.emplace_back(std::move(flipped_side));
+                    new_brush.faces.push_back(std::move(flipped_side));
                 } else {
                     mapface_t new_side;
                     new_side.texinfo = side.texinfo;
@@ -1638,7 +1645,7 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
                     new_side.texname = side.texname;
                     new_side.planenum = side.planenum;
 
-                    new_brush.faces.emplace_back(std::move(new_side));
+                    new_brush.faces.push_back(std::move(new_side));
                 }
             }
 

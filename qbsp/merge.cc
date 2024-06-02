@@ -186,7 +186,7 @@ void MergeFaceToList(
         }
     }
 
-    list.emplace_back(std::move(face));
+    list.push_back(std::move(face));
 }
 
 /*

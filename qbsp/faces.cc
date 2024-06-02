@@ -162,7 +162,7 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, e
     /* emit an edge */
     int64_t i = map.bsp.dedges.size();
 
-    map.bsp.dedges.emplace_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
+    map.bsp.dedges.push_back(bsp2_dedge_t{static_cast<uint32_t>(v1), static_cast<uint32_t>(v2)});
 
     map.add_hash_edge(v1, v2, i, face);
 

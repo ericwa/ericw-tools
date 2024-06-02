@@ -203,6 +203,9 @@ static void MakeSurfaceLight(const mbsp_t *bsp, const settings::worldspawn_keys 
     setting.totalintensity = intensity * facearea;
     setting.intensity = setting.totalintensity / l->points_before_culling;
     setting.color = texture_color.value();
+    if (extended_flags.surflight_atten.has_value()) {
+        setting.atten = extended_flags.surflight_atten.value();
+    }
 }
 
 std::optional<std::tuple<int32_t, int32_t, qvec3f, light_t *>> IsSurfaceLitFace(const mbsp_t *bsp, const mface_t *face)

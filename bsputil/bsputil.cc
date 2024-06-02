@@ -940,7 +940,7 @@ int bsputil_main(int _argc, const char **_argv)
 
                 total_bounds += f.bounds;
                 total_faces += f.faces.size();
-                faces.emplace_back(std::move(f));
+                faces.push_back(std::move(f));
             };
 
             addSubModel(0, {});

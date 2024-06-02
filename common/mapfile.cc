@@ -1041,7 +1041,7 @@ void brush_t::parse_brush_face(parser_t &parser, texcoord_style_t base_format)
 
     side.validate_texture_projection();
 
-    faces.emplace_back(std::move(side));
+    faces.push_back(std::move(side));
 }
 
 void brush_t::write(std::ostream &stream)

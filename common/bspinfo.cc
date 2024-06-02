@@ -317,7 +317,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             bspx_lmoffset >= faceofs;
         }
 
-        rectangles.emplace_back(
+        rectangles.push_back(
             face_rect{&face, get_face_extents(bsp, bspx, bspx_decoupled, face, use_bspx, use_decoupled), faceofs});
     }
 
@@ -850,7 +850,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
 
             if (src_tex.data.size() > sizeof(dmiptex_t)) {
                 json &mips = tex["mips"] = json::array();
-                mips.emplace_back(
+                mips.push_back(
                     serialize_image(img::load_mip(src_tex.name, src_tex.data, false, bspdata.loadversion->game)));
             }
         }

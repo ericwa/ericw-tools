@@ -805,44 +805,58 @@ static void Lightmap_Save(
  */
 
 // returns the light contribution at a given distance, without regard for angle
-float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, float dist)
+static float GetLightValue(const settings::worldspawn_keys &cfg,
+    const light_formula_t formula, const float light, const float falloff,
+    const float atten, const float dist, const float hotspot_clamp)
 {
-    const float light = entity->light.value();
+    if (formula == LF_INFINITE || formula == LF_LOCALMIN)
+        return light;
 
     // mxd. Apply falloff?
-    const float lightdistance = entity->falloff.value();
-    if (lightdistance > 0.0f) {
-        if (entity->getFormula() == LF_LINEAR) {
+    if (falloff > 0.0f) {
+        if (formula == LF_LINEAR) {
             // Light can affect surface?
-            if (lightdistance > dist)
-                return light * (1.0f - (dist / lightdistance));
+            if (falloff > dist)
+                return light * (1.0f - (dist / falloff));
             else
                 return 0.0f; // Surface is unaffected
         }
     }
 
-    if (entity->getFormula() == LF_INFINITE || entity->getFormula() == LF_LOCALMIN)
-        return light;
+    float value = cfg.scaledist.value() * atten * dist;
 
-    float value = cfg.scaledist.value() * entity->atten.value() * dist;
-
-    switch (entity->getFormula()) {
-        case LF_INVERSE: return light / (value / LF_SCALE);
+    switch (formula) {
+        case LF_INVERSE: return light / (value / hotspot_clamp);
         case LF_INVERSE2A:
-            value += LF_SCALE;
+            value += hotspot_clamp;
             /* Fall through */
-        case LF_INVERSE2: return light / ((value * value) / (LF_SCALE * LF_SCALE));
+        case LF_INVERSE2: return light / ((value * value) / (hotspot_clamp * hotspot_clamp));
         case LF_LINEAR:
             if (light > 0)
                 return (light - value > 0) ? light - value : 0;
             else
                 return (light + value < 0) ? light + value : 0;
+        case LF_QRAD3: {
+            const float d = std::max(value, hotspot_clamp); // Clamp away hotspots, also avoid division by 0...
+            return light / (d * d);
+        }
         default: Error("Internal error: unknown light formula");
     }
 }
 
-static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3f &surfnorm,
-    bool use_surfnorm, const qvec3f &surfpointToLightDir, float dist, bool twosided)
+// mxd. Surface light falloff. Returns color in [0,255]
+inline qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, const float &surf_scale,
+    const float &intensity, const qvec3f &color, const float &dist, const float &atten, const float &hotspot_clamp)
+{
+    const float v = GetLightValue(cfg, LF_QRAD3, intensity, 0.0f, atten, dist, hotspot_clamp) * surf_scale;
+    return color * v;
+}
+
+static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg,
+    const light_formula_t formula, const float light, const float falloff,
+    const float atten, const bool bleed, const float anglescale, const qvec3f &surfnorm,
+    bool use_surfnorm, const qvec3f &surfpointToLightDir, const float dist, bool twosided,
+    const float hotspot_clamp)
 {
     float angle;
 
@@ -852,7 +866,7 @@ static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const 
         angle = 1.0f;
     }
 
-    if (entity->bleed.value() || twosided) {
+    if (bleed || twosided) {
         if (angle < 0) {
             angle = -angle; // ericw -- support "_bleed" option
         }
@@ -865,7 +879,21 @@ static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const 
     }
 
     /* Apply anglescale */
-    angle = (1.0 - entity->anglescale.value()) + (entity->anglescale.value() * angle);
+    angle = (1.0 - anglescale) + (anglescale * angle);
+
+    return GetLightValue(cfg, formula, light, falloff, atten, dist, hotspot_clamp) * angle;
+}
+
+// returns the light contribution at a given distance, without regard for angle
+static float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *entity, const float dist)
+{
+    return GetLightValue(cfg, entity->getFormula(), entity->light.value(), entity->falloff.value(), entity->atten.value(), dist, LF_SCALE);
+}
+
+static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3f &surfnorm,
+    bool use_surfnorm, const qvec3f &surfpointToLightDir, float dist, bool twosided)
+{
+    float value = GetLightValue(cfg, entity, dist);
 
     /* Check spotlight cone */
     float spotscale = 1;
@@ -883,8 +911,7 @@ static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const 
         }
     }
 
-    float add = GetLightValue(cfg, entity, dist) * angle * spotscale;
-    return add;
+    return value * spotscale;
 }
 
 template<typename T>
@@ -1902,18 +1929,6 @@ static void LightFace_DebugMottle(const mbsp_t *bsp, const lightsurf_t *lightsur
     Lightmap_Save(bsp, lightmaps, lightsurf, lightmap, 0);
 }
 
-// mxd. Surface light falloff. Returns color in [0,255]
-constexpr qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, const float &surf_scale,
-    const float &intensity, const qvec3f &color, const float &dist, const float &hotspot_clamp)
-{
-    // Exponential falloff
-    const float d = std::max(dist, hotspot_clamp); // Clamp away hotspots, also avoid division by 0...
-    const float scaledintensity = intensity * surf_scale;
-    const float scale = (1.0f / (d * d));
-
-    return color * scaledintensity * scale;
-}
-
 // dir: vpl -> sample point direction
 // mxd. returns color in [0,255]
 inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t &vpl,
@@ -1957,14 +1972,8 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     }
 
     // Get light contribution
-    result = SurfaceLight_ColorAtDist(cfg, vpl_settings.omnidirectional ? sky_scale : standard_scale,
-        vpl_settings.intensity, vpl_settings.color, dist, hotspot_clamp);
-
-    // Apply angle scale
-    const qvec3f resultscaled = result * dotProductFactor;
-
-    //Q_assert(!std::isnan(resultscaled[0]) && !std::isnan(resultscaled[1]) && !std::isnan(resultscaled[2]));
-    return resultscaled;
+    return SurfaceLight_ColorAtDist(cfg, (vpl_settings.omnidirectional ? sky_scale : standard_scale) * dotProductFactor,
+        vpl_settings.intensity, vpl_settings.color, dist, vpl_settings.atten, hotspot_clamp);
 }
 
 static bool // mxd
@@ -1985,7 +1994,7 @@ SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
     // Get light contribution
     const qvec3f color = SurfaceLight_ColorAtDist(cfg,
         vpl_settings.omnidirectional ? cfg.surflightskyscale.value() : cfg.surflightscale.value(),
-        vpl_settings.totalintensity, vpl_settings.color, dist, hotspot_clamp);
+        vpl_settings.totalintensity, vpl_settings.color, dist, vpl_settings.atten, hotspot_clamp);
 
     return qv::gate(color, (float)bouncelight_gate);
 }

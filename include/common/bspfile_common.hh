@@ -267,6 +267,9 @@ struct surfflags_t
     // surface light rescaling
     std::optional<float> surflight_minlight_scale;
 
+    // surface light attenuation
+    std::optional<float> surflight_atten;
+
     // if non zero, enables phong shading and gives the angle threshold to use
     float phong_angle;
 

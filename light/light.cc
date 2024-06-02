@@ -153,6 +153,7 @@ modelinfo_t::modelinfo_t(const mbsp_t *b, const dmodelh2_t *m, float lmscale)
       lightcolorscale{this, "lightcolorscale", 1},
       object_channel_mask{this, "object_channel_mask", CHANNEL_MASK_DEFAULT},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.f},
+      surflight_atten{this, "surflight_atten", 1.f},
       autominlight{this, "autominlight", false},
       autominlight_target{this, "autominlight_target", ""}
 {
@@ -195,6 +196,7 @@ worldspawn_keys::worldspawn_keys()
       surflightskydist{this, "surflightskydist", 0.0, &worldspawn_group},
       surflightsubdivision{this, {"surflightsubdivision", "choplight"}, 16.0, 1.0, 8192.0, &worldspawn_group},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.0f, 0.f, 510.f, &worldspawn_group},
+      surflight_atten{this, "surflight_atten", 1.f, 0.f, std::numeric_limits<float>::max(), &worldspawn_group},
       sunlight{this, {"sunlight", "sun_light"}, 0.0, &worldspawn_group},
       sunlight_color{this, {"sunlight_color", "sun_color"}, 255.0, 255.0, 255.0, &worldspawn_group},
       sun2{this, "sun2", 0.0, &worldspawn_group},
@@ -1036,6 +1038,9 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         if (val.contains("surflight_minlight_scale")) {
             flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<float>();
         }
+        if (val.contains("surflight_atten")) {
+            flags.surflight_atten = val.at("surflight_atten").get<float>();
+        }
         if (val.contains("phong_angle")) {
             flags.phong_angle = val.at("phong_angle").get<float>();
         }
@@ -1071,9 +1076,6 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         }
         if (val.contains("object_channel_mask")) {
             flags.object_channel_mask = val.at("object_channel_mask").get<int32_t>();
-        }
-        if (val.contains("surflight_minlight_scale")) {
-            flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<float>();
         }
     }
 }

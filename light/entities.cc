@@ -118,6 +118,7 @@ light_t::light_t()
       nostaticlight{this, "nostaticlight", false},
       surflight_group{this, "surflight_group", 0},
       surflight_minlight_scale{this, "surflight_minlight_scale", 1.f},
+      surflight_atten{this, "surflight_atten", 1.f},
       light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
       shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT},
       nonudge{this, "nonudge", false}
@@ -357,6 +358,12 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
             // this default value mimicks the fullbright-ish nature of emissive surfaces
             // in Q2.
             entity->surflight_minlight_scale.set_value(64.0f, settings::source::DEFAULT);
+        }
+    }
+
+    if (!entity->surflight_atten.is_changed()) {
+        if (cfg.surflight_atten.is_changed()) {
+            entity->surflight_atten.set_value(cfg.surflight_atten.value(), settings::source::DEFAULT);
         }
     }
 }

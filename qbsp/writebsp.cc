@@ -414,6 +414,9 @@ static void WriteExtendedTexinfoFlags()
         if (tx.flags.surflight_minlight_scale.has_value()) {
             t["surflight_minlight_scale"] = tx.flags.surflight_minlight_scale.value();
         }
+        if (tx.flags.surflight_atten.has_value()) {
+            t["surflight_atten"] = tx.flags.surflight_atten.value();
+        }
         if (tx.flags.phong_angle) {
             t["phong_angle"] = tx.flags.phong_angle;
         }

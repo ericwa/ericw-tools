@@ -708,7 +708,7 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
             break;
         }
 
-        remainder.emplace_back(std::move(parser.token));
+        remainder.push_back(std::move(parser.token));
     }
 
     return remainder;

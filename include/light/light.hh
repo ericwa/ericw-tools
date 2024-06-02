@@ -225,6 +225,7 @@ public:
     settings::setting_scalar lightcolorscale;
     settings::setting_int32 object_channel_mask;
     settings::setting_scalar surflight_minlight_scale;
+    settings::setting_scalar surflight_atten;
     settings::setting_bool autominlight;
     settings::setting_string autominlight_target;
 
@@ -315,6 +316,7 @@ public:
     // "choplight" - arghrad3 name
     setting_scalar surflightsubdivision;
     setting_scalar surflight_minlight_scale;
+    setting_scalar surflight_atten;
 
     /* sunlight */
     /* sun_light, sun_color, sun_angle for http://www.bspquakeeditor.com/arghrad/ compatibility */

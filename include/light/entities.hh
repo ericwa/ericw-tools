@@ -54,6 +54,7 @@ enum light_formula_t
     LF_INVERSE2A = 5, /* Inverse square, with distance adjusted to avoid
                          exponentially bright values near the source.
                            (1/(x+128)^2), scaled by 1/(128^2) */
+    LF_QRAD3 = 6, /* qrad3-style surface lights; 1 / (max(x, 16) * max(x, 16)) */
     LF_COUNT
 };
 
@@ -108,6 +109,7 @@ public:
     settings::setting_bool nostaticlight;
     settings::setting_int32 surflight_group;
     settings::setting_scalar surflight_minlight_scale;
+    settings::setting_scalar surflight_atten;
     settings::setting_int32 light_channel_mask;
     settings::setting_int32 shadow_channel_mask;
     settings::setting_bool nonudge;

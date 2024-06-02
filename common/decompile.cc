@@ -440,10 +440,10 @@ struct decomp_brush_side_t
         for (auto &face : faces) {
             auto [faceFront, faceBack] = face.clipToPlane(plane);
             if (faceFront.winding) {
-                frontfaces.emplace_back(std::move(faceFront));
+                frontfaces.push_back(std::move(faceFront));
             }
             if (faceBack.winding) {
-                backfaces.emplace_back(std::move(faceBack));
+                backfaces.push_back(std::move(faceBack));
             }
         }
 
@@ -633,7 +633,7 @@ static decomp_brush_t BuildInitialBrush(
         // NOTE: side may have had all of its faces clipped away, but we still need to keep it
         // as it's one of the final boundaries of the brush
 
-        sides.emplace_back(std::move(side));
+        sides.push_back(std::move(side));
     }
 
     return decomp_brush_t(sides);
@@ -688,8 +688,7 @@ static decomp_brush_t BuildInitialBrush_Q2(
 
         auto side = decomp_brush_side_t(bsp, task, plane);
         side.winding = std::move(*winding);
-
-        sides.emplace_back(side);
+        sides.push_back(std::move(side));
     }
 
     return decomp_brush_t(sides);
@@ -1093,7 +1092,7 @@ static std::vector<compiled_brush_t> DecompileBrushTask(
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
-        decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t{qplane3d{bsp->dplanes[side->planenum]}});
+        decomp_plane_t &plane = task.allPlanes.emplace_back(qplane3d{bsp->dplanes[side->planenum]});
         plane.source = side;
     }
 
