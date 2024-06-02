@@ -1092,7 +1092,7 @@ static std::vector<compiled_brush_t> DecompileBrushTask(
 {
     for (size_t i = 0; i < task.brush->numsides; i++) {
         const q2_dbrushside_qbism_t *side = &bsp->dbrushsides[task.brush->firstside + i];
-        decomp_plane_t &plane = task.allPlanes.emplace_back(qplane3d{bsp->dplanes[side->planenum]});
+        decomp_plane_t &plane = task.allPlanes.emplace_back(decomp_plane_t{qplane3d{bsp->dplanes[side->planenum]}});
         plane.source = side;
     }
 
