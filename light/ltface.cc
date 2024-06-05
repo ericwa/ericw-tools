@@ -893,7 +893,10 @@ static float GetLightValue(const settings::worldspawn_keys &cfg, const light_t *
 static float GetLightValueWithAngle(const settings::worldspawn_keys &cfg, const light_t *entity, const qvec3f &surfnorm,
     bool use_surfnorm, const qvec3f &surfpointToLightDir, float dist, bool twosided)
 {
-    float value = GetLightValue(cfg, entity, dist);
+    float value = GetLightValueWithAngle(cfg, entity->formula.value(), entity->light.value(),
+                                         entity->falloff.value(), entity->atten.value(),
+                                         entity->bleed.value(), entity->anglescale.value(), surfnorm,
+                                         use_surfnorm, surfpointToLightDir, dist, twosided, LF_SCALE);
 
     /* Check spotlight cone */
     float spotscale = 1;
