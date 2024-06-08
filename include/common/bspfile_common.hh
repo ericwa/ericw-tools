@@ -68,37 +68,14 @@ enum contents_t : contents_int_t {
     EWT_LAST_VISIBLE_CONTENTS_INDEX = 8,
     EWT_LAST_VISIBLE_CONTENTS = EWT_VISCONTENTS_MIST,
 
-    EWT_ALL_LIQUIDS =
-    EWT_VISCONTENTS_LAVA |
-    EWT_VISCONTENTS_SLIME |
-    EWT_VISCONTENTS_WATER,
-
-    EWT_ALL_VISIBLE_CONTENTS =
-    EWT_VISCONTENTS_SOLID |
-    EWT_VISCONTENTS_SKY |
-    EWT_VISCONTENTS_DETAIL_WALL |
-    EWT_VISCONTENTS_WINDOW |
-    EWT_VISCONTENTS_AUX |
-    EWT_VISCONTENTS_LAVA |
-    EWT_VISCONTENTS_SLIME |
-    EWT_VISCONTENTS_WATER |
-    EWT_VISCONTENTS_MIST,
-
     EWT_INVISCONTENTS_ORIGIN = nth_bit<uint64_t>(9), // removed before bsping an entity
     // Q1 clip
     EWT_INVISCONTENTS_PLAYERCLIP = nth_bit<uint64_t>(10),
     EWT_INVISCONTENTS_MONSTERCLIP = nth_bit<uint64_t>(11),
     EWT_INVISCONTENTS_AREAPORTAL = nth_bit<uint64_t>(12),
-    EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER = nth_bit<uint64_t>(13),
+    EWT_INVISCONTENTS_NO_WATERJUMP = nth_bit<uint64_t>(13), // re-release
+    EWT_INVISCONTENTS_PROJECTILECLIP = nth_bit<uint64_t>(14), // re-release
 
-    EWT_ALL_INVISCONTENTS =
-    EWT_INVISCONTENTS_ORIGIN |
-    EWT_INVISCONTENTS_PLAYERCLIP |
-    EWT_INVISCONTENTS_MONSTERCLIP |
-    EWT_INVISCONTENTS_AREAPORTAL |
-    EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER,
-
-    EWT_CFLAG_DETAIL = nth_bit<uint64_t>(14), // brushes to be added after vis leafs
     EWT_CFLAG_MIRROR_INSIDE = nth_bit<uint64_t>(15),
     EWT_CFLAG_MIRROR_INSIDE_SET = nth_bit<uint64_t>(16),
     EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE = nth_bit<uint64_t>(17),
@@ -114,17 +91,43 @@ enum contents_t : contents_int_t {
     EWT_CFLAG_MONSTER = nth_bit<uint64_t>(26), // disallowed in maps, only for gamecode use
     EWT_CFLAG_DEADMONSTER = nth_bit<uint64_t>(27), // disallowed in maps, only for gamecode use
 
+    EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER = nth_bit<uint64_t>(28),
+    EWT_CFLAG_DETAIL = nth_bit<uint64_t>(29), // brushes to be added after vis leafs
+    
 // unused Q2 contents bits - just present here so we can roundtrip all 32-bit Q2 contents
-    EWT_CFLAG_Q2_UNUSED_7 = nth_bit<uint64_t>(28),
-    EWT_CFLAG_Q2_UNUSED_8 = nth_bit<uint64_t>(29),
-    EWT_CFLAG_Q2_UNUSED_9 = nth_bit<uint64_t>(30),
-    EWT_CFLAG_Q2_UNUSED_10 = nth_bit<uint64_t>(31),
-    EWT_CFLAG_Q2_UNUSED_11 = nth_bit<uint64_t>(32),
-    EWT_CFLAG_Q2_UNUSED_12 = nth_bit<uint64_t>(33),
-    EWT_CFLAG_Q2_UNUSED_13 = nth_bit<uint64_t>(34),
-    EWT_CFLAG_Q2_UNUSED_14 = nth_bit<uint64_t>(35),
+    EWT_CFLAG_Q2_UNUSED_7 = nth_bit<uint64_t>(30),
+    EWT_CFLAG_Q2_UNUSED_8 = nth_bit<uint64_t>(31),
+    EWT_CFLAG_Q2_UNUSED_9 = nth_bit<uint64_t>(32),
+    EWT_CFLAG_Q2_UNUSED_10 = nth_bit<uint64_t>(33),
+    EWT_CFLAG_Q2_UNUSED_11 = nth_bit<uint64_t>(34),
+    EWT_CFLAG_Q2_UNUSED_12 = nth_bit<uint64_t>(35),
     EWT_CFLAG_Q2_UNUSED_30 = nth_bit<uint64_t>(36),
-    EWT_CFLAG_Q2_UNUSED_31 = nth_bit<uint64_t>(37)
+    EWT_CFLAG_Q2_UNUSED_31 = nth_bit<uint64_t>(37),
+
+    // masks
+    EWT_ALL_LIQUIDS =
+        EWT_VISCONTENTS_LAVA |
+        EWT_VISCONTENTS_SLIME |
+        EWT_VISCONTENTS_WATER,
+
+    EWT_ALL_VISIBLE_CONTENTS =
+        EWT_VISCONTENTS_SOLID |
+        EWT_VISCONTENTS_SKY |
+        EWT_VISCONTENTS_DETAIL_WALL |
+        EWT_VISCONTENTS_WINDOW |
+        EWT_VISCONTENTS_AUX |
+        EWT_VISCONTENTS_LAVA |
+        EWT_VISCONTENTS_SLIME |
+        EWT_VISCONTENTS_WATER |
+        EWT_VISCONTENTS_MIST,
+
+    EWT_ALL_INVISCONTENTS =
+        EWT_INVISCONTENTS_ORIGIN |
+        EWT_INVISCONTENTS_PLAYERCLIP |
+        EWT_INVISCONTENTS_MONSTERCLIP |
+        EWT_INVISCONTENTS_AREAPORTAL |
+        EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER |
+        EWT_INVISCONTENTS_PROJECTILECLIP,
 };
 
 struct gamedef_t;
@@ -202,6 +205,15 @@ struct contentflags_t
                 return index;
             }
         }
+        
+        if (flags & EWT_INVISCONTENTS_PLAYERCLIP) {
+            return 10;
+        } else if (flags & EWT_INVISCONTENTS_MONSTERCLIP) {
+            return 11;
+        } else if (flags & EWT_INVISCONTENTS_PROJECTILECLIP) {
+            return 14;
+        }
+
         return -1;
     }
 

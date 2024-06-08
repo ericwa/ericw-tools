@@ -864,6 +864,7 @@ struct gamedef_q2_t : public gamedef_t
         if (native & Q2_CONTENTS_AREAPORTAL) result |= EWT_INVISCONTENTS_AREAPORTAL;
         if (native & Q2_CONTENTS_PLAYERCLIP) result |= EWT_INVISCONTENTS_PLAYERCLIP;
         if (native & Q2_CONTENTS_MONSTERCLIP) result |= EWT_INVISCONTENTS_MONSTERCLIP;
+        if (native & Q2_CONTENTS_PROJECTILECLIP) result |= EWT_INVISCONTENTS_PROJECTILECLIP;
         if (native & Q2_CONTENTS_ORIGIN) result |= EWT_INVISCONTENTS_ORIGIN;
 
         // contents flags
@@ -888,8 +889,6 @@ struct gamedef_q2_t : public gamedef_t
         if (native & Q2_CONTENTS_UNUSED_10) result |= EWT_CFLAG_Q2_UNUSED_10;
         if (native & Q2_CONTENTS_UNUSED_11) result |= EWT_CFLAG_Q2_UNUSED_11;
         if (native & Q2_CONTENTS_UNUSED_12) result |= EWT_CFLAG_Q2_UNUSED_12;
-        if (native & Q2_CONTENTS_UNUSED_13) result |= EWT_CFLAG_Q2_UNUSED_13;
-        if (native & Q2_CONTENTS_UNUSED_14) result |= EWT_CFLAG_Q2_UNUSED_14;
         if (native & Q2_CONTENTS_UNUSED_30) result |= EWT_CFLAG_Q2_UNUSED_30;
         if (native & Q2_CONTENTS_UNUSED_31) result |= EWT_CFLAG_Q2_UNUSED_31;
 
@@ -911,6 +910,7 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.flags & EWT_INVISCONTENTS_ORIGIN) result |= Q2_CONTENTS_ORIGIN;
         if (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP) result |= Q2_CONTENTS_PLAYERCLIP;
         if (contents.flags & EWT_INVISCONTENTS_MONSTERCLIP) result |= Q2_CONTENTS_MONSTERCLIP;
+        if (contents.flags & EWT_INVISCONTENTS_PROJECTILECLIP) result |= Q2_CONTENTS_PROJECTILECLIP;
         if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL) result |= Q2_CONTENTS_AREAPORTAL;
         if (contents.flags & EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER) throw std::invalid_argument("illusionary visblocker not a contents in Q2");
         if (contents.flags & EWT_CFLAG_DETAIL) result |= Q2_CONTENTS_DETAIL;
@@ -932,8 +932,6 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.flags & EWT_CFLAG_Q2_UNUSED_10) result |= Q2_CONTENTS_UNUSED_10;
         if (contents.flags & EWT_CFLAG_Q2_UNUSED_11) result |= Q2_CONTENTS_UNUSED_11;
         if (contents.flags & EWT_CFLAG_Q2_UNUSED_12) result |= Q2_CONTENTS_UNUSED_12;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_13) result |= Q2_CONTENTS_UNUSED_13;
-        if (contents.flags & EWT_CFLAG_Q2_UNUSED_14) result |= Q2_CONTENTS_UNUSED_14;
         if (contents.flags & EWT_CFLAG_Q2_UNUSED_30) result |= Q2_CONTENTS_UNUSED_30;
         if (contents.flags & EWT_CFLAG_Q2_UNUSED_31) result |= Q2_CONTENTS_UNUSED_31;
 

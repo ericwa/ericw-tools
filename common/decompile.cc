@@ -566,6 +566,8 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentfla
             return "e1u1/clip";
         } else if (native & Q2_CONTENTS_MONSTERCLIP) {
             return "e1u1/clip_mon";
+        } else if (native & Q2_CONTENTS_PROJECTILECLIP) {
+            return "e1u1/clip_proj";
         } else if (native & Q2_CONTENTS_AREAPORTAL) {
             return "e1u1/trigger";
         }
@@ -591,9 +593,13 @@ static void OverrideTextureForContents(
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int native = bsp->loadversion->game->contents_to_native(contents);
 
-        if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
-            if (!(native & Q2_CONTENTS_PLAYERCLIP)) {
+        if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PROJECTILECLIP)) {
+            if ((native & Q2_CONTENTS_PLAYERCLIP) == Q2_CONTENTS_PLAYERCLIP) {
+                side.texture_name = "e1u1/clip_player";
+            } else if ((native & Q2_CONTENTS_MONSTERCLIP) == Q2_CONTENTS_MONSTERCLIP) {
                 side.texture_name = "e1u1/clip_mon";
+            } else if ((native & Q2_CONTENTS_PROJECTILECLIP) == Q2_CONTENTS_PROJECTILECLIP) {
+                side.texture_name = "e1u1/clip_proj";
             } else {
                 side.texture_name = "e1u1/clip";
             }

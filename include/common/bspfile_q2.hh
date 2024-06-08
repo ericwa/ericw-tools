@@ -116,8 +116,8 @@ enum q2_contents_t : int32_t
     Q2_CONTENTS_UNUSED_10 = nth_bit(10),
     Q2_CONTENTS_UNUSED_11 = nth_bit(11),
     Q2_CONTENTS_UNUSED_12 = nth_bit(12),
-    Q2_CONTENTS_UNUSED_13 = nth_bit(13),
-    Q2_CONTENTS_UNUSED_14 = nth_bit(14),
+    Q2_CONTENTS_NO_WATERJUMP = nth_bit(13), // liquid-only; re-release
+    Q2_CONTENTS_PROJECTILECLIP = nth_bit(14), // like playerclip/monsterclip, but only affects projectiles
 
     Q2_LAST_VISIBLE_CONTENTS = Q2_CONTENTS_MIST,
     Q2_ALL_VISIBLE_CONTENTS = Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW | Q2_CONTENTS_AUX | Q2_CONTENTS_LAVA |
