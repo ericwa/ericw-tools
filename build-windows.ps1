@@ -27,7 +27,7 @@ if ( $? -eq $false ) {
   throw "build failed"
 }
 
-.\tests\tests.exe --no-skip
+.\tests\tests.exe
 
 if ( $? -eq $false ) {
   throw "tests failed"
