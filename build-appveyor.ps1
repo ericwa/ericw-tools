@@ -28,7 +28,7 @@ if ( $? -eq $false ) {
   throw "package failed"
 }
 
-.\tests\Release\tests.exe --no-skip
+.\tests\Release\tests.exe
 
 if ( $? -eq $false ) {
   throw "tests failed"
