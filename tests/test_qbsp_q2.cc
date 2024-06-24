@@ -13,7 +13,7 @@
 #include "test_qbsp.hh"
 #include "testutils.hh"
 
-TEST(testmaps_q2, detail)
+TEST(testmapsQ2, detail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map");
 
@@ -117,7 +117,7 @@ TEST(testmaps_q2, detail)
     EXPECT_EQ(prt->portalleafs, 4);
 }
 
-TEST(testmaps_q2, Q2DetailWithNodetail)
+TEST(testmapsQ2, Q2DetailWithNodetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map", {"-nodetail"});
 
@@ -129,7 +129,7 @@ TEST(testmaps_q2, Q2DetailWithNodetail)
     EXPECT_EQ(prt->portalleafs, 8);
 }
 
-TEST(testmaps_q2, Q2DetailWithOmitdetail)
+TEST(testmapsQ2, Q2DetailWithOmitdetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail.map", {"-omitdetail"});
 
@@ -145,12 +145,12 @@ TEST(testmaps_q2, Q2DetailWithOmitdetail)
     EXPECT_EQ(inside_button_leaf, above_button_leaf);
 }
 
-TEST(testmaps_q2, omitdetailRemovingAllBrushesInAFunc)
+TEST(testmapsQ2, omitdetailRemovingAllBrushesInAFunc)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_omitdetail_in_func.map", {"-omitdetail"});
 }
 
-TEST(testmaps_q2, playerclip)
+TEST(testmapsQ2, playerclip)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_playerclip.map");
 
@@ -178,7 +178,7 @@ TEST(testmaps_q2, playerclip)
     EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_DETAIL), Leaf_Brushes(&bsp, playerclip_leaf).at(0)->contents);
 }
 
-TEST(testmaps_q2, areaportal)
+TEST(testmapsQ2, areaportal)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal.map");
 
@@ -239,7 +239,7 @@ TEST(testmaps_q2, areaportal)
 /**
  *  Similar to above test, but there's a detail brush sticking into the area portal
  */
-TEST(testmaps_q2, areaportal_with_detail)
+TEST(testmapsQ2, areaportalWithDetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_with_detail.map");
 
@@ -254,7 +254,7 @@ TEST(testmaps_q2, areaportal_with_detail)
     EXPECT_VECTORS_UNOREDERED_EQUAL(bsp.dareas, std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}});
 }
 
-TEST(testmaps_q2, nodraw_light)
+TEST(testmapsQ2, nodrawLight)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_light.map", {"-includeskip"});
 
@@ -269,7 +269,7 @@ TEST(testmaps_q2, nodraw_light)
     EXPECT_EQ(texinfo->flags.native, (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
-TEST(testmaps_q2, q2_long_texture_name)
+TEST(testmapsQ2, longTextureName)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_long_texture_name.map");
 
@@ -285,7 +285,7 @@ TEST(testmaps_q2, q2_long_texture_name)
     EXPECT_EQ(texinfo->nexttexinfo, -1);
 }
 
-TEST(testmaps_q2, base1)
+TEST(testmapsQ2, base1)
 {
     GTEST_SKIP();
 
@@ -336,7 +336,7 @@ TEST(testmaps_q2, base1)
     }
 }
 
-TEST(testmaps_q2, base1leak)
+TEST(testmapsQ2, base1leak)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("base1leak.map");
 
@@ -360,7 +360,7 @@ TEST(testmaps_q2, base1leak)
 /**
  * e1u1/brlava brush intersecting e1u1/clip
  **/
-TEST(testmaps_q2, lavaclip)
+TEST(testmapsQ2, lavaclip)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_lavaclip.map");
 
@@ -399,7 +399,7 @@ TEST(testmaps_q2, lavaclip)
 /**
  * check that e1u1/clip intersecting mist doesn't split up the mist faces
  **/
-TEST(testmaps_q2, mist_clip)
+TEST(testmapsQ2, mistClip)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_clip.map");
 
@@ -412,7 +412,7 @@ TEST(testmaps_q2, mist_clip)
 /**
  * e1u1/brlava brush intersecting e1u1/brwater
  **/
-TEST(testmaps_q2, lavawater)
+TEST(testmapsQ2, lavawater)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_lavawater.map");
 
@@ -428,7 +428,7 @@ TEST(testmaps_q2, lavawater)
  * Weird mystery issue with a func_wall with broken collision
  * (ended up being a PLANE_X/Y/Z plane with negative facing normal, which is illegal - engine assumes they are positive)
  */
-TEST(testmaps_q2, q2_bmodel_collision)
+TEST(testmapsQ2, bmodelCollision)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_bmodel_collision.map");
 
@@ -439,7 +439,7 @@ TEST(testmaps_q2, q2_bmodel_collision)
     EXPECT_EQ(Q2_CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[1], in_bmodel)->contents);
 }
 
-TEST(testmaps_q2, q2_liquids)
+TEST(testmapsQ2, liquids)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_liquids.map");
 
@@ -487,7 +487,7 @@ TEST(testmaps_q2, q2_liquids)
 /**
  * Empty rooms are sealed to solid in Q2
  **/
-TEST(testmaps_q2, q2_seal_empty_rooms)
+TEST(testmapsQ2, sealEmptyRooms)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_seal_empty_rooms.map");
 
@@ -504,7 +504,7 @@ TEST(testmaps_q2, q2_seal_empty_rooms)
     EXPECT_EQ(prt->portalleafs, 1);
 }
 
-TEST(testmaps_q2, q2_detail_non_sealing)
+TEST(testmapsQ2, detailNonSealing)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_non_sealing.map");
 
@@ -518,7 +518,7 @@ TEST(testmaps_q2, q2_detail_non_sealing)
     EXPECT_EQ(Q2_CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
 }
 
-TEST(testmaps_q2, q2_detail_overlapping_solid_sealing)
+TEST(testmapsQ2, detailOverlappingSolidSealing)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_detail_overlapping_solid_sealing.map");
 
@@ -538,7 +538,7 @@ TEST(testmaps_q2, q2_detail_overlapping_solid_sealing)
  * Also, the faces on the ceiling/floor cross the areaportal
  * (due to our aggressive face merging).
  */
-TEST(testmaps_q2, q2_double_areaportal)
+TEST(testmapsQ2, doubleAreaportal)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_double_areaportal.map");
 
@@ -549,7 +549,7 @@ TEST(testmaps_q2, q2_double_areaportal)
     EXPECT_EQ(5, bsp.dareaportals.size());
 }
 
-TEST(testmaps_q2, q2_areaportal_split)
+TEST(testmapsQ2, areaportalSplit)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportal_split.map");
 
@@ -564,7 +564,7 @@ TEST(testmaps_q2, q2_areaportal_split)
 /**
  * Test for q2 bmodel bounds
  **/
-TEST(testmaps_q2, q2_door)
+TEST(testmapsQ2, door)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_door.map");
 
@@ -580,7 +580,7 @@ TEST(testmaps_q2, q2_door)
     EXPECT_EQ(bmodel_tight_bounds.maxs(), bsp.dmodels[1].maxs);
 }
 
-TEST(testmaps_q2, q2_mirrorinside)
+TEST(testmapsQ2, mirrorinside)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mirrorinside.map");
 
@@ -620,7 +620,7 @@ TEST(testmaps_q2, q2_mirrorinside)
     }
 }
 
-TEST(testmaps_q2, q2_alphatest_window)
+TEST(testmapsQ2, alphatestWindow)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_alphatest_window.map");
 
@@ -630,7 +630,7 @@ TEST(testmaps_q2, q2_alphatest_window)
     EXPECT_EQ(leaf->contents, (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
 }
 
-TEST(testmaps_q2, q2_alphatest_solid)
+TEST(testmapsQ2, alphatestSolid)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_alphatest_solid.map");
 
@@ -640,7 +640,7 @@ TEST(testmaps_q2, q2_alphatest_solid)
     EXPECT_EQ(leaf->contents, (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
 }
 
-TEST(testmaps_q2, q2_trans33_window)
+TEST(testmapsQ2, trans33Window)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_trans33_window.map");
 
@@ -650,7 +650,7 @@ TEST(testmaps_q2, q2_trans33_window)
     EXPECT_EQ(leaf->contents, (Q2_CONTENTS_DETAIL | Q2_CONTENTS_WINDOW | Q2_CONTENTS_TRANSLUCENT));
 }
 
-TEST(testmaps_q2, q2_trans33_solid)
+TEST(testmapsQ2, trans33Solid)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_trans33_solid.map");
 
@@ -664,7 +664,7 @@ TEST(testmaps_q2, q2_trans33_solid)
  * Ensure that leaked maps still get areas assigned properly
  * (empty leafs should get area 1, solid leafs area 0)
  */
-TEST(testmaps_q2, q2_leaked)
+TEST(testmapsQ2, leaked)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_leaked.map");
 
@@ -683,7 +683,7 @@ TEST(testmaps_q2, q2_leaked)
     }
 }
 
-TEST(testmaps_q2, missing_faces)
+TEST(testmapsQ2, missingFaces)
 {
     GTEST_SKIP();
 
@@ -699,7 +699,7 @@ TEST(testmaps_q2, missing_faces)
     EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], point_on_present_face));
 }
 
-TEST(testmaps_q2, q2_ladder)
+TEST(testmapsQ2, ladder)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_ladder.map");
 
@@ -718,7 +718,7 @@ TEST(testmaps_q2, q2_ladder)
     EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_LADDER | Q2_CONTENTS_DETAIL), Leaf_Brushes(&bsp, leaf).at(0)->contents);
 }
 
-TEST(testmaps_q2, hint_missing_faces)
+TEST(testmapsQ2, hintMissingFaces)
 {
     GTEST_SKIP();
 
@@ -727,7 +727,7 @@ TEST(testmaps_q2, hint_missing_faces)
     EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {36, 144, 30}));
 }
 
-TEST(testmaps_q2, q2_tb_cleanup)
+TEST(testmapsQ2, tbCleanup)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_tb_cleanup.map");
 
@@ -745,7 +745,7 @@ TEST(testmaps_q2, q2_tb_cleanup)
     }
 }
 
-TEST(testmaps_q2, q2_detail_wall)
+TEST(testmapsQ2, detailWall)
 {
     // q2_detail_wall_with_detail_bit.map has the DETAIL content flag set on the
     // brushes inside the func_detail_wall. the func_detail_wall should take priority.
@@ -794,7 +794,7 @@ TEST(testmaps_q2, q2_detail_wall)
     }
 }
 
-TEST(testmaps_q2, q2_detail_fence)
+TEST(testmapsQ2, detailFence)
 {
     const std::vector<std::string> maps{"q2_detail_fence.map", "q2_detail_fence_with_detail_bit.map"};
 
@@ -837,7 +837,7 @@ TEST(testmaps_q2, q2_detail_fence)
     }
 }
 
-TEST(testmaps_q2, q2_mist_transwater)
+TEST(testmapsQ2, mistTranswater)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_transwater.map", {"-tjunc", "none"});
 
@@ -860,7 +860,7 @@ TEST(testmaps_q2, q2_mist_transwater)
     EXPECT_TRUE(Face_Winding(&bsp, down_faces[0]).directional_equal(top_of_water_dn));
 }
 
-TEST(testmaps_q2, q2_tjunc_matrix)
+TEST(testmapsQ2, tjuncMatrix)
 {
     const auto [b, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");
     const mbsp_t &bsp = b; // workaround clang not allowing capturing bindings in lambdas
@@ -1041,7 +1041,7 @@ TEST(testmaps_q2, q2_tjunc_matrix)
     }
 }
 
-TEST(testmaps_q2, q2_unknown_contents)
+TEST(testmapsQ2, unknownContents)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_unknown_contents.map");
 
@@ -1086,7 +1086,7 @@ TEST(testmaps_q2, q2_unknown_contents)
     }
 }
 
-TEST(ltfaceQ2, noclipfaces_nodraw)
+TEST(ltfaceQ2, noclipfacesNodraw)
 {
     GTEST_SKIP();
 

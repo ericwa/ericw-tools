@@ -158,7 +158,7 @@ TEST(polylib, ClosestPointOnPolyBoundary)
     EXPECT_EQ(std::make_pair(0, qvec3f(0, 0, 0)), ClosestPointOnPolyBoundary(poly, qvec3f(-1, -1, 0)));
 }
 
-TEST(polylib, PolygonCentroid_empty)
+TEST(polylib, PolygonCentroidEmpty)
 {
     const std::initializer_list<qvec3d> empty{};
     const qvec3f res = qv::PolyCentroid(empty.begin(), empty.end());
@@ -168,13 +168,13 @@ TEST(polylib, PolygonCentroid_empty)
     }
 }
 
-TEST(polylib, PolygonCentroid_point)
+TEST(polylib, PolygonCentroidPoint)
 {
     const std::initializer_list<qvec3d> point{{1, 1, 1}};
     EXPECT_EQ(*point.begin(), qv::PolyCentroid(point.begin(), point.end()));
 }
 
-TEST(polylib, PolygonCentroid_line)
+TEST(polylib, PolygonCentroidLine)
 {
     const std::initializer_list<qvec3d> line{{0, 0, 0}, {2, 2, 2}};
     EXPECT_EQ(qvec3d(1, 1, 1), qv::PolyCentroid(line.begin(), line.end()));
@@ -447,7 +447,7 @@ TEST(mathlib, ConcavityTestCoplanar)
 
 static const float MANGLE_EPSILON = 0.1f;
 
-TEST(mathlib, vec_from_mangle)
+TEST(mathlib, vecFromMangle)
 {
     EXPECT_TRUE(qv::epsilonEqual(qvec3f(1, 0, 0), qv::vec_from_mangle(qvec3f(0, 0, 0)), MANGLE_EPSILON));
     EXPECT_TRUE(qv::epsilonEqual(qvec3f(-1, 0, 0), qv::vec_from_mangle(qvec3f(180, 0, 0)), MANGLE_EPSILON));
@@ -455,7 +455,7 @@ TEST(mathlib, vec_from_mangle)
     EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, -1), qv::vec_from_mangle(qvec3f(0, -90, 0)), MANGLE_EPSILON));
 }
 
-TEST(mathlib, mangle_from_vec)
+TEST(mathlib, mangleFromVec)
 {
     EXPECT_TRUE(qv::epsilonEqual(qvec3f(0, 0, 0), qv::mangle_from_vec(qvec3f(1, 0, 0)), MANGLE_EPSILON));
     EXPECT_TRUE(qv::epsilonEqual(qvec3f(180, 0, 0), qv::mangle_from_vec(qvec3f(-1, 0, 0)), MANGLE_EPSILON));
@@ -611,54 +611,54 @@ TEST(mathlib, DistToLineSegment)
     ASSERT_LT(fabs(0.5 - DistToLineSegment(qvec3f(10, 0, 0), qvec3f(10, 0, 100), qvec3f(9.5, 0, 0))), epsilon);
 }
 
-TEST(mathlib, linesOverlap_points)
+TEST(mathlib, linesOverlapPoints)
 {
     ASSERT_TRUE(LinesOverlap({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 0}));
 }
 
-TEST(mathlib, linesOverlap_point_line)
+TEST(mathlib, linesOverlapPointLine)
 {
     ASSERT_TRUE(LinesOverlap({0, 0, 0}, {0, 0, 0}, {0, 0, 0}, {0, 0, 1}));
 }
 
-TEST(mathlib, linesOverlap_same)
+TEST(mathlib, linesOverlapSame)
 {
     ASSERT_TRUE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 0}, {0, 0, 1}));
 }
 
-TEST(mathlib, linesOverlap_same_opposite_dir)
+TEST(mathlib, linesOverlapSameOppositeDir)
 {
     ASSERT_TRUE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 1}, {0, 0, 0}));
 }
 
-TEST(mathlib, linesOverlap_overlap)
+TEST(mathlib, linesOverlapOverlap)
 {
     ASSERT_TRUE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 0.5}, {0, 0, 1.5}));
 }
 
-TEST(mathlib, linesOverlap_overlap_opposite_dir)
+TEST(mathlib, linesOverlapOverlapOppositeDir)
 {
     ASSERT_TRUE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 1.5}, {0, 0, 0.5}));
 }
 
-TEST(mathlib, linesOverlap_only_tips_touching)
+TEST(mathlib, linesOverlapOnlyTipsTouching)
 {
     ASSERT_TRUE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 1}, {0, 0, 2}));
 }
 
-TEST(mathlib, linesOverlap_non_colinear)
+TEST(mathlib, linesOverlapNonColinear)
 {
     ASSERT_FALSE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {5, 0, 0}, {5, 0, 1}));
 }
 
-TEST(mathlib, linesOverlap_colinear_not_touching)
+TEST(mathlib, linesOverlapColinearNotTouching)
 {
     ASSERT_FALSE(LinesOverlap({0, 0, 0}, {0, 0, 1}, {0, 0, 2}, {0, 0, 3}));
 }
 
 // qvec
 
-TEST(mathlib, qvec_expand)
+TEST(mathlib, qvecExpand)
 {
     const qvec2f test(1, 2);
     const qvec4f test2(test);
@@ -669,7 +669,7 @@ TEST(mathlib, qvec_expand)
     EXPECT_EQ(0, test2[3]);
 }
 
-TEST(mathlib, qvec_contract)
+TEST(mathlib, qvecContract)
 {
     const qvec4f test(1, 2, 0, 0);
     const qvec2f test2(test);
@@ -678,7 +678,7 @@ TEST(mathlib, qvec_contract)
     EXPECT_EQ(2, test2[1]);
 }
 
-TEST(mathlib, qvec_copy)
+TEST(mathlib, qvecCopy)
 {
     const qvec2f test(1, 2);
     const qvec2f test2(test);
@@ -687,21 +687,21 @@ TEST(mathlib, qvec_copy)
     EXPECT_EQ(2, test2[1]);
 }
 
-TEST(mathlib, qvec_constructor_init)
+TEST(mathlib, qvecConstructorInit)
 {
     const qvec2f test{};
     EXPECT_EQ(0, test[0]);
     EXPECT_EQ(0, test[1]);
 }
 
-TEST(mathlib, qvec_constructor_1)
+TEST(mathlib, qvecConstructor1)
 {
     const qvec2f test(42);
     EXPECT_EQ(42, test[0]);
     EXPECT_EQ(42, test[1]);
 }
 
-TEST(mathlib, qvec_constructor_fewer)
+TEST(mathlib, qvecConstructorFewer)
 {
     const qvec4f test(1, 2, 3);
     EXPECT_EQ(1, test[0]);
@@ -710,7 +710,7 @@ TEST(mathlib, qvec_constructor_fewer)
     EXPECT_EQ(0, test[3]);
 }
 
-TEST(mathlib, qvec_constructor_extra)
+TEST(mathlib, qvecConstructorExtra)
 {
     const qvec2f test(1, 2, 3);
     EXPECT_EQ(1, test[0]);
@@ -728,14 +728,14 @@ TEST(mathlib, aabbBasic)
     EXPECT_EQ(qvec3f(9, 9, 9), b1.size());
 }
 
-TEST(mathlib, aabb_grow)
+TEST(mathlib, aabbGrow)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
     EXPECT_EQ(aabb3f(qvec3f(0, 0, 0), qvec3f(11, 11, 11)), b1.grow(qvec3f(1, 1, 1)));
 }
 
-TEST(mathlib, aabb_unionwith)
+TEST(mathlib, aabbUnionwith)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
     const aabb3f b2(qvec3f(11, 11, 11), qvec3f(12, 12, 12));
@@ -743,7 +743,7 @@ TEST(mathlib, aabb_unionwith)
     EXPECT_EQ(aabb3f(qvec3f(1, 1, 1), qvec3f(12, 12, 12)), b1.unionWith(b2));
 }
 
-TEST(mathlib, aabb_expand)
+TEST(mathlib, aabbExpand)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -758,7 +758,7 @@ TEST(mathlib, aabb_expand)
     EXPECT_EQ(b3, b1.expand(qvec3f(0, 1, 1)));
 }
 
-TEST(mathlib, aabb_disjoint)
+TEST(mathlib, aabbDisjoint)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -790,7 +790,7 @@ TEST(mathlib, aabb_disjoint)
     EXPECT_FALSE(b1.disjoint_or_touching(aabb3f(qvec3f(9.99, 1, 1), qvec3f(20, 10, 10))));
 }
 
-TEST(mathlib, aabb_contains)
+TEST(mathlib, aabbContains)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -806,7 +806,7 @@ TEST(mathlib, aabb_contains)
     EXPECT_FALSE(b1.contains(no2));
 }
 
-TEST(mathlib, aabb_containsPoint)
+TEST(mathlib, aabbContainsPoint)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(10, 10, 10));
 
@@ -826,7 +826,7 @@ TEST(mathlib, aabb_containsPoint)
     EXPECT_FALSE(b1.containsPoint(no3));
 }
 
-TEST(mathlib, aabb_create_invalid)
+TEST(mathlib, aabbCreateInvalid)
 {
     const aabb3f b1(qvec3f(1, 1, 1), qvec3f(-1, -1, -1));
     const aabb3f fixed(qvec3f(1, 1, 1), qvec3f(1, 1, 1));
@@ -913,7 +913,7 @@ TEST(qmat, matrix4x4inv)
     ASSERT_TRUE(std::isnan(nanMat.at(0, 0)));
 }
 
-TEST(qmat, qmat_construct_initialize)
+TEST(qmat, qmatConstructInitialize)
 {
     const qmat2x2f test{1, 2, 3, 4}; // column major
 
@@ -921,7 +921,7 @@ TEST(qmat, qmat_construct_initialize)
     EXPECT_EQ(qvec2f(2, 4), test.row(1));
 }
 
-TEST(qmat, qmat_construct_row_major)
+TEST(qmat, qmatConstructRowMajor)
 {
     const qmat2x2f test = qmat2x2f::row_major({1, 2, 3, 4});
 

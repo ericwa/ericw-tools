@@ -516,7 +516,7 @@ TEST(winding, WindingArea)
  * checks that options are reset across tests.
  * set two random options and check that they don't carry over.
  */
-TEST(testmaps_q1, options_reset1)
+TEST(testmapsQ1, optionsReset1)
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-noskip"});
 
@@ -524,7 +524,7 @@ TEST(testmaps_q1, options_reset1)
     EXPECT_TRUE(qbsp_options.noskip.value());
 }
 
-TEST(testmaps_q1, options_reset2)
+TEST(testmapsQ1, optionsReset2)
 {
     LoadTestmap("qbsp_simple_sealed.map", {"-forcegoodtree"});
 
@@ -535,14 +535,14 @@ TEST(testmaps_q1, options_reset2)
 /**
  * The brushes are touching but not intersecting, so ChopBrushes shouldn't change anything.
  */
-TEST(testmaps_q1, chop_no_change)
+TEST(testmapsQ1, chopNoChange)
 {
     LoadTestmapQ1("qbsp_chop_no_change.map");
 
     // TODO: ideally we should check we get back the same brush pointers from ChopBrushes
 }
 
-TEST(testmaps_q1, simple_sealed)
+TEST(testmapsQ1, simpleSealed)
 {
     const std::vector<std::string> quake_maps{"qbsp_simple_sealed.map", "qbsp_simple_sealed_rotated.map"};
 
@@ -572,7 +572,7 @@ TEST(testmaps_q1, simple_sealed)
     }
 }
 
-TEST(testmaps_q1, simple_sealed2)
+TEST(testmapsQ1, simpleSealed2)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_sealed2.map");
 
@@ -609,7 +609,7 @@ TEST(testmaps_q1, simple_sealed2)
         std::vector<const mface_t *>{other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y});
 }
 
-TEST(testmaps_q1, simple_worldspawn_worldspawn)
+TEST(testmapsQ1, simpleWorldspawnWorldspawn)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map", {"-tjunc", "rotate"});
 
@@ -637,7 +637,7 @@ TEST(testmaps_q1, simple_worldspawn_worldspawn)
     ASSERT_EQ(room_faces, 9);
 }
 
-TEST(testmaps_q1, simple_worldspawn_detail_wall)
+TEST(testmapsQ1, simpleWorldspawnDetailWall)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_wall.map");
 
@@ -654,7 +654,7 @@ TEST(testmaps_q1, simple_worldspawn_detail_wall)
     EXPECT_EQ(button_leaf, &bsp.dleafs[0]); // should be using shared solid leaf because it's func_detail_wall
 }
 
-TEST(testmaps_q1, simple_worldspawn_detail)
+TEST(testmapsQ1, simpleWorldspawnDetail)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail.map", {"-tjunc", "rotate"});
 
@@ -672,7 +672,7 @@ TEST(testmaps_q1, simple_worldspawn_detail)
     EXPECT_LE(bsp.dclipnodes.size(), 22);
 }
 
-TEST(testmaps_q1, simple_worldspawn_detail_illusionary)
+TEST(testmapsQ1, simpleWorldspawnDetailIllusionary)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_detail_illusionary.map");
 
@@ -694,7 +694,7 @@ TEST(testmaps_q1, simple_worldspawn_detail_illusionary)
     EXPECT_EQ(prt->portalleafs, 1);
 }
 
-TEST(testmaps_q1, simple_worldspawn_sky)
+TEST(testmapsQ1, simpleWorldspawnSky)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_sky.map");
 
@@ -741,7 +741,7 @@ TEST(testmaps_q1, simple_worldspawn_sky)
     EXPECT_EQ(12, bsp.dclipnodes.size());
 }
 
-TEST(testmaps_q1, water_detail_illusionary)
+TEST(testmapsQ1, waterDetailIllusionary)
 {
     static const std::string basic_mapname = "qbsp_water_detail_illusionary.map";
     static const std::string mirrorinside_mapname = "qbsp_water_detail_illusionary_mirrorinside.map";
@@ -788,7 +788,7 @@ TEST(testmaps_q1, water_detail_illusionary)
     }
 }
 
-TEST(testmaps_q1, qbsp_bmodel_mirrorinside_with_liquid)
+TEST(testmapsQ1, bmodelMirrorinsideWithLiquid)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_bmodel_mirrorinside_with_liquid.map");
 
@@ -811,7 +811,7 @@ TEST(testmaps_q1, qbsp_bmodel_mirrorinside_with_liquid)
     }
 }
 
-TEST(testmaps_q1, q1_bmodel_liquid)
+TEST(testmapsQ1, bmodelLiquid)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_bmodel_liquid.map", {"-bmodelcontents"});
     ASSERT_TRUE(prt.has_value());
@@ -826,7 +826,7 @@ TEST(testmaps_q1, q1_bmodel_liquid)
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, {2}, &bsp.dmodels[1], inside_water));
 }
 
-TEST(testmaps_q1, q1_liquid_mirrorinside_off)
+TEST(testmapsQ1, liquidMirrorinsideOff)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_liquid_mirrorinside_off.map");
     ASSERT_TRUE(prt.has_value());
@@ -836,7 +836,7 @@ TEST(testmaps_q1, q1_liquid_mirrorinside_off)
     EXPECT_FALSE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels.at(0), {-52, -56, 8}, {0, 0, -1}));
 }
 
-TEST(testmaps_q1, noclipfaces)
+TEST(testmapsQ1, noclipfaces)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces.map");
 
@@ -859,7 +859,7 @@ TEST(testmaps_q1, noclipfaces)
  *
  * Currently, to simplify the implementation, we're treating that the same as if both had _noclipfaces 1
  */
-TEST(testmaps_q1, noclipfaces_junction)
+TEST(testmapsQ1, noclipfacesJunction)
 {
     const std::vector<std::string> maps{"qbsp_noclipfaces_junction.map", "q2_noclipfaces_junction.map"};
 
@@ -893,7 +893,7 @@ TEST(testmaps_q1, noclipfaces_junction)
 /**
  * Same as previous test, but the T shaped brush entity has _mirrorinside
  */
-TEST(testmaps_q1, noclipfaces_mirrorinside)
+TEST(testmapsQ1, noclipfacesMirrorinside)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_noclipfaces_mirrorinside.map");
 
@@ -911,7 +911,7 @@ TEST(testmaps_q1, noclipfaces_mirrorinside)
     EXPECT_EQ(prt->portalleafs, 1);
 }
 
-TEST(testmaps_q1, detail_illusionary_intersecting)
+TEST(testmapsQ1, detailIllusionaryIntersecting)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_illusionary_intersecting.map", {"-tjunc", "rotate"});
 
@@ -937,7 +937,7 @@ TEST(testmaps_q1, detail_illusionary_intersecting)
     EXPECT_EQ(prt->portalleafs, 1);
 }
 
-TEST(testmaps_q1, detail_illusionary_noclipfaces_intersecting)
+TEST(testmapsQ1, detailIllusionaryNoclipfacesIntersecting)
 {
     const auto [bsp, bspx, prt] =
         LoadTestmapQ1("qbsp_detail_illusionary_noclipfaces_intersecting.map", {"-tjunc", "rotate"});
@@ -961,28 +961,28 @@ TEST(testmaps_q1, detail_illusionary_noclipfaces_intersecting)
     EXPECT_EQ(prt->portalleafs, 1);
 }
 
-TEST(testmaps_q1, q1_detail_non_sealing)
+TEST(testmapsQ1, detailNonSealing)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_non_sealing.map");
 
     EXPECT_FALSE(prt.has_value());
 }
 
-TEST(testmaps_q1, q1_sealing_contents)
+TEST(testmapsQ1, sealingContents)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_sealing_contents.map");
 
     EXPECT_TRUE(prt.has_value());
 }
 
-TEST(testmaps_q1, q1_detail_touching_water)
+TEST(testmapsQ1, detailTouchingWater)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_touching_water.map");
 
     EXPECT_TRUE(prt.has_value());
 }
 
-TEST(testmaps_q1, detail_doesnt_remove_world_nodes)
+TEST(testmapsQ1, detailDoesntRemoveWorldNodes)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_detail_doesnt_remove_world_nodes.map");
 
@@ -1013,7 +1013,7 @@ TEST(testmaps_q1, detail_doesnt_remove_world_nodes)
     }
 }
 
-TEST(testmaps_q1, merge)
+TEST(testmapsQ1, merge)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_merge.map");
 
@@ -1033,7 +1033,7 @@ TEST(testmaps_q1, merge)
     EXPECT_EQ(top_winding.bounds().maxs(), exp_bounds.maxs());
 }
 
-TEST(testmaps_q1, tjunc_many_sided_face)
+TEST(testmapsQ1, tjuncManySidedFace)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map", {"-tjunc", "rotate"});
 
@@ -1054,7 +1054,7 @@ TEST(testmaps_q1, tjunc_many_sided_face)
     EXPECT_EQ(2, (faces_by_normal.at({0, 0, -1}).size()));
 }
 
-TEST(testmaps_q1, tjunc_angled_face)
+TEST(testmapsQ1, tjuncAngledFace)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_tjunc_angled_face.map");
     CheckFilled(bsp);
@@ -1070,7 +1070,7 @@ TEST(testmaps_q1, tjunc_angled_face)
  * Because it comes second, the sbutt2 brush should "win" in clipping against the floor,
  * in both a worldspawn test case, as well as a func_wall.
  */
-TEST(testmaps_q1, brush_clipping_order)
+TEST(testmapsQ1, brushClippingOrder)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_brush_clipping_order.map", {"-tjunc", "rotate"});
 
@@ -1099,7 +1099,7 @@ TEST(testmaps_q1, brush_clipping_order)
 /**
  * Box room with a rotating fan (just a cube). Works in a mod with hiprotate - AD, Quoth, etc.
  */
-TEST(testmaps_q1, origin)
+TEST(testmapsQ1, origin)
 {
     const std::vector<std::string> maps{
         "qbsp_origin.map",
@@ -1132,7 +1132,7 @@ TEST(testmaps_q1, origin)
     }
 }
 
-TEST(testmaps_q1, simple)
+TEST(testmapsQ1, simple)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map");
 
@@ -1142,7 +1142,7 @@ TEST(testmaps_q1, simple)
 /**
  * Just a solid cuboid
  */
-TEST(testmaps_q1, q1_cube)
+TEST(testmapsQ1, cube)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cube.map");
 
@@ -1190,7 +1190,7 @@ TEST(testmaps_q1, q1_cube)
 /**
  * Two solid cuboids touching along one edge
  */
-TEST(testmaps_q1, q1_cubes)
+TEST(testmapsQ1, cubes)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cubes.map");
 
@@ -1200,7 +1200,7 @@ TEST(testmaps_q1, q1_cubes)
 /**
  * Ensure submodels that are all "clip" get bounds set correctly
  */
-TEST(testmaps_q1, q1_clip_func_wall)
+TEST(testmapsQ1, clipFuncWall)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_clip_func_wall.map");
 
@@ -1223,7 +1223,7 @@ TEST(testmaps_q1, q1_clip_func_wall)
 /**
  * Lots of features in one map, more for testing in game than automated testing
  */
-TEST(testmaps_q1, features)
+TEST(testmapsQ1, features)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbspfeatures.map");
 
@@ -1232,7 +1232,7 @@ TEST(testmaps_q1, features)
     EXPECT_EQ(bsp.loadversion, &bspver_q1);
 }
 
-TEST(testmaps_q1, q1_detail_wall_tjuncs)
+TEST(testmapsQ1, detailWallTjuncs)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_wall.map");
 
@@ -1248,7 +1248,7 @@ TEST(testmaps_q1, q1_detail_wall_tjuncs)
     EXPECT_EQ(w.size(), 5);
 }
 
-TEST(testmaps_q1, q1_detail_wall_intersecting_detail)
+TEST(testmapsQ1, detailWallIntersectingDetail)
 {
     GTEST_SKIP();
 
@@ -1271,7 +1271,7 @@ bool PortalMatcher(const prtfile_winding_t &a, const prtfile_winding_t &b)
     return a.undirectional_equal(b);
 }
 
-TEST(testmaps_q1, qbsp_func_detailVariousTypes)
+TEST(testmapsQ1, qbspFuncDetailVariousTypes)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_func_detail.map");
 
@@ -1321,7 +1321,7 @@ TEST(testmaps_q1, qbsp_func_detailVariousTypes)
     EXPECT_GT(prt->portalleafs_real, 3);
 }
 
-TEST(testmaps_q1, qbsp_angled_brush)
+TEST(testmapsQ1, angledBrush)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_angled_brush.map");
 
@@ -1333,14 +1333,14 @@ TEST(testmaps_q1, qbsp_angled_brush)
     EXPECT_EQ(6 + 1, bsp.dleafs.size());
 }
 
-TEST(testmaps_q1, qbsp_sealing_point_entity_on_outside)
+TEST(testmapsQ1, sealingPointEntityOnOutside)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_sealing_point_entity_on_outside.map");
 
     ASSERT_TRUE(prt.has_value());
 }
 
-TEST(testmaps_q1, q1_sealing_hull1_onnode)
+TEST(testmapsQ1, sealingHull1Onnode)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_sealing_hull1_onnode.map");
 
@@ -1359,7 +1359,7 @@ TEST(testmaps_q1, q1_sealing_hull1_onnode)
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
 }
 
-TEST(testmaps_q1, q1_0125unit_faces)
+TEST(testmapsQ1, 0125UnitFaces)
 {
     GTEST_SKIP();
 
@@ -1369,7 +1369,7 @@ TEST(testmaps_q1, q1_0125unit_faces)
     EXPECT_EQ(2, bsp.dfaces.size());
 }
 
-TEST(testmaps_q1, mountain)
+TEST(testmapsQ1, mountain)
 {
     GTEST_SKIP();
 
@@ -1386,7 +1386,7 @@ TEST(testmaps_q1, mountain)
  * - hull1+ can't, because it would cause areas containing no entities but connected by a thin gap to the
  *   rest of the world to get sealed off as solid.
  **/
-TEST(testmaps_q1, q1_sealing)
+TEST(testmapsQ1, sealing)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_sealing.map");
 
@@ -1423,7 +1423,7 @@ TEST(testmaps_q1, q1_sealing)
     EXPECT_EQ(prt->portalleafs_real, 3); // no detail, so same as above
 }
 
-TEST(testmaps_q1, q1_csg)
+TEST(testmapsQ1, csg)
 {
     auto *game = bspver_q1.game;
 
@@ -1451,7 +1451,7 @@ TEST(testmaps_q1, q1_csg)
 /**
  * Test for WAD internal textures
  **/
-TEST(testmaps_q1, q1_wad_internal)
+TEST(testmapsQ1, wadInternal)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map");
 
@@ -1477,7 +1477,7 @@ TEST(testmaps_q1, q1_wad_internal)
 /**
  * Test for WAD internal textures
  **/
-TEST(testmaps_q1, q1_wad_external)
+TEST(testmapsQ1, wadExternal)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple.map", {"-xwadpath", std::string(testmaps_dir)});
 
@@ -1496,7 +1496,7 @@ TEST(testmaps_q1, q1_wad_external)
     EXPECT_EQ(bsp.dtex.textures[3].data.size(), sizeof(dmiptex_t));
 }
 
-TEST(testmaps_q1, q1_loose_textures_ignored)
+TEST(testmapsQ1, looseTexturesIgnored)
 {
     SCOPED_TRACE("q1 should only load textures from .wad's. loose textures should not be included.");
 
@@ -1541,7 +1541,7 @@ TEST(testmaps_q1, q1_loose_textures_ignored)
 /**
  * Test that we automatically try to load X.wad when compiling X.map
  **/
-TEST(testmaps_q1, q1_wad_mapname)
+TEST(testmapsQ1, wadMapname)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_wad_mapname.map");
 
@@ -1556,7 +1556,7 @@ TEST(testmaps_q1, q1_wad_mapname)
     EXPECT_GT(bsp.dtex.textures[1].data.size(), sizeof(dmiptex_t));
 }
 
-TEST(testmaps_q1, q1_merge_maps)
+TEST(testmapsQ1, mergeMaps)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_merge_maps_base.map", {"-add", "q1_merge_maps_addition.map"});
 
@@ -1587,7 +1587,7 @@ TEST(testmaps_q1, q1_merge_maps)
 /**
  * Tests that hollow obj2map style geometry (tetrahedrons) get filled in, in all hulls.
  */
-TEST(testmaps_q1, q1_rocks)
+TEST(testmapsQ1, rocks)
 {
     GTEST_SKIP();
 
@@ -1686,7 +1686,7 @@ int CountClipnodeNodes(const mbsp_t &bsp, int hullnum)
 /**
  * Tests a bad hull expansion
  */
-TEST(testmaps_q1, q1_hull_expansion_lip)
+TEST(testmapsQ1, hullExpansionLip)
 {
     GTEST_SKIP();
 
@@ -1721,7 +1721,7 @@ TEST(testmaps_q1, q1_hull_expansion_lip)
     }
 }
 
-TEST(testmaps_q1, q1_hull1_content_types)
+TEST(testmapsQ1, hull1ContentTypes)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hull1_content_types.map");
 
@@ -1817,7 +1817,7 @@ TEST(qbsp, BrushFromBounds)
 }
 
 // FIXME: failing because water tjuncs with walls
-TEST(qbsp_q1, q1_water_subdivisionWithLitWaterOff)
+TEST(qbspQ1, waterSubdivisionWithLitWaterOff)
 {
     GTEST_SKIP();
 
@@ -1834,7 +1834,7 @@ TEST(qbsp_q1, q1_water_subdivisionWithLitWaterOff)
     }
 }
 
-TEST(qbsp_q1, q1_water_subdivision_with_defaults)
+TEST(qbspQ1, waterSubdivisionWithDefaults)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_water_subdivision.map");
 
@@ -1847,7 +1847,7 @@ TEST(qbsp_q1, q1_water_subdivision_with_defaults)
     }
 }
 
-TEST(qbsp_q1, texturesSearchRelativeToCurrentDirectory)
+TEST(qbspQ1, texturesSearchRelativeToCurrentDirectory)
 {
     // QuArK runs the compilers like this:
     //
@@ -1880,7 +1880,7 @@ TEST(qbsp_q1, texturesSearchRelativeToCurrentDirectory)
 
 // specifically designed to break the old isHexen2()
 // (has 0 faces, and model lump size is divisible by both Q1 and H2 model struct size)
-TEST(qbsp_q1, skipOnly)
+TEST(qbspQ1, skipOnly)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_skip_only.map");
 
@@ -1890,7 +1890,7 @@ TEST(qbsp_q1, skipOnly)
 
 // specifically designed to break the old isHexen2()
 // (has 0 faces, and model lump size is divisible by both Q1 and H2 model struct size)
-TEST(qbsp_h2, skipOnly)
+TEST(qbspH2, skipOnly)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("h2_skip_only.map", {"-hexen2"});
 
@@ -1898,7 +1898,7 @@ TEST(qbsp_h2, skipOnly)
     EXPECT_EQ(0, bsp.dfaces.size());
 }
 
-TEST(qbsp_q1, q1_hull1_fail)
+TEST(qbspQ1, hull1Fail)
 {
     GTEST_SKIP();
 
@@ -1920,7 +1920,7 @@ TEST(qbsp_q1, q1_hull1_fail)
     }
 }
 
-TEST(qbsp_q1, q1_sky_window)
+TEST(qbspQ1, skyWindow)
 {
     SCOPED_TRACE("faces partially covered by sky were getting wrongly merged and deleted");
     const auto [bsp, bspx, prt] = LoadTestmap("q1_sky_window.map");
@@ -1934,7 +1934,7 @@ TEST(qbsp_q1, q1_sky_window)
     }
 }
 
-TEST(qbsp_q1, q1_liquid_software)
+TEST(qbspQ1, liquidSoftware)
 {
     SCOPED_TRACE("map with just 1 liquid brush + a 'skip' platform, has render corruption on tyrquake");
     const auto [bsp, bspx, prt] = LoadTestmap("q1_liquid_software.map");
@@ -1991,7 +1991,7 @@ TEST(qbsp_q1, q1_liquid_software)
     }
 }
 
-TEST(qbsp_q1, q1_missing_texture)
+TEST(qbspQ1, missingTexture)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_missing_texture.map");
 
@@ -2011,7 +2011,7 @@ TEST(qbsp_q1, q1_missing_texture)
     EXPECT_EQ(6, bsp.dfaces.size());
 }
 
-TEST(qbsp_q1, q1_missing_textureAndMissing_textures_as_zero_size)
+TEST(qbspQ1, missingTextureAndMissingTexturesAsZeroSize)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_missing_texture.map", {"-missing_textures_as_zero_size"});
 
@@ -2033,7 +2033,7 @@ TEST(qbsp_q1, q1_missing_textureAndMissing_textures_as_zero_size)
     EXPECT_EQ(6, bsp.dfaces.size());
 }
 
-TEST(qbsp_q1, notex)
+TEST(qbspQ1, notex)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_cube.map", {"-notex"});
 
@@ -2065,7 +2065,7 @@ TEST(qbsp_q1, notex)
     }
 }
 
-TEST(qbsp_hl, basic)
+TEST(qbspHL, basic)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("hl_basic.map", {"-hlbsp"});
     EXPECT_TRUE(prt);
@@ -2081,7 +2081,7 @@ TEST(qbsp_hl, basic)
     EXPECT_EQ(64, bsp.dtex.textures[1].height);
 }
 
-TEST(qbsp_q1, wrbrushesAndMisc_external_map)
+TEST(qbspQ1, wrbrushesAndMiscExternalMap)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_external_map_base.map", {"-wrbrushes"});
 
@@ -2097,7 +2097,7 @@ TEST(qbsp_q1, wrbrushesAndMisc_external_map)
     ASSERT_EQ(brush.bounds.mins(), qvec3f(-64,-64,-16));
 }
 
-TEST(qbsp_q1, wrbrushesContentTypes)
+TEST(qbspQ1, wrbrushesContentTypes)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_hull1_content_types.map", {"-wrbrushes"});
 
@@ -2159,7 +2159,7 @@ TEST(qbsp, readBspxBrushes)
     EXPECT_EQ(brush.faces.size(), 0);
 }
 
-TEST(qbsp_q1, lqE3m4map)
+TEST(qbspQ1, lqE3m4map)
 {
     GTEST_SKIP();
 
@@ -2167,7 +2167,7 @@ TEST(qbsp_q1, lqE3m4map)
     EXPECT_TRUE(prt);
 }
 
-TEST(qbsp_q1, q1_tjunc_matrix)
+TEST(qbspQ1, tjuncMatrix)
 {
     // TODO: test opaque water in q1 mode
     const auto [b, bspx, prt] = LoadTestmap("q1_tjunc_matrix.map");
@@ -2358,7 +2358,7 @@ TEST(qbsp_q1, q1_tjunc_matrix)
     }
 }
 
-TEST(testmaps_q1, q1_liquid_is_detail)
+TEST(testmapsQ1, liquidIsDetail)
 {
     const auto portal_underwater = prtfile_winding_t{{-168, -384, 32}, {-168, -320, 32}, {-168, -320, -32}, {-168, -384, -32}};
     const auto portal_above = portal_underwater.translate({0, 320, 128});

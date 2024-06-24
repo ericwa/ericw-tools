@@ -137,7 +137,7 @@ testresults_t QbspVisLight_HL(
     return QbspVisLight_Common(name, {"-hlbsp"}, extra_light_args, run_vis);
 }
 
-TEST(lightgrid_sample_t, styleEquality)
+TEST(lightgridsample, styleEquality)
 {
         lightgrid_sample_t a {.used = true, .style = 4, .color = {}};
         lightgrid_sample_t b = a;
@@ -147,7 +147,7 @@ TEST(lightgrid_sample_t, styleEquality)
         EXPECT_NE(a, b);
 }
 
-TEST(lightgrid_sample_t, colorEquality) {
+TEST(lightgridsample, colorEquality) {
     lightgrid_sample_t a {.used = true, .style = 4, .color = {1,2,3}};
     lightgrid_sample_t b = a;
     EXPECT_EQ(a, b);
@@ -156,7 +156,7 @@ TEST(lightgrid_sample_t, colorEquality) {
     EXPECT_NE(a, b);
 }
 
-TEST(lightgrid_sample_t, nanColors) {
+TEST(lightgridsample, nanColors) {
     lightgrid_sample_t a {.used = true, .style = 4, .color = {std::numeric_limits<double>::quiet_NaN(), 1.0, 1.0}};
     lightgrid_sample_t b = a;
     EXPECT_EQ(a, b);
@@ -165,7 +165,7 @@ TEST(lightgrid_sample_t, nanColors) {
     EXPECT_NE(a, b);
 }
 
-TEST(lightgrid_sample_t, unusedEqualityDoesntConsiderOtherAttributes) {
+TEST(lightgridsample, unusedEqualityDoesntConsiderOtherAttributes) {
     lightgrid_sample_t a, b;
     EXPECT_FALSE(a.used);
     EXPECT_EQ(a, b);
@@ -178,7 +178,7 @@ TEST(lightgrid_sample_t, unusedEqualityDoesntConsiderOtherAttributes) {
 }
 
 
-TEST(world_units_per_luxel, lightgrid)
+TEST(worldunitsperluxel, lightgrid)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_lightmap_custom_scale.map", {"-lightgrid"});
 
@@ -415,7 +415,7 @@ TEST(ltfaceQ2, phongDoesntCrossContents)
     auto [bsp, bspx] = QbspVisLight_Q2("q2_phong_doesnt_cross_contents.map", {"-wrnormals"});
 }
 
-TEST(ltfaceQ2, q2_minlight_nomottle)
+TEST(ltfaceQ2, minlightNomottle)
 {
     SCOPED_TRACE("_minlightMottle 0 works on worldspawn");
 
@@ -739,7 +739,7 @@ TEST(ltfaceQ2, lightCone)
     CheckSpotCutoff(bsp, {1236, 1472, 952});
 }
 
-TEST(ltfaceQ2, light_sunlight_default_mangle)
+TEST(ltfaceQ2, lightSunlightDefaultMangle)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_sunlight_default_mangle.map", {});
 
@@ -751,7 +751,7 @@ TEST(ltfaceQ2, light_sunlight_default_mangle)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, shadow_pos + qvec3d{-48, 0, 0});
 }
 
-TEST(ltfaceQ2, q2_light_sun)
+TEST(ltfaceQ2, lightSun)
 {
     const std::vector<std::string> maps{"q2_light_sun.map", "q2_light_sun_mangle.map"};
 
@@ -768,7 +768,7 @@ TEST(ltfaceQ2, q2_light_sun)
     }
 }
 
-TEST(ltfaceQ2, light_origin_brush_shadow)
+TEST(ltfaceQ2, lightOriginBrushShadow)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_origin_brush_shadow.map", {});
 
@@ -792,7 +792,7 @@ TEST(ltfaceQ2, light_origin_brush_shadow)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {100, 100, 100}, at_origin);
 }
 
-TEST(ltfaceQ2, surface_lights_culling)
+TEST(ltfaceQ2, surfaceLightsCulling)
 {
     GTEST_SKIP();
 
@@ -978,7 +978,7 @@ TEST(ltfaceQ1, suntexture)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 142}, {1000, 1288, 944}, {0, 0, 1}, &lit);
 }
 
-TEST(ltfaceQ1, q1_light_sun_artifact)
+TEST(ltfaceQ1, lightSunArtifact)
 {
     SCOPED_TRACE("sun rays can hit cracks if RTC_SCENE_FLAG_ROBUST is not used");
 
@@ -991,7 +991,7 @@ TEST(ltfaceQ1, q1_light_sun_artifact)
     }
 }
 
-TEST(ltfaceQ1, q1_light_invalid_delay)
+TEST(ltfaceQ1, lightInvalidDelay)
 {
     SCOPED_TRACE("invalid light formulas are ignored, not a fatal error");
 
@@ -1002,7 +1002,7 @@ TEST(ltfaceQ1, q1_light_invalid_delay)
     }
 }
 
-TEST(ltfaceQ1, bounce_litwaterWithoutTheWater)
+TEST(ltfaceQ1, bounceLitwaterWithoutTheWater)
 {
     auto [bsp, bspx] = QbspVisLight_Common("q1_light_bounce_litwater.map", {"-omitdetail"}, {"-lit", "-bounce", "4"}, runvis_t::no);
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {118, 118, 118}, {128, 12, 156}, {-1, 0, 0});
