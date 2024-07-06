@@ -522,7 +522,9 @@ Options
 
 .. option:: -maxedges n
 
-   The max number of edges/vertices on a single face before it is split into another face.
+   The max number of edges/vertices on a single face before it is split into another face. 0 means unlimited.
+
+   Default is 0 for Q2, and 64 for Q1.
 
 .. option:: -worldextent n
 
