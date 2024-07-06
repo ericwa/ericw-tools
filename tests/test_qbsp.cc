@@ -1046,12 +1046,81 @@ TEST(testmapsQ1, tjuncManySidedFace)
 
     ASSERT_EQ(6, faces_by_normal.size());
 
+    const std::vector<const mface_t *> &floor_faces = faces_by_normal.at({0, 0, 1});
+
     // the floor has a 0.1 texture scale, so it gets subdivided into many small faces
-    EXPECT_EQ(15 * 15, (faces_by_normal.at({0, 0, 1}).size()));
+    EXPECT_EQ(15 * 15, floor_faces.size());
+    for (auto *face : floor_faces) {
+        // these should all be <= 6 sided
+        EXPECT_LE(face->numedges, 6);
+    }
 
     // the ceiling gets split into 2 faces because fixing T-Junctions with all of the
     // wall sections exceeds the max vertices per face limit
-    EXPECT_EQ(2, (faces_by_normal.at({0, 0, -1}).size()));
+    const std::vector<const mface_t *> &ceiling_faces = faces_by_normal.at({0, 0, -1});
+    ASSERT_EQ(2, ceiling_faces.size());
+
+    for (auto *face : ceiling_faces) {
+        // these should all be <= 64 sided
+        EXPECT_LE(face->numedges, 64);
+    }
+
+    // ceiling faces: one is 0 area (it's just repairing a bunch of tjuncs)
+    auto ceiling_winding0 = Face_Winding(&bsp, ceiling_faces[0]);
+    auto ceiling_winding1 = Face_Winding(&bsp, ceiling_faces[1]);
+
+    float w0_area = ceiling_winding0.area();
+    float w1_area = ceiling_winding1.area();
+
+    if (w0_area > w1_area) {
+        EXPECT_EQ(320 * 320, w0_area);
+        EXPECT_EQ(0, w1_area);
+    } else {
+        EXPECT_EQ(0, w0_area);
+        EXPECT_EQ(320 * 320, w1_area);
+    }
+}
+
+TEST(testmapsQ1, tjuncManySidedFaceMaxedges0)
+{
+    // same as above, but -maxedges 0 allows the ceiling to be >64 sides so it can be just 1 face
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map", {"-tjunc", "rotate", "-maxedges", "0"});
+
+    std::map<qvec3d, std::vector<const mface_t *>> faces_by_normal;
+    for (auto &face : bsp.dfaces) {
+        faces_by_normal[Face_Normal(&bsp, &face)].push_back(&face);
+    }
+
+    const std::vector<const mface_t *> &ceiling_faces = faces_by_normal.at({0, 0, -1});
+    ASSERT_EQ(1, ceiling_faces.size());
+    EXPECT_GT(ceiling_faces[0]->numedges, 64);
+}
+
+TEST(testmapsQ1, tjuncManySidedFaceSky) {
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_sky.map", {"-tjunc", "rotate"});
+
+    for (auto &face : bsp.dfaces) {
+        EXPECT_LE(face.numedges, 64);
+    }
+}
+
+TEST(testmapsQ1, tjuncManySidedFaceSkyWithDefaultTjuncMode) {
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_sky.map", {});
+
+    for (auto &face : bsp.dfaces) {
+        EXPECT_LE(face.numedges, 64);
+    }
+}
+
+TEST(testmapsQ1, manySidedFace) {
+    // FIXME: 360 sided cylinder is really slow to compile
+    GTEST_SKIP();
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_many_sided_face.map", {});
+
+    for (auto &face : bsp.dfaces) {
+        EXPECT_LE(face.numedges, 64);
+    }
 }
 
 TEST(testmapsQ1, tjuncAngledFace)
