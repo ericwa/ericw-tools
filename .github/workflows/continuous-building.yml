@@ -13,6 +13,7 @@ jobs:
       matrix:
         os: 
           - ubuntu-22.04
+          - ubuntu-24.04
           - macos-12
           - windows-2022
         use-asan: 
