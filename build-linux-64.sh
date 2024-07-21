@@ -17,9 +17,9 @@ cd "$BUILD_DIR"
 
 if [ "$USE_SYSTEM_TBB_AND_EMBREE" == "1" ]; then
   if [ "$USE_ASAN" == "YES" ]; then
-    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DERICWTOOLS_ASAN=YES
+    cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DERICWTOOLS_ASAN=YES -DSKIP_EMBREE_INSTALL=YES -DSKIP_TBB_INSTALL=YES
   else
-    cmake .. -DCMAKE_BUILD_TYPE=Release
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DSKIP_EMBREE_INSTALL=YES -DSKIP_TBB_INSTALL=YES
   fi
 else
   wget -q https://github.com/embree/embree/releases/download/v3.13.1/embree-3.13.1.x86_64.linux.tar.gz -O embree.tgz
