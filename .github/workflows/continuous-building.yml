@@ -48,7 +48,7 @@ jobs:
         mkdir ericw-tools-linux
         unzip build-linux/*-Linux.zip -d ericw-tools-linux
     - name: 'Linux: Upload the artifact'
-      if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' }}
+      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
       with:
         path: ericw-tools-linux/
