@@ -51,7 +51,7 @@ jobs:
         if-no-files-found: error
     - name: 'Linux: Create GitHub Release and upload build'
       uses: softprops/action-gh-release@v1
-      if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' && startsWith(github.ref, 'refs/tags/') }}
+      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.use-asan == 'NO' && startsWith(github.ref, 'refs/tags/') }}
       with:
         draft: true
         files: |
