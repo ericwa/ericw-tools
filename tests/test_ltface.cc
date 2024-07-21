@@ -319,7 +319,7 @@ static void CheckFaceLuxelsNonBlack(const mbsp_t &bsp, const mface_t &face)
 
 static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3b &expected_color,
     const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const lit_variant_t *lit = nullptr,
-    const bspxentries_t *bspx = nullptr)
+    const bspxentries_t *bspx = nullptr, int style = 0)
 {
     auto *face = BSP_FindFaceAtPoint(bsp, model, point, normal);
     ASSERT_TRUE(face);
@@ -340,7 +340,7 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
     const auto coord = extents.worldToLMCoord(point);
     const auto int_coord = qvec2i(round(coord[0]), round(coord[1]));
 
-    const qvec3b sample = LM_Sample(bsp, face, lit, extents, offset, int_coord);
+    const qvec3b sample = LM_Sample(bsp, face, lit, extents, offset, int_coord, style);
     SCOPED_TRACE(fmt::format("world point: {}", point));
     SCOPED_TRACE(fmt::format("lm coord: {}", coord));
     SCOPED_TRACE(fmt::format("lm int_coord: {}", int_coord));
@@ -1145,4 +1145,35 @@ TEST(ltfaceQ1, hdr)
         // check internal lightmap - greyscale, since Q1
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
     }
+}
+
+TEST(ltfaceQ1, switchableshadowTarget)
+{
+    SCOPED_TRACE("Vanilla-compatible switchable shadows");
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_switchableshadow_target.map", {});
+
+    // find the light controlling the switchable shadow
+    auto entdicts = EntData_Parse(bsp);
+
+    auto it = std::find_if(entdicts.begin(), entdicts.end(), [](const entdict_t& dict) -> bool {
+        return dict.get("_switchableshadow_target") == "door1";
+    });
+    ASSERT_NE(it, entdicts.end());
+
+    ASSERT_TRUE(it->has("style"));
+    int switchable_style = it->get_int("style");
+
+    ASSERT_EQ(32, switchable_style);
+
+    const qvec3f not_in_shadow {792, 1240, 944};
+    const qvec3f in_shadow {792, 1264, 944};
+
+    // not in shadow - should be lit up red in style 0, and black in style 32
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 0, 0}, not_in_shadow, {0, 0, 1}, &lit, &bspx, 0);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, not_in_shadow, {0, 0, 1}, &lit, &bspx, 32);
+
+    // in (switchable) shadow - should be black in style 0, and red in style 32
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, in_shadow, {0, 0, 1}, &lit, &bspx, 0);
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 0, 0}, in_shadow, {0, 0, 1}, &lit, &bspx, 32);
 }

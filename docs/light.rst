@@ -665,6 +665,11 @@ If used on func_detail* or func_group, a full qbsp pass need to be run.
    through the switchable shadow casters, regardless of whether the shadow
    is off or on.
 
+   .. seealso::
+
+      The light entity key :light-key:`_switchableshadow_target` allows using switchable
+      shadows in ID1 Quake, without custom QC, although the setup is more awkward.
+
 .. bmodel-key:: "_dirt" "n"
 
    For brush models, -1 prevents dirtmapping on the brush model. Useful
@@ -917,6 +922,21 @@ Point Lights
 
    Set to 1 to make the light compiler ignore this entity (prevents it
    from casting any light). e.g. could be useful with rtlights.
+
+.. light-key:: "_switchableshadow_target" "name"
+
+   Calculate lighting with and without bmodels with a "targetname" equal to "name",
+   and stores the resulting switchable shadow data in a light style which is stored in this light
+   entity's "style" key.
+
+   You should give this light a :light-key:`targetname` and typically set "spawnflags" "1" (start off).
+
+   Implies :light-key:`_nostaticlight` (this entity itself does not cast any light).
+
+   .. hint::
+
+      If your mod supports it, you should prefer to use bmodel key :bmodel-key:`_switchableshadow`
+      to enable switchable shadows.
 
 Spotlights
 ----------

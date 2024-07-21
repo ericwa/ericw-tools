@@ -113,6 +113,7 @@ public:
     settings::setting_int32 light_channel_mask;
     settings::setting_int32 shadow_channel_mask;
     settings::setting_bool nonudge;
+    settings::setting_string switchableshadow_target;
 
     light_t();
 
@@ -143,6 +144,10 @@ std::vector<std::unique_ptr<light_t>> &GetLights();
 const std::vector<entdict_t> &GetEntdicts();
 std::vector<sun_t> &GetSuns();
 std::vector<entdict_t> &GetRadLights();
+/**
+ * Returns the light entity that has "_switchableshadow_target" set to the given value, or nullptr.
+ */
+light_t *LightWithSwitchableShadowTargetValue(const std::string &target);
 
 const std::vector<std::unique_ptr<light_t>> &GetSurfaceLightTemplates();
 

@@ -725,6 +725,13 @@ static void FindModelInfo(const mbsp_t *bsp)
         // apply settings
         info->set_settings(*entdict, settings::source::MAP);
 
+        // vanilla-compatible switchable shadows
+        if (auto *light = LightWithSwitchableShadowTargetValue(entdict->get("targetname"))) {
+            // take the "style" key from this light entity and enable switchable shadows on ourself
+            info->switchableshadow.set_value(true, settings::source::DEFAULT);
+            info->switchshadstyle.set_value(light->style.value(), settings::source::DEFAULT);
+        }
+
         /* Check if this model will cast shadows (shadow => shadowself) */
         if (info->switchableshadow.boolValue()) {
             Q_assert(info->switchshadstyle.value() != 0);

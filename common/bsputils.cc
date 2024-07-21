@@ -1099,10 +1099,10 @@ static int StyleOffset(int style, const mface_t *face, const faceextents_t &face
 }
 
 /**
- * Samples the lightmap at an integer coordinate in style 0
+ * Samples the lightmap at an integer coordinate in the given style
  */
 qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *lit, const faceextents_t &faceextents,
-    int byte_offset_of_face, qvec2i coord)
+    int byte_offset_of_face, qvec2i coord, int style)
 {
     if (byte_offset_of_face == -1) {
         return {0, 0, 0};
@@ -1113,7 +1113,7 @@ qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *li
     Q_assert(coord[0] < faceextents.width());
     Q_assert(coord[1] < faceextents.height());
 
-    int style_offset = StyleOffset(0, face, faceextents);
+    int style_offset = StyleOffset(style, face, faceextents);
     if (style_offset == -1) {
         return {0, 0, 0};
     }

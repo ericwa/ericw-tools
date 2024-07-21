@@ -42,6 +42,7 @@ static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
 static std::ofstream surflights_dump_file;
 static fs::path surflights_dump_filename;
+static std::map<std::string, light_t*> lights_by_switchableshadow_target;
 
 /**
  * Resets global data in this file
@@ -58,6 +59,7 @@ void ResetLightEntities()
     surfacelight_templates.clear();
     surflights_dump_file = {};
     surflights_dump_filename.clear();
+    lights_by_switchableshadow_target.clear();
 }
 
 std::vector<std::unique_ptr<light_t>> &GetLights()
@@ -78,6 +80,16 @@ std::vector<sun_t> &GetSuns()
 std::vector<entdict_t> &GetRadLights()
 {
     return radlights;
+}
+
+light_t *LightWithSwitchableShadowTargetValue(const std::string &target)
+{
+    auto it = lights_by_switchableshadow_target.find(target);
+
+    if (it == lights_by_switchableshadow_target.end())
+        return nullptr;
+
+    return it->second;
 }
 
 /* surface lights */
@@ -121,7 +133,8 @@ light_t::light_t()
       surflight_atten{this, "surflight_atten", 1.f},
       light_channel_mask{this, "light_channel_mask", CHANNEL_MASK_DEFAULT},
       shadow_channel_mask{this, "shadow_channel_mask", CHANNEL_MASK_DEFAULT},
-      nonudge{this, "nonudge", false}
+      nonudge{this, "nonudge", false},
+      switchableshadow_target{this, "switchableshadow_target", ""}
 {
 }
 
@@ -1060,6 +1073,14 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
                         CalcFov(entity->projfov.value(), entity->projectedmip->meta.height,
                             entity->projectedmip->meta.width),
                         entity->projfov.value(), entity->projectionmatrix);
+            }
+
+            // vanilla-compatible switchable shadows
+            const std::string &switchableshadow_target = entity->switchableshadow_target.value();
+            if (!switchableshadow_target.empty()) {
+                entity->nostaticlight.set_value(true, settings::source::DEFAULT);
+
+                lights_by_switchableshadow_target[switchableshadow_target] = entity.get();
             }
 
             CheckEntityFields(bsp, cfg, entity.get());
