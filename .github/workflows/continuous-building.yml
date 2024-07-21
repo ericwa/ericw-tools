@@ -34,6 +34,11 @@ jobs:
       run: |
         sudo apt update
         sudo apt install qtbase5-dev libqt5svg5-dev
+    - name: 'Linux: Install TBB and Embree, if using distro packages'
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
+      run: |
+        sudo apt install libtbb-dev libembree-dev
+        echo "USE_SYSTEM_TBB_AND_EMBREE=1" >> $GITHUB_ENV
     - name: 'Linux: Build the artifact'
       if: startsWith(matrix.os, 'ubuntu-')
       run: ./build-linux-64.sh
