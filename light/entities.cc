@@ -1371,10 +1371,8 @@ bool FaceMatchesSurfaceLightTemplate(
 
     const surfflags_t &extended_flags = extended_texinfo_flags[face->texinfo];
 
-    if (extended_flags.surflight_group) {
-        if (surflight.surflight_group.value() && surflight.surflight_group.value() != extended_flags.surflight_group) {
-            return false;
-        }
+    if (surflight.surflight_group.value() != extended_flags.surflight_group) {
+        return false;
     }
 
     return !Q_strcasecmp(texname, surflight.epairs->get("_surface"));

@@ -1177,3 +1177,18 @@ TEST(ltfaceQ1, switchableshadowTarget)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, in_shadow, {0, 0, 1}, &lit, &bspx, 0);
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 0, 0}, in_shadow, {0, 0, 1}, &lit, &bspx, 32);
 }
+
+TEST(ltfaceQ1, surflightGroup)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_surflight_group.map", {});
+
+    {
+        SCOPED_TRACE("left brush is just receiving red light");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {75, 0, 0}, {720, 1184, 960}, {0, 0, 1}, &lit, &bspx);
+    }
+
+    {
+        SCOPED_TRACE("right brush is just receiving blue light");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 75}, {720, 1376, 960}, {0, 0, 1}, &lit, &bspx);
+    }
+}
