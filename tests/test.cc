@@ -11,8 +11,9 @@ TEST(settings, booleanFlagImplicit)
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(boolSetting.value(), true);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, booleanFlagExplicit)
@@ -21,8 +22,9 @@ TEST(settings, booleanFlagExplicit)
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked", "1"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(boolSetting.value(), true);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, booleanFlagStray)
@@ -31,8 +33,9 @@ TEST(settings, booleanFlagStray)
     settings::setting_bool boolSetting(&settings, "locked", false);
     const char *arguments[] = {"qbsp.exe", "-locked", "stray"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(boolSetting.value(), true);
+    ASSERT_EQ(remainder, (std::vector<std::string>{"stray"}));
 }
 
 // test scalars
@@ -42,8 +45,9 @@ TEST(settings, scalarSimple)
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "1.25"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(scalarSetting.value(), 1.25f);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, scalarNegative)
@@ -52,8 +56,9 @@ TEST(settings, scalarNegative)
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "-0.25"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(scalarSetting.value(), -0.25f);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, scalarInfinity)
@@ -62,8 +67,9 @@ TEST(settings, scalarInfinity)
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0, 0.0, std::numeric_limits<double>::infinity());
     const char *arguments[] = {"qbsp.exe", "-scale", "INFINITY"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(scalarSetting.value(), std::numeric_limits<float>::infinity());
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, scalarNAN)
@@ -72,8 +78,9 @@ TEST(settings, scalarNAN)
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "NAN"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_TRUE(std::isnan(scalarSetting.value()));
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, scalarScientific)
@@ -82,8 +89,9 @@ TEST(settings, scalarScientific)
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-scale", "1.54334E-34"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(scalarSetting.value(), 1.54334E-34f);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, scalarEOF)
@@ -120,8 +128,9 @@ TEST(settings, int32CanOmitArgumentSimple)
                                           settings::can_omit_argument_tag(), 1);
     const char *arguments[] = {"qbsp.exe", "-bounce", "2"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(setting.value(), 2);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, int32CanOmitArgumentWithFollingSetting)
@@ -132,9 +141,10 @@ TEST(settings, int32CanOmitArgumentWithFollingSetting)
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-bounce", "-scale", "0.25"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(setting.value(), 1);
     ASSERT_EQ(scalarSetting.value(), 0.25);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, int32CanOmitArgumentEOF)
@@ -145,8 +155,9 @@ TEST(settings, int32CanOmitArgumentEOF)
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-bounce"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(setting.value(), 1);
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, int32CanOmitArgumentRemainder)
@@ -158,7 +169,7 @@ TEST(settings, int32CanOmitArgumentRemainder)
     const char *arguments[] = {"qbsp.exe", "-bounce", "remainder"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
     auto remainder = settings.parse(p);
-    ASSERT_EQ(remainder, std::vector<std::string>{"remainder"});\
+    ASSERT_EQ(remainder, std::vector<std::string>{"remainder"});
 }
 
 // test vec3
@@ -168,8 +179,9 @@ TEST(settings, vec3Simple)
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "1", "2", "3"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(scalarSetting.value(), (qvec3f{1, 2, 3}));
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, vec3Complex)
@@ -178,10 +190,11 @@ TEST(settings, vec3Complex)
     settings::setting_vec3 scalarSetting(&settings, "origin", 0, 0, 0);
     const char *arguments[] = {"qbsp.exe", "-origin", "-12.5", "-INFINITY", "NAN"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(scalarSetting.value()[0], -12.5f);
     ASSERT_EQ(scalarSetting.value()[1], -std::numeric_limits<float>::infinity());
     ASSERT_TRUE(std::isnan(scalarSetting.value()[2]));
+    ASSERT_TRUE(remainder.empty());
 }
 
 TEST(settings, vec3Incomplete)
@@ -209,8 +222,9 @@ TEST(settings, stringSimple)
     settings::setting_string stringSetting(&settings, "name", "");
     const char *arguments[] = {"qbsp.exe", "-name", "i am a string with spaces in it"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(stringSetting.value(), arguments[2]);
+    ASSERT_TRUE(remainder.empty());
 }
 
 // test remainder
@@ -234,9 +248,10 @@ TEST(settings, doubleHyphen)
     settings::setting_string stringSetting(&settings, "name", "");
     const char *arguments[] = {"qbsp.exe", "--locked", "--name", "my name!"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
-    settings.parse(p);
+    auto remainder = settings.parse(p);
     ASSERT_EQ(boolSetting.value(), true);
     ASSERT_EQ(stringSetting.value(), "my name!");
+    ASSERT_TRUE(remainder.empty());
 }
 
 // test groups; ensure that performance is the first group
