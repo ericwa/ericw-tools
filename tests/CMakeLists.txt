@@ -1,5 +1,5 @@
 add_executable(tests
-		test.cc
+        test_settings.cc
 		test_main.cc
 		test_common.cc
 		test_entities.cc
