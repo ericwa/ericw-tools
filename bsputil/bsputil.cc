@@ -61,10 +61,10 @@ bsputil_settings::bsputil_settings() :
         return this->load_setting<settings::setting_string>(name, parser, src, "");
     }, nullptr, "Replace BSP entities with the given files' contents"},
     extract_entities{this, "extract-entities", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_string>(name, parser, src, "");
+        return this->load_setting<settings::setting_bool>(name, parser, src, "");
     }, nullptr, "Extract BSP entities to the given file name"},
     extract_textures{this, "extract-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_string>(name, parser, src, "");
+        return this->load_setting<settings::setting_bool>(name, parser, src, "");
     }, nullptr, "Extract BSP texutres to the given wad file"},
     replace_textures{this, "replace-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_string>(name, parser, src, "");

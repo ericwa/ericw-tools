@@ -71,3 +71,27 @@ TEST(bsputil, extractTextures)
         EXPECT_TRUE(loaded_tex);
     }
 }
+
+TEST(bsputil, parseExtractTextures)
+{
+    bsputil_settings settings;
+
+    const char *arguments[] = {"bsputil.exe", "--extract-textures", "test.bsp"};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
+    auto remainder = settings.parse(p);
+
+    ASSERT_EQ(1, remainder.size());
+    ASSERT_EQ("test.bsp", remainder[0]);
+}
+
+TEST(bsputil, parseExtractEntities)
+{
+    bsputil_settings settings;
+
+    const char *arguments[] = {"bsputil.exe", "--extract-entities", "test.bsp"};
+    token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
+    auto remainder = settings.parse(p);
+
+    ASSERT_EQ(1, remainder.size());
+    ASSERT_EQ("test.bsp", remainder[0]);
+}
