@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#include <bsputil/bsputil.hh>
+
 #include <cstdint>
 
 #ifndef _WIN32
@@ -42,93 +44,41 @@
 #include <fstream>
 #include <fmt/ostream.h>
 
-// special type of setting that combines multiple
-// settings. just for the casting capability of bsputil_settings.
-class setting_combined : public settings::setting_base
+// bsputil_settings
+
+bool bsputil_settings::load_setting(const std::string &name, settings::source src)
 {
-protected:
-    std::vector<std::shared_ptr<settings::setting_base>> _settings;
+    auto setting = std::make_unique<settings::setting_func>(nullptr, name, nullptr);
+    operations.push_back(std::move(setting));
+    return true;
+}
 
-public:
-    setting_combined(settings::setting_container *dictionary, const settings::nameset &names, std::initializer_list<std::shared_ptr<settings::setting_base>> settings,
-        const settings::setting_group *group = nullptr, const char *description = "")
-        : setting_base(dictionary, names, group, description),
-        _settings(settings)
-    {
-    }
-    bool copy_from(const setting_base &other) override
-    {
-        throw std::runtime_error("not implemented");
-    }
-    void reset() override
-    {
-        throw std::runtime_error("not implemented");
-    }
-    bool parse(const std::string &setting_name, parser_base_t &parser, settings::source source) override
-    {
-        throw std::runtime_error("not implemented");
-    }
-    std::string string_value() const override
-    {
-        throw std::runtime_error("not implemented");
-    }
-    std::string format() const override
-    {
-        throw std::runtime_error("not implemented");
-    }
-
-    template<typename TSetting>
-    const TSetting *get(size_t index) const
-    {
-        return dynamic_cast<const TSetting *>(_settings[index].get());
-    }
-};
-
-struct bsputil_settings : public settings::common_settings
-{
-private:
-    template<typename TSetting, typename...TArgs>
-    bool load_setting(const std::string &name, parser_base_t &parser, settings::source src, TArgs&& ...setting_arguments)
-    {
-        auto setting = std::make_unique<TSetting>(nullptr, name, std::forward<TArgs>(setting_arguments)...);
-        bool parsed = setting->parse(name, parser, src);
-        operations.push_back(std::move(setting));
-        return parsed;
-    }
-
-    bool load_setting(const std::string &name, settings::source src)
-    {
-        auto setting = std::make_unique<settings::setting_func>(nullptr, name, nullptr);
-        operations.push_back(std::move(setting));
-        return true;
-    }
-
-public:
-    settings::setting_func scale{this, "scale", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+bsputil_settings::bsputil_settings() :
+    scale{this, "scale", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_vec3>(name, parser, src, 0.f, 0.f, 0.f);
-    }, nullptr, "Scale the BSP by the given scalar vectors (can be negative, too)"};
-    settings::setting_func replace_entities{this, "replace-entities", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Scale the BSP by the given scalar vectors (can be negative, too)"},
+    replace_entities{this, "replace-entities", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Replace BSP entities with the given files' contents"};
-    settings::setting_func extract_entities{this, "extract-entities", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Replace BSP entities with the given files' contents"},
+    extract_entities{this, "extract-entities", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Extract BSP entities to the given file name"};
-    settings::setting_func extract_textures{this, "extract-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Extract BSP entities to the given file name"},
+    extract_textures{this, "extract-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Extract BSP texutres to the given wad file"};
-    settings::setting_func replace_textures{this, "replace-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Extract BSP texutres to the given wad file"},
+    replace_textures{this, "replace-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Replace BSP textures with the given wads' contents"};
-    settings::setting_func convert{this, "convert", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Replace BSP textures with the given wads' contents"},
+    convert{this, "convert", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Convert the BSP file to a different BSP format"};
-    settings::setting_func check{this, "check", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Convert the BSP file to a different BSP format"},
+    check{this, "check", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting(name, src);
-    }, nullptr, "Check/verify BSP data"};
-    settings::setting_func modelinfo{this, "modelinfo", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Check/verify BSP data"},
+    modelinfo{this, "modelinfo", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting(name, src);
-    }, nullptr, "Print model info"};
-    settings::setting_func findfaces{this, "findfaces", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Print model info"},
+    findfaces{this, "findfaces", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         auto pos = std::make_shared<settings::setting_vec3>(nullptr, name, 0.f, 0.f, 0.f);
         if (bool parsed = pos->parse(name, parser, src); !parsed)
             return false;
@@ -137,11 +87,11 @@ public:
             return false;
         operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { pos, norm }));
         return true;
-    }, nullptr, "Find faces with specified pos/normal"};
-    settings::setting_func findleaf{this, "findleaf", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Find faces with specified pos/normal"},
+    findleaf{this, "findleaf", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_vec3>(name, parser, src, 0.f, 0.f, 0.f);
-    }, nullptr, "Find closest leaf"};
-    settings::setting_func settexinfo{this, "settexinfo", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Find closest leaf"},
+    settexinfo{this, "settexinfo", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         auto faceNum = std::make_shared<settings::setting_int32>(nullptr, name, 0);
         if (bool parsed = faceNum->parse(name, parser, src); !parsed)
             return false;
@@ -150,20 +100,20 @@ public:
             return false;
         operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { faceNum, texInfoNum }));
         return true;
-    }, nullptr, "Set texinfo"};
-    settings::setting_func decompile{this, "decompile", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Set texinfo"},
+    decompile{this, "decompile", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting(name, src);
-    }, nullptr, "Decompile to the given .map file"};
-    settings::setting_func decompile_geomonly{this, "decompile-geomonly", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Decompile to the given .map file"},
+    decompile_geomonly{this, "decompile-geomonly", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting(name, src);
-    }, nullptr, "Decompile"};
-    settings::setting_func decompile_ignore_brushes{this, "decompile-ignore-brushes", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Decompile"},
+    decompile_ignore_brushes{this, "decompile-ignore-brushes", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting(name, src);
-    }, nullptr, "Decompile entities only"};
-    settings::setting_func decompile_hull{this, "decompile-hull", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Decompile entities only"},
+    decompile_hull{this, "decompile-hull", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_int32>(name, parser, src, 0);
-    }, nullptr, "Decompile specific hull"};
-    settings::setting_func extract_bspx_lump{this, "extract-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Decompile specific hull"},
+    extract_bspx_lump{this, "extract-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
         if (bool parsed = lump->parse(name, parser, src); !parsed)
             return false;
@@ -172,8 +122,8 @@ public:
             return false;
         operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { lump, output }));
         return true;
-    }, nullptr, "Extract a BSPX lump"};
-    settings::setting_func insert_bspx_lump{this, "insert-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Extract a BSPX lump"},
+    insert_bspx_lump{this, "insert-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
         if (bool parsed = lump->parse(name, parser, src); !parsed)
             return false;
@@ -182,16 +132,15 @@ public:
             return false;
         operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { lump, input }));
         return true;
-    }, nullptr, "Insert a BSPX lump"};
-    settings::setting_func remove_bspx_lump{this, "remove-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Insert a BSPX lump"},
+    remove_bspx_lump{this, "remove-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Remove a BSPX lump"};
-    settings::setting_func svg{this, "svg", [&](const std::string &name, parser_base_t &parser, settings::source src) {
+    }, nullptr, "Remove a BSPX lump"},
+    svg{this, "svg", [&](const std::string &name, parser_base_t &parser, settings::source src) {
         return this->load_setting<settings::setting_int32>(name, parser, src, 0);
-    }, nullptr, "Create an SVG view of the input BSP"};
+    }, nullptr, "Create an SVG view of the input BSP"}
+{}
 
-    std::vector<std::unique_ptr<settings::setting_base>>    operations;
-};
 
 bsputil_settings bsputil_options;
 
