@@ -2060,6 +2060,26 @@ TEST(qbspQ1, liquidSoftware)
     }
 }
 
+TEST(qbspQ1, edgeSharingSoftware)
+{
+    SCOPED_TRACE("the software renderer only allows a given edge to be reused at most once, as the backwards version (negative index)");
+    const auto [bsp, bspx, prt] = LoadTestmap("q1_edge_sharing_software.map");
+
+    std::map<int, std::vector<const mface_t *>> signed_edge_faces;
+    for (auto &face : bsp.dfaces) {
+        for (int i = face.firstedge; i < (face.firstedge + face.numedges); ++i) {
+            // may be negative
+            const int edge = bsp.dsurfedges.at(i);
+
+            signed_edge_faces[edge].push_back(&face);
+        }
+    }
+
+    for (auto &[edge, faces] : signed_edge_faces) {
+        EXPECT_EQ(1, faces.size());
+    }
+}
+
 TEST(qbspQ1, missingTexture)
 {
     const auto [bsp, bspx, prt] = LoadTestmap("q1_missing_texture.map");

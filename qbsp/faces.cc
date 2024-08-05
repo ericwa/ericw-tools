@@ -150,11 +150,16 @@ inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, e
     if (!qbsp_options.noedgereuse.value()) {
         // search for existing edges
         if (auto it = map.hashedges.find(std::make_pair(v2, v1)); it != map.hashedges.end()) {
-            const hashedge_t &existing = it->second;
+            hashedge_t &existing = it->second;
             // this content check is required for software renderers
             // (see q1_liquid_software test case)
             if (existing.face->contents.front.equals(qbsp_options.target_game, face->contents.front)) {
-                return -existing.edge_index;
+                // only reusing an edge once is a separate limitation of software renderers
+                // (see q1_edge_sharing_software.map test case)
+                if (!existing.has_been_reused) {
+                    existing.has_been_reused = true;
+                    return -existing.edge_index;
+                }
             }
         }
     }

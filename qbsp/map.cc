@@ -168,7 +168,8 @@ void mapdata_t::add_hash_vector(const qvec3d &point, const size_t &num)
 
 void mapdata_t::add_hash_edge(size_t v1, size_t v2, int64_t edge_index, const face_t *face)
 {
-    hashedges.emplace(std::make_pair(v1, v2), hashedge_t{.v1 = v1, .v2 = v2, .edge_index = edge_index, .face = face});
+    hashedges.emplace(std::make_pair(v1, v2), hashedge_t{.v1 = v1, .v2 = v2, .edge_index = edge_index, .face = face,
+                                                         .has_been_reused = false});
 }
 
 const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)

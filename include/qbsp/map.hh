@@ -171,6 +171,12 @@ struct hashedge_t
      * the face that edge v1 -> v2 belongs to
      */
     const face_t *face;
+
+    /**
+     * Has v2 -> v1 been referenced by another face yet, by using -edge_index?
+     * This is only allowed to happen once (software renderer limitation).
+     */
+    bool has_been_reused;
 };
 
 struct mapdata_t
