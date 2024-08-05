@@ -1263,7 +1263,10 @@ TEST(testmapsQ1, cubes)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cubes.map");
 
-    EXPECT_EQ(bsp.dedges.size(), 25);
+    // 1 + 12 for cube A + 13 for cube B.
+    // for the "four way" vertical edge, two of the faces can share an edge on cube A, but this blocks any further
+    // sharing on that edge in cube B.
+    EXPECT_EQ(bsp.dedges.size(), 26);
 }
 
 /**
