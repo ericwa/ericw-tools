@@ -866,6 +866,7 @@ struct gamedef_q2_t : public gamedef_t
         if (native & Q2_CONTENTS_MONSTERCLIP) result |= EWT_INVISCONTENTS_MONSTERCLIP;
         if (native & Q2_CONTENTS_PROJECTILECLIP) result |= EWT_INVISCONTENTS_PROJECTILECLIP;
         if (native & Q2_CONTENTS_ORIGIN) result |= EWT_INVISCONTENTS_ORIGIN;
+        if (native & Q2_CONTENTS_NO_WATERJUMP) result |= EWT_INVISCONTENTS_NO_WATERJUMP;
 
         // contents flags
         if (native & Q2_CONTENTS_CURRENT_0) result |= EWT_CFLAG_CURRENT_0;
@@ -908,6 +909,7 @@ struct gamedef_q2_t : public gamedef_t
         if (contents.flags & EWT_VISCONTENTS_WATER) result |= Q2_CONTENTS_WATER;
         if (contents.flags & EWT_VISCONTENTS_MIST) result |= Q2_CONTENTS_MIST;
         if (contents.flags & EWT_INVISCONTENTS_ORIGIN) result |= Q2_CONTENTS_ORIGIN;
+        if (contents.flags & EWT_INVISCONTENTS_NO_WATERJUMP) result |= Q2_CONTENTS_NO_WATERJUMP;
         if (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP) result |= Q2_CONTENTS_PLAYERCLIP;
         if (contents.flags & EWT_INVISCONTENTS_MONSTERCLIP) result |= Q2_CONTENTS_MONSTERCLIP;
         if (contents.flags & EWT_INVISCONTENTS_PROJECTILECLIP) result |= Q2_CONTENTS_PROJECTILECLIP;

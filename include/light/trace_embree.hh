@@ -243,8 +243,8 @@ public:
 
 #ifdef HAVE_EMBREE4
         RTCIntersectArguments embree4_args = ctx2.setup_intersection_arguments();
-        for (int i = 0; i < _numrays; ++i)
-            rtcIntersect1(scene, &_rays[i], &embree4_args);
+        for (auto &ray : _rays)
+            rtcIntersect1(scene, &ray.ray, &embree4_args);
 #else
         rtcIntersect1M(scene, &ctx2, &_rays.data()->ray, _rays.size(), sizeof(_rays[0]));
 #endif
@@ -310,8 +310,8 @@ public:
         ray_source_info ctx2(this, self, shadowmask);
 #ifdef HAVE_EMBREE4
         RTCOccludedArguments embree4_args = ctx2.setup_occluded_arguments();
-        for (int i = 0; i < _numrays; ++i)
-            rtcOccluded1(scene, &_rays[i], &embree4_args);
+        for (auto &ray : _rays)
+            rtcOccluded1(scene, &ray.ray.ray, &embree4_args);
 #else
         rtcOccluded1M(scene, &ctx2, &_rays.data()->ray.ray, _rays.size(), sizeof(_rays[0]));
 #endif

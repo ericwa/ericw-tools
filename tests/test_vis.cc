@@ -7,7 +7,7 @@
 #include "test_qbsp.hh"
 #include "testutils.hh"
 
-TEST_CASE("q2_detail_leak_test.map")
+TEST(vis, detailLeakTest)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_detail_leak_test.map", {}, runvis_t::yes);
     const auto vis = DecompressAllVis(&bsp);
@@ -28,27 +28,27 @@ TEST_CASE("q2_detail_leak_test.map")
     auto *player_start_curve_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start_curve);
     auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
 
-    CHECK(item_enviro_leaf->contents == 0);
-    CHECK(item_enviro_curve_leaf->contents == 0);
-    CHECK(player_start_curve_leaf->contents == 0);
-    CHECK(player_start_leaf->contents == 0);
+    EXPECT_EQ(item_enviro_leaf->contents, 0);
+    EXPECT_EQ(item_enviro_curve_leaf->contents, 0);
+    EXPECT_EQ(player_start_curve_leaf->contents, 0);
+    EXPECT_EQ(player_start_leaf->contents, 0);
 
     {
-        INFO("check item_enviro_leaf");
-        CHECK(leaf_sees(item_enviro_leaf, item_enviro_curve_leaf));
-        CHECK(!leaf_sees(item_enviro_leaf, player_start_curve_leaf));
-        CHECK(!leaf_sees(item_enviro_leaf, player_start_leaf));
+        SCOPED_TRACE("check item_enviro_leaf");
+        EXPECT_TRUE(leaf_sees(item_enviro_leaf, item_enviro_curve_leaf));
+        EXPECT_FALSE(leaf_sees(item_enviro_leaf, player_start_curve_leaf));
+        EXPECT_FALSE(leaf_sees(item_enviro_leaf, player_start_leaf));
     }
 
     {
-        INFO("check player_start_leaf");
-        CHECK(leaf_sees(player_start_leaf, player_start_curve_leaf));
-        CHECK(!leaf_sees(player_start_leaf, item_enviro_curve_leaf));
-        CHECK(!leaf_sees(player_start_leaf, item_enviro_leaf));
+        SCOPED_TRACE("check player_start_leaf");
+        EXPECT_TRUE(leaf_sees(player_start_leaf, player_start_curve_leaf));
+        EXPECT_FALSE(leaf_sees(player_start_leaf, item_enviro_curve_leaf));
+        EXPECT_FALSE(leaf_sees(player_start_leaf, item_enviro_leaf));
     }
 }
 
-TEST_CASE("ClipStackWinding") {
+TEST(vis, ClipStackWinding) {
     pstack_t stack{};
     visstats_t stats{};
 
@@ -61,11 +61,11 @@ TEST_CASE("ClipStackWinding") {
     w1->set_winding_sphere();
 
     w1 = ClipStackWinding(stats, w1, stack, qplane3d({-1, 0, 0}, -16));
-    CHECK(w1->size() == 4);
-    CHECK((*w1)[0] == qvec3d(0, 0, 0));
-    CHECK((*w1)[1] == qvec3d(16, 0, 0));
-    CHECK((*w1)[2] == qvec3d(16, 0, -32));
-    CHECK((*w1)[3] == qvec3d(0, 0, -32));
+    EXPECT_EQ(w1->size(), 4);
+    EXPECT_EQ((*w1)[0], qvec3d(0, 0, 0));
+    EXPECT_EQ((*w1)[1], qvec3d(16, 0, 0));
+    EXPECT_EQ((*w1)[2], qvec3d(16, 0, -32));
+    EXPECT_EQ((*w1)[3], qvec3d(0, 0, -32));
 
     FreeStackWinding(w1, stack);
 }

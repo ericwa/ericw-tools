@@ -1,7 +1,6 @@
 #include "test_main.hh"
 
-#define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
+#include <gtest/gtest.h>
 
 #include <common/log.hh>
 #include <common/threads.hh>
@@ -32,14 +31,6 @@ int main(int argc, char **argv)
         }
     }
 
-    doctest::Context context;
-
-    context.applyCommandLine(argc, argv);
-    int res = context.run();
-
-    if (context.shouldExit()) {
-        return res;
-    }
-
-    return res;
+    testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

@@ -10,6 +10,3 @@
 [submodule "3rdparty/pareto"]
 	path = 3rdparty/pareto
 	url = https://github.com/alandefreitas/pareto.git
-[submodule "3rdparty/doctest"]
-	path = 3rdparty/doctest
-	url = https://github.com/doctest/doctest

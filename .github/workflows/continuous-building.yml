@@ -13,6 +13,7 @@ jobs:
       matrix:
         os: 
           - ubuntu-22.04
+          - ubuntu-24.04
           - macos-12
           - windows-2022
         use-asan: 
@@ -33,6 +34,11 @@ jobs:
       run: |
         sudo apt update
         sudo apt install qtbase5-dev libqt5svg5-dev
+    - name: 'Linux: Install TBB and Embree, if using distro packages'
+      if: ${{ matrix.os == 'ubuntu-24.04' }}
+      run: |
+        sudo apt install libtbb-dev libembree-dev
+        echo "USE_SYSTEM_TBB_AND_EMBREE=1" >> $GITHUB_ENV
     - name: 'Linux: Build the artifact'
       if: startsWith(matrix.os, 'ubuntu-')
       run: ./build-linux-64.sh
@@ -42,7 +48,7 @@ jobs:
         mkdir ericw-tools-linux
         unzip build-linux/*-Linux.zip -d ericw-tools-linux
     - name: 'Linux: Upload the artifact'
-      if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' }}
+      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.use-asan == 'NO' }}
       uses: actions/upload-artifact@v4
       with:
         path: ericw-tools-linux/
@@ -50,7 +56,7 @@ jobs:
         if-no-files-found: error
     - name: 'Linux: Create GitHub Release and upload build'
       uses: softprops/action-gh-release@v1
-      if: ${{ startsWith(matrix.os, 'ubuntu-') && matrix.use-asan == 'NO' && startsWith(github.ref, 'refs/tags/') }}
+      if: ${{ matrix.os == 'ubuntu-22.04' && matrix.use-asan == 'NO' && startsWith(github.ref, 'refs/tags/') }}
       with:
         draft: true
         files: |
