@@ -956,7 +956,7 @@ int maputil_main(int argc, const char **argv)
     logging::init(std::nullopt, maputil_options);
 
     if (maputil_options.operations.empty()) {
-        maputil_options.print_help();
+        maputil_options.print_help(true);
         return 1;
     }
 

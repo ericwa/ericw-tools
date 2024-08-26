@@ -825,7 +825,7 @@ int bsputil_main(int _argc, const char **_argv)
     logging::init(std::nullopt, bsputil_options);
 
     if (bsputil_options.remainder.size() != 1 || bsputil_options.operations.empty()) {
-        bsputil_options.print_help();
+        bsputil_options.print_help(true);
         return 1;
     }
 

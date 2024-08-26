@@ -577,7 +577,7 @@ public:
 
     inline auto grouped() const { return _grouped_settings; }
 
-    void print_help();
+    void print_help(bool fatal);
     void print_summary();
     void print_rst_documentation();
 

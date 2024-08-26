@@ -169,10 +169,10 @@ void entdict_t::parse(parser_base_t &parser)
             FError("closing brace without data");
 
         // trim whitespace from start/end
-        while (std::isspace(keystr.front())) {
+        while (!keystr.empty() && std::isspace(keystr.front())) {
             keystr.erase(keystr.begin());
         }
-        while (std::isspace(keystr.back())) {
+        while (!keystr.empty() && std::isspace(keystr.back())) {
             keystr.erase(keystr.cbegin());
         }
 

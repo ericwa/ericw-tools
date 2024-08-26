@@ -533,7 +533,7 @@ void setting_container::set_settings(const entdict_t &epairs, source source)
     }
 }
 
-void setting_container::print_help()
+void setting_container::print_help(bool fatal)
 {
     fmt::print("{}usage: {} [-help/-h/-?] [-options] {}\n\n", program_description, program_name, remainder_name);
 
@@ -543,7 +543,7 @@ void setting_container::print_help()
         }
 
         for (auto setting : grouped.second) {
-            size_t numPadding = std::max(static_cast<size_t>(0), 28 - (setting->primary_name().size() + 4));
+            size_t numPadding = std::max(static_cast<size_t>(0), 28 - std::min((size_t) 28, (setting->primary_name().size() + 4)));
             fmt::print(
                 "  -{} {:{}}    {}\n", setting->primary_name(), setting->format(), numPadding, setting->description());
 
@@ -555,7 +555,10 @@ void setting_container::print_help()
         printf("\n");
     }
 
-    throw quit_after_help_exception();
+    if (fatal)
+    {
+        throw quit_after_help_exception();
+    }
 }
 
 void setting_container::print_summary()
@@ -679,7 +682,7 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
         }
 
         if (parser.token == "help" || parser.token == "h" || parser.token == "?") {
-            print_help();
+            print_help(true);
         } else if (parser.token == "rst") {
             print_rst_documentation();
         }

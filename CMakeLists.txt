@@ -117,7 +117,7 @@ if (WIN32)
 
 	if (MSVC)
 		# request 8MB stack for all .exe's
-		set(STACKSIZE 8388608)
+		set(STACKSIZE 16388608)
 		set(CMAKE_EXE_LINKER_FLAGS "/STACK:${STACKSIZE}")
 
 		add_definitions("/wd4244") # disable "conversion from .. to .., possible loss of data" warning

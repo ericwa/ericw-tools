@@ -447,13 +447,16 @@ void light_settings::initialize(int argc, const char **argv)
         common_settings::initialize(argc - 1, argv + 1);
 
         if (remainder.size() <= 0 || remainder.size() > 1) {
-            print_help();
+            print_help(true);
         }
 
         sourceMap = remainder[0];
     } catch (parse_exception &ex) {
+        print_help(false);
+        logging::print("ERROR OCCURRED WHEN TRYING TO PARSE ARGUMENTS:\n");
         logging::print(ex.what());
-        print_help();
+        logging::print("\n\n");
+        throw settings::quit_after_help_exception();
     }
 }
 
