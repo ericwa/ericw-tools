@@ -1063,8 +1063,8 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         logging::flag::STAT, "INFO: calculating BSP for {} brushes with {} sides\n", brushes.size(), num_sides);
 
     // sort by ascending (chop_index, line_number) pair
-    std::ranges::sort(brushes, {}, [](const bspbrush_t::ptr &a) -> std::tuple<int32_t, std::optional<size_t>> {
-        return a->mapbrush->sort_key();
+    std::ranges::sort(brushes, [](const auto &a, const auto &b) {
+        return a->mapbrush->sort_key() < b->mapbrush->sort_key();
     });
 
     // always chop the other hulls to reduce brush tests
