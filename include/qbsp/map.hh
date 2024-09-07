@@ -100,8 +100,9 @@ public:
     int16_t lmshift = 0; /* lightmap scaling (qu/lightmap pixel), passed to the light util */
     mapentity_t *func_areaportal = nullptr;
     bool is_hint = false; // whether we are a hint brush or not (at least one side is "hint" or SURF_HINT)
-    bool no_chop = false; // don't chop this
     int32_t chop_index = 0; // chopping order; higher numbers chop lower numbers
+
+    std::tuple<int32_t, std::optional<size_t>> sort_key() const;
 };
 
 enum class rotation_t

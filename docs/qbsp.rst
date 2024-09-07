@@ -173,11 +173,12 @@ Options
 
 .. option:: -q2bsp
 
-   Target Quake II's BSP format.
+   Target Quake II and the vanilla Q2BSP format, automatically switching to Qbism format
+   if necessary (unless :option:`-noallowupgrade` is specified.)
 
 .. option:: -qbism
 
-   Target Qbism's extended Quake II BSP format.
+   Target Quake II and use Qbism's extended Quake II BSP format.
 
 .. option:: -q2rtx
 
@@ -809,6 +810,21 @@ Model Entity Keys
    Set to 1 to save mirrored inside faces for bmodels, so when the
    player view is inside the bmodel, they will still see the faces.
    (e.g. for func_water, or func_illusionary)
+
+.. bmodel-key:: "_chop_order" "n"
+
+   Customize the brush order, which affects which brush "wins" in the CSG phase when there are multiple overlapping
+   brushes, since most .map editors don't directly expose the brush order.
+
+   Defaults to 0, brushes with higher values (equivalent to appearing later in the .map file) will clip away lower
+   valued brushes.
+
+.. bmodel-key:: "_chop" "n"
+
+   Set to 0 to prevent these brushes from being chopped.
+
+   .. deprecated:: 2.0.0
+      Prefer the more flexible :bmodel-key:`_chop_order` instead.
 
 Other Special-Purpose Entities
 ------------------------------

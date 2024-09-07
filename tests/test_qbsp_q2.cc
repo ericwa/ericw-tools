@@ -1105,3 +1105,17 @@ TEST(ltfaceQ2, noclipfacesNodraw)
     EXPECT_EQ(Face_TextureNameView(&bsp, up_faces[0]), "e1u1/water1_8");
     EXPECT_EQ(Face_TextureNameView(&bsp, down_faces[0]), "e1u1/water1_8");
 }
+
+TEST(testmapsQ2, chopOrder0) {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_0.map");
+
+    EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
+        std::vector<std::string>({"e1u1/ggrat4_2"}));
+}
+
+TEST(testmapsQ2, chopOrder1) {
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_1.map");
+
+    EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
+        std::vector<std::string>({"e1u1/+0btshoot2"}));
+}

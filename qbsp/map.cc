@@ -995,6 +995,11 @@ const qbsp_plane_t &mapface_t::get_positive_plane() const
     return map.get_plane(planenum & ~1);
 }
 
+std::tuple<int32_t, std::optional<size_t>> mapbrush_t::sort_key() const
+{
+    return {chop_index, line.line_number};
+}
+
 static std::optional<mapface_t> ParseBrushFace(
     const mapfile::brush_side_t &input_side, const mapbrush_t &brush, const mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
@@ -2132,10 +2137,10 @@ void ProcessMapBrushes()
                 brush.func_areaportal = areaportal;
                 brush.is_hint = MapBrush_IsHint(brush);
 
-                // _chop signals that a brush does not partake in the BSP chopping phase.
-                // this allows brushes embedded in others to be retained.
+                // "_chop" "0" is a deprecated way of saying "don't let this brush get chopped by others", i.e.
+                // move it to the end of the brush list.
                 if (entity.epairs.has("_chop") && !entity.epairs.get_int("_chop")) {
-                    brush.no_chop = true;
+                    brush.chop_index = 1;
                 }
 
                 // brushes are sorted by their _chop_order; higher numbered brushes

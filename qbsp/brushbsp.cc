@@ -1348,6 +1348,9 @@ Returns true if b1 is allowed to bite b2
 */
 inline bool BrushGE(const bspbrush_t &b1, const bspbrush_t &b2)
 {
+    if (b1.mapbrush->sort_key() < b2.mapbrush->sort_key())
+        return false;
+
     // detail brushes never bite structural brushes
     if ((b1.contents.is_any_detail(qbsp_options.target_game)) &&
         !(b2.contents.is_any_detail(qbsp_options.target_game))) {
@@ -1467,16 +1470,8 @@ newlist:
 
         auto &b1 = *b1_it;
 
-        if (b1->mapbrush->no_chop) {
-            continue;
-        }
-
         for (auto b2_it = next; b2_it != list.end(); b2_it++) {
             auto &b2 = *b2_it;
-
-            if (b2->mapbrush->no_chop) {
-                continue;
-            }
 
             if (BrushesDisjoint(*b1, *b2)) {
                 continue;
