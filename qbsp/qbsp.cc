@@ -1376,7 +1376,7 @@ static bspxbrushes_permodel BSPX_Brushes_AddModel(int modelnum, const std::vecto
                     perbrush.contents = BSPXBRUSHES_CONTENTS_CLIP;
                 } else {
                     logging::print("WARNING: Unknown contents: {}. Translating to solid.\n",
-                        contents.to_string(qbsp_options.target_game));
+                        contents.to_string());
                     perbrush.contents = CONTENTS_SOLID;
                 }
                 break;

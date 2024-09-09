@@ -767,13 +767,13 @@ TEST(testmapsQ2, detailWall)
         {
             SCOPED_TRACE("check leaf / brush contents");
 
-            SCOPED_TRACE(game->create_contents_from_native(detail_wall_leaf->contents).to_string(game));
+            SCOPED_TRACE(game->create_contents_from_native(detail_wall_leaf->contents).to_string());
             EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL), detail_wall_leaf->contents);
 
             ASSERT_EQ(1, Leaf_Brushes(&bsp, detail_wall_leaf).size());
             auto *brush = Leaf_Brushes(&bsp, detail_wall_leaf).at(0);
 
-            SCOPED_TRACE(game->create_contents_from_native(brush->contents).to_string(game));
+            SCOPED_TRACE(game->create_contents_from_native(brush->contents).to_string());
             EXPECT_EQ((Q2_CONTENTS_SOLID | Q2_CONTENTS_DETAIL), brush->contents);
         }
 
@@ -810,7 +810,7 @@ TEST(testmapsQ2, detailFence)
 
         {
             SCOPED_TRACE("check leaf / brush contents");
-            SCOPED_TRACE(game->create_contents_from_native(detail_wall_leaf->contents).to_string(game));
+            SCOPED_TRACE(game->create_contents_from_native(detail_wall_leaf->contents).to_string());
 
             EXPECT_EQ(
                 (Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT), detail_wall_leaf->contents);

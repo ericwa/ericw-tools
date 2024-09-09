@@ -168,9 +168,9 @@ bool contentflags_t::is_fence(const gamedef_t *game) const
     return is_detail_fence(game) || is_detail_illusionary(game);
 }
 
-std::string contentflags_t::to_string(const gamedef_t *game) const
+std::string contentflags_t::to_string() const
 {
-    std::string s = game->get_contents_display(*this);
+    std::string s = get_contents_display(flags);
 
     return s;
 }

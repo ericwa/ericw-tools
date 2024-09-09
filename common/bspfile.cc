@@ -115,7 +115,7 @@ static constexpr const char *bitflag_names[] = {
     "INVALID_BIT_63"
 };
 
-static std::string get_contents_display(contents_t bits)
+std::string get_contents_display(contents_t bits)
 {
     if (bits == EWT_VISCONTENTS_EMPTY) {
         return "EMPTY";
@@ -545,11 +545,6 @@ public:
         return true;
     }
 
-    std::string get_contents_display(const contentflags_t &contents) const override
-    {
-        return ::get_contents_display(contents.flags);
-    }
-
     void contents_make_valid(contentflags_t &contents) const override
     {
         // fixme-brushbsp: probably wrong?
@@ -687,7 +682,7 @@ public:
 
         for (auto [bits, count] : stats.native_types) {
             auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c), what))
+            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what))
                 .count += count;
         }
 
@@ -1266,11 +1261,6 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    std::string get_contents_display(const contentflags_t &contents) const override
-    {
-        return ::get_contents_display(contents.flags);
-    }
-
     void contents_make_valid(contentflags_t &contents) const override
     {
         if (contents_are_valid(contents, false)) {
@@ -1542,7 +1532,7 @@ public:
 
         for (auto [bits, count] : stats.native_types) {
             auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c), what))
+            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what))
                     .count += count;
         }
 

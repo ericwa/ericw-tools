@@ -195,7 +195,7 @@ struct contentflags_t
     // should return true only for solid / opaque content types
     bool chops(const gamedef_t *game) const;
 
-    std::string to_string(const gamedef_t *game) const;
+    std::string to_string() const;
 
     // returns the bit index (starting from 0) of the strongest visible content type
     // set, or -1 if no visible content bits are set (i.e. EWT_VISCONTENTS_EMPTY)
@@ -433,7 +433,6 @@ struct gamedef_t
     // _mirrorinside
     virtual bool portal_generates_face(const contentflags_t &portal_visible_contents,
         const contentflags_t &brushcontents, planeside_t brushside_side) const = 0;
-    virtual std::string get_contents_display(const contentflags_t &contents) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(

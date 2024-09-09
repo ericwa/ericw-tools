@@ -62,3 +62,5 @@ void PrintBSPFileSizes(const bspdata_t *bspdata);
  * Returns false if the conversion failed.
  */
 bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version);
+
+std::string get_contents_display(contents_t bits);

@@ -79,8 +79,8 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
             auto back_contents = ClusterContents(p->nodes.back);
 
             FError("front {}, cluster contents: {}. back {}, cluster contents: {}. portal: {}", front,
-                front_contents.to_string(qbsp_options.target_game), back,
-                back_contents.to_string(qbsp_options.target_game), w->center());
+                front_contents.to_string(), back,
+                back_contents.to_string(), w->center());
         }
 
         /*

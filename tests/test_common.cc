@@ -90,11 +90,11 @@ TEST(common, clusterContents)
             const auto empty = game->create_empty_contents();
 
             auto solid_solid_cluster = game->cluster_contents(solid_detail, solid_detail);
-            SCOPED_TRACE(solid_solid_cluster.to_string(game));
+            SCOPED_TRACE(solid_solid_cluster.to_string());
             EXPECT_TRUE(solid_solid_cluster.is_detail_solid(game));
 
             auto solid_empty_cluster = game->cluster_contents(solid_detail, empty);
-            SCOPED_TRACE(solid_empty_cluster.to_string(game));
+            SCOPED_TRACE(solid_empty_cluster.to_string());
 
             // it's empty because of the rule that:
             // - if all leaves in the cluster are solid, it means you can't see in, and there's no visportal
@@ -145,11 +145,11 @@ TEST(common, sharedContentFlagTests)
             const auto detail_fence = game->create_detail_fence_contents(solid);
             const auto detail_illusionary = game->create_detail_illusionary_contents(solid);
 
-            SCOPED_TRACE(solid.to_string(game));
-            SCOPED_TRACE(detail_solid.to_string(game));
-            SCOPED_TRACE(detail_wall.to_string(game));
-            SCOPED_TRACE(detail_fence.to_string(game));
-            SCOPED_TRACE(detail_illusionary.to_string(game));
+            SCOPED_TRACE(solid.to_string());
+            SCOPED_TRACE(detail_solid.to_string());
+            SCOPED_TRACE(detail_wall.to_string());
+            SCOPED_TRACE(detail_fence.to_string());
+            SCOPED_TRACE(detail_illusionary.to_string());
 
             {
                 SCOPED_TRACE("is_empty");
@@ -296,7 +296,7 @@ TEST(common, q2Contents)
             auto combined = game_q2->combine_contents(game_q2->create_contents_from_native(before), water);
 
             {
-                SCOPED_TRACE(fmt::format("water combined with {}", game_q2->create_contents_from_native(before).to_string(game_q2)).c_str());
+                SCOPED_TRACE(fmt::format("water combined with {}", game_q2->create_contents_from_native(before).to_string()).c_str());
                 EXPECT_EQ(game_q2->contents_to_native(combined), after);
             }
         }

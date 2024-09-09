@@ -900,7 +900,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
                     if (visible_contents != i) {
                         FError("{}: Mixed visible contents: {}", mapface.line,
                                qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native)
-                                .to_string(qbsp_options.target_game));
+                                .to_string());
                     }
                 }
             }
@@ -910,7 +910,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
         if (extinfo.info->contents_native & (Q2_CONTENTS_MONSTER | Q2_CONTENTS_DEADMONSTER)) {
             FError(
                 "{}: Illegal contents: {}", mapface.line, qbsp_options.target_game->create_contents_from_native(
-                        extinfo.info->contents_native).to_string(qbsp_options.target_game));
+                        extinfo.info->contents_native).to_string());
         }
 
         // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
@@ -943,7 +943,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
         auto old_contents = mapface.contents;
         qbsp_options.target_game->contents_make_valid(mapface.contents);
         logging::print("WARNING: {}: face has invalid contents {}, remapped to {}\n", mapface.line,
-            old_contents.to_string(qbsp_options.target_game), mapface.contents.to_string(qbsp_options.target_game));
+            old_contents.to_string(), mapface.contents.to_string());
     }
 
     tx->vecs = input_side.vecs;
@@ -1468,8 +1468,8 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
 
         if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
             logging::print("WARNING: {}: brush has multiple face contents ({} vs {}), the former will be used.\n",
-                mapface.line, base_contents.to_string(qbsp_options.target_game),
-                contents.to_string(qbsp_options.target_game));
+                mapface.line, base_contents.to_string(),
+                contents.to_string());
             break;
         }
     }

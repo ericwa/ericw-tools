@@ -1077,7 +1077,7 @@ void MainWindow::displayCameraPositionInfo()
         const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], point);
         if (leaf) {
             auto *game = bsp->loadversion->game;
-            leaf_type = game->create_contents_from_native(leaf->contents).to_string(game);
+            leaf_type = game->create_contents_from_native(leaf->contents).to_string();
         }
     }
 
