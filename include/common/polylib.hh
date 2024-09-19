@@ -16,6 +16,8 @@
 #include <stdexcept>
 #include <optional>
 
+#include <fmt/ostream.h>
+
 #include <tbb/scalable_allocator.h>
 
 namespace polylib
@@ -1278,7 +1280,24 @@ public:
 
         return result;
     }
+
+    // gtest support
+    // also, makes printable via fmt since we include fmt/ostream.h
+    friend std::ostream& operator<<(std::ostream& os, const winding_base_t &winding) {
+        os << "{";
+        for (size_t i = 0; i < winding.size(); ++i) {
+            os << "(" << winding[i] << ")";
+            if ((i + 1) < winding.size())
+                os << ", ";
+        }
+        os << "}";
+        return os;
+    }
 };
+
+// fmt support
+template<class T>
+struct fmt::formatter<winding_base_t<T>> : fmt::ostream_formatter {};
 
 // the default amount of points to keep on stack
 constexpr size_t STACK_POINTS_ON_WINDING = MAX_POINTS_ON_WINDING / 4;

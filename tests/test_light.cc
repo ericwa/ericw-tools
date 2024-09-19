@@ -980,6 +980,16 @@ TEST(mathlib, clampTexcoord)
     EXPECT_EQ(127, clamp_texcoord(-129.0f, 128));
 }
 
+TEST(mathlib, windingFormat)
+{
+    const polylib::winding_t poly{{0, 0, 0}, {0, 64, 0}, {64, 64, 0}, {64, 0, 0}};
+
+    const char *exp = "{(0 0 0), (0 64 0), (64 64 0), (64 0 0)}";
+
+    EXPECT_EQ(exp, testing::PrintToString(poly));
+    EXPECT_EQ(exp, fmt::format("{}", poly));
+}
+
 TEST(Settings, delayDefault)
 {
     light_t light;
