@@ -1295,13 +1295,13 @@ public:
     }
 };
 
-// fmt support
-template<class T>
-struct fmt::formatter<winding_base_t<T>> : fmt::ostream_formatter {};
-
 // the default amount of points to keep on stack
 constexpr size_t STACK_POINTS_ON_WINDING = MAX_POINTS_ON_WINDING / 4;
 
 using winding_t = winding_base_t<winding_storage_heap_t<double>>;
 using winding3f_t = winding_base_t<winding_storage_heap_t<float>>;
 }; // namespace polylib
+
+// fmt support
+template<class T>
+struct fmt::formatter<polylib::winding_base_t<T>> : fmt::ostream_formatter {};
