@@ -296,6 +296,12 @@ public:
     constexpr auto end() const { return v.end(); }
     constexpr auto cbegin() const { return v.cbegin(); }
     constexpr auto cend() const { return v.cend(); }
+
+    // gtest support
+    friend std::ostream& operator<<(std::ostream& os, const qvec& point) {
+        os << fmt::format("{}", point);
+        return os;
+    }
 };
 
 // Fmt support

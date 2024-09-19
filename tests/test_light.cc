@@ -717,6 +717,20 @@ TEST(mathlib, qvecConstructorExtra)
     EXPECT_EQ(2, test[1]);
 }
 
+TEST(mathlib, qvecGTestPrint)
+{
+    const qvec2f test(1, 2);
+
+    EXPECT_EQ(testing::PrintToString(test), "1 2");
+}
+
+TEST(mathlib, qvecFmtFormat)
+{
+    const qvec2f test(1, 2);
+
+    EXPECT_EQ("1 2", fmt::format("{}", test));
+}
+
 // aabb3f
 
 TEST(mathlib, aabbBasic)
