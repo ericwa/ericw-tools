@@ -1251,6 +1251,11 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
 {
     logging::header(__func__);
 
+    // NOTE: entity bounds may include brushes that were deleted
+    // from the brush list (e.g. clip brushes in Q1 hull 0 still need to affect the model/node bounds)
+    // so start with that.
+    tree.bounds = entity.bounds;
+
     if (brushlist.empty()) {
         /*
          * We allow an entity to be constructed with no visible brushes
@@ -1275,7 +1280,6 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
         nodedata->children[1]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
         nodedata->children[1]->parent = headnode;
 
-        tree.bounds = headnode->bounds;
         tree.headnode = headnode;
 
         return;

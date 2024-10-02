@@ -1269,12 +1269,20 @@ TEST(testmapsQ1, cubes)
     EXPECT_EQ(bsp.dedges.size(), 26);
 }
 
+class ClipFuncWallTest : public testing::TestWithParam<std::string>
+{
+};
+
+INSTANTIATE_TEST_SUITE_P(ClipFuncWallCases,ClipFuncWallTest,
+                         testing::Values("q1_clip_func_wall.map",
+                                         "q1_clip_and_solid_func_wall.map"));
+
 /**
  * Ensure submodels that are all "clip" get bounds set correctly
  */
-TEST(testmapsQ1, clipFuncWall)
+TEST_P(ClipFuncWallTest, testBounds)
 {
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_clip_func_wall.map");
+    const auto [bsp, bspx, prt] = LoadTestmapQ1(GetParam());
 
     ASSERT_TRUE(prt.has_value());
 
