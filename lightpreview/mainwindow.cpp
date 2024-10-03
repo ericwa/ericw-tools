@@ -1069,6 +1069,7 @@ void MainWindow::displayCameraPositionInfo()
     const qvec3f forward = glView->cameraForward();
 
     std::string leaf_type;
+    int32_t area = -1;
     {
         const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp);
         if (!bsp)
@@ -1078,10 +1079,12 @@ void MainWindow::displayCameraPositionInfo()
         if (leaf) {
             auto *game = bsp->loadversion->game;
             leaf_type = game->create_contents_from_native(leaf->contents).to_string();
+
+            area = leaf->area;
         }
     }
 
-    std::string cpp_str = fmt::format("pos ({}) forward ({}) contents ({})", point, forward, leaf_type);
+    std::string cpp_str = fmt::format("pos ({}) forward ({}) contents ({}) area ({})", point, forward, leaf_type, area);
 
     m_cameraStatus->setText(QString::fromStdString(cpp_str));
 }
