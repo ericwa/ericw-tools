@@ -1217,9 +1217,6 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
     // upload lightmap atlases
     {
-        // FIXME: empty map access if there are no lightmaps
-        const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
-
         m_is_hdr_lightmap = false;
         for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
             if (!style_atlas.e5brg9_samples.empty()) {
@@ -1229,7 +1226,12 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         }
 
         lightmap_texture = std::make_shared<QOpenGLTexture>(QOpenGLTexture::Target2DArray);
-        lightmap_texture->setSize(lm_tex.width, lm_tex.height);
+        if (lightmap.style_to_lightmap_atlas.empty()) {
+            lightmap_texture->setSize(1, 1);
+        } else {
+            const auto &lm_tex = lightmap.style_to_lightmap_atlas.begin()->second;
+            lightmap_texture->setSize(lm_tex.width, lm_tex.height);
+        }
         lightmap_texture->setLayers(highest_depth + 1);
         if (m_is_hdr_lightmap)
             lightmap_texture->setFormat(QOpenGLTexture::TextureFormat::RGB9E5);
