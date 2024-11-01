@@ -52,6 +52,8 @@ using contents_int_t = uint64_t;
 
 /**
  * Superset of Q1- and Q2- features, plus EWT extensions.
+ *
+ * Update bitflag_names if this is changed.
  */
 enum contents_t : contents_int_t {
     EWT_VISCONTENTS_EMPTY = 0,

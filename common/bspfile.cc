@@ -48,6 +48,9 @@ static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
     return result;
 }
 
+/**
+ * Keep up to date with contents_t enum.
+ */
 static constexpr const char *bitflag_names[] = {
     "SOLID",
     "SKY",
@@ -62,8 +65,8 @@ static constexpr const char *bitflag_names[] = {
     "PLAYERCLIP",
     "MONSTERCLIP",
     "AREAPORTAL",
-    "ILLUSIONARY_VISBLOCKER",
-    "DETAIL",
+    "NO_WATERJUMP",
+    "PROJECTILECLIP",
     "MIRROR_INSIDE",
     "MIRROR_INSIDE_SET",
     "SUPPRESS_CLIPPING_SAME_TYPE",
@@ -77,14 +80,14 @@ static constexpr const char *bitflag_names[] = {
     "LADDER",
     "MONSTER",
     "DEADMONSTER",
+    "ILLUSIONARY_VISBLOCKER",
+    "DETAIL",
     "Q2_UNUSED_7",
     "Q2_UNUSED_8",
     "Q2_UNUSED_9",
     "Q2_UNUSED_10",
     "Q2_UNUSED_11",
     "Q2_UNUSED_12",
-    "Q2_UNUSED_13",
-    "Q2_UNUSED_14",
     "Q2_UNUSED_30",
     "Q2_UNUSED_31",
     "INVALID_BIT_38",
