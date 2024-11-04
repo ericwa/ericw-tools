@@ -1540,7 +1540,10 @@ static void LoadTextureData()
         miptex.name = map.miptex[i].name;
 
         {
-            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, qbsp_options.target_game, qbsp_options, false, true);
+            // i.e. only allow loose (non-.wad) textures if -notex is in use
+            const bool mip_only = !qbsp_options.notextures.value();
+
+            auto [tex, pos, file] = img::load_texture(map.miptex[i].name, true, qbsp_options.target_game, qbsp_options, false, mip_only);
 
             if (!tex) {
                 if (pos.archive) {

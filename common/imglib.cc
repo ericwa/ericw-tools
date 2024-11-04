@@ -331,8 +331,10 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
 {
     fs::path prefix{};
 
-    if (!no_prefix && game->id == GAME_QUAKE_II) {
-        prefix = "textures";
+    if (!no_prefix) {
+        if (game->id == GAME_QUAKE_II || !mip_only) {
+            prefix = "textures";
+        }
     }
 
     std::vector<extension_info_t> exts;

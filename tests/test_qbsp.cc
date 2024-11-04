@@ -14,12 +14,14 @@
 #include <common/log.hh>
 #include <testmaps.hh>
 
+#include <algorithm>
 #include <fstream>
 #include <cstring>
 #include <stdexcept>
 #include <tuple>
 #include <map>
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include "testutils.hh"
 #include "test_main.hh"
 
@@ -102,14 +104,18 @@ std::tuple<mbsp_t, bspxentries_t, std::optional<prtfile_t>> LoadTestmap(
 
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
-    std::vector<std::string> args{"", // the exe path, which we're ignoring in this case
-        "-path", wal_metadata_path.string()};
+    std::vector<std::string> args{""}; // the exe path, which we're ignoring in this case
+    if (std::ranges::find(extra_args, "-path") == extra_args.end()) {
+        extra_args.push_back("-path");
+        extra_args.push_back(wal_metadata_path.string());
+    }
 
     if (!tests_verbose) {
         args.push_back("-noverbose");
     } else {
         args.push_back("-nopercent");
         args.push_back("-loghulls");
+        args.push_back("-verbose");
     }
 
     for (auto &arg : extra_args) {
@@ -1574,6 +1580,42 @@ TEST(testmapsQ1, wadExternal)
     EXPECT_EQ(bsp.dtex.textures[1].data.size(), sizeof(dmiptex_t));
     EXPECT_EQ(bsp.dtex.textures[2].data.size(), sizeof(dmiptex_t));
     EXPECT_EQ(bsp.dtex.textures[3].data.size(), sizeof(dmiptex_t));
+}
+
+TEST(testmapsQ1, looseTextures)
+{
+    SCOPED_TRACE("loose textures are only loaded when -notex is in use");
+
+    auto q1_loose_textures_path = std::filesystem::path(testmaps_dir) / "q1_loose_textures";
+
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_loose_textures.map",
+        {"-path", q1_loose_textures_path.string(), "-notex"});
+
+    EXPECT_EQ(GAME_QUAKE, bsp.loadversion->game->id);
+
+    // FIXME: we shouldn't really write out skip
+    const miptex_t &skip = bsp.dtex.textures[0];
+    EXPECT_EQ(skip.name, "");
+    EXPECT_TRUE(skip.null_texture);
+    EXPECT_EQ(skip.width, 0);
+    EXPECT_EQ(skip.height, 0);
+    EXPECT_EQ(skip.data.size(), 0);
+
+    const miptex_t &floor_purple_c = bsp.dtex.textures[1];
+    EXPECT_EQ(floor_purple_c.name, "floor_purple_c");
+    EXPECT_FALSE(floor_purple_c.null_texture);
+    EXPECT_EQ(floor_purple_c.width, 64);
+    EXPECT_EQ(floor_purple_c.height, 64);
+    EXPECT_EQ(floor_purple_c.data.size(), sizeof(dmiptex_t));
+    EXPECT_THAT(floor_purple_c.offsets, testing::ElementsAre(0, 0, 0, 0));
+
+    const miptex_t &wall_tan_a = bsp.dtex.textures[2];
+    EXPECT_EQ(wall_tan_a.name, "wall_tan_a");
+    EXPECT_FALSE(wall_tan_a.null_texture);
+    EXPECT_EQ(wall_tan_a.width, 64);
+    EXPECT_EQ(wall_tan_a.height, 64);
+    EXPECT_EQ(wall_tan_a.data.size(), sizeof(dmiptex_t));
+    EXPECT_THAT(wall_tan_a.offsets, testing::ElementsAre(0, 0, 0, 0));
 }
 
 TEST(testmapsQ1, looseTexturesIgnored)
