@@ -329,14 +329,7 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
 std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
     bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix, bool mip_only)
 {
-    fs::path prefix{};
-
-    if (!no_prefix) {
-        if (game->id == GAME_QUAKE_II || !mip_only) {
-            prefix = "textures";
-        }
-    }
-
+    fs::path prefix{"textures"};
     std::vector<extension_info_t> exts;
 
     if (mip_only) {
@@ -346,7 +339,14 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
     }
 
     for (auto &ext : exts) {
-        fs::path p = (no_prefix ? fs::path(name) : (prefix / name)) += ext.suffix;
+        fs::path p;
+        if (no_prefix || ext.id == ext::MIP) {
+            // never add "textures/" prefix when attemmpting to load from a .wad file
+            p = fs::path(name);
+        } else {
+            p = (prefix / name);
+        }
+        p += ext.suffix;
 
         if (auto pos = fs::where(p, options.filepriority.value() == settings::search_priority_t::LOOSE)) {
             if (auto data = fs::load(pos)) {
