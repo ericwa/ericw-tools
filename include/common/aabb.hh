@@ -22,6 +22,7 @@
 #include <common/qvec.hh>
 #include <common/iterators.hh>
 #include <array>
+#include <ostream>
 
 /**!
  * touching a side/edge/corner is considered touching
@@ -245,6 +246,12 @@ public:
 
     // stream support
     auto stream_data() { return std::tie(m_corners); }
+
+    // gtest support
+    friend std::ostream& operator<<(std::ostream& os, const aabb& aabb) {
+        os << fmt::format("{{mins: ({}), maxs: ({})}}", aabb.m_corners[0], aabb.m_corners[1]);
+        return os;
+    }
 };
 
 template<class V>
