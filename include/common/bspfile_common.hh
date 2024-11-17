@@ -173,6 +173,9 @@ struct contentflags_t
     bool is_any_solid(const gamedef_t *game) const;
     // solid, not detail or any other extended content types
     bool is_solid(const gamedef_t *game) const;
+    bool has_structural_solid() const {
+        return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL);
+    }
     bool is_sky(const gamedef_t *game) const;
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
