@@ -2249,7 +2249,7 @@ static void LightFace_DebugNeighbours(const mbsp_t *bsp, lightsurf_t *lightsurf,
     /* Overwrite each point */
     for (int i = 0; i < lightsurf->samples.size(); i++) {
         lightsample_t &sample = lightmap->samples[i];
-        const int &sample_face = lightsurf->samples[i].realfacenum;
+        const int sample_face = lightsurf->samples[i].realfacenum;
 
         if (sample_face == dump_facenum) {
             /* Red - the sample is on the selected face */
