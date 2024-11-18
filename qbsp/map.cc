@@ -172,7 +172,7 @@ void mapdata_t::add_hash_edge(size_t v1, size_t v2, int64_t edge_index, const fa
                                                          .has_been_reused = false});
 }
 
-const std::optional<img::texture_meta> &mapdata_t::load_image_meta(const std::string_view &name)
+const std::optional<img::texture_meta> &mapdata_t::load_image_meta(std::string_view name)
 {
     static std::optional<img::texture_meta> nullmeta = std::nullopt;
     auto it = meta_cache.find(name.data());

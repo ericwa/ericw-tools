@@ -42,19 +42,19 @@ public:
     entdict_t();
     entdict_t(parser_base_t &parser);
 
-    const std::string &get(const std::string_view &key) const;
-    double get_float(const std::string_view &key) const;
-    int32_t get_int(const std::string_view &key) const;
+    const std::string &get(std::string_view key) const;
+    double get_float(std::string_view key) const;
+    int32_t get_int(std::string_view key) const;
     // returns number of vector components read
-    int32_t get_vector(const std::string_view &key, qvec3f &out) const;
-    void set(const std::string_view &key, const std::string_view &value);
-    void remove(const std::string_view &key);
-    void rename(const std::string_view &from, const std::string_view &to);
+    int32_t get_vector(std::string_view key, qvec3f &out) const;
+    void set(std::string_view key, std::string_view value);
+    void remove(std::string_view key);
+    void rename(std::string_view from, std::string_view to);
 
-    keyvalues_t::iterator find(const std::string_view &key);
-    keyvalues_t::const_iterator find(const std::string_view &key) const;
+    keyvalues_t::iterator find(std::string_view key);
+    keyvalues_t::const_iterator find(std::string_view key) const;
 
-    bool has(const std::string_view &key) const;
+    bool has(std::string_view key) const;
 
     inline keyvalues_t::const_iterator begin() const { return keyvalues.begin(); }
     inline keyvalues_t::const_iterator end() const { return keyvalues.end(); }

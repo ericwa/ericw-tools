@@ -45,7 +45,7 @@
 #include <strings.h>
 #endif
 
-int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size_t maxcount)
+int32_t Q_strncasecmp(std::string_view a, std::string_view b, size_t maxcount)
 {
     return
 #ifdef _WIN32
@@ -58,7 +58,7 @@ int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size
         (a.data(), b.data(), maxcount);
 }
 
-int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b)
+int32_t Q_strcasecmp(std::string_view a, std::string_view b)
 {
     return
 #ifdef _WIN32
@@ -86,7 +86,7 @@ string_replaceall(std::string &str, const std::string &from, const std::string &
 }
 
 bool // mxd
-string_iequals(const std::string_view &a, const std::string_view &b)
+string_iequals(std::string_view a, std::string_view b)
 {
     size_t sz = a.size();
     if (b.size() != sz)

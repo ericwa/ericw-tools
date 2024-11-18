@@ -1234,7 +1234,7 @@ void map_file_t::convert_to(texcoord_style_t style, const gamedef_t *game, const
     }
 }
 
-map_file_t parse(const std::string_view &view, parser_source_location base_location)
+map_file_t parse(std::string_view view, parser_source_location base_location)
 {
     parser_t parser(view, base_location);
 

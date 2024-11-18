@@ -38,7 +38,7 @@ entdict_t::entdict_t(parser_base_t &parser)
     parse(parser);
 }
 
-const std::string &entdict_t::get(const std::string_view &key) const
+const std::string &entdict_t::get(std::string_view key) const
 {
     if (auto it = find(key); it != keyvalues.end()) {
         return it->second;
@@ -48,7 +48,7 @@ const std::string &entdict_t::get(const std::string_view &key) const
     return empty;
 }
 
-double entdict_t::get_float(const std::string_view &key) const
+double entdict_t::get_float(std::string_view key) const
 {
     const std::string &s = get(key);
 
@@ -59,7 +59,7 @@ double entdict_t::get_float(const std::string_view &key) const
     return atof(s.data());
 }
 
-int32_t entdict_t::get_int(const std::string_view &key) const
+int32_t entdict_t::get_int(std::string_view key) const
 {
     const std::string &s = get(key);
 
@@ -70,7 +70,7 @@ int32_t entdict_t::get_int(const std::string_view &key) const
     return atoi(s.data());
 }
 
-int32_t entdict_t::get_vector(const std::string_view &key, qvec3f &vec) const
+int32_t entdict_t::get_vector(std::string_view key, qvec3f &vec) const
 {
     std::string value = get(key);
 
@@ -83,7 +83,7 @@ int32_t entdict_t::get_vector(const std::string_view &key, qvec3f &vec) const
     return sscanf(value.data(), "%f %f %f", &vec[0], &vec[1], &vec[2]);
 }
 
-void entdict_t::set(const std::string_view &key, const std::string_view &value)
+void entdict_t::set(std::string_view key, std::string_view value)
 {
     // search for existing key to update
     if (auto it = find(key); it != keyvalues.end()) {
@@ -96,14 +96,14 @@ void entdict_t::set(const std::string_view &key, const std::string_view &value)
     keyvalues.emplace_back(key, value);
 }
 
-void entdict_t::remove(const std::string_view &key)
+void entdict_t::remove(std::string_view key)
 {
     if (auto it = find(key); it != keyvalues.end()) {
         keyvalues.erase(it);
     }
 }
 
-void entdict_t::rename(const std::string_view &from, const std::string_view &to)
+void entdict_t::rename(std::string_view from, std::string_view to)
 {
     const auto it = find(from);
     if (it != end()) {
@@ -113,7 +113,7 @@ void entdict_t::rename(const std::string_view &from, const std::string_view &to)
     }
 }
 
-keyvalues_t::iterator entdict_t::find(const std::string_view &key)
+keyvalues_t::iterator entdict_t::find(std::string_view key)
 {
     auto existingIt = keyvalues.end();
     for (auto it = keyvalues.begin(); it != keyvalues.end(); ++it) {
@@ -125,7 +125,7 @@ keyvalues_t::iterator entdict_t::find(const std::string_view &key)
     return existingIt;
 }
 
-keyvalues_t::const_iterator entdict_t::find(const std::string_view &key) const
+keyvalues_t::const_iterator entdict_t::find(std::string_view key) const
 {
     auto existingIt = keyvalues.end();
     for (auto it = keyvalues.begin(); it != keyvalues.end(); ++it) {
@@ -137,7 +137,7 @@ keyvalues_t::const_iterator entdict_t::find(const std::string_view &key) const
     return existingIt;
 }
 
-bool entdict_t::has(const std::string_view &key) const
+bool entdict_t::has(std::string_view key) const
 {
     return find(key) != end();
 }

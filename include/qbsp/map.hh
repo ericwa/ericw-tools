@@ -254,7 +254,7 @@ struct mapdata_t
     // Small cache for image meta in the current map
     std::unordered_map<std::string, std::optional<img::texture_meta>> meta_cache;
     // load or fetch image meta associated with the specified name
-    const std::optional<img::texture_meta> &load_image_meta(const std::string_view &name);
+    const std::optional<img::texture_meta> &load_image_meta(std::string_view name);
     // whether we had attempted loading texture stuff
     bool textures_loaded = false;
 

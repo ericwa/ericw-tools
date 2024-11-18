@@ -30,9 +30,9 @@
 #include <ostream>
 #include <tuple> // for std::apply()
 
-int32_t Q_strncasecmp(const std::string_view &a, const std::string_view &b, size_t maxcount);
-int32_t Q_strcasecmp(const std::string_view &a, const std::string_view &b);
-bool string_iequals(const std::string_view &a, const std::string_view &b); // mxd
+int32_t Q_strncasecmp(std::string_view a, std::string_view b, size_t maxcount);
+int32_t Q_strcasecmp(std::string_view a, std::string_view b);
+bool string_iequals(std::string_view a, std::string_view b); // mxd
 
 struct case_insensitive_hash
 {

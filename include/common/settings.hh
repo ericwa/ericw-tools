@@ -408,7 +408,7 @@ private:
 
 public:
     setting_string(setting_container *dictionary, const nameset &names, std::string v,
-        const std::string_view &format = "\"str\"", const setting_group *group = nullptr, const char *description = "");
+        std::string_view format = "\"str\"", const setting_group *group = nullptr, const char *description = "");
     bool parse(const std::string &setting_name, parser_base_t &parser, source source) override;
     [[deprecated("use value()")]] std::string string_value() const override;
     std::string format() const override;
@@ -432,7 +432,7 @@ private:
 
 public:
     setting_set(setting_container *dictionary, const nameset &names,
-        const std::string_view &format = "\"str\" <multiple allowed>", const setting_group *group = nullptr,
+        std::string_view format = "\"str\" <multiple allowed>", const setting_group *group = nullptr,
         const char *description = "");
 
     const std::unordered_set<std::string> &values() const;

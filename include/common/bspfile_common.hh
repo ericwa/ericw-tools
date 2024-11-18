@@ -388,7 +388,7 @@ struct gamedef_t
      * e.g. warping and non-warping
      */
     virtual bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const = 0;
-    virtual int32_t surfflags_from_string(const std::string_view &str) const = 0;
+    virtual int32_t surfflags_from_string(std::string_view str) const = 0;
     // FIXME: fix so that we don't have to pass a name here
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
@@ -418,7 +418,7 @@ struct gamedef_t
     virtual bool contents_are_sky(contentflags_t contents) const = 0;
     virtual bool contents_are_liquid(contentflags_t contents) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
-    virtual int32_t contents_from_string(const std::string_view &str) const = 0;
+    virtual int32_t contents_from_string(std::string_view str) const = 0;
     virtual bool portal_can_see_through(
         contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
     virtual bool contents_seals_map(contentflags_t contents) const = 0;

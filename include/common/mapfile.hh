@@ -210,6 +210,6 @@ struct map_file_t
     void convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options);
 };
 
-map_file_t parse(const std::string_view &view, parser_source_location base_location);
+map_file_t parse(std::string_view view, parser_source_location base_location);
 
 } // namespace mapfile

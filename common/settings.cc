@@ -259,7 +259,7 @@ const char *setting_base::sourceString() const
 // setting_string
 
 setting_string::setting_string(setting_container *dictionary, const nameset &names, std::string v,
-    const std::string_view &format, const setting_group *group, const char *description)
+    std::string_view format, const setting_group *group, const char *description)
     : setting_value(dictionary, names, v, group, description),
       _format(format)
 {
@@ -316,7 +316,7 @@ std::string setting_path::format() const
 
 // setting_set
 
-setting_set::setting_set(setting_container *dictionary, const nameset &names, const std::string_view &format,
+setting_set::setting_set(setting_container *dictionary, const nameset &names, std::string_view format,
     const setting_group *group, const char *description)
     : setting_base(dictionary, names, group, description),
       _format(format)

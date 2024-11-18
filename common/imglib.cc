@@ -126,7 +126,7 @@ struct q2_miptex_t
 };
 
 std::optional<texture> load_wal(
-    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -167,7 +167,7 @@ Quake/Half Life MIP
 */
 
 std::optional<texture> load_mip(
-    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size());
     stream >> endianness<std::endian::little>;
@@ -256,7 +256,7 @@ std::optional<texture> load_mip(
 }
 
 std::optional<texture> load_stb(
-    const std::string_view &name, const fs::data &file, bool meta_only, const gamedef_t *game)
+    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     int x, y, channels_in_file;
     stbi_uc *rgba_data = stbi_load_from_memory(file->data(), file->size(), &x, &y, &channels_in_file, 4);
@@ -294,7 +294,7 @@ std::optional<texture> load_stb(
 // texture cache
 std::unordered_map<std::string, texture, case_insensitive_hash, case_insensitive_equal> textures;
 
-const texture *find(const std::string_view &str)
+const texture *find(std::string_view str)
 {
     auto it = textures.find(str.data());
 
@@ -326,7 +326,7 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels)
     return avg /= n;
 }
 
-std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(const std::string_view &name,
+std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_texture(std::string_view name,
     bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix, bool mip_only)
 {
     fs::path prefix{"textures"};
@@ -360,7 +360,7 @@ std::tuple<std::optional<img::texture>, fs::resolve_result, fs::data> load_textu
     return {std::nullopt, {}, {}};
 }
 
-std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs::data &file, const gamedef_t *game)
+std::optional<texture_meta> load_wal_meta(std::string_view name, const fs::data &file, const gamedef_t *game)
 {
     if (auto tex = load_wal(name, file, true, game)) {
         return tex->meta;
@@ -371,7 +371,7 @@ std::optional<texture_meta> load_wal_meta(const std::string_view &name, const fs
 
 // see .wal_json section in qbsp.rst for format documentation
 std::optional<texture_meta> load_wal_json_meta(
-    const std::string_view &name, const fs::data &file, const gamedef_t *game)
+    std::string_view name, const fs::data &file, const gamedef_t *game)
 {
     try {
         auto json = json::parse(file->begin(), file->end());
@@ -459,7 +459,7 @@ std::optional<texture_meta> load_wal_json_meta(
 }
 
 std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_texture_meta(
-    const std::string_view &name, const gamedef_t *game, const settings::common_settings &options)
+    std::string_view name, const gamedef_t *game, const settings::common_settings &options)
 {
     fs::path prefix;
 
@@ -535,7 +535,7 @@ static qvec3b increase_saturation(const qvec3b &color)
 
 // Load the specified texture from the BSP
 static void AddTextureName(
-    const std::string_view &textureName, const mbsp_t *bsp, const settings::common_settings &options)
+    std::string_view textureName, const mbsp_t *bsp, const settings::common_settings &options)
 {
     if (img::find(textureName)) {
         return;

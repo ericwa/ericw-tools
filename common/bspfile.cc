@@ -185,7 +185,7 @@ public:
         return (a.native & TEX_SPECIAL) == (b.native & TEX_SPECIAL);
     }
 
-    int32_t surfflags_from_string(const std::string_view &str) const override
+    int32_t surfflags_from_string(std::string_view str) const override
     {
         if (string_iequals(str, "special")) {
             return TEX_SPECIAL;
@@ -405,7 +405,7 @@ public:
         return true;
     }
 
-    int32_t contents_from_string(const std::string_view &str) const override
+    int32_t contents_from_string(std::string_view str) const override
     {
         // Q1 doesn't get contents from files
         return 0;
@@ -829,7 +829,7 @@ struct gamedef_q2_t : public gamedef_t
         "FLOWING", "NODRAW", "HINT", "512", "1024", "2048", "4096", "8192", "16384", "32768", "65536", "131072",
         "262144", "524288", "1048576", "2097152", "4194304", "8388608", "16777216", "ALPHATEST"};
 
-    int32_t surfflags_from_string(const std::string_view &str) const override
+    int32_t surfflags_from_string(std::string_view str) const override
     {
         for (size_t i = 0; i < std::size(surf_bitflag_names); i++) {
             if (string_iequals(str, surf_bitflag_names[i])) {
@@ -1129,7 +1129,7 @@ struct gamedef_q2_t : public gamedef_t
         "CURRENT_90", "CURRENT_180", "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "ORIGIN", "MONSTER", "DEADMONSTER",
         "DETAIL", "TRANSLUCENT", "LADDER", "1073741824", "2147483648"};
 
-    int32_t contents_from_string(const std::string_view &str) const override
+    int32_t contents_from_string(std::string_view str) const override
     {
         for (size_t i = 0; i < std::size(bitflag_names); i++) {
             if (string_iequals(str, bitflag_names[i])) {
