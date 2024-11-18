@@ -759,7 +759,7 @@ public:
     }
 
     template<typename TPlane>
-    static winding_base_t from_plane(const qplane3<TPlane> &plane, const float_type &worldextent)
+    static winding_base_t from_plane(const qplane3<TPlane> &plane, float_type worldextent)
     {
         /* find the major axis */
         float_type max = -std::numeric_limits<float_type>::max();
@@ -806,7 +806,7 @@ public:
         return w;
     }
 
-    void check(const float_type &bogus_range = DEFAULT_BOGUS_RANGE, const float_type &on_epsilon = DEFAULT_ON_EPSILON) const
+    void check(float_type bogus_range = DEFAULT_BOGUS_RANGE, float_type on_epsilon = DEFAULT_ON_EPSILON) const
     {
         if (size() < 3)
             FError("{} points", size());
@@ -881,7 +881,7 @@ public:
     // dists/sides can be null, or must have (size() + 1) reserved
     template<typename TPlane>
     inline std::array<size_t, SIDE_TOTAL> calc_sides(
-        const qplane3<TPlane> &plane, float_type *dists, planeside_t *sides, const float_type &on_epsilon = DEFAULT_ON_EPSILON) const
+        const qplane3<TPlane> &plane, float_type *dists, planeside_t *sides, float_type on_epsilon = DEFAULT_ON_EPSILON) const
     {
         std::array<size_t, SIDE_TOTAL> counts{};
 
@@ -944,7 +944,7 @@ public:
     */
     template<typename TStor = TStorage>
     twosided<std::optional<winding_base_t<TStor>>> clip(
-        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false) const
+        const qplane3d &plane, float_type on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false) const
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1016,7 +1016,7 @@ public:
     */
     template<typename TPlane>
     std::optional<winding_base_t> clip_front(
-        const qplane3<TPlane> &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
+        const qplane3<TPlane> &plane, float_type on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1080,7 +1080,7 @@ public:
     ==================
     */
     std::optional<winding_base_t> clip_back(
-        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
+        const qplane3d &plane, float_type on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1217,7 +1217,7 @@ public:
         return result;
     }
 
-    bool directional_equal(const winding_base_t &w, const float_type &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool directional_equal(const winding_base_t &w, float_type equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         if (this->size() != w.size()) {
             return false;
@@ -1248,7 +1248,7 @@ public:
         return false;
     }
 
-    bool undirectional_equal(const winding_base_t &w, const float_type &equal_epsilon = POINT_EQUAL_EPSILON) const
+    bool undirectional_equal(const winding_base_t &w, float_type equal_epsilon = POINT_EQUAL_EPSILON) const
     {
         return directional_equal(w, equal_epsilon) || directional_equal(w.flip(), equal_epsilon);
     }
