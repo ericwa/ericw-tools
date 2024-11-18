@@ -161,7 +161,7 @@ std::optional<size_t> mapdata_t::find_emitted_hash_vector(const qvec3d &vert)
 }
 
 // add vector to hash
-void mapdata_t::add_hash_vector(const qvec3d &point, const size_t &num)
+void mapdata_t::add_hash_vector(const qvec3d &point, size_t num)
 {
     hashverts->hash.emplace(pareto::point<double, 3>({point[0], point[1], point[2]}), num);
 }

@@ -142,7 +142,7 @@ GetEdge
 Returns a global edge number, possibly negative to indicate a backwards edge.
 ==================
 */
-inline int64_t GetEdge(const size_t &v1, const size_t &v2, const face_t *face, emit_faces_stats_t &stats)
+inline int64_t GetEdge(size_t v1, size_t v2, const face_t *face, emit_faces_stats_t &stats)
 {
     if (!face->contents.front.is_valid(qbsp_options.target_game, false))
         FError("Face with invalid contents");

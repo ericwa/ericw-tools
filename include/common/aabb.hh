@@ -226,9 +226,9 @@ public:
 
     constexpr aabb grow(const value_type &size) const { return {mins() - size, maxs() + size}; }
 
-    constexpr value_type &operator[](const size_t &index) { return m_corners[index]; }
+    constexpr value_type &operator[](size_t index) { return m_corners[index]; }
 
-    constexpr const value_type &operator[](const size_t &index) const { return m_corners[index]; }
+    constexpr const value_type &operator[](size_t index) const { return m_corners[index]; }
 
     constexpr value_type centroid() const { return (mins() + maxs()) * 0.5; }
 

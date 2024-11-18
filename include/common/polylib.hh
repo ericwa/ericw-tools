@@ -62,7 +62,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_stack_t(const size_t &initial_size)
+    inline winding_storage_stack_t(size_t initial_size)
         : count(initial_size)
     {
         if (initial_size > N) {
@@ -124,7 +124,7 @@ public:
 
     inline size_t size() const { return count; }
 
-    inline vec3_type &at(const size_t &index)
+    inline vec3_type &at(size_t index)
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -134,7 +134,7 @@ public:
         return array[index];
     }
 
-    inline const vec3_type &at(const size_t &index) const
+    inline const vec3_type &at(size_t index) const
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -145,10 +145,10 @@ public:
     }
 
     // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index) { return array[index]; }
+    inline vec3_type &operator[](size_t index) { return array[index]; }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const { return array[index]; }
+    inline const vec3_type &operator[](size_t index) const { return array[index]; }
 
     using const_iterator = typename array_type::const_iterator;
 
@@ -173,7 +173,7 @@ public:
         return (array[count - 1] = vec);
     }
 
-    inline void resize(const size_t &new_size)
+    inline void resize(size_t new_size)
     {
         if (new_size > N) {
             throw std::bad_alloc();
@@ -204,7 +204,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_heap_t(const size_t &initial_size)
+    inline winding_storage_heap_t(size_t initial_size)
         : values(initial_size)
     {
     }
@@ -252,15 +252,15 @@ public:
 
     inline size_t size() const { return values.size(); }
 
-    inline vec3_type &at(const size_t &index) { return values[index]; }
+    inline vec3_type &at(size_t index) { return values[index]; }
 
-    inline const vec3_type &at(const size_t &index) const { return values[index]; }
-
-    // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index) { return values[index]; }
+    inline const vec3_type &at(size_t index) const { return values[index]; }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const { return values[index]; }
+    inline vec3_type &operator[](size_t index) { return values[index]; }
+
+    // un-bounds-checked
+    inline const vec3_type &operator[](size_t index) const { return values[index]; }
 
     inline const auto begin() const { return values.begin(); }
 
@@ -272,7 +272,7 @@ public:
 
     inline vec3_type &emplace_back(const vec3_type &vec) { return values.emplace_back(vec); }
 
-    inline void resize(const size_t &new_size) { values.resize(new_size); }
+    inline void resize(size_t new_size) { values.resize(new_size); }
 
     inline void reserve(size_t size) { values.reserve(size); }
 
@@ -396,7 +396,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_storage_hybrid_t(const size_t &initial_size)
+    inline winding_storage_hybrid_t(size_t initial_size)
         : count(initial_size)
     {
         if (count > N) {
@@ -491,7 +491,7 @@ public:
 
     inline size_t vector_size() const { return vector.size(); }
 
-    inline vec3_type &at(const size_t &index)
+    inline vec3_type &at(size_t index)
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -505,7 +505,7 @@ public:
         return array[index];
     }
 
-    inline const vec3_type &at(const size_t &index) const
+    inline const vec3_type &at(size_t index) const
     {
 #ifdef _DEBUG
         if (index >= count)
@@ -520,7 +520,7 @@ public:
     }
 
     // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index)
+    inline vec3_type &operator[](size_t index)
     {
         if (index >= N) {
             return vector[index - N];
@@ -530,7 +530,7 @@ public:
     }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const
+    inline const vec3_type &operator[](size_t index) const
     {
         if (index >= N) {
             return vector[index - N];
@@ -562,7 +562,7 @@ public:
         return (array[count - 1] = vec);
     }
 
-    inline void resize(const size_t &new_size)
+    inline void resize(size_t new_size)
     {
         // resize vector if necessary
         if (new_size > N) {
@@ -595,7 +595,7 @@ public:
     // construct winding with initial size; may allocate
     // memory, and sets size, but does not initialize any
     // of them.
-    inline winding_base_t(const size_t &initial_size)
+    inline winding_base_t(size_t initial_size)
         : storage(initial_size)
     {
     }
@@ -639,15 +639,15 @@ public:
 
     inline size_t size() const { return storage.size(); }
 
-    inline vec3_type &at(const size_t &index) { return storage.at(index); }
+    inline vec3_type &at(size_t index) { return storage.at(index); }
 
-    inline const vec3_type &at(const size_t &index) const { return storage.at(index); }
-
-    // un-bounds-checked
-    inline vec3_type &operator[](const size_t &index) { return storage[index]; }
+    inline const vec3_type &at(size_t index) const { return storage.at(index); }
 
     // un-bounds-checked
-    inline const vec3_type &operator[](const size_t &index) const { return storage[index]; }
+    inline vec3_type &operator[](size_t index) { return storage[index]; }
+
+    // un-bounds-checked
+    inline const vec3_type &operator[](size_t index) const { return storage[index]; }
 
     inline const auto begin() const { return storage.begin(); }
 
@@ -665,7 +665,7 @@ public:
 
     inline void push_back(const vec3_type &vec) { storage.emplace_back(vec); }
 
-    inline void resize(const size_t &new_size) { storage.resize(new_size); }
+    inline void resize(size_t new_size) { storage.resize(new_size); }
 
     inline void reserve(size_t size) { storage.reserve(size); }
 

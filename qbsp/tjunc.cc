@@ -454,7 +454,7 @@ static std::list<std::vector<size_t>> compress_triangles_into_fans(
         {
             size_t seed, vert_count;
 
-            bool operator()(const size_t &a, const size_t &b) const
+            bool operator()(size_t a, size_t b) const
             {
                 size_t ka = a < seed ? vert_count + a : a;
                 size_t kb = b < seed ? vert_count + b : b;

@@ -75,7 +75,7 @@ public:
         return *this;
     }
 
-    constexpr const size_t &size() const { return _size; }
+    constexpr size_t size() const { return _size; }
 
     // this clears existing bit data!
     inline void resize(size_t new_size) { *this = leafbits_t(new_size); }
@@ -86,7 +86,7 @@ public:
     inline uint32_t *data() { return bits.get(); }
     inline const uint32_t *data() const { return bits.get(); }
 
-    inline bool operator[](const size_t &index) const { return !!(bits[index >> shift] & nth_bit(index & mask)); }
+    inline bool operator[](size_t index) const { return !!(bits[index >> shift] & nth_bit(index & mask)); }
 
     struct reference
     {
@@ -107,5 +107,5 @@ public:
         }
     };
 
-    inline reference operator[](const size_t &index) { return {bits, index >> shift, nth_bit(index & mask)}; }
+    inline reference operator[](size_t index) { return {bits, index >> shift, nth_bit(index & mask)}; }
 };

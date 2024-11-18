@@ -1200,7 +1200,7 @@ static void DecompileEntity(
 
             // decompile the leafs in parallel
             compiledBrushes.resize(tasks.size());
-            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
+            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](size_t i) {
                 compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
             });
         } else if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
@@ -1251,7 +1251,7 @@ static void DecompileEntity(
             compiledBrushes.resize(brushes.size());
             size_t t = brushes.size();
 
-            tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](const size_t &i) {
+            tbb::parallel_for(static_cast<size_t>(0), brushes.size(), [&](size_t i) {
                 compiledBrushes[i] = DecompileBrushTask(bsp, options, brushesVector[i], brush_offset);
                 t--;
             });
@@ -1267,7 +1267,7 @@ static void DecompileEntity(
 
             // decompile the leafs in parallel
             compiledBrushes.resize(tasks.size());
-            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
+            tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](size_t i) {
                 if (options.geometryOnly) {
                     compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset);
                 } else {
@@ -1427,7 +1427,7 @@ std::vector<leaf_visualization_t> VisualizeLeafs(const mbsp_t &bsp, int modelnum
 
     // decompile the leafs in parallel
     compiledBrushes.resize(tasks.size());
-    tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](const size_t &i) {
+    tbb::parallel_for(static_cast<size_t>(0), tasks.size(), [&](size_t i) {
         compiledBrushes[i] = DecompileLeafTaskLeafVisualization(&bsp,  tasks[i], std::nullopt);
     });
 
