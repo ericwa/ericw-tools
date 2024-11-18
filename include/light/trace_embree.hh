@@ -252,7 +252,7 @@ public:
 
     inline const qvec3f &getPushedRayDir(size_t j) const { return *((qvec3f *)&_rays[j].ray.ray.dir_x); }
 
-    inline const float &getPushedRayHitDist(size_t j) const { return _rays[j].ray.ray.tfar; }
+    inline const float getPushedRayHitDist(size_t j) const { return _rays[j].ray.ray.tfar; }
 
     inline hittype_t getPushedRayHitType(size_t j) const
     {

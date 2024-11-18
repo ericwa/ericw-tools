@@ -1181,7 +1181,7 @@ aabb3f EstimateVisibleBoundsAtPoint(const qvec3f &point)
     rs.tracePushedRaysIntersection(nullptr, CHANNEL_MASK_DEFAULT);
 
     for (int i = 0; i < N2; i++) {
-        const float &dist = rs.getPushedRayHitDist(i);
+        const float dist = rs.getPushedRayHitDist(i);
         const qvec3f &dir = rs.getPushedRayDir(i);
 
         // get the intersection point

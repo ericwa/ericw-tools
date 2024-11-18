@@ -76,7 +76,7 @@ static bool Face_ShouldBounce(const mbsp_t *bsp, const mface_t *face)
 
 static void MakeBounceLight(const mbsp_t *bsp, const settings::worldspawn_keys &cfg, lightsurf_t &surf,
     qvec3f texture_color, int32_t style, std::vector<qvec3f> &points,
-    const float &area, const qvec3f &facenormal, const qvec3f &facemidpoint, size_t depth)
+    float area, const qvec3f &facenormal, const qvec3f &facemidpoint, size_t depth)
 {
     if (!Face_IsEmissive(bsp, surf.face)) {
         return;

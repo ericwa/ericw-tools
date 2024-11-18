@@ -845,8 +845,8 @@ static float GetLightValue(const settings::worldspawn_keys &cfg,
 }
 
 // mxd. Surface light falloff. Returns color in [0,255]
-inline qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, const float &surf_scale,
-    const float &intensity, const qvec3f &color, const float &dist, const float &atten, const float &hotspot_clamp)
+inline qvec3f SurfaceLight_ColorAtDist(const settings::worldspawn_keys &cfg, float surf_scale,
+    float intensity, const qvec3f &color, float dist, float atten, float hotspot_clamp)
 {
     const float v = GetLightValue(cfg, LF_QRAD3, intensity, 0.0f, atten, dist, hotspot_clamp) * surf_scale;
     return color * v;
@@ -1042,7 +1042,7 @@ constexpr bool Light_ClampMin(lightsample_t &sample, const float light, const qv
     return changed;
 }
 
-constexpr float fraction(const float &min, const float &val, const float &max)
+constexpr float fraction(float min, float val, float max)
 {
     if (val >= max)
         return 1.0;
@@ -1936,7 +1936,7 @@ static void LightFace_DebugMottle(const mbsp_t *bsp, const lightsurf_t *lightsur
 // mxd. returns color in [0,255]
 inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const surfacelight_t &vpl,
     const surfacelight_t::per_style_t &vpl_settings, const qvec3f &dir, float dist, const qvec3f &normal,
-    bool use_normal, const float &standard_scale, const float &sky_scale, const float &hotspot_clamp)
+    bool use_normal, float standard_scale, float sky_scale, float hotspot_clamp)
 {
     qvec3f result;
     float dotProductFactor = 1.0f;
@@ -1981,7 +1981,7 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
 
 static bool // mxd
 SurfaceLight_SphereCull(const surfacelight_t *vpl, const lightsurf_t *lightsurf,
-    const surfacelight_t::per_style_t &vpl_settings, const float &bouncelight_gate, const float &hotspot_clamp)
+    const surfacelight_t::per_style_t &vpl_settings, float bouncelight_gate, float hotspot_clamp)
 {
     if (light_options.visapprox.value() == visapprox_t::RAYS &&
         vpl->bounds.disjoint(lightsurf->extents.bounds, 0.001f)) {
@@ -2018,7 +2018,7 @@ SurfaceLight_VisCull(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, const l
 
 static void // mxd
 LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t *lightmaps, std::optional<size_t> bounce_depth,
-    const float &standard_scale, const float &sky_scale, const float &hotspot_clamp)
+    float standard_scale, float sky_scale, float hotspot_clamp)
 {
     const settings::worldspawn_keys &cfg = *lightsurf->cfg;
     const float surflight_gate = light_options.emissivequality.value() == emissivequality_t::HIGH ? 0.0f : 0.01f;
@@ -2124,7 +2124,7 @@ LightFace_SurfaceLight(const mbsp_t *bsp, lightsurf_t *lightsurf, lightmapdict_t
 
 static void // mxd
 LightPoint_SurfaceLight(const mbsp_t *bsp, const std::vector<uint8_t> *pvs, raystream_occlusion_t &rs, bool bounce,
-    const float &standard_scale, const float &sky_scale, const float &hotspot_clamp, const qvec3f &surfpoint,
+    float standard_scale, float sky_scale, float hotspot_clamp, const qvec3f &surfpoint,
     lightgrid_samples_t &result)
 {
     const settings::worldspawn_keys &cfg = light_options;
@@ -2420,7 +2420,7 @@ static void LightFace_CalculateDirt(lightsurf_t *lightsurf)
             const ray_io &ray = rs.getRay(k);
             const int i = ray.index;
             if (rs.getPushedRayHitType(k) == hittype_t::SOLID) {
-                const float &dist = rs.getPushedRayHitDist(k);
+                const float dist = rs.getPushedRayHitDist(k);
                 lightsurf->samples[i].occlusion += std::min(cfg.dirtdepth.value(), dist);
             } else {
                 lightsurf->samples[i].occlusion += cfg.dirtdepth.value();
