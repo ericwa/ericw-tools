@@ -606,7 +606,7 @@ int FindMiptex(const char *name, bool internal, bool recursive)
 }
 
 static surfflags_t SurfFlagsForEntity(
-    const maptexinfo_t &texinfo, const mapentity_t &entity, const contentflags_t &face_contents)
+    const maptexinfo_t &texinfo, const mapentity_t &entity, contentflags_t face_contents)
 {
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();

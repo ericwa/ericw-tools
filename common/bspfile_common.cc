@@ -50,12 +50,12 @@ void lump_t::stream_read(std::istream &s)
 
 // contentflags_t
 
-bool contentflags_t::equals(const gamedef_t *game, const contentflags_t &other) const
+bool contentflags_t::equals(const gamedef_t *game, contentflags_t other) const
 {
     return flags == other.flags;
 }
 
-bool contentflags_t::types_equal(const contentflags_t &other, const gamedef_t *game) const
+bool contentflags_t::types_equal(contentflags_t other, const gamedef_t *game) const
 {
     return game->contents_are_type_equal(*this, other);
 }
@@ -103,7 +103,7 @@ contentflags_t &contentflags_t::set_mirrored(const std::optional<bool> &mirror_i
     return *this;
 }
 
-bool contentflags_t::will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const
+bool contentflags_t::will_clip_same_type(const gamedef_t *game, contentflags_t other) const
 {
     return game->contents_clip_same_type(*this, other);
 }

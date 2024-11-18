@@ -144,7 +144,7 @@ static void FindEdgeVerts_BruteForce(
  * so it shouldn't interact with solid.
  */
 
-static bool Welds(const contentflags_t &a, const contentflags_t &b)
+static bool Welds(contentflags_t a, contentflags_t b)
 {
     // FIXME: no clipping same type?
 

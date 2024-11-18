@@ -549,7 +549,7 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
     }
 }
 
-static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentflags_t &contents)
+static const char *DefaultTextureForContents(const mbsp_t *bsp, contentflags_t contents)
 {
     int native = bsp->loadversion->game->contents_to_native(contents);
 
@@ -588,7 +588,7 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, const contentfla
 // don't actually have a rendered face to pull in, so we're gonna
 // replace the texture here with something more appropriate.
 static void OverrideTextureForContents(
-    compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, const contentflags_t &contents)
+    compiled_brush_side_t &side, const mbsp_t *bsp, const char *name, contentflags_t contents)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int native = bsp->loadversion->game->contents_to_native(contents);

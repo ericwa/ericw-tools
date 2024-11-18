@@ -142,7 +142,7 @@ struct contentflags_t
         return contentflags_t{.flags = static_cast<contents_t>(f)};
     }
 
-    bool equals(const gamedef_t *game, const contentflags_t &other) const;
+    bool equals(const gamedef_t *game, contentflags_t other) const;
 
     // is any kind of detail? (solid, liquid, etc.)
     bool is_any_detail(const gamedef_t *game) const;
@@ -160,7 +160,7 @@ struct contentflags_t
     contentflags_t &set_mirrored(const std::optional<bool> &mirror_inside_value);
 
     inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
-    bool will_clip_same_type(const gamedef_t *game, const contentflags_t &other) const;
+    bool will_clip_same_type(const gamedef_t *game, contentflags_t other) const;
     std::optional<bool> clips_same_type() const {
         if (flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) {
             return {false};
@@ -190,7 +190,7 @@ struct contentflags_t
     // flags that turn things on/off - match. Exactly what the native
     // "type" is depends on the game, but any of the detail flags must
     // also match.
-    bool types_equal(const contentflags_t &other, const gamedef_t *game) const;
+    bool types_equal(contentflags_t other, const gamedef_t *game) const;
 
     // when multiple brushes contribute to a leaf, the higher priority
     // one determines the leaf contents
@@ -392,60 +392,60 @@ struct gamedef_t
     // FIXME: fix so that we don't have to pass a name here
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
-    virtual int32_t contents_to_native(const contentflags_t &contents) const = 0;
-    virtual contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const = 0;
+    virtual int32_t contents_to_native(contentflags_t contents) const = 0;
+    virtual contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const = 0;
     virtual contentflags_t create_empty_contents() const = 0;
     virtual contentflags_t create_solid_contents() const = 0;
-    virtual contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const = 0;
-    virtual contentflags_t create_detail_fence_contents(const contentflags_t &original) const = 0;
-    virtual contentflags_t create_detail_wall_contents(const contentflags_t &original) const = 0;
-    virtual contentflags_t create_detail_solid_contents(const contentflags_t &original) const = 0;
-    virtual contentflags_t clear_detail(const contentflags_t &original) const = 0;
-    virtual contentflags_t set_detail(const contentflags_t &original) const = 0;
-    virtual bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
-    virtual bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const = 0;
-    virtual bool contents_are_any_detail(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_detail_solid(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_detail_wall(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_detail_fence(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_detail_illusionary(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_origin(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_clip(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_empty(const contentflags_t &contents) const = 0;
-    virtual bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const = 0;
-    virtual bool contents_are_any_solid(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_solid(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_sky(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_liquid(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_valid(const contentflags_t &contents, bool strict = true) const = 0;
+    virtual contentflags_t create_detail_illusionary_contents(contentflags_t original) const = 0;
+    virtual contentflags_t create_detail_fence_contents(contentflags_t original) const = 0;
+    virtual contentflags_t create_detail_wall_contents(contentflags_t original) const = 0;
+    virtual contentflags_t create_detail_solid_contents(contentflags_t original) const = 0;
+    virtual contentflags_t clear_detail(contentflags_t original) const = 0;
+    virtual contentflags_t set_detail(contentflags_t original) const = 0;
+    virtual bool contents_are_type_equal(contentflags_t self, contentflags_t other) const = 0;
+    virtual bool contents_are_equal(contentflags_t self, contentflags_t other) const = 0;
+    virtual bool contents_are_any_detail(contentflags_t contents) const = 0;
+    virtual bool contents_are_detail_solid(contentflags_t contents) const = 0;
+    virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
+    virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
+    virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
+    virtual bool contents_are_origin(contentflags_t contents) const = 0;
+    virtual bool contents_are_clip(contentflags_t contents) const = 0;
+    virtual bool contents_are_empty(contentflags_t contents) const = 0;
+    virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;
+    virtual bool contents_are_any_solid(contentflags_t contents) const = 0;
+    virtual bool contents_are_solid(contentflags_t contents) const = 0;
+    virtual bool contents_are_sky(contentflags_t contents) const = 0;
+    virtual bool contents_are_liquid(contentflags_t contents) const = 0;
+    virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(const std::string_view &str) const = 0;
     virtual bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater) const = 0;
-    virtual bool contents_seals_map(const contentflags_t &contents) const = 0;
-    virtual bool contents_are_opaque(const contentflags_t &contents, bool transwater) const = 0;
+        contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
+    virtual bool contents_seals_map(contentflags_t contents) const = 0;
+    virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
     {
         brush,
         leaf
     };
-    virtual contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const = 0;
-    virtual contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
+    virtual contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const = 0;
+    virtual contentflags_t combine_contents(contentflags_t a, contentflags_t b) const = 0;
     // for a portal with contents from `a` to `b`, returns what type of face should be rendered facing `a` and `b`
-    virtual contentflags_t portal_visible_contents(const contentflags_t &a, const contentflags_t &b) const = 0;
+    virtual contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const = 0;
     // for a brush with the given contents touching a portal with the required `portal_visible_contents`, as determined
     // by portal_visible_contents, should the `brushside_side` of the brushside generate a face? e.g. liquids generate
     // front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in with
     // _mirrorinside
-    virtual bool portal_generates_face(const contentflags_t &portal_visible_contents,
-        const contentflags_t &brushcontents, planeside_t brushside_side) const = 0;
+    virtual bool portal_generates_face(contentflags_t portal_visible_contents,
+        contentflags_t brushcontents, planeside_t brushside_side) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const = 0;
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
     virtual std::unique_ptr<content_stats_base_t> create_content_stats() const = 0;
-    virtual void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats) const = 0;
+    virtual void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats) const = 0;
     virtual void print_content_stats(const content_stats_base_t &stats, const char *what) const = 0;
 };
 

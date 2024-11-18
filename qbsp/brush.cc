@@ -551,7 +551,7 @@ LoadBrush
 Converts a mapbrush to a bsp brush
 ===============
 */
-std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, const contentflags_t &contents,
+std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush, contentflags_t contents,
     hull_index_t hullnum, std::optional<std::reference_wrapper<size_t>> num_clipped)
 {
     // create the brush

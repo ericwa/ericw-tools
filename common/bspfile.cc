@@ -219,7 +219,7 @@ public:
                 fmt::format("create_contents_from_native: unknown Q1 contents {}", native));
     }
 
-    int32_t contents_to_native(const contentflags_t &contents) const override {
+    int32_t contents_to_native(contentflags_t contents) const override {
         if (contents.flags & EWT_VISCONTENTS_SOLID) {
             return CONTENTS_SOLID;
         } else if (contents.flags & EWT_VISCONTENTS_SKY) {
@@ -242,7 +242,7 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const override
+    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override
     {
         contents_int_t combined = contents0.flags | contents1.flags;
 
@@ -265,37 +265,37 @@ public:
         return contentflags_t::make(EWT_VISCONTENTS_SOLID);
     }
 
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
     {
         return contentflags_t::make(EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL);
     }
 
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_fence_contents(contentflags_t original) const override
     {
         return contentflags_t::make(EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL);
     }
 
-    contentflags_t create_detail_wall_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_wall_contents(contentflags_t original) const override
     {
         return contentflags_t::make(EWT_VISCONTENTS_DETAIL_WALL | EWT_CFLAG_DETAIL);
     }
 
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_solid_contents(contentflags_t original) const override
     {
         return contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
     }
 
-    contentflags_t clear_detail(const contentflags_t &original) const override
+    contentflags_t clear_detail(contentflags_t original) const override
     {
         return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
     }
 
-    contentflags_t set_detail(const contentflags_t &original) const override
+    contentflags_t set_detail(contentflags_t original) const override
     {
         return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
     }
 
-    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override
+    bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         // fixme-brushbsp: document what this is supposed to do, remove if unneeded?
         // is it checking for equality of visible content bits (in q2 terminology)?
@@ -304,31 +304,31 @@ public:
         return self.flags == other.flags;
     }
 
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override
+    bool contents_are_equal(contentflags_t self, contentflags_t other) const override
     {
         return self.flags == other.flags;
     }
 
-    bool contents_are_any_detail(const contentflags_t &contents) const override
+    bool contents_are_any_detail(contentflags_t contents) const override
     {
         return (contents.flags & EWT_CFLAG_DETAIL) != 0;
     }
 
-    bool contents_are_detail_solid(const contentflags_t &contents) const override
+    bool contents_are_detail_solid(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|solid|detail)
         return (contents.flags & EWT_CFLAG_DETAIL)
         && (contents.flags & EWT_VISCONTENTS_SOLID);
     }
 
-    bool contents_are_detail_wall(const contentflags_t &contents) const override
+    bool contents_are_detail_wall(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
         return (contents.flags & EWT_CFLAG_DETAIL)
                && (contents.flags & EWT_VISCONTENTS_DETAIL_WALL);
     }
 
-    bool contents_are_detail_fence(const contentflags_t &contents) const override
+    bool contents_are_detail_fence(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|fence|detail)
         return (contents.flags & EWT_CFLAG_DETAIL)
@@ -336,26 +336,26 @@ public:
 
     }
 
-    bool contents_are_detail_illusionary(const contentflags_t &contents) const override
+    bool contents_are_detail_illusionary(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|mist|detail)
         return (contents.flags & EWT_CFLAG_DETAIL)
                && (contents.flags & EWT_VISCONTENTS_MIST);
     }
 
-    bool contents_are_origin(const contentflags_t &contents) const override
+    bool contents_are_origin(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|origin)
         return (contents.flags & EWT_INVISCONTENTS_ORIGIN) != 0;
     }
 
-    bool contents_are_clip(const contentflags_t &contents) const override
+    bool contents_are_clip(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|clip)
         return (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP) != 0;
     }
 
-    bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const override
+    bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
     {
         if (!self.equals(this, other))
             return false;
@@ -368,7 +368,7 @@ public:
         return true;
     }
 
-    bool contents_are_empty(const contentflags_t &contents) const override
+    bool contents_are_empty(contentflags_t contents) const override
     {
         if (contents.flags & EWT_INVISCONTENTS_ORIGIN)
             return false;
@@ -377,29 +377,29 @@ public:
         return (contents.flags & EWT_ALL_VISIBLE_CONTENTS) == 0;
     }
 
-    bool contents_are_any_solid(const contentflags_t &contents) const override
+    bool contents_are_any_solid(contentflags_t contents) const override
     {
         return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
     }
 
     // fixme-brushbsp: this is a leftover from q1 tools, and not really used in qbsp3, remove if possible
-    bool contents_are_solid(const contentflags_t &contents) const override
+    bool contents_are_solid(contentflags_t contents) const override
     {
         return (contents.flags & EWT_VISCONTENTS_SOLID)
             && !(contents.flags & EWT_CFLAG_DETAIL);
     }
 
-    bool contents_are_sky(const contentflags_t &contents) const override
+    bool contents_are_sky(contentflags_t contents) const override
     {
         return (contents.flags & EWT_VISCONTENTS_SKY);
     }
 
-    bool contents_are_liquid(const contentflags_t &contents) const override
+    bool contents_are_liquid(contentflags_t contents) const override
     {
         return (contents.visible_contents().flags  & EWT_ALL_LIQUIDS) != 0;
     }
 
-    bool contents_are_valid(const contentflags_t &contents, bool strict) const override
+    bool contents_are_valid(contentflags_t contents, bool strict) const override
     {
         // fixme-brushbsp: document exactly what this is supposed to do
         return true;
@@ -412,7 +412,7 @@ public:
     }
 
     bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool transwater) const override
+        contentflags_t contents0, contentflags_t contents1, bool transwater) const override
     {
         contents_int_t bits_a = contents0.flags;
         contents_int_t bits_b = contents1.flags;
@@ -441,12 +441,12 @@ public:
         return false;
     }
 
-    bool contents_seals_map(const contentflags_t &contents) const override
+    bool contents_seals_map(contentflags_t contents) const override
     {
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
-    bool contents_are_opaque(const contentflags_t &contents, bool transwater) const override
+    bool contents_are_opaque(contentflags_t contents, bool transwater) const override
     {
         auto bits = contents.visible_contents().flags;
 
@@ -462,7 +462,7 @@ public:
         return false;
     }
 
-    contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
+    contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
     {
         /*
          * This is for func_detail_wall.. we want to write a solid leaf that has faces,
@@ -482,7 +482,7 @@ public:
         return contents;
     }
 
-    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
+    contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
     {
         auto bits_a = a.flags;
         auto bits_b = b.flags;
@@ -497,7 +497,7 @@ public:
         return contentflags_t::make(bits_a | bits_b);
     }
 
-    contentflags_t portal_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
     {
         auto bits_a = a.flags;
         auto bits_b = b.flags;
@@ -520,7 +520,7 @@ public:
         return strongest_contents_change;
     }
 
-    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents,
+    bool portal_generates_face(contentflags_t portal_visible_contents, contentflags_t brushcontents,
         planeside_t brushside_side) const override
     {
         auto bits_portal = portal_visible_contents.flags;
@@ -567,7 +567,7 @@ public:
     }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, const contentflags_t &) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t ) const override
     {
         // check for strong content indicators
         if (!Q_strcasecmp(texname.data(), "origin")) {
@@ -666,7 +666,7 @@ public:
         return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
     }
 
-    void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats_any) const override
+    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
     {
         content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
 
@@ -894,7 +894,7 @@ struct gamedef_q2_t : public gamedef_t
         return contentflags_t::make(result);
     }
 
-    int32_t contents_to_native(const contentflags_t &contents) const override {
+    int32_t contents_to_native(contentflags_t contents) const override {
         int32_t result = 0;
 
         if (contents.flags & EWT_VISCONTENTS_SOLID) result |= Q2_CONTENTS_SOLID;
@@ -938,7 +938,7 @@ struct gamedef_q2_t : public gamedef_t
         return result;
     }
 
-    contentflags_t cluster_contents(const contentflags_t &contents0, const contentflags_t &contents1) const override
+    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override
     {
         contents_int_t combined = contents0.flags | contents1.flags;
 
@@ -951,7 +951,7 @@ struct gamedef_q2_t : public gamedef_t
         return contentflags_t::make(combined);
     }
 
-    inline int32_t get_content_type(const contentflags_t &contents) const
+    inline int32_t get_content_type(contentflags_t contents) const
     {
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
     }
@@ -960,7 +960,7 @@ struct gamedef_q2_t : public gamedef_t
 
     contentflags_t create_solid_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_SOLID); }
 
-    contentflags_t create_detail_illusionary_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
     {
         contents_int_t flags = original.flags;
         flags &= ~EWT_VISCONTENTS_SOLID;
@@ -968,7 +968,7 @@ struct gamedef_q2_t : public gamedef_t
         return contentflags_t::make(flags);
     }
 
-    contentflags_t create_detail_fence_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_fence_contents(contentflags_t original) const override
     {
         contents_int_t flags = original.flags;
         flags &= ~EWT_VISCONTENTS_SOLID;
@@ -976,7 +976,7 @@ struct gamedef_q2_t : public gamedef_t
         return contentflags_t::make(flags);
     }
 
-    contentflags_t create_detail_wall_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_wall_contents(contentflags_t original) const override
     {
         contents_int_t flags = original.flags;
         flags &= ~EWT_VISCONTENTS_SOLID;
@@ -984,45 +984,45 @@ struct gamedef_q2_t : public gamedef_t
         return contentflags_t::make(flags);
     }
 
-    contentflags_t create_detail_solid_contents(const contentflags_t &original) const override
+    contentflags_t create_detail_solid_contents(contentflags_t original) const override
     {
         contents_int_t flags = original.flags;
         flags |= (EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL);
         return contentflags_t::make(flags);
     }
 
-    contentflags_t clear_detail(const contentflags_t &original) const override
+    contentflags_t clear_detail(contentflags_t original) const override
     {
         return contentflags_t::make(original.flags & (~EWT_CFLAG_DETAIL));
     }
 
-    contentflags_t set_detail(const contentflags_t &original) const override
+    contentflags_t set_detail(contentflags_t original) const override
     {
         return contentflags_t::make(original.flags | EWT_CFLAG_DETAIL);
     }
 
-    bool contents_are_type_equal(const contentflags_t &self, const contentflags_t &other) const override
+    bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
     {
         return get_content_type(self) == get_content_type(other);
     }
 
-    bool contents_are_equal(const contentflags_t &self, const contentflags_t &other) const override
+    bool contents_are_equal(contentflags_t self, contentflags_t other) const override
     {
         return self.flags == other.flags;
     }
 
-    bool contents_are_any_detail(const contentflags_t &contents) const override
+    bool contents_are_any_detail(contentflags_t contents) const override
     {
         return (contents.flags & EWT_CFLAG_DETAIL) != 0;
     }
 
-    bool contents_are_detail_solid(const contentflags_t &contents) const override
+    bool contents_are_detail_solid(contentflags_t contents) const override
     {
         return (contents.flags & EWT_CFLAG_DETAIL)
                && (contents.flags & EWT_VISCONTENTS_SOLID);
     }
 
-    bool contents_are_detail_wall(const contentflags_t &contents) const override
+    bool contents_are_detail_wall(contentflags_t contents) const override
     {
         // fixme: Q1 is different
         if (contents.flags & EWT_VISCONTENTS_SOLID) {
@@ -1033,7 +1033,7 @@ struct gamedef_q2_t : public gamedef_t
         return ((contents.flags & test) == test);
     }
 
-    bool contents_are_detail_fence(const contentflags_t &contents) const override
+    bool contents_are_detail_fence(contentflags_t contents) const override
     {
         // fixme: Q1 is different
         if (contents.flags & EWT_VISCONTENTS_SOLID) {
@@ -1044,7 +1044,7 @@ struct gamedef_q2_t : public gamedef_t
         return ((contents.flags & test) == test);
     }
 
-    bool contents_are_detail_illusionary(const contentflags_t &contents) const override
+    bool contents_are_detail_illusionary(contentflags_t contents) const override
     {
         // fixme: Q1 is different
         if (contents.flags & EWT_VISCONTENTS_SOLID) {
@@ -1057,17 +1057,17 @@ struct gamedef_q2_t : public gamedef_t
         return ((contents.flags & mist1_type) == mist1_type) || ((contents.flags & mist2_type) == mist2_type);
     }
 
-    bool contents_are_origin(const contentflags_t &contents) const override
+    bool contents_are_origin(contentflags_t contents) const override
     {
         return contents.flags & EWT_INVISCONTENTS_ORIGIN;
     }
 
-    bool contents_are_clip(const contentflags_t &contents) const override
+    bool contents_are_clip(contentflags_t contents) const override
     {
         return (contents.flags & (EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP)) != 0;
     }
 
-    bool contents_clip_same_type(const contentflags_t &self, const contentflags_t &other) const override
+    bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
     {
         if ((self.flags & EWT_ALL_VISIBLE_CONTENTS) !=
                    (other.flags & EWT_ALL_VISIBLE_CONTENTS))
@@ -1079,27 +1079,27 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    inline bool contents_has_extended(const contentflags_t &contents) const { return false; }
+    inline bool contents_has_extended(contentflags_t contents) const { return false; }
 
-    bool contents_are_empty(const contentflags_t &contents) const override
+    bool contents_are_empty(contentflags_t contents) const override
     {
         return !contents_has_extended(contents) && !get_content_type(contents);
     }
 
-    bool contents_are_any_solid(const contentflags_t &contents) const override
+    bool contents_are_any_solid(contentflags_t contents) const override
     {
         return (contents.flags & EWT_VISCONTENTS_SOLID) != 0;
     }
 
-    bool contents_are_solid(const contentflags_t &contents) const override
+    bool contents_are_solid(contentflags_t contents) const override
     {
         return !contents_has_extended(contents) && (contents.flags & EWT_VISCONTENTS_SOLID) &&
                !(contents.flags & EWT_CFLAG_DETAIL);
     }
 
-    bool contents_are_sky(const contentflags_t &contents) const override { return false; }
+    bool contents_are_sky(contentflags_t contents) const override { return false; }
 
-    bool contents_are_liquid(const contentflags_t &contents) const override
+    bool contents_are_liquid(contentflags_t contents) const override
     {
         if (contents_has_extended(contents))
             return false;
@@ -1110,7 +1110,7 @@ struct gamedef_q2_t : public gamedef_t
         return (contents.flags & EWT_ALL_LIQUIDS) != 0;
     }
 
-    bool contents_are_valid(const contentflags_t &contents, bool strict) const override
+    bool contents_are_valid(contentflags_t contents, bool strict) const override
     {
         // check that we don't have more than one visible contents type
         // FIXME: we don't do that
@@ -1140,7 +1140,7 @@ struct gamedef_q2_t : public gamedef_t
         return 0;
     }
 
-    contentflags_t portal_visible_contents(const contentflags_t &a, const contentflags_t &b) const override
+    contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
     {
         auto bits_a = a.flags;
         auto bits_b = b.flags;
@@ -1159,7 +1159,7 @@ struct gamedef_q2_t : public gamedef_t
     }
 
     bool portal_can_see_through(
-        const contentflags_t &contents0, const contentflags_t &contents1, bool) const override
+        contentflags_t contents0, contentflags_t contents1, bool) const override
     {
         contents_int_t c0 = contents0.flags, c1 = contents1.flags;
 
@@ -1185,12 +1185,12 @@ struct gamedef_q2_t : public gamedef_t
         return (((c0 ^ c1) & EWT_ALL_VISIBLE_CONTENTS) == 0);
     }
 
-    bool contents_seals_map(const contentflags_t &contents) const override
+    bool contents_seals_map(contentflags_t contents) const override
     {
         return contents_are_solid(contents) || contents_are_sky(contents);
     }
 
-    bool contents_are_opaque(const contentflags_t &contents, bool transwater) const override
+    bool contents_are_opaque(contentflags_t contents, bool transwater) const override
     {
         int32_t c = contents.flags;
 
@@ -1206,7 +1206,7 @@ struct gamedef_q2_t : public gamedef_t
         return true;
     }
 
-    contentflags_t contents_remap_for_export(const contentflags_t &contents, remap_type_t type) const override
+    contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
     {
         if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL) {
             contents_int_t result = contents.flags;
@@ -1218,7 +1218,7 @@ struct gamedef_q2_t : public gamedef_t
         return contents;
     }
 
-    contentflags_t combine_contents(const contentflags_t &a, const contentflags_t &b) const override
+    contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
     {
         contents_int_t bits_a = a.flags;
         contents_int_t bits_b = b.flags;
@@ -1232,7 +1232,7 @@ struct gamedef_q2_t : public gamedef_t
         return contentflags_t::make(bits_a | bits_b);
     }
 
-    bool portal_generates_face(const contentflags_t &portal_visible_contents, const contentflags_t &brushcontents,
+    bool portal_generates_face(contentflags_t portal_visible_contents, contentflags_t brushcontents,
         planeside_t brushside_side) const override
     {
         auto bits_portal = portal_visible_contents.flags;
@@ -1295,7 +1295,7 @@ struct gamedef_q2_t : public gamedef_t
     }
 
     contentflags_t face_get_contents(
-        const std::string &texname, const surfflags_t &flags, const contentflags_t &contents) const override
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents) const override
     {
         // hints and skips are never detail, and have no content
         if (flags.native & (Q2_SURF_HINT | Q2_SURF_SKIP)) {
@@ -1516,7 +1516,7 @@ public:
         return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
     }
 
-    void count_contents_in_stats(const contentflags_t &contents, content_stats_base_t &stats_any) const override
+    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
     {
         content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
 

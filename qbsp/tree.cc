@@ -85,7 +85,7 @@ void FreeTreePortals(tree_t &tree)
 
 //============================================================================
 
-static void ConvertNodeToLeaf(node_t *node, const contentflags_t &contents)
+static void ConvertNodeToLeaf(node_t *node, contentflags_t contents)
 {
     auto *nodedata = node->get_nodedata();
 
