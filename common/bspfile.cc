@@ -1322,7 +1322,18 @@ struct gamedef_q2_t : public gamedef_t
         // translucent objects are automatically classified as detail
         if (surf_contents & EWT_CFLAG_TRANSLUCENT) {
             surf_contents |= EWT_CFLAG_DETAIL;
-        } else if (surf_contents & (EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX)) {
+        }
+
+        // MIST and AUX are forced to be detail because:
+        // - you can see out of AUX if you go inside it, since the inside faces are omitted, so it doesn't make sense
+        //   to be visblocking
+        // - MIST is typically used for small details that the mapper doesn't want the player to collide with.
+        //
+        //   If the mapper really wants visblocking mist, we have a separate feature for that,
+        //   func_illusionary_visblocker (but this feature is likely to let the player
+        //   see into the void when their camera is right on top of the bordering faces, at least in the
+        //   Q2 remaster engine, so it's not recommended.)
+        if (surf_contents & (EWT_VISCONTENTS_MIST | EWT_VISCONTENTS_AUX)) {
             surf_contents |= EWT_CFLAG_DETAIL;
         }
 
