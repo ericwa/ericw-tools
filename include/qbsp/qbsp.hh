@@ -337,8 +337,7 @@ public:
     [[nodiscard]] qbsp_plane_t operator-() const;
 
     [[nodiscard]] const plane_type_t &get_type() const;
-    [[nodiscard]] const double &get_dist() const;
-    [[nodiscard]] double &get_dist();
+    [[nodiscard]] double get_dist() const;
     [[nodiscard]] const qvec3d &get_normal() const;
     bool set_normal(const qvec3d &vec, bool flip = false);
     bool set_plane(const qplane3d &plane, bool flip = false);

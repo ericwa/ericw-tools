@@ -600,7 +600,7 @@ std::array<std::pair<qvec2i, float>, 4> bilinearWeightsAndCoords(qvec2f pos, con
  * - the direction doesn't matter.
  * - only tips touching is enough
  */
-bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, const double &on_epsilon)
+bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, double on_epsilon)
 {
     const float q0_linedist = DistToLine(p0, p1, q0);
     if (q0_linedist > on_epsilon)

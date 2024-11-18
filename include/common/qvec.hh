@@ -1178,7 +1178,7 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
 }
 
 bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1,
-    const double &on_epsilon = DEFAULT_ON_EPSILON);
+    double on_epsilon = DEFAULT_ON_EPSILON);
 
 template<typename T>
 struct twosided

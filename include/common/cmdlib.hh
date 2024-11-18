@@ -285,7 +285,7 @@ inline std::ostream &operator<=(std::ostream &s, const float &c)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const double &c)
+inline std::ostream &operator<=(std::ostream &s, double c)
 {
     if (!detail::need_swap(s))
         s.write(reinterpret_cast<const char *>(&c), sizeof(c));

@@ -321,11 +321,7 @@ qbsp_plane_t &qbsp_plane_t::operator=(const qplane3d &plane) noexcept
 {
     return type;
 }
-[[nodiscard]] const double &qbsp_plane_t::get_dist() const
-{
-    return plane.dist;
-}
-[[nodiscard]] double &qbsp_plane_t::get_dist()
+[[nodiscard]] double qbsp_plane_t::get_dist() const
 {
     return plane.dist;
 }
