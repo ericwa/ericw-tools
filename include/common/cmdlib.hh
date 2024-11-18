@@ -130,7 +130,7 @@ enum class st_en : long
 bool need_swap(std::ios_base &os);
 
 template<typename T>
-inline void write_swapped(std::ostream &s, const T &val)
+inline void write_swapped(std::ostream &s, T val)
 {
     const char *pVal = reinterpret_cast<const char *>(&val);
 
@@ -176,7 +176,7 @@ struct padding_n
 
 // using <= for ostream and >= for istream
 template<size_t n>
-inline std::ostream &operator<=(std::ostream &s, const padding<n> &)
+inline std::ostream &operator<=(std::ostream &s, padding<n>)
 {
     for (size_t i = 0; i < n; i++) {
         s.put(0);
@@ -185,7 +185,7 @@ inline std::ostream &operator<=(std::ostream &s, const padding<n> &)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const padding_n &p)
+inline std::ostream &operator<=(std::ostream &s, padding_n p)
 {
     for (size_t i = 0; i < p.n; i++) {
         s.put(0);
@@ -194,28 +194,28 @@ inline std::ostream &operator<=(std::ostream &s, const padding_n &p)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const char &c)
+inline std::ostream &operator<=(std::ostream &s, char c)
 {
     s.write(&c, sizeof(c));
 
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const int8_t &c)
+inline std::ostream &operator<=(std::ostream &s, int8_t c)
 {
     s.write(reinterpret_cast<const char *>(&c), sizeof(c));
 
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const uint8_t &c)
+inline std::ostream &operator<=(std::ostream &s, uint8_t c)
 {
     s.write(reinterpret_cast<const char *>(&c), sizeof(c));
 
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const uint16_t &c)
+inline std::ostream &operator<=(std::ostream &s, uint16_t c)
 {
     if (!detail::need_swap(s))
         s.write(reinterpret_cast<const char *>(&c), sizeof(c));
@@ -225,7 +225,7 @@ inline std::ostream &operator<=(std::ostream &s, const uint16_t &c)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const int16_t &c)
+inline std::ostream &operator<=(std::ostream &s, int16_t c)
 {
     if (!detail::need_swap(s))
         s.write(reinterpret_cast<const char *>(&c), sizeof(c));
@@ -235,7 +235,7 @@ inline std::ostream &operator<=(std::ostream &s, const int16_t &c)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const uint32_t &c)
+inline std::ostream &operator<=(std::ostream &s, uint32_t c)
 {
     if (!detail::need_swap(s))
         s.write(reinterpret_cast<const char *>(&c), sizeof(c));
@@ -245,7 +245,7 @@ inline std::ostream &operator<=(std::ostream &s, const uint32_t &c)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const int32_t &c)
+inline std::ostream &operator<=(std::ostream &s, int32_t c)
 {
     if (!detail::need_swap(s))
         s.write(reinterpret_cast<const char *>(&c), sizeof(c));
@@ -255,7 +255,7 @@ inline std::ostream &operator<=(std::ostream &s, const int32_t &c)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const uint64_t &c)
+inline std::ostream &operator<=(std::ostream &s, uint64_t c)
 {
     if (!detail::need_swap(s))
         s.write(reinterpret_cast<const char *>(&c), sizeof(c));
@@ -265,7 +265,7 @@ inline std::ostream &operator<=(std::ostream &s, const uint64_t &c)
     return s;
 }
 
-inline std::ostream &operator<=(std::ostream &s, const int64_t &c)
+inline std::ostream &operator<=(std::ostream &s, int64_t c)
 {
     if (!detail::need_swap(s))
         s.write(reinterpret_cast<const char *>(&c), sizeof(c));
@@ -329,9 +329,9 @@ inline std::enable_if_t<std::is_member_function_pointer_v<decltype(&T::stream_wr
 }
 
 template<typename T>
-inline std::enable_if_t<std::is_enum_v<T>, std::ostream &> operator<=(std::ostream &s, const T &obj)
+inline std::enable_if_t<std::is_enum_v<T>, std::ostream &> operator<=(std::ostream &s, T obj)
 {
-    s <= reinterpret_cast<const std::underlying_type_t<T> &>(obj);
+    s <= static_cast<std::underlying_type_t<T>>(obj);
     return s;
 }
 
