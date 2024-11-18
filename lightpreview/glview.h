@@ -253,7 +253,7 @@ public:
     // intensity = 0 to 200
     void setLightStyleIntensity(int style_id, int intensity);
     void setMagFilter(QOpenGLTexture::Filter filter);
-    const bool &getKeepOrigin() const { return m_keepOrigin; }
+    bool getKeepOrigin() const { return m_keepOrigin; }
     void setDrawTranslucencyAsOpaque(bool drawopaque);
     void setShowBmodels(bool bmodels);
     void setBrightness(float brightness);

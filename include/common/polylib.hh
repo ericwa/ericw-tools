@@ -944,7 +944,7 @@ public:
     */
     template<typename TStor = TStorage>
     twosided<std::optional<winding_base_t<TStor>>> clip(
-        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false) const
+        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false) const
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1016,7 +1016,7 @@ public:
     */
     template<typename TPlane>
     std::optional<winding_base_t> clip_front(
-        const qplane3<TPlane> &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3<TPlane> &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
@@ -1080,7 +1080,7 @@ public:
     ==================
     */
     std::optional<winding_base_t> clip_back(
-        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, const bool &keepon = false)
+        const qplane3d &plane, const float_type &on_epsilon = DEFAULT_ON_EPSILON, bool keepon = false)
     {
         float_type *dists = (float_type *)alloca(sizeof(float_type) * (size() + 1));
         planeside_t *sides = (planeside_t *)alloca(sizeof(planeside_t) * (size() + 1));
