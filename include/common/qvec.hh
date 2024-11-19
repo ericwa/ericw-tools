@@ -109,12 +109,7 @@ private:
     template<typename FT, std::size_t... pack>
     constexpr void copy_trunc_impl(const FT &from, std::index_sequence<pack...> packed)
     {
-        ((
-            (pack < N) ?
-                (v[pack] = ((pack < from.size() ? (from[pack]) : 0)))
-            :
-                (false)
-         ), ...);
+        (((pack < N) ? (v[pack] = ((pack < from.size() ? (from[pack]) : 0))) : (false)), ...);
     }
 
 public:
@@ -163,14 +158,14 @@ public:
 
     [[nodiscard]] constexpr const T &operator[](const size_t idx) const { return at(idx); }
     [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
-    
+
 private:
     // OUT = op THIS[N]
     template<class UnaryOperation, std::size_t... pack>
     constexpr auto utransform_impl(UnaryOperation func, std::index_sequence<pack...>) const
     {
         using R = decltype(-T());
-        return qvec<R, N> { func(at(pack))... };
+        return qvec<R, N>{func(at(pack))...};
     }
 
     // OUT = THIS[N] op IN
@@ -178,15 +173,15 @@ private:
     constexpr auto transform_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
     {
         using R = decltype(func(T(), InputType()));
-        return qvec<R, N> { func(at(pack), b)... };
+        return qvec<R, N>{func(at(pack), b)...};
     }
-    
+
     // OUT = THIS[N] op IN[N]
     template<class BinaryOperation, typename InputType, std::size_t... pack>
     constexpr auto transformv_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
     {
         using R = decltype(func(T(), InputType()[0]));
-        return qvec<R, N> { func(at(pack), b[pack])... };
+        return qvec<R, N>{func(at(pack), b[pack])...};
     }
 
 public:
@@ -213,7 +208,7 @@ public:
     {
         return transformv(std::plus(), other);
     }
-    
+
     template<typename F>
     [[nodiscard]] constexpr inline auto operator-(const qvec<F, N> &other) const
     {
@@ -244,10 +239,7 @@ public:
         return transformv(std::divides(), scale);
     }
 
-    [[nodiscard]] constexpr inline auto operator-() const
-    {
-        return utransform(std::negate());
-    }
+    [[nodiscard]] constexpr inline auto operator-() const { return utransform(std::negate()); }
 
     template<typename F>
     constexpr qvec operator+=(const qvec<F, N> &other)
@@ -298,7 +290,8 @@ public:
     constexpr auto cend() const { return v.cend(); }
 
     // gtest support
-    friend std::ostream& operator<<(std::ostream& os, const qvec& point) {
+    friend std::ostream &operator<<(std::ostream &os, const qvec &point)
+    {
         os << fmt::format("{}", point);
         return os;
     }
@@ -1177,8 +1170,8 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
     return result;
 }
 
-bool LinesOverlap(const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1,
-    double on_epsilon = DEFAULT_ON_EPSILON);
+bool LinesOverlap(
+    const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, double on_epsilon = DEFAULT_ON_EPSILON);
 
 template<typename T>
 struct twosided

@@ -51,21 +51,21 @@ const std::set<const mface_t *> &ShadowCastingSolidFacesSet();
 
 struct ray_io
 {
-    RTCRayHit   ray;
-    float   maxdist;
-    int     index;
-    qvec3f  color;
-    qvec3f  normalcontrib;
+    RTCRayHit ray;
+    float maxdist;
+    int index;
+    qvec3f color;
+    qvec3f normalcontrib;
 
-    bool    hit_glass = false;
-    qvec3f  glass_color;
-    float   glass_opacity;
+    bool hit_glass = false;
+    qvec3f glass_color;
+    float glass_opacity;
 
     // This is set to the modelinfo's switchshadstyle if the ray hit
     // a dynamic shadow caster. (note that for rays that hit dynamic
     // shadow casters, all of the other hit data is assuming the ray went
     // straight through).
-    int     dynamic_style = 0;
+    int dynamic_style = 0;
 };
 
 struct alignas(16) aligned_vec3
@@ -80,16 +80,10 @@ protected:
 
 public:
     inline raystream_embree_common_t() = default;
-    inline raystream_embree_common_t(size_t capacity)
-    {
-        _rays.reserve(capacity);
-    }
+    inline raystream_embree_common_t(size_t capacity) { _rays.reserve(capacity); }
     virtual ~raystream_embree_common_t() = default;
 
-    void resize(size_t size)
-    {
-        _rays.resize(size);
-    }
+    void resize(size_t size) { _rays.resize(size); }
 
     ray_io &getRay(size_t index) { return _rays[index]; }
     const ray_io &getRay(size_t index) const { return _rays[index]; };
@@ -119,7 +113,8 @@ public:
     }
 
 protected:
-    static inline RTCRayHit SetupRay(unsigned int rayindex, const aligned_vec3 &start, const aligned_vec3 &dir, float dist)
+    static inline RTCRayHit SetupRay(
+        unsigned int rayindex, const aligned_vec3 &start, const aligned_vec3 &dir, float dist)
     {
         RTCRayHit ray;
         ray.ray.org_x = start.x;
@@ -148,9 +143,9 @@ extern RTCScene scene;
 
 struct ray_source_info : public
 #ifdef HAVE_EMBREE4
-    RTCRayQueryContext
+                         RTCRayQueryContext
 #else
-    RTCIntersectContext
+                         RTCIntersectContext
 #endif
 {
     raystream_embree_common_t *raystream; // may be null if this ray is not from a ray stream
@@ -222,16 +217,13 @@ public:
     inline void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const qvec3f *color = nullptr,
         const qvec3f *normalcontrib = nullptr)
     {
-        const RTCRayHit rayHit = SetupRay(_rays.size(), { origin[0], origin[1], origin[2], 0.f }, { dir[0], dir[1], dir[2], 0.f }, dist);
-        _rays.push_back(
-            ray_io {
-                .ray = rayHit,
-                .maxdist = dist,
-                .index = i,
-                .color = color ? *color : qvec3f{},
-                .normalcontrib = normalcontrib ? *normalcontrib : qvec3f{}
-            }
-        );
+        const RTCRayHit rayHit =
+            SetupRay(_rays.size(), {origin[0], origin[1], origin[2], 0.f}, {dir[0], dir[1], dir[2], 0.f}, dist);
+        _rays.push_back(ray_io{.ray = rayHit,
+            .maxdist = dist,
+            .index = i,
+            .color = color ? *color : qvec3f{},
+            .normalcontrib = normalcontrib ? *normalcontrib : qvec3f{}});
     }
 
     inline void tracePushedRaysIntersection(const modelinfo_t *self, int shadowmask)
@@ -290,16 +282,13 @@ public:
     inline void pushRay(int i, const qvec3f &origin, const qvec3f &dir, float dist, const qvec3f *color = nullptr,
         const qvec3f *normalcontrib = nullptr)
     {
-        const RTCRay ray = SetupRay(_rays.size(), { origin[0], origin[1], origin[2], 0.f }, { dir[0], dir[1], dir[2], 0.f }, dist).ray;
-        _rays.push_back(
-            ray_io {
-                .ray = { ray },
-                .maxdist = dist,
-                .index = i,
-                .color = color ? *color : qvec3f{},
-                .normalcontrib = normalcontrib ? *normalcontrib : qvec3f{}
-            }
-        );
+        const RTCRay ray =
+            SetupRay(_rays.size(), {origin[0], origin[1], origin[2], 0.f}, {dir[0], dir[1], dir[2], 0.f}, dist).ray;
+        _rays.push_back(ray_io{.ray = {ray},
+            .maxdist = dist,
+            .index = i,
+            .color = color ? *color : qvec3f{},
+            .normalcontrib = normalcontrib ? *normalcontrib : qvec3f{}});
     }
 
     inline void tracePushedRaysOcclusion(const modelinfo_t *self, int shadowmask)

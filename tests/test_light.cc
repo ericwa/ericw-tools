@@ -12,7 +12,6 @@
 #include <common/aabb.hh>
 #include <common/litfile.hh>
 
-
 TEST(mathlib, MakeCDF)
 {
     std::vector<float> pdfUnnormzlied{25, 50, 25};

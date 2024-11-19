@@ -38,7 +38,7 @@
 #include <common/qvec.hh>
 #include <tbb/parallel_for_each.h>
 
-face_cache_t::face_cache_t(){};
+face_cache_t::face_cache_t() { };
 
 face_cache_t::face_cache_t(const mbsp_t *bsp, const mface_t *face, const std::vector<face_normal_t> &normals)
     : m_points(Face_Points(bsp, face)),

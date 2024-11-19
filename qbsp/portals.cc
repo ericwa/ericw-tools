@@ -66,8 +66,7 @@ bool Portal_VisFlood(const portal_t *p)
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
     // Check per-game visibility
-    return qbsp_options.target_game->portal_can_see_through(
-        contents0, contents1, qbsp_options.transwater.value());
+    return qbsp_options.target_game->portal_can_see_through(contents0, contents1, qbsp_options.transwater.value());
 }
 
 /*
@@ -1018,8 +1017,8 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
     // solid > lava > water, etc
 
     // if either is "_noclipfaces" then we don't require a content change
-    contentflags_t viscontents =
-        qbsp_options.target_game->portal_visible_contents(p->nodes[0]->get_leafdata()->contents, p->nodes[1]->get_leafdata()->contents);
+    contentflags_t viscontents = qbsp_options.target_game->portal_visible_contents(
+        p->nodes[0]->get_leafdata()->contents, p->nodes[1]->get_leafdata()->contents);
     if (viscontents.is_empty(qbsp_options.target_game))
         return;
 
@@ -1035,7 +1034,8 @@ static void FindPortalSide(portal_t *p, visible_faces_stats_t &stats)
 
         // iterate the n->original_brushes vector in reverse order, so later brushes
         // in the map file order are prioritized
-        for (auto it = n->get_leafdata()->original_brushes.rbegin(); it != n->get_leafdata()->original_brushes.rend(); ++it) {
+        for (auto it = n->get_leafdata()->original_brushes.rbegin(); it != n->get_leafdata()->original_brushes.rend();
+            ++it) {
             auto *brush = *it;
             const bool generate_outside_face =
                 qbsp_options.target_game->portal_generates_face(viscontents, brush->contents, SIDE_FRONT);

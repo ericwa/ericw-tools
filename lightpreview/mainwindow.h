@@ -102,7 +102,8 @@ private:
     int compileMap(const QString &file, bool is_reload);
     void compileThreadExited();
     bspdata_t QbspVisLight_Common(const fs::path &name, std::vector<std::string> extra_common_args,
-        std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args, std::vector<std::string> extra_light_args, bool run_vis, bool run_light);
+        std::vector<std::string> extra_qbsp_args, std::vector<std::string> extra_vis_args,
+        std::vector<std::string> extra_light_args, bool run_vis, bool run_light);
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;

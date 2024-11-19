@@ -164,7 +164,8 @@ struct wad_archive : archive_like
 
         auto stream_data() { return std::tie(filepos, disksize, size, type, compression, pad, name); }
 
-        std::string name_as_string() const {
+        std::string name_as_string() const
+        {
             size_t length = 0;
 
             // count the number of leading non-null characters

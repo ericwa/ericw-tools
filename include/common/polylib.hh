@@ -49,6 +49,7 @@ struct winding_storage_stack_t
 public:
     using float_type = T;
     using vec3_type = qvec<T, 3>;
+
 protected:
     using array_type = std::array<vec3_type, N>;
     array_type array;
@@ -194,6 +195,7 @@ struct winding_storage_heap_t
 public:
     using float_type = T;
     using vec3_type = qvec<T, 3>;
+
 protected:
     std::vector<vec3_type, tbb::scalable_allocator<vec3_type>> values{};
 
@@ -287,6 +289,7 @@ struct winding_storage_hybrid_t
 public:
     using float_type = T;
     using vec3_type = qvec<T, 3>;
+
 protected:
     using array_type = std::array<vec3_type, N>;
     using vector_type = std::vector<vec3_type>;
@@ -585,6 +588,7 @@ struct winding_base_t
 public:
     using float_type = typename TStorage::float_type;
     using vec3_type = typename TStorage::vec3_type;
+
 protected:
     TStorage storage;
 
@@ -880,8 +884,8 @@ public:
 
     // dists/sides can be null, or must have (size() + 1) reserved
     template<typename TPlane>
-    inline std::array<size_t, SIDE_TOTAL> calc_sides(
-        const qplane3<TPlane> &plane, float_type *dists, planeside_t *sides, float_type on_epsilon = DEFAULT_ON_EPSILON) const
+    inline std::array<size_t, SIDE_TOTAL> calc_sides(const qplane3<TPlane> &plane, float_type *dists,
+        planeside_t *sides, float_type on_epsilon = DEFAULT_ON_EPSILON) const
     {
         std::array<size_t, SIDE_TOTAL> counts{};
 
@@ -1283,7 +1287,8 @@ public:
 
     // gtest support
     // also, makes printable via fmt since we include fmt/ostream.h
-    friend std::ostream& operator<<(std::ostream& os, const winding_base_t &winding) {
+    friend std::ostream &operator<<(std::ostream &os, const winding_base_t &winding)
+    {
         os << "{";
         for (size_t i = 0; i < winding.size(); ++i) {
             os << "(" << winding[i] << ")";
@@ -1304,4 +1309,6 @@ using winding3f_t = winding_base_t<winding_storage_heap_t<float>>;
 
 // fmt support
 template<class T>
-struct fmt::formatter<polylib::winding_base_t<T>> : fmt::ostream_formatter {};
+struct fmt::formatter<polylib::winding_base_t<T>> : fmt::ostream_formatter
+{
+};

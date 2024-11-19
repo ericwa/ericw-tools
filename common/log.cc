@@ -84,7 +84,7 @@ void init(std::optional<fs::path> filename, const settings::common_settings &set
     }
 
     logfile.open(p, settings.logappend.value() ? std::ios_base::app : std::ios_base::trunc);
-    
+
     if (logfile) {
         print(flag::PROGRESS, "logging to {} ({})\n", p.string(), settings.logappend.value() ? "append" : "truncate");
         fmt::print(logfile, "---- {} / ericw-tools {} ----\n", settings.program_name, ERICWTOOLS_VERSION);
@@ -190,7 +190,7 @@ static time_point last_percent_time;
 
 static duration average_times_for_one_percent()
 {
-    duration pt {};
+    duration pt{};
 
     for (size_t i = 0; i < num_percent_times; i++) {
         pt += one_percent_times[i];
@@ -298,7 +298,9 @@ void percent(uint64_t count, uint64_t max, bool displayElapsed)
                         dt /= diff;
                         register_average_time(dt);
                         last_percent_time = I_FloatTime();
-                        print(flag::PERCENT, "[{:>3}%]  est: {:%H:%M:%S}\r", pct, std::chrono::duration_cast<std::chrono::duration<long long>>(average_times_for_one_percent() * (100 - pct)));
+                        print(flag::PERCENT, "[{:>3}%]  est: {:%H:%M:%S}\r", pct,
+                            std::chrono::duration_cast<std::chrono::duration<long long>>(
+                                average_times_for_one_percent() * (100 - pct)));
                     } else {
                         print(flag::PERCENT, "[{:>3}%]  ...\r", pct);
                     }

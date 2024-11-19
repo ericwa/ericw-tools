@@ -61,9 +61,8 @@ uint32_t HDR_PackE5BRG9(qvec3f rgb)
     constexpr int Emax = 31; // max allowed exponent bias value
 
     // slightly under 2^16
-    constexpr float max_representable = \
-        (static_cast<float>((1 << N) - 1) / static_cast<float>(1 << N)) * \
-                static_cast<float>(1 << (Emax - B));
+    constexpr float max_representable =
+        (static_cast<float>((1 << N) - 1) / static_cast<float>(1 << N)) * static_cast<float>(1 << (Emax - B));
 
     // clamp inputs
     const float r = std::max(0.0f, std::min(rgb[0], max_representable));
@@ -119,7 +118,7 @@ qvec3f HDR_UnpackE5BRG9(uint32_t packed)
 
     const uint32_t blue_int = (packed >> 18) & 0x1ff;
     const uint32_t green_int = (packed >> 9) & 0x1ff;
-    const uint32_t red_int =  packed & 0x1ff;
+    const uint32_t red_int = packed & 0x1ff;
 
     const float multiplier = std::pow(2.0f, static_cast<float>(exponent));
 
@@ -130,7 +129,7 @@ lit_variant_t LoadLitFile(const fs::path &path)
 {
     std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
     if (!stream.good()) {
-        return { lit_none() };
+        return {lit_none()};
     }
 
     stream >> endianness<std::endian::little>;

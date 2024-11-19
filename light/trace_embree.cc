@@ -65,7 +65,6 @@ const std::set<const mface_t *> &ShadowCastingSolidFacesSet()
     return shadow_casting_solid_faces;
 }
 
-
 /**
  * Returns 1.0 unless a custom alpha value is set.
  * The priority is: "_light_alpha" (read from extended_texinfo_flags), then "alpha", then Q2 surface flags
@@ -733,10 +732,10 @@ static void AddDynamicOccluderToRay(ray_source_info *ctx, unsigned rayIndex, int
     }
 }
 
-ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_) :
-    raystream(raystream_),
-    self(self_),
-    shadowmask(shadowmask_)
+ray_source_info::ray_source_info(raystream_embree_common_t *raystream_, const modelinfo_t *self_, int shadowmask_)
+    : raystream(raystream_),
+      self(self_),
+      shadowmask(shadowmask_)
 {
 #ifdef HAVE_EMBREE4
     rtcInitRayQueryContext(this);
@@ -760,8 +759,7 @@ RTCIntersectArguments ray_source_info::setup_intersection_arguments()
     if (shadowmask != CHANNEL_MASK_DEFAULT) {
         // non-default shadow mask means we have to use the slow path
         result.filter = PerRay_FilterFuncN;
-        result.flags = static_cast<RTCRayQueryFlags>(result.flags |
-                RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
+        result.flags = static_cast<RTCRayQueryFlags>(result.flags | RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
     }
 
     result.context = this;
@@ -777,8 +775,7 @@ RTCOccludedArguments ray_source_info::setup_occluded_arguments()
     if (shadowmask != CHANNEL_MASK_DEFAULT) {
         // non-default shadow mask means we have to use the slow path
         result.filter = PerRay_FilterFuncN;
-        result.flags = static_cast<RTCRayQueryFlags>(result.flags |
-                                                     RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
+        result.flags = static_cast<RTCRayQueryFlags>(result.flags | RTC_RAY_QUERY_FLAG_INVOKE_ARGUMENT_FILTER);
     }
 
     result.context = this;

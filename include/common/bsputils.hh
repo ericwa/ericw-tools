@@ -178,10 +178,7 @@ public:
 qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *lit, const faceextents_t &faceextents,
     int byte_offset_of_face, qvec2i coord, int style = 0);
 
-qvec3f LM_Sample_HDR(const mbsp_t *bsp,
-                     const mface_t *face,
-                     const faceextents_t &faceextents,
-                     int byte_offset_of_face, qvec2i coord,
-                     const lit_variant_t *lit = nullptr, const bspxentries_t *bspx = nullptr);
+qvec3f LM_Sample_HDR(const mbsp_t *bsp, const mface_t *face, const faceextents_t &faceextents, int byte_offset_of_face,
+    qvec2i coord, const lit_variant_t *lit = nullptr, const bspxentries_t *bspx = nullptr);
 
 std::map<int, std::vector<int>> ClusterToLeafnumsMap(const mbsp_t *bsp);

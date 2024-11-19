@@ -407,7 +407,7 @@ static void ClusterFlow(int clusternum, leafbits_t &buffer, mbsp_t *bsp)
     }
 
     if (buffer[clusternum])
-       logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
+        logging::print("WARNING: Leaf portals saw into cluster ({})\n", clusternum);
 
     buffer[clusternum] = true;
 
@@ -512,13 +512,9 @@ visstats_t CalcPortalVis(const mbsp_t *bsp)
     std::vector<visstats_t> stats_perportal;
     stats_perportal.resize(numportals * 2);
 
-    logging::parallel_for(startcount, numportals * 2, [&](size_t i) {
-        stats_perportal[i] = LeafThread();
-    });
+    logging::parallel_for(startcount, numportals * 2, [&](size_t i) { stats_perportal[i] = LeafThread(); });
 
-    const visstats_t stats = std::accumulate(stats_perportal.begin(),
-        stats_perportal.end(),
-        visstats_t{});
+    const visstats_t stats = std::accumulate(stats_perportal.begin(), stats_perportal.end(), visstats_t{});
 
     SaveVisState();
 

@@ -31,32 +31,21 @@ protected:
     std::vector<std::shared_ptr<settings::setting_base>> _settings;
 
 public:
-    setting_combined(settings::setting_container *dictionary, const settings::nameset &names, std::initializer_list<std::shared_ptr<settings::setting_base>> settings,
-                     const settings::setting_group *group = nullptr, const char *description = "")
-            : setting_base(dictionary, names, group, description),
-              _settings(settings)
+    setting_combined(settings::setting_container *dictionary, const settings::nameset &names,
+        std::initializer_list<std::shared_ptr<settings::setting_base>> settings,
+        const settings::setting_group *group = nullptr, const char *description = "")
+        : setting_base(dictionary, names, group, description),
+          _settings(settings)
     {
     }
-    bool copy_from(const setting_base &other) override
-    {
-        throw std::runtime_error("not implemented");
-    }
-    void reset() override
-    {
-        throw std::runtime_error("not implemented");
-    }
+    bool copy_from(const setting_base &other) override { throw std::runtime_error("not implemented"); }
+    void reset() override { throw std::runtime_error("not implemented"); }
     bool parse(const std::string &setting_name, parser_base_t &parser, settings::source source) override
     {
         throw std::runtime_error("not implemented");
     }
-    std::string string_value() const override
-    {
-        throw std::runtime_error("not implemented");
-    }
-    std::string format() const override
-    {
-        throw std::runtime_error("not implemented");
-    }
+    std::string string_value() const override { throw std::runtime_error("not implemented"); }
+    std::string format() const override { throw std::runtime_error("not implemented"); }
 
     template<typename TSetting>
     const TSetting *get(size_t index) const
@@ -65,13 +54,12 @@ public:
     }
 };
 
-
-
 struct bsputil_settings : public settings::common_settings
 {
 private:
-    template<typename TSetting, typename...TArgs>
-    bool load_setting(const std::string &name, parser_base_t &parser, settings::source src, TArgs&& ...setting_arguments)
+    template<typename TSetting, typename... TArgs>
+    bool load_setting(
+        const std::string &name, parser_base_t &parser, settings::source src, TArgs &&...setting_arguments)
     {
         auto setting = std::make_unique<TSetting>(nullptr, name, std::forward<TArgs>(setting_arguments)...);
         bool parsed = setting->parse(name, parser, src);
@@ -102,7 +90,7 @@ public:
     settings::setting_func remove_bspx_lump;
     settings::setting_func svg;
 
-    std::vector<std::unique_ptr<settings::setting_base>>    operations;
+    std::vector<std::unique_ptr<settings::setting_base>> operations;
 
     bsputil_settings();
 };

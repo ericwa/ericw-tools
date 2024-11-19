@@ -10,6 +10,7 @@ class StatsPanel : public QWidget
 {
 private:
     QTableWidget *m_table;
+
 public:
     StatsPanel(QWidget *parent = nullptr);
 

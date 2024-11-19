@@ -92,16 +92,13 @@ qvec3b calculate_average(const std::vector<qvec4b> &pixels);
 const texture *find(std::string_view str);
 
 // Load wal
-std::optional<texture> load_wal(
-    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
+std::optional<texture> load_wal(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // Load Quake/Half Life mip (raw data)
-std::optional<texture> load_mip(
-    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
+std::optional<texture> load_mip(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // stb_image.h loaders
-std::optional<texture> load_stb(
-    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
+std::optional<texture> load_stb(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
 // list of supported extensions and their loaders
 struct extension_info_t
@@ -111,13 +108,12 @@ struct extension_info_t
     decltype(load_wal) *loader;
 };
 
-constexpr extension_info_t extension_list[] = {{".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb}, {".tga", ext::TGA, load_stb},
-    {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
+constexpr extension_info_t extension_list[] = {{".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb},
+    {".tga", ext::TGA, load_stb}, {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
 
 // Attempt to load a texture from the specified name.
-std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(std::string_view name,
-    bool meta_only, const gamedef_t *game, const settings::common_settings &options, bool no_prefix = false,
-    bool mip_only = false);
+std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(std::string_view name, bool meta_only,
+    const gamedef_t *game, const settings::common_settings &options, bool no_prefix = false, bool mip_only = false);
 
 enum class meta_ext
 {
@@ -128,8 +124,7 @@ enum class meta_ext
 // Load wal
 std::optional<texture_meta> load_wal_meta(std::string_view name, const fs::data &file, const gamedef_t *game);
 
-std::optional<texture_meta> load_wal_json_meta(
-    std::string_view name, const fs::data &file, const gamedef_t *game);
+std::optional<texture_meta> load_wal_json_meta(std::string_view name, const fs::data &file, const gamedef_t *game);
 
 // list of supported meta extensions and their loaders
 constexpr struct

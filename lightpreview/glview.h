@@ -135,7 +135,8 @@ private:
     QOpenGLBuffer m_frustumFacesIndexBuffer;
     QOpenGLBuffer m_frustumEdgesIndexBuffer;
 
-    struct leaf_vao_t {
+    struct leaf_vao_t
+    {
         QOpenGLVertexArrayObject vao;
         QOpenGLBuffer vbo;
         QOpenGLBuffer indexBuffer;
@@ -227,9 +228,9 @@ public:
 
 private:
     void setFaceVisibilityArray(uint8_t *data);
-    static bool isVolumeInFrustum(const std::array<QVector4D, 4>& frustum, const qvec3f& mins, const qvec3f& maxs);
+    static bool isVolumeInFrustum(const std::array<QVector4D, 4> &frustum, const qvec3f &mins, const qvec3f &maxs);
     static std::vector<QVector3D> getFrustumCorners(float displayAspect);
-    static std::array<QVector4D, 4> getFrustumPlanes(const QMatrix4x4& MVP);
+    static std::array<QVector4D, 4> getFrustumPlanes(const QMatrix4x4 &MVP);
 
 public:
     void renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries_t &bspx,
@@ -263,6 +264,7 @@ public:
 private:
     void error(const QString &context, const QString &context2, const QString &log);
     void setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag);
+
 protected:
     void initializeGL() override;
     void paintGL() override;
@@ -270,7 +272,7 @@ protected:
 
 private:
     void updateFrustumVBO();
-    void updateFaceVisibility(const std::array<QVector4D, 4>& frustum);
+    void updateFaceVisibility(const std::array<QVector4D, 4> &frustum);
     bool shouldLiveUpdate() const;
     void handleLoggedMessage(const QOpenGLDebugMessage &debugMessage);
 

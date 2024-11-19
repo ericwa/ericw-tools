@@ -41,8 +41,9 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
 
     auto wal_metadata_path = std::filesystem::path(testmaps_dir) / "q2_wal_metadata";
 
-    std::vector<std::string> args{"", // the exe path, which we're ignoring in this case
-        };
+    std::vector<std::string> args{
+        "", // the exe path, which we're ignoring in this case
+    };
 
     if (!tests_verbose) {
         args.push_back("-noverbose");
@@ -120,9 +121,7 @@ testresults_lit_t QbspVisLight_Q1(
 
     auto lit_variant = LoadLitFile(lit_path);
 
-    return testresults_lit_t{.bsp = std::move(res.bsp),
-                             .bspx = std::move(res.bspx),
-                             .lit = std::move(lit_variant)};
+    return testresults_lit_t{.bsp = std::move(res.bsp), .bspx = std::move(res.bspx), .lit = std::move(lit_variant)};
 }
 
 testresults_t QbspVisLight_Q2(
@@ -132,40 +131,43 @@ testresults_t QbspVisLight_Q2(
 }
 
 testresults_t QbspVisLight_HL(
-        const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
     return QbspVisLight_Common(name, {"-hlbsp"}, extra_light_args, run_vis);
 }
 
 TEST(lightgridsample, styleEquality)
 {
-        lightgrid_sample_t a {.used = true, .style = 4, .color = {}};
-        lightgrid_sample_t b = a;
-        EXPECT_EQ(a, b);
-
-        b.style = 6;
-        EXPECT_NE(a, b);
-}
-
-TEST(lightgridsample, colorEquality) {
-    lightgrid_sample_t a {.used = true, .style = 4, .color = {1,2,3}};
+    lightgrid_sample_t a{.used = true, .style = 4, .color = {}};
     lightgrid_sample_t b = a;
     EXPECT_EQ(a, b);
 
-    b.color = {6,5,4};
+    b.style = 6;
     EXPECT_NE(a, b);
 }
 
-TEST(lightgridsample, nanColors) {
-    lightgrid_sample_t a {.used = true, .style = 4, .color = {std::numeric_limits<double>::quiet_NaN(), 1.0, 1.0}};
+TEST(lightgridsample, colorEquality)
+{
+    lightgrid_sample_t a{.used = true, .style = 4, .color = {1, 2, 3}};
     lightgrid_sample_t b = a;
     EXPECT_EQ(a, b);
 
-    b.color = { 0,0,0};
+    b.color = {6, 5, 4};
     EXPECT_NE(a, b);
 }
 
-TEST(lightgridsample, unusedEqualityDoesntConsiderOtherAttributes) {
+TEST(lightgridsample, nanColors)
+{
+    lightgrid_sample_t a{.used = true, .style = 4, .color = {std::numeric_limits<double>::quiet_NaN(), 1.0, 1.0}};
+    lightgrid_sample_t b = a;
+    EXPECT_EQ(a, b);
+
+    b.color = {0, 0, 0};
+    EXPECT_NE(a, b);
+}
+
+TEST(lightgridsample, unusedEqualityDoesntConsiderOtherAttributes)
+{
     lightgrid_sample_t a, b;
     EXPECT_FALSE(a.used);
     EXPECT_EQ(a, b);
@@ -176,7 +178,6 @@ TEST(lightgridsample, unusedEqualityDoesntConsiderOtherAttributes) {
     b.color = {1, 0, 0};
     EXPECT_EQ(a, b);
 }
-
 
 TEST(worldunitsperluxel, lightgrid)
 {
@@ -296,8 +297,7 @@ TEST(ltfaceQ2, novanillaWorldUnitsPerLuxel)
 }
 
 template<class L>
-static void CheckFaceLuxels(
-    const mbsp_t &bsp, const mface_t &face, L &&lambda, const lit_variant_t *lit = nullptr)
+static void CheckFaceLuxels(const mbsp_t &bsp, const mface_t &face, L &&lambda, const lit_variant_t *lit = nullptr)
 {
     // FIXME: assumes no DECOUPLED_LM lump
 
@@ -354,9 +354,8 @@ static void CheckFaceLuxelAtPoint(const mbsp_t *bsp, const dmodelh2_t *model, co
 }
 
 static void CheckFaceLuxelAtPoint_HDR(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3f &expected_color,
-                                      const qvec3f &allowed_delta,
-                                      const qvec3d &point, const qvec3d &normal = {0, 0, 0}, const lit_variant_t *lit = nullptr,
-                                      const bspxentries_t *bspx = nullptr)
+    const qvec3f &allowed_delta, const qvec3d &point, const qvec3d &normal = {0, 0, 0},
+    const lit_variant_t *lit = nullptr, const bspxentries_t *bspx = nullptr)
 {
     auto *face = BSP_FindFaceAtPoint(bsp, model, point, normal);
     ASSERT_TRUE(face);
@@ -505,7 +504,7 @@ TEST(ltfaceQ2, lightTranslucency)
     {
         SCOPED_TRACE("opaque liquids are lit twosided");
 
-        const qvec3d point {-616, 592, 224};
+        const qvec3d point{-616, 592, 224};
 
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {150, 150, 150}, point, {0, 0, 1});
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {150, 150, 150}, point, {0, 0, -1});
@@ -623,7 +622,8 @@ TEST(ltfaceQ2, lightChannelMask)
     }
 
     {
-        SCOPED_TRACE("_object_channel_mask 8 bmodel doesn't occlude luxels of a (channel 1) worldspawn brush touching it");
+        SCOPED_TRACE(
+            "_object_channel_mask 8 bmodel doesn't occlude luxels of a (channel 1) worldspawn brush touching it");
 
         auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {1290, 1264, 1014});
         ASSERT_TRUE(face);
@@ -1004,7 +1004,8 @@ TEST(ltfaceQ1, lightInvalidDelay)
 
 TEST(ltfaceQ1, bounceLitwaterWithoutTheWater)
 {
-    auto [bsp, bspx] = QbspVisLight_Common("q1_light_bounce_litwater.map", {"-omitdetail"}, {"-lit", "-bounce", "4"}, runvis_t::no);
+    auto [bsp, bspx] =
+        QbspVisLight_Common("q1_light_bounce_litwater.map", {"-omitdetail"}, {"-lit", "-bounce", "4"}, runvis_t::no);
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {118, 118, 118}, {128, 12, 156}, {-1, 0, 0});
 }
 
@@ -1028,7 +1029,7 @@ TEST(ltfaceQ2, lightBlack)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_light_black.map", {});
 
-    const qvec3d point {1056, 1300, 972};
+    const qvec3d point{1056, 1300, 972};
 
     SCOPED_TRACE("ensure completely black lightmaps are written out as style 0 in Q2 mode");
 
@@ -1122,8 +1123,8 @@ TEST(ltfaceQ1, hdr)
         EXPECT_TRUE(std::holds_alternative<lit_hdr>(lit));
 
         // check hdr .lit file
-        CheckFaceLuxelAtPoint_HDR(&bsp, &bsp.dmodels[0], expected_hdr_color, {1e-5, 1e-5, 1e-5}, testpoint, testnormal,
-                                  &lit, &bspx);
+        CheckFaceLuxelAtPoint_HDR(
+            &bsp, &bsp.dmodels[0], expected_hdr_color, {1e-5, 1e-5, 1e-5}, testpoint, testnormal, &lit, &bspx);
 
         // check internal lightmap - greyscale, since Q1
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
@@ -1139,8 +1140,8 @@ TEST(ltfaceQ1, hdr)
         EXPECT_TRUE(std::holds_alternative<lit_none>(lit));
 
         // check hdr BSPX lump
-        CheckFaceLuxelAtPoint_HDR(&bsp, &bsp.dmodels[0], expected_hdr_color, {1e-5, 1e-5, 1e-5}, testpoint, testnormal,
-                                  &lit, &bspx);
+        CheckFaceLuxelAtPoint_HDR(
+            &bsp, &bsp.dmodels[0], expected_hdr_color, {1e-5, 1e-5, 1e-5}, testpoint, testnormal, &lit, &bspx);
 
         // check internal lightmap - greyscale, since Q1
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
@@ -1156,9 +1157,8 @@ TEST(ltfaceQ1, switchableshadowTarget)
     // find the light controlling the switchable shadow
     auto entdicts = EntData_Parse(bsp);
 
-    auto it = std::find_if(entdicts.begin(), entdicts.end(), [](const entdict_t& dict) -> bool {
-        return dict.get("_switchableshadow_target") == "door1";
-    });
+    auto it = std::find_if(entdicts.begin(), entdicts.end(),
+        [](const entdict_t &dict) -> bool { return dict.get("_switchableshadow_target") == "door1"; });
     ASSERT_NE(it, entdicts.end());
 
     ASSERT_TRUE(it->has("style"));
@@ -1166,8 +1166,8 @@ TEST(ltfaceQ1, switchableshadowTarget)
 
     ASSERT_EQ(32, switchable_style);
 
-    const qvec3f not_in_shadow {792, 1240, 944};
-    const qvec3f in_shadow {792, 1264, 944};
+    const qvec3f not_in_shadow{792, 1240, 944};
+    const qvec3f in_shadow{792, 1264, 944};
 
     // not in shadow - should be lit up red in style 0, and black in style 32
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 0, 0}, not_in_shadow, {0, 0, 1}, &lit, &bspx, 0);

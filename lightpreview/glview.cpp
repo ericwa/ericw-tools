@@ -390,8 +390,7 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
         const auto &world = bsp.dmodels.at(0);
         const auto &origin = m_keepCullOrigin ? m_cullOrigin : m_cameraOrigin;
 
-        auto *leaf =
-            BSP_FindLeafAtPoint(&bsp, &world, qvec3d{origin.x(), origin.y(), origin.z()});
+        auto *leaf = BSP_FindLeafAtPoint(&bsp, &world, qvec3d{origin.x(), origin.y(), origin.z()});
 
         int leafnum = leaf - bsp.dleafs.data();
 
@@ -409,15 +408,13 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
     return result;
 }
 
-bool GLView::isVolumeInFrustum(const std::array<QVector4D, 4>& frustum, const qvec3f& mins, const qvec3f& maxs) {
+bool GLView::isVolumeInFrustum(const std::array<QVector4D, 4> &frustum, const qvec3f &mins, const qvec3f &maxs)
+{
     for (auto &plane : frustum) {
         // Select the p-vertex (positive vertex) - the vertex of the bounding
         // box most aligned with the plane normal
         const auto p = qvec3f(
-            plane.x() > 0 ? maxs[0] : mins[0],
-            plane.y() > 0 ? maxs[1] : mins[1],
-            plane.z() > 0 ? maxs[2] : mins[2]
-        );
+            plane.x() > 0 ? maxs[0] : mins[0], plane.y() > 0 ? maxs[1] : mins[1], plane.z() > 0 ? maxs[2] : mins[2]);
 
         // Check if the p-vertex is outside the plane
         if (plane.x() * p[0] + plane.y() * p[1] + plane.z() * p[2] + plane.w() < 0) {
@@ -428,7 +425,7 @@ bool GLView::isVolumeInFrustum(const std::array<QVector4D, 4>& frustum, const qv
     return true;
 }
 
-void GLView::updateFaceVisibility(const std::array<QVector4D, 4>& frustum)
+void GLView::updateFaceVisibility(const std::array<QVector4D, 4> &frustum)
 {
     if (!m_bsp)
         return;
@@ -518,23 +515,22 @@ void GLView::handleLoggedMessage(const QOpenGLDebugMessage &debugMessage)
 
 void GLView::error(const QString &context, const QString &context2, const QString &log)
 {
-    QMessageBox errorMessage(
-            QMessageBox::Critical,
-            tr("GLSL Error"), tr("%1: %2:\n\n%3").arg(context).arg(context2).arg(log), QMessageBox::Ok, this);
-    
+    QMessageBox errorMessage(QMessageBox::Critical, tr("GLSL Error"),
+        tr("%1: %2:\n\n%3").arg(context).arg(context2).arg(log), QMessageBox::Ok, this);
+
     errorMessage.exec();
 }
 
 void GLView::setupProgram(const QString &context, QOpenGLShaderProgram *dest, const char *vert, const char *frag)
 {
     if (!dest->addShaderFromSourceCode(QOpenGLShader::Vertex, vert)) {
-        error(context, "vertex shader",dest->log());
+        error(context, "vertex shader", dest->log());
     }
     if (!dest->addShaderFromSourceCode(QOpenGLShader::Fragment, frag)) {
-        error(context, "fragment shader",dest->log());
+        error(context, "fragment shader", dest->log());
     }
     if (!dest->link()) {
-        error(context, "link",dest->log());
+        error(context, "link", dest->log());
     }
 }
 
@@ -555,7 +551,7 @@ void GLView::initializeGL()
     setupProgram("m_program", m_program, s_vertShader, s_fragShader);
 
     m_skybox_program = new QOpenGLShaderProgram();
-    setupProgram("m_skybox_program", m_skybox_program, s_skyboxVertShader,s_skyboxFragShader);
+    setupProgram("m_skybox_program", m_skybox_program, s_skyboxVertShader, s_skyboxFragShader);
 
     m_program_simple = new QOpenGLShaderProgram();
     setupProgram("m_program_simple", m_program_simple, s_vertShader_Simple, s_fragShader_Simple);
@@ -619,7 +615,7 @@ void GLView::initializeGL()
     glFrontFace(GL_CW);
 }
 
-std::array<QVector4D, 4> GLView::getFrustumPlanes(const QMatrix4x4& MVP)
+std::array<QVector4D, 4> GLView::getFrustumPlanes(const QMatrix4x4 &MVP)
 {
     return {
         // left
@@ -658,8 +654,9 @@ void GLView::paintGL()
 
     QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
 
-    const auto frustum = m_keepCullOrigin && m_keepCullFrustum ?
-        getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix) : getFrustumPlanes(MVP);
+    const auto frustum = m_keepCullOrigin && m_keepCullFrustum
+                             ? getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix)
+                             : getFrustumPlanes(MVP);
 
     // update vis culling texture every frame
     updateFaceVisibility(frustum);
@@ -911,7 +908,7 @@ void GLView::paintGL()
 
             m_program_simple->setUniformValue(m_program_simple_color_location, 1.0f, 1.f, 1.f, 0.2f);
             glDrawElements(GL_LINE_LOOP, vaodata.num_indices, GL_UNSIGNED_INT, 0);
-            
+
             glDisable(GL_PRIMITIVE_RESTART);
 
             m_program_simple->release();
@@ -1121,7 +1118,8 @@ void GLView::setFaceVisibilityArray(uint8_t *data)
     face_visibility_texture->release();
 }
 
-std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect) {
+std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect)
+{
     QMatrix4x4 projectionMatrix;
     projectionMatrix.perspective(90, displayAspect, 1.0f, 8192.0f);
 
@@ -1129,14 +1127,14 @@ std::vector<QVector3D> GLView::getFrustumCorners(float displayAspect) {
 
     const std::vector ndcCorners = {
         QVector4D(-1.0f, -1.0f, -1.0f, 1.0f), // 0: near bottom left
-        QVector4D( 1.0f, -1.0f, -1.0f, 1.0f), // 1: near bottom right
-        QVector4D (1.0f,  1.0f, -1.0f, 1.0f), // 2: near top right
-        QVector4D(-1.0f,  1.0f, -1.0f, 1.0f), // 3: near top left
+        QVector4D(1.0f, -1.0f, -1.0f, 1.0f), // 1: near bottom right
+        QVector4D(1.0f, 1.0f, -1.0f, 1.0f), // 2: near top right
+        QVector4D(-1.0f, 1.0f, -1.0f, 1.0f), // 3: near top left
 
-        QVector4D(-1.0f, -1.0f,  1.0f, 1.0f), // far bottom left
-        QVector4D( 1.0f, -1.0f,  1.0f, 1.0f), // far bottom right
-        QVector4D( 1.0f,  1.0f,  1.0f, 1.0f), // far top left
-        QVector4D(-1.0f,  1.0f,  1.0f, 1.0f)  // far top right
+        QVector4D(-1.0f, -1.0f, 1.0f, 1.0f), // far bottom left
+        QVector4D(1.0f, -1.0f, 1.0f, 1.0f), // far bottom right
+        QVector4D(1.0f, 1.0f, 1.0f, 1.0f), // far top left
+        QVector4D(-1.0f, 1.0f, 1.0f, 1.0f) // far top right
     };
 
     std::vector<QVector3D> corners(8);
@@ -1245,10 +1243,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         for (auto &[style_index, style_atlas] : lightmap.style_to_lightmap_atlas) {
             if (m_is_hdr_lightmap) {
                 lightmap_texture->setData(0, style_index, QOpenGLTexture::RGB, QOpenGLTexture::UInt32_RGB9_E5,
-                                          reinterpret_cast<const void *>(style_atlas.e5brg9_samples.data()));
+                    reinterpret_cast<const void *>(style_atlas.e5brg9_samples.data()));
             } else {
                 lightmap_texture->setData(0, style_index, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
-                                          reinterpret_cast<const void *>(style_atlas.rgba8_samples.data()));
+                    reinterpret_cast<const void *>(style_atlas.rgba8_samples.data()));
             }
         }
     }
@@ -1669,28 +1667,21 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         // |    |              |    |
         // |    |              |    |
         // 0----1              4----5
-        GLuint faceIndices[] = {
-            // Left face
+        GLuint faceIndices[] = {// Left face
             0, 4, 7, 0, 7, 3,
             // Right face
             1, 2, 6, 1, 6, 5,
             // Top face
             2, 3, 7, 2, 7, 6,
             // Bottom face
-            0, 1, 5, 0, 5, 4
-        };
+            0, 1, 5, 0, 5, 4};
 
-        GLuint edgeIndices[] = {
-            // Front face
+        GLuint edgeIndices[] = {// Front face
             0, 1, 1, 2, 2, 3, 3, 0, (GLuint)-1,
             // Back face
             4, 5, 5, 6, 6, 7, 7, 4, (GLuint)-1,
             // Connecting edges
-            0, 4, (GLuint)-1,
-            1, 5, (GLuint)-1,
-            2, 6, (GLuint)-1,
-            3, 7, (GLuint)-1
-        };
+            0, 4, (GLuint)-1, 1, 5, (GLuint)-1, 2, 6, (GLuint)-1, 3, 7, (GLuint)-1};
 
         m_frustumFacesIndexBuffer.create();
         m_frustumFacesIndexBuffer.bind();
@@ -1785,7 +1776,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     // load decompiled hulls
     // TODO: support decompiling bmodels other than the world
 
-    for (int hullnum = 0; ; ++hullnum) {
+    for (int hullnum = 0;; ++hullnum) {
         if (hullnum >= 1) {
             // check if hullnum 1 or higher is valid for this bsp (hull0 is always present); it's slightly involved
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
@@ -1833,7 +1824,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
         vao.num_indices = indices.size();
 
-        logging::print("set up leaf vao for {} with {} indices vao indices {}", hullnum, vao.num_indices, indices.size());
+        logging::print(
+            "set up leaf vao for {} with {} indices vao indices {}", hullnum, vao.num_indices, indices.size());
 
         // upload vertex buffer
         vao.vbo.create();

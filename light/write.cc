@@ -26,7 +26,8 @@
 #include <common/litfile.hh>
 
 void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, const fs::path &filename, int version,
-    const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase, const std::vector<uint8_t> &hdr_filebase)
+    const std::vector<uint8_t> &lit_filebase, const std::vector<uint8_t> &lux_filebase,
+    const std::vector<uint8_t> &hdr_filebase)
 {
     litheader_t header;
 
@@ -80,7 +81,6 @@ void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, cons
     luxfile <= header.v1;
     luxfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
 }
-
 
 /*
  * Return space for the lightmap and colourmap at the same time so it can
@@ -356,8 +356,8 @@ static constexpr float HDR_ONE = 128.0f; // logical value for 1.0 lighting (quak
  * - Writes (actual_width * actual_height * 3) bytes to `lux`
  */
 static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int actual_width, const int actual_height,
-    uint8_t *out, uint8_t *lit, uint8_t *lux, uint8_t *hdr, const faceextents_t &output_extents)
+    const lightmap_t *lm, const int actual_width, const int actual_height, uint8_t *out, uint8_t *lit, uint8_t *lux,
+    uint8_t *hdr, const faceextents_t &output_extents)
 {
     const int oversampled_width = actual_width * light_options.extra.value();
     const int oversampled_height = actual_height * light_options.extra.value();
@@ -467,8 +467,8 @@ static void WriteSingleLightmap(const mbsp_t *bsp, const mface_t *face, const li
  * - Writes (output_width * output_height * 3) bytes to `lux`
  */
 static void WriteSingleLightmap_FromDecoupled(const mbsp_t *bsp, const mface_t *face, const lightsurf_t *lightsurf,
-    const lightmap_t *lm, const int output_width, const int output_height,
-    uint8_t *out, uint8_t *lit, uint8_t *lux, uint8_t *hdr)
+    const lightmap_t *lm, const int output_width, const int output_height, uint8_t *out, uint8_t *lit, uint8_t *lux,
+    uint8_t *hdr)
 {
     // this is the lightmap data in the "decoupled" coordinate system
     std::vector<qvec4f> fullres = LightmapColorsToGLMVector(lightsurf, lm);
@@ -702,10 +702,8 @@ struct lightmap_intermediate_data_t
 extern std::vector<facesup_t> faces_sup; // lit2/bspx stuff
 extern std::vector<bspx_decoupled_lm_perface> facesup_decoupled_global;
 
-int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
-    lightsurf_t *lightsurf, const faceextents_t &extents,
-    std::atomic_size_t &lightmap_size,
-    lightmap_intermediate_data_t &id)
+int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup, lightsurf_t *lightsurf,
+    const faceextents_t &extents, std::atomic_size_t &lightmap_size, lightmap_intermediate_data_t &id)
 {
     lightmapdict_t &lightmaps = lightsurf->lightmapsByStyle;
 
@@ -868,7 +866,7 @@ void SaveLightmapSurface(const mbsp_t *bsp, mface_t *face, facesup_t *facesup,
     }
 
     int lightofs;
-    
+
     // Q2/HL native colored lightmaps
     if (bsp->loadversion->game->has_rgb_lightmap) {
         lightofs = lit - lit_filebase.data();
@@ -1048,21 +1046,26 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
             int num_styles;
 
             if (!facesup_decoupled_global.empty()) {
-                num_styles = CalculateLightmapStyles(
-                    bsp, f, nullptr, &surf, surf.extents, lightmap_size, intermediate_data[i]);
+                num_styles =
+                    CalculateLightmapStyles(bsp, f, nullptr, &surf, surf.extents, lightmap_size, intermediate_data[i]);
 
                 if (!light_options.novanilla.value()) {
-                    intermediate_data[i].vanilla_lightofs = GetFileSpace(lightmap_size, surf.vanilla_extents.numsamples() * num_styles);
+                    intermediate_data[i].vanilla_lightofs =
+                        GetFileSpace(lightmap_size, surf.vanilla_extents.numsamples() * num_styles);
                 }
             } else if (faces_sup.empty()) {
-                num_styles = CalculateLightmapStyles(bsp, f, nullptr, &surf, surf.extents, lightmap_size, intermediate_data[i]);
+                num_styles =
+                    CalculateLightmapStyles(bsp, f, nullptr, &surf, surf.extents, lightmap_size, intermediate_data[i]);
             } else if (light_options.novanilla.value() || faces_sup[i].lmscale == face_modelinfo->lightmapscale) {
-                num_styles = CalculateLightmapStyles(bsp, f, &faces_sup[i], &surf, surf.extents, lightmap_size, intermediate_data[i]);
+                num_styles = CalculateLightmapStyles(
+                    bsp, f, &faces_sup[i], &surf, surf.extents, lightmap_size, intermediate_data[i]);
             } else {
-                num_styles = CalculateLightmapStyles(bsp, f, nullptr, &surf, surf.extents, lightmap_size, intermediate_data[i]);
-                intermediate_data[i].vanilla_lightofs = GetFileSpace(lightmap_size, surf.vanilla_extents.numsamples() * num_styles);
+                num_styles =
+                    CalculateLightmapStyles(bsp, f, nullptr, &surf, surf.extents, lightmap_size, intermediate_data[i]);
+                intermediate_data[i].vanilla_lightofs =
+                    GetFileSpace(lightmap_size, surf.vanilla_extents.numsamples() * num_styles);
             }
-            
+
             if (num_styles) {
                 intermediate_data[i].lightofs = GetFileSpace(lightmap_size, surf.extents.numsamples() * num_styles);
             }

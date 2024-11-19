@@ -42,7 +42,7 @@ static std::vector<std::pair<std::string, int>> lightstyleForTargetname;
 static std::vector<std::unique_ptr<light_t>> surfacelight_templates;
 static std::ofstream surflights_dump_file;
 static fs::path surflights_dump_filename;
-static std::map<std::string, light_t*> lights_by_switchableshadow_target;
+static std::map<std::string, light_t *> lights_by_switchableshadow_target;
 
 /**
  * Resets global data in this file
@@ -335,8 +335,8 @@ static void CheckEntityFields(const mbsp_t *bsp, const settings::worldspawn_keys
     }
 
     if (entity->getFormula() < 0 || entity->getFormula() >= LF_COUNT) {
-        logging::print("WARNING: unknown delay {} on {} at [{}]\n",
-                       static_cast<int>(entity->getFormula()), entity->classname(), entity->origin.value());
+        logging::print("WARNING: unknown delay {} on {} at [{}]\n", static_cast<int>(entity->getFormula()),
+            entity->classname(), entity->origin.value());
         entity->formula.set_value(LF_LINEAR, settings::source::MAP);
         entity->light.set_value(0.0f, settings::source::MAP);
     }
@@ -1043,8 +1043,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
             if (!entity->project_texture.value().empty()) {
                 auto texname = entity->project_texture.value();
                 entity->projectedmip = img::find(texname);
-                if (entity->projectedmip == nullptr ||
-                    entity->projectedmip->pixels.empty()) {
+                if (entity->projectedmip == nullptr || entity->projectedmip->pixels.empty()) {
                     logging::print(
                         "WARNING: light has \"_project_texture\" \"{}\", but this texture was not found\n", texname);
                     entity->projectedmip = nullptr;
@@ -1550,11 +1549,13 @@ static void MakeSurfaceLights(const mbsp_t *bsp)
                 entity->epairs->get("origin"));
 
             // Warning if no faces exist matching the texture
-            const bool found_face = std::any_of(bsp->dfaces.begin(), bsp->dfaces.end(), [&](const mface_t &face) -> bool {
-                return !Q_strcasecmp(Face_TextureName(bsp, &face), entity->epairs->get("_surface"));
-            });
+            const bool found_face =
+                std::any_of(bsp->dfaces.begin(), bsp->dfaces.end(), [&](const mface_t &face) -> bool {
+                    return !Q_strcasecmp(Face_TextureName(bsp, &face), entity->epairs->get("_surface"));
+                });
             if (!found_face) {
-                logging::print("WARNING: no faces found with texture {} (qbsp may have been run with .wad's missing?)\n",
+                logging::print(
+                    "WARNING: no faces found with texture {} (qbsp may have been run with .wad's missing?)\n",
                     entity->epairs->get("_surface"));
             }
         }

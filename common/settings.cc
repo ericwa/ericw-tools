@@ -543,7 +543,8 @@ void setting_container::print_help(bool fatal)
         }
 
         for (auto setting : grouped.second) {
-            size_t numPadding = std::max(static_cast<size_t>(0), 28 - std::min((size_t) 28, (setting->primary_name().size() + 4)));
+            size_t numPadding =
+                std::max(static_cast<size_t>(0), 28 - std::min((size_t)28, (setting->primary_name().size() + 4)));
             fmt::print(
                 "  -{} {:{}}    {}\n", setting->primary_name(), setting->format(), numPadding, setting->description());
 
@@ -555,8 +556,7 @@ void setting_container::print_help(bool fatal)
         printf("\n");
     }
 
-    if (fatal)
-    {
+    if (fatal) {
         throw quit_after_help_exception();
     }
 }
@@ -744,8 +744,9 @@ common_settings::common_settings()
           "whether the compiler should attempt to automatically derive game/base paths for games that support it"},
       tex_saturation_boost{this, "tex_saturation_boost", 0.0f, 0.0f, 1.0f, &game_group,
           "increase texture saturation to match original Q2 tools"},
-    logfile{this, "logfile", "auto", "\"path\"", &logging_group, "File to output logging data to. If unchanged, it is set by the tool."},
-    logappend{this, "logappend", false, &logging_group, "Whether to append to log file or replace"}
+      logfile{this, "logfile", "auto", "\"path\"", &logging_group,
+          "File to output logging data to. If unchanged, it is set by the tool."},
+      logappend{this, "logappend", false, &logging_group, "Whether to append to log file or replace"}
 {
 }
 

@@ -225,7 +225,7 @@ static faceextents_t get_face_extents(const mbsp_t &bsp, const bspxentries_t &bs
 }
 
 full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, const std::vector<uint8_t> &litdata,
-                                  const std::vector<uint32_t> &hdr_litdata, bool use_bspx, bool use_decoupled)
+    const std::vector<uint32_t> &hdr_litdata, bool use_bspx, bool use_decoupled)
 {
     struct face_rect
     {
@@ -428,9 +428,8 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             }
 
             if (!is_hdr) {
-                auto in_pixel =
-                        lightdata_source + ((is_lit ? 3 : 1) * rect.lightofs) +
-                        (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
+                auto in_pixel = lightdata_source + ((is_lit ? 3 : 1) * rect.lightofs) +
+                                (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
 
                 for (size_t y = 0; y < rect.extents.height(); y++) {
                     for (size_t x = 0; x < rect.extents.width(); x++) {
@@ -452,9 +451,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             } else {
                 // hdr
 
-                auto in_pixel =
-                        hdr_lightdata_source + rect.lightofs +
-                        (rect.extents.numsamples() * style_index);
+                auto in_pixel = hdr_lightdata_source + rect.lightofs + (rect.extents.numsamples() * style_index);
 
                 for (size_t y = 0; y < rect.extents.height(); y++) {
                     for (size_t x = 0; x < rect.extents.width(); x++) {
@@ -550,18 +547,18 @@ static void export_obj_and_lightmaps(const mbsp_t &bsp, const bspxentries_t &bsp
             }
 
             stbi_write_hdr_to_func(
-                    [](void *context, void *data, int size) {
-                        std::ofstream &strm = *((std::ofstream *) context);
-                        strm.write((const char *) data, size);
-                    },
-                    &strm, full_atlas.width, full_atlas.height, 3, temp.data());
+                [](void *context, void *data, int size) {
+                    std::ofstream &strm = *((std::ofstream *)context);
+                    strm.write((const char *)data, size);
+                },
+                &strm, full_atlas.width, full_atlas.height, 3, temp.data());
         } else {
             stbi_write_png_to_func(
-                    [](void *context, void *data, int size) {
-                        std::ofstream &strm = *((std::ofstream *) context);
-                        strm.write((const char *) data, size);
-                    },
-                    &strm, full_atlas.width, full_atlas.height, 4, full_atlas.rgba8_samples.data(), full_atlas.width * 4);
+                [](void *context, void *data, int size) {
+                    std::ofstream &strm = *((std::ofstream *)context);
+                    strm.write((const char *)data, size);
+                },
+                &strm, full_atlas.width, full_atlas.height, 4, full_atlas.rgba8_samples.data(), full_atlas.width * 4);
         }
         logging::print("wrote {}\n", lightmaps_path);
     }

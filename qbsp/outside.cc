@@ -349,7 +349,7 @@ static void MarkOccupiedLeafs(node_t *headnode, hull_index_t hullnum)
         mapentity_t &entity = map.entities.at(i);
 
         /* skip entities at (0 0 0) (bmodels) */
-        if (qv::epsilonEmpty(entity.origin, (float) QBSP_EQUAL_EPSILON))
+        if (qv::epsilonEmpty(entity.origin, (float)QBSP_EQUAL_EPSILON))
             continue;
 
         // skip nofill entities

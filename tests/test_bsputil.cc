@@ -11,7 +11,6 @@
 #include "testmaps.hh"
 #include "test_qbsp.hh"
 
-
 TEST(bsputil, q1DecompilerTest)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_decompiler_test.map");

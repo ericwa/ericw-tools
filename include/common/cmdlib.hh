@@ -573,7 +573,7 @@ uint16_t CRC_Block(const uint8_t *start, int count);
 
 std::vector<uint8_t> StringToVector(const std::string &str);
 
-template <class T>
+template<class T>
 T deserialize(const std::vector<uint8_t> &bytes)
 {
     auto stream = imemstream(bytes.data(), bytes.size());

@@ -116,16 +116,14 @@ TEST(settings, scalarStray)
 TEST(settings, int32CanOmitArgumentDefault)
 {
     settings::setting_container settings;
-    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
-                                    settings::can_omit_argument_tag(), 1);
+    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100, settings::can_omit_argument_tag(), 1);
     ASSERT_EQ(setting.value(), 0);
 }
 
 TEST(settings, int32CanOmitArgumentSimple)
 {
     settings::setting_container settings;
-    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
-                                          settings::can_omit_argument_tag(), 1);
+    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100, settings::can_omit_argument_tag(), 1);
     const char *arguments[] = {"qbsp.exe", "-bounce", "2"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
     auto remainder = settings.parse(p);
@@ -136,8 +134,7 @@ TEST(settings, int32CanOmitArgumentSimple)
 TEST(settings, int32CanOmitArgumentWithFollingSetting)
 {
     settings::setting_container settings;
-    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
-                                    settings::can_omit_argument_tag(), 1);
+    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100, settings::can_omit_argument_tag(), 1);
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-bounce", "-scale", "0.25"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
@@ -150,8 +147,7 @@ TEST(settings, int32CanOmitArgumentWithFollingSetting)
 TEST(settings, int32CanOmitArgumentEOF)
 {
     settings::setting_container settings;
-    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
-                                    settings::can_omit_argument_tag(), 1);
+    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100, settings::can_omit_argument_tag(), 1);
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-bounce"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
@@ -163,8 +159,7 @@ TEST(settings, int32CanOmitArgumentEOF)
 TEST(settings, int32CanOmitArgumentRemainder)
 {
     settings::setting_container settings;
-    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100,
-                                    settings::can_omit_argument_tag(), 1);
+    settings::setting_int32 setting(&settings, "bounce", 0, 0, 100, settings::can_omit_argument_tag(), 1);
     settings::setting_scalar scalarSetting(&settings, "scale", 1.0);
     const char *arguments[] = {"qbsp.exe", "-bounce", "remainder"};
     token_parser_t p{std::size(arguments) - 1, arguments + 1, {}};
@@ -425,7 +420,7 @@ TEST(settings, resetContainer)
 struct winding_check_t : polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 4>>
 {
 public:
-inline size_t vector_size() { return storage.vector_size(); }
+    inline size_t vector_size() { return storage.vector_size(); }
 };
 
 TEST(polylib, windingIterators)
@@ -482,7 +477,8 @@ TEST(polylib, windingIterators)
 
     // check that constructors work
     {
-        polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 4>> winding_other(winding.begin(), winding.end());
+        polylib::winding_base_t<polylib::winding_storage_hybrid_t<double, 4>> winding_other(
+            winding.begin(), winding.end());
 
         {
             auto it = winding_other.begin();

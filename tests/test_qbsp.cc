@@ -66,9 +66,7 @@ mapentity_t &LoadMap(const char *map, size_t length)
     qbsp_options.target_version = &bspver_q1;
     qbsp_options.target_game = qbsp_options.target_version->game;
 
-    parser_source_location base_location {
-        testing::UnitTest::GetInstance()->current_test_info()->name()
-    };
+    parser_source_location base_location{testing::UnitTest::GetInstance()->current_test_info()->name()};
     mapfile::map_file_t m = mapfile::parse(std::string_view(map, length), base_location);
 
     // FIXME: adds the brush to the global map...
@@ -363,7 +361,8 @@ TEST(qbsp, duplicatePlanes)
 
     auto *game = bspver_q1.game;
 
-    auto brush = LoadBrush(worldspawn, worldspawn.mapbrushes.front(), game->create_contents_from_native(CONTENTS_SOLID), 0, std::nullopt);
+    auto brush = LoadBrush(
+        worldspawn, worldspawn.mapbrushes.front(), game->create_contents_from_native(CONTENTS_SOLID), 0, std::nullopt);
     EXPECT_EQ(6, brush->sides.size());
 }
 
@@ -741,7 +740,7 @@ TEST(testmapsQ1, simpleWorldspawnSky)
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(0, 0, 500))->contents);
 
     EXPECT_EQ(CONTENTS_SKY,
-          BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d(player_pos[0], player_pos[1], inside_sky_z))->contents);
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], qvec3d(player_pos[0], player_pos[1], inside_sky_z))->contents);
 
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(500, 0, 0))->contents);
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_pos + qvec3d(-500, 0, 0))->contents);
@@ -1098,7 +1097,8 @@ TEST(testmapsQ1, tjuncManySidedFace)
 TEST(testmapsQ1, tjuncManySidedFaceMaxedges0)
 {
     // same as above, but -maxedges 0 allows the ceiling to be >64 sides so it can be just 1 face
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_face.map", {"-tjunc", "rotate", "-maxedges", "0"});
+    const auto [bsp, bspx, prt] =
+        LoadTestmapQ1("qbsp_tjunc_many_sided_face.map", {"-tjunc", "rotate", "-maxedges", "0"});
 
     std::map<qvec3d, std::vector<const mface_t *>> faces_by_normal;
     for (auto &face : bsp.dfaces) {
@@ -1110,7 +1110,8 @@ TEST(testmapsQ1, tjuncManySidedFaceMaxedges0)
     EXPECT_GT(ceiling_faces[0]->numedges, 64);
 }
 
-TEST(testmapsQ1, tjuncManySidedFaceSky) {
+TEST(testmapsQ1, tjuncManySidedFaceSky)
+{
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_sky.map", {"-tjunc", "rotate"});
 
     for (auto &face : bsp.dfaces) {
@@ -1118,7 +1119,8 @@ TEST(testmapsQ1, tjuncManySidedFaceSky) {
     }
 }
 
-TEST(testmapsQ1, tjuncManySidedFaceSkyWithDefaultTjuncMode) {
+TEST(testmapsQ1, tjuncManySidedFaceSkyWithDefaultTjuncMode)
+{
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_tjunc_many_sided_sky.map", {});
 
     for (auto &face : bsp.dfaces) {
@@ -1126,7 +1128,8 @@ TEST(testmapsQ1, tjuncManySidedFaceSkyWithDefaultTjuncMode) {
     }
 }
 
-TEST(testmapsQ1, manySidedFace) {
+TEST(testmapsQ1, manySidedFace)
+{
     // FIXME: 360 sided cylinder is really slow to compile
     GTEST_SKIP();
 
@@ -1287,9 +1290,8 @@ class ClipFuncWallTest : public testing::TestWithParam<std::string>
 {
 };
 
-INSTANTIATE_TEST_SUITE_P(ClipFuncWallCases,ClipFuncWallTest,
-                         testing::Values("q1_clip_func_wall.map",
-                                         "q1_clip_and_solid_func_wall.map"));
+INSTANTIATE_TEST_SUITE_P(
+    ClipFuncWallCases, ClipFuncWallTest, testing::Values("q1_clip_func_wall.map", "q1_clip_and_solid_func_wall.map"));
 
 /**
  * Ensure submodels that are all "clip" get bounds set correctly
@@ -1384,10 +1386,10 @@ TEST(testmapsQ1, qbspFuncDetailVariousTypes)
     // detail clips away world faces, others don't
     EXPECT_EQ(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail - qvec3d(0, 0, 24), {0, 0, 1}));
     EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_wall - qvec3d(0, 0, 24), {0, 0, 1}));
-    EXPECT_NE(nullptr,
-          BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary - qvec3d(0, 0, 24), {0, 0, 1}));
-    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(
-                         &bsp, &bsp.dmodels[0], in_func_detail_illusionary_mirrorinside - qvec3d(0, 0, 24), {0, 0, 1}));
+    EXPECT_NE(
+        nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], in_func_detail_illusionary - qvec3d(0, 0, 24), {0, 0, 1}));
+    EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0],
+                           in_func_detail_illusionary_mirrorinside - qvec3d(0, 0, 24), {0, 0, 1}));
 
     // check for correct contents
     auto *detail_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_func_detail);
@@ -1409,7 +1411,7 @@ TEST(testmapsQ1, qbspFuncDetailVariousTypes)
     const auto p1 = p0.translate({232, 0, 0});
 
     EXPECT_TRUE(((PortalMatcher(prt->portals[0].winding, p0) && PortalMatcher(prt->portals[1].winding, p1)) ||
-           (PortalMatcher(prt->portals[0].winding, p1) && PortalMatcher(prt->portals[1].winding, p0))));
+                 (PortalMatcher(prt->portals[0].winding, p1) && PortalMatcher(prt->portals[1].winding, p0))));
 
     EXPECT_EQ(prt->portalleafs, 3);
     EXPECT_GT(prt->portalleafs_real, 3);
@@ -1494,7 +1496,7 @@ TEST(testmapsQ1, sealing)
     // check leaf contents in hull 0
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_start_room)->contents);
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_emptyroom)
-                                ->contents); // can get sealed, since there are no entities
+                                  ->contents); // can get sealed, since there are no entities
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_void)->contents);
     EXPECT_EQ(CONTENTS_EMPTY, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], connected_by_thin_gap)->contents);
 
@@ -1527,7 +1529,8 @@ TEST(testmapsQ1, csg)
 
     bspbrush_t::container bspbrushes;
     for (int i = 0; i < 2; ++i) {
-        auto b = LoadBrush(entity, entity.mapbrushes[i], game->create_contents_from_native(CONTENTS_SOLID), 0, std::nullopt);
+        auto b =
+            LoadBrush(entity, entity.mapbrushes[i], game->create_contents_from_native(CONTENTS_SOLID), 0, std::nullopt);
 
         EXPECT_EQ(6, b->sides.size());
 
@@ -1596,8 +1599,8 @@ TEST(testmapsQ1, looseTextures)
 
     auto q1_loose_textures_path = std::filesystem::path(testmaps_dir) / "q1_loose_textures";
 
-    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_loose_textures.map",
-        {"-path", q1_loose_textures_path.string(), "-notex"});
+    const auto [bsp, bspx, prt] =
+        LoadTestmapQ1("q1_loose_textures.map", {"-path", q1_loose_textures_path.string(), "-notex"});
 
     EXPECT_EQ(GAME_QUAKE, bsp.loadversion->game->id);
 
@@ -2123,7 +2126,8 @@ TEST(qbspQ1, liquidSoftware)
 
 TEST(qbspQ1, edgeSharingSoftware)
 {
-    SCOPED_TRACE("the software renderer only allows a given edge to be reused at most once, as the backwards version (negative index)");
+    SCOPED_TRACE(
+        "the software renderer only allows a given edge to be reused at most once, as the backwards version (negative index)");
     const auto [bsp, bspx, prt] = LoadTestmap("q1_edge_sharing_software.map");
 
     std::map<int, std::vector<const mface_t *>> signed_edge_faces;
@@ -2243,8 +2247,8 @@ TEST(qbspQ1, wrbrushesAndMiscExternalMap)
     ASSERT_EQ(model.brushes.size(), 1);
 
     auto &brush = model.brushes.at(0);
-    ASSERT_EQ(brush.bounds.maxs(), qvec3f(64,64,16));
-    ASSERT_EQ(brush.bounds.mins(), qvec3f(-64,-64,-16));
+    ASSERT_EQ(brush.bounds.maxs(), qvec3f(64, 64, 16));
+    ASSERT_EQ(brush.bounds.mins(), qvec3f(-64, -64, -16));
 }
 
 TEST(qbspQ1, wrbrushesContentTypes)
@@ -2258,19 +2262,9 @@ TEST(qbspQ1, wrbrushesContentTypes)
     ASSERT_EQ(model.numfaces, 0); // all faces are axial
     ASSERT_EQ(model.modelnum, 0);
 
-    const std::vector<int> expected {
-        CONTENTS_SOLID,
-        CONTENTS_SOLID,
-        CONTENTS_SOLID,
-        CONTENTS_SOLID,
-        CONTENTS_SOLID,
-        CONTENTS_SOLID,
-        CONTENTS_WATER,
-        CONTENTS_SLIME,
-        CONTENTS_LAVA,
-        CONTENTS_SOLID,
-        CONTENTS_SKY,
-        BSPXBRUSHES_CONTENTS_CLIP,
+    const std::vector<int> expected{
+        CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_SOLID, CONTENTS_WATER,
+        CONTENTS_SLIME, CONTENTS_LAVA, CONTENTS_SOLID, CONTENTS_SKY, BSPXBRUSHES_CONTENTS_CLIP,
         CONTENTS_SOLID, // detail solid in source map
         CONTENTS_SOLID, // detail fence in source map
         // detail illusionary brush should be omitted
@@ -2326,12 +2320,13 @@ TEST(qbspQ1, tjuncMatrix)
 
     EXPECT_EQ(GAME_QUAKE, game->id);
 
-    const qvec3d face_midpoint_origin {-24, 0, 24};
-    const qvec3d face_midpoint_to_tjunc {8, 0, 8};
-    const qvec3d z_delta_to_next_face {0, 0, 64};
-    const qvec3d x_delta_to_next_face {-64, 0, 0};
+    const qvec3d face_midpoint_origin{-24, 0, 24};
+    const qvec3d face_midpoint_to_tjunc{8, 0, 8};
+    const qvec3d z_delta_to_next_face{0, 0, 64};
+    const qvec3d x_delta_to_next_face{-64, 0, 0};
 
-    enum index_t : int {
+    enum index_t : int
+    {
         INDEX_SOLID = 0,
         INDEX_SOLID_DETAIL,
         INDEX_DETAIL_WALL,
@@ -2344,9 +2339,8 @@ TEST(qbspQ1, tjuncMatrix)
     };
 
     auto has_tjunc = [&](index_t horizontal, index_t vertical) -> bool {
-        const qvec3d face_midpoint = face_midpoint_origin
-                                     + (x_delta_to_next_face * static_cast<int>(horizontal))
-                                     + (z_delta_to_next_face * static_cast<int>(vertical));
+        const qvec3d face_midpoint = face_midpoint_origin + (x_delta_to_next_face * static_cast<int>(horizontal)) +
+                                     (z_delta_to_next_face * static_cast<int>(vertical));
 
         auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_midpoint);
 
@@ -2362,21 +2356,21 @@ TEST(qbspQ1, tjuncMatrix)
 
     {
         SCOPED_TRACE("INDEX_SOLID horizontal - welds with anything opaque except detail_wall");
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_WALL));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_FENCE));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_FENCE_MIRRORINSIDE));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_SOLID_DETAIL horizontal - welds with anything opaque except detail_wall");
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_WALL));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_FENCE));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_FENCE_MIRRORINSIDE));
@@ -2384,16 +2378,16 @@ TEST(qbspQ1, tjuncMatrix)
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         // see INDEX_SOLID, INDEX_WATER explanation
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_DETAIL_WALL horizontal");
         // solid cuts a hole in detail_wall
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
         // solid detail cuts a hole in detail_wall
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_FENCE));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_FENCE_MIRRORINSIDE));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_ILLUSIONARY));
@@ -2401,116 +2395,117 @@ TEST(qbspQ1, tjuncMatrix)
         // see INDEX_SOLID, INDEX_WATER explanation
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_WATER));
         // sky cuts a hole in detail_wall
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_DETAIL_FENCE horizontal");
         // solid cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_SOLID));
         // solid detail cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_SOLID_DETAIL));
         // detail wall cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_FENCE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_FENCE_MIRRORINSIDE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_ILLUSIONARY));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_FENCE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_ILLUSIONARY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         // weld because both are translucent
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_WATER));
         // sky cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_DETAIL_FENCE_MIRRORINSIDE horizontal");
         // solid cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SOLID));
         // solid detail cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SOLID_DETAIL));
         // detail wall cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_FENCE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_FENCE_MIRRORINSIDE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_ILLUSIONARY));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_FENCE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_ILLUSIONARY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         // weld because both are translucent
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_WATER));
         // sky cuts a hole in fence
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_FENCE_MIRRORINSIDE, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_DETAIL_ILLUSIONARY horizontal");
         // solid cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SOLID));
         // solid detail cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SOLID_DETAIL));
         // detail wall cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_WALL));
         // fence and illusionary are both translucent, so weld
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_FENCE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_FENCE_MIRRORINSIDE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_ILLUSIONARY));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_FENCE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_ILLUSIONARY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         // weld because both are translucent
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_WATER));
         // sky cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES horizontal");
         // solid cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SOLID));
         // solid detail cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SOLID_DETAIL));
         // detail wall cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_WALL));
         // fence and illusionary are both translucent, so weld
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_FENCE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_FENCE_MIRRORINSIDE));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_ILLUSIONARY));
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_FENCE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_ILLUSIONARY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         // weld because both are translucent
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_WATER));
         // sky cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_WATER horizontal");
         // solid cuts a hole in water
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_SOLID));
         // solid detail cuts a hole in illusionary
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_SOLID_DETAIL));
         // detail wall cuts a hole in water
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_DETAIL_FENCE));
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_DETAIL_FENCE_MIRRORINSIDE));
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_DETAIL_ILLUSIONARY));
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_WATER, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_DETAIL_FENCE));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_DETAIL_FENCE_MIRRORINSIDE));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_DETAIL_ILLUSIONARY));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_WATER, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_SKY horizontal");
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_WALL));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_FENCE));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_FENCE_MIRRORINSIDE));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_ILLUSIONARY));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_ILLUSIONARY_NOCLIPFACES));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SKY));
     }
 }
 
 TEST(testmapsQ1, liquidIsDetail)
 {
-    const auto portal_underwater = prtfile_winding_t{{-168, -384, 32}, {-168, -320, 32}, {-168, -320, -32}, {-168, -384, -32}};
+    const auto portal_underwater =
+        prtfile_winding_t{{-168, -384, 32}, {-168, -320, 32}, {-168, -320, -32}, {-168, -384, -32}};
     const auto portal_above = portal_underwater.translate({0, 320, 128});
 
     {
@@ -2524,8 +2519,10 @@ TEST(testmapsQ1, liquidIsDetail)
         ASSERT_TRUE(prt.has_value());
         ASSERT_EQ(2, prt->portals.size());
 
-        EXPECT_TRUE(((PortalMatcher(prt->portals[0].winding, portal_underwater) && PortalMatcher(prt->portals[1].winding, portal_above)) ||
-               (PortalMatcher(prt->portals[0].winding, portal_above) && PortalMatcher(prt->portals[1].winding, portal_underwater))));
+        EXPECT_TRUE(((PortalMatcher(prt->portals[0].winding, portal_underwater) &&
+                         PortalMatcher(prt->portals[1].winding, portal_above)) ||
+                     (PortalMatcher(prt->portals[0].winding, portal_above) &&
+                         PortalMatcher(prt->portals[1].winding, portal_underwater))));
 
         // only 3 clusters: room with water, side corridors
         EXPECT_EQ(prt->portalleafs, 3);
@@ -2545,8 +2542,10 @@ TEST(testmapsQ1, liquidIsDetail)
 
         // same portals as transparent water case
         // (since the water is opqaue, it doesn't get a portal)
-        EXPECT_TRUE(((PortalMatcher(prt->portals[0].winding, portal_underwater) && PortalMatcher(prt->portals[1].winding, portal_above)) ||
-               (PortalMatcher(prt->portals[0].winding, portal_above) && PortalMatcher(prt->portals[1].winding, portal_underwater))));
+        EXPECT_TRUE(((PortalMatcher(prt->portals[0].winding, portal_underwater) &&
+                         PortalMatcher(prt->portals[1].winding, portal_above)) ||
+                     (PortalMatcher(prt->portals[0].winding, portal_above) &&
+                         PortalMatcher(prt->portals[1].winding, portal_underwater))));
 
         // 4 clusters this time:
         // above water, in water, plus 2 side rooms.

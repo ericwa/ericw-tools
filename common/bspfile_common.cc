@@ -180,12 +180,12 @@ std::string contentflags_t::to_string() const
 static auto as_tuple(const surfflags_t &flags)
 {
     return std::tie(flags.native, flags.is_nodraw, flags.is_hintskip, flags.is_hint, flags.no_dirt, flags.no_shadow,
-                    flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
-                    flags.surflight_rescale, flags.surflight_style, flags.surflight_color, flags.surflight_minlight_scale,
-                flags.surflight_atten,
-                    flags.surflight_targetname, flags.phong_angle, flags.phong_angle_concave, flags.phong_group, flags.minlight,
-                    flags.minlight_color, flags.light_alpha, flags.light_twosided, flags.maxlight, flags.lightcolorscale, flags.surflight_group,
-                    flags.world_units_per_luxel, flags.object_channel_mask);
+        flags.no_bounce, flags.no_minlight, flags.no_expand, flags.no_phong, flags.light_ignore,
+        flags.surflight_rescale, flags.surflight_style, flags.surflight_color, flags.surflight_minlight_scale,
+        flags.surflight_atten, flags.surflight_targetname, flags.phong_angle, flags.phong_angle_concave,
+        flags.phong_group, flags.minlight, flags.minlight_color, flags.light_alpha, flags.light_twosided,
+        flags.maxlight, flags.lightcolorscale, flags.surflight_group, flags.world_units_per_luxel,
+        flags.object_channel_mask);
 }
 
 bool surfflags_t::needs_write() const
@@ -211,7 +211,8 @@ bool surfflags_t::is_valid(const gamedef_t *game) const
 // gamedef_t
 
 gamedef_t::gamedef_t(const char *friendly_name, const char *default_base_dir)
-        : friendly_name(friendly_name), default_base_dir(default_base_dir)
+    : friendly_name(friendly_name),
+      default_base_dir(default_base_dir)
 {
 }
 

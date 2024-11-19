@@ -752,7 +752,8 @@ static bool CheckSplitBrush(const bspbrush_t::ptr &brush, size_t planenum)
     }
 
     for (int i = 0; i < 2; i++) {
-        double v1 = BrushVolume(temporary_brushes[i].sides, temporary_brushes[i].sides + temporary_brushes[i].num_sides);
+        double v1 =
+            BrushVolume(temporary_brushes[i].sides, temporary_brushes[i].sides + temporary_brushes[i].num_sides);
         if (v1 < qbsp_options.microvolume.value()) {
             return false;
         }
@@ -872,12 +873,12 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
     // passes will be tried.
     constexpr int numpasses = 4;
     for (int pass = 0; pass < numpasses; pass++) {
-        for (auto &brush: brushes) {
+        for (auto &brush : brushes) {
             // FIXME: these conditions need to be kept in sync with SelectSplitPlane
             // ideally, should be deduplicated somehow
             if ((pass >= 2) != brush->contents.is_any_detail(qbsp_options.target_game))
                 continue;
-            for (auto &side: brush->sides) {
+            for (auto &side : brush->sides) {
                 if (side.bevel)
                     continue; // never use a bevel as a spliter
                 if (!side.w)
@@ -1229,8 +1230,12 @@ static void BuildTree_r(tree_t &tree, int level, node_t *node, bspbrush_t::conta
 
     // recursively process children
     tbb::task_group g;
-    g.run([&]() { BuildTree_r(tree, level + 1, nodedata->children[0], std::move(children[0]), split_type, stats, clock); });
-    g.run([&]() { BuildTree_r(tree, level + 1, nodedata->children[1], std::move(children[1]), split_type, stats, clock); });
+    g.run([&]() {
+        BuildTree_r(tree, level + 1, nodedata->children[0], std::move(children[0]), split_type, stats, clock);
+    });
+    g.run([&]() {
+        BuildTree_r(tree, level + 1, nodedata->children[1], std::move(children[1]), split_type, stats, clock);
+    });
     g.wait();
 }
 

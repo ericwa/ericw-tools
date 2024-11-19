@@ -153,23 +153,21 @@ static bool Welds(contentflags_t a, contentflags_t b)
         return true;
 
     // detail wall only welds with detail wall
-    if (qbsp_options.target_game->contents_are_detail_wall(a)
-        || qbsp_options.target_game->contents_are_detail_wall(b))
+    if (qbsp_options.target_game->contents_are_detail_wall(a) || qbsp_options.target_game->contents_are_detail_wall(b))
         return false;
 
     // no need to weld translucent to opaque
     // (because they could have void behind them due to visblocking.
     // e.g. opaque water meeting solid)
-    if (!qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value())
-        && qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value()))
+    if (!qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value()) &&
+        qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value()))
         return false;
-    if (!qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value())
-        && qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value()))
+    if (!qbsp_options.target_game->contents_are_opaque(b, qbsp_options.transwater.value()) &&
+        qbsp_options.target_game->contents_are_opaque(a, qbsp_options.transwater.value()))
         return false;
 
     // never weld with backfaces
-    if (qbsp_options.target_game->contents_are_empty(a)
-        || qbsp_options.target_game->contents_are_empty(b))
+    if (qbsp_options.target_game->contents_are_empty(a) || qbsp_options.target_game->contents_are_empty(b))
         return false;
 
     // otherwise, weld
@@ -276,7 +274,7 @@ static float AngleOfTriangle(const qvec3d &a, const qvec3d &b, const qvec3d &c)
 {
     double num = (b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1]) + (b[2] - a[2]) * (c[2] - a[2]);
     double den = sqrt(pow((b[0] - a[0]), 2) + pow((b[1] - a[1]), 2) + pow((b[2] - a[2]), 2)) *
-                sqrt(pow((c[0] - a[0]), 2) + pow((c[1] - a[1]), 2) + pow((c[2] - a[2]), 2));
+                 sqrt(pow((c[0] - a[0]), 2) + pow((c[1] - a[1]), 2) + pow((c[2] - a[2]), 2));
 
     return acos(num / den) * (180.0 / 3.141592653589793238463);
 }

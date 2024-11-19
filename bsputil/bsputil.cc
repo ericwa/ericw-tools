@@ -53,94 +53,136 @@ bool bsputil_settings::load_setting(const std::string &name, settings::source sr
     return true;
 }
 
-bsputil_settings::bsputil_settings() :
-    scale{this, "scale", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_vec3>(name, parser, src, 0.f, 0.f, 0.f);
-    }, nullptr, "Scale the BSP by the given scalar vectors (can be negative, too)"},
-    replace_entities{this, "replace-entities", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Replace BSP entities with the given files' contents"},
-    extract_entities{this, "extract-entities", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_bool>(name, parser, src, "");
-    }, nullptr, "Extract BSP entities to the given file name"},
-    extract_textures{this, "extract-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_bool>(name, parser, src, "");
-    }, nullptr, "Extract BSP texutres to the given wad file"},
-    replace_textures{this, "replace-textures", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Replace BSP textures with the given wads' contents"},
-    convert{this, "convert", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Convert the BSP file to a different BSP format"},
-    check{this, "check", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting(name, src);
-    }, nullptr, "Check/verify BSP data"},
-    modelinfo{this, "modelinfo", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting(name, src);
-    }, nullptr, "Print model info"},
-    findfaces{this, "findfaces", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        auto pos = std::make_shared<settings::setting_vec3>(nullptr, name, 0.f, 0.f, 0.f);
-        if (bool parsed = pos->parse(name, parser, src); !parsed)
-            return false;
-        auto norm = std::make_shared<settings::setting_vec3>(nullptr, name, 0.f, 0.f, 0.f);
-        if (bool parsed = norm->parse(name, parser, src); !parsed)
-            return false;
-        operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { pos, norm }));
-        return true;
-    }, nullptr, "Find faces with specified pos/normal"},
-    findleaf{this, "findleaf", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_vec3>(name, parser, src, 0.f, 0.f, 0.f);
-    }, nullptr, "Find closest leaf"},
-    settexinfo{this, "settexinfo", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        auto faceNum = std::make_shared<settings::setting_int32>(nullptr, name, 0);
-        if (bool parsed = faceNum->parse(name, parser, src); !parsed)
-            return false;
-        auto texInfoNum = std::make_shared<settings::setting_int32>(nullptr, name, 0);
-        if (bool parsed = texInfoNum->parse(name, parser, src); !parsed)
-            return false;
-        operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { faceNum, texInfoNum }));
-        return true;
-    }, nullptr, "Set texinfo"},
-    decompile{this, "decompile", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting(name, src);
-    }, nullptr, "Decompile to the given .map file"},
-    decompile_geomonly{this, "decompile-geomonly", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting(name, src);
-    }, nullptr, "Decompile"},
-    decompile_ignore_brushes{this, "decompile-ignore-brushes", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting(name, src);
-    }, nullptr, "Decompile entities only"},
-    decompile_hull{this, "decompile-hull", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_int32>(name, parser, src, 0);
-    }, nullptr, "Decompile specific hull"},
-    extract_bspx_lump{this, "extract-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
-        if (bool parsed = lump->parse(name, parser, src); !parsed)
-            return false;
-        auto output = std::make_shared<settings::setting_string>(nullptr, name, "");
-        if (bool parsed = output->parse(name, parser, src); !parsed)
-            return false;
-        operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { lump, output }));
-        return true;
-    }, nullptr, "Extract a BSPX lump"},
-    insert_bspx_lump{this, "insert-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
-        if (bool parsed = lump->parse(name, parser, src); !parsed)
-            return false;
-        auto input = std::make_shared<settings::setting_string>(nullptr, name, "");
-        if (bool parsed = input->parse(name, parser, src); !parsed)
-            return false;
-        operations.push_back(std::make_unique<setting_combined>(nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>> { lump, input }));
-        return true;
-    }, nullptr, "Insert a BSPX lump"},
-    remove_bspx_lump{this, "remove-bspx-lump", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_string>(name, parser, src, "");
-    }, nullptr, "Remove a BSPX lump"},
-    svg{this, "svg", [&](const std::string &name, parser_base_t &parser, settings::source src) {
-        return this->load_setting<settings::setting_int32>(name, parser, src, 0);
-    }, nullptr, "Create an SVG view of the input BSP"}
-{}
-
+bsputil_settings::bsputil_settings()
+    : scale{this, "scale",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_vec3>(name, parser, src, 0.f, 0.f, 0.f);
+          },
+          nullptr, "Scale the BSP by the given scalar vectors (can be negative, too)"},
+      replace_entities{this, "replace-entities",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_string>(name, parser, src, "");
+          },
+          nullptr, "Replace BSP entities with the given files' contents"},
+      extract_entities{this, "extract-entities",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_bool>(name, parser, src, "");
+          },
+          nullptr, "Extract BSP entities to the given file name"},
+      extract_textures{this, "extract-textures",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_bool>(name, parser, src, "");
+          },
+          nullptr, "Extract BSP texutres to the given wad file"},
+      replace_textures{this, "replace-textures",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_string>(name, parser, src, "");
+          },
+          nullptr, "Replace BSP textures with the given wads' contents"},
+      convert{this, "convert",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_string>(name, parser, src, "");
+          },
+          nullptr, "Convert the BSP file to a different BSP format"},
+      check{this, "check",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Check/verify BSP data"},
+      modelinfo{this, "modelinfo",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Print model info"},
+      findfaces{this, "findfaces",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              auto pos = std::make_shared<settings::setting_vec3>(nullptr, name, 0.f, 0.f, 0.f);
+              if (bool parsed = pos->parse(name, parser, src); !parsed)
+                  return false;
+              auto norm = std::make_shared<settings::setting_vec3>(nullptr, name, 0.f, 0.f, 0.f);
+              if (bool parsed = norm->parse(name, parser, src); !parsed)
+                  return false;
+              operations.push_back(std::make_unique<setting_combined>(
+                  nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>>{pos, norm}));
+              return true;
+          },
+          nullptr, "Find faces with specified pos/normal"},
+      findleaf{this, "findleaf",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_vec3>(name, parser, src, 0.f, 0.f, 0.f);
+          },
+          nullptr, "Find closest leaf"},
+      settexinfo{this, "settexinfo",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              auto faceNum = std::make_shared<settings::setting_int32>(nullptr, name, 0);
+              if (bool parsed = faceNum->parse(name, parser, src); !parsed)
+                  return false;
+              auto texInfoNum = std::make_shared<settings::setting_int32>(nullptr, name, 0);
+              if (bool parsed = texInfoNum->parse(name, parser, src); !parsed)
+                  return false;
+              operations.push_back(std::make_unique<setting_combined>(
+                  nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>>{faceNum, texInfoNum}));
+              return true;
+          },
+          nullptr, "Set texinfo"},
+      decompile{this, "decompile",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Decompile to the given .map file"},
+      decompile_geomonly{this, "decompile-geomonly",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Decompile"},
+      decompile_ignore_brushes{this, "decompile-ignore-brushes",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting(name, src);
+          },
+          nullptr, "Decompile entities only"},
+      decompile_hull{this, "decompile-hull",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_int32>(name, parser, src, 0);
+          },
+          nullptr, "Decompile specific hull"},
+      extract_bspx_lump{this, "extract-bspx-lump",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
+              if (bool parsed = lump->parse(name, parser, src); !parsed)
+                  return false;
+              auto output = std::make_shared<settings::setting_string>(nullptr, name, "");
+              if (bool parsed = output->parse(name, parser, src); !parsed)
+                  return false;
+              operations.push_back(std::make_unique<setting_combined>(
+                  nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>>{lump, output}));
+              return true;
+          },
+          nullptr, "Extract a BSPX lump"},
+      insert_bspx_lump{this, "insert-bspx-lump",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              auto lump = std::make_shared<settings::setting_string>(nullptr, name, "");
+              if (bool parsed = lump->parse(name, parser, src); !parsed)
+                  return false;
+              auto input = std::make_shared<settings::setting_string>(nullptr, name, "");
+              if (bool parsed = input->parse(name, parser, src); !parsed)
+                  return false;
+              operations.push_back(std::make_unique<setting_combined>(
+                  nullptr, name, std::initializer_list<std::shared_ptr<settings::setting_base>>{lump, input}));
+              return true;
+          },
+          nullptr, "Insert a BSPX lump"},
+      remove_bspx_lump{this, "remove-bspx-lump",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_string>(name, parser, src, "");
+          },
+          nullptr, "Remove a BSPX lump"},
+      svg{this, "svg",
+          [&](const std::string &name, parser_base_t &parser, settings::source src) {
+              return this->load_setting<settings::setting_int32>(name, parser, src, 0);
+          },
+          nullptr, "Create an SVG view of the input BSP"}
+{
+}
 
 bsputil_settings bsputil_options;
 
@@ -219,12 +261,14 @@ static void ReplaceTexturesFromWad(mbsp_t &bsp)
         logging::print("bsp texture: {}\n", tex.name);
 
         // see if this texture in the .bsp is in the wad?
-        if (auto [wadtex_opt, _0, mipdata] = img::load_texture(tex.name, false, bsp.loadversion->game, bsputil_options, false, true); wadtex_opt) {
+        if (auto [wadtex_opt, _0, mipdata] =
+                img::load_texture(tex.name, false, bsp.loadversion->game, bsputil_options, false, true);
+            wadtex_opt) {
             const img::texture &wadtex = *wadtex_opt;
 
-            if  (tex.width != wadtex.width || tex.height != wadtex.height) {
-                logging::print("    size {}x{} in bsp does not match replacement texture {}x{}\n",
-                    tex.width, tex.height, wadtex.width, wadtex.height);
+            if (tex.width != wadtex.width || tex.height != wadtex.height) {
+                logging::print("    size {}x{} in bsp does not match replacement texture {}x{}\n", tex.width,
+                    tex.height, wadtex.width, wadtex.height);
                 continue;
             }
 
@@ -355,7 +399,8 @@ static void CheckBSPFile(const mbsp_t *bsp)
         if (face->texinfo < 0)
             logging::print("warning: face {} has negative texinfo ({})\n", i, face->texinfo);
         if (face->texinfo >= bsp->texinfo.size())
-            logging::print("warning: face {} has texinfo out of range ({} >= {})\n", i, face->texinfo, bsp->texinfo.size());
+            logging::print(
+                "warning: face {} has texinfo out of range ({} >= {})\n", i, face->texinfo, bsp->texinfo.size());
         referenced_texinfos.insert(face->texinfo);
 
         /* planenum bounds check */
@@ -371,7 +416,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
             logging::print("warning: face {} has negative light offset ({})\n", i, face->lightofs);
         if (face->lightofs >= bsp->dlightdata.size())
             logging::print("warning: face {} has light offset out of range "
-                       "({} >= {})\n",
+                           "({} >= {})\n",
                 i, face->lightofs, bsp->dlightdata.size());
 
         /* edge check */
@@ -397,7 +442,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
             const uint32_t vertex = (*edge)[j];
             if (vertex > bsp->dvertexes.size())
                 logging::print("warning: edge {} has vertex {} out range "
-                           "({} >= {})\n",
+                               "({} >= {})\n",
                     i, j, vertex, bsp->dvertexes.size());
             referenced_vertexes.insert(vertex);
         }
@@ -425,13 +470,13 @@ static void CheckBSPFile(const mbsp_t *bsp)
         const uint32_t endmarksurface = leaf->firstmarksurface + leaf->nummarksurfaces;
         if (endmarksurface > bsp->dleaffaces.size())
             logging::print("warning: leaf {} has marksurfaces out of range "
-                       "({}..{} >= {})\n",
+                           "({}..{} >= {})\n",
                 i, leaf->firstmarksurface, endmarksurface - 1, bsp->dleaffaces.size());
         if (leaf->visofs < -1)
             logging::print("warning: leaf {} has negative visdata offset ({})\n", i, leaf->visofs);
         if (leaf->visofs >= bsp->dvis.bits.size())
             logging::print("warning: leaf {} has visdata offset out of range "
-                       "({} >= {})\n",
+                           "({} >= {})\n",
                 i, leaf->visofs, bsp->dvis.bits.size());
     }
 
@@ -444,11 +489,11 @@ static void CheckBSPFile(const mbsp_t *bsp)
             const int32_t child = node->children[j];
             if (child >= 0 && child >= bsp->dnodes.size())
                 logging::print("warning: node {} has child {} (node) out of range "
-                           "({} >= {})\n",
+                               "({} >= {})\n",
                     i, j, child, bsp->dnodes.size());
             if (child < 0 && -child - 1 >= bsp->dleafs.size())
                 logging::print("warning: node {} has child {} (leaf) out of range "
-                           "({} >= {})\n",
+                               "({} >= {})\n",
                     i, j, -child - 1, bsp->dleafs.size());
         }
 
@@ -467,7 +512,7 @@ static void CheckBSPFile(const mbsp_t *bsp)
             const int32_t child = clipnode->children[j];
             if (child >= 0 && child >= bsp->dclipnodes.size())
                 logging::print("warning: clipnode {} has child {} (clipnode) out of range "
-                           "({} >= {})\n",
+                               "({} >= {})\n",
                     i, j, child, bsp->dclipnodes.size());
             if (child < 0 && child < CONTENTS_MIN)
                 logging::print("warning: clipnode {} has invalid contents ({}) for child {}\n", i, child, j);
@@ -563,7 +608,7 @@ static void FindLeaf(const mbsp_t *bsp, const qvec3d &pos)
     const mleaf_t *leaf = BSP_FindLeafAtPoint(bsp, &bsp->dmodels[0], pos);
 
     logging::print("leaf {}: contents {} ({})\n", (leaf - bsp->dleafs.data()), leaf->contents,
-               bsp->loadversion->game->create_contents_from_native(leaf->contents).to_string());
+        bsp->loadversion->game->create_contents_from_native(leaf->contents).to_string());
 }
 
 // map file stuff
@@ -807,7 +852,8 @@ int bsputil_main(int _argc, const char **_argv)
             std::ofstream f(svg, std::ios_base::out);
 
             f << R"(<?xml version="1.0" encoding="UTF-8"?>)" << std::endl;
-            f << R"(<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">)" << std::endl;
+            f << R"(<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">)"
+              << std::endl;
 
             auto &bsp = std::get<mbsp_t>(bspdata.bsp);
 
@@ -815,9 +861,9 @@ int bsputil_main(int _argc, const char **_argv)
 
             struct rendered_faces_t
             {
-                std::vector<const mface_t *>    faces;
-                qvec3f                          origin;
-                aabb3f                          bounds;
+                std::vector<const mface_t *> faces;
+                qvec3f origin;
+                aabb3f bounds;
             };
 
             std::vector<rendered_faces_t> faces;
@@ -827,16 +873,12 @@ int bsputil_main(int _argc, const char **_argv)
 
             auto addSubModel = [&bsp, &faces, &total_bounds, &total_faces](int32_t index, qvec3f origin) {
                 auto &model = bsp.dmodels[index];
-                rendered_faces_t f {
-                    {},
-                    origin
-                };
+                rendered_faces_t f{{}, origin};
 
                 std::vector<size_t> face_ids;
                 face_ids.reserve(model.numfaces);
 
-                for (size_t i = model.firstface; i < model.firstface + model.numfaces; i++)
-                {
+                for (size_t i = model.firstface; i < model.firstface + model.numfaces; i++) {
                     auto &face = bsp.dfaces[i];
 
                     if (face.texinfo == -1)
@@ -847,7 +889,7 @@ int bsputil_main(int _argc, const char **_argv)
                     if (texinfo.flags.is_nodraw)
                         continue;
                     // TODO
-                    //else if (texinfo.flags.native & Q2_SURF_SKY)
+                    // else if (texinfo.flags.native & Q2_SURF_SKY)
                     //    continue;
                     else if (!Q_strcasecmp(Face_TextureName(&bsp, &face), "trigger"))
                         continue;
@@ -865,18 +907,17 @@ int bsputil_main(int _argc, const char **_argv)
                     float zb = za;
                     auto &facea = bsp.dfaces[a];
                     auto &faceb = bsp.dfaces[b];
-                
+
                     for (size_t e = 0; e < facea.numedges; e++)
                         za = std::max(za, Face_PointAtIndex(&bsp, &facea, e)[2]);
-                
+
                     for (size_t e = 0; e < faceb.numedges; e++)
                         zb = std::max(zb, Face_PointAtIndex(&bsp, &faceb, e)[2]);
 
                     return za < zb;
                 });
 
-                for (auto &face_index : face_ids)
-                {
+                for (auto &face_index : face_ids) {
                     const auto &face = bsp.dfaces[face_index];
                     f.faces.push_back(&face);
 
@@ -894,12 +935,11 @@ int bsputil_main(int _argc, const char **_argv)
 
             addSubModel(0, {});
 
-            for (auto &entity : ents)
-            {
+            for (auto &entity : ents) {
                 if (!entity.has("model"))
                     continue;
 
-                qvec3f origin {};
+                qvec3f origin{};
                 int32_t model = atoi(entity.get("model").substr(1).c_str());
 
                 if (entity.has("origin"))
@@ -912,11 +952,11 @@ int bsputil_main(int _argc, const char **_argv)
 
             float xo = total_bounds.mins()[0];
             float yo = total_bounds.mins()[1];
-            //float zo = total_bounds.mins()[2];
-            
+            // float zo = total_bounds.mins()[2];
+
             float xs = total_bounds.maxs()[0] - xo;
             float ys = total_bounds.maxs()[1] - yo;
-            //float zs = total_bounds.maxs()[2] - zo;
+            // float zs = total_bounds.maxs()[2] - zo;
 
             fmt::print(f, R"(<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{}" height="{}">)", xs, ys);
             f << std::endl;
@@ -925,8 +965,8 @@ int bsputil_main(int _argc, const char **_argv)
 
             struct face_id_t
             {
-                size_t          model;
-                size_t          face;
+                size_t model;
+                size_t face;
             };
             std::vector<face_id_t> face_ids;
             face_ids.reserve(total_faces);
@@ -940,10 +980,10 @@ int bsputil_main(int _argc, const char **_argv)
                 float zb = yo;
                 auto facea = faces[a.model].faces[a.face];
                 auto faceb = faces[b.model].faces[b.face];
-                
+
                 for (size_t e = 0; e < facea->numedges; e++)
                     za = std::max(za, Face_PointAtIndex(&bsp, facea, e)[2] + faces[a.model].origin[2]);
-                
+
                 for (size_t e = 0; e < faceb->numedges; e++)
                     zb = std::max(zb, Face_PointAtIndex(&bsp, faceb, e)[2] + faces[b.model].origin[2]);
 
@@ -952,49 +992,48 @@ int bsputil_main(int _argc, const char **_argv)
 
             float low_z = total_bounds.maxs()[2], high_z = total_bounds.mins()[2];
 
-            for (auto &face_index : face_ids)
-            {
+            for (auto &face_index : face_ids) {
                 auto face = faces[face_index.model].faces[face_index.face];
 
-                for (auto &pt : Face_Points(&bsp, face))
-                {
+                for (auto &pt : Face_Points(&bsp, face)) {
                     low_z = std::min(low_z, pt[2] + faces[face_index.model].origin[2]);
                     high_z = std::max(high_z, pt[2] + faces[face_index.model].origin[2]);
                 }
             }
 
-            for (auto &face_index : face_ids)
-            {
+            for (auto &face_index : face_ids) {
                 auto face = faces[face_index.model].faces[face_index.face];
                 auto pts = Face_Points(&bsp, face);
                 std::string pts_str;
                 float nz = xo;
 
-                for (auto &pt : pts)
-                {
-                    fmt::format_to(std::back_inserter(pts_str), "{},{} ", (pt[0] + faces[face_index.model].origin[0]) - xo, ys - ((pt[1] + faces[face_index.model].origin[1]) - yo));
+                for (auto &pt : pts) {
+                    fmt::format_to(std::back_inserter(pts_str), "{},{} ",
+                        (pt[0] + faces[face_index.model].origin[0]) - xo,
+                        ys - ((pt[1] + faces[face_index.model].origin[1]) - yo));
                     nz = std::max(nz, pt[2] + faces[face_index.model].origin[2]);
                 }
 
                 float z_scale = (nz - low_z) / (high_z - low_z);
                 float d = (0.5 + (z_scale * 0.5));
-                qvec3b color { 255, 255, 255 };
+                qvec3b color{255, 255, 255};
 
                 const char *tex = Face_TextureName(&bsp, face);
 
-                if (tex)
-                {
+                if (tex) {
                     if (auto texptr = img::find(tex))
                         color = texptr->averageColor;
                 }
 
-                fmt::print(f, R"svg(<polygon points="{}" fill="rgb({}, {}, {})" />)svg", pts_str, color[0] * d, color[1] * d, color[2] * d);
+                fmt::print(f, R"svg(<polygon points="{}" fill="rgb({}, {}, {})" />)svg", pts_str, color[0] * d,
+                    color[1] * d, color[2] * d);
                 f << std::endl;
             }
 
             f << R"(</g></defs>)" << std::endl;
-            
-            f << R"(<use href="#bsp" fill="none" stroke="black" stroke-width="15" stroke-miterlimit="0" />)" << std::endl;
+
+            f << R"(<use href="#bsp" fill="none" stroke="black" stroke-width="15" stroke-miterlimit="0" />)"
+              << std::endl;
             f << R"(<use href="#bsp" fill="white" stroke="black" stroke-width="1" />)" << std::endl;
 
             f << R"(</svg>)" << std::endl;

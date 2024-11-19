@@ -29,4 +29,3 @@ struct mbsp_t;
 // public functions
 
 bool MakeBounceLights(const settings::worldspawn_keys &cfg, const mbsp_t *bsp, size_t depth);
-

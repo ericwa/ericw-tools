@@ -4,9 +4,11 @@
 #include <common/imglib.hh>
 #include <utility>
 
-namespace mapfile {
+namespace mapfile
+{
 
-/*static*/ bool brush_side_t::is_valid_texture_projection(const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
+/*static*/ bool brush_side_t::is_valid_texture_projection(
+    const qvec3f &faceNormal, const qvec3f &s_vec, const qvec3f &t_vec)
 {
     // TODO: This doesn't match how light does it (TexSpaceToWorld)
 
@@ -42,11 +44,7 @@ void brush_side_t::validate_texture_projection()
         */
 
         // Reset texturing to sensible defaults
-        set_texinfo(texdef_quake_ed_t {
-            { 0.0, 0.0 },
-            0,
-            { 1.0, 1.0 }
-            });
+        set_texinfo(texdef_quake_ed_t{{0.0, 0.0}, 0, {1.0, 1.0}});
 
         Q_assert(is_valid_texture_projection());
     }
@@ -86,7 +84,7 @@ void brush_side_t::validate_texture_projection()
         goto parse_error;
     }
 
-    return { texMat };
+    return {texMat};
 
 parse_error:
     FError("{}: couldn't parse Brush Primitives texture info", parser.location);
@@ -125,16 +123,7 @@ parse_error:
     parser.parse_token(PARSE_SAMELINE);
     scale[1] = std::stod(parser.token);
 
-    return {
-        {
-            shift,
-            rotate,
-            scale
-        },
-        {
-            axis
-        }
-    };
+    return {{shift, rotate, scale}, {axis}};
 
 parse_error:
     FError("{}: couldn't parse Valve220 texture info", parser.location);
@@ -158,11 +147,7 @@ parse_error:
     parser.parse_token(PARSE_SAMELINE);
     scale[1] = std::stod(parser.token);
 
-    return {
-        shift,
-        rotate,
-        scale
-    };
+    return {shift, rotate, scale};
 }
 
 bool brush_side_t::parse_quark_comment(parser_t &parser)
@@ -182,7 +167,7 @@ bool brush_side_t::parse_quark_comment(parser_t &parser)
         return false;
     }
 
-    raw = texdef_etp_t { std::get<texdef_quake_ed_t>(raw), parser.token[4] == '2' };
+    raw = texdef_etp_t{std::get<texdef_quake_ed_t>(raw), parser.token[4] == '2'};
     return true;
 }
 
@@ -212,10 +197,7 @@ void brush_side_t::parse_extended_texinfo(parser_t &parser)
 void brush_side_t::set_texinfo(const texdef_quake_ed_t &texdef)
 {
     texture_axis_t axis(plane);
-    qvec3d vectors[2] = {
-        axis.xv,
-        axis.yv
-    };
+    qvec3d vectors[2] = {axis.xv, axis.yv};
 
     /* Rotate axis */
     double ang = texdef.rotate / 180.0 * Q_PI;
@@ -314,10 +296,10 @@ void brush_side_t::set_texinfo(const texdef_etp_t &texdef)
     qvec3d vectors[2];
 
     /*
-    * Type 1 uses vecs[0] = (pt[2] - pt[0]) and vecs[1] = (pt[1] - pt[0])
-    * Type 2 reverses the order of the vecs
-    * 128 is the scaling factor assumed by QuArK.
-    */
+     * Type 1 uses vecs[0] = (pt[2] - pt[0]) and vecs[1] = (pt[1] - pt[0])
+     * Type 2 reverses the order of the vecs
+     * 128 is the scaling factor assumed by QuArK.
+     */
     if (!texdef.tx2) {
         vectors[0] = planepts[2] - planepts[0];
         vectors[1] = planepts[1] - planepts[0];
@@ -335,14 +317,14 @@ void brush_side_t::set_texinfo(const texdef_etp_t &texdef)
     double d = qv::dot(vectors[1], vectors[1]);
 
     /*
-    * Want to solve for out->vecs:
-    *
-    *    | a b | | out->vecs[0] | = | vecs[0] |
-    *    | c d | | out->vecs[1] |   | vecs[1] |
-    *
-    * => | out->vecs[0] | = __ 1.0__  | d  -b | | vecs[0] |
-    *    | out->vecs[1] |   a*d - b*c | -c  a | | vecs[1] |
-    */
+     * Want to solve for out->vecs:
+     *
+     *    | a b | | out->vecs[0] | = | vecs[0] |
+     *    | c d | | out->vecs[1] |   | vecs[1] |
+     *
+     * => | out->vecs[0] | = __ 1.0__  | d  -b | | vecs[0] |
+     *    | out->vecs[1] |   a*d - b*c | -c  a | | vecs[1] |
+     */
     double determinant = a * d - b * c;
     if (fabs(determinant) < ZERO_EPSILON) {
         logging::print("WARNING: {}: Face with degenerate QuArK-style texture axes\n", location);
@@ -365,7 +347,6 @@ void brush_side_t::set_texinfo(const texdef_etp_t &texdef)
     vecs.at(0, 3) = -qv::dot(vectors[0], planepts[0]);
     vecs.at(1, 3) = -qv::dot(vectors[1], planepts[0]);
 }
-
 
 /*
 ComputeAxisBase()
@@ -396,20 +377,9 @@ inline std::tuple<qvec3d, qvec3d> compute_axis_base(const qvec3d &normal_unsanit
     RotY = -atan2(normal[2], sqrt(normal[1] * normal[1] + normal[0] * normal[0]));
     RotZ = atan2(normal[1], normal[0]);
 
-    return {
-    /* rotate (0,1,0) and (0,0,1) to compute texX and texY */
-        {
-          -sin(RotZ),
-           cos(RotZ),
-           0
-        },
-        {
-    /* the texY vector is along -z (t texture coorinates axis) */
-           -sin(RotY) * cos(RotZ),
-           -sin(RotY) * sin(RotZ),
-           -cos(RotY)
-        }
-    };
+    return {/* rotate (0,1,0) and (0,0,1) to compute texX and texY */
+        {-sin(RotZ), cos(RotZ), 0}, {/* the texY vector is along -z (t texture coorinates axis) */
+                                        -sin(RotY) * cos(RotZ), -sin(RotY) * sin(RotZ), -cos(RotY)}};
 }
 
 void brush_side_t::set_texinfo(const texdef_bp_t &texdef)
@@ -521,22 +491,22 @@ void brush_side_t::write_extended_info(std::ostream &stream)
 
 void brush_side_t::write_texinfo(std::ostream &stream, const texdef_quake_ed_t &texdef)
 {
-    ewt::print(stream, "{} {} {} {} {}", texdef.shift[0], texdef.shift[1], texdef.rotate, texdef.scale[0], texdef.scale[1]);
+    ewt::print(
+        stream, "{} {} {} {} {}", texdef.shift[0], texdef.shift[1], texdef.rotate, texdef.scale[0], texdef.scale[1]);
     write_extended_info(stream);
 }
 
 void brush_side_t::write_texinfo(std::ostream &stream, const texdef_valve_t &texdef)
 {
-    ewt::print(stream, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}",
-        texdef.axis.at(0, 0), texdef.axis.at(0, 1), texdef.axis.at(0, 2), texdef.shift[0],
-        texdef.axis.at(1, 0), texdef.axis.at(1, 1), texdef.axis.at(1, 2), texdef.shift[1],
-        texdef.rotate, texdef.scale[0], texdef.scale[1]);
+    ewt::print(stream, "[ {} {} {} {} ] [ {} {} {} {} ] {} {} {}", texdef.axis.at(0, 0), texdef.axis.at(0, 1),
+        texdef.axis.at(0, 2), texdef.shift[0], texdef.axis.at(1, 0), texdef.axis.at(1, 1), texdef.axis.at(1, 2),
+        texdef.shift[1], texdef.rotate, texdef.scale[0], texdef.scale[1]);
     write_extended_info(stream);
 }
 
 void brush_side_t::write_texinfo(std::ostream &stream, const texdef_etp_t &texdef)
 {
-    write_texinfo(stream, (const texdef_quake_ed_t &) texdef);
+    write_texinfo(stream, (const texdef_quake_ed_t &)texdef);
     ewt::print(stream, "//TX{}", texdef.tx2 ? '2' : '1');
 }
 
@@ -548,422 +518,419 @@ void brush_side_t::write_texinfo(std::ostream &stream, const texdef_bp_t &texdef
 void brush_side_t::write(std::ostream &stream)
 {
     ewt::print(stream, "( {} {} {} ) ( {} {} {} ) ( {} {} {} ) {} ", planepts[0][0], planepts[0][1], planepts[0][2],
-        planepts[1][0], planepts[1][1], planepts[1][2], planepts[2][0], planepts[2][1], planepts[2][2],
-        texture);
+        planepts[1][0], planepts[1][1], planepts[1][2], planepts[2][0], planepts[2][1], planepts[2][2], texture);
 
     std::visit([this, &stream](auto &&x) { write_texinfo(stream, x); }, raw);
 }
 
 namespace convert_to_quaked
 {
-    static qmat2x2f rotation2x2_deg(float degrees)
-    {
-        float r = degrees * (Q_PI / 180.0);
-        float cosr = cos(r);
-        float sinr = sin(r);
+static qmat2x2f rotation2x2_deg(float degrees)
+{
+    float r = degrees * (Q_PI / 180.0);
+    float cosr = cos(r);
+    float sinr = sin(r);
 
-        // [ cosTh -sinTh ]
-        // [ sinTh cosTh  ]
+    // [ cosTh -sinTh ]
+    // [ sinTh cosTh  ]
 
-        qmat2x2f M{cosr, sinr, // col 0
-            -sinr, cosr}; // col1
+    qmat2x2f M{cosr, sinr, // col 0
+        -sinr, cosr}; // col1
 
-        return M;
+    return M;
+}
+
+static float extractRotation(qmat2x2f m)
+{
+    qvec2f point = m * qvec2f(1, 0); // choice of this matters if there's shearing
+    float rotation = atan2(point[1], point[0]) * 180.0 / Q_PI;
+    return rotation;
+}
+
+static std::pair<int, int> getSTAxes(const qvec3d &snapped_normal)
+{
+    if (snapped_normal[0]) {
+        return std::make_pair(1, 2);
+    } else if (snapped_normal[1]) {
+        return std::make_pair(0, 2);
+    } else {
+        return std::make_pair(0, 1);
     }
+}
 
-    static float extractRotation(qmat2x2f m)
-    {
-        qvec2f point = m * qvec2f(1, 0); // choice of this matters if there's shearing
-        float rotation = atan2(point[1], point[0]) * 180.0 / Q_PI;
-        return rotation;
+static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point)
+{
+    const std::pair<int, int> axes = getSTAxes(snapped_normal);
+    const qvec2f proj(point[axes.first], point[axes.second]);
+    return proj;
+}
+
+float clockwiseDegreesBetween(qvec2f start, qvec2f end)
+{
+    start = qv::normalize(start);
+    end = qv::normalize(end);
+
+    const float cosAngle = std::max(-1.0f, std::min(1.0f, qv::dot(start, end)));
+    const float unsigned_degrees = acos(cosAngle) * (360.0 / (2.0 * Q_PI));
+
+    if (unsigned_degrees < ANGLEEPSILON)
+        return 0;
+
+    // get a normal for the rotation plane using the right-hand rule
+    // if this is pointing up (qvec3f(0,0,1)), it's counterclockwise rotation.
+    // if this is pointing down (qvec3f(0,0,-1)), it's clockwise rotation.
+    qvec3f rotationNormal = qv::normalize(qv::cross(qvec3f(start[0], start[1], 0.0f), qvec3f(end[0], end[1], 0.0f)));
+
+    const float normalsCosAngle = qv::dot(rotationNormal, qvec3f(0, 0, 1));
+    if (normalsCosAngle >= 0) {
+        // counterclockwise rotation
+        return -unsigned_degrees;
     }
+    // clockwise rotation
+    return unsigned_degrees;
+}
 
-    static std::pair<int, int> getSTAxes(const qvec3d &snapped_normal)
+static texdef_quake_ed_t Reverse_QuakeEd(qmat2x2f M, const qplane3d &plane, bool preserveX)
+{
+    // Check for shear, because we might tweak M to remove it
     {
-        if (snapped_normal[0]) {
-            return std::make_pair(1, 2);
-        } else if (snapped_normal[1]) {
-            return std::make_pair(0, 2);
-        } else {
-            return std::make_pair(0, 1);
-        }
-    }
+        qvec2f Xvec = M.row(0);
+        qvec2f Yvec = M.row(1);
+        double cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
 
-    static qvec2f projectToAxisPlane(const qvec3d &snapped_normal, const qvec3d &point)
-    {
-        const std::pair<int, int> axes = getSTAxes(snapped_normal);
-        const qvec2f proj(point[axes.first], point[axes.second]);
-        return proj;
-    }
+        // const double oldXscale = sqrt(pow(M[0][0], 2.0) + pow(M[1][0], 2.0));
+        // const double oldYscale = sqrt(pow(M[0][1], 2.0) + pow(M[1][1], 2.0));
 
-    float clockwiseDegreesBetween(qvec2f start, qvec2f end)
-    {
-        start = qv::normalize(start);
-        end = qv::normalize(end);
+        if (fabs(cosAngle) > 0.001) {
+            // Detected shear
 
-        const float cosAngle = std::max(-1.0f, std::min(1.0f, qv::dot(start, end)));
-        const float unsigned_degrees = acos(cosAngle) * (360.0 / (2.0 * Q_PI));
+            if (preserveX) {
+                const float degreesToY = clockwiseDegreesBetween(Xvec, Yvec);
+                const bool CW = (degreesToY > 0);
 
-        if (unsigned_degrees < ANGLEEPSILON)
-            return 0;
+                // turn 90 degrees from Xvec
+                const qvec2f newYdir =
+                    qv::normalize(qvec2f(qv::cross(qvec3f(0, 0, CW ? -1.0f : 1.0f), qvec3f(Xvec[0], Xvec[1], 0.0))));
 
-        // get a normal for the rotation plane using the right-hand rule
-        // if this is pointing up (qvec3f(0,0,1)), it's counterclockwise rotation.
-        // if this is pointing down (qvec3f(0,0,-1)), it's clockwise rotation.
-        qvec3f rotationNormal = qv::normalize(qv::cross(qvec3f(start[0], start[1], 0.0f), qvec3f(end[0], end[1], 0.0f)));
+                // scalar projection of the old Yvec onto newYDir to get the new Yscale
+                const float newYscale = qv::dot(Yvec, newYdir);
+                Yvec = newYdir * static_cast<float>(newYscale);
+            } else {
+                // Preserve Y.
 
-        const float normalsCosAngle = qv::dot(rotationNormal, qvec3f(0, 0, 1));
-        if (normalsCosAngle >= 0) {
-            // counterclockwise rotation
-            return -unsigned_degrees;
-        }
-        // clockwise rotation
-        return unsigned_degrees;
-    }
+                const float degreesToX = clockwiseDegreesBetween(Yvec, Xvec);
+                const bool CW = (degreesToX > 0);
 
-    static texdef_quake_ed_t Reverse_QuakeEd(qmat2x2f M, const qplane3d &plane, bool preserveX)
-    {
-        // Check for shear, because we might tweak M to remove it
-        {
-            qvec2f Xvec = M.row(0);
-            qvec2f Yvec = M.row(1);
-            double cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
+                // turn 90 degrees from Yvec
+                const qvec2f newXdir =
+                    qv::normalize(qvec2f(qv::cross(qvec3f(0, 0, CW ? -1.0f : 1.0f), qvec3f(Yvec[0], Yvec[1], 0.0))));
 
-            // const double oldXscale = sqrt(pow(M[0][0], 2.0) + pow(M[1][0], 2.0));
-            // const double oldYscale = sqrt(pow(M[0][1], 2.0) + pow(M[1][1], 2.0));
+                // scalar projection of the old Xvec onto newXDir to get the new Xscale
+                const float newXscale = qv::dot(Xvec, newXdir);
+                Xvec = newXdir * static_cast<float>(newXscale);
+            }
 
+            // recheck
+            cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
             if (fabs(cosAngle) > 0.001) {
-                // Detected shear
+                FError("SHEAR correction failed\n");
+            }
 
-                if (preserveX) {
-                    const float degreesToY = clockwiseDegreesBetween(Xvec, Yvec);
-                    const bool CW = (degreesToY > 0);
+            // update M
+            M.at(0, 0) = Xvec[0];
+            M.at(0, 1) = Xvec[1];
 
-                    // turn 90 degrees from Xvec
-                    const qvec2f newYdir =
-                        qv::normalize(qvec2f(qv::cross(qvec3f(0, 0, CW ? -1.0f : 1.0f), qvec3f(Xvec[0], Xvec[1], 0.0))));
+            M.at(1, 0) = Yvec[0];
+            M.at(1, 1) = Yvec[1];
+        }
+    }
 
-                    // scalar projection of the old Yvec onto newYDir to get the new Yscale
-                    const float newYscale = qv::dot(Yvec, newYdir);
-                    Yvec = newYdir * static_cast<float>(newYscale);
-                } else {
-                    // Preserve Y.
+    // extract abs(scale)
+    const double absXscale = sqrt(pow(M.at(0, 0), 2.0) + pow(M.at(0, 1), 2.0));
+    const double absYscale = sqrt(pow(M.at(1, 0), 2.0) + pow(M.at(1, 1), 2.0));
+    const qmat2x2f applyAbsScaleM{static_cast<float>(absXscale), // col0
+        0,
+        0, // col1
+        static_cast<float>(absYscale)};
 
-                    const float degreesToX = clockwiseDegreesBetween(Yvec, Xvec);
-                    const bool CW = (degreesToX > 0);
+    auto [xv, yv, snapped_normal] = texture_axis_t(plane);
 
-                    // turn 90 degrees from Yvec
-                    const qvec2f newXdir =
-                        qv::normalize(qvec2f(qv::cross(qvec3f(0, 0, CW ? -1.0f : 1.0f), qvec3f(Yvec[0], Yvec[1], 0.0))));
+    const qvec2f sAxis = projectToAxisPlane(snapped_normal, xv);
+    const qvec2f tAxis = projectToAxisPlane(snapped_normal, yv);
 
-                    // scalar projection of the old Xvec onto newXDir to get the new Xscale
-                    const float newXscale = qv::dot(Xvec, newXdir);
-                    Xvec = newXdir * static_cast<float>(newXscale);
-                }
+    // This is an identity matrix possibly with negative signs.
+    const qmat2x2f axisFlipsM{sAxis[0], tAxis[0], // col0
+        sAxis[1], tAxis[1]}; // col1
 
-                // recheck
-                cosAngle = qv::dot(qv::normalize(Xvec), qv::normalize(Yvec));
-                if (fabs(cosAngle) > 0.001) {
-                    FError("SHEAR correction failed\n");
-                }
+    // N.B. this is how M is built in SetTexinfo_QuakeEd_New and guides how we
+    // strip off components of it later in this function.
+    //
+    //    qmat2x2f M = scaleM * rotateM * axisFlipsM;
 
-                // update M
-                M.at(0, 0) = Xvec[0];
-                M.at(0, 1) = Xvec[1];
+    // strip off the magnitude component of the scale, and `axisFlipsM`.
+    const qmat2x2f flipRotate = qv::inverse(applyAbsScaleM) * M * qv::inverse(axisFlipsM);
 
-                M.at(1, 0) = Yvec[0];
-                M.at(1, 1) = Yvec[1];
+    // We don't know the signs on the scales, which will mess up figuring out the rotation, so try all 4 combinations
+    for (float xScaleSgn : std::vector<float>{-1.0, 1.0}) {
+        for (float yScaleSgn : std::vector<float>{-1.0, 1.0}) {
+
+            // "apply" - matrix constructed to apply a guessed value
+            // "guess" - this matrix might not be what we think
+
+            const qmat2x2f applyGuessedFlipM{xScaleSgn, // col0
+                0,
+                0, // col1
+                yScaleSgn};
+
+            const qmat2x2f rotateMGuess = qv::inverse(applyGuessedFlipM) * flipRotate;
+            const float angleGuess = extractRotation(rotateMGuess);
+
+            //            const qmat2x2f Mident = rotateMGuess * rotation2x2_deg(-angleGuess);
+
+            const qmat2x2f applyAngleGuessM = rotation2x2_deg(angleGuess);
+            const qmat2x2f Mguess = applyGuessedFlipM * applyAbsScaleM * applyAngleGuessM * axisFlipsM;
+
+            if (fabs(M.at(0, 0) - Mguess.at(0, 0)) < 0.001 && fabs(M.at(1, 0) - Mguess.at(1, 0)) < 0.001 &&
+                fabs(M.at(0, 1) - Mguess.at(0, 1)) < 0.001 && fabs(M.at(1, 1) - Mguess.at(1, 1)) < 0.001) {
+
+                texdef_quake_ed_t reversed;
+                reversed.rotate = angleGuess;
+                reversed.scale[0] = xScaleSgn / absXscale;
+                reversed.scale[1] = yScaleSgn / absYscale;
+                return reversed;
             }
         }
-
-        // extract abs(scale)
-        const double absXscale = sqrt(pow(M.at(0, 0), 2.0) + pow(M.at(0, 1), 2.0));
-        const double absYscale = sqrt(pow(M.at(1, 0), 2.0) + pow(M.at(1, 1), 2.0));
-        const qmat2x2f applyAbsScaleM{static_cast<float>(absXscale), // col0
-            0,
-            0, // col1
-            static_cast<float>(absYscale)};
-
-        auto [ xv, yv, snapped_normal ] = texture_axis_t(plane);
-
-        const qvec2f sAxis = projectToAxisPlane(snapped_normal, xv);
-        const qvec2f tAxis = projectToAxisPlane(snapped_normal, yv);
-
-        // This is an identity matrix possibly with negative signs.
-        const qmat2x2f axisFlipsM{sAxis[0], tAxis[0], // col0
-            sAxis[1], tAxis[1]}; // col1
-
-        // N.B. this is how M is built in SetTexinfo_QuakeEd_New and guides how we
-        // strip off components of it later in this function.
-        //
-        //    qmat2x2f M = scaleM * rotateM * axisFlipsM;
-
-        // strip off the magnitude component of the scale, and `axisFlipsM`.
-        const qmat2x2f flipRotate = qv::inverse(applyAbsScaleM) * M * qv::inverse(axisFlipsM);
-
-        // We don't know the signs on the scales, which will mess up figuring out the rotation, so try all 4 combinations
-        for (float xScaleSgn : std::vector<float>{-1.0, 1.0}) {
-            for (float yScaleSgn : std::vector<float>{-1.0, 1.0}) {
-
-                // "apply" - matrix constructed to apply a guessed value
-                // "guess" - this matrix might not be what we think
-
-                const qmat2x2f applyGuessedFlipM{xScaleSgn, // col0
-                    0,
-                    0, // col1
-                    yScaleSgn};
-
-                const qmat2x2f rotateMGuess = qv::inverse(applyGuessedFlipM) * flipRotate;
-                const float angleGuess = extractRotation(rotateMGuess);
-
-                //            const qmat2x2f Mident = rotateMGuess * rotation2x2_deg(-angleGuess);
-
-                const qmat2x2f applyAngleGuessM = rotation2x2_deg(angleGuess);
-                const qmat2x2f Mguess = applyGuessedFlipM * applyAbsScaleM * applyAngleGuessM * axisFlipsM;
-
-                if (fabs(M.at(0, 0) - Mguess.at(0, 0)) < 0.001 && fabs(M.at(1, 0) - Mguess.at(1, 0)) < 0.001 &&
-                    fabs(M.at(0, 1) - Mguess.at(0, 1)) < 0.001 && fabs(M.at(1, 1) - Mguess.at(1, 1)) < 0.001) {
-
-                    texdef_quake_ed_t reversed;
-                    reversed.rotate = angleGuess;
-                    reversed.scale[0] = xScaleSgn / absXscale;
-                    reversed.scale[1] = yScaleSgn / absYscale;
-                    return reversed;
-                }
-            }
-        }
-
-        // TODO: detect when we expect this to fail, i.e.  invalid texture axes (0-length),
-        // and throw an error if it fails unexpectedly.
-
-        return {};
     }
 
-    static qmat4x4f texVecsTo4x4Matrix(const qplane3d &faceplane, const texvecf &in_vecs)
+    // TODO: detect when we expect this to fail, i.e.  invalid texture axes (0-length),
+    // and throw an error if it fails unexpectedly.
+
+    return {};
+}
+
+static qmat4x4f texVecsTo4x4Matrix(const qplane3d &faceplane, const texvecf &in_vecs)
+{
+    //           [s]
+    // T * vec = [t]
+    //           [distOffPlane]
+    //           [?]
+
+    qmat4x4f T{
+        in_vecs.at(0, 0), in_vecs.at(1, 0), static_cast<float>(faceplane.normal[0]), 0, // col 0
+        in_vecs.at(0, 1), in_vecs.at(1, 1), static_cast<float>(faceplane.normal[1]), 0, // col 1
+        in_vecs.at(0, 2), in_vecs.at(1, 2), static_cast<float>(faceplane.normal[2]), 0, // col 2
+        in_vecs.at(0, 3), in_vecs.at(1, 3), static_cast<float>(-faceplane.dist), 1 // col 3
+    };
+    return T;
+}
+
+static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qplane3d &faceplane, const qvec3f &point)
+{
+    brush_side_t temp;
+    temp.set_texinfo(texdef_quake_ed_t{texdef.shift, texdef.rotate, texdef.scale});
+
+    const qmat4x4f worldToTexSpace_res = texVecsTo4x4Matrix(faceplane, temp.vecs);
+    const qvec2f uv = qvec2f(worldToTexSpace_res * qvec4f(point[0], point[1], point[2], 1.0f));
+    return uv;
+}
+
+static texdef_quake_ed_t addShift(const texdef_quake_ed_t &texdef, const qvec2f shift)
+{
+    texdef_quake_ed_t res = texdef;
+    res.shift = shift;
+    return res;
+}
+
+qvec2f normalizeShift(const std::optional<img::texture_meta> &texture, const qvec2f &in)
+{
+    if (!texture) {
+        return in; // can't do anything without knowing the texture size.
+    }
+
+    int fullWidthOffsets = static_cast<int>(in[0]) / texture->width;
+    int fullHeightOffsets = static_cast<int>(in[1]) / texture->height;
+
+    qvec2f result(in[0] - static_cast<float>(fullWidthOffsets * texture->width),
+        in[1] - static_cast<float>(fullHeightOffsets * texture->height));
+    return result;
+}
+
+/// `texture` is optional. If given, the "shift" values can be normalized
+static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qplane3d &faceplane, const std::optional<img::texture_meta> &texture,
+    const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
+{
+    // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
+    texture_axis_t axis(faceplane);
+    qvec3d &snapped_normal = axis.snapped_normal;
+
+    const qmat4x4f worldToTexSpace = texVecsTo4x4Matrix(faceplane, in_vecs);
+
+    // Grab the UVs of the 3 reference points
+    qvec2f facepoints_uvs[3];
+    for (int i = 0; i < 3; i++) {
+        facepoints_uvs[i] = qvec2f(worldToTexSpace * qvec4f(facepoints[i][0], facepoints[i][1], facepoints[i][2], 1.0));
+    }
+
+    // Project the 3 reference points onto the axis plane. They are now 2d points.
+    qvec2f facepoints_projected[3];
+    for (int i = 0; i < 3; i++) {
+        facepoints_projected[i] = projectToAxisPlane(snapped_normal, facepoints[i]);
+    }
+
+    // Now make 2 vectors out of our 3 points (so we are ignoring translation for now)
+    const qvec2f p0p1 = facepoints_projected[1] - facepoints_projected[0];
+    const qvec2f p0p2 = facepoints_projected[2] - facepoints_projected[0];
+
+    const qvec2f p0p1_uv = facepoints_uvs[1] - facepoints_uvs[0];
+    const qvec2f p0p2_uv = facepoints_uvs[2] - facepoints_uvs[0];
+
+    /*
+    Find a 2x2 transformation matrix that maps p0p1 to p0p1_uv, and p0p2 to p0p2_uv
+
+    [ a b ] [ p0p1.x ] = [ p0p1_uv.x ]
+    [ c d ] [ p0p1.y ]   [ p0p1_uv.y ]
+
+    [ a b ] [ p0p2.x ] = [ p0p1_uv.x ]
+    [ c d ] [ p0p2.y ]   [ p0p2_uv.y ]
+
+    writing as a system of equations:
+
+    a * p0p1.x + b * p0p1.y = p0p1_uv.x
+    c * p0p1.x + d * p0p1.y = p0p1_uv.y
+    a * p0p2.x + b * p0p2.y = p0p2_uv.x
+    c * p0p2.x + d * p0p2.y = p0p2_uv.y
+
+    back to a matrix equation, with the unknowns in a column vector:
+
+    [ p0p1_uv.x ]   [ p0p1.x p0p1.y 0       0      ] [ a ]
+    [ p0p1_uv.y ] = [ 0       0     p0p1.x p0p1.y  ] [ b ]
+    [ p0p2_uv.x ]   [ p0p2.x p0p2.y 0       0      ] [ c ]
+    [ p0p2_uv.y ]   [ 0       0     p0p2.x p0p2.y  ] [ d ]
+
+    */
+
+    const qmat4x4f M{
+        p0p1[0], 0, p0p2[0], 0, // col 0
+        p0p1[1], 0, p0p2[1], 0, // col 1
+        0, p0p1[0], 0, p0p2[0], // col 2
+        0, p0p1[1], 0, p0p2[1] // col 3
+    };
+
+    const qmat4x4f Minv = qv::inverse(M);
+    const qvec4f abcd = Minv * qvec4f(p0p1_uv[0], p0p1_uv[1], p0p2_uv[0], p0p2_uv[1]);
+
+    const qmat2x2f texPlaneToUV{abcd[0], abcd[2], // col 0
+        abcd[1], abcd[3]}; // col 1
+
     {
-        //           [s]
-        // T * vec = [t]
-        //           [distOffPlane]
-        //           [?]
+        // self check
+        //        qvec2f uv01_test = texPlaneToUV * p0p1;
+        //        qvec2f uv02_test = texPlaneToUV * p0p2;
 
-        qmat4x4f T{
-            in_vecs.at(0, 0), in_vecs.at(1, 0), static_cast<float>(faceplane.normal[0]), 0, // col 0
-            in_vecs.at(0, 1), in_vecs.at(1, 1), static_cast<float>(faceplane.normal[1]), 0, // col 1
-            in_vecs.at(0, 2), in_vecs.at(1, 2), static_cast<float>(faceplane.normal[2]), 0, // col 2
-            in_vecs.at(0, 3), in_vecs.at(1, 3), static_cast<float>(-faceplane.dist), 1 // col 3
-        };
-        return T;
+        // these fail if one of the texture axes is 0 length.
+        //        checkEq(uv01_test, p0p1_uv, 0.01);
+        //        checkEq(uv02_test, p0p2_uv, 0.01);
     }
 
-    static qvec2f evalTexDefAtPoint(const texdef_quake_ed_t &texdef, const qplane3d &faceplane, const qvec3f &point)
-    {
-        brush_side_t temp;
-        temp.set_texinfo(texdef_quake_ed_t { texdef.shift, texdef.rotate, texdef.scale });
+    const texdef_quake_ed_t res = Reverse_QuakeEd(texPlaneToUV, faceplane, false);
 
-        const qmat4x4f worldToTexSpace_res = texVecsTo4x4Matrix(faceplane, temp.vecs);
-        const qvec2f uv = qvec2f(worldToTexSpace_res * qvec4f(point[0], point[1], point[2], 1.0f));
-        return uv;
-    }
+    // figure out shift based on facepoints[0]
+    const qvec3f testpoint = facepoints[0];
+    qvec2f uv0_actual = evalTexDefAtPoint(addShift(res, qvec2f(0, 0)), faceplane, testpoint);
+    qvec2f uv0_desired = qvec2f(worldToTexSpace * qvec4f(testpoint[0], testpoint[1], testpoint[2], 1.0f));
+    qvec2f shift = uv0_desired - uv0_actual;
 
-    static texdef_quake_ed_t addShift(const texdef_quake_ed_t &texdef, const qvec2f shift)
-    {
-        texdef_quake_ed_t res = texdef;
-        res.shift = shift;
-        return res;
-    }
+    // sometime we have very large shift values, normalize them to be smaller
+    shift = normalizeShift(texture, shift);
 
-    qvec2f normalizeShift(const std::optional<img::texture_meta> &texture, const qvec2f &in)
-    {
-        if (!texture) {
-            return in; // can't do anything without knowing the texture size.
-        }
-
-        int fullWidthOffsets = static_cast<int>(in[0]) / texture->width;
-        int fullHeightOffsets = static_cast<int>(in[1]) / texture->height;
-
-        qvec2f result(in[0] - static_cast<float>(fullWidthOffsets * texture->width),
-            in[1] - static_cast<float>(fullHeightOffsets * texture->height));
-        return result;
-    }
-
-    /// `texture` is optional. If given, the "shift" values can be normalized
-    static texdef_quake_ed_t TexDef_BSPToQuakeEd(const qplane3d &faceplane,
-        const std::optional<img::texture_meta> &texture, const texvecf &in_vecs, const std::array<qvec3d, 3> &facepoints)
-    {
-        // First get the un-rotated, un-scaled unit texture vecs (based on the face plane).
-        texture_axis_t axis(faceplane);
-        qvec3d &snapped_normal = axis.snapped_normal;
-
-        const qmat4x4f worldToTexSpace = texVecsTo4x4Matrix(faceplane, in_vecs);
-
-        // Grab the UVs of the 3 reference points
-        qvec2f facepoints_uvs[3];
-        for (int i = 0; i < 3; i++) {
-            facepoints_uvs[i] = qvec2f(worldToTexSpace * qvec4f(facepoints[i][0], facepoints[i][1], facepoints[i][2], 1.0));
-        }
-
-        // Project the 3 reference points onto the axis plane. They are now 2d points.
-        qvec2f facepoints_projected[3];
-        for (int i = 0; i < 3; i++) {
-            facepoints_projected[i] = projectToAxisPlane(snapped_normal, facepoints[i]);
-        }
-
-        // Now make 2 vectors out of our 3 points (so we are ignoring translation for now)
-        const qvec2f p0p1 = facepoints_projected[1] - facepoints_projected[0];
-        const qvec2f p0p2 = facepoints_projected[2] - facepoints_projected[0];
-
-        const qvec2f p0p1_uv = facepoints_uvs[1] - facepoints_uvs[0];
-        const qvec2f p0p2_uv = facepoints_uvs[2] - facepoints_uvs[0];
-
-        /*
-        Find a 2x2 transformation matrix that maps p0p1 to p0p1_uv, and p0p2 to p0p2_uv
-
-        [ a b ] [ p0p1.x ] = [ p0p1_uv.x ]
-        [ c d ] [ p0p1.y ]   [ p0p1_uv.y ]
-
-        [ a b ] [ p0p2.x ] = [ p0p1_uv.x ]
-        [ c d ] [ p0p2.y ]   [ p0p2_uv.y ]
-
-        writing as a system of equations:
-
-        a * p0p1.x + b * p0p1.y = p0p1_uv.x
-        c * p0p1.x + d * p0p1.y = p0p1_uv.y
-        a * p0p2.x + b * p0p2.y = p0p2_uv.x
-        c * p0p2.x + d * p0p2.y = p0p2_uv.y
-
-        back to a matrix equation, with the unknowns in a column vector:
-
-        [ p0p1_uv.x ]   [ p0p1.x p0p1.y 0       0      ] [ a ]
-        [ p0p1_uv.y ] = [ 0       0     p0p1.x p0p1.y  ] [ b ]
-        [ p0p2_uv.x ]   [ p0p2.x p0p2.y 0       0      ] [ c ]
-        [ p0p2_uv.y ]   [ 0       0     p0p2.x p0p2.y  ] [ d ]
-
-        */
-
-        const qmat4x4f M{
-            p0p1[0], 0, p0p2[0], 0, // col 0
-            p0p1[1], 0, p0p2[1], 0, // col 1
-            0, p0p1[0], 0, p0p2[0], // col 2
-            0, p0p1[1], 0, p0p2[1] // col 3
-        };
-
-        const qmat4x4f Minv = qv::inverse(M);
-        const qvec4f abcd = Minv * qvec4f(p0p1_uv[0], p0p1_uv[1], p0p2_uv[0], p0p2_uv[1]);
-
-        const qmat2x2f texPlaneToUV{abcd[0], abcd[2], // col 0
-            abcd[1], abcd[3]}; // col 1
-
-        {
-            // self check
-            //        qvec2f uv01_test = texPlaneToUV * p0p1;
-            //        qvec2f uv02_test = texPlaneToUV * p0p2;
-
-            // these fail if one of the texture axes is 0 length.
-            //        checkEq(uv01_test, p0p1_uv, 0.01);
-            //        checkEq(uv02_test, p0p2_uv, 0.01);
-        }
-
-        const texdef_quake_ed_t res = Reverse_QuakeEd(texPlaneToUV, faceplane, false);
-
-        // figure out shift based on facepoints[0]
-        const qvec3f testpoint = facepoints[0];
-        qvec2f uv0_actual = evalTexDefAtPoint(addShift(res, qvec2f(0, 0)), faceplane, testpoint);
-        qvec2f uv0_desired = qvec2f(worldToTexSpace * qvec4f(testpoint[0], testpoint[1], testpoint[2], 1.0f));
-        qvec2f shift = uv0_desired - uv0_actual;
-
-        // sometime we have very large shift values, normalize them to be smaller
-        shift = normalizeShift(texture, shift);
-
-        const texdef_quake_ed_t res2 = addShift(res, shift);
-        return res2;
-    }
-};
+    const texdef_quake_ed_t res2 = addShift(res, shift);
+    return res2;
+}
+}; // namespace convert_to_quaked
 
 namespace convert_to_valve
 {
-    static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
-    {
-        texdef_valve_t res;
+static texdef_valve_t TexDef_BSPToValve(const texvecf &in_vecs)
+{
+    texdef_valve_t res;
 
-        // From the valve -> bsp code,
-        //
-        //    for (i = 0; i < 3; i++) {
-        //        out->vecs[0][i] = axis[0][i] / scale[0];
-        //        out->vecs[1][i] = axis[1][i] / scale[1];
-        //    }
-        //
-        // We'll generate axis vectors of length 1 and pick the necessary scale
+    // From the valve -> bsp code,
+    //
+    //    for (i = 0; i < 3; i++) {
+    //        out->vecs[0][i] = axis[0][i] / scale[0];
+    //        out->vecs[1][i] = axis[1][i] / scale[1];
+    //    }
+    //
+    // We'll generate axis vectors of length 1 and pick the necessary scale
 
-        for (size_t i = 0; i < 2; i++) {
-            qvec3d axis = in_vecs.row(i).xyz();
-            const double length = qv::normalizeInPlace(axis);
-            // avoid division by 0
-            if (length != 0.0) {
-                res.scale[i] = 1.0 / length;
-            } else {
-                res.scale[i] = 0.0;
-            }
-            res.shift[i] = in_vecs.at(i, 3);
-            res.axis.set_row(i, axis);
+    for (size_t i = 0; i < 2; i++) {
+        qvec3d axis = in_vecs.row(i).xyz();
+        const double length = qv::normalizeInPlace(axis);
+        // avoid division by 0
+        if (length != 0.0) {
+            res.scale[i] = 1.0 / length;
+        } else {
+            res.scale[i] = 0.0;
         }
-
-        return res;
+        res.shift[i] = in_vecs.at(i, 3);
+        res.axis.set_row(i, axis);
     }
-};
+
+    return res;
+}
+}; // namespace convert_to_valve
 
 namespace convert_to_bp
 {
-    // From FaceToBrushPrimitFace in GtkRadiant
-    static texdef_bp_t TexDef_BSPToBrushPrimitives(
-        const qplane3d &plane, const img::texture_meta &texture, const texvecf &in_vecs)
-    {
-        auto [ texX, texY ] = compute_axis_base(plane.normal);
+// From FaceToBrushPrimitFace in GtkRadiant
+static texdef_bp_t TexDef_BSPToBrushPrimitives(
+    const qplane3d &plane, const img::texture_meta &texture, const texvecf &in_vecs)
+{
+    auto [texX, texY] = compute_axis_base(plane.normal);
 
-        // compute projection vector
-        qvec3d proj = plane.normal * plane.dist;
+    // compute projection vector
+    qvec3d proj = plane.normal * plane.dist;
 
-        // (0,0) in plane axis base is (0,0,0) in world coordinates + projection on the affine plane
-        // (1,0) in plane axis base is texX in world coordinates + projection on the affine plane
-        // (0,1) in plane axis base is texY in world coordinates + projection on the affine plane
-        // use old texture code to compute the ST coords of these points
-        qvec2d st[] = {
-            in_vecs.uvs(proj, texture.width, texture.height),
-            in_vecs.uvs(texX + proj, texture.width, texture.height),
-            in_vecs.uvs(texY + proj, texture.width, texture.height)
-        };
-        // compute texture matrix
-        texdef_bp_t res;
-        res.axis.set_col(2, st[0]);
-        res.axis.set_col(0, st[1] - st[0]);
-        res.axis.set_col(1, st[2] - st[0]);
-        return res;
-    }
-};
+    // (0,0) in plane axis base is (0,0,0) in world coordinates + projection on the affine plane
+    // (1,0) in plane axis base is texX in world coordinates + projection on the affine plane
+    // (0,1) in plane axis base is texY in world coordinates + projection on the affine plane
+    // use old texture code to compute the ST coords of these points
+    qvec2d st[] = {in_vecs.uvs(proj, texture.width, texture.height),
+        in_vecs.uvs(texX + proj, texture.width, texture.height),
+        in_vecs.uvs(texY + proj, texture.width, texture.height)};
+    // compute texture matrix
+    texdef_bp_t res;
+    res.axis.set_col(2, st[0]);
+    res.axis.set_col(0, st[1] - st[0]);
+    res.axis.set_col(1, st[2] - st[0]);
+    return res;
+}
+}; // namespace convert_to_bp
 
 void brush_side_t::convert_to(texcoord_style_t style, const gamedef_t *game, const settings::common_settings &options)
 {
     // we're already this style
     switch (style) {
-    case texcoord_style_t::quaked:
-        if (std::holds_alternative<texdef_quake_ed_t>(raw)) {
-            return;
-        }
-        break;
-    case texcoord_style_t::etp:
-        if (std::holds_alternative<texdef_etp_t>(raw)) {
-            return;
-        }
-        break;
-    case texcoord_style_t::brush_primitives:
-        if (std::holds_alternative<texdef_bp_t>(raw)) {
-            return;
-        }
-        break;
-    case texcoord_style_t::valve_220:
-        if (std::holds_alternative<texdef_valve_t>(raw)) {
-            return;
-        }
-        break;
+        case texcoord_style_t::quaked:
+            if (std::holds_alternative<texdef_quake_ed_t>(raw)) {
+                return;
+            }
+            break;
+        case texcoord_style_t::etp:
+            if (std::holds_alternative<texdef_etp_t>(raw)) {
+                return;
+            }
+            break;
+        case texcoord_style_t::brush_primitives:
+            if (std::holds_alternative<texdef_bp_t>(raw)) {
+                return;
+            }
+            break;
+        case texcoord_style_t::valve_220:
+            if (std::holds_alternative<texdef_valve_t>(raw)) {
+                return;
+            }
+            break;
     }
 
     if (style == texcoord_style_t::quaked) {
@@ -981,7 +948,7 @@ void brush_side_t::convert_to(texcoord_style_t style, const gamedef_t *game, con
             FError("conversion to brush primitives requires a `--game` option to be set");
         }
 
-        auto [ meta, result, data ] = img::load_texture_meta(texture, game, options);
+        auto [meta, result, data] = img::load_texture_meta(texture, game, options);
 
         if (!meta) {
             FError("conversion to brush primitives requires texture to be loaded");
@@ -1009,7 +976,7 @@ void brush_t::parse_brush_face(parser_t &parser, texcoord_style_t base_format)
     qvec3d normal = qv::normalize(qv::cross(ab, cb), length);
     double dist = qv::dot(side.planepts[1], normal);
 
-    side.plane = { normal, dist };
+    side.plane = {normal, dist};
 
     side.parse_texture_def(parser, base_format);
 
@@ -1020,8 +987,7 @@ void brush_t::parse_brush_face(parser_t &parser, texcoord_style_t base_format)
 
     /* Check for duplicate planes */
     for (auto &check : faces) {
-        if (qv::epsilonEqual(check.plane, side.plane) ||
-            qv::epsilonEqual(-check.plane, side.plane)) {
+        if (qv::epsilonEqual(check.plane, side.plane) || qv::epsilonEqual(-check.plane, side.plane)) {
             logging::print("{}: Brush with duplicate plane\n", parser.location);
             return;
         }
@@ -1119,7 +1085,8 @@ void map_entity_t::parse_brush(parser_t &parser)
 
         // mandatory
         if (parser.token != "{") {
-            FError("{}: Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.location, parser.token);
+            FError("{}: Brush primitives: expected second {{ at beginning of brush, got \"{}\"", parser.location,
+                parser.token);
         }
     }
     // ericw -- end brush primitives

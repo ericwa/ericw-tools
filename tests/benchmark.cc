@@ -85,7 +85,7 @@ TEST(benchmark, visWindings)
     ankerl::nanobench::Bench b;
     b.run("create pstack_t", [&]() {
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         ankerl::nanobench::doNotOptimizeAway(stack);
@@ -93,7 +93,7 @@ TEST(benchmark, visWindings)
 
     b.run("create pstack_t + 1x AllocStackWinding", [&]() {
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         auto *w1 = AllocStackWinding(stack);
@@ -106,7 +106,7 @@ TEST(benchmark, visWindings)
 
     b.run("create pstack_t + 2x AllocStackWinding", [&]() {
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         auto *w1 = AllocStackWinding(stack);
@@ -124,7 +124,7 @@ TEST(benchmark, visWindings)
     b.run("setup + ClipStackWinding", [&]() {
         visstats_t stats;
         pstack_t stack;
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
             stack.windings_used[i] = false;
 
         auto *w1 = AllocStackWinding(stack);
@@ -148,18 +148,12 @@ TEST(benchmark, vectorMath)
     ankerl::nanobench::Bench b;
     ankerl::nanobench::Rng rng;
 
-    qvec3d vec0 {rng.uniform01(), rng.uniform01(), rng.uniform01()};
-    qvec3d vec1 {rng.uniform01(), rng.uniform01(), rng.uniform01()};
+    qvec3d vec0{rng.uniform01(), rng.uniform01(), rng.uniform01()};
+    qvec3d vec1{rng.uniform01(), rng.uniform01(), rng.uniform01()};
 
-    b.run("dot product", [&]() {
-        vec0[0] = qv::dot(vec0, vec1);
-    });
-    b.run("add", [&]() {
-        vec0 = vec0 + vec1;
-    });
-    b.run("subtract", [&]() {
-        vec0 = vec0 - vec1;
-    });
+    b.run("dot product", [&]() { vec0[0] = qv::dot(vec0, vec1); });
+    b.run("add", [&]() { vec0 = vec0 + vec1; });
+    b.run("subtract", [&]() { vec0 = vec0 - vec1; });
 
     b.doNotOptimizeAway(vec0);
     b.doNotOptimizeAway(vec1);

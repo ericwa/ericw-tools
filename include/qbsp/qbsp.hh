@@ -392,7 +392,8 @@ struct bspbrush_t;
 struct side_t;
 class mapbrush_t;
 
-struct nodedata_t {
+struct nodedata_t
+{
     // information for decision nodes
     size_t planenum; // decision node only
 
@@ -407,7 +408,8 @@ struct nodedata_t {
                            // are detail.
 };
 
-struct leafdata_t {
+struct leafdata_t
+{
     // information for leafs
     std::vector<face_t *> markfaces; // leaf nodes only, point to node faces
     int outside_distance; // -1 = can't reach outside, 0 = first void node, >0 = distance from void, in number of
@@ -436,26 +438,17 @@ struct node_t
     int visleafnum; // -1 = solid
     int viscluster; // detail cluster for faster vis
 
-    bool is_leaf() const {
-        return data.index() == 1;
-    }
+    bool is_leaf() const { return data.index() == 1; }
 
-    nodedata_t *get_nodedata() {
-        return std::get_if<0>(&data);
-    }
-    const nodedata_t *get_nodedata() const {
-        return std::get_if<0>(&data);
-    }
+    nodedata_t *get_nodedata() { return std::get_if<0>(&data); }
+    const nodedata_t *get_nodedata() const { return std::get_if<0>(&data); }
 
-    leafdata_t *get_leafdata() {
-        return std::get_if<1>(&data);
-    }
-    const leafdata_t *get_leafdata() const {
-        return std::get_if<1>(&data);
-    }
+    leafdata_t *get_leafdata() { return std::get_if<1>(&data); }
+    const leafdata_t *get_leafdata() const { return std::get_if<1>(&data); }
 
     // defaults to node
-    leafdata_t *make_leaf() {
+    leafdata_t *make_leaf()
+    {
         data = leafdata_t{};
         return get_leafdata();
     }

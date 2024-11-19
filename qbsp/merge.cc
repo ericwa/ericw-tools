@@ -76,8 +76,7 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
         // if requested, block merging across water boundaries;
         // ezQuake/nQuake (Q1) and Paintball2 (Q2) water caustics will leak onto
         // above-water faces.
-        if (f1->contents[0].is_liquid(qbsp_options.target_game) !=
-            f2->contents[0].is_liquid(qbsp_options.target_game))
+        if (f1->contents[0].is_liquid(qbsp_options.target_game) != f2->contents[0].is_liquid(qbsp_options.target_game))
             return nullptr;
     }
 

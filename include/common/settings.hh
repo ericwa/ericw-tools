@@ -244,7 +244,9 @@ public:
     std::string format() const override;
 };
 
-class can_omit_argument_tag {};
+class can_omit_argument_tag
+{
+};
 
 template<typename T>
 class setting_numeric : public setting_value<T>
@@ -255,6 +257,7 @@ protected:
     T _min, _max;
     bool _can_omit_argument = false;
     T _omitted_argument_value = static_cast<T>(0);
+
 public:
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
         const setting_group *group = nullptr, const char *description = "")
@@ -276,8 +279,8 @@ public:
     }
 
     inline setting_numeric(setting_container *dictionary, const nameset &names, T v, T minval, T maxval,
-                           can_omit_argument_tag tag, T omitted_argument_value,
-                           const setting_group *group = nullptr, const char *description = "")
+        can_omit_argument_tag tag, T omitted_argument_value, const setting_group *group = nullptr,
+        const char *description = "")
         : setting_numeric(dictionary, names, v, minval, maxval, group, description)
     {
         _can_omit_argument = true;

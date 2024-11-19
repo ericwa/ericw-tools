@@ -24,8 +24,8 @@
   pointer, was measurably faster
   ==============
 */
-static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, const qplane3d src_pl, const viswinding_t *pass,
-    viswinding_t *&target, unsigned int test, pstack_t &stack)
+static void ClipToSeparators(visstats_t &stats, const viswinding_t *source, const qplane3d src_pl,
+    const viswinding_t *pass, viswinding_t *&target, unsigned int test, pstack_t &stack)
 {
     // check all combinations
     for (size_t i = 0; i < source->size(); i++) {
@@ -121,12 +121,14 @@ static int CheckStack(leaf_t *leaf, threaddata_t *thread)
     return 0;
 }
 
-enum class vistest_action {
+enum class vistest_action
+{
     action_continue,
     action_pass
 };
 
-static vistest_action VisTests(visstats_t &stats, pstack_t &stack, const pstack_t* const head, const pstack_t* const prevstack)
+static vistest_action VisTests(
+    visstats_t &stats, pstack_t &stack, const pstack_t *const head, const pstack_t *const prevstack)
 {
     /* TEST 0 :: source -> pass -> target */
     if (vis_options.level.value() > 0) {
@@ -192,8 +194,8 @@ static vistest_action VisTests(visstats_t &stats, pstack_t &stack, const pstack_
   Filter mightsee by clipping against all portals
   ==================
 */
-static unsigned
-TargetChecks(visstats_t &stats, const pstack_t* const head, const pstack_t* const prevstack, leafbits_t& prevportalbits, leafbits_t& portalbits)
+static unsigned TargetChecks(visstats_t &stats, const pstack_t *const head, const pstack_t *const prevstack,
+    leafbits_t &prevportalbits, leafbits_t &portalbits)
 {
     pstack_t stack;
     visportal_t *p, *q;
@@ -225,20 +227,20 @@ TargetChecks(visstats_t &stats, const pstack_t* const head, const pstack_t* cons
     for (i = 0, p = portals.data(); i < numportals * 2; i++, p++) {
 
         if ((*stack.mightsee)[p->leaf])
-            continue;           // target check already done and passed
+            continue; // target check already done and passed
 
         if (!(*prevstack->mightsee)[p->leaf])
-            continue;           // can't possibly see it
+            continue; // can't possibly see it
 
         if (!prevportalbits[i])
-            continue;           // can't possibly see it
+            continue; // can't possibly see it
 
         // get plane of portal, point normal into the neighbor leaf
         stack.portalplane = p->plane;
         backplane = -p->plane;
 
         if (qv::epsilonEqual(prevstack->portalplane.normal, backplane.normal, VIS_EQUAL_EPSILON))
-            continue;           // can't go out a coplanar face
+            continue; // can't go out a coplanar face
 
         numchecks++;
 
@@ -301,7 +303,6 @@ TargetChecks(visstats_t &stats, const pstack_t* const head, const pstack_t* cons
     return numchecks;
 }
 
-
 /*
   ==================
   IterativeTargetChecks
@@ -309,30 +310,27 @@ TargetChecks(visstats_t &stats, const pstack_t* const head, const pstack_t* cons
   Retrace the path and reduce mightsee by clipping the targets directly
   ==================
 */
-static unsigned
-IterativeTargetChecks(visstats_t &stats, pstack_t* const head)
+static unsigned IterativeTargetChecks(visstats_t &stats, pstack_t *const head)
 {
     unsigned numchecks, numblocks;
 
     numchecks = 0;
     numblocks = (portalleafs + leafbits_t::mask) >> leafbits_t::shift;
 
-    leafbits_t portalbits(numportals*2); // in contradiction to the typename, I know
+    leafbits_t portalbits(numportals * 2); // in contradiction to the typename, I know
     portalbits.setall();
 
-    for (pstack_t* stack = head; stack; stack = stack->next)
-    {
+    for (pstack_t *stack = head; stack; stack = stack->next) {
         if (stack->did_targetchecks)
             continue;
 
-        leafbits_t nextportalbits(numportals*2);
+        leafbits_t nextportalbits(numportals * 2);
         nextportalbits.clear();
         numchecks += TargetChecks(stats, head, stack, portalbits, nextportalbits);
         portalbits = std::move(nextportalbits);
 
-        if (stack->next)
-        {
-            pstack_t* next = stack->next;
+        if (stack->next) {
+            pstack_t *next = stack->next;
             uint32_t *nextsee = next->mightsee->data();
             uint32_t *mightsee = stack->mightsee->data();
             for (int i = 0; i < numblocks; i++)
@@ -346,7 +344,6 @@ IterativeTargetChecks(visstats_t &stats, pstack_t* const head)
 
     return numchecks;
 }
-
 
 /*
   ==================
@@ -379,11 +376,9 @@ static void RecursiveLeafFlow(int leafnum, threaddata_t *thread, pstack_t &prevs
     }
 
     // check all target portals instead of just neighbor portals, if the time is right
-    if (vis_options.targetratio.value() > 0.0 &&
-        prevstack.num_expected_targetchecks > 0 &&
+    if (vis_options.targetratio.value() > 0.0 && prevstack.num_expected_targetchecks > 0 &&
         thread->numsteps * vis_options.targetratio.value() >=
-        thread->numtargetchecks + prevstack.num_expected_targetchecks)
-    {
+            thread->numtargetchecks + prevstack.num_expected_targetchecks) {
         unsigned num_actual_targetchecks = IterativeTargetChecks(thread->stats, &thread->pstack_head);
         thread->stats.c_targetcheck += num_actual_targetchecks;
         thread->numtargetchecks += num_actual_targetchecks;

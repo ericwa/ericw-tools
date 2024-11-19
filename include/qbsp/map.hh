@@ -302,8 +302,9 @@ struct texture_def_issues_t : logging::stat_tracker_t
         true);
 };
 
-namespace mapfile {
-    struct map_entity_t;
+namespace mapfile
+{
+struct map_entity_t;
 }
 void ParseEntity(const mapfile::map_entity_t &in_entity, mapentity_t &entity, texture_def_issues_t &issue_stats);
 

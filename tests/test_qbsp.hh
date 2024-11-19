@@ -56,4 +56,4 @@ testresults_lit_t QbspVisLight_Q1(
 testresults_t QbspVisLight_Q2(
     const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);
 testresults_t QbspVisLight_HL(
-        const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis = runvis_t::no);

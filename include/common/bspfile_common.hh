@@ -55,7 +55,8 @@ using contents_int_t = uint64_t;
  *
  * Update bitflag_names if this is changed.
  */
-enum contents_t : contents_int_t {
+enum contents_t : contents_int_t
+{
     EWT_VISCONTENTS_EMPTY = 0,
     EWT_VISCONTENTS_SOLID = nth_bit<uint64_t>(0), // an eye is never valid in a solid
     EWT_VISCONTENTS_SKY = nth_bit<uint64_t>(1),
@@ -95,8 +96,8 @@ enum contents_t : contents_int_t {
 
     // 28 unused
     EWT_CFLAG_DETAIL = nth_bit<uint64_t>(29), // brushes to be added after vis leafs
-    
-// unused Q2 contents bits - just present here so we can roundtrip all 32-bit Q2 contents
+
+    // unused Q2 contents bits - just present here so we can roundtrip all 32-bit Q2 contents
     EWT_CFLAG_Q2_UNUSED_7 = nth_bit<uint64_t>(30),
     EWT_CFLAG_Q2_UNUSED_8 = nth_bit<uint64_t>(31),
     EWT_CFLAG_Q2_UNUSED_9 = nth_bit<uint64_t>(32),
@@ -107,28 +108,14 @@ enum contents_t : contents_int_t {
     EWT_CFLAG_Q2_UNUSED_31 = nth_bit<uint64_t>(37),
 
     // masks
-    EWT_ALL_LIQUIDS =
-        EWT_VISCONTENTS_LAVA |
-        EWT_VISCONTENTS_SLIME |
-        EWT_VISCONTENTS_WATER,
+    EWT_ALL_LIQUIDS = EWT_VISCONTENTS_LAVA | EWT_VISCONTENTS_SLIME | EWT_VISCONTENTS_WATER,
 
-    EWT_ALL_VISIBLE_CONTENTS =
-        EWT_VISCONTENTS_SOLID |
-        EWT_VISCONTENTS_SKY |
-        EWT_VISCONTENTS_DETAIL_WALL |
-        EWT_VISCONTENTS_WINDOW |
-        EWT_VISCONTENTS_AUX |
-        EWT_VISCONTENTS_LAVA |
-        EWT_VISCONTENTS_SLIME |
-        EWT_VISCONTENTS_WATER |
-        EWT_VISCONTENTS_MIST,
+    EWT_ALL_VISIBLE_CONTENTS = EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY | EWT_VISCONTENTS_DETAIL_WALL |
+                               EWT_VISCONTENTS_WINDOW | EWT_VISCONTENTS_AUX | EWT_VISCONTENTS_LAVA |
+                               EWT_VISCONTENTS_SLIME | EWT_VISCONTENTS_WATER | EWT_VISCONTENTS_MIST,
 
-    EWT_ALL_INVISCONTENTS =
-        EWT_INVISCONTENTS_ORIGIN |
-        EWT_INVISCONTENTS_PLAYERCLIP |
-        EWT_INVISCONTENTS_MONSTERCLIP |
-        EWT_INVISCONTENTS_AREAPORTAL |
-        EWT_INVISCONTENTS_PROJECTILECLIP,
+    EWT_ALL_INVISCONTENTS = EWT_INVISCONTENTS_ORIGIN | EWT_INVISCONTENTS_PLAYERCLIP | EWT_INVISCONTENTS_MONSTERCLIP |
+                            EWT_INVISCONTENTS_AREAPORTAL | EWT_INVISCONTENTS_PROJECTILECLIP,
 };
 
 struct gamedef_t;
@@ -137,9 +124,7 @@ struct contentflags_t
 {
     contents_t flags;
 
-    static contentflags_t make(contents_int_t f) {
-        return contentflags_t{.flags = static_cast<contents_t>(f)};
-    }
+    static contentflags_t make(contents_int_t f) { return contentflags_t{.flags = static_cast<contents_t>(f)}; }
 
     bool equals(const gamedef_t *game, contentflags_t other) const;
 
@@ -150,7 +135,8 @@ struct contentflags_t
     bool is_detail_fence(const gamedef_t *game) const;
     bool is_detail_illusionary(const gamedef_t *game) const;
 
-    std::optional<bool> mirror_inside() const {
+    std::optional<bool> mirror_inside() const
+    {
         if (flags & EWT_CFLAG_MIRROR_INSIDE_SET) {
             return {(flags & EWT_CFLAG_MIRROR_INSIDE) != 0};
         }
@@ -160,7 +146,8 @@ struct contentflags_t
 
     inline bool will_clip_same_type(const gamedef_t *game) const { return will_clip_same_type(game, *this); }
     bool will_clip_same_type(const gamedef_t *game, contentflags_t other) const;
-    std::optional<bool> clips_same_type() const {
+    std::optional<bool> clips_same_type() const
+    {
         if (flags & EWT_CFLAG_SUPPRESS_CLIPPING_SAME_TYPE) {
             return {false};
         }
@@ -172,9 +159,7 @@ struct contentflags_t
     bool is_any_solid(const gamedef_t *game) const;
     // solid, not detail or any other extended content types
     bool is_solid(const gamedef_t *game) const;
-    bool has_structural_solid() const {
-        return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL);
-    }
+    bool has_structural_solid() const { return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL); }
     bool is_sky(const gamedef_t *game) const;
     bool is_liquid(const gamedef_t *game) const;
     bool is_valid(const gamedef_t *game, bool strict = true) const;
@@ -203,13 +188,14 @@ struct contentflags_t
 
     // returns the bit index (starting from 0) of the strongest visible content type
     // set, or -1 if no visible content bits are set (i.e. EWT_VISCONTENTS_EMPTY)
-    int visible_contents_index() const {
+    int visible_contents_index() const
+    {
         for (uint32_t index = 0; nth_bit(index) <= EWT_LAST_VISIBLE_CONTENTS; ++index) {
             if (flags & nth_bit(index)) {
                 return index;
             }
         }
-        
+
         if (flags & EWT_INVISCONTENTS_PLAYERCLIP) {
             return 10;
         } else if (flags & EWT_INVISCONTENTS_MONSTERCLIP) {
@@ -222,7 +208,8 @@ struct contentflags_t
     }
 
     // returns the strongest EWT_VISCONTENTS_ bit, discarding all other flags
-    contentflags_t visible_contents() const {
+    contentflags_t visible_contents() const
+    {
         int index = visible_contents_index();
         if (index >= 0) {
             return contentflags_t::make(static_cast<contents_t>(nth_bit(index)));
@@ -418,8 +405,7 @@ struct gamedef_t
     virtual bool contents_are_liquid(contentflags_t contents) const = 0;
     virtual bool contents_are_valid(contentflags_t contents, bool strict = true) const = 0;
     virtual int32_t contents_from_string(std::string_view str) const = 0;
-    virtual bool portal_can_see_through(
-        contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
+    virtual bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool transwater) const = 0;
     virtual bool contents_seals_map(contentflags_t contents) const = 0;
     virtual bool contents_are_opaque(contentflags_t contents, bool transwater) const = 0;
     enum class remap_type_t
@@ -435,8 +421,8 @@ struct gamedef_t
     // by portal_visible_contents, should the `brushside_side` of the brushside generate a face? e.g. liquids generate
     // front and back sides by default, but for q1 detail_wall/detail_illusionary the back side is opt-in with
     // _mirrorinside
-    virtual bool portal_generates_face(contentflags_t portal_visible_contents,
-        contentflags_t brushcontents, planeside_t brushside_side) const = 0;
+    virtual bool portal_generates_face(
+        contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;
     virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(

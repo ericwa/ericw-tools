@@ -248,7 +248,8 @@ public:
     auto stream_data() { return std::tie(m_corners); }
 
     // gtest support
-    friend std::ostream& operator<<(std::ostream& os, const aabb& aabb) {
+    friend std::ostream &operator<<(std::ostream &os, const aabb &aabb)
+    {
         os << fmt::format("{{mins: ({}), maxs: ({})}}", aabb.m_corners[0], aabb.m_corners[1]);
         return os;
     }

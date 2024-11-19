@@ -380,11 +380,11 @@ TEST(testmapsQ2, lavaclip)
 
     // check leaf contents
     EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL),
-          BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside1)->contents);
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside1)->contents);
     EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL),
-          BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside2)->contents);
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_outside2)->contents);
     EXPECT_EQ((Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_DETAIL | Q2_CONTENTS_LAVA),
-          BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_inside_lava)->contents);
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], playerclip_inside_lava)->contents);
     EXPECT_EQ(Q2_CONTENTS_LAVA, BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_lava_only)->contents);
 
     // search for face
@@ -421,7 +421,8 @@ TEST(testmapsQ2, lavawater)
     const qvec3d inside_both{0, 32, 8};
 
     // check leaf contents
-    EXPECT_EQ((Q2_CONTENTS_LAVA | Q2_CONTENTS_WATER), BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_both)->contents);
+    EXPECT_EQ(
+        (Q2_CONTENTS_LAVA | Q2_CONTENTS_WATER), BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], inside_both)->contents);
 }
 
 /**
@@ -557,8 +558,9 @@ TEST(testmapsQ2, areaportalSplit)
     CheckFilled(bsp);
 
     EXPECT_EQ(3, bsp.dareas.size()); // 1 invalid index zero reserved + 2 areas
-    EXPECT_EQ(3, bsp.dareaportals
-                   .size()); // 1 invalid index zero reserved + 2 dareaportals to store the two directions of the portal
+    EXPECT_EQ(
+        3, bsp.dareaportals
+               .size()); // 1 invalid index zero reserved + 2 dareaportals to store the two directions of the portal
 }
 
 /**
@@ -812,12 +814,11 @@ TEST(testmapsQ2, detailFence)
             SCOPED_TRACE("check leaf / brush contents");
             SCOPED_TRACE(game->create_contents_from_native(detail_wall_leaf->contents).to_string());
 
-            EXPECT_EQ(
-                (Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT), detail_wall_leaf->contents);
+            EXPECT_EQ((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT), detail_wall_leaf->contents);
 
             ASSERT_EQ(1, Leaf_Brushes(&bsp, detail_wall_leaf).size());
             EXPECT_EQ((Q2_CONTENTS_WINDOW | Q2_CONTENTS_DETAIL | Q2_CONTENTS_TRANSLUCENT),
-                  Leaf_Brushes(&bsp, detail_wall_leaf).at(0)->contents);
+                Leaf_Brushes(&bsp, detail_wall_leaf).at(0)->contents);
         }
 
         {
@@ -853,7 +854,7 @@ TEST(testmapsQ2, mistTranswater)
     EXPECT_EQ(Face_TextureNameView(&bsp, up_faces[0]), "e1u1/water6");
     EXPECT_EQ(Face_TextureNameView(&bsp, down_faces[0]), "e1u1/water6");
 
-    const auto top_of_water_up = winding_t{{-232,-32,352}, {-232,0, 352}, {-200,0, 352}, {-200,-32,352}};
+    const auto top_of_water_up = winding_t{{-232, -32, 352}, {-232, 0, 352}, {-200, 0, 352}, {-200, -32, 352}};
     const auto top_of_water_dn = top_of_water_up.flip();
 
     EXPECT_TRUE(Face_Winding(&bsp, up_faces[0]).directional_equal(top_of_water_up));
@@ -877,12 +878,13 @@ TEST(testmapsQ2, tjuncMatrix)
 
     EXPECT_EQ(GAME_QUAKE_II, game->id);
 
-    const qvec3d face_midpoint_origin {-24, 0, 24};
-    const qvec3d face_midpoint_to_tjunc {8, 0, 8};
-    const qvec3d z_delta_to_next_face {0, 0, 64};
-    const qvec3d x_delta_to_next_face {-64, 0, 0};
+    const qvec3d face_midpoint_origin{-24, 0, 24};
+    const qvec3d face_midpoint_to_tjunc{8, 0, 8};
+    const qvec3d z_delta_to_next_face{0, 0, 64};
+    const qvec3d x_delta_to_next_face{-64, 0, 0};
 
-    enum index_t : int {
+    enum index_t : int
+    {
         INDEX_DETAIL_WALL = 0,
         INDEX_SOLID,
         INDEX_SOLID_DETAIL,
@@ -895,9 +897,8 @@ TEST(testmapsQ2, tjuncMatrix)
     };
 
     auto has_tjunc = [&](index_t horizontal, index_t vertical) -> bool {
-        const qvec3d face_midpoint = face_midpoint_origin
-                + (x_delta_to_next_face * static_cast<int>(horizontal))
-                + (z_delta_to_next_face * static_cast<int>(vertical));
+        const qvec3d face_midpoint = face_midpoint_origin + (x_delta_to_next_face * static_cast<int>(horizontal)) +
+                                     (z_delta_to_next_face * static_cast<int>(vertical));
 
         auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], face_midpoint);
 
@@ -913,140 +914,140 @@ TEST(testmapsQ2, tjuncMatrix)
 
     {
         SCOPED_TRACE("INDEX_DETAIL_WALL horizontal");
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_DETAIL_WALL));
         // this one is tricky - the solid cuts a hole in the top
         // that hole (the detail_wall faces) are what weld with the side
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID));
         // same as INDEX_DETAIL_WALL, INDEX_SOLID
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WATER));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_WATER));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_TRANSPARENT_WINDOW));
         EXPECT_FALSE(has_tjunc(INDEX_DETAIL_WALL, INDEX_OPAQUE_AUX));
         // same as INDEX_DETAIL_WALL, INDEX_SOLID
-        EXPECT_TRUE( has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_DETAIL_WALL, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_SOLID horizontal - welds with anything opaque except detail_wall");
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID, INDEX_TRANSPARENT_WINDOW));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_OPAQUE_AUX));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_SOLID_DETAIL horizontal - same as INDEX_SOLID");
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_TRANSPARENT_WINDOW));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_AUX));
-        EXPECT_TRUE( has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_SOLID_DETAIL, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_TRANSPARENT_WATER horizontal");
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID_DETAIL));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_WATER));
         // water is stronger than mist, so cuts away the bottom face of the mist
         // the top face of the water then doesn't need to weld because
         EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_MIST));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WINDOW));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_AUX));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WATER, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_OPAQUE_WATER horizontal");
         // detail wall is stronger than water, so cuts a hole and the water then welds with itself
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_SOLID_DETAIL));
         // welds because opaque water and translucent don't get a face between them
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_MIST));
         // window is stronger and cuts a hole in the water
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_TRANSPARENT_WINDOW));
         // same with aux
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_AUX));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_WATER, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_WATER, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_OPAQUE_MIST horizontal");
         // detail wall is stronger, cuts mist
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_SOLID_DETAIL));
         // water is stronger, cuts mist
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_MIST));
         // window is stronger, cuts mist
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WINDOW));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_AUX));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_MIST, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_MIST, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_TRANSPARENT_WINDOW horizontal");
         // detail wall is stronger than window, cuts a hole in the window, so window
         // tjuncs with itself
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_DETAIL_WALL));
         // solid cuts a hole in the window
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SOLID_DETAIL));
         // translucent window and translucent water weld
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WATER));
         EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_WATER));
         EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_MIST));
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_TRANSPARENT_WINDOW));
         // note, aux is lower priority than window, so bottom face of aux gets cut away
         EXPECT_FALSE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_OPAQUE_AUX));
         // sky cuts hole in window
-        EXPECT_TRUE( has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_TRANSPARENT_WINDOW, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_OPAQUE_AUX horizontal");
         // detail_wall is higher priority, cuts a hole in aux, which welds with itself
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_DETAIL_WALL));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_MIST));
         // window is stronger, cuts a hole which causes aux to weld
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WINDOW));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_AUX));
-        EXPECT_TRUE( has_tjunc(INDEX_OPAQUE_AUX, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_TRANSPARENT_WINDOW));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_OPAQUE_AUX, INDEX_SKY));
     }
 
     {
         SCOPED_TRACE("INDEX_SKY horizontal - same as INDEX_SOLID");
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_DETAIL_WALL));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_SOLID));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SOLID_DETAIL));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_OPAQUE_WATER));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_OPAQUE_MIST));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_WATER));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_MIST));
         EXPECT_FALSE(has_tjunc(INDEX_SKY, INDEX_TRANSPARENT_WINDOW));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_OPAQUE_AUX));
-        EXPECT_TRUE( has_tjunc(INDEX_SKY, INDEX_SKY));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_OPAQUE_AUX));
+        EXPECT_TRUE(has_tjunc(INDEX_SKY, INDEX_SKY));
     }
 }
 
@@ -1064,8 +1065,7 @@ TEST(testmapsQ2, unknownContents)
 
         EXPECT_EQ(1, Leaf_Brushes(&bsp, leaf).size());
         // FIXME: should the unknown contents have SOLID added in the brush?
-        EXPECT_EQ((Q2_CONTENTS_SOLID | 1024),
-              Leaf_Brushes(&bsp, leaf).at(0)->contents);
+        EXPECT_EQ((Q2_CONTENTS_SOLID | 1024), Leaf_Brushes(&bsp, leaf).at(0)->contents);
     }
 
     {
@@ -1078,8 +1078,7 @@ TEST(testmapsQ2, unknownContents)
 
         EXPECT_EQ(1, Leaf_Brushes(&bsp, leaf).size());
         // FIXME: should the unknown contents have SOLID added in the brush?
-        EXPECT_EQ((Q2_CONTENTS_SOLID | nth_bit(30)),
-              Leaf_Brushes(&bsp, leaf).at(0)->contents);
+        EXPECT_EQ((Q2_CONTENTS_SOLID | nth_bit(30)), Leaf_Brushes(&bsp, leaf).at(0)->contents);
     }
 
     {
@@ -1115,14 +1114,16 @@ TEST(ltfaceQ2, noclipfacesNodraw)
     EXPECT_EQ(Face_TextureNameView(&bsp, down_faces[0]), "e1u1/water1_8");
 }
 
-TEST(testmapsQ2, chopOrder0) {
+TEST(testmapsQ2, chopOrder0)
+{
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_0.map");
 
     EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),
         std::vector<std::string>({"e1u1/ggrat4_2"}));
 }
 
-TEST(testmapsQ2, chopOrder1) {
+TEST(testmapsQ2, chopOrder1)
+{
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_chop_order_1.map");
 
     EXPECT_VECTORS_UNOREDERED_EQUAL(TexNames(bsp, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0})),

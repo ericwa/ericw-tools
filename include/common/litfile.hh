@@ -58,17 +58,21 @@ struct litheader_t
 uint32_t HDR_PackE5BRG9(qvec3f rgb);
 qvec3f HDR_UnpackE5BRG9(uint32_t packed);
 
-struct lit1_t {
+struct lit1_t
+{
     // 3 bytes (r,g,b) per sample
     std::vector<uint8_t> rgbdata;
 };
 
-struct lit_hdr {
+struct lit_hdr
+{
     // 1 packed e5bgr9 uint32_t per sample
     std::vector<uint32_t> samples;
 };
 
-struct lit_none {};
+struct lit_none
+{
+};
 
 using lit_variant_t = std::variant<lit1_t, lit_hdr, lit_none>;
 

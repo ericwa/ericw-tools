@@ -63,14 +63,14 @@ static std::unique_ptr<lightsurf_t[]> light_surfaces;
 static std::span<lightsurf_t> light_surfaces_span;
 
 // light_surfaces filtered down to just the emissive ones
-static std::vector<lightsurf_t*> emissive_light_surfaces;
+static std::vector<lightsurf_t *> emissive_light_surfaces;
 
 std::span<lightsurf_t> &LightSurfaces()
 {
     return light_surfaces_span;
 }
 
-std::vector<lightsurf_t*> &EmissiveLightSurfaces()
+std::vector<lightsurf_t *> &EmissiveLightSurfaces()
 {
     return emissive_light_surfaces;
 }
@@ -315,13 +315,36 @@ light_settings::light_settings()
               {"rays", visapprox_t::RAYS}},
           &debug_group,
           "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"},
-      lit{this, "lit", [&](const std::string &, parser_base_t &, source) { write_litfile |= lightfile::external; return true; }, &output_group, "write .lit file"},
-      lit2{this, "lit2", [&](const std::string &, parser_base_t &, source) { write_litfile = lightfile::lit2; return true; }, &experimental_group, "write .lit2 file"},
-      bspxlit{this, "bspxlit", [&](const std::string &, parser_base_t &, source) { write_litfile |= lightfile::bspx; return true; }, &experimental_group,
-          "writes rgb data into the bsp itself"},
-      lux{this, "lux", [&](const std::string &, parser_base_t &, source) { write_luxfile |= lightfile::external; return true; }, &experimental_group, "write .lux file"},
-      bspxlux{this, "bspxlux", [&](const std::string &, parser_base_t &, source) { write_luxfile |= lightfile::bspx; return true; }, &experimental_group,
-          "writes lux data into the bsp itself"},
+      lit{this, "lit",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile::external;
+              return true;
+          },
+          &output_group, "write .lit file"},
+      lit2{this, "lit2",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile = lightfile::lit2;
+              return true;
+          },
+          &experimental_group, "write .lit2 file"},
+      bspxlit{this, "bspxlit",
+          [&](const std::string &, parser_base_t &, source) {
+              write_litfile |= lightfile::bspx;
+              return true;
+          },
+          &experimental_group, "writes rgb data into the bsp itself"},
+      lux{this, "lux",
+          [&](const std::string &, parser_base_t &, source) {
+              write_luxfile |= lightfile::external;
+              return true;
+          },
+          &experimental_group, "write .lux file"},
+      bspxlux{this, "bspxlux",
+          [&](const std::string &, parser_base_t &, source) {
+              write_luxfile |= lightfile::bspx;
+              return true;
+          },
+          &experimental_group, "writes lux data into the bsp itself"},
       bspxonly{this, "bspxonly",
           [&](const std::string &, parser_base_t &, source src) {
               write_litfile = lightfile::bspx;
@@ -430,7 +453,8 @@ light_settings::light_settings()
           },
           &debug_group, "save mottle pattern to lightmap"},
 
-      debug_lightgrid_octree{this, "debug_lightgrid_octree", false, &debug_group, "write .octree.prt file for light grid"}
+      debug_lightgrid_octree{
+          this, "debug_lightgrid_octree", false, &debug_group, "write .octree.prt file for light grid"}
 {
 }
 
@@ -632,7 +656,7 @@ static void CacheTextures(const mbsp_t &bsp)
 static void CreateLightmapSurfaces(mbsp_t *bsp)
 {
     light_surfaces = std::make_unique<lightsurf_t[]>(bsp->dfaces.size());
-    light_surfaces_span = { light_surfaces.get(), light_surfaces.get() + bsp->dfaces.size() };
+    light_surfaces_span = {light_surfaces.get(), light_surfaces.get() + bsp->dfaces.size()};
     logging::funcheader();
     logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&bsp](size_t i) {
         auto facesup = faces_sup.empty() ? nullptr : &faces_sup[i];
@@ -844,9 +868,9 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
 
             logging::parallel_for(static_cast<size_t>(0), bsp.dfaces.size(), [i, &bsp](size_t f) {
                 if (Face_IsLightmapped(&bsp, &bsp.dfaces[f])) {
-    #if defined(HAVE_EMBREE) && defined(__SSE2__)
+#if defined(HAVE_EMBREE) && defined(__SSE2__)
                     _MM_SET_FLUSH_ZERO_MODE(_MM_FLUSH_ZERO_ON);
-    #endif
+#endif
 
                     IndirectLightFace(&bsp, light_surfaces[f], light_options, i);
                 }

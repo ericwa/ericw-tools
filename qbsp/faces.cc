@@ -57,11 +57,10 @@ static bool ShouldOmitFace(face_t *f)
     }
 
     // omit faces fully covered by detail wall
-    if (!f->markleafs.empty() && std::all_of(f->markleafs.begin(), f->markleafs.end(),
-                                     [](node_t *l) {
-        auto *leafdata = l->get_leafdata();
-        return leafdata->contents.is_detail_wall(qbsp_options.target_game);
-    })) {
+    if (!f->markleafs.empty() && std::all_of(f->markleafs.begin(), f->markleafs.end(), [](node_t *l) {
+            auto *leafdata = l->get_leafdata();
+            return leafdata->contents.is_detail_wall(qbsp_options.target_game);
+        })) {
         return true;
     }
 
@@ -504,8 +503,8 @@ static std::unique_ptr<face_t> FaceFromPortal(portal_t *p, bool pside)
         f->w = p->winding.clone();
     }
 
-    f->contents = {.front = p->nodes[pside]->get_leafdata()->contents,
-                   .back = p->nodes[!pside]->get_leafdata()->contents};
+    f->contents = {
+        .front = p->nodes[pside]->get_leafdata()->contents, .back = p->nodes[!pside]->get_leafdata()->contents};
 
     UpdateFaceSphere(f.get());
 

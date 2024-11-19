@@ -125,8 +125,7 @@ struct q2_miptex_t
     auto stream_data() { return std::tie(name, width, height, offsets, animname, flags, contents, value); }
 };
 
-std::optional<texture> load_wal(
-    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_wal(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
     stream >> endianness<std::endian::little>;
@@ -166,8 +165,7 @@ Quake/Half Life MIP
 ============================================================================
 */
 
-std::optional<texture> load_mip(
-    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_mip(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     imemstream stream(file->data(), file->size());
     stream >> endianness<std::endian::little>;
@@ -255,8 +253,7 @@ std::optional<texture> load_mip(
     return tex;
 }
 
-std::optional<texture> load_stb(
-    std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
+std::optional<texture> load_stb(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
 {
     int x, y, channels_in_file;
     stbi_uc *rgba_data = stbi_load_from_memory(file->data(), file->size(), &x, &y, &channels_in_file, 4);
@@ -370,8 +367,7 @@ std::optional<texture_meta> load_wal_meta(std::string_view name, const fs::data 
 }
 
 // see .wal_json section in qbsp.rst for format documentation
-std::optional<texture_meta> load_wal_json_meta(
-    std::string_view name, const fs::data &file, const gamedef_t *game)
+std::optional<texture_meta> load_wal_json_meta(std::string_view name, const fs::data &file, const gamedef_t *game)
 {
     try {
         auto json = json::parse(file->begin(), file->end());
@@ -406,8 +402,7 @@ std::optional<texture_meta> load_wal_json_meta(
             if (contents.is_number_integer()) {
                 meta.contents_native = contents.get<int32_t>();
             } else if (contents.is_string()) {
-                meta.contents_native =
-                        game->contents_from_string(contents.get<std::string>());
+                meta.contents_native = game->contents_from_string(contents.get<std::string>());
             } else if (contents.is_array()) {
                 int native = 0;
                 for (auto &content : contents) {
@@ -534,8 +529,7 @@ static qvec3b increase_saturation(const qvec3b &color)
 }
 
 // Load the specified texture from the BSP
-static void AddTextureName(
-    std::string_view textureName, const mbsp_t *bsp, const settings::common_settings &options)
+static void AddTextureName(std::string_view textureName, const mbsp_t *bsp, const settings::common_settings &options)
 {
     if (img::find(textureName)) {
         return;

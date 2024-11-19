@@ -59,8 +59,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
         return;
     }
     // at this point, `node` may be a leaf or a cluster
-    if (auto *leafdata = node->get_leafdata();
-        leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game))
+    if (auto *leafdata = node->get_leafdata(); leafdata && leafdata->contents.is_any_solid(qbsp_options.target_game))
         return;
 
     for (p = node->portals; p; p = next) {
@@ -79,8 +78,7 @@ static void WritePortals_r(node_t *node, std::ofstream &portalFile, bool cluster
             auto back_contents = ClusterContents(p->nodes.back);
 
             FError("front {}, cluster contents: {}. back {}, cluster contents: {}. portal: {}", front,
-                front_contents.to_string(), back,
-                back_contents.to_string(), w->center());
+                front_contents.to_string(), back, back_contents.to_string(), w->center());
         }
 
         /*

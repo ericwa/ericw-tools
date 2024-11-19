@@ -7,12 +7,16 @@
 #include "test_qbsp.hh"
 #include "testutils.hh"
 
-static bool q2_leaf_sees(const mbsp_t &bsp, const std::unordered_map<int, std::vector<uint8_t>> &vis, const mleaf_t *a, const mleaf_t *b) {
+static bool q2_leaf_sees(
+    const mbsp_t &bsp, const std::unordered_map<int, std::vector<uint8_t>> &vis, const mleaf_t *a, const mleaf_t *b)
+{
     auto &pvs = vis.at(a->cluster);
     return Pvs_LeafVisible(&bsp, pvs, b);
 }
 
-static bool q1_leaf_sees(const mbsp_t &bsp, const std::unordered_map<int, std::vector<uint8_t>> &vis, const mleaf_t *a, const mleaf_t *b) {
+static bool q1_leaf_sees(
+    const mbsp_t &bsp, const std::unordered_map<int, std::vector<uint8_t>> &vis, const mleaf_t *a, const mleaf_t *b)
+{
     auto &pvs = vis.at(a->visofs);
     return Pvs_LeafVisible(&bsp, pvs, b);
 }
@@ -21,7 +25,6 @@ TEST(vis, detailLeakTest)
 {
     auto [bsp, bspx] = QbspVisLight_Q2("q2_detail_leak_test.map", {}, runvis_t::yes);
     const auto vis = DecompressAllVis(&bsp);
-
 
     // points arranged so the items can only see the corrseponding _curve point
     const auto item_enviro = qvec3d(48, 464, 32);
@@ -139,7 +142,8 @@ TEST(vis, q1FuncIllusionaryVisblocker)
     }
 }
 
-TEST(vis, ClipStackWinding) {
+TEST(vis, ClipStackWinding)
+{
     pstack_t stack{};
     visstats_t stats{};
 

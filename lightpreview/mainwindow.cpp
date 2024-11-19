@@ -110,7 +110,8 @@ static QStringList GetRecents()
 static constexpr auto CAMERA_BOOKMARKS_SETTINGS_KEY = "camera_bookmarks";
 static constexpr size_t MAX_CAMERA_BOOKMARKS = 10;
 
-struct camera_bookmark_t {
+struct camera_bookmark_t
+{
     qvec3f origin;
     qvec3f forward;
 };
@@ -121,7 +122,8 @@ static void ClearCameraBookmarks()
     s.setValue(CAMERA_BOOKMARKS_SETTINGS_KEY, QStringList());
 }
 
-static QString CameraBookmarkToQString(const camera_bookmark_t &b) {
+static QString CameraBookmarkToQString(const camera_bookmark_t &b)
+{
     return QString("%1 %2 %3 %4 %5 %6")
         .arg(b.origin[0])
         .arg(b.origin[1])
@@ -131,7 +133,8 @@ static QString CameraBookmarkToQString(const camera_bookmark_t &b) {
         .arg(b.forward[2]);
 }
 
-static std::optional<camera_bookmark_t> CameraBookmarkFromQString(const QString &string) {
+static std::optional<camera_bookmark_t> CameraBookmarkFromQString(const QString &string)
+{
     QStringList parts = string.split(' ', Qt::SkipEmptyParts);
     if (parts.length() != 6)
         return std::nullopt;
@@ -394,14 +397,21 @@ void MainWindow::createPropertiesSidebar()
         glView->setKeepCullOrigin(checked);
         keepcullfrustum->setEnabled(checked);
     });
-    connect(keepcullfrustum, &QAbstractButton::toggled, this, [this](bool checked) { glView->setKeepCullFrustum(checked); });
+    connect(keepcullfrustum, &QAbstractButton::toggled, this,
+        [this](bool checked) { glView->setKeepCullFrustum(checked); });
     connect(drawflat, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawFlat(checked); });
-    connect(hull0, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{0} : std::nullopt); });
-    connect(hull1, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{1} : std::nullopt); });
-    connect(hull2, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{2} : std::nullopt); });
-    connect(hull3, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{3} : std::nullopt); });
-    connect(hull4, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{4} : std::nullopt); });
-    connect(hull5, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{5} : std::nullopt); });
+    connect(hull0, &QAbstractButton::toggled, this,
+        [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{0} : std::nullopt); });
+    connect(hull1, &QAbstractButton::toggled, this,
+        [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{1} : std::nullopt); });
+    connect(hull2, &QAbstractButton::toggled, this,
+        [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{2} : std::nullopt); });
+    connect(hull3, &QAbstractButton::toggled, this,
+        [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{3} : std::nullopt); });
+    connect(hull4, &QAbstractButton::toggled, this,
+        [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{4} : std::nullopt); });
+    connect(hull5, &QAbstractButton::toggled, this,
+        [this](bool checked) { glView->setDrawLeafs(checked ? std::optional<int>{5} : std::nullopt); });
     connect(drawportals, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawPortals(checked); });
     connect(drawleak, &QAbstractButton::toggled, this, [this](bool checked) { glView->setDrawLeak(checked); });
     connect(keepposition, &QAbstractButton::toggled, this, [this](bool checked) { glView->setKeepOrigin(checked); });
@@ -410,16 +420,14 @@ void MainWindow::createPropertiesSidebar()
     connect(draw_opaque, &QAbstractButton::toggled, this,
         [this](bool checked) { glView->setDrawTranslucencyAsOpaque(checked); });
     connect(glView, &GLView::cameraMoved, this, &MainWindow::displayCameraPositionInfo);
-    connect(show_bmodels, &QAbstractButton::toggled, this,
-        [this](bool checked) { glView->setShowBmodels(checked); });
-    connect(brightnessSlider, &QAbstractSlider::valueChanged, this, [this,brightnessLabel](int value){
+    connect(show_bmodels, &QAbstractButton::toggled, this, [this](bool checked) { glView->setShowBmodels(checked); });
+    connect(brightnessSlider, &QAbstractSlider::valueChanged, this, [this, brightnessLabel](int value) {
         float brightness = value / 10.0f;
         brightnessLabel->setText(QString::fromLatin1("%1").arg(brightness, 0, 'f', 2));
         glView->setBrightness(brightness);
     });
-    connect(brightnessReset, &QAbstractButton::pressed, this, [this, brightnessSlider](){
-        brightnessSlider->setValue(0);
-    });
+    connect(brightnessReset, &QAbstractButton::pressed, this,
+        [this, brightnessSlider]() { brightnessSlider->setValue(0); });
 
     // set up load timer
     m_fileReloadTimer = std::make_unique<QTimer>();
@@ -542,14 +550,12 @@ void MainWindow::updateRecentsSubmenu(const QStringList &recents)
     });
 }
 
-void MainWindow::updateCameraBookmarksSubmenu() {
+void MainWindow::updateCameraBookmarksSubmenu()
+{
     cameraBookmarksMenu->clear();
 
     cameraBookmarksMenu->addAction(tr("Bookmark Current Camera Position"), this, [this]() {
-        camera_bookmark_t b {
-            .origin = this->glView->cameraPosition(),
-            .forward = this->glView->cameraForward()
-        };
+        camera_bookmark_t b{.origin = this->glView->cameraPosition(), .forward = this->glView->cameraForward()};
         AddCameraBookmark(b);
         this->updateCameraBookmarksSubmenu();
     });
@@ -558,9 +564,8 @@ void MainWindow::updateCameraBookmarksSubmenu() {
     auto bookmarks = GetCameraBookmarks();
     for (const auto &bookmark : bookmarks) {
         auto *action = cameraBookmarksMenu->addAction(CameraBookmarkToQString(bookmark));
-        connect(action, &QAction::triggered, this, [this, bookmark]() {
-            this->glView->setCamera(bookmark.origin, bookmark.forward);
-        });
+        connect(action, &QAction::triggered, this,
+            [this, bookmark]() { this->glView->setCamera(bookmark.origin, bookmark.forward); });
     }
 
     cameraBookmarksMenu->addSeparator();
@@ -572,7 +577,8 @@ void MainWindow::updateCameraBookmarksSubmenu() {
 
 MainWindow::~MainWindow() { }
 
-static void OpenHelpFile(const QString &file) {
+static void OpenHelpFile(const QString &file)
+{
     QString fileString = QCoreApplication::applicationDirPath() + QStringLiteral("/doc/") + file;
     QUrl fileUrl = QUrl::fromLocalFile(fileString);
 
@@ -601,7 +607,7 @@ void MainWindow::setupMenu()
     // edit menu
 
     auto *editMenu = menuBar()->addMenu(tr("&Edit"));
-    editMenu->addAction(tr("&Copy Camera Position"), this, [this](){
+    editMenu->addAction(tr("&Copy Camera Position"), this, [this]() {
         qvec3f pos = this->glView->cameraPosition();
 
         std::string cpp_str = fmt::format("{}", pos);
@@ -620,13 +626,9 @@ void MainWindow::setupMenu()
 
     auto *helpMenu = menuBar()->addMenu(tr("&Help"));
 
-    helpMenu->addAction(tr("&Lightpreview Documentation"), this, [](){
-        OpenHelpFile("lightpreview.html");
-    });
-    helpMenu->addAction(tr("&About"), this, [this](){
-        QMessageBox::about(this, tr("About lightpreview"),
-                           tr("ericw-tools " ERICWTOOLS_VERSION));
-    });
+    helpMenu->addAction(tr("&Lightpreview Documentation"), this, []() { OpenHelpFile("lightpreview.html"); });
+    helpMenu->addAction(tr("&About"), this,
+        [this]() { QMessageBox::about(this, tr("About lightpreview"), tr("ericw-tools " ERICWTOOLS_VERSION)); });
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
@@ -920,8 +922,9 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
             ConvertBSPFormat(&m_bspdata, &bspver_generic);
 
         } else {
-            m_bspdata = QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options),
-                ParseArgs(vis_options), ParseArgs(light_options), vis_checkbox->isChecked(), light_checkbox->isChecked());
+            m_bspdata =
+                QbspVisLight_Common(fs_path, ParseArgs(common_options), ParseArgs(qbsp_options), ParseArgs(vis_options),
+                    ParseArgs(light_options), vis_checkbox->isChecked(), light_checkbox->isChecked());
 
             // FIXME: move to a lightpreview_settings
             settings::common_settings settings;
@@ -961,9 +964,9 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
     try {
         auto lit_variant = LoadLitFile(lit_path);
 
-        if (auto* lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
+        if (auto *lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
             m_litdata = std::move(lit1_ptr->rgbdata);
-        } else if (auto* lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
+        } else if (auto *lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
             m_hdr_litdata = std::move(lit_hdr_ptr->samples);
         }
     } catch (const std::runtime_error &error) {
@@ -993,7 +996,8 @@ void MainWindow::compileThreadExited()
     auto ents = EntData_Parse(bsp);
 
     // build lightmap atlas
-    auto atlas = build_lightmap_atlas(bsp, m_bspdata.bspx.entries, m_litdata, m_hdr_litdata, false, bspx_decoupled_lm->isChecked());
+    auto atlas = build_lightmap_atlas(
+        bsp, m_bspdata.bspx.entries, m_litdata, m_hdr_litdata, false, bspx_decoupled_lm->isChecked());
 
     glView->renderBSP(m_mapFile, bsp, m_bspdata.bspx.entries, ents, atlas, render_settings, bspx_normals->isChecked());
 

@@ -168,8 +168,8 @@ void mapdata_t::add_hash_vector(const qvec3d &point, size_t num)
 
 void mapdata_t::add_hash_edge(size_t v1, size_t v2, int64_t edge_index, const face_t *face)
 {
-    hashedges.emplace(std::make_pair(v1, v2), hashedge_t{.v1 = v1, .v2 = v2, .edge_index = edge_index, .face = face,
-                                                         .has_been_reused = false});
+    hashedges.emplace(std::make_pair(v1, v2),
+        hashedge_t{.v1 = v1, .v2 = v2, .edge_index = edge_index, .face = face, .has_been_reused = false});
 }
 
 const std::optional<img::texture_meta> &mapdata_t::load_image_meta(std::string_view name)
@@ -691,8 +691,7 @@ static surfflags_t SurfFlagsForEntity(
     if (entity.epairs.has("_surflight_atten"))
         flags.surflight_atten = entity.epairs.get_float("_surflight_atten");
     // Paril: inherit _surflight_atten from worldspawn if unset
-    else if (!entity.epairs.has("_surflight_atten") &&
-             map.world_entity().epairs.has("_surflight_atten"))
+    else if (!entity.epairs.has("_surflight_atten") && map.world_entity().epairs.has("_surflight_atten"))
         flags.surflight_atten = map.world_entity().epairs.get_float("_surflight_atten");
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
@@ -794,12 +793,12 @@ static surfflags_t SurfFlagsForEntity(
         qvec3f mincolor{};
 
         entity.epairs.get_vector("_mincolor", mincolor);
-        if (qv::epsilonEmpty(mincolor, (float) QBSP_EQUAL_EPSILON)) {
+        if (qv::epsilonEmpty(mincolor, (float)QBSP_EQUAL_EPSILON)) {
             entity.epairs.get_vector("_minlight_color", mincolor);
         }
 
         mincolor = qv::normalize_color_format(mincolor);
-        if (!qv::epsilonEmpty(mincolor, (float) QBSP_EQUAL_EPSILON)) {
+        if (!qv::epsilonEmpty(mincolor, (float)QBSP_EQUAL_EPSILON)) {
             for (int32_t i = 0; i < 3; i++) {
                 flags.minlight_color[i] = std::clamp(mincolor[i], 0.0f, 255.0f);
             }
@@ -820,8 +819,9 @@ static surfflags_t SurfFlagsForEntity(
     return flags;
 }
 
-static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side_t &input_side, mapface_t &mapface, const mapbrush_t &brush,
-    maptexinfo_t *tx, std::array<qvec3d, 3> &planepts, const qplane3d &plane, texture_def_issues_t &issue_stats)
+static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side_t &input_side, mapface_t &mapface,
+    const mapbrush_t &brush, maptexinfo_t *tx, std::array<qvec3d, 3> &planepts, const qplane3d &plane,
+    texture_def_issues_t &issue_stats)
 {
     quark_tx_info_t extinfo;
     mapface.texname = input_side.texture;
@@ -899,7 +899,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
                 if (visible_contents & i) {
                     if (visible_contents != i) {
                         FError("{}: Mixed visible contents: {}", mapface.line,
-                               qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native)
+                            qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native)
                                 .to_string());
                     }
                 }
@@ -908,9 +908,8 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
 
         // Other Q2 hard errors
         if (extinfo.info->contents_native & (Q2_CONTENTS_MONSTER | Q2_CONTENTS_DEADMONSTER)) {
-            FError(
-                "{}: Illegal contents: {}", mapface.line, qbsp_options.target_game->create_contents_from_native(
-                        extinfo.info->contents_native).to_string());
+            FError("{}: Illegal contents: {}", mapface.line,
+                qbsp_options.target_game->create_contents_from_native(extinfo.info->contents_native).to_string());
         }
 
         // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
@@ -1000,8 +999,8 @@ std::tuple<int32_t, std::optional<size_t>> mapbrush_t::sort_key() const
     return {chop_index, line.line_number};
 }
 
-static std::optional<mapface_t> ParseBrushFace(
-    const mapfile::brush_side_t &input_side, const mapbrush_t &brush, const mapentity_t &entity, texture_def_issues_t &issue_stats)
+static std::optional<mapface_t> ParseBrushFace(const mapfile::brush_side_t &input_side, const mapbrush_t &brush,
+    const mapentity_t &entity, texture_def_issues_t &issue_stats)
 {
     maptexinfo_t tx;
     mapface_t face;
@@ -1023,7 +1022,7 @@ static std::optional<mapface_t> ParseBrushFace(
     if (tx.flags.is_nodraw || tx.flags.is_hintskip || tx.flags.is_hint) {
         mapfile::brush_side_t temp;
         temp.plane = face.get_plane();
-        temp.set_texinfo(mapfile::texdef_quake_ed_t{ { 0, 0 }, 0, { 1, 1 }});
+        temp.set_texinfo(mapfile::texdef_quake_ed_t{{0, 0}, 0, {1, 1}});
         tx.vecs = temp.vecs;
     }
 
@@ -1468,8 +1467,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
 
         if (!contents.types_equal(base_contents, qbsp_options.target_game)) {
             logging::print("WARNING: {}: brush has multiple face contents ({} vs {}), the former will be used.\n",
-                mapface.line, base_contents.to_string(),
-                contents.to_string());
+                mapface.line, base_contents.to_string(), contents.to_string());
             break;
         }
     }
@@ -1497,8 +1495,8 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     if (string_iequals(entity.epairs.get("classname"), "func_illusionary_visblocker")) {
         // unset solid + detail, set mist
         // note this overrides the logic in face_get_contents() that normally forces mist to be detail
-        base_contents = contentflags_t::make((base_contents.flags & ~(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL))
-                                             | EWT_VISCONTENTS_MIST);
+        base_contents = contentflags_t::make(
+            (base_contents.flags & ~(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL)) | EWT_VISCONTENTS_MIST);
     }
 
     // non-Q2: -transwater implies liquids are detail
@@ -1699,7 +1697,7 @@ void ParseEntity(const mapfile::map_entity_t &in_entity, mapentity_t &entity, te
     if (in_entity.epairs.has("origin")) {
         in_entity.epairs.get_vector("origin", entity.origin);
     }
-    
+
     // _omitbrushes 1 just discards all brushes in the entity.
     // could be useful for geometry guides, selective compilation, etc.
     bool omit = in_entity.epairs.get_int("_omitbrushes");
@@ -1834,7 +1832,8 @@ static mapentity_t LoadExternalMap(const std::string &filename)
         FError("Couldn't load external map file \"{}\".\n", filename);
     }
 
-    auto in_map = mapfile::parse(std::string_view(reinterpret_cast<const char*>(file->data()), file->size()), parser_source_location{filename});
+    auto in_map = mapfile::parse(
+        std::string_view(reinterpret_cast<const char *>(file->data()), file->size()), parser_source_location{filename});
     texture_def_issues_t issue_stats;
 
     // parse the worldspawn
@@ -1895,7 +1894,7 @@ void ProcessExternalMapEntity(mapentity_t &entity)
     qvec3f angles;
     entity.epairs.get_vector("_external_map_angles", angles);
 
-    if (qv::epsilonEmpty(angles, (float) QBSP_EQUAL_EPSILON)) {
+    if (qv::epsilonEmpty(angles, (float)QBSP_EQUAL_EPSILON)) {
         angles[1] = entity.epairs.get_float("_external_map_angle");
     }
 
@@ -2368,7 +2367,7 @@ void LoadMapFile()
             for (const auto &in_entity : input_map.entities) {
                 mapentity_t &entity = map.entities.emplace_back();
 
-                ParseEntity(in_entity, entity,issue_stats);
+                ParseEntity(in_entity, entity, issue_stats);
 
                 if (entity.epairs.get("classname") == "worldspawn") {
                     // The easiest way to get the additional map's worldspawn brushes
