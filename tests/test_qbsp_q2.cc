@@ -860,6 +860,15 @@ TEST(testmapsQ2, mistTranswater)
     EXPECT_TRUE(Face_Winding(&bsp, down_faces[0]).directional_equal(top_of_water_dn));
 }
 
+TEST(testmapsQ2, mistAuxImplicitlyDetail)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_mist_aux_implicitly_detail.map", {});
+
+    ASSERT_TRUE(prt);
+    EXPECT_EQ(prt->portals.size(), 0);
+    EXPECT_EQ(prt->portalleafs, 1);
+}
+
 TEST(testmapsQ2, tjuncMatrix)
 {
     const auto [b, bspx, prt] = LoadTestmapQ2("q2_tjunc_matrix.map");
