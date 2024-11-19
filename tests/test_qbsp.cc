@@ -615,6 +615,14 @@ TEST(testmapsQ1, simpleSealed2)
         std::vector<const mface_t *>{other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y});
 }
 
+TEST(testmapsQ1, q1FuncIllusionaryVisblocker)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_func_illusionary_visblocker.map", {});
+
+    EXPECT_EQ(prt->portalleafs, 3);
+    EXPECT_EQ(prt->portals.size(), 0);
+}
+
 TEST(testmapsQ1, simpleWorldspawnWorldspawn)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map", {"-tjunc", "rotate"});

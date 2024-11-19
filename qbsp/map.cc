@@ -1495,7 +1495,10 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
     }
 
     if (string_iequals(entity.epairs.get("classname"), "func_illusionary_visblocker")) {
-        base_contents = contentflags_t::make(base_contents.flags | EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER);
+        // unset solid + detail, set mist
+        // note this overrides the logic in face_get_contents() that normally forces mist to be detail
+        base_contents = contentflags_t::make((base_contents.flags & ~(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL))
+                                             | EWT_VISCONTENTS_MIST);
     }
 
     // non-Q2: -transwater implies liquids are detail

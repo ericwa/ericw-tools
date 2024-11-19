@@ -65,11 +65,6 @@ bool Portal_VisFlood(const portal_t *p)
     contentflags_t contents0 = ClusterContents(p->nodes[0]);
     contentflags_t contents1 = ClusterContents(p->nodes[1]);
 
-    /* Can't see through func_illusionary_visblocker */
-    if ((contents0.flags & EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER)
-    || (contents1.flags & EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER))
-        return false;
-
     // Check per-game visibility
     return qbsp_options.target_game->portal_can_see_through(
         contents0, contents1, qbsp_options.transwater.value());

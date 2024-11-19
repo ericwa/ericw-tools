@@ -93,7 +93,7 @@ enum contents_t : contents_int_t {
     EWT_CFLAG_MONSTER = nth_bit<uint64_t>(26), // disallowed in maps, only for gamecode use
     EWT_CFLAG_DEADMONSTER = nth_bit<uint64_t>(27), // disallowed in maps, only for gamecode use
 
-    EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER = nth_bit<uint64_t>(28),
+    // 28 unused
     EWT_CFLAG_DETAIL = nth_bit<uint64_t>(29), // brushes to be added after vis leafs
     
 // unused Q2 contents bits - just present here so we can roundtrip all 32-bit Q2 contents
@@ -128,7 +128,6 @@ enum contents_t : contents_int_t {
         EWT_INVISCONTENTS_PLAYERCLIP |
         EWT_INVISCONTENTS_MONSTERCLIP |
         EWT_INVISCONTENTS_AREAPORTAL |
-        EWT_INVISCONTENTS_ILLUSIONARY_VISBLOCKER |
         EWT_INVISCONTENTS_PROJECTILECLIP,
 };
 
