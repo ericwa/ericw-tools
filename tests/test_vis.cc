@@ -106,9 +106,9 @@ TEST(vis, q1FuncIllusionaryVisblocker)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_func_illusionary_visblocker.map", {}, runvis_t::yes);
 
-    // should export a face
-    auto *face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {80, 16, 96}, {0, 1, 0});
-    ASSERT_TRUE(face);
+    // func_illusionary_visblocker is 2 sided by default
+    EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {80, 16, 96}, {0, 1, 0}));
+    EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {80, 16, 96}, {0, -1, 0}));
 
     const auto vis = DecompressAllVis(&bsp);
 
@@ -126,6 +126,7 @@ TEST(vis, q1FuncIllusionaryVisblocker)
 
     EXPECT_EQ(item_enviro_leaf->contents, CONTENTS_EMPTY);
     EXPECT_EQ(player_start_leaf->contents, CONTENTS_EMPTY);
+    // water brush inside func_illusionary_visblocker gets converted to empty
     EXPECT_EQ(in_visblocker_leaf->contents, CONTENTS_EMPTY);
 
     // check visdata
