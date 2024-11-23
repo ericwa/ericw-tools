@@ -511,8 +511,6 @@ static bool IsSkipName(const char *name)
         return true;
     if (!Q_strcasecmp(name, "null")) // zhlt compat
         return true;
-    if (!Q_strcasecmp(name, "__TB_empty"))
-        return true;
     return false;
 }
 

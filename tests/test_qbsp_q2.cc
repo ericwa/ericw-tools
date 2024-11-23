@@ -734,8 +734,8 @@ TEST(testmapsQ2, tbCleanup)
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_tb_cleanup.map");
 
     {
-        SCOPED_TRACE("check that __TB_empty was converted to skip");
-        EXPECT_EQ(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}));
+        SCOPED_TRACE("check that __TB_empty was not converted to skip");
+        EXPECT_NE(nullptr, BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}));
     }
 
     {
