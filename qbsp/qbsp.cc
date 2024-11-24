@@ -985,6 +985,24 @@ static void GatherLeafVolumes_r(node_t *node, bspbrush_t::container &container)
     GatherLeafVolumes_r(nodedata->children[1], container);
 }
 
+/* Returns true if the user requested to generate an entity bmodel clipnodes
+ * for a given hull. */
+static bool ShouldGenerateClipnodes(mapentity_t &entity, hull_index_t hullnum)
+{
+    // Default to generating clipnodes for all hulls.
+    if (!entity.epairs.has("_hulls")) {
+        return true;
+    }
+
+    const int hulls = entity.epairs.get_int("_hulls");
+    // Ensure 0 means all hulls even in the case we have more than 32 hulls.
+    if (hulls == 0) {
+        return true;
+    }
+
+    return hulls & (1 << hullnum.value_or(0));
+}
+
 /*
 ===============
 ProcessEntity
@@ -1089,6 +1107,16 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     // simpler operation for hulls
     if (hullnum.value_or(0)) {
+        if (!ShouldGenerateClipnodes(entity, hullnum)) {
+            // We still need to emit an empty tree otherwise hull 0 will point past
+            // the clipnode array (FIXME?).
+            bspbrush_t::container empty;
+            tree_t tree;
+            BrushBSP(tree, entity, empty, tree_split_t::FAST);
+            ExportClipNodes(entity, tree.headnode, hullnum.value());
+            return;
+        }
+
         tree_t tree;
         BrushBSP(tree, entity, brushes, tree_split_t::FAST);
         if (map.is_world_entity(entity) && !qbsp_options.nofill.value()) {
@@ -1114,6 +1142,10 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
             CountLeafs(tree.headnode);
         }
         ExportClipNodes(entity, tree.headnode, hullnum.value());
+        return;
+    }
+
+    if (!ShouldGenerateClipnodes(entity, hullnum)) {
         return;
     }
 
