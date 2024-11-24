@@ -143,6 +143,22 @@ TEST(vis, q1FuncIllusionaryVisblocker)
     }
 }
 
+TEST(vis, q1FuncIllusionaryVisblockerInteractions)
+{
+    SCOPED_TRACE("make sure illusionary_visblocker covered by detail_illusionary doesn't break the visblocker");
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_func_illusionary_visblocker_interactions.map", {}, runvis_t::yes);
+
+    const auto vis = DecompressAllVis(&bsp);
+
+    const auto player_start = qvec3d(80, -272, 40);
+    const auto in_visblocker_covered_by_illusionary = qvec3d(48, 248, 56);
+
+    auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
+    auto *in_visblocker_covered_by_illusionary_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_visblocker_covered_by_illusionary);
+
+    EXPECT_FALSE(q1_leaf_sees(bsp, vis, in_visblocker_covered_by_illusionary_leaf, player_start_leaf));
+}
+
 TEST(vis, ClipStackWinding)
 {
     pstack_t stack{};

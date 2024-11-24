@@ -466,14 +466,15 @@ public:
         if (contents_are_detail_fence(contents) || contents_are_detail_wall(contents)) {
             return create_solid_contents();
         }
+
         if (contents.flags & EWT_VISCONTENTS_MIST) {
             // clear mist. detail_illusionary on its own becomes CONTENTS_EMPTY,
             // detail_illusionary in water becomes CONTENTS_WATER, etc.
-            return contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_MIST);
+            contents = contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_MIST);
         }
         if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
             // this exports as empty
-            return contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
+            contents = contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
         }
 
         return contents;
@@ -484,14 +485,20 @@ public:
         auto bits_a = a.flags;
         auto bits_b = b.flags;
 
+        auto result = contentflags_t::make(bits_a | bits_b);
+
         if (contents_are_solid(a) || contents_are_solid(b)) {
             return create_solid_contents();
         }
         if (contents_are_sky(a) || contents_are_sky(b)) {
             return contentflags_t::make(EWT_VISCONTENTS_SKY);
         }
+        if ((a.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (b.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
+            // strip out detail flag, otherwise it breaks the visblocker feature
+            result = contentflags_t::make(result.flags & ~EWT_CFLAG_DETAIL);
+        }
 
-        return contentflags_t::make(bits_a | bits_b);
+        return result;
     }
 
     contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
@@ -1294,6 +1301,11 @@ struct gamedef_q2_t : public gamedef_t
 
         // structural solid eats detail flags
         if (contents_are_solid(a) || contents_are_solid(b)) {
+            bits_a &= ~EWT_CFLAG_DETAIL;
+            bits_b &= ~EWT_CFLAG_DETAIL;
+        }
+        if ((bits_a & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) || (bits_b & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) {
+            // strip out detail flag, otherwise it breaks the visblocker feature
             bits_a &= ~EWT_CFLAG_DETAIL;
             bits_b &= ~EWT_CFLAG_DETAIL;
         }
