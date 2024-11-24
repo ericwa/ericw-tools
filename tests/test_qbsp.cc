@@ -622,6 +622,44 @@ TEST(testmapsQ1, q1FuncIllusionaryVisblocker)
     EXPECT_EQ(prt->portals.size(), 0);
 }
 
+TEST(testmapsQ1, q1FuncIllusionaryVisblockerInteractions)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_func_illusionary_visblocker_interactions.map", {});
+
+    {
+        SCOPED_TRACE("func_illusionary_visblocker and func_detail_illusionary");
+        SCOPED_TRACE("should have 2 faces between");
+
+        EXPECT_EQ(2, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {-8, 16, 104}).size());
+    }
+
+    {
+        SCOPED_TRACE("func_illusionary_visblocker and func_detail_illusionary (mirrorinside 1)");
+        SCOPED_TRACE("should have 2 faces between");
+
+        EXPECT_EQ(2, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {136, 16, 104}).size());
+    }
+
+    {
+        SCOPED_TRACE("func_illusionary_visblocker (mirrorinside 0) and func_detail_illusionary");
+        SCOPED_TRACE("should have 1 or 2 faces between");
+
+        EXPECT_THAT(BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {280, 16, 104}).size(),
+            testing::AllOf(testing::Ge(1), testing::Le(2)));
+
+        // make sure mirrorinside 0 works
+        EXPECT_EQ(1, BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {280, -48, 104}).size());
+    }
+
+    {
+        SCOPED_TRACE("func_illusionary_visblocker (mirrorinside 0) and func_detail_illusionary (mirrorinside 1)");
+        SCOPED_TRACE("should have 1 or 2 faces between");
+
+        EXPECT_THAT(BSP_FindFacesAtPoint(&bsp, &bsp.dmodels[0], {424, 16, 104}).size(),
+            testing::AllOf(testing::Ge(1), testing::Le(2)));
+    }
+}
+
 TEST(testmapsQ1, simpleWorldspawnWorldspawn)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_worldspawn_worldspawn.map", {"-tjunc", "rotate"});

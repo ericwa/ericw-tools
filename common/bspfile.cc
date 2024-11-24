@@ -48,19 +48,77 @@ static std::vector<qvec3b> make_palette(std::initializer_list<uint8_t> bytes)
     return result;
 }
 
+// clang-format off
 /**
  * Keep up to date with contents_t enum.
  */
-static constexpr const char *bitflag_names[] = {"SOLID", "SKY", "DETAIL_WALL", "WINDOW", "AUX", "LAVA", "SLIME",
-    "WATER", "MIST", "ORIGIN", "PLAYERCLIP", "MONSTERCLIP", "AREAPORTAL", "NO_WATERJUMP", "PROJECTILECLIP",
-    "MIRROR_INSIDE", "MIRROR_INSIDE_SET", "SUPPRESS_CLIPPING_SAME_TYPE", "CURRENT_0", "CURRENT_90", "CURRENT_180",
-    "CURRENT_270", "CURRENT_UP", "CURRENT_DOWN", "TRANSLUCENT", "LADDER", "MONSTER", "DEADMONSTER",
-    "ILLUSIONARY_VISBLOCKER", "DETAIL", "Q2_UNUSED_7", "Q2_UNUSED_8", "Q2_UNUSED_9", "Q2_UNUSED_10", "Q2_UNUSED_11",
-    "Q2_UNUSED_12", "Q2_UNUSED_30", "Q2_UNUSED_31", "INVALID_BIT_38", "INVALID_BIT_39", "INVALID_BIT_40",
-    "INVALID_BIT_41", "INVALID_BIT_42", "INVALID_BIT_43", "INVALID_BIT_44", "INVALID_BIT_45", "INVALID_BIT_46",
-    "INVALID_BIT_47", "INVALID_BIT_48", "INVALID_BIT_49", "INVALID_BIT_50", "INVALID_BIT_51", "INVALID_BIT_52",
-    "INVALID_BIT_53", "INVALID_BIT_54", "INVALID_BIT_55", "INVALID_BIT_56", "INVALID_BIT_57", "INVALID_BIT_58",
-    "INVALID_BIT_59", "INVALID_BIT_60", "INVALID_BIT_61", "INVALID_BIT_62", "INVALID_BIT_63"};
+static constexpr const char *bitflag_names[] = {
+    "SOLID", // bit 0
+    "SKY", // bit 1
+    "DETAIL_WALL", // bit 2
+    "WINDOW", // bit 3
+    "ILLUSIONARY_VISBLOCKER", // bit 4
+    "AUX", // bit 5
+    "LAVA", // bit 6
+    "SLIME", // bit 7
+    "WATER", // bit 8
+    "MIST", // bit 9
+    "ORIGIN", // bit 10
+    "PLAYERCLIP", // bit 11
+    "MONSTERCLIP", // bit 12
+    "AREAPORTAL", // bit 13
+    "NO_WATERJUMP", // bit 14
+    "PROJECTILECLIP", // bit 15
+    "MIRROR_INSIDE", // bit 16
+    "MIRROR_INSIDE_SET", // bit 17
+    "SUPPRESS_CLIPPING_SAME_TYPE", // bit 18
+    "CURRENT_0", // bit 19
+    "CURRENT_90", // bit 20
+    "CURRENT_180", // bit 21
+    "CURRENT_270", // bit 22
+    "CURRENT_UP", // bit 23
+    "CURRENT_DOWN", // bit 24
+    "TRANSLUCENT", // bit 25
+    "LADDER", // bit 26
+    "MONSTER", // bit 27
+    "DEADMONSTER", // bit 28
+    "DETAIL", // bit 29
+    "Q2_UNUSED_7", // bit 30
+    "Q2_UNUSED_8", // bit 31
+    "Q2_UNUSED_9", // bit 32
+    "Q2_UNUSED_10", // bit 33
+    "Q2_UNUSED_11", // bit 34
+    "Q2_UNUSED_12", // bit 35
+    "Q2_UNUSED_30", // bit 36
+    "Q2_UNUSED_31", // bit 37
+    "INVALID_BIT_38", // bit 38
+    "INVALID_BIT_39", // bit 39
+    "INVALID_BIT_40", // bit 40
+    "INVALID_BIT_41", // bit 41
+    "INVALID_BIT_42", // bit 42
+    "INVALID_BIT_43", // bit 43
+    "INVALID_BIT_44", // bit 44
+    "INVALID_BIT_45", // bit 45
+    "INVALID_BIT_46", // bit 46
+    "INVALID_BIT_47", // bit 47
+    "INVALID_BIT_48", // bit 48
+    "INVALID_BIT_49", // bit 49
+    "INVALID_BIT_50", // bit 50
+    "INVALID_BIT_51", // bit 51
+    "INVALID_BIT_52", // bit 52
+    "INVALID_BIT_53", // bit 53
+    "INVALID_BIT_54", // bit 54
+    "INVALID_BIT_55", // bit 55
+    "INVALID_BIT_56", // bit 56
+    "INVALID_BIT_57", // bit 57
+    "INVALID_BIT_58", // bit 58
+    "INVALID_BIT_59", // bit 59
+    "INVALID_BIT_60", // bit 60
+    "INVALID_BIT_61", // bit 61
+    "INVALID_BIT_62", // bit 62
+    "INVALID_BIT_63" // bit 63
+};
+// clang-format on
 
 std::string get_contents_display(contents_t bits)
 {
@@ -167,6 +225,8 @@ public:
             throw std::invalid_argument("EWT_VISCONTENTS_DETAIL_WALL not representable in Q1");
         } else if (contents.flags & EWT_VISCONTENTS_WINDOW) {
             throw std::invalid_argument("EWT_VISCONTENTS_WINDOW not representable in Q1");
+        } else if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
+            throw std::invalid_argument("EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER not representable in Q1");
         } else if (contents.flags & EWT_VISCONTENTS_AUX) {
             throw std::invalid_argument("EWT_VISCONTENTS_AUX not representable in Q1");
         } else if (contents.flags & EWT_VISCONTENTS_LAVA) {
@@ -381,6 +441,8 @@ public:
             return true;
         else if (bits == EWT_VISCONTENTS_WINDOW)
             return false;
+        else if (bits == EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)
+            return true;
         else if (bits == EWT_VISCONTENTS_LAVA)
             return !transwater;
         else if (bits == EWT_VISCONTENTS_SLIME)
@@ -408,6 +470,10 @@ public:
             // clear mist. detail_illusionary on its own becomes CONTENTS_EMPTY,
             // detail_illusionary in water becomes CONTENTS_WATER, etc.
             return contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_MIST);
+        }
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
+            // this exports as empty
+            return contentflags_t::make(contents.flags & ~EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
         }
 
         return contents;
@@ -474,7 +540,7 @@ public:
                 return (bits_brush & EWT_CFLAG_MIRROR_INSIDE) != 0;
             }
 
-            return (bits_brush & EWT_ALL_LIQUIDS) != 0;
+            return (bits_brush & (EWT_ALL_LIQUIDS | EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)) != 0;
         }
         return true;
     }
@@ -869,6 +935,8 @@ struct gamedef_q2_t : public gamedef_t
             throw std::invalid_argument("detail wall not a contents in Q2");
         if (contents.flags & EWT_VISCONTENTS_WINDOW)
             result |= Q2_CONTENTS_WINDOW;
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)
+            throw std::invalid_argument("illusionary visblocker not a contents in Q2");
         if (contents.flags & EWT_VISCONTENTS_AUX)
             result |= Q2_CONTENTS_AUX;
         if (contents.flags & EWT_VISCONTENTS_LAVA)
@@ -1206,6 +1274,13 @@ struct gamedef_q2_t : public gamedef_t
             contents_int_t result = contents.flags;
             result &= (~EWT_VISCONTENTS_DETAIL_WALL);
             result |= EWT_VISCONTENTS_SOLID;
+            return contentflags_t::make(result);
+        }
+
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER) {
+            contents_int_t result = contents.flags;
+            result &= (~EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
+            result |= EWT_VISCONTENTS_MIST;
             return contentflags_t::make(result);
         }
 

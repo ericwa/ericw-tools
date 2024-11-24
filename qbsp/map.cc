@@ -1496,7 +1496,7 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         // note this overrides the logic in face_get_contents() that normally forces mist to be detail
         base_contents = contentflags_t::make(
             (base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL))
-            | (EWT_VISCONTENTS_MIST | EWT_CFLAG_MIRROR_INSIDE | EWT_CFLAG_MIRROR_INSIDE_SET));
+            | EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
     }
 
     // non-Q2: -transwater implies liquids are detail
