@@ -755,7 +755,8 @@ void load_textures(const mbsp_t *bsp, const settings::common_settings &options)
 {
     logging::funcheader();
 
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         LoadTextures(bsp, options);
     } else if (bsp->dtex.textures.size() > 0) {
         ConvertTextures(bsp, options);

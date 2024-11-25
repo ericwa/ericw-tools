@@ -1487,14 +1487,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         if (!texture) {
             logging::print("warning, couldn't locate {}", k.texname);
             qtexture = placeholder_texture;
-        }
-
-        if (!texture->width || !texture->height) {
+        } else if (!texture->width || !texture->height) {
             logging::print("warning, empty texture {}", k.texname);
             qtexture = placeholder_texture;
-        }
-
-        if (texture->pixels.empty()) {
+        } else if (texture->pixels.empty()) {
             logging::print("warning, empty texture pixels {}", k.texname);
             qtexture = placeholder_texture;
         }

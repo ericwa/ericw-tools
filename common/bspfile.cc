@@ -1798,7 +1798,7 @@ private:
         std::set<std::string, natural_case_insensitive_less> packs;
 
         for (auto &entry : it) {
-            if (string_iequals(entry.path().extension().generic_string(), ".pak")) {
+            if (string_iequals(entry.path().extension().generic_string(), ".sin")) {
                 packs.insert(entry.path().generic_string());
             }
         }
@@ -1812,16 +1812,114 @@ public:
     inline void addArchive(const fs::path &path) const
     {
         fs::addArchive(path, true);
-        discoverArchives(path);
+
+        if (fs::is_directory(path)) {
+            discoverArchives(path);
+        }
     }
 
     void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
     {
         img::clear();
-        // Q1-like games don't care about the local
-        // filesystem.
-        // they do care about the palette though.
         fs::clear();
+
+        if (options.defaultpaths.value()) {
+            constexpr const char *MAPS_FOLDER = "maps";
+
+            // detect gamedir (mod directory path)
+            fs::path gamedir, basedir;
+
+            // pull in from settings
+            if (options.gamedir.is_changed()) {
+                gamedir = options.gamedir.value();
+            }
+            if (options.basedir.is_changed()) {
+                basedir = options.basedir.value();
+            }
+
+            // figure out the gamedir first
+            if (!gamedir.is_absolute()) {
+                if (!gamedir.empty() && basedir.is_absolute()) {
+                    // we passed in a relative gamedir. probably meant to
+                    // be derived from basedir.
+                    gamedir = basedir.parent_path() / gamedir;
+                }
+
+                // no gamedir, so calculate it from the input
+                if (gamedir.empty()) {
+                    // expand canonicals, and fetch parent of source file
+                    if (auto paths = fs::splitArchivePath(source)) {
+                        // if the source is an archive, use the parent
+                        // of that folder as the mod directory
+                        // pak0.pak/maps/source.map -> C:/Quake/ID1
+                        gamedir = fs::canonical(paths.archive).parent_path();
+                    } else {
+                        // maps/*/source.map -> C:/Quake/ID1/maps
+                        // this is weak because the source may not exist yet
+                        bool found_maps_folder = false;
+                        fs::path olddir = gamedir = source;
+
+                        // NOTE: parent_path() of C:/ is C:/ and this is considered non-empty
+                        // its relative_path() (the part after the drive letter) is empty, though
+                        while (!gamedir.relative_path().empty()) {
+                            gamedir = fs::weakly_canonical(gamedir).parent_path();
+
+                            if (string_iequals(gamedir.filename().generic_string(), MAPS_FOLDER)) {
+                                found_maps_folder = true;
+                                break;
+                            }
+                        }
+
+                        if (!found_maps_folder) {
+                            logging::print(
+                                "WARNING: '{}' is not a child of '{}'; gamedir can't be automatically determined.\n",
+                                source, MAPS_FOLDER);
+
+                            gamedir = olddir;
+                        }
+
+                        // C:/Quake/ID1/maps -> C:/Quake/ID1
+                        gamedir = gamedir.parent_path();
+                    }
+                }
+            }
+
+            if (!exists(gamedir)) {
+                logging::print("WARNING: failed to find gamedir '{}'\n", gamedir);
+            } else {
+                logging::print("using gamedir: '{}'\n", gamedir);
+            }
+
+            // now find base dir, if we haven't set it yet
+            if (!basedir.is_absolute()) {
+                if (!basedir.empty() && gamedir.is_absolute()) {
+                    // we passed in a relative basedir. probably meant to
+                    // be derived from gamedir.
+                    basedir = gamedir.parent_path() / basedir;
+                }
+
+                // no basedir, so calculate it from gamedir
+                if (basedir.empty()) {
+                    basedir = gamedir.parent_path() / default_base_dir;
+                }
+            }
+
+            if (!exists(basedir)) {
+                logging::print("WARNING: failed to find basedir '{}'\n", basedir);
+            } else if (!equivalent(gamedir, basedir)) {
+                addArchive(basedir);
+                logging::print("using basedir: '{}'\n", basedir);
+            }
+
+            if (exists(gamedir)) {
+                addArchive(gamedir);
+            }
+        }
+
+        // add secondary paths
+        for (auto &path : options.paths.values()) {
+            addArchive(path);
+        }
     }
 
     const std::vector<qvec3b> &get_default_palette() const override
@@ -2008,6 +2106,30 @@ const bspversion_t bspver_qbism{Q2_QBISMIDENT, Q2_BSPVERSION, "qbism", "Quake II
         {"areaportals", sizeof(dareaportal_t)},
     },
     &gamedef_q2};
+const bspversion_t bspver_sin{SIN_BSPIDENT, SIN_BSPVERSION, "sinbsp", "SiN BSP",
+    {
+        {"entities", sizeof(char)},
+        {"planes", sizeof(dplane_t)},
+        {"vertexes", sizeof(qvec3f)},
+        {"visibility", sizeof(uint8_t)},
+        {"nodes", sizeof(q2_dnode_t)},
+        {"texinfos", sizeof(sin_texinfo_t)},
+        {"faces", sizeof(sin_dface_t)},
+        {"lighting", sizeof(uint8_t)},
+        {"leafs", sizeof(q2_dleaf_t)},
+        {"leaffaces", sizeof(uint16_t)},
+        {"leafbrushes", sizeof(uint16_t)},
+        {"edges", sizeof(bsp29_dedge_t)},
+        {"surfedges", sizeof(int32_t)},
+        {"models", sizeof(q2_dmodel_t)},
+        {"brushes", sizeof(dbrush_t)},
+        {"brushsides", sizeof(sin_dbrushside_t)},
+        {"pop", sizeof(uint8_t)},
+        {"areas", sizeof(darea_t)},
+        {"areaportals", sizeof(dareaportal_t)},
+        {"lightinfo", sizeof(sin_lightinfo_t)},
+    },
+    &gamedef_sin};
 
 static bool BSPVersionSupported(int32_t ident, std::optional<int32_t> version, const bspversion_t **out_version)
 {
@@ -2127,6 +2249,31 @@ inline void ConvertQ2BSPToGeneric(T &bsp, mbsp_t &mbsp)
     CopyArray(bsp.dareaportals, mbsp.dareaportals);
 }
 
+// Convert from a SiN format to Generic
+template<typename T>
+inline void ConvertSiNBSPToGeneric(T &bsp, mbsp_t &mbsp)
+{
+    CopyArray(bsp.dentdata, mbsp.dentdata);
+    CopyArray(bsp.dplanes, mbsp.dplanes);
+    CopyArray(bsp.dvertexes, mbsp.dvertexes);
+    CopyArray(bsp.dvis, mbsp.dvis);
+    CopyArray(bsp.dnodes, mbsp.dnodes);
+    CopyArray(bsp.texinfo, mbsp.texinfo);
+    CopyArray(bsp.dfaces, mbsp.dfaces);
+    CopyArray(bsp.dlightdata, mbsp.dlightdata);
+    CopyArray(bsp.dleafs, mbsp.dleafs);
+    CopyArray(bsp.dleaffaces, mbsp.dleaffaces);
+    CopyArray(bsp.dleafbrushes, mbsp.dleafbrushes);
+    CopyArray(bsp.dedges, mbsp.dedges);
+    CopyArray(bsp.dsurfedges, mbsp.dsurfedges);
+    CopyArray(bsp.dmodels, mbsp.dmodels);
+    CopyArray(bsp.dbrushes, mbsp.dbrushes);
+    CopyArray(bsp.dbrushsides, mbsp.dbrushsides);
+    CopyArray(bsp.dareas, mbsp.dareas);
+    CopyArray(bsp.dareaportals, mbsp.dareaportals);
+    CopyArray(bsp.dlightinfo, mbsp.dlightinfo);
+}
+
 // Convert from a Q1-esque format to Generic
 template<typename T>
 inline T ConvertGenericToQ1BSP(mbsp_t &mbsp, const bspversion_t *to_version)
@@ -2186,6 +2333,36 @@ inline T ConvertGenericToQ2BSP(mbsp_t &mbsp, const bspversion_t *to_version)
     return bsp;
 }
 
+// Convert from a SiN format to Generic
+template<typename T>
+inline T ConvertGenericToSiNBSP(mbsp_t &mbsp, const bspversion_t *to_version)
+{
+    T bsp{};
+
+    // copy or convert data
+    CopyArray(mbsp.dentdata, bsp.dentdata);
+    CopyArray(mbsp.dplanes, bsp.dplanes);
+    CopyArray(mbsp.dvertexes, bsp.dvertexes);
+    CopyArray(mbsp.dvis, bsp.dvis);
+    CopyArray(mbsp.dnodes, bsp.dnodes);
+    CopyArray(mbsp.texinfo, bsp.texinfo);
+    CopyArray(mbsp.dfaces, bsp.dfaces);
+    CopyArray(mbsp.dlightdata, bsp.dlightdata);
+    CopyArray(mbsp.dleafs, bsp.dleafs);
+    CopyArray(mbsp.dleaffaces, bsp.dleaffaces);
+    CopyArray(mbsp.dleafbrushes, bsp.dleafbrushes);
+    CopyArray(mbsp.dedges, bsp.dedges);
+    CopyArray(mbsp.dsurfedges, bsp.dsurfedges);
+    CopyArray(mbsp.dmodels, bsp.dmodels);
+    CopyArray(mbsp.dbrushes, bsp.dbrushes);
+    CopyArray(mbsp.dbrushsides, bsp.dbrushsides);
+    CopyArray(mbsp.dareas, bsp.dareas);
+    CopyArray(mbsp.dareaportals, bsp.dareaportals);
+    CopyArray(mbsp.dlightinfo, bsp.dlightinfo);
+
+    return bsp;
+}
+
 /*
  * =========================================================================
  * ConvertBSPFormat
@@ -2210,6 +2387,8 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
             ConvertQ2BSPToGeneric(std::get<q2bsp_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<q2bsp_qbism_t>(bspdata->bsp)) {
             ConvertQ2BSPToGeneric(std::get<q2bsp_qbism_t>(bspdata->bsp), mbsp);
+        } else if (std::holds_alternative<sinbsp_t>(bspdata->bsp)) {
+            ConvertSiNBSPToGeneric(std::get<sinbsp_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<bsp2rmq_t>(bspdata->bsp)) {
             ConvertQ1BSPToGeneric(std::get<bsp2rmq_t>(bspdata->bsp), mbsp);
         } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
@@ -2234,6 +2413,8 @@ bool ConvertBSPFormat(bspdata_t *bspdata, const bspversion_t *to_version)
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_t>(mbsp, to_version);
             } else if (to_version == &bspver_qbism) {
                 bspdata->bsp = ConvertGenericToQ2BSP<q2bsp_qbism_t>(mbsp, to_version);
+            } else if (to_version == &bspver_sin) {
+                bspdata->bsp = ConvertGenericToSiNBSP<sinbsp_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2rmq || to_version == &bspver_h2bsp2rmq) {
                 bspdata->bsp = ConvertGenericToQ1BSP<bsp2rmq_t>(mbsp, to_version);
             } else if (to_version == &bspver_bsp2 || to_version == &bspver_h2bsp2) {
@@ -2455,6 +2636,30 @@ inline void ReadQ2BSP(lump_reader &reader, T &bsp)
     reader.read(Q2_LUMP_AREAPORTALS, bsp.dareaportals);
 }
 
+template<typename T>
+inline void ReadSiNBSP(lump_reader &reader, T &bsp)
+{
+    reader.read(SIN_LUMP_ENTITIES, bsp.dentdata);
+    reader.read(SIN_LUMP_PLANES, bsp.dplanes);
+    reader.read(SIN_LUMP_VERTEXES, bsp.dvertexes);
+    reader.read(SIN_LUMP_VISIBILITY, bsp.dvis);
+    reader.read(SIN_LUMP_NODES, bsp.dnodes);
+    reader.read(SIN_LUMP_TEXINFO, bsp.texinfo);
+    reader.read(SIN_LUMP_FACES, bsp.dfaces);
+    reader.read(SIN_LUMP_LIGHTING, bsp.dlightdata);
+    reader.read(SIN_LUMP_LEAFS, bsp.dleafs);
+    reader.read(SIN_LUMP_LEAFFACES, bsp.dleaffaces);
+    reader.read(SIN_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
+    reader.read(SIN_LUMP_EDGES, bsp.dedges);
+    reader.read(SIN_LUMP_SURFEDGES, bsp.dsurfedges);
+    reader.read(SIN_LUMP_MODELS, bsp.dmodels);
+    reader.read(SIN_LUMP_BRUSHES, bsp.dbrushes);
+    reader.read(SIN_LUMP_BRUSHSIDES, bsp.dbrushsides);
+    reader.read(SIN_LUMP_AREAS, bsp.dareas);
+    reader.read(SIN_LUMP_AREAPORTALS, bsp.dareaportals);
+    reader.read(SIN_LUMP_LIGHTINFO, bsp.dlightinfo);
+}
+
 void bspdata_t::bspxentries::transfer(const char *xname, std::vector<uint8_t> &xdata)
 {
     entries.insert_or_assign(xname, std::move(xdata));
@@ -2499,7 +2704,14 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
     stream >= temp_version.ident;
     stream.seekg(0);
 
-    if (temp_version.ident == Q2_BSPIDENT || temp_version.ident == Q2_QBISMIDENT) {
+    if (temp_version.ident == SIN_BSPIDENT) {
+        sin_dheader_t sinheader;
+        stream >= sinheader;
+
+        temp_version.version = sinheader.version;
+        std::copy(sinheader.lumps.begin(), sinheader.lumps.end(), std::back_inserter(lumps));
+    } else if (temp_version.ident == Q2_BSPIDENT ||
+               temp_version.ident == Q2_QBISMIDENT) {
         q2_dheader_t q2header;
         stream >= q2header;
 
@@ -2545,6 +2757,8 @@ void LoadBSPFile(fs::path &filename, bspdata_t *bspdata)
         ReadQ1BSP(reader, bspdata->bsp.emplace<bsp2rmq_t>());
     } else if (bspdata->version == &bspver_bsp2 || bspdata->version == &bspver_h2bsp2) {
         ReadQ1BSP(reader, bspdata->bsp.emplace<bsp2_t>());
+    } else if (bspdata->version == &bspver_sin) {
+        ReadSiNBSP(reader, bspdata->bsp.emplace<sinbsp_t>());
     } else {
         FError("Unknown format");
     }
@@ -2602,6 +2816,7 @@ struct bspfile_t
     {
         dheader_t q1header;
         q2_dheader_t q2header;
+        sin_dheader_t sinheader;
     };
 
     std::ofstream stream;
@@ -2616,7 +2831,11 @@ private:
         lump_t *lumps;
 
         if (version->version.has_value()) {
-            lumps = q2header.lumps.data();
+            if (version->game->id == GAME_QUAKE_II) {
+                lumps = q2header.lumps.data();
+            } else {
+                lumps = sinheader.lumps.data();
+            }
         } else {
             lumps = q1header.lumps.data();
         }
@@ -2749,6 +2968,31 @@ public:
         write_lump(Q2_LUMP_LIGHTING, bsp.dlightdata);
         write_lump(Q2_LUMP_VISIBILITY, bsp.dvis);
         write_lump(Q2_LUMP_ENTITIES, bsp.dentdata);
+    }
+
+    template<typename T, typename std::enable_if_t<std::is_base_of_v<sinbsp_tag_t, T>, int> = 0>
+    inline void write_bsp(const T &bsp)
+    {
+        write_lump(SIN_LUMP_PLANES, bsp.dplanes);
+        write_lump(SIN_LUMP_LEAFS, bsp.dleafs);
+        write_lump(SIN_LUMP_VERTEXES, bsp.dvertexes);
+        write_lump(SIN_LUMP_NODES, bsp.dnodes);
+        write_lump(SIN_LUMP_TEXINFO, bsp.texinfo);
+        write_lump(SIN_LUMP_FACES, bsp.dfaces);
+        write_lump(SIN_LUMP_LEAFFACES, bsp.dleaffaces);
+        write_lump(SIN_LUMP_SURFEDGES, bsp.dsurfedges);
+        write_lump(SIN_LUMP_EDGES, bsp.dedges);
+        write_lump(SIN_LUMP_MODELS, bsp.dmodels);
+        write_lump(SIN_LUMP_LEAFBRUSHES, bsp.dleafbrushes);
+        write_lump(SIN_LUMP_BRUSHES, bsp.dbrushes);
+        write_lump(SIN_LUMP_BRUSHSIDES, bsp.dbrushsides);
+        write_lump(SIN_LUMP_AREAS, bsp.dareas);
+        write_lump(SIN_LUMP_AREAPORTALS, bsp.dareaportals);
+        write_lump(SIN_LUMP_LIGHTINFO, bsp.dlightinfo);
+
+        write_lump(SIN_LUMP_LIGHTING, bsp.dlightdata);
+        write_lump(SIN_LUMP_VISIBILITY, bsp.dvis);
+        write_lump(SIN_LUMP_ENTITIES, bsp.dentdata);
     }
 
     inline void write_bspx(const bspdata_t &bspdata)
@@ -2895,6 +3139,32 @@ inline void PrintQ2BSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, c
     logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
 }
 
+
+template<typename T>
+inline void PrintSiNBSPLumps(const std::initializer_list<lumpspec_t> &lumpspec, const T &bsp)
+{
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_MODELS], bsp.dmodels.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_PLANES], bsp.dplanes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_VERTEXES], bsp.dvertexes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_NODES], bsp.dnodes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_TEXINFO], bsp.texinfo.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_FACES], bsp.dfaces.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LEAFS], bsp.dleafs.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LEAFFACES], bsp.dleaffaces.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LEAFBRUSHES], bsp.dleafbrushes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_EDGES], bsp.dedges.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_SURFEDGES], bsp.dsurfedges.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_BRUSHES], bsp.dbrushes.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_BRUSHSIDES], bsp.dbrushsides.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_AREAS], bsp.dareas.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_AREAPORTALS], bsp.dareaportals.size());
+    PrintLumpSize(lumpspec.begin()[SIN_LUMP_LIGHTINFO], bsp.dlightinfo.size());
+
+    logging::print("{:7} {:<12} {:10}\n", "", "lightdata", bsp.dlightdata.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "visdata", bsp.dvis.bits.size());
+    logging::print("{:7} {:<12} {:10}\n", "", "entdata", bsp.dentdata.size() + 1); // include the null terminator
+}
+
 /*
  * =============
  * PrintBSPFileSizes
@@ -2917,6 +3187,8 @@ void PrintBSPFileSizes(const bspdata_t *bspdata)
         PrintQ1BSPLumps(lumpspec, std::get<bsp2rmq_t>(bspdata->bsp));
     } else if (std::holds_alternative<bsp2_t>(bspdata->bsp)) {
         PrintQ1BSPLumps(lumpspec, std::get<bsp2_t>(bspdata->bsp));
+    } else if (std::holds_alternative<sinbsp_t>(bspdata->bsp)) {
+        PrintSiNBSPLumps(lumpspec, std::get<sinbsp_t>(bspdata->bsp));
     } else {
         Error("Unsupported BSP version: {}", *bspdata->version);
     }

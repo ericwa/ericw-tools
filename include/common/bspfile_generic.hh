@@ -237,11 +237,25 @@ struct mtexinfo_t
 
     // q2 only
     int32_t value; // light emission, etc
-    std::array<char, 32> texture; // texture name (textures/*.wal)
+    std::array<char, 64> texture; // texture name (textures/*.wal)
     int32_t nexttexinfo = -1; // for animations, -1 = end of chain
+
+    // SiN only
+    float trans_mag;
+    int trans_angle;
+    int base_angle;
+    float animtime;
+    float nonlit;
+    float translucence;
+    float friction;
+    float restitution;
+    qvec3f color;
+    std::array<char, 32> groupname;
 };
 
-constexpr size_t MAXLIGHTMAPS = 4;
+// SiN TODO: this is 16 in SiN but 4 in Quake;
+// need to expose to gamedef
+constexpr size_t MAXLIGHTMAPS = 16;
 constexpr uint16_t INVALID_LIGHTSTYLE_OLD = 0xffu;
 
 struct mface_t
@@ -255,6 +269,9 @@ struct mface_t
     /* lighting info */
     std::array<uint8_t, MAXLIGHTMAPS> styles;
     int32_t lightofs; /* start of [numstyles*surfsize] samples */
+
+    // SiN
+    int32_t lightinfo;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -362,6 +379,22 @@ struct q2_dbrushside_qbism_t
 {
     uint32_t planenum; // facing out of the leaf
     int32_t texinfo;
+    // SiN
+    int32_t lightinfo;
+
+    // serialize for streams
+    void stream_write(std::ostream &s) const;
+    void stream_read(std::istream &s);
+};
+
+struct sin_lightinfo_t
+{
+    int32_t value;
+    qvec3f color;
+    float direct;
+    float directangle;
+    float directstyle;
+    std::array<char, 32> directstylename;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -399,6 +432,7 @@ struct mbsp_t
     std::vector<dareaportal_t> dareaportals;
     std::vector<dbrush_t> dbrushes;
     std::vector<q2_dbrushside_qbism_t> dbrushsides;
+    std::vector<sin_lightinfo_t> dlightinfo;
 };
 
 extern const bspversion_t bspver_generic;

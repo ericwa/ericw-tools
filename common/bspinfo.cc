@@ -474,11 +474,8 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         // copy out the atlas texture
         result.style_to_lightmap_atlas[i] = full_atlas;
 
-        if (!full_atlas.rgba8_samples.empty())
-            memset(full_atlas.rgba8_samples.data(), 0, full_atlas.rgba8_samples.size());
-
-        if (!full_atlas.e5brg9_samples.empty())
-            memset(full_atlas.e5brg9_samples.data(), 0, full_atlas.e5brg9_samples.size() * 4);
+        std::fill(full_atlas.rgba8_samples.begin(), full_atlas.rgba8_samples.end(), qvec4b{});
+        std::fill(full_atlas.e5brg9_samples.begin(), full_atlas.e5brg9_samples.end(), uint32_t{});
     }
 
     auto ExportLightmapUVs = [&full_atlas, &result](const mbsp_t *bsp, const face_rect &face) {

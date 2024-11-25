@@ -5,6 +5,7 @@ add_library(common STATIC
     bspfile_generic.cc
     bspfile_q1.cc
     bspfile_q2.cc
+    bspfile_sin.cc
     bsputils.cc
     bspxfile.cc
     cmdlib.cc
@@ -31,6 +32,7 @@ add_library(common STATIC
     ../include/common/bspfile_generic.hh
     ../include/common/bspfile_q1.hh
     ../include/common/bspfile_q2.hh
+    ../include/common/bspfile_sin.hh
     ../include/common/bsputils.hh
     ../include/common/bspxfile.hh
     ../include/common/cmdlib.hh
