@@ -453,6 +453,109 @@ std::optional<texture_meta> load_wal_json_meta(std::string_view name, const fs::
     }
 }
 
+/*
+============================================================================
+SWL IMAGE
+============================================================================
+*/
+struct sin_miptex_t
+{
+    std::array<char, 64> name;
+    uint32_t width, height;
+    std::array<qvec4b, 256> palette;
+    uint16_t palette_crc;
+    uint16_t padding;
+    std::array<uint32_t, MIPLEVELS> offsets; // four mip maps stored
+    std::array<char, 64> animname; // next frame in animation chain
+    int32_t flags;
+    int32_t contents;
+    uint16_t value;
+    uint16_t direct;
+    float animtime;
+    float nonlit;
+    uint16_t directangle;
+    uint16_t trans_angle;
+    float directstyle;
+    float translucence;
+    float friction;
+    float restitution;
+    float trans_mag;
+    qvec3f color;
+
+    auto stream_data() { return std::tie(name, width, height, palette, palette_crc, padding, offsets, animname, flags, contents, value, direct, animtime,
+        nonlit, directangle, trans_angle, directstyle, translucence, friction, restitution, trans_mag, color); }
+};
+static void convert_sin_paletted_to_32_bit(
+    const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::array<qvec4b, 256> &pal)
+{
+    output.resize(pixels.size());
+
+    for (size_t i = 0; i < pixels.size(); i++) {
+        output[i] = pal[pixels[i]];
+
+        if (output[i][0] == 255 && output[i][1] == 0 && output[i][2] == 255) {
+            output[i][3] = 0;
+        } else {
+            output[i][3] = 255;
+        }
+    }
+}
+
+std::optional<texture> load_swl(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game)
+{
+    imemstream stream(file->data(), file->size(), std::ios_base::in | std::ios_base::binary);
+    stream >> endianness<std::endian::little>;
+
+    // Parse WAL
+    sin_miptex_t mt;
+    stream >= mt;
+
+    texture tex;
+
+    tex.meta.extension = ext::SWL;
+
+    // note: this is a bit of a hack, but the name stored in
+    // the .wal is ignored. it's extraneous and well-formed wals
+    // will all match up anyways.
+    tex.meta.name = name;
+    tex.meta.width = tex.width = mt.width;
+    tex.meta.height = tex.height = mt.height;
+    tex.meta.contents_native = mt.contents;
+    tex.meta.flags = {mt.flags};
+    tex.meta.value = mt.value;
+    tex.meta.animation = mt.animname.data();
+
+    tex.meta.direct = mt.direct;
+    tex.meta.animtime = mt.animtime;
+    tex.meta.nonlit = mt.nonlit;
+    tex.meta.directangle = mt.directangle;
+    tex.meta.trans_angle = mt.trans_angle;
+    tex.meta.directstyle = mt.directstyle;
+    tex.meta.translucence = mt.translucence;
+    tex.meta.friction = mt.friction;
+    tex.meta.restitution = mt.restitution;
+    tex.meta.trans_mag = mt.trans_mag;
+    tex.meta.color = mt.color;
+
+    if (!meta_only) {
+        stream.seekg(mt.offsets[0]);
+        std::vector<uint8_t> pixels(mt.width * mt.height);
+        stream.read(reinterpret_cast<char *>(pixels.data()), pixels.size());
+        convert_sin_paletted_to_32_bit(pixels, tex.pixels, mt.palette);
+    }
+
+    return tex;
+}
+
+std::optional<texture_meta> load_swl_meta(std::string_view name, const fs::data &file, const gamedef_t *game)
+{
+    if (auto tex = load_swl(name, file, true, game)) {
+        return tex->meta;
+    }
+
+    return std::nullopt;
+}
+
 std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_texture_meta(
     std::string_view name, const gamedef_t *game, const settings::common_settings &options)
 {

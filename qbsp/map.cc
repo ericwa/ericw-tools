@@ -825,12 +825,14 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
     mapface.texname = input_side.texture;
 
     // copy in Q2 attributes if present
-    if (input_side.extended_info) {
+    if (std::holds_alternative<mapfile::texinfo_quake2_t>(input_side.extended_info)) {
         extinfo.info = {extended_texinfo_t{}};
 
-        extinfo.info->contents_native = input_side.extended_info->contents;
-        extinfo.info->flags = input_side.extended_info->flags;
-        extinfo.info->value = input_side.extended_info->value;
+        auto &in_extended = std::get<mapfile::texinfo_quake2_t>(input_side.extended_info);
+
+        extinfo.info->contents_native = in_extended.contents;
+        extinfo.info->flags = in_extended.flags;
+        extinfo.info->value = in_extended.value;
 
         mapface.raw_info = extinfo.info;
     }
@@ -2451,7 +2453,7 @@ void ConvertMapFile()
         for (mapfile::map_entity_t &ent : parsed_map.entities)
             for (mapfile::brush_t &brush : ent.brushes)
                 for (mapfile::brush_side_t &side : brush.faces)
-                    side.extended_info = std::nullopt;
+                    side.extended_info = std::monostate{};
 
     // write out
     std::ofstream f(filename);

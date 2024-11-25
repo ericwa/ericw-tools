@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <any>
 #include <optional>
+#include <mutex>
 
 #include <common/bitflags.hh>
 #include <common/fs.hh>
@@ -334,6 +335,7 @@ enum gameid_t
     GAME_HEXEN_II,
     GAME_HALF_LIFE,
     GAME_QUAKE_II,
+    GAME_SIN,
 
     GAME_TOTAL
 };
@@ -437,9 +439,19 @@ struct gamedef_t
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;
     virtual const std::vector<qvec3b> &get_default_palette() const = 0;
-    virtual std::unique_ptr<content_stats_base_t> create_content_stats() const = 0;
-    virtual void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats) const = 0;
-    virtual void print_content_stats(const content_stats_base_t &stats, const char *what) const = 0;
+
+private:
+    struct content_stats_t : public content_stats_base_t
+    {
+        std::mutex stat_mutex;
+        std::unordered_map<contents_t, size_t> native_types;
+        std::atomic<size_t> total_brushes;
+    };
+
+public:
+    std::unique_ptr<content_stats_base_t> create_content_stats() const;
+    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const;
+    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const;
 };
 
 // Lump specification; stores the name and size

@@ -61,13 +61,14 @@ struct directory_archive : archive_like
     }
 };
 
+template<int32_t TMagic, size_t TPathSize> 
 struct pak_archive : archive_like
 {
     std::ifstream pakstream;
 
     struct pak_header
     {
-        std::array<char, 4> magic;
+        int32_t magic;
         uint32_t offset;
         uint32_t size;
 
@@ -76,7 +77,7 @@ struct pak_archive : archive_like
 
     struct pak_file
     {
-        std::array<char, 56> name;
+        std::array<char, TPathSize> name;
         uint32_t offset;
         uint32_t size;
 
@@ -96,7 +97,7 @@ struct pak_archive : archive_like
 
         pakstream >= header;
 
-        if (header.magic != std::array<char, 4>{'P', 'A', 'C', 'K'}) {
+        if (header.magic != TMagic) {
             throw std::runtime_error("Bad magic");
         }
 
@@ -132,6 +133,18 @@ struct pak_archive : archive_like
         return data;
     }
 };
+
+constexpr int32_t calculate_magic(char a, char b, char c, char d)
+{
+    if constexpr(std::endian::native == std::endian::little) {
+        return a | (b << 8) | (c << 16) | (d << 24);
+    } else {
+        return d | (c << 8) | (b << 16) | (a << 24);
+    }
+}
+
+using quake_pak_archive = pak_archive<calculate_magic('P', 'A', 'C', 'K'), 56>;
+using sin_pak_archive = pak_archive<calculate_magic('S', 'P', 'A', 'K'), 120>;
 
 struct wad_archive : archive_like
 {
@@ -265,9 +278,14 @@ inline std::shared_ptr<archive_like> addArchiveInternal(const path &p, bool exte
 
         try {
             if (string_iequals(ext.generic_string(), ".pak")) {
-                auto &arch = archives.emplace_front(std::make_shared<pak_archive>(p, external));
-                auto &pak = reinterpret_cast<std::shared_ptr<pak_archive> &>(arch);
-                logging::print(logging::flag::VERBOSE, "Added pak '{}' with {} files\n", p, pak->files.size());
+                auto &arch = archives.emplace_front(std::make_shared<quake_pak_archive>(p, external));
+                auto &pak = reinterpret_cast<std::shared_ptr<quake_pak_archive> &>(arch);
+                logging::print(logging::flag::VERBOSE, "Added Quake pak '{}' with {} files\n", p, pak->files.size());
+                return arch;
+            } else if (string_iequals(ext.generic_string(), ".sin")) {
+                auto &arch = archives.emplace_front(std::make_shared<sin_pak_archive>(p, external));
+                auto &pak = reinterpret_cast<std::shared_ptr<sin_pak_archive> &>(arch);
+                logging::print(logging::flag::VERBOSE, "Added SiN pak '{}' with {} files\n", p, pak->files.size());
                 return arch;
             } else if (string_iequals(ext.generic_string(), ".wad")) {
                 auto &arch = archives.emplace_front(std::make_shared<wad_archive>(p, external));

@@ -29,9 +29,9 @@ namespace img
 {
 enum class ext
 {
-    TGA,
-    WAL,
-    MIP,
+    WAL, // Quake II / Kingpin WAL
+    MIP, // Generic miptex (Quake)
+    SWL, // SiN WAL
     /**
      * Anything loadable by stb_image.h
      */
@@ -55,11 +55,24 @@ struct texture_meta
     // texture data. Also useful to override the emissive color
     std::optional<qvec3b> color_override;
 
-    // Q2/WAL only
+    // Quake II WAL only
     surfflags_t flags{};
     uint32_t contents_native = 0;
     int32_t value = 0;
     std::string animation;
+
+    // SiN WAL only
+    uint16_t direct;
+    float animtime;
+    float nonlit;
+    uint16_t directangle;
+    uint16_t trans_angle;
+    float directstyle;
+    float translucence;
+    float friction;
+    float restitution;
+    float trans_mag;
+    qvec3f color;
 };
 
 struct texture
@@ -97,6 +110,9 @@ std::optional<texture> load_wal(std::string_view name, const fs::data &file, boo
 // Load Quake/Half Life mip (raw data)
 std::optional<texture> load_mip(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
+// Load swl
+std::optional<texture> load_swl(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
+
 // stb_image.h loaders
 std::optional<texture> load_stb(std::string_view name, const fs::data &file, bool meta_only, const gamedef_t *game);
 
@@ -109,7 +125,7 @@ struct extension_info_t
 };
 
 constexpr extension_info_t extension_list[] = {{".png", ext::STB, load_stb}, {".jpg", ext::STB, load_stb},
-    {".tga", ext::TGA, load_stb}, {".wal", ext::WAL, load_wal}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
+    {".tga", ext::STB, load_stb}, {".wal", ext::WAL, load_wal}, {".swl", ext::SWL, load_swl}, {".mip", ext::MIP, load_mip}, {"", ext::MIP, load_mip}};
 
 // Attempt to load a texture from the specified name.
 std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(std::string_view name, bool meta_only,
@@ -118,13 +134,17 @@ std::tuple<std::optional<texture>, fs::resolve_result, fs::data> load_texture(st
 enum class meta_ext
 {
     WAL,
-    WAL_JSON
+    WAL_JSON,
+    SWL
 };
 
 // Load wal
 std::optional<texture_meta> load_wal_meta(std::string_view name, const fs::data &file, const gamedef_t *game);
 
 std::optional<texture_meta> load_wal_json_meta(std::string_view name, const fs::data &file, const gamedef_t *game);
+
+// Load swl
+std::optional<texture_meta> load_swl_meta(std::string_view name, const fs::data &file, const gamedef_t *game);
 
 // list of supported meta extensions and their loaders
 constexpr struct
@@ -133,7 +153,7 @@ constexpr struct
     meta_ext id;
     decltype(load_wal_meta) *loader;
 } meta_extension_list[] = {
-    {".wal_json", meta_ext::WAL_JSON, load_wal_json_meta}, {".wal", meta_ext::WAL, load_wal_meta}};
+    {".wal_json", meta_ext::WAL_JSON, load_wal_json_meta}, {".wal", meta_ext::WAL, load_wal_meta}, {".swl", meta_ext::SWL, load_swl_meta}};
 
 // Attempt to load a texture meta from the specified name.
 std::tuple<std::optional<texture_meta>, fs::resolve_result, fs::data> load_texture_meta(

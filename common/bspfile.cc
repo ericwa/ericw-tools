@@ -655,45 +655,6 @@ public:
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
-
-private:
-    struct content_stats_t : public content_stats_base_t
-    {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
-
-public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
-    {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
-    }
-
-    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
-    {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
-    }
-
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
-    {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
-    }
 };
 
 struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
@@ -1447,7 +1408,10 @@ public:
     inline void addArchive(const fs::path &path) const
     {
         fs::addArchive(path, true);
-        discoverArchives(path);
+
+        if (fs::is_directory(path)) {
+            discoverArchives(path);
+        }
     }
 
     void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
@@ -1593,44 +1557,277 @@ public:
         static const auto palette = make_palette(palette_bytes);
         return palette;
     }
+};
+
+struct gamedef_sin_t : public gamedef_t
+{
+    gamedef_sin_t()
+        : gamedef_t("sin", "base")
+    {
+        this->id = GAME_SIN;
+        has_rgb_lightmap = true;
+        allow_contented_bmodels = true;
+        max_entity_key = 1024;
+    }
+
+    bool surf_is_lightmapped(
+        const surfflags_t &flags, const char *texname, bool light_nodraw, bool lightgrid_enabled) const override
+    {
+        return false;
+    }
+
+    bool surf_is_emissive(const surfflags_t &flags, const char *texname) const override { return true; }
+
+    bool surf_is_subdivided(const surfflags_t &flags) const override { return true; }
+
+    bool surfflags_are_valid(const surfflags_t &flags) const override
+    {
+        return true;
+    }
+
+    bool surfflags_may_phong(const surfflags_t &a, const surfflags_t &b) const override
+    {
+        return false;
+    }
+
+    int32_t surfflags_from_string(std::string_view str) const override
+    {
+        return 0;
+    }
+
+    bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const override
+    {
+        return false;
+    }
+
+    contentflags_t create_contents_from_native(int32_t native) const override
+    {
+        return {};
+    }
+
+    int32_t contents_to_native(contentflags_t contents) const override
+    {
+        return 0;
+    }
+
+    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override
+    {
+        return {};
+    }
+
+    inline int32_t get_content_type(contentflags_t contents) const
+    {
+        return 0;
+    }
+
+    contentflags_t create_empty_contents() const override { return {}; }
+
+    contentflags_t create_solid_contents() const override { return {}; }
+
+    contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
+    {
+        return {};
+    }
+
+    contentflags_t create_detail_fence_contents(contentflags_t original) const override
+    {
+        return {};
+    }
+
+    contentflags_t create_detail_wall_contents(contentflags_t original) const override
+    {
+        return {};
+    }
+
+    contentflags_t create_detail_solid_contents(contentflags_t original) const override
+    {
+        return {};
+    }
+
+    contentflags_t clear_detail(contentflags_t original) const override
+    {
+        return {};
+    }
+
+    contentflags_t set_detail(contentflags_t original) const override
+    {
+        return {};
+    }
+
+    bool contents_are_type_equal(contentflags_t self, contentflags_t other) const override
+    {
+        return false;
+    }
+
+    bool contents_are_equal(contentflags_t self, contentflags_t other) const override
+    {
+        return false;
+    }
+
+    bool contents_are_any_detail(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_detail_solid(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_detail_wall(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_detail_fence(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_detail_illusionary(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_origin(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_clip(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_clip_same_type(contentflags_t self, contentflags_t other) const override
+    {
+        return false;
+    }
+
+    inline bool contents_has_extended(contentflags_t contents) const { return false; }
+
+    bool contents_are_empty(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_any_solid(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_solid(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_sky(contentflags_t contents) const override { return false; }
+
+    bool contents_are_liquid(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_valid(contentflags_t contents, bool strict) const override
+    {
+        return false;
+    }
+
+    int32_t contents_from_string(std::string_view str) const override
+    {
+        return 0;
+    }
+
+    contentflags_t portal_visible_contents(contentflags_t a, contentflags_t b) const override
+    {
+        return {};
+    }
+
+    bool portal_can_see_through(contentflags_t contents0, contentflags_t contents1, bool) const override
+    {
+        return false;
+    }
+
+    bool contents_seals_map(contentflags_t contents) const override
+    {
+        return false;
+    }
+
+    bool contents_are_opaque(contentflags_t contents, bool transwater) const override
+    {
+        return false;
+    }
+
+    contentflags_t contents_remap_for_export(contentflags_t contents, remap_type_t type) const override
+    {
+        return {};
+    }
+
+    contentflags_t combine_contents(contentflags_t a, contentflags_t b) const override
+    {
+        return {};
+    }
+
+    bool portal_generates_face(
+        contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const override
+    {
+        return false;
+    }
+
+    void contents_make_valid(contentflags_t &contents) const override
+    {
+    }
+
+    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    {
+        static constexpr std::initializer_list<aabb3d> hulls = {};
+        return hulls;
+    }
+
+    contentflags_t face_get_contents(
+        const std::string &texname, const surfflags_t &flags, contentflags_t contents) const override
+    {
+        return {};
+    }
 
 private:
-    struct content_stats_t : public content_stats_base_t
+    void discoverArchives(const fs::path &base) const
     {
-        std::mutex stat_mutex;
-        std::unordered_map<contents_t, size_t> native_types;
-        std::atomic<size_t> total_brushes;
-    };
+        fs::directory_iterator it(base);
+
+        std::set<std::string, natural_case_insensitive_less> packs;
+
+        for (auto &entry : it) {
+            if (string_iequals(entry.path().extension().generic_string(), ".pak")) {
+                packs.insert(entry.path().generic_string());
+            }
+        }
+
+        for (auto &pak : packs) {
+            fs::addArchive(pak);
+        }
+    }
 
 public:
-    std::unique_ptr<content_stats_base_t> create_content_stats() const override
+    inline void addArchive(const fs::path &path) const
     {
-        return std::unique_ptr<content_stats_base_t>(new content_stats_t{});
+        fs::addArchive(path, true);
+        discoverArchives(path);
     }
 
-    void count_contents_in_stats(contentflags_t contents, content_stats_base_t &stats_any) const override
+    void init_filesystem(const fs::path &source, const settings::common_settings &options) const override
     {
-        content_stats_t &stats = dynamic_cast<content_stats_t &>(stats_any);
-
-        {
-            std::unique_lock lock(stats.stat_mutex);
-            stats.native_types[contents.flags]++;
-        }
-
-        stats.total_brushes++;
+        img::clear();
+        // Q1-like games don't care about the local
+        // filesystem.
+        // they do care about the palette though.
+        fs::clear();
     }
 
-    void print_content_stats(const content_stats_base_t &stats_any, const char *what) const override
+    const std::vector<qvec3b> &get_default_palette() const override
     {
-        const content_stats_t &stats = dynamic_cast<const content_stats_t &>(stats_any);
-        logging::stat_tracker_t stat_print;
-
-        for (auto [bits, count] : stats.native_types) {
-            auto c = contentflags_t{.flags = bits};
-            stat_print.register_stat(fmt::format("{} {}", get_contents_display(c.flags), what)).count += count;
-        }
-
-        stat_print.register_stat(fmt::format("{} total", what)).count += stats.total_brushes;
+        static const std::vector<qvec3b> palette;
+        return palette;
     }
 };
 
@@ -1639,11 +1836,12 @@ static const gamedef_q1_like_t<GAME_QUAKE> gamedef_q1;
 static const gamedef_h2_t gamedef_h2;
 static const gamedef_hl_t gamedef_hl;
 static const gamedef_q2_t gamedef_q2;
+static const gamedef_sin_t gamedef_sin;
 
 const std::initializer_list<const gamedef_t *> &gamedef_list()
 {
     static constexpr std::initializer_list<const gamedef_t *> gamedefs{
-        &gamedef_q1, &gamedef_h2, &gamedef_hl, &gamedef_q2};
+        &gamedef_q1, &gamedef_h2, &gamedef_hl, &gamedef_q2, &gamedef_sin};
     return gamedefs;
 }
 

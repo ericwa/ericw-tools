@@ -75,6 +75,153 @@ struct texinfo_quake2_t
     int value;
 };
 
+template<typename T>
+struct name_and_flag_t
+{
+    const char  *name;
+    T           flag;
+};
+
+// extra SiN info
+// TODO: move this stuff to gamedef in some way
+enum class sin_contents_t : uint32_t
+{
+    SOLID = 1,
+    WATER = 32,
+    FENCE = 4,
+    SLIME = 16,
+    LAVA = 8,
+    WINDOW = 2,
+    MIST = 64,
+    ORIGIN = 0x1000000,
+    PLAYERCLIP = 0x10000,
+    MONSTERCLIP = 0x20000,
+
+    CURRENT_0 = 0x40000,
+    CURRENT_90 = 0x80000,
+    CURRENT_180 = 0x100000,
+    CURRENT_270 = 0x200000,
+    CURRENT_UP = 0x400000,
+    CURRENT_DOWN = 0x800000,
+    MONSTER = 0x2000000,
+    CORPSE = 0x4000000,
+    DETAIL = 0x8000000,
+    TRANSLUCENT = 0x10000000,
+    LADDER = 0x20000000
+};
+
+static constexpr name_and_flag_t<sin_contents_t> sin_contents_names[] = {
+    {"solid",         sin_contents_t::SOLID},
+    {"water",         sin_contents_t::WATER},
+    {"fence",         sin_contents_t::FENCE},
+    {"slime",         sin_contents_t::SLIME},
+    {"lava",          sin_contents_t::LAVA},
+    {"window",        sin_contents_t::WINDOW},
+    {"mist",          sin_contents_t::MIST},
+    {"origin",        sin_contents_t::ORIGIN},
+    {"playerclip",    sin_contents_t::PLAYERCLIP},
+    {"monsterclip",   sin_contents_t::MONSTERCLIP},
+
+    {"current_0",     sin_contents_t::CURRENT_0},
+    {"current_90",    sin_contents_t::CURRENT_90},
+    {"current_180",   sin_contents_t::CURRENT_180},
+    {"current_270",   sin_contents_t::CURRENT_270},
+    {"current_up",    sin_contents_t::CURRENT_UP},
+    {"current_dn",    sin_contents_t::CURRENT_DOWN},
+    {"monster",       sin_contents_t::MONSTER},
+    {"corpse",        sin_contents_t::CORPSE},
+    {"detail",        sin_contents_t::DETAIL},
+    {"translucent",   sin_contents_t::TRANSLUCENT},
+    {"ladder",        sin_contents_t::LADDER}
+};
+
+enum class sin_surfflags_t : uint32_t
+{
+    HINT = 0x100,
+    SKIP = 0x200,
+    NOMERGE = 0x4000000,
+
+    RANDOMANIMATE = 0x400000,
+    ANIMATE = 0x800000,
+    RNDTIME = 0x1000000,
+
+    CONVEYOR = 0x40,
+    HARDWAREONLY = 0x10000,
+    DAMAGE = 0x20000,
+    WEAK = 0x40000,
+    NORMAL = 0x80000,
+    ADD = 0x100000,
+    RICOCHET = 0x800,
+
+    SKY = 0x4,
+    WARP = 0x8,
+    NODRAW = 0x80,
+    MASKED = 0x2,
+    WAVY = 0x400,
+    NONLIT = 0x10,
+    
+    TYPE_BIT0 = 0x8000000,
+    TYPE_BIT1 = 0x10000000,
+    TYPE_BIT2 = 0x20000000,
+    TYPE_BIT3 = 0x40000000,
+    TRANSLATE = 0x2000000,
+    LIGHT = 0x1,
+    PRELIT = 0x1000,
+    NOFILTER = 0x20,
+    MIRROR = 0x2000,
+    CONSOLE = 0x4000,
+    USECOLOR = 0x8000,
+    ENVMAPPED = 0x200000
+};
+
+static constexpr name_and_flag_t<sin_surfflags_t> sin_surfflag_names[] = {
+    {"hint",        sin_surfflags_t::HINT},
+    {"skip",        sin_surfflags_t::SKIP},
+    {"nomerge",     sin_surfflags_t::NOMERGE},
+
+    {"random",      sin_surfflags_t::RANDOMANIMATE},
+    {"animate",     sin_surfflags_t::ANIMATE},
+    {"rndtime",     sin_surfflags_t::RNDTIME},
+
+    {"conveyor",    sin_surfflags_t::CONVEYOR},
+    {"hardwareonly",sin_surfflags_t::HARDWAREONLY},
+    {"damage",      sin_surfflags_t::DAMAGE},
+    {"weak",        sin_surfflags_t::WEAK},
+    {"normal",      sin_surfflags_t::NORMAL},
+    {"add",         sin_surfflags_t::ADD},
+    {"ricochet",    sin_surfflags_t::RICOCHET},
+
+    {"sky",         sin_surfflags_t::SKY},
+    {"warping",     sin_surfflags_t::WARP},
+    {"nodraw",      sin_surfflags_t::NODRAW},
+    {"masked",      sin_surfflags_t::MASKED},
+    {"wavy",        sin_surfflags_t::WAVY},
+    {"nonlit",      sin_surfflags_t::NONLIT},
+    {"surfbit0",    sin_surfflags_t::TYPE_BIT0},
+    {"surfbit1",    sin_surfflags_t::TYPE_BIT1},
+    {"surfbit2",    sin_surfflags_t::TYPE_BIT2},
+    {"surfbit3",    sin_surfflags_t::TYPE_BIT3},
+    {"translate",   sin_surfflags_t::TRANSLATE},
+    {"light",       sin_surfflags_t::LIGHT},
+    {"prelit",      sin_surfflags_t::PRELIT},
+    {"nofilter",    sin_surfflags_t::NOFILTER},
+    {"mirror",      sin_surfflags_t::MIRROR},
+    {"console",     sin_surfflags_t::CONSOLE},
+    {"usecolor",    sin_surfflags_t::USECOLOR},
+    {"envmapped",   sin_surfflags_t::ENVMAPPED},
+};
+
+struct sin_modify_flag_t
+{
+    bool                                          add;
+    std::variant<sin_contents_t, sin_surfflags_t> flag;
+};
+
+struct texinfo_sin_t
+{
+    std::vector<std::variant<sin_modify_flag_t, keyvalue_t>> objects;
+};
+
 // convert a plane to a texture axis; used by quaked
 struct texture_axis_t
 {
@@ -127,8 +274,8 @@ struct brush_side_t
     std::variant<texdef_quake_ed_t, texdef_valve_t, texdef_etp_t, texdef_bp_t> raw;
     // raw plane points
     std::array<qvec3d, 3> planepts;
-    // Q2/Q3 data, if available
-    std::optional<texinfo_quake2_t> extended_info = std::nullopt;
+    // additional game data, if available
+    std::variant<std::monostate, texinfo_quake2_t, texinfo_sin_t> extended_info = {};
 
     // calculated texture vecs
     texvecf vecs;
@@ -202,7 +349,13 @@ struct map_entity_t
 
 struct map_file_t
 {
+    fs::path filename;
+
     std::vector<map_entity_t> entities;
+
+    // if we loaded this in a specific game
+    // it will be stored here.
+    const gamedef_t *game = nullptr;
 
     void parse(parser_t &parser);
 
