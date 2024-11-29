@@ -382,3 +382,33 @@ TEST(qmat, transpose)
 
     EXPECT_EQ(in.transpose(), exp);
 }
+
+TEST(string, strcasecmp)
+{
+    EXPECT_EQ('x', Q_tolower('X'));
+    EXPECT_EQ('"', Q_tolower('"'));
+
+    const char *test = "abcA**";
+
+    // lhs < rhs
+    EXPECT_LT(Q_strcasecmp("a", "aa"), 0);
+    EXPECT_LT(Q_strcasecmp("aaa", "BBB"), 0);
+    EXPECT_LT(Q_strcasecmp("AAA", "bbb"), 0);
+
+    // lhs == rhs
+    EXPECT_EQ(Q_strcasecmp(std::string_view(&test[0], 1), std::string_view(&test[3], 1)), 0);
+    EXPECT_EQ(Q_strcasecmp("test", "TEST"), 0);
+    EXPECT_EQ(Q_strcasecmp("test", "test"), 0);
+
+    // lhs > rhs
+    EXPECT_GT(Q_strcasecmp("test", "aaaa"), 0);
+    EXPECT_GT(Q_strcasecmp("test", "AAAA"), 0);
+    EXPECT_GT(Q_strcasecmp("test", "tes"), 0);
+    EXPECT_GT(Q_strcasecmp("TEST", "T"), 0);
+}
+
+TEST(string, strncasecmp)
+{
+    EXPECT_EQ(Q_strncasecmp("*lava123", "*LAVA", 5), 0);
+    EXPECT_EQ(Q_strncasecmp("*lava123", "*LAVA", 8), 1);
+}

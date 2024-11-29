@@ -41,34 +41,47 @@
 #include <algorithm>
 #include <string>
 
-#if defined(__has_include) && __has_include(<strings.h>)
-#include <strings.h>
-#endif
+char Q_tolower(char x)
+{
+    if (x >= 'A' && x <= 'Z') {
+        x += 'a' - 'A';
+    }
+    return x;
+}
 
 int32_t Q_strncasecmp(std::string_view a, std::string_view b, size_t maxcount)
 {
-    return
-#ifdef _WIN32
-        _strnicmp
-#elif defined(__has_include) && __has_include(<strings.h>)
-        strncasecmp
-#else
-        strnicmp
-#endif
-        (a.data(), b.data(), maxcount);
+    return Q_strcasecmp(
+        a.substr(0, maxcount),
+        b.substr(0, maxcount));
 }
 
 int32_t Q_strcasecmp(std::string_view a, std::string_view b)
 {
-    return
-#ifdef _WIN32
-        _stricmp
-#elif defined(__has_include) && __has_include(<strings.h>)
-        strcasecmp
-#else
-        stricmp
-#endif
-        (a.data(), b.data());
+    const char *a_ptr = a.data();
+    const char *b_ptr = b.data();
+    const size_t common_size = std::min(a.size(), b.size());
+
+    for (size_t i = 0; i < common_size; ++i) {
+        char achar = Q_tolower(a_ptr[i]);
+        char bchar = Q_tolower(b_ptr[i]);
+
+        if (achar < bchar) {
+            return -1;
+        }
+        if (achar > bchar) {
+            return 1;
+        }
+    }
+
+    // the first common_size chars are the same
+    if (a.size() < b.size()) {
+        return -1;
+    }
+    if (a.size() > b.size()) {
+        return 1;
+    }
+    return 0;
 }
 
 void // mxd
