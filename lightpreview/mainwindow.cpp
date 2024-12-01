@@ -27,6 +27,7 @@ See file, 'COPYING', for details.
 #include <QMimeData>
 #include <QFileSystemWatcher>
 #include <QFileInfo>
+#include <QInputDialog>
 #include <QFormLayout>
 #include <QLineEdit>
 #include <QSplitter>
@@ -621,6 +622,17 @@ void MainWindow::setupMenu()
     viewMenu = menuBar()->addMenu(tr("&View"));
     cameraBookmarksMenu = viewMenu->addMenu(tr("Camera Bookmarks"));
     updateCameraBookmarksSubmenu();
+    viewMenu->addAction(tr("&Move camera to..."), this, [this]() {
+        bool ok = false;
+        QString text = QInputDialog::getText(
+            this, tr("Move camera to"), tr("Enter X Y Z coords, space-separated"), QLineEdit::Normal, QString(), &ok);
+
+        QStringList comps = text.split(QString::fromLatin1(" "), Qt::SkipEmptyParts);
+
+        if (comps.length() >= 3) {
+            this->glView->setCamera(qvec3d{comps[0].toDouble(), comps[1].toDouble(), comps[2].toDouble()});
+        }
+    });
 
     // help menu
 
