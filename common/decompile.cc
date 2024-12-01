@@ -508,6 +508,8 @@ static const char *DefaultSkipTexture(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return "e1u1/skip";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        return "GENERIC/misc/skip";
     } else {
         return "skip";
     }
@@ -516,9 +518,11 @@ static const char *DefaultSkipTexture(const mbsp_t *bsp)
 static void DefaultSkipSide(compiled_brush_side_t &side, const mbsp_t *bsp)
 {
     side.texture_name = DefaultSkipTexture(bsp);
-
+    
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         side.flags = {Q2_SURF_NODRAW};
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        side.flags = {SIN_SURF_NODRAW};
     }
 }
 
@@ -526,6 +530,8 @@ static const char *DefaultTriggerTexture(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return "e1u1/trigger";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        return "GENERIC/misc/trigger";
     } else {
         return "trigger";
     }
@@ -544,6 +550,8 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         return "e1u1/origin";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        return "GENERIC/misc/origin";
     } else {
         return "origin";
     }
@@ -552,7 +560,7 @@ static const char *DefaultOriginTexture(const mbsp_t *bsp)
 static const char *DefaultTextureForContents(const mbsp_t *bsp, contentflags_t contents)
 {
     int native = bsp->loadversion->game->contents_to_native(contents);
-
+    
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int visible = native & Q2_ALL_VISIBLE_CONTENTS;
 
@@ -573,6 +581,18 @@ static const char *DefaultTextureForContents(const mbsp_t *bsp, contentflags_t c
         }
 
         return "e1u1/skip";
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        int visible = native & SIN_ALL_VISIBLE_CONTENTS;
+
+        if (native & SIN_CONTENTS_PLAYERCLIP) {
+            return "generic/misc/clip";
+        } else if (native & SIN_CONTENTS_MONSTERCLIP) {
+            return "generic/misc/monster";
+        } else if (native & SIN_CONTENTS_AREAPORTAL) {
+            return "GENERIC/misc/trigger";
+        }
+
+        return "GENERIC/misc/skip";
     } else {
         switch (native) {
             case CONTENTS_WATER: return "*waterskip";
@@ -605,6 +625,14 @@ static void OverrideTextureForContents(
             }
 
             side.flags = {Q2_SURF_NODRAW};
+            return;
+        }
+    } else if (bsp->loadversion->game->id == GAME_SIN) {
+        int native = bsp->loadversion->game->contents_to_native(contents);
+
+        if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
+            side.texture_name = "e1u1/clip";
+            side.flags = {SIN_SURF_NODRAW};
             return;
         }
     }
@@ -782,7 +810,8 @@ static std::vector<decomp_brush_t> SplitDifferentTexturedPartsOfBrush(const mbsp
 {
     // Quake II maps include brushes, so we shouldn't ever run into
     // a case where a brush has faces split up beyond the brush bounds.
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         return {brush};
     }
 
@@ -841,7 +870,8 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
     leaf_decompile_task &task, const std::optional<qvec3d> &brush_offset)
 {
     std::vector<decomp_brush_t> finalBrushes;
-    if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
+    if ((bsp->loadversion->game->id == GAME_QUAKE_II || bsp->loadversion->game->id == GAME_SIN)
+        && !options.ignoreBrushes) {
         // Q2 doesn't need this - we assume each brush in the brush lump corresponds to exactly one .map file brush
         // and so each side of the brush can only have 1 texture at this point.
         finalBrushes = {BuildInitialBrush_Q2(bsp, task, task.allPlanes)};
@@ -893,9 +923,11 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
             if (bsp->loadversion->game->contents_to_native(brush.contents) == 0) {
                 // hint brush
                 side.texture_name = "e1u1/hint";
-
+                
                 if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                     side.flags = {Q2_SURF_HINT};
+                } else if (bsp->loadversion->game->id == GAME_SIN) {
+                    side.flags = {SIN_SURF_HINT};
                 }
 
                 side.valve = finalSide.plane.normal;
@@ -936,6 +968,7 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
                     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
                         side.flags = ti->flags;
                         side.value = ti->value;
+                    } else if (bsp->loadversion->game->id == GAME_SIN) {
                     }
                 } else {
                     side.valve = finalSide.plane.normal;
@@ -1203,7 +1236,8 @@ static void DecompileEntity(
             compiledBrushes.resize(tasks.size());
             tbb::parallel_for(static_cast<size_t>(0), tasks.size(),
                 [&](size_t i) { compiledBrushes[i] = DecompileLeafTaskGeometryOnly(bsp, tasks[i], brush_offset); });
-        } else if (bsp->loadversion->game->id == GAME_QUAKE_II && !options.ignoreBrushes) {
+        } else if ((bsp->loadversion->game->id == GAME_QUAKE_II || bsp->loadversion->game->id == GAME_SIN)
+                   && !options.ignoreBrushes) {
             std::unordered_map<const dbrush_t *, leaf_decompile_task> brushes;
 
             auto handle_leaf = [&brushes, bsp, model](const mleaf_t *leaf) {

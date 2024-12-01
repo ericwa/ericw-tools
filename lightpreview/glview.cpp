@@ -180,7 +180,7 @@ in vec2 uv;
 in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
-flat in uint styles;
+flat in uvec4 styles;
 
 out vec4 color;
 
@@ -213,14 +213,19 @@ void main() {
 
         if (!fullbright)
         {
-            for (uint i = 0u; i < 32u; i += 8u)
+            uint style = 0u;
+
+            for (uint s = 0u; s < 4u && style != 0xFFu; s = s + 1u)
             {
-                uint style = (styles >> i) & 0xFFu;
+                for (uint i = 0u; i < 32u; i += 8u)
+                {
+                    style = (styles[s] >> i) & 0xFFu;
 
-                if (style == 0xFFu)
-                    break;
+                    if (style == 0xFFu)
+                        break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                    lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                }
             }
         }
 
@@ -241,14 +246,14 @@ layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
-layout (location = 5) in uint vertex_styles;
+layout (location = 5) in uvec4 vertex_styles;
 layout (location = 6) in int face_index;
 
 out vec2 uv;
 out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
-flat out uint styles;
+flat out uvec4 styles;
 
 uniform mat4 MVP;
 uniform usamplerBuffer face_visibility_sampler;
@@ -284,7 +289,7 @@ in vec3 fragment_world_pos;
 in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
-flat in uint styles;
+flat in uvec4 styles;
 
 out vec4 color;
 
@@ -307,18 +312,24 @@ void main() {
     } else if (drawflat) {
         color = vec4(flat_color, 1.0);
     } else {
+        // TODO: why is this in skybox? skies are never lit?
         if (!fullbright && lightmap_only)
         {
             vec3 lmcolor = vec3(0.5);
 
-            for (uint i = 0u; i < 32u; i += 8u)
+            uint style = 0u;
+
+            for (uint s = 0u; s < 4u && style != 0xFFu; s = s + 1u)
             {
-                uint style = (styles >> i) & 0xFFu;
+                for (uint i = 0u; i < 32u; i += 8u)
+                {
+                    style = (styles[s] >> i) & 0xFFu;
 
-                if (style == 0xFFu)
-                    break;
+                    if (style == 0xFFu)
+                        break;
 
-                lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                    lmcolor += texture(lightmap_sampler, vec3(lightmap_uv, float(style))).rgb * style_scalars[style];
+                }
             }
 
             // see lightmap_scale documentation above
@@ -343,14 +354,14 @@ layout (location = 1) in vec2 vertex_uv;
 layout (location = 2) in vec2 vertex_lightmap_uv;
 layout (location = 3) in vec3 vertex_normal;
 layout (location = 4) in vec3 vertex_flat_color;
-layout (location = 5) in uint vertex_styles;
+layout (location = 5) in uvec4 vertex_styles;
 layout (location = 6) in int face_index;
 
 out vec3 fragment_world_pos;
 out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
-flat out uint styles;
+flat out uvec4 styles;
 
 uniform mat4 MVP;
 uniform vec3 eye_origin;
@@ -1303,16 +1314,27 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             // find matching entity
             std::string modelStr = fmt::format("*{}", mi);
             bool found = false;
+            bool remove = false;
 
             for (auto &ent : entities) {
                 if (ent.get("model") == modelStr) {
                     found = true;
+
+                    if (auto classname = ent.get("classname"); !classname.empty()) {
+                        if (bsp.loadversion->game->id == GAME_SIN) {
+                            if (classname == "func_remove") {
+                                remove = true;
+                                break;
+                            }
+                        }
+                    }
+
                     ent.get_vector("origin", origin);
                     break;
                 }
             }
 
-            if (!found)
+            if (!found || remove)
                 continue;
         }
 
@@ -1333,10 +1355,11 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             // determine opacity
             float opacity = 1.0f;
             bool alpha_test = false;
-
+            
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
-
                 if (texinfo->flags.native & Q2_SURF_NODRAW) {
+                    continue;
+                } else if (t.ends_with("/trigger")) {
                     continue;
                 }
 
@@ -1354,6 +1377,23 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     if (texinfo->flags.native & Q2_SURF_ALPHATEST) {
                         alpha_test = true;
                     }
+                }
+            } else if (bsp.loadversion->game->id == GAME_SIN) {
+                if (texinfo->flags.native & SIN_SURF_NODRAW) {
+                    continue;
+                } else if (t.ends_with("/trigger")) {
+                    continue;
+                }
+
+                if (texinfo->flags.native & SIN_SURF_SKY) {
+                    program = m_skybox_program;
+                    needs_skybox = true;
+                } else {
+                    alpha_test = true;
+                }
+
+                if (texinfo->translucence) {
+                    opacity = texinfo->translucence;
                 }
             } else if (bsp.loadversion->game->id == GAME_QUAKE) {
                 if (t.starts_with('{')) {
@@ -1472,7 +1512,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         qvec2f lightmap_uv;
         qvec3f normal;
         qvec3f flat_color;
-        uint32_t styles;
+        std::array<uint32_t, 4> styles;
         int32_t face_index;
     };
     std::vector<vertex_t> verts;
@@ -1541,8 +1581,16 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     .lightmap_uv = lightmap_uv,
                     .normal = vertex_normal,
                     .flat_color = flat_color,
-                    .styles = (uint32_t)(f->styles[0]) | (uint32_t)(f->styles[1] << 8) |
-                              (uint32_t)(f->styles[2] << 16) | (uint32_t)(f->styles[3] << 24),
+                    .styles = {
+                        (uint32_t)(f->styles[0]) | (uint32_t)(f->styles[1] << 8) |
+                        (uint32_t)(f->styles[2] << 16) | (uint32_t)(f->styles[3] << 24),
+                        (uint32_t)(f->styles[4]) | (uint32_t)(f->styles[5] << 8) |
+                        (uint32_t)(f->styles[6] << 16) | (uint32_t)(f->styles[7] << 24),
+                        (uint32_t)(f->styles[8]) | (uint32_t)(f->styles[9] << 8) |
+                        (uint32_t)(f->styles[10] << 16) | (uint32_t)(f->styles[11] << 24),
+                        (uint32_t)(f->styles[12]) | (uint32_t)(f->styles[13] << 8) |
+                        (uint32_t)(f->styles[14] << 16) | (uint32_t)(f->styles[15] << 24),
+                    },
                     .face_index = fnum});
             }
 
@@ -1619,7 +1667,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         // styles
         glEnableVertexAttribArray(5 /* attrib */);
         glVertexAttribIPointer(
-            5 /* attrib */, 1, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
+            5 /* attrib */, 4, GL_UNSIGNED_INT, sizeof(vertex_t), (void *)offsetof(vertex_t, styles));
 
         // face indices
         glEnableVertexAttribArray(6 /* attrib */);
