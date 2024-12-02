@@ -726,11 +726,13 @@ void GLView::paintGL()
             active_program = draw.key.program;
             active_program->bind();
         }
+        
+        if (active_program == m_program) {
+            m_program->setUniformValue(m_program_alpha_test_location, draw.key.alpha_test);
 
-        if (draw.key.alpha_test) {
-            m_program->setUniformValue(m_program_alpha_test_location, true);
-        } else {
-            m_program->setUniformValue(m_program_alpha_test_location, false);
+            if (!m_fullbright) {
+                m_program->setUniformValue(m_program_fullbright_location, draw.key.fullbright);
+            }
         }
 
         draw.texture->bind(0 /* texture unit */);
@@ -1354,7 +1356,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             // determine opacity
             float opacity = 1.0f;
-            bool alpha_test = false;
+            bool alpha_test = false, fullbright = false;
             
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
                 if (texinfo->flags.native & Q2_SURF_NODRAW) {
@@ -1392,6 +1394,10 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     alpha_test = true;
                 }
 
+                if (texinfo->flags.native & SIN_SURF_NONLIT) {
+                    fullbright = true;
+                }
+
                 if (texinfo->translucence) {
                     opacity = texinfo->translucence;
                 }
@@ -1401,7 +1407,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                 }
             }
 
-            material_key k = {.program = program, .texname = t, .opacity = opacity, .alpha_test = alpha_test};
+            material_key k = {.program = program, .texname = t, .opacity = opacity, .alpha_test = alpha_test, .fullbright = fullbright};
             faces_by_material_key[k].push_back({.face = &f, .model_offset = origin});
         }
     }

@@ -485,6 +485,7 @@ struct sin_miptex_t
     auto stream_data() { return std::tie(name, width, height, palette, palette_crc, padding, offsets, animname, flags, contents, value, direct, animtime,
         nonlit, directangle, trans_angle, directstyle, translucence, friction, restitution, trans_mag, color); }
 };
+
 static void convert_sin_paletted_to_32_bit(
     const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::array<qvec4b, 256> &pal)
 {
@@ -494,7 +495,7 @@ static void convert_sin_paletted_to_32_bit(
         output[i] = pal[pixels[i]];
 
         if (output[i][0] == 255 && output[i][1] == 0 && output[i][2] == 255) {
-            output[i][3] = 0;
+            output[i] = {};
         } else {
             output[i][3] = 255;
         }

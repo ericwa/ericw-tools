@@ -151,8 +151,9 @@ private:
         std::string texname;
         float opacity = 1.f;
         bool alpha_test = false;
+        bool fullbright = false;
 
-        auto as_tuple() const { return std::make_tuple(program, texname, opacity, alpha_test); }
+        auto as_tuple() const { return std::make_tuple(program, texname, opacity, alpha_test, fullbright); }
 
         bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
     };
