@@ -475,6 +475,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         result.style_to_lightmap_atlas[i] = full_atlas;
 
         std::fill(full_atlas.rgba8_samples.begin(), full_atlas.rgba8_samples.end(), qvec4b{});
+
         std::fill(full_atlas.e5brg9_samples.begin(), full_atlas.e5brg9_samples.end(), uint32_t{});
     }
 

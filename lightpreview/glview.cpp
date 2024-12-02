@@ -937,11 +937,19 @@ void GLView::paintGL()
     }
 }
 
+void GLView::setCamera(const qvec3d &origin)
+{
+    m_cameraOrigin = {(float)origin[0], (float)origin[1], (float)origin[2]};
+    update();
+    emit cameraMoved();
+}
+
 void GLView::setCamera(const qvec3d &origin, const qvec3d &fwd)
 {
     m_cameraOrigin = {(float)origin[0], (float)origin[1], (float)origin[2]};
     m_cameraFwd = {(float)fwd[0], (float)fwd[1], (float)fwd[2]};
     update();
+    emit cameraMoved();
 }
 
 void GLView::setLighmapOnly(bool lighmapOnly)
