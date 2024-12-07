@@ -581,7 +581,7 @@ TEST(testmapsQ1, simpleSealed2)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_simple_sealed2.map");
 
-    EXPECT_EQ(bsp.dleafs.size(), 3);
+    ASSERT_EQ(bsp.dleafs.size(), 3);
 
     EXPECT_EQ(bsp.dleafs[0].contents, CONTENTS_SOLID);
     EXPECT_EQ(bsp.dleafs[1].contents, CONTENTS_EMPTY);
