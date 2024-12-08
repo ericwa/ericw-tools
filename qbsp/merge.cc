@@ -72,13 +72,11 @@ static std::unique_ptr<face_t> TryMerge(const face_t *f1, const face_t *f2)
         f1->original_side->lmshift != f2->original_side->lmshift)
         return NULL;
 
-    if (qbsp_options.nomergeacrossliquids.value()) {
-        // if requested, block merging across water boundaries;
-        // ezQuake/nQuake (Q1) and Paintball2 (Q2) water caustics will leak onto
-        // above-water faces.
-        if (f1->contents[0].is_liquid(qbsp_options.target_game) != f2->contents[0].is_liquid(qbsp_options.target_game))
-            return nullptr;
-    }
+    // block merging across water boundaries;
+    // ezQuake/nQuake (Q1) and Paintball2 (Q2) water caustics will leak onto
+    // above-water faces.
+    if (f1->contents[0].is_liquid(qbsp_options.target_game) != f2->contents[0].is_liquid(qbsp_options.target_game))
+        return nullptr;
 
     // Q1: don't merge across sky boundary - we delete faces inside sky
     if (f1->contents[0].is_sky(qbsp_options.target_game) != f2->contents[0].is_sky(qbsp_options.target_game))

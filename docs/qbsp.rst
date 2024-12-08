@@ -40,14 +40,6 @@ Options
 
    Don't perform face merging.
 
-.. option:: -nomergeacrossliquids
-
-   Don't merge faces above and below a liquid.
-
-   This is for maps targetting ezQuake (Q1) and Paintball2 (Q2) water caustics,
-   where the effect is applied per-face and breaks if a face is partially above
-   and partially below water.
-
 .. option:: -noedgereuse
 
    Don't reuse edges (may be useful for debugging software rendering).
