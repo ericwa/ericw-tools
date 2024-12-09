@@ -1105,18 +1105,24 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
         return;
     }
 
+    // _hulls key
+    if (!ShouldGenerateClipnodes(entity, hullnum)) {
+        // We still need to emit an empty tree otherwise hull 0 will point past
+        // the clipnode array (FIXME?).
+        bspbrush_t::container empty;
+        tree_t tree;
+        BrushBSP(tree, entity, empty, tree_split_t::FAST);
+        if (hullnum.value_or(0)) {
+            ExportClipNodes(entity, tree.headnode, hullnum.value());
+        } else {
+            MakeTreePortals(tree); // needed to assign leaf bounds
+            ExportDrawNodes(entity, tree.headnode, map.bsp.dfaces.size());
+        }
+        return;
+    }
+
     // simpler operation for hulls
     if (hullnum.value_or(0)) {
-        if (!ShouldGenerateClipnodes(entity, hullnum)) {
-            // We still need to emit an empty tree otherwise hull 0 will point past
-            // the clipnode array (FIXME?).
-            bspbrush_t::container empty;
-            tree_t tree;
-            BrushBSP(tree, entity, empty, tree_split_t::FAST);
-            ExportClipNodes(entity, tree.headnode, hullnum.value());
-            return;
-        }
-
         tree_t tree;
         BrushBSP(tree, entity, brushes, tree_split_t::FAST);
         if (map.is_world_entity(entity) && !qbsp_options.nofill.value()) {
@@ -1142,10 +1148,6 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
             CountLeafs(tree.headnode);
         }
         ExportClipNodes(entity, tree.headnode, hullnum.value());
-        return;
-    }
-
-    if (!ShouldGenerateClipnodes(entity, hullnum)) {
         return;
     }
 

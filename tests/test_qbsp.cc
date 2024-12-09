@@ -1493,6 +1493,39 @@ TEST(testmapsQ1, sealingHull1Onnode)
     EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[0], player_start_pos + qvec3d(0, 0, 1000)));
 }
 
+TEST(testmapsQ1, hullsFlag)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_hulls.map");
+
+    ASSERT_EQ(3, bsp.dmodels.size()); // world and 2 func_wall's
+
+    {
+        const auto in_bmodel_pos = qvec3d(-152, -168, 168);
+
+        // the func_wall has _hulls is set to 5 = 0b101, so generate hulls 0 and 2 (blocks shambler and line traces but
+        // player can walk through)
+
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[1], in_bmodel_pos));
+        EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[1], in_bmodel_pos));
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[1], in_bmodel_pos));
+
+        EXPECT_TRUE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[1], in_bmodel_pos + qvec3d(8, 0, 0)));
+    }
+
+    {
+        // the second one has _hulls 6 = 0b110, so generate hulls 1 and 2 (blocks player + shambler, but no visual
+        // faces and point-size hull traces can pass through)
+
+        const auto in_bmodel_pos2 = qvec3d(-152, 24, 168);
+
+        EXPECT_EQ(CONTENTS_EMPTY, BSP_FindContentsAtPoint(&bsp, 0, &bsp.dmodels[2], in_bmodel_pos2));
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 1, &bsp.dmodels[2], in_bmodel_pos2));
+        EXPECT_EQ(CONTENTS_SOLID, BSP_FindContentsAtPoint(&bsp, 2, &bsp.dmodels[2], in_bmodel_pos2));
+
+        EXPECT_FALSE(BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[2], in_bmodel_pos2 + qvec3d(8, 0, 0)));
+    }
+}
+
 TEST(testmapsQ1, 0125UnitFaces)
 {
     GTEST_SKIP();
