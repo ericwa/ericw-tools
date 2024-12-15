@@ -50,4 +50,7 @@ struct prtfile_t
 
 struct bspversion_t;
 prtfile_t LoadPrtFile(const fs::path &name, const bspversion_t *loadversion);
+void WritePortalfile(
+    const fs::path &name, const prtfile_t &prtfile, const bspversion_t *loadversion, bool uses_detail, bool forceprt1);
+
 void WriteDebugPortals(const std::vector<polylib::winding_t> &portals, fs::path name);

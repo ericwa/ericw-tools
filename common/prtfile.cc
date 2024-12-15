@@ -25,6 +25,7 @@
 #include <common/ostream.hh>
 
 #include <fstream>
+#include <map>
 
 constexpr const char *PORTALFILE = "PRT1";
 constexpr const char *PORTALFILE2 = "PRT2";
@@ -195,5 +196,103 @@ void WriteDebugPortals(const std::vector<polylib::winding_t> &portals, fs::path 
     ewt::print(portal_file, "{}\n", portal_count);
     for (auto &p : portals) {
         WriteDebugPortal(p, portal_file);
+    }
+}
+
+/*
+==============================================================================
+
+PORTAL FILE GENERATION
+
+==============================================================================
+*/
+
+static void WritePortal(std::ofstream &portalFile, const prtfile_portal_t &portal)
+{
+    ewt::print(portalFile, "{} {} {} ", portal.winding.size(), portal.leafnums[0], portal.leafnums[1]);
+
+    for (auto &point : portal.winding) {
+        ewt::print(portalFile, "({} {} {}) ", point[0], point[1], point[2]);
+    }
+
+    ewt::print(portalFile, "\n");
+}
+
+static void WritePTR2ClusterMapping(std::ofstream &portalFile, const prtfile_t &input)
+{
+    // build cluster -> leafs mapping from dleafinfos
+    std::map<int, std::vector<int>> cluster_to_leafs;
+    for (int leafnum = 0; leafnum < input.portalleafs_real; ++leafnum) {
+        int cluster = input.dleafinfos[leafnum + 1].cluster;
+
+        cluster_to_leafs[cluster].push_back(leafnum);
+    }
+
+    // print one line per cluster
+    for (int i = 0; i < input.portalleafs; i++) {
+        auto it = cluster_to_leafs.find(i);
+        if (it != cluster_to_leafs.end()) {
+            for (int leafnum : it->second) {
+                ewt::print(portalFile, "{} ", leafnum);
+            }
+        }
+        ewt::print(portalFile, "-1\n");
+    }
+}
+
+/*
+================
+WritePortalfile
+================
+*/
+void WritePortalfile(
+    const fs::path &name, const prtfile_t &prtfile, const bspversion_t *loadversion, bool uses_detail, bool forceprt1)
+{
+    std::ofstream portalFile(name, std::ios_base::out); // .prt files are intentionally text mode
+    if (!portalFile)
+        FError("Failed to open {}: {}", name, strerror(errno));
+
+    // q2 uses a PRT1 file, but with clusters.
+    // (Since q2bsp natively supports clusters, we don't need PRT2.)
+    if (loadversion->game->id == GAME_QUAKE_II) {
+        ewt::print(portalFile, "PRT1\n");
+        ewt::print(portalFile, "{}\n", prtfile.portalleafs);
+        ewt::print(portalFile, "{}\n", prtfile.portals.size());
+        for (auto &portal : prtfile.portals) {
+            WritePortal(portalFile, portal);
+        }
+        return;
+    }
+
+    /* If no detail clusters, just use a normal PRT1 format */
+    if (!uses_detail) {
+        ewt::print(portalFile, "PRT1\n");
+        ewt::print(portalFile, "{}\n", prtfile.portalleafs);
+        ewt::print(portalFile, "{}\n", prtfile.portals.size());
+
+        for (auto &portal : prtfile.portals) {
+            WritePortal(portalFile, portal);
+        }
+    } else if (forceprt1) {
+        /* Write a PRT1 file for loading in the map editor. Vis will reject it. */
+        ewt::print(portalFile, "PRT1\n");
+        ewt::print(portalFile, "{}\n", prtfile.portalleafs);
+        ewt::print(portalFile, "{}\n", prtfile.portals.size());
+
+        for (auto &portal : prtfile.portals) {
+            WritePortal(portalFile, portal);
+        }
+    } else {
+        /* Write a PRT2 */
+        ewt::print(portalFile, "PRT2\n");
+        ewt::print(portalFile, "{}\n", prtfile.portalleafs_real);
+        ewt::print(portalFile, "{}\n", prtfile.portalleafs);
+        ewt::print(portalFile, "{}\n", prtfile.portals.size());
+
+        for (auto &portal : prtfile.portals) {
+            WritePortal(portalFile, portal);
+        }
+
+        WritePTR2ClusterMapping(portalFile, prtfile);
     }
 }
