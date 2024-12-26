@@ -1173,13 +1173,16 @@ std::vector<V> PointsAlongLine(const V &start, const V &end, const float step)
 bool LinesOverlap(
     const qvec3f &p0, const qvec3f &p1, const qvec3f &q0, const qvec3f &q1, double on_epsilon = DEFAULT_ON_EPSILON);
 
+/**
+ * Same as a std::array<T, 2> with the added semantics that arr[0] is "the front" and arr[1] is "the back".
+ */
 template<typename T>
 struct twosided
 {
     T front, back;
 
     // 0 is front, 1 is back
-    constexpr T &operator[](const int32_t &i)
+    constexpr T &operator[](int32_t i)
     {
         switch (i) {
             case 0: return front;
@@ -1189,7 +1192,7 @@ struct twosided
         throw std::exception();
     }
     // 0 is front, 1 is back
-    constexpr const T &operator[](const int32_t &i) const
+    constexpr const T &operator[](int32_t i) const
     {
         switch (i) {
             case 0: return front;
@@ -1208,6 +1211,10 @@ struct twosided
 
     // swap the front and back values
     constexpr void swap() { std::swap(front, back); }
+
+    // std::array compat
+    using value_type = T;
+    constexpr size_t size() const { return 2; }
 };
 
 namespace qv

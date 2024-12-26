@@ -155,7 +155,7 @@ enum q2_contents_t : int32_t
 struct q2_dnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; // negative numbers are -(leafs+1), not nodes
+    twosided<int32_t> children; // negative numbers are -(leafs+1), not nodes
     qvec3s mins; // for frustom culling
     qvec3s maxs;
     uint16_t firstface;

@@ -216,7 +216,7 @@ struct dplane_t : qplane3f
 struct bsp2_dnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
+    twosided<int32_t> children; /* negative numbers are -(leafs+1), not nodes */
     qvec3f mins; /* for sphere culling */
     qvec3f maxs;
     uint32_t firstface;
@@ -270,7 +270,7 @@ struct mface_t
 struct bsp2_dclipnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are contents */
+    twosided<int32_t> children; /* negative numbers are contents */
 
     // serialize for streams
     void stream_write(std::ostream &s) const;

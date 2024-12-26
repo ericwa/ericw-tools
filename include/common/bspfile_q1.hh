@@ -110,7 +110,7 @@ constexpr static int BSPXBRUSHES_CONTENTS_CLIP = -8;
 struct bsp29_dnode_t
 {
     int32_t planenum;
-    std::array<int16_t, 2>
+    twosided<int16_t>
         children; /* negative numbers are -(leafs+1), not nodes. children[0] is front, children[1] is back */
     qvec3s mins; /* for sphere culling */
     qvec3s maxs;
@@ -133,7 +133,7 @@ struct bsp29_dnode_t
 struct bsp2rmq_dnode_t
 {
     int32_t planenum;
-    std::array<int32_t, 2> children; /* negative numbers are -(leafs+1), not nodes */
+    twosided<int32_t> children; /* negative numbers are -(leafs+1), not nodes */
     qvec3s mins; /* for sphere culling */
     qvec3s maxs;
     uint32_t firstface;
@@ -162,7 +162,7 @@ struct bsp2rmq_dnode_t
 struct bsp29_dclipnode_t
 {
     int32_t planenum;
-    std::array<int16_t, 2> children; /* negative numbers are contents */
+    twosided<int16_t> children; /* negative numbers are contents */
 
     bsp29_dclipnode_t() = default;
 

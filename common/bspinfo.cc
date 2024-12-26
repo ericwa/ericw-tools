@@ -701,7 +701,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             json &node = nodes.insert(nodes.end(), json::object()).value();
 
             node.push_back({"planenum", src_node.planenum});
-            node.push_back({"children", src_node.children});
+            node.push_back({"children", json::array({src_node.children[0], src_node.children[1]})});
             node.push_back({"mins", src_node.mins});
             node.push_back({"maxs", src_node.maxs});
             node.push_back({"firstface", src_node.firstface});
@@ -769,7 +769,7 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
             json &clipnode = clipnodes.insert(clipnodes.end(), json::object()).value();
 
             clipnode.push_back({"planenum", src_clipnodes.planenum});
-            clipnode.push_back({"children", src_clipnodes.children});
+            clipnode.push_back({"children", json::array({src_clipnodes.children[0], src_clipnodes.children[1]})});
         }
     }
 

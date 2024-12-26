@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include "qvec.hh"
+
 #include <array>
 #include <cstdint>
 #include <cstring> // for memcpy()
@@ -305,6 +307,15 @@ inline std::ostream &operator<=(std::ostream &s, const std::array<T, N> &c)
     return s;
 }
 
+template<typename T>
+inline std::ostream &operator<=(std::ostream &s, const twosided<T> &c)
+{
+    s <= c[0];
+    s <= c[1];
+
+    return s;
+}
+
 template<typename... T>
 inline std::ostream &operator<=(std::ostream &s, std::tuple<T &...> tuple)
 {
@@ -458,6 +469,15 @@ inline std::istream &operator>=(std::istream &s, std::array<T, N> &c)
 {
     for (auto &v : c)
         s >= v;
+
+    return s;
+}
+
+template<typename T>
+inline std::istream &operator>=(std::istream &s, twosided<T> &c)
+{
+    s >= c[0];
+    s >= c[1];
 
     return s;
 }
