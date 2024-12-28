@@ -82,10 +82,10 @@ struct q2_dmodel_t
     q2_dmodel_t() = default;
 
     // convert from mbsp_t
-    q2_dmodel_t(const dmodelh2_t &model);
+    explicit q2_dmodel_t(const dmodelh2_t &model);
 
     // convert to mbsp_t
-    operator dmodelh2_t() const;
+    explicit operator dmodelh2_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -164,10 +164,10 @@ struct q2_dnode_t
     q2_dnode_t() = default;
 
     // convert from mbsp_t
-    q2_dnode_t(const bsp2_dnode_t &model);
+    explicit q2_dnode_t(const bsp2_dnode_t &model);
 
     // convert to mbsp_t
-    operator bsp2_dnode_t() const;
+    explicit operator bsp2_dnode_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -207,10 +207,10 @@ struct q2_texinfo_t
     q2_texinfo_t() = default;
 
     // convert from mbsp_t
-    q2_texinfo_t(const mtexinfo_t &model);
+    explicit q2_texinfo_t(const mtexinfo_t &model);
 
     // convert to mbsp_t
-    operator mtexinfo_t() const;
+    explicit operator mtexinfo_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -232,10 +232,10 @@ struct q2_dface_t
     q2_dface_t() = default;
 
     // convert from mbsp_t
-    q2_dface_t(const mface_t &model);
+    explicit q2_dface_t(const mface_t &model);
 
     // convert to mbsp_t
-    operator mface_t() const;
+    explicit operator mface_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -257,10 +257,10 @@ struct q2_dface_qbism_t
     q2_dface_qbism_t() = default;
 
     // convert from mbsp_t
-    q2_dface_qbism_t(const mface_t &model);
+    explicit q2_dface_qbism_t(const mface_t &model);
 
     // convert to mbsp_t
-    operator mface_t() const;
+    explicit operator mface_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -286,10 +286,10 @@ struct q2_dleaf_t
     q2_dleaf_t() = default;
 
     // convert from mbsp_t
-    q2_dleaf_t(const mleaf_t &model);
+    explicit q2_dleaf_t(const mleaf_t &model);
 
     // convert to mbsp_t
-    operator mleaf_t() const;
+    explicit operator mleaf_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -315,10 +315,10 @@ struct q2_dleaf_qbism_t
     q2_dleaf_qbism_t() = default;
 
     // convert from mbsp_t
-    q2_dleaf_qbism_t(const mleaf_t &model);
+    explicit q2_dleaf_qbism_t(const mleaf_t &model);
 
     // convert to mbsp_t
-    operator mleaf_t() const;
+    explicit operator mleaf_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -333,10 +333,10 @@ struct q2_dbrushside_t
     q2_dbrushside_t() = default;
 
     // convert from mbsp_t
-    q2_dbrushside_t(const q2_dbrushside_qbism_t &model);
+    explicit q2_dbrushside_t(const q2_dbrushside_qbism_t &model);
 
     // convert to mbsp_t
-    operator q2_dbrushside_qbism_t() const;
+    explicit operator q2_dbrushside_qbism_t() const;
 
     // serialize for streams
     void stream_write(std::ostream &s) const;

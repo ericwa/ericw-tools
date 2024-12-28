@@ -1853,7 +1853,7 @@ inline void CopyArray(std::vector<F> &from, std::vector<T> &to)
         if constexpr (std::is_arithmetic_v<T> && std::is_arithmetic_v<F>)
             to.push_back(numeric_cast<T>(v));
         else
-            to.push_back(v);
+            to.push_back(static_cast<T>(v));
     }
 }
 
