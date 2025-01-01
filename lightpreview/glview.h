@@ -152,9 +152,7 @@ private:
         float opacity = 1.f;
         bool alpha_test = false;
 
-        auto as_tuple() const { return std::make_tuple(program, texname, opacity, alpha_test); }
-
-        bool operator<(const material_key &other) const { return as_tuple() < other.as_tuple(); }
+        auto operator<=>(const material_key &other) const = default;
     };
 
     std::shared_ptr<QOpenGLTexture> placeholder_texture;

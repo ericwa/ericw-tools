@@ -137,12 +137,7 @@ public:
     [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qvec &other) const { return v < other.v; }
-    [[nodiscard]] constexpr bool operator<=(const qvec &other) const { return v <= other.v; }
-    [[nodiscard]] constexpr bool operator>(const qvec &other) const { return v > other.v; }
-    [[nodiscard]] constexpr bool operator>=(const qvec &other) const { return v >= other.v; }
-    [[nodiscard]] constexpr bool operator==(const qvec &other) const { return v == other.v; }
-    [[nodiscard]] constexpr bool operator!=(const qvec &other) const { return v != other.v; }
+    [[nodiscard]] constexpr auto operator<=>(const qvec &) const = default;
 
     [[nodiscard]] constexpr const T &at(const size_t idx) const
     {
@@ -780,17 +775,9 @@ public:
     {
     }
 
-private:
-    auto as_tuple() const { return std::tie(normal, dist); }
-
 public:
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qplane3 &other) const { return as_tuple() < other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator<=(const qplane3 &other) const { return as_tuple() <= other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator>(const qplane3 &other) const { return as_tuple() > other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator>=(const qplane3 &other) const { return as_tuple() >= other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator==(const qplane3 &other) const { return as_tuple() == other.as_tuple(); }
-    [[nodiscard]] constexpr bool operator!=(const qplane3 &other) const { return as_tuple() != other.as_tuple(); }
+    [[nodiscard]] constexpr auto operator<=>(const qplane3 &other) const = default;
 
     [[nodiscard]] constexpr const qvec<T, 4> vec4() const { return qvec<T, 4>(normal[0], normal[1], normal[2], dist); }
 
@@ -905,12 +892,7 @@ public:
     }
 
     // Sort support
-    [[nodiscard]] constexpr bool operator<(const qmat &other) const { return m_values < other.m_values; }
-    [[nodiscard]] constexpr bool operator<=(const qmat &other) const { return m_values <= other.m_values; }
-    [[nodiscard]] constexpr bool operator>(const qmat &other) const { return m_values > other.m_values; }
-    [[nodiscard]] constexpr bool operator>=(const qmat &other) const { return m_values >= other.m_values; }
-    [[nodiscard]] constexpr bool operator==(const qmat &other) const { return m_values == other.m_values; }
-    [[nodiscard]] constexpr bool operator!=(const qmat &other) const { return m_values != other.m_values; }
+    [[nodiscard]] constexpr auto operator<=>(const qmat &other) const = default;
 
     // access to elements
 

@@ -320,8 +320,7 @@ struct surfflags_t
 
 public:
     // sort support
-    bool operator<(const surfflags_t &other) const;
-    bool operator>(const surfflags_t &other) const;
+    auto operator<=>(const surfflags_t &other) const = default;
 
     bool is_valid(const gamedef_t *game) const;
 };
