@@ -3,10 +3,10 @@ project (lightpreview CXX)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt5Widgets)
-if(Qt5Widgets_FOUND)
+find_package(Qt6Widgets)
+if(Qt6Widgets_FOUND)
 else()
-    message(WARNING "Qt5 not found, disabling lightpreview")
+    message(WARNING "Qt6 not found, disabling lightpreview")
     return()
 endif()
 
@@ -34,7 +34,7 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 endif()
 
 target_link_libraries(lightpreview
-        Qt5::Widgets
+        Qt6::Widgets
         libqbsp
         liblight
         libvis
@@ -48,9 +48,9 @@ target_link_libraries(lightpreview
 if (WIN32)
     add_custom_command(
         TARGET lightpreview POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Widgets> $<TARGET_FILE_DIR:lightpreview>
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Gui> $<TARGET_FILE_DIR:lightpreview>
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt5::Core> $<TARGET_FILE_DIR:lightpreview>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Widgets> $<TARGET_FILE_DIR:lightpreview>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Gui> $<TARGET_FILE_DIR:lightpreview>
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Core> $<TARGET_FILE_DIR:lightpreview>
     )
 
     # HACK: copy .dll dependencies
@@ -70,14 +70,14 @@ add_loader_path_to_rpath(lightpreview)
 
 # Install Qt DLL's
 if (WIN32)
-    install(FILES $<TARGET_FILE:Qt5::Widgets> DESTINATION .)
-    install(FILES $<TARGET_FILE:Qt5::Gui> DESTINATION .)
-    install(FILES $<TARGET_FILE:Qt5::Core> DESTINATION .)
-    install(FILES "$<TARGET_FILE:Qt5::QWindowsIntegrationPlugin>" DESTINATION platforms)
+    install(FILES $<TARGET_FILE:Qt6::Widgets> DESTINATION .)
+    install(FILES $<TARGET_FILE:Qt6::Gui> DESTINATION .)
+    install(FILES $<TARGET_FILE:Qt6::Core> DESTINATION .)
+    install(FILES "$<TARGET_FILE:Qt6::QWindowsIntegrationPlugin>" DESTINATION platforms)
 endif ()
 
 function(apple_install_lib SRC_TARGET_NAME DEST_PATH)
-    # SRC_TARGET_NAME - a target name, e.g. Qt5::Widgets
+    # SRC_TARGET_NAME - a target name, e.g. Qt6::Widgets
     # DEST_PATH - destination path to install the library to
     
     get_target_property(SO_FILE_SYMLINK ${SRC_TARGET_NAME} IMPORTED_LOCATION_RELEASE)
@@ -99,16 +99,16 @@ if (APPLE)
     apple_install_lib(embree "$<TARGET_FILE_DIR:lightpreview>")
 
     # TODO: this should be replaced with macdeployqt
-    apple_install_lib(Qt5::Widgets "$<TARGET_FILE_DIR:lightpreview>/QtWidgets.framework/Versions/5")
-    apple_install_lib(Qt5::Gui "$<TARGET_FILE_DIR:lightpreview>/QtGui.framework/Versions/5")
-    apple_install_lib(Qt5::Core "$<TARGET_FILE_DIR:lightpreview>/QtCore.framework/Versions/5")
-    apple_install_lib(Qt5::QCocoaIntegrationPlugin "$<TARGET_FILE_DIR:lightpreview>/platforms")
+    apple_install_lib(Qt6::Widgets "$<TARGET_FILE_DIR:lightpreview>/QtWidgets.framework/Versions/5")
+    apple_install_lib(Qt6::Gui "$<TARGET_FILE_DIR:lightpreview>/QtGui.framework/Versions/5")
+    apple_install_lib(Qt6::Core "$<TARGET_FILE_DIR:lightpreview>/QtCore.framework/Versions/5")
+    apple_install_lib(Qt6::QCocoaIntegrationPlugin "$<TARGET_FILE_DIR:lightpreview>/platforms")
 
     # these are required by QCocoaIntegrationPlugin
-    find_package(Qt5DBus REQUIRED)
-    find_package(Qt5PrintSupport REQUIRED)
-    apple_install_lib(Qt5::PrintSupport "$<TARGET_FILE_DIR:lightpreview>/QtPrintSupport.framework/Versions/5")
-    apple_install_lib(Qt5::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/5")
+    find_package(Qt6DBus REQUIRED)
+    find_package(Qt6PrintSupport REQUIRED)
+    apple_install_lib(Qt6::PrintSupport "$<TARGET_FILE_DIR:lightpreview>/QtPrintSupport.framework/Versions/5")
+    apple_install_lib(Qt6::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/5")
 endif ()
 
 install(TARGETS lightpreview RUNTIME DESTINATION . BUNDLE DESTINATION .)
