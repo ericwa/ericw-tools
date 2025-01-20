@@ -22,7 +22,6 @@
 #include <map>
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "testutils.hh"
 #include "test_main.hh"
 
 // FIXME: Clear global data (planes, etc) between each test
@@ -573,7 +572,7 @@ TEST(testmapsQ1, simpleSealed)
 
         EXPECT_EQ(bsp.dleafs[1].nummarksurfaces, 6);
         EXPECT_EQ(bsp.dleafs[1].firstmarksurface, 0);
-        EXPECT_VECTORS_UNOREDERED_EQUAL(bsp.dleaffaces, std::vector<uint32_t>{0, 1, 2, 3, 4, 5});
+        EXPECT_THAT(bsp.dleaffaces, testing::UnorderedElementsAre(0, 1, 2, 3, 4, 5));
     }
 }
 
@@ -610,8 +609,8 @@ TEST(testmapsQ1, simpleSealed2)
     auto *other_plus_y =
         BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], qvec3d(-64, -368, 128), qvec3d(0, 1, 0)); // back wall +Y normal
 
-    EXPECT_VECTORS_UNOREDERED_EQUAL(other_markfaces,
-        std::vector<const mface_t *>{other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y});
+    EXPECT_THAT(other_markfaces,
+        testing::UnorderedElementsAre(other_floor, other_ceil, other_minus_x, other_plus_x, other_plus_y));
 }
 
 TEST(testmapsQ1, q1FuncIllusionaryVisblocker)

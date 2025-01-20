@@ -5,7 +5,7 @@
 #include <vis/vis.hh>
 
 #include "test_qbsp.hh"
-#include "testutils.hh"
+#include <gtest/gtest.h>
 
 static bool q2_leaf_sees(
     const mbsp_t &bsp, const std::unordered_map<int, std::vector<uint8_t>> &vis, const mleaf_t *a, const mleaf_t *b)
@@ -154,7 +154,8 @@ TEST(vis, q1FuncIllusionaryVisblockerInteractions)
     const auto in_visblocker_covered_by_illusionary = qvec3d(48, 248, 56);
 
     auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
-    auto *in_visblocker_covered_by_illusionary_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_visblocker_covered_by_illusionary);
+    auto *in_visblocker_covered_by_illusionary_leaf =
+        BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_visblocker_covered_by_illusionary);
 
     EXPECT_FALSE(q1_leaf_sees(bsp, vis, in_visblocker_covered_by_illusionary_leaf, player_start_leaf));
 }
