@@ -256,6 +256,94 @@ TEST(testmapsQ2, areaportalWithDetail)
     EXPECT_THAT(bsp.dareas, testing::UnorderedElementsAreArray(std::vector<darea_t>{{0, 0}, {1, 1}, {1, 2}}));
 }
 
+/**
+ * same as q2_areaportal.map but has 2 areaportals
+ * more clearly shows how areaportal indices work
+ *
+ *        ap1      ap2
+ *
+ *  player |  light |   ammo
+ *  start  |        | grenades
+ *
+ *   area     area      area
+ *    3         2        1
+ *
+ *         -- +x -->
+ */
+TEST(testmapsQ2, areaportals)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_areaportals.map");
+
+    ASSERT_EQ(4, bsp.dareas.size()); // 1 reserved + 3 actual = 4
+    ASSERT_EQ(5, bsp.dareaportals.size()); // 1 reserved + (2 portals * 2 directions) = 5
+
+    // check the areaportal numbers from the "style" keys of the func_areaportal entities
+    auto ents = EntData_Parse(bsp);
+
+    auto playerstart_portal_it = std::ranges::find_if(
+        ents, [](const entdict_t &dict) { return dict.get("targetname") == "playerstart_portal"; });
+    auto grenades_portal_it =
+        std::ranges::find_if(ents, [](const entdict_t &dict) { return dict.get("targetname") == "grenades_portal"; });
+
+    ASSERT_NE(playerstart_portal_it, ents.end());
+    ASSERT_NE(grenades_portal_it, ents.end());
+
+    const int32_t playerstart_portal_num = playerstart_portal_it->get_int("style");
+    const int32_t grenades_portal_num = grenades_portal_it->get_int("style");
+
+    // may need to be adjusted
+    ASSERT_EQ(1, playerstart_portal_num);
+    ASSERT_EQ(2, grenades_portal_num);
+
+    // look up the leafs
+    const qvec3d player_start{-88, -112, 120};
+    const qvec3d light_pos{72, -136, 168};
+    const qvec3d grenades_pos{416, -128, 112};
+
+    auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start);
+    auto *light_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], light_pos);
+    auto *grenades_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], grenades_pos);
+
+    // check leaf areas (may need to be adjusted)
+    EXPECT_EQ(2, light_leaf->area);
+    EXPECT_EQ(3, player_start_leaf->area);
+    EXPECT_EQ(1, grenades_leaf->area);
+
+    // inspect player_start_leaf area
+    {
+        const darea_t &area = bsp.dareas[player_start_leaf->area];
+        ASSERT_EQ(area.numareaportals, 1); // to light area
+
+        const dareaportal_t &portal = bsp.dareaportals[area.firstareaportal];
+        EXPECT_EQ(portal.otherarea, light_leaf->area);
+        EXPECT_EQ(portal.portalnum, playerstart_portal_num);
+    }
+
+    // inspect "light" leaf
+    {
+        const darea_t &area = bsp.dareas[light_leaf->area];
+        ASSERT_EQ(area.numareaportals, 2); // to player start, grenades areas
+
+        dareaportal_t portal_x = bsp.dareaportals[area.firstareaportal];
+        dareaportal_t portal_y = bsp.dareaportals[area.firstareaportal + 1];
+
+        EXPECT_THAT((std::vector{portal_x, portal_y}),
+            testing::UnorderedElementsAre(
+                dareaportal_t{.portalnum = playerstart_portal_num, .otherarea = player_start_leaf->area},
+                dareaportal_t{.portalnum = grenades_portal_num, .otherarea = grenades_leaf->area}));
+    }
+
+    // inspect "grenades" leaf
+    {
+        const darea_t &area = bsp.dareas[grenades_leaf->area];
+        ASSERT_EQ(area.numareaportals, 1); // to light leaf
+
+        dareaportal_t portal = bsp.dareaportals[area.firstareaportal];
+
+        EXPECT_EQ(portal, (dareaportal_t{.portalnum = grenades_portal_num, .otherarea = light_leaf->area}));
+    }
+}
+
 TEST(testmapsQ2, nodrawLight)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ2("q2_nodraw_light.map", {"-includeskip"});

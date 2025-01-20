@@ -318,10 +318,12 @@ struct mleaf_t
     bool operator==(const mleaf_t &other) const;
 };
 
+// index of darea_t in dareas *is* the "area number" (unlike for dareaportals).
+// 0 is reserved
 struct darea_t
 {
-    int32_t numareaportals;
-    int32_t firstareaportal;
+    int32_t numareaportals; // number of entries in dareaportals (number of outgoing graph edges)
+    int32_t firstareaportal; // index into dareaportals of our first outgoing graph edge, *not* the "area portal number"
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
@@ -334,10 +336,13 @@ struct darea_t
 // each area has a list of portals that lead into other areas
 // when portals are closed, other areas may not be visible or
 // hearable even if the vis info says that it should be
+//
+// a dareaportal_t is a directed edge in the area graph.
 struct dareaportal_t
 {
-    int32_t portalnum;
-    int32_t otherarea;
+    int32_t portalnum; // our "area portal number". corresponds to the "style" key on the func_areaportal entity.
+                       // multiple dareaportal_t entries (should be always 2) will have the same portalnum
+    int32_t otherarea; // area number (index in dareas array) of the other area.
 
     // serialize for streams
     void stream_write(std::ostream &s) const;
