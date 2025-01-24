@@ -40,7 +40,7 @@ struct dmodelh2_t
 {
     qvec3f mins;
     qvec3f maxs;
-    qvec3f origin;
+    qvec3f origin; /* unused */
     std::array<int32_t, MAX_MAP_HULLS_H2> headnode; /* hexen2 only uses 6 */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;

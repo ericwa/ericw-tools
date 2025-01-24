@@ -72,7 +72,7 @@ struct dmodelq1_t
 {
     qvec3f mins;
     qvec3f maxs;
-    qvec3f origin;
+    qvec3f origin; /* unused */
     std::array<int32_t, MAX_MAP_HULLS_Q1> headnode; /* 4 for backward compat, only 3 hulls exist */
     int32_t visleafs; /* not including the solid leaf 0 */
     int32_t firstface;
