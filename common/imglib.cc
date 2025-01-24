@@ -304,6 +304,7 @@ const texture *find(std::string_view str)
 
 void clear()
 {
+    palette.clear();
     textures.clear();
 }
 
