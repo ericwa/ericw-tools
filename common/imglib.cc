@@ -99,6 +99,9 @@ void init_palette(const gamedef_t *game)
 static void convert_paletted_to_32_bit(
     const std::vector<uint8_t> &pixels, std::vector<qvec4b> &output, const std::vector<qvec3b> &pal)
 {
+    if (pal.size() != 256) {
+        FError("palette size {} != 256", pal.size());
+    }
     output.resize(pixels.size());
 
     for (size_t i = 0; i < pixels.size(); i++) {
