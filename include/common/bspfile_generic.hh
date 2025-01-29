@@ -315,7 +315,7 @@ struct mleaf_t
     uint32_t numleafbrushes;
 
     // comparison operator for tests
-    bool operator==(const mleaf_t &other) const;
+    auto operator<=>(const mleaf_t &other) const = default;
 };
 
 // index of darea_t in dareas *is* the "area number" (unlike for dareaportals).
@@ -330,7 +330,7 @@ struct darea_t
     void stream_read(std::istream &s);
 
     // comparison operator for tests
-    bool operator==(const darea_t &other) const;
+    auto operator<=>(const darea_t &other) const = default;
 };
 
 // each area has a list of portals that lead into other areas
@@ -349,7 +349,7 @@ struct dareaportal_t
     void stream_read(std::istream &s);
 
     // comparison operator for tests
-    bool operator==(const dareaportal_t &other) const;
+    auto operator<=>(const dareaportal_t &other) const = default;
 };
 
 struct dbrush_t

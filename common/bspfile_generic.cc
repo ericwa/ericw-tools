@@ -285,11 +285,6 @@ static auto tuple(const mleaf_t &l)
         l.cluster, l.area, l.firstleafbrush, l.numleafbrushes);
 }
 
-bool mleaf_t::operator==(const mleaf_t &other) const
-{
-    return tuple(*this) == tuple(other);
-}
-
 // darea_t
 
 void darea_t::stream_write(std::ostream &s) const
@@ -302,11 +297,6 @@ void darea_t::stream_read(std::istream &s)
     s >= std::tie(numareaportals, firstareaportal);
 }
 
-bool darea_t::operator==(const darea_t &other) const
-{
-    return std::tie(numareaportals, firstareaportal) == std::tie(other.numareaportals, other.firstareaportal);
-}
-
 // dareaportal_t
 
 void dareaportal_t::stream_write(std::ostream &s) const
@@ -317,11 +307,6 @@ void dareaportal_t::stream_write(std::ostream &s) const
 void dareaportal_t::stream_read(std::istream &s)
 {
     s >= std::tie(portalnum, otherarea);
-}
-
-bool dareaportal_t::operator==(const dareaportal_t &other) const
-{
-    return std::tie(portalnum, otherarea) == std::tie(other.portalnum, other.otherarea);
 }
 
 // dbrush_t

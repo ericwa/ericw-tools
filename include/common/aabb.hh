@@ -51,10 +51,7 @@ public:
         {
         }
 
-        constexpr bool operator==(const intersection_t &other) const
-        {
-            return valid == other.valid && bbox == other.bbox;
-        }
+        constexpr auto operator<=>(const intersection_t &other) const = default;
 
         constexpr operator bool() const { return valid; }
     };
@@ -106,7 +103,7 @@ public:
         }
     }
 
-    constexpr bool operator==(const aabb &other) const { return m_corners == other.m_corners; }
+    constexpr auto operator<=>(const aabb &other) const = default;
 
     constexpr const value_type &mins() const { return m_corners[0]; }
 

@@ -78,10 +78,7 @@ private:
         // other: visofs
         int clusternum;
 
-        bool operator==(const face_visibility_key_t &other) const
-        {
-            return show_bmodels == other.show_bmodels && leafnum == other.leafnum && clusternum == other.clusternum;
-        }
+        auto operator<=>(const face_visibility_key_t &other) const = default;
     };
     face_visibility_key_t desiredFaceVisibility() const;
 

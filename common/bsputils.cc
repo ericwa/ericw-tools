@@ -468,13 +468,6 @@ static clipnode_info_t BSP_FindClipnodeAtPoint_r(const mbsp_t *bsp, const int pa
         return BSP_FindClipnodeAtPoint_r(bsp, clipnodenum, SIDE_BACK, node->children[SIDE_BACK], point);
     }
 }
-
-bool clipnode_info_t::operator==(const clipnode_info_t &other) const
-{
-    return this->parent_clipnode == other.parent_clipnode && this->side == other.side &&
-           this->contents == other.contents;
-}
-
 clipnode_info_t BSP_FindClipnodeAtPoint(
     const mbsp_t *bsp, hull_index_t hullnum, const dmodelh2_t *model, const qvec3d &point)
 {
