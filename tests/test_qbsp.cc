@@ -1310,6 +1310,17 @@ TEST(testmapsQ1, cube)
     EXPECT_EQ(12, bsp.dclipnodes.size());
 }
 
+TEST(testmapsQ1, cubeCaseInsensitive)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_cube_case_insensitive.map");
+
+    ASSERT_EQ(6, bsp.dfaces.size());
+    for (const auto &dface : bsp.dfaces) {
+        // the case from the .wad is used, not the case from the .map
+        ASSERT_EQ(Face_TextureNameView(&bsp, &dface), "orangestuff8");
+    }
+}
+
 /**
  * Two solid cuboids touching along one edge
  */
