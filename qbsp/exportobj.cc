@@ -174,7 +174,7 @@ static void ExportObj_Marksurfaces_r(const node_t *node, std::unordered_set<cons
     auto *leafdata = node->get_leafdata();
 
     for (auto &face : leafdata->markfaces) {
-        if (!face->get_texinfo().flags.is_nodraw) {
+        if (!face->get_texinfo().flags.is_nodraw()) {
             dest->insert(face);
         }
     }

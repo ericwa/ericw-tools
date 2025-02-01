@@ -886,7 +886,7 @@ int bsputil_main(int _argc, const char **_argv)
 
                     auto &texinfo = bsp.texinfo[face.texinfo];
 
-                    if (texinfo.flags.is_nodraw)
+                    if (texinfo.flags.is_nodraw())
                         continue;
                     // TODO
                     // else if (texinfo.flags.native & Q2_SURF_SKY)

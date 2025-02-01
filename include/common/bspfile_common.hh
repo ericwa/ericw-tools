@@ -239,7 +239,7 @@ struct surfflags_t
     q1_surf_flags_t native_q1;
 
     // an invisible surface (Q1 "skip" texture, Q2 SURF_NODRAW)
-    bool is_nodraw;
+    bool is_nodraw() const;
 
     // hint surface
     bool is_hint;

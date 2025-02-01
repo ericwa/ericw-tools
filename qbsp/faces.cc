@@ -40,7 +40,7 @@ struct makefaces_stats_t : logging::stat_tracker_t
 
 static bool ShouldOmitFace(face_t *f)
 {
-    if (!qbsp_options.includeskip.value() && f->get_texinfo().flags.is_nodraw) {
+    if (!qbsp_options.includeskip.value() && f->get_texinfo().flags.is_nodraw()) {
         // TODO: move to game specific
         // always include LIGHT
         if (qbsp_options.target_game->id == GAME_QUAKE_II && (f->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
@@ -364,7 +364,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
     /* special (non-surface cached) faces don't need subdivision */
     const maptexinfo_t &tex = f->get_texinfo();
 
-    if (tex.flags.is_nodraw || tex.flags.is_hint || !qbsp_options.target_game->surf_is_subdivided(tex.flags)) {
+    if (tex.flags.is_nodraw() || tex.flags.is_hint || !qbsp_options.target_game->surf_is_subdivided(tex.flags)) {
         std::list<std::unique_ptr<face_t>> result;
         result.push_back(std::move(f));
         return result;

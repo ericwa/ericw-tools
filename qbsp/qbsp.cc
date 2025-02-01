@@ -1720,7 +1720,7 @@ static int MakeSkipTexinfo()
     maptexinfo_t mt{};
 
     mt.miptex = FindMiptex("skip", true);
-    mt.flags.is_nodraw = true;
+    mt.flags.native_q2 = static_cast<q2_surf_flags_t>(mt.flags.native_q2 | Q2_SURF_NODRAW);
 
     return FindTexinfo(mt, qplane3d{});
 }

@@ -177,6 +177,11 @@ std::string contentflags_t::to_string() const
 
 // surfflags_t
 
+bool surfflags_t::is_nodraw() const
+{
+    return !!(native_q2 & Q2_SURF_NODRAW);
+}
+
 bool surfflags_t::needs_write() const
 {
     return *this != surfflags_t();
