@@ -254,26 +254,26 @@ struct surfflags_t
     void set_hintskip(bool hintskip);
 
     // don't receive dirtmapping
-    bool no_dirt;
+    bool no_dirt : 1;
 
     // don't cast a shadow
-    bool no_shadow;
+    bool no_shadow : 1;
 
     // light doesn't bounce off this face
-    bool no_bounce;
+    bool no_bounce : 1;
 
     // opt out of minlight on this face (including opting out of local minlight, so
     // not the same as just setting minlight to 0).
-    bool no_minlight;
+    bool no_minlight : 1;
 
     // don't expand this face for larger clip hulls
-    bool no_expand;
+    bool no_expand : 1;
 
     // block any way phong can be enabled
-    bool no_phong;
+    bool no_phong : 1;
 
     // this face doesn't receive light
-    bool light_ignore;
+    bool light_ignore : 1;
 
     // if true, rescales any surface light emitted by these brushes to emit 50% light at 90 degrees from the surface
     // normal if false, use a more natural angle falloff of 0% at 90 degrees
