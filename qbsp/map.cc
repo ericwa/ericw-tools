@@ -1013,7 +1013,7 @@ static std::optional<mapface_t> ParseBrushFace(const mapfile::brush_side_t &inpu
     tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
 
     // to save on texinfo, reset all invisible sides to default texvecs
-    if (tx.flags.is_nodraw() || tx.flags.is_hintskip || tx.flags.is_hint()) {
+    if (tx.flags.is_nodraw() || tx.flags.is_hintskip() || tx.flags.is_hint()) {
         mapfile::brush_side_t temp;
         temp.plane = face.get_plane();
         temp.set_texinfo(mapfile::texdef_quake_ed_t{{0, 0}, 0, {1, 1}});
@@ -1672,7 +1672,7 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
             if (qbsp_options.target_game->texinfo_is_hintskip(
                     face.get_texinfo().flags, map.miptexTextureName(face.get_texinfo().miptex))) {
                 auto copy = face.get_texinfo();
-                copy.flags.is_hintskip = true;
+                copy.flags.set_hintskip(true);
                 face.texinfo = FindTexinfo(copy, face.get_plane());
             }
         }

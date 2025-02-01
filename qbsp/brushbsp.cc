@@ -315,7 +315,7 @@ static int TestBrushToPlanenum(
                     back = 1;
             }
             if (front && back) {
-                if (!(side.get_texinfo().flags.is_hintskip)) {
+                if (!(side.get_texinfo().flags.is_hintskip())) {
                     (*numsplits)++;
                     if (side.get_texinfo().flags.is_hint()) {
                         *hintsplit = true;
@@ -885,7 +885,7 @@ static side_t *ChooseMidPlaneFromList(const bspbrush_t::container &brushes, cons
                     continue; // nothing visible, so it can't split
                 if (side.onnode)
                     continue; // allready a node splitter
-                if (side.get_texinfo().flags.is_hintskip)
+                if (side.get_texinfo().flags.is_hintskip())
                     continue; // skip surfaces are never chosen
                 if (side.is_visible() != (pass == 0 || pass == 2))
                     continue; // only check visible faces on pass 0/2
@@ -1010,7 +1010,7 @@ static side_t *SelectSplitPlane(
                     continue; // allready a node splitter
                 if (side.tested)
                     continue; // we allready have metrics for this plane
-                if (side.get_texinfo().flags.is_hintskip)
+                if (side.get_texinfo().flags.is_hintskip())
                     continue; // skip surfaces are never chosen
                 if (side.is_visible() != (pass == 0 || pass == 2))
                     continue; // only check visible faces on pass 0/2

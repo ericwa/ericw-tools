@@ -203,6 +203,19 @@ void surfflags_t::set_hint(bool hint)
         native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_HINT);
 }
 
+bool surfflags_t::is_hintskip() const
+{
+    return !!(native_q2 & Q2_SURF_SKIP);
+}
+
+void surfflags_t::set_hintskip(bool hintskip)
+{
+    if (hintskip)
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 | Q2_SURF_SKIP);
+    else
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_SKIP);
+}
+
 bool surfflags_t::needs_write() const
 {
     return *this != surfflags_t();

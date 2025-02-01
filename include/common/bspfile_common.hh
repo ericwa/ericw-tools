@@ -249,7 +249,9 @@ struct surfflags_t
     void set_hint(bool hint);
 
     // is a skip surface from a hint brush
-    bool is_hintskip;
+    bool is_hintskip() const;
+
+    void set_hintskip(bool hintskip);
 
     // don't receive dirtmapping
     bool no_dirt;
