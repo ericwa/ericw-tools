@@ -1094,8 +1094,10 @@ static void ProcessEntity(mapentity_t &entity, hull_index_t hullnum)
 
     // we're discarding the brush
     if (discarded_trigger) {
-        entity.epairs.set("mins", fmt::to_string(entity.bounds.mins()));
-        entity.epairs.set("maxs", fmt::to_string(entity.bounds.maxs()));
+        if (!hullnum.value_or(0)) {
+            entity.epairs.set("mins", fmt::to_string(entity.bounds.mins()));
+            entity.epairs.set("maxs", fmt::to_string(entity.bounds.maxs()));
+        }
         return;
     }
 
