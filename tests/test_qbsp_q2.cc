@@ -356,7 +356,7 @@ TEST(testmapsQ2, nodrawLight)
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
     EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/trigger");
-    EXPECT_EQ(texinfo->flags.native, (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
+    EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_NODRAW));
 }
 
 TEST(testmapsQ2, longTextureName)
@@ -483,7 +483,7 @@ TEST(testmapsQ2, lavaclip)
 
     auto *texinfo = Face_Texinfo(&bsp, topface);
     EXPECT_EQ(std::string(texinfo->texture.data()), "e1u1/brlava");
-    EXPECT_EQ(texinfo->flags.native, (Q2_SURF_LIGHT | Q2_SURF_WARP));
+    EXPECT_EQ(texinfo->flags.native_q2, (Q2_SURF_LIGHT | Q2_SURF_WARP));
 }
 
 /**
@@ -1180,7 +1180,7 @@ TEST(testmapsQ2, unknownContents)
         auto *texinfo = BSP_GetTexinfo(&bsp, top_face->texinfo);
         ASSERT_TRUE(texinfo);
 
-        EXPECT_EQ(texinfo->flags.native, 1024);
+        EXPECT_EQ(texinfo->flags.native_q2, 1024);
     }
 }
 

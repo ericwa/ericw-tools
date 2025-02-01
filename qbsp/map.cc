@@ -445,7 +445,7 @@ int FindMiptex(const char *name, std::optional<extended_texinfo_t> &extended_inf
         for (i = 0; i < map.miptex.size(); i++) {
             const maptexdata_t &tex = map.miptex.at(i);
 
-            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native == extended_info->flags.native &&
+            if (!Q_strcasecmp(name, tex.name.c_str()) && tex.flags.native_q2 == extended_info->flags.native_q2 &&
                 tex.value == extended_info->value && tex.animation == extended_info->animation) {
 
                 return i;
@@ -638,15 +638,15 @@ static surfflags_t SurfFlagsForEntity(
         if (IsHintName(texname))
             flags.is_hint = true;
         if (IsSpecialName(texname, allow_litwater))
-            flags.native |= TEX_SPECIAL;
+            flags.native_q1 = static_cast<q1_surf_flags_t>(flags.native_q1 | TEX_SPECIAL);
     } else {
-        flags.native = texinfo.flags.native;
+        flags.native_q2 = texinfo.flags.native_q2;
 
-        if ((flags.native & Q2_SURF_NODRAW) || IsSkipName(texname))
+        if ((flags.native_q2 & Q2_SURF_NODRAW) || IsSkipName(texname))
             flags.is_nodraw = true;
-        if ((flags.native & Q2_SURF_HINT) || IsHintName(texname))
+        if ((flags.native_q2 & Q2_SURF_HINT) || IsHintName(texname))
             flags.is_hint = true;
-        if ((flags.native & Q2_SURF_TRANS33) || (flags.native & Q2_SURF_TRANS66))
+        if ((flags.native_q2 & Q2_SURF_TRANS33) || (flags.native_q2 & Q2_SURF_TRANS66))
             is_translucent = true;
     }
     if (IsNoExpandName(texname))
@@ -866,7 +866,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
             extinfo.info->contents_native &= ~Q2_CONTENTS_TRANSLUCENT;
 
             // but give us detail if we lack trans. this is likely what they intended
-            if (!(extinfo.info->flags.native & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
+            if (!(extinfo.info->flags.native_q2 & (Q2_SURF_TRANS33 | Q2_SURF_TRANS66))) {
                 extinfo.info->contents_native |= Q2_CONTENTS_DETAIL;
 
                 if (qbsp_options.verbose.value()) {
@@ -878,8 +878,9 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
         }
 
         // This fixes a bug in some old maps.
-        if ((extinfo.info->flags.native & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
-            extinfo.info->flags.native &= ~Q2_SURF_NODRAW;
+        if ((extinfo.info->flags.native_q2 & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
+            extinfo.info->flags.native_q2 =
+                static_cast<q2_surf_flags_t>(extinfo.info->flags.native_q2 & ~Q2_SURF_NODRAW);
 
             if (qbsp_options.verbose.value()) {
                 logging::print("WARNING: {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.line);
@@ -912,7 +913,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
 
         // If Q2 style phong is enabled on a mirrored face, `light` will erroneously try to blend normals between
         // the front and back faces leading to light artifacts.
-        const bool wants_phong = !(extinfo.info->flags.native & Q2_SURF_LIGHT) && (extinfo.info->value != 0);
+        const bool wants_phong = !(extinfo.info->flags.native_q2 & Q2_SURF_LIGHT) && (extinfo.info->value != 0);
         // Technically this is not the 100% correct check for mirrored, but we don't have the full brush
         // contents set up at this point. Correct would be to call `portal_generates_face()`.
         bool mirrored = (extinfo.info->contents_native != 0) &&
@@ -1494,9 +1495,8 @@ static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrus
         // - unset existing visible contents + detail
         // - set mist, mirrorinside, mirrorinside set
         // note this overrides the logic in face_get_contents() that normally forces mist to be detail
-        base_contents = contentflags_t::make(
-            (base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL))
-            | EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
+        base_contents = contentflags_t::make((base_contents.flags & ~(EWT_ALL_VISIBLE_CONTENTS | EWT_CFLAG_DETAIL)) |
+                                             EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER);
     }
 
     // non-Q2: -transwater implies liquids are detail

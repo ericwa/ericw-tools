@@ -401,7 +401,7 @@ int Q2_FacePhongValue(const mbsp_t *bsp, const mface_t *face)
             // Q1 _phong_group syntax (also works in Q2 maps)
             return phong_group;
         }
-        if (texinfo->value != 0 && ((texinfo->flags.native & Q2_SURF_LIGHT) == 0)) {
+        if (texinfo->value != 0 && ((texinfo->flags.native_q2 & Q2_SURF_LIGHT) == 0)) {
             return texinfo->value;
         }
     }

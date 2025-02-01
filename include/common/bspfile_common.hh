@@ -226,10 +226,17 @@ struct contentflags_t
     }
 };
 
+enum q1_surf_flags_t : int32_t;
+enum q2_surf_flags_t : int32_t;
+
 struct surfflags_t
 {
-    // native flags value; what's written to the BSP basically
-    int32_t native;
+    // native flags value; what's written to the BSP for a Q2 map basically
+    // when compiling Q1 maps, we can use these internally but obviously not write them out
+    q2_surf_flags_t native_q2;
+
+    // native q1 flags
+    q1_surf_flags_t native_q1;
 
     // an invisible surface (Q1 "skip" texture, Q2 SURF_NODRAW)
     bool is_nodraw;

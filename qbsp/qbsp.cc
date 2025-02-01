@@ -641,7 +641,7 @@ void qbsp_settings::load_texture_def(const std::string &pathname)
             texinfo = extended_texinfo_t{.contents_native = native};
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {
-                texinfo->flags.native = std::stoi(parser.token);
+                texinfo->flags.native_q2 = static_cast<q2_surf_flags_t>(std::stoi(parser.token));
             }
 
             if (parser.parse_token(PARSE_SAMELINE | PARSE_OPTIONAL)) {

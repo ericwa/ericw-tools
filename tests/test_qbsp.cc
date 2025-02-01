@@ -2044,7 +2044,7 @@ TEST(qbspQ1, waterSubdivisionWithLitWaterOff)
 
     for (auto *face : faces) {
         auto *texinfo = BSP_GetTexinfo(&bsp, face->texinfo);
-        EXPECT_EQ(texinfo->flags.native, TEX_SPECIAL);
+        EXPECT_EQ(texinfo->flags.native_q1, TEX_SPECIAL);
     }
 }
 
@@ -2057,7 +2057,7 @@ TEST(qbspQ1, waterSubdivisionWithDefaults)
 
     for (auto *face : faces) {
         auto *texinfo = BSP_GetTexinfo(&bsp, face->texinfo);
-        EXPECT_EQ(texinfo->flags.native, 0);
+        EXPECT_EQ(texinfo->flags.native_q1, 0);
     }
 }
 

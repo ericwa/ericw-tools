@@ -188,7 +188,7 @@ struct compiled_brush_t
 
             int native = bsp->loadversion->game->contents_to_native(contents);
 
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (native || side.flags.native || side.value)) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II && (native || side.flags.native_q2 || side.value)) {
                 wal_metadata_t *meta = nullptr;
 
                 auto it = wals.find(side.texture_name);
@@ -210,8 +210,8 @@ struct compiled_brush_t
 
                 if (!meta || !((meta->contents & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) ==
                                      (native & ~(Q2_CONTENTS_SOLID | Q2_CONTENTS_WINDOW)) &&
-                                 meta->flags == side.flags.native && meta->value == side.value)) {
-                    ewt::print(stream, " {} {} {}", native, side.flags.native, side.value);
+                                 meta->flags == side.flags.native_q2 && meta->value == side.value)) {
+                    ewt::print(stream, " {} {} {}", native, static_cast<int32_t>(side.flags.native_q2), side.value);
                 }
             }
 

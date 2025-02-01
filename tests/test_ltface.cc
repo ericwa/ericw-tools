@@ -922,7 +922,7 @@ TEST(ltfaceQ1, litWater)
         SCOPED_TRACE("cube 2: non-lightmapped via _splitturb 0 func_group key");
         auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-160, 120, 128}, {0, 0, 1});
         auto *ti = Face_Texinfo(&bsp, f);
-        EXPECT_EQ(ti->flags.native, TEX_SPECIAL);
+        EXPECT_EQ(ti->flags.native_q1, TEX_SPECIAL);
     }
 
     {
@@ -944,7 +944,7 @@ TEST(ltfaceQ1, litWaterOptIn)
         SCOPED_TRACE("cube 2: non-lightmapped");
         auto *f = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], {-160, 120, 128}, {0, 0, 1});
         auto *ti = Face_Texinfo(&bsp, f);
-        EXPECT_EQ(ti->flags.native, TEX_SPECIAL);
+        EXPECT_EQ(ti->flags.native_q1, TEX_SPECIAL);
     }
 }
 
@@ -1073,7 +1073,7 @@ TEST(ltfaceQ1, lightBlack)
         auto *texinfo = Face_Texinfo(&bsp, face);
         ASSERT_TRUE(texinfo);
 
-        EXPECT_EQ(texinfo->flags.native, 0); // i.e. TEX_SPECIAL is not set because it's lit water
+        EXPECT_EQ(texinfo->flags.native_q1, 0); // i.e. TEX_SPECIAL is not set because it's lit water
         EXPECT_EQ(face->styles[0], 255);
         EXPECT_EQ(face->styles[1], 255);
         EXPECT_EQ(face->styles[2], 255);

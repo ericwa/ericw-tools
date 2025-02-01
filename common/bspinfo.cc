@@ -723,7 +723,8 @@ void serialize_bsp(const bspdata_t &bspdata, const mbsp_t &bsp, const fs::path &
                                                         src_texinfo.vecs.at(0, 2), src_texinfo.vecs.at(0, 3)}),
                                            json::array({src_texinfo.vecs.at(1, 0), src_texinfo.vecs.at(1, 1),
                                                src_texinfo.vecs.at(1, 2), src_texinfo.vecs.at(1, 3)})})});
-            texinfo.push_back({"flags", src_texinfo.flags.native});
+            texinfo.push_back({"flags", bspdata.loadversion->game->id == GAME_QUAKE_II ? src_texinfo.flags.native_q2
+                                                                                       : src_texinfo.flags.native_q1});
             texinfo.push_back({"miptex", src_texinfo.miptex});
             texinfo.push_back({"value", src_texinfo.value});
             texinfo.push_back({"texture", std::string(src_texinfo.texture.data())});

@@ -234,7 +234,7 @@ Face_ContentsOrSurfaceFlags(const mbsp_t *bsp, const mface_t *face)
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
-        return info->flags.native;
+        return info->flags.native_q2;
     } else {
         return TextureName_Contents(Face_TextureName(bsp, face));
     }

@@ -214,7 +214,7 @@ std::optional<std::tuple<int32_t, int32_t, qvec3f, light_t *>> IsSurfaceLitFace(
         // first, check if it's a Q2 surface
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
 
-        if (info != nullptr && (info->flags.native & Q2_SURF_LIGHT) && info->value > 0) {
+        if (info != nullptr && (info->flags.native_q2 & Q2_SURF_LIGHT) && info->value > 0) {
             return std::make_tuple(info->value, 0, qvec3f(Face_LookupTextureColor(bsp, face)), nullptr);
         }
     }
@@ -242,15 +242,15 @@ static void MakeSurfaceLightsThread(const mbsp_t *bsp, const settings::worldspaw
         const mtexinfo_t *info = Face_Texinfo(bsp, face);
 
         if (info != nullptr) {
-            if (!(info->flags.native & Q2_SURF_LIGHT) || info->value == 0) {
-                if (info->flags.native & Q2_SURF_LIGHT) {
+            if (!(info->flags.native_q2 & Q2_SURF_LIGHT) || info->value == 0) {
+                if (info->flags.native_q2 & Q2_SURF_LIGHT) {
                     qvec3f wc = polylib::winding3f_t::from_face(bsp, face).center();
                     logging::print(
                         "WARNING: surface light '{}' at [{}] has 0 intensity.\n", Face_TextureName(bsp, face), wc);
                 }
             } else {
-                MakeSurfaceLight(bsp, cfg, face, std::nullopt, !(info->flags.native & Q2_SURF_SKY),
-                    (info->flags.native & Q2_SURF_SKY), 0, info->value);
+                MakeSurfaceLight(bsp, cfg, face, std::nullopt, !(info->flags.native_q2 & Q2_SURF_SKY),
+                    (info->flags.native_q2 & Q2_SURF_SKY), 0, info->value);
             }
         }
     }

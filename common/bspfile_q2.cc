@@ -94,7 +94,7 @@ void q2_dnode_t::stream_read(std::istream &s)
 
 q2_texinfo_t::q2_texinfo_t(const mtexinfo_t &model)
     : vecs(model.vecs),
-      flags(model.flags.native),
+      flags(model.flags.native_q2),
       value(model.value),
       texture(model.texture),
       nexttexinfo(model.nexttexinfo)
@@ -104,7 +104,7 @@ q2_texinfo_t::q2_texinfo_t(const mtexinfo_t &model)
 // convert to mbsp_t
 q2_texinfo_t::operator mtexinfo_t() const
 {
-    return {vecs, {flags}, -1, value, texture, nexttexinfo};
+    return {vecs, {.native_q2 = static_cast<q2_surf_flags_t>(flags)}, -1, value, texture, nexttexinfo};
 }
 
 void q2_texinfo_t::stream_write(std::ostream &s) const
