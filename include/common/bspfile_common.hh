@@ -241,8 +241,12 @@ struct surfflags_t
     // an invisible surface (Q1 "skip" texture, Q2 SURF_NODRAW)
     bool is_nodraw() const;
 
+    void set_nodraw(bool nodraw);
+
     // hint surface
-    bool is_hint;
+    bool is_hint() const;
+
+    void set_hint(bool hint);
 
     // is a skip surface from a hint brush
     bool is_hintskip;

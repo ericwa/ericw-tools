@@ -633,17 +633,15 @@ static surfflags_t SurfFlagsForEntity(
     // the only annoyance is we can't access the various options (noskip,
     // splitturb, etc) from there.
     if (IsSkipName(texname))
-        flags.native_q2 = static_cast<q2_surf_flags_t>(flags.native_q2 | Q2_SURF_NODRAW);
+        flags.set_nodraw(true);
+    if (IsHintName(texname))
+        flags.set_hint(true);
 
     if (qbsp_options.target_game->id != GAME_QUAKE_II) {
-        if (IsHintName(texname))
-            flags.is_hint = true;
         if (IsSpecialName(texname, allow_litwater))
             flags.native_q1 = static_cast<q1_surf_flags_t>(flags.native_q1 | TEX_SPECIAL);
     } else {
         flags.native_q2 = texinfo.flags.native_q2;
-        if ((flags.native_q2 & Q2_SURF_HINT) || IsHintName(texname))
-            flags.is_hint = true;
         if ((flags.native_q2 & Q2_SURF_TRANS33) || (flags.native_q2 & Q2_SURF_TRANS66))
             is_translucent = true;
     }
@@ -877,8 +875,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
 
         // This fixes a bug in some old maps.
         if ((extinfo.info->flags.native_q2 & (Q2_SURF_SKY | Q2_SURF_NODRAW)) == (Q2_SURF_SKY | Q2_SURF_NODRAW)) {
-            extinfo.info->flags.native_q2 =
-                static_cast<q2_surf_flags_t>(extinfo.info->flags.native_q2 & ~Q2_SURF_NODRAW);
+            extinfo.info->flags.set_nodraw(false);
 
             if (qbsp_options.verbose.value()) {
                 logging::print("WARNING: {}: SKY | NODRAW mixed. Removing NODRAW.\n", mapface.line);
@@ -1016,7 +1013,7 @@ static std::optional<mapface_t> ParseBrushFace(const mapfile::brush_side_t &inpu
     tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
 
     // to save on texinfo, reset all invisible sides to default texvecs
-    if (tx.flags.is_nodraw() || tx.flags.is_hintskip || tx.flags.is_hint) {
+    if (tx.flags.is_nodraw() || tx.flags.is_hintskip || tx.flags.is_hint()) {
         mapfile::brush_side_t temp;
         temp.plane = face.get_plane();
         temp.set_texinfo(mapfile::texdef_quake_ed_t{{0, 0}, 0, {1, 1}});
@@ -1564,7 +1561,7 @@ static mapbrush_t ParseBrush(const mapfile::brush_t &in, mapentity_t &entity, te
             continue;
         }
 
-        if (face->get_texinfo().flags.is_hint) {
+        if (face->get_texinfo().flags.is_hint()) {
             is_hint = true;
         }
 
@@ -2000,7 +1997,7 @@ bool IsNonRemoveWorldBrushEntity(const mapentity_t &entity)
 inline bool MapBrush_IsHint(const mapbrush_t &brush)
 {
     for (auto &f : brush.faces) {
-        if (f.get_texinfo().flags.is_hint)
+        if (f.get_texinfo().flags.is_hint())
             return true;
     }
 

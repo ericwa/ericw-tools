@@ -48,7 +48,7 @@ static bool ShouldOmitFace(face_t *f)
 
         return true;
     }
-    if (map.mtexinfos.at(f->texinfo).flags.is_hint)
+    if (map.mtexinfos.at(f->texinfo).flags.is_hint())
         return true;
 
     // HACK: to save a few faces, don't output the interior faces of sky brushes
@@ -364,7 +364,7 @@ static std::list<std::unique_ptr<face_t>> SubdivideFace(std::unique_ptr<face_t> 
     /* special (non-surface cached) faces don't need subdivision */
     const maptexinfo_t &tex = f->get_texinfo();
 
-    if (tex.flags.is_nodraw() || tex.flags.is_hint || !qbsp_options.target_game->surf_is_subdivided(tex.flags)) {
+    if (tex.flags.is_nodraw() || tex.flags.is_hint() || !qbsp_options.target_game->surf_is_subdivided(tex.flags)) {
         std::list<std::unique_ptr<face_t>> result;
         result.push_back(std::move(f));
         return result;

@@ -412,7 +412,7 @@ void MarkBrushSidesInvisible(bspbrush_t::container &brushes)
             if (face.source) {
                 face.source->visible = false;
 
-                if (face.source->get_texinfo().flags.is_hint) {
+                if (face.source->get_texinfo().flags.is_hint()) {
                     face.source->visible = true; // hints are always visible
                 }
             }

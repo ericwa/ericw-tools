@@ -377,8 +377,8 @@ static void WriteExtendedTexinfoFlags()
         if (tx.flags.is_nodraw()) {
             t["is_nodraw"] = tx.flags.is_nodraw();
         }
-        if (tx.flags.is_hint) {
-            t["is_hint"] = tx.flags.is_hint;
+        if (tx.flags.is_hint()) {
+            t["is_hint"] = tx.flags.is_hint();
         }
         if (tx.flags.no_dirt) {
             t["no_dirt"] = tx.flags.no_dirt;

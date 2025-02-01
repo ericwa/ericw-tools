@@ -317,7 +317,7 @@ static int TestBrushToPlanenum(
             if (front && back) {
                 if (!(side.get_texinfo().flags.is_hintskip)) {
                     (*numsplits)++;
-                    if (side.get_texinfo().flags.is_hint) {
+                    if (side.get_texinfo().flags.is_hint()) {
                         *hintsplit = true;
                     }
                 }
@@ -1067,7 +1067,7 @@ static side_t *SelectSplitPlane(
                 value -= epsilonbrush * 1000; // avoid!
 
                 // never split a hint side except with another hint
-                if (hintsplit && !(side.get_texinfo().flags.is_hint))
+                if (hintsplit && !(side.get_texinfo().flags.is_hint()))
                     value = -9999999;
 
                 // save off the side test so we don't need

@@ -1028,13 +1028,10 @@ static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_
         auto &flags = extended_texinfo_flags[index];
 
         if (val.contains("is_nodraw")) {
-            if (val.at("is_nodraw").get<bool>())
-                flags.native_q2 = static_cast<q2_surf_flags_t>(flags.native_q2 | Q2_SURF_NODRAW);
-            else
-                flags.native_q2 = static_cast<q2_surf_flags_t>(flags.native_q2 & ~Q2_SURF_NODRAW);
+            flags.set_nodraw(val.at("is_nodraw").get<bool>());
         }
         if (val.contains("is_hint")) {
-            flags.is_hint = val.at("is_hint").get<bool>();
+            flags.set_hint(val.at("is_hint").get<bool>());
         }
         if (val.contains("is_hintskip")) {
             flags.is_hintskip = val.at("is_hintskip").get<bool>();

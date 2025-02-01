@@ -794,7 +794,7 @@ struct gamedef_q2_t : public gamedef_t
             return false;
 
         // Q2RTX should light nodraw faces
-        if (light_nodraw && (flags.native_q2 & Q2_SURF_NODRAW)) {
+        if (light_nodraw && flags.is_nodraw()) {
             return true;
         }
 

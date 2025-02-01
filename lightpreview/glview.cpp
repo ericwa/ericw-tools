@@ -1344,7 +1344,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             if (bsp.loadversion->game->id == GAME_QUAKE_II) {
 
-                if (texinfo->flags.native_q2 & Q2_SURF_NODRAW) {
+                if (texinfo->flags.is_nodraw()) {
                     continue;
                 }
 

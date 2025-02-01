@@ -182,6 +182,27 @@ bool surfflags_t::is_nodraw() const
     return !!(native_q2 & Q2_SURF_NODRAW);
 }
 
+void surfflags_t::set_nodraw(bool nodraw)
+{
+    if (nodraw)
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 | Q2_SURF_NODRAW);
+    else
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_NODRAW);
+}
+
+bool surfflags_t::is_hint() const
+{
+    return !!(native_q2 & Q2_SURF_HINT);
+}
+
+void surfflags_t::set_hint(bool hint)
+{
+    if (hint)
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 | Q2_SURF_HINT);
+    else
+        native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_HINT);
+}
+
 bool surfflags_t::needs_write() const
 {
     return *this != surfflags_t();

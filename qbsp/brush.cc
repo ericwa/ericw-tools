@@ -52,7 +52,7 @@ bool side_t::is_visible() const
     // workaround for qbsp_q2_mist_clip.map - we want to treat nodraw faces as "!visible"
     // so they're used as splitters after mist
     if (get_texinfo().flags.is_nodraw()) {
-        if (get_texinfo().flags.is_hint) {
+        if (get_texinfo().flags.is_hint()) {
             return true;
         }
 
@@ -568,12 +568,12 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
         // to the world extents (winding & bounds) which throws
         // a lot of warnings. is this how this should be working?
 #if 0
-        if (!hullnum.value_or(0) && mapbrush.is_hint) {
+        if (!hullnum.value_or(0) && mapbrush.is_hint()) {
             /* Don't generate hintskip faces */
             const maptexinfo_t &texinfo = src.get_texinfo();
 
             // any face that isn't a hint is assumed to be hintskip
-            if (!texinfo.flags.is_hint) {
+            if (!texinfo.flags.is_hint()) {
                 continue;
             }
         }
