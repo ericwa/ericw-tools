@@ -678,8 +678,7 @@ static surfflags_t SurfFlagsForEntity(
     if (epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = epairs.get_float("_surflight_minlight_scale");
     // Paril: inherit _surflight_minlight_scale from worldspawn if unset
-    else if (!epairs.has("_surflight_minlight_scale") &&
-             map.world_entity().epairs.has("_surflight_minlight_scale"))
+    else if (!epairs.has("_surflight_minlight_scale") && map.world_entity().epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = map.world_entity().epairs.get_float("_surflight_minlight_scale");
 
     if (epairs.has("_surflight_atten"))
@@ -825,7 +824,7 @@ static void ParseTextureDef(const mapentity_t &entity, const mapfile::brush_side
         extinfo.info = {extended_texinfo_t{}};
 
         extinfo.info->contents_native = input_side.extended_info->contents;
-        extinfo.info->flags = input_side.extended_info->flags;
+        extinfo.info->flags = {.native_q2 = static_cast<q2_surf_flags_t>(input_side.extended_info->flags)};
         extinfo.info->value = input_side.extended_info->value;
 
         mapface.raw_info = extinfo.info;

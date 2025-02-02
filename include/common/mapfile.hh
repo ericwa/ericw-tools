@@ -71,7 +71,7 @@ struct texdef_etp_t : texdef_quake_ed_t
 struct texinfo_quake2_t
 {
     int contents;
-    surfflags_t flags;
+    int flags;
     int value;
 };
 
