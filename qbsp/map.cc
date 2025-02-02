@@ -604,21 +604,21 @@ int FindMiptex(const char *name, bool internal, bool recursive)
 }
 
 static surfflags_t SurfFlagsForEntity(
-    const maptexinfo_t &texinfo, const mapentity_t &entity, contentflags_t face_contents)
+    const maptexinfo_t &texinfo, const entdict_t &epairs, contentflags_t face_contents)
 {
     surfflags_t flags{};
     const char *texname = map.miptex.at(texinfo.miptex).name.c_str();
-    const int shadow = entity.epairs.get_int("_shadow");
+    const int shadow = epairs.get_int("_shadow");
     bool is_translucent = false;
 
     // lit water: use worldspawn key by default, but allow overriding with bmodel keys
     // TODO: use a setting_container for these things, rather than custom parsing
     // TODO: support lit water opt-out in Q2 mode
     bool allow_litwater = false;
-    if (entity.epairs.has("_litwater")) {
-        allow_litwater = (entity.epairs.get_int("_litwater") > 0);
-    } else if (entity.epairs.has("_splitturb")) {
-        allow_litwater = (entity.epairs.get_int("_splitturb") > 0);
+    if (epairs.has("_litwater")) {
+        allow_litwater = (epairs.get_int("_litwater") > 0);
+    } else if (epairs.has("_splitturb")) {
+        allow_litwater = (epairs.get_int("_splitturb") > 0);
     } else {
         allow_litwater = qbsp_options.splitturb.value();
     }
@@ -647,21 +647,21 @@ static surfflags_t SurfFlagsForEntity(
     }
     if (IsNoExpandName(texname))
         flags.no_expand = true;
-    if (entity.epairs.get_int("_dirt") == -1)
+    if (epairs.get_int("_dirt") == -1)
         flags.no_dirt = true;
-    if (entity.epairs.get_int("_bounce") == -1)
+    if (epairs.get_int("_bounce") == -1)
         flags.no_bounce = true;
-    if (entity.epairs.get_int("_minlight") == -1)
+    if (epairs.get_int("_minlight") == -1)
         flags.no_minlight = true;
-    if (entity.epairs.get_int("_lightignore") == 1)
+    if (epairs.get_int("_lightignore") == 1)
         flags.light_ignore = true;
-    if (entity.epairs.has("_surflight_rescale")) {
-        flags.surflight_rescale = entity.epairs.get_int("_surflight_rescale") == 1;
+    if (epairs.has("_surflight_rescale")) {
+        flags.surflight_rescale = epairs.get_int("_surflight_rescale") == 1;
     }
     {
         qvec3f color;
         // FIXME: get_color, to match settings
-        if (entity.epairs.has("_surflight_color") && entity.epairs.get_vector("_surflight_color", color) == 3) {
+        if (epairs.has("_surflight_color") && epairs.get_vector("_surflight_color", color) == 3) {
             if (color[0] <= 1 && color[1] <= 1 && color[2] <= 1) {
                 flags.surflight_color =
                     qvec3b{(uint8_t)(color[0] * 255), (uint8_t)(color[1] * 255), (uint8_t)(color[2] * 255)};
@@ -670,22 +670,22 @@ static surfflags_t SurfFlagsForEntity(
             }
         }
     }
-    if (entity.epairs.has("_surflight_style") && entity.epairs.get_int("_surflight_style") != 0)
-        flags.surflight_style = entity.epairs.get_int("_surflight_style");
-    if (entity.epairs.has("_surflight_targetname"))
-        flags.surflight_targetname = entity.epairs.get("_surflight_targetname");
+    if (epairs.has("_surflight_style") && epairs.get_int("_surflight_style") != 0)
+        flags.surflight_style = epairs.get_int("_surflight_style");
+    if (epairs.has("_surflight_targetname"))
+        flags.surflight_targetname = epairs.get("_surflight_targetname");
 
-    if (entity.epairs.has("_surflight_minlight_scale"))
-        flags.surflight_minlight_scale = entity.epairs.get_float("_surflight_minlight_scale");
+    if (epairs.has("_surflight_minlight_scale"))
+        flags.surflight_minlight_scale = epairs.get_float("_surflight_minlight_scale");
     // Paril: inherit _surflight_minlight_scale from worldspawn if unset
-    else if (!entity.epairs.has("_surflight_minlight_scale") &&
+    else if (!epairs.has("_surflight_minlight_scale") &&
              map.world_entity().epairs.has("_surflight_minlight_scale"))
         flags.surflight_minlight_scale = map.world_entity().epairs.get_float("_surflight_minlight_scale");
 
-    if (entity.epairs.has("_surflight_atten"))
-        flags.surflight_atten = entity.epairs.get_float("_surflight_atten");
+    if (epairs.has("_surflight_atten"))
+        flags.surflight_atten = epairs.get_float("_surflight_atten");
     // Paril: inherit _surflight_atten from worldspawn if unset
-    else if (!entity.epairs.has("_surflight_atten") && map.world_entity().epairs.has("_surflight_atten"))
+    else if (!epairs.has("_surflight_atten") && map.world_entity().epairs.has("_surflight_atten"))
         flags.surflight_atten = map.world_entity().epairs.get_float("_surflight_atten");
 
     // "_minlight_exclude", "_minlight_exclude2", "_minlight_exclude3"...
@@ -695,7 +695,7 @@ static surfflags_t SurfFlagsForEntity(
             key += std::to_string(i);
         }
 
-        const std::string &excludeTex = entity.epairs.get(key.c_str());
+        const std::string &excludeTex = epairs.get(key.c_str());
         if (!excludeTex.empty() && !Q_strcasecmp(texname, excludeTex)) {
             flags.no_minlight = true;
         }
@@ -703,7 +703,7 @@ static surfflags_t SurfFlagsForEntity(
 
     if (shadow == -1)
         flags.no_shadow = true;
-    if (!Q_strcasecmp("func_detail_illusionary", entity.epairs.get("classname"))) {
+    if (!Q_strcasecmp("func_detail_illusionary", epairs.get("classname"))) {
         /* Mark these entities as TEX_NOSHADOW unless the mapper set "_shadow" "1" */
         if (shadow != 1) {
             flags.no_shadow = true;
@@ -717,16 +717,16 @@ static surfflags_t SurfFlagsForEntity(
     }
 
     // handle "_phong" and "_phong_angle" and "_phong_angle_concave"
-    double phongangle = entity.epairs.get_float("_phong_angle");
-    int phong = entity.epairs.get_int("_phong");
+    double phongangle = epairs.get_float("_phong_angle");
+    int phong = epairs.get_int("_phong");
 
     // Paril: inherit phong from worldspawn if unset
-    if (!entity.epairs.has("_phong") && map.world_entity().epairs.has("_phong")) {
+    if (!epairs.has("_phong") && map.world_entity().epairs.has("_phong")) {
         phong = map.world_entity().epairs.get_int("_phong");
     }
 
     // Paril: inherit phong from worldspawn if unset
-    if (!entity.epairs.has("_phong_angle") && map.world_entity().epairs.has("_phong_angle")) {
+    if (!epairs.has("_phong_angle") && map.world_entity().epairs.has("_phong_angle")) {
         phongangle = map.world_entity().epairs.get_float("_phong_angle");
     }
 
@@ -738,20 +738,20 @@ static surfflags_t SurfFlagsForEntity(
         flags.phong_angle = std::clamp(phongangle, 0.0, 360.0);
     }
 
-    const double phong_angle_concave = entity.epairs.get_float("_phong_angle_concave");
+    const double phong_angle_concave = epairs.get_float("_phong_angle_concave");
     flags.phong_angle_concave = std::clamp(phong_angle_concave, 0.0, 360.0);
 
-    flags.phong_group = entity.epairs.get_int("_phong_group");
+    flags.phong_group = epairs.get_int("_phong_group");
 
     // handle "_minlight"
-    if (entity.epairs.has("_minlight")) {
-        const double minlight = entity.epairs.get_float("_minlight");
+    if (epairs.has("_minlight")) {
+        const double minlight = epairs.get_float("_minlight");
         // handle -1 as an alias for 0 (same with other negative values).
         flags.minlight = std::max(0., minlight);
     }
 
     // handle "_maxlight"
-    const double maxlight = entity.epairs.get_float("_maxlight");
+    const double maxlight = epairs.get_float("_maxlight");
     if (maxlight > 0) {
         // CHECK: allow > 510 now that we're float? or is it not worth it since it will
         // be beyond max?
@@ -759,36 +759,36 @@ static surfflags_t SurfFlagsForEntity(
     }
 
     // handle "_lightcolorscale"
-    if (entity.epairs.has("_lightcolorscale")) {
-        const double lightcolorscale = entity.epairs.get_float("_lightcolorscale");
+    if (epairs.has("_lightcolorscale")) {
+        const double lightcolorscale = epairs.get_float("_lightcolorscale");
         if (lightcolorscale != 1.0) {
             flags.lightcolorscale = std::clamp(lightcolorscale, 0.0, 1.0);
         }
     }
 
-    if (entity.epairs.has("_surflight_group")) {
-        const int32_t surflight_group = entity.epairs.get_int("_surflight_group");
+    if (epairs.has("_surflight_group")) {
+        const int32_t surflight_group = epairs.get_int("_surflight_group");
 
         if (surflight_group) {
             flags.surflight_group = surflight_group;
         }
     }
 
-    if (entity.epairs.has("_world_units_per_luxel")) {
-        flags.world_units_per_luxel = entity.epairs.get_float("_world_units_per_luxel");
+    if (epairs.has("_world_units_per_luxel")) {
+        flags.world_units_per_luxel = epairs.get_float("_world_units_per_luxel");
     }
 
-    if (entity.epairs.has("_object_channel_mask")) {
-        flags.object_channel_mask = entity.epairs.get_int("_object_channel_mask");
+    if (epairs.has("_object_channel_mask")) {
+        flags.object_channel_mask = epairs.get_int("_object_channel_mask");
     }
 
     // handle "_mincolor"
     {
         qvec3f mincolor{};
 
-        entity.epairs.get_vector("_mincolor", mincolor);
+        epairs.get_vector("_mincolor", mincolor);
         if (qv::epsilonEmpty(mincolor, (float)QBSP_EQUAL_EPSILON)) {
-            entity.epairs.get_vector("_minlight_color", mincolor);
+            epairs.get_vector("_minlight_color", mincolor);
         }
 
         mincolor = qv::normalize_color_format(mincolor);
@@ -800,14 +800,14 @@ static surfflags_t SurfFlagsForEntity(
     }
 
     // handle "_light_alpha"
-    if (entity.epairs.has("_light_alpha")) {
-        const double lightalpha = entity.epairs.get_float("_light_alpha");
+    if (epairs.has("_light_alpha")) {
+        const double lightalpha = epairs.get_float("_light_alpha");
         flags.light_alpha = std::clamp(lightalpha, 0.0, 1.0);
     }
 
     // handle "_light_twosided"
-    if (entity.epairs.has("_light_twosided")) {
-        flags.light_twosided = entity.epairs.get_int("_light_twosided");
+    if (epairs.has("_light_twosided")) {
+        flags.light_twosided = epairs.get_int("_light_twosided");
     }
 
     return flags;
@@ -1010,7 +1010,7 @@ static std::optional<mapface_t> ParseBrushFace(const mapfile::brush_side_t &inpu
         return std::nullopt;
     }
 
-    tx.flags = SurfFlagsForEntity(tx, entity, face.contents);
+    tx.flags = SurfFlagsForEntity(tx, entity.epairs, face.contents);
 
     // to save on texinfo, reset all invisible sides to default texvecs
     if (tx.flags.is_nodraw() || tx.flags.is_hintskip() || tx.flags.is_hint()) {
