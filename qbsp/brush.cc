@@ -600,7 +600,7 @@ std::optional<bspbrush_t> LoadBrush(const mapentity_t &src, mapbrush_t &mapbrush
 
     // expand the brushes for the hull
     if (hullnum.value_or(0)) {
-        auto &hulls = qbsp_options.target_game->get_hull_sizes();
+        auto hulls = qbsp_options.target_game->get_hull_sizes();
         Q_assert(hullnum < hulls.size());
         auto &hull = *(hulls.begin() + hullnum.value());
 

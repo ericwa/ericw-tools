@@ -1549,7 +1549,7 @@ CreateHulls
 static void CreateHulls()
 {
     /* create the hulls sequentially */
-    auto &hulls = qbsp_options.target_game->get_hull_sizes();
+    auto hulls = qbsp_options.target_game->get_hull_sizes();
 
     // game has no hulls, so we have to export brush lists and stuff.
     if (!hulls.size()) {

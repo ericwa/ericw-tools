@@ -27,6 +27,7 @@
 #include <unordered_map>
 #include <any>
 #include <optional>
+#include <span>
 
 #include <common/bitflags.hh>
 #include <common/fs.hh>
@@ -444,7 +445,7 @@ struct gamedef_t
     virtual bool portal_generates_face(
         contentflags_t portal_visible_contents, contentflags_t brushcontents, planeside_t brushside_side) const = 0;
     virtual void contents_make_valid(contentflags_t &contents) const = 0;
-    virtual const std::initializer_list<aabb3d> &get_hull_sizes() const = 0;
+    virtual std::span<const aabb3d> get_hull_sizes() const = 0;
     virtual contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const = 0;
     virtual void init_filesystem(const fs::path &source, const settings::common_settings &settings) const = 0;

@@ -562,9 +562,9 @@ public:
         }
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {
+        static constexpr aabb3d hulls[] = {
             {{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}}, {{-32, -32, -64}, {32, 32, 24}}};
 
         return hulls;
@@ -703,9 +703,9 @@ struct gamedef_h2_t : public gamedef_q1_like_t<GAME_HEXEN_II>
     {
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
+        static constexpr aabb3d hulls[] = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -32}, {16, 16, 24}},
             {{-24, -24, -20}, {24, 24, 20}}, {{-16, -16, -16}, {16, 16, 12}},
             {{-8, -8, -8}, {8, 8, 8}}, // {{-40, -40, -42}, {40, 40, 42}} = original game
             {{-28, -28, -40}, {28, 28, 40}}};
@@ -760,9 +760,9 @@ struct gamedef_hl_t : public gamedef_q1_like_t<GAME_HALF_LIFE>
         has_rgb_lightmap = true;
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
+    std::span<const aabb3d> get_hull_sizes() const override
     {
-        static std::initializer_list<aabb3d> hulls = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},
+        static constexpr aabb3d hulls[] = {{{0, 0, 0}, {0, 0, 0}}, {{-16, -16, -36}, {16, 16, 36}},
             {{-32, -32, -32}, {32, 32, 32}}, {{-16, -16, -18}, {16, 16, 18}}};
 
         return hulls;
@@ -1369,11 +1369,7 @@ struct gamedef_q2_t : public gamedef_t
         contents = contentflags_t::make(flags);
     }
 
-    const std::initializer_list<aabb3d> &get_hull_sizes() const override
-    {
-        static constexpr std::initializer_list<aabb3d> hulls = {};
-        return hulls;
-    }
+    std::span<const aabb3d> get_hull_sizes() const override { return {}; }
 
     contentflags_t face_get_contents(
         const std::string &texname, const surfflags_t &flags, contentflags_t contents) const override

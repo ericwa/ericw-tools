@@ -2300,7 +2300,7 @@ void ProcessMapBrushes()
         aabb3d hull;
 
         if (qbsp_options.debugexpand.is_hull()) {
-            const auto &hulls = qbsp_options.target_game->get_hull_sizes();
+            const auto hulls = qbsp_options.target_game->get_hull_sizes();
 
             if (hulls.size() <= qbsp_options.debugexpand.hull_index_value()) {
                 FError("invalid hull index passed to debugexpand\n");
