@@ -1352,9 +1352,6 @@ static void load_sin_srf_file(const fs::path &path, std::unordered_map<std::stri
     }
 }
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_write.h"
-
 static void convert_sin_to_q2(map_file_t &map, const gamedef_t *game, const settings::common_settings &options)
 {
     // load the SRF file if we have one
@@ -1398,14 +1395,6 @@ static void convert_sin_to_q2(map_file_t &map, const gamedef_t *game, const sett
                     q2.contents = swl_meta->meta.contents_native;
                     q2.flags = swl_meta->meta.flags;
                     q2.value = swl_meta->meta.value;
-
-                    // temp, just for us
-                    auto tex_name = (map.filename.parent_path() / face.texture).replace_extension(".tga");
-                    fs::create_directories(tex_name.parent_path());
-
-                    if (!fs::exists(tex_name)) {
-                        stbi_write_tga(tex_name.string().c_str(), swl_meta->width, swl_meta->height, 4, swl_meta->pixels.data());
-                    }
                 } else {
                     FError("{} is missing, needed for this to work properly", face.texture);
                 }

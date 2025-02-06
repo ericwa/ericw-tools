@@ -188,23 +188,25 @@ struct compiled_brush_t
 
             int native = bsp->loadversion->game->contents_to_native(contents);
 
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (native || side.flags.native || side.value)) {
+            if ((bsp->loadversion->game->id == GAME_QUAKE_II || bsp->loadversion->game->id == GAME_SIN) && (native || side.flags.native || side.value)) {
                 wal_metadata_t *meta = nullptr;
 
-                auto it = wals.find(side.texture_name);
+                if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+                    auto it = wals.find(side.texture_name);
 
-                if (it != wals.end()) {
-                    meta = &it->second;
-                } else {
-                    auto wal = fs::load((fs::path("textures") / side.texture_name) += ".wal");
+                    if (it != wals.end()) {
+                        meta = &it->second;
+                    } else {
+                        auto wal = fs::load((fs::path("textures") / side.texture_name) += ".wal");
 
-                    if (wal) {
-                        imemstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
-                        stream >> endianness<std::endian::little>;
-                        stream.seekg(88);
+                        if (wal) {
+                            imemstream stream(wal->data(), wal->size(), std::ios_base::in | std::ios_base::binary);
+                            stream >> endianness<std::endian::little>;
+                            stream.seekg(88);
 
-                        meta = &wals.emplace(side.texture_name, wal_metadata_t{}).first->second;
-                        stream >= *meta;
+                            meta = &wals.emplace(side.texture_name, wal_metadata_t{}).first->second;
+                            stream >= *meta;
+                        }
                     }
                 }
 
@@ -612,6 +614,12 @@ static void OverrideTextureForContents(
 {
     if (bsp->loadversion->game->id == GAME_QUAKE_II) {
         int native = bsp->loadversion->game->contents_to_native(contents);
+        
+        if (strstr(name, " ")) {
+            side.texture_name = "skip";
+            side.flags = {Q2_SURF_NODRAW};
+            return;
+        }
 
         if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP | Q2_CONTENTS_PROJECTILECLIP)) {
             if ((native & Q2_CONTENTS_PLAYERCLIP) == Q2_CONTENTS_PLAYERCLIP) {
@@ -629,9 +637,15 @@ static void OverrideTextureForContents(
         }
     } else if (bsp->loadversion->game->id == GAME_SIN) {
         int native = bsp->loadversion->game->contents_to_native(contents);
+        
+        if (strstr(name, " ")) {
+            side.texture_name = "GENERIC/misc/skip";
+            side.flags = {SIN_SURF_NODRAW};
+            return;
+        }
 
         if (native & (Q2_CONTENTS_PLAYERCLIP | Q2_CONTENTS_MONSTERCLIP)) {
-            side.texture_name = "e1u1/clip";
+            side.texture_name = "GENERIC/misc/clip";
             side.flags = {SIN_SURF_NODRAW};
             return;
         }
@@ -969,6 +983,8 @@ static std::vector<compiled_brush_t> DecompileLeafTask(const mbsp_t *bsp, const 
                         side.flags = ti->flags;
                         side.value = ti->value;
                     } else if (bsp->loadversion->game->id == GAME_SIN) {
+                        side.flags = ti->flags;
+                        side.value = ti->value;
                     }
                 } else {
                     side.valve = finalSide.plane.normal;

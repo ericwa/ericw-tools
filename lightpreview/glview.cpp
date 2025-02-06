@@ -192,6 +192,7 @@ uniform bool lightmap_only;
 uniform bool fullbright;
 uniform bool drawnormals;
 uniform bool drawflat;
+uniform bool lit_translucency;
 uniform float style_scalars[256];
 uniform float brightness;
 uniform float lightmap_scale; // extra scale factor for remapping 0-1 SDR lightmaps to 0-2
@@ -211,7 +212,11 @@ void main() {
 
         vec3 lmcolor = fullbright ? vec3(0.5) : vec3(0);
 
-        if (!fullbright)
+        if (!lit_translucency && opacity != 1.0)
+        {
+            lmcolor = vec3(0.5);
+        }
+        else if (!fullbright)
         {
             uint style = 0u;
 
@@ -407,7 +412,8 @@ GLView::face_visibility_key_t GLView::desiredFaceVisibility() const
 
         result.leafnum = leafnum;
 
-        if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+        if (bsp.loadversion->game->id == GAME_QUAKE_II ||
+            bsp.loadversion->game->id == GAME_SIN) {
             result.clusternum = leaf->cluster;
         } else {
             result.clusternum = leaf->visofs;
@@ -459,7 +465,7 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4> &frustum)
         in_solid = true;
     if (desired.clusternum == -1)
         in_solid = true;
-    if (desired.leafnum == 0 && bsp.loadversion->game->id != GAME_QUAKE_II)
+    if (desired.leafnum == 0 && bsp.loadversion->game->id != GAME_QUAKE_II && bsp.loadversion->game->id != GAME_SIN)
         in_solid = true;
 
     bool found_visdata = false;
@@ -581,6 +587,7 @@ void GLView::initializeGL()
     m_program_fullbright_location = m_program->uniformLocation("fullbright");
     m_program_drawnormals_location = m_program->uniformLocation("drawnormals");
     m_program_drawflat_location = m_program->uniformLocation("drawflat");
+    m_program_lit_translucency_location = m_program->uniformLocation("lit_translucency");
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
     m_program_brightness_location = m_program->uniformLocation("brightness");
     m_program_lightmap_scale_location = m_program->uniformLocation("lightmap_scale");
@@ -689,6 +696,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_fullbright_location, m_fullbright);
     m_program->setUniformValue(m_program_drawnormals_location, m_drawNormals);
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
+    m_program->setUniformValue(m_program_lit_translucency_location, m_litTranslucency);
     m_program->setUniformValue(m_program_brightness_location, m_brightness);
     m_program->setUniformValue(m_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
 
@@ -1024,6 +1032,12 @@ void GLView::setKeepCullOrigin(bool keepcullorigin)
 void GLView::setDrawFlat(bool drawflat)
 {
     m_drawFlat = drawflat;
+    update();
+}
+
+void GLView::setLitTranslucency(bool v)
+{
+    m_litTranslucency = v;
     update();
 }
 
@@ -1406,9 +1420,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     fullbright = true;
                 }
 
-                if (texinfo->translucence) {
-                    opacity = texinfo->translucence;
-                }
+                opacity = 1.0f - texinfo->translucence;
             } else if (bsp.loadversion->game->id == GAME_QUAKE) {
                 if (t.starts_with('{')) {
                     alpha_test = true;
@@ -1437,9 +1449,18 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto up =
                     img::load_texture(fmt::format("env/{}up", skybox), false, bsp.loadversion->game, settings, true);
-                up_img = QImage((const uchar *)std::get<0>(up)->pixels.data(), std::get<0>(up)->width,
-                    std::get<0>(up)->height, QImage::Format_RGB32);
-                up_img = std::move(up_img.transformed(QTransform().rotate(-90.0)).mirrored(false, true));
+
+                if (std::get<0>(up))
+                {
+                    up_img = QImage((const uchar *)std::get<0>(up)->pixels.data(), std::get<0>(up)->width,
+                        std::get<0>(up)->height, QImage::Format_RGB32);
+                    up_img = std::move(up_img.transformed(QTransform().rotate(-90.0)).mirrored(false, true));
+                }
+                else
+                {
+                    up_img = QImage(1, 1, QImage::Format_RGB32);
+                    up_img.setPixel(0, 0, 0);
+                }
             }
 
             skybox_texture->setSize(up_img.width(), up_img.height());
@@ -1460,9 +1481,18 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto down =
                     img::load_texture(fmt::format("env/{}dn", skybox), false, bsp.loadversion->game, settings, true);
-                down_img = QImage((const uchar *)std::get<0>(down)->pixels.data(), std::get<0>(down)->width,
-                    std::get<0>(down)->height, QImage::Format_RGB32);
-                down_img = std::move(down_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+
+                if (std::get<0>(down))
+                {
+                    down_img = QImage((const uchar *)std::get<0>(down)->pixels.data(), std::get<0>(down)->width,
+                        std::get<0>(down)->height, QImage::Format_RGB32);
+                    down_img = std::move(down_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                }
+                else
+                {
+                    down_img = QImage(1, 1, QImage::Format_RGB32);
+                    down_img.setPixel(0, 0, 0);
+                }
             }
 
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeZ, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
@@ -1473,9 +1503,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto left =
                     img::load_texture(fmt::format("env/{}lf", skybox), false, bsp.loadversion->game, settings, true);
-                left_img = QImage((const uchar *)std::get<0>(left)->pixels.data(), std::get<0>(left)->width,
-                    std::get<0>(left)->height, QImage::Format_RGB32);
-                left_img = std::move(left_img.transformed(QTransform().rotate(-90.0)).mirrored(true, false));
+                if (std::get<0>(left))
+                {
+                    left_img = QImage((const uchar *)std::get<0>(left)->pixels.data(), std::get<0>(left)->width,
+                        std::get<0>(left)->height, QImage::Format_RGB32);
+                    left_img = std::move(left_img.transformed(QTransform().rotate(-90.0)).mirrored(true, false));
+                }
+                else
+                {
+                    left_img = QImage(1, 1, QImage::Format_RGB32);
+                    left_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 left_img.constBits(), nullptr);
@@ -1485,9 +1523,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto right =
                     img::load_texture(fmt::format("env/{}rt", skybox), false, bsp.loadversion->game, settings, true);
-                right_img = QImage((const uchar *)std::get<0>(right)->pixels.data(), std::get<0>(right)->width,
-                    std::get<0>(right)->height, QImage::Format_RGB32);
-                right_img = std::move(right_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                if (std::get<0>(right))
+                {
+                    right_img = QImage((const uchar *)std::get<0>(right)->pixels.data(), std::get<0>(right)->width,
+                        std::get<0>(right)->height, QImage::Format_RGB32);
+                    right_img = std::move(right_img.transformed(QTransform().rotate(90.0)).mirrored(true, false));
+                }
+                else
+                {
+                    right_img = QImage(1, 1, QImage::Format_RGB32);
+                    right_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveX, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 right_img.constBits(), nullptr);
@@ -1497,9 +1543,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto front =
                     img::load_texture(fmt::format("env/{}ft", skybox), false, bsp.loadversion->game, settings, true);
-                front_img = QImage((const uchar *)std::get<0>(front)->pixels.data(), std::get<0>(front)->width,
-                    std::get<0>(front)->height, QImage::Format_RGB32);
-                front_img = front_img.mirrored(true, false);
+                if (std::get<0>(front))
+                {
+                    front_img = QImage((const uchar *)std::get<0>(front)->pixels.data(), std::get<0>(front)->width,
+                        std::get<0>(front)->height, QImage::Format_RGB32);
+                    front_img = front_img.mirrored(true, false);
+                }
+                else
+                {
+                    front_img = QImage(1, 1, QImage::Format_RGB32);
+                    front_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapNegativeY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 front_img.constBits(), nullptr);
@@ -1509,9 +1563,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
             {
                 auto back =
                     img::load_texture(fmt::format("env/{}bk", skybox), false, bsp.loadversion->game, settings, true);
-                back_img = QImage((const uchar *)std::get<0>(back)->pixels.data(), std::get<0>(back)->width,
-                    std::get<0>(back)->height, QImage::Format_RGB32);
-                back_img = std::move(back_img.transformed(QTransform().rotate(-180.0)).mirrored(true, false));
+                if (std::get<0>(back))
+                {
+                    back_img = QImage((const uchar *)std::get<0>(back)->pixels.data(), std::get<0>(back)->width,
+                        std::get<0>(back)->height, QImage::Format_RGB32);
+                    back_img = std::move(back_img.transformed(QTransform().rotate(-180.0)).mirrored(true, false));
+                }
+                else
+                {
+                    back_img = QImage(1, 1, QImage::Format_RGB32);
+                    back_img.setPixel(0, 0, 0);
+                }
             }
             skybox_texture->setData(0, 0, QOpenGLTexture::CubeMapPositiveY, QOpenGLTexture::RGBA, QOpenGLTexture::UInt8,
                 back_img.constBits(), nullptr);
@@ -1565,7 +1627,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
 
             const size_t first_vertex_of_face = verts.size();
 
-            const auto lm_uvs = lightmap.facenum_to_lightmap_uvs.at(fnum);
+            const auto lm_uvs_it = lightmap.facenum_to_lightmap_uvs.find(fnum);
+            const auto lm_uvs = lm_uvs_it != lightmap.facenum_to_lightmap_uvs.end() ? *lm_uvs_it : (decltype(*lm_uvs_it){});
 
             // output a vertex for each vertex of the face
             for (int j = 0; j < f->numedges; ++j) {
@@ -1580,7 +1643,7 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     uv[1] *= (1.0 / texture->height);
                 }
 
-                qvec2f lightmap_uv = lm_uvs.at(j);
+                qvec2f lightmap_uv = lm_uvs.second.empty() ? qvec2f{} : lm_uvs.second.at(j);
 
                 qvec3f vertex_normal;
                 if (facenormals) {
@@ -1590,20 +1653,28 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
                     vertex_normal = plane_normal;
                 }
 
+                std::array<uint8_t, MAXLIGHTMAPS> styles;
+
+                if (lightmap.facenum_to_styles.contains(fnum)) {
+                    styles = lightmap.facenum_to_styles.at(fnum);
+                } else {
+                    styles.fill(0xFF);
+                }
+
                 verts.push_back({.pos = pos + model_offset,
                     .uv = uv,
                     .lightmap_uv = lightmap_uv,
                     .normal = vertex_normal,
                     .flat_color = flat_color,
                     .styles = {
-                        (uint32_t)(f->styles[0]) | (uint32_t)(f->styles[1] << 8) |
-                        (uint32_t)(f->styles[2] << 16) | (uint32_t)(f->styles[3] << 24),
-                        (uint32_t)(f->styles[4]) | (uint32_t)(f->styles[5] << 8) |
-                        (uint32_t)(f->styles[6] << 16) | (uint32_t)(f->styles[7] << 24),
-                        (uint32_t)(f->styles[8]) | (uint32_t)(f->styles[9] << 8) |
-                        (uint32_t)(f->styles[10] << 16) | (uint32_t)(f->styles[11] << 24),
-                        (uint32_t)(f->styles[12]) | (uint32_t)(f->styles[13] << 8) |
-                        (uint32_t)(f->styles[14] << 16) | (uint32_t)(f->styles[15] << 24),
+                        (uint32_t)(styles[0])        | (uint32_t)(styles[1] << 8) |
+                        (uint32_t)(styles[2] << 16)  | (uint32_t)(styles[3] << 24),
+                        (uint32_t)(styles[4])        | (uint32_t)(styles[5] << 8) |
+                        (uint32_t)(styles[6] << 16)  | (uint32_t)(styles[7] << 24),
+                        (uint32_t)(styles[8])        | (uint32_t)(styles[9] << 8) |
+                        (uint32_t)(styles[10] << 16) | (uint32_t)(styles[11] << 24),
+                        (uint32_t)(styles[12])       | (uint32_t)(styles[13] << 8) |
+                        (uint32_t)(styles[14] << 16) | (uint32_t)(styles[15] << 24),
                     },
                     .face_index = fnum});
             }
@@ -1837,7 +1908,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     for (int hullnum = 0;; ++hullnum) {
         if (hullnum >= 1) {
             // check if hullnum 1 or higher is valid for this bsp (hull0 is always present); it's slightly involved
-            if (bsp.loadversion->game->id == GAME_QUAKE_II) {
+            if (bsp.loadversion->game->id == GAME_QUAKE_II ||
+                bsp.loadversion->game->id == GAME_SIN) {
                 break;
             }
             if (hullnum >= bsp.dmodels[0].headnode.size())

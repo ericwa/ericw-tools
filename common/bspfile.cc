@@ -1600,14 +1600,167 @@ struct gamedef_sin_t : public gamedef_t
         return false;
     }
 
+
+
     contentflags_t create_contents_from_native(int32_t native) const override
     {
-        return {};
+        contents_int_t result = 0;
+
+        // visible contents
+        if (native & SIN_CONTENTS_SOLID)
+            result |= EWT_VISCONTENTS_SOLID;
+        if (native & SIN_CONTENTS_WINDOW)
+            result |= EWT_VISCONTENTS_WINDOW;
+        if (native & SIN_CONTENTS_FENCE)
+            result |= EWT_VISCONTENTS_AUX;
+        if (native & SIN_CONTENTS_LAVA)
+            result |= EWT_VISCONTENTS_LAVA;
+        if (native & SIN_CONTENTS_SLIME)
+            result |= EWT_VISCONTENTS_SLIME;
+        if (native & SIN_CONTENTS_WATER)
+            result |= EWT_VISCONTENTS_WATER;
+        if (native & SIN_CONTENTS_MIST)
+            result |= EWT_VISCONTENTS_MIST;
+
+        // invisible contents
+        if (native & SIN_CONTENTS_AREAPORTAL)
+            result |= EWT_INVISCONTENTS_AREAPORTAL;
+        if (native & SIN_CONTENTS_PLAYERCLIP)
+            result |= EWT_INVISCONTENTS_PLAYERCLIP;
+        if (native & SIN_CONTENTS_MONSTERCLIP)
+            result |= EWT_INVISCONTENTS_MONSTERCLIP;
+        if (native & SIN_CONTENTS_UNUSED_14)
+            result |= EWT_INVISCONTENTS_PROJECTILECLIP;
+        if (native & SIN_CONTENTS_ORIGIN)
+            result |= EWT_INVISCONTENTS_ORIGIN;
+        if (native & SIN_CONTENTS_UNUSED_10)
+            result |= EWT_INVISCONTENTS_NO_WATERJUMP;
+
+        // contents flags
+        if (native & SIN_CONTENTS_CURRENT_0)
+            result |= EWT_CFLAG_CURRENT_0;
+        if (native & SIN_CONTENTS_CURRENT_90)
+            result |= EWT_CFLAG_CURRENT_90;
+        if (native & SIN_CONTENTS_CURRENT_180)
+            result |= EWT_CFLAG_CURRENT_180;
+        if (native & SIN_CONTENTS_CURRENT_270)
+            result |= EWT_CFLAG_CURRENT_270;
+        if (native & SIN_CONTENTS_CURRENT_UP)
+            result |= EWT_CFLAG_CURRENT_UP;
+        if (native & SIN_CONTENTS_CURRENT_DOWN)
+            result |= EWT_CFLAG_CURRENT_DOWN;
+        if (native & SIN_CONTENTS_DETAIL)
+            result |= EWT_CFLAG_DETAIL;
+        if (native & SIN_CONTENTS_TRANSLUCENT)
+            result |= EWT_CFLAG_TRANSLUCENT;
+        if (native & SIN_CONTENTS_LADDER)
+            result |= EWT_CFLAG_LADDER;
+
+        // disallowed flags
+        if (native & SIN_CONTENTS_MONSTER)
+            result |= EWT_CFLAG_MONSTER;
+        if (native & SIN_CONTENTS_DEADMONSTER)
+            result |= EWT_CFLAG_DEADMONSTER;
+
+        // other unused flags which are illegal
+        if (native & SIN_CONTENTS_UNUSED_7)
+            result |= EWT_CFLAG_Q2_UNUSED_7;
+        if (native & SIN_CONTENTS_UNUSED_8)
+            result |= EWT_CFLAG_Q2_UNUSED_8;
+        if (native & SIN_CONTENTS_UNUSED_9)
+            result |= EWT_CFLAG_Q2_UNUSED_9;
+        if (native & SIN_CONTENTS_UNUSED_10)
+            result |= EWT_CFLAG_Q2_UNUSED_10;
+        if (native & SIN_CONTENTS_UNUSED_11)
+            result |= EWT_CFLAG_Q2_UNUSED_11;
+        if (native & SIN_CONTENTS_UNUSED_13)
+            result |= EWT_CFLAG_Q2_UNUSED_12;
+        if (native & SIN_CONTENTS_UNUSED_30)
+            result |= EWT_CFLAG_Q2_UNUSED_30;
+        if (native & SIN_CONTENTS_UNUSED_31)
+            result |= EWT_CFLAG_Q2_UNUSED_31;
+
+        return contentflags_t::make(result);
     }
 
     int32_t contents_to_native(contentflags_t contents) const override
     {
-        return 0;
+        int32_t result = 0;
+
+        if (contents.flags & EWT_VISCONTENTS_SOLID)
+            result |= SIN_CONTENTS_SOLID;
+        if (contents.flags & EWT_VISCONTENTS_SKY)
+            throw std::invalid_argument("sky not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_DETAIL_WALL)
+            throw std::invalid_argument("detail wall not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_WINDOW)
+            result |= SIN_CONTENTS_WINDOW;
+        if (contents.flags & EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER)
+            throw std::invalid_argument("illusionary visblocker not a contents in Q2");
+        if (contents.flags & EWT_VISCONTENTS_AUX)
+            result |= SIN_CONTENTS_FENCE;
+        if (contents.flags & EWT_VISCONTENTS_LAVA)
+            result |= SIN_CONTENTS_LAVA;
+        if (contents.flags & EWT_VISCONTENTS_SLIME)
+            result |= SIN_CONTENTS_SLIME;
+        if (contents.flags & EWT_VISCONTENTS_WATER)
+            result |= SIN_CONTENTS_WATER;
+        if (contents.flags & EWT_VISCONTENTS_MIST)
+            result |= SIN_CONTENTS_MIST;
+        if (contents.flags & EWT_INVISCONTENTS_ORIGIN)
+            result |= SIN_CONTENTS_ORIGIN;
+        if (contents.flags & EWT_INVISCONTENTS_NO_WATERJUMP)
+            result |= SIN_CONTENTS_UNUSED_10;
+        if (contents.flags & EWT_INVISCONTENTS_PLAYERCLIP)
+            result |= SIN_CONTENTS_PLAYERCLIP;
+        if (contents.flags & EWT_INVISCONTENTS_MONSTERCLIP)
+            result |= SIN_CONTENTS_MONSTERCLIP;
+        if (contents.flags & EWT_INVISCONTENTS_PROJECTILECLIP)
+            result |= SIN_CONTENTS_UNUSED_14;
+        if (contents.flags & EWT_INVISCONTENTS_AREAPORTAL)
+            result |= SIN_CONTENTS_AREAPORTAL;
+        if (contents.flags & EWT_CFLAG_DETAIL)
+            result |= SIN_CONTENTS_DETAIL;
+
+        // cflags
+        if (contents.flags & EWT_CFLAG_CURRENT_0)
+            result |= SIN_CONTENTS_CURRENT_0;
+        if (contents.flags & EWT_CFLAG_CURRENT_90)
+            result |= SIN_CONTENTS_CURRENT_90;
+        if (contents.flags & EWT_CFLAG_CURRENT_180)
+            result |= SIN_CONTENTS_CURRENT_180;
+        if (contents.flags & EWT_CFLAG_CURRENT_270)
+            result |= SIN_CONTENTS_CURRENT_270;
+        if (contents.flags & EWT_CFLAG_CURRENT_UP)
+            result |= SIN_CONTENTS_CURRENT_UP;
+        if (contents.flags & EWT_CFLAG_CURRENT_DOWN)
+            result |= SIN_CONTENTS_CURRENT_DOWN;
+        if (contents.flags & EWT_CFLAG_TRANSLUCENT)
+            result |= SIN_CONTENTS_TRANSLUCENT;
+        if (contents.flags & EWT_CFLAG_LADDER)
+            result |= SIN_CONTENTS_LADDER;
+        if (contents.flags & EWT_CFLAG_MONSTER)
+            result |= SIN_CONTENTS_MONSTER;
+        if (contents.flags & EWT_CFLAG_DEADMONSTER)
+            result |= SIN_CONTENTS_DEADMONSTER;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_7)
+            result |= SIN_CONTENTS_UNUSED_7;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_8)
+            result |= SIN_CONTENTS_UNUSED_8;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_9)
+            result |= SIN_CONTENTS_UNUSED_9;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_10)
+            result |= SIN_CONTENTS_UNUSED_10;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_11)
+            result |= SIN_CONTENTS_UNUSED_11;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_12)
+            result |= SIN_CONTENTS_UNUSED_13;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_30)
+            result |= SIN_CONTENTS_UNUSED_30;
+        if (contents.flags & EWT_CFLAG_Q2_UNUSED_31)
+            result |= SIN_CONTENTS_UNUSED_31;
+
+        return result;
     }
 
     contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override

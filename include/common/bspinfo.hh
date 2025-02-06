@@ -47,6 +47,8 @@ struct full_atlas_t
      */
     std::map<int, std::vector<qvec2f>> facenum_to_lightmap_uvs;
 
+    std::map<int, std::array<uint8_t, MAXLIGHTMAPS>> facenum_to_styles;
+
     std::map<int, single_style_atlas_t> style_to_lightmap_atlas;
 };
 

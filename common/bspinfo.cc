@@ -246,7 +246,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
 
     bool is_hdr = false;
     const uint32_t *hdr_lightdata_source = nullptr; // 1 packed uint32 (e5brg9) per sample
-    const uint8_t *lightdata_source = nullptr; // either greyscale (1 byte per sample) or rgb (3 bytes per sample)
+    const std::vector<uint8_t> *lightdata_source = nullptr; // either greyscale (1 byte per sample) or rgb (3 bytes per sample)
     bool is_rgb = false;
     bool is_lit = false;
 
@@ -260,11 +260,11 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     } else if (!litdata.empty()) {
         is_lit = true;
         is_rgb = true;
-        lightdata_source = litdata.data();
+        lightdata_source = &litdata;
     } else {
         is_lit = false;
         is_rgb = bsp.loadversion->game->has_rgb_lightmap;
-        lightdata_source = bsp.dlightdata.data();
+        lightdata_source = &bsp.dlightdata;
     }
 
     struct atlas
@@ -303,6 +303,16 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         use_decoupled = false;
     }
 
+    std::vector<uint16_t> bspx_lmstyle16;
+    int max_styles_per_face = MAXLIGHTMAPS;
+
+    if (bspx.contains("LMSTYLE16")) {
+        auto &lmstyle16 = bspx.at("LMSTYLE16");
+        max_styles_per_face = lmstyle16.size() / sizeof(uint16_t) / bsp.dfaces.size();
+        bspx_lmstyle16.resize(max_styles_per_face * bsp.dfaces.size());
+        memcpy(bspx_lmstyle16.data(), lmstyle16.data(), lmstyle16.size());
+    }
+
     // make rectangles
     for (auto &face : bsp.dfaces) {
         const ptrdiff_t face_idx = (&face - bsp.dfaces.data());
@@ -315,6 +325,10 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         } else {
             bspx_lmoffset.seekg(face_idx * sizeof(int32_t));
             bspx_lmoffset >= faceofs;
+        }
+
+        if (faceofs == -1) {
+            continue;
         }
 
         rectangles.push_back(
@@ -339,6 +353,10 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
 
     // pack
     for (auto &rect : rectangles) {
+        if (rect.extents.width() > atlas_size || rect.extents.height() > atlas_size) {
+            logging::print(logging::flag::DEFAULT, "WARNING: can't fit face {} in atlas\n", (ptrdiff_t) (rect.face - bsp.dfaces.data()));
+            continue; // literally can't fit it
+        }
         while (true) {
             if (current_atlas == atlasses.size()) {
                 atlasses.emplace_back();
@@ -405,17 +423,28 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
     full_atlas_t result;
 
     // compile all of the styles that are available
-    // TODO: LMSTYLE16
+    // TODO: LMSTYLE16 for other ones
     for (size_t i = 0; i < INVALID_LIGHTSTYLE_OLD - 1; i++) {
         bool any_written = false;
 
         for (auto &rect : rectangles) {
+            auto face_idx = (intptr_t) (rect.face - bsp.dfaces.data());
             int32_t style_index = -1;
 
-            for (size_t s = 0; s < MAXLIGHTMAPS; s++) {
-                if (rect.face->styles[s] == i) {
-                    style_index = s;
-                    break;
+            if (!bspx_lmstyle16.empty()) {
+                const uint16_t *styles = bspx_lmstyle16.data() + face_idx * max_styles_per_face;
+                for (size_t s = 0; s < max_styles_per_face; s++) {
+                    if (styles[s] == i) {
+                        style_index = s;
+                        break;
+                    }
+                }
+            } else {
+                for (size_t s = 0; s < max_styles_per_face; s++) {
+                    if (rect.face->styles[s] == i) {
+                        style_index = s;
+                        break;
+                    }
                 }
             }
 
@@ -428,8 +457,15 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             }
 
             if (!is_hdr) {
-                auto in_pixel = lightdata_source + ((is_lit ? 3 : 1) * rect.lightofs) +
+                auto in_offset = ((is_lit ? 3 : 1) * rect.lightofs) +
                                 (rect.extents.numsamples() * (is_rgb ? 3 : 1) * style_index);
+                auto in_pixel = lightdata_source->data() + in_offset;
+
+                // assert bounds
+                if (in_offset < 0 || in_offset >= lightdata_source->size()) {
+                    logging::print(logging::flag::DEFAULT, "WARNING: bad lightmap offset on face {}\n", (ptrdiff_t) (rect.face - bsp.dfaces.data()));
+                    continue;
+                }
 
                 for (size_t y = 0; y < rect.extents.height(); y++) {
                     for (size_t x = 0; x < rect.extents.width(); x++) {
@@ -479,7 +515,7 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         std::fill(full_atlas.e5brg9_samples.begin(), full_atlas.e5brg9_samples.end(), uint32_t{});
     }
 
-    auto ExportLightmapUVs = [&full_atlas, &result](const mbsp_t *bsp, const face_rect &face) {
+    auto ExportLightmapUVs = [&full_atlas, &result, &bspx_lmstyle16, max_styles_per_face](const mbsp_t *bsp, const face_rect &face) {
         std::vector<qvec2f> face_lightmap_uvs;
 
         for (int i = 0; i < face.face->numedges; i++) {
@@ -501,6 +537,20 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
         }
 
         result.facenum_to_lightmap_uvs[Face_GetNum(bsp, face.face)] = std::move(face_lightmap_uvs);
+
+        auto face_idx = (intptr_t) (face.face - bsp->dfaces.data());
+        std::array<uint8_t, MAXLIGHTMAPS> s;
+
+        if (!bspx_lmstyle16.empty()) {
+            const uint16_t *styles = bspx_lmstyle16.data() + face_idx * max_styles_per_face;
+
+            for (int i = 0; i < s.size(); i++)
+                s[i] = styles[i];
+        } else {
+            memcpy(s.data(), face.face->styles.data(), sizeof(s));
+        }
+
+        result.facenum_to_styles[Face_GetNum(bsp, face.face)] = s;
     };
 
     for (auto &rect : rectangles) {

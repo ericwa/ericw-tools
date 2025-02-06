@@ -109,6 +109,7 @@ private:
     bool m_showTris = false;
     bool m_showTrisSeeThrough = false;
     bool m_drawFlat = false;
+    bool m_litTranslucency = true;
     bool m_keepOrigin = false;
     bool m_keepCullFrustum = true;
     bool m_keepCullOrigin = false;
@@ -196,6 +197,7 @@ private:
     int m_program_fullbright_location = 0;
     int m_program_drawnormals_location = 0;
     int m_program_drawflat_location = 0;
+    int m_program_lit_translucency_location = 0;
     int m_program_style_scalars_location = 0;
     int m_program_brightness_location = 0;
     int m_program_lightmap_scale_location = 0;
@@ -248,6 +250,7 @@ public:
     void setShowTrisSeeThrough(bool showtris);
     void setVisCulling(bool viscull);
     void setDrawFlat(bool drawflat);
+    void setLitTranslucency(bool v);
     void setKeepOrigin(bool keeporigin);
     void setKeepCullFrustum(bool keepfrustum);
     void setKeepCullOrigin(bool keeporigin);

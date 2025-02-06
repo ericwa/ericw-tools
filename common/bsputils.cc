@@ -260,7 +260,8 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const int nodenum, const qve
         const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
 
         // mxd
-        if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+        if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+            bsp->loadversion->game->id == GAME_SIN) {
             return leaf->contents & Q2_CONTENTS_SOLID;
         }
 
@@ -608,7 +609,8 @@ void CompressRow(const uint8_t *vis, const size_t numbytes, std::back_insert_ite
 
 size_t DecompressedVisSize(const mbsp_t *bsp)
 {
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         return (bsp->dvis.bit_offsets.size() + 7) / 8;
     }
 
@@ -628,7 +630,8 @@ int LeafnumToVisleaf(int leafnum)
 // returns true if pvs can see leaf
 bool Pvs_LeafVisible(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, const mleaf_t *leaf)
 {
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         if (leaf->cluster < 0) {
             return false;
         }
@@ -713,7 +716,8 @@ std::unordered_map<int, std::vector<uint8_t>> DecompressAllVis(const mbsp_t *bsp
 
     const size_t decompressed_size = DecompressedVisSize(bsp);
 
-    if (bsp->loadversion->game->id == GAME_QUAKE_II) {
+    if (bsp->loadversion->game->id == GAME_QUAKE_II ||
+        bsp->loadversion->game->id == GAME_SIN) {
         const int num_clusters = bsp->dvis.bit_offsets.size();
 
         for (int cluster = 0; cluster < num_clusters; ++cluster) {

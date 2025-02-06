@@ -562,7 +562,7 @@ std::tuple<std::optional<img::texture_meta>, fs::resolve_result, fs::data> load_
 {
     fs::path prefix;
 
-    if (game->id == GAME_QUAKE_II) {
+    if (game->id == GAME_QUAKE_II || game->id == GAME_SIN) {
         prefix = "textures";
     }
 

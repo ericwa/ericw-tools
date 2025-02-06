@@ -808,6 +808,31 @@ struct planelist_t
     }
 };
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <common/stb_write.h>
+
+static void ExportTextures(const fs::path &source, const gamedef_t *game, const mbsp_t &bsp)
+{
+    for (auto &tex : bsp.texinfo) {
+        // temp, just for us
+        auto tex_name = (source.parent_path() / "textures" / tex.texture.data()).replace_extension(".tga");
+
+        if (tex_name.string().find_first_of(' ') != std::string::npos)
+            continue;
+
+        auto swl_meta = std::get<0>(img::load_texture(tex.texture.data(), false, game, bsputil_options));
+
+        if (!swl_meta)
+            continue;
+
+        fs::create_directories(tex_name.parent_path());
+
+        if (!fs::exists(tex_name)) {
+            stbi_write_tga(tex_name.string().c_str(), swl_meta->width, swl_meta->height, 4, swl_meta->pixels.data());
+        }
+    }
+}
+
 int bsputil_main(int _argc, const char **_argv)
 {
     logging::preinitialize();
@@ -1394,6 +1419,12 @@ int bsputil_main(int _argc, const char **_argv)
             f.close();
         } else if (operation->primary_name() == "extract-textures") {
             mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+            if (bspdata.loadversion->game->id == GAME_QUAKE_II ||
+                bspdata.loadversion->game->id == GAME_SIN) {
+                ExportTextures(source, bspdata.loadversion->game, bsp);
+                continue;
+            }
 
             source.replace_extension(".wad");
             logging::print("-> writing {}... ", source);

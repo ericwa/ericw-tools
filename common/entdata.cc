@@ -198,6 +198,16 @@ void EntData_ParseInto(parser_t &parser, std::vector<entdict_t> &vector)
     }
 }
 
+const entdict_t *EntData_Find(const std::vector<entdict_t> &vector, const std::string &key, const std::string &value)
+{
+    for (const auto &entdict : vector) {
+        if (entdict.get(key) == value) {
+            return &entdict;
+        }
+    }
+    return nullptr;
+}
+
 std::vector<entdict_t> EntData_Parse(parser_t &parser)
 {
     std::vector<entdict_t> result;

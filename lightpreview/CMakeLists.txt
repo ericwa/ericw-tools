@@ -16,8 +16,10 @@ add_executable(lightpreview
     mainwindow.h
     glview.cpp
     glview.h
-        stats.cpp
-        stats.h)
+    stats.cpp
+    stats.h
+    face.h
+    face.cpp)
 
 set_target_properties(lightpreview PROPERTIES WIN32_EXECUTABLE YES)
 set_target_properties(lightpreview PROPERTIES MACOSX_BUNDLE TRUE)
