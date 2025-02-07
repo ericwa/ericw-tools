@@ -27,6 +27,7 @@
 #include <array>
 #include <list>
 #include <stdexcept>
+#include <system_error>
 #include <unordered_map>
 
 namespace fs
@@ -246,7 +247,8 @@ inline std::shared_ptr<archive_like> addArchiveInternal(const path &p, bool exte
 {
     if (is_directory(p)) {
         for (auto &dir : directories) {
-            if (equivalent(dir->pathname, p)) {
+            std::error_code ec;
+            if (equivalent(dir->pathname, p, ec)) {
                 return dir;
             }
         }
@@ -256,7 +258,8 @@ inline std::shared_ptr<archive_like> addArchiveInternal(const path &p, bool exte
         return arch;
     } else {
         for (auto &arch : archives) {
-            if (equivalent(arch->pathname, p)) {
+            std::error_code ec;
+            if (equivalent(arch->pathname, p, ec)) {
                 return arch;
             }
         }

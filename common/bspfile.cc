@@ -28,6 +28,7 @@
 
 #include <cstdint>
 #include <limits.h>
+#include <system_error>
 
 #include <fmt/core.h>
 
@@ -1532,9 +1533,10 @@ public:
                 }
             }
 
+            std::error_code ec;
             if (!exists(basedir)) {
                 logging::print("WARNING: failed to find basedir '{}'\n", basedir);
-            } else if (!equivalent(gamedir, basedir)) {
+            } else if (!equivalent(gamedir, basedir, ec)) {
                 addArchive(basedir);
                 logging::print("using basedir: '{}'\n", basedir);
             }
