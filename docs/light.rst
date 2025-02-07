@@ -558,6 +558,14 @@ The following keys can be added to the *worldspawn* entity:
 
    Scales the surface light emission from Q2 surface lights (excluding sky faces) by this amount.
 
+.. worldspawn-key:: "_surflight_atten" "n"
+
+   Float, default 1.0.
+
+   .. todo::
+
+      Document this.
+
 .. worldspawn-key:: "_surflightskyscale" "n"
 
    Scales the surface light emission from Q2 sky faces by this amount.
@@ -739,6 +747,10 @@ If used on func_detail* or func_group, a full qbsp pass need to be run.
                 "_splitturb" "n"
 
    Overrides the worldspawn/command line option :option:`qbsp -litwater` for these specific brushes.
+
+.. bmodel-key:: "_surflight_atten" "n"
+
+   Overrides the worldspawn key :worldspawn-key:`_surflight_atten` for these brushes.
 
 .. bmodel-key:: "_surflight_rescale" "n"
 

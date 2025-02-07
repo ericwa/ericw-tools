@@ -2,6 +2,40 @@
 Changelog
 =========
 
+2.0.0-alpha9
+============
+
+Changes
+-------
+
+- qbsp: never merge across liquids, deprecate ``-nomergeacrossliquids``
+- qbsp: remove treating ``__TB_empty`` as skip
+- qbsp: deprecate :bmodel-key:`_chop` and replace with :bmodel-key:`_chop_order`
+- macOS builds now compiled on macOS 14
+
+Features
+--------
+
+- light: add :worldspawn-key:`_surflight_atten` key, supported on worldspawn/func_group/func_detail/etc.
+- light: add :light-key:`_switchableshadow_target`
+- qbsp: add :bmodel-key:`_hulls` bmodel key for omitting specific collision hulls
+- lightpreview: add "view -> move camera to" menu item, show Q2 area in statusbar
+
+Bug fixes
+---------
+
+- qbsp: fix bmodel bounds for bmodels that mix ``clip`` and non-``clip`` brushes
+- qbsp: fix software renderer compatibility (only reuse edges once)
+- qbsp: add support for the two missing content flags from re-release (``Q2_CONTENTS_NO_WATERJUMP``,
+  ``Q2_CONTENTS_PROJECTILECLIP``)
+- qbsp: fix :option:`qbsp -notriggermodels` using incorrect bounds
+- qbsp: :classname:`func_illusionary_visblocker` fixes
+- qbsp: :option:`qbsp -notex` fixes
+- common: fix ``std::filesystem::equivalence`` exception on macOS
+- bspinfo: fix lightmap dump
+- bsputil: fix :option:`bsputil --extract-entities` and :option:`bsputil --extract-textures` command line parsing
+- light: fix :bmodel-key:`_surflight_group`
+
 2.0.0-alpha8
 ============
 
@@ -588,8 +622,8 @@ other
 * qbsp: added support for using WAD3 texture wads used by Hammer
 * qbsp: include clip brushes when calculating bmodel bounding box
 * qbsp: enable creation of clip-only bmodels
-* qbsp: recognise and remove :texture:`*waterskip`, :texture:`*slimeskip` and :texture:`*lavaskip` surfaces
-* qbsp: added :texture:`hintskip` texture support
+* qbsp: recognise and remove ``*waterskip``, ``*slimeskip`` and ``*lavaskip`` surfaces
+* qbsp: added ``hintskip`` texture support
 * qbsp: fixed some bugs parsing empty func_group/func_detail entities
 * light: implemented self shadowing and full shadows for brush models
 * light: implemented the "-soft" command line option
