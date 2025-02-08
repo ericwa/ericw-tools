@@ -270,9 +270,6 @@ struct surfflags_t
     // don't expand this face for larger clip hulls
     bool no_expand : 1;
 
-    // block any way phong can be enabled
-    bool no_phong : 1;
-
     // this face doesn't receive light
     bool light_ignore : 1;
 

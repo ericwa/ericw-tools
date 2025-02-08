@@ -395,9 +395,6 @@ static void WriteExtendedTexinfoFlags()
         if (tx.flags.no_expand) {
             t["no_expand"] = tx.flags.no_expand;
         }
-        if (tx.flags.no_phong) {
-            t["no_phong"] = tx.flags.no_phong;
-        }
         if (tx.flags.light_ignore) {
             t["light_ignore"] = tx.flags.light_ignore;
         }
