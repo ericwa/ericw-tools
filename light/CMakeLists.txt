@@ -1,5 +1,5 @@
-option(SKIP_TBB_INSTALL "Skip TBB Library Installation" OFF)
-option(SKIP_EMBREE_INSTALL "Skip Embree Library Installation" OFF)
+option(SKIP_TBB_INSTALL "Skip TBB Library Installation" ON)
+option(SKIP_EMBREE_INSTALL "Skip Embree Library Installation" ON)
 
 set(LIGHT_INCLUDES
 	../include/light/entities.hh
@@ -92,7 +92,7 @@ if (embree_FOUND)
 	endif()
 
 	if(NOT SKIP_EMBREE_INSTALL)
-		install(FILES $<TARGET_FILE:embree> DESTINATION .)
+		install(FILES $<TARGET_FILE:embree> DESTINATION ${CMAKE_INSTALL_LIBDIR})
 	endif()
 
 	# install TBB
@@ -140,5 +140,5 @@ endif(embree_FOUND)
 copy_mingw_dlls(light)
 add_loader_path_to_rpath(light)
 
-install(TARGETS light RUNTIME DESTINATION .)
-install(FILES ../gpl_v3.txt DESTINATION .)
+install(TARGETS light RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(FILES ../gpl_v3.txt DESTINATION ${CMAKE_INSTALL_DOCDIR})
