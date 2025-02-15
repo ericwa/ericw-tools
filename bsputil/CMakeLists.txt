@@ -17,4 +17,4 @@ add_custom_command(TARGET bsputil POST_BUILD
 copy_mingw_dlls(bsputil)
 add_loader_path_to_rpath(bsputil)
 
-install(TARGETS bsputil RUNTIME DESTINATION .)
+install(TARGETS bsputil RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

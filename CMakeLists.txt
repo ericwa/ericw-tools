@@ -3,6 +3,8 @@ cmake_policy(SET CMP0028 NEW)
 
 project (ericw-tools)
 
+include(GNUInstallDirs)
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/3rdparty/Catch2/extras")
 
@@ -46,9 +48,10 @@ if (UNIX)
 endif (UNIX)
 
 # set our C/C++ dialects
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_DEBUG OFF)
@@ -202,7 +205,7 @@ if(NOT DISABLE_DOCS)
 	add_subdirectory(docs)
 endif ()
 
-install(FILES README.md DESTINATION .)
+install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 #CPack configuration
 
