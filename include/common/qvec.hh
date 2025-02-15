@@ -32,13 +32,19 @@
 #include <functional>
 #include "common/mathlib.hh"
 
-template<class T, size_t N>
-class qvec
+enum class align
 {
-protected:
-    std::array<T, N> v;
+	none     = 0 << 0,
+	scalar   = 1 << 0,
+	vector   = 1 << 1,
+	matrix   = 1 << 2,
+	adaptive = 1 << 3,
+};
 
-    template<class T2, size_t N2>
+template<class T, size_t N, enum align A = align::adaptive, size_t N_POW2 = std::bit_ceil<size_t>(N)>
+struct alignas(((N == N_POW2) && A != align::scalar) || A == align::vector ? N * std::max<size_t>(alignof(T),sizeof(T)) : std::max<size_t>(alignof(T),sizeof(T))) qvec : std::array<T,N>
+{
+    template<class T2, size_t N2, enum align A2, size_t N2_POW2>
     friend class qvec;
 
 public:
@@ -52,14 +58,13 @@ public:
 #endif
     template<typename... Args,
         typename = std::enable_if_t<sizeof...(Args) && std::is_convertible_v<std::common_type_t<Args...>, T>>>
-    constexpr qvec(Args... a)
-        : v({})
+    constexpr qvec(Args... a) : std::array<T,N>({})
     {
         constexpr size_t count = sizeof...(Args);
 
         // special case for single argument
         if constexpr (count == 1) {
-            for (auto &e : v)
+            for (auto &e : (*this))
                 ((e = a, true) || ...);
         }
         // multiple arguments; copy up to min(N, `count`),
@@ -67,7 +72,7 @@ public:
         else {
             constexpr size_t copy_size = std::min(N, count);
             size_t i = 0;
-            ((i++ < copy_size ? (v[i - 1] = a, true) : false), ...);
+            ((i++ < copy_size ? ((*this)[i - 1] = a, true) : false), ...);
         }
     }
 #ifdef __clang__
@@ -78,7 +83,7 @@ private:
     template<typename FT, std::size_t... pack>
     constexpr void copy_impl(const FT &from, std::index_sequence<pack...> packed)
     {
-        ((v[pack] = from[pack]), ...);
+        (((*this)[pack] = from[pack]), ...);
     }
 
 public:
@@ -109,7 +114,7 @@ private:
     template<typename FT, std::size_t... pack>
     constexpr void copy_trunc_impl(const FT &from, std::index_sequence<pack...> packed)
     {
-        (((pack < N) ? (v[pack] = ((pack < from.size() ? (from[pack]) : 0))) : (false)), ...);
+        (((pack < N) ? ((*this)[pack] = ((pack < from.size() ? (from[pack]) : 0))) : (false)), ...);
     }
 
 public:
@@ -130,29 +135,12 @@ public:
      */
     constexpr qvec(const qvec<T, N - 1> &other, T value)
     {
-        std::copy(other.begin(), other.end(), v.begin());
-        v[N - 1] = value;
+        std::copy(other.begin(), other.end(), ((*this).begin()));
+        (*this)[N - 1] = value;
     }
-
-    [[nodiscard]] constexpr size_t size() const { return N; }
 
     // Sort support
     [[nodiscard]] constexpr auto operator<=>(const qvec &) const = default;
-
-    [[nodiscard]] constexpr const T &at(const size_t idx) const
-    {
-        assert(idx >= 0 && idx < N);
-        return v[idx];
-    }
-
-    [[nodiscard]] constexpr T &at(const size_t idx)
-    {
-        assert(idx >= 0 && idx < N);
-        return v[idx];
-    }
-
-    [[nodiscard]] constexpr const T &operator[](const size_t idx) const { return at(idx); }
-    [[nodiscard]] constexpr T &operator[](const size_t idx) { return at(idx); }
 
 private:
     // OUT = op THIS[N]
@@ -160,7 +148,7 @@ private:
     constexpr auto utransform_impl(UnaryOperation func, std::index_sequence<pack...>) const
     {
         using R = decltype(-T());
-        return qvec<R, N>{func(at(pack))...};
+        return qvec<R, N>{func((*this).at(pack))...};
     }
 
     // OUT = THIS[N] op IN
@@ -168,7 +156,7 @@ private:
     constexpr auto transform_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
     {
         using R = decltype(func(T(), InputType()));
-        return qvec<R, N>{func(at(pack), b)...};
+        return qvec<R, N>{func((*this).at(pack), b)...};
     }
 
     // OUT = THIS[N] op IN[N]
@@ -176,7 +164,7 @@ private:
     constexpr auto transformv_impl(BinaryOperation func, const InputType &b, std::index_sequence<pack...>) const
     {
         using R = decltype(func(T(), InputType()[0]));
-        return qvec<R, N>{func(at(pack), b[pack])...};
+        return qvec<R, N>{func((*this).at(pack), b[pack])...};
     }
 
 public:
@@ -274,15 +262,7 @@ public:
     }
 
     // stream support
-    auto stream_data() { return std::tie(v); }
-
-    // iterator support
-    constexpr auto begin() { return v.begin(); }
-    constexpr auto end() { return v.end(); }
-    constexpr auto begin() const { return v.begin(); }
-    constexpr auto end() const { return v.end(); }
-    constexpr auto cbegin() const { return v.cbegin(); }
-    constexpr auto cend() const { return v.cend(); }
+    auto stream_data() { return std::tie((*this)); }
 
     // gtest support
     friend std::ostream &operator<<(std::ostream &os, const qvec &point)
