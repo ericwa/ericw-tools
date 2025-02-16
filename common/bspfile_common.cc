@@ -315,7 +315,7 @@ nlohmann::json surfflags_t::to_json() const
 
 surfflags_t surfflags_t::from_json(const nlohmann::json &val)
 {
-    surfflags_t flags{};
+    surfflags_t flags;
 
     if (val.contains("is_nodraw")) {
         flags.set_nodraw(val.at("is_nodraw").get<bool>());
