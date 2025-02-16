@@ -43,7 +43,7 @@ static void WritePortals_r(node_t *node, prtfile_t &portalFile, bool clusters)
 {
     const portal_t *p, *next;
     const winding_t *w;
-    int i, front, back;
+    int front, back;
     qplane3d plane2;
 
     if (auto *nodedata = node->get_nodedata(); nodedata && !nodedata->detail_separator) {
