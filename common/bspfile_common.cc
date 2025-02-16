@@ -27,6 +27,7 @@
 #include <common/log.hh>
 #include <common/settings.hh>
 #include <common/numeric_cast.hh>
+#include <common/json.hh>
 
 #include <cstdint>
 #include <limits.h>
@@ -224,6 +225,181 @@ bool surfflags_t::needs_write() const
 bool surfflags_t::is_valid(const gamedef_t *game) const
 {
     return game->surfflags_are_valid(*this);
+}
+
+nlohmann::json surfflags_t::to_json() const
+{
+    nlohmann::json t = nlohmann::json::object();
+
+    if (is_nodraw()) {
+        t["is_nodraw"] = is_nodraw();
+    }
+    if (is_hint()) {
+        t["is_hint"] = is_hint();
+    }
+    if (no_dirt) {
+        t["no_dirt"] = no_dirt;
+    }
+    if (no_shadow) {
+        t["no_shadow"] = no_shadow;
+    }
+    if (no_bounce) {
+        t["no_bounce"] = no_bounce;
+    }
+    if (no_minlight) {
+        t["no_minlight"] = no_minlight;
+    }
+    if (no_expand) {
+        t["no_expand"] = no_expand;
+    }
+    if (light_ignore) {
+        t["light_ignore"] = light_ignore;
+    }
+    if (surflight_rescale) {
+        t["surflight_rescale"] = surflight_rescale.value();
+    }
+    if (surflight_style.has_value()) {
+        t["surflight_style"] = surflight_style.value();
+    }
+    if (surflight_targetname.has_value()) {
+        t["surflight_targetname"] = surflight_targetname.value();
+    }
+    if (surflight_color.has_value()) {
+        t["surflight_color"] = surflight_color.value();
+    }
+    if (surflight_minlight_scale.has_value()) {
+        t["surflight_minlight_scale"] = surflight_minlight_scale.value();
+    }
+    if (surflight_atten.has_value()) {
+        t["surflight_atten"] = surflight_atten.value();
+    }
+    if (phong_angle) {
+        t["phong_angle"] = phong_angle;
+    }
+    if (phong_angle_concave) {
+        t["phong_angle_concave"] = phong_angle_concave;
+    }
+    if (phong_group) {
+        t["phong_group"] = phong_group;
+    }
+    if (minlight) {
+        t["minlight"] = *minlight;
+    }
+    if (maxlight) {
+        t["maxlight"] = maxlight;
+    }
+    if (!qv::emptyExact(minlight_color)) {
+        t["minlight_color"] = minlight_color;
+    }
+    if (light_alpha) {
+        t["light_alpha"] = *light_alpha;
+    }
+    if (light_twosided) {
+        t["light_twosided"] = *light_twosided;
+    }
+    if (lightcolorscale != 1.0) {
+        t["lightcolorscale"] = lightcolorscale;
+    }
+    if (surflight_group) {
+        t["surflight_group"] = surflight_group;
+    }
+    if (world_units_per_luxel) {
+        t["world_units_per_luxel"] = *world_units_per_luxel;
+    }
+    if (object_channel_mask) {
+        t["object_channel_mask"] = *object_channel_mask;
+    }
+
+    return t;
+}
+
+surfflags_t surfflags_t::from_json(const nlohmann::json &val)
+{
+    surfflags_t flags{};
+
+    if (val.contains("is_nodraw")) {
+        flags.set_nodraw(val.at("is_nodraw").get<bool>());
+    }
+    if (val.contains("is_hint")) {
+        flags.set_hint(val.at("is_hint").get<bool>());
+    }
+    if (val.contains("is_hintskip")) {
+        flags.set_hintskip(val.at("is_hintskip").get<bool>());
+    }
+    if (val.contains("no_dirt")) {
+        flags.no_dirt = val.at("no_dirt").get<bool>();
+    }
+    if (val.contains("no_shadow")) {
+        flags.no_shadow = val.at("no_shadow").get<bool>();
+    }
+    if (val.contains("no_bounce")) {
+        flags.no_bounce = val.at("no_bounce").get<bool>();
+    }
+    if (val.contains("no_minlight")) {
+        flags.no_minlight = val.at("no_minlight").get<bool>();
+    }
+    if (val.contains("no_expand")) {
+        flags.no_expand = val.at("no_expand").get<bool>();
+    }
+    if (val.contains("light_ignore")) {
+        flags.light_ignore = val.at("light_ignore").get<bool>();
+    }
+    if (val.contains("surflight_rescale")) {
+        flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
+    }
+    if (val.contains("surflight_style")) {
+        flags.surflight_style = val.at("surflight_style").get<int32_t>();
+    }
+    if (val.contains("surflight_targetname")) {
+        flags.surflight_targetname = val.at("surflight_targetname").get<std::string>();
+    }
+    if (val.contains("surflight_color")) {
+        flags.surflight_color = val.at("surflight_color").get<qvec3b>();
+    }
+    if (val.contains("surflight_minlight_scale")) {
+        flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<float>();
+    }
+    if (val.contains("surflight_atten")) {
+        flags.surflight_atten = val.at("surflight_atten").get<float>();
+    }
+    if (val.contains("phong_angle")) {
+        flags.phong_angle = val.at("phong_angle").get<float>();
+    }
+    if (val.contains("phong_angle_concave")) {
+        flags.phong_angle_concave = val.at("phong_angle_concave").get<float>();
+    }
+    if (val.contains("phong_group")) {
+        flags.phong_group = val.at("phong_group").get<int>();
+    }
+    if (val.contains("minlight")) {
+        flags.minlight = val.at("minlight").get<float>();
+    }
+    if (val.contains("maxlight")) {
+        flags.maxlight = val.at("maxlight").get<float>();
+    }
+    if (val.contains("minlight_color")) {
+        flags.minlight_color = val.at("minlight_color").get<qvec3b>();
+    }
+    if (val.contains("light_alpha")) {
+        flags.light_alpha = val.at("light_alpha").get<float>();
+    }
+    if (val.contains("light_twosided")) {
+        flags.light_twosided = val.at("light_twosided").get<bool>();
+    }
+    if (val.contains("lightcolorscale")) {
+        flags.lightcolorscale = val.at("lightcolorscale").get<float>();
+    }
+    if (val.contains("surflight_group")) {
+        flags.surflight_group = val.at("surflight_group").get<int32_t>();
+    }
+    if (val.contains("world_units_per_luxel")) {
+        flags.world_units_per_luxel = val.at("world_units_per_luxel").get<float>();
+    }
+    if (val.contains("object_channel_mask")) {
+        flags.object_channel_mask = val.at("object_channel_mask").get<int32_t>();
+    }
+
+    return flags;
 }
 
 // gamedef_t

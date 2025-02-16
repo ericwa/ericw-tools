@@ -34,6 +34,8 @@
 #include <common/qvec.hh>
 #include <common/aabb.hh>
 
+#include <nlohmann/json.hpp>
+
 namespace settings
 {
 class common_settings;
@@ -334,6 +336,12 @@ public:
     auto operator<=>(const surfflags_t &other) const = default;
 
     bool is_valid(const gamedef_t *game) const;
+
+public:
+    // to/from json
+
+    nlohmann::json to_json() const;
+    static surfflags_t from_json(const nlohmann::json &json);
 };
 
 // native game target ID
