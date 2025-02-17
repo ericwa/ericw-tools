@@ -217,26 +217,66 @@ void surfflags_t::set_hintskip(bool hintskip)
         native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_SKIP);
 }
 
-bool surfflags_t::needs_write() const
-{
-    return *this != surfflags_t();
-}
-
 bool surfflags_t::is_valid(const gamedef_t *game) const
 {
     return game->surfflags_are_valid(*this);
+}
+
+void surfflags_t::set_native_q1_bits(q1_surf_flags_t bits)
+{
+    native_q1 = static_cast<q1_surf_flags_t>(native_q1 | bits);
+}
+
+void surfflags_t::set_native_q2_bits(q2_surf_flags_t bits)
+{
+    native_q2 = static_cast<q2_surf_flags_t>(native_q2 | bits);
 }
 
 nlohmann::json surfflags_t::to_json() const
 {
     nlohmann::json t = nlohmann::json::object();
 
-    if (is_nodraw()) {
-        t["is_nodraw"] = is_nodraw();
+    // native q2 flags
+    if (native_q2 & Q2_SURF_LIGHT) {
+        t["is_light"] = true;
     }
-    if (is_hint()) {
-        t["is_hint"] = is_hint();
+    if (native_q2 & Q2_SURF_SLICK) {
+        t["is_slick"] = true;
     }
+    if (native_q2 & Q2_SURF_SKY) {
+        t["is_sky"] = true;
+    }
+    if (native_q2 & Q2_SURF_WARP) {
+        t["is_warp"] = true;
+    }
+    if (native_q2 & Q2_SURF_TRANS33) {
+        t["is_trans33"] = true;
+    }
+    if (native_q2 & Q2_SURF_TRANS66) {
+        t["is_trans66"] = true;
+    }
+    if (native_q2 & Q2_SURF_FLOWING) {
+        t["is_flowing"] = true;
+    }
+    if (native_q2 & Q2_SURF_NODRAW) {
+        t["is_nodraw"] = true;
+    }
+    if (native_q2 & Q2_SURF_HINT) {
+        t["is_hint"] = true;
+    }
+    if (native_q2 & Q2_SURF_SKIP) {
+        t["is_skip"] = true;
+    }
+    if (native_q2 & Q2_SURF_ALPHATEST) {
+        t["is_alphatest"] = true;
+    }
+
+    // native q1 flags
+    if (native_q1 & TEX_SPECIAL) {
+        t["is_special"] = true;
+    }
+
+    // extended flags
     if (no_dirt) {
         t["no_dirt"] = no_dirt;
     }
@@ -256,22 +296,22 @@ nlohmann::json surfflags_t::to_json() const
         t["light_ignore"] = light_ignore;
     }
     if (surflight_rescale) {
-        t["surflight_rescale"] = surflight_rescale.value();
+        t["surflight_rescale"] = *surflight_rescale;
     }
-    if (surflight_style.has_value()) {
-        t["surflight_style"] = surflight_style.value();
+    if (surflight_style) {
+        t["surflight_style"] = *surflight_style;
     }
-    if (surflight_targetname.has_value()) {
-        t["surflight_targetname"] = surflight_targetname.value();
+    if (surflight_targetname) {
+        t["surflight_targetname"] = *surflight_targetname;
     }
-    if (surflight_color.has_value()) {
-        t["surflight_color"] = surflight_color.value();
+    if (surflight_color) {
+        t["surflight_color"] = *surflight_color;
     }
-    if (surflight_minlight_scale.has_value()) {
-        t["surflight_minlight_scale"] = surflight_minlight_scale.value();
+    if (surflight_minlight_scale) {
+        t["surflight_minlight_scale"] = *surflight_minlight_scale;
     }
-    if (surflight_atten.has_value()) {
-        t["surflight_atten"] = surflight_atten.value();
+    if (surflight_atten) {
+        t["surflight_atten"] = *surflight_atten;
     }
     if (phong_angle) {
         t["phong_angle"] = phong_angle;
@@ -285,9 +325,6 @@ nlohmann::json surfflags_t::to_json() const
     if (minlight) {
         t["minlight"] = *minlight;
     }
-    if (maxlight) {
-        t["maxlight"] = maxlight;
-    }
     if (!qv::emptyExact(minlight_color)) {
         t["minlight_color"] = minlight_color;
     }
@@ -296,6 +333,9 @@ nlohmann::json surfflags_t::to_json() const
     }
     if (light_twosided) {
         t["light_twosided"] = *light_twosided;
+    }
+    if (maxlight) {
+        t["maxlight"] = maxlight;
     }
     if (lightcolorscale != 1.0) {
         t["lightcolorscale"] = lightcolorscale;
@@ -317,6 +357,47 @@ surfflags_t surfflags_t::from_json(const nlohmann::json &val)
 {
     surfflags_t flags;
 
+    // native q2 flags
+    if (val.contains("is_light") && val.at("is_light").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_LIGHT);
+    }
+    if (val.contains("is_slick") && val.at("is_slick").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_SLICK);
+    }
+    if (val.contains("is_sky") && val.at("is_sky").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_SKY);
+    }
+    if (val.contains("is_warp") && val.at("is_warp").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_WARP);
+    }
+    if (val.contains("is_trans33") && val.at("is_trans33").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_TRANS33);
+    }
+    if (val.contains("is_trans66") && val.at("is_trans66").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_TRANS66);
+    }
+    if (val.contains("is_flowing") && val.at("is_flowing").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_FLOWING);
+    }
+    if (val.contains("is_nodraw") && val.at("is_nodraw").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_NODRAW);
+    }
+    if (val.contains("is_hint") && val.at("is_hint").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_HINT);
+    }
+    if (val.contains("is_skip") && val.at("is_skip").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_SKIP);
+    }
+    if (val.contains("is_alphatest") && val.at("is_alphatest").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_ALPHATEST);
+    }
+
+    // native q1 flags
+    if (val.contains("is_special") && val.at("is_special").get<bool>()) {
+        flags.set_native_q1_bits(TEX_SPECIAL);
+    }
+
+    // extended flags
     if (val.contains("is_nodraw")) {
         flags.set_nodraw(val.at("is_nodraw").get<bool>());
     }

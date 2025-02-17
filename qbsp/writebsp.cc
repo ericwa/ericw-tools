@@ -350,15 +350,7 @@ static void WriteExtendedTexinfoFlags()
         fs::remove(file);
     }
 
-    for (auto &texinfo : map.mtexinfos) {
-        if (texinfo.flags.needs_write()) {
-            // this texinfo uses some extended flags, write them to a file
-            needwrite = true;
-            break;
-        }
-    }
-
-    if (!needwrite || qbsp_options.noextendedsurfflags.value())
+    if (qbsp_options.noextendedsurfflags.value())
         return;
 
     // sort by output texinfo number
@@ -369,7 +361,7 @@ static void WriteExtendedTexinfoFlags()
     json texinfofile = json::object();
 
     for (const auto &tx : texinfos_sorted) {
-        if (!tx.outputnum.has_value() || !tx.flags.needs_write())
+        if (!tx.outputnum.has_value())
             continue;
 
         json t = tx.flags.to_json();

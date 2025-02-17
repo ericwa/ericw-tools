@@ -232,6 +232,9 @@ struct contentflags_t
 enum q1_surf_flags_t : int32_t;
 enum q2_surf_flags_t : int32_t;
 
+/**
+ * Superset of all surface flags for all supported games, plus extended EWT-specific flags
+ */
 struct surfflags_t
 {
     // native flags value; what's written to the BSP for a Q2 map basically
@@ -329,8 +332,6 @@ struct surfflags_t
 
     std::optional<int32_t> object_channel_mask;
 
-    bool needs_write() const;
-
 public:
     // sort support
     auto operator<=>(const surfflags_t &other) const = default;
@@ -342,6 +343,10 @@ public:
 
     nlohmann::json to_json() const;
     static surfflags_t from_json(const nlohmann::json &json);
+
+private:
+    void set_native_q1_bits(q1_surf_flags_t bits);
+    void set_native_q2_bits(q2_surf_flags_t bits);
 };
 
 // native game target ID
