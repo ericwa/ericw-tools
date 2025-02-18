@@ -412,3 +412,73 @@ TEST(string, strncasecmp)
     EXPECT_EQ(Q_strncasecmp("*lava123", "*LAVA", 5), 0);
     EXPECT_EQ(Q_strncasecmp("*lava123", "*LAVA", 8), 1);
 }
+
+TEST(surfflags, jsonEmpty)
+{
+    surfflags_t flags;
+    EXPECT_EQ(nlohmann::json::object(), flags.to_json());
+
+    surfflags_t roundtrip = surfflags_t::from_json(nlohmann::json::object());
+    EXPECT_EQ(roundtrip, flags);
+}
+
+TEST(surfflags, jsonAllQ2)
+{
+    surfflags_t flags;
+    flags.native_q2 = static_cast<q2_surf_flags_t>(Q2_SURF_ALL);
+
+    nlohmann::json json = flags.to_json();
+    surfflags_t roundtrip = surfflags_t::from_json(json);
+
+    EXPECT_EQ(roundtrip.native_q2, Q2_SURF_ALL);
+    EXPECT_EQ(roundtrip, flags);
+}
+
+TEST(surfflags, jsonAllQ1)
+{
+    surfflags_t flags;
+    flags.native_q1 = TEX_SPECIAL;
+
+    nlohmann::json json = flags.to_json();
+    surfflags_t roundtrip = surfflags_t::from_json(json);
+
+    EXPECT_EQ(roundtrip.native_q1, TEX_SPECIAL);
+    EXPECT_EQ(roundtrip, flags);
+}
+
+TEST(surfflags, jsonAllExtended)
+{
+    surfflags_t flags{
+        .native_q2 = static_cast<q2_surf_flags_t>(Q2_SURF_ALL),
+        .native_q1 = TEX_SPECIAL,
+        .no_dirt = true,
+        .no_shadow = true,
+        .no_bounce = true,
+        .no_minlight = true,
+        .no_expand = true,
+        .light_ignore = true,
+        .surflight_rescale = std::optional<bool>{true},
+        .surflight_style = std::optional<int32_t>{3},
+        .surflight_targetname = std::optional<std::string>{"test"},
+        .surflight_color = std::optional<qvec3b>{{0, 1, 255}},
+        .surflight_minlight_scale = std::optional<float>{0.345f},
+        .surflight_atten = std::optional<float>{123.456f},
+        .phong_angle = 65.4f,
+        .phong_angle_concave = 32.1f,
+        .phong_group = 5,
+        .minlight = std::optional<float>{3.1f},
+        .minlight_color = qvec3b(10, 20, 30),
+        .light_alpha = std::optional<float>{2.3f},
+        .light_twosided = std::optional<bool>{true},
+        .maxlight = 200.4f,
+        .lightcolorscale = 1.7,
+        .surflight_group = 4,
+        .world_units_per_luxel = std::optional<float>{15.0f},
+        .object_channel_mask = std::optional<int32_t>{323}
+    };
+
+    nlohmann::json json = flags.to_json();
+    surfflags_t roundtrip = surfflags_t::from_json(json);
+
+    EXPECT_EQ(roundtrip, flags);
+}

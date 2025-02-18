@@ -34,6 +34,8 @@
 #include <common/qvec.hh>
 #include <common/aabb.hh>
 
+#include <nlohmann/json.hpp>
+
 namespace settings
 {
 class common_settings;
@@ -230,14 +232,17 @@ struct contentflags_t
 enum q1_surf_flags_t : int32_t;
 enum q2_surf_flags_t : int32_t;
 
+/**
+ * Superset of all surface flags for all supported games, plus extended EWT-specific flags
+ */
 struct surfflags_t
 {
     // native flags value; what's written to the BSP for a Q2 map basically
     // when compiling Q1 maps, we can use these internally but obviously not write them out
-    q2_surf_flags_t native_q2;
+    q2_surf_flags_t native_q2 = static_cast<q2_surf_flags_t>(0);
 
     // native q1 flags
-    q1_surf_flags_t native_q1;
+    q1_surf_flags_t native_q1 = static_cast<q1_surf_flags_t>(0);
 
     // an invisible surface (Q1 "skip" texture, Q2 SURF_NODRAW)
     bool is_nodraw() const;
@@ -255,23 +260,23 @@ struct surfflags_t
     void set_hintskip(bool hintskip);
 
     // don't receive dirtmapping
-    bool no_dirt : 1;
+    bool no_dirt : 1 = false;
 
     // don't cast a shadow
-    bool no_shadow : 1;
+    bool no_shadow : 1 = false;
 
     // light doesn't bounce off this face
-    bool no_bounce : 1;
+    bool no_bounce : 1 = false;
 
     // opt out of minlight on this face (including opting out of local minlight, so
     // not the same as just setting minlight to 0).
-    bool no_minlight : 1;
+    bool no_minlight : 1 = false;
 
     // don't expand this face for larger clip hulls
-    bool no_expand : 1;
+    bool no_expand : 1 = false;
 
     // this face doesn't receive light
-    bool light_ignore : 1;
+    bool light_ignore : 1 = false;
 
     // if true, rescales any surface light emitted by these brushes to emit 50% light at 90 degrees from the surface
     // normal if false, use a more natural angle falloff of 0% at 90 degrees
@@ -293,19 +298,19 @@ struct surfflags_t
     std::optional<float> surflight_atten;
 
     // if non zero, enables phong shading and gives the angle threshold to use
-    float phong_angle;
+    float phong_angle = 0.0f;
 
     // if non zero, overrides _phong_angle for concave joints
-    float phong_angle_concave;
+    float phong_angle_concave = 0.0f;
 
     // _phong_group key, equivalent q2 map format's use of the "value" field
-    int phong_group;
+    int phong_group = 0;
 
     // minlight value for this face. empty = inherit from worldspawn.
     std::optional<float> minlight;
 
     // red minlight colors for this face
-    qvec3b minlight_color;
+    qvec3b minlight_color = qvec3b(0, 0, 0);
 
     // custom opacity
     std::optional<float> light_alpha;
@@ -314,26 +319,34 @@ struct surfflags_t
     std::optional<bool> light_twosided;
 
     // maxlight value for this face
-    float maxlight;
+    float maxlight = 0.0;
 
     // light color scale
     float lightcolorscale = 1.0;
 
     // surface light group
-    int32_t surflight_group;
+    int32_t surflight_group = 0;
 
     // custom world_units_per_luxel for this geometry
     std::optional<float> world_units_per_luxel;
 
     std::optional<int32_t> object_channel_mask;
 
-    bool needs_write() const;
-
 public:
     // sort support
     auto operator<=>(const surfflags_t &other) const = default;
 
     bool is_valid(const gamedef_t *game) const;
+
+public:
+    // to/from json
+
+    nlohmann::json to_json() const;
+    static surfflags_t from_json(const nlohmann::json &json);
+
+private:
+    void set_native_q1_bits(q1_surf_flags_t bits);
+    void set_native_q2_bits(q2_surf_flags_t bits);
 };
 
 // native game target ID

@@ -27,6 +27,7 @@
 #include <common/log.hh>
 #include <common/settings.hh>
 #include <common/numeric_cast.hh>
+#include <common/json.hh>
 
 #include <cstdint>
 #include <limits.h>
@@ -216,14 +217,270 @@ void surfflags_t::set_hintskip(bool hintskip)
         native_q2 = static_cast<q2_surf_flags_t>(native_q2 & ~Q2_SURF_SKIP);
 }
 
-bool surfflags_t::needs_write() const
-{
-    return *this != surfflags_t();
-}
-
 bool surfflags_t::is_valid(const gamedef_t *game) const
 {
     return game->surfflags_are_valid(*this);
+}
+
+void surfflags_t::set_native_q1_bits(q1_surf_flags_t bits)
+{
+    native_q1 = static_cast<q1_surf_flags_t>(native_q1 | bits);
+}
+
+void surfflags_t::set_native_q2_bits(q2_surf_flags_t bits)
+{
+    native_q2 = static_cast<q2_surf_flags_t>(native_q2 | bits);
+}
+
+nlohmann::json surfflags_t::to_json() const
+{
+    nlohmann::json t = nlohmann::json::object();
+
+    // native q2 flags
+    if (native_q2 & Q2_SURF_LIGHT) {
+        t["is_light"] = true;
+    }
+    if (native_q2 & Q2_SURF_SLICK) {
+        t["is_slick"] = true;
+    }
+    if (native_q2 & Q2_SURF_SKY) {
+        t["is_sky"] = true;
+    }
+    if (native_q2 & Q2_SURF_WARP) {
+        t["is_warp"] = true;
+    }
+    if (native_q2 & Q2_SURF_TRANS33) {
+        t["is_trans33"] = true;
+    }
+    if (native_q2 & Q2_SURF_TRANS66) {
+        t["is_trans66"] = true;
+    }
+    if (native_q2 & Q2_SURF_FLOWING) {
+        t["is_flowing"] = true;
+    }
+    if (native_q2 & Q2_SURF_NODRAW) {
+        t["is_nodraw"] = true;
+    }
+    if (native_q2 & Q2_SURF_HINT) {
+        t["is_hint"] = true;
+    }
+    if (native_q2 & Q2_SURF_SKIP) {
+        t["is_skip"] = true;
+    }
+    if (native_q2 & Q2_SURF_ALPHATEST) {
+        t["is_alphatest"] = true;
+    }
+
+    // native q1 flags
+    if (native_q1 & TEX_SPECIAL) {
+        t["is_special"] = true;
+    }
+
+    // extended flags
+    if (no_dirt) {
+        t["no_dirt"] = no_dirt;
+    }
+    if (no_shadow) {
+        t["no_shadow"] = no_shadow;
+    }
+    if (no_bounce) {
+        t["no_bounce"] = no_bounce;
+    }
+    if (no_minlight) {
+        t["no_minlight"] = no_minlight;
+    }
+    if (no_expand) {
+        t["no_expand"] = no_expand;
+    }
+    if (light_ignore) {
+        t["light_ignore"] = light_ignore;
+    }
+    if (surflight_rescale) {
+        t["surflight_rescale"] = *surflight_rescale;
+    }
+    if (surflight_style) {
+        t["surflight_style"] = *surflight_style;
+    }
+    if (surflight_targetname) {
+        t["surflight_targetname"] = *surflight_targetname;
+    }
+    if (surflight_color) {
+        t["surflight_color"] = *surflight_color;
+    }
+    if (surflight_minlight_scale) {
+        t["surflight_minlight_scale"] = *surflight_minlight_scale;
+    }
+    if (surflight_atten) {
+        t["surflight_atten"] = *surflight_atten;
+    }
+    if (phong_angle) {
+        t["phong_angle"] = phong_angle;
+    }
+    if (phong_angle_concave) {
+        t["phong_angle_concave"] = phong_angle_concave;
+    }
+    if (phong_group) {
+        t["phong_group"] = phong_group;
+    }
+    if (minlight) {
+        t["minlight"] = *minlight;
+    }
+    if (!qv::emptyExact(minlight_color)) {
+        t["minlight_color"] = minlight_color;
+    }
+    if (light_alpha) {
+        t["light_alpha"] = *light_alpha;
+    }
+    if (light_twosided) {
+        t["light_twosided"] = *light_twosided;
+    }
+    if (maxlight) {
+        t["maxlight"] = maxlight;
+    }
+    if (lightcolorscale != 1.0) {
+        t["lightcolorscale"] = lightcolorscale;
+    }
+    if (surflight_group) {
+        t["surflight_group"] = surflight_group;
+    }
+    if (world_units_per_luxel) {
+        t["world_units_per_luxel"] = *world_units_per_luxel;
+    }
+    if (object_channel_mask) {
+        t["object_channel_mask"] = *object_channel_mask;
+    }
+
+    return t;
+}
+
+surfflags_t surfflags_t::from_json(const nlohmann::json &val)
+{
+    surfflags_t flags;
+
+    // native q2 flags
+    if (val.contains("is_light") && val.at("is_light").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_LIGHT);
+    }
+    if (val.contains("is_slick") && val.at("is_slick").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_SLICK);
+    }
+    if (val.contains("is_sky") && val.at("is_sky").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_SKY);
+    }
+    if (val.contains("is_warp") && val.at("is_warp").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_WARP);
+    }
+    if (val.contains("is_trans33") && val.at("is_trans33").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_TRANS33);
+    }
+    if (val.contains("is_trans66") && val.at("is_trans66").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_TRANS66);
+    }
+    if (val.contains("is_flowing") && val.at("is_flowing").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_FLOWING);
+    }
+    if (val.contains("is_nodraw") && val.at("is_nodraw").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_NODRAW);
+    }
+    if (val.contains("is_hint") && val.at("is_hint").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_HINT);
+    }
+    if (val.contains("is_skip") && val.at("is_skip").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_SKIP);
+    }
+    if (val.contains("is_alphatest") && val.at("is_alphatest").get<bool>()) {
+        flags.set_native_q2_bits(Q2_SURF_ALPHATEST);
+    }
+
+    // native q1 flags
+    if (val.contains("is_special") && val.at("is_special").get<bool>()) {
+        flags.set_native_q1_bits(TEX_SPECIAL);
+    }
+
+    // extended flags
+    if (val.contains("is_nodraw")) {
+        flags.set_nodraw(val.at("is_nodraw").get<bool>());
+    }
+    if (val.contains("is_hint")) {
+        flags.set_hint(val.at("is_hint").get<bool>());
+    }
+    if (val.contains("is_hintskip")) {
+        flags.set_hintskip(val.at("is_hintskip").get<bool>());
+    }
+    if (val.contains("no_dirt")) {
+        flags.no_dirt = val.at("no_dirt").get<bool>();
+    }
+    if (val.contains("no_shadow")) {
+        flags.no_shadow = val.at("no_shadow").get<bool>();
+    }
+    if (val.contains("no_bounce")) {
+        flags.no_bounce = val.at("no_bounce").get<bool>();
+    }
+    if (val.contains("no_minlight")) {
+        flags.no_minlight = val.at("no_minlight").get<bool>();
+    }
+    if (val.contains("no_expand")) {
+        flags.no_expand = val.at("no_expand").get<bool>();
+    }
+    if (val.contains("light_ignore")) {
+        flags.light_ignore = val.at("light_ignore").get<bool>();
+    }
+    if (val.contains("surflight_rescale")) {
+        flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
+    }
+    if (val.contains("surflight_style")) {
+        flags.surflight_style = val.at("surflight_style").get<int32_t>();
+    }
+    if (val.contains("surflight_targetname")) {
+        flags.surflight_targetname = val.at("surflight_targetname").get<std::string>();
+    }
+    if (val.contains("surflight_color")) {
+        flags.surflight_color = val.at("surflight_color").get<qvec3b>();
+    }
+    if (val.contains("surflight_minlight_scale")) {
+        flags.surflight_minlight_scale = val.at("surflight_minlight_scale").get<float>();
+    }
+    if (val.contains("surflight_atten")) {
+        flags.surflight_atten = val.at("surflight_atten").get<float>();
+    }
+    if (val.contains("phong_angle")) {
+        flags.phong_angle = val.at("phong_angle").get<float>();
+    }
+    if (val.contains("phong_angle_concave")) {
+        flags.phong_angle_concave = val.at("phong_angle_concave").get<float>();
+    }
+    if (val.contains("phong_group")) {
+        flags.phong_group = val.at("phong_group").get<int>();
+    }
+    if (val.contains("minlight")) {
+        flags.minlight = val.at("minlight").get<float>();
+    }
+    if (val.contains("maxlight")) {
+        flags.maxlight = val.at("maxlight").get<float>();
+    }
+    if (val.contains("minlight_color")) {
+        flags.minlight_color = val.at("minlight_color").get<qvec3b>();
+    }
+    if (val.contains("light_alpha")) {
+        flags.light_alpha = val.at("light_alpha").get<float>();
+    }
+    if (val.contains("light_twosided")) {
+        flags.light_twosided = val.at("light_twosided").get<bool>();
+    }
+    if (val.contains("lightcolorscale")) {
+        flags.lightcolorscale = val.at("lightcolorscale").get<float>();
+    }
+    if (val.contains("surflight_group")) {
+        flags.surflight_group = val.at("surflight_group").get<int32_t>();
+    }
+    if (val.contains("world_units_per_luxel")) {
+        flags.world_units_per_luxel = val.at("world_units_per_luxel").get<float>();
+    }
+    if (val.contains("object_channel_mask")) {
+        flags.object_channel_mask = val.at("object_channel_mask").get<int32_t>();
+    }
+
+    return flags;
 }
 
 // gamedef_t

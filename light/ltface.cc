@@ -1935,7 +1935,6 @@ inline qvec3f GetSurfaceLighting(const settings::worldspawn_keys &cfg, const sur
     const surfacelight_t::per_style_t &vpl_settings, const qvec3f &dir, float dist, const qvec3f &normal,
     bool use_normal, float standard_scale, float sky_scale, float hotspot_clamp)
 {
-    qvec3f result;
     float dotProductFactor = 1.0f;
 
     float dp1 = qv::dot(vpl.surfnormal, dir);
