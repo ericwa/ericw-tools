@@ -111,4 +111,4 @@ if (APPLE)
     apple_install_lib(Qt5::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/5")
 endif ()
 
-install(TARGETS lightpreview RUNTIME DESTINATION . BUNDLE DESTINATION .)
+install(TARGETS lightpreview RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR})
