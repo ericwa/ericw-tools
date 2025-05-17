@@ -29,4 +29,4 @@ add_custom_command(TARGET vis POST_BUILD
 copy_mingw_dlls(vis)
 add_loader_path_to_rpath(vis)
 
-install(TARGETS vis RUNTIME DESTINATION .)
+install(TARGETS vis RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
