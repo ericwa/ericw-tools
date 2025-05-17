@@ -35,6 +35,11 @@ int leafbytes; // (portalleafs+63)>>3
 int leaflongs;
 int leafbytes_real; // (portalleafs_real+63)>>3, not used for Q2.
 
+namespace vis
+{
+std::vector<surfflags_t> extended_texinfo_flags;
+}
+
 namespace settings
 {
 setting_group vis_output_group{"Output", 200, expected_source::commandline};
@@ -708,6 +713,8 @@ void vis_reset()
 
     totalvis = 0;
     compressed.clear();
+
+    vis::extended_texinfo_flags.clear();
 }
 
 int vis_main(int argc, const char **argv)
@@ -741,6 +748,8 @@ int vis_main(int argc, const char **argv)
     ConvertBSPFormat(&bspdata, &bspver_generic);
 
     mbsp_t &bsp = std::get<mbsp_t>(bspdata.bsp);
+
+    vis::extended_texinfo_flags = LoadExtendedTexinfoFlags(vis_options.sourceMap, &bsp);
 
     if (vis_options.phsonly.value()) {
         if (bsp.loadversion->game->id != GAME_QUAKE_II) {

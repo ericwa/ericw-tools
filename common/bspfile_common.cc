@@ -29,6 +29,7 @@
 #include <common/numeric_cast.hh>
 #include <common/json.hh>
 
+#include <fstream>
 #include <cstdint>
 #include <limits.h>
 
@@ -295,6 +296,9 @@ nlohmann::json surfflags_t::to_json() const
     if (light_ignore) {
         t["light_ignore"] = light_ignore;
     }
+    if (noambient) {
+        t["noambient"] = noambient;
+    }
     if (surflight_rescale) {
         t["surflight_rescale"] = *surflight_rescale;
     }
@@ -425,6 +429,9 @@ surfflags_t surfflags_t::from_json(const nlohmann::json &val)
     if (val.contains("light_ignore")) {
         flags.light_ignore = val.at("light_ignore").get<bool>();
     }
+    if (val.contains("noambient")) {
+        flags.noambient = val.at("noambient").get<bool>();
+    }
     if (val.contains("surflight_rescale")) {
         flags.surflight_rescale = val.at("surflight_rescale").get<bool>();
     }
@@ -481,6 +488,43 @@ surfflags_t surfflags_t::from_json(const nlohmann::json &val)
     }
 
     return flags;
+}
+
+std::vector<surfflags_t> LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp)
+{
+    std::vector<surfflags_t> result;
+
+    // always create the zero'ed array
+    result.resize(bsp->texinfo.size());
+
+    fs::path filename(sourcefilename);
+    filename.replace_extension("texinfo.json");
+
+    std::ifstream texinfofile(filename, std::ios_base::in | std::ios_base::binary);
+
+    if (!texinfofile)
+        return result;
+
+    logging::print("Loading extended texinfo flags from {}...\n", filename);
+
+    json j;
+
+    texinfofile >> j;
+
+    for (auto it = j.begin(); it != j.end(); ++it) {
+        size_t index = std::stoull(it.key());
+
+        if (index >= bsp->texinfo.size()) {
+            logging::print("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
+            memset(result.data(), 0, bsp->texinfo.size() * sizeof(surfflags_t));
+            return result;
+        }
+
+        auto &val = it.value();
+        result[index] = surfflags_t::from_json(val);
+    }
+
+    return result;
 }
 
 // gamedef_t
