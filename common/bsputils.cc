@@ -1117,10 +1117,7 @@ qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *li
 
     const uint8_t *data = bsp->dlightdata.data();
 
-    if (lit) {
-        if (!std::holds_alternative<lit1_t>(*lit))
-            throw std::runtime_error("not implemented");
-
+    if (lit && std::holds_alternative<lit1_t>(*lit)) {
         const uint8_t *lit_data = std::get_if<lit1_t>(lit)->rgbdata.data();
 
         return qvec3f{lit_data[(3 * byte_offset_of_face) + (pixel * 3) + 0],
@@ -1129,9 +1126,11 @@ qvec3b LM_Sample(const mbsp_t *bsp, const mface_t *face, const lit_variant_t *li
     } else if (bsp->loadversion->game->has_rgb_lightmap) {
         return qvec3f{data[byte_offset_of_face + (pixel * 3) + 0], data[byte_offset_of_face + (pixel * 3) + 1],
             data[byte_offset_of_face + (pixel * 3) + 2]};
-    } else {
+    } else if (!lit || std::holds_alternative<lit_none>(*lit)) {
         return qvec3f{
             data[byte_offset_of_face + pixel], data[byte_offset_of_face + pixel], data[byte_offset_of_face + pixel]};
+    } else {
+        throw std::runtime_error("not implemented");
     }
 }
 
