@@ -809,6 +809,8 @@ static surfflags_t SurfFlagsForEntity(
         flags.light_twosided = epairs.get_int("_light_twosided");
     }
 
+    flags.noambient = epairs.get_int("_noambient");
+
     return flags;
 }
 

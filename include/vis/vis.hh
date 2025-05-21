@@ -235,6 +235,11 @@ extern int leaflongs;
 
 extern fs::path portalfile, statefile, statetmpfile;
 
+namespace vis
+{
+extern std::vector<surfflags_t> extended_texinfo_flags;
+}
+
 void BasePortalVis();
 
 visstats_t PortalFlow(visportal_t *p);

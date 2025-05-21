@@ -182,3 +182,16 @@ TEST(vis, ClipStackWinding)
 
     FreeStackWinding(w1, stack);
 }
+
+TEST(vis, q1NoambientFuncGroup)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_vis_noambient_func_group.map", {}, runvis_t::yes);
+
+    auto *playerstart_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {-240, 80, 56});
+    auto *other_room_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], {-184, 536, 104});
+
+    EXPECT_EQ(playerstart_leaf->ambient_level[AMBIENT_SKY], 255);
+
+    // sky in this room has func_group with "_noambient" "1"
+    EXPECT_EQ(other_room_leaf->ambient_level[AMBIENT_SKY], 0);
+}

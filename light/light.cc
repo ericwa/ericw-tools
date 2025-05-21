@@ -996,39 +996,6 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
     }
 }
 
-static void LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp)
-{
-    // always create the zero'ed array
-    extended_texinfo_flags.resize(bsp->texinfo.size());
-
-    fs::path filename(sourcefilename);
-    filename.replace_extension("texinfo.json");
-
-    std::ifstream texinfofile(filename, std::ios_base::in | std::ios_base::binary);
-
-    if (!texinfofile)
-        return;
-
-    logging::print("Loading extended texinfo flags from {}...\n", filename);
-
-    json j;
-
-    texinfofile >> j;
-
-    for (auto it = j.begin(); it != j.end(); ++it) {
-        size_t index = std::stoull(it.key());
-
-        if (index >= bsp->texinfo.size()) {
-            logging::print("WARNING: Extended texinfo flags in {} does not match bsp, ignoring\n", filename);
-            memset(extended_texinfo_flags.data(), 0, bsp->texinfo.size() * sizeof(surfflags_t));
-            return;
-        }
-
-        auto &val = it.value();
-        extended_texinfo_flags[index] = surfflags_t::from_json(val);
-    }
-}
-
 // obj
 
 static void ExportObjFace(std::ofstream &f, const mbsp_t *bsp, const mface_t *face, int *vertcount)
@@ -1376,7 +1343,7 @@ int light_main(int argc, const char **argv)
 
     img::load_textures(&bsp, light_options);
 
-    LoadExtendedTexinfoFlags(source, &bsp);
+    extended_texinfo_flags = LoadExtendedTexinfoFlags(source, &bsp);
 
     CacheTextures(bsp);
 

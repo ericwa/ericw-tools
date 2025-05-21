@@ -278,6 +278,8 @@ struct surfflags_t
     // this face doesn't receive light
     bool light_ignore : 1 = false;
 
+    bool noambient : 1 = false;
+
     // if true, rescales any surface light emitted by these brushes to emit 50% light at 90 degrees from the surface
     // normal if false, use a more natural angle falloff of 0% at 90 degrees
     std::optional<bool> surflight_rescale;
@@ -348,6 +350,9 @@ private:
     void set_native_q1_bits(q1_surf_flags_t bits);
     void set_native_q2_bits(q2_surf_flags_t bits);
 };
+
+struct mbsp_t;
+std::vector<surfflags_t> LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp);
 
 // native game target ID
 enum gameid_t

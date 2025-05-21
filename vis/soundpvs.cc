@@ -118,6 +118,10 @@ void CalcAmbientSounds(mbsp_t *bsp)
                 else
                     continue;
 
+                // noambient surfflag
+                if (vis::extended_texinfo_flags[surf->texinfo].noambient)
+                    continue;
+
                 // find distance from source leaf to polygon
                 aabb3d bounds = SurfaceBBox(bsp, surf);
                 float maxd = 0;

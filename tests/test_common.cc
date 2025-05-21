@@ -457,6 +457,7 @@ TEST(surfflags, jsonAllExtended)
         .no_minlight = true,
         .no_expand = true,
         .light_ignore = true,
+        .noambient = true,
         .surflight_rescale = std::optional<bool>{true},
         .surflight_style = std::optional<int32_t>{3},
         .surflight_targetname = std::optional<std::string>{"test"},
@@ -476,6 +477,16 @@ TEST(surfflags, jsonAllExtended)
         .world_units_per_luxel = std::optional<float>{15.0f},
         .object_channel_mask = std::optional<int32_t>{323}
     };
+
+    nlohmann::json json = flags.to_json();
+    surfflags_t roundtrip = surfflags_t::from_json(json);
+
+    EXPECT_EQ(roundtrip, flags);
+}
+
+TEST(surfflags, jsonAllFalse)
+{
+    surfflags_t flags{};
 
     nlohmann::json json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);
