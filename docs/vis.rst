@@ -150,7 +150,7 @@ Output
 
    .. seealso::
 
-      :bmodel-key:`_noambient` for selective control on func_group.
+      :bmodel-key:`_noambient` for selectively disabling ambient sounds.
 
 .. option:: -noautoclean
 
@@ -183,7 +183,7 @@ Model Entity Keys
 
 .. bmodel-key:: "_noambient" "1"
 
-   Disables ambient sound emission from these specific brushes, works on func_group.
+   Disables ambient sound emission from these specific brushes.
 
 Author
 ======

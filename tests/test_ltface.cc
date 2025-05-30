@@ -1192,3 +1192,13 @@ TEST(ltfaceQ1, surflightGroup)
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 75}, {720, 1376, 960}, {0, 0, 1}, &lit, &bspx);
     }
 }
+
+TEST(ltfaceQ1, q1LightSkipShadow)
+{
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_skip_shadow.map", {"-lit"});
+
+    {
+        SCOPED_TRACE("func_wall with all skip faces and _shadow 1 casts shadows");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, {552, 1392, 944}, {0, 0, 1}, &lit, &bspx);
+    }
+}
