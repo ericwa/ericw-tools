@@ -92,7 +92,11 @@ if (embree_FOUND)
 	endif()
 
 	if(NOT SKIP_EMBREE_INSTALL)
-		install(FILES $<TARGET_FILE:embree> DESTINATION ${CMAKE_INSTALL_LIBDIR})
+		if(ENABLE_PREFIX_INSTALL)
+			install(FILES $<TARGET_FILE:embree> DESTINATION ${CMAKE_INSTALL_LIBDIR})
+		else
+			install(FILES $<TARGET_FILE:embree> DESTINATION .)
+		endif()
 	endif()
 
 	# install TBB
@@ -140,5 +144,10 @@ endif(embree_FOUND)
 copy_mingw_dlls(light)
 add_loader_path_to_rpath(light)
 
+if(ENABLE_PREFIX_INSTALL)
 install(TARGETS light RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ../gpl_v3.txt DESTINATION ${CMAKE_INSTALL_DOCDIR})
+else
+install(TARGETS light RUNTIME DESTINATION .)
+install(FILES ../gpl_v3.txt DESTINATION .)
+endif()

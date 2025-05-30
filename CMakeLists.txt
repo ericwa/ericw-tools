@@ -181,6 +181,7 @@ add_subdirectory(qbsp)
 add_subdirectory(vis)
 add_subdirectory(maputil)
 
+option(ENABLE_PREFIX_INSTALL "Enable Prefix install" ON)
 option(DISABLE_TESTS "Disables Tests" OFF)
 option(DISABLE_DOCS "Disables Docs" OFF)
 option(ENABLE_LIGHTPREVIEW "Enable light preview tool" ON)
@@ -204,7 +205,11 @@ if(NOT DISABLE_DOCS)
 	add_subdirectory(docs)
 endif ()
 
+if(ENABLE_INSTALL_PREFIX)
 install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
+else
+install(FILES README.md DESTINATION .)
+endif
 
 #CPack configuration
 
