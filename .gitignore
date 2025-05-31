@@ -85,7 +85,6 @@ CTestTestfile.cmake
 docs/CTestTestConfig.cmake
 docs/CTestTestfile.cmake
 docs/cmake_install.cmake
-docs/Makefile
 docs/CMakeFiles/
 docs/CMakeCache.txt
 lib/lib*
