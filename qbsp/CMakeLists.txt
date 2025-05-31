@@ -40,7 +40,7 @@ target_link_libraries(qbsp libqbsp)
 
 if(ENABLE_PREFIX_INSTALL)
 install(TARGETS qbsp RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-else
+else()
 install(TARGETS qbsp RUNTIME DESTINATION .)
 endif()
 

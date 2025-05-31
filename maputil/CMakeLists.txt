@@ -32,6 +32,6 @@ add_loader_path_to_rpath(maputil)
 
 if(ENABLE_PREFIX_INSTALL)
 install(TARGETS maputil RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-else
+else()
 install(TARGETS maputil RUNTIME DESTINATION .)
 endif()

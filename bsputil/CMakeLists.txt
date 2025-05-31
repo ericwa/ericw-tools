@@ -19,6 +19,6 @@ add_loader_path_to_rpath(bsputil)
 
 if(ENABLE_PREFIX_INSTALL)
 install(TARGETS bsputil RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-else
+else()
 install(TARGETS bsputil RUNTIME DESTINATION .)
 endif()

@@ -172,6 +172,8 @@ set(TEST_QUAKE2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Qu
 set(TEST_HEXEN2_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Hexen 2 maps to this directory (useful for testing in game)")
 set(TEST_HALFLIFE_MAP_EXPORT_DIR "" CACHE PATH "When running unit tests, export Half-Life maps to this directory (useful for testing in game)")
 
+option(ENABLE_PREFIX_INSTALL "Enable Prefix install" OFF)
+
 add_subdirectory(3rdparty)
 add_subdirectory(common)
 add_subdirectory(bspinfo)
@@ -181,7 +183,6 @@ add_subdirectory(qbsp)
 add_subdirectory(vis)
 add_subdirectory(maputil)
 
-option(ENABLE_PREFIX_INSTALL "Enable Prefix install" ON)
 option(DISABLE_TESTS "Disables Tests" OFF)
 option(DISABLE_DOCS "Disables Docs" OFF)
 option(ENABLE_LIGHTPREVIEW "Enable light preview tool" ON)
@@ -205,11 +206,11 @@ if(NOT DISABLE_DOCS)
 	add_subdirectory(docs)
 endif ()
 
-if(ENABLE_INSTALL_PREFIX)
+if(ENABLE_PREFIX_INSTALL)
 install(FILES README.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
-else
+else()
 install(FILES README.md DESTINATION .)
-endif
+endif ()
 
 #CPack configuration
 

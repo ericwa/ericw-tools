@@ -14,5 +14,10 @@ if (Sphinx_FOUND)
                       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
                       COMMENT "Generating documentation with Sphinx")
 
+if(ENABLE_PREFIX_INSTALL)
     install(DIRECTORY ${SPHINX_BUILD}/ DESTINATION ${CMAKE_INSTALL_DOCDIR})
+else()
+    install(DIRECTORY ${SPHINX_BUILD}/ DESTINATION doc)
+endif()
+
 endif()
