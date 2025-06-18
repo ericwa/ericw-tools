@@ -1149,27 +1149,31 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
     bspdata->bspx.entries.erase("LIGHTINGDIR");
     bspdata->bspx.entries.erase("LIGHTING_E5BGR9");
 
-    // lit/lux files (or their BSPX equivalents) - only write in games that lack RGB lightmaps.
-    // (technically we could allow .lux in Q2 mode, but no engines support it.)
-    if (!bsp->loadversion->game->has_rgb_lightmap) {
-        if (light_options.write_litfile & lightfile::external) {
-            int version = light_options.write_litfile & lightfile::hdr ? LIT_VERSION_E5BGR9 : LIT_VERSION;
-            WriteLitFile(bsp, faces_sup, source, version, lit_filebase, lux_filebase, hdr_filebase);
+    // lit/lux files (or their BSPX equivalents)
+    if (light_options.write_litfile & lightfile::external) {
+        if (light_options.write_litfile & lightfile::hdr) {
+            WriteLitFile(bsp, faces_sup, source, LIT_VERSION_E5BGR9, lit_filebase, lux_filebase, hdr_filebase);
+        } else if (!bsp->loadversion->game->has_rgb_lightmap) {
+            // only write in games that lack RGB lightmaps.
+            WriteLitFile(bsp, faces_sup, source, LIT_VERSION, lit_filebase, lux_filebase, hdr_filebase);
         }
+    }
+    if (!bsp->loadversion->game->has_rgb_lightmap) {
+        // only write in games that lack RGB lightmaps.
         if (light_options.write_litfile & lightfile::bspx) {
             lit_filebase.resize(bsp->dlightdata.size() * 3);
             bspdata->bspx.transfer("RGBLIGHTING", lit_filebase);
         }
-        if (light_options.write_luxfile & lightfile::external) {
-            WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
-        }
-        if (light_options.write_luxfile & lightfile::bspx) {
-            lux_filebase.resize(bsp->dlightdata.size() * 3);
-            bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
-        }
-        if (light_options.write_litfile & lightfile::bspxhdr) {
-            hdr_filebase.resize(bsp->dlightdata.size() * 4);
-            bspdata->bspx.transfer("LIGHTING_E5BGR9", hdr_filebase);
-        }
+    }
+    if (light_options.write_luxfile & lightfile::external) {
+        WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
+    }
+    if (light_options.write_luxfile & lightfile::bspx) {
+        lux_filebase.resize(bsp->dlightdata.size() * 3);
+        bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
+    }
+    if (light_options.write_litfile & lightfile::bspxhdr) {
+        hdr_filebase.resize(bsp->dlightdata.size() * 4);
+        bspdata->bspx.transfer("LIGHTING_E5BGR9", hdr_filebase);
     }
 }
