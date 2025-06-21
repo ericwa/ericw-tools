@@ -1,8 +1,8 @@
 # Download embree and tbb
-Invoke-WebRequest 'https://github.com/embree/embree/releases/download/v3.12.1/embree-3.12.1.x64.vc14.windows.zip' -OutFile 'embree64.zip'
-7z x embree64.zip -oc:\
-Invoke-WebRequest 'https://github.com/oneapi-src/oneTBB/releases/download/v2020.2/tbb-2020.2-win.zip' -OutFile 'tbb.zip'
-7z x tbb.zip -oc:\
+Invoke-WebRequest 'https://github.com/RenderKit/embree/releases/download/v4.4.0/embree-4.4.0.x64.windows.zip' -OutFile 'embree64.zip'
+Expand-Archive -Path 'embree64.zip' -DestinationPath 'C:\embree-4.4.0'
+Invoke-WebRequest 'https://github.com/uxlfoundation/oneTBB/releases/download/v2021.11.0/oneapi-tbb-2021.11.0-win.zip' -OutFile 'tbb.zip'
+Expand-Archive -Path 'tbb.zip' -DestinationPath 'C:\'
 
 git submodule update --init --recursive
 
@@ -20,7 +20,7 @@ choco install ninja
 mkdir build-windows
 cd build-windows
 
-cmake .. -GNinja -Dembree_DIR="C:\embree-3.12.1.x64.vc14.windows" -DTBB_DIR="C:\tbb\cmake" -DCMAKE_BUILD_TYPE=Release -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5Widgets"
+cmake .. -GNinja -Dembree_DIR="C:\embree-4.4.0\lib\cmake\embree-4.4.0" -DTBB_DIR="C:\oneapi-tbb-2021.11.0\lib\cmake\tbb" -DCMAKE_BUILD_TYPE=Release -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5Widgets"
 
 ninja package
 if ( $? -eq $false ) {
