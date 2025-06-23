@@ -9,8 +9,6 @@
  - Author:  Kevin Shanahan (AKA Tyrann)
  - Email:   tyrann@disenchant.net
 
-[![Build status](https://ci.appveyor.com/api/projects/status/7lpdcy7l3e840u70?svg=true)](https://ci.appveyor.com/project/EricWasylishen/ericw-tools)
-
 ## About
 
 ericw-tools is a branch of Tyrann's quake 1 tools, focused on
