@@ -705,9 +705,9 @@ void vis_reset()
 
     portalIndex = 0;
 
-    starttime = time_point();
-    endtime = time_point();
-    statetime = time_point();
+    starttime = {};
+    endtime = {};
+    statetime = {};
 
     stateinterval = duration();
 

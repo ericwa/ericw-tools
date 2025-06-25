@@ -3,14 +3,16 @@ project (lightpreview CXX)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6Widgets)
-if(Qt6Widgets_FOUND)
+find_package(Qt6 COMPONENTS OpenGL Widgets OpenGLWidgets)
+if(Qt6_FOUND)
 else()
     message(WARNING "Qt6 not found, disabling lightpreview")
     return()
 endif()
 
-add_executable(lightpreview
+qt_standard_project_setup()
+
+qt_add_executable(lightpreview
     main.cpp
     mainwindow.cpp
     mainwindow.h
@@ -34,7 +36,12 @@ if (NOT EMBREE_TBB_DLL STREQUAL EMBREE_TBB_DLL-NOTFOUND)
 endif()
 
 target_link_libraries(lightpreview
+        PRIVATE
+        Qt6::Core
         Qt6::Widgets
+        Qt6::Gui
+        Qt6::OpenGL
+        Qt6::OpenGLWidgets
         libqbsp
         liblight
         libvis
@@ -48,9 +55,13 @@ target_link_libraries(lightpreview
 if (WIN32)
     add_custom_command(
         TARGET lightpreview POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Widgets> $<TARGET_FILE_DIR:lightpreview>
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Gui> $<TARGET_FILE_DIR:lightpreview>
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:Qt6::Core> $<TARGET_FILE_DIR:lightpreview>
+        COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:Qt6::Core> $<TARGET_FILE_DIR:lightpreview>/$<TARGET_FILE_NAME:Qt6::Core>
+        COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:Qt6::Widgets> $<TARGET_FILE_DIR:lightpreview>/$<TARGET_FILE_NAME:Qt6::Widgets>
+        COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:Qt6::Gui> $<TARGET_FILE_DIR:lightpreview>/$<TARGET_FILE_NAME:Qt6::Gui>
+        COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:Qt6::OpenGL> $<TARGET_FILE_DIR:lightpreview>/$<TARGET_FILE_NAME:Qt6::OpenGL>
+        COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:Qt6::OpenGLWidgets> $<TARGET_FILE_DIR:lightpreview>/$<TARGET_FILE_NAME:Qt6::OpenGLWidgets>
+        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:lightpreview>/plugins/platforms
+        COMMAND ${CMAKE_COMMAND} -E create_symlink $<TARGET_FILE:Qt6::QWindowsIntegrationPlugin> $<TARGET_FILE_DIR:lightpreview>/plugins/platforms/$<TARGET_FILE_NAME:Qt6::QWindowsIntegrationPlugin>
     )
 
     # HACK: copy .dll dependencies
