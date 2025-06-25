@@ -81,10 +81,12 @@ add_loader_path_to_rpath(lightpreview)
 
 # Install Qt DLL's
 if (WIN32)
+    install(FILES $<TARGET_FILE:Qt6::Core> DESTINATION .)
     install(FILES $<TARGET_FILE:Qt6::Widgets> DESTINATION .)
     install(FILES $<TARGET_FILE:Qt6::Gui> DESTINATION .)
-    install(FILES $<TARGET_FILE:Qt6::Core> DESTINATION .)
-    install(FILES "$<TARGET_FILE:Qt6::QWindowsIntegrationPlugin>" DESTINATION platforms)
+    install(FILES $<TARGET_FILE:Qt6::OpenGL> DESTINATION .)
+    install(FILES $<TARGET_FILE:Qt6::OpenGLWidgets> DESTINATION .)
+    install(FILES "$<TARGET_FILE:Qt6::QWindowsIntegrationPlugin>" DESTINATION plugins/platforms)
 endif ()
 
 function(apple_install_lib SRC_TARGET_NAME DEST_PATH)
