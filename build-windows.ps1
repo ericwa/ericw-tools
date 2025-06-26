@@ -20,7 +20,7 @@ choco install ninja
 mkdir build-windows
 cd build-windows
 
-cmake .. -GNinja -Dembree_DIR="C:\embree-4.4.0\lib\cmake\embree-4.4.0" -DTBB_DIR="C:\oneapi-tbb-2021.11.0\lib\cmake\tbb" -DCMAKE_BUILD_TYPE=Release -DENABLE_LIGHTPREVIEW=YES -DQt5Widgets_DIR="C:\Qt\5.15.2\msvc2019_64\lib\cmake\Qt5Widgets"
+cmake .. -GNinja -Dembree_DIR="C:\embree-4.4.0\lib\cmake\embree-4.4.0" -DTBB_DIR="C:\oneapi-tbb-2021.11.0\lib\cmake\tbb" -DCMAKE_BUILD_TYPE=Release -DENABLE_LIGHTPREVIEW=YES -DQt6Widgets_DIR="C:\Qt\6.7.0\msvc2019_64\lib\cmake\Qt6Widgets"
 
 ninja package
 if ( $? -eq $false ) {

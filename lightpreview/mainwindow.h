@@ -29,7 +29,6 @@ class GLView;
 class QFileSystemWatcher;
 class QLineEdit;
 class QCheckBox;
-class QStringList;
 class QTextEdit;
 class StatsPanel;
 class QLabel;

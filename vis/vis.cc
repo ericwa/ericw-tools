@@ -353,7 +353,7 @@ static void PortalCompleted(visstats_t &stats, visportal_t *completed)
     portal_mutex.unlock();
 }
 
-time_point starttime, endtime, statetime;
+qtime_point starttime, endtime, statetime;
 static duration stateinterval;
 
 /*
@@ -705,9 +705,9 @@ void vis_reset()
 
     portalIndex = 0;
 
-    starttime = time_point();
-    endtime = time_point();
-    statetime = time_point();
+    starttime = {};
+    endtime = {};
+    statetime = {};
 
     stateinterval = duration();
 

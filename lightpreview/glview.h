@@ -61,7 +61,7 @@ private:
     std::unordered_map<int, std::vector<uint8_t>> m_decompressedVis;
 
     uint32_t m_keysPressed;
-    std::optional<time_point> m_lastFrame;
+    std::optional<qtime_point> m_lastFrame;
     std::optional<QPoint> m_lastMouseDownPos;
     /**
      * units / second

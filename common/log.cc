@@ -179,14 +179,14 @@ void vprint(fmt::string_view format, fmt::format_args args)
     vprint(flag::DEFAULT, format, args);
 }
 
-static time_point start_time;
+static qtime_point start_time;
 static bool is_timing = false;
 static uint64_t last_count = -1;
-static time_point last_indeterminate_time;
+static qtime_point last_indeterminate_time;
 static std::atomic_bool locked = false;
 static std::array<duration, 10> one_percent_times;
 static size_t num_percent_times, percent_time_index;
-static time_point last_percent_time;
+static qtime_point last_percent_time;
 
 static duration average_times_for_one_percent()
 {
