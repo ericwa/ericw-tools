@@ -68,7 +68,10 @@ jobs:
       if: ${{ startsWith(matrix.os, 'macos-') }}
       uses: jurplel/install-qt-action@v4
       with:
-        version: 6.7.0
+        # 6.4.3 is the latest version supporting macOS 10.15
+        # see: https://doc.qt.io/archives/qt-6.4/macos.html
+        # and: https://wiki.qt.io/Qt_6.4_Release
+        version: 6.4.3
     - name: 'macOS: Build the artifact'
       if: startsWith(matrix.os, 'macos-')
       run: ./build-osx.sh

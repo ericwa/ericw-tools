@@ -112,16 +112,18 @@ if (APPLE)
     apple_install_lib(embree "$<TARGET_FILE_DIR:lightpreview>")
 
     # TODO: this should be replaced with macdeployqt
-    apple_install_lib(Qt6::Widgets "$<TARGET_FILE_DIR:lightpreview>/QtWidgets.framework/Versions/5")
-    apple_install_lib(Qt6::Gui "$<TARGET_FILE_DIR:lightpreview>/QtGui.framework/Versions/5")
-    apple_install_lib(Qt6::Core "$<TARGET_FILE_DIR:lightpreview>/QtCore.framework/Versions/5")
+    apple_install_lib(Qt6::Core "$<TARGET_FILE_DIR:lightpreview>/QtCore.framework/Versions/6")
+    apple_install_lib(Qt6::Widgets "$<TARGET_FILE_DIR:lightpreview>/QtWidgets.framework/Versions/6")
+    apple_install_lib(Qt6::Gui "$<TARGET_FILE_DIR:lightpreview>/QtGui.framework/Versions/6")
+    apple_install_lib(Qt6::OpenGL "$<TARGET_FILE_DIR:lightpreview>/QtOpenGL.framework/Versions/6")
+    apple_install_lib(Qt6::OpenGLWidgets "$<TARGET_FILE_DIR:lightpreview>/QtOpenGLWidgets.framework/Versions/6")
     apple_install_lib(Qt6::QCocoaIntegrationPlugin "$<TARGET_FILE_DIR:lightpreview>/platforms")
 
     # these are required by QCocoaIntegrationPlugin
     find_package(Qt6DBus REQUIRED)
     find_package(Qt6PrintSupport REQUIRED)
-    apple_install_lib(Qt6::PrintSupport "$<TARGET_FILE_DIR:lightpreview>/QtPrintSupport.framework/Versions/5")
-    apple_install_lib(Qt6::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/5")
+    apple_install_lib(Qt6::PrintSupport "$<TARGET_FILE_DIR:lightpreview>/QtPrintSupport.framework/Versions/6")
+    apple_install_lib(Qt6::DBus "$<TARGET_FILE_DIR:lightpreview>/QtDBus.framework/Versions/6")
 endif ()
 
 install(TARGETS lightpreview RUNTIME DESTINATION . BUNDLE DESTINATION .)
