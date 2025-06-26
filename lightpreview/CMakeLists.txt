@@ -10,7 +10,11 @@ else()
     return()
 endif()
 
-qt_standard_project_setup()
+message(STATUS "Using Qt version: ${Qt6_VERSION}")
+
+if ("${Qt6_VERSION}" VERSION_GREATER_EQUAL "6.3.0")
+    qt_standard_project_setup()
+endif()
 
 qt_add_executable(lightpreview
     main.cpp
