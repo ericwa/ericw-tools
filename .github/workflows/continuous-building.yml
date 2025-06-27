@@ -29,11 +29,12 @@ jobs:
       with:
         submodules: recursive
 
-    - name: 'Linux: Install Qt5'
+    - name: 'Linux: Install Qt6'
       if: startsWith(matrix.os, 'ubuntu-')
       run: |
         sudo apt update
-        sudo apt install qtbase5-dev libqt5svg5-dev
+        sudo apt install qt6-base-dev
+        sudo apt install libgl1-mesa-dev
     - name: 'Linux: Install TBB and Embree, if using distro packages'
       if: ${{ matrix.os == 'ubuntu-24.04' }}
       run: |
@@ -64,11 +65,14 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: 'macOS: Install Qt5'
+    - name: 'macOS: Install Qt6'
       if: ${{ startsWith(matrix.os, 'macos-') }}
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        version: 5.15.2
+        # 6.4.3 is the latest version supporting macOS 10.15
+        # see: https://doc.qt.io/archives/qt-6.4/macos.html
+        # and: https://wiki.qt.io/Qt_6.4_Release
+        version: 6.4.3
     - name: 'macOS: Build the artifact'
       if: startsWith(matrix.os, 'macos-')
       run: ./build-osx.sh
@@ -97,12 +101,11 @@ jobs:
     - name: 'Windows: Setup MSVC environment'
       if: startsWith(matrix.os, 'windows-')
       uses: ilammy/msvc-dev-cmd@v1
-    - name: 'Windows: Install Qt5'
+    - name: 'Windows: Install Qt6'
       if: ${{ startsWith(matrix.os, 'windows-') }}
-      uses: jurplel/install-qt-action@v3
+      uses: jurplel/install-qt-action@v4
       with:
-        version: 5.15.2
-        arch: win64_msvc2019_64
+        version: 6.7.0
     - name: 'Windows: Build the artifact'
       if: startsWith(matrix.os, 'windows-')
       run: .\build-windows.ps1

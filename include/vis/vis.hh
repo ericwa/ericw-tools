@@ -248,7 +248,7 @@ void CalcAmbientSounds(mbsp_t *bsp);
 
 void CalcPHS(mbsp_t *bsp);
 
-extern time_point starttime, endtime, statetime;
+extern qtime_point starttime, endtime, statetime;
 
 void SaveVisState();
 bool LoadVisState();

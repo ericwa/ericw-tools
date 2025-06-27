@@ -692,7 +692,7 @@ bool string_icontains(std::string_view haystack, std::string_view needle)
     return string_ifind(haystack, needle) != haystack.end();
 }
 
-time_point I_FloatTime()
+qtime_point I_FloatTime()
 {
     return qclock::now();
 }

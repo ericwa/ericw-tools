@@ -103,9 +103,9 @@ bool string_icontains(std::string_view haystack, std::string_view needle);
 
 using qclock = std::chrono::high_resolution_clock;
 using duration = std::chrono::duration<double>;
-using time_point = std::chrono::time_point<qclock, duration>;
+using qtime_point = std::chrono::time_point<qclock, duration>;
 
-time_point I_FloatTime();
+qtime_point I_FloatTime();
 
 /*
  * ============================================================================
