@@ -323,7 +323,7 @@ light_settings::light_settings()
           &output_group, "write .lit file"},
       lit2{this, "lit2",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile = lightfile_t::lit2;
+              write_litfile |= lightfile_t::lit2;
               return true;
           },
           &experimental_group, "write .lit2 file"},
@@ -347,29 +347,27 @@ light_settings::light_settings()
           &experimental_group, "writes lux data into the bsp itself"},
       bspxonly{this, "bspxonly",
           [&](const std::string &, parser_base_t &, source src) {
-              write_litfile = lightfile_t::bspx;
-              write_luxfile = luxfile_t::bspx;
+              write_litfile |= lightfile_t::bspx;
+              write_luxfile |= luxfile_t::bspx;
               novanilla.set_value(true, src);
               return true;
           },
           &experimental_group, "writes both rgb and directions data *only* into the bsp itself"},
       bspx{this, "bspx",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile = lightfile_t::bspx;
-              write_luxfile = luxfile_t::bspx;
+              write_litfile |= lightfile_t::bspx;
+              write_luxfile |= luxfile_t::bspx;
               return true;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
       hdr{this, "hdr",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile |= lightfile_t::lit;
               write_litfile |= lightfile_t::lithdr;
               return true;
           },
           &experimental_group, "write .lit file with e5bgr9 data"},
       bspxhdr{this, "bspxhdr",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile |= lightfile_t::lithdr;
               write_litfile |= lightfile_t::bspxhdr;
               return true;
           },
@@ -512,7 +510,7 @@ void light_settings::light_postinitialize(int argc, const char **argv)
         write_litfile |= lightfile_t::lit;
     }
 
-    if (write_litfile == lightfile_t::lit2) {
+    if (write_litfile & lightfile_t::lit2) {
         logging::print("generating lit2 output only.\n");
     } else {
         if (write_litfile & lightfile_t::lit)
@@ -808,7 +806,7 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
-    if (lmshift_lump == bspdata->bspx.entries.end() && light_options.write_litfile != lightfile_t::lit2 &&
+    if (lmshift_lump == bspdata->bspx.entries.end() && !(light_options.write_litfile & lightfile_t::lit2) &&
         light_options.facestyles.value() <= 4) {
         faces_sup.clear(); // no scales, no lit2
     } else { // we have scales or lit2 output. yay...
@@ -1393,7 +1391,7 @@ int light_main(int argc, const char **argv)
             WriteNormals(bsp, bspdata);
         }
 
-        if (light_options.write_litfile == lightfile_t::lit2) {
+        if (light_options.write_litfile & lightfile_t::lit2) {
             return 0; // run away before any files are written
         }
     }

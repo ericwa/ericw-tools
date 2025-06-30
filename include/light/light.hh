@@ -167,18 +167,28 @@ enum class debugmodes
 
 enum class lightfile_t
 {
+    // no auxiliary lighting formats
     none = 0,
+    // write .lit (version 1) file with RGB lighting
     lit = 1,
+    // write RGBLIGHTING BSPX lump
     bspx = 2,
+    // write .lit (version 2) file
     lit2 = 4,
+    // write .lit (version LIT_VERSION_E5BGR9) file with HDR lighting
     lithdr = 8,
+    // write LIGHTING_E5BGR9 BSPX lump
     bspxhdr = 16,
+    // bitmask for all HDR formats
+    all_hdr_formats = (lithdr | bspxhdr)
 };
 
 enum class luxfile_t
 {
     none = 0,
+    // write .lux file
     lux = 1,
+    // write LIGHTINGDIR BSPX lump
     bspx = 2
 };
 
