@@ -170,7 +170,6 @@ enum class lightfile
     none = 0,
     external = 1,
     bspx = 2,
-    both = external | bspx,
     lit2 = 4,
     hdr = 8,
     bspxhdr = 16,
