@@ -119,7 +119,7 @@ testresults_lit_t QbspVisLight_Q1(
     auto lit_path = fs::path(test_quake_maps_dir) / name.filename();
     lit_path.replace_extension(".lit");
 
-    auto lit_variant = LoadLitFile(lit_path);
+    auto lit_variant = LoadLitFile(lit_path, res.bsp);
 
     return testresults_lit_t{.bsp = std::move(res.bsp), .bspx = std::move(res.bspx), .lit = std::move(lit_variant)};
 }

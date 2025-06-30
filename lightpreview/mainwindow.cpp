@@ -974,12 +974,14 @@ int MainWindow::compileMap(const QString &file, bool is_reload)
     m_litdata = {};
 
     try {
-        auto lit_variant = LoadLitFile(lit_path);
+        if (const auto *bsp = std::get_if<mbsp_t>(&m_bspdata.bsp)) {
+            auto lit_variant = LoadLitFile(lit_path, *bsp);
 
-        if (auto *lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
-            m_litdata = std::move(lit1_ptr->rgbdata);
-        } else if (auto *lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
-            m_hdr_litdata = std::move(lit_hdr_ptr->samples);
+            if (auto *lit1_ptr = std::get_if<lit1_t>(&lit_variant)) {
+                m_litdata = std::move(lit1_ptr->rgbdata);
+            } else if (auto *lit_hdr_ptr = std::get_if<lit_hdr>(&lit_variant)) {
+                m_hdr_litdata = std::move(lit_hdr_ptr->samples);
+            }
         }
     } catch (const std::runtime_error &error) {
         logging::print("error loading lit: {}", error.what());
