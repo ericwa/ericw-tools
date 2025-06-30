@@ -404,6 +404,8 @@ struct mbsp_t
     std::vector<dareaportal_t> dareaportals;
     std::vector<dbrush_t> dbrushes;
     std::vector<q2_dbrushside_qbism_t> dbrushsides;
+
+    int lightsamples() const;
 };
 
 extern const bspversion_t bspver_generic;

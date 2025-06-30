@@ -61,9 +61,9 @@ void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, cons
         litfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
     } else {
         if (version == LIT_VERSION_E5BGR9) {
-            litfile.write((const char *)hdr_filebase.data(), bsp->dlightdata.size() * 4);
+            litfile.write((const char *)hdr_filebase.data(), bsp->lightsamples() * 4);
         } else {
-            litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
+            litfile.write((const char *)lit_filebase.data(), bsp->lightsamples() * 3);
         }
     }
 }
@@ -79,7 +79,7 @@ void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, cons
 
     std::ofstream luxfile(luxname, std::ios_base::out | std::ios_base::binary);
     luxfile <= header.v1;
-    luxfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
+    luxfile.write((const char *)lux_filebase.data(), bsp->lightsamples() * 3);
 }
 
 /*
@@ -1161,7 +1161,7 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
     if (!bsp->loadversion->game->has_rgb_lightmap) {
         // only write in games that lack RGB lightmaps.
         if (light_options.write_litfile & lightfile::bspx) {
-            lit_filebase.resize(bsp->dlightdata.size() * 3);
+            lit_filebase.resize(bsp->lightsamples() * 3);
             bspdata->bspx.transfer("RGBLIGHTING", lit_filebase);
         }
     }
@@ -1169,11 +1169,11 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
         WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
     }
     if (light_options.write_luxfile & lightfile::bspx) {
-        lux_filebase.resize(bsp->dlightdata.size() * 3);
+        lux_filebase.resize(bsp->lightsamples() * 3);
         bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
     }
     if (light_options.write_litfile & lightfile::bspxhdr) {
-        hdr_filebase.resize(bsp->dlightdata.size() * 4);
+        hdr_filebase.resize(bsp->lightsamples() * 4);
         bspdata->bspx.transfer("LIGHTING_E5BGR9", hdr_filebase);
     }
 }
