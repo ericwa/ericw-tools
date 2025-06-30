@@ -1165,10 +1165,10 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
             bspdata->bspx.transfer("RGBLIGHTING", lit_filebase);
         }
     }
-    if (light_options.write_luxfile & lightfile_t::lit) {
+    if (light_options.write_luxfile & luxfile_t::lux) {
         WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
     }
-    if (light_options.write_luxfile & lightfile_t::bspx) {
+    if (light_options.write_luxfile & luxfile_t::bspx) {
         lux_filebase.resize(bsp->lightsamples() * 3);
         bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
     }

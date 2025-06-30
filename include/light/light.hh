@@ -175,6 +175,13 @@ enum class lightfile_t
     bspxhdr = 16,
 };
 
+enum class luxfile_t
+{
+    none = 0,
+    lux = 1,
+    bspx = 2
+};
+
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
 extern std::vector<const modelinfo_t *> tracelist;
 extern std::vector<const modelinfo_t *> selfshadowlist;
@@ -423,7 +430,7 @@ public:
     fs::path sourceMap;
 
     bitflags<lightfile_t> write_litfile = lightfile_t::none;
-    bitflags<lightfile_t> write_luxfile = lightfile_t::none;
+    bitflags<luxfile_t> write_luxfile = luxfile_t::none;
     debugmodes debugmode = debugmodes::none;
 
     void set_parameters(int argc, const char **argv) override;

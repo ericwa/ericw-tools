@@ -335,20 +335,20 @@ light_settings::light_settings()
           &experimental_group, "writes rgb data into the bsp itself"},
       lux{this, "lux",
           [&](const std::string &, parser_base_t &, source) {
-              write_luxfile |= lightfile_t::lit;
+              write_luxfile |= luxfile_t::lux;
               return true;
           },
           &experimental_group, "write .lux file"},
       bspxlux{this, "bspxlux",
           [&](const std::string &, parser_base_t &, source) {
-              write_luxfile |= lightfile_t::bspx;
+              write_luxfile |= luxfile_t::bspx;
               return true;
           },
           &experimental_group, "writes lux data into the bsp itself"},
       bspxonly{this, "bspxonly",
           [&](const std::string &, parser_base_t &, source src) {
               write_litfile = lightfile_t::bspx;
-              write_luxfile = lightfile_t::bspx;
+              write_luxfile = luxfile_t::bspx;
               novanilla.set_value(true, src);
               return true;
           },
@@ -356,7 +356,7 @@ light_settings::light_settings()
       bspx{this, "bspx",
           [&](const std::string &, parser_base_t &, source) {
               write_litfile = lightfile_t::bspx;
-              write_luxfile = lightfile_t::bspx;
+              write_luxfile = luxfile_t::bspx;
               return true;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
@@ -519,9 +519,9 @@ void light_settings::light_postinitialize(int argc, const char **argv)
             logging::print(".lit colored light output requested on command line.\n");
         if (write_litfile & lightfile_t::bspx)
             logging::print("BSPX colored light output requested on command line.\n");
-        if (write_luxfile & lightfile_t::lit)
+        if (write_luxfile & luxfile_t::lux)
             logging::print(".lux light directions output requested on command line.\n");
-        if (write_luxfile & lightfile_t::bspx)
+        if (write_luxfile & luxfile_t::bspx)
             logging::print("BSPX light directions output requested on command line.\n");
     }
 
@@ -556,7 +556,7 @@ void light_settings::reset()
     sourceMap = fs::path();
 
     write_litfile = lightfile_t::none;
-    write_luxfile = lightfile_t::none;
+    write_luxfile = luxfile_t::none;
     debugmode = debugmodes::none;
 }
 } // namespace settings
