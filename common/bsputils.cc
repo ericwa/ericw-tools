@@ -1168,7 +1168,10 @@ qvec3f LM_Sample_HDR(const mbsp_t *bsp, const mface_t *face, const faceextents_t
     if (!packed_samples)
         throw std::runtime_error("LM_Sample_HDR requires either an HDR .lit file or BSPX lump");
 
-    return HDR_UnpackE5BRG9(packed_samples[byte_offset_of_face + pixel]);
+    int sample_offset_of_face =
+        bsp->loadversion->game->has_rgb_lightmap ? byte_offset_of_face / 3 : byte_offset_of_face;
+
+    return HDR_UnpackE5BRG9(packed_samples[sample_offset_of_face + pixel]);
 }
 
 static void AddLeafs(const mbsp_t *bsp, int nodenum, std::map<int, std::vector<int>> &cluster_to_leafnums)

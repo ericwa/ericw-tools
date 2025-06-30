@@ -86,13 +86,6 @@ static testresults_t QbspVisLight_Common(const std::filesystem::path &name, std:
         light_args.push_back(bsp_path.string());
 
         light_main(light_args);
-
-        // ensure a .lit is never created in q2
-        if (is_q2) {
-            auto lit_check_path = bsp_path;
-            lit_check_path.replace_extension(".lit");
-            EXPECT_FALSE(fs::exists(lit_check_path));
-        }
     }
 
     // serialize obj
@@ -127,7 +120,29 @@ testresults_lit_t QbspVisLight_Q1(
 testresults_t QbspVisLight_Q2(
     const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
 {
-    return QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+    testresults_t result = QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+
+    // ensure a .lit isn't created in q2 by default
+    fs::path lit_check_path = result.bsp.file;
+    lit_check_path.replace_extension(".lit");
+    EXPECT_FALSE(fs::exists(lit_check_path));
+
+    return result;
+}
+
+// special variant of above for Q2 tests with lit files (e.g. hdr lit)
+testresults_lit_t QbspVisLight_Q2_Lit(
+    const std::filesystem::path &name, std::vector<std::string> extra_light_args, runvis_t run_vis)
+{
+    auto result = QbspVisLight_Common(name, {"-q2bsp"}, extra_light_args, run_vis);
+
+    // load .lit file
+    fs::path lit_path = result.bsp.file;
+    lit_path.replace_extension(".lit");
+    auto lit_variant = LoadLitFile(lit_path, result.bsp);
+
+    return testresults_lit_t{
+        .bsp = std::move(result.bsp), .bspx = std::move(result.bspx), .lit = std::move(lit_variant)};
 }
 
 testresults_t QbspVisLight_HL(
@@ -1144,6 +1159,57 @@ TEST(ltfaceQ1, hdr)
             &bsp, &bsp.dmodels[0], expected_hdr_color, {1e-5, 1e-5, 1e-5}, testpoint, testnormal, &lit, &bspx);
 
         // check internal lightmap - greyscale, since Q1
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
+    }
+}
+
+// same as above, for Q2
+TEST(ltfaceQ2, hdr)
+{
+    // center of the room on the floor.
+    // in the non-HDR lightmap this is pure black (0, 0, 0), but in the HDR one it's still receiving a bit of light
+    const qvec3f testpoint = {0, 0, 48};
+    const qvec3f testnormal = {0, 0, 1};
+    const qvec3f expected_hdr_color = {0.0043182373, 0.0037384033, 0.002532959};
+    const qvec3f epsilon = {1e-5, 1e-5, 1e-5};
+
+    {
+        SCOPED_TRACE("lit");
+
+        // this validates the .lit size
+        auto [bsp, bspx, lit] = QbspVisLight_Q2_Lit("q2_hdrtest.map", {"-hdr"});
+
+        EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+        EXPECT_TRUE(bspx.empty());
+        EXPECT_TRUE(std::holds_alternative<lit_hdr>(lit));
+
+        // check hdr .lit file
+        CheckFaceLuxelAtPoint_HDR(
+            &bsp, &bsp.dmodels[0], expected_hdr_color, epsilon, testpoint, testnormal, &lit, &bspx);
+
+        // check internal lightmap - greyscale, since Q1
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
+    }
+
+    {
+        SCOPED_TRACE("bspx");
+
+        auto [bsp, bspx] = QbspVisLight_Q2("q2_hdrtest.map", {"-bspxhdr"});
+
+        EXPECT_EQ(GAME_QUAKE_II, bsp.loadversion->game->id);
+        EXPECT_EQ(bspx.size(), 1);
+        EXPECT_NE(bspx.find("LIGHTING_E5BGR9"), bspx.end());
+
+        const std::vector<uint8_t> &bspxhdr = bspx.find("LIGHTING_E5BGR9")->second;
+        EXPECT_EQ(bspxhdr.size(), 4 * bsp.lightsamples());
+        EXPECT_EQ(bsp.lightsamples(), bsp.dlightdata.size() / 3);
+        EXPECT_EQ(0, bsp.dlightdata.size() % 3);
+
+        // check hdr BSPX lump
+        CheckFaceLuxelAtPoint_HDR(
+            &bsp, &bsp.dmodels[0], expected_hdr_color, epsilon, testpoint, testnormal, nullptr, &bspx);
+
+        // check internal lightmap
         CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, testpoint, testnormal);
     }
 }
