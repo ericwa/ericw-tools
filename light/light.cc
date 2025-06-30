@@ -317,60 +317,60 @@ light_settings::light_settings()
           "change approximate visibility algorithm. auto = choose default based on format. vis = use BSP vis data (slow but precise). rays = use sphere culling with fired rays (fast but may miss faces)"},
       lit{this, "lit",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile |= lightfile::external;
+              write_litfile |= lightfile_t::lit;
               return true;
           },
           &output_group, "write .lit file"},
       lit2{this, "lit2",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile = lightfile::lit2;
+              write_litfile = lightfile_t::lit2;
               return true;
           },
           &experimental_group, "write .lit2 file"},
       bspxlit{this, "bspxlit",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile |= lightfile::bspx;
+              write_litfile |= lightfile_t::bspx;
               return true;
           },
           &experimental_group, "writes rgb data into the bsp itself"},
       lux{this, "lux",
           [&](const std::string &, parser_base_t &, source) {
-              write_luxfile |= lightfile::external;
+              write_luxfile |= lightfile_t::lit;
               return true;
           },
           &experimental_group, "write .lux file"},
       bspxlux{this, "bspxlux",
           [&](const std::string &, parser_base_t &, source) {
-              write_luxfile |= lightfile::bspx;
+              write_luxfile |= lightfile_t::bspx;
               return true;
           },
           &experimental_group, "writes lux data into the bsp itself"},
       bspxonly{this, "bspxonly",
           [&](const std::string &, parser_base_t &, source src) {
-              write_litfile = lightfile::bspx;
-              write_luxfile = lightfile::bspx;
+              write_litfile = lightfile_t::bspx;
+              write_luxfile = lightfile_t::bspx;
               novanilla.set_value(true, src);
               return true;
           },
           &experimental_group, "writes both rgb and directions data *only* into the bsp itself"},
       bspx{this, "bspx",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile = lightfile::bspx;
-              write_luxfile = lightfile::bspx;
+              write_litfile = lightfile_t::bspx;
+              write_luxfile = lightfile_t::bspx;
               return true;
           },
           &experimental_group, "writes both rgb and directions data into the bsp itself"},
       hdr{this, "hdr",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile |= lightfile::external;
-              write_litfile |= lightfile::hdr;
+              write_litfile |= lightfile_t::lit;
+              write_litfile |= lightfile_t::lithdr;
               return true;
           },
           &experimental_group, "write .lit file with e5bgr9 data"},
       bspxhdr{this, "bspxhdr",
           [&](const std::string &, parser_base_t &, source) {
-              write_litfile |= lightfile::hdr;
-              write_litfile |= lightfile::bspxhdr;
+              write_litfile |= lightfile_t::lithdr;
+              write_litfile |= lightfile_t::bspxhdr;
               return true;
           },
           &experimental_group, "writes e5bgr9 data into the bsp itself"},
@@ -505,23 +505,23 @@ void light_settings::light_postinitialize(int argc, const char **argv)
     }
 
     if (debugmode != debugmodes::none) {
-        write_litfile |= lightfile::external;
+        write_litfile |= lightfile_t::lit;
     }
 
     if (litonly.value()) {
-        write_litfile |= lightfile::external;
+        write_litfile |= lightfile_t::lit;
     }
 
-    if (write_litfile == lightfile::lit2) {
+    if (write_litfile == lightfile_t::lit2) {
         logging::print("generating lit2 output only.\n");
     } else {
-        if (write_litfile & lightfile::external)
+        if (write_litfile & lightfile_t::lit)
             logging::print(".lit colored light output requested on command line.\n");
-        if (write_litfile & lightfile::bspx)
+        if (write_litfile & lightfile_t::bspx)
             logging::print("BSPX colored light output requested on command line.\n");
-        if (write_luxfile & lightfile::external)
+        if (write_luxfile & lightfile_t::lit)
             logging::print(".lux light directions output requested on command line.\n");
-        if (write_luxfile & lightfile::bspx)
+        if (write_luxfile & lightfile_t::bspx)
             logging::print("BSPX light directions output requested on command line.\n");
     }
 
@@ -555,8 +555,8 @@ void light_settings::reset()
 
     sourceMap = fs::path();
 
-    write_litfile = lightfile::none;
-    write_luxfile = lightfile::none;
+    write_litfile = lightfile_t::none;
+    write_luxfile = lightfile_t::none;
     debugmode = debugmodes::none;
 }
 } // namespace settings
@@ -808,7 +808,7 @@ static void LightWorld(bspdata_t *bspdata, const fs::path &source, bool forcedsc
 
     auto lmshift_lump = bspdata->bspx.entries.find("LMSHIFT");
 
-    if (lmshift_lump == bspdata->bspx.entries.end() && light_options.write_litfile != lightfile::lit2 &&
+    if (lmshift_lump == bspdata->bspx.entries.end() && light_options.write_litfile != lightfile_t::lit2 &&
         light_options.facestyles.value() <= 4) {
         faces_sup.clear(); // no scales, no lit2
     } else { // we have scales or lit2 output. yay...
@@ -1115,11 +1115,11 @@ static void SetLitNeeded()
 {
     if (!light_options.write_litfile) {
         if (light_options.novanilla.value()) {
-            light_options.write_litfile = lightfile::bspx;
+            light_options.write_litfile = lightfile_t::bspx;
             logging::print("Colored light entities/settings detected: "
                            "bspxlit output enabled.\n");
         } else {
-            light_options.write_litfile = lightfile::external;
+            light_options.write_litfile = lightfile_t::lit;
             logging::print("Colored light entities/settings detected: "
                            ".lit output enabled.\n");
         }
@@ -1393,13 +1393,13 @@ int light_main(int argc, const char **argv)
             WriteNormals(bsp, bspdata);
         }
 
-        if (light_options.write_litfile == lightfile::lit2) {
+        if (light_options.write_litfile == lightfile_t::lit2) {
             return 0; // run away before any files are written
         }
     }
 
     /* -novanilla + internal lighting = no grey lightmap */
-    if (light_options.novanilla.value() && (light_options.write_litfile & lightfile::bspx)) {
+    if (light_options.novanilla.value() && (light_options.write_litfile & lightfile_t::bspx)) {
         bsp.dlightdata.clear();
     }
 

@@ -165,13 +165,13 @@ enum class debugmodes
     mottle
 };
 
-enum class lightfile
+enum class lightfile_t
 {
     none = 0,
-    external = 1,
+    lit = 1,
     bspx = 2,
     lit2 = 4,
-    hdr = 8,
+    lithdr = 8,
     bspxhdr = 16,
 };
 
@@ -422,8 +422,8 @@ public:
 
     fs::path sourceMap;
 
-    bitflags<lightfile> write_litfile = lightfile::none;
-    bitflags<lightfile> write_luxfile = lightfile::none;
+    bitflags<lightfile_t> write_litfile = lightfile_t::none;
+    bitflags<lightfile_t> write_luxfile = lightfile_t::none;
     debugmodes debugmode = debugmodes::none;
 
     void set_parameters(int argc, const char **argv) override;
