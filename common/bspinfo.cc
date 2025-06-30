@@ -451,7 +451,11 @@ full_atlas_t build_lightmap_atlas(const mbsp_t &bsp, const bspxentries_t &bspx, 
             } else {
                 // hdr
 
-                auto in_pixel = hdr_lightdata_source + rect.lightofs + (rect.extents.numsamples() * style_index);
+                int rect_lightofs_in_samples =
+                    bsp.loadversion->game->has_rgb_lightmap ? rect.lightofs / 3 : rect.lightofs;
+
+                auto in_pixel =
+                    hdr_lightdata_source + rect_lightofs_in_samples + (rect.extents.numsamples() * style_index);
 
                 for (size_t y = 0; y < rect.extents.height(); y++) {
                     for (size_t x = 0; x < rect.extents.width(); x++) {
