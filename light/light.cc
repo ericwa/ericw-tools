@@ -510,18 +510,20 @@ void light_settings::light_postinitialize(int argc, const char **argv)
         write_litfile |= lightfile_t::lit;
     }
 
-    if (write_litfile & lightfile_t::lit2) {
-        logging::print("generating lit2 output only.\n");
-    } else {
-        if (write_litfile & lightfile_t::lit)
-            logging::print(".lit colored light output requested on command line.\n");
-        if (write_litfile & lightfile_t::bspx)
-            logging::print("BSPX colored light output requested on command line.\n");
-        if (write_luxfile & luxfile_t::lux)
-            logging::print(".lux light directions output requested on command line.\n");
-        if (write_luxfile & luxfile_t::bspx)
-            logging::print("BSPX light directions output requested on command line.\n");
-    }
+    if (write_litfile & lightfile_t::lit)
+        logging::print(".lit colored light output requested on command line.\n");
+    if (write_litfile & lightfile_t::bspx)
+        logging::print("BSPX colored light output requested on command line.\n");
+    if (write_litfile & lightfile_t::lit2)
+        logging::print(".lit (version 2) colored light output requested on command line.\n");
+    if (write_litfile & lightfile_t::lithdr)
+        logging::print(".lit (HDR) light output requested on command line.\n");
+    if (write_litfile & lightfile_t::bspxhdr)
+        logging::print("BSPX HDR light output requested on command line.\n");
+    if (write_luxfile & luxfile_t::lux)
+        logging::print(".lux light directions output requested on command line.\n");
+    if (write_luxfile & luxfile_t::bspx)
+        logging::print("BSPX light directions output requested on command line.\n");
 
     if (debugmode == debugmodes::dirt) {
         light_options.dirt.set_value(true, settings::source::COMMANDLINE);
