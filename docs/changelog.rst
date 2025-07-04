@@ -2,6 +2,28 @@
 Changelog
 =========
 
+2.0.0-alpha10 (unreleased)
+==========================
+
+Changes
+-------
+
+- ``.texinfo.json`` file is always written (simplifies passing data between qbsp and vis/light)
+
+Features
+--------
+
+- vis: support :bmodel-key:`_noambient` on func_group to selectively disable ambient sounds from the grouped brushes
+- light: allow :option:`light -hdr`, :option:`light -bspxhdr`, :option:`light -lux`, :option:`light -bspxlux`
+  on Q2 BSP's. These are experimental in Q2 and not yet supported by any engines, but both .lit and BSPX HDR formats can
+  be viewed in lightpreview with Q2 BSP's.
+
+Developer
+---------
+
+- Qt 6 now required for lightpreview (previously only Qt 5 was required)
+- Embree 4 is now required (previously 3 or 4 were supported)
+
 2.0.0-alpha9
 ============
 
