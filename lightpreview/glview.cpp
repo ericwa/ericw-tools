@@ -1493,17 +1493,17 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         std::shared_ptr<QOpenGLTexture> qtexture;
 
         if (!texture) {
-            logging::print("warning, couldn't locate {}", k.texname);
+            logging::print("warning, couldn't locate {}\n", k.texname);
             qtexture = placeholder_texture;
         }
 
         if (!texture->width || !texture->height) {
-            logging::print("warning, empty texture {}", k.texname);
+            logging::print("warning, empty texture {}\n", k.texname);
             qtexture = placeholder_texture;
         }
 
         if (texture->pixels.empty()) {
-            logging::print("warning, empty texture pixels {}", k.texname);
+            logging::print("warning, empty texture pixels {}\n", k.texname);
             qtexture = placeholder_texture;
         }
 
