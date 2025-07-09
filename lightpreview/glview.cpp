@@ -53,6 +53,7 @@ static int GetMipLevelsForDimensions(int w, int h)
 
 GLView::GLView(QWidget *parent)
     : QOpenGLWidget(parent),
+      m_spatialindex(std::make_unique<spatialindex_t>()),
       m_keysPressed(0),
       m_moveSpeed(1000),
       m_displayAspect(1),
@@ -89,6 +90,9 @@ GLView::~GLView()
 
     m_leakVao.destroy();
     m_leakVbo.destroy();
+
+    m_clickVao.destroy();
+    m_clickVbo.destroy();
 
     m_portalVbo.destroy();
     m_portalIndexBuffer.destroy();
@@ -181,6 +185,7 @@ in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
 flat in uint styles;
+flat in int is_selected;
 
 out vec4 color;
 
@@ -230,6 +235,10 @@ void main() {
         // HDR lightmaps are used as-is with lightmap_scale == 1.
         color = vec4(texcolor * lmcolor * lightmap_scale, opacity) * pow(2.0, brightness);
     }
+
+    if (is_selected != 0) {
+        color.rgb = mix(color.rgb, vec3(1.0, 0.0, 0.0), 0.1);
+    }
 }
 )";
 
@@ -249,9 +258,11 @@ out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
 flat out uint styles;
+flat out int is_selected;
 
 uniform mat4 MVP;
 uniform usamplerBuffer face_visibility_sampler;
+uniform int selected_face;
 
 bool is_culled() {
     int byte_index = face_index;
@@ -274,6 +285,7 @@ void main() {
     normal = vertex_normal;
     flat_color = vertex_flat_color;
     styles = vertex_styles;
+    is_selected = (face_index == selected_face ? 1 : 0);
 }
 )";
 
@@ -285,6 +297,7 @@ in vec2 lightmap_uv;
 in vec3 normal;
 flat in vec3 flat_color;
 flat in uint styles;
+flat in int is_selected;
 
 out vec4 color;
 
@@ -332,6 +345,10 @@ void main() {
         }
         color = color * pow(2.0, brightness);
     }
+
+    if (is_selected != 0) {
+        color.rgb = mix(color.rgb, vec3(1.0, 0.0, 0.0), 0.1);
+    }
 }
 )";
 
@@ -351,10 +368,12 @@ out vec2 lightmap_uv;
 out vec3 normal;
 flat out vec3 flat_color;
 flat out uint styles;
+flat out int is_selected;
 
 uniform mat4 MVP;
 uniform vec3 eye_origin;
 uniform usamplerBuffer face_visibility_sampler;
+uniform int selected_face;
 
 bool is_culled() {
     int byte_index = face_index;
@@ -377,6 +396,7 @@ void main() {
     normal = vertex_normal;
     flat_color = vertex_flat_color;
     styles = vertex_styles;
+    is_selected = (face_index == selected_face ? 1 : 0);
 }
 )";
 
@@ -549,13 +569,14 @@ void GLView::initializeGL()
 {
     initializeOpenGLFunctions();
 
+#if _DEBUG
     QOpenGLDebugLogger *logger = new QOpenGLDebugLogger(this);
 
     logger->initialize(); // initializes in the current context, i.e. ctx
 
     connect(logger, &QOpenGLDebugLogger::messageLogged, this, &GLView::handleLoggedMessage);
     logger->startLogging(QOpenGLDebugLogger::SynchronousLogging);
-
+#endif
     // set up shader
 
     m_program = new QOpenGLShaderProgram();
@@ -584,6 +605,7 @@ void GLView::initializeGL()
     m_program_style_scalars_location = m_program->uniformLocation("style_scalars");
     m_program_brightness_location = m_program->uniformLocation("brightness");
     m_program_lightmap_scale_location = m_program->uniformLocation("lightmap_scale");
+    m_program_selected_face_location = m_program->uniformLocation("selected_face");
     m_program->release();
 
     m_skybox_program->bind();
@@ -600,6 +622,7 @@ void GLView::initializeGL()
     m_skybox_program_style_scalars_location = m_skybox_program->uniformLocation("style_scalars");
     m_skybox_program_brightness_location = m_skybox_program->uniformLocation("brightness");
     m_skybox_program_lightmap_scale_location = m_skybox_program->uniformLocation("lightmap_scale");
+    m_skybox_program_selected_face_location = m_skybox_program->uniformLocation("selected_face");
     m_skybox_program->release();
 
     m_program_wireframe->bind();
@@ -615,6 +638,7 @@ void GLView::initializeGL()
 
     m_vao.create();
     m_leakVao.create();
+    m_clickVao.create();
     m_portalVao.create();
     for (auto &hullVao : m_hullVaos) {
         hullVao.vao.create();
@@ -640,6 +664,19 @@ std::array<QVector4D, 4> GLView::getFrustumPlanes(const QMatrix4x4 &MVP)
     };
 }
 
+GLView::matrices_t GLView::getMatrices() const
+{
+    QMatrix4x4 modelMatrix;
+    QMatrix4x4 viewMatrix;
+    QMatrix4x4 projectionMatrix;
+    projectionMatrix.perspective(90, m_displayAspect, 1.0f, 1'000'000.0f);
+    viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
+
+    QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
+
+    return {modelMatrix, viewMatrix, projectionMatrix, MVP};
+}
+
 void GLView::paintGL()
 {
     // calculate frame time + update m_lastFrame
@@ -657,13 +694,10 @@ void GLView::paintGL()
     applyMouseMotion();
     applyFlyMovement(duration_seconds);
 
-    QMatrix4x4 modelMatrix;
-    QMatrix4x4 viewMatrix;
-    QMatrix4x4 projectionMatrix;
-    projectionMatrix.perspective(90, m_displayAspect, 1.0f, 1'000'000.0f);
-    viewMatrix.lookAt(m_cameraOrigin, m_cameraOrigin + m_cameraFwd, QVector3D(0, 0, 1));
-
-    QMatrix4x4 MVP = projectionMatrix * viewMatrix * modelMatrix;
+    const auto [modelMatrix,
+        viewMatrix,
+        projectionMatrix,
+        MVP] = getMatrices();
 
     const auto frustum = m_keepCullOrigin && m_keepCullFrustum
                              ? getFrustumPlanes(projectionMatrix * m_cullViewMatrix * modelMatrix)
@@ -691,6 +725,7 @@ void GLView::paintGL()
     m_program->setUniformValue(m_program_drawflat_location, m_drawFlat);
     m_program->setUniformValue(m_program_brightness_location, m_brightness);
     m_program->setUniformValue(m_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
+    m_program->setUniformValue(m_program_selected_face_location, m_selected_face);
 
     m_skybox_program->bind();
     m_skybox_program->setUniformValue(m_skybox_program_mvp_location, MVP);
@@ -705,6 +740,7 @@ void GLView::paintGL()
     m_skybox_program->setUniformValue(m_skybox_program_drawflat_location, m_drawFlat);
     m_skybox_program->setUniformValue(m_skybox_program_brightness_location, m_brightness);
     m_skybox_program->setUniformValue(m_skybox_program_lightmap_scale_location, m_is_hdr_lightmap ? 1.0f : 2.0f);
+    m_skybox_program->setUniformValue(m_skybox_program_selected_face_location, m_selected_face);
 
     // resolves whether to render a particular drawcall as opaque
     auto draw_as_opaque = [&](const drawcall_t &draw) -> bool {
@@ -857,6 +893,19 @@ void GLView::paintGL()
 
         glDisable(GL_BLEND);
         glEnable(GL_CULL_FACE);
+
+        m_program_simple->release();
+    }
+
+    // render mouse clicks
+    if (m_hasClick && false) {
+        m_program_simple->bind();
+        m_program_simple->setUniformValue(m_program_simple_color_location, QVector4D{1.0, 1.0, 1.0, 1.0});
+        m_program_simple->setUniformValue(m_program_simple_mvp_location, MVP);
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_clickVao);
+
+        glDrawArrays(GL_LINE_STRIP, 0, 2);
 
         m_program_simple->release();
     }
@@ -1194,6 +1243,8 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
     makeCurrent();
 
     // clear old data
+    m_spatialindex->clear();
+
     placeholder_texture.reset();
     lightmap_texture.reset();
     face_visibility_texture.reset();
@@ -1603,6 +1654,18 @@ void GLView::renderBSP(const QString &file, const mbsp_t &bsp, const bspxentries
         m_drawcalls.push_back(std::move(dc));
     }
 
+    // populate spatial index
+    for (const auto &[k, faces] : faces_by_material_key) {
+        for (const face_payload &facePayload : faces) {
+            int face_num = Face_GetNum(&bsp, facePayload.face);
+
+            // FIXME: face offset
+            m_spatialindex->add_poly(Face_Winding(&bsp, facePayload.face),
+                std::make_any<int>(face_num));
+        }
+    }
+    m_spatialindex->commit();
+
     {
         QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
 
@@ -1879,6 +1942,78 @@ void GLView::resizeGL(int width, int height)
     updateFrustumVBO();
 }
 
+void GLView::clickFace(QMouseEvent *event)
+{
+    if (m_spatialindex->get_state() != state_t::tracing)
+        return;
+
+    // convert to click x, y to NDC
+
+    float x_01 = event->position().x() / width(); // 0 = left, 1 = right
+    float y_01 = event->position().y() / height(); // 0 = top, 1 = bottom
+
+    float x_ndc = mix(-1.0f, 1.0f, x_01); // -1 = left, 1 = right
+    float y_ndc = mix(1.0f, -1.0f, y_01); // -1 = bottom, 1 = top
+    float z_ndc = -1.0f; // near plane
+
+    const auto [modelMatrix,
+        viewMatrix,
+        projectionMatrix,
+        MVP] = getMatrices();
+
+    QMatrix4x4 MVP_Inverse =  MVP.inverted();
+
+    QVector4D ws = MVP_Inverse * QVector4D(x_ndc, y_ndc, z_ndc, 1.0f /* ??? */);
+    QVector4D ws2 = MVP_Inverse * QVector4D(x_ndc, y_ndc, 1.0f /* far plane */, 1.0f /* ??? */);
+
+    qDebug() << "ws: " << ws;
+    qDebug() << "ws2: " << ws2;
+
+    QVector3D ws_a = ws.toVector3DAffine();
+    QVector3D ws2_a = ws2.toVector3DAffine();
+
+    qDebug() << "ws_a: " << ws_a;
+    qDebug() << "ws2_a: " << ws2_a;
+
+    // ray direction
+    QVector3D ray_dir = (ws2_a - ws_a).normalized();
+
+    // trace a ray
+    auto hit = m_spatialindex->trace_ray(qvec3f(ws_a[0], ws_a[1], ws_a[2]),
+        qvec3f(ray_dir[0], ray_dir[1], ray_dir[2]));
+
+    if (hit.hit) {
+        m_selected_face = *std::any_cast<int>(hit.hitpayload);
+    } else {
+        m_selected_face = -1;
+        m_hasClick = false;
+        return;
+    }
+
+    // upload line segment
+
+    makeCurrent();
+
+    {
+        // record that it's safe to draw
+        m_hasClick = true;
+
+        QOpenGLVertexArrayObject::Binder vaoBinder(&m_clickVao);
+        std::array<QVector3D, 2> points{ws_a, QVector3D(hit.hitpos[0], hit.hitpos[1], hit.hitpos[2])};
+
+        // upload vertex buffer
+        m_clickVbo.create();
+        m_clickVbo.bind();
+        m_clickVbo.allocate(points.data(), points.size() * sizeof(points[0]));
+
+        // positions
+        glEnableVertexAttribArray(0 /* attrib */);
+        glVertexAttribPointer(0 /* attrib */, 3, GL_FLOAT, GL_FALSE, sizeof(QVector3D), (void *)0);
+    }
+
+    doneCurrent();
+}
+
 void GLView::applyMouseMotion()
 {
     if (!(QApplication::mouseButtons() & Qt::RightButton)) {
@@ -1953,6 +2088,10 @@ void GLView::wheelEvent(QWheelEvent *event)
 
 void GLView::mousePressEvent(QMouseEvent *event)
 {
+    if (event->button() & Qt::LeftButton) {
+        clickFace(event);
+    }
+
     update();
 }
 

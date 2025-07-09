@@ -5,6 +5,7 @@ add_executable(tests
 		test_entities.cc
 		test_light.cc
 		test_ltface.cc
+		test_spatialindex.cpp
 		test_qbsp.cc
 		test_qbsp.hh
 		test_qbsp_q2.cc
