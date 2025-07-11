@@ -61,9 +61,9 @@ void WriteLitFile(const mbsp_t *bsp, const std::vector<facesup_t> &facesup, cons
         litfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
     } else {
         if (version == LIT_VERSION_E5BGR9) {
-            litfile.write((const char *)hdr_filebase.data(), bsp->dlightdata.size() * 4);
+            litfile.write((const char *)hdr_filebase.data(), bsp->lightsamples() * 4);
         } else {
-            litfile.write((const char *)lit_filebase.data(), bsp->dlightdata.size() * 3);
+            litfile.write((const char *)lit_filebase.data(), bsp->lightsamples() * 3);
         }
     }
 }
@@ -79,7 +79,7 @@ void WriteLuxFile(const mbsp_t *bsp, const fs::path &filename, int version, cons
 
     std::ofstream luxfile(luxname, std::ios_base::out | std::ios_base::binary);
     luxfile <= header.v1;
-    luxfile.write((const char *)lux_filebase.data(), bsp->dlightdata.size() * 3);
+    luxfile.write((const char *)lux_filebase.data(), bsp->lightsamples() * 3);
 }
 
 /*
@@ -738,7 +738,8 @@ int CalculateLightmapStyles(const mbsp_t *bsp, mface_t *face, facesup_t *facesup
         // skip lightmaps where all samples have brightness below 1 unless rendering float lightmaps
         // HACK: don't do this on Q2. seems if all styles are 0xff,
         //       the face is drawn fullbright instead of black (Q1)
-        if (bsp->loadversion->game->id != GAME_QUAKE_II && !(light_options.write_litfile & lightfile::hdr)) {
+        if (bsp->loadversion->game->id != GAME_QUAKE_II &&
+            !(light_options.write_litfile & lightfile_t::all_hdr_formats)) {
             const float maxb = Lightmap_MaxBrightness(&lightmap, lightsurf);
             if (maxb < 1)
                 continue;
@@ -1007,7 +1008,7 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
             lux_filebase.resize(filebase.size() * 3);
         }
 
-        if (light_options.write_litfile & lightfile::hdr) {
+        if (light_options.write_litfile & lightfile_t::all_hdr_formats) {
             hdr_filebase.resize(filebase.size() * 4);
         }
 
@@ -1084,7 +1085,7 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
             lux_filebase.resize(lightmap_size * 3);
         }
 
-        if (light_options.write_litfile & lightfile::hdr) {
+        if (light_options.write_litfile & lightfile_t::all_hdr_formats) {
             hdr_filebase.resize(lightmap_size * 4);
         }
 
@@ -1130,7 +1131,7 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
 
     logging::print("Lighting Completed.\n\n");
 
-    if (light_options.write_litfile == lightfile::lit2) {
+    if (light_options.write_litfile == lightfile_t::lit2) {
         WriteLitFile(bsp, faces_sup, source, 2, lit_filebase, lux_filebase, hdr_filebase);
         return; // run away before any files are written
     }
@@ -1149,27 +1150,34 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
     bspdata->bspx.entries.erase("LIGHTINGDIR");
     bspdata->bspx.entries.erase("LIGHTING_E5BGR9");
 
-    // lit/lux files (or their BSPX equivalents) - only write in games that lack RGB lightmaps.
-    // (technically we could allow .lux in Q2 mode, but no engines support it.)
-    if (!bsp->loadversion->game->has_rgb_lightmap) {
-        if (light_options.write_litfile & lightfile::external) {
-            int version = light_options.write_litfile & lightfile::hdr ? LIT_VERSION_E5BGR9 : LIT_VERSION;
-            WriteLitFile(bsp, faces_sup, source, version, lit_filebase, lux_filebase, hdr_filebase);
+    // lit/lux files (or their BSPX equivalents)
+    if (light_options.write_litfile & lightfile_t::lithdr) {
+        WriteLitFile(bsp, faces_sup, source, LIT_VERSION_E5BGR9, lit_filebase, lux_filebase, hdr_filebase);
+    }
+    if (light_options.write_litfile & lightfile_t::lit) {
+        if (bsp->loadversion->game->has_rgb_lightmap) {
+            logging::print("WARNING: -lit requested but game has RGB lightmaps already, ignoring.\n");
+        } else {
+            WriteLitFile(bsp, faces_sup, source, LIT_VERSION, lit_filebase, lux_filebase, hdr_filebase);
         }
-        if (light_options.write_litfile & lightfile::bspx) {
-            lit_filebase.resize(bsp->dlightdata.size() * 3);
+    }
+    if (light_options.write_litfile & lightfile_t::bspx) {
+        if (bsp->loadversion->game->has_rgb_lightmap) {
+            logging::print("WARNING: RGBLIGHTING BSPX lump requested but game has RGB lightmaps already, ignoring.\n");
+        } else {
+            lit_filebase.resize(bsp->lightsamples() * 3);
             bspdata->bspx.transfer("RGBLIGHTING", lit_filebase);
         }
-        if (light_options.write_luxfile & lightfile::external) {
-            WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
-        }
-        if (light_options.write_luxfile & lightfile::bspx) {
-            lux_filebase.resize(bsp->dlightdata.size() * 3);
-            bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
-        }
-        if (light_options.write_litfile & lightfile::bspxhdr) {
-            hdr_filebase.resize(bsp->dlightdata.size() * 4);
-            bspdata->bspx.transfer("LIGHTING_E5BGR9", hdr_filebase);
-        }
+    }
+    if (light_options.write_luxfile & luxfile_t::lux) {
+        WriteLuxFile(bsp, source, LIT_VERSION, lux_filebase);
+    }
+    if (light_options.write_luxfile & luxfile_t::bspx) {
+        lux_filebase.resize(bsp->lightsamples() * 3);
+        bspdata->bspx.transfer("LIGHTINGDIR", lux_filebase);
+    }
+    if (light_options.write_litfile & lightfile_t::bspxhdr) {
+        hdr_filebase.resize(bsp->lightsamples() * 4);
+        bspdata->bspx.transfer("LIGHTING_E5BGR9", hdr_filebase);
     }
 }

@@ -332,3 +332,14 @@ void q2_dbrushside_qbism_t::stream_read(std::istream &s)
 {
     s >= std::tie(planenum, texinfo);
 }
+
+// mbsp_t
+
+int mbsp_t::lightsamples() const
+{
+    if (loadversion->game->has_rgb_lightmap) {
+        return dlightdata.size() / 3;
+    } else {
+        return dlightdata.size();
+    }
+}

@@ -75,5 +75,6 @@ struct lit_none
 };
 
 using lit_variant_t = std::variant<lit1_t, lit_hdr, lit_none>;
+struct mbsp_t;
 
-lit_variant_t LoadLitFile(const fs::path &path);
+lit_variant_t LoadLitFile(const fs::path &path, const mbsp_t &bsp);

@@ -165,15 +165,31 @@ enum class debugmodes
     mottle
 };
 
-enum class lightfile
+enum class lightfile_t
+{
+    // no auxiliary lighting formats
+    none = 0,
+    // write .lit (version 1) file with RGB lighting
+    lit = 1,
+    // write RGBLIGHTING BSPX lump
+    bspx = 2,
+    // write .lit (version 2) file
+    lit2 = 4,
+    // write .lit (version LIT_VERSION_E5BGR9) file with HDR lighting
+    lithdr = 8,
+    // write LIGHTING_E5BGR9 BSPX lump
+    bspxhdr = 16,
+    // bitmask for all HDR formats
+    all_hdr_formats = (lithdr | bspxhdr)
+};
+
+enum class luxfile_t
 {
     none = 0,
-    external = 1,
-    bspx = 2,
-    both = external | bspx,
-    lit2 = 4,
-    hdr = 8,
-    bspxhdr = 16,
+    // write .lux file
+    lux = 1,
+    // write LIGHTINGDIR BSPX lump
+    bspx = 2
 };
 
 /* tracelist is a std::vector of pointers to modelinfo_t to use for LOS tests */
@@ -423,8 +439,8 @@ public:
 
     fs::path sourceMap;
 
-    bitflags<lightfile> write_litfile = lightfile::none;
-    bitflags<lightfile> write_luxfile = lightfile::none;
+    bitflags<lightfile_t> write_litfile = lightfile_t::none;
+    bitflags<luxfile_t> write_luxfile = luxfile_t::none;
     debugmodes debugmode = debugmodes::none;
 
     void set_parameters(int argc, const char **argv) override;

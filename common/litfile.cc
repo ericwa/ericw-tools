@@ -17,6 +17,8 @@
     See file, 'COPYING', for details.
 */
 
+#include "common/bspfile_generic.hh"
+
 #include <common/litfile.hh>
 #include <common/cmdlib.hh>
 
@@ -125,7 +127,7 @@ qvec3f HDR_UnpackE5BRG9(uint32_t packed)
     return qvec3f(red_int, green_int, blue_int) * multiplier;
 }
 
-lit_variant_t LoadLitFile(const fs::path &path)
+lit_variant_t LoadLitFile(const fs::path &path, const mbsp_t &bsp)
 {
     std::ifstream stream(path, std::ios_base::in | std::ios_base::binary);
     if (!stream.good()) {
@@ -144,20 +146,31 @@ lit_variant_t LoadLitFile(const fs::path &path)
     stream >= version;
     if (version == LIT_VERSION) {
         std::vector<uint8_t> litdata;
-        while (stream.good()) {
-            uint8_t b;
-            stream >= b;
+        uint8_t b;
+        while (stream >= b && stream.good()) {
             litdata.push_back(b);
         }
+
+        // validate data length
+        if (litdata.size() != bsp.lightsamples() * 3) {
+            throw std::runtime_error("incorrect lit size");
+        }
+
         return {lit1_t{.rgbdata = std::move(litdata)}};
     } else if (version == LIT_VERSION_E5BGR9) {
-        std::vector<uint32_t> litdata;
-        while (stream.good()) {
-            uint32_t sample;
-            stream >= sample;
-            litdata.push_back(sample);
+        std::vector<uint32_t> hdrsamples;
+
+        uint32_t sample;
+        while (stream >= sample && stream.good()) {
+            hdrsamples.push_back(sample);
         }
-        return {lit_hdr{.samples = std::move(litdata)}};
+
+        // validate data length
+        if (hdrsamples.size() != bsp.lightsamples()) {
+            throw std::runtime_error("incorrect hdr lit size");
+        }
+
+        return {lit_hdr{.samples = std::move(hdrsamples)}};
     }
 
     throw std::runtime_error("invalid lit version");
