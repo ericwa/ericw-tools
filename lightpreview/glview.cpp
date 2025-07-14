@@ -462,6 +462,17 @@ void GLView::updateFaceVisibility(const std::array<QVector4D, 4> &frustum)
 
             // visit all world leafs: if they're visible, mark the appropriate faces
             BSP_VisitAllLeafs(bsp, bsp.dmodels[0], [&](const mleaf_t &leaf) {
+                auto contents = bsp.loadversion->game->create_contents_from_native(leaf.contents);
+                if (contents.flags & EWT_VISCONTENTS_SOLID) {
+                    // Solid leafs can never mark faces for rendering; see r_bsp.c:R_RecursiveWorldNode() in winquake.
+                    // However, some engines allow it (QS).
+                    //
+                    // This affects func_detail_fence, which can generate solid faces with marksurfaces,
+                    // causing HOMs in some situations on vised maps, which we'll hopefully fix in qbsp.
+                    //
+                    // Match winquake/FTEQW's rendering.
+                    return;
+                }
                 if (Pvs_LeafVisible(&bsp, pvs, &leaf) && isVolumeInFrustum(frustum, leaf.mins, leaf.maxs)) {
                     for (int ms = 0; ms < leaf.nummarksurfaces; ++ms) {
                         int fnum = bsp.dleaffaces[leaf.firstmarksurface + ms];
