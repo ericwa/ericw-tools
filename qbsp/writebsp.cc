@@ -188,22 +188,27 @@ static void ExportLeaf(node_t *node)
 
     dleaf.visofs = -1; // no vis info yet
 
-    // write the marksurfaces
+    // write the marksurfaces only if it's a nonsolid leaf.
+    //
+    // the only reason a solid leaf would have marksurfaces is in Q1, we convert func_detail_fence to CONTENTS_SOLID.
+    // this leads to inconsitent rendering (winquake, FTEQW ignore the marksurfaces on solid leafs, QS renders them).
     dleaf.firstmarksurface = static_cast<int>(map.bsp.dleaffaces.size());
 
-    for (auto &face : leafdata->markfaces) {
-        if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw()) {
+    if (!(remapped.flags & EWT_VISCONTENTS_SOLID)) {
+        for (auto &face : leafdata->markfaces) {
+            if (!qbsp_options.includeskip.value() && face->get_texinfo().flags.is_nodraw()) {
 
-            // TODO: move to game specific
-            // always include LIGHT
-            if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
-                continue;
-        }
+                // TODO: move to game specific
+                // always include LIGHT
+                if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
+                    continue;
+            }
 
-        /* grab final output faces */
-        for (auto &fragment : face->fragments) {
-            if (fragment.outputnumber.has_value()) {
-                map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
+            /* grab final output faces */
+            for (auto &fragment : face->fragments) {
+                if (fragment.outputnumber.has_value()) {
+                    map.bsp.dleaffaces.push_back(fragment.outputnumber.value());
+                }
             }
         }
     }
