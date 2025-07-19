@@ -177,6 +177,16 @@ std::string contentflags_t::to_string() const
     return s;
 }
 
+nlohmann::json contentflags_t::to_json() const
+{
+    return get_contents_json(flags);
+}
+
+contentflags_t contentflags_t::from_json(const nlohmann::json &json)
+{
+    return contentflags_t::make(set_contents_json(json));
+}
+
 // surfflags_t
 
 bool surfflags_t::is_nodraw() const
