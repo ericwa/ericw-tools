@@ -300,12 +300,12 @@ static void CalcPoints_Debug(const lightsurf_t *surf, const mbsp_t *bsp)
 /// This is used for marking sample points as occluded.
 static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, const qvec3f &point)
 {
-    if (Light_PointInSolid(bsp, self, point))
+    if (Light_PointInSolid(bsp, self, extended_content_flags, point))
         return true;
 
     auto *self_modelinfo = ModelInfoForModel(bsp, self - bsp->dmodels.data());
     if (self_modelinfo->object_channel_mask.value() == CHANNEL_MASK_DEFAULT) {
-        if (Light_PointInWorld(bsp, point))
+        if (Light_PointInWorld(bsp, extended_content_flags, point))
             return true;
     }
 
@@ -313,7 +313,7 @@ static bool Light_PointInAnySolid(const mbsp_t *bsp, const dmodelh2_t *self, con
         if (modelinfo->object_channel_mask.value() != self_modelinfo->object_channel_mask.value())
             continue;
 
-        if (Light_PointInSolid(bsp, modelinfo->model, point - modelinfo->offset)) {
+        if (Light_PointInSolid(bsp, modelinfo->model, extended_content_flags, point - modelinfo->offset)) {
             // Only mark occluded if the bmodel is fully opaque
             if (modelinfo->alpha.value() == 1.0f)
                 return true;

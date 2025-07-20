@@ -27,6 +27,7 @@
 #include <qbsp/map.hh>
 #include <qbsp/merge.hh>
 #include <qbsp/qbsp.hh>
+#include <qbsp/tree.hh>
 #include <qbsp/writebsp.hh>
 
 #include <list>
@@ -342,6 +343,210 @@ void MakeMarkFaces(node_t *node)
     MakeMarkFaces(nodedata->children[0]);
     MakeMarkFaces(nodedata->children[1]);
 }
+
+//===========================================================================
+// FixupDetailFence
+//===========================================================================
+
+// gathers markfaces from the node and descendants, if they're in detail fence leafs
+static void FixupDetailFence_FindDetailFenceFaces(std::set<face_t *> *dest, node_t *node)
+{
+    // descend to leafs
+    if (nodedata_t *nodedata = node->get_nodedata()) {
+        FixupDetailFence_FindDetailFenceFaces(dest, nodedata->children[0]);
+        FixupDetailFence_FindDetailFenceFaces(dest, nodedata->children[1]);
+        return;
+    }
+
+    // add this leaf's markfaces to the set
+    auto *leafdata = node->get_leafdata();
+
+    // exit if it's not a detail_fence
+    if (leafdata->contents.visible_contents().flags != EWT_VISCONTENTS_WINDOW)
+        return;
+
+    for (auto *f : leafdata->markfaces) {
+        dest->insert(f);
+    }
+}
+
+// does this cluster have any leafs with detail fence as their strongest content type?
+static bool FixupMarkFaces_ProcessCluster_HasDetailFence(node_t *node)
+{
+    // descend to leafs
+    if (nodedata_t *nodedata = node->get_nodedata()) {
+        return FixupMarkFaces_ProcessCluster_HasDetailFence(nodedata->children[0]) ||
+               FixupMarkFaces_ProcessCluster_HasDetailFence(nodedata->children[1]);
+    }
+
+    return !!(node->get_leafdata()->contents.visible_contents().flags & EWT_VISCONTENTS_WINDOW);
+}
+
+static bool FixupMarkFaces_IsUsableLeaf(node_t *node)
+{
+    auto flags = node->get_leafdata()->contents.visible_contents().flags;
+
+    return (flags == EWT_VISCONTENTS_EMPTY || flags == EWT_VISCONTENTS_LAVA || flags == EWT_VISCONTENTS_SLIME ||
+            flags == EWT_VISCONTENTS_WATER);
+}
+
+static node_t *FixupMarkFaces_ProcessCluster_FindStorageLeaf(node_t *node)
+{
+    // descend to leafs
+    if (nodedata_t *nodedata = node->get_nodedata()) {
+        // return the first child that is usable
+        for (int i = 0; i < 2; ++i)
+            if (auto *found = FixupMarkFaces_ProcessCluster_FindStorageLeaf(nodedata->children[i]))
+                return found;
+
+        return nullptr;
+    }
+
+    // make sure it's usable
+    auto *leafdata = node->get_leafdata();
+    if (!FixupMarkFaces_IsUsableLeaf(node))
+        return nullptr;
+
+    // it's usable, return it
+    return node;
+}
+
+static void FixupMarkFaces_AddFacesToLeaf(node_t *node, const std::set<face_t *> &marfaces_to_add)
+{
+    Q_assert(FixupMarkFaces_IsUsableLeaf(node));
+    auto *leafdata = node->get_leafdata();
+
+    // ensure this leaf's marksurfaces list contains everything in marfaces_to_add
+    auto current_markfaces = std::set<face_t *>(leafdata->markfaces.begin(), leafdata->markfaces.end());
+
+    for (face_t *f : marfaces_to_add) {
+        current_markfaces.insert(f);
+    }
+
+    auto new_markfaces = std::vector<face_t *>(current_markfaces.begin(), current_markfaces.end());
+    leafdata->markfaces = new_markfaces;
+}
+
+/**
+ * Does the func_detail_fence fixup process described below for this 1 cluster (if it has any detail_fence in it).
+ */
+static void FixupMarkFaces_ProcessCluster(node_t *node)
+{
+    // need to fix up?
+    if (!FixupMarkFaces_ProcessCluster_HasDetailFence(node))
+        return;
+
+    logging::print("fixing up cluster at {}\n", node->bounds.centroid());
+
+    // gather all marksurfaces of func_detail_fence containing leafs in the cluster into a std::set
+    std::set<face_t *> marfaces_to_propagate;
+    FixupDetailFence_FindDetailFenceFaces(&marfaces_to_propagate, node);
+
+    // start with the cluster...
+    std::vector<node_t *> queue;
+    queue.push_back(node);
+    int front = 0;
+
+    std::set<node_t *> visited;
+
+    // results of the flood fill
+    std::vector<node_t *> storage_leafs;
+
+    while (front < queue.size()) {
+        // pop front, and visit it
+        node_t *current_node = queue[front++];
+        visited.insert(current_node);
+
+        // to visit: either we store the marfaces_to_propagate,
+        // _or_ we push all valid neighbours (unvisited, vis-visible) to the queue.
+        if (auto *storage_leaf = FixupMarkFaces_ProcessCluster_FindStorageLeaf(current_node)) {
+            storage_leafs.push_back(storage_leaf);
+
+            // processing done on this cluster
+            continue;
+        }
+
+        // we couldn't store the marksurfaces in current_node. so we need to push all of its
+        // neighbours
+        bool is_on_back;
+        for (portal_t *p = current_node->portals; p; p = p->next[is_on_back]) {
+            is_on_back = (p->nodes.back == current_node);
+
+            node_t *other_cluster = is_on_back ? p->nodes.front : p->nodes.back;
+            if (visited.find(other_cluster) != visited.end())
+                continue;
+            if (!Portal_VisFlood(p))
+                continue;
+
+            queue.push_back(other_cluster);
+        }
+    }
+
+    // final part: now that we've identified the storage destinations, actually store there
+    for (auto *storage_leaf: storage_leafs) {
+        FixupMarkFaces_AddFacesToLeaf(storage_leaf, marfaces_to_propagate);
+    }
+}
+
+// process all clusters in the tree with FixupMarkFaces_ProcessCluster
+static void FixupDetailFenceMarkFaces_R(node_t *node)
+{
+    // visit all clusters
+    if (nodedata_t *nodedata = node->get_nodedata()) {
+        if (nodedata->detail_separator) {
+            // process cluster
+            FixupMarkFaces_ProcessCluster(node);
+            return;
+        }
+
+        // non-cluster leaf.. descend
+        FixupDetailFenceMarkFaces_R(nodedata->children[0]);
+        FixupDetailFenceMarkFaces_R(nodedata->children[1]);
+        return;
+    }
+
+    // it's a regular leaf.. process as cluster
+    FixupMarkFaces_ProcessCluster(node);
+}
+
+/**
+ * func_detail_fence (internally we call it WINDOW because it's identical to Q2 WINDOW)
+ * does not map perfectly to any contents type in Q1 so we need to emulate it.
+ *
+ * We write them as solid (see `gamedef_q1_like_t::contents_remap_for_export()`) but this has some issues,
+ * because players are supposed to be able to see inside, but vanilla Quake ignores marksurfaces on solid leafs.
+ *
+ * This is the workaround; the idea is, we take the marksurfaces that would be rendered as a part of
+ * func_detail_fence leafs, and propagate them outwards to the nearest empty leafs and use that to trick the renderer
+ * into drawing inside the func_detail_fence (solid in the .bsp).
+ *
+ * More precise description: for each cluster with _any_ detail_fence in it:
+ * 1. gather _all_ marksurfaces in detail_fence leafs in that cluster
+ * 2. use the cluster itself if it is "usable" as defined below
+ * 3. if not, flood fill through see-through cluster portals until we find _all_ "usable" clusters - these could be
+ *   several clusters away
+ *
+ * "usable cluster" is defined as "having 1 or more non-solid leaf in it", and the action we do with all of them is
+ * add the set of marksurfaces identified in step 1.
+ */
+void FixupDetailFence(tree_t &tree)
+{
+    if (tree.portaltype != portaltype_t::VIS) {
+        return;
+    }
+
+    if (qbsp_options.target_game->id == GAME_QUAKE_II) {
+        // Q2 natively supports detail fence (WINDOW) so this isn't needed
+        return;
+    }
+    if (!qbsp_options.fixupdetailfence.value()) {
+        return;
+    }
+
+    FixupDetailFenceMarkFaces_R(tree.headnode);
+}
+
+//===========================================================================
 
 /*
 ===============

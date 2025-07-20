@@ -334,6 +334,26 @@ TEST(common, q2ContentsRoundtrip)
     }
 }
 
+TEST(common, jsonContentsEmpty)
+{
+    contentflags_t contents{};
+    EXPECT_EQ(nlohmann::json::array(), contents.to_json());
+
+    contentflags_t roundtrip = contentflags_t::from_json(nlohmann::json::array());
+    EXPECT_EQ(roundtrip, contents);
+}
+
+TEST(common, jsonContentsDetailSolid)
+{
+    contentflags_t contents = contentflags_t::make(EWT_VISCONTENTS_SOLID | EWT_CFLAG_DETAIL | EWT_CFLAG_Q2_UNUSED_31);
+
+    auto expected_json = nlohmann::json::array({"SOLID", "DETAIL", "Q2_UNUSED_31"});
+    EXPECT_EQ(expected_json, contents.to_json());
+
+    contentflags_t roundtrip = contentflags_t::from_json(expected_json);
+    EXPECT_EQ(roundtrip, contents);
+}
+
 TEST(common, q2PortalCanSeeThrough)
 {
     auto *game_q2 = bspver_q2.game;

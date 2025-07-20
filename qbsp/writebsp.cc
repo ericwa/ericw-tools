@@ -166,6 +166,10 @@ static void ExportLeaf(node_t *node)
     leafdata_t *leafdata = node->get_leafdata();
     mleaf_t &dleaf = map.bsp.dleafs.emplace_back();
 
+    // save original content flags for .content.json, before remapping
+    map.exported_extended_contentflags.push_back(leafdata->contents);
+    assert(map.exported_extended_contentflags.size() == map.bsp.dleafs.size());
+
     const contentflags_t remapped =
         qbsp_options.target_game->contents_remap_for_export(leafdata->contents, gamedef_t::remap_type_t::leaf);
 
@@ -340,6 +344,8 @@ void BeginBSPFile()
         qbsp_options.target_game->contents_to_native(qbsp_options.target_game->create_solid_contents());
     solid_leaf.cluster = CLUSTER_INVALID;
     Q_assert(map.bsp.dleafs.size() == 1);
+
+    map.exported_extended_contentflags.push_back(contentflags_t::make(EWT_VISCONTENTS_SOLID));
 }
 
 /*
@@ -374,6 +380,28 @@ static void WriteExtendedTexinfoFlags()
     }
 
     std::ofstream(file, std::ios_base::out | std::ios_base::binary) << texinfofile;
+}
+
+static void WriteExtendedContentFlags()
+{
+    auto file = fs::path(qbsp_options.bsp_path).replace_extension("content.json");
+
+    if (fs::exists(file)) {
+        fs::remove(file);
+    }
+
+    if (qbsp_options.noextendedcontentflags.value())
+        return;
+
+    Q_assert(map.exported_extended_contentflags.size() == map.bsp.dleafs.size());
+
+    json jsonfile = json::array();
+
+    for (const auto &flags : map.exported_extended_contentflags) {
+        jsonfile.push_back(flags.to_json());
+    }
+
+    std::ofstream(file, std::ios_base::out | std::ios_base::binary) << jsonfile;
 }
 
 static bool Is16BitMarkfsurfaceFormat(const bspversion_t *version)
@@ -464,6 +492,7 @@ void FinishBSPFile()
     }
 
     WriteExtendedTexinfoFlags();
+    WriteExtendedContentFlags();
     WriteBSPFile();
 }
 

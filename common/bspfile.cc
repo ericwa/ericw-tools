@@ -142,6 +142,42 @@ std::string get_contents_display(contents_t bits)
     return s;
 }
 
+nlohmann::json get_contents_json(contents_t bits)
+{
+    nlohmann::json result = nlohmann::json::array();
+
+    for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
+        if (bits & nth_bit<contents_int_t>(i)) {
+           result.push_back(bitflag_names[i]);
+        }
+    }
+
+    return result;
+}
+
+contents_int_t set_contents_json(const nlohmann::json &json)
+{
+    contents_int_t result = EWT_VISCONTENTS_EMPTY;
+
+    if (!json.is_array()) {
+        return result;
+    }
+
+    for (const nlohmann::json &entry : json) {
+        if (!entry.is_string())
+            continue;
+
+        const std::string entry_str = entry.get<std::string>();
+
+        for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
+            if (!Q_strcasecmp(entry_str.c_str(), bitflag_names[i]))
+                result |= nth_bit<contents_int_t>(i);
+        }
+    }
+
+    return result;
+}
+
 template<gameid_t ID>
 struct gamedef_q1_like_t : public gamedef_t
 {

@@ -197,6 +197,9 @@ struct contentflags_t
 
     std::string to_string() const;
 
+    nlohmann::json to_json() const;
+    static contentflags_t from_json(const nlohmann::json &json);
+
     // returns the bit index (starting from 0) of the strongest visible content type
     // set, or -1 if no visible content bits are set (i.e. EWT_VISCONTENTS_EMPTY)
     int visible_contents_index() const
@@ -227,6 +230,8 @@ struct contentflags_t
         }
         return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     }
+
+    auto operator<=>(const contentflags_t &other) const = default;
 };
 
 enum q1_surf_flags_t : int32_t;
@@ -353,6 +358,7 @@ private:
 
 struct mbsp_t;
 std::vector<surfflags_t> LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp);
+std::vector<contentflags_t> LoadExtendedContentFlags(const fs::path &sourcefilename, const mbsp_t *bsp);
 
 // native game target ID
 enum gameid_t

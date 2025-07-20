@@ -24,6 +24,8 @@
 #include <list>
 
 struct node_t;
+struct tree_t;
 
 void MakeMarkFaces(node_t *headnode);
+void FixupDetailFence(tree_t &tree);
 void MakeFaces(node_t *node);

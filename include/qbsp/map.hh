@@ -245,6 +245,9 @@ struct mapdata_t
     bool needslmshifts = false;
     std::vector<uint8_t> exported_bspxbrushes;
 
+    // contents flags to write to content.json
+    std::vector<contentflags_t> exported_extended_contentflags;
+
     // Q2 stuff
     int32_t c_areas = 0;
     int32_t numareaportals = 0;

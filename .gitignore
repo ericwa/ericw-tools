@@ -20,8 +20,7 @@ testmaps/**/*.obj
 testmaps/**/*.pts
 testmaps/**/*.vis
 testmaps/**/*.texinfo
-testmaps/**/*.texinfo.json
-testmaps/**/*.bsp.json
+testmaps/**/*.json
 testmaps/**/*.chop.map
 **/autosave
 CMakeSettings.json
