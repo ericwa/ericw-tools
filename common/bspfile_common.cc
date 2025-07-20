@@ -537,6 +537,43 @@ std::vector<surfflags_t> LoadExtendedTexinfoFlags(const fs::path &sourcefilename
     return result;
 }
 
+std::vector<contentflags_t> LoadExtendedContentFlags(const fs::path &sourcefilename, const mbsp_t *bsp)
+{
+    std::vector<contentflags_t> result;
+
+    // initialize with the contents from the .bsp, in case the .json file is missing
+    result.resize(bsp->dleafs.size());
+    for (size_t i = 0; i < bsp->dleafs.size(); ++i) {
+        result[i] = bsp->loadversion->game->create_contents_from_native(bsp->dleafs[i].contents);
+    }
+
+    fs::path filename(sourcefilename);
+    filename.replace_extension("content.json");
+
+    std::ifstream texinfofile(filename, std::ios_base::in | std::ios_base::binary);
+
+    if (!texinfofile)
+        return result;
+
+    logging::print("Loading extended content flags from {}...\n", filename);
+
+    json j;
+    texinfofile >> j;
+
+    if (!j.is_array() || j.size() != bsp->dleafs.size()) {
+        logging::print("ERROR: malformed extended content flags file\n");
+        return result;
+    }
+
+    for (size_t i = 0; i < bsp->dleafs.size(); ++i) {
+        const auto &elem = j[i];
+
+        result[i] = contentflags_t::from_json(elem);
+    }
+
+    return result;
+}
+
 // gamedef_t
 
 gamedef_t::gamedef_t(const char *friendly_name, const char *default_base_dir)

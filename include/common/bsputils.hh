@@ -40,6 +40,7 @@ int Face_GetNum(const mbsp_t *bsp, const mface_t *f);
 // bounds-checked array access (assertion failure on out-of-bounds)
 const bsp2_dnode_t *BSP_GetNode(const mbsp_t *bsp, int nodenum);
 const mleaf_t *BSP_GetLeaf(const mbsp_t *bsp, int leafnum);
+int BSP_GetLeafNum(const mbsp_t *bsp, const mleaf_t *leaf);
 const mleaf_t *BSP_GetLeafFromNodeNum(const mbsp_t *bsp, int nodenum);
 const dplane_t *BSP_GetPlane(const mbsp_t *bsp, int planenum);
 const mface_t *BSP_GetFace(const mbsp_t *bsp, int fnum);
@@ -60,8 +61,8 @@ bool Face_IsTranslucent(const mbsp_t *bsp, const mface_t *face); // mxd
 int Face_ContentsOrSurfaceFlags(
     const mbsp_t *bsp, const mface_t *face); // mxd. Returns CONTENTS_ value for Q1, Q2_SURF_ bitflags for Q2...
 const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string &submodel_str);
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point);
-bool Light_PointInWorld(const mbsp_t *bsp, const qvec3d &point);
+bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const std::vector<contentflags_t> &extended_flags, const qvec3d &point);
+bool Light_PointInWorld(const mbsp_t *bsp, const std::vector<contentflags_t> &extended_flags, const qvec3d &point);
 
 std::vector<const mface_t *> BSP_FindFacesAtPoint(
     const mbsp_t *bsp, const dmodelh2_t *model, const qvec3d &point, const qvec3d &wantedNormal = qvec3d(0, 0, 0));

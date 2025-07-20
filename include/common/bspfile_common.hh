@@ -358,6 +358,7 @@ private:
 
 struct mbsp_t;
 std::vector<surfflags_t> LoadExtendedTexinfoFlags(const fs::path &sourcefilename, const mbsp_t *bsp);
+std::vector<contentflags_t> LoadExtendedContentFlags(const fs::path &sourcefilename, const mbsp_t *bsp);
 
 // native game target ID
 enum gameid_t

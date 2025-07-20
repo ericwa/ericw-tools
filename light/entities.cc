@@ -1092,7 +1092,7 @@ void LoadEntities(const settings::worldspawn_keys &cfg, const mbsp_t *bsp)
 std::tuple<qvec3f, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3f &point, bool warn, float max_dist)
 {
     // FIXME: Check all shadow casters
-    if (!Light_PointInWorld(bsp, point)) {
+    if (!Light_PointInWorld(bsp, extended_content_flags, point)) {
         return {point, true};
     }
 
@@ -1106,7 +1106,7 @@ std::tuple<qvec3f, bool> FixLightOnFace(const mbsp_t *bsp, const qvec3f &point, 
         testpoint[axis] += (add ? max_dist : -max_dist);
 
         // FIXME: Check all shadow casters
-        if (!Light_PointInWorld(bsp, testpoint)) {
+        if (!Light_PointInWorld(bsp, extended_content_flags, testpoint)) {
             return {testpoint, true};
         }
     }

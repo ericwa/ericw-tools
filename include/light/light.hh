@@ -463,6 +463,7 @@ std::span<lightsurf_t> &LightSurfaces();
 std::vector<lightsurf_t *> &EmissiveLightSurfaces();
 
 extern std::vector<surfflags_t> extended_texinfo_flags;
+extern std::vector<contentflags_t> extended_content_flags;
 
 lightmap_t *Lightmap_ForStyle(lightmapdict_t *lightmaps, const int style, const lightsurf_t *lightsurf);
 

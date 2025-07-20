@@ -1465,6 +1465,69 @@ TEST(testmapsQ1, qbspFuncDetailVariousTypes)
     EXPECT_GT(prt->portalleafs_real, 3);
 }
 
+TEST(testmapsQ1, detailFence)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_fence.map");
+
+    ASSERT_TRUE(prt.has_value());
+    EXPECT_EQ(GAME_QUAKE, bsp.loadversion->game->id);
+
+    const auto in_detail_fence = qvec3d(120, -72, 104);
+    auto extflags = LoadExtendedContentFlags(bsp.file, &bsp);
+
+    EXPECT_EQ(bsp.dleafs.size(), extflags.size());
+
+    const auto *detail_fence_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_detail_fence);
+    int leafnum = BSP_GetLeafNum(&bsp, detail_fence_leaf);
+
+    // check the extended contents
+    EXPECT_EQ(detail_fence_leaf->contents, CONTENTS_SOLID);
+    // due to FixupDetailFence, we move the marksurfaces out to a neighbour that will actually render them
+    EXPECT_EQ(detail_fence_leaf->nummarksurfaces, 0);
+
+    contentflags_t detail_fence_leaf_flags = extflags[leafnum];
+    EXPECT_EQ(detail_fence_leaf_flags.flags, EWT_VISCONTENTS_WINDOW | EWT_CFLAG_DETAIL);
+
+    // grab a random face inside the detail_fence - we should find it inside the player start leaf's markfaces list
+    const auto back_of_pillar_pos = qvec3d(176, -32, 120);
+    auto *back_of_pillar_face = BSP_FindFaceAtPoint(&bsp, &bsp.dmodels[0], back_of_pillar_pos);
+
+    // check the player start leaf
+    const auto player_start_pos = qvec3d(-56, -96, 120);
+    const auto *player_start_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], player_start_pos);
+    EXPECT_EQ(player_start_leaf->contents, CONTENTS_EMPTY);
+    auto markfaces = Leaf_Markfaces(&bsp, player_start_leaf);
+    EXPECT_THAT(markfaces, testing::Contains(back_of_pillar_face));
+
+    // check the cubby off to the side - it _shouldn't_ have got the back_of_pillar_face added to its marksurfaces
+    // (make sure the flood fill in FixupDetailFence() isn't propagating them excessively)
+    const auto cubby_pos = qvec3d(-176, -288, 96);
+    const auto *cubby_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], cubby_pos);
+    EXPECT_EQ(cubby_leaf->contents, CONTENTS_EMPTY);
+    auto cubby_leaf_markfaces = Leaf_Markfaces(&bsp, cubby_leaf);
+    EXPECT_THAT(cubby_leaf_markfaces, testing::Not(testing::Contains(back_of_pillar_face)));
+}
+
+TEST(testmapsQ1, detailFenceWithoutExtendedContents)
+{
+    const auto [bsp, bspx, prt] = LoadTestmapQ1("q1_detail_fence.map", {"-noextendedcontentflags"});
+
+    const auto in_detail_fence = qvec3d(120, -72, 104);
+
+    // the file doesn't exist, but we still get back an emulated version
+    auto extflags = LoadExtendedContentFlags(bsp.file, &bsp);
+    EXPECT_EQ(bsp.dleafs.size(), extflags.size());
+
+    const auto *detail_fence_leaf = BSP_FindLeafAtPoint(&bsp, &bsp.dmodels[0], in_detail_fence);
+    int leafnum = BSP_GetLeafNum(&bsp, detail_fence_leaf);
+
+    // check the basic and extended contents
+    EXPECT_EQ(detail_fence_leaf->contents, CONTENTS_SOLID);
+
+    contentflags_t detail_fence_leaf_flags = extflags[leafnum];
+    EXPECT_EQ(detail_fence_leaf_flags.flags, EWT_VISCONTENTS_SOLID);
+}
+
 TEST(testmapsQ1, angledBrush)
 {
     const auto [bsp, bspx, prt] = LoadTestmapQ1("qbsp_angled_brush.map");

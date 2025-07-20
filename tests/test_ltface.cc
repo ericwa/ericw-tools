@@ -838,6 +838,15 @@ TEST(ltfaceQ1, lightignore)
     }
 }
 
+TEST(ltfaceQ1, detailFence)
+{
+    // check that func_detail_fence has proper lighting inside (this relies on WriteExtendedContentFlags)
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_detail_fence.map", {});
+
+    CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {215, 215, 215}, {140, -80, 64}, {0, 0, 1}, &lit);
+}
+
 TEST(ltfaceQ2, lowLuxelRes)
 {
     auto [bsp, bspx] = QbspVisLight_Q2(

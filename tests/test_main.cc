@@ -49,7 +49,7 @@ int main(int argc, char **argv)
             continue;
         }
         // parse "-verbose"
-        if (!strcmp("-verbose", argv[i]) || !strcmp("--verbose", argv[i])) {
+        if (!strcmp("-verbose", argv[i]) || !strcmp("--verbose", argv[i]) || !strcmp("-v", argv[i])) {
             tests_verbose = true;
             continue;
         }

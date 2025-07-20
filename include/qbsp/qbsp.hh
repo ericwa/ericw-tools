@@ -211,6 +211,7 @@ public:
     setting_tjunc tjunc;
     setting_bool objexport;
     setting_bool noextendedsurfflags;
+    setting_bool noextendedcontentflags;
     setting_bool wrbrushes;
     setting_redirect wrbrushesonly;
     setting_bool bmodelcontents;
@@ -233,6 +234,7 @@ public:
     setting_bool loghulls;
     setting_bool logbmodels;
     setting_bool debug_missing_portal_sides;
+    setting_bool fixupdetailfence;
 
     void set_parameters(int argc, const char **argv) override;
     void initialize(int argc, const char **argv) override;

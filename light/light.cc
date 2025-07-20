@@ -108,6 +108,7 @@ std::vector<const modelinfo_t *> shadowworldonlylist;
 std::vector<const modelinfo_t *> switchableshadowlist;
 
 std::vector<surfflags_t> extended_texinfo_flags;
+std::vector<contentflags_t> extended_content_flags;
 
 int dump_facenum = -1;
 int dump_vertnum = -1;
@@ -1245,6 +1246,7 @@ static void ResetLight()
     switchableshadowlist.clear();
 
     extended_texinfo_flags.clear();
+    extended_content_flags.clear();
 
     dump_facenum = -1;
     dump_vertnum = -1;
@@ -1344,6 +1346,7 @@ int light_main(int argc, const char **argv)
     img::load_textures(&bsp, light_options);
 
     extended_texinfo_flags = LoadExtendedTexinfoFlags(source, &bsp);
+    extended_content_flags = LoadExtendedContentFlags(source, &bsp);
 
     CacheTextures(bsp);
 
