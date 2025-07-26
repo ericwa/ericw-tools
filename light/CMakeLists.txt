@@ -10,7 +10,9 @@ set(LIGHT_INCLUDES
 	../include/light/surflight.hh
 	../include/light/ltface.hh
 	../include/light/trace.hh
-	../include/light/write.hh)
+	../include/light/write.hh
+	../include/light/spatialindex.hh
+)
 
 set(LIGHT_SOURCES
 	entities.cc
@@ -22,7 +24,9 @@ set(LIGHT_SOURCES
 	bounce.cc
 	surflight.cc
 	write.cc
-	${LIGHT_INCLUDES})
+	spatialindex.cc
+	${LIGHT_INCLUDES}
+)
 
 if (embree_FOUND)
 	MESSAGE(STATUS "Embree library found: ${EMBREE_LIBRARY}")
