@@ -1253,6 +1253,32 @@ TEST(ltfaceQ1, switchableshadowTarget)
     CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {68, 0, 0}, in_shadow, {0, 0, 1}, &lit, &bspx, 32);
 }
 
+TEST(ltfaceQ1, switchableshadowSelfShadows)
+{
+    SCOPED_TRACE("Siwtchable shadow-casting geometry should always self-shadow as well, even when the world shadow is 'off'");
+
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_switchableshadow_selfshadows.map", {});
+    
+    const qvec3f selfshadowed_point{720, 1280, 960}; // on the bmodel that toggles
+    const qvec3f switching_point{648, 1288, 944}; // on the floor
+
+    {
+        SCOPED_TRACE("bmodel: is in shadow in style 0 (the bmodel has minlight though, so not 0)");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {12, 12, 12}, selfshadowed_point, {0, 0, 1}, &lit, &bspx, 0);
+    }
+
+    {
+        SCOPED_TRACE("bmodel: in style 32, there should be no data (so light 0 0 0)");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[1], {0, 0, 0}, selfshadowed_point, {0, 0, 1}, &lit, &bspx, 32);
+    }
+
+    {
+        SCOPED_TRACE("world: in shadow in style 0, lit up in style 32");
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {0, 0, 0}, switching_point, {0, 0, 1}, &lit, &bspx, 0);
+        CheckFaceLuxelAtPoint(&bsp, &bsp.dmodels[0], {89, 89, 89}, switching_point, {0, 0, 1}, &lit, &bspx, 32);
+    }
+}
+
 TEST(ltfaceQ1, surflightGroup)
 {
     auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_surflight_group.map", {});

@@ -368,11 +368,15 @@ static void Embree_FilterFuncN(const struct RTCFilterFunctionNArguments *args)
 
             const int style = hit_triinfo.switchshadstyle;
 
-            AddDynamicOccluderToRay(rsi, rayIndex, style);
+            // only treat it as a switchable shadow on models that are part of a different style-group.
+            // i.e. the switchable shadow caster should still self-shadow, when the shadow is "off"
+            if (!source_modelinfo || source_modelinfo->switchshadstyle.value() != style) {
+                AddDynamicOccluderToRay(rsi, rayIndex, style);
 
-            // reject hit
-            valid[i] = INVALID;
-            continue;
+                // reject hit
+                valid[i] = INVALID;
+                continue;
+            }
         }
 
         float alpha = hit_triinfo.alpha;
