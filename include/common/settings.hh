@@ -342,6 +342,8 @@ class setting_enum : public setting_value<T>
 {
 private:
     std::map<std::string, T, natural_case_insensitive_less> _values;
+    bool _can_omit_argument = false;
+    T _omitted_argument_value = static_cast<T>(0);
 
 public:
     inline setting_enum(setting_container *dictionary, const nameset &names, T v,
@@ -350,6 +352,15 @@ public:
         : setting_value<T>(dictionary, names, v, group, description),
           _values(enum_values.begin(), enum_values.end())
     {
+    }
+
+    inline setting_enum(setting_container *dictionary, const nameset &names, T v,
+        const std::initializer_list<std::pair<const char *, T>> &enum_values, can_omit_argument_tag tag,
+        T omitted_argument_value, const setting_group *group = nullptr, const char *description = "")
+        : setting_enum(dictionary, names, v, enum_values, group, description)
+    {
+        _can_omit_argument = true;
+        _omitted_argument_value = omitted_argument_value;
     }
 
     std::string string_value() const override
@@ -380,24 +391,34 @@ public:
 
     bool parse(const std::string &setting_name, parser_base_t &parser, source source) override
     {
-        if (!parser.parse_token()) {
-            return false;
+        if (parser.parse_token(PARSE_PEEK)) {
+            // see if it's a string enum case label
+            if (auto it = _values.find(parser.token); it != _values.end()) {
+                this->set_value(it->second, source);
+
+                // consume the token we peeked above
+                Q_assert(parser.parse_token());
+                return true;
+            }
+
+            // see if it's an integer
+            try {
+                const int i = std::stoi(parser.token);
+
+                this->set_value(static_cast<T>(i), source);
+
+                // consume the token we peeked above
+                Q_assert(parser.parse_token());
+                return true;
+            } catch (std::invalid_argument &) {
+            } catch (std::out_of_range &) {
+            }
         }
 
-        // see if it's a string enum case label
-        if (auto it = _values.find(parser.token); it != _values.end()) {
-            this->set_value(it->second, source);
+        // either there is nothing to parse, or it failed to parse as a case label/int
+        if (_can_omit_argument) {
+            this->set_value(_omitted_argument_value, source);
             return true;
-        }
-
-        // see if it's an integer
-        try {
-            const int i = std::stoi(parser.token);
-
-            this->set_value(static_cast<T>(i), source);
-            return true;
-        } catch (std::invalid_argument &) {
-        } catch (std::out_of_range &) {
         }
 
         return false;
@@ -592,6 +613,9 @@ public:
      * eaten by the options).
      */
     std::vector<std::string> parse(parser_base_t &parser);
+
+    // convenience, for tests
+    std::vector<std::string> parse_string(std::string_view string);
 };
 
 // global groups

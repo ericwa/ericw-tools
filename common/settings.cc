@@ -717,6 +717,12 @@ std::vector<std::string> setting_container::parse(parser_base_t &parser)
     return remainder;
 }
 
+std::vector<std::string> setting_container::parse_string(std::string_view string)
+{
+    parser_t parser(string, parser_source_location());
+    return this->parse(parser);
+}
+
 // global settings
 common_settings::common_settings()
     : threads{this, "threads", 0, &performance_group, "number of threads to use, maximum; leave 0 for automatic"},

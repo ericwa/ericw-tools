@@ -167,6 +167,74 @@ TEST(settings, int32CanOmitArgumentRemainder)
     ASSERT_EQ(remainder, std::vector<std::string>{"remainder"});
 }
 
+// test enum
+
+enum class testenum
+{
+    A = 0,
+    B = 1,
+    C = 2,
+    D = 3
+};
+
+class SettingEnumTest : public testing::Test {
+protected:
+    settings::setting_container settings;
+
+    settings::setting_enum<testenum> enum_required_arg {
+        &settings, "enum_required_arg", testenum::A, {{"A", testenum::A}, {"B", testenum::B}, {"C", testenum::C}, {"D", testenum::D}}
+    };
+
+    // no arg specified gives A.
+    // -enum_optional_arg alone is an alias for B.
+    settings::setting_enum<testenum> enum_optional_arg {
+        &settings, "enum_optional_arg", testenum::A, {{"A", testenum::A}, {"B", testenum::B}, {"C", testenum::C}, {"D", testenum::D}},
+        settings::can_omit_argument_tag(), testenum::B
+    };
+
+    settings::setting_scalar scalar_setting {&settings, "scale", 1.0};
+};
+
+TEST_F(SettingEnumTest, enumRequiredArgMissing)
+{
+    ASSERT_THROW(settings.parse_string("-enum_required_arg -scale 3"), settings::parse_exception);
+    ASSERT_EQ(scalar_setting.value(), 1);
+}
+
+TEST_F(SettingEnumTest, enumRequired)
+{
+    ASSERT_EQ(settings.parse_string("-enum_required_arg C -scale 3"), std::vector<std::string>());
+    ASSERT_EQ(enum_required_arg.value(), testenum::C);
+    ASSERT_EQ(enum_optional_arg.value(), testenum::A);
+    ASSERT_EQ(scalar_setting.value(), 3);
+}
+
+TEST_F(SettingEnumTest, enumOptional)
+{
+    ASSERT_EQ(settings.parse_string("-enum_optional_arg D remainder"), (std::vector<std::string>{"remainder"}));
+    ASSERT_EQ(enum_optional_arg.value(), testenum::D);
+}
+
+TEST_F(SettingEnumTest, enumOptionalOmittedEOF)
+{
+    ASSERT_EQ(settings.parse_string("-enum_optional_arg"), std::vector<std::string>());
+    ASSERT_EQ(enum_optional_arg.value(), testenum::B);
+}
+
+TEST_F(SettingEnumTest, enumOptionalOmittedWithNextArg)
+{
+    ASSERT_EQ(settings.parse_string("-enum_optional_arg -scale 3"), std::vector<std::string>());
+    ASSERT_EQ(enum_optional_arg.value(), testenum::B);
+    ASSERT_EQ(scalar_setting.value(), 3);
+}
+
+TEST_F(SettingEnumTest, enumOptionalOmittedWithRemainder)
+{
+    ASSERT_EQ(settings.parse_string("-enum_optional_arg remainder"), (std::vector<std::string>{"remainder"}));
+    ASSERT_EQ(enum_optional_arg.value(), testenum::B);
+    ASSERT_EQ(scalar_setting.value(), 1);
+}
+
 // test vec3
 TEST(settings, vec3Simple)
 {
