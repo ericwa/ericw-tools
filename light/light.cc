@@ -503,10 +503,6 @@ void light_settings::light_postinitialize(int argc, const char **argv)
         }
     }
 
-    if (debugmode != debugmodes::none) {
-        write_litfile |= lightfile_t::lit;
-    }
-
     if (litonly.value()) {
         write_litfile |= lightfile_t::lit;
     }
@@ -1112,8 +1108,12 @@ static void FindDebugVert(const mbsp_t *bsp)
     dump_vertnum = v;
 }
 
-static void SetLitNeeded()
+void SetLitNeeded(const bspdata_t &bspdata)
 {
+    if (bspdata.loadversion->game->has_rgb_lightmap) {
+        return;
+    }
+
     if (!light_options.write_litfile) {
         if (light_options.novanilla.value()) {
             light_options.write_litfile = lightfile_t::bspx;
@@ -1124,29 +1124,6 @@ static void SetLitNeeded()
             logging::print("Colored light entities/settings detected: "
                            ".lit output enabled.\n");
         }
-    }
-}
-
-static void CheckLitNeeded(const settings::worldspawn_keys &cfg)
-{
-    // check lights
-    for (const auto &light : GetLights()) {
-        if (!qv::epsilonEqual(vec3_white, light->color.value(), LIGHT_EQUAL_EPSILON) ||
-            light->projectedmip != nullptr) { // mxd. Projected mips could also use .lit output
-            SetLitNeeded();
-            return;
-        }
-    }
-
-    // check global settings
-    if (cfg.bouncecolorscale.value() != 0 ||
-        !qv::epsilonEqual(cfg.minlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sun2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight2_color.value(), vec3_white, LIGHT_EQUAL_EPSILON) ||
-        !qv::epsilonEqual(cfg.sunlight3_color.value(), vec3_white, LIGHT_EQUAL_EPSILON)) {
-        SetLitNeeded();
-        return;
     }
 }
 
@@ -1377,10 +1354,6 @@ int light_main(int argc, const char **argv)
     // PrintLights();
 
     if (!light_options.onlyents.value()) {
-        if (!bspdata.loadversion->game->has_rgb_lightmap) {
-            CheckLitNeeded(light_options);
-        }
-
         SetupDirt(light_options);
 
         LightWorld(&bspdata, source, light_options.lightmap_scale.is_changed());

@@ -1130,6 +1130,14 @@ TEST(ltfaceHL, lightBlack)
     }
 }
 
+TEST(ltfaceQ1, litNotGenerated)
+{
+    SCOPED_TRACE("map with no colored lights doesn't generate a .lit");
+    auto [bsp, bspx, lit] = QbspVisLight_Q1("q1_light_skip_shadow.map", {});
+
+    EXPECT_TRUE(std::holds_alternative<lit_none>(lit));
+}
+
 TEST(ltfaceQ1, hdr)
 {
     // center of the room on the floor.

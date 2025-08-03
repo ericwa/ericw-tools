@@ -591,6 +591,20 @@ inline void LightFace_ScaleAndClamp(lightsurf_t *lightsurf)
     }
 }
 
+static bool Lightsurf_HasColor(const lightsurf_t &lightsurf)
+{
+    for (const lightmap_t &lightmap : lightsurf.lightmapsByStyle) {
+        for (int i = 0; i < lightmap.samples.size(); i++) {
+            const qvec3f &color = lightmap.samples[i].color;
+
+            for (int j = 1; j <= 2; ++j)
+                if (!qv::epsilonEqual(color[0], color[j], LIGHT_EQUAL_EPSILON))
+                    return true;
+        }
+    }
+    return false;
+}
+
 void FinishLightmapSurface(const mbsp_t *bsp, lightsurf_t *lightsurf)
 {
     /* Apply gamma, rangescale, and clamp */
@@ -1031,6 +1045,8 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
         std::vector<lightmap_intermediate_data_t> intermediate_data;
         intermediate_data.resize(bsp->dfaces.size());
 
+        std::atomic_bool has_color = false;
+
         // calculate finish lightmaps and calculate lightofs for each face.
         // the lightofs will be set to the size in bytes.
         logging::parallel_for(static_cast<size_t>(0), bsp->dfaces.size(), [&](size_t i) {
@@ -1070,7 +1086,17 @@ void SaveLightmapSurfaces(bspdata_t *bspdata, const fs::path &source)
             if (num_styles) {
                 intermediate_data[i].lightofs = GetFileSpace(lightmap_size, surf.extents.numsamples() * num_styles);
             }
+
+            if (Lightsurf_HasColor(surf)) {
+                has_color = true;
+            }
         });
+
+        // auto-generate .lit file if appropriate
+        logging::print(logging::flag::STAT, "map uses color: {}\n", static_cast<bool>(has_color));
+        if (has_color) {
+            SetLitNeeded(*bspdata);
+        }
 
         // allocate required space
         if (!bsp->loadversion->game->has_rgb_lightmap) {
