@@ -1441,7 +1441,7 @@ Fetch the final contents flag of the given mapbrush.
 static contentflags_t Brush_GetContents(const mapentity_t &entity, const mapbrush_t &mapbrush)
 {
     bool base_contents_set = false;
-    contentflags_t base_contents = qbsp_options.target_game->create_empty_contents();
+    contentflags_t base_contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
     // validate that all of the sides have valid contents
     for (auto &mapface : mapbrush.faces) {

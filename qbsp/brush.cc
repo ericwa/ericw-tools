@@ -803,7 +803,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
                 continue;
                 // for hull1, 2, etc., convert clip to CONTENTS_SOLID
             } else {
-                contents = qbsp_options.target_game->create_solid_contents();
+                contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
             }
         }
 
@@ -812,7 +812,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             if (hullnum.value_or(0)) {
                 continue;
             }
-            contents = qbsp_options.target_game->create_empty_contents();
+            contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         }
 
         /* entities in some games never use water merging */
@@ -824,7 +824,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             // to CONTENTS_SOLID at export. (we wouldn't generate inside faces if the content was CONTENTS_SOLID
             // from the start.)
             contents = qbsp_options.target_game->create_detail_fence_contents(
-                qbsp_options.target_game->create_solid_contents());
+                contentflags_t::make(EWT_VISCONTENTS_SOLID));
         }
 
         if (hullnum.value_or(0)) {
@@ -835,7 +835,7 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             }
 
             /* all used brushes are solid in the collision hulls */
-            contents = qbsp_options.target_game->create_solid_contents();
+            contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
 
         // fixme-brushbsp: function calls above can override the values below

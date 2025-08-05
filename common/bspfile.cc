@@ -291,10 +291,6 @@ public:
         return contentflags_t::make(combined);
     }
 
-    contentflags_t create_empty_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_EMPTY); }
-
-    contentflags_t create_solid_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_SOLID); }
-
     contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
     {
         return contentflags_t::make(EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL);
@@ -501,7 +497,7 @@ public:
          * Normally solid leafs are not written and just referenced as leaf 0.
          */
         if (contents_are_detail_fence(contents) || contents_are_detail_wall(contents)) {
-            return create_solid_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
 
         if (contents.flags & EWT_VISCONTENTS_MIST) {
@@ -525,7 +521,7 @@ public:
         auto result = contentflags_t::make(bits_a | bits_b);
 
         if (contents_are_solid(a) || contents_are_solid(b)) {
-            return create_solid_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
         if (contents_are_sky(a) || contents_are_sky(b)) {
             return contentflags_t::make(EWT_VISCONTENTS_SKY);
@@ -546,7 +542,7 @@ public:
         // aviods spamming "sides not found" warning on Q1 maps with sky
         if ((bits_a & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)) &&
             (bits_b & (EWT_VISCONTENTS_SOLID | EWT_VISCONTENTS_SKY)))
-            return create_empty_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
         contents_int_t result;
 
@@ -614,7 +610,7 @@ public:
         if (!Q_strcasecmp(texname.data(), "origin")) {
             return contentflags_t::make(EWT_INVISCONTENTS_ORIGIN);
         } else if (!Q_strcasecmp(texname.data(), "hint") || !Q_strcasecmp(texname.data(), "hintskip")) {
-            return create_empty_contents();
+            return contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         } else if (!Q_strcasecmp(texname.data(), "clip")) {
             return contentflags_t::make(EWT_INVISCONTENTS_PLAYERCLIP);
         } else if (texname[0] == '*') {
@@ -630,7 +626,7 @@ public:
         }
 
         // and anything else is assumed to be a regular solid.
-        return create_solid_contents();
+        return contentflags_t::make(EWT_VISCONTENTS_SOLID);
     }
 
     void init_filesystem(const fs::path &map_or_bsp, const settings::common_settings &options) const override
@@ -1064,10 +1060,6 @@ struct gamedef_q2_t : public gamedef_t
     {
         return contents.flags & (EWT_ALL_VISIBLE_CONTENTS | EWT_ALL_INVISCONTENTS);
     }
-
-    contentflags_t create_empty_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_EMPTY); }
-
-    contentflags_t create_solid_contents() const override { return contentflags_t::make(EWT_VISCONTENTS_SOLID); }
 
     contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
     {

@@ -18,7 +18,7 @@ TEST(common, q1Contents)
 {
     auto *game_q1 = bspver_q1.game;
 
-    const auto solid = game_q1->create_solid_contents();
+    const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
     const auto detail_solid = game_q1->create_detail_solid_contents(solid);
     const auto detail_wall = game_q1->create_detail_wall_contents(solid);
     const auto detail_fence = game_q1->create_detail_fence_contents(solid);
@@ -84,9 +84,9 @@ TEST(common, clusterContents)
         {
             SCOPED_TRACE(bspver->name);
 
-            const auto solid = game->create_solid_contents();
+            const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
             const auto solid_detail = game->create_detail_solid_contents(solid);
-            const auto empty = game->create_empty_contents();
+            const auto empty = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
 
             auto solid_solid_cluster = game->cluster_contents(solid_detail, solid_detail);
             SCOPED_TRACE(solid_solid_cluster.to_string());
@@ -138,7 +138,7 @@ TEST(common, sharedContentFlagTests)
         {
             SCOPED_TRACE(bspver->name);
 
-            const auto solid = game->create_solid_contents();
+            const auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
             const auto detail_solid = game->create_detail_solid_contents(solid);
             const auto detail_wall = game->create_detail_wall_contents(solid);
             const auto detail_fence = game->create_detail_fence_contents(solid);
@@ -153,7 +153,7 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_empty");
 
-                EXPECT_TRUE(game->create_empty_contents().is_empty(game));
+                EXPECT_TRUE(contentflags_t::make(EWT_VISCONTENTS_EMPTY).is_empty(game));
                 EXPECT_FALSE(solid.is_empty(game));
                 EXPECT_FALSE(detail_solid.is_empty(game));
                 EXPECT_FALSE(detail_wall.is_empty(game));
@@ -255,7 +255,7 @@ TEST(common, q2Contents)
             {Q2_CONTENTS_DETAIL | Q2_CONTENTS_MIST, Q2_CONTENTS_SOLID | Q2_CONTENTS_MIST} // detail flag gets erased
         };
 
-        auto solid = game_q2->create_solid_contents();
+        auto solid = contentflags_t::make(EWT_VISCONTENTS_SOLID);
         EXPECT_EQ(game_q2->contents_to_native(solid), Q2_CONTENTS_SOLID);
 
         for (const auto &[before, after] : before_after_adding_solid) {

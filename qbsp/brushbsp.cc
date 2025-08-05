@@ -351,7 +351,7 @@ static void LeafNode(node_t *leafnode, bspbrush_t::container brushes, bspstats_t
 
     auto *leafdata = leafnode->get_leafdata();
 
-    leafdata->contents = qbsp_options.target_game->create_empty_contents();
+    leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
     for (auto &brush : brushes) {
         leafdata->contents = qbsp_options.target_game->combine_contents(leafdata->contents, brush->contents);
     }
@@ -1278,11 +1278,11 @@ void BrushBSP(tree_t &tree, mapentity_t &entity, const bspbrush_t::container &br
         nodedata->planenum = 0;
         nodedata->children[0] = tree.create_node();
         nodedata->children[0]->make_leaf();
-        nodedata->children[0]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[0]->get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         nodedata->children[0]->parent = headnode;
         nodedata->children[1] = tree.create_node();
         nodedata->children[1]->make_leaf();
-        nodedata->children[1]->get_leafdata()->contents = qbsp_options.target_game->create_empty_contents();
+        nodedata->children[1]->get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_EMPTY);
         nodedata->children[1]->parent = headnode;
 
         tree.headnode = headnode;

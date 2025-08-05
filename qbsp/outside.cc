@@ -504,7 +504,7 @@ static void OutLeafsToSolid_R(node_t *node, settings::filltype_t filltype, outle
     }
 
     // Finally, we can fill it in as void.
-    leafdata->contents = qbsp_options.target_game->create_solid_contents();
+    leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
     stats.outleafs++;
 }
 
@@ -535,7 +535,7 @@ static void FillDetailEnclosedLeafsToDetailSolid_R(node_t *node, detail_filled_l
 
     // Finally, we can fill it in as detail solid.
     leafdata->contents =
-        qbsp_options.target_game->create_detail_solid_contents(qbsp_options.target_game->create_solid_contents());
+        qbsp_options.target_game->create_detail_solid_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
     stats.filledleafs++;
 }
 

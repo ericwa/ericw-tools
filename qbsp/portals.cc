@@ -130,7 +130,7 @@ std::list<buildportal_t> MakeHeadnodePortals(tree_t &tree)
     aabb3d bounds = tree.bounds.grow(SIDESPACE);
 
     tree.outside_node.make_leaf();
-    tree.outside_node.get_leafdata()->contents = qbsp_options.target_game->create_solid_contents();
+    tree.outside_node.get_leafdata()->contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
     tree.outside_node.portals = nullptr;
 
     // create 6 portals forming a cube around the bounds of the map.

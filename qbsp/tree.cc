@@ -126,7 +126,7 @@ static void PruneNodes_R(node_t *node, prune_stats_t &stats)
         // remap any contents
         if (qbsp_options.target_game->id != GAME_QUAKE_II &&
             leafdata->contents.is_detail_wall(qbsp_options.target_game)) {
-            leafdata->contents = qbsp_options.target_game->create_solid_contents();
+            leafdata->contents = contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
         return;
     }
