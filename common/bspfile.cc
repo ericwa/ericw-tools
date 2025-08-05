@@ -335,11 +335,6 @@ public:
         return self.flags == other.flags;
     }
 
-    bool contents_are_any_detail(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL) != 0;
-    }
-
     bool contents_are_detail_solid(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|solid|detail)
@@ -1104,11 +1099,6 @@ struct gamedef_q2_t : public gamedef_t
     bool contents_are_equal(contentflags_t self, contentflags_t other) const override
     {
         return self.flags == other.flags;
-    }
-
-    bool contents_are_any_detail(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_CFLAG_DETAIL) != 0;
     }
 
     bool contents_are_detail_solid(contentflags_t contents) const override
