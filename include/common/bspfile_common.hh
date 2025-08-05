@@ -61,35 +61,36 @@ using contents_int_t = uint64_t;
 enum contents_t : contents_int_t
 {
     EWT_VISCONTENTS_EMPTY = 0,
-    EWT_VISCONTENTS_SOLID = nth_bit<uint64_t>(0), // an eye is never valid in a solid
+    /** an eye is never valid in a solid */
+    EWT_VISCONTENTS_SOLID = nth_bit<uint64_t>(0),
     EWT_VISCONTENTS_SKY = nth_bit<uint64_t>(1),
+    /** eye never valid inside. always detail, doesn't split other faces. (func_detail_wall) */
     EWT_VISCONTENTS_DETAIL_WALL = nth_bit<uint64_t>(2),
-    EWT_VISCONTENTS_WINDOW = nth_bit<uint64_t>(3), // translucent, but not watery (detail fence)
-    /**
-     * Visblocking mist, but doesn't merge with mist/aux
-     */
+    /** translucent, but not watery. eye valid inside. (func_detail_fence) */
+    EWT_VISCONTENTS_WINDOW = nth_bit<uint64_t>(3),
+    /** Visblocking mist, but doesn't merge with mist/aux. (func_illusionary_visblocker) */
     EWT_VISCONTENTS_ILLUSIONARY_VISBLOCKER = nth_bit<uint64_t>(4),
-    /**
-     * Mist but not mirrored by default. Doesn't merge with mist. Never visblocking / always detail.
-     */
+    /** Mist but not mirrored by default. Doesn't merge with mist. Never visblocking / always detail. */
     EWT_VISCONTENTS_AUX = nth_bit<uint64_t>(5),
     EWT_VISCONTENTS_LAVA = nth_bit<uint64_t>(6),
     EWT_VISCONTENTS_SLIME = nth_bit<uint64_t>(7),
     EWT_VISCONTENTS_WATER = nth_bit<uint64_t>(8),
-    /**
-     * Never visblocking / always detail.
-     */
+    /** Never visblocking / always detail. (func_detail_illusionary). */
     EWT_VISCONTENTS_MIST = nth_bit<uint64_t>(9),
 
     EWT_LAST_VISIBLE_CONTENTS_INDEX = 9,
     EWT_LAST_VISIBLE_CONTENTS = EWT_VISCONTENTS_MIST,
 
-    EWT_INVISCONTENTS_ORIGIN = nth_bit<uint64_t>(10), // removed before bsping an entity
-    EWT_INVISCONTENTS_PLAYERCLIP = nth_bit<uint64_t>(11), // Q1 clip
+    /** removed before bsping an entity */
+    EWT_INVISCONTENTS_ORIGIN = nth_bit<uint64_t>(10),
+    /** Q1 clip */
+    EWT_INVISCONTENTS_PLAYERCLIP = nth_bit<uint64_t>(11),
     EWT_INVISCONTENTS_MONSTERCLIP = nth_bit<uint64_t>(12),
     EWT_INVISCONTENTS_AREAPORTAL = nth_bit<uint64_t>(13),
-    EWT_INVISCONTENTS_NO_WATERJUMP = nth_bit<uint64_t>(14), // re-release
-    EWT_INVISCONTENTS_PROJECTILECLIP = nth_bit<uint64_t>(15), // re-release
+    /** re-release */
+    EWT_INVISCONTENTS_NO_WATERJUMP = nth_bit<uint64_t>(14),
+    /** re-release */
+    EWT_INVISCONTENTS_PROJECTILECLIP = nth_bit<uint64_t>(15),
 
     EWT_CFLAG_MIRROR_INSIDE = nth_bit<uint64_t>(16),
     EWT_CFLAG_MIRROR_INSIDE_SET = nth_bit<uint64_t>(17),
@@ -101,11 +102,15 @@ enum contents_t : contents_int_t
     EWT_CFLAG_CURRENT_270 = nth_bit<uint64_t>(22),
     EWT_CFLAG_CURRENT_UP = nth_bit<uint64_t>(23),
     EWT_CFLAG_CURRENT_DOWN = nth_bit<uint64_t>(24),
-    EWT_CFLAG_TRANSLUCENT = nth_bit<uint64_t>(25), // auto set if any surface has trans,
+    /** auto set if any surface has trans, */
+    EWT_CFLAG_TRANSLUCENT = nth_bit<uint64_t>(25),
     EWT_CFLAG_LADDER = nth_bit<uint64_t>(26),
-    EWT_CFLAG_MONSTER = nth_bit<uint64_t>(27), // disallowed in maps, only for gamecode use
-    EWT_CFLAG_DEADMONSTER = nth_bit<uint64_t>(28), // disallowed in maps, only for gamecode use
-    EWT_CFLAG_DETAIL = nth_bit<uint64_t>(29), // brushes to be added after vis leafs
+    /** disallowed in maps, only for gamecode use */
+    EWT_CFLAG_MONSTER = nth_bit<uint64_t>(27),
+    /** disallowed in maps, only for gamecode use */
+    EWT_CFLAG_DEADMONSTER = nth_bit<uint64_t>(28),
+    /** brushes to be added after vis leafs */
+    EWT_CFLAG_DETAIL = nth_bit<uint64_t>(29),
 
     // unused Q2 contents bits - just present here so we can roundtrip all 32-bit Q2 contents
     EWT_CFLAG_Q2_UNUSED_7 = nth_bit<uint64_t>(30),
