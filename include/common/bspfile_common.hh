@@ -440,7 +440,9 @@ struct gamedef_t
     virtual bool contents_are_detail_wall(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_fence(contentflags_t contents) const = 0;
     virtual bool contents_are_detail_illusionary(contentflags_t contents) const = 0;
-    virtual bool contents_are_origin(contentflags_t contents) const = 0;
+    bool contents_are_origin(contentflags_t contents) const {
+        return (contents.flags & EWT_INVISCONTENTS_ORIGIN) != 0;
+    }
     virtual bool contents_are_clip(contentflags_t contents) const = 0;
     virtual bool contents_are_empty(contentflags_t contents) const = 0;
     virtual bool contents_clip_same_type(contentflags_t self, contentflags_t other) const = 0;

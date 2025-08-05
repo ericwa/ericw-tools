@@ -364,12 +364,6 @@ public:
         return (contents.flags & EWT_CFLAG_DETAIL) && (contents.flags & EWT_VISCONTENTS_MIST);
     }
 
-    bool contents_are_origin(contentflags_t contents) const override
-    {
-        // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|origin)
-        return (contents.flags & EWT_INVISCONTENTS_ORIGIN) != 0;
-    }
-
     bool contents_are_clip(contentflags_t contents) const override
     {
         // fixme-brushbsp: document whether this is an exclusive test (i.e. what does it return for water|clip)
@@ -1155,11 +1149,6 @@ struct gamedef_q2_t : public gamedef_t
         contents_int_t mist2_type = (EWT_CFLAG_DETAIL | EWT_VISCONTENTS_AUX);
 
         return ((contents.flags & mist1_type) == mist1_type) || ((contents.flags & mist2_type) == mist2_type);
-    }
-
-    bool contents_are_origin(contentflags_t contents) const override
-    {
-        return contents.flags & EWT_INVISCONTENTS_ORIGIN;
     }
 
     bool contents_are_clip(contentflags_t contents) const override
