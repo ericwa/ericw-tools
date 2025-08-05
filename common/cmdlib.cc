@@ -51,9 +51,7 @@ char Q_tolower(char x)
 
 int32_t Q_strncasecmp(std::string_view a, std::string_view b, size_t maxcount)
 {
-    return Q_strcasecmp(
-        a.substr(0, maxcount),
-        b.substr(0, maxcount));
+    return Q_strcasecmp(a.substr(0, maxcount), b.substr(0, maxcount));
 }
 
 int32_t Q_strcasecmp(std::string_view a, std::string_view b)

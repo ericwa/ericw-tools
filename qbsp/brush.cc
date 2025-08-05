@@ -823,8 +823,8 @@ static void Brush_LoadEntity(mapentity_t &dst, mapentity_t &src, hull_index_t hu
             // to allow use of _mirrorinside, we'll set it to detail fence, which will get remapped back
             // to CONTENTS_SOLID at export. (we wouldn't generate inside faces if the content was CONTENTS_SOLID
             // from the start.)
-            contents = qbsp_options.target_game->create_detail_fence_contents(
-                contentflags_t::make(EWT_VISCONTENTS_SOLID));
+            contents =
+                qbsp_options.target_game->create_detail_fence_contents(contentflags_t::make(EWT_VISCONTENTS_SOLID));
         }
 
         if (hullnum.value_or(0)) {

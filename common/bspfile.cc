@@ -148,7 +148,7 @@ nlohmann::json get_contents_json(contents_t bits)
 
     for (uint32_t i = 0; i < std::size(bitflag_names); i++) {
         if (bits & nth_bit<contents_int_t>(i)) {
-           result.push_back(bitflag_names[i]);
+            result.push_back(bitflag_names[i]);
         }
     }
 

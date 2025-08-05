@@ -483,7 +483,7 @@ static void FixupMarkFaces_ProcessCluster(node_t *node)
     }
 
     // final part: now that we've identified the storage destinations, actually store there
-    for (auto *storage_leaf: storage_leafs) {
+    for (auto *storage_leaf : storage_leafs) {
         FixupMarkFaces_AddFacesToLeaf(storage_leaf, marfaces_to_propagate);
     }
 }

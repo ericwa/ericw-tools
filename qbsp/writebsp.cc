@@ -204,7 +204,8 @@ static void ExportLeaf(node_t *node)
 
                 // TODO: move to game specific
                 // always include LIGHT
-                if (qbsp_options.target_game->id != GAME_QUAKE_II || !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
+                if (qbsp_options.target_game->id != GAME_QUAKE_II ||
+                    !(face->get_texinfo().flags.native_q2 & Q2_SURF_LIGHT))
                     continue;
             }
 
@@ -340,8 +341,7 @@ void BeginBSPFile()
 
     // Leave room for leaf 0 (must be solid)
     auto &solid_leaf = map.bsp.dleafs.emplace_back();
-    solid_leaf.contents =
-        qbsp_options.target_game->contents_to_native(contentflags_t::make(EWT_VISCONTENTS_SOLID));
+    solid_leaf.contents = qbsp_options.target_game->contents_to_native(contentflags_t::make(EWT_VISCONTENTS_SOLID));
     solid_leaf.cluster = CLUSTER_INVALID;
     Q_assert(map.bsp.dleafs.size() == 1);
 

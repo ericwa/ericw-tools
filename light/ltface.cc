@@ -693,7 +693,8 @@ static lightsurf_t Lightsurf_Init(const modelinfo_t *modelinfo, const settings::
 
         /* Set up the surface points */
         if (light_options.world_units_per_luxel.is_changed()) {
-            if (bsp->loadversion->game->id == GAME_QUAKE_II && (Face_Texinfo(bsp, face)->flags.native_q2 & Q2_SURF_SKY)) {
+            if (bsp->loadversion->game->id == GAME_QUAKE_II &&
+                (Face_Texinfo(bsp, face)->flags.native_q2 & Q2_SURF_SKY)) {
                 lightsurf.extents = faceextents_t(*face, *bsp, world_units_per_luxel_t{}, 512.f);
             } else if (extended_flags.world_units_per_luxel) {
                 lightsurf.extents =

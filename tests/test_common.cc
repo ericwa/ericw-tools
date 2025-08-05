@@ -468,8 +468,7 @@ TEST(surfflags, jsonAllQ1)
 
 TEST(surfflags, jsonAllExtended)
 {
-    surfflags_t flags{
-        .native_q2 = static_cast<q2_surf_flags_t>(Q2_SURF_ALL),
+    surfflags_t flags{.native_q2 = static_cast<q2_surf_flags_t>(Q2_SURF_ALL),
         .native_q1 = TEX_SPECIAL,
         .no_dirt = true,
         .no_shadow = true,
@@ -495,8 +494,7 @@ TEST(surfflags, jsonAllExtended)
         .lightcolorscale = 1.7,
         .surflight_group = 4,
         .world_units_per_luxel = std::optional<float>{15.0f},
-        .object_channel_mask = std::optional<int32_t>{323}
-    };
+        .object_channel_mask = std::optional<int32_t>{323}};
 
     nlohmann::json json = flags.to_json();
     surfflags_t roundtrip = surfflags_t::from_json(json);

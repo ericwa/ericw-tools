@@ -24,21 +24,23 @@ See file, 'COPYING', for details.
 
 #include <any>
 
-struct hitresult_t {
+struct hitresult_t
+{
     bool hit;
     qvec3f hitpos;
     // points to data owned by spatialindex_t, or nullptr if we didn't hit anything
     const std::any *hitpayload;
 };
 
-enum class state_t {
+enum class state_t
+{
     filling_geom,
     tracing
 };
 
-class spatialindex_t {
+class spatialindex_t
+{
 private:
-
     state_t state = state_t::filling_geom;
 
     RTCDevice device = nullptr;
@@ -55,8 +57,8 @@ private:
 public:
     ~spatialindex_t();
     spatialindex_t();
-    spatialindex_t(const spatialindex_t& other) = delete;
-    spatialindex_t& operator=(const spatialindex_t& other) = delete;
+    spatialindex_t(const spatialindex_t &other) = delete;
+    spatialindex_t &operator=(const spatialindex_t &other) = delete;
 
     void clear();
     void add_poly(const polylib::winding_t &winding, std::any payload);

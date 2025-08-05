@@ -263,7 +263,8 @@ const dmodelh2_t *BSP_DModelForModelString(const mbsp_t *bsp, const std::string 
     return nullptr;
 }
 
-static bool Light_PointInSolid_r(const mbsp_t *bsp, const std::vector<contentflags_t> &extended_flags, const int nodenum, const qvec3d &point)
+static bool Light_PointInSolid_r(
+    const mbsp_t *bsp, const std::vector<contentflags_t> &extended_flags, const int nodenum, const qvec3d &point)
 {
     if (nodenum < 0) {
         const mleaf_t *leaf = BSP_GetLeafFromNodeNum(bsp, nodenum);
@@ -284,12 +285,13 @@ static bool Light_PointInSolid_r(const mbsp_t *bsp, const std::vector<contentfla
         return Light_PointInSolid_r(bsp, extended_flags, node->children[1], point);
 
     // too close to the plane, check both sides
-    return Light_PointInSolid_r(bsp, extended_flags, node->children[0], point)
-           || Light_PointInSolid_r(bsp, extended_flags, node->children[1], point);
+    return Light_PointInSolid_r(bsp, extended_flags, node->children[0], point) ||
+           Light_PointInSolid_r(bsp, extended_flags, node->children[1], point);
 }
 
 // Tests hull 0 of the given model
-bool Light_PointInSolid(const mbsp_t *bsp, const dmodelh2_t *model, const std::vector<contentflags_t> &extended_flags, const qvec3d &point)
+bool Light_PointInSolid(
+    const mbsp_t *bsp, const dmodelh2_t *model, const std::vector<contentflags_t> &extended_flags, const qvec3d &point)
 {
     return Light_PointInSolid_r(bsp, extended_flags, model->headnode[0], point);
 }

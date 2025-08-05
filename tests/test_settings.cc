@@ -177,22 +177,21 @@ enum class testenum
     D = 3
 };
 
-class SettingEnumTest : public testing::Test {
+class SettingEnumTest : public testing::Test
+{
 protected:
     settings::setting_container settings;
 
-    settings::setting_enum<testenum> enum_required_arg {
-        &settings, "enum_required_arg", testenum::A, {{"A", testenum::A}, {"B", testenum::B}, {"C", testenum::C}, {"D", testenum::D}}
-    };
+    settings::setting_enum<testenum> enum_required_arg{&settings, "enum_required_arg", testenum::A,
+        {{"A", testenum::A}, {"B", testenum::B}, {"C", testenum::C}, {"D", testenum::D}}};
 
     // no arg specified gives A.
     // -enum_optional_arg alone is an alias for B.
-    settings::setting_enum<testenum> enum_optional_arg {
-        &settings, "enum_optional_arg", testenum::A, {{"A", testenum::A}, {"B", testenum::B}, {"C", testenum::C}, {"D", testenum::D}},
-        settings::can_omit_argument_tag(), testenum::B
-    };
+    settings::setting_enum<testenum> enum_optional_arg{&settings, "enum_optional_arg", testenum::A,
+        {{"A", testenum::A}, {"B", testenum::B}, {"C", testenum::C}, {"D", testenum::D}},
+        settings::can_omit_argument_tag(), testenum::B};
 
-    settings::setting_scalar scalar_setting {&settings, "scale", 1.0};
+    settings::setting_scalar scalar_setting{&settings, "scale", 1.0};
 };
 
 TEST_F(SettingEnumTest, enumRequiredArgMissing)
