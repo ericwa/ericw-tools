@@ -426,7 +426,7 @@ struct gamedef_t
     virtual bool texinfo_is_hintskip(const surfflags_t &flags, const std::string &name) const = 0;
     virtual contentflags_t create_contents_from_native(int32_t native) const = 0;
     virtual int32_t contents_to_native(contentflags_t contents) const = 0;
-    virtual contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const = 0;
+    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const;
     virtual contentflags_t create_detail_illusionary_contents(contentflags_t original) const = 0;
     virtual contentflags_t create_detail_fence_contents(contentflags_t original) const = 0;
     virtual contentflags_t create_detail_wall_contents(contentflags_t original) const = 0;

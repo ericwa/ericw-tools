@@ -278,19 +278,6 @@ public:
         return CONTENTS_EMPTY;
     }
 
-    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override
-    {
-        contents_int_t combined = contents0.flags | contents1.flags;
-
-        // a cluster may include some solid detail areas, but
-        // still be seen into
-        if (!(contents0.flags & EWT_VISCONTENTS_SOLID) || !(contents1.flags & EWT_VISCONTENTS_SOLID)) {
-            combined &= ~EWT_VISCONTENTS_SOLID;
-        }
-
-        return contentflags_t::make(combined);
-    }
-
     contentflags_t create_detail_illusionary_contents(contentflags_t original) const override
     {
         return contentflags_t::make(EWT_VISCONTENTS_MIST | EWT_CFLAG_DETAIL);
@@ -1025,19 +1012,6 @@ struct gamedef_q2_t : public gamedef_t
             result |= Q2_CONTENTS_UNUSED_31;
 
         return result;
-    }
-
-    contentflags_t cluster_contents(contentflags_t contents0, contentflags_t contents1) const override
-    {
-        contents_int_t combined = contents0.flags | contents1.flags;
-
-        // a cluster may include some solid detail areas, but
-        // still be seen into
-        if (!(contents0.flags & EWT_VISCONTENTS_SOLID) || !(contents1.flags & EWT_VISCONTENTS_SOLID)) {
-            combined &= ~EWT_VISCONTENTS_SOLID;
-        }
-
-        return contentflags_t::make(combined);
     }
 
     inline int32_t get_content_type(contentflags_t contents) const
