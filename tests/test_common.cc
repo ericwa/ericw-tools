@@ -59,7 +59,7 @@ TEST(common, q1Contents)
         auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_WATER));
 
         EXPECT_TRUE(combined.is_any_solid());
-        EXPECT_TRUE(combined.is_detail_solid(game_q1));
+        EXPECT_TRUE(combined.is_detail_solid());
         EXPECT_FALSE(combined.is_liquid(game_q1));
         EXPECT_FALSE(combined.is_solid(game_q1));
     }
@@ -68,7 +68,7 @@ TEST(common, q1Contents)
         SCOPED_TRACE("detail_solid plus sky");
         auto combined = game_q1->combine_contents(detail_solid, game_q1->create_contents_from_native(CONTENTS_SKY));
 
-        EXPECT_FALSE(combined.is_detail_solid(game_q1));
+        EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky(game_q1));
         EXPECT_FALSE(combined.is_solid(game_q1));
     }
@@ -90,7 +90,7 @@ TEST(common, clusterContents)
 
             auto solid_solid_cluster = solid_detail.cluster_contents(solid_detail);
             SCOPED_TRACE(solid_solid_cluster.to_string());
-            EXPECT_TRUE(solid_solid_cluster.is_detail_solid(game));
+            EXPECT_TRUE(solid_solid_cluster.is_detail_solid());
 
             auto solid_empty_cluster = solid_detail.cluster_contents(empty);
             SCOPED_TRACE(solid_empty_cluster.to_string());
@@ -184,11 +184,11 @@ TEST(common, sharedContentFlagTests)
             {
                 SCOPED_TRACE("is_detail_solid");
 
-                EXPECT_FALSE(solid.is_detail_solid(game));
-                EXPECT_TRUE(detail_solid.is_detail_solid(game));
-                EXPECT_FALSE(detail_wall.is_detail_solid(game));
-                EXPECT_FALSE(detail_fence.is_detail_solid(game));
-                EXPECT_FALSE(detail_illusionary.is_detail_solid(game));
+                EXPECT_FALSE(solid.is_detail_solid());
+                EXPECT_TRUE(detail_solid.is_detail_solid());
+                EXPECT_FALSE(detail_wall.is_detail_solid());
+                EXPECT_FALSE(detail_fence.is_detail_solid());
+                EXPECT_FALSE(detail_illusionary.is_detail_solid());
             }
 
             {

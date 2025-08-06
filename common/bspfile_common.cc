@@ -67,9 +67,9 @@ bool contentflags_t::is_any_detail() const
     return (flags & EWT_CFLAG_DETAIL) != 0;
 }
 
-bool contentflags_t::is_detail_solid(const gamedef_t *game) const
+bool contentflags_t::is_detail_solid() const
 {
-    return game->contents_are_detail_solid(*this);
+    return (flags & EWT_CFLAG_DETAIL) && (flags & EWT_VISCONTENTS_SOLID);
 }
 
 bool contentflags_t::is_detail_wall(const gamedef_t *game) const
