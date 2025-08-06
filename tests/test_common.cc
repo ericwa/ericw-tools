@@ -39,7 +39,7 @@ TEST(common, q1Contents)
             auto combined = game_q1->combine_contents(solid, c);
 
             EXPECT_EQ(game_q1->contents_to_native(combined), CONTENTS_SOLID);
-            EXPECT_TRUE(combined.is_solid(game_q1));
+            EXPECT_TRUE(combined.is_solid());
 
             EXPECT_FALSE(combined.is_any_detail());
         }
@@ -61,7 +61,7 @@ TEST(common, q1Contents)
         EXPECT_TRUE(combined.is_any_solid());
         EXPECT_TRUE(combined.is_detail_solid());
         EXPECT_FALSE(combined.is_liquid(game_q1));
-        EXPECT_FALSE(combined.is_solid(game_q1));
+        EXPECT_FALSE(combined.is_solid());
     }
 
     {
@@ -70,7 +70,7 @@ TEST(common, q1Contents)
 
         EXPECT_FALSE(combined.is_detail_solid());
         EXPECT_TRUE(combined.is_sky(game_q1));
-        EXPECT_FALSE(combined.is_solid(game_q1));
+        EXPECT_FALSE(combined.is_solid());
     }
 }
 
@@ -265,7 +265,7 @@ TEST(common, q2Contents)
                 gamedef_t::remap_type_t::leaf);
 
             EXPECT_EQ(game_q2->contents_to_native(combined), after);
-            EXPECT_TRUE(combined.is_solid(game_q2));
+            EXPECT_TRUE(combined.is_solid());
             EXPECT_FALSE(combined.is_any_detail());
         }
     }

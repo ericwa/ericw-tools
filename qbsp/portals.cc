@@ -84,8 +84,8 @@ bool Portal_EntityFlood(const portal_t *p, int32_t s)
     }
 
     // can never cross to a solid
-    if (p->nodes[0]->get_leafdata()->contents.is_solid(qbsp_options.target_game) ||
-        p->nodes[1]->get_leafdata()->contents.is_solid(qbsp_options.target_game)) {
+    if (p->nodes[0]->get_leafdata()->contents.is_solid() ||
+        p->nodes[1]->get_leafdata()->contents.is_solid()) {
         return false;
     }
 
@@ -776,7 +776,7 @@ static void FindAreaPortalExits_R(node_t *n, std::unordered_set<node_t *> &visit
 
         // is this an exit?
         if (!(neighbour->get_leafdata()->contents.flags & EWT_INVISCONTENTS_AREAPORTAL) &&
-            !neighbour->get_leafdata()->contents.is_solid(qbsp_options.target_game)) {
+            !neighbour->get_leafdata()->contents.is_solid()) {
             exits.emplace_back(p, neighbour);
             continue;
         }

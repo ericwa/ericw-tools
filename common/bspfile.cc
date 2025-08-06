@@ -358,12 +358,6 @@ public:
         return (contents.flags & EWT_ALL_VISIBLE_CONTENTS) == 0;
     }
 
-    // fixme-brushbsp: this is a leftover from q1 tools, and not really used in qbsp3, remove if possible
-    bool contents_are_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) && !(contents.flags & EWT_CFLAG_DETAIL);
-    }
-
     bool contents_are_sky(contentflags_t contents) const override { return (contents.flags & EWT_VISCONTENTS_SKY); }
 
     bool contents_are_liquid(contentflags_t contents) const override
@@ -414,7 +408,7 @@ public:
 
     bool contents_seals_map(contentflags_t contents) const override
     {
-        return contents_are_solid(contents) || contents_are_sky(contents);
+        return contents.is_solid() || contents_are_sky(contents);
     }
 
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
@@ -475,7 +469,7 @@ public:
 
         auto result = contentflags_t::make(bits_a | bits_b);
 
-        if (contents_are_solid(a) || contents_are_solid(b)) {
+        if (a.is_solid() || b.is_solid()) {
             return contentflags_t::make(EWT_VISCONTENTS_SOLID);
         }
         if (contents_are_sky(a) || contents_are_sky(b)) {
@@ -1100,12 +1094,6 @@ struct gamedef_q2_t : public gamedef_t
         return !get_content_type(contents);
     }
 
-    bool contents_are_solid(contentflags_t contents) const override
-    {
-        return (contents.flags & EWT_VISCONTENTS_SOLID) &&
-               !(contents.flags & EWT_CFLAG_DETAIL);
-    }
-
     bool contents_are_sky(contentflags_t contents) const override { return false; }
 
     bool contents_are_liquid(contentflags_t contents) const override
@@ -1192,7 +1180,7 @@ struct gamedef_q2_t : public gamedef_t
 
     bool contents_seals_map(contentflags_t contents) const override
     {
-        return contents_are_solid(contents) || contents_are_sky(contents);
+        return contents.is_solid() || contents_are_sky(contents);
     }
 
     bool contents_are_opaque(contentflags_t contents, bool transwater) const override
@@ -1236,7 +1224,7 @@ struct gamedef_q2_t : public gamedef_t
         contents_int_t bits_b = b.flags;
 
         // structural solid eats detail flags
-        if (contents_are_solid(a) || contents_are_solid(b)) {
+        if (a.is_solid() || b.is_solid()) {
             bits_a &= ~EWT_CFLAG_DETAIL;
             bits_b &= ~EWT_CFLAG_DETAIL;
         }

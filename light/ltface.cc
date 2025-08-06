@@ -1185,7 +1185,7 @@ static bool VisCullEntity(const mbsp_t *bsp, const std::vector<uint8_t> &pvs, co
 
     auto contents = bsp->loadversion->game->create_contents_from_native(entleaf->contents);
 
-    if (bsp->loadversion->game->contents_are_solid(contents) || bsp->loadversion->game->contents_are_sky(contents) ||
+    if (contents.is_solid() || bsp->loadversion->game->contents_are_sky(contents) ||
         bsp->loadversion->game->contents_are_liquid(contents)) {
         // the liquid case is because entleaf->contents might be in an opaque liquid,
         // which we typically want light to pass through, but visdata would report that

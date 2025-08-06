@@ -130,9 +130,9 @@ bool contentflags_t::is_any_solid() const
     return (flags & EWT_VISCONTENTS_SOLID) != 0;
 }
 
-bool contentflags_t::is_solid(const gamedef_t *game) const
+bool contentflags_t::is_solid() const
 {
-    return game->contents_are_solid(*this);
+    return (flags & EWT_VISCONTENTS_SOLID) && !(flags & EWT_CFLAG_DETAIL);
 }
 
 bool contentflags_t::is_sky(const gamedef_t *game) const
